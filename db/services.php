@@ -68,4 +68,20 @@ $functions = [
         'ajax' => true,
         'capabilities' => 'moodle/course:update',
     ],
+    'local_coursegen_validate_course_form' => [
+        'classname' => 'local_coursegen\\external\\validate_course_form',
+        'methodname' => 'execute',
+        'description' => 'Validate AI-related course form fields for coursegen',
+        'type' => 'read',
+        'ajax' => true,
+        'loginrequired' => true,
+    ],
+    'local_coursegen_process_course_form' => [
+        'classname' => 'local_coursegen\\external\\process_course_form',
+        'methodname' => 'execute',
+        'description' => 'Store full course edit form payload for AI processing',
+        'type' => 'write',
+        'ajax' => true,
+        'loginrequired' => true,
+    ],
 ];

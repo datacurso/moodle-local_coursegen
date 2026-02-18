@@ -24,6 +24,10 @@ use local_coursegen\ai_context;
 use local_coursegen\ai_course;
 use local_coursegen\system_instruction;
 
+defined('MOODLE_INTERNAL') || die();
+
+require_once($CFG->libdir . '/filelib.php');
+
 /**
  * Hook to extend the course form with custom fields.
  *

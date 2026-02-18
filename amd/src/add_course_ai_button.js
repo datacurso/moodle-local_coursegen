@@ -21,7 +21,14 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import Ajax from "core/ajax";
 import Templates from "core/templates";
+import Notification from "core/notification";
+import * as FormEvents from "core_form/events";
+import * as FormChangeChecker from "core_form/changechecker";
+
+const VALIDATE_WS = "local_coursegen_validate_course_form";
+const PROCESS_WS = "local_coursegen_process_course_form";
 
 /**
  * Initialize the AI button functionality
@@ -33,7 +40,12 @@ export const init = () => {
 /**
  * Add the AI button before the submit button
  */
-const addAIButton = async () => {
+const addAIButton = async() => {
+  const form = document.querySelector("form.mform");
+  if (!form) {
+    return;
+  }
+
   // Find the submit form element
   const submitElement = document.querySelector(".mb-3.fitem.form-submit");
 
@@ -53,30 +65,84 @@ const addAIButton = async () => {
   const button = document.querySelector(
     '[data-action="local_coursegen/add_ai_course"]'
   );
-  button.addEventListener("click", handleAIButtonClick);
-};
-
-/**
- * Handle the AI button click event
- * @param {Event} e - The click event
- */
-const handleAIButtonClick = async (e) => {
-  e.preventDefault();
-  const btn = e.currentTarget;
-  if (btn) {
-    btn.setAttribute("disabled", "disabled");
-    btn.classList.add("disabled");
+  if (!button) {
+    return;
   }
 
-  document.querySelector('input[name="local_coursegen_create_ai_course"]').value = 1;
-  document.querySelector('input[name="saveanddisplay"]').click();
+  button.addEventListener("click", async(e) => {
+    e.preventDefault();
+
+    // If we found invalid fields, focus on the first one and do not submit via ajax.
+    if (!validateElements(form)) {
+      return;
+    }
+
+    disableButtons(form);
+    clearServerErrors(form);
+
+    const hiddenFlag = form.querySelector(
+      'input[name="local_coursegen_create_ai_course"]'
+    );
+    if (hiddenFlag) {
+      hiddenFlag.value = 1;
+    }
+
+    const formData = new URLSearchParams(new FormData(form)).toString();
+
+    try {
+      // Primero, validación servidor.
+      const validation = await Ajax.call([
+        {
+          methodname: VALIDATE_WS,
+          args: {payload: formData},
+        },
+      ])[0];
+
+      if (!validation.ok) {
+        const errorsMap = {};
+        (validation.errors || []).forEach((err) => {
+          errorsMap[err.field] = err.msg;
+        });
+        showServerErrors(form, errorsMap);
+        enableButtons(form);
+        return;
+      }
+
+      // Si la validación OK, procesar vía webservice dinámico.
+      const response = await Ajax.call([
+        {
+          methodname: PROCESS_WS,
+          args: {formdata: formData},
+        },
+      ])[0];
+
+      if (!response.submitted) {
+        enableButtons(form);
+        return;
+      }
+
+      const data = response.data || {};
+
+      // Form was submitted properly: limpiar estado dirty y redirigir.
+      FormEvents.notifyFormSubmittedByJavascript(form, true);
+      FormChangeChecker.resetFormDirtyState(form);
+      enableButtons(form);
+
+      if (data.redirecturl) {
+        window.location.href = data.redirecturl;
+      }
+    } catch (err) {
+      enableButtons(form);
+      Notification.exception(err);
+    }
+  });
 };
 
 /**
  * Insert the AI button before the target element
  * @param {Element} targetElement - The element before which to insert the button
  */
-const insertAIButton = async (targetElement) => {
+const insertAIButton = async(targetElement) => {
   // Check if button already exists to avoid duplicates
   if (document.querySelector('[data-action="local_coursegen/add_ai_course"]')) {
     return;
@@ -92,4 +158,90 @@ const insertAIButton = async (targetElement) => {
 
   // Insert before the submit element
   targetElement.parentNode.insertBefore(buttonContainer, targetElement);
+};
+
+const validateElements = (form) => {
+  // Notificar envío JS (resetea autosave Atto, etc.).
+  FormEvents.notifyFormSubmittedByJavascript(form);
+
+  // Ahora verificamos campos inválidos.
+  const invalid = [...form.querySelectorAll('[aria-invalid="true"], .error')];
+  if (invalid.length) {
+    const focusField = invalid[0];
+    focusField.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+    setTimeout(() => {
+      focusField.focus({preventScroll: true});
+    }, 0);
+    return false;
+  }
+
+  return true;
+};
+
+const disableButtons = (form) => {
+  form
+    .querySelectorAll('input[type="submit"], button[type="submit"]')
+    .forEach((el) => el.setAttribute("disabled", true));
+};
+
+const enableButtons = (form) => {
+  form
+    .querySelectorAll('input[type="submit"], button[type="submit"]')
+    .forEach((el) => el.removeAttribute("disabled"));
+};
+
+const clearServerErrors = (form) => {
+  form.querySelectorAll(".is-invalid").forEach((el) =>
+    el.classList.remove("is-invalid")
+  );
+  form
+    .querySelectorAll(
+      '.form-control-feedback.invalid-feedback[data-from-aicourse="1"]'
+    )
+    .forEach((el) => el.remove());
+};
+
+const showServerErrors = (form, errors) => {
+  let focusField = null;
+  Object.entries(errors).forEach(([field, msg]) => {
+    if (field === "_general") {
+      return;
+    }
+
+    const input = form.querySelector(`#id_${field}`);
+    if (!input) {
+      return;
+    }
+
+    input.classList.add("is-invalid");
+
+    let feedback = form.querySelector(`#id_error_${field}`);
+    if (!feedback) {
+      feedback = document.createElement("div");
+      feedback.className = "form-control-feedback invalid-feedback";
+      input.insertAdjacentElement("afterend", feedback);
+    }
+
+    feedback.setAttribute("data-from-aicourse", "1");
+    feedback.textContent = msg;
+    feedback.style.display = "block";
+
+    if (!focusField) {
+      focusField = input;
+    }
+  });
+
+  if (focusField) {
+    focusField.scrollIntoView({
+      behavior: "smooth",
+      block: "center",
+    });
+
+    setTimeout(() => {
+      focusField.focus({preventScroll: true});
+    }, 0);
+  }
 };
