@@ -5,26 +5,6 @@
     xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd">
 
     <TABLES>
-        <TABLE NAME="local_coursegen_course_data" COMMENT="Store custom course data from datacurso">
-            <FIELDS>
-                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
-                <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
-                <FIELD NAME="custom_text" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" />
-                <FIELD NAME="custom_select" TYPE="char" LENGTH="100" NOTNULL="false"
-                    SEQUENCE="false" />
-                <FIELD NAME="custom_checkbox" TYPE="int" LENGTH="2" NOTNULL="false" DEFAULT="0"
-                    SEQUENCE="false" />
-                <FIELD NAME="custom_textarea" TYPE="text" NOTNULL="false" SEQUENCE="false" />
-                <FIELD NAME="custom_date" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" />
-                <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
-                <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
-            </FIELDS>
-            <KEYS>
-                <KEY NAME="primary" TYPE="primary" FIELDS="id" />
-                <KEY NAME="courseid" TYPE="foreign" FIELDS="courseid" REFTABLE="course"
-                    REFFIELDS="id" />
-            </KEYS>
-        </TABLE>
         
         <TABLE NAME="local_coursegen_system_instruction" COMMENT="Store system instructions for datacurso">
             <FIELDS>

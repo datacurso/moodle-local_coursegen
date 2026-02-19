@@ -144,15 +144,6 @@ $string['privacy:metadata:local_coursegen_course_context:system_instruction_id']
 $string['privacy:metadata:local_coursegen_course_context:timecreated'] = 'Waktu ketika catatan konteks kursus dibuat.';
 $string['privacy:metadata:local_coursegen_course_context:timemodified'] = 'Waktu ketika catatan konteks kursus terakhir diperbarui.';
 $string['privacy:metadata:local_coursegen_course_context:usermodified'] = 'ID pengguna yang terakhir mengubah konteks kursus.';
-$string['privacy:metadata:local_coursegen_course_data'] = 'Data kursus khusus yang disimpan untuk integrasi dengan DataCurso.';
-$string['privacy:metadata:local_coursegen_course_data:courseid'] = 'ID kursus tempat data ini berada.';
-$string['privacy:metadata:local_coursegen_course_data:custom_checkbox'] = 'Nilai kotak centang kustom yang terkait dengan kursus.';
-$string['privacy:metadata:local_coursegen_course_data:custom_date'] = 'Nilai tanggal kustom yang terkait dengan kursus.';
-$string['privacy:metadata:local_coursegen_course_data:custom_select'] = 'Nilai pilihan kustom yang terkait dengan kursus.';
-$string['privacy:metadata:local_coursegen_course_data:custom_text'] = 'Nilai teks pendek kustom yang terkait dengan kursus.';
-$string['privacy:metadata:local_coursegen_course_data:custom_textarea'] = 'Nilai textarea kustom yang terkait dengan kursus.';
-$string['privacy:metadata:local_coursegen_course_data:timecreated'] = 'Waktu ketika catatan dibuat.';
-$string['privacy:metadata:local_coursegen_course_data:timemodified'] = 'Waktu ketika catatan terakhir diperbarui.';
 $string['privacy:metadata:local_coursegen_course_sessions'] = 'Sesi perencanaan kursus yang dibuat melalui layanan AI.';
 $string['privacy:metadata:local_coursegen_course_sessions:courseid'] = 'ID kursus yang sedang direncanakan.';
 $string['privacy:metadata:local_coursegen_course_sessions:session_id'] = 'Pengenal sesi yang dikembalikan oleh layanan AI.';

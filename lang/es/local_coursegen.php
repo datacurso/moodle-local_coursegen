@@ -144,15 +144,6 @@ $string['privacy:metadata:local_coursegen_course_context:system_instruction_id']
 $string['privacy:metadata:local_coursegen_course_context:timecreated'] = 'La hora en que se creó el registro de contexto del curso.';
 $string['privacy:metadata:local_coursegen_course_context:timemodified'] = 'La hora en que se actualizó por última vez el registro de contexto del curso.';
 $string['privacy:metadata:local_coursegen_course_context:usermodified'] = 'El ID del usuario que modificó por última vez el contexto del curso.';
-$string['privacy:metadata:local_coursegen_course_data'] = 'Datos de curso personalizados almacenados para la integración con DataCurso.';
-$string['privacy:metadata:local_coursegen_course_data:courseid'] = 'El ID del curso al que pertenecen estos datos.';
-$string['privacy:metadata:local_coursegen_course_data:custom_checkbox'] = 'Un valor de casilla personalizada asociado al curso.';
-$string['privacy:metadata:local_coursegen_course_data:custom_date'] = 'Un valor de fecha personalizada asociado al curso.';
-$string['privacy:metadata:local_coursegen_course_data:custom_select'] = 'Un valor de selección personalizada asociado al curso.';
-$string['privacy:metadata:local_coursegen_course_data:custom_text'] = 'Un valor de texto corto personalizado asociado al curso.';
-$string['privacy:metadata:local_coursegen_course_data:custom_textarea'] = 'Un valor de área de texto personalizada asociado al curso.';
-$string['privacy:metadata:local_coursegen_course_data:timecreated'] = 'La hora en que se creó el registro.';
-$string['privacy:metadata:local_coursegen_course_data:timemodified'] = 'La hora en que el registro se actualizó por última vez.';
 $string['privacy:metadata:local_coursegen_course_sessions'] = 'Sesiones de planificación de curso creadas mediante el servicio de IA.';
 $string['privacy:metadata:local_coursegen_course_sessions:courseid'] = 'El ID del curso que se está planificando.';
 $string['privacy:metadata:local_coursegen_course_sessions:session_id'] = 'El identificador de sesión devuelto por el servicio de IA.';

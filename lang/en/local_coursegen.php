@@ -143,15 +143,6 @@ $string['privacy:metadata:local_coursegen_course_context:system_instruction_id']
 $string['privacy:metadata:local_coursegen_course_context:timecreated'] = 'The time when the course context record was created.';
 $string['privacy:metadata:local_coursegen_course_context:timemodified'] = 'The time when the course context record was last updated.';
 $string['privacy:metadata:local_coursegen_course_context:usermodified'] = 'The ID of the user who last modified the course context.';
-$string['privacy:metadata:local_coursegen_course_data'] = 'Custom course data stored for integration with DataCurso.';
-$string['privacy:metadata:local_coursegen_course_data:courseid'] = 'The ID of the course this data belongs to.';
-$string['privacy:metadata:local_coursegen_course_data:custom_checkbox'] = 'A custom checkbox value associated with the course.';
-$string['privacy:metadata:local_coursegen_course_data:custom_date'] = 'A custom date value associated with the course.';
-$string['privacy:metadata:local_coursegen_course_data:custom_select'] = 'A custom select value associated with the course.';
-$string['privacy:metadata:local_coursegen_course_data:custom_text'] = 'A custom short text value associated with the course.';
-$string['privacy:metadata:local_coursegen_course_data:custom_textarea'] = 'A custom textarea value associated with the course.';
-$string['privacy:metadata:local_coursegen_course_data:timecreated'] = 'The time when the record was created.';
-$string['privacy:metadata:local_coursegen_course_data:timemodified'] = 'The time when the record was last updated.';
 $string['privacy:metadata:local_coursegen_course_sessions'] = 'Course planning sessions created through the AI service.';
 $string['privacy:metadata:local_coursegen_course_sessions:courseid'] = 'The ID of the course being planned.';
 $string['privacy:metadata:local_coursegen_course_sessions:session_id'] = 'The session identifier returned by the AI service.';

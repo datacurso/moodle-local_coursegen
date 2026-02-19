@@ -143,15 +143,6 @@ $string['privacy:metadata:local_coursegen_course_context:system_instruction_id']
 $string['privacy:metadata:local_coursegen_course_context:timecreated'] = 'La date à laquelle l\'enregistrement de contexte du cours a été créé.';
 $string['privacy:metadata:local_coursegen_course_context:timemodified'] = 'La date à laquelle l\'enregistrement de contexte du cours a été mis à jour pour la dernière fois.';
 $string['privacy:metadata:local_coursegen_course_context:usermodified'] = 'L\'identifiant de l\'utilisateur qui a modifié pour la dernière fois le contexte du cours.';
-$string['privacy:metadata:local_coursegen_course_data'] = 'Données de cours personnalisées stockées pour l\'intégration avec DataCurso.';
-$string['privacy:metadata:local_coursegen_course_data:courseid'] = 'L\'identifiant du cours auquel ces données appartiennent.';
-$string['privacy:metadata:local_coursegen_course_data:custom_checkbox'] = 'Une valeur de case à cocher personnalisée associée au cours.';
-$string['privacy:metadata:local_coursegen_course_data:custom_date'] = 'Une valeur de date personnalisée associée au cours.';
-$string['privacy:metadata:local_coursegen_course_data:custom_select'] = 'Une valeur de sélection personnalisée associée au cours.';
-$string['privacy:metadata:local_coursegen_course_data:custom_text'] = 'Une valeur de texte court personnalisé associée au cours.';
-$string['privacy:metadata:local_coursegen_course_data:custom_textarea'] = 'Une valeur de zone de texte personnalisée associée au cours.';
-$string['privacy:metadata:local_coursegen_course_data:timecreated'] = 'La date à laquelle l\'enregistrement a été créé.';
-$string['privacy:metadata:local_coursegen_course_data:timemodified'] = 'La date à laquelle l\'enregistrement a été mis à jour pour la dernière fois.';
 $string['privacy:metadata:local_coursegen_course_sessions'] = 'Sessions de planification de cours créées via le service IA.';
 $string['privacy:metadata:local_coursegen_course_sessions:courseid'] = 'L\'identifiant du cours en cours de planification.';
 $string['privacy:metadata:local_coursegen_course_sessions:session_id'] = 'L\'identifiant de session renvoyé par le service IA.';

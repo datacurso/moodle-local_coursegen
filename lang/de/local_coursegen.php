@@ -144,15 +144,6 @@ $string['privacy:metadata:local_coursegen_course_context:system_instruction_id']
 $string['privacy:metadata:local_coursegen_course_context:timecreated'] = 'Zeitpunkt, zu dem der Kurskontext-Datensatz erstellt wurde.';
 $string['privacy:metadata:local_coursegen_course_context:timemodified'] = 'Zeitpunkt, zu dem der Kurskontext-Datensatz zuletzt aktualisiert wurde.';
 $string['privacy:metadata:local_coursegen_course_context:usermodified'] = 'Die ID des Benutzers, der den Kurskontext zuletzt geändert hat.';
-$string['privacy:metadata:local_coursegen_course_data'] = 'Benutzerdefinierte Kursdaten, die für die Integration mit DataCurso gespeichert werden.';
-$string['privacy:metadata:local_coursegen_course_data:courseid'] = 'Die ID des Kurses, zu dem diese Daten gehören.';
-$string['privacy:metadata:local_coursegen_course_data:custom_checkbox'] = 'Ein benutzerdefinierter Kontrollkästchenwert, der dem Kurs zugeordnet ist.';
-$string['privacy:metadata:local_coursegen_course_data:custom_date'] = 'Ein benutzerdefinierter Datumswert, der dem Kurs zugeordnet ist.';
-$string['privacy:metadata:local_coursegen_course_data:custom_select'] = 'Ein benutzerdefinierter Auswahlwert, der dem Kurs zugeordnet ist.';
-$string['privacy:metadata:local_coursegen_course_data:custom_text'] = 'Ein benutzerdefinierter Kurztextwert, der dem Kurs zugeordnet ist.';
-$string['privacy:metadata:local_coursegen_course_data:custom_textarea'] = 'Ein benutzerdefinierter Textfeldwert, der dem Kurs zugeordnet ist.';
-$string['privacy:metadata:local_coursegen_course_data:timecreated'] = 'Zeitpunkt, zu dem der Datensatz erstellt wurde.';
-$string['privacy:metadata:local_coursegen_course_data:timemodified'] = 'Zeitpunkt, zu dem der Datensatz zuletzt aktualisiert wurde.';
 $string['privacy:metadata:local_coursegen_course_sessions'] = 'Kursplanungssitzungen, die über den KI-Dienst erstellt wurden.';
 $string['privacy:metadata:local_coursegen_course_sessions:courseid'] = 'Die ID des Kurses, der geplant wird.';
 $string['privacy:metadata:local_coursegen_course_sessions:session_id'] = 'Die von dem KI-Dienst zurückgegebene Sitzungskennung.';

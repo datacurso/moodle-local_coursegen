@@ -144,15 +144,6 @@ $string['privacy:metadata:local_coursegen_course_context:system_instruction_id']
 $string['privacy:metadata:local_coursegen_course_context:timecreated'] = 'Время создания записи контекста курса.';
 $string['privacy:metadata:local_coursegen_course_context:timemodified'] = 'Время последнего обновления записи контекста курса.';
 $string['privacy:metadata:local_coursegen_course_context:usermodified'] = 'ID пользователя, который последним изменил контекст курса.';
-$string['privacy:metadata:local_coursegen_course_data'] = 'Пользовательские данные курса, сохранённые для интеграции с DataCurso.';
-$string['privacy:metadata:local_coursegen_course_data:courseid'] = 'ID курса, которому принадлежат эти данные.';
-$string['privacy:metadata:local_coursegen_course_data:custom_checkbox'] = 'Значение пользовательского флажка, связанного с курсом.';
-$string['privacy:metadata:local_coursegen_course_data:custom_date'] = 'Значение пользовательской даты, связанной с курсом.';
-$string['privacy:metadata:local_coursegen_course_data:custom_select'] = 'Значение пользовательского списка выбора, связанного с курсом.';
-$string['privacy:metadata:local_coursegen_course_data:custom_text'] = 'Значение пользовательского краткого текста, связанного с курсом.';
-$string['privacy:metadata:local_coursegen_course_data:custom_textarea'] = 'Значение пользовательского текстового поля, связанного с курсом.';
-$string['privacy:metadata:local_coursegen_course_data:timecreated'] = 'Время создания записи.';
-$string['privacy:metadata:local_coursegen_course_data:timemodified'] = 'Время последнего обновления записи.';
 $string['privacy:metadata:local_coursegen_course_sessions'] = 'Сессии планирования курсов, созданные с помощью сервиса ИИ.';
 $string['privacy:metadata:local_coursegen_course_sessions:courseid'] = 'ID курса, который планируется.';
 $string['privacy:metadata:local_coursegen_course_sessions:session_id'] = 'Идентификатор сессии, возвращённый сервисом ИИ.';

@@ -54,10 +54,6 @@ class provider implements
      */
     public static function get_metadata(collection $collection): collection {
         $tables = [
-            'local_coursegen_course_data' => [
-                'courseid', 'custom_text', 'custom_select', 'custom_checkbox', 'custom_textarea', 'custom_date',
-                'timecreated', 'timemodified',
-            ],
             'local_coursegen_system_instruction' => [
                 'name', 'content', 'deleted', 'timecreated', 'timemodified', 'usermodified',
             ],
