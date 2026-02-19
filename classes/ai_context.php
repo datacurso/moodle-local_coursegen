@@ -64,16 +64,15 @@ class ai_context {
     /**
      * Uploads the syllabus file to the AI endpoint.
      *
-     * @param int $courseid ID of the course.
+     * The current AI service requires a valid session ID to associate uploads.
+     *
+     * @param string $sessionid Session ID from the AI service.
+     * @param int $itemid Item ID used to locate the syllabus file in system context.
      */
-    public static function upload_syllabus_to_ai(int $courseid): void {
-        global $CFG;
-
+    public static function upload_syllabus_to_ai(string $sessionid, int $itemid): void {
         $fs = get_file_storage();
-        $context = \context_course::instance($courseid);
-
-        $files = $fs->get_area_files($context->id, 'local_coursegen', 'syllabus', 0, 'itemid', false);
-
+        $context = \context_system::instance();
+        $files = $fs->get_area_files($context->id, 'local_coursegen', self::CONTEXT_TYPE_SYLLABUS, $itemid, 'itemid', false);
         if (empty($files)) {
             return;
         }
@@ -83,32 +82,34 @@ class ai_context {
             return;
         }
 
-        $siteid = md5($CFG->wwwroot);
-
         // Save the file temporarily.
         $filepath = $file->copy_content_to_temp();
-
-        $postdata = [
-            'title' => $file->get_filename(),
-            'site_id' => $siteid,
-            'course_id' => $courseid,
-        ];
 
         $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
         $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
 
         $client = new ai_course_api(null, $baseurl, $baseurleu);
-        $client->upload_file('/context/upload', $filepath, $file->get_mimetype(), $file->get_filename(), $postdata);
+
+        $client->upload_file(
+            '/context/upload/syllabus',
+            $filepath,
+            $file->get_mimetype(),
+            $file->get_filename(),
+            [
+                'session_id' => $sessionid,
+                'site_id' => ai_course::get_site_uuid(),
+            ]
+        );
     }
 
     /**
-     * Save syllabus PDF file from draft area to course context.
+     * Save syllabus PDF file from draft area to system context.
      *
-     * @param int $courseid Course ID where the syllabus will be saved
+     * @param int $itemid Item ID used to store the syllabus file in system context.
      * @param int|null $draftitemid Draft item ID from the syllabus file picker
      * @return bool True if syllabus was saved successfully, false otherwise
      */
-    public static function save_syllabus_from_draft(int $courseid, ?int $draftitemid = null): bool {
+    public static function save_syllabus_from_draft(int $itemid, ?int $draftitemid = null): bool {
         if (!$draftitemid) {
             return false;
         }
@@ -123,10 +124,10 @@ class ai_context {
         try {
             file_save_draft_area_files(
                 $draftitemid,
-                \context_course::instance($courseid)->id,
+                \context_system::instance()->id,
                 'local_coursegen',
                 self::CONTEXT_TYPE_SYLLABUS,
-                0,
+                $itemid,
                 [
                     'subdirs' => 0,
                     'maxfiles' => 1,

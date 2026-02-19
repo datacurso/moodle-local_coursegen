@@ -27,57 +27,21 @@ use aiprovider_datacurso\httpclient\ai_course_api;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class ai_course {
+    /** @var string Config key for the persistent site UUID used by the Datacurso course service. */
+    private const CONFIG_SITE_UUID = 'site_uuid';
+
     /**
-     * Start AI course planning session by calling the /plan-course/start endpoint..
+     * Start AI course planning session by calling the /planning/start endpoint.
      *
-     * @param int $courseid Course ID
-     * @param string $contexttype Context type (model, syllabus or customprompt)
-     * @param string|null $modelname Model name for AI processing
-     * @param string $coursename Course name
-     * @param string|null $promptmessage Plain text prompt summary when context type is customprompt
-     * @param int $generateimages 1 indicates AI could generate images, 0 indicates AI could not generate images
-     * @param string|null $lang Language code to use in the AI request
+     * @param array $sessioncreate Request payload to send as SessionCreate.
+     * @return string Session ID
      */
-    public static function start_course_planning(
-        int $courseid,
-        string $contexttype,
-        ?string $modelname,
-        string $coursename,
-        ?string $promptmessage = null,
-        int $generateimages = 0,
-        ?string $lang = null
-    ): void {
-        global $CFG;
-
-        // Prepare request data.
-        $requestdata = [
-            'course_id' => $courseid,
-            'site_id' => md5($CFG->wwwroot),
-            'context_type' => $contexttype,
-            'course_name' => $coursename,
-        ];
-
-        if (!empty($modelname)) {
-            $requestdata['model_name'] = $modelname;
-        }
-
-        if ($contexttype === ai_context::CONTEXT_TYPE_CUSTOM_PROMPT) {
-            if (!empty($promptmessage)) {
-                $requestdata['prompt_message'] = $promptmessage;
-            }
-        }
-
-        // Whether the AI service should generate images for this course.
-        $requestdata['generate_images'] = $generateimages === 1;
-        if (!empty($lang)) {
-            $requestdata['lang'] = $lang;
-        }
-
+    public static function start_course_session(array $sessioncreate): string {
         $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
         $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
 
         $client = new ai_course_api(null, $baseurl, $baseurleu);
-        $result = $client->request('POST', '/course/v2/start', $requestdata);
+        $result = $client->request('POST', '/course/planning/start', $sessioncreate);
 
         if (!isset($result['session_id'])) {
             throw new \moodle_exception('error_starting_course_planning', 'local_coursegen');
@@ -85,12 +49,32 @@ class ai_course {
 
         $sessionid = $result['session_id'];
 
-        // Store session_id in database.
-        $success = self::save_course_session($courseid, $sessionid);
+        if (isset($sessioncreate['course_id'])) {
+            // Store session_id in database.
+            $success = self::save_course_session((int) $sessioncreate['course_id'], $sessionid);
 
-        if (!$success) {
-            throw new \moodle_exception('error_saving_session', 'local_coursegen');
+            if (!$success) {
+                throw new \moodle_exception('error_saving_session', 'local_coursegen');
+            }
         }
+
+        return $sessionid;
+    }
+
+    /**
+     * Returns a persistent site UUID for the Datacurso course service.
+     *
+     * @return string
+     */
+    public static function get_site_uuid(): string {
+        $siteuuid = get_config('local_coursegen', self::CONFIG_SITE_UUID);
+        if (!empty($siteuuid)) {
+            return (string) $siteuuid;
+        }
+
+        $siteuuid = \core\uuid::generate();
+        set_config(self::CONFIG_SITE_UUID, $siteuuid, 'local_coursegen');
+        return $siteuuid;
     }
 
     /**

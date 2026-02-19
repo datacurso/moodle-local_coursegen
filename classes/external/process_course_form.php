@@ -30,6 +30,8 @@ use core_external\external_api;
 use core_external\external_function_parameters;
 use core_external\external_single_structure;
 use core_external\external_value;
+use local_coursegen\ai_course;
+use local_coursegen\ai_context;
 use moodle_url;
 
 defined('MOODLE_INTERNAL') || die();
@@ -123,23 +125,48 @@ class process_course_form extends external_api {
         if (!$form->is_cancelled() && $form->is_submitted() && $form->is_validated()) {
             $data = $form->get_data();
 
+            $contexttype = $data->local_coursegen_context_type ?? '';
+            $draftitemid = (int) $data->local_coursegen_syllabus_pdf ?? 0;
+            $selectedlang = $data->local_coursegen_lang ?? null;
+            $generateimages = $data->local_coursegen_generate_images ?? 0;
+
             // Store the validated data in local_coursegen_ai_course.
             $record = new \stdClass();
-            $record->courseid = isset($data->id) ? (int) $data->id : null;
             $record->userid = $USER->id;
             $record->coursedata = json_encode($data, JSON_UNESCAPED_UNICODE);
             $record->timecreated = time();
             $record->timemodified = $record->timecreated;
 
-            $id = $DB->insert_record('local_coursegen_ai_course', $record);
+            $aicourseid = $DB->insert_record('local_coursegen_ai_course', $record);
 
-            $url = new moodle_url('/local/coursegen/aicoursecreation.php', ['id' => $id]);
+            $url = new moodle_url('/local/coursegen/aicoursecreation.php', ['id' => $aicourseid]);
+
+            if ($contexttype === ai_context::CONTEXT_TYPE_SYLLABUS && !empty($draftitemid)) {
+                $sessioncreate = [
+                    'site_id' => ai_course::get_site_uuid(),
+                    'site_url' => $CFG->wwwroot,
+                    'moodle_user_id' => $USER->id,
+                    'user_instructions' => '',
+                    'request_config' => [
+                        'language' => $selectedlang,
+                        'with_images' => (bool) $generateimages == 1,
+                        'context_type' => $contexttype,
+                        'course_id' => $aicourseid,
+                    ],
+                ];
+
+                $sessionid = ai_course::start_course_session($sessioncreate);
+
+                if (ai_context::save_syllabus_from_draft($aicourseid, $draftitemid)) {
+                    ai_context::upload_syllabus_to_ai($sessionid, $aicourseid);
+                }
+            }
 
             return [
                 'submitted' => true,
                 'data' => [
                     'message' => 'course form processed',
-                    'recordid' => $id,
+                    'recordid' => $aicourseid,
                     'redirecturl' => $url->out(false),
                 ],
             ];
