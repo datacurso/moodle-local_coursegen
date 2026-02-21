@@ -128,11 +128,7 @@ class ai_context {
                 'local_coursegen',
                 self::CONTEXT_TYPE_SYLLABUS,
                 $itemid,
-                [
-                    'subdirs' => 0,
-                    'maxfiles' => 1,
-                    'accepted_types' => ['.pdf'],
-                ]
+                $fileoptions
             );
             return true;
         } catch (\Exception $e) {
