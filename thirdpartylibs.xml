@@ -1,0 +1,16 @@
+<?xml version="1.0"?>
+<libraries>
+  <library>
+    <location>amd/src/marked.js</location>
+    <name>Marked</name>
+    <description>A low-level markdown compiler for parsing markdown without caching or blocking for
+      long periods of time.</description>
+    <version>17.0.3</version>
+    <license>MIT</license>
+    <repository>https://github.com/markedjs/marked</repository>
+    <copyrights>
+      <copyright>2018-2026 MarkedJS</copyright>
+      <copyright>2011-2018 Christopher Jeffrey</copyright>
+    </copyrights>
+  </library>
+</libraries>
