@@ -221,31 +221,42 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025121601, 'local', 'coursegen');
     }
 
-    if ($oldversion < 2025120703) {
+    if ($oldversion < 2026021801) {
 
-        // Define table local_coursegen_ai_course to be created.
-        $table = new xmldb_table('local_coursegen_ai_course');
+        // Changing nullability of field courseid on table local_coursegen_course_sessions to null.
+        $table = new xmldb_table('local_coursegen_course_sessions');
+        $field = new xmldb_field('courseid', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'id');
 
-        // Adding fields to table local_coursegen_ai_course.
-        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
-        $table->add_field('courseid', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
-        $table->add_field('userid', XMLDB_TYPE_INTEGER, '10', null, null, null, null);
-        $table->add_field('coursedata', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL, null, null);
-        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
-        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $index = new xmldb_index('courseid', XMLDB_INDEX_NOTUNIQUE, ['courseid']);
 
-        // Adding keys to table local_coursegen_ai_course.
-        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
-        $table->add_key('courseid', XMLDB_KEY_FOREIGN, ['courseid'], 'course', ['id']);
-        $table->add_key('userid', XMLDB_KEY_FOREIGN, ['userid'], 'user', ['id']);
+        if ($dbman->index_exists($table, $index)) {
+            $dbman->drop_index($table, $index);
+        }
 
-        // Conditionally launch create table for local_coursegen_ai_course.
-        if (!$dbman->table_exists($table)) {
-            $dbman->create_table($table);
+        // Launch change of nullability for field courseid.
+        $dbman->change_field_notnull($table, $field);
+
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
         }
 
         // Coursegen savepoint reached.
-        upgrade_plugin_savepoint(true, 2025120703, 'local', 'coursegen');
+        upgrade_plugin_savepoint(true, 2026021801, 'local', 'coursegen');
+    }
+
+    if ($oldversion < 2026021803) {
+
+        // Define field coursedata to be added to local_coursegen_course_sessions.
+        $table = new xmldb_table('local_coursegen_course_sessions');
+        $field = new xmldb_field('coursedata', XMLDB_TYPE_TEXT, null, null, null, null, null, 'courseid');
+
+        // Conditionally launch add field coursedata.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Coursegen savepoint reached.
+        upgrade_plugin_savepoint(true, 2026021803, 'local', 'coursegen');
     }
 
     return true;
