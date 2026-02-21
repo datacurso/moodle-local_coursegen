@@ -25,20 +25,35 @@
 require('../../config.php');
 
 require_login();
-$id = required_param('id', PARAM_INT);
+$sessionid = required_param('sessionid', PARAM_INT);
 
-$url = new moodle_url('/local/coursegen/aicoursecreation.php', ['id' => $id]);
+$url = new moodle_url('/local/coursegen/aicoursecreation.php', ['sessionid' => $sessionid]);
 $PAGE->set_url($url);
 $PAGE->set_context(context_system::instance());
 
 $PAGE->set_heading($SITE->fullname);
 echo $OUTPUT->header();
 
-$record = $DB->get_record('local_coursegen_ai_course', ['id' => $id], '*', MUST_EXIST);
-
-echo html_writer::tag(
-    'pre',
-    json_encode($record, JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE)
+$record = $DB->get_record(
+    'local_coursegen_course_sessions',
+    ['id' => $sessionid, 'userid' => $USER->id],
+    '*',
+    MUST_EXIST
 );
+
+$baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
+$baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
+
+$client = new \aiprovider_datacurso\httpclient\ai_course_api(null, $baseurl, $baseurleu);
+$streamingurl = $client->get_streaming_url_for_session($record->session_id);
+
+echo $OUTPUT->render_from_template('local_coursegen/aicoursecreation_page', []);
+
+$PAGE->requires->js_call_amd('local_coursegen/aicoursecreation_page', 'init', [
+    [
+        'recordid' => (int) $record->id,
+        'streamingurl' => $streamingurl,
+    ],
+]);
 
 echo $OUTPUT->footer();
