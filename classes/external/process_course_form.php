@@ -41,7 +41,7 @@ require_once($CFG->dirroot . '/course/lib.php');
 require_once($CFG->dirroot . '/course/edit_form.php');
 
 /**
- * Web service that stores the full course form payload into local_coursegen_ai_course.
+ * Web service that stores the full course form payload into local_coursegen_course_sessions.
  */
 class process_course_form extends external_api {
 
@@ -62,7 +62,7 @@ class process_course_form extends external_api {
     /**
      * Process the AJAX submission of the course_edit_form.
      *
-     * On success, stores the validated form data as JSON in local_coursegen_ai_course
+     * On success, stores the validated form data as JSON in local_coursegen_course_sessions
      * and returns submitted=true with JSON-encoded result. Otherwise, returns
      * submitted=false without rendering HTML/JS.
      *
@@ -130,17 +130,6 @@ class process_course_form extends external_api {
             $selectedlang = $data->local_coursegen_lang ?? null;
             $generateimages = $data->local_coursegen_generate_images ?? 0;
 
-            // Store the validated data in local_coursegen_ai_course.
-            $record = new \stdClass();
-            $record->userid = $USER->id;
-            $record->coursedata = json_encode($data, JSON_UNESCAPED_UNICODE);
-            $record->timecreated = time();
-            $record->timemodified = $record->timecreated;
-
-            $aicourseid = $DB->insert_record('local_coursegen_ai_course', $record);
-
-            $url = new moodle_url('/local/coursegen/aicoursecreation.php', ['id' => $aicourseid]);
-
             if ($contexttype === ai_context::CONTEXT_TYPE_SYLLABUS && !empty($draftitemid)) {
                 $sessioncreate = [
                     'site_id' => ai_course::get_site_uuid(),
@@ -151,14 +140,24 @@ class process_course_form extends external_api {
                         'language' => $selectedlang,
                         'with_images' => (bool) $generateimages == 1,
                         'context_type' => $contexttype,
-                        'course_id' => $aicourseid,
                     ],
                 ];
 
                 $sessionid = ai_course::start_course_session($sessioncreate);
 
-                if (ai_context::save_syllabus_from_draft($aicourseid, $draftitemid)) {
-                    ai_context::upload_syllabus_to_ai($sessionid, $aicourseid);
+                $record = new \stdClass();
+                $record->userid = $USER->id;
+                $record->session_id = $sessionid;
+                $record->coursedata = json_encode($data, JSON_UNESCAPED_UNICODE);
+                $record->timecreated = time();
+                $record->timemodified = $record->timecreated;
+
+                $recordid = $DB->insert_record('local_coursegen_course_sessions', $record);
+
+                $url = new moodle_url('/local/coursegen/aicoursecreation.php', ['sessionid' => $recordid]);
+
+                if (ai_context::save_syllabus_from_draft($recordid, $draftitemid)) {
+                    ai_context::upload_syllabus_to_ai($sessionid, $recordid);
                 }
             }
 
@@ -166,7 +165,7 @@ class process_course_form extends external_api {
                 'submitted' => true,
                 'data' => [
                     'message' => 'course form processed',
-                    'recordid' => $aicourseid,
+                    'recordid' => $recordid,
                     'redirecturl' => $url->out(false),
                 ],
             ];
@@ -187,7 +186,7 @@ class process_course_form extends external_api {
             'submitted' => new external_value(PARAM_BOOL, 'If form was submitted and validated'),
             'data' => new external_single_structure([
                 'message' => new external_value(PARAM_TEXT, 'Informational message about processing'),
-                'recordid' => new external_value(PARAM_INT, 'ID of the stored local_coursegen_ai_course record'),
+                'recordid' => new external_value(PARAM_INT, 'ID of the stored local_coursegen_course_sessions record'),
                 'redirecturl' => new external_value(PARAM_URL, 'URL where the client should be redirected'),
             ], 'Processing result data', VALUE_OPTIONAL),
         ]);
