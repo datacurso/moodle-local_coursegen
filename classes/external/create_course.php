@@ -25,6 +25,7 @@
 namespace local_coursegen\external;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
+use context_coursecat;
 use local_coursegen\ai_course;
 use local_coursegen\mod_manager;
 use external_api;
@@ -51,48 +52,54 @@ class create_course extends external_api {
      */
     public static function execute_parameters() {
         return new external_function_parameters([
-            'courseid' => new external_value(PARAM_INT, 'Course ID'),
+            'recordid' => new external_value(PARAM_INT, 'Course planning session record ID'),
         ]);
     }
 
     /**
-     * Apply AI-generated course content to an existing course.
+     * Create a course from stored session data and apply AI-generated content.
      *
-     * @param int $courseid Course ID
+     * @param int $recordid Session record ID in local_coursegen_course_sessions
      * @return array Result of the course content application
      * @throws moodle_exception
      */
-    public static function execute($courseid) {
+    public static function execute($recordid) {
         global $CFG, $DB, $USER;
 
         try {
             $params = self::validate_parameters(self::execute_parameters(), [
-                'courseid' => $courseid,
+                'recordid' => $recordid,
             ]);
 
-            $courseid = $params['courseid'];
+            $recordid = $params['recordid'];
 
-            // Validate course exists and user has permission.
-            $course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
-            $coursecontext = \context_course::instance($course->id);
-            self::validate_context($coursecontext);
-            require_capability('moodle/course:manageactivities', $coursecontext);
-
-            // Validate that a session exists for this course and user.
+            // Validate that a session exists for this record and user.
             $session = $DB->get_record('local_coursegen_course_sessions', [
-                'courseid' => $course->id,
+                'id' => $recordid,
                 'userid' => $USER->id,
-            ]);
+            ], '*', MUST_EXIST);
 
-            if (!$session) {
-                return [
-                    'success' => false,
-                    'message' => get_string('error_no_session_found', 'local_coursegen', $course->id),
-                    'courseid' => $course->id,
-                    'shortname' => $course->shortname,
-                    'fullname' => $course->fullname,
-                ];
+            // Decode stored coursedata from the session.
+            if (empty($session->coursedata)) {
+                throw new moodle_exception('error_no_coursedata_found', 'local_coursegen');
             }
+
+            $coursedata = json_decode($session->coursedata);
+            if (!is_object($coursedata)) {
+                throw new moodle_exception('error_invalid_coursedata', 'local_coursegen');
+            }
+
+            // New course must be created, ensure id is zero.
+            $coursedata->id = 0;
+
+            if (empty($coursedata->category)) {
+                throw new moodle_exception('error_missing_category', 'local_coursegen');
+            }
+
+            // Validate user has permission to create a course in the target category.
+            $catcontext = context_coursecat::instance($coursedata->category);
+            self::validate_context($catcontext);
+            require_capability('moodle/course:create', $catcontext);
 
             // This request may take a long time depending on the complexity of the prompt that the AI ​​has to resolve.
             \core_php_time_limit::raise();
@@ -100,22 +107,22 @@ class create_course extends external_api {
             // Release the session so other tabs in the same session are not blocked.
             \core\session\manager::write_close();
 
+            require_once($CFG->dirroot . '/course/lib.php');
+
+            // Create the Moodle course from stored form data.
+            $course = create_course($coursedata);
+
+            // Persist course id in the session record and mark as creating (2).
+            $session->courseid = $course->id;
+            $session->status = 2;
+            $session->timemodified = time();
+            $DB->update_record('local_coursegen_course_sessions', $session);
+
             $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
             $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
 
             $client = new ai_course_api(null, $baseurl, $baseurleu);
-            $result = $client->request('GET', '/course/result?session_id=' . urlencode($session->session_id));
-
-            // Check if the plan is completed.
-            if (empty($result['status']) || $result['status'] !== 'completed') {
-                // Update session status to failed (4).
-                ai_course::update_session_status($session->id, 4);
-
-                return [
-                    'success' => false,
-                    'message' => 'Course plan is not completed yet',
-                ];
-            }
+            $result = $client->request('GET', '/course/result/' . urlencode($session->session_id));
 
             // Extract result data.
             $resultdata = $result['result'] ?? [];
@@ -154,7 +161,7 @@ class create_course extends external_api {
 
             return [
                 'success' => false,
-                'courseid' => $courseid ?? 0,
+                'courseid' => 0,
                 'shortname' => '',
                 'fullname' => '',
                 'message' => $e->getMessage(),
@@ -176,31 +183,6 @@ class create_course extends external_api {
             'message' => new external_value(PARAM_TEXT, 'Status message'),
             'courseurl' => new external_value(PARAM_URL, 'Course URL', VALUE_OPTIONAL),
         ]);
-    }
-
-    /**
-     * Generate a unique course shortname.
-     *
-     * @return string Unique shortname
-     */
-    private static function generate_unique_shortname() {
-        global $DB;
-
-        $baseprefix = 'AI_COURSE_';
-
-        // Get the highest existing number from AI_COURSE_ prefixed courses.
-        $sql = "SELECT shortname FROM {course} WHERE shortname LIKE ? ORDER BY shortname DESC LIMIT 1";
-        $lastcourse = $DB->get_field_sql($sql, [$baseprefix . '%']);
-
-        $nextnumber = 1;
-        if ($lastcourse) {
-            // Extract the number from the shortname (e.g., AI_COURSE_5 -> 5).
-            if (preg_match('/AI_COURSE_(\d+)/', $lastcourse, $matches)) {
-                $nextnumber = intval($matches[1]) + 1;
-            }
-        }
-
-        return $baseprefix . $nextnumber;
     }
 
     /**
