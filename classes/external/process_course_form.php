@@ -25,6 +25,7 @@
 
 namespace local_coursegen\external;
 
+use aiprovider_datacurso\httpclient\ai_course_api;
 use context_system;
 use core_external\external_api;
 use core_external\external_function_parameters;
@@ -32,6 +33,7 @@ use core_external\external_single_structure;
 use core_external\external_value;
 use local_coursegen\ai_course;
 use local_coursegen\ai_context;
+use local_coursegen\system_instruction;
 use moodle_url;
 
 defined('MOODLE_INTERNAL') || die();
@@ -126,28 +128,16 @@ class process_course_form extends external_api {
             $data = $form->get_data();
 
             $contexttype = $data->local_coursegen_context_type ?? '';
-            $draftitemid = (int) $data->local_coursegen_syllabus_pdf ?? 0;
+            $draftitemid = (int) ($data->local_coursegen_syllabus_pdf ?? 0);
             $selectedlang = $data->local_coursegen_lang ?? null;
             $generateimages = $data->local_coursegen_generate_images ?? 0;
 
+            $useinstruction = !empty($data->local_coursegen_use_system_instruction);
+            $selectedinstructionid = $useinstruction ? (int) ($data->local_coursegen_select_system_instruction ?? 0) : 0;
+
             if ($contexttype === ai_context::CONTEXT_TYPE_SYLLABUS && !empty($draftitemid)) {
-                $sessioncreate = [
-                    'site_id' => ai_course::get_site_uuid(),
-                    'site_url' => $CFG->wwwroot,
-                    'moodle_user_id' => $USER->id,
-                    'user_instructions' => '',
-                    'request_config' => [
-                        'language' => $selectedlang,
-                        'with_images' => (bool) $generateimages == 1,
-                        'context_type' => $contexttype,
-                    ],
-                ];
-
-                $sessionid = ai_course::start_course_session($sessioncreate);
-
                 $record = new \stdClass();
                 $record->userid = $USER->id;
-                $record->session_id = $sessionid;
                 $record->coursedata = json_encode($data, JSON_UNESCAPED_UNICODE);
                 $record->timecreated = time();
                 $record->timemodified = $record->timecreated;
@@ -157,7 +147,66 @@ class process_course_form extends external_api {
                 $url = new moodle_url('/local/coursegen/aicoursecreation.php', ['sessionid' => $recordid]);
 
                 if (ai_context::save_syllabus_from_draft($recordid, $draftitemid)) {
-                    ai_context::upload_syllabus_to_ai($sessionid, $recordid);
+                    $fs = get_file_storage();
+                    $syscontext = \context_system::instance();
+                    $files = $fs->get_area_files(
+                        $syscontext->id,
+                        'local_coursegen',
+                        ai_context::CONTEXT_TYPE_SYLLABUS,
+                        $recordid,
+                        'itemid',
+                        false
+                    );
+
+                    $file = $files ? reset($files) : false;
+                    if ($file) {
+                        $filepath = $file->copy_content_to_temp();
+
+                        $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
+                        $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
+
+                        $client = new ai_course_api(null, $baseurl, $baseurleu);
+
+                        $courseconfig = [
+                            'language' => $selectedlang ?? 'es',
+                            'with_images' => (bool) $generateimages == 1,
+                            'context_type' => $contexttype,
+                            'site_id' => ai_course::get_site_uuid(),
+                            'moodle_user_id' => (string) $USER->id,
+                            'site_url' => $CFG->wwwroot,
+                        ];
+
+                        // Resolve instructions text from selected system instruction, if any.
+                        $instructions = '';
+                        if ($selectedinstructionid > 0) {
+                            $instructionmodel = system_instruction::get_by_id($selectedinstructionid);
+                            if ($instructionmodel && !empty($instructionmodel->content)) {
+                                $instructions = (string) $instructionmodel->content;
+                            }
+                        }
+
+                        $extra = [
+                            'instructions' => $instructions,
+                            'config' => json_encode($courseconfig, JSON_UNESCAPED_UNICODE),
+                        ];
+
+                        $result = $client->upload_file(
+                            '/course/init',
+                            $filepath,
+                            $file->get_mimetype(),
+                            $file->get_filename(),
+                            $extra
+                        );
+
+                        if (!is_array($result) || empty($result['thread_id'])) {
+                            throw new \moodle_exception('error_starting_course_planning', 'local_coursegen');
+                        }
+
+                        $updaterecord = new \stdClass();
+                        $updaterecord->id = $recordid;
+                        $updaterecord->session_id = (string) $result['thread_id'];
+                        $DB->update_record('local_coursegen_course_sessions', $updaterecord);
+                    }
                 }
             }
 
