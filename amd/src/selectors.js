@@ -25,4 +25,11 @@ export const regions = {
     root: "[data-region='local_coursegen/aicoursecreation/root']",
     status: "[data-region='local_coursegen/aicoursecreation/status']",
     output: "[data-region='local_coursegen/aicoursecreation/output']",
+    threadId: "[data-region='local_coursegen/aicoursecreation/threadid']",
+    chat: "[data-region='local_coursegen/aicoursecreation/chat']",
+    feedbackPanel: "[data-region='local_coursegen/aicoursecreation/feedbackpanel']",
+    feedbackText: "[data-region='local_coursegen/aicoursecreation/feedbacktext']",
+    btnAccept: "[data-region='local_coursegen/aicoursecreation/btnaccept']",
+    btnRevise: "[data-region='local_coursegen/aicoursecreation/btnrevise']",
+    btnFetchResult: "[data-region='local_coursegen/aicoursecreation/fetchresult']",
 };
