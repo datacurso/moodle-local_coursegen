@@ -68,6 +68,14 @@ $functions = [
         'ajax' => true,
         'capabilities' => 'moodle/course:update',
     ],
+    'local_coursegen_course_planning_feedback' => [
+        'classname' => 'local_coursegen\external\course_planning_feedback',
+        'methodname' => 'execute',
+        'description' => 'Send human feedback for AI course planning session',
+        'type' => 'write',
+        'ajax' => true,
+        'loginrequired' => true,
+    ],
     'local_coursegen_validate_course_form' => [
         'classname' => 'local_coursegen\\external\\validate_course_form',
         'methodname' => 'execute',
