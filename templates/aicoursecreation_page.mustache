@@ -1,0 +1,81 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+
+<div class="container my-4" data-region="local_coursegen/aicoursecreation/root" data-recordid="{{recordid}}">
+    <h3 class="mb-3">AI Course planning</h3>
+
+    <div class="card mb-3">
+        <div class="card-body">
+            <div class="mb-2">
+                <strong>Context type:</strong>
+                <span>{{contexttype}}</span>
+            </div>
+
+            {{#pdffilename}}
+                <div class="mb-2">
+                    <strong>Syllabus PDF:</strong>
+                    <span>{{pdffilename}}</span>
+                </div>
+            {{/pdffilename}}
+
+            <div class="alert alert-info mb-3" data-region="local_coursegen/aicoursecreation/status">Connecting...</div>
+
+            <div
+                data-region="local_coursegen/aicoursecreation/output"
+                class="border rounded p-3 bg-white"
+                style="min-height: 520px; overflow-y: auto;"
+            >
+                Waiting...
+            </div>
+
+            <div
+                data-region="local_coursegen/aicoursecreation/feedbackpanel"
+                class="card mt-3 d-none"
+                style="background: #ffebee; border: 1px solid #f44336;"
+            >
+                <div class="card-body">
+                    <strong>Review required:</strong> The AI finished the plan. What do you want to do?
+
+                    <div class="mt-3">
+                        <button type="button" class="btn btn-success" data-region="local_coursegen/aicoursecreation/btnaccept">
+                            Accept plan
+                        </button>
+                    </div>
+
+                    <div class="row mt-3" style="align-items: end;">
+                        <div class="col">
+                            <label class="font-weight-bold" for="local-coursegen-feedback-text">Feedback</label>
+                            <input
+                                type="text"
+                                id="local-coursegen-feedback-text"
+                                class="form-control"
+                                data-region="local_coursegen/aicoursecreation/feedbacktext"
+                                placeholder="E.g. Make module 2 shorter and add a quiz..."
+                                value=""
+                            />
+                        </div>
+                        <div class="col-auto">
+                            <button type="button" class="btn btn-danger" data-region="local_coursegen/aicoursecreation/btnrevise">
+                                Request changes
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
