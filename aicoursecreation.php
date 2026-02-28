@@ -41,13 +41,38 @@ $record = $DB->get_record(
     MUST_EXIST
 );
 
+$contexttype = null;
+if (!empty($record->coursedata)) {
+    $coursedata = json_decode($record->coursedata);
+    if (!empty($coursedata) && !empty($coursedata->local_coursegen_context_type)) {
+        $contexttype = (string) $coursedata->local_coursegen_context_type;
+    }
+}
+
+$pdffilename = null;
+if ($contexttype === 'syllabus') {
+    $fs = get_file_storage();
+    $syscontext = context_system::instance();
+    $files = $fs->get_area_files($syscontext->id, 'local_coursegen', 'syllabus', $record->id, 'itemid', false);
+    if (!empty($files)) {
+        $file = reset($files);
+        if ($file) {
+            $pdffilename = $file->get_filename();
+        }
+    }
+}
+
 $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
 $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
 
 $client = new \aiprovider_datacurso\httpclient\ai_course_api(null, $baseurl, $baseurleu);
 $streamingurl = $client->get_streaming_url_for_session($record->session_id);
 
-echo $OUTPUT->render_from_template('local_coursegen/aicoursecreation_page', []);
+echo $OUTPUT->render_from_template('local_coursegen/aicoursecreation_page', [
+    'contexttype' => $contexttype,
+    'pdffilename' => $pdffilename,
+    'recordid' => (int) $record->id,
+]);
 
 $PAGE->requires->js_call_amd('local_coursegen/aicoursecreation_page', 'init', [
     [
