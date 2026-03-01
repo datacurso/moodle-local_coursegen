@@ -26,7 +26,7 @@
             <FIELDS>
                 <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
                 <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
-                <FIELD NAME="context_type" TYPE="char" LENGTH="20" NOTNULL="false" SEQUENCE="false" COMMENT="Type of context: system_instruction, syllabus or customprompt" />
+                <FIELD NAME="context_type" TYPE="char" LENGTH="20" NOTNULL="false" SEQUENCE="false" COMMENT="Type of context syllabus or customprompt" />
                 <FIELD NAME="system_instruction_id" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Selected system instruction ID if context_type is system_instruction" />
                 <FIELD NAME="lang" TYPE="char" LENGTH="20" NOTNULL="false" SEQUENCE="false" COMMENT="Language code to use in the AI requests. Example: es, en, etc." />
                 <FIELD NAME="prompt_text" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Custom prompt text when context_type is customprompt" />
@@ -72,22 +72,6 @@
                 <FIELD NAME="system_instruction_name" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" />
                 <FIELD NAME="sectionnum" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" />
                 <FIELD NAME="beforemod" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" />
-                <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
-                <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
-            </FIELDS>
-            <KEYS>
-                <KEY NAME="primary" TYPE="primary" FIELDS="id" />
-                <KEY NAME="courseid" TYPE="foreign" FIELDS="courseid" REFTABLE="course" REFFIELDS="id" />
-                <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id" />
-            </KEYS>
-        </TABLE>
-        
-        <TABLE NAME="local_coursegen_ai_course" COMMENT="Store raw course edit form data for AI processing">
-            <FIELDS>
-                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
-                <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" />
-                <FIELD NAME="userid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" />
-                <FIELD NAME="coursedata" TYPE="text" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
             </FIELDS>
