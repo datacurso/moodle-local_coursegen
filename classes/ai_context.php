@@ -62,47 +62,6 @@ class ai_context {
     }
 
     /**
-     * Uploads the syllabus file to the AI endpoint.
-     *
-     * The current AI service requires a valid session ID to associate uploads.
-     *
-     * @param string $sessionid Session ID from the AI service.
-     * @param int $itemid Item ID used to locate the syllabus file in system context.
-     */
-    public static function upload_syllabus_to_ai(string $sessionid, int $itemid): void {
-        $fs = get_file_storage();
-        $context = \context_system::instance();
-        $files = $fs->get_area_files($context->id, 'local_coursegen', self::CONTEXT_TYPE_SYLLABUS, $itemid, 'itemid', false);
-        if (empty($files)) {
-            return;
-        }
-
-        $file = reset($files);
-        if (!$file) {
-            return;
-        }
-
-        // Save the file temporarily.
-        $filepath = $file->copy_content_to_temp();
-
-        $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
-        $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
-
-        $client = new ai_course_api(null, $baseurl, $baseurleu);
-
-        $client->upload_file(
-            '/context/upload/syllabus',
-            $filepath,
-            $file->get_mimetype(),
-            $file->get_filename(),
-            [
-                'session_id' => $sessionid,
-                'site_id' => ai_course::get_site_uuid(),
-            ]
-        );
-    }
-
-    /**
      * Save syllabus PDF file from draft area to system context.
      *
      * @param int $itemid Item ID used to store the syllabus file in system context.
@@ -135,57 +94,6 @@ class ai_context {
             // Log the error or handle it as needed.
             debugging('Error saving syllabus from draft: ' . $e->getMessage(), DEBUG_DEVELOPER);
             return false;
-        }
-    }
-
-    /**
-     * Save course context data to database.
-     *
-     * @param int $courseid Course ID
-     * @param string $contexttype Context type (system_instruction, syllabus or customprompt)
-     * @param int|null $systeminstructionid Selected system instruction ID (if context type is system instruction)
-     * @param string|null $lang Language code to use in the AI requests
-     * @param string|null $prompttext Custom prompt text (if context type is custom prompt)
-     */
-    public static function save_course_context(
-        int $courseid,
-        string $contexttype,
-        ?int $systeminstructionid = null,
-        ?string $lang = null,
-        ?string $prompttext = null
-    ): void {
-        global $DB, $USER;
-
-        $now = time();
-
-        // Check if record already exists.
-        $existingrecord = $DB->get_record('local_coursegen_course_context', ['courseid' => $courseid]);
-
-        if ($existingrecord) {
-            // Update existing record.
-            $record = new \stdClass();
-            $record->id = $existingrecord->id;
-            $record->context_type = $contexttype;
-            $record->system_instruction_id = $systeminstructionid;
-            $record->lang = $lang;
-            $record->prompt_text = $prompttext;
-            $record->timemodified = $now;
-            $record->usermodified = $USER->id;
-
-            $DB->update_record('local_coursegen_course_context', $record);
-        } else {
-            // Create new record.
-            $record = new \stdClass();
-            $record->courseid = $courseid;
-            $record->context_type = $contexttype;
-            $record->system_instruction_id = $systeminstructionid;
-            $record->lang = $lang;
-            $record->prompt_text = $prompttext;
-            $record->timecreated = $now;
-            $record->timemodified = $now;
-            $record->usermodified = $USER->id;
-
-            $DB->insert_record('local_coursegen_course_context', $record);
         }
     }
 

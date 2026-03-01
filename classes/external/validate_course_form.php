@@ -31,6 +31,7 @@ use external_function_parameters;
 use external_multiple_structure;
 use external_single_structure;
 use external_value;
+use local_coursegen\local\service\course_form_validation_service;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -63,8 +64,6 @@ class validate_course_form extends external_api {
      * @return array The validation result and error list.
      */
     public static function execute(string $payload): array {
-        global $DB, $CFG;
-
         self::validate_parameters(self::execute_parameters(), [
             'payload' => $payload,
         ]);
@@ -74,64 +73,8 @@ class validate_course_form extends external_api {
         $data = [];
         parse_str($payload, $data);
 
-        // Rebuild minimal $course and $category similar to course/edit.php.
-        $course = null;
-        $category = null;
-
-        $courseid = isset($data['id']) ? (int)$data['id'] : 0;
-        $categoryid = isset($data['category']) ? (int)$data['category'] : 0;
-
-        if ($courseid) {
-            // Existing course: load full record so the form and custom fields have all data.
-            $course = get_course($courseid);
-            $category = $DB->get_record('course_categories', ['id' => $course->category], '*', MUST_EXIST);
-        } else {
-            // New course: resolve target category and build a minimal course object.
-            if ($categoryid) {
-                $category = $DB->get_record('course_categories', ['id' => $categoryid], '*', MUST_EXIST);
-            } else {
-                $category = \core_course_category::get_default();
-            }
-
-            $course = new \stdClass();
-            $course->id = 0;
-            $course->category = $category->id;
-        }
-
-        $editoroptions = [
-            'maxfiles' => 0,
-            'maxbytes' => $CFG->maxbytes,
-            'trusttext' => false,
-            'noclean' => true,
-        ];
-
-        $args = [
-            'course' => $course,
-            'category' => $category,
-            'editoroptions' => $editoroptions,
-            'returnto' => 0,
-            'returnurl' => '',
-        ];
-
-        $mform = new \course_edit_form(null, $args);
-
-        // Use the form's own validation logic.
-        $errorsassoc = $mform->validation($data, []);
-
-        $errorslist = [];
-        if (!empty($errorsassoc)) {
-            foreach ($errorsassoc as $field => $msg) {
-                $errorslist[] = [
-                    'field' => (string) $field,
-                    'msg' => (string) $msg,
-                ];
-            }
-        }
-
-        return [
-            'ok' => empty($errorslist),
-            'errors' => $errorslist,
-        ];
+        // Delegate the actual validation to the course form validation service.
+        return course_form_validation_service::validate($data);
     }
 
     /**

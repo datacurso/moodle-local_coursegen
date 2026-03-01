@@ -17,12 +17,8 @@
 namespace local_coursegen\hook;
 
 use core_course\hook\after_form_definition;
-use core_course\hook\after_form_definition_after_data;
-use core_course\hook\after_form_submission;
-use core_course\hook\after_form_validation;
-use local_coursegen\ai_context;
-use local_coursegen\ai_course;
-use local_coursegen\system_instruction;
+use local_coursegen\local\models\course_context;
+use local_coursegen\local\service\system_instruction_service;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -98,8 +94,8 @@ class course_form_hook {
         // Add context type selector.
         $contexttypes = [
             '' => get_string('choosedots'),
-            ai_context::CONTEXT_TYPE_CUSTOM_PROMPT => get_string('context_type_customprompt', 'local_coursegen'),
-            ai_context::CONTEXT_TYPE_SYLLABUS => get_string('context_type_syllabus', 'local_coursegen'),
+            course_context::CONTEXT_TYPE_CUSTOM_PROMPT => get_string('context_type_customprompt', 'local_coursegen'),
+            course_context::CONTEXT_TYPE_SYLLABUS => get_string('context_type_syllabus', 'local_coursegen'),
         ];
         $mform->addElement(
             'select',
@@ -122,7 +118,7 @@ class course_form_hook {
             'local_coursegen_custom_prompt',
             'local_coursegen_context_type',
             'neq',
-            ai_context::CONTEXT_TYPE_CUSTOM_PROMPT
+            course_context::CONTEXT_TYPE_CUSTOM_PROMPT
         );
 
         // Add field to upload syllabus PDF (shown only when context type is syllabus).
@@ -138,7 +134,12 @@ class course_form_hook {
             ]
         );
         $mform->addHelpButton('local_coursegen_syllabus_pdf', 'syllabus_pdf_field', 'local_coursegen');
-        $mform->hideIf('local_coursegen_syllabus_pdf', 'local_coursegen_context_type', 'neq', ai_context::CONTEXT_TYPE_SYLLABUS);
+        $mform->hideIf(
+            'local_coursegen_syllabus_pdf',
+            'local_coursegen_context_type',
+            'neq',
+            course_context::CONTEXT_TYPE_SYLLABUS
+        );
 
         // Add checkbox to enable the use of a system instruction as a complement.
         $mform->addElement(
@@ -149,12 +150,12 @@ class course_form_hook {
         );
         $mform->addHelpButton('local_coursegen_use_system_instruction', 'use_system_instruction_field', 'local_coursegen');
 
-        // Get system instructions from the database.
-        $instructions = system_instruction::get_all();
+        // Get system instructions from the service.
+        $instructions = system_instruction_service::get_all();
         $hasinstructions = !empty($instructions);
         if ($hasinstructions) {
             foreach ($instructions as $instruction) {
-                $instructionoptions[$instruction->id] = $instruction->name;
+                $instructionoptions[$instruction->get('id')] = $instruction->get('name');
             }
 
             // Add system instruction selector (shown only when the checkbox is enabled).

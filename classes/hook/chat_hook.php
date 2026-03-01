@@ -16,9 +16,7 @@
 
 namespace local_coursegen\hook;
 
-use aiprovider_datacurso\httpclient\ai_course_api;
 use core\hook\output\before_footer_html_generation;
-use local_coursegen\ai_course;
 
 /**
  * Hook to load the floating chat
@@ -36,7 +34,6 @@ class chat_hook {
     public static function before_footer_html_generation(before_footer_html_generation $hook): void {
         self::add_activity_ai_button();
         self::add_course_ai_button();
-        self::check_ai_course_creation();
     }
 
     /**
@@ -107,61 +104,6 @@ class chat_hook {
 
         if (self::can_create_course()) {
             $PAGE->requires->js_call_amd('local_coursegen/add_course_ai_button', 'init', []);
-        }
-    }
-
-    /**
-     * Check if course is being created with AI and open modal if needed
-     */
-    private static function check_ai_course_creation(): void {
-        global $PAGE, $COURSE, $CFG, $SESSION;
-
-        // Check if we are on course/view.php page.
-        $path = $PAGE->url->get_path();
-        $iscourseviewpage = strpos($path, '/course/view.php') !== false;
-        if (!$iscourseviewpage) {
-            return;
-        }
-
-        // Check if we have a valid course ID.
-        if (!isset($COURSE) || $COURSE->id <= 1) {
-            return;
-        }
-
-        // Get course session from database.
-        $session = ai_course::get_course_session($COURSE->id);
-        // If no session exists, return.
-        if (!$session) {
-            return;
-        }
-
-        // Check if session is in planning or creating status (1 or 2).
-        if ($session->status == 1 || $session->status == 2) {
-            if (!isset($SESSION->local_coursegen_modal_shown)) {
-                $SESSION->local_coursegen_modal_shown = [];
-            }
-
-            $shown = $SESSION->local_coursegen_modal_shown[$COURSE->id] ?? false;
-
-            if ($shown) {
-                ai_course::update_session_status($session->id, 4);
-                return;
-            }
-
-            $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
-            $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
-
-            $client = new ai_course_api(null, $baseurl, $baseurleu);
-            $streamingurl = $client->get_streaming_url_for_session($session->session_id);
-
-            $PAGE->requires->js_call_amd('local_coursegen/add_course_ai_modal', 'init', [
-                [
-                    'streamingurl' => $streamingurl,
-                    'courseid' => $COURSE->id,
-                ],
-            ]);
-
-            $SESSION->local_coursegen_modal_shown[$COURSE->id] = true;
         }
     }
 

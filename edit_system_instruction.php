@@ -26,8 +26,8 @@ require_once('../../config.php');
 require_once($CFG->libdir . '/adminlib.php');
 
 use local_coursegen\form\system_instruction_form;
-use local_coursegen\system_instruction;
 use local_coursegen\ai_context;
+use local_coursegen\local\service\system_instruction_service;
 
 
 admin_externalpage_setup('local_coursegen_edit_system_instruction');
@@ -42,52 +42,49 @@ $PAGE->set_url('/local/coursegen/edit_system_instruction.php', ['id' => $id]);
 $PAGE->set_pagelayout('admin');
 $PAGE->navigation->override_active_url(new moodle_url('/local/coursegen/manage_system_instructions.php'));
 
-$modelobj = null;
+/** @var \local_coursegen\local\models\system_instruction|null $instruction */
+$instruction = null;
 if ($id > 0) {
-    $modelobj = system_instruction::get_by_id($id);
-    if (!$modelobj) {
+    $instruction = system_instruction_service::get_by_id($id);
+    if (!$instruction) {
         throw new moodle_exception('invalidsysteminstruction', 'local_coursegen');
     }
     $PAGE->set_title(get_string('editsysteminstruction', 'local_coursegen'));
     $PAGE->set_heading(get_string('editsysteminstruction', 'local_coursegen'));
-    // Set navigation breadcrumb.
     $PAGE->navbar->add(get_string('editsysteminstruction', 'local_coursegen'));
 } else {
-    $modelobj = new system_instruction();
     $PAGE->set_title(get_string('addsysteminstruction', 'local_coursegen'));
     $PAGE->set_heading(get_string('addsysteminstruction', 'local_coursegen'));
-    // Set navigation breadcrumb.
     $PAGE->navbar->add(get_string('addsysteminstruction', 'local_coursegen'));
 }
 
 $form = new system_instruction_form();
 
-// Set form data if editing.
-if ($modelobj && $modelobj->id > 0) {
+if ($instruction && $instruction->get('id')) {
     $formdata = new stdClass();
-    $formdata->id = $modelobj->id;
-    $formdata->name = $modelobj->name;
-
-    // Prepare content for editor.
+    $formdata->id = $instruction->get('id');
+    $formdata->name = $instruction->get('name');
     $formdata->content_editor = [
-        'text' => $modelobj->content,
+        'text' => $instruction->get('content'),
         'format' => FORMAT_HTML,
     ];
-
     $form->set_data($formdata);
 }
 
 if ($form->is_cancelled()) {
     redirect(new moodle_url('/local/coursegen/manage_system_instructions.php'));
-} else if ($data = $form->get_data()) {
-    // Update model object with form data.
-    $modelobj->name = trim($data->name);
-    $modelobj->content = $data->content_editor['text'];
+}
 
-    // Save the system instruction.
-    $modelobj->save();
+if ($data = $form->get_data()) {
+    $name = trim($data->name);
+    $content = $data->content_editor['text'];
 
-    ai_context::upload_model_to_ai($modelobj);
+    if (!empty($data->id)) {
+        system_instruction_service::update((int)$data->id, $name, $content);
+    } else {
+        system_instruction_service::create($name, $content);
+    }
+
     redirect(
         new moodle_url('/local/coursegen/manage_system_instructions.php'),
         get_string('systeminstructionsaved', 'local_coursegen'),

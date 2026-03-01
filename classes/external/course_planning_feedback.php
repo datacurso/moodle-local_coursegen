@@ -25,12 +25,13 @@
 
 namespace local_coursegen\external;
 
-use aiprovider_datacurso\httpclient\ai_course_api;
 use context_system;
 use core_external\external_api;
 use core_external\external_function_parameters;
 use core_external\external_single_structure;
 use core_external\external_value;
+use local_coursegen\local\service\ai_course_api_service;
+use local_coursegen\local\service\course_session_service;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -62,7 +63,7 @@ class course_planning_feedback extends external_api {
      * @return array
      */
     public static function execute(int $recordid, string $approvalstatus, string $instruction = ''): array {
-        global $CFG, $DB, $USER;
+        global $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'recordid' => $recordid,
@@ -70,53 +71,33 @@ class course_planning_feedback extends external_api {
             'instruction' => $instruction,
         ]);
 
-        $recordid = (int) $params['recordid'];
-        $approvalstatus = (string) $params['approval_status'];
-        $instruction = (string) $params['instruction'];
+        $recordid = $params['recordid'];
+        $approvalstatus = $params['approval_status'];
+        $instruction = $params['instruction'];
 
         $context = context_system::instance();
         self::validate_context($context);
 
-        $session = $DB->get_record('local_coursegen_course_sessions', [
-            'id' => $recordid,
-            'userid' => $USER->id,
-        ], '*', MUST_EXIST);
+        $session = course_session_service::get_user_session($recordid, $USER->id);
+        $sessionid = $session->get('session_id');
 
-        if (empty($session->session_id)) {
-            return [
-                'success' => false,
-                'message' => 'Missing session_id for planning session',
-                'action' => null,
-            ];
+        if (!$sessionid) {
+            throw new \moodle_exception('error_no_session_found', 'local_coursegen');
         }
 
-        $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
-        $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
-
-        $client = new ai_course_api(null, $baseurl, $baseurleu);
-
-        $payload = [
-            'approval_status' => $approvalstatus,
-            'instruction' => $instruction,
-        ];
-
-        $endpoint = '/course/feedback/' . $session->session_id;
+        $apiservice = new ai_course_api_service();
 
         try {
-            $result = $client->request('POST', $endpoint, $payload);
-        } catch (\Exception $e) {
-            return [
-                'success' => false,
-                'message' => $e->getMessage(),
-                'action' => null,
-            ];
+            $result = $apiservice->send_planning_feedback($sessionid, $approvalstatus, $instruction);
+        } catch (\moodle_exception $e) {
+            throw new \moodle_exception('error_sending_feedback', 'local_coursegen', '', $e->getMessage());
         }
 
         $action = $result['action'] ?? null;
 
         return [
             'success' => true,
-            'message' => 'Feedback sent',
+            'message' => get_string('message_sent_successfully', 'local_coursegen'),
             'action' => $action,
         ];
     }

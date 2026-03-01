@@ -22,6 +22,9 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use local_coursegen\local\models\system_instruction;
+use local_coursegen\local\service\system_instruction_service;
+
 require_once('../../config.php');
 require_once($CFG->libdir . '/adminlib.php');
 
@@ -42,7 +45,9 @@ $PAGE->set_heading(get_string('managesysteminstructions', 'local_coursegen'));
 if ($action === 'delete' && $id > 0) {
     if ($confirm && confirm_sesskey()) {
         // Soft delete the system instruction.
-        $DB->set_field('local_coursegen_system_instruction', 'deleted', 1, ['id' => $id]);
+        $model = new system_instruction($id);
+        $model->set('deleted', 1);
+        $model->update();
         redirect(
             $PAGE->url,
             get_string('systeminstructiondeleted', 'local_coursegen'),
@@ -51,7 +56,7 @@ if ($action === 'delete' && $id > 0) {
         );
     } else {
         // Show confirmation dialog.
-        $model = $DB->get_record('local_coursegen_system_instruction', ['id' => $id, 'deleted' => 0], '*', MUST_EXIST);
+        $model = system_instruction::get_record(['id' => $id, 'deleted' => 0]);
 
         echo $OUTPUT->header();
         echo $OUTPUT->heading(get_string('deletesysteminstruction', 'local_coursegen'));
@@ -64,7 +69,7 @@ if ($action === 'delete' && $id > 0) {
 
         echo $OUTPUT->confirm(
             get_string('confirmdeletesysteminstruction', 'local_coursegen') .
-                '<br><strong>' . format_string($model->name) . '</strong>',
+                '<br><strong>' . format_string($model->get('name')) . '</strong>',
             $confirmurl,
             $cancelurl
         );
@@ -93,18 +98,18 @@ $table->head = [
 ];
 $table->attributes['class'] = 'table table-striped';
 
-// Get system instructions from database.
-$models = $DB->get_records('local_coursegen_system_instruction', ['deleted' => 0], 'timecreated DESC');
+// Get system instructions from service (handles filtering and ordering).
+$instructions = system_instruction_service::get_all();
 
-if (empty($models)) {
+if (empty($instructions)) {
     echo html_writer::div(
         html_writer::tag('p', get_string('nosysteminstructions', 'local_coursegen'), ['class' => 'alert alert-info']),
         'mt-3'
     );
 } else {
-    foreach ($models as $model) {
-        $editurl = new moodle_url('/local/coursegen/edit_system_instruction.php', ['id' => $model->id]);
-        $deleteurl = new moodle_url($PAGE->url, ['action' => 'delete', 'id' => $model->id]);
+    foreach ($instructions as $instruction) {
+        $editurl = new moodle_url('/local/coursegen/edit_system_instruction.php', ['id' => $instruction->get('id')]);
+        $deleteurl = new moodle_url($PAGE->url, ['action' => 'delete', 'id' => $instruction->get('id')]);
 
         $editicon = $OUTPUT->pix_icon('t/edit', get_string('edit', 'local_coursegen'));
         $deleteicon = $OUTPUT->pix_icon('t/delete', get_string('delete', 'local_coursegen'));
@@ -113,9 +118,9 @@ if (empty($models)) {
         $actions .= html_writer::link($deleteurl, $deleteicon, ['title' => get_string('delete', 'local_coursegen')]);
 
         $table->data[] = [
-            format_string($model->name),
-            userdate($model->timecreated),
-            userdate($model->timemodified),
+            format_string($instruction->get('name')),
+            userdate($instruction->get('timecreated')),
+            userdate($instruction->get('timemodified')),
             $actions,
         ];
     }
