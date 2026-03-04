@@ -58,6 +58,32 @@ class ai_course_api_service {
     }
 
     /**
+     * Get the streaming URL for a given activity generation thread/job.
+     *
+     * @param string $jobid External job/thread identifier.
+     * @return string Streaming URL.
+     */
+    public function get_mod_streaming_url_for_job(string $jobid): string {
+        return $this->client->get_mod_streaming_url_for_job($jobid);
+    }
+
+    /**
+     * Start the AI activity generation process by sending a JSON payload to the activity init endpoint.
+     *
+     * @param array $payload Payload to send to the API (instructions, config, etc.).
+     * @return array Decoded response from the API.
+     */
+    public function start_activity(array $payload): array {
+        $result = $this->client->request('POST', '/activity/init', $payload);
+
+        if (!is_array($result) || empty($result['thread_id'])) {
+            throw new \moodle_exception('error_generating_resource', 'local_coursegen');
+        }
+
+        return $result;
+    }
+
+    /**
      * Upload the syllabus file for an existing planning session.
      *
      * @param string $sessionid External planning session identifier (thread_id).
@@ -103,6 +129,17 @@ class ai_course_api_service {
      */
     public function get_course_result(string $sessionid): array {
         $endpoint = '/course/result/' . urlencode($sessionid);
+        return $this->client->request('GET', $endpoint);
+    }
+
+    /**
+     * Retrieve the activity result for a module generation thread.
+     *
+     * @param string $threadid External activity generation identifier (currentThreadId).
+     * @return array Decoded response from the API.
+     */
+    public function get_activity_result(string $threadid): array {
+        $endpoint = '/activity/result/' . urlencode($threadid);
         return $this->client->request('GET', $endpoint);
     }
 }
