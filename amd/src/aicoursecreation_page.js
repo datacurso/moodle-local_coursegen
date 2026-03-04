@@ -197,6 +197,9 @@ export const init = async(params) => {
                     accumulatedMarkdown += data.text || '';
                 } else if (data && data.type === 'status') {
                     setStatus(data.text || '', true, false);
+                } else if (data && data.type === 'done') {
+                    // Ignore terminal JSON messages like {"type":"done"} so they are not shown in the markdown.
+                    return;
                 } else if (data && data.type === 'completed') {
                     if (eventSource) eventSource.close();
                     await handleCourseCreation();
