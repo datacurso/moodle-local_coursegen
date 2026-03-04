@@ -94,6 +94,7 @@ $string['error_label'] = 'Error';
 $string['error_missing_parameters'] = 'Could not get parameters to create the module from the AI response. Please try again.';
 $string['error_missing_resource_type'] = 'Could not get the resource type from the AI response. Please try again.';
 $string['error_no_course_id'] = 'Could not get course ID';
+$string['error_no_module_job_found'] = 'No module generation job was found for this course and user.';
 $string['error_no_session_found'] = 'No planning session found for this course and user.';
 $string['error_no_coursedata_found'] = 'No stored course data was found for this planning session.';
 $string['error_invalid_coursedata'] = 'Stored course data for this planning session is invalid.';

@@ -93,6 +93,7 @@ $string['error_label'] = 'Error';
 $string['error_missing_parameters'] = 'No se han podido obtener los parámetros para crear el módulo a partir de la respuesta de la IA. Por favor, inténtalo de nuevo.';
 $string['error_missing_resource_type'] = 'No se ha podido obtener el tipo de recurso a partir de la respuesta de la IA. Por favor, inténtalo de nuevo.';
 $string['error_no_course_id'] = 'No se ha podido obtener el ID del curso';
+$string['error_no_module_job_found'] = 'No se encontró ningún trabajo de generación de módulo para este curso y usuario.';
 $string['error_no_session_found'] = 'No se ha encontrado ninguna sesión de planificación para este curso y usuario.';
 $string['error_no_coursedata_found'] = 'No se encontraron datos de curso almacenados para esta sesión de planificación.';
 $string['error_invalid_coursedata'] = 'Los datos de curso almacenados para esta sesión de planificación no son válidos.';
