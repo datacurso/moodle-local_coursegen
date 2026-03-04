@@ -26,7 +26,6 @@ require_once('../../config.php');
 require_once($CFG->libdir . '/adminlib.php');
 
 use local_coursegen\form\system_instruction_form;
-use local_coursegen\ai_context;
 use local_coursegen\local\service\system_instruction_service;
 
 
