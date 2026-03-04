@@ -33,3 +33,12 @@ export const regions = {
     btnRevise: "[data-region='local_coursegen/aicoursecreation/btnrevise']",
     btnFetchResult: "[data-region='local_coursegen/aicoursecreation/fetchresult']",
 };
+
+export const activityRegions = {
+    root: "[data-region='local_coursegen/activity/root']",
+    userMessages: "[data-region='local_coursegen/activity/user_messages']",
+    streamingSection: "[data-region='local_coursegen/activity/streaming']",
+    form: "[data-region='local_coursegen/activity/form']",
+    promptTextarea: "[data-region='local_coursegen/activity/prompt']",
+    sendButton: "[data-region='local_coursegen/activity/send']",
+};
