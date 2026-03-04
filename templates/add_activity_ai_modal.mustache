@@ -29,7 +29,7 @@
         "sectionnum": 1
     }
 }}
-<div class="local_coursegen_ai_chat pb-4 container" aria-label="{{#str}} addactivityai_arialabel, local_coursegen {{/str}}">
+<div class="local_coursegen_ai_chat pb-4 container" aria-label="{{#str}} addactivityai_arialabel, local_coursegen {{/str}}" data-region="local_coursegen/activity/root">
     <!-- Welcome Message -->
     <div class="row justify-content-center">
         <div class="col-lg-10">
@@ -41,15 +41,18 @@
 
     <!-- User Messages Section -->
     <div class="row justify-content-center">
-        <div id="activity-user-messages" class="col-lg-10" style="display: none;">
+        <div class="col-lg-10" data-region="local_coursegen/activity/user_messages" style="display: none;">
             <!-- User messages will be added here -->
         </div>
     </div>
 
-    <!-- Streaming Phase Section -->
+    <!-- Streaming Phase Section (reuse course streaming structure inside modal) -->
     <div class="row justify-content-center">
-        <div id="activity-streaming-section" class="col-lg-10" style="display: none;">
-            {{> local_coursegen/course_streaming_inline}}
+        <div class="col-lg-10" data-region="local_coursegen/activity/streaming" style="display: none;">
+            <div data-region="local_coursegen/aicoursecreation/output"
+                 class="mb-4 text-dark"
+                 style="font-size: 1.05rem; line-height: 1.7;">
+            </div>
         </div>
     </div>
 </div>
