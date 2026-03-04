@@ -21,346 +21,294 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-define([
-  "core/templates",
-  "core/notification",
-  "core/modal",
-  "core/custom_interaction_events",
-  "core/str",
-  "local_coursegen/repository/chatbot",
-  "local_coursegen/module_streaming",
-], (
-  Templates,
-  Notification,
-  Modal,
-  CustomEvents,
-  Str,
-  chatbotRepository,
-  moduleStreaming
-) => {
-  const LINK_SELECTOR = '[data-action="local_coursegen/add_activity_ai"]';
+import Templates from 'core/templates';
+import Notification from 'core/notification';
+import Modal from 'core/modal';
+import CustomEvents from 'core/custom_interaction_events';
+import {get_string as getString} from 'core/str';
+import {createModStream} from 'local_coursegen/repository/activity';
+import * as activityStreamingPage from 'local_coursegen/activity_creation_page';
+import {regions, activityRegions} from 'local_coursegen/selectors';
 
-  let modal = null;
-  let initialized = false;
+const LINK_SELECTOR = '[data-action="local_coursegen/add_activity_ai"]';
 
-  // Global state for scroll behavior
-  let userHasScrolled = false;
-  let scrollTimeout = null;
+let modal = null;
+let initialized = false;
 
-  /**
-   * Check if user is at the bottom of the scrollable container
-   * @param {Element} element - The scrollable element
-   * @returns {boolean} - True if user is at bottom
-   */
-  const isAtBottom = (element) => {
-    const threshold = 50; // 50px threshold
-    return (
-      element.scrollTop + element.clientHeight >=
-      element.scrollHeight - threshold
-    );
-  };
+/**
+ * Escape HTML for safe text insertion.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
+const escapeHtml = (value) => {
+    return String(value || '')
+        .replaceAll('&', '&amp;')
+        .replaceAll('<', '&lt;')
+        .replaceAll('>', '&gt;');
+};
 
-  /**
-   * Setup scroll detection to pause auto-scroll when user scrolls manually
-   * @param {Element} scrollContainer - The container to monitor for scroll
-   */
-  const setupScrollDetection = (scrollContainer) => {
-    if (!scrollContainer) {
-      return;
+/**
+ * Append a small "you asked" badge message to the user messages container.
+ *
+ * @param {HTMLElement|null} container
+ * @param {string} prompt
+ */
+const appendUserPromptMessage = (container, prompt) => {
+    if (!container) {
+        return;
     }
 
-    const handleScroll = () => {
-      // Clear existing timeout
-      if (scrollTimeout) {
-        clearTimeout(scrollTimeout);
-      }
+    container.style.display = 'block';
 
-      // Mark that user has scrolled
-      userHasScrolled = true;
+    const wrapper = document.createElement('div');
+    wrapper.className = 'd-flex justify-content-end my-3 border-top pt-3 mt-4';
 
-      // Check if user scrolled back to bottom
-      if (isAtBottom(scrollContainer)) {
-        // Reset flag after a short delay to resume auto-scroll
-        scrollTimeout = setTimeout(() => {
-          userHasScrolled = false;
-        }, 1000);
-      }
-    };
+    const safePrompt = escapeHtml(prompt);
+    wrapper.innerHTML = '' +
+        '<span class="badge badge-light border border-secondary text-muted p-2" style="font-size: 0.9rem;">' +
+        '<i class="fa fa-user mr-1"></i> Tú pediste: ' + safePrompt +
+        '</span>';
 
-    scrollContainer.addEventListener("scroll", handleScroll, { passive: true });
-  };
+    container.appendChild(wrapper);
+    window.scrollTo({top: document.body.scrollHeight, behavior: 'smooth'});
+};
 
-  const init = () => {
+/**
+ * Wire chat form handlers inside the modal.
+ *
+ * @param {HTMLElement} rootElement
+ * @param {{courseid: number, sectionnum: number, beforemod: (number|null)}} payload
+ */
+const wireChatHandlers = (rootElement, payload) => {
+    const formElement = rootElement.querySelector(activityRegions.form);
+    const textareaElement = rootElement.querySelector(activityRegions.promptTextarea);
+    const sendButtonElement = rootElement.querySelector(activityRegions.sendButton);
+    const chatRadios = rootElement.querySelectorAll("input[name='generate_images']");
+    const streamingSectionElement = rootElement.querySelector(activityRegions.streamingSection);
+
+    if (!formElement) {
+        return;
+    }
+
+    formElement.addEventListener('submit', (e) => {
+        e.preventDefault();
+
+        if (textareaElement) {
+            textareaElement.disabled = true;
+        }
+
+        if (sendButtonElement) {
+            sendButtonElement.disabled = true;
+        }
+
+        if (chatRadios && chatRadios.length) {
+            chatRadios.forEach((rb) => {
+                rb.disabled = true;
+            });
+        }
+
+        submitActivityPrompt(formElement, streamingSectionElement, rootElement, payload);
+    });
+
+    if (textareaElement) {
+        textareaElement.addEventListener('keydown', (e) => {
+            if (e.key === 'Enter' && !e.shiftKey) {
+                e.preventDefault();
+                formElement.requestSubmit();
+            }
+        });
+    }
+};
+
+/**
+ * Handle activity chat form submission.
+ *
+ * @param {HTMLFormElement} formElement
+ * @param {HTMLElement|null} streamingSectionElement
+ * @param {HTMLElement} rootElement
+ * @param {{courseid: number, sectionnum: number, beforemod: (number|null)}} payload
+ */
+async function submitActivityPrompt(formElement, streamingSectionElement, rootElement, payload) {
+    const textarea = formElement.querySelector(activityRegions.promptTextarea);
+    const sendButton = formElement.querySelector(activityRegions.sendButton);
+    const chatRadios = formElement.querySelectorAll("input[name='generate_images']");
+    const prompt = String(textarea && textarea.value ? textarea.value : '').trim();
+    if (!prompt) {
+        if (textarea) {
+            textarea.focus();
+        }
+        return;
+    }
+
+    const selectedRadio = formElement.querySelector('input[name="generate_images"]:checked');
+    const generateimages = selectedRadio ? Number(selectedRadio.value || 0) || 0 : 0;
+
+    const courseid = payload.courseid;
+    const sectionnum = payload.sectionnum;
+    const beforemod = payload.beforemod;
+
+    const reviewActionsContainer = rootElement.querySelector('.local-coursegen-review-actions');
+    if (reviewActionsContainer) {
+        reviewActionsContainer.remove();
+    }
+
+    if (textarea) {
+        textarea.value = '';
+    }
+
+    if (sendButton) {
+        sendButton.disabled = true;
+    }
+
+    if (chatRadios && chatRadios.length) {
+        chatRadios.forEach((rb) => {
+            rb.disabled = true;
+        });
+    }
+
+    if (streamingSectionElement) {
+        streamingSectionElement.style.display = 'block';
+    }
+
+    const outputElement = rootElement.querySelector(regions.output);
+    appendUserPromptMessage(outputElement || null, prompt);
+
+    try {
+        const response = await createModStream({
+            courseid,
+            sectionnum,
+            beforemod,
+            prompt,
+            generateimages,
+        });
+        await handleStreamingResponse(response, streamingSectionElement, rootElement, {
+            courseid,
+            sectionnum,
+            beforemod,
+        });
+    } catch (err) {
+        Notification.exception(err);
+    }
+}
+
+/**
+ * Handle the response from the createModStream webservice call.
+ *
+ * @param {Object} response
+ * @param {HTMLElement|null} streamingSectionElement
+ * @param {HTMLElement} rootElement
+ * @param {{courseid: number, sectionnum: (number|null), beforemod: (number|null)}} ctx
+ */
+async function handleStreamingResponse(response, streamingSectionElement, rootElement, ctx) {
+    if (!response || !response.ok || !response.streamingurl) {
+        Notification.alert(
+            '',
+            response && response.message
+                ? response.message
+                : 'Error al iniciar la generación de la actividad.',
+            'close'
+        );
+        return;
+    }
+
+    if (streamingSectionElement) {
+        streamingSectionElement.style.display = 'block';
+    }
+
+    await activityStreamingPage.init({
+        streamingurl: response.streamingurl,
+        courseid: ctx.courseid,
+        sectionnum: ctx.sectionnum,
+        beforemod: ctx.beforemod,
+        jobid: response.job_id || '',
+        root: rootElement,
+    });
+}
+
+/**
+ * Initialize the click handler for the add activity AI trigger.
+ */
+export const init = () => {
     if (initialized) {
-      return;
+        return;
     }
     initialized = true;
 
-    const events = [
-      "click",
-      CustomEvents.events.activate,
-      CustomEvents.events.keyboardActivate,
-    ];
-
+    const events = ['click', CustomEvents.events.activate, CustomEvents.events.keyboardActivate];
     CustomEvents.define(document, events);
 
     events.forEach((event) => {
-      document.addEventListener(event, async (e) => {
-        const link = e.target.closest(LINK_SELECTOR);
-        if (!link) {
-          return;
-        }
-        e.preventDefault();
-        const payload = readDataset(link);
-        await openChatModal(payload);
-      });
+        document.addEventListener(event, async(e) => {
+            const link = e.target.closest(LINK_SELECTOR);
+            if (!link) {
+                return;
+            }
+            e.preventDefault();
+            const payload = readDataset(link);
+            await openChatModal(payload);
+        });
     });
-  };
+};
 
-  const readDataset = (el) => {
-    const { sectionnum, beforemod } = el.dataset;
+/**
+ * Read expected dataset values.
+ *
+ * @param {HTMLElement} el
+ * @returns {{sectionnum: number, beforemod: (number|null), courseid: (number|null)}}
+ */
+const readDataset = (el) => {
+    const {sectionnum, beforemod, courseid} = el.dataset;
     return {
-      sectionnum: Number(sectionnum),
-      beforemod: beforemod ? Number(beforemod) : null,
+        sectionnum: Number(sectionnum),
+        beforemod: beforemod ? Number(beforemod) : null,
+        courseid: courseid ? Number(courseid) : null,
     };
-  };
+};
 
-  const openChatModal = async (payload) => {
+/**
+ * Open the activity AI modal.
+ *
+ * @param {{courseid: number, sectionnum: number, beforemod: (number|null)}} payload
+ */
+export const openChatModal = async(payload) => {
     try {
-      // If there is already an open modal, close it first
-      if (modal) {
-        await modal.destroy();
-        modal = null;
-      }
-
-      const [bodyHTML, footerHTML] = await Promise.all([
-        Templates.render("local_coursegen/add_activity_ai_modal", {}),
-        Templates.render("local_coursegen/activity_chat_footer", {}),
-      ]);
-
-      const title = await Str.get_string(
-        "addactivityai_modaltitle",
-        "local_coursegen"
-      );
-
-      modal = await Modal.create({
-        title,
-        body: bodyHTML,
-        footer: footerHTML,
-        large: true,
-        scrollable: true,
-        removeOnClose: true,
-      });
-
-      // Align width/appearance with course AI modal.
-      modal.getRoot().addClass("local_coursegen_course_ai_modal");
-
-      // Explicitly show after creation (no show: true in options).
-      modal.show();
-
-      // Handle modal close event
-      modal.getRoot().on("hidden.bs.modal", () => {
         if (modal) {
-          modal.destroy();
-          modal = null;
+            await modal.destroy();
+            modal = null;
         }
-      });
-      // Reset scroll state and setup detection
-      userHasScrolled = false;
-      if (scrollTimeout) {
-        clearTimeout(scrollTimeout);
-        scrollTimeout = null;
-      }
 
-      // Setup scroll detection on modal body
-      const modalBody = modal.getBody()[0];
-      if (modalBody) {
-        setupScrollDetection(modalBody);
-      }
+        const [bodyHTML, footerHTML] = await Promise.all([
+            Templates.render('local_coursegen/add_activity_ai_modal', {}),
+            Templates.render('local_coursegen/activity_chat_footer', {}),
+        ]);
 
-      // Chat handlers
-      const bodyEl = modal.getBody()[0];
-      const footerEl = modal.getFooter()[0];
-      wireChatHandlers(bodyEl, footerEl, payload);
+        const title = await getString('addactivityai_modaltitle', 'local_coursegen');
+
+        modal = await Modal.create({
+            title,
+            body: bodyHTML,
+            footer: footerHTML,
+            large: true,
+            scrollable: true,
+            removeOnClose: true,
+        });
+
+        modal.getRoot().addClass('local_coursegen_course_ai_modal');
+        modal.show();
+
+        const rootElement = modal.getRoot()[0];
+        if (rootElement) {
+            wireChatHandlers(rootElement, payload);
+        }
+
+        modal.getRoot().on('hidden.bs.modal', () => {
+            if (modal) {
+                modal.destroy();
+                modal = null;
+            }
+        });
     } catch (err) {
-      Notification.exception(err);
+        Notification.exception(err);
     }
-  };
-
-  const wireChatHandlers = (container, footerContainer, payload) => {
-    const streamingSection = container.querySelector(
-      "#activity-streaming-section"
-    );
-    const userMessagesSection = container.querySelector(
-      "#activity-user-messages"
-    );
-    const form = footerContainer.querySelector("form.local_coursegen_ai_input");
-    const textarea = form.querySelector("textarea");
-    const sendBtn = form.querySelector(".local_coursegen_ai_send");
-
-    // Send on submit.
-    form.addEventListener("submit", async (e) => {
-      e.preventDefault();
-      const prompt = textarea.value.trim();
-      if (!prompt) {
-        return;
-      }
-
-      pushUser(userMessagesSection, prompt);
-
-      // Show user messages section
-      if (userMessagesSection) {
-        userMessagesSection.style.display = "block";
-      }
-
-      const generateImages = document.querySelector(
-        'input[name="generate_images"]:checked'
-      ).value;
-
-      textarea.value = "";
-
-      // Disable form elements
-      sendBtn.disabled = true;
-      textarea.disabled = true;
-      const radioButtons = document.querySelectorAll(
-        'input[name="generate_images"]'
-      );
-      radioButtons.forEach((rb) => {
-        rb.disabled = true;
-      });
-      setLoading(sendBtn, true);
-
-      try {
-        // Start streaming job
-        const response = await chatbotRepository.createModStream({
-          ...payload,
-          prompt,
-          generateimages: generateImages,
-        });
-
-        if (!response.ok) {
-          throw new Error(response.message);
-        }
-
-        // Show and use the integrated streaming section
-        if (streamingSection) {
-          streamingSection.style.display = "block";
-
-          // Update progress indicator text for activity creation
-          const progressIndicator = streamingSection.querySelector(
-            "[data-region='local_coursegen/course_streaming/progress']"
-          );
-          if (progressIndicator) {
-            const titleElement = progressIndicator.querySelector("h6, h5");
-            const subtitleElement = progressIndicator.querySelector("small");
-            if (titleElement) {
-              const titleText = await Str.get_string(
-                "module_creation_title",
-                "local_coursegen"
-              );
-              titleElement.textContent = titleText;
-            }
-            if (subtitleElement) {
-              const subtitleText = await Str.get_string(
-                "module_creation_subtitle",
-                "local_coursegen"
-              );
-              subtitleElement.textContent = subtitleText;
-            }
-            progressIndicator.style.display = "block";
-          }
-        }
-
-        // Start module streaming using the integrated container
-        await moduleStreaming.startModuleStreaming(
-          response.streamingurl,
-          streamingSection,
-          {
-            courseid: payload.courseid,
-            sectionnum: payload.sectionnum,
-            beforemod: payload.beforemod,
-            jobid: response.job_id,
-          }
-        );
-      } catch (err) {
-        // Show error message in streaming section
-        if (streamingSection) {
-          streamingSection.style.display = "block";
-          const eventList = streamingSection.querySelector(
-            "[data-region='local_coursegen/course_streaming']"
-          );
-          if (eventList) {
-            const errorDiv = document.createElement("div");
-            errorDiv.className = "alert alert-danger mb-2";
-            const errorMsg =
-              err.message ||
-              (await Str.get_string("addactivityai_error", "local_coursegen"));
-            const errorLabel = await Str.get_string(
-              "error_label",
-              "local_coursegen"
-            );
-            errorDiv.innerHTML = `<small>❌ ${errorLabel}: ${errorMsg}</small>`;
-            eventList.appendChild(errorDiv);
-
-            // Auto-scroll to show error message - only if user hasn't scrolled
-            if (!userHasScrolled) {
-              const modalBody = document.querySelector(".modal-body");
-              if (modalBody) {
-                modalBody.scrollTop = modalBody.scrollHeight;
-              } else {
-                eventList.scrollTop = eventList.scrollHeight;
-              }
-            }
-          }
-        }
-      } finally {
-        // Re-enable form elements
-        radioButtons.forEach((rb) => {
-          rb.disabled = false;
-        });
-        textarea.disabled = false;
-        sendBtn.disabled = false;
-        setLoading(sendBtn, false);
-      }
-    });
-
-    // Press Enter to send (without Ctrl, as is more common in chat)
-    textarea.addEventListener("keydown", (e) => {
-      if (e.key === "Enter" && !e.shiftKey) {
-        e.preventDefault();
-        form.requestSubmit();
-      }
-    });
-  };
-
-  const pushUser = (wrap, text) => addBubble(wrap, text, "user");
-
-  const addBubble = (wrap, text, role) => {
-    const row = document.createElement("div");
-    row.className = `local_coursegen_ai_msg ${role}`;
-    const b = document.createElement("div");
-    b.className = "bubble";
-    b.textContent = text;
-    row.appendChild(b);
-    wrap.appendChild(row);
-    scrollToBottom(wrap);
-  };
-
-  const scrollToBottom = (wrap) => {
-    if (!userHasScrolled) {
-      const modalBody = document.querySelector(".modal-body");
-      if (modalBody) {
-        modalBody.scrollTop = modalBody.scrollHeight;
-      } else {
-        wrap.scrollTop = wrap.scrollHeight;
-      }
-    }
-  };
-
-  const setLoading = (btn, isLoading) => {
-    btn.disabled = isLoading;
-    btn.style.opacity = isLoading ? 0.7 : 1;
-  };
-
-  return { init, openChatModal };
-});
+};
