@@ -26,14 +26,17 @@ import Notification from 'core/notification';
 import Modal from 'core/modal';
 import CustomEvents from 'core/custom_interaction_events';
 import {get_string as getString} from 'core/str';
-import {createModStream} from 'local_coursegen/repository/activity';
+import {createModStream, initActivityFilepicker, uploadActivityFile} from 'local_coursegen/repository/activity';
 import * as activityStreamingPage from 'local_coursegen/activity_creation_page';
 import {regions, activityRegions} from 'local_coursegen/selectors';
+import YUI from 'core/yui';
 
 const LINK_SELECTOR = '[data-action="local_coursegen/add_activity_ai"]';
 
 let modal = null;
 let initialized = false;
+
+let pendingDraftItemId = null;
 
 /**
  * Escape HTML for safe text insertion.
@@ -84,6 +87,7 @@ const wireChatHandlers = (rootElement, payload) => {
     const formElement = rootElement.querySelector(activityRegions.form);
     const textareaElement = rootElement.querySelector(activityRegions.promptTextarea);
     const sendButtonElement = rootElement.querySelector(activityRegions.sendButton);
+    const uploadButtonElement = rootElement.querySelector(activityRegions.uploadButton);
     const chatRadios = rootElement.querySelectorAll("input[name='generate_images']");
     const streamingSectionElement = rootElement.querySelector(activityRegions.streamingSection);
 
@@ -116,6 +120,49 @@ const wireChatHandlers = (rootElement, payload) => {
             if (e.key === 'Enter' && !e.shiftKey) {
                 e.preventDefault();
                 formElement.requestSubmit();
+            }
+        });
+    }
+
+    // Upload button: open filepicker and store selected draft item.
+    if (uploadButtonElement) {
+        uploadButtonElement.addEventListener('click', async(e) => {
+            e.preventDefault();
+
+            try {
+                const pickerdata = await initActivityFilepicker({courseid: payload.courseid});
+                if (!pickerdata || !pickerdata.clientid || !pickerdata.draftitemid || !pickerdata.options) {
+                    return;
+                }
+
+                const pickerOptions = JSON.parse(pickerdata.options);
+                pickerOptions.client_id = pickerdata.clientid;
+                pickerOptions.itemid = pickerdata.draftitemid;
+
+                YUI.use('core_filepicker', 'node', 'node-event-simulate', 'core_dndupload', function(Y) {
+                    if (pickerdata.templates) {
+                        try {
+                            const templates = JSON.parse(pickerdata.templates);
+                            if (templates && typeof templates === 'object') {
+                                M.core_filepicker.set_templates(Y, templates);
+                            }
+                        } catch (ex) {
+                            // Ignore invalid templates.
+                        }
+                    }
+
+                    pickerOptions.formcallback = function() {
+                        pendingDraftItemId = pickerOptions.itemid;
+                    };
+
+                    if (!M.core_filepicker.instances[pickerOptions.client_id]) {
+                        M.core_filepicker.init(Y, pickerOptions);
+                    }
+
+                    M.core_filepicker.instances[pickerOptions.client_id].show();
+                });
+            } catch (err) {
+                window.console.error(err);
             }
         });
     }
@@ -182,6 +229,21 @@ async function submitActivityPrompt(formElement, streamingSectionElement, rootEl
             prompt,
             generateimages,
         });
+
+        const jobid = response && response.job_id ? String(response.job_id) : '';
+        if (pendingDraftItemId && jobid) {
+            try {
+                await uploadActivityFile({
+                    courseid,
+                    jobid,
+                    draftitemid: pendingDraftItemId,
+                });
+            } catch (uploadError) {
+                // Do not block streaming; just notify.
+                Notification.exception(uploadError);
+            }
+        }
+
         await handleStreamingResponse(response, streamingSectionElement, rootElement, {
             courseid,
             sectionnum,
