@@ -41,5 +41,8 @@ export const activityRegions = {
     form: "[data-region='local_coursegen/activity/form']",
     promptTextarea: "[data-region='local_coursegen/activity/prompt']",
     uploadButton: "[data-region='local_coursegen/activity/upload']",
+    selectedFile: "[data-region='local_coursegen/activity/selectedfile']",
+    selectedFileName: "[data-region='local_coursegen/activity/selectedfile_name']",
+    removeSelectedFileButton: "[data-region='local_coursegen/activity/selectedfile_remove']",
     sendButton: "[data-region='local_coursegen/activity/send']",
 };

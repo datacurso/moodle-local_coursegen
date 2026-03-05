@@ -37,6 +37,38 @@ let modal = null;
 let initialized = false;
 
 let pendingDraftItemId = null;
+let pendingFileName = '';
+
+/**
+ * Update the selected file indicator UI.
+ *
+ * @param {HTMLElement} rootElement
+ */
+const renderSelectedFile = (rootElement) => {
+    const selectedFileElement = rootElement.querySelector(activityRegions.selectedFile);
+    const selectedFileNameElement = rootElement.querySelector(activityRegions.selectedFileName);
+    const removeSelectedFileButton = rootElement.querySelector(activityRegions.removeSelectedFileButton);
+    const uploadButtonElement = rootElement.querySelector(activityRegions.uploadButton);
+
+    if (!selectedFileElement || !selectedFileNameElement || !removeSelectedFileButton) {
+        return;
+    }
+
+    if (!pendingDraftItemId) {
+        selectedFileElement.style.display = 'none';
+        selectedFileNameElement.textContent = '';
+        if (uploadButtonElement) {
+            uploadButtonElement.disabled = false;
+        }
+        return;
+    }
+
+    selectedFileNameElement.textContent = pendingFileName || '';
+    selectedFileElement.style.display = 'block';
+    if (uploadButtonElement) {
+        uploadButtonElement.disabled = true;
+    }
+};
 
 /**
  * Escape HTML for safe text insertion.
@@ -69,7 +101,9 @@ const appendUserPromptMessage = (container, prompt) => {
 
     const safePrompt = escapeHtml(prompt);
     wrapper.innerHTML = '' +
-        '<span class="badge badge-light border border-secondary text-muted p-2" style="font-size: 0.9rem;">' +
+        '<span class="badge badge-light border border-secondary text-muted p-2" ' +
+        'style="font-size: 1rem; line-height: 1.4; font-weight: normal; max-width: 100%; ' +
+        'white-space: normal; word-break: break-word; text-align: left; display: inline-block;">' +
         '<i class="fa fa-user mr-1"></i> Tú pediste: ' + safePrompt +
         '</span>';
 
@@ -88,6 +122,7 @@ const wireChatHandlers = (rootElement, payload) => {
     const textareaElement = rootElement.querySelector(activityRegions.promptTextarea);
     const sendButtonElement = rootElement.querySelector(activityRegions.sendButton);
     const uploadButtonElement = rootElement.querySelector(activityRegions.uploadButton);
+    const removeSelectedFileButton = rootElement.querySelector(activityRegions.removeSelectedFileButton);
     const chatRadios = rootElement.querySelectorAll("input[name='generate_images']");
     const streamingSectionElement = rootElement.querySelector(activityRegions.streamingSection);
 
@@ -122,12 +157,22 @@ const wireChatHandlers = (rootElement, payload) => {
                 formElement.requestSubmit();
             }
         });
+
+        textareaElement.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = this.scrollHeight + 'px';
+        });
     }
 
     // Upload button: open filepicker and store selected draft item.
     if (uploadButtonElement) {
         uploadButtonElement.addEventListener('click', async(e) => {
             e.preventDefault();
+
+            if (pendingDraftItemId) {
+                renderSelectedFile(rootElement);
+                return;
+            }
 
             try {
                 const pickerdata = await initActivityFilepicker({courseid: payload.courseid});
@@ -151,8 +196,10 @@ const wireChatHandlers = (rootElement, payload) => {
                         }
                     }
 
-                    pickerOptions.formcallback = function() {
+                    pickerOptions.formcallback = function(fileinfo) {
                         pendingDraftItemId = pickerOptions.itemid;
+                        pendingFileName = fileinfo && fileinfo.file ? String(fileinfo.file) : '';
+                        renderSelectedFile(rootElement);
                     };
 
                     if (!M.core_filepicker.instances[pickerOptions.client_id]) {
@@ -166,6 +213,17 @@ const wireChatHandlers = (rootElement, payload) => {
             }
         });
     }
+
+    if (removeSelectedFileButton) {
+        removeSelectedFileButton.addEventListener('click', (e) => {
+            e.preventDefault();
+            pendingDraftItemId = null;
+            pendingFileName = '';
+            renderSelectedFile(rootElement);
+        });
+    }
+
+    renderSelectedFile(rootElement);
 };
 
 /**
@@ -202,6 +260,7 @@ async function submitActivityPrompt(formElement, streamingSectionElement, rootEl
 
     if (textarea) {
         textarea.value = '';
+        textarea.style.height = 'auto';
     }
 
     if (sendButton) {
@@ -241,6 +300,10 @@ async function submitActivityPrompt(formElement, streamingSectionElement, rootEl
             } catch (uploadError) {
                 // Do not block streaming; just notify.
                 Notification.exception(uploadError);
+            } finally {
+                pendingDraftItemId = null;
+                pendingFileName = '';
+                renderSelectedFile(rootElement);
             }
         }
 
