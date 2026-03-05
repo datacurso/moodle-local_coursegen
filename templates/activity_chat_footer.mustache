@@ -31,10 +31,40 @@
 <div class="col-lg-10">
     <div class="py-3 w-100" data-region="local_coursegen/activity/chat">
     <style>
+    .ai-prompt-container {
+        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
+    }
+    .ai-prompt-container:focus-within {
+        border-color: var(--primary) !important;
+        box-shadow: 0 0 0 0.25rem color-mix(in srgb, var(--primary) 25%, transparent) !important;
+        outline: 0;
+    }
+
+    .ai-prompt-container textarea:focus {
+        box-shadow: none !important;
+        outline: none !important;
+    }
+
+    .ai-prompt-textarea::-webkit-scrollbar {
+        width: 6px;
+    }
+    .ai-prompt-textarea::-webkit-scrollbar-thumb {
+        background-color: var(--secondary);
+        border-radius: 10px;
+    }
+
+    .ai-btn-send {
+        width: 42px;
+        height: 42px;
+        border-radius: 50%;
+        flex-shrink: 0;
+        transition: transform 0.1s ease;
+    }
+
     .ai-btn-send[disabled] {
         cursor: default !important;
     }
-</style>
+    </style>
     <form class="local_coursegen_ai_input" novalidate data-region="local_coursegen/activity/form">
         
         <!-- Radios arriba -->
@@ -49,20 +79,34 @@
             </label>
         </div>
 
-        <!-- Input de texto y botón igual que antes -->
+        <!-- Barra de entrada estilo chat (textarea arriba, botones abajo) -->
         <label class="sr-only" for="local-coursegen-activity-prompt">{{#str}} addactivityai_label, local_coursegen {{/str}}</label>
-        <div class="local_coursegen_ai_input_group ai-prompt-container">
-            <textarea id="local-coursegen-activity-prompt" class="form-control local_coursegen_ai_textarea ai-prompt-textarea" rows="2"
-                placeholder="{{#str}} addactivityai_placeholder, local_coursegen {{/str}}" required
-                data-region="local_coursegen/activity/prompt"></textarea>
+        <div class="ai-prompt-container shadow-sm d-flex flex-column"
+             style="background-color: var(--body-bg); border: 1px solid var(--border-color, #d1d5db); border-radius: 24px; padding: 10px; max-width: 100%;">
 
-            <button class="btn btn-light p-0 d-flex align-items-center justify-content-center text-primary ai-btn-send local_coursegen_ai_send"
-                type="submit" title="{{#str}} send, local_coursegen {{/str}}"
-                data-region="local_coursegen/activity/send">
-                <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
-                    <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
-                </svg>
-            </button>
+            <textarea
+                id="local-coursegen-activity-prompt"
+                class="form-control ai-prompt-textarea local_coursegen_ai_textarea"
+                data-region="local_coursegen/activity/prompt"
+                placeholder="{{#str}} addactivityai_placeholder, local_coursegen {{/str}}"
+                rows="1"
+                style="resize: none; border: none; box-shadow: none; padding: 0 10px; margin: 0; background: transparent; min-height: 24px; max-height: 150px; overflow-y: auto; line-height: 1.5; color: inherit; width: 100%;"></textarea>
+
+            <div class="d-flex justify-content-between align-items-center">
+                <button type="button" class="btn btn-light p-0 d-flex align-items-center justify-content-center rounded-circle"
+                    data-region="local_coursegen/activity/upload"
+                    style="width: 34px; height: 34px; flex-shrink: 0;">
+                    <i class="fa fa-file text-primary" aria-hidden="true" style="font-size: 1.1rem;"></i>
+                </button>
+
+                <button class="btn btn-light p-0 d-flex align-items-center justify-content-center text-primary ai-btn-send local_coursegen_ai_send"
+                    type="submit" title="{{#str}} send, local_coursegen {{/str}}"
+                    data-region="local_coursegen/activity/send">
+                    <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" width="18" height="18" fill="currentColor">
+                        <path d="M2 21l21-9L2 3v7l15 2-15 2v7z"/>
+                    </svg>
+                </button>
+            </div>
         </div>
     </form>
     </div>
