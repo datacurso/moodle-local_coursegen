@@ -67,3 +67,65 @@ export async function createMod({courseid, sectionnum, jobid, beforemod}) {
         },
     ])[0];
 }
+
+/**
+ * Send human feedback for an existing AI activity generation job.
+ *
+ * @param {{courseid: number, jobid: string, approvalstatus: string, instruction: string}} payload
+ * @return {Promise<Object>} response
+ */
+export async function sendActivityFeedback({courseid, jobid, approvalstatus, instruction}) {
+    const args = {
+        courseid: Number(courseid) || 0,
+        jobid,
+        approvalstatus,
+        instruction,
+    };
+
+    return ajax.call([
+        {
+            methodname: 'local_coursegen_activity_feedback',
+            args,
+        },
+    ])[0];
+}
+
+/**
+ * Initialise a filepicker draft area for activity uploads.
+ *
+ * @param {{courseid: number}} payload
+ * @return {Promise<Object>} response
+ */
+export async function initActivityFilepicker({courseid}) {
+    const args = {
+        courseid: Number(courseid) || 0,
+    };
+
+    return ajax.call([
+        {
+            methodname: 'local_coursegen_activity_filepicker_init',
+            args,
+        },
+    ])[0];
+}
+
+/**
+ * Upload a draft file to the AI activity thread.
+ *
+ * @param {{courseid: number, jobid: string, draftitemid: number}} payload
+ * @return {Promise<Object>} response
+ */
+export async function uploadActivityFile({courseid, jobid, draftitemid}) {
+    const args = {
+        courseid: Number(courseid) || 0,
+        jobid,
+        draftitemid: Number(draftitemid) || 0,
+    };
+
+    return ajax.call([
+        {
+            methodname: 'local_coursegen_activity_file_upload',
+            args,
+        },
+    ])[0];
+}
