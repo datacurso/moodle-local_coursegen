@@ -241,7 +241,6 @@ span.local_coursegen-sparkles-icon.white {
 
 /* Textarea takes full width */
 .local_coursegen_ai_textarea {
-    flex: 1;
     resize: none;
     border-radius: .5rem;
     padding: .6rem .75rem;
