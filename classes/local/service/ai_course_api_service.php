@@ -103,6 +103,29 @@ class ai_course_api_service {
     }
 
     /**
+     * Upload a file associated with an existing AI activity generation thread.
+     *
+     * This is used to send additional resources (e.g. syllabus, statements) for
+     * the current activity "thread" so the external AI service can use them as
+     * context.
+     *
+     * @param string $threadid External activity generation identifier (thread_id).
+     * @param stored_file $file File to upload.
+     * @return array Decoded response from the API.
+     */
+    public function upload_activity_file(string $threadid, stored_file $file): array {
+        $extra = [
+            'thread_id' => $threadid,
+        ];
+
+        return $this->client->upload_file(
+            '/activity/file/upload',
+            $file,
+            $extra
+        );
+    }
+
+    /**
      * Send human feedback for an existing AI course planning session.
      *
      * @param string $sessionid External planning session identifier.
@@ -117,6 +140,25 @@ class ai_course_api_service {
         ];
 
         $endpoint = '/course/feedback/' . $sessionid;
+
+        return $this->client->request('POST', $endpoint, $payload);
+    }
+
+    /**
+     * Send human feedback for an existing AI activity generation job.
+     *
+     * @param string $threadid External activity generation identifier.
+     * @param string $approvalstatus Approval status (accept|adjust).
+     * @param string $instruction Optional feedback text.
+     * @return array Decoded response from the API.
+     */
+    public function send_activity_feedback(string $threadid, string $approvalstatus, string $instruction = ''): array {
+        $payload = [
+            'approval_status' => $approvalstatus,
+            'instruction' => $instruction,
+        ];
+
+        $endpoint = '/activity/feedback/' . $threadid;
 
         return $this->client->request('POST', $endpoint, $payload);
     }
