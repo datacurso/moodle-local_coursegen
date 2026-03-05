@@ -79,6 +79,18 @@
             </label>
         </div>
 
+        <div class="mb-2" data-region="local_coursegen/activity/selectedfile" style="display: none;">
+            <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-light" style="gap: .5rem;">
+                <div class="text-truncate" style="min-width: 0;">
+                    <i class="fa fa-paperclip mr-1" aria-hidden="true"></i>
+                    <span data-region="local_coursegen/activity/selectedfile_name"></span>
+                </div>
+                <button type="button" class="btn btn-link p-0" data-region="local_coursegen/activity/selectedfile_remove">
+                    <i class="fa fa-times" aria-hidden="true"></i>
+                </button>
+            </div>
+        </div>
+
         <!-- Barra de entrada estilo chat (textarea arriba, botones abajo) -->
         <label class="sr-only" for="local-coursegen-activity-prompt">{{#str}} addactivityai_label, local_coursegen {{/str}}</label>
         <div class="ai-prompt-container shadow-sm d-flex flex-column"
@@ -90,7 +102,7 @@
                 data-region="local_coursegen/activity/prompt"
                 placeholder="{{#str}} addactivityai_placeholder, local_coursegen {{/str}}"
                 rows="1"
-                style="resize: none; border: none; box-shadow: none; padding: 0 10px; margin: 0; background: transparent; min-height: 24px; max-height: 150px; overflow-y: auto; line-height: 1.5; color: inherit; width: 100%;"></textarea>
+                style="resize: none; border: none; box-shadow: none; padding: 0 10px; margin: 0; background: transparent; min-height: 24px; max-height: 6em; overflow-y: auto; line-height: 1.5; color: inherit; width: 100%;"></textarea>
 
             <div class="d-flex justify-content-between align-items-center">
                 <button type="button" class="btn btn-light p-0 d-flex align-items-center justify-content-center rounded-circle"
