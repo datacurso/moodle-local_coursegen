@@ -26,7 +26,7 @@
 import Notification from 'core/notification';
 import * as markedModule from 'local_coursegen/marked';
 import {regions, activityRegions} from 'local_coursegen/selectors';
-import {createMod} from 'local_coursegen/repository/activity';
+import {createMod, sendActivityFeedback} from 'local_coursegen/repository/activity';
 
 let eventSource = null;
 
@@ -193,13 +193,64 @@ export const init = async(params) => {
             container.appendChild(btnAccept);
             container.appendChild(btnAdjust);
             outputElement.appendChild(container);
+            
+            const sendFeedback = async(action) => {
+                if (!jobid) {
+                    return;
+                }
 
-            btnAccept.addEventListener('click', async() => {
+                const instruction = chatPromptElement ? String(chatPromptElement.value || '').trim() : '';
+
+                if (action === 'adjust' && !instruction) {
+                    if (chatPromptElement) {
+                        chatPromptElement.focus();
+                    }
+                    return;
+                }
+
                 container.remove();
-                await handleActivityCreation();
+
+                if (chatPromptElement) {
+                    chatPromptElement.value = '';
+                }
+
+                setChatEnabled(false);
+
+                try {
+                    setStatus(
+                        action === 'accept'
+                            ? 'Plan aceptado. Generando la actividad en el servidor...'
+                            : 'Ajuste enviado. Reintentando planificación de la actividad...',
+                        true,
+                        true
+                    );
+
+                    await sendActivityFeedback({
+                        courseid,
+                        jobid,
+                        approvalstatus: action,
+                        instruction,
+                    });
+
+                    // Reiniciar estado para el nuevo streaming de construcción
+                    accumulatedMarkdown = '';
+                    currentStreamingBlock = null;
+                    lastStatusText = '';
+
+                    connectToStream();
+                } catch (error) {
+                    window.console.error(error);
+                    setStatus('Error al enviar instrucciones para la actividad.', false, true);
+                    setChatEnabled(true);
+                }
+            };
+
+            btnAccept.addEventListener('click', () => {
+                sendFeedback('accept');
             });
 
             btnAdjust.addEventListener('click', () => {
+                // Solo habilitar el chat y enfocar el campo.
                 setChatEnabled(true);
                 if (chatPromptElement) {
                     chatPromptElement.focus();
