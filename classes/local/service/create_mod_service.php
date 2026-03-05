@@ -45,7 +45,7 @@ class create_mod_service {
 
         self::validate_resultinfo($resultinfo);
 
-        $modname = $resultinfo['result']['resource_type'];
+        $modname = $resultinfo['resource_type'];
 
         self::validate_mod_existence($modname);
 
@@ -53,7 +53,7 @@ class create_mod_service {
 
         $mform = self::create_mod_form_instance($modname, $data, $cw, $cm, $course);
 
-        $parameters = self::prepare_parameters($modname, $resultinfo['result']['parameters'], $sectionnum, $beforemod, $module->id);
+        $parameters = self::prepare_parameters($modname, $resultinfo['parameters'], $sectionnum, $beforemod, $module->id);
 
         $newcm = add_moduleinfo($parameters, $course, $mform);
 
@@ -72,11 +72,11 @@ class create_mod_service {
      * @throws \Exception If resource_type or parameters are missing.
      */
     private static function validate_resultinfo($resultinfo) {
-        if (!isset($resultinfo['result']['resource_type'])) {
+        if (!isset($resultinfo['resource_type'])) {
             throw new \Exception(\get_string('error_missing_resource_type', 'local_coursegen'));
         }
 
-        if (!isset($resultinfo['result']['parameters'])) {
+        if (!isset($resultinfo['parameters'])) {
             throw new \Exception(\get_string('error_missing_parameters', 'local_coursegen'));
         }
     }
