@@ -40,5 +40,6 @@ export const activityRegions = {
     streamingSection: "[data-region='local_coursegen/activity/streaming']",
     form: "[data-region='local_coursegen/activity/form']",
     promptTextarea: "[data-region='local_coursegen/activity/prompt']",
+    uploadButton: "[data-region='local_coursegen/activity/upload']",
     sendButton: "[data-region='local_coursegen/activity/send']",
 };
