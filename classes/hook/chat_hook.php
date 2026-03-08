@@ -89,7 +89,7 @@ class chat_hook {
     private static function add_activity_ai_button(): void {
         global $PAGE, $COURSE;
         if (self::can_create_activity()) {
-            $PAGE->requires->js_call_amd('local_coursegen/add_activity_ai_button', 'init', [
+            $PAGE->requires->js_call_amd('local_coursegen/activityai', 'init', [
                 $COURSE->id,
                 self::is_moodle_45(),
             ]);
