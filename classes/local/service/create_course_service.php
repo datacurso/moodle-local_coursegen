@@ -245,12 +245,8 @@ class create_course_service {
                 $sectionnum = $activity['parameters']['section'];
             }
 
-            $resultinfo = [
-                'result' => $activity,
-            ];
-
             try {
-                create_mod_service::create_from_ai_result($resultinfo, $course, $sectionnum);
+                create_mod_service::create_from_ai_result($activity, $course, $sectionnum);
             } catch (\Exception $e) {
                 debugging('Error creating module from AI result: ' . $e->getMessage());
                 // Continue with next activity.
