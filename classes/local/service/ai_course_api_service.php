@@ -137,9 +137,10 @@ class ai_course_api_service {
         $payload = [
             'approval_status' => $approvalstatus,
             'instruction' => $instruction,
+            'thread_id' => $sessionid,
         ];
 
-        $endpoint = '/course/feedback/' . $sessionid;
+        $endpoint = '/course/feedback';
 
         return $this->client->request('POST', $endpoint, $payload);
     }
@@ -154,11 +155,12 @@ class ai_course_api_service {
      */
     public function send_activity_feedback(string $threadid, string $approvalstatus, string $instruction = ''): array {
         $payload = [
+            'thread_id' => $threadid,
             'approval_status' => $approvalstatus,
             'instruction' => $instruction,
         ];
 
-        $endpoint = '/activity/feedback/' . $threadid;
+        $endpoint = '/activity/feedback';
 
         return $this->client->request('POST', $endpoint, $payload);
     }
