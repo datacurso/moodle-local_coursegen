@@ -102,4 +102,13 @@ $functions = [
         'ajax' => true,
         'loginrequired' => true,
     ],
+    'local_coursegen_manage_image_generation' => [
+        'classname' => 'local_coursegen\\external\\manage_image_generation',
+        'methodname' => 'execute',
+        'description' => 'Save image generation settings for course and activity creation',
+        'type' => 'write',
+        'ajax' => true,
+        'capabilities' => 'moodle/site:config',
+        'loginrequired' => true,
+    ],
 ];

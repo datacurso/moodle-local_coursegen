@@ -46,3 +46,13 @@ export const activityRegions = {
     removeSelectedFileButton: "[data-region='local_coursegen/activity/selectedfile_remove']",
     sendButton: "[data-region='local_coursegen/activity/send']",
 };
+
+export const imageGenerationRegions = {
+    form: "[data-region='local_coursegen/image_generation/form']",
+    modeCard: "[data-region='local_coursegen/image_generation/mode_card']",
+    manualSettings: "[data-region='local_coursegen/image_generation/manual_settings']",
+    inputMode: "[data-region='local_coursegen/image_generation/input_mode']",
+    toggleActivity: "[data-action='local_coursegen/image_generation/toggle_activity']",
+    activityContent: "[data-region='local_coursegen/image_generation/activity_content']",
+    saveButton: "[data-action='local_coursegen/image_generation/save']",
+};
