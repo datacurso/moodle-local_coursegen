@@ -30,10 +30,7 @@ import ajax from 'core/ajax';
  *     overridecourse: number,
  *     overrideactivity: number,
  *     generationmode: string,
- *     enableimgbook: number,
- *     promptimgbook: string,
- *     enableimgquiz: number,
- *     promptimgquiz: string,
+ *     activities: Array<{id: string, enabled: number, prompt: string}>,
  * }} payload
  * @return {Promise<{success: boolean}>} response
  */
@@ -42,10 +39,7 @@ export async function saveImageGenerationSettings(payload) {
         overridecourse: payload.overridecourse,
         overrideactivity: payload.overrideactivity,
         generationmode: payload.generationmode,
-        enableimgbook: payload.enableimgbook,
-        promptimgbook: payload.promptimgbook,
-        enableimgquiz: payload.enableimgquiz,
-        promptimgquiz: payload.promptimgquiz,
+        activities: payload.activities || [],
     };
 
     return ajax.call([

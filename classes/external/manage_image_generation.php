@@ -20,7 +20,9 @@ use context_system;
 use external_api;
 use external_function_parameters;
 use external_single_structure;
+use external_multiple_structure;
 use external_value;
+use local_coursegen\local\image_generation\activities;
 
 /**
  * External function to manage image generation settings.
@@ -42,10 +44,14 @@ class manage_image_generation extends external_api {
             'overridecourse'   => new external_value(PARAM_INT, 'Allow course override'),
             'overrideactivity' => new external_value(PARAM_INT, 'Allow activity override'),
             'generationmode'   => new external_value(PARAM_ALPHANUM, 'Mode: auto, manual, disabled'),
-            'enableimgbook'    => new external_value(PARAM_INT, 'Enable for books'),
-            'promptimgbook'    => new external_value(PARAM_RAW, 'Book prompt', VALUE_DEFAULT, ''),
-            'enableimgquiz'    => new external_value(PARAM_INT, 'Enable for quizzes'),
-            'promptimgquiz'    => new external_value(PARAM_RAW, 'Quiz prompt', VALUE_DEFAULT, ''),
+            'activities'       => new external_multiple_structure(
+                new external_single_structure([
+                    'id' => new external_value(PARAM_ALPHANUMEXT, 'Activity identifier'),
+                    'enabled' => new external_value(PARAM_INT, 'Whether the activity type is enabled'),
+                    'prompt' => new external_value(PARAM_RAW, 'Prompt used for this activity type', VALUE_DEFAULT, ''),
+                ]),
+                'Activity settings list'
+            ),
         ]);
     }
 
@@ -55,20 +61,14 @@ class manage_image_generation extends external_api {
      * @param int $overridecourse Allow course override.
      * @param int $overrideactivity Allow activity override.
      * @param string $generationmode Mode: auto, manual, disabled.
-     * @param int $enableimgbook Enable for books.
-     * @param string $promptimgbook Book prompt.
-     * @param int $enableimgquiz Enable for quizzes.
-     * @param string $promptimgquiz Quiz prompt.
+     * @param array $activities Activity settings list.
      * @return array
      */
     public static function execute(
         int $overridecourse,
         int $overrideactivity,
         string $generationmode,
-        int $enableimgbook,
-        string $promptimgbook,
-        int $enableimgquiz,
-        string $promptimgquiz
+        array $activities
     ): array {
 
         $context = context_system::instance();
@@ -78,10 +78,31 @@ class manage_image_generation extends external_api {
         set_config('overridecourse', $overridecourse, 'local_coursegen');
         set_config('overrideactivity', $overrideactivity, 'local_coursegen');
         set_config('generationmode', $generationmode, 'local_coursegen');
-        set_config('enableimgbook', $enableimgbook, 'local_coursegen');
-        set_config('promptimgbook', $promptimgbook, 'local_coursegen');
-        set_config('enableimgquiz', $enableimgquiz, 'local_coursegen');
-        set_config('promptimgquiz', $promptimgquiz, 'local_coursegen');
+
+        $submittedbyid = [];
+        foreach ($activities as $activity) {
+            if (!is_array($activity) || empty($activity['id'])) {
+                continue;
+            }
+            $id = (string) $activity['id'];
+            $submittedbyid[$id] = $activity;
+        }
+
+        foreach (activities::get_definitions() as $definition) {
+            $id = $definition['id'];
+            if (!array_key_exists($id, $submittedbyid)) {
+                continue;
+            }
+
+            $configenable = $definition['configenable'];
+            $configprompt = $definition['configprompt'];
+
+            $enabled = !empty($submittedbyid[$id]['enabled']) ? 1 : 0;
+            $prompt = isset($submittedbyid[$id]['prompt']) ? (string) $submittedbyid[$id]['prompt'] : '';
+
+            set_config($configenable, $enabled, 'local_coursegen');
+            set_config($configprompt, $prompt, 'local_coursegen');
+        }
 
         return ['success' => true];
     }

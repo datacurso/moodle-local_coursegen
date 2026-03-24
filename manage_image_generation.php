@@ -17,26 +17,48 @@
 require_once('../../config.php');
 require_once($CFG->libdir.'/adminlib.php');
 
+use local_coursegen\local\image_generation\activities;
+
 admin_externalpage_setup('local_coursegen_manage_image_generation');
 
-$currentmode = get_config('local_coursegen', 'generationmode') ?: 'auto';
+$currentmode = get_config('local_coursegen', 'generationmode') ?: activities::MODE_AUTO;
+
+$activitydefinitions = activities::get_definitions();
+$activitiescontext = [];
+
+foreach ($activitydefinitions as $definition) {
+    $id = $definition['id'];
+    $configenable = $definition['configenable'];
+    $configprompt = $definition['configprompt'];
+
+    $enabled = (int) get_config('local_coursegen', $configenable) === 1;
+    $prompt = (string) get_config('local_coursegen', $configprompt);
+    if ($prompt === '') {
+        $prompt = $definition['defaultprompt'];
+    }
+
+    $activitiescontext[] = [
+        'id' => $id,
+        'iconclass' => $definition['iconclass'],
+        'name' => get_string($definition['stringactivity'], 'local_coursegen'),
+        'tooltip' => get_string($definition['stringtooltip'], 'local_coursegen'),
+        'promptlabel' => get_string($definition['stringpromptlabel'], 'local_coursegen'),
+        'enabled' => $enabled,
+        'show' => $enabled,
+        'prompt' => $prompt,
+    ];
+}
 
 $context = [
-    'override_course'   => get_config('local_coursegen', 'overridecourse') ? 'checked' : '',
-    'override_activity' => get_config('local_coursegen', 'overrideactivity') ? 'checked' : '',
+    'overridecourse'   => (bool) get_config('local_coursegen', 'overridecourse'),
+    'overrideactivity' => (bool) get_config('local_coursegen', 'overrideactivity'),
 
-    'mode_disabled' => ($currentmode === 'disabled') ? 'active-disabled' : '',
-    'mode_auto'     => ($currentmode === 'auto') ? 'active-auto' : '',
-    'mode_manual'   => ($currentmode === 'manual') ? 'active-manual' : '',
-    'current_mode'  => $currentmode,
+    'ismoddisabled' => ($currentmode === activities::MODE_DISABLED),
+    'ismodeauto'    => ($currentmode === activities::MODE_AUTO),
+    'ismodemanual'  => ($currentmode === activities::MODE_MANUAL),
+    'currentmode'   => $currentmode,
 
-    'enable_book' => get_config('local_coursegen', 'enableimgbook') ? 'checked' : '',
-    'book_show'   => get_config('local_coursegen', 'enableimgbook') ? 'show' : '',
-    'prompt_book' => get_config('local_coursegen', 'promptimgbook') ?: 'Generate 1 header image per book chapter...',
-
-    'enable_quiz' => get_config('local_coursegen', 'enableimgquiz') ? 'checked' : '',
-    'quiz_show'   => get_config('local_coursegen', 'enableimgquiz') ? 'show' : '',
-    'prompt_quiz' => get_config('local_coursegen', 'promptimgquiz') ?: 'Generate 1 illustrative image per question...',
+    'activities' => $activitiescontext,
 ];
 
 echo $OUTPUT->header();

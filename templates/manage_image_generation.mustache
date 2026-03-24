@@ -2,7 +2,7 @@
 
     <form data-region="local_coursegen/image_generation/form">
 
-        <input type="hidden" data-region="local_coursegen/image_generation/input_mode" name="generationmode" value="{{current_mode}}">
+        <input type="hidden" data-region="local_coursegen/image_generation/input_mode" name="generationmode" value="{{currentmode}}">
 
         <div class="mb-5 mt-3">
             <h2 class="h3 font-weight-bold mb-2">{{#str}} manage_image_generation, local_coursegen {{/str}}</h2>
@@ -27,7 +27,7 @@
                         </td>
                         <td class="align-middle py-3">
                             <div class="custom-control custom-switch" data-toggle="tooltip" title="{{#str}} tooltip_override_course, local_coursegen {{/str}}">
-                                <input type="checkbox" class="custom-control-input" id="override-course" name="overridecourse" value="1" {{override_course}}>
+                                <input type="checkbox" class="custom-control-input" id="override-course" name="overridecourse" value="1" {{#overridecourse}}checked{{/overridecourse}}>
                                 <label class="custom-control-label" for="override-course" style="cursor: pointer;"></label>
                             </div>
                         </td>
@@ -38,7 +38,7 @@
                         </td>
                         <td class="align-middle py-3">
                             <div class="custom-control custom-switch" data-toggle="tooltip" title="{{#str}} tooltip_override_activity, local_coursegen {{/str}}">
-                                <input type="checkbox" class="custom-control-input" id="override-activity" name="overrideactivity" value="1" {{override_activity}}>
+                                <input type="checkbox" class="custom-control-input" id="override-activity" name="overrideactivity" value="1" {{#overrideactivity}}checked{{/overrideactivity}}>
                                 <label class="custom-control-label" for="override-activity" style="cursor: pointer;"></label>
                             </div>
                         </td>
@@ -52,12 +52,12 @@
 
         <div class="row mb-4">
             <div class="col-md-4 mb-3 mb-md-0">
-                <div class="card h-100 {{#mode_disabled}}border-danger bg-light{{/mode_disabled}}" data-region="local_coursegen/image_generation/mode_card" data-mode="disabled" style="cursor: pointer;">
+                <div class="card h-100 {{#ismoddisabled}}border-danger bg-light{{/ismoddisabled}}" data-region="local_coursegen/image_generation/mode_card" data-mode="disabled" style="cursor: pointer;">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <div class="mb-0 text-danger" style="font-size: 1.1rem; line-height: 1;"><i class="icon fa fa-ban fa-fw" aria-hidden="true"></i></div>
                             <div class="custom-control custom-radio">
-                                <input type="radio" class="custom-control-input" id="radio-disabled" name="mode_visual_radio" {{#mode_disabled}}checked{{/mode_disabled}}>
+                                <input type="radio" class="custom-control-input" id="radio-disabled" name="mode_visual_radio" {{#ismoddisabled}}checked{{/ismoddisabled}}>
                                 <label class="custom-control-label" for="radio-disabled" style="cursor: pointer;"></label>
                             </div>
                         </div>
@@ -68,12 +68,12 @@
             </div>
             
             <div class="col-md-4 mb-3 mb-md-0">
-                <div class="card h-100 {{#mode_auto}}border-primary bg-light{{/mode_auto}}" data-region="local_coursegen/image_generation/mode_card" data-mode="auto" style="cursor: pointer;">
+                <div class="card h-100 {{#ismodeauto}}border-primary bg-light{{/ismodeauto}}" data-region="local_coursegen/image_generation/mode_card" data-mode="auto" style="cursor: pointer;">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <div class="mb-0 text-primary" style="font-size: 1.1rem; line-height: 1;"><i class="icon fa fa-magic fa-fw" aria-hidden="true"></i></div>
                             <div class="custom-control custom-radio">
-                                <input type="radio" class="custom-control-input" id="radio-auto" name="mode_visual_radio" {{#mode_auto}}checked{{/mode_auto}}>
+                                <input type="radio" class="custom-control-input" id="radio-auto" name="mode_visual_radio" {{#ismodeauto}}checked{{/ismodeauto}}>
                                 <label class="custom-control-label" for="radio-auto" style="cursor: pointer;"></label>
                             </div>
                         </div>
@@ -84,12 +84,12 @@
             </div>
 
             <div class="col-md-4">
-                <div class="card h-100 {{#mode_manual}}border-primary bg-light{{/mode_manual}}" data-region="local_coursegen/image_generation/mode_card" data-mode="manual" style="cursor: pointer;">
+                <div class="card h-100 {{#ismodemanual}}border-primary bg-light{{/ismodemanual}}" data-region="local_coursegen/image_generation/mode_card" data-mode="manual" style="cursor: pointer;">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-2">
                             <div class="mb-0 text-primary" style="font-size: 1.1rem; line-height: 1;"><i class="icon fa fa-cog fa-fw" aria-hidden="true"></i></div>
                             <div class="custom-control custom-radio">
-                                <input type="radio" class="custom-control-input" id="radio-manual" name="mode_visual_radio" {{#mode_manual}}checked{{/mode_manual}}>
+                                <input type="radio" class="custom-control-input" id="radio-manual" name="mode_visual_radio" {{#ismodemanual}}checked{{/ismodemanual}}>
                                 <label class="custom-control-label" for="radio-manual" style="cursor: pointer;"></label>
                             </div>
                         </div>
@@ -100,7 +100,7 @@
             </div>
         </div>
 
-        <div data-region="local_coursegen/image_generation/manual_settings" class="{{^mode_manual}}d-none{{/mode_manual}}">
+        <div data-region="local_coursegen/image_generation/manual_settings" class="{{^ismodemanual}}d-none{{/ismodemanual}}">
             <h4 class="h5 font-weight-bold text-dark mt-5 mb-1">{{#str}} generation_rules, local_coursegen {{/str}}</h4>
             <p class="text-muted mb-3">{{#str}} generation_rules_desc, local_coursegen {{/str}}</p>
 
@@ -113,55 +113,36 @@
                         </tr>
                     </thead>
                     <tbody>
-                        <tr>
+                        {{#activities}}
+                        <tr data-region="local_coursegen/image_generation/activity_row" data-activity-id="{{id}}">
                             <td class="align-middle py-3">
                                 <div class="d-flex align-items-center">
-                                    <span class="mr-2 text-primary" style="font-size: 1rem;"><i class="icon fa fa-book fa-fw" aria-hidden="true"></i></span>
-                                    <span class="font-weight-bold text-dark">{{#str}} activity_book, local_coursegen {{/str}}</span>
+                                    <span class="mr-2 text-primary" style="font-size: 1rem;"><i class="icon fa {{iconclass}} fa-fw" aria-hidden="true"></i></span>
+                                    <span class="font-weight-bold text-dark">{{name}}</span>
                                 </div>
                             </td>
                             <td class="align-middle py-3 text-right">
-                                <div class="custom-control custom-switch d-inline-block" data-toggle="tooltip" title="{{#str}} tooltip_enable_book, local_coursegen {{/str}}">
-                                    <input type="checkbox" class="custom-control-input" id="switch-book" name="enableimgbook" value="1" data-action="local_coursegen/image_generation/toggle_activity" data-target="content-book" {{enable_book}}>
-                                    <label class="custom-control-label" for="switch-book" style="cursor: pointer;"></label>
+                                <div class="custom-control custom-switch d-inline-block" data-toggle="tooltip" title="{{tooltip}}">
+                                    <input type="checkbox" class="custom-control-input" id="switch-{{id}}" value="1" data-action="local_coursegen/image_generation/toggle_activity" data-target="content-{{id}}" {{#enabled}}checked{{/enabled}}>
+                                    <label class="custom-control-label" for="switch-{{id}}" style="cursor: pointer;"></label>
                                 </div>
                             </td>
                         </tr>
                         <tr class="collapse-row">
                             <td colspan="2" class="p-0">
-                                <div class="collapse {{book_show}} border-top" id="content-book" data-region="local_coursegen/image_generation/activity_content" data-content="content-book">
+                                <div class="collapse {{#show}}show{{/show}} border-top" id="content-{{id}}" data-region="local_coursegen/image_generation/activity_content" data-content="content-{{id}}">
                                     <div class="form-group mb-0 pt-2 px-3 pb-3">
-                                        <label class="sr-only" for="prompt_img_book">{{#str}} prompt_book_label, local_coursegen {{/str}}</label>
-                                        <textarea class="form-control" id="prompt_img_book" name="promptimgbook" rows="3">{{prompt_book}}</textarea>
+                                        <label class="sr-only" for="prompt_img_{{id}}">{{promptlabel}}</label>
+                                        <textarea class="form-control"
+                                            id="prompt_img_{{id}}"
+                                            data-region="local_coursegen/image_generation/prompt"
+                                            data-activity-id="{{id}}"
+                                            rows="3">{{prompt}}</textarea>
                                     </div>
                                 </div>
                             </td>
                         </tr>
-
-                        <tr>
-                            <td class="align-middle py-3">
-                                <div class="d-flex align-items-center">
-                                    <span class="mr-2 text-primary" style="font-size: 1rem;"><i class="icon fa fa-pencil-square-o fa-fw" aria-hidden="true"></i></span>
-                                    <span class="font-weight-bold text-dark">{{#str}} activity_quiz, local_coursegen {{/str}}</span>
-                                </div>
-                            </td>
-                            <td class="align-middle py-3 text-right">
-                                <div class="custom-control custom-switch d-inline-block" data-toggle="tooltip" title="{{#str}} tooltip_enable_quiz, local_coursegen {{/str}}">
-                                    <input type="checkbox" class="custom-control-input" id="switch-quiz" name="enableimgquiz" value="1" data-action="local_coursegen/image_generation/toggle_activity" data-target="content-quiz" {{enable_quiz}}>
-                                    <label class="custom-control-label" for="switch-quiz" style="cursor: pointer;"></label>
-                                </div>
-                            </td>
-                        </tr>
-                        <tr class="collapse-row">
-                            <td colspan="2" class="p-0">
-                                <div class="collapse {{quiz_show}} border-top" id="content-quiz" data-region="local_coursegen/image_generation/activity_content" data-content="content-quiz">
-                                    <div class="form-group mb-0 pt-2 px-3 pb-3">
-                                        <label class="sr-only" for="prompt_img_quiz">{{#str}} prompt_quiz_label, local_coursegen {{/str}}</label>
-                                        <textarea class="form-control" id="prompt_img_quiz" name="promptimgquiz" rows="3">{{prompt_quiz}}</textarea>
-                                    </div>
-                                </div>
-                            </td>
-                        </tr>
+                        {{/activities}}
                     </tbody>
                 </table>
             </div>

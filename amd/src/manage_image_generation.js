@@ -100,14 +100,35 @@ export const init = () => {
 
         try {
             const formData = new FormData(form);
+
+            const activities = [];
+            const activityRows = form.querySelectorAll(imageGenerationRegions.activityRow);
+            activityRows.forEach((row) => {
+                const activityId = row.dataset.activityId;
+                if (!activityId) {
+                    return;
+                }
+
+                const toggle = row.querySelector(imageGenerationRegions.toggleActivity);
+                const promptTextarea = row.querySelector(
+                    imageGenerationRegions.getActivityPromptSelector(activityId)
+                );
+
+                const enabled = toggle && toggle.checked ? 1 : 0;
+                const prompt = promptTextarea ? String(promptTextarea.value || '') : '';
+
+                activities.push({
+                    id: activityId,
+                    enabled,
+                    prompt,
+                });
+            });
+
             const payload = {
                 overridecourse: formData.get('overridecourse') ? 1 : 0,
                 overrideactivity: formData.get('overrideactivity') ? 1 : 0,
                 generationmode: String(formData.get('generationmode') || ''),
-                enableimgbook: formData.get('enableimgbook') ? 1 : 0,
-                promptimgbook: String(formData.get('promptimgbook') || ''),
-                enableimgquiz: formData.get('enableimgquiz') ? 1 : 0,
-                promptimgquiz: String(formData.get('promptimgquiz') || ''),
+                activities,
             };
 
             const response = await saveImageGenerationSettings(payload);
