@@ -51,16 +51,12 @@ class manage_image_generation extends external_api {
                 new external_single_structure([
                     'id' => new external_value(PARAM_ALPHANUMEXT, 'Activity identifier'),
                     'enabled' => new external_value(PARAM_INT, 'Whether the activity type is enabled'),
+                    'prompt' => new external_value(PARAM_RAW, 'Prompt used for this activity type', VALUE_DEFAULT, ''),
                     'parts' => new external_multiple_structure(
                         new external_single_structure([
                             'id' => new external_value(PARAM_ALPHANUMEXT, 'Activity part identifier'),
                             'enabled' => new external_value(PARAM_INT, 'Whether the activity part is enabled'),
-                            'maximages' => new external_value(
-                                PARAM_INT,
-                                'Maximum images to generate for this part',
-                                VALUE_DEFAULT,
-                                0
-                            ),
+                            'maximages' => new external_value(PARAM_INT, 'Maximum images to generate for this part', VALUE_DEFAULT, 0),
                         ]),
                         'Optional per-activity parts configuration',
                         VALUE_DEFAULT,

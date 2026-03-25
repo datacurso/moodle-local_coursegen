@@ -177,14 +177,19 @@ export const init = () => {
                 }
 
                 const toggle = row.querySelector(imageGenerationRegions.toggleActivity);
-                const enabled = toggle && toggle.checked ? 1 : 0;
+                const promptTextarea = row.querySelector(
+                    imageGenerationRegions.getActivityPromptSelector(activityId)
+                );
 
-                // Per-part controls live in the collapse content row for this activity.
+                const enabled = toggle && toggle.checked ? 1 : 0;
+                const prompt = promptTextarea ? String(promptTextarea.value || '') : '';
+
+                // Per-part controls live in the collapsed content row for this activity.
                 const contentContainer = form.querySelector(
                     `${imageGenerationRegions.activityContent}[data-content="content-${activityId}"]`
                 );
                 if (!contentContainer) {
-                    activities.push({id: activityId, enabled, parts: []});
+                    activities.push({id: activityId, enabled, prompt, parts: []});
                     return;
                 }
 
@@ -201,7 +206,13 @@ export const init = () => {
                         `${imageGenerationRegions.activityPartMaxImages}[data-part-id="${partId}"]`
                     );
 
-                    const maximages = parseInt(maxInput.value, 10) || 0;
+                    let maximages = 0;
+                    if (maxInput) {
+                        const parsed = Number(maxInput.value || 0);
+                        if (!Number.isNaN(parsed)) {
+                            maximages = parsed;
+                        }
+                    }
 
                     parts.push({
                         id: partId,
@@ -210,7 +221,12 @@ export const init = () => {
                     });
                 });
 
-                activities.push({id: activityId, enabled, parts});
+                activities.push({
+                    id: activityId,
+                    enabled,
+                    prompt,
+                    parts,
+                });
             });
 
             const payload = {
