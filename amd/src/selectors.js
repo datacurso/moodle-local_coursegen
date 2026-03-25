@@ -55,9 +55,7 @@ export const imageGenerationRegions = {
     toggleActivity: "[data-action='local_coursegen/image_generation/toggle_activity']",
     activityContent: "[data-region='local_coursegen/image_generation/activity_content']",
     activityRow: "[data-region='local_coursegen/image_generation/activity_row']",
-    activityPrompt: "[data-region='local_coursegen/image_generation/prompt']",
+    activityPartToggle: "[data-action='local_coursegen/image_generation/part_toggle']",
+    activityPartMaxImages: "[data-region='local_coursegen/image_generation/part_maximages']",
     saveButton: "[data-action='local_coursegen/image_generation/save']",
-    getActivityPromptSelector(activityId) {
-        return `${this.activityPrompt}[data-activity-id="${activityId}"]`;
-    },
 };

@@ -29,25 +29,51 @@ $activitiescontext = [];
 foreach ($activitydefinitions as $definition) {
     $id = $definition['id'];
     $configenable = $definition['configenable'];
-    $configprompt = $definition['configprompt'];
 
     $enabled = (int) get_config('local_coursegen', $configenable) === 1;
-    $prompt = (string) get_config('local_coursegen', $configprompt);
-    if ($prompt === '') {
-        $prompt = $definition['defaultprompt'];
+
+    // Use the standard module monologo icon, similar to admin activity table.
+    $component = 'mod_' . $id;
+    $iconurl = $OUTPUT->image_url('monologo', $component)->out(false);
+
+    $partcontexts = [];
+    if (!empty($definition['parts']) && is_array($definition['parts'])) {
+        foreach ($definition['parts'] as $partdefinition) {
+            $partid = $partdefinition['id'];
+            $partconfigenable = $partdefinition['configenable'];
+            $partconfigmaximages = $partdefinition['configmaximages'] ?? null;
+            $partenabled = (int) get_config('local_coursegen', $partconfigenable) === 1;
+
+            $maximages = 1;
+            if ($partconfigmaximages !== null) {
+                $savedmax = (int) get_config('local_coursegen', $partconfigmaximages);
+                if ($savedmax >= 0) {
+                    $maximages = $savedmax;
+                }
+            }
+
+            $partcontexts[] = [
+                'id' => $partid,
+                'partuniqueid' => $id . '_' . $partid,
+                'label' => $partdefinition['stringlabel'],
+                'enabled' => $partenabled,
+                'maximages' => $maximages,
+            ];
+        }
     }
 
     $activitiescontext[] = [
         'id' => $id,
-        'iconclass' => $definition['iconclass'],
-        'name' => get_string($definition['stringactivity'], 'local_coursegen'),
-        'tooltip' => get_string($definition['stringtooltip'], 'local_coursegen'),
-        'promptlabel' => get_string($definition['stringpromptlabel'], 'local_coursegen'),
+        'iconurl' => $iconurl,
+        'name' => $definition['stringactivity'],
+        'tooltip' => $definition['stringtooltip'],
         'enabled' => $enabled,
         'show' => $enabled,
-        'prompt' => $prompt,
+        'parts' => $partcontexts,
     ];
 }
+
+$partmaximageshelpicon = new \core\output\help_icon('help_part_maximages', 'local_coursegen');
 
 $context = [
     'overridecourse'   => (bool) get_config('local_coursegen', 'overridecourse'),
@@ -59,6 +85,7 @@ $context = [
     'currentmode'   => $currentmode,
 
     'activities' => $activitiescontext,
+    'partmaximageshelp' => $OUTPUT->render($partmaximageshelpicon),
 ];
 
 echo $OUTPUT->header();

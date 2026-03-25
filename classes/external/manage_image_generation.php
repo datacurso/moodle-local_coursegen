@@ -49,6 +49,16 @@ class manage_image_generation extends external_api {
                     'id' => new external_value(PARAM_ALPHANUMEXT, 'Activity identifier'),
                     'enabled' => new external_value(PARAM_INT, 'Whether the activity type is enabled'),
                     'prompt' => new external_value(PARAM_RAW, 'Prompt used for this activity type', VALUE_DEFAULT, ''),
+                    'parts' => new external_multiple_structure(
+                        new external_single_structure([
+                            'id' => new external_value(PARAM_ALPHANUMEXT, 'Activity part identifier'),
+                            'enabled' => new external_value(PARAM_INT, 'Whether the activity part is enabled'),
+                            'maximages' => new external_value(PARAM_INT, 'Maximum images to generate for this part', VALUE_DEFAULT, 0),
+                        ]),
+                        'Optional per-activity parts configuration',
+                        VALUE_DEFAULT,
+                        []
+                    ),
                 ]),
                 'Activity settings list'
             ),
@@ -95,13 +105,42 @@ class manage_image_generation extends external_api {
             }
 
             $configenable = $definition['configenable'];
-            $configprompt = $definition['configprompt'];
 
             $enabled = !empty($submittedbyid[$id]['enabled']) ? 1 : 0;
-            $prompt = isset($submittedbyid[$id]['prompt']) ? (string) $submittedbyid[$id]['prompt'] : '';
 
             set_config($configenable, $enabled, 'local_coursegen');
-            set_config($configprompt, $prompt, 'local_coursegen');
+
+            $definitionparts = $definition['parts'] ?? [];
+            if (!empty($definitionparts) && is_array($definitionparts)) {
+                $submittedparts = $submittedbyid[$id]['parts'] ?? [];
+                $submittedpartsbyid = [];
+                foreach ($submittedparts as $submittedpart) {
+                    if (!is_array($submittedpart) || empty($submittedpart['id'])) {
+                        continue;
+                    }
+                    $submittedpartsbyid[(string) $submittedpart['id']] = $submittedpart;
+                }
+
+                foreach ($definitionparts as $partdefinition) {
+                    $partid = $partdefinition['id'];
+                    $partconfigenable = $partdefinition['configenable'];
+                    $partconfigmaximages = $partdefinition['configmaximages'] ?? null;
+                    $partenabled = 0;
+                    $maximages = 0;
+                    if (array_key_exists($partid, $submittedpartsbyid)) {
+                        $partenabled = !empty($submittedpartsbyid[$partid]['enabled']) ? 1 : 0;
+                        $submittedmax = isset($submittedpartsbyid[$partid]['maximages'])
+                            ? (int) $submittedpartsbyid[$partid]['maximages'] : 0;
+                        if ($submittedmax > 0) {
+                            $maximages = min($submittedmax, 5);
+                        }
+                    }
+                    set_config($partconfigenable, $partenabled, 'local_coursegen');
+                    if ($partconfigmaximages !== null) {
+                        set_config($partconfigmaximages, $maximages, 'local_coursegen');
+                    }
+                }
+            }
         }
 
         return ['success' => true];

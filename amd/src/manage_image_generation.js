@@ -42,6 +42,7 @@ export const init = () => {
                 }
             });
 
+
             // Activate selected card.
             if (selectedMode === 'disabled') {
                 e.currentTarget.classList.add('border-danger', 'bg-light');
@@ -89,6 +90,46 @@ export const init = () => {
         });
     });
 
+    // Handle per-part toggles (enable/disable max images input).
+    const partToggles = form.querySelectorAll(imageGenerationRegions.activityPartToggle);
+    partToggles.forEach((partToggle) => {
+        const partId = partToggle.dataset.partId;
+        if (!partId) {
+            return;
+        }
+
+        // The part checkbox lives inside the collapsed content row, not in the header row.
+        // We locate the nearest collapse container and search for the matching maximages input there.
+        const container = partToggle.closest(imageGenerationRegions.activityContent) || partToggle.closest('.collapse');
+        if (!container) {
+            return;
+        }
+
+        const maxInput = container.querySelector(
+            `${imageGenerationRegions.activityPartMaxImages}[data-part-id="${partId}"]`
+        );
+        if (!maxInput) {
+            return;
+        }
+
+        // Initialise disabled state on load.
+        maxInput.disabled = !partToggle.checked;
+
+        partToggle.addEventListener('change', () => {
+            const isChecked = partToggle.checked;
+            maxInput.disabled = !isChecked;
+
+            if (isChecked) {
+                const current = Number(maxInput.value || 0);
+                if (Number.isNaN(current) || current <= 0) {
+                    maxInput.value = '1';
+                }
+            }
+
+            markFormAsDirty(form);
+        });
+    });
+
     // Submit handler.
     form.addEventListener('submit', async(e) => {
         e.preventDefault();
@@ -110,17 +151,38 @@ export const init = () => {
                 }
 
                 const toggle = row.querySelector(imageGenerationRegions.toggleActivity);
-                const promptTextarea = row.querySelector(
-                    imageGenerationRegions.getActivityPromptSelector(activityId)
-                );
 
                 const enabled = toggle && toggle.checked ? 1 : 0;
-                const prompt = promptTextarea ? String(promptTextarea.value || '') : '';
+
+                const parts = [];
+                const partToggles = row.querySelectorAll(imageGenerationRegions.activityPartToggle);
+                partToggles.forEach((partToggle) => {
+                    const partId = partToggle.dataset.partId;
+                    if (!partId) {
+                        return;
+                    }
+                    const maxInput = row.querySelector(
+                        `${imageGenerationRegions.activityPartMaxImages}[data-part-id="${partId}"]`
+                    );
+                    let maximages = 0;
+                    if (maxInput) {
+                        const parsed = Number(maxInput.value || 0);
+                        if (!Number.isNaN(parsed)) {
+                            maximages = Math.min(Math.max(parsed, 0), 5);
+                        }
+                    }
+                    parts.push({
+                        id: partId,
+                        enabled: partToggle.checked ? 1 : 0,
+                        maximages,
+                    });
+                });
 
                 activities.push({
                     id: activityId,
                     enabled,
                     prompt,
+                    parts,
                 });
             });
 

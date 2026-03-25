@@ -117,7 +117,9 @@
                         <tr data-region="local_coursegen/image_generation/activity_row" data-activity-id="{{id}}">
                             <td class="align-middle py-3">
                                 <div class="d-flex align-items-center">
-                                    <span class="mr-2 text-primary" style="font-size: 1rem;"><i class="icon fa {{iconclass}} fa-fw" aria-hidden="true"></i></span>
+                                    <div class="mr-2">
+                                        <img src="{{iconurl}}" class="icon" alt="{{name}}" style="width: 20px; height: 20px;" />
+                                    </div>
                                     <span class="font-weight-bold text-dark">{{name}}</span>
                                 </div>
                             </td>
@@ -132,12 +134,31 @@
                             <td colspan="2" class="p-0">
                                 <div class="collapse {{#show}}show{{/show}} border-top" id="content-{{id}}" data-region="local_coursegen/image_generation/activity_content" data-content="content-{{id}}">
                                     <div class="form-group mb-0 pt-2 px-3 pb-3">
-                                        <label class="sr-only" for="prompt_img_{{id}}">{{promptlabel}}</label>
-                                        <textarea class="form-control"
-                                            id="prompt_img_{{id}}"
-                                            data-region="local_coursegen/image_generation/prompt"
-                                            data-activity-id="{{id}}"
-                                            rows="3">{{prompt}}</textarea>
+                                        {{#parts}}
+                                        <div class="d-flex align-items-center mb-1">
+                                            <div class="custom-control custom-checkbox mr-2 mb-0">
+                                                <input type="checkbox"
+                                                    class="custom-control-input"
+                                                    id="part-{{partuniqueid}}"
+                                                    value="1"
+                                                    data-action="local_coursegen/image_generation/part_toggle"
+                                                    data-part-id="{{id}}"
+                                                    {{#enabled}}checked{{/enabled}}>
+                                                <label class="custom-control-label" for="part-{{partuniqueid}}">{{label}}</label>
+                                            </div>
+                                            <input type="number"
+                                                class="form-control form-control-sm ml-auto"
+                                                style="width: 4.5rem;"
+                                                min="0"
+                                                max="5"
+                                                value="{{maximages}}"
+                                                aria-label="{{label}}"
+                                                data-region="local_coursegen/image_generation/part_maximages"
+                                                data-part-id="{{id}}"
+                                                {{^enabled}}disabled{{/enabled}}>
+                                            <span class="ml-2 d-inline-block">{{{partmaximageshelp}}}</span>
+                                        </div>
+                                        {{/parts}}
                                     </div>
                                 </div>
                             </td>
