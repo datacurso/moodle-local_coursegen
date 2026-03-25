@@ -24,6 +24,10 @@ use external_multiple_structure;
 use external_value;
 use local_coursegen\local\image_generation\activities;
 
+defined('MOODLE_INTERNAL') || die();
+
+require_once($CFG->libdir . '/externallib.php');
+
 /**
  * External function to manage image generation settings.
  *
@@ -48,7 +52,6 @@ class manage_image_generation extends external_api {
                 new external_single_structure([
                     'id' => new external_value(PARAM_ALPHANUMEXT, 'Activity identifier'),
                     'enabled' => new external_value(PARAM_INT, 'Whether the activity type is enabled'),
-                    'prompt' => new external_value(PARAM_RAW, 'Prompt used for this activity type', VALUE_DEFAULT, ''),
                     'parts' => new external_multiple_structure(
                         new external_single_structure([
                             'id' => new external_value(PARAM_ALPHANUMEXT, 'Activity part identifier'),

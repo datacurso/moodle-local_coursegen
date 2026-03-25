@@ -21,7 +21,12 @@ use local_coursegen\local\image_generation\activities;
 
 admin_externalpage_setup('local_coursegen_manage_image_generation');
 
-$currentmode = get_config('local_coursegen', 'generationmode') ?: activities::MODE_AUTO;
+// Show a standard success notification if coming back from a save redirect.
+if (optional_param('saved', 0, PARAM_BOOL)) {
+    \core\notification::success(get_string('changessaved'));
+}
+
+$currentmode = get_config('local_coursegen', 'generationmode') ?: activities::MODE_DISABLED;
 
 $activitydefinitions = activities::get_definitions();
 $activitiescontext = [];

@@ -12,10 +12,16 @@ export const init = () => {
         return;
     }
 
+    // Clean up the temporary 'saved' flag from the URL so the settings page URL stays clean.
+    const currentUrl = new URL(window.location.href);
+    if (currentUrl.searchParams.has('saved')) {
+        currentUrl.searchParams.delete('saved');
+        window.history.replaceState(null, '', currentUrl.toString());
+    }
+
     watchForm(form);
 
     prefetchStrings('local_coursegen', [
-        'settings_saved',
         'settings_error',
     ]);
 
@@ -134,10 +140,7 @@ export const init = () => {
     form.addEventListener('submit', async(e) => {
         e.preventDefault();
 
-        const originalBtnText = submitBtn.innerHTML;
         submitBtn.disabled = true;
-        submitBtn.innerHTML =
-            '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Saving...';
 
         try {
             const formData = new FormData(form);
@@ -151,26 +154,32 @@ export const init = () => {
                 }
 
                 const toggle = row.querySelector(imageGenerationRegions.toggleActivity);
-
                 const enabled = toggle && toggle.checked ? 1 : 0;
 
+                // Per-part controls live in the collapse content row for this activity.
+                const contentContainer = form.querySelector(
+                    `${imageGenerationRegions.activityContent}[data-content="content-${activityId}"]`
+                );
+                if (!contentContainer) {
+                    activities.push({id: activityId, enabled, parts: []});
+                    return;
+                }
+
                 const parts = [];
-                const partToggles = row.querySelectorAll(imageGenerationRegions.activityPartToggle);
+                const partToggles = contentContainer.querySelectorAll(imageGenerationRegions.activityPartToggle);
+
                 partToggles.forEach((partToggle) => {
                     const partId = partToggle.dataset.partId;
                     if (!partId) {
                         return;
                     }
-                    const maxInput = row.querySelector(
+
+                    const maxInput = contentContainer.querySelector(
                         `${imageGenerationRegions.activityPartMaxImages}[data-part-id="${partId}"]`
                     );
-                    let maximages = 0;
-                    if (maxInput) {
-                        const parsed = Number(maxInput.value || 0);
-                        if (!Number.isNaN(parsed)) {
-                            maximages = Math.min(Math.max(parsed, 0), 5);
-                        }
-                    }
+
+                    const maximages = parseInt(maxInput.value, 10) || 0;
+
                     parts.push({
                         id: partId,
                         enabled: partToggle.checked ? 1 : 0,
@@ -178,12 +187,7 @@ export const init = () => {
                     });
                 });
 
-                activities.push({
-                    id: activityId,
-                    enabled,
-                    prompt,
-                    parts,
-                });
+                activities.push({id: activityId, enabled, parts});
             });
 
             const payload = {
@@ -196,8 +200,11 @@ export const init = () => {
             const response = await saveImageGenerationSettings(payload);
             if (response.success) {
                 resetFormDirtyState(form);
-                const savedStr = await getString('settings_saved', 'local_coursegen');
-                notification.addNotification({message: savedStr, type: 'success'});
+
+                // Redirect back to the page with a flag so PHP can show a standard admin notification.
+                const url = new URL(window.location.href);
+                url.searchParams.set('saved', '1');
+                window.location.href = url.toString();
             }
         } catch (error) {
             notification.exception(error);
@@ -207,7 +214,6 @@ export const init = () => {
 
         } finally {
             submitBtn.disabled = false;
-            submitBtn.innerHTML = originalBtnText;
         }
     });
 };

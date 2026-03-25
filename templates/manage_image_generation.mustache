@@ -68,22 +68,6 @@
             </div>
             
             <div class="col-md-4 mb-3 mb-md-0">
-                <div class="card h-100 {{#ismodeauto}}border-primary bg-light{{/ismodeauto}}" data-region="local_coursegen/image_generation/mode_card" data-mode="auto" style="cursor: pointer;">
-                    <div class="card-body">
-                        <div class="d-flex justify-content-between align-items-start mb-2">
-                            <div class="mb-0 text-primary" style="font-size: 1.1rem; line-height: 1;"><i class="icon fa fa-magic fa-fw" aria-hidden="true"></i></div>
-                            <div class="custom-control custom-radio">
-                                <input type="radio" class="custom-control-input" id="radio-auto" name="mode_visual_radio" {{#ismodeauto}}checked{{/ismodeauto}}>
-                                <label class="custom-control-label" for="radio-auto" style="cursor: pointer;"></label>
-                            </div>
-                        </div>
-                        <h6 class="font-weight-bold text-dark mb-1 small">{{#str}} mode_auto, local_coursegen {{/str}}</h6>
-                        <p class="small text-muted mb-0">{{#str}} mode_auto_desc, local_coursegen {{/str}}</p>
-                    </div>
-                </div>
-            </div>
-
-            <div class="col-md-4">
                 <div class="card h-100 {{#ismodemanual}}border-primary bg-light{{/ismodemanual}}" data-region="local_coursegen/image_generation/mode_card" data-mode="manual" style="cursor: pointer;">
                     <div class="card-body">
                         <div class="d-flex justify-content-between align-items-start mb-2">
@@ -95,6 +79,22 @@
                         </div>
                         <h6 class="font-weight-bold text-dark mb-1 small">{{#str}} mode_manual, local_coursegen {{/str}}</h6>
                         <p class="small text-muted mb-0">{{#str}} mode_manual_desc, local_coursegen {{/str}}</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-4">
+                <div class="card h-100 {{#ismodeauto}}border-primary bg-light{{/ismodeauto}}" data-region="local_coursegen/image_generation/mode_card" data-mode="auto" style="cursor: pointer;">
+                    <div class="card-body">
+                        <div class="d-flex justify-content-between align-items-start mb-2">
+                            <div class="mb-0 text-primary" style="font-size: 1.1rem; line-height: 1;"><i class="icon fa fa-magic fa-fw" aria-hidden="true"></i></div>
+                            <div class="custom-control custom-radio">
+                                <input type="radio" class="custom-control-input" id="radio-auto" name="mode_visual_radio" {{#ismodeauto}}checked{{/ismodeauto}}>
+                                <label class="custom-control-label" for="radio-auto" style="cursor: pointer;"></label>
+                            </div>
+                        </div>
+                        <h6 class="font-weight-bold text-dark mb-1 small">{{#str}} mode_auto, local_coursegen {{/str}}</h6>
+                        <p class="small text-muted mb-0">{{#str}} mode_auto_desc, local_coursegen {{/str}}</p>
                     </div>
                 </div>
             </div>
@@ -150,7 +150,6 @@
                                                 class="form-control form-control-sm ml-auto"
                                                 style="width: 4.5rem;"
                                                 min="0"
-                                                max="5"
                                                 value="{{maximages}}"
                                                 aria-label="{{label}}"
                                                 data-region="local_coursegen/image_generation/part_maximages"
@@ -170,7 +169,7 @@
         </div>
 
         <div class="mt-4 pt-3 text-right">
-            <button type="submit" data-action="local_coursegen/image_generation/save" class="btn btn-primary px-4 py-2 font-weight-bold">
+            <button type="submit" data-action="local_coursegen/image_generation/save" class="btn btn-primary">
                 {{#str}} savechanges, core {{/str}}
             </button>
         </div>
