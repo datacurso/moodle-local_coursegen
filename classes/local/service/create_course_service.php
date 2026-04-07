@@ -30,30 +30,14 @@ class create_course_service {
     /**
      * Execute course creation from a stored planning session.
      *
-     * @param int $recordid Session record ID in local_coursegen_course_sessions.
-     * @param int $userid User ID requesting the creation.
+     * @param course_session $session Planning session persistent.
+     * @param \stdClass $coursedata Validated course data stored in the session.
      * @return array Result of the course content application.
      */
-    public static function execute(int $recordid, int $userid): array {
+    public static function create_course(course_session $session, \stdClass $coursedata): array {
         global $CFG;
 
         try {
-            $session = course_session_service::get_user_session($recordid, $userid);
-
-            $coursedatajson = $session->get('coursedata');
-            if (empty($coursedatajson)) {
-                throw new \moodle_exception('error_no_coursedata_found', 'local_coursegen');
-            }
-
-            $coursedata = json_decode($coursedatajson);
-            if (!is_object($coursedata)) {
-                throw new \moodle_exception('error_invalid_coursedata', 'local_coursegen');
-            }
-
-            if (empty($coursedata->category)) {
-                throw new \moodle_exception('error_missing_category', 'local_coursegen');
-            }
-
             // This request may take a long time depending on the complexity of the prompt that the AI has to resolve.
             \core_php_time_limit::raise();
             raise_memory_limit(MEMORY_EXTRA);
@@ -61,6 +45,8 @@ class create_course_service {
             \core\session\manager::write_close();
 
             require_once($CFG->dirroot . '/course/lib.php');
+
+            $coursedata = self::ensure_unique_course_fields($coursedata);
 
             // Create the Moodle course from stored form data.
             $course = create_course($coursedata);
@@ -107,9 +93,7 @@ class create_course_service {
             ];
         } catch (\Exception $e) {
             // Update session status to failed if session exists.
-            if (isset($session) && $session instanceof course_session) {
-                course_session_service::update_status((int)$session->get('id'), course_session::STATUS_FAILED);
-            }
+            course_session_service::update_status((int)$session->get('id'), course_session::STATUS_FAILED);
 
             return [
                 'success' => false,
@@ -119,6 +103,46 @@ class create_course_service {
                 'message' => $e->getMessage(),
             ];
         }
+    }
+
+    /**
+     * Ensure unique values for course fields that must be unique.
+     *
+     * Currently handles shortname and idnumber.
+     *
+     * @param \stdClass $coursedata Original course data.
+     * @return \stdClass Updated course data with unique values where required.
+     */
+    private static function ensure_unique_course_fields(\stdClass $coursedata): \stdClass {
+        global $DB;
+
+        if (!empty($coursedata->shortname)) {
+            $base = $coursedata->shortname;
+            $candidate = $base;
+            $suffix = 1;
+
+            while ($DB->record_exists('course', ['shortname' => $candidate])) {
+                $candidate = $base . '-' . $suffix;
+                $suffix++;
+            }
+
+            $coursedata->shortname = $candidate;
+        }
+
+        if (!empty($coursedata->idnumber)) {
+            $base = $coursedata->idnumber;
+            $candidate = $base;
+            $suffix = 1;
+
+            while ($DB->record_exists('course', ['idnumber' => $candidate])) {
+                $candidate = $base . '-' . $suffix;
+                $suffix++;
+            }
+
+            $coursedata->idnumber = $candidate;
+        }
+
+        return $coursedata;
     }
 
     /**

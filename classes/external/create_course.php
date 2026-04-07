@@ -90,8 +90,7 @@ class create_course extends external_api {
         self::validate_context($catcontext);
         require_capability('moodle/course:create', $catcontext);
 
-        // Delegate all business logic to the service.
-        return create_course_service::execute($recordid, $USER->id);
+        return create_course_service::create_course($session, $coursedata);
     }
 
     /**

@@ -17,6 +17,7 @@
 namespace local_coursegen\local\service;
 
 use local_coursegen\local\models\course_context;
+use local_coursegen\local\image_generation\activities;
 use local_coursegen\local\service\system_instruction_service;
 use local_coursegen\local\service\course_session_service;
 use moodle_url;
@@ -96,12 +97,15 @@ class process_course_form_service {
         $selectedinstructionid = $useinstruction ? (int) ($data->local_coursegen_select_system_instruction ?? 0) : 0;
         $instructions = system_instruction_service::get_instruction_content($selectedinstructionid);
 
+        $imagesconfig = self::build_images_config();
+
         // Build payload matching CourseInitPayload in the external service.
         $payload = [
             'instructions' => $instructions,
             'lang' => $selectedlang,
             'with_images' => (bool) $generateimages == 1,
             'context_type' => $contexttype,
+            'images_config' => $imagesconfig,
         ];
 
         $apiservice = new ai_course_api_service();
@@ -125,6 +129,83 @@ class process_course_form_service {
                 'recordid' => $recordid,
                 'redirecturl' => $url->out(false),
             ],
+        ];
+    }
+
+    /**
+     * Build the image generation configuration used by the external AI service.
+     *
+     * The result includes the global mode, override flags and per-activity
+     * settings (enable flags and maximum images per part).
+     *
+     * Example:
+     * [
+     *     'mode' => 'manual',
+     *     'overridecourse' => true,
+     *     'overrideactivity' => true,
+     *     'activities' => [
+     *         [
+     *             'id' => 'assign',
+     *             'enabled' => true,
+     *             'parts' => [
+     *                 ['id' => 'intro', 'enabled' => true, 'maximages' => 1],
+     *             ],
+     *         ],
+     *     ],
+     * ]
+     *
+     * @return array
+     */
+    private static function build_images_config(): array {
+        $mode = get_config('local_coursegen', 'generationmode') ?: activities::MODE_DISABLED;
+        $overridecourse = (bool) ((int) get_config('local_coursegen', 'overridecourse') === 1);
+        $overrideactivity = (bool) ((int) get_config('local_coursegen', 'overrideactivity') === 1);
+
+        $activitiesconfig = [];
+
+        foreach (activities::get_definitions() as $definition) {
+            $activityid = $definition['id'];
+            $configenable = $definition['configenable'];
+
+            $enabled = (int) get_config('local_coursegen', $configenable) === 1;
+
+            $partsconfig = [];
+            $definitionparts = $definition['parts'] ?? [];
+
+            foreach ($definitionparts as $partdefinition) {
+                $partid = $partdefinition['id'];
+                $partconfigenable = $partdefinition['configenable'];
+                $partconfigmaximages = $partdefinition['configmaximages'] ?? null;
+
+                $partenabled = (int) get_config('local_coursegen', $partconfigenable) === 1;
+
+                $maximages = 0;
+                if ($partconfigmaximages !== null) {
+                    $savedmax = (int) get_config('local_coursegen', $partconfigmaximages);
+                    if ($savedmax > 0) {
+                        $maximages = $savedmax;
+                    }
+                }
+
+                $partsconfig[] = [
+                    'id' => $partid,
+                    'enabled' => $partenabled,
+                    'maximages' => $maximages,
+                ];
+            }
+
+            $activitiesconfig[] = [
+                'id' => $activityid,
+                'enabled' => $enabled,
+                'parts' => $partsconfig,
+            ];
+        }
+
+        return [
+            'mode' => $mode,
+            'overridecourse' => $overridecourse,
+            'overrideactivity' => $overrideactivity,
+            'activities' => $activitiesconfig,
         ];
     }
 
