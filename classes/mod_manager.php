@@ -41,7 +41,13 @@ class mod_manager {
      *
      * @return object New course module.
      */
-    public static function create_from_ai_result($resultinfo, $course, $sectionnum, $beforemod = null) {
+    public static function create_from_ai_result(
+        $resultinfo,
+        $course,
+        $sectionnum,
+        $beforemod = null,
+        bool $enforcemanualcompletion = false
+    ) {
 
         self::validate_resultinfo($resultinfo);
 
@@ -53,15 +59,43 @@ class mod_manager {
 
         $mform = self::create_mod_form_instance($modname, $data, $cw, $cm, $course);
 
-        $parameters = self::prepare_parameters($modname, $resultinfo['result']['parameters'], $sectionnum, $beforemod, $module->id);
+        $parameters = self::prepare_parameters(
+            $modname,
+            $resultinfo['result']['parameters'],
+            $sectionnum,
+            $beforemod,
+            $module->id,
+            $enforcemanualcompletion
+        );
 
         $newcm = add_moduleinfo($parameters, $course, $mform);
 
         $modsettings = $parameters->mod_settings;
 
         self::apply_mod_settings($modname, $newcm, $modsettings);
+        if ($enforcemanualcompletion) {
+            self::enforce_manual_completion_tracking($newcm);
+        }
 
         return $newcm;
+    }
+
+    /**
+     * Force manual activity completion for generated modules.
+     *
+     * @param object $newcm Result object returned by add_moduleinfo().
+     * @return void
+     */
+    private static function enforce_manual_completion_tracking($newcm): void {
+        global $DB;
+
+        $cmid = (int)($newcm->coursemodule ?? 0);
+        if ($cmid <= 0) {
+            return;
+        }
+
+        $manual = defined('COMPLETION_TRACKING_MANUAL') ? COMPLETION_TRACKING_MANUAL : 2;
+        $DB->set_field('course_modules', 'completion', $manual, ['id' => $cmid]);
     }
 
     /**
@@ -140,12 +174,29 @@ class mod_manager {
      * @param int $moduleid Module id from 'modules' table.
      * @return object Parameters ready for add_moduleinfo().
      */
-    private static function prepare_parameters($modname, $rawparameters, $sectionnum, $beforemod, $moduleid) {
+    private static function prepare_parameters(
+        $modname,
+        $rawparameters,
+        $sectionnum,
+        $beforemod,
+        $moduleid,
+        bool $enforcemanualcompletion = false
+    ) {
         $cleanedparameters = text_editor_parameter_cleaner::clean_text_editor_objects($rawparameters);
         $parameters = (object)$cleanedparameters;
         $parameters->section = $sectionnum;
         $parameters->beforemod = $beforemod;
         $parameters->module = $moduleid;
+
+        if ($enforcemanualcompletion) {
+            // Only internal automation forces manual completion tracking.
+            if (!isset($parameters->completion)) {
+                $parameters->completion = defined('COMPLETION_TRACKING_MANUAL') ? COMPLETION_TRACKING_MANUAL : 2;
+            }
+            if (!isset($parameters->completionunlocked)) {
+                $parameters->completionunlocked = 1;
+            }
+        }
 
         $parameters = self::process_mod_parameters($modname, $parameters);
 
