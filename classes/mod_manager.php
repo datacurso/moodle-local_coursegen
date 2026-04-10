@@ -38,6 +38,7 @@ class mod_manager {
      * @param object $course Course object
      * @param int $sectionnum Section number where the module will be created
      * @param int|null $beforemod Before module id where the module will be created
+     * @param bool $enforcemanualcompletion Force manual completion after creation.
      *
      * @return object New course module.
      */
@@ -172,6 +173,7 @@ class mod_manager {
      * @param int $sectionnum Target section number.
      * @param int|null $beforemod Optional cm id to insert before.
      * @param int $moduleid Module id from 'modules' table.
+     * @param bool $enforcemanualcompletion Force manual completion in prepared params.
      * @return object Parameters ready for add_moduleinfo().
      */
     private static function prepare_parameters(

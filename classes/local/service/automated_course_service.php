@@ -32,6 +32,7 @@ class automated_course_service {
      * Create a full course automatically using prompt context.
      *
      * @param array $payload
+     * @param callable|null $progresscallback Optional progress callback.
      * @return array
      */
     public function create_prompt_course(array $payload, ?callable $progresscallback = null): array {
@@ -244,6 +245,8 @@ class automated_course_service {
      *
      * @param string $sessionid
      * @param string $lang
+     * @param int $userid User id for backend attribution.
+     * @param int $maxretries Maximum execute retries.
      * @return void
      */
     private function execute_remote_plan(string $sessionid, string $lang, int $userid, int $maxretries = 4): void {
@@ -281,6 +284,9 @@ class automated_course_service {
      *
      * @param string $courseid
      * @param string $lang
+     * @param int $userid User id for backend attribution.
+     * @param int $maxattempts Maximum stream attempts.
+     * @param int $timeoutseconds Request timeout in seconds.
      * @return void
      */
     private function consume_planning_stream(
@@ -350,6 +356,10 @@ class automated_course_service {
      *
      * @param string $sessionid
      * @param string $lang
+     * @param int $userid User id for backend attribution.
+     * @param int $maxattempts Maximum polling attempts.
+     * @param int $sleepseconds Delay between polls.
+     * @param callable|null $progresscallback Optional progress callback.
      * @return array
      */
     private function wait_for_result(
