@@ -25,7 +25,7 @@
 require('../../config.php');
 
 require_login();
-$sessionid = required_param('sessionid', PARAM_INT);
+$sessionid = optional_param('sessionid', 0, PARAM_INT);
 
 $url = new moodle_url('/local/coursegen/aicoursecreation.php', ['sessionid' => $sessionid]);
 $PAGE->set_url($url);
