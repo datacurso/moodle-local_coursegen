@@ -33,7 +33,6 @@ class chat_hook {
      */
     public static function before_footer_html_generation(before_footer_html_generation $hook): void {
         self::add_activity_ai_button();
-        self::add_course_ai_button();
     }
 
     /**
@@ -97,17 +96,6 @@ class chat_hook {
     }
 
     /**
-     * Add course AI button
-     */
-    private static function add_course_ai_button(): void {
-        global $PAGE;
-
-        if (self::can_create_course()) {
-            $PAGE->requires->js_call_amd('local_coursegen/add_course_ai_button', 'init', []);
-        }
-    }
-
-    /**
      * Check if user can create an activity
      */
     private static function can_create_activity(): bool {
@@ -130,34 +118,20 @@ class chat_hook {
      * Check if user can create a course
      */
     private static function can_create_course(): bool {
-        global $PAGE, $DB;
+        global $PAGE;
 
+        // Show only on personal area pages (e.g. My courses).
         $path = $PAGE->url->get_path();
-        $iseditpage = strpos($path, '/course/edit.php') !== false;
-
-        if (!$iseditpage) {
+        $ispersonalarea = strpos($path, '/my/') === 0;
+        if (!$ispersonalarea) {
             return false;
         }
 
-        // Not allowed when editing a course.
-        $courseid = $PAGE->url->get_param('id');
-        if ($courseid) {
-            return false;
-        }
-
-        $categoryid = $PAGE->url->get_param('category');
-        $categorycontext = null;
-        if ($categoryid) {
-            $category = $DB->get_record('course_categories', ['id' => $categoryid], '*', MUST_EXIST);
-            $categorycontext = \context_coursecat::instance($category->id);
-        } else {
-            $category = \core_course_category::get_default();
-            $categorycontext = \context_coursecat::instance($category->id);
-        }
+        $systemcontext = \context_system::instance();
 
         return has_all_capabilities([
             'moodle/course:create',
             'local/coursegen:createcoursewithai',
-        ], $categorycontext);
+        ], $systemcontext);
     }
 }
