@@ -35,4 +35,9 @@ $callbacks = [
         'callback' => 'local_coursegen\hook\chat_hook::before_footer_html_generation',
         'priority' => 900,
     ],
+    [
+        'hook' => core\hook\after_config::class,
+        'callback' => 'local_coursegen\hook\mycourses_header_hook::after_config',
+        'priority' => 500,
+    ],
 ];
