@@ -53,6 +53,7 @@ class create_mod_stream extends external_api {
                 VALUE_OPTIONAL
             ),
             'beforemod' => new external_value(PARAM_INT, 'Before module id', VALUE_OPTIONAL),
+            'lang' => new external_value(PARAM_TEXT, 'Language code for AI response/content generation', VALUE_OPTIONAL),
         ]);
     }
 
@@ -64,6 +65,7 @@ class create_mod_stream extends external_api {
      * @param string $prompt Prompt to create module.
      * @param int $generateimages 1 indicates AI could generate images, 0 indicates AI could not generate images.
      * @param int|null $beforemod Before module id where the module will be created.
+     * @param string|null $lang Optional language code for AI response/content generation.
      * @return array
      */
     public static function execute(
@@ -71,7 +73,8 @@ class create_mod_stream extends external_api {
         ?int $sectionnum,
         string $prompt,
         int $generateimages = 0,
-        ?int $beforemod = null
+        ?int $beforemod = null,
+        ?string $lang = null
     ) {
         global $CFG, $DB, $USER;
 
@@ -82,11 +85,13 @@ class create_mod_stream extends external_api {
                 'prompt' => $prompt,
                 'generateimages' => $generateimages,
                 'beforemod' => $beforemod,
+                'lang' => $lang,
             ]);
 
             $courseid = $params['courseid'];
             $sectionnum = $params['sectionnum'] ?? null;
             $prompt = $params['prompt'];
+            $lang = !empty($params['lang']) ? (string)$params['lang'] : null;
             $generateimages = $params['generateimages'] ?? 0;
             $beforemod = $params['beforemod'] ?? null;
 
@@ -102,7 +107,13 @@ class create_mod_stream extends external_api {
             // Release the session so other tabs in the same session are not blocked.
             \core\session\manager::write_close();
 
-            $lang = $coursecontext->lang ?? 'en';
+            $lang = trim((string)($lang ?? ''));
+            if ($lang === '') {
+                $lang = trim((string)($coursecontext->lang ?? ''));
+            }
+            if ($lang === '') {
+                $lang = current_language();
+            }
 
             $payload = [
                 'instructions' => $prompt,
