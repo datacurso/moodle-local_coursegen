@@ -1,0 +1,130 @@
+// This file is part of Moodle - http://moodle.org/
+
+/**
+ * Wizard i18n loader.
+ *
+ * @module     local_coursegen/local/wizard/i18n
+ */
+
+import {get_string as getString} from 'core/str';
+
+const STRING_KEYS = [
+    'wizard_header_title',
+    'wizard_header_subtitle',
+    'wizard_step_context',
+    'wizard_step_planning',
+    'wizard_step_detailed',
+    'wizard_step_generating',
+    'wizard_context_title',
+    'wizard_context_subtitle',
+    'wizard_prompt_placeholder',
+    'wizard_prompt_arialabel',
+    'wizard_chip_remove_syllabus',
+    'wizard_chip_view_guideline',
+    'wizard_chip_remove_guideline',
+    'wizard_btn_syllabus',
+    'wizard_btn_syllabus_title',
+    'wizard_btn_guidelines',
+    'wizard_btn_guidelines_title',
+    'wizard_guidelines_dialog_label',
+    'wizard_guidelines_search_placeholder',
+    'wizard_guidelines_note_one',
+    'wizard_guidelines_list_label',
+    'wizard_lang_title',
+    'wizard_lang_arialabel',
+    'wizard_images_title',
+    'wizard_images_label',
+    'wizard_images_arialabel',
+    'wizard_hint_enter',
+    'wizard_btn_generate',
+    'wizard_form_tip',
+    'wizard_progress_label',
+    'wizard_toggle_details',
+    'wizard_prv_title_initial',
+    'wizard_prv_sub_init',
+    'wizard_prv_live_note',
+    'wizard_plan_actions_hint',
+    'wizard_btn_adjust',
+    'wizard_btn_approve',
+    'wizard_adjust_placeholder',
+    'wizard_btn_cancel',
+    'wizard_btn_send_adjust',
+    'wizard_btn_back_context',
+    'wizard_btn_back_planning',
+    'wizard_btn_cancel_flow',
+    'wizard_btn_cancel_and_exit',
+    'wizard_modal_close',
+    'wizard_modal_subtitle_text',
+    'wizard_modal_fullcontext',
+    'wizard_no_results',
+    'wizard_category_general',
+    'wizard_state_planning',
+    'wizard_state_starting',
+    'wizard_state_structuring',
+    'wizard_state_completed',
+    'wizard_state_error',
+    'wizard_progress_percent',
+    'wizard_plan_counter',
+    'wizard_plan_adding',
+    'wizard_plan_sections_counter',
+    'wizard_plan_review_title',
+    'wizard_plan_review_subtitle',
+    'wizard_plan_review_hint_initial',
+    'wizard_plan_detailed_title',
+    'wizard_plan_detailed_subtitle',
+    'wizard_plan_review_hint_detailed',
+    'wizard_plan_detailed_done_title',
+    'wizard_plan_detailed_done_subtitle',
+    'wizard_plan_detailed_markdown_title',
+    'wizard_plan_detailed_markdown_subtitle',
+    'wizard_generating_details',
+    'wizard_generating_details_for',
+    'wizard_section_label',
+    'wizard_section_progress_with_total',
+    'wizard_section_progress_no_total',
+    'wizard_activities_count',
+    'wizard_processing_status',
+    'wizard_error_stream_url',
+    'wizard_error_connection',
+    'wizard_error_create_course',
+    'wizard_error_init_session',
+    'wizard_error_upload_syllabus',
+    'wizard_error_send_feedback',
+    'wizard_error_init_filepicker',
+    'wizard_error_generic',
+    'wizard_generate_starting',
+    'wizard_generate_uploading_syllabus',
+    'wizard_course_creating',
+    'wizard_course_creating_subtitle',
+    'wizard_back_to_context',
+    'wizard_live_note_detailed',
+    'wizard_activity_default',
+    'wizard_activity_quiz',
+    'wizard_activity_book',
+    'wizard_activity_assign',
+    'wizard_activity_forum',
+    'wizard_activity_lesson',
+    'wizard_activity_url',
+    'wizard_activity_resource',
+    'wizard_activity_page',
+    'wizard_activity_data',
+    'wizard_activity_glossary',
+    'wizard_plan_default_unnamed',
+    'wizard_status_approving',
+    'wizard_status_adjusting',
+    'wizard_chapters_label',
+    'wizard_questions_label',
+];
+
+/**
+ * Load all wizard strings from lang pack.
+ *
+ * @returns {Promise<Object>}
+ */
+export const loadWizardStrings = async() => {
+    const values = await Promise.all(STRING_KEYS.map((key) => getString(key, 'local_coursegen')));
+    return STRING_KEYS.reduce((acc, key, index) => {
+        acc[key] = values[index];
+        return acc;
+    }, {});
+};
