@@ -19,6 +19,7 @@ export const createPlanningUi = (deps) => {
         activityLabels,
         escapeHtml,
         setProgress,
+        updateDetailedHeaderStats,
         texts,
         formatTemplate,
     } = deps;
@@ -304,10 +305,8 @@ export const createPlanningUi = (deps) => {
             if (prvHeaderTitle) {
                 prvHeaderTitle.textContent = texts.wizard_plan_detailed_done_title;
             }
-            if (prvHeaderSub) {
-                prvHeaderSub.textContent = formatTemplate(texts.wizard_plan_detailed_done_subtitle, {
-                    activities: state.detailedTotal,
-                });
+            if (updateDetailedHeaderStats) {
+                updateDetailedHeaderStats();
             }
             if (prvLiveNote) {
                 prvLiveNote.style.display = 'none';

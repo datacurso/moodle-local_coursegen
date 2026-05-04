@@ -26,15 +26,20 @@ import ajax from 'core/ajax';
 /**
  * Send human feedback for a planning session.
  *
- * @param {{recordid: number, action: string, instruction: string}} payload
+ * @param {{recordid: number, action: string, instruction: string, selectedimageids?: string[]}} payload
  * @return {Promise<Object>} response
  */
-export async function sendPlanningFeedback({recordid, action, instruction}) {
+export async function sendPlanningFeedback({recordid, action, instruction, selectedimageids}) {
     const args = {
         recordid: Number(recordid) || 0,
         ['approval_status']: action,
         instruction,
     };
+
+    // Include selected image IDs if provided
+    if (Array.isArray(selectedimageids) && selectedimageids.length > 0) {
+        args.selected_image_ids = selectedimageids;
+    }
 
     return ajax.call([
         {

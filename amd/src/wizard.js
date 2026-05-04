@@ -66,22 +66,23 @@ export const init = async(params) => {
             texts,
         });
 
-        const planningUi = createPlanningUi({
-            state,
-            elements,
-            activityLabels,
-            escapeHtml,
-            setProgress: stepsUi.setProgress,
-            texts,
-            formatTemplate,
-        });
-
         const detailedUi = createDetailedUi({
             state,
             elements,
             activityLabels,
             escapeHtml,
             switchPlanMode: stepsUi.switchPlanMode,
+            texts,
+            formatTemplate,
+        });
+
+        const planningUi = createPlanningUi({
+            state,
+            elements,
+            activityLabels,
+            escapeHtml,
+            setProgress: stepsUi.setProgress,
+            updateDetailedHeaderStats: detailedUi.updateDetailedHeaderStats,
             texts,
             formatTemplate,
         });

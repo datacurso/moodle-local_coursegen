@@ -1265,6 +1265,31 @@ svg { display: block; flex-shrink: 0; }
   line-height: 1.45;
 }
 
+.prv-section-meta-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.prv-image-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 12px;
+  padding: 3px 10px;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 1.3;
+  background: hsl(8 72% 50%);
+  color: hsl(0 0% 100%);
+  box-shadow: 0 1px 2px hsl(8 72% 20% / .15);
+}
+
+.prv-image-pill--small {
+  font-size: 10.5px;
+  padding: 2px 8px;
+}
+
 .prv-chevron {
   flex-shrink: 0;
   color: var(--muted-fg);
@@ -1290,6 +1315,17 @@ svg { display: block; flex-shrink: 0; }
   background: var(--muted);
   padding: 8px 10px;
   transition: opacity .2s;
+  width: 100%;
+  border: none;
+  text-align: left;
+  appearance: none;
+  -webkit-appearance: none;
+}
+
+.prv-activity-item:focus,
+.prv-activity-item:focus-visible {
+  outline: none;
+  box-shadow: none;
 }
 
 .prv-activity-item--pending {
@@ -1304,6 +1340,17 @@ svg { display: block; flex-shrink: 0; }
 .prv-activity-text {
   flex: 1;
   min-width: 0;
+}
+
+.dp-activity-right {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dp-activity-chevron {
+  margin-top: 2px;
 }
 
 .prv-activity-name {
@@ -1330,6 +1377,8 @@ svg { display: block; flex-shrink: 0; }
 .dp-activity-wrap .prv-activity-item {
   border-radius: 0;
   background: transparent;
+  border: none;
+  outline: none;
 }
 
 .dp-activity-wrap .prv-activity-item--has-detail {
@@ -1338,6 +1387,13 @@ svg { display: block; flex-shrink: 0; }
 
 .dp-activity-wrap .prv-activity-item--has-detail:hover {
   background: rgba(0, 0, 0, .04);
+}
+
+.dp-activity-wrap .prv-activity-item:focus,
+.dp-activity-wrap .prv-activity-item:focus-visible {
+  outline: none;
+  border: none;
+  box-shadow: none;
 }
 
 .dp-act-detail {
@@ -1410,6 +1466,129 @@ svg { display: block; flex-shrink: 0; }
   color: var(--muted-fg);
   line-height: 1.5;
   margin: 0;
+}
+
+.dp-images-container {
+  margin-top: 12px;
+  border: 1px solid hsl(8 72% 50% / .25);
+  border-radius: 12px;
+  padding: 12px 14px;
+  background: hsl(8 72% 50% / .03);
+}
+
+.dp-images-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 12px;
+  padding-bottom: 10px;
+  border-bottom: 1px solid hsl(8 72% 50% / .15);
+}
+
+.dp-images-header-label {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+}
+
+.dp-image-check-master {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+  accent-color: hsl(8 72% 50%);
+}
+
+.dp-images-header-icon {
+  display: inline-flex;
+  align-items: center;
+  color: hsl(8 72% 50%);
+  margin-left: 2px;
+}
+
+.dp-images-header-icon svg {
+  width: 16px;
+  height: 16px;
+}
+
+.dp-images-header-title {
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  color: hsl(8 72% 40%);
+}
+
+.dp-images-header-count {
+  font-size: 11px;
+  font-weight: 600;
+  color: hsl(8 72% 50%);
+  padding: 2px 8px;
+  background: hsl(8 72% 50% / .12);
+  border: 1px solid hsl(8 72% 50% / .3);
+  border-radius: 6px;
+}
+
+.dp-image-list {
+  display: grid;
+  grid-template-columns: repeat(2, 1fr);
+  gap: 10px;
+  margin-top: 4px;
+}
+
+.dp-image-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  border: 1px solid hsl(8 72% 50% / .25);
+  border-radius: 12px;
+  background: hsl(0 0% 100%);
+  padding: 10px 12px;
+  cursor: pointer;
+  transition: border-color .15s, box-shadow .15s;
+}
+
+.dp-image-card:hover {
+  border-color: hsl(8 72% 50% / .45);
+  box-shadow: 0 2px 4px hsl(8 72% 20% / .08);
+}
+
+.dp-image-card--off {
+  opacity: .5;
+  background: hsl(0 0% 98%);
+}
+
+.dp-image-check {
+  margin-top: 3px;
+  width: 16px;
+  height: 16px;
+  flex-shrink: 0;
+  accent-color: hsl(8 72% 50%);
+  cursor: pointer;
+}
+
+.dp-image-body {
+  min-width: 0;
+  flex: 1;
+}
+
+.dp-image-placement {
+  display: inline-block;
+  margin: 0 0 6px;
+  padding: 2px 8px;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .02em;
+  color: hsl(8 72% 50%);
+  background: hsl(8 72% 50% / .12);
+  border: 1px solid hsl(8 72% 50% / .3);
+  border-radius: 6px;
+}
+
+.dp-image-description {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.5;
+  color: hsl(215 15% 30%);
 }
 
 .pc-cancel-row {

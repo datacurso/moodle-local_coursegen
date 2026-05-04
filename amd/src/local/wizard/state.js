@@ -42,6 +42,7 @@ export const createInitialState = ({defaultLang, guidelines, languages}) => {
         planSectionsData: [],
         detailedActivityEls: {},
         detailedSectionMeta: {},
+        selectedDetailedImages: {},
         currentStage: 'planning'
     };
 };

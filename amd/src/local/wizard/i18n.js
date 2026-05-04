@@ -72,6 +72,7 @@ const STRING_KEYS = [
     'wizard_plan_review_hint_initial',
     'wizard_plan_detailed_title',
     'wizard_plan_detailed_subtitle',
+    'wizard_plan_detailed_stats',
     'wizard_plan_review_hint_detailed',
     'wizard_plan_detailed_done_title',
     'wizard_plan_detailed_done_subtitle',
@@ -114,6 +115,11 @@ const STRING_KEYS = [
     'wizard_status_adjusting',
     'wizard_chapters_label',
     'wizard_questions_label',
+    'wizard_notes_label',
+    'wizard_images_suggested_label',
+    'wizard_images_select_all',
+    'wizard_image_count_one',
+    'wizard_image_count_many',
 ];
 
 /**

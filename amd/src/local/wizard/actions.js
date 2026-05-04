@@ -196,11 +196,20 @@ export const createWizardActions = (deps) => {
         }
 
         try {
-            const feedbackResponse = await sendPlanningFeedback({
+            const feedbackPayload = {
                 recordid: state.sessionid,
                 action,
                 instruction,
-            });
+            };
+
+            // Include selected image IDs when approving detailed plan
+            if (action === 'accept' && state.planningMode === 'detailed') {
+                const selectedImageIds = Object.keys(state.selectedDetailedImages)
+                    .filter(id => state.selectedDetailedImages[id] !== false);
+                feedbackPayload.selectedimageids = selectedImageIds;
+            }
+
+            const feedbackResponse = await sendPlanningFeedback(feedbackPayload);
 
             if (!feedbackResponse || !feedbackResponse.success) {
                 throw new Error(feedbackResponse?.message || texts.wizard_error_send_feedback);

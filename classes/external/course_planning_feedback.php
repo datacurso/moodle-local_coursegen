@@ -30,6 +30,7 @@ use external_api;
 use external_function_parameters;
 use external_single_structure;
 use external_value;
+use external_multiple_structure;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
 
