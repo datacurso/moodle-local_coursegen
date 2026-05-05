@@ -232,7 +232,7 @@
 
     <!-- Step 2: Planning view -->
     <div class="planning-wrap" id="planningView" style="display:none">
-      <div class="pc-card">
+      <div class="pc-card" id="planningProgressCard">
         <div class="pc-card-main">
           <div class="pc-icon-wrap">
             <svg id="planningSpinner" class="pc-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
@@ -279,6 +279,32 @@
             <div class="plan-markdown" id="planMarkdown"></div>
             <span class="typing-cursor hidden" id="typingCursor"></span>
           </div>
+        </div>
+      </div>
+
+      <div class="pc-completion-card" id="completionView" style="display:none">
+        <span class="pc-completion-icon" aria-hidden="true">
+          <svg width="30" height="30" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M5.8 11.3 2 22l10.7-3.8"></path>
+            <path d="M4 3h.01"></path>
+            <path d="M22 8h.01"></path>
+            <path d="M15 2h.01"></path>
+            <path d="M22 20h.01"></path>
+            <path d="m22 2-2 2"></path>
+            <path d="m22 13-4-4"></path>
+            <path d="M11 2 9 4"></path>
+          </svg>
+        </span>
+        <h3 class="pc-completion-title">{{#str}}wizard_completion_title, local_coursegen{{/str}}</h3>
+        <p class="pc-completion-summary" id="completionSummary">{{#str}}wizard_completion_summary_default, local_coursegen{{/str}}</p>
+        <div class="pc-completion-actions">
+          <button class="btn-completion-primary" id="btnOpenMoodleCourse" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"></path>
+            </svg>
+            {{#str}}wizard_completion_btn_open_course, local_coursegen{{/str}}
+          </button>
+          <button class="btn-completion-secondary" id="btnCreateAnotherCourse" type="button">{{#str}}wizard_completion_btn_create_another, local_coursegen{{/str}}</button>
         </div>
       </div>
 

@@ -26,6 +26,7 @@ export const getWizardElements = () => {
         imgToggleWrap: btnWithImages ? btnWithImages.closest('label') : null,
         contextView: document.getElementById('contextView'),
         planningView: document.getElementById('planningView'),
+        planningProgressCard: document.getElementById('planningProgressCard'),
         planningSpinner: document.getElementById('planningSpinner'),
         pcStep: document.getElementById('pcStep'),
         pcTitle: document.getElementById('pcTitle'),
@@ -61,5 +62,10 @@ export const getWizardElements = () => {
         btnAdjustSend: document.getElementById('btnAdjustSend'),
         btnBackFlow: document.getElementById('btnBackFlow'),
         btnCancelFlow: document.getElementById('btnCancelFlow'),
+        planningNavRow: document.getElementById('planningNavRow'),
+        completionView: document.getElementById('completionView'),
+        completionSummary: document.getElementById('completionSummary'),
+        btnOpenMoodleCourse: document.getElementById('btnOpenMoodleCourse'),
+        btnCreateAnotherCourse: document.getElementById('btnCreateAnotherCourse'),
     };
 };

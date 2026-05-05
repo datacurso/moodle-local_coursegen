@@ -27,6 +27,7 @@ export const createWizardActions = (deps) => {
         planningUi,
         streamManager,
         texts,
+        formatTemplate,
     } = deps;
 
     const {
@@ -43,29 +44,157 @@ export const createWizardActions = (deps) => {
         pcSubtitle,
         btnBackFlow,
         btnCancelFlow,
+        planningNavRow,
         pcToggleBtn,
         pcDetailsPanel,
         pcChevron,
+        planningProgressCard,
+        completionView,
+        completionSummary,
+        btnOpenMoodleCourse,
+        btnCreateAnotherCourse,
+        btnWithImages,
+        imgToggleWrap,
+        langSelect,
     } = elements;
+
+    const getSummaryCounts = () => {
+        if (state.completionStats) {
+            return state.completionStats;
+        }
+
+        const units = state.totalSections || Object.keys(state.detailedSectionMeta || {}).length || 0;
+        const activities = state.totalActivities || state.detailedTotal || 0;
+        const images = Object.keys(state.selectedDetailedImages || {})
+            .filter((id) => state.selectedDetailedImages[id] !== false).length;
+
+        return {units, activities, images};
+    };
+
+    const buildCompletionSummary = () => {
+        const {units, activities, images} = getSummaryCounts();
+        if (state.withImages) {
+            return formatTemplate(texts.wizard_completion_summary_with_images, {
+                units,
+                activities,
+                images,
+            });
+        }
+
+        return formatTemplate(texts.wizard_completion_summary_no_images, {
+            units,
+            activities,
+        });
+    };
+
+    const showCompletionView = (result) => {
+        state.createdCourseResult = result || null;
+        state.createdCourseUrl = result?.courseurl || '';
+        state.currentStage = 'completed';
+
+        if (completionSummary) {
+            completionSummary.textContent = buildCompletionSummary();
+        }
+        if (planningProgressCard) {
+            planningProgressCard.style.display = 'none';
+        }
+        if (elements.planReviewCard) {
+            elements.planReviewCard.style.display = 'none';
+        }
+        if (planActions) {
+            planActions.style.display = 'none';
+        }
+        if (adjustPanel) {
+            adjustPanel.style.display = 'none';
+        }
+        if (planningNavRow) {
+            planningNavRow.style.display = 'none';
+        }
+        if (completionView) {
+            completionView.style.display = 'flex';
+        }
+        if (btnOpenMoodleCourse) {
+            btnOpenMoodleCourse.disabled = !state.createdCourseUrl;
+        }
+
+        stepsUi.setStepState('generating', 'done');
+        stepsUi.updateFlowNav();
+    };
+
+    const resetForAnotherCourse = () => {
+        state.sessionid = 0;
+        state.threadid = '';
+        state.streamingurl = '';
+        state.selectedGuidelineId = null;
+        state.syllabusFile = null;
+        state.syllabusFilename = null;
+        state.draftitemid = null;
+        state.withImages = false;
+        state.lang = state.defaultLang;
+        state.completionStats = null;
+        state.createdCourseUrl = '';
+        state.createdCourseResult = null;
+
+        if (promptInput) {
+            promptInput.value = '';
+        }
+        if (langSelect) {
+            langSelect.value = state.lang;
+        }
+        if (btnWithImages) {
+            btnWithImages.checked = false;
+        }
+        if (imgToggleWrap) {
+            imgToggleWrap.classList.remove('on');
+        }
+
+        const chipSyllabus = document.getElementById('chipSyllabus');
+        if (chipSyllabus) {
+            chipSyllabus.classList.add('hidden');
+        }
+        const chipSyllabusName = document.getElementById('chipSyllabusName');
+        if (chipSyllabusName) {
+            chipSyllabusName.textContent = '';
+        }
+
+        refreshGuidelineChip();
+        refreshChipsRow();
+        stepsUi.backToContext();
+        updateGenerateButton();
+    };
 
     const createCourseFromSession = async() => {
         if (!state.sessionid) {
             return;
         }
-        if (elements.pcStep) {
-            elements.pcStep.textContent = texts.wizard_state_completed;
-        }
-        if (elements.pcTitle) {
-            elements.pcTitle.textContent = texts.wizard_course_creating;
-        }
-        stepsUi.setProgress(100);
+        try {
+            if (elements.pcStep) {
+                elements.pcStep.textContent = texts.wizard_state_completed;
+            }
+            if (elements.pcTitle) {
+                elements.pcTitle.textContent = texts.wizard_course_creating;
+            }
+            if (pcSubtitle) {
+                pcSubtitle.textContent = texts.wizard_course_creating_subtitle;
+            }
+            stepsUi.setProgress(100);
 
-        const result = await createCourse({recordid: state.sessionid});
-        if (!result || !result.success) {
-            throw new Error(result?.message || texts.wizard_error_create_course);
-        }
-        if (result.courseurl) {
-            window.location.href = result.courseurl;
+            const result = await createCourse({recordid: state.sessionid});
+            if (!result || !result.success) {
+                throw new Error(result?.message || texts.wizard_error_create_course);
+            }
+
+            showCompletionView(result);
+            return result;
+        } catch (error) {
+            if (elements.pcStep) {
+                elements.pcStep.textContent = texts.wizard_state_error;
+            }
+            if (pcSubtitle) {
+                pcSubtitle.textContent = error?.message || texts.wizard_error_create_course;
+            }
+            await Notification.exception(error);
+            return null;
         }
     };
 
@@ -202,11 +331,24 @@ export const createWizardActions = (deps) => {
                 instruction,
             };
 
-            // Include selected image IDs when approving detailed plan
+            // Include selected image IDs when approving detailed plan.
             if (action === 'accept' && state.planningMode === 'detailed') {
                 const selectedImageIds = Object.keys(state.selectedDetailedImages)
-                    .filter(id => state.selectedDetailedImages[id] !== false);
+                    .filter((id) => state.selectedDetailedImages[id] !== false);
                 feedbackPayload.selectedimageids = selectedImageIds;
+
+                state.completionStats = {
+                    units: state.totalSections || Object.keys(state.detailedSectionMeta || {}).length || 0,
+                    activities: state.totalActivities || state.detailedTotal || 0,
+                    images: selectedImageIds.length,
+                };
+            } else if (action === 'accept' && state.currentStage === 'detailed') {
+                state.completionStats = {
+                    units: state.totalSections || Object.keys(state.detailedSectionMeta || {}).length || 0,
+                    activities: state.totalActivities || state.detailedTotal || 0,
+                    images: Object.keys(state.selectedDetailedImages || {})
+                        .filter((id) => state.selectedDetailedImages[id] !== false).length,
+                };
             }
 
             const feedbackResponse = await sendPlanningFeedback(feedbackPayload);
@@ -320,8 +462,25 @@ export const createWizardActions = (deps) => {
             });
         }
 
+        if (btnOpenMoodleCourse) {
+            btnOpenMoodleCourse.addEventListener('click', () => {
+                if (!state.createdCourseUrl) {
+                    return;
+                }
+                window.open(state.createdCourseUrl, '_blank', 'noopener,noreferrer');
+            });
+        }
+
+        if (btnCreateAnotherCourse) {
+            btnCreateAnotherCourse.addEventListener('click', () => {
+                resetForAnotherCourse();
+            });
+        }
+
         window.clearSyllabus = () => {
+            state.syllabusFile = null;
             state.syllabusFilename = null;
+            state.draftitemid = null;
             const chipSyllabus = document.getElementById('chipSyllabus');
             if (chipSyllabus) {
                 chipSyllabus.classList.add('hidden');

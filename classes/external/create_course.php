@@ -24,6 +24,7 @@
 
 namespace local_coursegen\external;
 
+use core_course_category;
 use context_coursecat;
 use external_api;
 use external_function_parameters;
@@ -81,6 +82,8 @@ class create_course extends external_api {
             throw new moodle_exception('error_invalid_coursedata', 'local_coursegen');
         }
 
+        $coursedata = self::hydrate_minimal_course_fields($coursedata, $recordid);
+
         if (empty($coursedata->category)) {
             throw new moodle_exception('error_missing_category', 'local_coursegen');
         }
@@ -91,6 +94,101 @@ class create_course extends external_api {
         require_capability('moodle/course:create', $catcontext);
 
         return create_course_service::create_course($session, $coursedata);
+    }
+
+    /**
+     * Ensure required core fields exist for wizard-created sessions.
+     *
+     * Wizard sessions can be created from a lightweight payload that does not
+     * always contain category/fullname/shortname. This method fills safe
+     * defaults so course creation can continue.
+     *
+     * @param \stdClass $coursedata Stored session course data.
+     * @param int $recordid Session record ID.
+     * @return \stdClass
+     */
+    private static function hydrate_minimal_course_fields(\stdClass $coursedata, int $recordid): \stdClass {
+        if (empty($coursedata->category)) {
+            $defaultcategory = core_course_category::get_default();
+            if ($defaultcategory && !empty($defaultcategory->id)) {
+                $coursedata->category = (int)$defaultcategory->id;
+            }
+        }
+
+        $prompt = trim((string)($coursedata->local_coursegen_custom_prompt ?? ''));
+        $lang = (string)($coursedata->local_coursegen_lang ?? 'es');
+        $existingfullname = trim((string)($coursedata->fullname ?? ''));
+
+        if ($existingfullname === '' || self::looks_like_instructional_prompt($existingfullname)) {
+            $baseprompt = $prompt !== '' ? $prompt : $existingfullname;
+            $coursedata->fullname = self::build_course_title_from_prompt($baseprompt, $lang);
+        }
+
+        if (empty($coursedata->shortname)) {
+            $base = \core_text::strtolower((string)$coursedata->fullname);
+            $base = preg_replace('/[^a-z0-9]+/i', '-', $base);
+            $base = trim((string)$base, '-');
+
+            if ($base === '') {
+                $base = 'ai-course';
+            }
+
+            $base = (string)\core_text::substr($base, 0, 40);
+            $coursedata->shortname = $base . '-' . $recordid;
+        }
+
+        return $coursedata;
+    }
+
+    /**
+     * Return true when the text still looks like a raw instruction prompt.
+     *
+     * @param string $text Candidate title.
+     * @return bool
+     */
+    private static function looks_like_instructional_prompt(string $text): bool {
+        $candidate = trim((string)\core_text::strtolower($text));
+        if ($candidate === '') {
+            return false;
+        }
+
+        return (bool)preg_match(
+            '/^(please\s+)?(create|generate|build|design|make|draft|crea|crear|genera|generar|disena|diseña|elabora|desarrolla|haz)\b/iu',
+            $candidate
+        );
+    }
+
+    /**
+     * Build a user-friendly course title from a free-form prompt.
+     *
+     * @param string $prompt Free-form user prompt.
+     * @param string $lang Language code from request context.
+     * @return string
+     */
+    private static function build_course_title_from_prompt(string $prompt, string $lang = 'es'): string {
+        $normalized = trim((string)preg_replace('/\s+/u', ' ', $prompt));
+        $normalized = preg_replace('/^[\p{P}\p{Zs}]+/u', '', $normalized);
+        $normalized = preg_replace(
+            '/^(please\s+)?(create|generate|build|design|make|draft|crea|crear|genera|generar|disena|diseña|elabora|desarrolla|haz)\s+/iu',
+            '',
+            $normalized
+        );
+        $normalized = preg_replace('/^(an?|un|una)\s+/iu', '', $normalized);
+        $normalized = preg_replace('/^(course|curso)\s*(about|on|of|sobre|de|acerca de)?\s*/iu', '', $normalized);
+        $normalized = trim((string)$normalized, " \t\n\r\0\x0B.,;:!¡?¿-_");
+
+        if ($normalized === '') {
+            return get_string('createwithai', 'local_coursegen');
+        }
+
+        $maxlen = 180;
+        $topic = trim((string)\core_text::substr($normalized, 0, $maxlen));
+
+        if ($lang === 'en') {
+            return 'Course: ' . $topic;
+        }
+
+        return 'Curso: ' . $topic;
     }
 
     /**

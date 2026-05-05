@@ -17,6 +17,7 @@
  */
 export const createInitialState = ({defaultLang, guidelines, languages}) => {
     return {
+        defaultLang,
         syllabusFile: null,
         syllabusFilename: null,
         draftitemid: null,
@@ -43,6 +44,9 @@ export const createInitialState = ({defaultLang, guidelines, languages}) => {
         detailedActivityEls: {},
         detailedSectionMeta: {},
         selectedDetailedImages: {},
+        completionStats: null,
+        createdCourseUrl: '',
+        createdCourseResult: null,
         currentStage: 'planning'
     };
 };

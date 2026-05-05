@@ -17,7 +17,6 @@
 namespace local_coursegen\local\service;
 
 use local_coursegen\local\models\course_session;
-use local_coursegen\utils\text_editor_parameter_cleaner;
 
 /**
  * Service responsible for creating a course from an AI planning session.
@@ -65,6 +64,11 @@ class create_course_service {
             // Extract result data.
             $resultdata = $result['result'] ?? [];
 
+            $aititle = self::extract_ai_course_title($resultdata);
+            if ($aititle !== '') {
+                $course = self::apply_ai_course_title($course, $aititle);
+            }
+
             // Process sections if provided in the response.
             if (!empty($resultdata['sections_info'])) {
                 self::process_course_sections($course->id, $resultdata['sections_info']);
@@ -72,11 +76,7 @@ class create_course_service {
 
             // Process generated activities if provided in the response.
             if (!empty($resultdata['generated_activities'])) {
-                // Clean text editor parameters before processing.
-                $cleanedactivities = text_editor_parameter_cleaner::clean_editor_parameters(
-                    $resultdata['generated_activities']
-                );
-                self::process_generated_activities($course->id, $cleanedactivities);
+                self::process_generated_activities($course->id, $resultdata['generated_activities']);
             }
 
             // Update session status to created.
@@ -103,6 +103,81 @@ class create_course_service {
                 'message' => $e->getMessage(),
             ];
         }
+    }
+
+    /**
+     * Extract a representative AI-generated course title from the final payload.
+     *
+     * @param array $resultdata Final result from AI service.
+     * @return string
+     */
+    private static function extract_ai_course_title(array $resultdata): string {
+        $sections = $resultdata['sections_info'] ?? [];
+        if (is_array($sections)) {
+            foreach ($sections as $section) {
+                if (!is_array($section)) {
+                    continue;
+                }
+
+                $name = trim(strip_tags((string)($section['name'] ?? '')));
+                if ($name === '') {
+                    continue;
+                }
+
+                if (preg_match('/^(section|secci[oó]n)\s*\d+$/iu', $name)) {
+                    continue;
+                }
+
+                return (string)\core_text::substr($name, 0, 255);
+            }
+        }
+
+        $activities = $resultdata['generated_activities'] ?? [];
+        if (is_array($activities)) {
+            foreach ($activities as $activity) {
+                if (!is_array($activity)) {
+                    continue;
+                }
+
+                $parameters = $activity['parameters'] ?? [];
+                if (!is_array($parameters)) {
+                    continue;
+                }
+
+                $name = trim(strip_tags((string)($parameters['name'] ?? '')));
+                if ($name !== '') {
+                    return (string)\core_text::substr($name, 0, 255);
+                }
+            }
+        }
+
+        return '';
+    }
+
+    /**
+     * Update course fullname with a refined AI-proposed title.
+     *
+     * @param \stdClass $course Created course object.
+     * @param string $title AI-proposed title.
+     * @return \stdClass
+     */
+    private static function apply_ai_course_title(\stdClass $course, string $title): \stdClass {
+        global $DB;
+
+        $clean = trim((string)preg_replace('/\s+/u', ' ', $title));
+        if ($clean === '' || $clean === (string)$course->fullname) {
+            return $course;
+        }
+
+        $newfullname = (string)\core_text::substr($clean, 0, 255);
+        $updaterecord = (object)[
+            'id' => $course->id,
+            'fullname' => $newfullname,
+        ];
+        $DB->update_record('course', $updaterecord);
+
+        $course->fullname = $newfullname;
+        return $course;
     }
 
     /**

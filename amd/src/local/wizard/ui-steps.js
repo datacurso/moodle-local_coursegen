@@ -23,9 +23,13 @@ export const createStepsUi = (deps) => {
     const {
         contextView,
         planningView,
+        planningProgressCard,
         btnGenerate,
         btnBackFlow,
         btnCancelFlow,
+        planningNavRow,
+        completionView,
+        completionSummary,
         planSectionsView,
         planDetailedView,
         planMarkdownView,
@@ -91,6 +95,11 @@ export const createStepsUi = (deps) => {
         if (!btnBackFlow || !btnCancelFlow) {
             return;
         }
+
+        if (planningNavRow) {
+            planningNavRow.style.display = state.currentStage === 'completed' ? 'none' : 'flex';
+        }
+
         if (state.currentStage === 'planning') {
             btnBackFlow.style.display = '';
             btnBackFlow.textContent = texts.wizard_btn_back_context;
@@ -152,6 +161,18 @@ export const createStepsUi = (deps) => {
         if (planReviewCard) {
             planReviewCard.style.display = 'none';
         }
+        if (completionView) {
+            completionView.style.display = 'none';
+        }
+        if (completionSummary) {
+            completionSummary.textContent = texts.wizard_completion_summary_default;
+        }
+        if (planningProgressCard) {
+            planningProgressCard.style.display = '';
+        }
+        if (planningNavRow) {
+            planningNavRow.style.display = 'flex';
+        }
         if (planActions) {
             planActions.style.display = 'none';
         }
@@ -210,6 +231,10 @@ export const createStepsUi = (deps) => {
         state.planSectionsData = [];
         state.detailedActivityEls = {};
         state.detailedSectionMeta = {};
+        state.selectedDetailedImages = {};
+        state.completionStats = null;
+        state.createdCourseUrl = '';
+        state.createdCourseResult = null;
     };
 
     const backToContext = () => {

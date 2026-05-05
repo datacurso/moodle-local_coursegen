@@ -36,8 +36,8 @@ export async function sendPlanningFeedback({recordid, action, instruction, selec
         instruction,
     };
 
-    // Include selected image IDs if provided
-    if (Array.isArray(selectedimageids) && selectedimageids.length > 0) {
+    // Include selected image IDs if provided (can be empty when user deselects all)
+    if (Array.isArray(selectedimageids)) {
         args.selected_image_ids = selectedimageids;
     }
 
@@ -69,4 +69,3 @@ export async function createCourse({recordid}) {
         },
     ])[0];
 }
-

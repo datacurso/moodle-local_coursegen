@@ -35,6 +35,118 @@ export const createStreamManager = (deps) => {
         pcStep,
     } = elements;
 
+    const collectStringValues = (value, output) => {
+        if (typeof value === 'string') {
+            output.push(value);
+            return;
+        }
+
+        if (Array.isArray(value)) {
+            value.forEach((item) => collectStringValues(item, output));
+            return;
+        }
+
+        if (value && typeof value === 'object') {
+            Object.values(value).forEach((item) => collectStringValues(item, output));
+        }
+    };
+
+    const normalizeImageSource = (source) => {
+        if (!source || typeof source !== 'string') {
+            return '';
+        }
+
+        return source
+            .trim()
+            .replace(/^['"]|['"]$/g, '')
+            .replace(/\\\//g, '/');
+    };
+
+    const countImagesInActivityPayload = (activityPayload) => {
+        const stringValues = [];
+        collectStringValues(activityPayload || {}, stringValues);
+        if (stringValues.length === 0) {
+            return 0;
+        }
+
+        const imageSources = new Set();
+        let fallbackImgTagCount = 0;
+
+        stringValues.forEach((value) => {
+            if (!value) {
+                return;
+            }
+
+            const htmlImagePattern = /<img\b[^>]*\bsrc\s*=\s*(["'])(.*?)\1/gi;
+            let htmlMatch = htmlImagePattern.exec(value);
+            while (htmlMatch) {
+                const normalized = normalizeImageSource(htmlMatch[2]);
+                if (normalized) {
+                    imageSources.add(normalized);
+                }
+                htmlMatch = htmlImagePattern.exec(value);
+            }
+
+            const markdownImagePattern = /!\[[^\]]*\]\(([^)\s]+)(?:\s+"[^"]*")?\)/g;
+            let markdownMatch = markdownImagePattern.exec(value);
+            while (markdownMatch) {
+                const normalized = normalizeImageSource(markdownMatch[1]);
+                if (normalized) {
+                    imageSources.add(normalized);
+                }
+                markdownMatch = markdownImagePattern.exec(value);
+            }
+
+            const generatedPathPattern = /\/tmp\/resource_files\/generated_images\/[a-z0-9._-]+/gi;
+            const generatedPaths = value.match(generatedPathPattern) || [];
+            generatedPaths.forEach((path) => {
+                const normalized = normalizeImageSource(path);
+                if (normalized) {
+                    imageSources.add(normalized);
+                }
+            });
+
+            if (imageSources.size === 0) {
+                const looseHtmlMatches = value.match(/<img\s+[^>]*src=/gi) || [];
+                fallbackImgTagCount += looseHtmlMatches.length;
+            }
+        });
+
+        return imageSources.size > 0 ? imageSources.size : fallbackImgTagCount;
+    };
+
+    const setCompletionStatsFromGeneratedResult = (generatedActivities) => {
+        if (!Array.isArray(generatedActivities) || generatedActivities.length === 0) {
+            return;
+        }
+
+        const sectionIndexes = new Set();
+        let generatedImageCount = 0;
+        generatedActivities.forEach((activity) => {
+            const rawSection = activity?.parameters?.section;
+            const parsedSection = Number(rawSection);
+            if (!Number.isNaN(parsedSection)) {
+                sectionIndexes.add(parsedSection);
+            }
+
+            generatedImageCount += countImagesInActivityPayload(activity);
+        });
+
+        const selectedImages = Object.keys(state.selectedDetailedImages || {})
+            .filter((id) => state.selectedDetailedImages[id] !== false).length;
+
+        const finalImageCount = generatedImageCount > 0 ? generatedImageCount : selectedImages;
+
+        state.completionStats = {
+            units: sectionIndexes.size
+                || state.totalSections
+                || Object.keys(state.detailedSectionMeta || {}).length
+                || (generatedActivities.length > 0 ? 1 : 0),
+            activities: generatedActivities.length,
+            images: finalImageCount,
+        };
+    };
+
     const closeStream = () => {
         if (state.sseSource) {
             try {
@@ -159,6 +271,7 @@ export const createStreamManager = (deps) => {
                     planningUi.showReviewActions(state.planningMode === 'detailed' ? 'detailed' : 'markdown');
                     break;
                 case 'completed':
+                    setCompletionStatsFromGeneratedResult(data.result || []);
                     stepsUi.setStepState('detailed', 'done');
                     stepsUi.setStepState('generating', 'active');
                     state.currentStage = 'generating';

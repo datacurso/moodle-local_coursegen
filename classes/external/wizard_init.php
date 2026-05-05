@@ -16,6 +16,7 @@
 
 namespace local_coursegen\external;
 
+use core_course_category;
 use context_system;
 use external_api;
 use external_function_parameters;
@@ -140,12 +141,29 @@ class wizard_init extends external_api {
             $client = new ai_course_api(null, $baseurl ?: null, $baseurleu ?: null);
             $streamingurl = $client->get_streaming_url_for_session($threadid);
 
+            $defaultcategory = core_course_category::get_default();
+            $defaultcategoryid = $defaultcategory ? (int)$defaultcategory->id : 0;
+
+            $prompttitle = self::build_course_title_from_prompt($params['prompt'], (string)$params['lang']);
+
+            $shortnamebase = \core_text::strtolower($prompttitle);
+            $shortnamebase = preg_replace('/[^a-z0-9]+/i', '-', $shortnamebase);
+            $shortnamebase = trim((string)$shortnamebase, '-');
+            if ($shortnamebase === '') {
+                $shortnamebase = 'ai-course';
+            }
+            $shortnamebase = (string)\core_text::substr($shortnamebase, 0, 40);
+            $generatedshortname = $shortnamebase . '-' . $USER->id . '-' . time();
+
             // Create course session record.
             $session = new course_session();
             $session->set('userid', $USER->id);
             $session->set('session_id', $threadid);
             $session->set('status', 1); // Planning.
             $session->set('coursedata', json_encode([
+                'category' => $defaultcategoryid,
+                'fullname' => $prompttitle,
+                'shortname' => $generatedshortname,
                 'local_coursegen_lang' => $params['lang'],
                 'local_coursegen_generate_images' => $params['withimages'] ? 1 : 0,
                 'local_coursegen_context_type' => 'customprompt',
@@ -172,6 +190,38 @@ class wizard_init extends external_api {
                 'message' => $e->getMessage(),
             ];
         }
+    }
+
+    /**
+     * Build a user-friendly course title from a free-form prompt.
+     *
+     * @param string $prompt Free-form prompt from the wizard.
+     * @param string $lang Language code from request context.
+     * @return string
+     */
+    private static function build_course_title_from_prompt(string $prompt, string $lang = 'es'): string {
+        $normalized = trim((string)preg_replace('/\s+/u', ' ', $prompt));
+        $normalized = preg_replace('/^[\p{P}\p{Zs}]+/u', '', $normalized);
+        $normalized = preg_replace(
+            '/^(please\s+)?(create|generate|build|design|make|draft|crea|crear|genera|generar|disena|diseña|elabora|desarrolla|haz)\s+/iu',
+            '',
+            $normalized
+        );
+        $normalized = preg_replace('/^(an?|un|una)\s+/iu', '', $normalized);
+        $normalized = preg_replace('/^(course|curso)\s*(about|on|of|sobre|de|acerca de)?\s*/iu', '', $normalized);
+        $normalized = trim((string)$normalized, " \t\n\r\0\x0B.,;:!¡?¿-_");
+
+        if ($normalized === '') {
+            return get_string('createwithai', 'local_coursegen');
+        }
+
+        $topic = trim((string)\core_text::substr($normalized, 0, 180));
+
+        if ($lang === 'en') {
+            return 'Course: ' . $topic;
+        }
+
+        return 'Curso: ' . $topic;
     }
 
     /**

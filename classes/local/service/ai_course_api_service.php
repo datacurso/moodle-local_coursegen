@@ -131,14 +131,29 @@ class ai_course_api_service {
      * @param string $sessionid External planning session identifier.
      * @param string $approvalstatus Approval status (accept|adjust).
      * @param string $instruction Optional feedback text.
+     * @param array|null $selectedimageids Selected image IDs from detailed planning review.
      * @return array Decoded response from the API.
      */
-    public function send_planning_feedback(string $sessionid, string $approvalstatus, string $instruction = ''): array {
+    public function send_planning_feedback(
+        string $sessionid,
+        string $approvalstatus,
+        string $instruction = '',
+        ?array $selectedimageids = null
+    ): array {
         $payload = [
             'approval_status' => $approvalstatus,
             'instruction' => $instruction,
             'thread_id' => $sessionid,
         ];
+
+        if ($selectedimageids !== null) {
+            $payload['selected_image_ids'] = array_values(array_map(
+                static function($value): string {
+                    return trim((string) $value);
+                },
+                $selectedimageids
+            ));
+        }
 
         $endpoint = '/course/feedback';
 

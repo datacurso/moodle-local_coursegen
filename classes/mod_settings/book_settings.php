@@ -58,7 +58,19 @@ class book_settings extends base_settings {
             IGNORE_MULTIPLE
         );
 
-        $chapter['content_editor']['itemid'] = file_get_unused_draft_itemid();
+        $contenteditor = $chapter['content_editor'] ?? [];
+        if (!is_array($contenteditor)) {
+            $contenteditor = ['text' => (string)$contenteditor];
+        }
+
+        $contenteditor['text'] = (string)($contenteditor['text'] ?? '');
+        $contenteditor['format'] = (int)($contenteditor['format'] ?? FORMAT_HTML);
+
+        $contentitemid = (int)($contenteditor['itemid'] ?? 0);
+        if ($contentitemid <= 0) {
+            $contentitemid = file_get_unused_draft_itemid();
+        }
+        $contenteditor['itemid'] = $contentitemid;
 
         $pagenum = $last ? ($last->pagenum + 1) : 1;
 
@@ -71,7 +83,7 @@ class book_settings extends base_settings {
         $data->timecreated = time();
         $data->timemodified = time();
         $data->importsrc = '';
-        $data->content_editor = $chapter['content_editor'];
+        $data->content_editor = $contenteditor;
         $data->content = '';
         $data->contentformat = FORMAT_HTML;
 
