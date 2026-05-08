@@ -143,11 +143,15 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .step-label {
-  font-size: 13px;
-  font-weight: 500;
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.2;
+  display: flex;
+  align-items: center;
+  min-height: 32px;
+  white-space: normal;
+  overflow: visible;
+  text-overflow: clip;
   color: var(--muted-fg);
 }
 .step-item.active .step-label,
@@ -931,6 +935,11 @@ svg { display: block; flex-shrink: 0; }
   box-shadow: 0 16px 26px -18px hsl(8, 72%, 42%, .75);
 }
 
+.pc-completion-emoji {
+  font-size: 34px;
+  line-height: 1;
+}
+
 .pc-completion-title {
   margin: 0;
   font-size: 24px;
@@ -1090,6 +1099,12 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .pc-spin.done { animation: none; }
+
+#planningCheckIcon {
+  width: 20px;
+  height: 20px;
+  color: #fff;
+}
 .pc-info { flex: 1; min-width: 0; }
 
 .pc-step {
@@ -1284,6 +1299,22 @@ svg { display: block; flex-shrink: 0; }
   margin-top: 1px;
 }
 
+.ps-badge-icon {
+  width: 14px;
+  height: 14px;
+  margin-right: 5px;
+  flex-shrink: 0;
+  display: inline-block;
+  vertical-align: middle;
+  filter: brightness(0) saturate(100%);
+  opacity: 0.7;
+}
+
+.ps-badge-text {
+  display: inline-block;
+  line-height: 1;
+}
+
 .ps-badge--quiz { background: hsl(252, 80%, 92%); color: hsl(252, 60%, 40%); }
 .ps-badge--book { background: hsl(198, 80%, 90%); color: hsl(198, 65%, 32%); }
 .ps-badge--assign { background: hsl(35, 85%, 90%); color: hsl(35, 65%, 32%); }
@@ -1385,6 +1416,119 @@ svg { display: block; flex-shrink: 0; }
 
 .prv-section-btn:hover {
   background: var(--muted);
+}
+
+.dp-item-actions {
+  margin-left: auto;
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.dp-item-actions--section {
+  margin-right: 2px;
+}
+
+.dp-item-actions--image {
+  position: absolute;
+  top: 0;
+  right: 0;
+  margin: 0;
+  z-index: 2;
+}
+
+.dp-action-btn {
+  width: 24px;
+  height: 24px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 6px;
+  border: none;
+  background: hsl(215 35% 97%);
+  color: hsl(215 18% 46%);
+  font-size: 12px;
+  cursor: pointer;
+  transition: all .12s;
+  box-shadow: 0 1px 2px hsl(215 28% 17% / .04);
+}
+
+.dp-action-icon {
+  width: 14px;
+  height: 14px;
+  display: block;
+  filter: brightness(0) saturate(100%);
+  opacity: .5;
+}
+
+.dp-action-icon--ia {
+  filter: none;
+  opacity: 1;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  color: currentColor;
+}
+
+.dp-action-icon--ia svg {
+  display: block;
+  stroke: currentColor;
+}
+
+.dp-action-btn--ia {
+  background: hsl(0 0% 100% / .98);
+  color: hsl(8 72% 42%);
+  box-shadow: 0 2px 6px hsl(8 72% 20% / .12);
+}
+
+.dp-action-btn--delete {
+  background: hsl(0 0% 100% / .98);
+  color: hsl(8 55% 46%);
+  box-shadow: 0 2px 6px hsl(8 72% 20% / .12);
+}
+
+.dp-action-btn:hover {
+  color: hsl(215 28% 34%);
+  box-shadow: 0 2px 5px hsl(215 28% 17% / .08);
+}
+
+.dp-action-btn--ia:hover {
+  color: hsl(8 72% 42%);
+  background: hsl(0 0% 100% / .98);
+  box-shadow: 0 2px 6px hsl(8 72% 20% / .12);
+}
+
+.dp-action-btn--delete:hover {
+  color: hsl(8 64% 40%);
+  background: hsl(0 0% 100% / .98);
+  box-shadow: 0 2px 6px hsl(8 72% 20% / .12);
+}
+
+.dp-action-btn:focus,
+.dp-action-btn:focus-visible {
+  outline: 2px solid hsl(8 72% 50% / .35);
+  outline-offset: 1px;
+}
+
+.dp-action-btn--ia.is-active {
+  color: hsl(8 72% 42%);
+  background: hsl(0 0% 100% / .98);
+}
+
+.dp-item-actions--image .dp-action-btn {
+  width: 26px;
+  height: 26px;
+  border-radius: 8px;
+  background: hsl(0 0% 100% / .96);
+}
+
+.dp-item-actions--image .dp-action-btn:hover {
+  color: hsl(8 72% 42%);
+}
+
+.dp-action-btn--delete.is-active {
+  color: hsl(8 72% 42%);
+  background: hsl(0 0% 100% / .98);
 }
 
 .prv-section-badge {
@@ -1530,6 +1674,89 @@ svg { display: block; flex-shrink: 0; }
   border-radius: 8px;
   overflow: hidden;
   background: var(--muted);
+}
+
+.dp-ai-inline {
+  border-top: 1px dashed hsl(8 72% 42% / .3);
+  background: hsl(8 72% 50% / .03);
+  padding: 8px 10px 10px;
+}
+
+.dp-image-wrap > .dp-ai-inline {
+  margin: 0 0 8px;
+  border-radius: 8px;
+}
+
+.prv-section-row > .dp-ai-inline {
+  margin: 0 20px 6px 58px;
+  border-radius: 8px;
+}
+
+.dp-ai-textarea {
+  width: 100%;
+  min-height: 56px;
+  resize: vertical;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 7px 9px;
+  font-size: 12px;
+  font-family: inherit;
+  color: var(--fg);
+  background: var(--card);
+}
+
+.dp-ai-textarea:focus,
+.dp-ai-textarea:focus-visible {
+  outline: none;
+  border-color: hsl(8 72% 42% / .45);
+  box-shadow: 0 0 0 2px hsl(8 72% 50% / .16);
+}
+
+.dp-ai-actions {
+  margin-top: 8px;
+  display: flex;
+  justify-content: flex-end;
+  gap: 8px;
+}
+
+.dp-ai-btn {
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  padding: 4px 10px;
+  font-size: 11px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+}
+
+.dp-ai-btn--secondary {
+  background: var(--card);
+  color: var(--muted-fg);
+}
+
+.dp-ai-btn--primary {
+  background: hsl(8 72% 42%);
+  border-color: hsl(8 72% 42%);
+  color: hsl(0 0% 100%);
+}
+
+.dp-item-deleted .prv-section-btn,
+.dp-item-deleted .prv-activity-item {
+  opacity: .55;
+}
+
+.dp-item-deleted .prv-section-title,
+.dp-item-deleted .prv-activity-name {
+  text-decoration: line-through;
+}
+
+.dp-item-has-adjustment .prv-section-btn,
+.dp-item-has-adjustment .prv-activity-item {
+  box-shadow: inset 3px 0 0 hsl(252 55% 42% / .55);
+}
+
+.dp-item-has-adjustment .dp-image-card {
+  box-shadow: inset 3px 0 0 hsl(252 55% 42% / .55);
 }
 
 .dp-activity-wrap .prv-activity-item {
@@ -1687,8 +1914,8 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .dp-image-list {
-  display: grid;
-  grid-template-columns: repeat(2, 1fr);
+  display: flex;
+  flex-direction: column;
   gap: 10px;
   margin-top: 4px;
 }
@@ -1703,6 +1930,7 @@ svg { display: block; flex-shrink: 0; }
   padding: 10px 12px;
   cursor: pointer;
   transition: border-color .15s, box-shadow .15s;
+  position: relative;
 }
 
 .dp-image-card:hover {
@@ -1727,11 +1955,13 @@ svg { display: block; flex-shrink: 0; }
 .dp-image-body {
   min-width: 0;
   flex: 1;
+  position: relative;
+  padding-right: 34px;
 }
 
 .dp-image-placement {
   display: inline-block;
-  margin: 0 0 6px;
+  margin: 0 0 8px;
   padding: 2px 8px;
   font-size: 10px;
   font-weight: 700;

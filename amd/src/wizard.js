@@ -17,6 +17,7 @@ import {
     parseWizardData,
     escapeHtml,
     getActivityLabels,
+    getActivityIconUrl,
     getGenerateButtonHtml,
     formatTemplate,
 } from 'local_coursegen/local/wizard/utils';
@@ -70,8 +71,10 @@ export const init = async(params) => {
             state,
             elements,
             activityLabels,
+            getActivityIconUrl,
             escapeHtml,
             switchPlanMode: stepsUi.switchPlanMode,
+            setProgress: stepsUi.setProgress,
             texts,
             formatTemplate,
         });
@@ -80,6 +83,7 @@ export const init = async(params) => {
             state,
             elements,
             activityLabels,
+            getActivityIconUrl,
             escapeHtml,
             setProgress: stepsUi.setProgress,
             updateDetailedHeaderStats: detailedUi.updateDetailedHeaderStats,

@@ -17,8 +17,10 @@ export const createDetailedUi = (deps) => {
         state,
         elements,
         activityLabels,
+        getActivityIconUrl,
         escapeHtml,
         switchPlanMode,
+        setProgress,
         texts,
         formatTemplate,
     } = deps;
@@ -142,6 +144,123 @@ export const createDetailedUi = (deps) => {
         return label;
     };
 
+    const iaSparklesSvg = [
+        '<svg width="13" height="13" viewBox="0 0 24 24" fill="none"',
+        'stroke="currentColor" stroke-width="2" stroke-linecap="round"',
+        'stroke-linejoin="round" aria-hidden="true">',
+        '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582' +
+            'a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135' +
+            'a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581' +
+            'a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135' +
+            'a.5.5 0 0 1-.962 0z"/>',
+        '</svg>'
+    ].join(' ');
+
+    const getCoreIconUrl = (iconkey) => {
+        if (!iconkey || typeof iconkey !== 'string') {
+            return '';
+        }
+        // eslint-disable-next-line no-undef
+        return M.cfg.wwwroot + '/pix/' + iconkey + '.svg';
+    };
+
+    const createActionControl = ({variant, iconUrl, iconSvg, label, onActivate}) => {
+        const control = document.createElement('span');
+        control.className = `dp-action-btn dp-action-btn--${variant}`;
+        control.setAttribute('role', 'button');
+        control.setAttribute('tabindex', '0');
+        control.setAttribute('aria-label', label);
+        control.title = label;
+        if (iconSvg) {
+            control.innerHTML = `
+                <span class="dp-action-icon dp-action-icon--${variant}" aria-hidden="true">${iconSvg}</span>
+            `;
+        } else {
+            control.innerHTML = `
+                <img src="${iconUrl}"
+                     class="dp-action-icon dp-action-icon--${variant}"
+                     alt=""
+                     aria-hidden="true"
+                     onerror="this.style.display='none'">
+            `;
+        }
+
+        const activate = (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            onActivate();
+        };
+
+        control.addEventListener('click', activate);
+        control.addEventListener('keydown', (event) => {
+            if (event.key === 'Enter' || event.key === ' ') {
+                activate(event);
+            }
+        });
+
+        return control;
+    };
+
+    const createInlineAdjustmentPanel = ({onSubmit}) => {
+        const panel = document.createElement('div');
+        panel.className = 'dp-ai-inline';
+        panel.style.display = 'none';
+
+        const textarea = document.createElement('textarea');
+        textarea.className = 'dp-ai-textarea';
+        textarea.placeholder = texts.wizard_adjust_placeholder || '';
+        textarea.rows = 2;
+
+        const actions = document.createElement('div');
+        actions.className = 'dp-ai-actions';
+
+        const cancel = document.createElement('button');
+        cancel.type = 'button';
+        cancel.className = 'dp-ai-btn dp-ai-btn--secondary';
+        cancel.textContent = texts.wizard_btn_cancel || 'Cancel';
+
+        const send = document.createElement('button');
+        send.type = 'button';
+        send.className = 'dp-ai-btn dp-ai-btn--primary';
+        send.textContent = texts.wizard_btn_send_adjust || 'Send';
+
+        const closePanel = (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            panel.style.display = 'none';
+            textarea.value = '';
+        };
+
+        cancel.addEventListener('click', closePanel);
+        send.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const value = textarea.value.trim();
+            if (!value) {
+                textarea.focus();
+                return;
+            }
+            onSubmit(value);
+            panel.style.display = 'none';
+            textarea.value = '';
+        });
+
+        actions.appendChild(cancel);
+        actions.appendChild(send);
+        panel.appendChild(textarea);
+        panel.appendChild(actions);
+
+        return {
+            panel,
+            open: () => {
+                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+                if (panel.style.display !== 'none') {
+                    textarea.focus();
+                }
+            },
+        };
+    };
+
     const createImagesDetail = ({entry, sectionIndex, imageSuggestions}) => {
         const container = document.createElement('div');
         container.className = 'dp-images-container';
@@ -193,6 +312,9 @@ export const createDetailedUi = (deps) => {
         const checkboxes = [];
 
         imageSuggestions.forEach((item) => {
+            const imageWrap = document.createElement('div');
+            imageWrap.className = 'dp-image-wrap';
+
             const imageCard = document.createElement('label');
             imageCard.className = 'dp-image-card';
 
@@ -224,12 +346,36 @@ export const createDetailedUi = (deps) => {
 
             const body = document.createElement('div');
             body.className = 'dp-image-body';
+
+            const imageActions = document.createElement('div');
+            imageActions.className = 'dp-item-actions dp-item-actions--image';
+
+            let iaControl = null;
+            const imagePanelApi = createInlineAdjustmentPanel({
+                onSubmit: () => {
+                    imageWrap.classList.add('dp-item-has-adjustment');
+                    iaControl.classList.add('is-active');
+                },
+            });
+
+            iaControl = createActionControl({
+                variant: 'ia',
+                iconSvg: iaSparklesSvg,
+                label: texts.wizard_btn_adjust || 'IA',
+                onActivate: () => imagePanelApi.open(),
+            });
+
+            imageActions.appendChild(iaControl);
+
             body.appendChild(placement);
+            body.appendChild(imageActions);
             body.appendChild(description);
 
             imageCard.appendChild(checkbox);
             imageCard.appendChild(body);
-            list.appendChild(imageCard);
+            imageWrap.appendChild(imageCard);
+            imageWrap.appendChild(imagePanelApi.panel);
+            list.appendChild(imageWrap);
         });
 
         masterCheckbox.addEventListener('change', (event) => {
@@ -318,15 +464,6 @@ export const createDetailedUi = (deps) => {
             detailFragment.appendChild(list);
         }
 
-        const notes = typeof parsed.notes === 'string' ? parsed.notes.trim() : '';
-        if (notes) {
-            detailFragment.appendChild(createDetailLabel(texts.wizard_notes_label));
-            const notesParagraph = document.createElement('p');
-            notesParagraph.className = 'dp-detail-text';
-            notesParagraph.textContent = notes;
-            detailFragment.appendChild(notesParagraph);
-        }
-
         const imageSuggestions = Array.isArray(parsed.image_suggestions) ? parsed.image_suggestions : [];
         if (imageSuggestions.length > 0) {
             detailFragment.appendChild(createImagesDetail({
@@ -358,6 +495,8 @@ export const createDetailedUi = (deps) => {
         if (!prvSections) {
             return null;
         }
+
+        let row = null;
 
         const metaEl = document.createElement('p');
         metaEl.className = 'prv-section-meta';
@@ -406,7 +545,48 @@ export const createDetailedUi = (deps) => {
 
         infoDiv.appendChild(titleEl);
         infoDiv.appendChild(metaRowEl);
+
+        const actionsEl = document.createElement('div');
+        actionsEl.className = 'dp-item-actions dp-item-actions--section';
+
+        let iaControl = null;
+        let deleteControl = null;
+
+        const sectionPanelApi = createInlineAdjustmentPanel({
+            onSubmit: () => {
+                if (!row) {
+                    return;
+                }
+                row.classList.add('dp-item-has-adjustment');
+                iaControl.classList.add('is-active');
+            },
+        });
+
+        iaControl = createActionControl({
+            variant: 'ia',
+            iconSvg: iaSparklesSvg,
+            label: texts.wizard_btn_adjust || 'IA',
+            onActivate: () => sectionPanelApi.open(),
+        });
+
+        deleteControl = createActionControl({
+            variant: 'delete',
+            iconUrl: getCoreIconUrl('t/delete'),
+            label: texts.wizard_btn_cancel || 'Delete',
+            onActivate: () => {
+                if (!row) {
+                    return;
+                }
+                const isDeleted = row.classList.toggle('dp-item-deleted');
+                deleteControl.classList.toggle('is-active', isDeleted);
+            },
+        });
+
+        actionsEl.appendChild(iaControl);
+        actionsEl.appendChild(deleteControl);
+
         btn.appendChild(infoDiv);
+        btn.appendChild(actionsEl);
         btn.appendChild(chevronEl);
 
         btn.addEventListener('click', () => {
@@ -415,9 +595,10 @@ export const createDetailedUi = (deps) => {
             chevronEl.classList.toggle('prv-chevron--open', !isOpen);
         });
 
-        const row = document.createElement('div');
+        row = document.createElement('div');
         row.className = 'prv-section-row';
         row.appendChild(btn);
+        row.appendChild(sectionPanelApi.panel);
         row.appendChild(bodyEl);
         prvSections.appendChild(row);
 
@@ -438,9 +619,16 @@ export const createDetailedUi = (deps) => {
         const item = document.createElement('button');
         item.type = 'button';
         item.className = 'prv-activity-item prv-activity-item--pending';
+        const iconUrl = getActivityIconUrl(activityType);
         item.innerHTML = `
             <span class="ps-badge ps-badge--${escapeHtml(activityType)}">
-                ${escapeHtml(activityLabels[activityType] || activityType)}
+                <img src="${iconUrl}" 
+                     class="ps-badge-icon" 
+                     alt="" 
+                     onerror="this.style.display='none'">
+                <span class="ps-badge-text">
+                    ${escapeHtml(activityLabels[activityType] || activityType)}
+                </span>
             </span>
             <div class="prv-activity-text">
                 <p class="prv-activity-name">${escapeHtml(activityTitle)}</p>
@@ -454,6 +642,9 @@ export const createDetailedUi = (deps) => {
         imageBadgeEl.className = 'prv-image-pill prv-image-pill--small';
         imageBadgeEl.style.display = 'none';
 
+        const actionsEl = document.createElement('div');
+        actionsEl.className = 'dp-item-actions';
+
         const chevronEl = document.createElement('span');
         chevronEl.className = 'prv-chevron dp-activity-chevron';
         chevronEl.style.visibility = 'hidden';
@@ -465,6 +656,7 @@ export const createDetailedUi = (deps) => {
         ].join(' ');
 
         rightEl.appendChild(imageBadgeEl);
+        rightEl.appendChild(actionsEl);
         rightEl.appendChild(chevronEl);
         item.appendChild(rightEl);
 
@@ -474,7 +666,38 @@ export const createDetailedUi = (deps) => {
 
         const wrap = document.createElement('div');
         wrap.className = 'dp-activity-wrap';
+
+        let iaControl = null;
+        let deleteControl = null;
+        const activityPanelApi = createInlineAdjustmentPanel({
+            onSubmit: () => {
+                wrap.classList.add('dp-item-has-adjustment');
+                iaControl.classList.add('is-active');
+            },
+        });
+
+        iaControl = createActionControl({
+            variant: 'ia',
+                iconSvg: iaSparklesSvg,
+            label: texts.wizard_btn_adjust || 'IA',
+            onActivate: () => activityPanelApi.open(),
+        });
+
+        deleteControl = createActionControl({
+            variant: 'delete',
+            iconUrl: getCoreIconUrl('t/delete'),
+            label: texts.wizard_btn_cancel || 'Delete',
+            onActivate: () => {
+                const isDeleted = wrap.classList.toggle('dp-item-deleted');
+                deleteControl.classList.toggle('is-active', isDeleted);
+            },
+        });
+
+        actionsEl.appendChild(iaControl);
+        actionsEl.appendChild(deleteControl);
+
         wrap.appendChild(item);
+        wrap.appendChild(activityPanelApi.panel);
         wrap.appendChild(detailEl);
         bodyEl.appendChild(wrap);
 
@@ -695,6 +918,12 @@ export const createDetailedUi = (deps) => {
         entry.done = true;
         entry.item.classList.remove('prv-activity-item--pending');
         entry.item.classList.add('prv-activity-item--done');
+
+        // Update progress based on completed activities (cap at 95% to avoid reaching 100% prematurely)
+        if (typeof setProgress === 'function') {
+            const progress = Math.min(95, (state.detailedCurrent / Math.max(1, state.detailedTotal)) * 100);
+            setProgress(progress);
+        }
 
         if (entry.progressEl) {
             entry.progressEl.remove();

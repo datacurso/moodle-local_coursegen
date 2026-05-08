@@ -17,6 +17,7 @@ export const createPlanningUi = (deps) => {
         state,
         elements,
         activityLabels,
+        getActivityIconUrl,
         escapeHtml,
         setProgress,
         updateDetailedHeaderStats,
@@ -37,6 +38,8 @@ export const createPlanningUi = (deps) => {
         prvHeader,
         prvHeaderTitle,
         planningSpinner,
+        planningCheckIcon,
+        pcIconWrap,
         typingCursor,
         pcTitle,
         planActionsHint,
@@ -83,17 +86,27 @@ export const createPlanningUi = (deps) => {
                 <span class="ps-section-count">${activities.length} ${texts.wizard_activities_count}</span>
             </div>
             <ul class="ps-activities">
-                ${activities.map((activity) => `
+                ${activities.map((activity) => {
+                    const activityType = activity.type || 'resource';
+                    const iconUrl = getActivityIconUrl(activityType);
+                    return `
                     <li class="ps-activity">
-                        <span class="ps-badge ps-badge--${escapeHtml(activity.type || 'resource')}">
-                            ${escapeHtml(activityLabels[activity.type] || activity.type || texts.wizard_activity_default)}
+                        <span class="ps-badge ps-badge--${escapeHtml(activityType)}">
+                            <img src="${iconUrl}" 
+                                 class="ps-badge-icon" 
+                                 alt="" 
+                                 onerror="this.style.display='none'">
+                            <span class="ps-badge-text">
+                                ${escapeHtml(activityLabels[activityType] || activityType || texts.wizard_activity_default)}
+                            </span>
                         </span>
                         <div class="ps-activity-info">
                             <span class="ps-activity-name">${escapeHtml(activity.name || '')}</span>
                             <span class="ps-activity-desc">${escapeHtml(activity.description || '')}</span>
                         </div>
                     </li>
-                `).join('')}
+                `;
+                }).join('')}
             </ul>
         `;
         planSectionsList.appendChild(sectionEl);
@@ -208,9 +221,16 @@ export const createPlanningUi = (deps) => {
         activityItem.className = 'prv-activity-item';
         const activityType = data.activity_type || data.type || 'quiz';
         const activityName = data.title || data.name || texts.wizard_activity_default;
+        const iconUrl = getActivityIconUrl(activityType);
         activityItem.innerHTML = `
             <span class="ps-badge ps-badge--${escapeHtml(activityType)}">
-                ${escapeHtml(activityLabels[activityType] || activityType)}
+                <img src="${iconUrl}" 
+                     class="ps-badge-icon" 
+                     alt="" 
+                     onerror="this.style.display='none'">
+                <span class="ps-badge-text">
+                    ${escapeHtml(activityLabels[activityType] || activityType)}
+                </span>
             </span>
             <div class="prv-activity-text">
                 <p class="prv-activity-name">${escapeHtml(activityName)}</p>
@@ -273,6 +293,16 @@ export const createPlanningUi = (deps) => {
         setProgress(100);
 
         if (mode === 'initial') {
+            if (planningSpinner) {
+                planningSpinner.style.display = 'none';
+            }
+            if (planningCheckIcon) {
+                planningCheckIcon.style.display = '';
+            }
+            if (pcIconWrap) {
+                pcIconWrap.style.background = '#16a34a';
+                pcIconWrap.style.color = '#fff';
+            }
             if (pcStep) {
                 pcStep.textContent = formatTemplate(texts.wizard_plan_counter, {
                     sections: state.totalSections,
@@ -292,6 +322,16 @@ export const createPlanningUi = (deps) => {
                 planReviewCard.style.display = '';
             }
         } else if (mode === 'detailed') {
+            if (planningSpinner) {
+                planningSpinner.style.display = 'none';
+            }
+            if (planningCheckIcon) {
+                planningCheckIcon.style.display = '';
+            }
+            if (pcIconWrap) {
+                pcIconWrap.style.background = '#16a34a';
+                pcIconWrap.style.color = '#fff';
+            }
             if (prvSpinnerIcon) {
                 prvSpinnerIcon.style.display = 'none';
             }

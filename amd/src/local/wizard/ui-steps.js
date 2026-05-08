@@ -46,6 +46,8 @@ export const createStepsUi = (deps) => {
         prvLiveNote,
         typingCursor,
         planningSpinner,
+        planningCheckIcon,
+        pcIconWrap,
         prvHeader,
         prvHeaderTitle,
         prvHeaderSub,
@@ -66,11 +68,22 @@ export const createStepsUi = (deps) => {
 
     const setProgress = (pct) => {
         const clamped = Math.min(100, Math.max(0, Math.round(pct)));
+
+        window.console.log('[SETPROGRESS-DEBUG] Called with:', pct, 'clamped to:', clamped);
+        window.console.log('[SETPROGRESS-DEBUG] pcPct element exists:', !!pcPct);
+        window.console.log('[SETPROGRESS-DEBUG] pcBarFill element exists:', !!pcBarFill);
+
         if (pcPct) {
             pcPct.textContent = `${clamped}${texts.wizard_progress_percent}`;
+            window.console.log('[SETPROGRESS-DEBUG] Updated pcPct to:', pcPct.textContent);
+        } else {
+            window.console.warn('[SETPROGRESS-DEBUG] pcPct element is NULL!');
         }
         if (pcBarFill) {
             pcBarFill.style.width = `${clamped}%`;
+            window.console.log('[SETPROGRESS-DEBUG] Updated pcBarFill width to:', pcBarFill.style.width);
+        } else {
+            window.console.warn('[SETPROGRESS-DEBUG] pcBarFill element is NULL!');
         }
     };
 
@@ -208,6 +221,16 @@ export const createStepsUi = (deps) => {
         if (prvHeaderSub) {
             prvHeaderSub.textContent = texts.wizard_state_starting;
         }
+        if (planningSpinner) {
+            planningSpinner.style.display = '';
+        }
+        if (planningCheckIcon) {
+            planningCheckIcon.style.display = 'none';
+        }
+        if (pcIconWrap) {
+            pcIconWrap.style.background = '';
+            pcIconWrap.style.color = '';
+        }
         if (prvSpinnerIcon) {
             prvSpinnerIcon.style.display = '';
         }
@@ -228,6 +251,9 @@ export const createStepsUi = (deps) => {
         state.latestInitialSections = [];
         state.detailedTotal = 0;
         state.detailedCurrent = 0;
+        state.phase4TotalActivities = 0;
+        state.contentGenerationStarted = 0;
+        state.contentGenerationCurrent = 0;
         state.planSectionsData = [];
         state.detailedActivityEls = {};
         state.detailedSectionMeta = {};

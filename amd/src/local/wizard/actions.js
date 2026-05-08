@@ -167,6 +167,9 @@ export const createWizardActions = (deps) => {
         if (!state.sessionid) {
             return;
         }
+
+        let progressInterval = null;
+
         try {
             if (elements.pcStep) {
                 elements.pcStep.textContent = texts.wizard_state_completed;
@@ -177,9 +180,39 @@ export const createWizardActions = (deps) => {
             if (pcSubtitle) {
                 pcSubtitle.textContent = texts.wizard_course_creating_subtitle;
             }
-            stepsUi.setProgress(100);
+
+            // Continue progress from content generation phase (should be around 90%)
+            // Quick final push: currentProgress → 95%
+            const startProgress = state.contentGenerationCurrent && state.detailedTotal > 0
+                ? Math.min(90, (state.contentGenerationCurrent / state.detailedTotal) * 90)
+                : 0;
+            const targetProgress = 95;
+            const duration = 2000; // 2 seconds for final push
+            const intervalMs = 100;
+            const startTime = Date.now();
+
+            progressInterval = setInterval(() => {
+                const elapsed = Date.now() - startTime;
+                const progress = Math.min(1, elapsed / duration);
+                // Ease-out for smooth finish
+                const eased = 1 - Math.pow(1 - progress, 3);
+                const currentProgress = startProgress + (eased * (targetProgress - startProgress));
+                stepsUi.setProgress(Math.round(currentProgress));
+
+                // Stop interval when target reached
+                if (currentProgress >= targetProgress) {
+                    clearInterval(progressInterval);
+                }
+            }, intervalMs);
 
             const result = await createCourse({recordid: state.sessionid});
+
+            // Stop simulation and jump to 100%
+            if (progressInterval) {
+                clearInterval(progressInterval);
+            }
+            stepsUi.setProgress(100);
+
             if (!result || !result.success) {
                 throw new Error(result?.message || texts.wizard_error_create_course);
             }
@@ -187,6 +220,10 @@ export const createWizardActions = (deps) => {
             showCompletionView(result);
             return result;
         } catch (error) {
+            if (progressInterval) {
+                clearInterval(progressInterval);
+            }
+
             if (elements.pcStep) {
                 elements.pcStep.textContent = texts.wizard_state_error;
             }
@@ -337,12 +374,21 @@ export const createWizardActions = (deps) => {
                     .filter((id) => state.selectedDetailedImages[id] !== false);
                 feedbackPayload.selectedimageids = selectedImageIds;
 
+                // PRESERVE detailedTotal BEFORE any state changes or stream opening
+                // This value will be used for phase 4 progress tracking
+                state.phase4TotalActivities = state.detailedTotal || 0;
+                window.console.log('[PHASE4-DEBUG] PRE-FEEDBACK - Preserved phase4TotalActivities:', state.phase4TotalActivities);
+
                 state.completionStats = {
                     units: state.totalSections || Object.keys(state.detailedSectionMeta || {}).length || 0,
                     activities: state.totalActivities || state.detailedTotal || 0,
                     images: selectedImageIds.length,
                 };
             } else if (action === 'accept' && state.currentStage === 'detailed') {
+                // PRESERVE detailedTotal BEFORE any state changes or stream opening
+                state.phase4TotalActivities = state.detailedTotal || 0;
+                window.console.log('[PHASE4-DEBUG] PRE-FEEDBACK - Preserved phase4TotalActivities:', state.phase4TotalActivities);
+
                 state.completionStats = {
                     units: state.totalSections || Object.keys(state.detailedSectionMeta || {}).length || 0,
                     activities: state.totalActivities || state.detailedTotal || 0,
@@ -362,6 +408,24 @@ export const createWizardActions = (deps) => {
                     stepsUi.setStepState('detailed', 'done');
                     stepsUi.setStepState('generating', 'active');
                     state.currentStage = 'generating';
+
+                    window.console.log('[PHASE4-DEBUG] POST-FEEDBACK - Approved detailed plan - initializing phase 4');
+                    window.console.log('[PHASE4-DEBUG] POST-FEEDBACK - Setting currentStage to:', state.currentStage);
+                    window.console.log('[PHASE4-DEBUG] POST-FEEDBACK - detailedTotal:', state.detailedTotal);
+                    window.console.log('[PHASE4-DEBUG] POST-FEEDBACK - phase4TotalActivities:', state.phase4TotalActivities);
+
+                    // Initialize content generation tracking (two-phase hybrid)
+                    state.contentGenerationStarted = 0;
+                    state.contentGenerationCurrent = 0;
+
+                    window.console.log(
+                        '[PHASE4-DEBUG] POST-FEEDBACK - Initialized counters - started:',
+                        state.contentGenerationStarted,
+                        'current:',
+                        state.contentGenerationCurrent
+                    );
+
+                    stepsUi.setProgress(0);
                 } else {
                     stepsUi.setStepState('planning', 'done');
                     stepsUi.setStepState('detailed', 'active');
@@ -370,7 +434,9 @@ export const createWizardActions = (deps) => {
                 stepsUi.updateFlowNav();
             }
 
+            window.console.log('[PHASE4-DEBUG] BEFORE-STREAM - phase4TotalActivities:', state.phase4TotalActivities);
             streamManager.openSSEStream(state.streamingurl);
+            window.console.log('[PHASE4-DEBUG] AFTER-STREAM - phase4TotalActivities:', state.phase4TotalActivities);
         } catch (error) {
             await Notification.exception(error);
         } finally {

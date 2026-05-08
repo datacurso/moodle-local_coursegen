@@ -6,6 +6,10 @@
  * @module     local_coursegen/local/wizard/stream
  */
 
+// Module-level variable to preserve phase 4 total activities
+// This survives state resets that happen during stream opening
+let preservedPhase4Total = 0;
+
 /**
  * Create stream manager.
  *
@@ -163,7 +167,19 @@ export const createStreamManager = (deps) => {
             throw new Error(texts.wizard_error_stream_url);
         }
         closeStream();
+
+        // PRESERVE phase4TotalActivities BEFORE reset
+        const savedPhase4Total = state.phase4TotalActivities || 0;
+        window.console.log('[PHASE4-DEBUG] BEFORE-RESET - Saving phase4TotalActivities:', savedPhase4Total);
+
         stepsUi.resetPlanningState();
+
+        // RESTORE phase4TotalActivities AFTER reset
+        if (savedPhase4Total > 0) {
+            state.phase4TotalActivities = savedPhase4Total;
+            preservedPhase4Total = savedPhase4Total;
+            window.console.log('[PHASE4-DEBUG] AFTER-RESET - Restored phase4TotalActivities:', state.phase4TotalActivities);
+        }
 
         state.sseSource = new EventSource(streamUrl);
         state.sseSource.addEventListener('message', async(event) => {
@@ -175,7 +191,7 @@ export const createStreamManager = (deps) => {
             }
 
             switch (data.type) {
-                case 'activity':
+                case 'activity': {
                     if (!state.planSectionsData.find((section) => section.sectionIndex === data.section_index)) {
                         planningUi.addSectionHeader({
                             section_index: data.section_index,
@@ -185,8 +201,12 @@ export const createStreamManager = (deps) => {
                         });
                     }
                     planningUi.addActivityToSection(data);
+                    // Update progress based on activities received (cap at 95% to avoid reaching 100% prematurely)
+                    const activityProgress = Math.min(95, (state.totalActivities / Math.max(1, state.totalActivities + 1)) * 100);
+                    stepsUi.setProgress(activityProgress);
                     break;
-                case 'section':
+                }
+                case 'section': {
                     planningUi.addSectionHeader({
                         section_index: data.section_index ?? state.planSectionsData.length,
                         name: data.section?.name || data.name || texts.wizard_plan_default_unnamed,
@@ -207,7 +227,11 @@ export const createStreamManager = (deps) => {
                         description: data.description || '',
                         activities: data.activities || []
                     });
+                    // Update progress based on activities received (cap at 95%)
+                    const sectionProgress = Math.min(95, (state.totalActivities / Math.max(1, state.totalActivities + 5)) * 100);
+                    stepsUi.setProgress(sectionProgress);
                     break;
+                }
                 case 'detailed_plan_start':
                     detailedUi.initDetailedPlanView(data);
                     break;
@@ -222,19 +246,85 @@ export const createStreamManager = (deps) => {
                     state.planBuffer += data.text || '';
                     renderPlanMarkdown();
                     break;
-                case 'status':
+                case 'status': {
+                    const statusText = data.text || '';
+
+                    // Use module-level preserved value as fallback if state was reset
+                    const totalActivities = state.phase4TotalActivities || preservedPhase4Total;
+
+                    window.console.log('[PHASE4-DEBUG] Status event received:', statusText);
+                    window.console.log('[PHASE4-DEBUG] Current stage:', state.currentStage);
+                    window.console.log('[PHASE4-DEBUG] state.phase4TotalActivities:', state.phase4TotalActivities);
+                    window.console.log('[PHASE4-DEBUG] preservedPhase4Total (fallback):', preservedPhase4Total);
+                    window.console.log('[PHASE4-DEBUG] totalActivities (used for calc):', totalActivities);
+
                     if (state.planningMode === 'detailed' && planReviewCard && planReviewCard.style.display !== 'none') {
                         if (prvHeaderSub) {
-                            prvHeaderSub.textContent = data.text || '';
+                            prvHeaderSub.textContent = statusText;
                         }
                         if (prvLiveNote) {
                             prvLiveNote.style.display = 'block';
                             prvLiveNote.textContent = texts.wizard_live_note_detailed;
                         }
                     } else if (pcSubtitle) {
-                        pcSubtitle.textContent = data.text || '';
+                        pcSubtitle.textContent = statusText;
+                    }
+
+                    // Track progress during content generation phase (after detailed plan approval)
+                    // Two-phase hybrid approach:
+                    // Phase 1: Starting activities (0% → 30%) - immediate feedback
+                    // Phase 2: Completing activities (30% → 90%) - granular progress
+                    // Use totalActivities (with fallback to module-level variable) to survive resets
+                    if (state.currentStage === 'generating' && totalActivities > 0) {
+                        window.console.log('[PHASE4-DEBUG] Inside tracking condition');
+
+                        // Phase 1: Detect when an activity/resource STARTS
+                        const startPattern = /^(Designing|Generating Assignment content)/i;
+                        const isActivityStarting = startPattern.test(statusText);
+
+                        // Phase 2: Detect when an activity/resource COMPLETES
+                        const completePattern = new RegExp(
+                            'ready|Assembling final|configuration ready|with \\d+ discussion',
+                            'i'
+                        );
+                        const isActivityComplete = completePattern.test(statusText);
+
+                        window.console.log('[PHASE4-DEBUG] Start pattern match:', isActivityStarting);
+                        window.console.log('[PHASE4-DEBUG] Complete pattern match:', isActivityComplete);
+
+                        if (isActivityStarting) {
+                            // Phase 1: Track started activities (0% → 30%)
+                            state.contentGenerationStarted = (state.contentGenerationStarted || 0) + 1;
+                            const startProgress = Math.min(
+                                30,
+                                (state.contentGenerationStarted / totalActivities) * 30
+                            );
+                            window.console.log('[PHASE4-DEBUG] PHASE 1 - Started count:', state.contentGenerationStarted);
+                            window.console.log('[PHASE4-DEBUG] PHASE 1 - Setting progress to:', Math.round(startProgress));
+                            stepsUi.setProgress(Math.round(startProgress));
+                        } else if (isActivityComplete) {
+                            // Phase 2: Track completed activities (30% → 90%)
+                            state.contentGenerationCurrent = (state.contentGenerationCurrent || 0) + 1;
+                            const completeProgress = 30 + Math.min(
+                                60,
+                                (state.contentGenerationCurrent / totalActivities) * 60
+                            );
+                            window.console.log('[PHASE4-DEBUG] PHASE 2 - Complete count:', state.contentGenerationCurrent);
+                            window.console.log('[PHASE4-DEBUG] PHASE 2 - Setting progress to:', Math.round(completeProgress));
+                            stepsUi.setProgress(Math.round(completeProgress));
+                        } else {
+                            window.console.log('[PHASE4-DEBUG] No pattern matched for this event');
+                        }
+                    } else {
+                        window.console.log(
+                            '[PHASE4-DEBUG] NOT in tracking condition. Stage:',
+                            state.currentStage,
+                            'Total:',
+                            totalActivities
+                        );
                     }
                     break;
+                }
                 case 'review_needed_initial':
                     stepsUi.setStepState('planning', 'active');
                     state.currentStage = 'planning';
@@ -270,7 +360,7 @@ export const createStreamManager = (deps) => {
                     }
                     planningUi.showReviewActions(state.planningMode === 'detailed' ? 'detailed' : 'markdown');
                     break;
-                case 'completed':
+                case 'completed': {
                     setCompletionStatsFromGeneratedResult(data.result || []);
                     stepsUi.setStepState('detailed', 'done');
                     stepsUi.setStepState('generating', 'active');
@@ -279,6 +369,7 @@ export const createStreamManager = (deps) => {
                     closeStream();
                     await createCourseFromSession();
                     break;
+                }
                 case 'failed':
                     stepsUi.setStepState('planning', 'active');
                     closeStream();

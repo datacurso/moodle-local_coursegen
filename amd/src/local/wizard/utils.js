@@ -74,6 +74,21 @@ export const getActivityLabels = (texts = {}) => ({
 });
 
 /**
+ * Get Moodle activity icon URL.
+ *
+ * @param {string} modname - Module name (e.g., 'quiz', 'forum', 'assign')
+ * @returns {string} URL to the module's monologo icon
+ */
+export const getActivityIconUrl = (modname) => {
+    if (!modname || typeof modname !== 'string') {
+        return '';
+    }
+    // Use Moodle's global config to construct the URL
+    // eslint-disable-next-line no-undef
+    return M.cfg.wwwroot + '/mod/' + modname + '/pix/monologo.svg';
+};
+
+/**
  * Replace {tokens} in a template string.
  *
  * @param {string} template
