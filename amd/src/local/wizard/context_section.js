@@ -64,6 +64,18 @@ export const setupContextSection = (deps) => {
         }
     };
 
+    const refreshCompactChipsRow = () => {
+        const compactChipsRow = document.getElementById('compactChipsRow');
+        const compactChipSyllabus = document.getElementById('compactChipSyllabus');
+        const compactChipGuideline = document.getElementById('compactChipGuideline');
+        if (!compactChipsRow) {
+            return;
+        }
+        const hasSyllabus = compactChipSyllabus && !compactChipSyllabus.classList.contains('hidden');
+        const hasGuideline = compactChipGuideline && !compactChipGuideline.classList.contains('hidden');
+        compactChipsRow.style.display = (hasSyllabus || hasGuideline) ? 'flex' : 'none';
+    };
+
     const refreshChipsRow = () => {
         const chipsRow = document.getElementById('chipsRow');
         const chipSyllabus = document.getElementById('chipSyllabus');
@@ -89,28 +101,49 @@ export const setupContextSection = (deps) => {
         const chipGuideline = document.getElementById('chipGuideline');
         const chipGuidelineName = document.getElementById('chipGuidelineName');
         const guidelineBadge = document.getElementById('guidelineBadge');
-
-        if (!chipGuideline) {
-            return;
-        }
+        // Compact counterparts
+        const compactChipGuideline = document.getElementById('compactChipGuideline');
+        const compactChipGuidelineName = document.getElementById('compactChipGuidelineName');
+        const compactGuidelineBadge = document.getElementById('compactGuidelineBadge');
 
         if (state.selectedGuidelineId) {
             const guideline = state.guidelines.find((g) => g.id === state.selectedGuidelineId);
-            if (guideline && chipGuidelineName) {
-                chipGuidelineName.textContent = guideline.name;
-                chipGuideline.classList.remove('hidden');
-                if (guidelineBadge) {
-                    guidelineBadge.textContent = '1';
-                    guidelineBadge.classList.remove('hidden');
+            if (guideline) {
+                // Main chip
+                if (chipGuideline && chipGuidelineName) {
+                    chipGuidelineName.textContent = guideline.name;
+                    chipGuideline.classList.remove('hidden');
+                    if (guidelineBadge) {
+                        guidelineBadge.textContent = '1';
+                        guidelineBadge.classList.remove('hidden');
+                    }
+                }
+                // Compact chip
+                if (compactChipGuideline && compactChipGuidelineName) {
+                    compactChipGuidelineName.textContent = guideline.name;
+                    compactChipGuideline.classList.remove('hidden');
+                    if (compactGuidelineBadge) {
+                        compactGuidelineBadge.textContent = '1';
+                        compactGuidelineBadge.classList.remove('hidden');
+                    }
                 }
             }
         } else {
-            chipGuideline.classList.add('hidden');
-            if (guidelineBadge) {
-                guidelineBadge.classList.add('hidden');
+            if (chipGuideline) {
+                chipGuideline.classList.add('hidden');
+                if (guidelineBadge) {
+                    guidelineBadge.classList.add('hidden');
+                }
+            }
+            if (compactChipGuideline) {
+                compactChipGuideline.classList.add('hidden');
+                if (compactGuidelineBadge) {
+                    compactGuidelineBadge.classList.add('hidden');
+                }
             }
         }
         refreshChipsRow();
+        refreshCompactChipsRow();
     };
 
     const showGuidelinePreview = (id) => {
@@ -237,9 +270,9 @@ export const setupContextSection = (deps) => {
                         state.syllabusFilename = filename;
                         state.draftitemid = pickerOptions.itemid;
 
+                        // Update main chip
                         const chipSyllabus = document.getElementById('chipSyllabus');
                         const chipSyllabusName = document.getElementById('chipSyllabusName');
-
                         if (chipSyllabusName) {
                             chipSyllabusName.textContent = filename;
                         }
@@ -247,6 +280,17 @@ export const setupContextSection = (deps) => {
                             chipSyllabus.classList.remove('hidden');
                         }
                         refreshChipsRow();
+
+                        // Also update compact chip so it reflects the change immediately
+                        const compactChipSyllabus = document.getElementById('compactChipSyllabus');
+                        const compactChipSyllabusName = document.getElementById('compactChipSyllabusName');
+                        if (compactChipSyllabusName) {
+                            compactChipSyllabusName.textContent = filename;
+                        }
+                        if (compactChipSyllabus) {
+                            compactChipSyllabus.classList.remove('hidden');
+                        }
+                        refreshCompactChipsRow();
                     }
                 };
 
@@ -262,11 +306,24 @@ export const setupContextSection = (deps) => {
         }
     };
 
-    if (langSelect && languages.length > 0) {
-        langSelect.innerHTML = languages.map((lang) =>
+    const optionsHtml = languages.length > 0
+        ? languages.map((lang) =>
             `<option value="${lang.code}" ${lang.code === defaultLang ? 'selected' : ''}>🌐 ${lang.code.toUpperCase()}</option>`
-        ).join('');
+        ).join('')
+        : null;
+
+    // Populate main and compact lang selects with the full languages list
+    if (optionsHtml) {
+        if (langSelect) {
+            langSelect.innerHTML = optionsHtml;
+        }
+        const compactLangSelect = document.getElementById('compactLangSelect');
+        if (compactLangSelect) {
+            compactLangSelect.innerHTML = optionsHtml;
+        }
     }
+
+    // ─── Main context controls ───────────────────────────────────────────────
 
     if (btnDirectrices && guidelinesPopover) {
         btnDirectrices.addEventListener('click', (e) => {
@@ -308,6 +365,11 @@ export const setupContextSection = (deps) => {
     if (langSelect) {
         langSelect.addEventListener('change', () => {
             state.lang = langSelect.value;
+            // Keep compact in sync
+            const compactLangSelect = document.getElementById('compactLangSelect');
+            if (compactLangSelect) {
+                compactLangSelect.value = langSelect.value;
+            }
         });
     }
 
@@ -315,6 +377,75 @@ export const setupContextSection = (deps) => {
         btnWithImages.addEventListener('change', () => {
             state.withImages = btnWithImages.checked;
             imgToggleWrap.classList.toggle('on', state.withImages);
+            // Keep compact in sync
+            if (elements.btnCompactWithImages) {
+                elements.btnCompactWithImages.checked = state.withImages;
+            }
+            if (elements.compactImgToggleWrap) {
+                elements.compactImgToggleWrap.classList.toggle('on', state.withImages);
+            }
+        });
+    }
+
+    // ─── Compact chat toolbar mirroring ─────────────────────────────────────
+    // Wire compact controls so they remain functional in phases 2 and 3.
+
+    const btnCompactSyllabus = document.getElementById('btnCompactSyllabus');
+    if (btnCompactSyllabus) {
+        btnCompactSyllabus.addEventListener('click', async() => {
+            await showFilePicker();
+        });
+    }
+
+    const btnCompactDirectrices = document.getElementById('btnCompactDirectrices');
+    if (btnCompactDirectrices && guidelinesPopover) {
+        btnCompactDirectrices.addEventListener('click', (e) => {
+            e.stopPropagation();
+            state.guidelinePopoverOpen = !state.guidelinePopoverOpen;
+            guidelinesPopover.classList.toggle('open', state.guidelinePopoverOpen);
+            if (state.guidelinePopoverOpen && guidelineSearch) {
+                guidelineSearch.value = '';
+                state.guidelineSearchQuery = '';
+                renderGuidelineList();
+                guidelineSearch.focus();
+            }
+        });
+    }
+
+    const compactLangSelectEl = document.getElementById('compactLangSelect');
+    if (compactLangSelectEl) {
+        compactLangSelectEl.addEventListener('change', () => {
+            state.lang = compactLangSelectEl.value;
+            // Keep main in sync
+            if (langSelect) {
+                langSelect.value = compactLangSelectEl.value;
+            }
+        });
+    }
+
+    if (elements.btnCompactWithImages) {
+        elements.btnCompactWithImages.addEventListener('change', () => {
+            state.withImages = elements.btnCompactWithImages.checked;
+            if (elements.compactImgToggleWrap) {
+                elements.compactImgToggleWrap.classList.toggle('on', state.withImages);
+            }
+            // Keep main in sync
+            if (btnWithImages) {
+                btnWithImages.checked = state.withImages;
+            }
+            if (imgToggleWrap) {
+                imgToggleWrap.classList.toggle('on', state.withImages);
+            }
+        });
+    }
+
+    // Compact guideline eye button: preview the currently selected guideline
+    const compactChipGuidelineEyeBtn = document.getElementById('compactChipGuidelineEyeBtn');
+    if (compactChipGuidelineEyeBtn) {
+        compactChipGuidelineEyeBtn.addEventListener('click', () => {
+            if (state.selectedGuidelineId) {
+                showGuidelinePreview(state.selectedGuidelineId);
+            }
         });
     }
 

@@ -12,6 +12,180 @@
  * @param {Object} deps
  * @returns {Object}
  */
+/**
+ * Set compact chat visibility and control state.
+ *
+ * @param {Object} deps - Dependencies including state, elements, texts
+ * @param {string} mode - 'hidden' | 'disabled' | 'enabled' | 'reset'
+ */
+export const setCompactChatState = (deps, mode) => {
+    const {
+        state,
+        elements,
+        texts,
+    } = deps;
+
+    const {
+        compactChatCard,
+        compactPromptInput,
+        compactChipsRow,
+        compactToolbarLeft,
+        btnCompactRegenerate,
+        compactLangSelect,
+        btnCompactWithImages,
+        btnCompactSyllabus,
+        btnCompactDirectrices,
+    } = elements;
+
+    if (!compactChatCard) {
+        return;
+    }
+
+    const sparkleIcon = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" ' +
+        'stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
+        'stroke-linejoin="round" aria-hidden="true">' +
+        '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 ' +
+        '9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 ' +
+        '15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 ' +
+        '6.135a.5.5 0 0 1-.962 0z"/></svg>';
+
+    switch (mode) {
+        case 'hidden':
+            compactChatCard.style.display = 'none';
+            compactChatCard.classList.remove('compact-chat-card--disabled');
+            if (compactPromptInput) {
+                compactPromptInput.classList.remove('compact-controls--disabled');
+                compactPromptInput.disabled = false;
+            }
+            if (compactChipsRow) {
+                compactChipsRow.classList.remove('compact-controls--disabled');
+            }
+            if (compactToolbarLeft) {
+                compactToolbarLeft.classList.remove('compact-controls--disabled');
+            }
+            if (compactLangSelect) {
+                compactLangSelect.disabled = false;
+            }
+            if (btnCompactWithImages) {
+                btnCompactWithImages.disabled = false;
+            }
+            if (btnCompactSyllabus) {
+                btnCompactSyllabus.disabled = false;
+            }
+            if (btnCompactDirectrices) {
+                btnCompactDirectrices.disabled = false;
+            }
+            if (btnCompactRegenerate) {
+                btnCompactRegenerate.disabled = false;
+            }
+            break;
+
+        case 'disabled':
+            compactChatCard.style.display = 'block';
+            if (compactPromptInput) {
+                compactPromptInput.classList.add('compact-controls--disabled');
+                compactPromptInput.disabled = true;
+            }
+            if (compactChipsRow) {
+                compactChipsRow.classList.add('compact-controls--disabled');
+            }
+            if (compactToolbarLeft) {
+                compactToolbarLeft.classList.add('compact-controls--disabled');
+            }
+            // Disable form controls and toolbar buttons — keyboard + mouse
+            if (compactLangSelect) {
+                compactLangSelect.disabled = true;
+            }
+            if (btnCompactWithImages) {
+                btnCompactWithImages.disabled = true;
+            }
+            if (btnCompactSyllabus) {
+                btnCompactSyllabus.disabled = true;
+            }
+            if (btnCompactDirectrices) {
+                btnCompactDirectrices.disabled = true;
+            }
+            // Disable Regenerar — actions.js re-enables it and switches label to Pausar
+            if (btnCompactRegenerate) {
+                btnCompactRegenerate.disabled = true;
+            }
+            break;
+
+        case 'enabled':
+            compactChatCard.style.display = 'block';
+            compactChatCard.classList.remove('compact-chat-card--disabled');
+            if (compactPromptInput) {
+                compactPromptInput.classList.remove('compact-controls--disabled');
+                compactPromptInput.disabled = false;
+            }
+            if (compactChipsRow) {
+                compactChipsRow.classList.remove('compact-controls--disabled');
+            }
+            if (compactToolbarLeft) {
+                compactToolbarLeft.classList.remove('compact-controls--disabled');
+            }
+            if (compactLangSelect) {
+                compactLangSelect.disabled = false;
+            }
+            if (btnCompactWithImages) {
+                btnCompactWithImages.disabled = false;
+            }
+            if (btnCompactSyllabus) {
+                btnCompactSyllabus.disabled = false;
+            }
+            if (btnCompactDirectrices) {
+                btnCompactDirectrices.disabled = false;
+            }
+            if (btnCompactRegenerate) {
+                btnCompactRegenerate.disabled = false;
+                if (texts?.wizard_btn_regenerate) {
+                    btnCompactRegenerate.innerHTML = `${sparkleIcon} ${texts.wizard_btn_regenerate}`;
+                }
+            }
+            if (state) {
+                state.isStreaming = false;
+            }
+            break;
+
+        case 'reset':
+        default:
+            compactChatCard.style.display = 'none';
+            compactChatCard.classList.remove('compact-chat-card--disabled');
+            if (compactPromptInput) {
+                compactPromptInput.classList.remove('compact-controls--disabled');
+                compactPromptInput.disabled = false;
+            }
+            if (compactChipsRow) {
+                compactChipsRow.classList.remove('compact-controls--disabled');
+            }
+            if (compactToolbarLeft) {
+                compactToolbarLeft.classList.remove('compact-controls--disabled');
+            }
+            if (compactLangSelect) {
+                compactLangSelect.disabled = false;
+            }
+            if (btnCompactWithImages) {
+                btnCompactWithImages.disabled = false;
+            }
+            if (btnCompactSyllabus) {
+                btnCompactSyllabus.disabled = false;
+            }
+            if (btnCompactDirectrices) {
+                btnCompactDirectrices.disabled = false;
+            }
+            if (btnCompactRegenerate) {
+                btnCompactRegenerate.disabled = false;
+                if (texts?.wizard_btn_regenerate) {
+                    btnCompactRegenerate.innerHTML = `${sparkleIcon} ${texts.wizard_btn_regenerate}`;
+                }
+            }
+            if (state) {
+                state.isStreaming = false;
+            }
+            break;
+    }
+};
+
 export const createPlanningUi = (deps) => {
     const {
         state,
@@ -283,6 +457,78 @@ export const createPlanningUi = (deps) => {
         }
     };
 
+    const syncCompactChatState = () => {
+        // Sync language
+        const langSelect = document.getElementById('langSelect');
+        const compactLangSelect = document.getElementById('compactLangSelect');
+        if (langSelect && compactLangSelect) {
+            compactLangSelect.value = langSelect.value;
+        }
+
+        // Sync images toggle
+        const btnWithImages = document.getElementById('btnWithImages');
+        const btnCompactWithImages = document.getElementById('btnCompactWithImages');
+        const imgToggleTrack = document.getElementById('imgToggleTrack');
+        const compactImgToggleTrack = document.getElementById('compactImgToggleTrack');
+        if (btnWithImages && btnCompactWithImages) {
+            btnCompactWithImages.checked = btnWithImages.checked;
+            if (compactImgToggleTrack && imgToggleTrack) {
+                if (btnWithImages.checked) {
+                    compactImgToggleTrack.parentElement.classList.add('on');
+                } else {
+                    compactImgToggleTrack.parentElement.classList.remove('on');
+                }
+            }
+        }
+
+        // Sync syllabus chip
+        const chipSyllabus = document.getElementById('chipSyllabus');
+        const compactChipSyllabus = document.getElementById('compactChipSyllabus');
+        const chipSyllabusName = document.getElementById('chipSyllabusName');
+        const compactChipSyllabusName = document.getElementById('compactChipSyllabusName');
+        const compactChipsRow = document.getElementById('compactChipsRow');
+        if (chipSyllabus && compactChipSyllabus && chipSyllabusName && compactChipSyllabusName) {
+            if (!chipSyllabus.classList.contains('hidden')) {
+                compactChipSyllabus.classList.remove('hidden');
+                compactChipSyllabusName.textContent = chipSyllabusName.textContent;
+                if (compactChipsRow) {
+                    compactChipsRow.style.display = 'flex';
+                }
+            } else {
+                compactChipSyllabus.classList.add('hidden');
+            }
+        }
+
+        // Sync guideline chip
+        const chipGuideline = document.getElementById('chipGuideline');
+        const compactChipGuideline = document.getElementById('compactChipGuideline');
+        const chipGuidelineName = document.getElementById('chipGuidelineName');
+        const compactChipGuidelineName = document.getElementById('compactChipGuidelineName');
+        const guidelineBadge = document.getElementById('guidelineBadge');
+        const compactGuidelineBadge = document.getElementById('compactGuidelineBadge');
+        if (chipGuideline && compactChipGuideline && chipGuidelineName && compactChipGuidelineName) {
+            if (!chipGuideline.classList.contains('hidden')) {
+                compactChipGuideline.classList.remove('hidden');
+                compactChipGuidelineName.textContent = chipGuidelineName.textContent;
+                if (compactChipsRow) {
+                    compactChipsRow.style.display = 'flex';
+                }
+                if (guidelineBadge && compactGuidelineBadge && !guidelineBadge.classList.contains('hidden')) {
+                    compactGuidelineBadge.classList.remove('hidden');
+                    compactGuidelineBadge.textContent = guidelineBadge.textContent;
+                }
+            } else {
+                compactChipGuideline.classList.add('hidden');
+            }
+        }
+
+        // Keep compact prompt empty (user will write adjustments)
+        const compactPromptInput = document.getElementById('compactPromptInput');
+        if (compactPromptInput) {
+            compactPromptInput.value = '';
+        }
+    };
+
     const showReviewActions = (mode) => {
         if (planningSpinner) {
             planningSpinner.classList.add('done');
@@ -291,6 +537,16 @@ export const createPlanningUi = (deps) => {
             typingCursor.classList.add('hidden');
         }
         setProgress(100);
+
+        // Enable compact chat and show wizard cancel button when review is ready
+        setCompactChatState(deps, 'enabled');
+        // Sync state from main chat to compact chat (language, chips, etc.)
+        syncCompactChatState();
+
+        const wizardCancelRow = document.getElementById('wizardCancelRow');
+        if (wizardCancelRow) {
+            wizardCancelRow.style.display = 'flex';
+        }
 
         if (mode === 'initial') {
             if (planningSpinner) {
@@ -381,11 +637,49 @@ export const createPlanningUi = (deps) => {
         }
     };
 
+    const renderInitialReviewFromState = () => {
+        const sections = Array.isArray(state.latestInitialSections) ? state.latestInitialSections : [];
+
+        state.planSectionsData = [];
+        state.totalSections = 0;
+        state.totalActivities = 0;
+
+        if (prvSections) {
+            prvSections.innerHTML = '';
+        }
+
+        sections.forEach((section, sectionIndex) => {
+            const activities = Array.isArray(section.activities) ? section.activities : [];
+            addSectionHeader({
+                section_index: section.section_index ?? sectionIndex,
+                name: section.name || texts.wizard_plan_default_unnamed,
+                description: section.description || '',
+                activity_count: activities.length,
+            });
+
+            activities.forEach((activity) => {
+                addActivityToSection({
+                    section_index: section.section_index ?? sectionIndex,
+                    activity_type: activity.activity_type || activity.type,
+                    title: activity.title || activity.name,
+                    description: activity.description || '',
+                });
+            });
+        });
+
+        if (prvLiveNote) {
+            prvLiveNote.style.display = 'none';
+            prvLiveNote.textContent = '';
+        }
+    };
+
     return {
         addPlanSection,
         addSectionHeader,
         addActivityToSection,
         buildReviewCard,
+        renderInitialReviewFromState,
         showReviewActions,
+        syncCompactChatState,
     };
 };

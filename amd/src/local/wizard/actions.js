@@ -6,6 +6,8 @@
  * @module     local_coursegen/local/wizard/actions
  */
 
+import { setCompactChatState } from './ui-planning';
+
 /**
  * Create wizard actions and event bindings.
  *
@@ -33,18 +35,10 @@ export const createWizardActions = (deps) => {
     const {
         promptInput,
         btnGenerate,
-        adjustInput,
         btnApprove,
-        btnAdjust,
-        btnAdjustCancel,
-        btnAdjustSend,
-        adjustPanel,
         planActions,
         planningSpinner,
         pcSubtitle,
-        btnBackFlow,
-        btnCancelFlow,
-        planningNavRow,
         pcToggleBtn,
         pcDetailsPanel,
         pcChevron,
@@ -56,6 +50,8 @@ export const createWizardActions = (deps) => {
         btnWithImages,
         imgToggleWrap,
         langSelect,
+        compactPromptInput,
+        btnCompactRegenerate,
     } = elements;
 
     const getSummaryCounts = () => {
@@ -103,12 +99,6 @@ export const createWizardActions = (deps) => {
         }
         if (planActions) {
             planActions.style.display = 'none';
-        }
-        if (adjustPanel) {
-            adjustPanel.style.display = 'none';
-        }
-        if (planningNavRow) {
-            planningNavRow.style.display = 'none';
         }
         if (completionView) {
             completionView.style.display = 'flex';
@@ -316,6 +306,9 @@ export const createWizardActions = (deps) => {
             }
 
             stepsUi.transitionToPlanning();
+            // Sync chips (syllabus, guideline, images, lang) to the compact chat immediately
+            // so they are visible from the moment phase 2 streaming begins.
+            planningUi.syncCompactChatState();
             streamManager.openSSEStream(state.streamingurl);
         } catch (error) {
             window.console.error('Error generating course:', error);
@@ -329,28 +322,24 @@ export const createWizardActions = (deps) => {
             return;
         }
 
-        const instruction = adjustInput ? String(adjustInput.value || '').trim() : '';
-        if (action === 'adjust' && !instruction) {
-            if (adjustInput) {
-                adjustInput.focus();
-            }
-            return;
-        }
-
         if (btnApprove) {
             btnApprove.disabled = true;
-        }
-        if (btnAdjust) {
-            btnAdjust.disabled = true;
-        }
-        if (btnAdjustSend) {
-            btnAdjustSend.disabled = true;
         }
         if (planActions) {
             planActions.style.display = 'none';
         }
-        if (adjustPanel) {
-            adjustPanel.style.display = 'none';
+        // Disable controls and Regenerar button during stream
+        setCompactChatState(deps, 'disabled');
+        // For adjust: switch to "Pausar" and re-enable the button so user can cancel the stream
+        if (action === 'adjust' && btnCompactRegenerate) {
+            state.isStreaming = true;
+            const pauseIcon = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" ' +
+                'stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
+                'stroke-linejoin="round" aria-hidden="true">' +
+                '<rect x="6" y="4" width="4" height="16"/>' +
+                '<rect x="14" y="4" width="4" height="16"/></svg>';
+            btnCompactRegenerate.innerHTML = `${pauseIcon} ${texts.wizard_btn_pause || 'Pausar'}`;
+            btnCompactRegenerate.disabled = false;
         }
         if (planningSpinner) {
             planningSpinner.classList.remove('done');
@@ -362,6 +351,10 @@ export const createWizardActions = (deps) => {
         }
 
         try {
+            const instruction = action === 'adjust' && compactPromptInput
+                ? compactPromptInput.value.trim()
+                : '';
+
             const feedbackPayload = {
                 recordid: state.sessionid,
                 action,
@@ -434,6 +427,12 @@ export const createWizardActions = (deps) => {
                 stepsUi.updateFlowNav();
             }
 
+            // Sync chips to compact chat so they remain visible during phase 3 streaming.
+            // For 'adjust' actions the text is kept so the user sees what they submitted.
+            if (action === 'accept') {
+                planningUi.syncCompactChatState();
+            }
+
             window.console.log('[PHASE4-DEBUG] BEFORE-STREAM - phase4TotalActivities:', state.phase4TotalActivities);
             streamManager.openSSEStream(state.streamingurl);
             window.console.log('[PHASE4-DEBUG] AFTER-STREAM - phase4TotalActivities:', state.phase4TotalActivities);
@@ -442,12 +441,6 @@ export const createWizardActions = (deps) => {
         } finally {
             if (btnApprove) {
                 btnApprove.disabled = false;
-            }
-            if (btnAdjust) {
-                btnAdjust.disabled = false;
-            }
-            if (btnAdjustSend) {
-                btnAdjustSend.disabled = false;
             }
         }
     };
@@ -482,48 +475,42 @@ export const createWizardActions = (deps) => {
         if (btnApprove) {
             btnApprove.addEventListener('click', () => sendFeedbackAction('accept'));
         }
-        if (btnAdjust) {
-            btnAdjust.addEventListener('click', () => {
-                if (adjustPanel) {
-                    adjustPanel.style.display = 'block';
-                }
-                if (adjustInput) {
-                    adjustInput.value = '';
-                    adjustInput.focus();
-                }
-            });
-        }
-        if (btnAdjustCancel) {
-            btnAdjustCancel.addEventListener('click', () => {
-                if (adjustPanel) {
-                    adjustPanel.style.display = 'none';
-                }
-            });
-        }
-        if (btnAdjustSend) {
-            btnAdjustSend.addEventListener('click', () => sendFeedbackAction('adjust'));
-        }
 
-        if (btnBackFlow) {
-            btnBackFlow.addEventListener('click', () => {
-                if (state.currentStage === 'planning') {
-                    stepsUi.backToContext();
+        // Compact chat regeneration / pause
+        if (btnCompactRegenerate) {
+            btnCompactRegenerate.addEventListener('click', () => {
+                // If streaming, pause and unlock chat
+                if (state.isStreaming) {
+                    streamManager.closeStream();
+                    state.isStreaming = false;
+                    // Re-enable compact chat controls and reset button to "Regenerar"
+                    setCompactChatState(deps, 'enabled');
                     return;
                 }
-                if (state.currentStage === 'detailed') {
-                    stepsUi.setStepState('planning', 'active');
-                    stepsUi.setStepState('detailed', 'pending');
-                    stepsUi.setStepState('generating', 'pending');
-                    state.currentStage = 'planning';
-                    stepsUi.switchPlanMode('sections');
-                    planningUi.showReviewActions('initial');
-                    stepsUi.updateFlowNav();
+
+                // Otherwise, regenerate
+                const instruction = compactPromptInput ? compactPromptInput.value.trim() : '';
+                if (instruction.length < 10) {
+                    if (compactPromptInput) {
+                        compactPromptInput.focus();
+                    }
+                    return;
                 }
+                sendFeedbackAction('adjust');
             });
         }
 
-        if (btnCancelFlow) {
-            btnCancelFlow.addEventListener('click', () => {
+        // Sync compact chat input with main prompt input
+        if (compactPromptInput && promptInput) {
+            compactPromptInput.addEventListener('input', () => {
+                promptInput.value = compactPromptInput.value;
+            });
+        }
+
+        // Wizard cancel button - return to phase 1
+        const btnWizardCancel = document.getElementById('btnWizardCancel');
+        if (btnWizardCancel) {
+            btnWizardCancel.addEventListener('click', () => {
                 stepsUi.backToContext();
             });
         }
@@ -547,15 +534,28 @@ export const createWizardActions = (deps) => {
             state.syllabusFile = null;
             state.syllabusFilename = null;
             state.draftitemid = null;
+            // Hide main chip
             const chipSyllabus = document.getElementById('chipSyllabus');
             if (chipSyllabus) {
                 chipSyllabus.classList.add('hidden');
             }
             refreshChipsRow();
+            // Also hide compact chip
+            const compactChipSyllabus = document.getElementById('compactChipSyllabus');
+            if (compactChipSyllabus) {
+                compactChipSyllabus.classList.add('hidden');
+            }
+            const compactChipsRow = document.getElementById('compactChipsRow');
+            const compactChipGuideline = document.getElementById('compactChipGuideline');
+            if (compactChipsRow) {
+                const hasGuideline = compactChipGuideline && !compactChipGuideline.classList.contains('hidden');
+                compactChipsRow.style.display = hasGuideline ? 'flex' : 'none';
+            }
         };
 
         window.clearGuideline = () => {
             state.selectedGuidelineId = null;
+            // refreshGuidelineChip already updates both main and compact chips
             refreshGuidelineChip();
         };
     };

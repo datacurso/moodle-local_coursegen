@@ -6,6 +6,8 @@
  * @module     local_coursegen/local/wizard/ui-steps
  */
 
+import { setCompactChatState } from './ui-planning';
+
 /**
  * Create step UI helpers.
  *
@@ -25,9 +27,6 @@ export const createStepsUi = (deps) => {
         planningView,
         planningProgressCard,
         btnGenerate,
-        btnBackFlow,
-        btnCancelFlow,
-        planningNavRow,
         completionView,
         completionSummary,
         planSectionsView,
@@ -39,7 +38,6 @@ export const createStepsUi = (deps) => {
         prvSections,
         planReviewCard,
         planActions,
-        adjustPanel,
         pcDetailsPanel,
         pcToggleRow,
         pcChevron,
@@ -105,26 +103,7 @@ export const createStepsUi = (deps) => {
     };
 
     const updateFlowNav = () => {
-        if (!btnBackFlow || !btnCancelFlow) {
-            return;
-        }
-
-        if (planningNavRow) {
-            planningNavRow.style.display = state.currentStage === 'completed' ? 'none' : 'flex';
-        }
-
-        if (state.currentStage === 'planning') {
-            btnBackFlow.style.display = '';
-            btnBackFlow.textContent = texts.wizard_btn_back_context;
-            btnCancelFlow.textContent = texts.wizard_btn_cancel_flow;
-        } else if (state.currentStage === 'detailed') {
-            btnBackFlow.style.display = '';
-            btnBackFlow.textContent = texts.wizard_btn_back_planning;
-            btnCancelFlow.textContent = texts.wizard_btn_cancel_flow;
-        } else {
-            btnBackFlow.style.display = 'none';
-            btnCancelFlow.textContent = texts.wizard_btn_cancel_and_exit;
-        }
+        // Navigation removed - wizard is now forward-only
     };
 
     const switchPlanMode = (mode) => {
@@ -183,14 +162,8 @@ export const createStepsUi = (deps) => {
         if (planningProgressCard) {
             planningProgressCard.style.display = '';
         }
-        if (planningNavRow) {
-            planningNavRow.style.display = 'flex';
-        }
         if (planActions) {
             planActions.style.display = 'none';
-        }
-        if (adjustPanel) {
-            adjustPanel.style.display = 'none';
         }
         if (pcDetailsPanel) {
             pcDetailsPanel.style.display = 'none';
@@ -255,12 +228,22 @@ export const createStepsUi = (deps) => {
         state.contentGenerationStarted = 0;
         state.contentGenerationCurrent = 0;
         state.planSectionsData = [];
+        state.detailedTotal = 0;
+        state.detailedCurrent = 0;
+        state.phase4TotalActivities = 0;
+        state.contentGenerationStarted = 0;
+        state.contentGenerationCurrent = 0;
+        state.planSectionsData = [];
         state.detailedActivityEls = {};
         state.detailedSectionMeta = {};
         state.selectedDetailedImages = {};
         state.completionStats = null;
         state.createdCourseUrl = '';
         state.createdCourseResult = null;
+        // NOTE: compact chat lifecycle is NOT reset here intentionally.
+        // openSSEStream() calls resetPlanningState() at stream start, and the chat
+        // must remain visible (disabled) during streaming. Chat reset only happens
+        // in backToContext() which is a true full-navigation reset.
     };
 
     const backToContext = () => {
@@ -276,21 +259,41 @@ export const createStepsUi = (deps) => {
         setStepState('planning', 'pending');
         setStepState('detailed', 'pending');
         setStepState('generating', 'pending');
+        // Reset compact chat before other state (it depends on some state)
+        setCompactChatState(deps, 'reset');
         resetPlanningState();
         renderGenerateButtonDefault();
         updateFlowNav();
+
+        // Clear both the compact chat input and the main prompt input.
+        // The compact chat syncs keystrokes to the main prompt, so without this
+        // the user would see their last adjustment text when landing back on phase 1.
+        if (elements.compactPromptInput) {
+            elements.compactPromptInput.value = '';
+        }
+        if (elements.promptInput) {
+            elements.promptInput.value = '';
+        }
     };
 
     const transitionToPlanning = () => {
         setStepState('context', 'done');
         setStepState('planning', 'active');
         state.currentStage = 'planning';
+
+        // Hide context view completely
         if (contextView) {
             contextView.style.display = 'none';
         }
+
         if (planningView) {
             planningView.style.display = 'flex';
         }
+
+        // Show compact chat in disabled state immediately when phase 2 starts
+        // This ensures the chat is visible but non-interactive during streaming
+        setCompactChatState(deps, 'disabled');
+
         updateFlowNav();
     };
 

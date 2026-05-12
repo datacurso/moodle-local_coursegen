@@ -162,6 +162,13 @@ svg { display: block; flex-shrink: 0; }
   max-width: 768px;
   margin: 0 auto;
   width: 100%;
+  margin-bottom: 32px;
+}
+
+.context-wrap--disabled {
+  pointer-events: none;
+  opacity: 0.6;
+  user-select: none;
 }
 
 .context-head {
@@ -1999,6 +2006,153 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .pc-cancel-btn:hover {
+  background: var(--muted);
+  color: var(--fg);
+}
+
+/* ─── COMPACT CHAT CARD ───────────────────────────────────────────── */
+.compact-chat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 14px;
+  margin-top: 14px;
+  transition: opacity .2s, filter .2s;
+}
+
+/* Control-level disabled state (preferred) - disables specific controls, NOT the pause button */
+.compact-controls--disabled {
+  opacity: 0.6;
+  pointer-events: none;
+  user-select: none;
+  filter: grayscale(0.3);
+}
+
+/* Ensure pause/regenerate button stays interactive even when controls are disabled */
+.compact-controls--disabled .btn-compact-regenerate,
+.compact-controls--disabled .btn-compact-regenerate * {
+  pointer-events: auto;
+  opacity: 1;
+  filter: none;
+}
+
+/* Legacy container-level disabled state - keep for backward compatibility but don't use for new code */
+.compact-chat-card--disabled {
+  opacity: 0.6;
+  user-select: none;
+  filter: grayscale(0.3);
+}
+
+.compact-chat-card--disabled .btn-compact-regenerate {
+  pointer-events: auto;
+  opacity: 1;
+  filter: none;
+}
+
+.compact-prompt-textarea {
+  display: block;
+  width: 100%;
+  min-height: 80px;
+  max-height: 180px;
+  padding: 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  font-family: inherit;
+  color: var(--fg);
+  background: var(--bg);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  outline: none;
+  resize: none;
+  transition: border-color .15s;
+}
+
+.compact-prompt-textarea:focus {
+  border-color: var(--primary);
+}
+
+.compact-prompt-textarea::placeholder {
+  color: hsl(215, 20%, 65%);
+}
+
+.compact-chat-toolbar {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+  margin-top: 10px;
+  padding-top: 10px;
+  border-top: 1px solid var(--border);
+}
+
+.compact-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.compact-toolbar-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.btn-compact-regenerate {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 9px 18px;
+  font-size: 13.5px;
+  font-weight: 600;
+  color: var(--primary-fg);
+  background: var(--primary);
+  border: none;
+  border-radius: 8px;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .15s, transform .08s;
+  box-shadow: 0 1px 2px rgba(0,0,0,.1);
+}
+
+.btn-compact-regenerate:hover {
+  background: hsl(8, 72%, 38%);
+  transform: translateY(-1px);
+  box-shadow: 0 2px 4px rgba(0,0,0,.15);
+}
+
+.btn-compact-regenerate:active {
+  transform: translateY(0);
+}
+
+.btn-compact-regenerate:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+/* ─── WIZARD CANCEL ROW (outside planning) ────────────────────────── */
+.wizard-cancel-row {
+  margin-top: 20px;
+  margin-bottom: 20px;
+  text-align: center;
+  display: flex;
+  justify-content: center;
+}
+
+.wizard-cancel-btn {
+  background: none;
+  border: none;
+  font-size: 13px;
+  color: var(--muted-fg);
+  cursor: pointer;
+  font-family: inherit;
+  padding: 6px 12px;
+  border-radius: 6px;
+  transition: color .12s, background .12s;
+}
+
+.wizard-cancel-btn:hover {
   background: var(--muted);
   color: var(--fg);
 }

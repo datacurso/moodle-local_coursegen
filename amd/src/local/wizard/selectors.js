@@ -13,6 +13,7 @@
  */
 export const getWizardElements = () => {
     const btnWithImages = document.getElementById('btnWithImages');
+    const btnCompactWithImages = document.getElementById('btnCompactWithImages');
     return {
         promptInput: document.getElementById('promptInput'),
         btnGenerate: document.getElementById('btnGenerate'),
@@ -56,15 +57,17 @@ export const getWizardElements = () => {
         prvCheckIcon: document.getElementById('prvCheckIcon'),
         planActions: document.getElementById('planActions'),
         planActionsHint: document.getElementById('planActionsHint'),
-        adjustPanel: document.getElementById('adjustPanel'),
-        adjustInput: document.getElementById('adjustInput'),
         btnApprove: document.getElementById('btnApprove'),
-        btnAdjust: document.getElementById('btnAdjust'),
-        btnAdjustCancel: document.getElementById('btnAdjustCancel'),
-        btnAdjustSend: document.getElementById('btnAdjustSend'),
-        btnBackFlow: document.getElementById('btnBackFlow'),
-        btnCancelFlow: document.getElementById('btnCancelFlow'),
-        planningNavRow: document.getElementById('planningNavRow'),
+        compactChatCard: document.getElementById('compactChatCard'),
+        compactPromptInput: document.getElementById('compactPromptInput'),
+        compactChipsRow: document.getElementById('compactChipsRow'),
+        compactToolbarLeft: document.getElementById('compactToolbarLeft'),
+        btnCompactRegenerate: document.getElementById('btnCompactRegenerate'),
+        compactLangSelect: document.getElementById('compactLangSelect'),
+        btnCompactWithImages,
+        compactImgToggleWrap: btnCompactWithImages ? btnCompactWithImages.closest('label') : null,
+        btnCompactSyllabus: document.getElementById('btnCompactSyllabus'),
+        btnCompactDirectrices: document.getElementById('btnCompactDirectrices'),
         completionView: document.getElementById('completionView'),
         completionSummary: document.getElementById('completionSummary'),
         btnOpenMoodleCourse: document.getElementById('btnOpenMoodleCourse'),

@@ -290,3 +290,17 @@ PARTICULAR PURPOSE.  See the GNU General Public License for more details.
 
 You should have received a copy of the GNU General Public License along with
 this program.  If not, see <https://www.gnu.org/licenses/>.
+
+------
+Mejoras del creador de cursos IA Wizard
+
+1. Quitar navegación entre fases solo dejar el botón de Cancelar
+2. Manter el mismo chat en cada fase de planificación
+3. Mostrar y bloquear chat mientras se realiza el stream
+4. Habilitar un botón de Pausar en el chat durante el stream
+5. Corregir el servicio IA para adaptar estas nuevas funciones 
+6. Corregir el icono de IA por pencil en cada imagen o recurso
+7. Limitar la cantidad de imagenes por recurso en el servicio IA
+
+Prompt de prueba:
+Crea un curso de uso de moodle de 2 secciones

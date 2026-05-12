@@ -6,6 +6,8 @@
  * @module     local_coursegen/local/wizard/stream
  */
 
+import { setCompactChatState } from './ui-planning';
+
 // Module-level variable to preserve phase 4 total activities
 // This survives state resets that happen during stream opening
 let preservedPhase4Total = 0;
@@ -162,23 +164,37 @@ export const createStreamManager = (deps) => {
         }
     };
 
-    const openSSEStream = (streamUrl) => {
+    const openSSEStream = (streamUrl, retryAttempt = 0) => {
+        // When the user pauses a stream mid-way and then regenerates, the AI backend
+        // continues running and writes the remaining events + "done" to the stream buffer.
+        // When the new EventSource connects, it may read that stale "done" before the
+        // new content arrives.  We detect this as a "stale done" (done with no preceding
+        // content events) and retry automatically.
+        const MAX_STALE_RETRIES = 3;
+        const STALE_RETRY_DELAY_MS = 2000;
+
+        // Per-attempt flag: set to true when any structural content event arrives.
+        let contentReceived = false;
+
         if (!streamUrl) {
             throw new Error(texts.wizard_error_stream_url);
         }
         closeStream();
 
-        // PRESERVE phase4TotalActivities BEFORE reset
-        const savedPhase4Total = state.phase4TotalActivities || 0;
-        window.console.log('[PHASE4-DEBUG] BEFORE-RESET - Saving phase4TotalActivities:', savedPhase4Total);
+        // Only reset planning UI on the first attempt (not on stale-done retries).
+        if (retryAttempt === 0) {
+            // PRESERVE phase4TotalActivities BEFORE reset
+            const savedPhase4Total = state.phase4TotalActivities || 0;
+            window.console.log('[PHASE4-DEBUG] BEFORE-RESET - Saving phase4TotalActivities:', savedPhase4Total);
 
-        stepsUi.resetPlanningState();
+            stepsUi.resetPlanningState();
 
-        // RESTORE phase4TotalActivities AFTER reset
-        if (savedPhase4Total > 0) {
-            state.phase4TotalActivities = savedPhase4Total;
-            preservedPhase4Total = savedPhase4Total;
-            window.console.log('[PHASE4-DEBUG] AFTER-RESET - Restored phase4TotalActivities:', state.phase4TotalActivities);
+            // RESTORE phase4TotalActivities AFTER reset
+            if (savedPhase4Total > 0) {
+                state.phase4TotalActivities = savedPhase4Total;
+                preservedPhase4Total = savedPhase4Total;
+                window.console.log('[PHASE4-DEBUG] AFTER-RESET - Restored phase4TotalActivities:', state.phase4TotalActivities);
+            }
         }
 
         state.sseSource = new EventSource(streamUrl);
@@ -192,6 +208,7 @@ export const createStreamManager = (deps) => {
 
             switch (data.type) {
                 case 'activity': {
+                    contentReceived = true;
                     if (!state.planSectionsData.find((section) => section.sectionIndex === data.section_index)) {
                         planningUi.addSectionHeader({
                             section_index: data.section_index,
@@ -207,6 +224,7 @@ export const createStreamManager = (deps) => {
                     break;
                 }
                 case 'section': {
+                    contentReceived = true;
                     planningUi.addSectionHeader({
                         section_index: data.section_index ?? state.planSectionsData.length,
                         name: data.section?.name || data.name || texts.wizard_plan_default_unnamed,
@@ -233,15 +251,19 @@ export const createStreamManager = (deps) => {
                     break;
                 }
                 case 'detailed_plan_start':
+                    contentReceived = true;
                     detailedUi.initDetailedPlanView(data);
                     break;
                 case 'detailed_plan_field':
+                    contentReceived = true;
                     detailedUi.handleDetailedPlanField(data);
                     break;
                 case 'detailed_plan_activity':
+                    contentReceived = true;
                     detailedUi.handleDetailedPlanActivity(data);
                     break;
                 case 'token':
+                    contentReceived = true;
                     stepsUi.switchPlanMode('markdown');
                     state.planBuffer += data.text || '';
                     renderPlanMarkdown();
@@ -331,15 +353,24 @@ export const createStreamManager = (deps) => {
                     stepsUi.updateFlowNav();
                     stepsUi.switchPlanMode('sections');
                     planningUi.buildReviewCard(data.sections || [], detailedUi.normalizeInitialSections);
+                    planningUi.renderInitialReviewFromState();
                     if (
                         Array.isArray(data.sections) &&
                         data.sections.length > 0 &&
                         planSectionsList &&
                         !planSectionsList.children.length
                     ) {
+                        const preservedTotals = {
+                            sections: state.totalSections,
+                            activities: state.totalActivities,
+                        };
                         data.sections.forEach((section) => planningUi.addPlanSection(section));
+                        state.totalSections = preservedTotals.sections;
+                        state.totalActivities = preservedTotals.activities;
                     }
                     planningUi.showReviewActions('initial');
+                    // Re-enable compact chat now that review is ready
+                    setCompactChatState(deps, 'enabled');
                     break;
                 case 'review_needed':
                     stepsUi.setStepState('planning', 'done');
@@ -359,6 +390,8 @@ export const createStreamManager = (deps) => {
                         });
                     }
                     planningUi.showReviewActions(state.planningMode === 'detailed' ? 'detailed' : 'markdown');
+                    // Re-enable compact chat now that review is ready
+                    setCompactChatState(deps, 'enabled');
                     break;
                 case 'completed': {
                     setCompletionStatsFromGeneratedResult(data.result || []);
@@ -382,6 +415,8 @@ export const createStreamManager = (deps) => {
                     if (pcSubtitle) {
                         pcSubtitle.textContent = data.message || texts.wizard_error_generic;
                     }
+                    // Stream failed - re-enable compact chat for retry
+                    setCompactChatState(deps, 'enabled');
                     break;
                 default:
                     break;
@@ -390,12 +425,27 @@ export const createStreamManager = (deps) => {
 
         state.sseSource.addEventListener('done', () => {
             closeStream();
+
+            // Stale-done guard: if done arrived without any content events, the previous
+            // stream's "done" was read before the new content arrived (race condition after
+            // a Pausar + Regenerar cycle).  Retry automatically up to MAX_STALE_RETRIES times.
+            if (!contentReceived && retryAttempt < MAX_STALE_RETRIES) {
+                window.console.log(
+                    '[STREAM] Stale done detected (attempt', retryAttempt + 1, '/', MAX_STALE_RETRIES + ').',
+                    'Retrying in', STALE_RETRY_DELAY_MS, 'ms…'
+                );
+                setTimeout(() => openSSEStream(streamUrl, retryAttempt + 1), STALE_RETRY_DELAY_MS);
+                return;
+            }
+
             if (typingCursor) {
                 typingCursor.classList.add('hidden');
             }
             if (planningSpinner) {
                 planningSpinner.classList.add('done');
             }
+            // Stream completed normally - re-enable compact chat
+            setCompactChatState(deps, 'enabled');
         });
 
         state.sseSource.onerror = () => {
@@ -411,6 +461,8 @@ export const createStreamManager = (deps) => {
             if (pcSubtitle) {
                 pcSubtitle.textContent = texts.wizard_error_connection;
             }
+            // Connection error - re-enable compact chat for retry
+            setCompactChatState(deps, 'enabled');
         };
     };
 

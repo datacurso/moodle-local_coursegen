@@ -119,6 +119,8 @@ const STRING_KEYS = [
     'wizard_plan_default_unnamed',
     'wizard_status_approving',
     'wizard_status_adjusting',
+    'wizard_btn_regenerate',
+    'wizard_btn_pause',
     'wizard_chapters_label',
     'wizard_questions_label',
     'wizard_notes_label',
