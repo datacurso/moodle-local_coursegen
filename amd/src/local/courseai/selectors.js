@@ -61,6 +61,8 @@ export const getCourseaiElements = () => {
         btnApprove: document.getElementById('btnApprove'),
         compactChatCard: document.getElementById('compactChatCard'),
         compactPromptInput: document.getElementById('compactPromptInput'),
+        initialPromptHistory: document.getElementById('courseaiInitialPromptHistory'),
+        initialPromptText: document.getElementById('courseaiInitialPromptText'),
         compactChipsRow: document.getElementById('compactChipsRow'),
         compactToolbarLeft: document.getElementById('compactToolbarLeft'),
         btnCompactRegenerate: document.getElementById('btnCompactRegenerate'),

@@ -325,6 +325,7 @@ $string['courseai_step_planning'] = 'Planning';
 $string['courseai_step_generating'] = 'Generation';
 $string['courseai_context_title'] = 'What course do you want to create?';
 $string['courseai_context_subtitle'] = 'Describe the course and optionally attach a syllabus or apply institutional guidelines.';
+$string['courseai_initial_prompt_label'] = 'Initial message';
 $string['courseai_prompt_placeholder'] = 'Example: Create an introductory Python course for first-year engineering, 8 weeks, focused on computational thinking and weekly practical exercises...';
 $string['courseai_compact_prompt_placeholder'] = 'Example: In section 2, create 3 activities';
 $string['courseai_prompt_arialabel'] = 'Course description';

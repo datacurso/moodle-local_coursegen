@@ -276,6 +276,13 @@ export const createStepsUi = (deps) => {
         if (elements.promptInput) {
             elements.promptInput.value = '';
         }
+        state.initialPrompt = '';
+        if (elements.initialPromptText) {
+            elements.initialPromptText.textContent = '';
+        }
+        if (elements.initialPromptHistory) {
+            elements.initialPromptHistory.classList.add('hidden');
+        }
     };
 
     const transitionToPlanning = () => {

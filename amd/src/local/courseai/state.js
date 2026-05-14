@@ -27,6 +27,7 @@ export const createInitialState = ({defaultLang, guidelines, languages}) => {
         selectedGuidelineId: null,
         guidelinePopoverOpen: false,
         guidelineSearchQuery: '',
+        initialPrompt: '',
         lang: defaultLang,
         withImages: false,
         guidelines,

@@ -52,7 +52,18 @@ export const createCourseaiActions = (deps) => {
         langSelect,
         compactPromptInput,
         btnCompactRegenerate,
+        initialPromptHistory,
+        initialPromptText,
     } = elements;
+
+    const renderInitialPromptHistory = (message) => {
+        if (initialPromptText) {
+            initialPromptText.textContent = message || '';
+        }
+        if (initialPromptHistory) {
+            initialPromptHistory.classList.toggle('hidden', !message);
+        }
+    };
 
     const getSummaryCounts = () => {
         if (state.completionStats) {
@@ -124,6 +135,7 @@ export const createCourseaiActions = (deps) => {
         state.completionStats = null;
         state.createdCourseUrl = '';
         state.createdCourseResult = null;
+        state.initialPrompt = '';
 
         if (promptInput) {
             promptInput.value = '';
@@ -149,6 +161,7 @@ export const createCourseaiActions = (deps) => {
 
         refreshGuidelineChip();
         refreshChipsRow();
+        renderInitialPromptHistory('');
         stepsUi.backToContext();
         updateGenerateButton();
     };
@@ -233,6 +246,9 @@ export const createCourseaiActions = (deps) => {
             }
             return;
         }
+
+        state.initialPrompt = prompt;
+        renderInitialPromptHistory(prompt);
 
         if (btnGenerate) {
             btnGenerate.disabled = true;
@@ -339,6 +355,8 @@ export const createCourseaiActions = (deps) => {
                 '<rect x="6" y="4" width="4" height="16"/>' +
                 '<rect x="14" y="4" width="4" height="16"/></svg>';
             btnCompactRegenerate.innerHTML = `${pauseIcon} ${texts.courseai_btn_pause || 'Pausar'}`;
+            btnCompactRegenerate.setAttribute('aria-label', texts.courseai_btn_pause || 'Pausar');
+            btnCompactRegenerate.setAttribute('title', texts.courseai_btn_pause || 'Pausar');
             btnCompactRegenerate.disabled = false;
         }
         if (planningSpinner) {

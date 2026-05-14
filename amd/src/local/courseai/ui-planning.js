@@ -140,6 +140,8 @@ export const setCompactChatState = (deps, mode) => {
                 btnCompactRegenerate.disabled = false;
                 if (texts?.courseai_btn_regenerate) {
                     btnCompactRegenerate.innerHTML = `${sparkleIcon} ${texts.courseai_btn_regenerate}`;
+                    btnCompactRegenerate.setAttribute('aria-label', texts.courseai_btn_regenerate);
+                    btnCompactRegenerate.setAttribute('title', texts.courseai_btn_regenerate);
                 }
             }
             if (state) {
@@ -177,6 +179,8 @@ export const setCompactChatState = (deps, mode) => {
                 btnCompactRegenerate.disabled = false;
                 if (texts?.courseai_btn_regenerate) {
                     btnCompactRegenerate.innerHTML = `${sparkleIcon} ${texts.courseai_btn_regenerate}`;
+                    btnCompactRegenerate.setAttribute('aria-label', texts.courseai_btn_regenerate);
+                    btnCompactRegenerate.setAttribute('title', texts.courseai_btn_regenerate);
                 }
             }
             if (state) {
