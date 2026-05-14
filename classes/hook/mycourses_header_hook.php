@@ -83,7 +83,7 @@ class mycourses_header_hook {
     private static function render_button_html(): string {
         global $OUTPUT;
 
-        $url = (new \moodle_url('/local/coursegen/wizard.php'))->out(false);
+        $url = (new \moodle_url('/local/coursegen/aicoursecreation.php'))->out(false);
 
         return $OUTPUT->render_from_template('local_coursegen/add_ai_course_button', [
             'url' => $url,
