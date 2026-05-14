@@ -36,9 +36,14 @@
      aria-label="{{#str}}createwithai, local_coursegen{{/str}}">
     <div class="container-fluid">
         <div class="d-flex align-items-center gap-2">
-            {{#logourl}}
-            <img src="{{logourl}}" alt="" class="aicoursecreation-navbar-logo" />
-            {{/logourl}}
+            <button class="aicoursecreation-navbar-trigger" id="courseaiMenuTrigger" type="button" aria-label="Menu">
+                {{#logourl}}
+                <img src="{{logourl}}" alt="" class="aicoursecreation-navbar-logo courseai-nav-logo" />
+                {{/logourl}}
+                <svg class="courseai-nav-menuicon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+                </svg>
+            </button>
             <h1 class="h5 m-0">{{{title}}}</h1>
         </div>
         <div class="ms-auto d-flex">

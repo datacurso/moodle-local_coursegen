@@ -1,0 +1,423 @@
+/* ─── SIDEBAR BACKDROP ───────────────────────────────────────────── */
+.courseai-sidebar-backdrop {
+  position: fixed;
+  inset: 0;
+  background: hsl(0, 0%, 0%, 0.3);
+  z-index: 1039;            /* below sidebar (1040), above Bootstrap navbar (1030) */
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity .28s ease;
+}
+
+.courseai-sidebar-backdrop.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* ─── SIDEBAR — LIGHT MINIMALIST ───────────────────────────────────── */
+:root {
+  --courseai-sidebar-w: 240px;
+}
+
+/* Toggle button – inside sidebar, only visible when open */
+.courseai-sidebar-toggle {
+  position: absolute;
+  top: 14px;
+  right: -14px;
+  width: 28px;
+  height: 28px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  z-index: 5;
+  color: var(--fg);
+  padding: 0;
+  line-height: 1;
+  box-shadow: 0 1px 4px hsl(0, 0%, 0%, 0.08);
+  transition: opacity .2s;
+}
+
+.courseai-sidebar-toggle:hover {
+  background: var(--muted);
+}
+
+/* When sidebar is collapsed, toggle button is hidden too */
+.courseai-sidebar.collapsed .courseai-sidebar-toggle {
+  opacity: 0;
+  pointer-events: none;
+}
+
+/* Sidebar panel – covers everything including navbar */
+.courseai-sidebar {
+  position: fixed;
+  top: 0;                   /* overlay navbar too */
+  left: 0;
+  bottom: 0;
+  width: var(--courseai-sidebar-w);
+  background: var(--card);
+  border-right: 1px solid var(--border);
+  color: var(--fg);
+  display: flex;
+  flex-direction: column;
+  z-index: 1040;            /* above Bootstrap navbar (1030) */
+  transform: translateX(0);
+  transition: transform .28s cubic-bezier(.4, 0, .2, 1);
+  overflow: hidden;
+  box-shadow: 4px 0 24px hsl(0, 0%, 0%, 0.15);
+}
+
+.courseai-sidebar.collapsed {
+  transform: translateX(-100%);  /* completely off-screen – no visible strip */
+  box-shadow: none;
+}
+
+/* Body */
+.courseai-sidebar-body {
+  display: flex;
+  flex-direction: column;
+  padding: 20px 14px;
+  gap: 8px;
+  flex: 1;
+  overflow-y: auto;
+}
+
+/* Brand */
+.courseai-sidebar-brand {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 0 10px 16px;
+  border-bottom: 1px solid var(--border);
+  margin-bottom: 12px;
+  color: var(--fg);
+  font-weight: 600;
+  font-size: 15px;
+  white-space: nowrap;
+}
+
+.courseai-sidebar-logo {
+  flex-shrink: 0;
+  width: 22px;
+  height: 22px;
+  object-fit: contain;
+}
+
+/* Collapsed: hide text */
+.courseai-sidebar.collapsed .courseai-sidebar-brand-text,
+.courseai-sidebar.collapsed .courseai-sidebar-btn-text,
+.courseai-sidebar.collapsed .courseai-sidebar-section-title,
+.courseai-sidebar.collapsed .courseai-sidebar-chevron,
+.courseai-sidebar.collapsed .courseai-sidebar-course-info,
+.courseai-sidebar.collapsed .courseai-sidebar-viewall {
+  display: none;
+}
+
+.courseai-sidebar.collapsed .courseai-sidebar-course-item svg {
+  margin: 0 auto;
+}
+
+/* New course button */
+.courseai-sidebar-btn-new {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 10px 12px;
+  background: var(--primary);
+  color: var(--primary-fg);
+  border: none;
+  border-radius: 8px;
+  font-size: 14px;
+  font-weight: 600;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: opacity .15s;
+}
+
+.courseai-sidebar-btn-new:hover { opacity: .9; }
+.courseai-sidebar-btn-new svg { flex-shrink: 0; }
+
+/* Recent section */
+.courseai-sidebar-section { margin-top: 4px; }
+
+.courseai-sidebar-section-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  cursor: pointer;
+  border-radius: 6px;
+  white-space: nowrap;
+  transition: background .15s;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  font-weight: 500;
+  font-size: 12px;
+  color: var(--muted-fg);
+}
+
+.courseai-sidebar-section-header:hover { background: var(--muted); }
+.courseai-sidebar-section-header svg { flex-shrink: 0; }
+.courseai-sidebar-section-title { flex: 1; }
+
+.courseai-sidebar-chevron {
+  transition: transform .2s ease;
+}
+.courseai-sidebar-chevron.closed { transform: rotate(-90deg); }
+
+/* Courses list */
+.courseai-sidebar-courses-list {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-left: 0;
+  overflow: hidden;
+  transition: max-height .25s ease;
+}
+
+.courseai-sidebar-courses-list.closed { max-height: 0 !important; }
+
+.courseai-sidebar-course-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s;
+}
+
+.courseai-sidebar-course-item:hover { background: var(--muted); }
+
+.courseai-sidebar-course-item svg {
+  flex-shrink: 0;
+  color: var(--primary);
+}
+
+.courseai-sidebar-course-info {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.courseai-sidebar-course-title {
+  font-size: 13px;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.courseai-sidebar-course-status {
+  font-size: 11px;
+  color: var(--muted-fg);
+}
+
+.courseai-sidebar-courses-empty {
+  padding: 8px 10px;
+  font-size: 12px;
+  color: var(--muted-fg);
+  font-style: italic;
+}
+
+/* View all — same style as section header */
+.courseai-sidebar-viewall {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 8px 10px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  transition: background .15s;
+  background: none;
+  border: none;
+  color: var(--muted-fg);
+  font-size: 12px;
+  font-family: inherit;
+  width: 100%;
+  margin-top: 4px;
+  text-transform: uppercase;
+  letter-spacing: .4px;
+  font-weight: 500;
+}
+
+.courseai-sidebar-viewall:hover { background: var(--muted); }
+.courseai-sidebar-viewall svg { flex-shrink: 0; }
+
+/* ─── SESSIONS VIEW (inside wizard) ───────────────────────────────── */
+.courseai-sessions-view {
+  max-width: 1040px;
+  margin: 0 auto;
+  padding: 32px 24px;
+}
+
+.courseai-sessions-header {
+  display: flex;
+  align-items: center;
+  gap: 16px;
+  margin-bottom: 28px;
+}
+
+.courseai-sessions-header h2 {
+  font-size: 22px;
+  font-weight: 700;
+  margin: 0;
+}
+
+.courseai-sessions-back-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 36px;
+  height: 36px;
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 50%;
+  cursor: pointer;
+  color: var(--fg);
+  transition: background .15s;
+  flex-shrink: 0;
+  padding: 0;
+}
+
+.courseai-sessions-back-btn:hover { background: var(--border); }
+
+/* Card grid */
+.courseai-sessions-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
+  gap: 16px;
+}
+
+.courseai-session-card {
+  display: flex;
+  flex-direction: column;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 12px;
+  padding: 20px;
+  transition: box-shadow .2s;
+}
+
+.courseai-session-card:hover {
+  box-shadow: 0 4px 20px hsl(215, 28%, 17%, 0.1);
+}
+
+.courseai-session-card-icon {
+  width: 48px;
+  height: 48px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: hsl(215, 40%, 96%);
+  border-radius: 10px;
+  margin-bottom: 12px;
+  color: var(--primary);
+}
+
+.courseai-session-card-body { flex: 1; margin-bottom: 16px; }
+
+.courseai-session-card-title {
+  font-size: 16px;
+  font-weight: 600;
+  margin: 0 0 6px;
+  color: var(--fg);
+}
+
+.courseai-session-card-status {
+  display: inline-block;
+  font-size: 12px;
+  padding: 3px 10px;
+  border-radius: 20px;
+  background: var(--muted);
+  color: var(--muted-fg);
+  margin-right: 8px;
+}
+
+.courseai-session-card-date {
+  font-size: 11px;
+  color: var(--muted-fg);
+}
+
+.courseai-session-card-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--primary);
+  text-decoration: none;
+}
+
+.courseai-session-card-btn:hover { text-decoration: underline; }
+
+/* Empty state */
+.courseai-sessions-empty {
+  text-align: center;
+  padding: 60px 20px;
+  color: var(--muted-fg);
+}
+
+.courseai-sessions-empty svg { margin-bottom: 16px; opacity: .4; }
+
+.courseai-sessions-empty p {
+  font-size: 16px;
+  margin-bottom: 20px;
+}
+
+.courseai-sessions-empty a {
+  display: inline-flex;
+  padding: 10px 24px;
+  background: var(--primary);
+  color: var(--primary-fg);
+  border-radius: 8px;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+/* ─── PAGINATION ───────────────────────────────────────────────────── */
+.courseai-sessions-pagination {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  margin-top: 24px;
+  padding-top: 20px;
+  border-top: 1px solid var(--border);
+}
+
+.courseai-pagination-btn {
+  width: 36px;
+  height: 36px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  color: var(--fg);
+  transition: background .15s, opacity .15s;
+  padding: 0;
+}
+
+.courseai-pagination-btn:hover:not(:disabled) { background: var(--muted); }
+
+.courseai-pagination-btn:disabled {
+  opacity: .3;
+  cursor: default;
+}
+
+.courseai-pagination-info {
+  font-size: 14px;
+  font-weight: 500;
+  color: var(--muted-fg);
+  min-width: 60px;
+  text-align: center;
+}

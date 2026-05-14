@@ -1,0 +1,72 @@
+{{!
+    @template local_coursegen/sidebar
+
+    AI Course Creator Sidebar — light minimalist overlay panel.
+
+    Context:
+    - sessions: array of { id, title, statuslabel }
+    - hassessions: boolean
+    - logourl: string
+}}
+<!-- Toggle button (inside sidebar, hidden when sidebar is collapsed) -->
+<button class="courseai-sidebar-toggle" id="courseaiSidebarToggle" type="button" aria-label="{{#str}}courseai_sidebar_toggle, local_coursegen{{/str}}">
+  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <line x1="3" y1="6" x2="21" y2="6"/><line x1="3" y1="12" x2="21" y2="12"/><line x1="3" y1="18" x2="21" y2="18"/>
+  </svg>
+</button>
+
+<aside class="courseai-sidebar collapsed" id="courseaiSidebar">
+  <div class="courseai-sidebar-body">
+    <!-- Brand -->
+    <div class="courseai-sidebar-brand">
+      <img src="{{logourl}}" alt="" class="courseai-sidebar-logo" />
+      <span class="courseai-sidebar-brand-text">Course Creator AI</span>
+    </div>
+
+    <!-- New course button -->
+    <button class="courseai-sidebar-btn-new" id="courseaiBtnNew" type="button">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      <span class="courseai-sidebar-btn-text">{{#str}}courseai_sidebar_newcourse, local_coursegen{{/str}}</span>
+    </button>
+
+    <!-- Recent section -->
+    <div class="courseai-sidebar-section">
+      <div class="courseai-sidebar-section-header" id="courseaiCoursesHeader">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+        </svg>
+        <span class="courseai-sidebar-section-title">{{#str}}courseai_sidebar_recent, local_coursegen{{/str}}</span>
+        <svg class="courseai-sidebar-chevron" id="courseaiCoursesChevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="6 9 12 15 18 9"/>
+        </svg>
+      </div>
+
+      <div class="courseai-sidebar-courses-list" id="courseaiCoursesList">
+        {{#sessions}}
+        <div class="courseai-sidebar-course-item" data-sessionid="{{id}}">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+          </svg>
+          <div class="courseai-sidebar-course-info">
+            <span class="courseai-sidebar-course-title">{{title}}</span>
+            <span class="courseai-sidebar-course-status">{{statuslabel}}</span>
+          </div>
+        </div>
+        {{/sessions}}
+        {{^sessions}}
+        <div class="courseai-sidebar-courses-empty">{{#str}}courseai_sidebar_nocourses, local_coursegen{{/str}}</div>
+        {{/sessions}}
+      </div>
+
+      <!-- View all -->
+      <button class="courseai-sidebar-viewall" id="courseaiViewAll" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+        {{#str}}courseai_sidebar_viewall, local_coursegen{{/str}}
+      </button>
+    </div>
+  </div>
+</aside>

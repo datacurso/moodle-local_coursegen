@@ -39,8 +39,12 @@ $PAGE->set_context($systemcontext);
 $PAGE->set_pagelayout('popup');
 $PAGE->set_title(get_string('createwithai', 'local_coursegen'));
 
-// Load courseai CSS.
+// Load courseai CSS + sidebar CSS.
 $PAGE->requires->css('/local/coursegen/styles/aicoursecreation.css');
+$PAGE->requires->css('/local/coursegen/styles/sidebar.css');
+
+use local_coursegen\local\models\course_session;
+use local_coursegen\local\service\course_session_service;
 
 // Load system instructions (directrices institucionales).
 $systeminstructions = [];
@@ -68,6 +72,38 @@ foreach ($supportedlangs as $code) {
     }
 }
 
+// Helper to build session data array.
+$buildsessiondata = function($session, $maxtitle = 50) {
+    $statuslabels = [
+        course_session::STATUS_PENDING => get_string('status_pending', 'local_coursegen'),
+        course_session::STATUS_CREATING => get_string('status_creating', 'local_coursegen'),
+        course_session::STATUS_FAILED => get_string('status_failed', 'local_coursegen'),
+    ];
+    $coursedata = json_decode($session->get('coursedata') ?? '{}', true);
+    $rawtitle = $coursedata['fullname'] ?? $coursedata['local_coursegen_custom_prompt'] ?? '';
+    return [
+        'id' => $session->get('id'),
+        'title' => \core_text::str_max_bytes($rawtitle, $maxtitle) ?: get_string('courseai_untitled', 'local_coursegen'),
+        'statuslabel' => $statuslabels[$session->get('status')] ?? '',
+        'status' => $session->get('status'),
+        'timecreated' => userdate($session->get('timecreated'), get_string('strftimedatetimeshort', 'langconfig')),
+    ];
+};
+
+// Get recent 5 sessions for sidebar.
+$recentrecords = course_session_service::get_user_inprogress_sessions($USER->id, 5);
+$recent5 = [];
+foreach ($recentrecords as $session) {
+    $recent5[] = $buildsessiondata($session, 50);
+}
+
+// Get ALL sessions for the full list view.
+$allrecords = course_session_service::get_user_inprogress_sessions($USER->id);
+$allsessionsdata = [];
+foreach ($allrecords as $session) {
+    $allsessionsdata[] = $buildsessiondata($session, 80);
+}
+
 // Get logo URL.
 $logourl = new moodle_url('/local/coursegen/pix/logo.png');
 
@@ -76,6 +112,10 @@ $templatecontext = [
     'guidelines' => json_encode($systeminstructions),
     'languages' => json_encode($languageoptions),
     'defaultlang' => current_language(),
+    'logourl' => $logourl->out(),
+    'hassessions' => !empty($recent5),
+    'sessions' => $recent5,
+    'allsessions' => $allsessionsdata,
 ];
 
 echo $OUTPUT->header();
@@ -96,6 +136,7 @@ $PAGE->requires->js_call_amd('local_coursegen/courseai', 'init', [
         'guidelines' => $systeminstructions,
         'languages' => $languageoptions,
         'defaultlang' => current_language(),
+        'sessions' => $allsessionsdata,
     ],
 ]);
 

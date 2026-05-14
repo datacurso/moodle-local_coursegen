@@ -29,6 +29,10 @@
 
 {{! Wizard CSS will be loaded via PHP $PAGE->requires->css() }}
 
+<!-- ══════════════════════ SIDEBAR ════════════════════════════════════ -->
+{{> local_coursegen/sidebar }}
+<div class="courseai-sidebar-backdrop" id="courseaiSidebarBackdrop"></div>
+
 <!-- ══════════════════════ MAIN ════════════════════════════════════════ -->
 <main class="app-main aicoursecreation-main">
   <div class="container">
@@ -385,12 +389,64 @@
 
     </div><!-- .courseai-workspace -->
 
-    <!-- Cancel button (outside planning-wrap, returns to phase 1) -->
-    <div class="courseai-cancel-row" id="courseaiCancelRow" style="display:none">
-      <button class="courseai-cancel-btn" id="btnCourseaiCancel" type="button">{{#str}}courseai_btn_cancel, local_coursegen{{/str}}</button>
+  </div><!-- .container -->
+
+  <!-- Sessions list view (hidden by default) -->
+  <div class="courseai-sessions-view" id="courseaiSessionsView" style="display:none">
+    <div class="courseai-sessions-header">
+      <button class="courseai-sessions-back-btn" id="courseaiSessionsBackBtn" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+      </button>
+      <h2>{{#str}}courseai_sessions_title, local_coursegen{{/str}}</h2>
     </div>
 
-  </div><!-- .container -->
+    {{#hassessions}}
+    <div class="courseai-sessions-grid" id="courseaiSessionsGrid">
+      {{#allsessions}}
+      <div class="courseai-session-card" data-sessionid="{{id}}">
+        <div class="courseai-session-card-icon">
+          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
+          </svg>
+        </div>
+        <div class="courseai-session-card-body">
+          <h3 class="courseai-session-card-title">{{title}}</h3>
+          <span class="courseai-session-card-status">{{statuslabel}}</span>
+          <span class="courseai-session-card-date">{{timecreated}}</span>
+        </div>
+        <a class="courseai-session-card-btn" href="aicoursecreation.php?sessionid={{id}}">{{#str}}courseai_sessions_continuebtn, local_coursegen{{/str}} &rarr;</a>
+      </div>
+      {{/allsessions}}
+    </div>
+
+    <div class="courseai-sessions-pagination" id="courseaiSessionsPagination" style="display:none">
+      <button class="courseai-pagination-btn courseai-pagination-prev" id="courseaiPaginationPrev" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+      </button>
+      <span class="courseai-pagination-info" id="courseaiPaginationInfo"></span>
+      <button class="courseai-pagination-btn courseai-pagination-next" id="courseaiPaginationNext" type="button">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="9 18 15 12 9 6"/>
+        </svg>
+      </button>
+    </div>
+    {{/hassessions}}
+
+    {{^hassessions}}
+    <div class="courseai-sessions-empty">
+      <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+      </svg>
+      <p>{{#str}}courseai_sessions_empty, local_coursegen{{/str}}</p>
+      <a href="aicoursecreation.php">{{#str}}courseai_sessions_newbtn, local_coursegen{{/str}}</a>
+    </div>
+    {{/hassessions}}
+  </div>
+
 </main>
 
 <!-- Guideline preview modal (Bootstrap 4) -->
