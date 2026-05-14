@@ -786,10 +786,7 @@ export const createDetailedUi = (deps) => {
     };
 
     const initDetailedPlanView = (data) => {
-        let sourceSections = normalizeInitialSections(data?.sections || []);
-        if (sourceSections.length === 0) {
-            sourceSections = normalizeInitialSections(state.latestInitialSections || []);
-        }
+        const sourceSections = normalizeInitialSections(data?.sections || []);
 
         if (prvSections) {
             prvSections.innerHTML = '';

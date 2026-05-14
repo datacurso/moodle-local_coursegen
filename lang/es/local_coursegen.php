@@ -324,7 +324,7 @@ $string['yesimages'] = 'Generar imágenes';
 $string['wizard_header_title'] = 'Datacurso course creator AI';
 $string['wizard_header_subtitle'] = 'Crea cursos completos en Moodle con IA, en minutos';
 $string['wizard_step_context'] = 'Contexto';
-$string['wizard_step_planning'] = 'Planificación inicial';
+$string['wizard_step_planning'] = 'Planificación';
 $string['wizard_step_detailed'] = 'Planificación detallada';
 $string['wizard_step_generating'] = 'Generación';
 $string['wizard_context_title'] = '¿Qué curso quieres crear?';
@@ -354,7 +354,7 @@ $string['wizard_form_tip'] = 'Tip: sé específico con tema, nivel, duración y 
 $string['wizard_progress_label'] = 'Progreso';
 $string['wizard_progress_percent'] = '%';
 $string['wizard_toggle_details'] = 'Ver detalles del avance';
-$string['wizard_prv_title_initial'] = 'Diseñando la estructura del curso';
+
 $string['wizard_prv_sub_init'] = 'Iniciando...';
 $string['wizard_prv_live_note'] = 'Mostrando avance en tiempo real de la planificación detallada.';
 $string['wizard_plan_actions_hint'] = 'Aprueba la estructura para continuar o solicita ajustes.';
@@ -364,7 +364,7 @@ $string['wizard_adjust_placeholder'] = 'Indicá qué querés ajustar en la plani
 $string['wizard_btn_cancel'] = 'Cancelar';
 $string['wizard_btn_send_adjust'] = 'Enviar ajuste';
 $string['wizard_btn_back_context'] = '← Volver al contexto';
-$string['wizard_btn_back_planning'] = '← Volver a planificación inicial';
+
 $string['wizard_btn_cancel_flow'] = 'Cancelar';
 $string['wizard_btn_cancel_and_exit'] = 'Cancelar y salir';
 $string['wizard_btn_regenerate'] = 'Regenerar';
@@ -384,7 +384,7 @@ $string['wizard_plan_adding'] = 'Anadiendo: {name}';
 $string['wizard_plan_sections_counter'] = '{sections} secciones · {activities} actividades.';
 $string['wizard_plan_review_title'] = 'Estructura del curso lista';
 $string['wizard_plan_review_subtitle'] = 'Revisa las secciones y aproba para continuar.';
-$string['wizard_plan_review_hint_initial'] = 'Aproba la estructura para generar el plan detallado, o solicita ajustes a la IA.';
+
 $string['wizard_plan_detailed_title'] = 'Planificando contenido del curso';
 $string['wizard_plan_detailed_subtitle'] = '{current} de {total} actividades planificadas';
 $string['wizard_plan_detailed_stats'] = '{sections} secciones · {activities} actividades · {selectedImages}/{totalImages} imágenes seleccionadas';

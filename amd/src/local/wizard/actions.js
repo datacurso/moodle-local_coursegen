@@ -361,32 +361,19 @@ export const createWizardActions = (deps) => {
                 instruction,
             };
 
-            // Include selected image IDs when approving detailed plan.
-            if (action === 'accept' && state.planningMode === 'detailed') {
+            // Include selected image IDs when approving the plan.
+            if (action === 'accept') {
                 const selectedImageIds = Object.keys(state.selectedDetailedImages)
                     .filter((id) => state.selectedDetailedImages[id] !== false);
                 feedbackPayload.selectedimageids = selectedImageIds;
 
                 // PRESERVE detailedTotal BEFORE any state changes or stream opening
-                // This value will be used for phase 4 progress tracking
                 state.phase4TotalActivities = state.detailedTotal || 0;
-                window.console.log('[PHASE4-DEBUG] PRE-FEEDBACK - Preserved phase4TotalActivities:', state.phase4TotalActivities);
 
                 state.completionStats = {
                     units: state.totalSections || Object.keys(state.detailedSectionMeta || {}).length || 0,
                     activities: state.totalActivities || state.detailedTotal || 0,
                     images: selectedImageIds.length,
-                };
-            } else if (action === 'accept' && state.currentStage === 'detailed') {
-                // PRESERVE detailedTotal BEFORE any state changes or stream opening
-                state.phase4TotalActivities = state.detailedTotal || 0;
-                window.console.log('[PHASE4-DEBUG] PRE-FEEDBACK - Preserved phase4TotalActivities:', state.phase4TotalActivities);
-
-                state.completionStats = {
-                    units: state.totalSections || Object.keys(state.detailedSectionMeta || {}).length || 0,
-                    activities: state.totalActivities || state.detailedTotal || 0,
-                    images: Object.keys(state.selectedDetailedImages || {})
-                        .filter((id) => state.selectedDetailedImages[id] !== false).length,
                 };
             }
 
@@ -397,33 +384,15 @@ export const createWizardActions = (deps) => {
             }
 
             if (action === 'accept') {
-                if (state.planningMode === 'detailed') {
-                    stepsUi.setStepState('detailed', 'done');
-                    stepsUi.setStepState('generating', 'active');
-                    state.currentStage = 'generating';
+                stepsUi.setStepState('planning', 'done');
+                stepsUi.setStepState('generating', 'active');
+                state.currentStage = 'generating';
 
-                    window.console.log('[PHASE4-DEBUG] POST-FEEDBACK - Approved detailed plan - initializing phase 4');
-                    window.console.log('[PHASE4-DEBUG] POST-FEEDBACK - Setting currentStage to:', state.currentStage);
-                    window.console.log('[PHASE4-DEBUG] POST-FEEDBACK - detailedTotal:', state.detailedTotal);
-                    window.console.log('[PHASE4-DEBUG] POST-FEEDBACK - phase4TotalActivities:', state.phase4TotalActivities);
+                // Initialize content generation tracking
+                state.contentGenerationStarted = 0;
+                state.contentGenerationCurrent = 0;
 
-                    // Initialize content generation tracking (two-phase hybrid)
-                    state.contentGenerationStarted = 0;
-                    state.contentGenerationCurrent = 0;
-
-                    window.console.log(
-                        '[PHASE4-DEBUG] POST-FEEDBACK - Initialized counters - started:',
-                        state.contentGenerationStarted,
-                        'current:',
-                        state.contentGenerationCurrent
-                    );
-
-                    stepsUi.setProgress(0);
-                } else {
-                    stepsUi.setStepState('planning', 'done');
-                    stepsUi.setStepState('detailed', 'active');
-                    state.currentStage = 'detailed';
-                }
+                stepsUi.setProgress(0);
                 stepsUi.updateFlowNav();
             }
 

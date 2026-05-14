@@ -221,7 +221,6 @@ export const createStepsUi = (deps) => {
         }
         setProgress(0);
 
-        state.latestInitialSections = [];
         state.detailedTotal = 0;
         state.detailedCurrent = 0;
         state.phase4TotalActivities = 0;
@@ -257,7 +256,6 @@ export const createStepsUi = (deps) => {
         }
         setStepState('context', 'active');
         setStepState('planning', 'pending');
-        setStepState('detailed', 'pending');
         setStepState('generating', 'pending');
         // Reset compact chat before other state (it depends on some state)
         setCompactChatState(deps, 'reset');
