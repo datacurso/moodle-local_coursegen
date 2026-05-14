@@ -35,7 +35,6 @@ export const createStreamManager = (deps) => {
         prvHeaderSub,
         prvLiveNote,
         pcSubtitle,
-        planSectionsList,
         typingCursor,
         planningSpinner,
         pcStep,

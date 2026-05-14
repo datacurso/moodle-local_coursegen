@@ -420,10 +420,6 @@ export const createPlanningUi = (deps) => {
         }
     };
 
-    const buildReviewCard = (sections, normalizeInitialSections) => {
-        // Kept for compatibility — currently unused after removing initial planning phase.
-    };
-
     const syncCompactChatState = () => {
         // Sync language
         const langSelect = document.getElementById('langSelect');
