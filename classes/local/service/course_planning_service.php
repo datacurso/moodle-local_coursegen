@@ -51,12 +51,23 @@ class course_planning_service {
         }
 
         $apiservice = new ai_course_api_service();
-        $response = $apiservice->start_course_planning([
-            'prompt' => $prompt,
-            'instructions' => $instructions,
-            'lang' => $lang,
-            'with_images' => $withimages,
-        ]);
+        try {
+            $response = $apiservice->start_course_planning([
+                'prompt' => $prompt,
+                'instructions' => $instructions,
+                'lang' => $lang,
+                'with_images' => $withimages,
+            ]);
+        } catch (\Exception $e) {
+            debugging('AI course planning API error: ' . $e->getMessage());
+            return [
+                'success' => false,
+                'sessionid' => 0,
+                'threadid' => '',
+                'streamingurl' => '',
+                'message' => get_string('error_api_connection', 'local_coursegen'),
+            ];
+        }
 
         if (empty($response['thread_id'])) {
             return [
