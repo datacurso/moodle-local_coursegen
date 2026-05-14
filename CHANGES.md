@@ -1,3 +1,22 @@
+## 1.4.0
+
+**Released on:** 2026-05-14
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Changed
+
+- **Refactored webservice layer: thin controllers + service classes**  
+  Renamed `wizard_init` to `start_course_planning`, extracting all business logic into `course_planning_service`. The external function now acts as a thin controller that validates params and delegates to services.
+- **Full frontend rename: `wizard` → `courseai`**  
+  Renamed all AMD modules, Mustache template, CSS selectors, DOM IDs, and JS function/variable names from `wizard` to `courseai` for naming consistency across the codebase.
+- **Language string keys renamed**  
+  All `wizard_*` language string keys renamed to `courseai_*` across all 7 supported locales.
+- **Removed hard-stop for unconfigured API URLs**  
+  Removed validation that blocked Generate when `datacurso_service_url` settings were empty, allowing the API client to use its default fallback.
+- **Version bump**  
+  Internal version bumped to **2026051402** and release bumped to **1.4.0**.
+
 ## 1.3.2
 
 **Released on:** 2026-01-26
