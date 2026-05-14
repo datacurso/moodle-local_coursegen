@@ -27,6 +27,12 @@
   - Sidebar closes automatically on any navigation click
 - **Version bump**  
   Internal version bumped to **2026051406** and release bumped to **1.4.0**.
+- **Refined chat UI during planning/streaming**  
+  Full-height sticky left panel with initial prompt shown as a chat history bubble. Compact chat controls are now icon-focused to prevent horizontal scroll. Borders removed from textarea, chat card, toolbar, and message bubble for a cleaner look. A light dividing line separates the chat panel from stream content.
+- **Fixed stream content scroll**  
+  Removed `max-height: 380px` constraint and `overflow: hidden` on `pc-details-panel` and review cards so the right column scrolls as one unit, no longer clipping stream output.
+- **Removed floating sidebar toggle**  
+  Removed the absolute-positioned toggle button that caused horizontal page scroll. Sidebar remains accessible via navbar trigger only.
 
 ## 1.3.3
 
