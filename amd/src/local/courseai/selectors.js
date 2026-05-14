@@ -1,17 +1,17 @@
 // This file is part of Moodle - http://moodle.org/
 
 /**
- * Wizard DOM selectors helper.
+ * Courseai DOM selectors helper.
  *
  * @module     local_coursegen/local/courseai/selectors
  */
 
 /**
- * Return all wizard DOM elements.
+ * Return all courseai DOM elements.
  *
  * @returns {Object}
  */
-export const getWizardElements = () => {
+export const getCourseaiElements = () => {
     const btnWithImages = document.getElementById('btnWithImages');
     const btnCompactWithImages = document.getElementById('btnCompactWithImages');
     return {
@@ -25,7 +25,7 @@ export const getWizardElements = () => {
         langSelect: document.getElementById('langSelect'),
         btnWithImages,
         imgToggleWrap: btnWithImages ? btnWithImages.closest('label') : null,
-        wizardWorkspace: document.getElementById('wizardWorkspace'),
+        courseaiWorkspace: document.getElementById('courseaiWorkspace'),
         contextView: document.getElementById('contextView'),
         planningView: document.getElementById('planningView'),
         planningProgressCard: document.getElementById('planningProgressCard'),

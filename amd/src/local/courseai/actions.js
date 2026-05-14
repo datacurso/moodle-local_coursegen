@@ -1,7 +1,7 @@
 // This file is part of Moodle - http://moodle.org/
 
 /**
- * Wizard action handlers.
+ * Courseai action handlers.
  *
  * @module     local_coursegen/local/courseai/actions
  */
@@ -9,17 +9,17 @@
 import { setCompactChatState } from './ui-planning';
 
 /**
- * Create wizard actions and event bindings.
+ * Create courseai actions and event bindings.
  *
  * @param {Object} deps
  * @returns {Object}
  */
-export const createWizardActions = (deps) => {
+export const createCourseaiActions = (deps) => {
     const {
         state,
         elements,
         Notification,
-        WizardRepository,
+        CourseaiRepository,
         sendPlanningFeedback,
         createCourse,
         updateGenerateButton,
@@ -70,14 +70,14 @@ export const createWizardActions = (deps) => {
     const buildCompletionSummary = () => {
         const {units, activities, images} = getSummaryCounts();
         if (state.withImages) {
-            return formatTemplate(texts.wizard_completion_summary_with_images, {
+            return formatTemplate(texts.courseai_completion_summary_with_images, {
                 units,
                 activities,
                 images,
             });
         }
 
-        return formatTemplate(texts.wizard_completion_summary_no_images, {
+        return formatTemplate(texts.courseai_completion_summary_no_images, {
             units,
             activities,
         });
@@ -162,13 +162,13 @@ export const createWizardActions = (deps) => {
 
         try {
             if (elements.pcStep) {
-                elements.pcStep.textContent = texts.wizard_state_completed;
+                elements.pcStep.textContent = texts.courseai_state_completed;
             }
             if (elements.pcTitle) {
-                elements.pcTitle.textContent = texts.wizard_course_creating;
+                elements.pcTitle.textContent = texts.courseai_course_creating;
             }
             if (pcSubtitle) {
-                pcSubtitle.textContent = texts.wizard_course_creating_subtitle;
+                pcSubtitle.textContent = texts.courseai_course_creating_subtitle;
             }
 
             // Continue progress from content generation phase (should be around 90%)
@@ -204,7 +204,7 @@ export const createWizardActions = (deps) => {
             stepsUi.setProgress(100);
 
             if (!result || !result.success) {
-                throw new Error(result?.message || texts.wizard_error_create_course);
+                throw new Error(result?.message || texts.courseai_error_create_course);
             }
 
             showCompletionView(result);
@@ -215,10 +215,10 @@ export const createWizardActions = (deps) => {
             }
 
             if (elements.pcStep) {
-                elements.pcStep.textContent = texts.wizard_state_error;
+                elements.pcStep.textContent = texts.courseai_state_error;
             }
             if (pcSubtitle) {
-                pcSubtitle.textContent = error?.message || texts.wizard_error_create_course;
+                pcSubtitle.textContent = error?.message || texts.courseai_error_create_course;
             }
             await Notification.exception(error);
             return null;
@@ -250,7 +250,7 @@ export const createWizardActions = (deps) => {
                 >
                     <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
                 </svg>
-                ${texts.wizard_generate_starting}
+                ${texts.courseai_generate_starting}
             `;
         }
 
@@ -263,7 +263,7 @@ export const createWizardActions = (deps) => {
                 }
             }
 
-            const initResponse = await WizardRepository.initSession({
+            const initResponse = await CourseaiRepository.initSession({
                 prompt,
                 lang: state.lang,
                 withimages: state.withImages,
@@ -271,7 +271,7 @@ export const createWizardActions = (deps) => {
             });
 
             if (!initResponse.success) {
-                throw new Error(initResponse.message || texts.wizard_error_init_session);
+                throw new Error(initResponse.message || texts.courseai_error_init_session);
             }
 
             const sessionid = initResponse.sessionid;
@@ -295,13 +295,13 @@ export const createWizardActions = (deps) => {
                         >
                             <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
                         </svg>
-                        ${texts.wizard_generate_uploading_syllabus}
+                        ${texts.courseai_generate_uploading_syllabus}
                     `;
                 }
 
-                const uploadResponse = await WizardRepository.uploadSyllabus(sessionid, state.draftitemid);
+                const uploadResponse = await CourseaiRepository.uploadSyllabus(sessionid, state.draftitemid);
                 if (!uploadResponse.success) {
-                    throw new Error(uploadResponse.message || texts.wizard_error_upload_syllabus);
+                    throw new Error(uploadResponse.message || texts.courseai_error_upload_syllabus);
                 }
             }
 
@@ -338,7 +338,7 @@ export const createWizardActions = (deps) => {
                 'stroke-linejoin="round" aria-hidden="true">' +
                 '<rect x="6" y="4" width="4" height="16"/>' +
                 '<rect x="14" y="4" width="4" height="16"/></svg>';
-            btnCompactRegenerate.innerHTML = `${pauseIcon} ${texts.wizard_btn_pause || 'Pausar'}`;
+            btnCompactRegenerate.innerHTML = `${pauseIcon} ${texts.courseai_btn_pause || 'Pausar'}`;
             btnCompactRegenerate.disabled = false;
         }
         if (planningSpinner) {
@@ -346,8 +346,8 @@ export const createWizardActions = (deps) => {
         }
         if (pcSubtitle) {
             pcSubtitle.textContent = action === 'accept'
-                ? texts.wizard_status_approving
-                : texts.wizard_status_adjusting;
+                ? texts.courseai_status_approving
+                : texts.courseai_status_adjusting;
         }
 
         try {
@@ -380,7 +380,7 @@ export const createWizardActions = (deps) => {
             const feedbackResponse = await sendPlanningFeedback(feedbackPayload);
 
             if (!feedbackResponse || !feedbackResponse.success) {
-                throw new Error(feedbackResponse?.message || texts.wizard_error_send_feedback);
+                throw new Error(feedbackResponse?.message || texts.courseai_error_send_feedback);
             }
 
             if (action === 'accept') {

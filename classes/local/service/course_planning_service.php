@@ -99,14 +99,14 @@ class course_planning_service {
             'sessionid' => (int)$session->get('id'),
             'threadid' => $threadid,
             'streamingurl' => $streamingurl,
-            'message' => get_string('wizard_init_success', 'local_coursegen'),
+            'message' => get_string('courseai_init_success', 'local_coursegen'),
         ];
     }
 
     /**
      * Build a user-friendly course title from a free-form prompt.
      *
-     * @param string $prompt Free-form prompt from the wizard.
+     * @param string $prompt Free-form prompt from the courseai.
      * @param string $lang Language code from request context.
      * @return string
      */

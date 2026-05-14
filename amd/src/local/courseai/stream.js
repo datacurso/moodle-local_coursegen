@@ -1,7 +1,7 @@
 // This file is part of Moodle - http://moodle.org/
 
 /**
- * SSE stream manager for wizard.
+ * SSE stream manager for courseai.
  *
  * @module     local_coursegen/local/courseai/stream
  */
@@ -176,7 +176,7 @@ export const createStreamManager = (deps) => {
         let contentReceived = false;
 
         if (!streamUrl) {
-            throw new Error(texts.wizard_error_stream_url);
+            throw new Error(texts.courseai_error_stream_url);
         }
         closeStream();
 
@@ -211,7 +211,7 @@ export const createStreamManager = (deps) => {
                     if (!state.planSectionsData.find((section) => section.sectionIndex === data.section_index)) {
                         planningUi.addSectionHeader({
                             section_index: data.section_index,
-                            name: data.section_name || texts.wizard_plan_default_unnamed,
+                            name: data.section_name || texts.courseai_plan_default_unnamed,
                             description: '',
                             activity_count: null
                         });
@@ -226,7 +226,7 @@ export const createStreamManager = (deps) => {
                     contentReceived = true;
                     planningUi.addSectionHeader({
                         section_index: data.section_index ?? state.planSectionsData.length,
-                        name: data.section?.name || data.name || texts.wizard_plan_default_unnamed,
+                        name: data.section?.name || data.name || texts.courseai_plan_default_unnamed,
                         description: data.section?.description || data.description || '',
                         activity_count: (data.section?.activities || data.activities || []).length
                     });
@@ -240,7 +240,7 @@ export const createStreamManager = (deps) => {
                     });
                     stepsUi.switchPlanMode('sections');
                     planningUi.addPlanSection(data.section || {
-                        name: data.name || texts.wizard_plan_default_unnamed,
+                        name: data.name || texts.courseai_plan_default_unnamed,
                         description: data.description || '',
                         activities: data.activities || []
                     });
@@ -285,7 +285,7 @@ export const createStreamManager = (deps) => {
                         }
                         if (prvLiveNote) {
                             prvLiveNote.style.display = 'block';
-                            prvLiveNote.textContent = texts.wizard_live_note_detailed;
+                            prvLiveNote.textContent = texts.courseai_live_note_detailed;
                         }
                     } else if (pcSubtitle) {
                         pcSubtitle.textContent = statusText;
@@ -383,10 +383,10 @@ export const createStreamManager = (deps) => {
                         planningSpinner.classList.add('done');
                     }
                     if (pcStep) {
-                        pcStep.textContent = texts.wizard_state_error;
+                        pcStep.textContent = texts.courseai_state_error;
                     }
                     if (pcSubtitle) {
-                        pcSubtitle.textContent = data.message || texts.wizard_error_generic;
+                        pcSubtitle.textContent = data.message || texts.courseai_error_generic;
                     }
                     // Stream failed - re-enable compact chat for retry
                     setCompactChatState(deps, 'enabled');
@@ -429,10 +429,10 @@ export const createStreamManager = (deps) => {
                 planningSpinner.classList.add('done');
             }
             if (pcStep) {
-                pcStep.textContent = texts.wizard_state_error;
+                pcStep.textContent = texts.courseai_state_error;
             }
             if (pcSubtitle) {
-                pcSubtitle.textContent = texts.wizard_error_connection;
+                pcSubtitle.textContent = texts.courseai_error_connection;
             }
             // Connection error - re-enable compact chat for retry
             setCompactChatState(deps, 'enabled');

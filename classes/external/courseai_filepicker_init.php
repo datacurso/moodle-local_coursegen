@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * External API to initialise a filepicker (draft area) for wizard syllabus upload.
+ * External API to initialise a filepicker (draft area) for courseai syllabus upload.
  *
  * @package    local_coursegen
  * @category   external
@@ -37,9 +37,9 @@ require_once($CFG->libdir . '/externallib.php');
 require_once($CFG->dirroot . '/repository/lib.php');
 
 /**
- * External API to initialise a filepicker (draft area) for wizard syllabus upload.
+ * External API to initialise a filepicker (draft area) for courseai syllabus upload.
  */
-class wizard_filepicker_init extends external_api {
+class courseai_filepicker_init extends external_api {
     /**
      * Parameters definition.
      *
@@ -67,7 +67,7 @@ class wizard_filepicker_init extends external_api {
         require_capability('local/coursegen:createcoursewithai', $context);
 
         $draftitemid = file_get_unused_draft_itemid();
-        $clientid = uniqid('local_coursegen_wizard_syllabus_');
+        $clientid = uniqid('local_coursegen_courseai_syllabus_');
 
         $args = (object) [
             'context' => $context,

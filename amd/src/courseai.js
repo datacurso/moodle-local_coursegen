@@ -8,41 +8,41 @@
  */
 
 import Notification from 'core/notification';
-import * as WizardRepository from 'local_coursegen/repository/courseai';
+import * as CourseaiRepository from 'local_coursegen/repository/courseai';
 import YUI from 'core/yui';
 import * as markedModule from 'local_coursegen/marked';
 import {sendPlanningFeedback, createCourse} from 'local_coursegen/repository/course';
 
 import {
-    parseWizardData,
+    parseCourseaiData,
     escapeHtml,
     getActivityLabels,
     getActivityIconUrl,
     getGenerateButtonHtml,
     formatTemplate,
 } from 'local_coursegen/local/courseai/utils';
-import {loadWizardStrings} from 'local_coursegen/local/courseai/i18n';
-import {getWizardElements} from 'local_coursegen/local/courseai/selectors';
+import {loadCourseaiStrings} from 'local_coursegen/local/courseai/i18n';
+import {getCourseaiElements} from 'local_coursegen/local/courseai/selectors';
 import {createInitialState} from 'local_coursegen/local/courseai/state';
 import {createContextUi} from 'local_coursegen/local/courseai/ui-context';
 import {createStepsUi} from 'local_coursegen/local/courseai/ui-steps';
 import {createPlanningUi} from 'local_coursegen/local/courseai/ui-planning';
 import {createDetailedUi} from 'local_coursegen/local/courseai/ui-detailed';
 import {createStreamManager} from 'local_coursegen/local/courseai/stream';
-import {createWizardActions} from 'local_coursegen/local/courseai/actions';
+import {createCourseaiActions} from 'local_coursegen/local/courseai/actions';
 
 /**
- * Initialize the wizard page.
+ * Initialize the courseai page.
  *
  * @param {Object} params
  */
 export const init = async(params) => {
     try {
-        window.console.log('Wizard initialized', params);
+        window.console.log('CourseAI initialized', params);
 
-        const {guidelines, languages, defaultLang} = parseWizardData(params);
-        const texts = await loadWizardStrings();
-        const elements = getWizardElements();
+        const {guidelines, languages, defaultLang} = parseCourseaiData(params);
+        const texts = await loadCourseaiStrings();
+        const elements = getCourseaiElements();
         const state = createInitialState({defaultLang, guidelines, languages});
 
         const markedParser = markedModule.parse ? markedModule : markedModule.marked;
@@ -55,7 +55,7 @@ export const init = async(params) => {
             defaultLang,
             elements,
             Notification,
-            WizardRepository,
+            CourseaiRepository,
             YUI,
             texts,
         });
@@ -120,11 +120,11 @@ export const init = async(params) => {
 
         stepsUi.bindCloseStream(streamManager.closeStream);
 
-        actions = createWizardActions({
+        actions = createCourseaiActions({
             state,
             elements,
             Notification,
-            WizardRepository,
+            CourseaiRepository,
             sendPlanningFeedback,
             createCourse,
             updateGenerateButton: contextUi.updateGenerateButton,

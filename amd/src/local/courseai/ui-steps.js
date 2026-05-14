@@ -24,7 +24,7 @@ export const createStepsUi = (deps) => {
 
     const {
         contextView,
-        wizardWorkspace,
+        courseaiWorkspace,
         planningView,
         planningProgressCard,
         btnGenerate,
@@ -73,7 +73,7 @@ export const createStepsUi = (deps) => {
         window.console.log('[SETPROGRESS-DEBUG] pcBarFill element exists:', !!pcBarFill);
 
         if (pcPct) {
-            pcPct.textContent = `${clamped}${texts.wizard_progress_percent}`;
+            pcPct.textContent = `${clamped}${texts.courseai_progress_percent}`;
             window.console.log('[SETPROGRESS-DEBUG] Updated pcPct to:', pcPct.textContent);
         } else {
             window.console.warn('[SETPROGRESS-DEBUG] pcPct element is NULL!');
@@ -104,7 +104,7 @@ export const createStepsUi = (deps) => {
     };
 
     const updateFlowNav = () => {
-        // Navigation removed - wizard is now forward-only
+        // Navigation removed - courseai is now forward-only
     };
 
     const switchPlanMode = (mode) => {
@@ -158,7 +158,7 @@ export const createStepsUi = (deps) => {
             completionView.style.display = 'none';
         }
         if (completionSummary) {
-            completionSummary.textContent = texts.wizard_completion_summary_default;
+            completionSummary.textContent = texts.courseai_completion_summary_default;
         }
         if (planningProgressCard) {
             planningProgressCard.style.display = '';
@@ -190,10 +190,10 @@ export const createStepsUi = (deps) => {
             prvHeader.classList.add('prv-header--stream');
         }
         if (prvHeaderTitle) {
-            prvHeaderTitle.textContent = texts.wizard_state_structuring;
+            prvHeaderTitle.textContent = texts.courseai_state_structuring;
         }
         if (prvHeaderSub) {
-            prvHeaderSub.textContent = texts.wizard_state_starting;
+            prvHeaderSub.textContent = texts.courseai_state_starting;
         }
         if (planningSpinner) {
             planningSpinner.style.display = '';
@@ -212,10 +212,10 @@ export const createStepsUi = (deps) => {
             prvCheckIcon.style.display = 'none';
         }
         if (pcStep) {
-            pcStep.textContent = texts.wizard_state_planning;
+            pcStep.textContent = texts.courseai_state_planning;
         }
         if (pcTitle) {
-            pcTitle.textContent = texts.wizard_state_structuring;
+            pcTitle.textContent = texts.courseai_state_structuring;
         }
         if (pcSubtitle) {
             pcSubtitle.textContent = '';
@@ -252,8 +252,8 @@ export const createStepsUi = (deps) => {
         if (planningView) {
             planningView.style.display = 'none';
         }
-        if (wizardWorkspace) {
-            wizardWorkspace.classList.remove('is-planning');
+        if (courseaiWorkspace) {
+            courseaiWorkspace.classList.remove('is-planning');
         }
         if (contextView) {
             contextView.style.display = '';
@@ -287,8 +287,8 @@ export const createStepsUi = (deps) => {
         if (contextView) {
             contextView.style.display = '';
         }
-        if (wizardWorkspace) {
-            wizardWorkspace.classList.add('is-planning');
+        if (courseaiWorkspace) {
+            courseaiWorkspace.classList.add('is-planning');
         }
 
         if (planningView) {

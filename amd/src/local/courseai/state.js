@@ -1,13 +1,13 @@
 // This file is part of Moodle - http://moodle.org/
 
 /**
- * Wizard state factory.
+ * Courseai state factory.
  *
  * @module     local_coursegen/local/courseai/state
  */
 
 /**
- * Create initial wizard state.
+ * Create initial courseai state.
  *
  * @param {Object} args
  * @param {string} args.defaultLang

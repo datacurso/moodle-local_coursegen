@@ -6,7 +6,7 @@
 // (at your option) any later version.
 
 /**
- * Context step controls for wizard page.
+ * Context step controls for courseai page.
  *
  * @module     local_coursegen/local/courseai/context_section
  * @copyright  2025
@@ -31,7 +31,7 @@ export const setupContextSection = (deps) => {
         defaultLang,
         elements,
         Notification,
-        WizardRepository,
+        CourseaiRepository,
         YUI,
         texts,
     } = deps;
@@ -160,7 +160,7 @@ export const setupContextSection = (deps) => {
             modalLabel.textContent = guideline.name;
         }
         if (modalCategory) {
-            modalCategory.textContent = guideline.category || texts.wizard_category_general;
+            modalCategory.textContent = guideline.category || texts.courseai_category_general;
         }
         if (modalBody) {
             modalBody.textContent = guideline.description || '';
@@ -194,7 +194,7 @@ export const setupContextSection = (deps) => {
         );
 
         if (filtered.length === 0) {
-            guidelineList.innerHTML = `<li class="pop-empty">${escapeHtml(texts.wizard_no_results)}</li>`;
+            guidelineList.innerHTML = `<li class="pop-empty">${escapeHtml(texts.courseai_no_results)}</li>`;
             return;
         }
 
@@ -206,12 +206,12 @@ export const setupContextSection = (deps) => {
                         <div class="pop-radio"><div class="pop-dot"></div></div>
                         <div class="pop-item-text">
                             <span class="pop-item-name">${escapeHtml(g.name)}</span>
-                            <span class="pop-item-cat">${escapeHtml(g.category || texts.wizard_category_general)}</span>
+                            <span class="pop-item-cat">${escapeHtml(g.category || texts.courseai_category_general)}</span>
                         </div>
                     </button>
                     <button 
                     class="pop-eye-btn" 
-                    data-preview="${g.id}" type="button" title="${escapeHtml(texts.wizard_chip_view_guideline)}">
+                    data-preview="${g.id}" type="button" title="${escapeHtml(texts.courseai_chip_view_guideline)}">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round"
                             stroke-linejoin="round">
@@ -240,10 +240,10 @@ export const setupContextSection = (deps) => {
 
     const showFilePicker = async() => {
         try {
-            const pickerdata = await WizardRepository.initFilepicker();
+            const pickerdata = await CourseaiRepository.initFilepicker();
 
             if (!pickerdata || !pickerdata.clientid || !pickerdata.draftitemid || !pickerdata.options) {
-                window.console.error(texts.wizard_error_init_filepicker || 'Failed to initialize filepicker');
+                window.console.error(texts.courseai_error_init_filepicker || 'Failed to initialize filepicker');
                 return;
             }
 

@@ -138,8 +138,8 @@ export const setCompactChatState = (deps, mode) => {
             }
             if (btnCompactRegenerate) {
                 btnCompactRegenerate.disabled = false;
-                if (texts?.wizard_btn_regenerate) {
-                    btnCompactRegenerate.innerHTML = `${sparkleIcon} ${texts.wizard_btn_regenerate}`;
+                if (texts?.courseai_btn_regenerate) {
+                    btnCompactRegenerate.innerHTML = `${sparkleIcon} ${texts.courseai_btn_regenerate}`;
                 }
             }
             if (state) {
@@ -175,8 +175,8 @@ export const setCompactChatState = (deps, mode) => {
             }
             if (btnCompactRegenerate) {
                 btnCompactRegenerate.disabled = false;
-                if (texts?.wizard_btn_regenerate) {
-                    btnCompactRegenerate.innerHTML = `${sparkleIcon} ${texts.wizard_btn_regenerate}`;
+                if (texts?.courseai_btn_regenerate) {
+                    btnCompactRegenerate.innerHTML = `${sparkleIcon} ${texts.courseai_btn_regenerate}`;
                 }
             }
             if (state) {
@@ -231,13 +231,13 @@ export const createPlanningUi = (deps) => {
         state.totalActivities += activities.length;
 
         if (pcStep) {
-            pcStep.textContent = formatTemplate(texts.wizard_plan_counter, {
+            pcStep.textContent = formatTemplate(texts.courseai_plan_counter, {
                 sections: state.totalSections,
                 activities: state.totalActivities,
             });
         }
         if (pcSubtitle) {
-            pcSubtitle.textContent = formatTemplate(texts.wizard_plan_adding, {
+            pcSubtitle.textContent = formatTemplate(texts.courseai_plan_adding, {
                 name: section.name || '',
             });
         }
@@ -257,7 +257,7 @@ export const createPlanningUi = (deps) => {
                     <h3 class="ps-section-name">${escapeHtml(section.name || '')}</h3>
                     <p class="ps-section-desc">${escapeHtml(section.description || '')}</p>
                 </div>
-                <span class="ps-section-count">${activities.length} ${texts.wizard_activities_count}</span>
+                <span class="ps-section-count">${activities.length} ${texts.courseai_activities_count}</span>
             </div>
             <ul class="ps-activities">
                 ${activities.map((activity) => {
@@ -271,7 +271,7 @@ export const createPlanningUi = (deps) => {
                                  alt="" 
                                  onerror="this.style.display='none'">
                             <span class="ps-badge-text">
-                                ${escapeHtml(activityLabels[activityType] || activityType || texts.wizard_activity_default)}
+                                ${escapeHtml(activityLabels[activityType] || activityType || texts.courseai_activity_default)}
                             </span>
                         </span>
                         <div class="ps-activity-info">
@@ -295,12 +295,12 @@ export const createPlanningUi = (deps) => {
         const metaEl = document.createElement('p');
         metaEl.className = 'prv-section-meta';
         metaEl.textContent = sectionData.activity_count !== null && sectionData.activity_count !== undefined
-            ? formatTemplate(texts.wizard_section_progress_with_total, {
+            ? formatTemplate(texts.courseai_section_progress_with_total, {
                 done: 0,
                 total: sectionData.activity_count,
                 description: sectionData.description || '',
             })
-            : formatTemplate(texts.wizard_section_progress_no_total, {
+            : formatTemplate(texts.courseai_section_progress_no_total, {
                 description: sectionData.description || '',
             });
 
@@ -326,7 +326,7 @@ export const createPlanningUi = (deps) => {
         infoDiv.className = 'prv-section-info';
         const titleEl = document.createElement('p');
         titleEl.className = 'prv-section-title';
-        titleEl.textContent = sectionData.name || texts.wizard_plan_default_unnamed;
+        titleEl.textContent = sectionData.name || texts.courseai_plan_default_unnamed;
         infoDiv.appendChild(titleEl);
         infoDiv.appendChild(metaEl);
         btn.appendChild(infoDiv);
@@ -345,7 +345,7 @@ export const createPlanningUi = (deps) => {
 
         state.planSectionsData.push({
             sectionIndex: sectionData.section_index,
-            name: sectionData.name || texts.wizard_plan_default_unnamed,
+            name: sectionData.name || texts.courseai_plan_default_unnamed,
             description: sectionData.description || '',
             activityCount: sectionData.activity_count,
             activities: [],
@@ -355,9 +355,9 @@ export const createPlanningUi = (deps) => {
         });
 
         if (prvHeaderSub) {
-            prvHeaderSub.textContent = formatTemplate(texts.wizard_section_label, {
+            prvHeaderSub.textContent = formatTemplate(texts.courseai_section_label, {
                 section: state.totalSections,
-                name: sectionData.name || texts.wizard_plan_default_unnamed,
+                name: sectionData.name || texts.courseai_plan_default_unnamed,
             });
         }
         if (planReviewCard) {
@@ -380,13 +380,13 @@ export const createPlanningUi = (deps) => {
 
         const done = sectionEntry.activities.length;
         if (sectionEntry.activityCount !== null && sectionEntry.activityCount !== undefined) {
-            sectionEntry.metaEl.textContent = formatTemplate(texts.wizard_section_progress_with_total, {
+            sectionEntry.metaEl.textContent = formatTemplate(texts.courseai_section_progress_with_total, {
                 done,
                 total: sectionEntry.activityCount,
                 description: sectionEntry.description,
             });
         } else {
-            sectionEntry.metaEl.textContent = formatTemplate(texts.wizard_section_progress_no_total, {
+            sectionEntry.metaEl.textContent = formatTemplate(texts.courseai_section_progress_no_total, {
                 description: sectionEntry.description,
             });
         }
@@ -394,7 +394,7 @@ export const createPlanningUi = (deps) => {
         const activityItem = document.createElement('div');
         activityItem.className = 'prv-activity-item';
         const activityType = data.activity_type || data.type || 'quiz';
-        const activityName = data.title || data.name || texts.wizard_activity_default;
+        const activityName = data.title || data.name || texts.courseai_activity_default;
         const iconUrl = getActivityIconUrl(activityType);
         activityItem.innerHTML = `
             <span class="ps-badge ps-badge--${escapeHtml(activityType)}">
@@ -414,7 +414,7 @@ export const createPlanningUi = (deps) => {
         sectionEntry.bodyEl.appendChild(activityItem);
 
         if (prvHeaderSub) {
-            prvHeaderSub.textContent = formatTemplate(texts.wizard_plan_adding, {
+            prvHeaderSub.textContent = formatTemplate(texts.courseai_plan_adding, {
                 name: activityName,
             });
         }
@@ -501,14 +501,14 @@ export const createPlanningUi = (deps) => {
         }
         setProgress(100);
 
-        // Enable compact chat and show wizard cancel button when review is ready
+        // Enable compact chat and show courseai cancel button when review is ready
         setCompactChatState(deps, 'enabled');
         // Sync state from main chat to compact chat (language, chips, etc.)
         syncCompactChatState();
 
-        const wizardCancelRow = document.getElementById('wizardCancelRow');
-        if (wizardCancelRow) {
-            wizardCancelRow.style.display = 'flex';
+        const courseaiCancelRow = document.getElementById('courseaiCancelRow');
+        if (courseaiCancelRow) {
+            courseaiCancelRow.style.display = 'flex';
         }
 
         if (mode === 'detailed') {
@@ -533,7 +533,7 @@ export const createPlanningUi = (deps) => {
                 prvHeader.classList.add('prv-header--done');
             }
             if (prvHeaderTitle) {
-                prvHeaderTitle.textContent = texts.wizard_plan_detailed_done_title;
+                prvHeaderTitle.textContent = texts.courseai_plan_detailed_done_title;
             }
             if (updateDetailedHeaderStats) {
                 updateDetailedHeaderStats();
@@ -543,23 +543,23 @@ export const createPlanningUi = (deps) => {
                 prvLiveNote.textContent = '';
             }
             if (planActionsHint) {
-                planActionsHint.textContent = texts.wizard_plan_review_hint_detailed;
+                planActionsHint.textContent = texts.courseai_plan_review_hint_detailed;
             }
             if (planReviewCard) {
                 planReviewCard.style.display = '';
             }
         } else {
             if (pcStep) {
-                pcStep.textContent = texts.wizard_plan_detailed_markdown_title;
+                pcStep.textContent = texts.courseai_plan_detailed_markdown_title;
             }
             if (pcTitle) {
-                pcTitle.textContent = texts.wizard_plan_detailed_markdown_title;
+                pcTitle.textContent = texts.courseai_plan_detailed_markdown_title;
             }
             if (pcSubtitle) {
-                pcSubtitle.textContent = texts.wizard_plan_detailed_markdown_subtitle;
+                pcSubtitle.textContent = texts.courseai_plan_detailed_markdown_subtitle;
             }
             if (planActionsHint) {
-                planActionsHint.textContent = texts.wizard_plan_review_hint_detailed;
+                planActionsHint.textContent = texts.courseai_plan_review_hint_detailed;
             }
             if (pcToggleRow) {
                 pcToggleRow.style.display = 'flex';

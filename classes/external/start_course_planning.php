@@ -56,7 +56,7 @@ class start_course_planning extends external_api {
     }
 
     /**
-     * Start wizard session and create course planning thread.
+     * Start courseai session and create course planning thread.
      *
      * @param string $prompt Course description.
      * @param string $lang Language code.

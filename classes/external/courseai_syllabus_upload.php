@@ -30,13 +30,13 @@ defined('MOODLE_INTERNAL') || die();
 require_once($CFG->libdir . '/externallib.php');
 
 /**
- * External function to upload syllabus for wizard session.
+ * External function to upload syllabus for courseai session.
  *
  * @package    local_coursegen
  * @copyright  2025 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class wizard_syllabus_upload extends external_api {
+class courseai_syllabus_upload extends external_api {
 
     /**
      * Returns description of method parameters.
@@ -160,7 +160,7 @@ class wizard_syllabus_upload extends external_api {
             return [
                 'success' => true,
                 'filename' => $filename,
-                'message' => get_string('wizard_syllabus_upload_success', 'local_coursegen'),
+                'message' => get_string('courseai_syllabus_upload_success', 'local_coursegen'),
             ];
 
         } catch (\Exception $e) {

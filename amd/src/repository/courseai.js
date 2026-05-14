@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Repository for wizard AJAX calls.
+ * Repository for courseai AJAX calls.
  *
  * @module     local_coursegen/repository/courseai
  * @copyright  2025 Wilber Narvaez <https://datacurso.com>
@@ -25,7 +25,7 @@
 import Ajax from 'core/ajax';
 
 /**
- * Initialize wizard session.
+ * Initialize courseai session.
  *
  * @param {Object} params Parameters
  * @param {string} params.prompt Course description prompt
@@ -49,13 +49,13 @@ export const initSession = (params) => {
 };
 
 /**
- * Initialise filepicker for wizard syllabus upload.
+ * Initialise filepicker for courseai syllabus upload.
  *
  * @returns {Promise<Object>} Response with clientid, draftitemid, options, templates
  */
 export const initFilepicker = () => {
     const request = {
-        methodname: 'local_coursegen_wizard_filepicker_init',
+        methodname: 'local_coursegen_courseai_filepicker_init',
         args: {},
     };
 
@@ -63,7 +63,7 @@ export const initFilepicker = () => {
 };
 
 /**
- * Upload syllabus file for wizard session.
+ * Upload syllabus file for courseai session.
  *
  * @param {number} sessionid Course session ID
  * @param {number} draftitemid Draft file area ID
@@ -71,7 +71,7 @@ export const initFilepicker = () => {
  */
 export const uploadSyllabus = (sessionid, draftitemid) => {
     const request = {
-        methodname: 'local_coursegen_wizard_syllabus_upload',
+        methodname: 'local_coursegen_courseai_syllabus_upload',
         args: {
             sessionid: sessionid,
             draftitemid: draftitemid,

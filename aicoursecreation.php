@@ -39,7 +39,7 @@ $PAGE->set_context($systemcontext);
 $PAGE->set_pagelayout('popup');
 $PAGE->set_title(get_string('createwithai', 'local_coursegen'));
 
-// Load wizard CSS.
+// Load courseai CSS.
 $PAGE->requires->css('/local/coursegen/styles/aicoursecreation.css');
 
 // Load system instructions (directrices institucionales).

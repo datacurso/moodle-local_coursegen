@@ -7,18 +7,18 @@
  */
 
 /**
- * Parse wizard data payload from params or DOM.
+ * Parse courseai data payload from params or DOM.
  *
  * @param {Object} params
  * @returns {{guidelines: Array, languages: Array, defaultLang: string}}
  */
-export const parseWizardData = (params) => {
+export const parseCourseaiData = (params) => {
     let guidelines = params?.guidelines || [];
     let languages = params?.languages || [];
     const defaultLang = params?.defaultlang || 'es';
 
     if (guidelines.length === 0 || languages.length === 0) {
-        const dataEl = document.getElementById('wizard-data');
+        const dataEl = document.getElementById('courseai-data');
         if (dataEl) {
             try {
                 const guidelinesData = dataEl.getAttribute('data-guidelines');
@@ -31,7 +31,7 @@ export const parseWizardData = (params) => {
                     languages = JSON.parse(languagesData);
                 }
             } catch (error) {
-                window.console.error('Error parsing wizard data:', error);
+                window.console.error('Error parsing courseai data:', error);
             }
         }
     }
@@ -61,16 +61,16 @@ export const escapeHtml = (str) => {
  * @returns {Object}
  */
 export const getActivityLabels = (texts = {}) => ({
-    quiz: texts.wizard_activity_quiz || 'Quiz',
-    book: texts.wizard_activity_book || 'Book',
-    assign: texts.wizard_activity_assign || 'Assignment',
-    forum: texts.wizard_activity_forum || 'Forum',
-    lesson: texts.wizard_activity_lesson || 'Lesson',
-    url: texts.wizard_activity_url || 'URL',
-    resource: texts.wizard_activity_resource || 'Resource',
-    page: texts.wizard_activity_page || 'Page',
-    data: texts.wizard_activity_data || 'Database',
-    glossary: texts.wizard_activity_glossary || 'Glossary',
+    quiz: texts.courseai_activity_quiz || 'Quiz',
+    book: texts.courseai_activity_book || 'Book',
+    assign: texts.courseai_activity_assign || 'Assignment',
+    forum: texts.courseai_activity_forum || 'Forum',
+    lesson: texts.courseai_activity_lesson || 'Lesson',
+    url: texts.courseai_activity_url || 'URL',
+    resource: texts.courseai_activity_resource || 'Resource',
+    page: texts.courseai_activity_page || 'Page',
+    data: texts.courseai_activity_data || 'Database',
+    glossary: texts.courseai_activity_glossary || 'Glossary',
 });
 
 /**
@@ -129,7 +129,7 @@ export const getGenerateButtonHtml = (texts = {}) => `
             .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"
         />
     </svg>
-    ${texts.wizard_btn_generate || 'Generate'}
+    ${texts.courseai_btn_generate || 'Generate'}
     <svg
         width="12"
         height="12"

@@ -67,29 +67,29 @@ svg { display: block; flex-shrink: 0; }
 .aicoursecreation-main { padding: 56px 0 80px; }
 
 /* Workspace layout: chat/form left, progress right */
-.wizard-workspace {
+.courseai-workspace {
   display: block;
 }
 
-.wizard-workspace.is-planning {
+.courseai-workspace.is-planning {
   display: grid;
   grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
   gap: 24px;
   align-items: start;
 }
 
-.wizard-workspace.is-planning .context-wrap {
+.courseai-workspace.is-planning .context-wrap {
   max-width: none;
   margin: 0;
   position: sticky;
   top: 84px;
 }
 
-.wizard-workspace.is-planning .context-head {
+.courseai-workspace.is-planning .context-head {
   text-align: left;
 }
 
-.wizard-workspace.is-planning .planning-wrap {
+.courseai-workspace.is-planning .planning-wrap {
   max-width: none;
   margin: 0;
   width: 100%;
@@ -97,11 +97,11 @@ svg { display: block; flex-shrink: 0; }
 }
 
 @media (max-width: 1100px) {
-  .wizard-workspace.is-planning {
+  .courseai-workspace.is-planning {
     grid-template-columns: 1fr;
   }
 
-  .wizard-workspace.is-planning .context-wrap {
+  .courseai-workspace.is-planning .context-wrap {
     position: static;
   }
 }
@@ -2151,7 +2151,7 @@ svg { display: block; flex-shrink: 0; }
 }
 
 /* ─── WIZARD CANCEL ROW (outside planning) ────────────────────────── */
-.wizard-cancel-row {
+.courseai-cancel-row {
   margin-top: 20px;
   margin-bottom: 20px;
   text-align: center;
@@ -2159,7 +2159,7 @@ svg { display: block; flex-shrink: 0; }
   justify-content: center;
 }
 
-.wizard-cancel-btn {
+.courseai-cancel-btn {
   background: none;
   border: none;
   font-size: 13px;
@@ -2171,7 +2171,7 @@ svg { display: block; flex-shrink: 0; }
   transition: color .12s, background .12s;
 }
 
-.wizard-cancel-btn:hover {
+.courseai-cancel-btn:hover {
   background: var(--muted);
   color: var(--fg);
 }

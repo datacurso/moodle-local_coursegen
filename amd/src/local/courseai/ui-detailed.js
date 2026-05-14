@@ -39,9 +39,9 @@ export const createDetailedUi = (deps) => {
 
     const formatImageCount = (count) => {
         if (count === 1) {
-            return formatTemplate(texts.wizard_image_count_one, {count: 1});
+            return formatTemplate(texts.courseai_image_count_one, {count: 1});
         }
-        return formatTemplate(texts.wizard_image_count_many, {count});
+        return formatTemplate(texts.courseai_image_count_many, {count});
     };
 
     const setImageBadge = (badgeEl, count) => {
@@ -116,21 +116,21 @@ export const createDetailedUi = (deps) => {
         });
 
         if (totalImages > 0) {
-            prvHeaderSub.textContent = formatTemplate(texts.wizard_plan_detailed_stats, {
+            prvHeaderSub.textContent = formatTemplate(texts.courseai_plan_detailed_stats, {
                 sections: totalSections,
                 activities: totalActivities,
                 selectedImages,
                 totalImages,
             });
         } else if (state.detailedCurrent >= totalActivities && totalActivities > 0) {
-            prvHeaderSub.textContent = formatTemplate(texts.wizard_plan_detailed_stats, {
+            prvHeaderSub.textContent = formatTemplate(texts.courseai_plan_detailed_stats, {
                 sections: totalSections,
                 activities: totalActivities,
                 selectedImages: 0,
                 totalImages: 0,
             });
         } else {
-            prvHeaderSub.textContent = formatTemplate(texts.wizard_plan_detailed_subtitle, {
+            prvHeaderSub.textContent = formatTemplate(texts.courseai_plan_detailed_subtitle, {
                 current: state.detailedCurrent,
                 total: totalActivities,
             });
@@ -208,7 +208,7 @@ export const createDetailedUi = (deps) => {
 
         const textarea = document.createElement('textarea');
         textarea.className = 'dp-ai-textarea';
-        textarea.placeholder = texts.wizard_adjust_placeholder || '';
+        textarea.placeholder = texts.courseai_adjust_placeholder || '';
         textarea.rows = 2;
 
         const actions = document.createElement('div');
@@ -217,12 +217,12 @@ export const createDetailedUi = (deps) => {
         const cancel = document.createElement('button');
         cancel.type = 'button';
         cancel.className = 'dp-ai-btn dp-ai-btn--secondary';
-        cancel.textContent = texts.wizard_btn_cancel || 'Cancel';
+        cancel.textContent = texts.courseai_btn_cancel || 'Cancel';
 
         const send = document.createElement('button');
         send.type = 'button';
         send.className = 'dp-ai-btn dp-ai-btn--primary';
-        send.textContent = texts.wizard_btn_send_adjust || 'Send';
+        send.textContent = texts.courseai_btn_send_adjust || 'Send';
 
         const closePanel = (event) => {
             event.preventDefault();
@@ -272,7 +272,7 @@ export const createDetailedUi = (deps) => {
         masterCheckbox.type = 'checkbox';
         masterCheckbox.className = 'dp-image-check-master';
         masterCheckbox.checked = true;
-        masterCheckbox.setAttribute('aria-label', texts.wizard_images_select_all);
+        masterCheckbox.setAttribute('aria-label', texts.courseai_images_select_all);
 
         const headerLabel = document.createElement('label');
         headerLabel.className = 'dp-images-header-label';
@@ -290,14 +290,14 @@ export const createDetailedUi = (deps) => {
 
         const headerTitle = document.createElement('span');
         headerTitle.className = 'dp-images-header-title';
-        headerTitle.textContent = texts.wizard_images_suggested_label.toUpperCase();
+        headerTitle.textContent = texts.courseai_images_suggested_label.toUpperCase();
 
         const headerCount = document.createElement('span');
         headerCount.className = 'dp-images-header-count';
         headerCount.textContent = `${imageSuggestions.length} ${
             imageSuggestions.length === 1
-                ? texts.wizard_image_count_one.replace('{count}', '').trim()
-                : texts.wizard_image_count_many.replace('{count}', '').trim()
+                ? texts.courseai_image_count_one.replace('{count}', '').trim()
+                : texts.courseai_image_count_many.replace('{count}', '').trim()
         }`;
 
         headerLabel.appendChild(masterCheckbox);
@@ -322,7 +322,7 @@ export const createDetailedUi = (deps) => {
             checkbox.type = 'checkbox';
             checkbox.className = 'dp-image-check';
             checkbox.checked = state.selectedDetailedImages[item.id] !== false;
-            checkbox.setAttribute('aria-label', item.placement || texts.wizard_images_suggested_label);
+            checkbox.setAttribute('aria-label', item.placement || texts.courseai_images_suggested_label);
             imageCard.classList.toggle('dp-image-card--off', !checkbox.checked);
 
             checkboxes.push({checkbox, card: imageCard, id: item.id});
@@ -338,7 +338,7 @@ export const createDetailedUi = (deps) => {
 
             const placement = document.createElement('p');
             placement.className = 'dp-image-placement';
-            placement.textContent = item.placement || texts.wizard_activity_default;
+            placement.textContent = item.placement || texts.courseai_activity_default;
 
             const description = document.createElement('p');
             description.className = 'dp-image-description';
@@ -361,7 +361,7 @@ export const createDetailedUi = (deps) => {
             iaControl = createActionControl({
                 variant: 'ia',
                 iconSvg: iaSparklesSvg,
-                label: texts.wizard_btn_adjust || 'IA',
+                label: texts.courseai_btn_adjust || 'IA',
                 onActivate: () => imagePanelApi.open(),
             });
 
@@ -399,7 +399,7 @@ export const createDetailedUi = (deps) => {
 
         const chapters = Array.isArray(parsed.chapters) ? parsed.chapters : [];
         if (chapters.length > 0) {
-            detailFragment.appendChild(createDetailLabel(texts.wizard_chapters_label));
+            detailFragment.appendChild(createDetailLabel(texts.courseai_chapters_label));
             const list = document.createElement('ul');
             list.className = 'dp-item-list';
             chapters.forEach((chapter, index) => {
@@ -432,7 +432,7 @@ export const createDetailedUi = (deps) => {
 
         const questions = Array.isArray(parsed.questions) ? parsed.questions : [];
         if (questions.length > 0) {
-            detailFragment.appendChild(createDetailLabel(texts.wizard_questions_label));
+            detailFragment.appendChild(createDetailLabel(texts.courseai_questions_label));
             const list = document.createElement('ul');
             list.className = 'dp-item-list';
             questions.forEach((question, index) => {
@@ -480,12 +480,12 @@ export const createDetailedUi = (deps) => {
         return (sections || []).map((section, sectionidx) => ({
             id: section.id || `s${sectionidx}`,
             section_index: section.section_index ?? sectionidx,
-            name: section.name || formatTemplate(texts.wizard_section_label, {section: sectionidx + 1, name: ''}),
+            name: section.name || formatTemplate(texts.courseai_section_label, {section: sectionidx + 1, name: ''}),
             description: section.description || '',
             activities: (section.activities || []).map((activity, activityidx) => ({
                 id: activity.id || `s${sectionidx}-a${activityidx}`,
                 activity_type: activity.activity_type || activity.type || 'quiz',
-                title: activity.title || activity.name || `${texts.wizard_activity_default} ${activityidx + 1}`,
+                title: activity.title || activity.name || `${texts.courseai_activity_default} ${activityidx + 1}`,
                 description: activity.description || ''
             }))
         }));
@@ -500,7 +500,7 @@ export const createDetailedUi = (deps) => {
 
         const metaEl = document.createElement('p');
         metaEl.className = 'prv-section-meta';
-        metaEl.textContent = formatTemplate(texts.wizard_section_progress_with_total, {
+        metaEl.textContent = formatTemplate(texts.courseai_section_progress_with_total, {
             done: 0,
             total: totalActivities,
             description: '',
@@ -538,7 +538,7 @@ export const createDetailedUi = (deps) => {
 
         const titleEl = document.createElement('p');
         titleEl.className = 'prv-section-title';
-        titleEl.textContent = sectionName || formatTemplate(texts.wizard_section_label, {
+        titleEl.textContent = sectionName || formatTemplate(texts.courseai_section_label, {
             section: renderIndex + 1,
             name: '',
         });
@@ -565,14 +565,14 @@ export const createDetailedUi = (deps) => {
         iaControl = createActionControl({
             variant: 'ia',
             iconSvg: iaSparklesSvg,
-            label: texts.wizard_btn_adjust || 'IA',
+            label: texts.courseai_btn_adjust || 'IA',
             onActivate: () => sectionPanelApi.open(),
         });
 
         deleteControl = createActionControl({
             variant: 'delete',
             iconUrl: getCoreIconUrl('t/delete'),
-            label: texts.wizard_btn_cancel || 'Delete',
+            label: texts.courseai_btn_cancel || 'Delete',
             onActivate: () => {
                 if (!row) {
                     return;
@@ -679,14 +679,14 @@ export const createDetailedUi = (deps) => {
         iaControl = createActionControl({
             variant: 'ia',
                 iconSvg: iaSparklesSvg,
-            label: texts.wizard_btn_adjust || 'IA',
+            label: texts.courseai_btn_adjust || 'IA',
             onActivate: () => activityPanelApi.open(),
         });
 
         deleteControl = createActionControl({
             variant: 'delete',
             iconUrl: getCoreIconUrl('t/delete'),
-            label: texts.wizard_btn_cancel || 'Delete',
+            label: texts.courseai_btn_cancel || 'Delete',
             onActivate: () => {
                 const isDeleted = wrap.classList.toggle('dp-item-deleted');
                 deleteControl.classList.toggle('is-active', isDeleted);
@@ -704,7 +704,7 @@ export const createDetailedUi = (deps) => {
         const textDiv = item.querySelector('.prv-activity-text');
         const progressEl = document.createElement('p');
         progressEl.className = 'prv-activity-desc';
-        progressEl.textContent = texts.wizard_generating_details;
+        progressEl.textContent = texts.courseai_generating_details;
         textDiv.appendChild(progressEl);
 
         const key = `${sectionIndex}-${activityIndex}`;
@@ -748,7 +748,7 @@ export const createDetailedUi = (deps) => {
         createDetailedSectionRow({
             sectionIndex,
             renderIndex,
-            sectionName: formatTemplate(texts.wizard_section_label, {section: sectionIndex + 1, name: ''}),
+            sectionName: formatTemplate(texts.courseai_section_label, {section: sectionIndex + 1, name: ''}),
             totalActivities: 0
         });
         meta = state.detailedSectionMeta[sectionIndex];
@@ -770,7 +770,7 @@ export const createDetailedUi = (deps) => {
         }
 
         meta.total += 1;
-        meta.metaEl.textContent = formatTemplate(texts.wizard_section_progress_with_total, {
+        meta.metaEl.textContent = formatTemplate(texts.courseai_section_progress_with_total, {
             done: meta.done,
             total: meta.total,
             description: '',
@@ -780,7 +780,7 @@ export const createDetailedUi = (deps) => {
             sectionIndex: data.section_index,
             activityIndex: data.activity_index,
             activityType: data.activity_type || 'quiz',
-            activityTitle: data.title || `${texts.wizard_activity_default} ${data.activity_index + 1}`,
+            activityTitle: data.title || `${texts.courseai_activity_default} ${data.activity_index + 1}`,
             bodyEl: meta.bodyEl
         });
     };
@@ -806,7 +806,7 @@ export const createDetailedUi = (deps) => {
         }
         if (prvLiveNote) {
             prvLiveNote.style.display = 'block';
-            prvLiveNote.textContent = texts.wizard_live_note_detailed;
+            prvLiveNote.textContent = texts.courseai_live_note_detailed;
         }
         if (prvSpinnerIcon) {
             prvSpinnerIcon.style.display = '';
@@ -819,10 +819,10 @@ export const createDetailedUi = (deps) => {
             prvHeader.classList.add('prv-header--stream');
         }
         if (prvHeaderTitle) {
-            prvHeaderTitle.textContent = texts.wizard_plan_detailed_title;
+            prvHeaderTitle.textContent = texts.courseai_plan_detailed_title;
         }
         if (prvHeaderSub) {
-            prvHeaderSub.textContent = formatTemplate(texts.wizard_plan_detailed_subtitle, {
+            prvHeaderSub.textContent = formatTemplate(texts.courseai_plan_detailed_subtitle, {
                 current: 0,
                 total: state.detailedTotal,
             });
@@ -850,7 +850,7 @@ export const createDetailedUi = (deps) => {
                     activityType: activity.activity_type || activity.type || 'quiz',
                     activityTitle: activity.title
                         || activity.name
-                        || `${texts.wizard_activity_default} ${activityIdx + 1}`,
+                        || `${texts.courseai_activity_default} ${activityIdx + 1}`,
                     bodyEl: sectionRow.bodyEl
                 });
             });
@@ -883,15 +883,15 @@ export const createDetailedUi = (deps) => {
 
         const summary = [];
         if (entry.chapterCount > 0) {
-            summary.push(`${entry.chapterCount} ${texts.wizard_chapters_label}`);
+            summary.push(`${entry.chapterCount} ${texts.courseai_chapters_label}`);
         }
         if (entry.questionCount > 0) {
-            summary.push(`${entry.questionCount} ${texts.wizard_questions_label}`);
+            summary.push(`${entry.questionCount} ${texts.courseai_questions_label}`);
         }
         if (entry.imageCount > 0) {
             summary.push(formatImageCount(entry.imageCount));
         }
-        let text = entry.previewDescription || texts.wizard_generating_details;
+        let text = entry.previewDescription || texts.courseai_generating_details;
         if (summary.length > 0) {
             text = `${text} (${summary.join(' · ')})`;
         }
@@ -899,8 +899,8 @@ export const createDetailedUi = (deps) => {
             entry.progressEl.textContent = text;
         }
         if (prvHeaderSub) {
-            prvHeaderSub.textContent = formatTemplate(texts.wizard_generating_details_for, {
-                name: data.title || texts.wizard_activity_default,
+            prvHeaderSub.textContent = formatTemplate(texts.courseai_generating_details_for, {
+                name: data.title || texts.courseai_activity_default,
             });
         }
     };
@@ -968,7 +968,7 @@ export const createDetailedUi = (deps) => {
         const meta = state.detailedSectionMeta[data.section_index];
         if (meta) {
             meta.done += 1;
-            meta.metaEl.textContent = formatTemplate(texts.wizard_section_progress_with_total, {
+            meta.metaEl.textContent = formatTemplate(texts.courseai_section_progress_with_total, {
                 done: meta.done,
                 total: meta.total,
                 description: '',
