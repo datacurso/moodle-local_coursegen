@@ -111,10 +111,10 @@ $functions = [
         'capabilities' => 'moodle/site:config',
         'loginrequired' => true,
     ],
-    'local_coursegen_wizard_init' => [
-        'classname' => 'local_coursegen\\external\\wizard_init',
+    'local_coursegen_start_course_planning' => [
+        'classname' => 'local_coursegen\\external\\start_course_planning',
         'methodname' => 'execute',
-        'description' => 'Initialize AI course creation wizard session',
+        'description' => 'Start AI course planning session',
         'type' => 'write',
         'ajax' => true,
         'capabilities' => 'moodle/course:create,local/coursegen:createcoursewithai',
