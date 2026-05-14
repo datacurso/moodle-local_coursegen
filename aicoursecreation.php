@@ -36,9 +36,8 @@ require_capability('local/coursegen:createcoursewithai', $systemcontext);
 $url = new moodle_url('/local/coursegen/aicoursecreation.php');
 $PAGE->set_url($url);
 $PAGE->set_context($systemcontext);
-$PAGE->set_pagelayout('standard');
+$PAGE->set_pagelayout('popup');
 $PAGE->set_title(get_string('createwithai', 'local_coursegen'));
-$PAGE->set_heading($SITE->fullname);
 
 // Load wizard CSS.
 $PAGE->requires->css('/local/coursegen/styles/aicoursecreation.css');
@@ -77,10 +76,17 @@ $templatecontext = [
     'guidelines' => json_encode($systeminstructions),
     'languages' => json_encode($languageoptions),
     'defaultlang' => current_language(),
-    'logourl' => $logourl->out(),
 ];
 
 echo $OUTPUT->header();
+
+// Navbar (floating top bar like reportbuilder/edit.php).
+$navbarcontext = [
+    'title' => get_string('createwithai', 'local_coursegen'),
+    'logourl' => $logourl->out(),
+    'closeurl' => (new moodle_url('/my/courses.php'))->out(false),
+];
+echo $OUTPUT->render_from_template('local_coursegen/editor_navbar', $navbarcontext);
 
 echo $OUTPUT->render_from_template('local_coursegen/wizard_page', $templatecontext);
 
