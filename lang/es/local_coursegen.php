@@ -86,7 +86,6 @@ $string['edit'] = 'Editar';
 $string['editsysteminstruction'] = 'Editar instrucción del sistema';
 $string['enter_message'] = 'Escribe tu mensaje';
 $string['error'] = 'Error: {$a}';
-$string['error_api_connection'] = 'No se pudo conectar con el servicio de IA. Revisa que las URLs del servicio DataCurso estén configuradas en los ajustes del plugin.';
 $string['error_api_response'] = 'Respuesta inválida del servicio de IA';
 $string['error_context_type_required'] = 'Selecciona un tipo de contexto para continuar (Silabo o Prompt personalizado).';
 $string['error_creating_course'] = '❌ Error al crear el curso: {$a}';

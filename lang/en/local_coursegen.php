@@ -88,7 +88,6 @@ $string['edit'] = 'Edit';
 $string['editsysteminstruction'] = 'Edit system instruction';
 $string['enter_message'] = 'Enter your message';
 $string['error'] = 'Error: {$a}';
-$string['error_api_connection'] = 'Could not connect to the AI service. Please check that the DataCurso service URLs are configured in the plugin settings.';
 $string['error_api_response'] = 'Invalid response from AI service';
 $string['error_context_type_required'] = 'Please select a context type to continue (Syllabus or Custom prompt).';
 $string['error_creating_course'] = '❌ Error creating course: {$a}';
