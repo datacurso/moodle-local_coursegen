@@ -66,6 +66,46 @@ svg { display: block; flex-shrink: 0; }
 .app-main { padding: 56px 0 80px; }
 .aicoursecreation-main { padding: 56px 0 80px; }
 
+/* Workspace layout: chat/form left, progress right */
+.wizard-workspace {
+  display: block;
+}
+
+.wizard-workspace.is-planning {
+  display: grid;
+  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.wizard-workspace.is-planning .context-wrap {
+  max-width: none;
+  margin: 0;
+  position: sticky;
+  top: 84px;
+}
+
+.wizard-workspace.is-planning .context-head {
+  text-align: left;
+}
+
+.wizard-workspace.is-planning .planning-wrap {
+  max-width: none;
+  margin: 0;
+  width: 100%;
+  min-width: 0;
+}
+
+@media (max-width: 1100px) {
+  .wizard-workspace.is-planning {
+    grid-template-columns: 1fr;
+  }
+
+  .wizard-workspace.is-planning .context-wrap {
+    position: static;
+  }
+}
+
 /* ─── STEP HEADER ─────────────────────────────────────────────────────── */
 .step-header { margin-bottom: 32px; }
 

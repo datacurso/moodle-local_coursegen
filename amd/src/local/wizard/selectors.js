@@ -25,6 +25,7 @@ export const getWizardElements = () => {
         langSelect: document.getElementById('langSelect'),
         btnWithImages,
         imgToggleWrap: btnWithImages ? btnWithImages.closest('label') : null,
+        wizardWorkspace: document.getElementById('wizardWorkspace'),
         contextView: document.getElementById('contextView'),
         planningView: document.getElementById('planningView'),
         planningProgressCard: document.getElementById('planningProgressCard'),

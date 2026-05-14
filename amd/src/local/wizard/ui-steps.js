@@ -24,6 +24,7 @@ export const createStepsUi = (deps) => {
 
     const {
         contextView,
+        wizardWorkspace,
         planningView,
         planningProgressCard,
         btnGenerate,
@@ -251,6 +252,9 @@ export const createStepsUi = (deps) => {
         if (planningView) {
             planningView.style.display = 'none';
         }
+        if (wizardWorkspace) {
+            wizardWorkspace.classList.remove('is-planning');
+        }
         if (contextView) {
             contextView.style.display = '';
         }
@@ -279,9 +283,12 @@ export const createStepsUi = (deps) => {
         setStepState('planning', 'active');
         state.currentStage = 'planning';
 
-        // Hide context view completely
+        // Keep context view visible on the left; progress/streaming stays on the right.
         if (contextView) {
-            contextView.style.display = 'none';
+            contextView.style.display = '';
+        }
+        if (wizardWorkspace) {
+            wizardWorkspace.classList.add('is-planning');
         }
 
         if (planningView) {
