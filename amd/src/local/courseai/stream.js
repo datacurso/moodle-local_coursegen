@@ -31,8 +31,8 @@ export const createStreamManager = (deps) => {
     } = deps;
 
     const {
-        planReviewCard,
         prvHeaderSub,
+        prvHeaderTitle,
         prvLiveNote,
         pcSubtitle,
         typingCursor,
@@ -205,62 +205,130 @@ export const createStreamManager = (deps) => {
                 return;
             }
 
+            // Helper: create a new checklist container below the adjustment messages
+            const getOrCreateRoundChecklist = (els, currentRound) => {
+                const existing = document.querySelector(`.courseai-checklist[data-round="${currentRound}"]`);
+                if (existing) {
+                    return existing.querySelector('.courseai-checklist-list');
+                }
+                const container = document.createElement('div');
+                container.className = 'courseai-checklist';
+                container.setAttribute('data-round', currentRound);
+                const list = document.createElement('ul');
+                list.className = 'courseai-checklist-list';
+                container.appendChild(list);
+                const label = document.createElement('span');
+                label.className = 'courseai-checklist-label';
+                label.textContent = texts.courseai_checklist_label || 'Course sections';
+                container.insertBefore(label, list);
+                if (els.adjustmentHistory && els.adjustmentHistory.parentNode) {
+                    els.adjustmentHistory.parentNode.insertBefore(
+                        container,
+                        els.adjustmentHistory.nextSibling
+                    );
+                }
+                return list;
+            };
+
             switch (data.type) {
                 case 'activity': {
                     contentReceived = true;
-                    if (!state.planSectionsData.find((section) => section.sectionIndex === data.section_index)) {
-                        planningUi.addSectionHeader({
-                            section_index: data.section_index,
-                            name: data.section_name || texts.courseai_plan_default_unnamed,
-                            description: '',
-                            activity_count: null
-                        });
-                    }
-                    planningUi.addActivityToSection(data);
-                    // Update progress based on activities received (cap at 95% to avoid reaching 100% prematurely)
-                    const activityProgress = Math.min(95, (state.totalActivities / Math.max(1, state.totalActivities + 1)) * 100);
-                    stepsUi.setProgress(activityProgress);
+                    // Activity data consumed internally; no sections view shown
                     break;
                 }
                 case 'section': {
                     contentReceived = true;
-                    planningUi.addSectionHeader({
-                        section_index: data.section_index ?? state.planSectionsData.length,
-                        name: data.section?.name || data.name || texts.courseai_plan_default_unnamed,
-                        description: data.section?.description || data.description || '',
-                        activity_count: (data.section?.activities || data.activities || []).length
-                    });
-                    (data.section?.activities || data.activities || []).forEach((activity) => {
-                        planningUi.addActivityToSection({
-                            section_index: data.section_index ?? (state.planSectionsData.length - 1),
-                            activity_type: activity.type || activity.activity_type,
-                            title: activity.name || activity.title,
-                            description: activity.description || ''
-                        });
-                    });
-                    stepsUi.switchPlanMode('sections');
-                    planningUi.addPlanSection(data.section || {
-                        name: data.name || texts.courseai_plan_default_unnamed,
-                        description: data.description || '',
-                        activities: data.activities || []
-                    });
-                    // Update progress based on activities received (cap at 95%)
-                    const sectionProgress = Math.min(95, (state.totalActivities / Math.max(1, state.totalActivities + 5)) * 100);
-                    stepsUi.setProgress(sectionProgress);
+                    // Hide loading spinner and show stream content on first section
+                    const loadingEl = document.getElementById('planningLoading');
+                    const streamContentEl = document.getElementById('planningStreamContent');
+                    if (loadingEl) {
+                        loadingEl.style.display = 'none';
+                    }
+                    if (streamContentEl) {
+                        streamContentEl.style.display = '';
+                    }
+                    // Capture first section name as the course title for the header
+                    if (!state.courseTitle && data.name) {
+                        state.courseTitle = data.name;
+                        if (prvHeaderTitle) {
+                            prvHeaderTitle.textContent = state.courseTitle;
+                        }
+                    }
+                    // Add section to checklist in the left panel (loading state initially)
+                    // For regeneration rounds, create a new checklist below the adjustment
+                    const round = state.generationRound || 0;
+                    const targetList = (round <= 1)
+                        ? elements.checklistList
+                        : getOrCreateRoundChecklist(elements, round);
+                    if (targetList && data.name) {
+                        const item = document.createElement('li');
+                        item.className = 'courseai-checklist-item is-loading';
+                        const activityCount = (data.activities || []).length;
+                        item.setAttribute('data-section-index', data.section_index);
+                        item.setAttribute('data-round', state.generationRound || 0);
+                        item.setAttribute('data-remaining', activityCount);
+                        item.innerHTML = '<span class="courseai-checklist-check">'
+                            + '<svg class="spinner-icon" viewBox="0 0 24 24">'
+                            + '<path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg>'
+                            + '<svg class="check-icon" viewBox="0 0 24 24">'
+                            + '<polyline points="20 6 9 17 4 12"/></svg></span>'
+                            + '<span class="courseai-checklist-name">'
+                            + data.name + '</span>';
+                        targetList.appendChild(item);
+                        // Show the parent checklist container
+                        const listParent = targetList.closest('.courseai-checklist');
+                        if (listParent) {
+                            listParent.classList.remove('hidden');
+                        }
+                        // Also ensure the default checklist is visible for round 1
+                        if (elements.checklist) {
+                            elements.checklist.classList.remove('hidden');
+                        }
+                    }
                     break;
                 }
-                case 'detailed_plan_start':
+                case 'detailed_plan_start': {
                     contentReceived = true;
                     detailedUi.initDetailedPlanView(data);
+                    // Set the course title as the header title if captured from structure
+                    if (state.courseTitle && prvHeaderTitle) {
+                        prvHeaderTitle.textContent = state.courseTitle;
+                    }
+                    // Show initial progress when detailed planning begins
+                    stepsUi.setProgress(5);
                     break;
+                }
                 case 'detailed_plan_field':
                     contentReceived = true;
                     detailedUi.handleDetailedPlanField(data);
                     break;
-                case 'detailed_plan_activity':
+                case 'detailed_plan_activity': {
                     contentReceived = true;
                     detailedUi.handleDetailedPlanActivity(data);
+                    // Track progress: each activity planned updates the bar (0→90%)
+                    state.activitiesPlannedCount = (state.activitiesPlannedCount || 0) + 1;
+                    const totalDetailed = state.detailedTotal || 1;
+                    const pct = Math.min(90, (state.activitiesPlannedCount / totalDetailed) * 90);
+                    stepsUi.setProgress(Math.round(pct));
+
+                    // Mark section as done when all its activities are planned
+                    if (data.section_index !== undefined) {
+                        const round = state.generationRound || 0;
+                        const items = document.querySelectorAll(
+                            `.courseai-checklist-list [data-section-index="${data.section_index}"][data-round="${round}"]`
+                        );
+                        items.forEach((item) => {
+                            const remaining = parseInt(item.getAttribute('data-remaining') || '1', 10);
+                            const newRemaining = Math.max(0, remaining - 1);
+                            item.setAttribute('data-remaining', newRemaining);
+                            if (newRemaining === 0) {
+                                item.classList.remove('is-loading');
+                                item.classList.add('is-done');
+                            }
+                        });
+                    }
                     break;
+                }
                 case 'token':
                     contentReceived = true;
                     stepsUi.switchPlanMode('markdown');
@@ -279,16 +347,18 @@ export const createStreamManager = (deps) => {
                     window.console.log('[PHASE4-DEBUG] preservedPhase4Total (fallback):', preservedPhase4Total);
                     window.console.log('[PHASE4-DEBUG] totalActivities (used for calc):', totalActivities);
 
-                    if (state.planningMode === 'detailed' && planReviewCard && planReviewCard.style.display !== 'none') {
-                        if (prvHeaderSub) {
-                            prvHeaderSub.textContent = statusText;
-                        }
-                        if (prvLiveNote) {
-                            prvLiveNote.style.display = 'block';
-                            prvLiveNote.textContent = texts.courseai_live_note_detailed;
-                        }
-                    } else if (pcSubtitle) {
+                    // Always update the header subtitle with live status text
+                    if (prvHeaderSub) {
+                        prvHeaderSub.textContent = statusText;
+                    }
+                    // Also keep progress card subtitle updated
+                    if (pcSubtitle) {
                         pcSubtitle.textContent = statusText;
+                    }
+                    // Show live note when in detailed planning mode
+                    if (state.planningMode === 'detailed' && prvLiveNote) {
+                        prvLiveNote.style.display = 'block';
+                        prvLiveNote.textContent = texts.courseai_live_note_detailed;
                     }
 
                     // Track progress during content generation phase (after detailed plan approval)

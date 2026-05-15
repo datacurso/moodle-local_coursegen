@@ -54,6 +54,7 @@ export const createCourseaiActions = (deps) => {
         btnCompactRegenerate,
         initialPromptHistory,
         initialPromptText,
+        adjustmentHistory,
     } = elements;
 
     const renderInitialPromptHistory = (message) => {
@@ -372,6 +373,18 @@ export const createCourseaiActions = (deps) => {
             const instruction = action === 'adjust' && compactPromptInput
                 ? compactPromptInput.value.trim()
                 : '';
+
+            // Show adjustment as a chat message and clear the textarea
+            if (action === 'adjust' && instruction && adjustmentHistory) {
+                const msgEl = document.createElement('div');
+                msgEl.className = 'courseai-adjustment';
+                msgEl.textContent = instruction;
+                adjustmentHistory.appendChild(msgEl);
+                adjustmentHistory.classList.remove('hidden');
+                if (compactPromptInput) {
+                    compactPromptInput.value = '';
+                }
+            }
 
             const feedbackPayload = {
                 recordid: state.sessionid,

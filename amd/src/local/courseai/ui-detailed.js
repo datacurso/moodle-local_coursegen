@@ -32,7 +32,6 @@ export const createDetailedUi = (deps) => {
         prvSpinnerIcon,
         prvCheckIcon,
         prvHeader,
-        prvHeaderTitle,
         prvHeaderSub,
         planningSpinner,
     } = elements;
@@ -95,46 +94,8 @@ export const createDetailedUi = (deps) => {
     };
 
     const updateDetailedHeaderStats = () => {
-        if (!prvHeaderSub) {
-            return;
-        }
-
-        const totalSections = Object.keys(state.detailedSectionMeta).length;
-        const totalActivities = state.detailedTotal;
-
-        let totalImages = 0;
-        let selectedImages = 0;
-
-        Object.values(state.detailedActivityEls).forEach((entry) => {
-            const suggestions = Array.isArray(entry.imageSuggestions) ? entry.imageSuggestions : [];
-            totalImages += suggestions.length;
-            suggestions.forEach((suggestion) => {
-                if (state.selectedDetailedImages[suggestion.id] !== false) {
-                    selectedImages += 1;
-                }
-            });
-        });
-
-        if (totalImages > 0) {
-            prvHeaderSub.textContent = formatTemplate(texts.courseai_plan_detailed_stats, {
-                sections: totalSections,
-                activities: totalActivities,
-                selectedImages,
-                totalImages,
-            });
-        } else if (state.detailedCurrent >= totalActivities && totalActivities > 0) {
-            prvHeaderSub.textContent = formatTemplate(texts.courseai_plan_detailed_stats, {
-                sections: totalSections,
-                activities: totalActivities,
-                selectedImages: 0,
-                totalImages: 0,
-            });
-        } else {
-            prvHeaderSub.textContent = formatTemplate(texts.courseai_plan_detailed_subtitle, {
-                current: state.detailedCurrent,
-                total: totalActivities,
-            });
-        }
+        // Stats tracking kept internally for image badge calculations
+        // Header subtitle is managed by stream.js status events
     };
 
     const createDetailLabel = (text) => {
@@ -818,14 +779,8 @@ export const createDetailedUi = (deps) => {
             prvHeader.classList.remove('prv-header--done');
             prvHeader.classList.add('prv-header--stream');
         }
-        if (prvHeaderTitle) {
-            prvHeaderTitle.textContent = texts.courseai_plan_detailed_title;
-        }
         if (prvHeaderSub) {
-            prvHeaderSub.textContent = formatTemplate(texts.courseai_plan_detailed_subtitle, {
-                current: 0,
-                total: state.detailedTotal,
-            });
+            prvHeaderSub.textContent = '';
         }
         if (planningSpinner) {
             planningSpinner.classList.remove('done');
