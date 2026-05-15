@@ -148,7 +148,8 @@ class ai_course_api_service {
         string $sessionid,
         string $approvalstatus,
         string $instruction = '',
-        ?array $selectedimageids = null
+        ?array $selectedimageids = null,
+        ?bool $withimages = null
     ): array {
         $payload = [
             'approval_status' => $approvalstatus,
@@ -165,9 +166,44 @@ class ai_course_api_service {
             ));
         }
 
+        if ($withimages !== null) {
+            $payload['with_images'] = $withimages;
+        }
+
         $endpoint = '/course/feedback';
 
         return $this->client->request('POST', $endpoint, $payload);
+    }
+
+    /**
+     * Regenerate a single section, activity, or image in the detailed plan.
+     *
+     * @param string $sessionid External session identifier.
+     * @param string $targettype Target type: section, activity, image.
+     * @param int $sectionindex 0-based section index.
+     * @param int|null $activityindex 0-based activity index (null for section).
+     * @param string $instruction User adjustment text.
+     * @return array Decoded response from the API.
+     */
+    public function regenerate_detailed_item(
+        string $sessionid,
+        string $targettype,
+        int $sectionindex,
+        ?int $activityindex = null,
+        string $instruction = ''
+    ): array {
+        $payload = [
+            'thread_id' => $sessionid,
+            'target_type' => $targettype,
+            'section_index' => $sectionindex,
+            'instruction' => $instruction,
+        ];
+
+        if ($activityindex !== null) {
+            $payload['activity_index'] = $activityindex;
+        }
+
+        return $this->client->request('POST', '/course/regenerate-item', $payload);
     }
 
     /**

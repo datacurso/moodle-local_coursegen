@@ -28,6 +28,7 @@ import {createContextUi} from 'local_coursegen/local/courseai/ui-context';
 import {createStepsUi} from 'local_coursegen/local/courseai/ui-steps';
 import {createPlanningUi} from 'local_coursegen/local/courseai/ui-planning';
 import {createDetailedUi} from 'local_coursegen/local/courseai/ui-detailed';
+import {regenerateDetailedItem} from 'local_coursegen/repository/course';
 import {createStreamManager} from 'local_coursegen/local/courseai/stream';
 import {createCourseaiActions} from 'local_coursegen/local/courseai/actions';
 import {initSidebar} from 'local_coursegen/local/courseai/sidebar';
@@ -78,6 +79,7 @@ export const init = async(params) => {
             setProgress: stepsUi.setProgress,
             texts,
             formatTemplate,
+            regenerateDetailedItem,
         });
 
         const planningUi = createPlanningUi({

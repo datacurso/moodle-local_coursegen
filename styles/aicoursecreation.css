@@ -2074,6 +2074,25 @@ svg { display: block; flex-shrink: 0; }
   box-shadow: inset 3px 0 0 hsl(252 55% 42% / .55);
 }
 
+/* Regenerating state — loading pulse */
+.dp-item-regenerating {
+  opacity: 0.6;
+  pointer-events: none;
+  animation: dp-pulse 1.2s ease-in-out infinite;
+}
+
+/* Disabled action buttons while planning is streaming */
+.dp-action-btn--disabled {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}
+
+@keyframes dp-pulse {
+  0%, 100% { opacity: 0.6; }
+  50% { opacity: 0.3; }
+}
+
 .dp-activity-wrap .prv-activity-item {
   border-radius: 0;
   background: transparent;
@@ -2386,7 +2405,6 @@ svg { display: block; flex-shrink: 0; }
   align-items: center;
   gap: 16px;
   flex-wrap: nowrap;
-  overflow: hidden;
   min-width: 0;
 }
 
@@ -2419,6 +2437,10 @@ svg { display: block; flex-shrink: 0; }
   height: 32px;
   padding: 0;
   justify-content: center;
+}
+
+.compact-chat-toolbar .popover-wrap {
+  flex-shrink: 0;
 }
 
 .compact-chat-toolbar .tbar-sep {

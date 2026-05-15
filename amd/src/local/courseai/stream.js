@@ -338,6 +338,12 @@ export const createStreamManager = (deps) => {
                 case 'status': {
                     const statusText = data.text || '';
 
+                    // Update the loading spinner text while AI is still planning
+                    const loadingTextEl = document.querySelector('.planning-loading-text');
+                    if (loadingTextEl && statusText) {
+                        loadingTextEl.textContent = statusText;
+                    }
+
                     // Use module-level preserved value as fallback if state was reset
                     const totalActivities = state.phase4TotalActivities || preservedPhase4Total;
 
@@ -419,6 +425,10 @@ export const createStreamManager = (deps) => {
                 case 'review_needed':
                     stepsUi.setStepState('planning', 'done');
                     state.currentStage = 'planning';
+                    // Enable action buttons (IA/Delete) now that planning is complete
+                    if (typeof detailedUi.enableAllActionControls === 'function') {
+                        detailedUi.enableAllActionControls();
+                    }
                     stepsUi.updateFlowNav();
                     if (Array.isArray(data.current_plan) && data.current_plan.length > 0) {
                         detailedUi.initDetailedPlanView({sections: data.current_plan});

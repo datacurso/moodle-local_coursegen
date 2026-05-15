@@ -23,6 +23,7 @@ export const createDetailedUi = (deps) => {
         setProgress,
         texts,
         formatTemplate,
+        regenerateDetailedItem,
     } = deps;
 
     const {
@@ -125,11 +126,14 @@ export const createDetailedUi = (deps) => {
         return M.cfg.wwwroot + '/pix/' + iconkey + '.svg';
     };
 
-    const createActionControl = ({variant, iconUrl, iconSvg, label, onActivate}) => {
+    const createActionControl = ({variant, iconUrl, iconSvg, label, onActivate, disabled}) => {
         const control = document.createElement('span');
         control.className = `dp-action-btn dp-action-btn--${variant}`;
+        if (disabled) {
+            control.classList.add('dp-action-btn--disabled');
+        }
         control.setAttribute('role', 'button');
-        control.setAttribute('tabindex', '0');
+        control.setAttribute('tabindex', disabled ? '-1' : '0');
         control.setAttribute('aria-label', label);
         control.title = label;
         if (iconSvg) {
@@ -147,6 +151,9 @@ export const createDetailedUi = (deps) => {
         }
 
         const activate = (event) => {
+            if (control.classList.contains('dp-action-btn--disabled')) {
+                return;
+            }
             event.preventDefault();
             event.stopPropagation();
             onActivate();
@@ -222,7 +229,7 @@ export const createDetailedUi = (deps) => {
         };
     };
 
-    const createImagesDetail = ({entry, sectionIndex, imageSuggestions}) => {
+    const createImagesDetail = ({entry, sectionIndex, activityIndex, imageSuggestions}) => {
         const container = document.createElement('div');
         container.className = 'dp-images-container';
 
@@ -313,9 +320,26 @@ export const createDetailedUi = (deps) => {
 
             let iaControl = null;
             const imagePanelApi = createInlineAdjustmentPanel({
-                onSubmit: () => {
-                    imageWrap.classList.add('dp-item-has-adjustment');
-                    iaControl.classList.add('is-active');
+                onSubmit: (value) => {
+                    if (regenerateDetailedItem && sectionIndex !== undefined && activityIndex !== undefined) {
+                        imageWrap.classList.add('dp-item-regenerating');
+                        iaControl.disabled = true;
+                        regenerateDetailedItem({
+                            recordid: state.sessionid,
+                            target_type: 'image',
+                            section_index: Number(sectionIndex),
+                            activity_index: Number(activityIndex),
+                            instruction: value,
+                        }).then(() => {
+                            imageWrap.classList.remove('dp-item-regenerating');
+                            imageWrap.classList.add('dp-item-has-adjustment');
+                            iaControl.classList.add('is-active');
+                        }).catch(() => {
+                            imageWrap.classList.remove('dp-item-regenerating');
+                        }).finally(() => {
+                            iaControl.disabled = false;
+                        });
+                    }
                 },
             });
 
@@ -324,6 +348,7 @@ export const createDetailedUi = (deps) => {
                 iconSvg: iaSparklesSvg,
                 label: texts.courseai_btn_adjust || 'IA',
                 onActivate: () => imagePanelApi.open(),
+                disabled: true,
             });
 
             imageActions.appendChild(iaControl);
@@ -355,7 +380,7 @@ export const createDetailedUi = (deps) => {
         return container;
     };
 
-    const buildActivityDetailContent = ({parsed, entry, sectionIndex}) => {
+    const buildActivityDetailContent = ({parsed, entry, sectionIndex, activityIndex}) => {
         const detailFragment = document.createDocumentFragment();
 
         const chapters = Array.isArray(parsed.chapters) ? parsed.chapters : [];
@@ -430,6 +455,7 @@ export const createDetailedUi = (deps) => {
             detailFragment.appendChild(createImagesDetail({
                 entry,
                 sectionIndex,
+                activityIndex,
                 imageSuggestions,
             }));
         }
@@ -514,12 +540,84 @@ export const createDetailedUi = (deps) => {
         let deleteControl = null;
 
         const sectionPanelApi = createInlineAdjustmentPanel({
-            onSubmit: () => {
-                if (!row) {
+            onSubmit: async(value) => {
+                if (!regenerateDetailedItem || !state.sessionid || !row) {
                     return;
                 }
-                row.classList.add('dp-item-has-adjustment');
-                iaControl.classList.add('is-active');
+                row.classList.add('dp-item-regenerating');
+                iaControl.disabled = true;
+                try {
+                    const resp = await regenerateDetailedItem({
+                        recordid: state.sessionid,
+                        target_type: 'section',
+                        section_index: Number(sectionIndex),
+                        instruction: value,
+                    });
+                    const rawResult = (resp && resp.result) || '';
+                    const parsed = rawResult
+                        ? (typeof rawResult === 'string' ? JSON.parse(rawResult) : rawResult)
+                        : null;
+
+                    if (parsed && parsed.success && parsed.section_data) {
+                        const meta = state.detailedSectionMeta[sectionIndex];
+                        if (meta) {
+                            // 1. Remove all old activity wraps from DOM
+                            Array.from(meta.bodyEl.querySelectorAll('.dp-activity-wrap'))
+                                .forEach((el) => el.remove());
+
+                            // 2. Remove old entries from state
+                            Object.keys(state.detailedActivityEls)
+                                .filter((k) => k.startsWith(`${sectionIndex}-`))
+                                .forEach((k) => delete state.detailedActivityEls[k]);
+
+                            // 3. Reset section meta counts
+                            meta.done = 0;
+                            meta.total = (parsed.section_data.activities || []).length;
+                            meta.imagesCount = 0;
+                            meta._prepared = false;
+
+                            // 4. Create new activity rows and mark them as done immediately
+                            (parsed.section_data.activities || []).forEach((act, aIdx) => {
+                                createDetailedActivityRow({
+                                    sectionIndex,
+                                    activityIndex: aIdx,
+                                    activityType: act.activity_type || 'quiz',
+                                    activityTitle: act.title || '',
+                                    bodyEl: meta.bodyEl,
+                                });
+                                // Mark this activity as done with its plan data
+                                markActivityPlanned({
+                                    section_index: sectionIndex,
+                                    activity_index: aIdx,
+                                    activity_type: act.activity_type || 'quiz',
+                                    title: act.title || '',
+                                    data: act.detailed_plan || {},
+                                });
+                            });
+
+                            // 5. Update section meta counter
+                            if (meta.metaEl) {
+                                meta.metaEl.textContent = formatTemplate(
+                                    texts.courseai_section_progress_with_total,
+                                    {done: meta.done, total: meta.total, description: ''}
+                                );
+                            }
+
+                            // 6. Update section title if changed
+                            const titleEl = row.querySelector('.prv-section-title');
+                            if (titleEl && parsed.section_data.name) {
+                                titleEl.textContent = parsed.section_data.name;
+                            }
+                        }
+                    }
+
+                    row.classList.remove('dp-item-regenerating');
+                    row.classList.add('dp-item-has-adjustment');
+                    iaControl.classList.add('is-active');
+                } catch (e) {
+                    row.classList.remove('dp-item-regenerating');
+                }
+                iaControl.disabled = false;
             },
         });
 
@@ -528,6 +626,7 @@ export const createDetailedUi = (deps) => {
             iconSvg: iaSparklesSvg,
             label: texts.courseai_btn_adjust || 'IA',
             onActivate: () => sectionPanelApi.open(),
+            disabled: true,
         });
 
         deleteControl = createActionControl({
@@ -631,9 +730,26 @@ export const createDetailedUi = (deps) => {
         let iaControl = null;
         let deleteControl = null;
         const activityPanelApi = createInlineAdjustmentPanel({
-            onSubmit: () => {
-                wrap.classList.add('dp-item-has-adjustment');
-                iaControl.classList.add('is-active');
+            onSubmit: (value) => {
+                if (regenerateDetailedItem && state.sessionid) {
+                    wrap.classList.add('dp-item-regenerating');
+                    iaControl.disabled = true;
+                    regenerateDetailedItem({
+                        recordid: state.sessionid,
+                        target_type: 'activity',
+                        section_index: Number(sectionIndex),
+                        activity_index: Number(activityIndex),
+                        instruction: value,
+                    }).then(() => {
+                        wrap.classList.remove('dp-item-regenerating');
+                        wrap.classList.add('dp-item-has-adjustment');
+                        iaControl.classList.add('is-active');
+                    }).catch(() => {
+                        wrap.classList.remove('dp-item-regenerating');
+                    }).finally(() => {
+                        iaControl.disabled = false;
+                    });
+                }
             },
         });
 
@@ -642,6 +758,7 @@ export const createDetailedUi = (deps) => {
                 iconSvg: iaSparklesSvg,
             label: texts.courseai_btn_adjust || 'IA',
             onActivate: () => activityPanelApi.open(),
+            disabled: true,
         });
 
         deleteControl = createActionControl({
@@ -748,6 +865,8 @@ export const createDetailedUi = (deps) => {
 
     const initDetailedPlanView = (data) => {
         const sourceSections = normalizeInitialSections(data?.sections || []);
+        // Store sections for later use (e.g., partial regeneration)
+        state.latestInitialSections = sourceSections;
 
         if (prvSections) {
             prvSections.innerHTML = '';
@@ -815,6 +934,16 @@ export const createDetailedUi = (deps) => {
     const handleDetailedPlanField = (data) => {
         if (state.planningMode !== 'detailed') {
             initDetailedPlanView({sections: state.latestInitialSections});
+        }
+
+        // On regeneration (round > 1), clear existing section entries once per section
+        const secIdx = data.section_index;
+        if (typeof secIdx === 'number' && (state.generationRound || 0) > 1) {
+            const meta = state.detailedSectionMeta[secIdx];
+            if (meta && !meta._prepared) {
+                meta._prepared = true;
+                clearSectionEntries(secIdx);
+            }
         }
 
         const entry = ensureDetailedEntry(data);
@@ -911,6 +1040,7 @@ export const createDetailedUi = (deps) => {
             parsed,
             entry,
             sectionIndex: data.section_index,
+            activityIndex: data.activity_index,
         });
         if (detailContent.childNodes.length > 0) {
             entry.detailEl.innerHTML = '';
@@ -933,11 +1063,40 @@ export const createDetailedUi = (deps) => {
         updateDetailedHeaderStats();
     };
 
+    const clearSectionEntries = (sectionIndex) => {
+        // Remove activity entries for this section so they can be recreated on regeneration
+        const keys = Object.keys(state.detailedActivityEls);
+        keys.forEach((key) => {
+            if (key.startsWith(`${sectionIndex}-`)) {
+                const entry = state.detailedActivityEls[key];
+                if (entry.item && entry.item.parentNode) {
+                    entry.item.remove();
+                }
+                delete state.detailedActivityEls[key];
+            }
+        });
+        // Reset section meta so it starts counting from 0
+        if (state.detailedSectionMeta[sectionIndex]) {
+            state.detailedSectionMeta[sectionIndex].done = 0;
+            state.detailedSectionMeta[sectionIndex].total = 0;
+            if (state.detailedSectionMeta[sectionIndex].metaEl) {
+                state.detailedSectionMeta[sectionIndex].metaEl.textContent = '';
+            }
+        }
+    };
+
     const handleDetailedPlanActivity = (data) => {
         if (state.planningMode !== 'detailed') {
             initDetailedPlanView({sections: state.latestInitialSections});
         }
         markActivityPlanned(data);
+    };
+
+    const enableAllActionControls = () => {
+        document.querySelectorAll('.dp-action-btn--disabled').forEach(function(el) {
+            el.classList.remove('dp-action-btn--disabled');
+            el.setAttribute('tabindex', '0');
+        });
     };
 
     return {
@@ -946,5 +1105,6 @@ export const createDetailedUi = (deps) => {
         handleDetailedPlanField,
         handleDetailedPlanActivity,
         updateDetailedHeaderStats,
+        enableAllActionControls,
     };
 };
