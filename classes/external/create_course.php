@@ -97,7 +97,7 @@ class create_course extends external_api {
     }
 
     /**
-     * Ensure required core fields exist for wizard-created sessions.
+     * Ensure required core fields exist for courseai-created sessions.
      *
      * Wizard sessions can be created from a lightweight payload that does not
      * always contain category/fullname/shortname. This method fills safe

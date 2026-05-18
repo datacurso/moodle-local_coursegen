@@ -39,7 +39,7 @@ $PAGE->set_context($systemcontext);
 $PAGE->set_pagelayout('popup');
 $PAGE->set_title(get_string('createwithai', 'local_coursegen'));
 
-// Load wizard CSS.
+// Load courseai CSS.
 $PAGE->requires->css('/local/coursegen/styles/aicoursecreation.css');
 
 // Load system instructions (directrices institucionales).
@@ -88,10 +88,10 @@ $navbarcontext = [
 ];
 echo $OUTPUT->render_from_template('local_coursegen/editor_navbar', $navbarcontext);
 
-echo $OUTPUT->render_from_template('local_coursegen/wizard_page', $templatecontext);
+echo $OUTPUT->render_from_template('local_coursegen/courseai_page', $templatecontext);
 
 // Initialize JavaScript module.
-$PAGE->requires->js_call_amd('local_coursegen/wizard', 'init', [
+$PAGE->requires->js_call_amd('local_coursegen/courseai', 'init', [
     [
         'guidelines' => $systeminstructions,
         'languages' => $languageoptions,

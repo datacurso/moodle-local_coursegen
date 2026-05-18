@@ -111,28 +111,28 @@ $functions = [
         'capabilities' => 'moodle/site:config',
         'loginrequired' => true,
     ],
-    'local_coursegen_wizard_init' => [
-        'classname' => 'local_coursegen\\external\\wizard_init',
+    'local_coursegen_start_course_planning' => [
+        'classname' => 'local_coursegen\\external\\start_course_planning',
         'methodname' => 'execute',
-        'description' => 'Initialize AI course creation wizard session',
+        'description' => 'Start AI course planning session',
         'type' => 'write',
         'ajax' => true,
         'capabilities' => 'moodle/course:create,local/coursegen:createcoursewithai',
         'loginrequired' => true,
     ],
-    'local_coursegen_wizard_syllabus_upload' => [
-        'classname' => 'local_coursegen\\external\\wizard_syllabus_upload',
+    'local_coursegen_courseai_syllabus_upload' => [
+        'classname' => 'local_coursegen\\external\\courseai_syllabus_upload',
         'methodname' => 'execute',
-        'description' => 'Upload syllabus file for wizard session',
+        'description' => 'Upload syllabus file for courseai session',
         'type' => 'write',
         'ajax' => true,
         'capabilities' => 'moodle/course:create,local/coursegen:createcoursewithai',
         'loginrequired' => true,
     ],
-    'local_coursegen_wizard_filepicker_init' => [
-        'classname' => 'local_coursegen\\external\\wizard_filepicker_init',
+    'local_coursegen_courseai_filepicker_init' => [
+        'classname' => 'local_coursegen\\external\\courseai_filepicker_init',
         'methodname' => 'execute',
-        'description' => 'Initialise filepicker draft area for wizard syllabus upload',
+        'description' => 'Initialise filepicker draft area for courseai syllabus upload',
         'type' => 'read',
         'ajax' => true,
         'capabilities' => 'moodle/course:create,local/coursegen:createcoursewithai',

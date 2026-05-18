@@ -68,6 +68,16 @@ class ai_course_api_service {
     }
 
     /**
+     * Get the streaming URL for a given course planning session.
+     *
+     * @param string $sessionid External planning thread identifier.
+     * @return string Streaming URL.
+     */
+    public function get_course_streaming_url(string $sessionid): string {
+        return $this->client->get_streaming_url_for_session($sessionid);
+    }
+
+    /**
      * Start the AI activity generation process by sending a JSON payload to the activity init endpoint.
      *
      * @param array $payload Payload to send to the API (instructions, config, etc.).

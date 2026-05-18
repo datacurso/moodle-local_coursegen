@@ -1,0 +1,439 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/courseai_page
+
+    AI Course Creation Wizard - Step 1: Context
+
+    Example context (json):
+    {
+        "guidelines": "[{\"id\":\"si_1\",\"name\":\"Example\",\"category\":\"General\",\"description\":\"...\"}]",
+        "languages": "[{\"code\":\"es\",\"name\":\"Español (es)\"}]",
+        "defaultlang": "es"
+    }
+}}
+
+{{! Wizard CSS will be loaded via PHP $PAGE->requires->css() }}
+
+<!-- ══════════════════════ MAIN ════════════════════════════════════════ -->
+<main class="app-main aicoursecreation-main">
+  <div class="container">
+    <div class="courseai-workspace" id="courseaiWorkspace">
+
+    <!-- Context step form -->
+    <div class="context-wrap" id="contextView">
+
+      <div class="context-head">
+        <h2>{{#str}}courseai_context_title, local_coursegen{{/str}}</h2>
+        <p>{{#str}}courseai_context_subtitle, local_coursegen{{/str}}</p>
+      </div>
+
+      <!-- Card -->
+      <div class="card" id="mainCard">
+
+        <!-- Prompt textarea -->
+        <textarea
+          id="promptInput"
+          class="prompt-textarea"
+          placeholder="{{#str}}courseai_prompt_placeholder, local_coursegen{{/str}}"
+          rows="5"
+          aria-label="{{#str}}courseai_prompt_arialabel, local_coursegen{{/str}}"
+        ></textarea>
+
+        <!-- Selected chips (syllabus + guideline) -->
+        <div class="chips-row" id="chipsRow" style="display:none">
+
+          <!-- Syllabus chip (shown after file attach) -->
+          <span class="chip chip-syllabus hidden" id="chipSyllabus">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            <span class="chip-name" id="chipSyllabusName"></span>
+            <button class="chip-btn" onclick="clearSyllabus()" aria-label="{{#str}}courseai_chip_remove_syllabus, local_coursegen{{/str}}">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </span>
+
+          <!-- Guideline chip (shown after selecting a guideline) -->
+          <span class="chip chip-guideline hidden" id="chipGuideline">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <polyline points="9 12 11 14 15 10"/>
+            </svg>
+            <span class="chip-name" id="chipGuidelineName"></span>
+            <button class="chip-btn" id="chipGuidelineEyeBtn" aria-label="{{#str}}courseai_chip_view_guideline, local_coursegen{{/str}}">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+            <button class="chip-btn" onclick="clearGuideline()" aria-label="{{#str}}courseai_chip_remove_guideline, local_coursegen{{/str}}">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </span>
+
+        </div>
+
+        <!-- Bottom toolbar -->
+        <div class="card-toolbar">
+          <div class="tbar-left">
+
+            <!-- Sílabo button -->
+            <button class="tbar-btn" id="btnSyllabus" title="{{#str}}courseai_btn_syllabus_title, local_coursegen{{/str}}" type="button">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+              </svg>
+              {{#str}}courseai_btn_syllabus, local_coursegen{{/str}}
+            </button>
+            <!-- Hidden file manager container for Moodle file picker -->
+            <div class="hidden" id="syllabusFilemanager"></div>
+
+            <div class="tbar-sep" role="separator"></div>
+
+            <!-- Directrices button + popover -->
+            <div class="popover-wrap">
+              <button class="tbar-btn" id="btnDirectrices" title="{{#str}}courseai_btn_guidelines_title, local_coursegen{{/str}}" type="button">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  <polyline points="9 12 11 14 15 10"/>
+                </svg>
+                {{#str}}courseai_btn_guidelines, local_coursegen{{/str}}
+                <span class="guideline-badge hidden" id="guidelineBadge"></span>
+              </button>
+
+              <!-- Popover panel -->
+              <div class="popover-panel" id="guidelinesPopover" role="dialog" aria-label="{{#str}}courseai_guidelines_dialog_label, local_coursegen{{/str}}">
+                <div class="pop-search-row">
+                  <div class="pop-search-inner">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="11" cy="11" r="8"/>
+                      <path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <input type="text" id="guidelineSearch" placeholder="{{#str}}courseai_guidelines_search_placeholder, local_coursegen{{/str}}" autocomplete="off" />
+                  </div>
+                  <p class="pop-note">{{#str}}courseai_guidelines_note_one, local_coursegen{{/str}}</p>
+                </div>
+                <ul class="pop-list" id="guidelineList" role="listbox" aria-label="{{#str}}courseai_guidelines_list_label, local_coursegen{{/str}}"></ul>
+              </div>
+            </div>
+
+            <div class="tbar-sep" role="separator"></div>
+
+            <!-- Language selector -->
+            <select class="tbar-select" id="langSelect" title="{{#str}}courseai_lang_title, local_coursegen{{/str}}" aria-label="{{#str}}courseai_lang_arialabel, local_coursegen{{/str}}">
+              <option value="es">🌐 ES</option>
+              <option value="en">🌐 EN</option>
+            </select>
+
+            <div class="tbar-sep" role="separator"></div>
+
+            <!-- With images toggle switch -->
+            <label class="tbar-toggle-wrap" title="{{#str}}courseai_images_title, local_coursegen{{/str}}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+              <span class="tbar-toggle-label">{{#str}}courseai_images_label, local_coursegen{{/str}}</span>
+              <div class="toggle-track" id="imgToggleTrack">
+                <div class="toggle-thumb"></div>
+              </div>
+              <input type="checkbox" id="btnWithImages" class="hidden" aria-label="{{#str}}courseai_images_arialabel, local_coursegen{{/str}}" />
+            </label>
+
+          </div>
+
+          <div class="tbar-right">
+            <span class="kbd-hint">{{#str}}courseai_hint_enter, local_coursegen{{/str}}</span>
+            <button class="btn-generate" id="btnGenerate" type="button">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"/>
+              </svg>
+              {{#str}}courseai_btn_generate, local_coursegen{{/str}}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 19V5M5 12l7-7 7 7"/>
+              </svg>
+            </button>
+          </div>
+        </div>
+
+      </div><!-- .card -->
+
+      <p class="form-tip">{{#str}}courseai_form_tip, local_coursegen{{/str}}</p>
+
+    </div><!-- .context-wrap -->
+
+    <!-- Step 2: Planning view -->
+    <div class="planning-wrap" id="planningView" style="display:none">
+      <div class="pc-card" id="planningProgressCard">
+        <div class="pc-card-main">
+          <div class="pc-icon-wrap" id="pcIconWrap">
+            <svg id="planningSpinner" class="pc-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+              <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+            </svg>
+            <svg id="planningCheckIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </div>
+
+          <div class="pc-info">
+            <span class="pc-step" id="pcStep">{{#str}}courseai_state_planning, local_coursegen{{/str}}</span>
+            <h3 class="pc-title" id="pcTitle">{{#str}}courseai_state_structuring, local_coursegen{{/str}}</h3>
+            <p class="pc-subtitle" id="pcSubtitle"></p>
+
+            <div class="pc-progress-wrap">
+              <div class="pc-progress-row">
+                <span class="pc-progress-label">{{#str}}courseai_progress_label, local_coursegen{{/str}}</span>
+                <span class="pc-progress-pct" id="pcPct">0%</span>
+              </div>
+              <div class="pc-bar-track">
+                <div class="pc-bar-fill" id="pcBarFill" style="width:0%"></div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="pc-toggle-row" id="pcToggleRow" style="display:none">
+          <button class="pc-toggle-btn" id="pcToggleBtn" type="button">
+            <svg class="pc-chevron" id="pcChevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <polyline points="9 18 15 12 9 6"/>
+            </svg>
+            {{#str}}courseai_toggle_details, local_coursegen{{/str}}
+          </button>
+        </div>
+
+        <div class="pc-details-panel" id="pcDetailsPanel" style="display:none">
+          <div id="planSectionsView" style="display:none">
+            <div id="planSectionsList"></div>
+          </div>
+
+          <div id="planDetailedView" style="display:none">
+            <div id="planDetailedList"></div>
+          </div>
+
+          <div id="planMarkdownView" style="display:none">
+            <div class="plan-markdown" id="planMarkdown"></div>
+            <span class="typing-cursor hidden" id="typingCursor"></span>
+          </div>
+        </div>
+      </div>
+
+      <div class="pc-completion-card" id="completionView" style="display:none">
+        <span class="pc-completion-icon" aria-hidden="true">
+          <span class="pc-completion-emoji">🎉</span>
+        </span>
+        <h3 class="pc-completion-title">{{#str}}courseai_completion_title, local_coursegen{{/str}}</h3>
+        <p class="pc-completion-summary" id="completionSummary">{{#str}}courseai_completion_summary_default, local_coursegen{{/str}}</p>
+        <div class="pc-completion-actions">
+          <button class="btn-completion-primary" id="btnOpenMoodleCourse" type="button">
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"></path>
+            </svg>
+            {{#str}}courseai_completion_btn_open_course, local_coursegen{{/str}}
+          </button>
+          <button class="btn-completion-secondary" id="btnCreateAnotherCourse" type="button">{{#str}}courseai_completion_btn_create_another, local_coursegen{{/str}}</button>
+        </div>
+      </div>
+
+      <div class="prv-card" id="planReviewCard" style="display:none">
+        <div class="prv-header prv-header--stream" id="prvHeader">
+          <span class="prv-icon-wrap" id="prvIconWrap">
+            <svg id="prvSpinnerIcon" class="prv-spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+              <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+            </svg>
+            <svg id="prvCheckIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </span>
+          <div class="prv-header-text">
+            <h2 class="prv-header-title" id="prvHeaderTitle">{{#str}}courseai_state_structuring, local_coursegen{{/str}}</h2>
+            <p class="prv-header-sub" id="prvHeaderSub">{{#str}}courseai_state_starting, local_coursegen{{/str}}</p>
+            <p class="prv-header-sub" id="prvLiveNote" style="display:none">{{#str}}courseai_live_note_detailed, local_coursegen{{/str}}</p>
+          </div>
+        </div>
+        <div class="prv-sections" id="prvSections"></div>
+      </div>
+
+      <div class="plan-actions" id="planActions" style="display:none">
+        <p class="plan-action-hint" id="planActionsHint">{{#str}}courseai_plan_actions_hint, local_coursegen{{/str}}</p>
+        <div class="plan-action-btns">
+          <button class="btn-plan-approve" id="btnApprove" type="button">{{#str}}courseai_btn_approve, local_coursegen{{/str}}</button>
+        </div>
+      </div>
+
+      <!-- Compact chat for regeneration -->
+      <div class="compact-chat-card" id="compactChatCard" style="display:none">
+        <textarea
+          id="compactPromptInput"
+          class="compact-prompt-textarea"
+          placeholder="{{#str}}courseai_compact_prompt_placeholder, local_coursegen{{/str}}"
+          rows="3"
+          aria-label="{{#str}}courseai_prompt_arialabel, local_coursegen{{/str}}"
+        ></textarea>
+
+        <!-- Chips row (same as main card) -->
+        <div class="chips-row" id="compactChipsRow" style="display:none">
+          <span class="chip chip-syllabus hidden" id="compactChipSyllabus">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            <span class="chip-name" id="compactChipSyllabusName"></span>
+            <button class="chip-btn" onclick="clearSyllabus()" aria-label="{{#str}}courseai_chip_remove_syllabus, local_coursegen{{/str}}">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </span>
+
+          <span class="chip chip-guideline hidden" id="compactChipGuideline">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+              <polyline points="9 12 11 14 15 10"/>
+            </svg>
+            <span class="chip-name" id="compactChipGuidelineName"></span>
+            <button class="chip-btn" id="compactChipGuidelineEyeBtn" aria-label="{{#str}}courseai_chip_view_guideline, local_coursegen{{/str}}">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>
+              </svg>
+            </button>
+            <button class="chip-btn" onclick="clearGuideline()" aria-label="{{#str}}courseai_chip_remove_guideline, local_coursegen{{/str}}">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </span>
+        </div>
+
+        <!-- Compact toolbar with same controls -->
+        <div class="compact-chat-toolbar">
+          <div class="compact-toolbar-left" id="compactToolbarLeft">
+            <!-- Note: Sílabo and Directrices use the same buttons/popovers from main card -->
+            <button class="tbar-btn" id="btnCompactSyllabus" title="{{#str}}courseai_btn_syllabus_title, local_coursegen{{/str}}" type="button">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+              </svg>
+              {{#str}}courseai_btn_syllabus, local_coursegen{{/str}}
+            </button>
+
+            <div class="tbar-sep" role="separator"></div>
+
+            <button class="tbar-btn" id="btnCompactDirectrices" title="{{#str}}courseai_btn_guidelines_title, local_coursegen{{/str}}" type="button">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <polyline points="9 12 11 14 15 10"/>
+              </svg>
+              {{#str}}courseai_btn_guidelines, local_coursegen{{/str}}
+              <span class="guideline-badge hidden" id="compactGuidelineBadge"></span>
+            </button>
+
+            <div class="tbar-sep" role="separator"></div>
+
+            <select class="tbar-select" id="compactLangSelect" title="{{#str}}courseai_lang_title, local_coursegen{{/str}}" aria-label="{{#str}}courseai_lang_arialabel, local_coursegen{{/str}}">
+              <option value="es">🌐 ES</option>
+              <option value="en">🌐 EN</option>
+            </select>
+
+            <div class="tbar-sep" role="separator"></div>
+
+            <label class="tbar-toggle-wrap" title="{{#str}}courseai_images_title, local_coursegen{{/str}}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0">
+                <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+                <polyline points="21 15 16 10 5 21"/>
+              </svg>
+              <span class="tbar-toggle-label">{{#str}}courseai_images_label, local_coursegen{{/str}}</span>
+              <div class="toggle-track" id="compactImgToggleTrack">
+                <div class="toggle-thumb"></div>
+              </div>
+              <input type="checkbox" id="btnCompactWithImages" class="hidden" aria-label="{{#str}}courseai_images_arialabel, local_coursegen{{/str}}" />
+            </label>
+          </div>
+
+          <div class="compact-toolbar-right">
+            <button class="btn-compact-regenerate" id="btnCompactRegenerate" type="button">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"/>
+              </svg>
+              {{#str}}courseai_btn_regenerate, local_coursegen{{/str}}
+            </button>
+          </div>
+        </div>
+      </div>
+
+    </div>
+
+    </div><!-- .courseai-workspace -->
+
+    <!-- Cancel button (outside planning-wrap, returns to phase 1) -->
+    <div class="courseai-cancel-row" id="courseaiCancelRow" style="display:none">
+      <button class="courseai-cancel-btn" id="btnCourseaiCancel" type="button">{{#str}}courseai_btn_cancel, local_coursegen{{/str}}</button>
+    </div>
+
+  </div><!-- .container -->
+</main>
+
+<!-- Guideline preview modal (Bootstrap 4) -->
+<div class="modal fade" id="guidelinePreviewModal" tabindex="-1" role="dialog" aria-labelledby="previewModalLabel" aria-hidden="true">
+  <div class="modal-dialog modal-dialog-centered preview-dialog" role="document">
+    <div class="modal-content preview-modal-content">
+
+      <!-- Circle-X close button (top right) -->
+      <button type="button" class="preview-close" data-dismiss="modal" aria-label="{{#str}}courseai_modal_close, local_coursegen{{/str}}">
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
+          <circle cx="12" cy="12" r="10"/>
+          <line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
+        </svg>
+      </button>
+
+      <!-- Header -->
+      <div class="preview-header">
+        <div class="preview-title">
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);flex-shrink:0" aria-hidden="true">
+            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/>
+          </svg>
+          <span id="previewModalLabel"></span>
+        </div>
+        <div class="preview-subtitle">
+          <span class="preview-cat-badge" id="previewModalCategory"></span>
+          <span class="preview-subtitle-text">{{#str}}courseai_modal_fullcontext, local_coursegen{{/str}}</span>
+        </div>
+      </div>
+
+      <!-- Description box -->
+      <div class="preview-body">
+        <div class="preview-desc-box">
+          <p id="previewModalBody"></p>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+{{! Data passed to JavaScript }}
+<div id="courseai-data" style="display:none" 
+     data-guidelines="{{{guidelines}}}" 
+     data-languages="{{{languages}}}" 
+     data-defaultlang="{{defaultlang}}">
+</div>
