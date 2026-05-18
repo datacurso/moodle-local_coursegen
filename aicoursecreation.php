@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * TODO describe file aicoursecreation
+ * AI Course Creation Wizard - Step 1: Context
  *
  * @package    local_coursegen
  * @copyright  2025 Wilber Narvaez <https://datacurso.com>
@@ -23,61 +23,79 @@
  */
 
 require('../../config.php');
+require_once($CFG->libdir . '/filelib.php');
 
 require_login();
-$sessionid = optional_param('sessionid', 0, PARAM_INT);
 
-$url = new moodle_url('/local/coursegen/aicoursecreation.php', ['sessionid' => $sessionid]);
+// Check permissions.
+$systemcontext = context_system::instance();
+require_capability('moodle/course:create', $systemcontext);
+require_capability('local/coursegen:createcoursewithai', $systemcontext);
+
+// Set up the page.
+$url = new moodle_url('/local/coursegen/aicoursecreation.php');
 $PAGE->set_url($url);
-$PAGE->set_context(context_system::instance());
+$PAGE->set_context($systemcontext);
+$PAGE->set_pagelayout('popup');
+$PAGE->set_title(get_string('createwithai', 'local_coursegen'));
 
-$PAGE->set_heading($SITE->fullname);
+// Load wizard CSS.
+$PAGE->requires->css('/local/coursegen/styles/aicoursecreation.css');
+
+// Load system instructions (directrices institucionales).
+$systeminstructions = [];
+$records = $DB->get_records('local_coursegen_system_instruction', ['deleted' => 0], 'name ASC');
+foreach ($records as $record) {
+    $systeminstructions[] = [
+        'id' => 'si_' . $record->id,
+        'name' => $record->name,
+        'category' => 'General', // The table doesn't have a category field, using default
+        'description' => $record->content ?? '',
+    ];
+}
+
+// Get available languages (only those supported by the plugin).
+$supportedlangs = ['es', 'en', 'de', 'ru', 'pt', 'fr', 'id'];
+$alllanguages = get_string_manager()->get_list_of_languages(null, 'iso6391');
+
+$languageoptions = [];
+foreach ($supportedlangs as $code) {
+    if (isset($alllanguages[$code])) {
+        $languageoptions[] = [
+            'code' => $code,
+            'name' => $alllanguages[$code] . ' (' . strtoupper($code) . ')',
+        ];
+    }
+}
+
+// Get logo URL.
+$logourl = new moodle_url('/local/coursegen/pix/logo.png');
+
+// Prepare template context.
+$templatecontext = [
+    'guidelines' => json_encode($systeminstructions),
+    'languages' => json_encode($languageoptions),
+    'defaultlang' => current_language(),
+];
+
 echo $OUTPUT->header();
 
-$record = $DB->get_record(
-    'local_coursegen_course_sessions',
-    ['id' => $sessionid, 'userid' => $USER->id],
-    '*',
-    MUST_EXIST
-);
+// Navbar (floating top bar like reportbuilder/edit.php).
+$navbarcontext = [
+    'title' => get_string('createwithai', 'local_coursegen'),
+    'logourl' => $logourl->out(),
+    'closeurl' => (new moodle_url('/my/courses.php'))->out(false),
+];
+echo $OUTPUT->render_from_template('local_coursegen/editor_navbar', $navbarcontext);
 
-$contexttype = null;
-if (!empty($record->coursedata)) {
-    $coursedata = json_decode($record->coursedata);
-    if (!empty($coursedata) && !empty($coursedata->local_coursegen_context_type)) {
-        $contexttype = (string) $coursedata->local_coursegen_context_type;
-    }
-}
+echo $OUTPUT->render_from_template('local_coursegen/wizard_page', $templatecontext);
 
-$pdffilename = null;
-if ($contexttype === 'syllabus') {
-    $fs = get_file_storage();
-    $syscontext = context_system::instance();
-    $files = $fs->get_area_files($syscontext->id, 'local_coursegen', 'syllabus', $record->id, 'itemid', false);
-    if (!empty($files)) {
-        $file = reset($files);
-        if ($file) {
-            $pdffilename = $file->get_filename();
-        }
-    }
-}
-
-$baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
-$baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
-
-$client = new \aiprovider_datacurso\httpclient\ai_course_api(null, $baseurl, $baseurleu);
-$streamingurl = $client->get_streaming_url_for_session($record->session_id);
-
-echo $OUTPUT->render_from_template('local_coursegen/aicoursecreation_page', [
-    'contexttype' => $contexttype,
-    'pdffilename' => $pdffilename,
-    'recordid' => (int) $record->id,
-]);
-
-$PAGE->requires->js_call_amd('local_coursegen/aicoursecreation_page', 'init', [
+// Initialize JavaScript module.
+$PAGE->requires->js_call_amd('local_coursegen/wizard', 'init', [
     [
-        'recordid' => (int) $record->id,
-        'streamingurl' => $streamingurl,
+        'guidelines' => $systeminstructions,
+        'languages' => $languageoptions,
+        'defaultlang' => current_language(),
     ],
 ]);
 
