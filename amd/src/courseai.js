@@ -30,6 +30,7 @@ import {createPlanningUi} from 'local_coursegen/local/courseai/ui-planning';
 import {createDetailedUi} from 'local_coursegen/local/courseai/ui-detailed';
 import {createStreamManager} from 'local_coursegen/local/courseai/stream';
 import {createCourseaiActions} from 'local_coursegen/local/courseai/actions';
+import {initSidebar} from 'local_coursegen/local/courseai/sidebar';
 
 /**
  * Initialize the courseai page.
@@ -142,6 +143,9 @@ export const init = async(params) => {
         contextUi.renderGuidelineList();
         stepsUi.updateFlowNav();
         contextUi.updateGenerateButton();
+
+        // Initialize sidebar.
+        initSidebar(state);
     } catch (error) {
         Notification.exception(error);
     }

@@ -84,4 +84,33 @@ class course_session_service {
 
         return $session;
     }
+
+    /**
+     * Get in-progress course sessions for a user (status != CREATED).
+     *
+     * @param int $userid User ID.
+     * @param int $limit Max records (0 = no limit).
+     * @return array List of course_session objects.
+     */
+    public static function get_user_inprogress_sessions(int $userid, int $limit = 0): array {
+        global $DB;
+
+        $records = $DB->get_records_select(
+            'local_coursegen_course_sessions',
+            'userid = ? AND status != ?',
+            [$userid, course_session::STATUS_CREATED],
+            'timecreated DESC'
+        );
+
+        $sessions = [];
+        $count = 0;
+        foreach ($records as $record) {
+            if ($limit > 0 && $count >= $limit) {
+                break;
+            }
+            $sessions[] = new course_session(0, $record);
+            $count++;
+        }
+        return $sessions;
+    }
 }

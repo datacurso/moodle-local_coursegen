@@ -14,8 +14,19 @@
   All `wizard_*` language string keys renamed to `courseai_*` across all 7 supported locales.
 - **Removed hard-stop for unconfigured API URLs**  
   Removed validation that blocked Generate when `datacurso_service_url` settings were empty, allowing the API client to use its default fallback.
+- **New light sidebar for course navigation**  
+  Added a light/minimalist sidebar overlay panel that includes:
+  - Logo-branded trigger in the navbar (hover reveals menu icon)
+  - "New course" shortcut button
+  - "Recent" section showing the last 5 in-progress sessions
+  - "View all courses" button that switches to a paginated sessions grid (10/page) inside the wizard
+  - Backdrop overlay when open, click to close
+  - Sidebar slides over the entire page including the navbar (z-index 1040)
+  - Separate `sidebar.css` for maintainability
+  - New `get_user_inprogress_sessions()` method on `course_session_service`
+  - Sidebar closes automatically on any navigation click
 - **Version bump**  
-  Internal version bumped to **2026051402** and release bumped to **1.4.0**.
+  Internal version bumped to **2026051406** and release bumped to **1.4.0**.
 
 ## 1.3.2
 
