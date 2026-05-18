@@ -106,16 +106,6 @@ class wizard_init extends external_api {
             $baseurl = get_config('local_coursegen', 'datacurso_service_url');
             $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu');
 
-            if (empty($baseurl) && empty($baseurleu)) {
-                return [
-                    'success' => false,
-                    'sessionid' => 0,
-                    'threadid' => '',
-                    'streamingurl' => '',
-                    'message' => get_string('error_no_api_url', 'local_coursegen'),
-                ];
-            }
-
             // Create API service instance.
             $apiservice = new ai_course_api_service();
 

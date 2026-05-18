@@ -24,6 +24,7 @@ export const createStepsUi = (deps) => {
 
     const {
         contextView,
+        wizardWorkspace,
         planningView,
         planningProgressCard,
         btnGenerate,
@@ -221,7 +222,6 @@ export const createStepsUi = (deps) => {
         }
         setProgress(0);
 
-        state.latestInitialSections = [];
         state.detailedTotal = 0;
         state.detailedCurrent = 0;
         state.phase4TotalActivities = 0;
@@ -252,12 +252,14 @@ export const createStepsUi = (deps) => {
         if (planningView) {
             planningView.style.display = 'none';
         }
+        if (wizardWorkspace) {
+            wizardWorkspace.classList.remove('is-planning');
+        }
         if (contextView) {
             contextView.style.display = '';
         }
         setStepState('context', 'active');
         setStepState('planning', 'pending');
-        setStepState('detailed', 'pending');
         setStepState('generating', 'pending');
         // Reset compact chat before other state (it depends on some state)
         setCompactChatState(deps, 'reset');
@@ -281,9 +283,12 @@ export const createStepsUi = (deps) => {
         setStepState('planning', 'active');
         state.currentStage = 'planning';
 
-        // Hide context view completely
+        // Keep context view visible on the left; progress/streaming stays on the right.
         if (contextView) {
-            contextView.style.display = 'none';
+            contextView.style.display = '';
+        }
+        if (wizardWorkspace) {
+            wizardWorkspace.classList.add('is-planning');
         }
 
         if (planningView) {

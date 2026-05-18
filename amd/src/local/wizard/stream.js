@@ -35,7 +35,6 @@ export const createStreamManager = (deps) => {
         prvHeaderSub,
         prvLiveNote,
         pcSubtitle,
-        planSectionsList,
         typingCursor,
         planningSpinner,
         pcStep,
@@ -347,35 +346,9 @@ export const createStreamManager = (deps) => {
                     }
                     break;
                 }
-                case 'review_needed_initial':
-                    stepsUi.setStepState('planning', 'active');
-                    state.currentStage = 'planning';
-                    stepsUi.updateFlowNav();
-                    stepsUi.switchPlanMode('sections');
-                    planningUi.buildReviewCard(data.sections || [], detailedUi.normalizeInitialSections);
-                    planningUi.renderInitialReviewFromState();
-                    if (
-                        Array.isArray(data.sections) &&
-                        data.sections.length > 0 &&
-                        planSectionsList &&
-                        !planSectionsList.children.length
-                    ) {
-                        const preservedTotals = {
-                            sections: state.totalSections,
-                            activities: state.totalActivities,
-                        };
-                        data.sections.forEach((section) => planningUi.addPlanSection(section));
-                        state.totalSections = preservedTotals.sections;
-                        state.totalActivities = preservedTotals.activities;
-                    }
-                    planningUi.showReviewActions('initial');
-                    // Re-enable compact chat now that review is ready
-                    setCompactChatState(deps, 'enabled');
-                    break;
                 case 'review_needed':
                     stepsUi.setStepState('planning', 'done');
-                    stepsUi.setStepState('detailed', 'active');
-                    state.currentStage = 'detailed';
+                    state.currentStage = 'planning';
                     stepsUi.updateFlowNav();
                     if (Array.isArray(data.current_plan) && data.current_plan.length > 0) {
                         detailedUi.initDetailedPlanView({sections: data.current_plan});
@@ -395,7 +368,7 @@ export const createStreamManager = (deps) => {
                     break;
                 case 'completed': {
                     setCompletionStatsFromGeneratedResult(data.result || []);
-                    stepsUi.setStepState('detailed', 'done');
+                    stepsUi.setStepState('planning', 'done');
                     stepsUi.setStepState('generating', 'active');
                     state.currentStage = 'generating';
                     stepsUi.updateFlowNav();

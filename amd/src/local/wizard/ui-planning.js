@@ -420,43 +420,6 @@ export const createPlanningUi = (deps) => {
         }
     };
 
-    const buildReviewCard = (sections, normalizeInitialSections) => {
-        state.latestInitialSections = normalizeInitialSections(sections || []);
-        if (state.latestInitialSections.length === 0) {
-            return;
-        }
-        if (prvSpinnerIcon) {
-            prvSpinnerIcon.style.display = 'none';
-        }
-        if (prvCheckIcon) {
-            prvCheckIcon.style.display = '';
-        }
-        if (prvHeader) {
-            prvHeader.classList.remove('prv-header--stream');
-            prvHeader.classList.add('prv-header--done');
-        }
-        if (prvHeaderTitle) {
-            prvHeaderTitle.textContent = texts.wizard_plan_review_title;
-        }
-
-        const sectionCount = state.latestInitialSections.length;
-        const activityCount = state.latestInitialSections.reduce((acc, section) => {
-            return acc + (section.activities || []).length;
-        }, 0);
-        state.totalSections = sectionCount;
-        state.totalActivities = activityCount;
-
-        if (prvHeaderSub) {
-            prvHeaderSub.textContent = formatTemplate(texts.wizard_plan_sections_counter, {
-                sections: sectionCount,
-                activities: activityCount,
-            });
-        }
-        if (planReviewCard) {
-            planReviewCard.style.display = '';
-        }
-    };
-
     const syncCompactChatState = () => {
         // Sync language
         const langSelect = document.getElementById('langSelect');
@@ -548,36 +511,7 @@ export const createPlanningUi = (deps) => {
             wizardCancelRow.style.display = 'flex';
         }
 
-        if (mode === 'initial') {
-            if (planningSpinner) {
-                planningSpinner.style.display = 'none';
-            }
-            if (planningCheckIcon) {
-                planningCheckIcon.style.display = '';
-            }
-            if (pcIconWrap) {
-                pcIconWrap.style.background = '#16a34a';
-                pcIconWrap.style.color = '#fff';
-            }
-            if (pcStep) {
-                pcStep.textContent = formatTemplate(texts.wizard_plan_counter, {
-                    sections: state.totalSections,
-                    activities: state.totalActivities,
-                });
-            }
-            if (pcTitle) {
-                pcTitle.textContent = texts.wizard_plan_review_title;
-            }
-            if (pcSubtitle) {
-                pcSubtitle.textContent = texts.wizard_plan_review_subtitle;
-            }
-            if (planActionsHint) {
-                planActionsHint.textContent = texts.wizard_plan_review_hint_initial;
-            }
-            if (planReviewCard) {
-                planReviewCard.style.display = '';
-            }
-        } else if (mode === 'detailed') {
+        if (mode === 'detailed') {
             if (planningSpinner) {
                 planningSpinner.style.display = 'none';
             }
@@ -637,48 +571,10 @@ export const createPlanningUi = (deps) => {
         }
     };
 
-    const renderInitialReviewFromState = () => {
-        const sections = Array.isArray(state.latestInitialSections) ? state.latestInitialSections : [];
-
-        state.planSectionsData = [];
-        state.totalSections = 0;
-        state.totalActivities = 0;
-
-        if (prvSections) {
-            prvSections.innerHTML = '';
-        }
-
-        sections.forEach((section, sectionIndex) => {
-            const activities = Array.isArray(section.activities) ? section.activities : [];
-            addSectionHeader({
-                section_index: section.section_index ?? sectionIndex,
-                name: section.name || texts.wizard_plan_default_unnamed,
-                description: section.description || '',
-                activity_count: activities.length,
-            });
-
-            activities.forEach((activity) => {
-                addActivityToSection({
-                    section_index: section.section_index ?? sectionIndex,
-                    activity_type: activity.activity_type || activity.type,
-                    title: activity.title || activity.name,
-                    description: activity.description || '',
-                });
-            });
-        });
-
-        if (prvLiveNote) {
-            prvLiveNote.style.display = 'none';
-            prvLiveNote.textContent = '';
-        }
-    };
-
     return {
         addPlanSection,
         addSectionHeader,
         addActivityToSection,
-        buildReviewCard,
-        renderInitialReviewFromState,
         showReviewActions,
         syncCompactChatState,
     };

@@ -37,7 +37,6 @@ export const createInitialState = ({defaultLang, guidelines, languages}) => {
         planDetailsOpen: false,
         totalSections: 0,
         totalActivities: 0,
-        latestInitialSections: [],
         detailedTotal: 0,
         detailedCurrent: 0,
         planSectionsData: [],

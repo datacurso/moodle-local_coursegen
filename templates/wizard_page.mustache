@@ -32,36 +32,7 @@
 <!-- ══════════════════════ MAIN ════════════════════════════════════════ -->
 <main class="app-main aicoursecreation-main">
   <div class="container">
-
-    <!-- Step header -->
-    <div class="step-header">
-      <ol class="steps-list">
-
-        <li class="step-item active" data-step="context">
-          <div class="step-circle">1</div>
-          <span class="step-label">{{#str}}wizard_step_context, local_coursegen{{/str}}</span>
-        </li>
-        <div class="step-connector" role="presentation"></div>
-
-        <li class="step-item pending" data-step="planning">
-          <div class="step-circle">2</div>
-          <span class="step-label">{{#str}}wizard_step_planning, local_coursegen{{/str}}</span>
-        </li>
-        <div class="step-connector" role="presentation"></div>
-
-        <li class="step-item pending" data-step="detailed">
-          <div class="step-circle">3</div>
-          <span class="step-label">{{#str}}wizard_step_detailed, local_coursegen{{/str}}</span>
-        </li>
-        <div class="step-connector" role="presentation"></div>
-
-        <li class="step-item pending" data-step="generating">
-          <div class="step-circle">4</div>
-          <span class="step-label">{{#str}}wizard_step_generating, local_coursegen{{/str}}</span>
-        </li>
-
-      </ol>
-    </div>
+    <div class="wizard-workspace" id="wizardWorkspace">
 
     <!-- Context step form -->
     <div class="context-wrap" id="contextView">
@@ -411,6 +382,8 @@
       </div>
 
     </div>
+
+    </div><!-- .wizard-workspace -->
 
     <!-- Cancel button (outside planning-wrap, returns to phase 1) -->
     <div class="wizard-cancel-row" id="wizardCancelRow" style="display:none">
