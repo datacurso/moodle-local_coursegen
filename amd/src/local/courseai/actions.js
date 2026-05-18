@@ -375,12 +375,32 @@ export const createCourseaiActions = (deps) => {
                 ? compactPromptInput.value.trim()
                 : '';
 
-            // Show adjustment as a chat message and clear the textarea
+            // Show adjustment as a chat message paired with a response slot
             if (action === 'adjust' && instruction && adjustmentHistory) {
+                const round = (state.generationRound || 0) + 1;
+                const roundContainer = document.createElement('div');
+                roundContainer.className = 'courseai-round';
+                roundContainer.setAttribute('data-round', round);
+
                 const msgEl = document.createElement('div');
-                msgEl.className = 'courseai-adjustment';
-                msgEl.textContent = instruction;
-                adjustmentHistory.appendChild(msgEl);
+                msgEl.className = 'courseai-chat-history';
+
+                const messageBubble = document.createElement('div');
+                messageBubble.className = 'courseai-chat-message courseai-chat-message--user';
+
+                const messageText = document.createElement('p');
+                messageText.textContent = instruction;
+
+                messageBubble.appendChild(messageText);
+                msgEl.appendChild(messageBubble);
+
+                const responseSlot = document.createElement('div');
+                responseSlot.className = 'courseai-round-response';
+                responseSlot.setAttribute('data-round', round);
+
+                roundContainer.appendChild(msgEl);
+                roundContainer.appendChild(responseSlot);
+                adjustmentHistory.appendChild(roundContainer);
                 adjustmentHistory.classList.remove('hidden');
                 if (compactPromptInput) {
                     compactPromptInput.value = '';
@@ -436,7 +456,8 @@ export const createCourseaiActions = (deps) => {
             }
 
             window.console.log('[PHASE4-DEBUG] BEFORE-STREAM - phase4TotalActivities:', state.phase4TotalActivities);
-            streamManager.openSSEStream(state.streamingurl);
+            const streamMode = action === 'accept' ? 'generating' : 'planning';
+            streamManager.openSSEStream(state.streamingurl, 0, streamMode);
             window.console.log('[PHASE4-DEBUG] AFTER-STREAM - phase4TotalActivities:', state.phase4TotalActivities);
         } catch (error) {
             await Notification.exception(error);
@@ -468,6 +489,7 @@ export const createCourseaiActions = (deps) => {
                 if (pcDetailsPanel) {
                     pcDetailsPanel.style.display = state.planDetailsOpen ? 'block' : 'none';
                 }
+                pcToggleBtn.setAttribute('aria-expanded', state.planDetailsOpen ? 'true' : 'false');
                 if (pcChevron) {
                     pcChevron.style.transform = state.planDetailsOpen ? 'rotate(90deg)' : 'rotate(0deg)';
                 }

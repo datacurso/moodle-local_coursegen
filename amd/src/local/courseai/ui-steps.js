@@ -123,7 +123,8 @@ export const createStepsUi = (deps) => {
         }
     };
 
-    const resetPlanningState = () => {
+    const resetPlanningState = (options = {}) => {
+        const showLoading = options.showLoading !== false;
         state.planBuffer = '';
         state.planningMode = null;
         state.planDetailsOpen = false;
@@ -134,10 +135,10 @@ export const createStepsUi = (deps) => {
         const loadingEl = document.getElementById('planningLoading');
         const streamContentEl = document.getElementById('planningStreamContent');
         if (loadingEl) {
-            loadingEl.style.display = '';
+            loadingEl.style.display = showLoading ? '' : 'none';
         }
         if (streamContentEl) {
-            streamContentEl.style.display = 'none';
+            streamContentEl.style.display = showLoading ? 'none' : '';
         }
 
         if (planMarkdown) {
@@ -171,13 +172,14 @@ export const createStepsUi = (deps) => {
             completionSummary.textContent = texts.courseai_completion_summary_default;
         }
         if (planningProgressCard) {
-            planningProgressCard.style.display = '';
+            planningProgressCard.style.display = showLoading ? 'none' : '';
         }
         if (planActions) {
             planActions.style.display = 'none';
         }
         if (pcDetailsPanel) {
             pcDetailsPanel.style.display = 'none';
+            pcDetailsPanel.innerHTML = '';
         }
         if (pcToggleRow) {
             pcToggleRow.style.display = 'none';
@@ -244,6 +246,7 @@ export const createStepsUi = (deps) => {
         state.contentGenerationStarted = 0;
         state.contentGenerationCurrent = 0;
         state.planSectionsData = [];
+        state.generationTracker = null;
         state.detailedActivityEls = {};
         state.detailedSectionMeta = {};
         state.selectedDetailedImages = {};
