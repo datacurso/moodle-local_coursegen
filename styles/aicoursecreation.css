@@ -1687,12 +1687,16 @@ svg { display: block; flex-shrink: 0; }
 
 .ps-activity-info {
   display: flex;
-  flex-direction: column;
-  gap: 2px;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  flex: 1;
   min-width: 0;
 }
 
 .ps-activity-name {
+  flex: 1;
+  min-width: 0;
   font-size: 13px;
   font-weight: 600;
   color: var(--fg);
@@ -1703,7 +1707,10 @@ svg { display: block; flex-shrink: 0; }
   display: inline-flex;
   align-items: center;
   width: fit-content;
-  margin-top: 2px;
+  margin-top: 0;
+  margin-left: 8px;
+  flex-shrink: 0;
+  white-space: nowrap;
   padding: 1px 7px;
   border-radius: 999px;
   font-size: 11px;
@@ -2464,7 +2471,7 @@ svg { display: block; flex-shrink: 0; }
   border-radius: 10px;
 }
 
-/* Control-level disabled state (preferred) - disables specific controls, NOT the pause button */
+/* Control-level disabled state for compact chat during active streams */
 .compact-controls--disabled {
   opacity: 0.6;
   pointer-events: none;
@@ -2472,25 +2479,12 @@ svg { display: block; flex-shrink: 0; }
   filter: grayscale(0.3);
 }
 
-/* Ensure pause/regenerate button stays interactive even when controls are disabled */
-.compact-controls--disabled .btn-compact-regenerate,
-.compact-controls--disabled .btn-compact-regenerate * {
-  pointer-events: auto;
-  opacity: 1;
-  filter: none;
-}
-
 /* Legacy container-level disabled state - keep for backward compatibility but don't use for new code */
 .compact-chat-card--disabled {
   opacity: 0.6;
+  pointer-events: none;
   user-select: none;
   filter: grayscale(0.3);
-}
-
-.compact-chat-card--disabled .btn-compact-regenerate {
-  pointer-events: auto;
-  opacity: 1;
-  filter: none;
 }
 
 .compact-prompt-textarea {
