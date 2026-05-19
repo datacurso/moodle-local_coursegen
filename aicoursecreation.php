@@ -90,8 +90,8 @@ $buildsessiondata = function($session, $maxtitle = 50) {
     ];
 };
 
-// Get recent 5 sessions for sidebar.
-$recentrecords = course_session_service::get_user_inprogress_sessions($USER->id, 5);
+// Get recent 5 sessions for sidebar (including already created ones).
+$recentrecords = course_session_service::get_user_inprogress_sessions($USER->id, 5, true);
 $recent5 = [];
 foreach ($recentrecords as $session) {
     $recent5[] = $buildsessiondata($session, 50);

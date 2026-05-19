@@ -588,6 +588,7 @@ export const createCourseaiActions = (deps) => {
         createCourseFromSession,
         handleGenerate,
         sendFeedbackAction,
+        resetForAnotherCourse,
         bindEvents,
     };
 };
