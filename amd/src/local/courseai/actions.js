@@ -347,7 +347,7 @@ export const createCourseaiActions = (deps) => {
         }
         // Disable controls and Regenerar button during stream
         setCompactChatState(deps, 'disabled');
-        // For adjust: switch to "Pausar" and re-enable the button so user can cancel the stream
+        /* PAUSAR — to be implemented later
         if (action === 'adjust' && btnCompactRegenerate) {
             state.isStreaming = true;
             const pauseIcon = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" ' +
@@ -360,6 +360,7 @@ export const createCourseaiActions = (deps) => {
             btnCompactRegenerate.setAttribute('title', texts.courseai_btn_pause || 'Pausar');
             btnCompactRegenerate.disabled = false;
         }
+        */
         if (planningSpinner) {
             planningSpinner.classList.remove('done');
         }
@@ -390,6 +391,7 @@ export const createCourseaiActions = (deps) => {
                 recordid: state.sessionid,
                 action,
                 instruction,
+                withimages: state.withImages,
             };
 
             // Include selected image IDs when approving the plan.

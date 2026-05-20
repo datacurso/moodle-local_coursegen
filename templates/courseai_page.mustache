@@ -265,13 +265,28 @@
 
               <div class="tbar-sep" role="separator"></div>
 
-              <button class="tbar-btn" id="btnCompactDirectrices" title="{{#str}}courseai_btn_guidelines_title, local_coursegen{{/str}}" type="button">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                  <polyline points="9 12 11 14 15 10"/>
-                </svg>
-                <span class="guideline-badge hidden" id="compactGuidelineBadge"></span>
-              </button>
+              <div class="popover-wrap" style="position:relative">
+                <button class="tbar-btn" id="btnCompactDirectrices" title="{{#str}}courseai_btn_guidelines_title, local_coursegen{{/str}}" type="button">
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                    <polyline points="9 12 11 14 15 10"/>
+                  </svg>
+                  <span class="guideline-badge hidden" id="compactGuidelineBadge"></span>
+                </button>
+                <div class="popover-panel" id="guidelinesPopoverCompact" role="dialog" aria-label="{{#str}}courseai_guidelines_dialog_label, local_coursegen{{/str}}">
+                  <div class="pop-search-row">
+                    <div class="pop-search-inner">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.35-4.35"/>
+                      </svg>
+                      <input type="text" id="guidelineSearchCompact" placeholder="{{#str}}courseai_guidelines_search_placeholder, local_coursegen{{/str}}" autocomplete="off" />
+                    </div>
+                    <p class="pop-note">{{#str}}courseai_guidelines_note_one, local_coursegen{{/str}}</p>
+                  </div>
+                  <ul class="pop-list" id="guidelineListCompact" role="listbox" aria-label="{{#str}}courseai_guidelines_list_label, local_coursegen{{/str}}"></ul>
+                </div>
+              </div>
 
               <div class="tbar-sep" role="separator"></div>
 

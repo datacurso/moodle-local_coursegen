@@ -398,16 +398,88 @@ export const setupContextSection = (deps) => {
     }
 
     const btnCompactDirectrices = document.getElementById('btnCompactDirectrices');
-    if (btnCompactDirectrices && guidelinesPopover) {
+    const compactGuidelinesPopover = document.getElementById('guidelinesPopoverCompact');
+    const compactGuidelineSearch = document.getElementById('guidelineSearchCompact');
+    const compactGuidelineList = document.getElementById('guidelineListCompact');
+
+    const renderCompactGuidelineList = () => {
+        if (!compactGuidelineList) {
+            return;
+        }
+        const query = (state.guidelineSearchQuery || '').toLowerCase();
+        const filtered = state.guidelines.filter((g) =>
+            !query || (g.name || '').toLowerCase().includes(query)
+        );
+        compactGuidelineList.innerHTML = filtered.map((g) =>
+            `<li class="pop-item${g.id === state.selectedGuidelineId ? ' active' : ''}"
+                 role="option" data-id="${g.id}" tabindex="-1">
+               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                 <polyline points="9 12 11 14 15 10"/>
+               </svg>
+               <span class="pop-item-name">${g.name}</span>
+               ${g.id === state.selectedGuidelineId ? '<span class="pop-item-check">✓</span>' : ''}
+             </li>`
+        ).join('');
+    };
+
+    if (btnCompactDirectrices && compactGuidelinesPopover) {
         btnCompactDirectrices.addEventListener('click', (e) => {
             e.stopPropagation();
             state.guidelinePopoverOpen = !state.guidelinePopoverOpen;
-            guidelinesPopover.classList.toggle('open', state.guidelinePopoverOpen);
-            if (state.guidelinePopoverOpen && guidelineSearch) {
-                guidelineSearch.value = '';
+            compactGuidelinesPopover.classList.toggle('open', state.guidelinePopoverOpen);
+            if (state.guidelinePopoverOpen && compactGuidelineSearch) {
+                compactGuidelineSearch.value = '';
                 state.guidelineSearchQuery = '';
-                renderGuidelineList();
-                guidelineSearch.focus();
+                renderCompactGuidelineList();
+                compactGuidelineSearch.focus();
+            }
+        });
+    }
+
+    if (compactGuidelineSearch) {
+        compactGuidelineSearch.addEventListener('input', () => {
+            state.guidelineSearchQuery = compactGuidelineSearch.value;
+            renderCompactGuidelineList();
+        });
+    }
+
+    if (compactGuidelineList) {
+        compactGuidelineList.addEventListener('click', (e) => {
+            const item = e.target.closest('.pop-item');
+            if (!item) {
+                return;
+            }
+            const id = item.getAttribute('data-id');
+            // Close the compact popover
+            compactGuidelinesPopover.classList.remove('open');
+            state.guidelinePopoverOpen = false;
+            // Handle selection via the same shared state
+            const guideline = state.guidelines.find((g) => g.id === id);
+            if (guideline) {
+                state.selectedGuidelineId = id;
+                state.selectedGuidelineName = guideline.name;
+                refreshGuidelineChip();
+                refreshChipsRow();
+            }
+        });
+    }
+
+    // Close compact popover on outside click
+    if (document.body && compactGuidelinesPopover) {
+        document.body.addEventListener('click', (e) => {
+            if (!state.guidelinePopoverOpen) {
+                return;
+            }
+            if (
+                compactGuidelinesPopover &&
+                !compactGuidelinesPopover.contains(e.target) &&
+                e.target !== btnCompactDirectrices &&
+                !btnCompactDirectrices?.contains(e.target)
+            ) {
+                compactGuidelinesPopover.classList.remove('open');
+                state.guidelinePopoverOpen = false;
             }
         });
     }

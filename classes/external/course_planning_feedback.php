@@ -58,6 +58,7 @@ class course_planning_feedback extends external_api {
                 VALUE_DEFAULT,
                 []
             ),
+            'with_images' => new external_value(PARAM_BOOL, 'Whether image generation is enabled', VALUE_DEFAULT, null),
         ]);
     }
 
@@ -74,7 +75,8 @@ class course_planning_feedback extends external_api {
         int $recordid,
         string $approvalstatus,
         string $instruction = '',
-        array $selectedimageids = []
+        array $selectedimageids = [],
+        ?bool $withimages = null
     ): array {
         global $USER;
 
@@ -83,6 +85,7 @@ class course_planning_feedback extends external_api {
             'approval_status' => $approvalstatus,
             'instruction' => $instruction,
             'selected_image_ids' => $selectedimageids,
+            'with_images' => $withimages,
         ]);
 
         $recordid = $params['recordid'];
@@ -109,12 +112,15 @@ class course_planning_feedback extends external_api {
 
         $apiservice = new ai_course_api_service();
 
+        $withimages = $params['with_images'] ?? null;
+
         try {
             $result = $apiservice->send_planning_feedback(
                 $sessionid,
                 $approvalstatus,
                 $instruction,
-                $selectedimageids
+                $selectedimageids,
+                $withimages
             );
         } catch (\moodle_exception $e) {
             throw new \moodle_exception('error_sending_feedback', 'local_coursegen', '', $e->getMessage());
