@@ -43,6 +43,16 @@ svg { display: block; flex-shrink: 0; }
   padding: 0 24px;
 }
 
+.aicoursecreation-main .container {
+  max-width: 1680px;
+}
+
+/* Remove left container padding in planning mode for edge-to-edge chat */
+.aicoursecreation-main:has(.courseai-workspace.is-planning) .container {
+  padding-left: 0;
+  padding-right: 0;
+}
+
 /* ─── NAVBAR (fixed-top, like reportbuilder/edit.php) ────────────────── */
 .aicoursecreation-navbar {
   border-bottom: 1px solid var(--border);
@@ -108,6 +118,11 @@ svg { display: block; flex-shrink: 0; }
 .app-main { padding: 56px 0 80px; }
 .aicoursecreation-main { padding: 56px 0 80px; }
 
+.app-main,
+.aicoursecreation-main {
+  padding-top: 24px;
+}
+
 /* Workspace layout: chat/form left, progress right */
 .courseai-workspace {
   display: block;
@@ -115,20 +130,58 @@ svg { display: block; flex-shrink: 0; }
 
 .courseai-workspace.is-planning {
   display: grid;
-  grid-template-columns: minmax(320px, 420px) minmax(0, 1fr);
-  gap: 24px;
-  align-items: start;
+  grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  height: calc(100vh - 100px);
+  overflow: hidden;
 }
 
 .courseai-workspace.is-planning .context-wrap {
   max-width: none;
   margin: 0;
   position: sticky;
-  top: 84px;
+  top: 0;
+  max-height: 100%;
+  display: flex;
+  min-width: 0;
+  min-height: 0;
+  padding-right: 16px;
+  border-right: 1px solid var(--border);
 }
 
 .courseai-workspace.is-planning .context-head {
   text-align: left;
+}
+
+.courseai-context-chat {
+  display: none;
+}
+
+.courseai-workspace.is-planning .courseai-context-editor {
+  display: none;
+}
+
+.courseai-workspace.is-planning .courseai-context-chat {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  height: 100%;
+  min-height: 0;
+  min-width: 0;
+}
+
+/* Scrollable wrapper for history + checklist + adjustments */
+.courseai-chat-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.courseai-workspace.is-planning .courseai-chat-history {
+  flex: 0 0 auto;
 }
 
 .courseai-workspace.is-planning .planning-wrap {
@@ -136,16 +189,181 @@ svg { display: block; flex-shrink: 0; }
   margin: 0;
   width: 100%;
   min-width: 0;
+  min-height: 0;
+  padding-left: 28px;
+  overflow-y: auto;
 }
 
 @media (max-width: 1100px) {
   .courseai-workspace.is-planning {
     grid-template-columns: 1fr;
+    height: auto;
+    overflow: visible;
   }
-
   .courseai-workspace.is-planning .context-wrap {
     position: static;
+    max-height: none;
+    min-height: 0;
+    border-right: none;
+    padding-right: 0;
   }
+
+  .courseai-workspace.is-planning .planning-wrap {
+    padding-left: 0;
+  }
+
+  .courseai-workspace.is-planning .courseai-context-editor {
+    display: none;
+  }
+
+  .courseai-workspace.is-planning .courseai-context-chat {
+    display: flex;
+  }
+}
+
+.courseai-chat-history {
+  background: transparent;
+  padding: 0;
+}
+
+.courseai-chat-history-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--muted-fg);
+  margin-bottom: 8px;
+}
+
+.courseai-chat-message {
+  display: inline-block;
+  max-width: 100%;
+  border-radius: 14px;
+  padding: 10px 12px;
+  font-size: 14px;
+  line-height: 1.5;
+  word-break: break-word;
+}
+
+.courseai-chat-message--user {
+  background: var(--primary-soft);
+  color: var(--fg);
+}
+
+.courseai-chat-message--user p {
+  margin: 0;
+}
+
+/* ─── SECTION CHECKLIST ───────────────────────────────────────────────── */
+.courseai-checklist {
+  background: var(--card);
+  border-radius: 10px;
+  padding: 12px;
+  font-size: 13px;
+}
+
+.courseai-checklist-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .05em;
+  text-transform: uppercase;
+  color: var(--muted-fg);
+  margin-bottom: 8px;
+}
+
+.courseai-checklist-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.courseai-checklist-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--fg);
+  line-height: 1.4;
+  opacity: .7;
+  transition: opacity .2s;
+}
+
+.courseai-checklist-item.is-done {
+  opacity: 1;
+}
+
+.courseai-checklist-check {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: all .2s;
+}
+
+.courseai-checklist-item.is-done .courseai-checklist-check {
+  background: #16a34a;
+  border-color: #16a34a;
+}
+
+.courseai-checklist-check svg {
+  width: 10px;
+  height: 10px;
+  fill: none;
+  display: none;
+}
+
+.courseai-checklist-check .check-icon {
+  stroke: #fff;
+  stroke-width: 3;
+}
+
+.courseai-checklist-check .spinner-icon {
+  stroke: var(--muted-fg);
+  stroke-width: 2.5;
+  animation: courseai-spin .8s linear infinite;
+}
+
+.courseai-checklist-item.is-done .courseai-checklist-check svg.check-icon {
+  display: block;
+}
+
+.courseai-checklist-item.is-loading .courseai-checklist-check svg.spinner-icon {
+  display: block;
+}
+
+@keyframes courseai-spin {
+  to { transform: rotate(360deg); }
+}
+
+.courseai-checklist-name {
+  flex: 1;
+  min-width: 0;
+}
+
+/* ─── ADJUSTMENT MESSAGE ──────────────────────────────────────────────── */
+.courseai-adjustment {
+  border-radius: 8px;
+  padding: 5px 10px;
+  font-size: 12px;
+  line-height: 1.5;
+  background: var(--primary-soft);
+  word-break: break-word;
+}
+
+.courseai-adjustment + .courseai-adjustment {
+  margin-top: 8px;
+}
+
+.courseai-adjustment:empty {
+  display: none;
 }
 
 /* ─── STEP HEADER ─────────────────────────────────────────────────────── */
@@ -970,12 +1188,44 @@ svg { display: block; flex-shrink: 0; }
   padding: 8px 0 24px;
 }
 
+/* Centered loading spinner for initial planning phase */
+.planning-loading {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 16px;
+  padding: 80px 24px;
+  text-align: center;
+}
+
+.planning-loading-spinner {
+  width: 40px;
+  height: 40px;
+  border: 3.5px solid hsl(215, 20%, 88%);
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin 0.8s linear infinite;
+}
+
+.planning-loading-text {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--muted-fg);
+  margin: 0;
+}
+
+.planning-stream-content {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
 .pc-card {
   background: #fff;
   border: 1px solid var(--border);
   border-radius: 14px;
   box-shadow: 0 2px 12px rgba(0,0,0,.06);
-  overflow: hidden;
 }
 
 .pc-completion-card {
@@ -1201,7 +1451,7 @@ svg { display: block; flex-shrink: 0; }
   min-height: 18px;
 }
 
-.pc-progress-wrap { margin-top: 4px; }
+.pc-progress-wrap { padding: 22px 22px 16px; }
 .pc-progress-row { display: flex; justify-content: space-between; margin-bottom: 5px; }
 .pc-progress-label { font-size: 12px; color: var(--muted-fg); }
 .pc-progress-pct { font-size: 12px; font-weight: 700; color: var(--fg); }
@@ -1252,8 +1502,6 @@ svg { display: block; flex-shrink: 0; }
 .pc-details-panel {
   border-top: 1px solid var(--border);
   padding: 16px 22px;
-  max-height: 380px;
-  overflow-y: auto;
 }
 
 .ps-section {
@@ -1400,7 +1648,6 @@ svg { display: block; flex-shrink: 0; }
   border: 1px solid var(--border);
   background: var(--card);
   box-shadow: 0 1px 3px rgba(0, 0, 0, .07);
-  overflow: hidden;
 }
 
 .prv-header {
@@ -2073,12 +2320,15 @@ svg { display: block; flex-shrink: 0; }
 
 /* ─── COMPACT CHAT CARD ───────────────────────────────────────────── */
 .compact-chat-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 14px;
-  margin-top: 14px;
+  background: transparent;
+  padding: 12px;
+  margin-top: auto;
   transition: opacity .2s, filter .2s;
+  width: 100%;
+  max-width: 100%;
+  min-width: 0;
+  border: 1.5px solid hsl(215, 20%, 82%);
+  border-radius: 10px;
 }
 
 /* Control-level disabled state (preferred) - disables specific controls, NOT the pause button */
@@ -2115,21 +2365,15 @@ svg { display: block; flex-shrink: 0; }
   width: 100%;
   min-height: 80px;
   max-height: 180px;
-  padding: 12px;
+  padding: 12px 0;
   font-size: 14px;
   line-height: 1.5;
   font-family: inherit;
   color: var(--fg);
-  background: var(--bg);
-  border: 1px solid var(--border);
-  border-radius: 8px;
+  background: transparent;
+  border: none;
   outline: none;
   resize: none;
-  transition: border-color .15s;
-}
-
-.compact-prompt-textarea:focus {
-  border-color: var(--primary);
 }
 
 .compact-prompt-textarea::placeholder {
@@ -2140,32 +2384,68 @@ svg { display: block; flex-shrink: 0; }
   display: flex;
   justify-content: space-between;
   align-items: center;
-  gap: 10px;
-  margin-top: 10px;
-  padding-top: 10px;
-  border-top: 1px solid var(--border);
+  gap: 16px;
+  flex-wrap: nowrap;
+  overflow: hidden;
+  min-width: 0;
 }
 
 .compact-toolbar-left {
   display: flex;
   align-items: center;
-  gap: 8px;
-  flex-wrap: wrap;
+  gap: 10px;
+  flex-wrap: nowrap;
+  min-width: 0;
+  flex: 1 1 auto;
+  white-space: nowrap;
 }
 
 .compact-toolbar-right {
   display: flex;
   align-items: center;
   gap: 8px;
+  flex: 0 0 auto;
+}
+
+.compact-chat-toolbar .tbar-btn,
+.compact-chat-toolbar .tbar-select,
+.compact-chat-toolbar .tbar-toggle-wrap,
+.compact-chat-toolbar .tbar-sep {
+  flex: 0 0 auto;
+}
+
+.compact-chat-toolbar .tbar-btn {
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  justify-content: center;
+}
+
+.compact-chat-toolbar .tbar-sep {
+  display: none;
+}
+
+.compact-chat-toolbar .tbar-select {
+  width: 54px;
+  min-width: 54px;
+  padding: 0 6px;
+}
+
+.compact-chat-toolbar .tbar-toggle-wrap {
+  gap: 6px;
+  padding-right: 0;
 }
 
 .btn-compact-regenerate {
   display: inline-flex;
   align-items: center;
+  justify-content: center;
   gap: 6px;
-  padding: 9px 18px;
-  font-size: 13.5px;
+  min-width: 0;
+  padding: 9px 14px;
+  font-size: 13px;
   font-weight: 600;
+  white-space: nowrap;
   color: var(--primary-fg);
   background: var(--primary);
   border: none;

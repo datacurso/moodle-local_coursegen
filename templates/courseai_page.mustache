@@ -41,6 +41,8 @@
     <!-- Context step form -->
     <div class="context-wrap" id="contextView">
 
+      <div class="courseai-context-editor" id="courseaiContextEditor">
+
       <div class="context-head">
         <h2>{{#str}}courseai_context_title, local_coursegen{{/str}}</h2>
         <p>{{#str}}courseai_context_subtitle, local_coursegen{{/str}}</p>
@@ -184,60 +186,147 @@
 
       <p class="form-tip">{{#str}}courseai_form_tip, local_coursegen{{/str}}</p>
 
+      </div>
+
+      <div class="courseai-context-chat" id="courseaiContextChat">
+        <div class="courseai-chat-scroll" id="courseaiChatScroll">
+          <div class="courseai-chat-history hidden" id="courseaiInitialPromptHistory">
+            <span class="courseai-chat-history-label">{{#str}}courseai_initial_prompt_label, local_coursegen{{/str}}</span>
+            <div class="courseai-chat-message courseai-chat-message--user">
+              <p id="courseaiInitialPromptText"></p>
+            </div>
+          </div>
+
+          <!-- Section checklist shown during streaming -->
+          <div class="courseai-checklist hidden" id="courseaiChecklist">
+            <span class="courseai-checklist-label">{{#str}}courseai_checklist_label, local_coursegen{{/str}}</span>
+            <ul class="courseai-checklist-list" id="courseaiChecklistList"></ul>
+          </div>
+
+          <!-- Adjustment message history (shown after user sends adjustments) -->
+          <div class="courseai-adjustment hidden" id="courseaiAdjustmentHistory"></div>
+        </div>
+
+        <!-- Compact chat for regeneration -->
+        <div class="compact-chat-card" id="compactChatCard" style="display:none">
+          <textarea
+            id="compactPromptInput"
+            class="compact-prompt-textarea"
+            placeholder="{{#str}}courseai_compact_prompt_placeholder, local_coursegen{{/str}}"
+            rows="3"
+            aria-label="{{#str}}courseai_prompt_arialabel, local_coursegen{{/str}}"
+          ></textarea>
+
+          <!-- Chips row (same as main card) -->
+          <div class="chips-row" id="compactChipsRow" style="display:none">
+            <span class="chip chip-syllabus hidden" id="compactChipSyllabus">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/>
+                <polyline points="14 2 14 8 20 8"/>
+                <line x1="16" y1="13" x2="8" y2="13"/>
+                <line x1="16" y1="17" x2="8" y2="17"/>
+              </svg>
+              <span class="chip-name" id="compactChipSyllabusName"></span>
+              <button class="chip-btn" onclick="clearSyllabus()" aria-label="{{#str}}courseai_chip_remove_syllabus, local_coursegen{{/str}}">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </span>
+
+            <span class="chip chip-guideline hidden" id="compactChipGuideline">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                <polyline points="9 12 11 14 15 10"/>
+              </svg>
+              <span class="chip-name" id="compactChipGuidelineName"></span>
+              <button class="chip-btn" id="compactChipGuidelineEyeBtn" aria-label="{{#str}}courseai_chip_view_guideline, local_coursegen{{/str}}">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>
+                </svg>
+              </button>
+              <button class="chip-btn" onclick="clearGuideline()" aria-label="{{#str}}courseai_chip_remove_guideline, local_coursegen{{/str}}">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </span>
+          </div>
+
+          <!-- Compact toolbar with same controls -->
+          <div class="compact-chat-toolbar">
+            <div class="compact-toolbar-left" id="compactToolbarLeft">
+              <!-- Note: Sílabo and Directrices use the same buttons/popovers from main card -->
+              <button class="tbar-btn" id="btnCompactSyllabus" title="{{#str}}courseai_btn_syllabus_title, local_coursegen{{/str}}" type="button">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+                </svg>
+              </button>
+
+              <div class="tbar-sep" role="separator"></div>
+
+              <button class="tbar-btn" id="btnCompactDirectrices" title="{{#str}}courseai_btn_guidelines_title, local_coursegen{{/str}}" type="button">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+                  <polyline points="9 12 11 14 15 10"/>
+                </svg>
+                <span class="guideline-badge hidden" id="compactGuidelineBadge"></span>
+              </button>
+
+              <div class="tbar-sep" role="separator"></div>
+
+              <select class="tbar-select" id="compactLangSelect" title="{{#str}}courseai_lang_title, local_coursegen{{/str}}" aria-label="{{#str}}courseai_lang_arialabel, local_coursegen{{/str}}">
+                <option value="es">🌐 ES</option>
+                <option value="en">🌐 EN</option>
+              </select>
+
+              <div class="tbar-sep" role="separator"></div>
+
+              <label class="tbar-toggle-wrap" title="{{#str}}courseai_images_title, local_coursegen{{/str}}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0">
+                  <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
+                  <polyline points="21 15 16 10 5 21"/>
+                </svg>
+                <div class="toggle-track" id="compactImgToggleTrack">
+                  <div class="toggle-thumb"></div>
+                </div>
+                <input type="checkbox" id="btnCompactWithImages" class="hidden" aria-label="{{#str}}courseai_images_arialabel, local_coursegen{{/str}}" />
+              </label>
+            </div>
+
+            <div class="compact-toolbar-right">
+              <button class="btn-compact-regenerate" id="btnCompactRegenerate" type="button" aria-label="{{#str}}courseai_btn_regenerate, local_coursegen{{/str}}" title="{{#str}}courseai_btn_regenerate, local_coursegen{{/str}}">
+                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"/>
+                </svg>
+                {{#str}}courseai_btn_regenerate, local_coursegen{{/str}}
+              </button>
+            </div>
+          </div>
+        </div>
+      </div>
+
     </div><!-- .context-wrap -->
 
     <!-- Step 2: Planning view -->
     <div class="planning-wrap" id="planningView" style="display:none">
-      <div class="pc-card" id="planningProgressCard">
-        <div class="pc-card-main">
-          <div class="pc-icon-wrap" id="pcIconWrap">
-            <svg id="planningSpinner" class="pc-spin" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-              <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-            </svg>
-            <svg id="planningCheckIcon" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="display:none">
-              <polyline points="20 6 9 17 4 12"/>
-            </svg>
-          </div>
+      <!-- Centered loading spinner shown during initial streaming -->
+      <div class="planning-loading" id="planningLoading">
+        <div class="planning-loading-spinner"></div>
+        <p class="planning-loading-text">{{#str}}courseai_state_structuring, local_coursegen{{/str}}</p>
+      </div>
 
-          <div class="pc-info">
-            <span class="pc-step" id="pcStep">{{#str}}courseai_state_planning, local_coursegen{{/str}}</span>
-            <h3 class="pc-title" id="pcTitle">{{#str}}courseai_state_structuring, local_coursegen{{/str}}</h3>
-            <p class="pc-subtitle" id="pcSubtitle"></p>
-
-            <div class="pc-progress-wrap">
-              <div class="pc-progress-row">
-                <span class="pc-progress-label">{{#str}}courseai_progress_label, local_coursegen{{/str}}</span>
-                <span class="pc-progress-pct" id="pcPct">0%</span>
-              </div>
-              <div class="pc-bar-track">
-                <div class="pc-bar-fill" id="pcBarFill" style="width:0%"></div>
-              </div>
-            </div>
-          </div>
+      <!-- Streaming content containers (hidden initially, shown as content arrives) -->
+      <div class="planning-stream-content" id="planningStreamContent" style="display:none">
+        <div id="planSectionsView" style="display:none">
+          <div id="planSectionsList"></div>
         </div>
-
-        <div class="pc-toggle-row" id="pcToggleRow" style="display:none">
-          <button class="pc-toggle-btn" id="pcToggleBtn" type="button">
-            <svg class="pc-chevron" id="pcChevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <polyline points="9 18 15 12 9 6"/>
-            </svg>
-            {{#str}}courseai_toggle_details, local_coursegen{{/str}}
-          </button>
+        <div id="planDetailedView" style="display:none">
+          <div id="planDetailedList"></div>
         </div>
-
-        <div class="pc-details-panel" id="pcDetailsPanel" style="display:none">
-          <div id="planSectionsView" style="display:none">
-            <div id="planSectionsList"></div>
-          </div>
-
-          <div id="planDetailedView" style="display:none">
-            <div id="planDetailedList"></div>
-          </div>
-
-          <div id="planMarkdownView" style="display:none">
-            <div class="plan-markdown" id="planMarkdown"></div>
-            <span class="typing-cursor hidden" id="typingCursor"></span>
-          </div>
+        <div id="planMarkdownView" style="display:none">
+          <div class="plan-markdown" id="planMarkdown"></div>
+          <span class="typing-cursor hidden" id="typingCursor"></span>
         </div>
       </div>
 
@@ -258,7 +347,7 @@
         </div>
       </div>
 
-      <div class="prv-card" id="planReviewCard" style="display:none">
+        <div class="prv-card" id="planReviewCard" style="display:none">
         <div class="prv-header prv-header--stream" id="prvHeader">
           <span class="prv-icon-wrap" id="prvIconWrap">
             <svg id="prvSpinnerIcon" class="prv-spin" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
@@ -281,107 +370,6 @@
         <p class="plan-action-hint" id="planActionsHint">{{#str}}courseai_plan_actions_hint, local_coursegen{{/str}}</p>
         <div class="plan-action-btns">
           <button class="btn-plan-approve" id="btnApprove" type="button">{{#str}}courseai_btn_approve, local_coursegen{{/str}}</button>
-        </div>
-      </div>
-
-      <!-- Compact chat for regeneration -->
-      <div class="compact-chat-card" id="compactChatCard" style="display:none">
-        <textarea
-          id="compactPromptInput"
-          class="compact-prompt-textarea"
-          placeholder="{{#str}}courseai_compact_prompt_placeholder, local_coursegen{{/str}}"
-          rows="3"
-          aria-label="{{#str}}courseai_prompt_arialabel, local_coursegen{{/str}}"
-        ></textarea>
-
-        <!-- Chips row (same as main card) -->
-        <div class="chips-row" id="compactChipsRow" style="display:none">
-          <span class="chip chip-syllabus hidden" id="compactChipSyllabus">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/>
-              <polyline points="14 2 14 8 20 8"/>
-              <line x1="16" y1="13" x2="8" y2="13"/>
-              <line x1="16" y1="17" x2="8" y2="17"/>
-            </svg>
-            <span class="chip-name" id="compactChipSyllabusName"></span>
-            <button class="chip-btn" onclick="clearSyllabus()" aria-label="{{#str}}courseai_chip_remove_syllabus, local_coursegen{{/str}}">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
-          </span>
-
-          <span class="chip chip-guideline hidden" id="compactChipGuideline">
-            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-              <polyline points="9 12 11 14 15 10"/>
-            </svg>
-            <span class="chip-name" id="compactChipGuidelineName"></span>
-            <button class="chip-btn" id="compactChipGuidelineEyeBtn" aria-label="{{#str}}courseai_chip_view_guideline, local_coursegen{{/str}}">
-              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>
-              </svg>
-            </button>
-            <button class="chip-btn" onclick="clearGuideline()" aria-label="{{#str}}courseai_chip_remove_guideline, local_coursegen{{/str}}">
-              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
-          </span>
-        </div>
-
-        <!-- Compact toolbar with same controls -->
-        <div class="compact-chat-toolbar">
-          <div class="compact-toolbar-left" id="compactToolbarLeft">
-            <!-- Note: Sílabo and Directrices use the same buttons/popovers from main card -->
-            <button class="tbar-btn" id="btnCompactSyllabus" title="{{#str}}courseai_btn_syllabus_title, local_coursegen{{/str}}" type="button">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
-              </svg>
-              {{#str}}courseai_btn_syllabus, local_coursegen{{/str}}
-            </button>
-
-            <div class="tbar-sep" role="separator"></div>
-
-            <button class="tbar-btn" id="btnCompactDirectrices" title="{{#str}}courseai_btn_guidelines_title, local_coursegen{{/str}}" type="button">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                <polyline points="9 12 11 14 15 10"/>
-              </svg>
-              {{#str}}courseai_btn_guidelines, local_coursegen{{/str}}
-              <span class="guideline-badge hidden" id="compactGuidelineBadge"></span>
-            </button>
-
-            <div class="tbar-sep" role="separator"></div>
-
-            <select class="tbar-select" id="compactLangSelect" title="{{#str}}courseai_lang_title, local_coursegen{{/str}}" aria-label="{{#str}}courseai_lang_arialabel, local_coursegen{{/str}}">
-              <option value="es">🌐 ES</option>
-              <option value="en">🌐 EN</option>
-            </select>
-
-            <div class="tbar-sep" role="separator"></div>
-
-            <label class="tbar-toggle-wrap" title="{{#str}}courseai_images_title, local_coursegen{{/str}}">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0">
-                <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
-                <polyline points="21 15 16 10 5 21"/>
-              </svg>
-              <span class="tbar-toggle-label">{{#str}}courseai_images_label, local_coursegen{{/str}}</span>
-              <div class="toggle-track" id="compactImgToggleTrack">
-                <div class="toggle-thumb"></div>
-              </div>
-              <input type="checkbox" id="btnCompactWithImages" class="hidden" aria-label="{{#str}}courseai_images_arialabel, local_coursegen{{/str}}" />
-            </label>
-          </div>
-
-          <div class="compact-toolbar-right">
-            <button class="btn-compact-regenerate" id="btnCompactRegenerate" type="button">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"/>
-              </svg>
-              {{#str}}courseai_btn_regenerate, local_coursegen{{/str}}
-            </button>
-          </div>
         </div>
       </div>
 

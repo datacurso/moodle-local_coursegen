@@ -140,6 +140,8 @@ export const setCompactChatState = (deps, mode) => {
                 btnCompactRegenerate.disabled = false;
                 if (texts?.courseai_btn_regenerate) {
                     btnCompactRegenerate.innerHTML = `${sparkleIcon} ${texts.courseai_btn_regenerate}`;
+                    btnCompactRegenerate.setAttribute('aria-label', texts.courseai_btn_regenerate);
+                    btnCompactRegenerate.setAttribute('title', texts.courseai_btn_regenerate);
                 }
             }
             if (state) {
@@ -177,6 +179,8 @@ export const setCompactChatState = (deps, mode) => {
                 btnCompactRegenerate.disabled = false;
                 if (texts?.courseai_btn_regenerate) {
                     btnCompactRegenerate.innerHTML = `${sparkleIcon} ${texts.courseai_btn_regenerate}`;
+                    btnCompactRegenerate.setAttribute('aria-label', texts.courseai_btn_regenerate);
+                    btnCompactRegenerate.setAttribute('title', texts.courseai_btn_regenerate);
                 }
             }
             if (state) {
@@ -194,7 +198,6 @@ export const createPlanningUi = (deps) => {
         getActivityIconUrl,
         escapeHtml,
         setProgress,
-        updateDetailedHeaderStats,
         texts,
         formatTemplate,
     } = deps;
@@ -210,7 +213,6 @@ export const createPlanningUi = (deps) => {
         prvSpinnerIcon,
         prvCheckIcon,
         prvHeader,
-        prvHeaderTitle,
         planningSpinner,
         planningCheckIcon,
         pcIconWrap,
@@ -532,11 +534,8 @@ export const createPlanningUi = (deps) => {
                 prvHeader.classList.remove('prv-header--stream');
                 prvHeader.classList.add('prv-header--done');
             }
-            if (prvHeaderTitle) {
-                prvHeaderTitle.textContent = texts.courseai_plan_detailed_done_title;
-            }
-            if (updateDetailedHeaderStats) {
-                updateDetailedHeaderStats();
+            if (prvHeaderSub) {
+                prvHeaderSub.textContent = texts.courseai_plan_detailed_done_subtitle;
             }
             if (prvLiveNote) {
                 prvLiveNote.style.display = 'none';

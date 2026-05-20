@@ -130,6 +130,16 @@ export const createStepsUi = (deps) => {
         state.totalSections = 0;
         state.totalActivities = 0;
 
+        // Reset loading/stream content visibility
+        const loadingEl = document.getElementById('planningLoading');
+        const streamContentEl = document.getElementById('planningStreamContent');
+        if (loadingEl) {
+            loadingEl.style.display = '';
+        }
+        if (streamContentEl) {
+            streamContentEl.style.display = 'none';
+        }
+
         if (planMarkdown) {
             planMarkdown.innerHTML = '';
         }
@@ -237,9 +247,13 @@ export const createStepsUi = (deps) => {
         state.detailedActivityEls = {};
         state.detailedSectionMeta = {};
         state.selectedDetailedImages = {};
+        state.courseTitle = '';
+        state.activitiesPlannedCount = 0;
         state.completionStats = null;
         state.createdCourseUrl = '';
         state.createdCourseResult = null;
+        state.generationRound = (state.generationRound || 0) + 1;
+
         // NOTE: compact chat lifecycle is NOT reset here intentionally.
         // openSSEStream() calls resetPlanningState() at stream start, and the chat
         // must remain visible (disabled) during streaming. Chat reset only happens
@@ -275,6 +289,25 @@ export const createStepsUi = (deps) => {
         }
         if (elements.promptInput) {
             elements.promptInput.value = '';
+        }
+        state.initialPrompt = '';
+        state.generationRound = 0;
+        if (elements.initialPromptText) {
+            elements.initialPromptText.textContent = '';
+        }
+        if (elements.initialPromptHistory) {
+            elements.initialPromptHistory.classList.add('hidden');
+        }
+        // Full reset: clear checklist and adjustment history from DOM
+        if (elements.checklist) {
+            elements.checklist.classList.add('hidden');
+        }
+        if (elements.checklistList) {
+            elements.checklistList.innerHTML = '';
+        }
+        if (elements.adjustmentHistory) {
+            elements.adjustmentHistory.classList.add('hidden');
+            elements.adjustmentHistory.innerHTML = '';
         }
     };
 

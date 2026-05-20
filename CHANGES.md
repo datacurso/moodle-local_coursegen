@@ -27,6 +27,38 @@
   - Sidebar closes automatically on any navigation click
 - **Version bump**  
   Internal version bumped to **2026051406** and release bumped to **1.4.0**.
+- **Refined chat UI during planning/streaming**  
+  Full-height sticky left panel with initial prompt shown as a chat history bubble. Compact chat controls are now icon-focused to prevent horizontal scroll. Borders removed from textarea, chat card, toolbar, and message bubble for a cleaner look. A light dividing line separates the chat panel from stream content.
+- **Fixed stream content scroll**  
+  Removed `max-height: 380px` constraint and `overflow: hidden` on `pc-details-panel` and review cards so the right column scrolls as one unit, no longer clipping stream output.
+- **Removed floating sidebar toggle**  
+  Removed the absolute-positioned toggle button that caused horizontal page scroll. Sidebar remains accessible via navbar trigger only.
+
+## 1.3.3
+
+**Released on:** 2026-04-10
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Added
+- **Automated prompt-based course creation service**
+  Added a dedicated backend automation service to orchestrate end-to-end course creation from prompt context, including planning/execution/result stages and user enrolment when applicable.
+- **Centralized result application service**
+  Added a dedicated result service to apply remote AI course results in a structured and reusable way.
+
+## Changed
+- **More resilient remote automation flow**
+  Improved planning stream handling, execute retries, and result polling to better tolerate transient backend/network issues during automated creation.
+- **Completion enforcement support in module creation flow**
+  Extended module manager parameter handling to support manual completion enforcement during internal automation paths.
+- **Version bump**
+  Internal version bumped to **2026041000** and release version bumped to **1.3.3**.
+
+## Fixed
+- **Static analysis and coding-style compliance**
+  Updated PHPDoc parameter annotations and long-line formatting in automation/privacy files to satisfy CI checks (PHPDoc Checker and Codechecker).
+- **Language pack consistency cleanup**
+  Normalized language files formatting for repository consistency.
 
 ## 1.3.2
 
