@@ -279,7 +279,7 @@ export const createDetailedUi = (deps) => {
 
         const checkboxes = [];
 
-        imageSuggestions.forEach((item) => {
+        imageSuggestions.forEach((item, imageIdx) => {
             const imageWrap = document.createElement('div');
             imageWrap.className = 'dp-image-wrap';
 
@@ -320,26 +320,46 @@ export const createDetailedUi = (deps) => {
 
             let iaControl = null;
             const imagePanelApi = createInlineAdjustmentPanel({
-                onSubmit: (value) => {
-                    if (regenerateDetailedItem && sectionIndex !== undefined && activityIndex !== undefined) {
-                        imageWrap.classList.add('dp-item-regenerating');
-                        iaControl.disabled = true;
-                        regenerateDetailedItem({
+                onSubmit: async(value) => {
+                    if (!regenerateDetailedItem || sectionIndex === undefined || activityIndex === undefined) {
+                        return;
+                    }
+                    imageWrap.classList.add('dp-item-regenerating');
+                    iaControl.disabled = true;
+                    try {
+                        const resp = await regenerateDetailedItem({
                             recordid: state.sessionid,
                             target_type: 'image',
                             section_index: Number(sectionIndex),
                             activity_index: Number(activityIndex),
                             instruction: value,
-                        }).then(() => {
-                            imageWrap.classList.remove('dp-item-regenerating');
-                            imageWrap.classList.add('dp-item-has-adjustment');
-                            iaControl.classList.add('is-active');
-                        }).catch(() => {
-                            imageWrap.classList.remove('dp-item-regenerating');
-                        }).finally(() => {
-                            iaControl.disabled = false;
                         });
+                        const rawResult = (resp && resp.result) || '';
+                        const parsed = rawResult
+                            ? (typeof rawResult === 'string' ? JSON.parse(rawResult) : rawResult)
+                            : null;
+
+                        if (parsed && parsed.success && parsed.data) {
+                            // Update DOM elements
+                            placement.textContent = parsed.data.placement
+                                || texts.courseai_activity_default;
+                            description.textContent = parsed.data.description || '';
+
+                            // Update entry state
+                            if (entry && entry.imageSuggestions && entry.imageSuggestions[imageIdx]) {
+                                entry.imageSuggestions[imageIdx].placement = parsed.data.placement || '';
+                                entry.imageSuggestions[imageIdx].description = parsed.data.description || '';
+                            }
+                        }
+
+                        imageWrap.classList.remove('dp-item-regenerating');
+                        imageWrap.classList.add('dp-item-has-adjustment');
+                        iaControl.classList.add('is-active');
+                        enableAllActionControls();
+                    } catch (e) {
+                        imageWrap.classList.remove('dp-item-regenerating');
                     }
+                    iaControl.disabled = false;
                 },
             });
 
@@ -614,6 +634,8 @@ export const createDetailedUi = (deps) => {
                     row.classList.remove('dp-item-regenerating');
                     row.classList.add('dp-item-has-adjustment');
                     iaControl.classList.add('is-active');
+                    // Enable newly created activity controls inside this section
+                    enableAllActionControls();
                 } catch (e) {
                     row.classList.remove('dp-item-regenerating');
                 }
@@ -640,6 +662,7 @@ export const createDetailedUi = (deps) => {
                 const isDeleted = row.classList.toggle('dp-item-deleted');
                 deleteControl.classList.toggle('is-active', isDeleted);
             },
+            disabled: true,
         });
 
         actionsEl.appendChild(iaControl);
@@ -730,26 +753,112 @@ export const createDetailedUi = (deps) => {
         let iaControl = null;
         let deleteControl = null;
         const activityPanelApi = createInlineAdjustmentPanel({
-            onSubmit: (value) => {
-                if (regenerateDetailedItem && state.sessionid) {
-                    wrap.classList.add('dp-item-regenerating');
-                    iaControl.disabled = true;
-                    regenerateDetailedItem({
+            onSubmit: async(value) => {
+                if (!regenerateDetailedItem || !state.sessionid) {
+                    return;
+                }
+                wrap.classList.add('dp-item-regenerating');
+                iaControl.disabled = true;
+                try {
+                    const resp = await regenerateDetailedItem({
                         recordid: state.sessionid,
                         target_type: 'activity',
                         section_index: Number(sectionIndex),
                         activity_index: Number(activityIndex),
                         instruction: value,
-                    }).then(() => {
-                        wrap.classList.remove('dp-item-regenerating');
-                        wrap.classList.add('dp-item-has-adjustment');
-                        iaControl.classList.add('is-active');
-                    }).catch(() => {
-                        wrap.classList.remove('dp-item-regenerating');
-                    }).finally(() => {
-                        iaControl.disabled = false;
                     });
+                    const rawResult = (resp && resp.result) || '';
+                    const parsed = rawResult
+                        ? (typeof rawResult === 'string' ? JSON.parse(rawResult) : rawResult)
+                        : null;
+
+                    if (parsed && parsed.success && parsed.activity_data) {
+                        const key = `${sectionIndex}-${activityIndex}`;
+                        const entry = state.detailedActivityEls[key];
+                        if (entry) {
+                            const plan = parsed.activity_data.detailed_plan || {};
+
+                            // 1. Clear old description from textDiv
+                            const oldDescs = entry.textDiv.querySelectorAll('.prv-activity-desc');
+                            oldDescs.forEach((el) => el.remove());
+
+                            // 2. Clear old detail content
+                            entry.detailEl.innerHTML = '';
+                            entry.hasDetail = false;
+                            entry.item.classList.remove('prv-activity-item--has-detail');
+                            entry.chevronEl.style.visibility = 'hidden';
+
+                            // 3. Reset counts and suggestions
+                            entry.chapterCount = 0;
+                            entry.questionCount = 0;
+                            entry.imageCount = 0;
+                            entry.imageSuggestions = [];
+
+                            // 4. Clean up old selectedDetailedImages for this activity
+                            const actPrefix = `${sectionIndex}-${activityIndex}-`;
+                            Object.keys(state.selectedDetailedImages).forEach((id) => {
+                                if (id.startsWith(actPrefix)) {
+                                    delete state.selectedDetailedImages[id];
+                                }
+                            });
+
+                            // 5. Set new preview description
+                            entry.previewDescription = plan.activity_description || '';
+
+                            // 6. Add new description
+                            if (entry.previewDescription) {
+                                const desc = document.createElement('p');
+                                desc.className = 'prv-activity-desc';
+                                desc.textContent = entry.previewDescription;
+                                entry.textDiv.appendChild(desc);
+                            }
+
+                            // 7. Rebuild image suggestions
+                            const rawSuggestions = Array.isArray(plan.image_suggestions)
+                                ? plan.image_suggestions
+                                : [];
+                            entry.imageSuggestions = rawSuggestions.map((item, imgIdx) => {
+                                const suggestionId = `${sectionIndex}-${activityIndex}-${imgIdx}`;
+                                if (typeof state.selectedDetailedImages[suggestionId] === 'undefined') {
+                                    state.selectedDetailedImages[suggestionId] = true;
+                                }
+                                return {
+                                    id: suggestionId,
+                                    placement: item.placement || '',
+                                    description: item.description || '',
+                                };
+                            });
+                            plan.image_suggestions = entry.imageSuggestions;
+
+                            // 8. Build new detail content
+                            const detailContent = buildActivityDetailContent({
+                                parsed: plan,
+                                entry,
+                                sectionIndex,
+                                activityIndex,
+                            });
+                            if (detailContent.childNodes.length > 0) {
+                                entry.detailEl.appendChild(detailContent);
+                                entry.hasDetail = true;
+                                entry.item.classList.add('prv-activity-item--has-detail');
+                                entry.chevronEl.style.visibility = 'visible';
+                            }
+
+                            // 9. Update image badges
+                            recalculateEntryImageCount(entry, sectionIndex);
+                            updateSectionImageBadge(sectionIndex);
+                        }
+                    }
+
+                    wrap.classList.remove('dp-item-regenerating');
+                    wrap.classList.add('dp-item-has-adjustment');
+                    iaControl.classList.add('is-active');
+                    // Enable newly created image controls inside this activity
+                    enableAllActionControls();
+                } catch (e) {
+                    wrap.classList.remove('dp-item-regenerating');
                 }
+                iaControl.disabled = false;
             },
         });
 
@@ -769,6 +878,7 @@ export const createDetailedUi = (deps) => {
                 const isDeleted = wrap.classList.toggle('dp-item-deleted');
                 deleteControl.classList.toggle('is-active', isDeleted);
             },
+            disabled: true,
         });
 
         actionsEl.appendChild(iaControl);

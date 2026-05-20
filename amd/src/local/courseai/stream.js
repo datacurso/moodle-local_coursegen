@@ -35,10 +35,363 @@ export const createStreamManager = (deps) => {
         prvHeaderTitle,
         prvLiveNote,
         pcSubtitle,
+        pcTitle,
         typingCursor,
         planningSpinner,
         pcStep,
+        planningProgressCard,
+        pcToggleRow,
+        pcDetailsPanel,
+        pcChevron,
     } = elements;
+
+    const normalizeText = (value) => (value || '')
+        .toString()
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .toLowerCase()
+        .trim();
+
+    const normalizeActivityType = (rawType) => {
+        const cleaned = normalizeText(rawType).replace(/\s+/g, ' ');
+        const aliases = {
+            forum: 'forum',
+            page: 'page',
+            book: 'book',
+            quiz: 'quiz',
+            'quiz blueprint': 'quiz',
+            assignment: 'assign',
+            task: 'assign',
+            resource: 'resource',
+            file: 'resource',
+            folder: 'folder',
+            label: 'label',
+            'text and media area': 'label',
+            database: 'data',
+            glossary: 'glossary',
+            lesson: 'lesson',
+            url: 'url',
+            wiki: 'wiki',
+            workshop: 'workshop',
+            scorm: 'scorm',
+            'scorm package': 'scorm',
+            imscp: 'imscp',
+            'ims content package': 'imscp',
+            feedback: 'feedback',
+            choice: 'choice',
+            survey: 'survey',
+            h5p: 'h5pactivity',
+            'h5p activity': 'h5pactivity',
+            certificate: 'customcert',
+            customcert: 'customcert',
+            chat: 'chat',
+            lti: 'lti',
+        };
+
+        if (aliases[cleaned]) {
+            return aliases[cleaned];
+        }
+
+        const firstWord = cleaned.split(' ')[0] || cleaned;
+        if (aliases[firstWord]) {
+            return aliases[firstWord];
+        }
+
+        return cleaned.replace(/\s+/g, '_');
+    };
+
+    const extractActivityFromStatus = (statusText) => {
+        const text = statusText || '';
+
+        let match = text.match(/^Designing\s+([^:]+):\s+(.+?)\.\.\./i);
+        if (match) {
+            return {
+                type: normalizeActivityType(match[1]),
+                title: match[2].trim(),
+            };
+        }
+
+        match = text.match(/^Designing\s+Quiz\s+Blueprint\s+for:\s+(.+?)\.\.\./i);
+        if (match) {
+            return {
+                type: 'quiz',
+                title: match[1].trim(),
+            };
+        }
+
+        match = text.match(/^Generating\s+Assignment\s+content\s+for:\s+(.+?)\.\.\./i);
+        if (match) {
+            return {
+                type: 'assign',
+                title: match[1].trim(),
+            };
+        }
+
+        return null;
+    };
+
+    const isActivityDoneStatus = (statusText) => {
+        const text = statusText || '';
+        return /^(?:[A-Za-z][A-Za-z\s0-9/_-]*\s+ready:|Assembling final Quiz package\.\.\.)/i.test(text);
+    };
+
+    const humanizeType = (type) => {
+        return String(type || '')
+            .replace(/_/g, ' ')
+            .replace(/\b\w/g, (char) => char.toUpperCase());
+    };
+
+    const getActivityLabel = (type) => {
+        const keyMap = {
+            quiz: 'courseai_activity_quiz',
+            book: 'courseai_activity_book',
+            assign: 'courseai_activity_assign',
+            forum: 'courseai_activity_forum',
+            lesson: 'courseai_activity_lesson',
+            url: 'courseai_activity_url',
+            resource: 'courseai_activity_resource',
+            page: 'courseai_activity_page',
+            data: 'courseai_activity_data',
+            glossary: 'courseai_activity_glossary',
+            label: 'courseai_activity_resource',
+            folder: 'courseai_activity_resource',
+            wiki: null,
+            workshop: null,
+            scorm: null,
+            imscp: null,
+            feedback: null,
+            choice: null,
+            survey: null,
+            h5pactivity: null,
+            customcert: null,
+            chat: null,
+            lti: null,
+        };
+
+        const key = keyMap[type] || null;
+        if (key && texts[key]) {
+            return texts[key];
+        }
+        return type ? humanizeType(type) : texts.courseai_activity_default;
+    };
+
+    const createGenerationTracker = () => {
+        const sourceSections = Array.isArray(state.latestInitialSections)
+            ? state.latestInitialSections
+            : [];
+
+        const sections = sourceSections.map((section, sectionIndex) => {
+            const activities = Array.isArray(section.activities) ? section.activities : [];
+            return {
+                index: sectionIndex,
+                name: section.name || `${texts.courseai_section_label} ${sectionIndex + 1}`,
+                activities: activities.map((activity, activityIndex) => ({
+                    sectionIndex,
+                    activityIndex,
+                    title: activity.title
+                        || activity.name
+                        || `${texts.courseai_activity_default} ${activityIndex + 1}`,
+                    type: (activity.activity_type || activity.type || 'page').toLowerCase(),
+                    status: 'pending',
+                })),
+            };
+        });
+
+        const flat = [];
+        sections.forEach((section) => {
+            section.activities.forEach((activity) => flat.push(activity));
+        });
+
+        return {
+            sections,
+            flat,
+            currentIndex: -1,
+        };
+    };
+
+    const renderGenerationTracker = () => {
+        if (!pcDetailsPanel || !state.generationTracker) {
+            return;
+        }
+
+        const tracker = state.generationTracker;
+        pcDetailsPanel.innerHTML = '';
+
+        tracker.sections.forEach((section, sectionIdx) => {
+            const sectionEl = document.createElement('div');
+            sectionEl.className = 'ps-section';
+
+            const doneCount = section.activities.filter((activity) => activity.status === 'done').length;
+            const inProgressCount = section.activities.filter((activity) => activity.status === 'in_progress').length;
+            const totalCount = section.activities.length;
+
+            if (doneCount === 0 && inProgressCount === 0) {
+                sectionEl.classList.add('ps-section--pending');
+            } else if (inProgressCount > 0) {
+                sectionEl.classList.add('ps-section--in_progress');
+            } else {
+                sectionEl.classList.add('ps-section--done');
+            }
+
+            const headEl = document.createElement('div');
+            headEl.className = 'ps-section-head';
+
+            const numEl = document.createElement('span');
+            numEl.className = 'ps-section-num';
+            numEl.textContent = String(sectionIdx + 1).padStart(2, '0');
+
+            const infoEl = document.createElement('div');
+            infoEl.className = 'ps-section-info';
+
+            const nameEl = document.createElement('p');
+            nameEl.className = 'ps-section-name';
+            if (doneCount === 0 && inProgressCount === 0) {
+                const sectionSkeleton = document.createElement('span');
+                sectionSkeleton.className = 'ps-skeleton-line ps-skeleton-line--section';
+                sectionSkeleton.setAttribute('aria-hidden', 'true');
+                nameEl.appendChild(sectionSkeleton);
+            } else {
+                nameEl.textContent = section.name;
+            }
+
+            infoEl.appendChild(nameEl);
+
+            const countEl = document.createElement('span');
+            countEl.className = 'ps-section-count';
+            countEl.textContent = `${doneCount}/${totalCount}`;
+
+            headEl.appendChild(numEl);
+            headEl.appendChild(infoEl);
+            headEl.appendChild(countEl);
+
+            const listEl = document.createElement('ul');
+            listEl.className = 'ps-activities';
+
+            section.activities.forEach((activity) => {
+                const itemEl = document.createElement('li');
+                itemEl.className = `ps-activity ps-activity--${activity.status}`;
+
+                if (activity.status === 'pending') {
+                    const skeleton = document.createElement('span');
+                    skeleton.className = 'ps-skeleton-line ps-skeleton-line--activity';
+                    skeleton.setAttribute('aria-hidden', 'true');
+                    itemEl.appendChild(skeleton);
+                } else {
+                    const statusDot = document.createElement('span');
+                    statusDot.className = `ps-status-dot ps-status-dot--${activity.status}`;
+                    statusDot.setAttribute('aria-hidden', 'true');
+
+                    const badgeEl = document.createElement('span');
+                    badgeEl.className = `ps-badge ps-badge--${activity.type}`;
+
+                    const badgeTextEl = document.createElement('span');
+                    badgeTextEl.className = 'ps-badge-text';
+                    badgeTextEl.textContent = getActivityLabel(activity.type);
+                    badgeEl.appendChild(badgeTextEl);
+
+                    const activityInfo = document.createElement('div');
+                    activityInfo.className = 'ps-activity-info';
+
+                    const activityName = document.createElement('span');
+                    activityName.className = 'ps-activity-name';
+                    activityName.textContent = activity.title;
+
+                    activityInfo.appendChild(activityName);
+
+                    itemEl.appendChild(statusDot);
+                    itemEl.appendChild(badgeEl);
+                    itemEl.appendChild(activityInfo);
+                }
+                listEl.appendChild(itemEl);
+            });
+
+            sectionEl.appendChild(headEl);
+            sectionEl.appendChild(listEl);
+            pcDetailsPanel.appendChild(sectionEl);
+        });
+    };
+
+    const findNextPendingIndex = (startFrom = 0) => {
+        const tracker = state.generationTracker;
+        if (!tracker || !Array.isArray(tracker.flat)) {
+            return -1;
+        }
+        for (let idx = Math.max(0, startFrom); idx < tracker.flat.length; idx++) {
+            if (tracker.flat[idx].status === 'pending') {
+                return idx;
+            }
+        }
+        return -1;
+    };
+
+    const markTrackerActivityDone = (index) => {
+        const tracker = state.generationTracker;
+        if (!tracker || index < 0 || index >= tracker.flat.length) {
+            return;
+        }
+        tracker.flat[index].status = 'done';
+    };
+
+    const syncTrackerFromStatus = (statusText) => {
+        const tracker = state.generationTracker;
+        if (!tracker || tracker.flat.length === 0) {
+            return;
+        }
+
+        const parsedStart = extractActivityFromStatus(statusText);
+        const doneStatus = isActivityDoneStatus(statusText);
+
+        if (doneStatus && tracker.currentIndex >= 0) {
+            markTrackerActivityDone(tracker.currentIndex);
+            tracker.currentIndex = -1;
+        }
+
+        if (parsedStart) {
+            if (tracker.currentIndex >= 0 && tracker.flat[tracker.currentIndex].status !== 'done') {
+                markTrackerActivityDone(tracker.currentIndex);
+            }
+
+            let nextIndex = -1;
+            const pendingStart = findNextPendingIndex(Math.max(0, tracker.currentIndex + 1));
+
+            if (parsedStart.title) {
+                const normalizedTitle = normalizeText(parsedStart.title);
+                for (let idx = Math.max(0, pendingStart); idx < tracker.flat.length; idx++) {
+                    const activity = tracker.flat[idx];
+                    if (activity.status !== 'pending') {
+                        continue;
+                    }
+                    if (normalizeText(activity.title) === normalizedTitle) {
+                        nextIndex = idx;
+                        break;
+                    }
+                }
+            }
+
+            if (nextIndex === -1) {
+                nextIndex = pendingStart;
+            }
+
+            if (nextIndex >= 0) {
+                tracker.flat[nextIndex].status = 'in_progress';
+                tracker.currentIndex = nextIndex;
+            }
+        }
+
+        renderGenerationTracker();
+    };
+
+    const markAllTrackerActivitiesDone = () => {
+        const tracker = state.generationTracker;
+        if (!tracker || !Array.isArray(tracker.flat)) {
+            return;
+        }
+        tracker.flat.forEach((activity) => {
+            activity.status = 'done';
+        });
+        tracker.currentIndex = -1;
+        renderGenerationTracker();
+    };
 
     const collectStringValues = (value, output) => {
         if (typeof value === 'string') {
@@ -163,7 +516,7 @@ export const createStreamManager = (deps) => {
         }
     };
 
-    const openSSEStream = (streamUrl, retryAttempt = 0) => {
+    const openSSEStream = (streamUrl, retryAttempt = 0, streamMode = 'planning') => {
         // When the user pauses a stream mid-way and then regenerates, the AI backend
         // continues running and writes the remaining events + "done" to the stream buffer.
         // When the new EventSource connects, it may read that stale "done" before the
@@ -174,6 +527,17 @@ export const createStreamManager = (deps) => {
 
         // Per-attempt flag: set to true when any structural content event arrives.
         let contentReceived = false;
+
+        const ensureStreamContentVisible = () => {
+            const loadingEl = document.getElementById('planningLoading');
+            const streamContentEl = document.getElementById('planningStreamContent');
+            if (loadingEl) {
+                loadingEl.style.display = 'none';
+            }
+            if (streamContentEl) {
+                streamContentEl.style.display = '';
+            }
+        };
 
         if (!streamUrl) {
             throw new Error(texts.courseai_error_stream_url);
@@ -186,7 +550,37 @@ export const createStreamManager = (deps) => {
             const savedPhase4Total = state.phase4TotalActivities || 0;
             window.console.log('[PHASE4-DEBUG] BEFORE-RESET - Saving phase4TotalActivities:', savedPhase4Total);
 
-            stepsUi.resetPlanningState();
+            stepsUi.resetPlanningState({showLoading: streamMode !== 'generating'});
+
+            if (streamMode === 'generating') {
+                ensureStreamContentVisible();
+
+                if (planningProgressCard) {
+                    planningProgressCard.style.display = '';
+                }
+                if (pcToggleRow) {
+                    pcToggleRow.style.display = 'flex';
+                }
+                state.planDetailsOpen = true;
+                if (pcDetailsPanel) {
+                    pcDetailsPanel.style.display = 'block';
+                }
+                if (pcChevron) {
+                    pcChevron.style.transform = 'rotate(90deg)';
+                }
+                if (pcStep) {
+                    pcStep.textContent = texts.courseai_state_completed;
+                }
+                if (pcTitle) {
+                    pcTitle.textContent = texts.courseai_course_creating;
+                }
+                if (pcSubtitle) {
+                    pcSubtitle.textContent = texts.courseai_course_creating_subtitle;
+                }
+
+                state.generationTracker = createGenerationTracker();
+                renderGenerationTracker();
+            }
 
             // RESTORE phase4TotalActivities AFTER reset
             if (savedPhase4Total > 0) {
@@ -205,7 +599,7 @@ export const createStreamManager = (deps) => {
                 return;
             }
 
-            // Helper: create a new checklist container below the adjustment messages
+            // Helper: create a new checklist container inside the matching round's response slot
             const getOrCreateRoundChecklist = (els, currentRound) => {
                 const existing = document.querySelector(`.courseai-checklist[data-round="${currentRound}"]`);
                 if (existing) {
@@ -221,7 +615,16 @@ export const createStreamManager = (deps) => {
                 label.className = 'courseai-checklist-label';
                 label.textContent = texts.courseai_checklist_label || 'Course sections';
                 container.insertBefore(label, list);
-                if (els.adjustmentHistory && els.adjustmentHistory.parentNode) {
+                // Insert checklist into the corresponding round container's response slot
+                const roundEl = els.adjustmentHistory
+                    ? els.adjustmentHistory.querySelector(`.courseai-round[data-round="${currentRound}"]`)
+                    : null;
+                const responseSlot = roundEl
+                    ? roundEl.querySelector('.courseai-round-response')
+                    : null;
+                if (responseSlot) {
+                    responseSlot.appendChild(container);
+                } else if (els.adjustmentHistory && els.adjustmentHistory.parentNode) {
                     els.adjustmentHistory.parentNode.insertBefore(
                         container,
                         els.adjustmentHistory.nextSibling
@@ -338,6 +741,13 @@ export const createStreamManager = (deps) => {
                 case 'status': {
                     const statusText = data.text || '';
 
+                    // During final generation, keep stream container visible and hide
+                    // centered planning spinner regardless of event shape.
+                    if (streamMode === 'generating') {
+                        ensureStreamContentVisible();
+                        syncTrackerFromStatus(statusText);
+                    }
+
                     // Update the loading spinner text while AI is still planning
                     const loadingTextEl = document.querySelector('.planning-loading-text');
                     if (loadingTextEl && statusText) {
@@ -425,10 +835,6 @@ export const createStreamManager = (deps) => {
                 case 'review_needed':
                     stepsUi.setStepState('planning', 'done');
                     state.currentStage = 'planning';
-                    // Enable action buttons (IA/Delete) now that planning is complete
-                    if (typeof detailedUi.enableAllActionControls === 'function') {
-                        detailedUi.enableAllActionControls();
-                    }
                     stepsUi.updateFlowNav();
                     if (Array.isArray(data.current_plan) && data.current_plan.length > 0) {
                         detailedUi.initDetailedPlanView({sections: data.current_plan});
@@ -442,11 +848,18 @@ export const createStreamManager = (deps) => {
                             });
                         });
                     }
+                    // Enable action buttons (IA/Delete) AFTER re-initialization so newly created controls get enabled
+                    if (typeof detailedUi.enableAllActionControls === 'function') {
+                        detailedUi.enableAllActionControls();
+                    }
                     planningUi.showReviewActions(state.planningMode === 'detailed' ? 'detailed' : 'markdown');
                     // Re-enable compact chat now that review is ready
                     setCompactChatState(deps, 'enabled');
                     break;
                 case 'completed': {
+                    if (streamMode === 'generating') {
+                        markAllTrackerActivitiesDone();
+                    }
                     setCompletionStatsFromGeneratedResult(data.result || []);
                     stepsUi.setStepState('planning', 'done');
                     stepsUi.setStepState('generating', 'active');
@@ -457,6 +870,9 @@ export const createStreamManager = (deps) => {
                     break;
                 }
                 case 'failed':
+                    if (streamMode === 'generating') {
+                        markAllTrackerActivitiesDone();
+                    }
                     stepsUi.setStepState('planning', 'active');
                     closeStream();
                     if (planningSpinner) {
@@ -467,6 +883,10 @@ export const createStreamManager = (deps) => {
                     }
                     if (pcSubtitle) {
                         pcSubtitle.textContent = data.message || texts.courseai_error_generic;
+                    }
+                    // Re-enable action controls on failure so user can interact with partial plan
+                    if (typeof detailedUi.enableAllActionControls === 'function') {
+                        detailedUi.enableAllActionControls();
                     }
                     // Stream failed - re-enable compact chat for retry
                     setCompactChatState(deps, 'enabled');
@@ -487,15 +907,22 @@ export const createStreamManager = (deps) => {
                     '[STREAM] Stale done detected (attempt', retryAttempt + 1, '/', MAX_STALE_RETRIES + ').',
                     'Retrying in', STALE_RETRY_DELAY_MS, 'ms…'
                 );
-                setTimeout(() => openSSEStream(streamUrl, retryAttempt + 1), STALE_RETRY_DELAY_MS);
+                setTimeout(() => openSSEStream(streamUrl, retryAttempt + 1, streamMode), STALE_RETRY_DELAY_MS);
                 return;
             }
 
             if (typingCursor) {
                 typingCursor.classList.add('hidden');
             }
+            if (streamMode === 'generating') {
+                markAllTrackerActivitiesDone();
+            }
             if (planningSpinner) {
                 planningSpinner.classList.add('done');
+            }
+            // Safety net: enable action controls in case review_needed didn't cover newly created controls
+            if (typeof detailedUi.enableAllActionControls === 'function') {
+                detailedUi.enableAllActionControls();
             }
             // Stream completed normally - re-enable compact chat
             setCompactChatState(deps, 'enabled');
