@@ -553,7 +553,7 @@ export const createCourseaiActions = (deps) => {
 
         if (btnCreateAnotherCourse) {
             btnCreateAnotherCourse.addEventListener('click', () => {
-                resetForAnotherCourse();
+                window.location.href = 'aicoursecreation.php';
             });
         }
 

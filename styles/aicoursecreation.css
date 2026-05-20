@@ -355,6 +355,13 @@ svg { display: block; flex-shrink: 0; }
   min-width: 0;
 }
 
+.courseai-checklist-meta {
+  font-size: 11px;
+  font-weight: 700;
+  color: var(--muted-fg);
+  white-space: nowrap;
+}
+
 /* ─── ADJUSTMENT HISTORY ─────────────────────────────────────────────── */
 .courseai-adjustment-history {
   display: flex;

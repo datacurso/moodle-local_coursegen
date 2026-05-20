@@ -238,6 +238,17 @@ class ai_course_api_service {
     }
 
     /**
+     * Retrieve resumable state snapshot for a planning session.
+     *
+     * @param string $sessionid External planning session identifier.
+     * @return array Decoded response from the API.
+     */
+    public function get_course_state(string $sessionid): array {
+        $endpoint = '/course/state/' . urlencode($sessionid);
+        return $this->client->request('GET', $endpoint);
+    }
+
+    /**
      * Retrieve the activity result for a module generation thread.
      *
      * @param string $threadid External activity generation identifier (currentThreadId).

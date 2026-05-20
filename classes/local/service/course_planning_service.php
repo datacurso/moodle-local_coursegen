@@ -75,7 +75,7 @@ class course_planning_service {
         $defaultcategoryid = $defaultcategory ? (int)$defaultcategory->id : 0;
 
         $prompttitle = self::build_course_title_from_prompt($prompt, $lang);
-        $generatedshortname = self::build_shortname_from_title($prompttitle, $userid);
+        $generatedshortname = self::build_initial_shortname($userid);
 
         $session = new course_session();
         $session->set('userid', $userid);
@@ -112,15 +112,6 @@ class course_planning_service {
      */
     private static function build_course_title_from_prompt(string $prompt, string $lang = 'es'): string {
         $normalized = trim((string)preg_replace('/\s+/u', ' ', $prompt));
-        $normalized = preg_replace('/^[\p{P}\p{Zs}]+/u', '', $normalized);
-        $normalized = preg_replace(
-            '/^(please\s+)?(create|generate|build|design|make|draft|crea|crear|genera|generar|disena|diseña|elabora|desarrolla|haz)\s+/iu',
-            '',
-            $normalized
-        );
-        $normalized = preg_replace('/^(an?|un|una)\s+/iu', '', $normalized);
-        $normalized = preg_replace('/^(course|curso)\s*(about|on|of|sobre|de|acerca de)?\s*/iu', '', $normalized);
-        $normalized = trim((string)$normalized, " \t\n\r\0\x0B.,;:!¡?¿-_");
 
         if ($normalized === '') {
             return get_string('createwithai', 'local_coursegen');
@@ -136,22 +127,15 @@ class course_planning_service {
     }
 
     /**
-     * Build a unique-ish shortname candidate from a title and user.
+     * Build a temporary shortname for the session payload.
      *
-     * @param string $title Course title.
+     * Final semantic shortname is provided by Python `course_identity` and
+     * normalized at course creation time.
+     *
      * @param int $userid Current user id.
      * @return string
      */
-    private static function build_shortname_from_title(string $title, int $userid): string {
-        $shortnamebase = \core_text::strtolower($title);
-        $shortnamebase = preg_replace('/[^a-z0-9]+/i', '-', $shortnamebase);
-        $shortnamebase = trim((string)$shortnamebase, '-');
-
-        if ($shortnamebase === '') {
-            $shortnamebase = 'ai-course';
-        }
-
-        $shortnamebase = (string)\core_text::substr($shortnamebase, 0, 40);
-        return $shortnamebase . '-' . $userid . '-' . time();
+    private static function build_initial_shortname(int $userid): string {
+        return 'courseai-' . $userid . '-' . time();
     }
 }

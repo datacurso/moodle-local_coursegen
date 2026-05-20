@@ -610,11 +610,23 @@ export const createStreamManager = (deps) => {
 
         // Only reset planning UI on the first attempt (not on stale-done retries).
         if (retryAttempt === 0) {
+            if (streamMode !== 'generating') {
+                preservedPhase4Total = 0;
+            }
+
+            const savedLatestInitialSections = streamMode === 'generating'
+                ? (Array.isArray(state.latestInitialSections) ? state.latestInitialSections : [])
+                : [];
+
             // PRESERVE phase4TotalActivities BEFORE reset
             const savedPhase4Total = state.phase4TotalActivities || 0;
             window.console.log('[PHASE4-DEBUG] BEFORE-RESET - Saving phase4TotalActivities:', savedPhase4Total);
 
             stepsUi.resetPlanningState({showLoading: streamMode !== 'generating'});
+
+            if (streamMode === 'generating' && savedLatestInitialSections.length > 0) {
+                state.latestInitialSections = savedLatestInitialSections;
+            }
 
             if (streamMode === 'generating') {
                 ensureStreamContentVisible();

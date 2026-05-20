@@ -146,4 +146,13 @@ $functions = [
         'capabilities' => 'moodle/course:create,local/coursegen:createcoursewithai',
         'loginrequired' => true,
     ],
+    'local_coursegen_get_course_session_state' => [
+        'classname' => 'local_coursegen\\external\\get_course_session_state',
+        'methodname' => 'execute',
+        'description' => 'Get resumable state for an AI course session',
+        'type' => 'read',
+        'ajax' => true,
+        'capabilities' => 'moodle/course:create,local/coursegen:createcoursewithai',
+        'loginrequired' => true,
+    ],
 ];
