@@ -26,6 +26,13 @@
 defined('MOODLE_INTERNAL') || die();
 
 if ($hassiteconfig) {
+    $ADMIN->add('courses', new admin_externalpage(
+        'local_coursegen_addnewcourseai',
+        get_string('courseai_admin_addnewcourse', 'local_coursegen'),
+        new moodle_url('/local/coursegen/aicoursecreation.php'),
+        'local/coursegen:createcoursewithai'
+    ), 'restorecourse');
+
     $pluginname = 'local_coursegen';
     $admincategory = new admin_category($pluginname, get_string('pluginname', $pluginname));
     $ADMIN->add('localplugins', $admincategory);

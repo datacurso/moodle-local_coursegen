@@ -82,6 +82,7 @@ export const setCompactChatState = (deps, mode) => {
 
         case 'disabled':
             compactChatCard.style.display = 'block';
+            compactChatCard.classList.add('compact-chat-card--disabled');
             if (compactPromptInput) {
                 compactPromptInput.classList.add('compact-controls--disabled');
                 compactPromptInput.disabled = true;
@@ -108,6 +109,9 @@ export const setCompactChatState = (deps, mode) => {
             // Disable Regenerar — actions.js re-enables it and switches label to Pausar
             if (btnCompactRegenerate) {
                 btnCompactRegenerate.disabled = true;
+            }
+            if (state) {
+                state.isStreaming = true;
             }
             break;
 

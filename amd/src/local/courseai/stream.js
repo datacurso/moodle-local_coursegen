@@ -193,6 +193,8 @@ export const createStreamManager = (deps) => {
                         || `${texts.courseai_activity_default} ${activityIndex + 1}`,
                     type: (activity.activity_type || activity.type || 'page').toLowerCase(),
                     status: 'pending',
+                    imageDone: 0,
+                    imageTotal: 0,
                 })),
             };
         });
@@ -224,6 +226,7 @@ export const createStreamManager = (deps) => {
             const doneCount = section.activities.filter((activity) => activity.status === 'done').length;
             const inProgressCount = section.activities.filter((activity) => activity.status === 'in_progress').length;
             const totalCount = section.activities.length;
+            const visibleCount = doneCount + inProgressCount;
 
             if (doneCount === 0 && inProgressCount === 0) {
                 sectionEl.classList.add('ps-section--pending');
@@ -258,7 +261,7 @@ export const createStreamManager = (deps) => {
 
             const countEl = document.createElement('span');
             countEl.className = 'ps-section-count';
-            countEl.textContent = `${doneCount}/${totalCount}`;
+            countEl.textContent = `${visibleCount}/${totalCount}`;
 
             headEl.appendChild(numEl);
             headEl.appendChild(infoEl);
@@ -298,6 +301,15 @@ export const createStreamManager = (deps) => {
 
                     activityInfo.appendChild(activityName);
 
+                    if (activity.imageTotal > 0) {
+                        const imageProgressTag = document.createElement('span');
+                        imageProgressTag.className = 'ps-image-progress';
+                        imageProgressTag.textContent = (
+                            `${activity.imageDone}/${activity.imageTotal} ${texts.courseai_images_label}`
+                        );
+                        activityInfo.appendChild(imageProgressTag);
+                    }
+
                     itemEl.appendChild(statusDot);
                     itemEl.appendChild(badgeEl);
                     itemEl.appendChild(activityInfo);
@@ -330,6 +342,20 @@ export const createStreamManager = (deps) => {
             return;
         }
         tracker.flat[index].status = 'done';
+    };
+
+    const updateTrackerActivityStatusByCoordinates = (sectionIndex, activityIndex, status) => {
+        const tracker = state.generationTracker;
+        if (!tracker || !Array.isArray(tracker.sections) || !tracker.sections[sectionIndex]) {
+            return;
+        }
+
+        const section = tracker.sections[sectionIndex];
+        if (!Array.isArray(section.activities) || !section.activities[activityIndex]) {
+            return;
+        }
+
+        section.activities[activityIndex].status = status;
     };
 
     const syncTrackerFromStatus = (statusText) => {
@@ -391,6 +417,40 @@ export const createStreamManager = (deps) => {
         });
         tracker.currentIndex = -1;
         renderGenerationTracker();
+    };
+
+    const updateTrackerImageProgress = (sectionIndex, activityIndex, done, total) => {
+        const tracker = state.generationTracker;
+        if (!tracker || !Array.isArray(tracker.sections) || !tracker.sections[sectionIndex]) {
+            return;
+        }
+
+        const section = tracker.sections[sectionIndex];
+        if (!section.activities || !section.activities[activityIndex]) {
+            return;
+        }
+
+        const activity = section.activities[activityIndex];
+        const safeTotal = Math.max(0, Number(total) || 0);
+        const safeDone = Math.max(0, Math.min(Number(done) || 0, safeTotal));
+        activity.imageTotal = safeTotal;
+        activity.imageDone = safeDone;
+    };
+
+    const getTrackerImagesProgress = () => {
+        const tracker = state.generationTracker;
+        if (!tracker || !Array.isArray(tracker.flat)) {
+            return {done: 0, total: 0};
+        }
+
+        return tracker.flat.reduce((acc, activity) => {
+            const total = Math.max(0, Number(activity.imageTotal) || 0);
+            const done = Math.max(0, Math.min(Number(activity.imageDone) || 0, total));
+            return {
+                done: acc.done + done,
+                total: acc.total + total,
+            };
+        }, {done: 0, total: 0});
     };
 
     const collectStringValues = (value, output) => {
@@ -544,6 +604,10 @@ export const createStreamManager = (deps) => {
         }
         closeStream();
 
+        // Keep compact chat disabled for the whole active stream lifecycle.
+        // It is re-enabled explicitly on review/failed/error states.
+        setCompactChatState(deps, 'disabled');
+
         // Only reset planning UI on the first attempt (not on stale-done retries).
         if (retryAttempt === 0) {
             // PRESERVE phase4TotalActivities BEFORE reset
@@ -578,9 +642,13 @@ export const createStreamManager = (deps) => {
                     pcSubtitle.textContent = texts.courseai_course_creating_subtitle;
                 }
 
-                state.generationTracker = createGenerationTracker();
-                renderGenerationTracker();
-            }
+                    state.generationTracker = createGenerationTracker();
+                    state.structuredActivityProgress = false;
+                    state.activityProgressTotal = 0;
+                    state.activityProgressStarted = 0;
+                    state.activityProgressDone = 0;
+                    renderGenerationTracker();
+                }
 
             // RESTORE phase4TotalActivities AFTER reset
             if (savedPhase4Total > 0) {
@@ -745,7 +813,9 @@ export const createStreamManager = (deps) => {
                     // centered planning spinner regardless of event shape.
                     if (streamMode === 'generating') {
                         ensureStreamContentVisible();
-                        syncTrackerFromStatus(statusText);
+                        if (!state.structuredActivityProgress) {
+                            syncTrackerFromStatus(statusText);
+                        }
                     }
 
                     // Update the loading spinner text while AI is still planning
@@ -832,6 +902,107 @@ export const createStreamManager = (deps) => {
                     }
                     break;
                 }
+                case 'activity_progress_init': {
+                    state.structuredActivityProgress = true;
+                    state.activityProgressTotal = Math.max(0, Number(data.total) || 0);
+                    state.activityProgressStarted = 0;
+                    state.activityProgressDone = 0;
+                    if (state.currentStage === 'generating' && state.activityProgressTotal > 0) {
+                        stepsUi.setProgress(0);
+                    }
+                    break;
+                }
+                case 'activity_progress_start': {
+                    updateTrackerActivityStatusByCoordinates(
+                        Number(data.section_index) || 0,
+                        Number(data.activity_index) || 0,
+                        'in_progress'
+                    );
+
+                    state.activityProgressStarted = (state.activityProgressStarted || 0) + 1;
+                    if (state.currentStage === 'generating' && (state.activityProgressTotal || 0) > 0) {
+                        const startProgress = Math.min(
+                            30,
+                            (state.activityProgressStarted / state.activityProgressTotal) * 30
+                        );
+                        stepsUi.setProgress(Math.round(startProgress));
+                    }
+
+                    renderGenerationTracker();
+                    break;
+                }
+                case 'activity_progress_done': {
+                    updateTrackerActivityStatusByCoordinates(
+                        Number(data.section_index) || 0,
+                        Number(data.activity_index) || 0,
+                        'done'
+                    );
+
+                    state.activityProgressDone = (state.activityProgressDone || 0) + 1;
+                    if (state.currentStage === 'generating' && (state.activityProgressTotal || 0) > 0) {
+                        const completeProgress = 30 + Math.min(
+                            60,
+                            (state.activityProgressDone / state.activityProgressTotal) * 60
+                        );
+                        stepsUi.setProgress(Math.round(completeProgress));
+                    }
+
+                    renderGenerationTracker();
+                    break;
+                }
+                case 'activity_progress_failed':
+                    updateTrackerActivityStatusByCoordinates(
+                        Number(data.section_index) || 0,
+                        Number(data.activity_index) || 0,
+                        'done'
+                    );
+                    renderGenerationTracker();
+                    break;
+                case 'image_progress_init': {
+                    const activities = Array.isArray(data.activities) ? data.activities : [];
+                    activities.forEach((item) => {
+                        updateTrackerImageProgress(
+                            Number(item.section_index) || 0,
+                            Number(item.activity_index) || 0,
+                            Number(item.done) || 0,
+                            Number(item.total) || 0
+                        );
+                    });
+
+                    const imageTotals = getTrackerImagesProgress();
+                    state.imageProgressTotal = imageTotals.total;
+                    if (state.currentStage === 'generating' && imageTotals.total > 0) {
+                        stepsUi.setProgress(90);
+                    }
+
+                    renderGenerationTracker();
+                    break;
+                }
+                case 'image_progress_tick': {
+                    updateTrackerImageProgress(
+                        Number(data.section_index) || 0,
+                        Number(data.activity_index) || 0,
+                        Number(data.done) || 0,
+                        Number(data.total) || 0
+                    );
+
+                    const imageTotals = getTrackerImagesProgress();
+                    state.imageProgressDone = imageTotals.done;
+                    state.imageProgressTotal = imageTotals.total;
+
+                    if (state.currentStage === 'generating' && imageTotals.total > 0) {
+                        const imageProgress = Math.min(99, 90 + Math.round((imageTotals.done / imageTotals.total) * 9));
+                        stepsUi.setProgress(imageProgress);
+                    }
+
+                    renderGenerationTracker();
+                    break;
+                }
+                case 'image_progress_done':
+                    if (state.currentStage === 'generating') {
+                        stepsUi.setProgress(99);
+                    }
+                    break;
                 case 'review_needed':
                     stepsUi.setStepState('planning', 'done');
                     state.currentStage = 'planning';
@@ -924,8 +1095,10 @@ export const createStreamManager = (deps) => {
             if (typeof detailedUi.enableAllActionControls === 'function') {
                 detailedUi.enableAllActionControls();
             }
-            // Stream completed normally - re-enable compact chat
-            setCompactChatState(deps, 'enabled');
+            // Stream completed normally - keep chat disabled during generating phase.
+            if (streamMode !== 'generating') {
+                setCompactChatState(deps, 'enabled');
+            }
         });
 
         state.sseSource.onerror = () => {

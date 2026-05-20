@@ -147,7 +147,7 @@ export const init = async(params) => {
         contextUi.updateGenerateButton();
 
         // Initialize sidebar.
-        initSidebar(state);
+        initSidebar(state, actions.resetForAnotherCourse);
     } catch (error) {
         Notification.exception(error);
     }

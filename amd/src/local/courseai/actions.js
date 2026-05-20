@@ -172,6 +172,7 @@ export const createCourseaiActions = (deps) => {
             return;
         }
 
+        const CREATE_COURSE_TIMEOUT_MS = 180000;
         let progressInterval = null;
 
         try {
@@ -209,7 +210,13 @@ export const createCourseaiActions = (deps) => {
                 }
             }, intervalMs);
 
-            const result = await createCourse({recordid: state.sessionid});
+            const createRequest = createCourse({recordid: state.sessionid});
+            const timeoutPromise = new Promise((_, reject) => {
+                setTimeout(() => {
+                    reject(new Error(texts.courseai_error_connection));
+                }, CREATE_COURSE_TIMEOUT_MS);
+            });
+            const result = await Promise.race([createRequest, timeoutPromise]);
 
             // Stop simulation and jump to 100%
             if (progressInterval) {
@@ -503,12 +510,8 @@ export const createCourseaiActions = (deps) => {
         // Compact chat regeneration / pause
         if (btnCompactRegenerate) {
             btnCompactRegenerate.addEventListener('click', () => {
-                // If streaming, pause and unlock chat
+                // While streaming this control must remain non-interactive.
                 if (state.isStreaming) {
-                    streamManager.closeStream();
-                    state.isStreaming = false;
-                    // Re-enable compact chat controls and reset button to "Regenerar"
-                    setCompactChatState(deps, 'enabled');
                     return;
                 }
 
@@ -588,6 +591,7 @@ export const createCourseaiActions = (deps) => {
         createCourseFromSession,
         handleGenerate,
         sendFeedbackAction,
+        resetForAnotherCourse,
         bindEvents,
     };
 };

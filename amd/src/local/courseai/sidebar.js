@@ -104,6 +104,15 @@ export const initSidebar = (state, resetFn) => {
         sessionsBackBtn.addEventListener('click', showMainView);
     }
 
+    let coursesOpen = true;
+
+    const syncCoursesListHeight = () => {
+        if (!coursesList || !coursesOpen) {
+            return;
+        }
+        coursesList.style.maxHeight = coursesList.scrollHeight + 'px';
+    };
+
     // ─── Open / close helpers ────────────────────────────────────────
     const openSidebar = () => {
         sidebar.classList.remove('collapsed');
@@ -113,6 +122,7 @@ export const initSidebar = (state, resetFn) => {
         if (backdrop) {
             backdrop.classList.add('open');
         }
+        syncCoursesListHeight();
     };
 
     const closeSidebar = () => {
@@ -161,8 +171,6 @@ export const initSidebar = (state, resetFn) => {
     }
 
     // ─── Courses section expand/collapse ─────────────────────────────
-    let coursesOpen = true;
-
     const toggleCourses = () => {
         coursesOpen = !coursesOpen;
         if (coursesChevron) {
@@ -171,7 +179,7 @@ export const initSidebar = (state, resetFn) => {
         if (coursesList) {
             coursesList.classList.toggle('closed', !coursesOpen);
             if (coursesOpen) {
-                coursesList.style.maxHeight = coursesList.scrollHeight + 'px';
+                syncCoursesListHeight();
             }
         }
     };
@@ -181,9 +189,9 @@ export const initSidebar = (state, resetFn) => {
     }
 
     if (coursesList) {
-        coursesList.style.maxHeight = coursesList.scrollHeight + 'px';
+        syncCoursesListHeight();
         setTimeout(() => {
-            coursesList.style.maxHeight = coursesList.scrollHeight + 'px';
+            syncCoursesListHeight();
         }, 50);
     }
 

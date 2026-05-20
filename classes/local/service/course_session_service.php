@@ -86,19 +86,28 @@ class course_session_service {
     }
 
     /**
-     * Get in-progress course sessions for a user (status != CREATED).
+     * Get in-progress course sessions for a user.
      *
      * @param int $userid User ID.
      * @param int $limit Max records (0 = no limit).
+     * @param bool $includecreated Whether to include CREATED sessions.
      * @return array List of course_session objects.
      */
-    public static function get_user_inprogress_sessions(int $userid, int $limit = 0): array {
+    public static function get_user_inprogress_sessions(int $userid, int $limit = 0, bool $includecreated = false): array {
         global $DB;
+
+        if ($includecreated) {
+            $where = 'userid = ?';
+            $params = [$userid];
+        } else {
+            $where = 'userid = ? AND status != ?';
+            $params = [$userid, course_session::STATUS_CREATED];
+        }
 
         $records = $DB->get_records_select(
             'local_coursegen_course_sessions',
-            'userid = ? AND status != ?',
-            [$userid, course_session::STATUS_CREATED],
+            $where,
+            $params,
             'timecreated DESC'
         );
 
