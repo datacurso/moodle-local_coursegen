@@ -6,6 +6,9 @@
  * @module     local_coursegen/local/courseai/ui-detailed
  */
 
+import DeleteCancelModal from 'core/modal_delete_cancel';
+import ModalEvents from 'core/modal_events';
+
 /**
  * Create detailed planning helpers.
  *
@@ -36,6 +39,28 @@ export const createDetailedUi = (deps) => {
         prvHeaderSub,
         planningSpinner,
     } = elements;
+
+    const confirmDelete = async({title, body}) => {
+        const modal = await DeleteCancelModal.create({title, body});
+
+        return await new Promise((resolve) => {
+            let resolved = false;
+
+            modal.getRoot().on(ModalEvents.delete, () => {
+                resolved = true;
+                resolve(true);
+            });
+
+            modal.getRoot().on(ModalEvents.hidden, () => {
+                if (!resolved) {
+                    resolve(false);
+                }
+                modal.destroy();
+            });
+
+            modal.show();
+        });
+    };
 
     const formatImageCount = (count) => {
         if (count === 1) {
@@ -655,12 +680,60 @@ export const createDetailedUi = (deps) => {
             variant: 'delete',
             iconUrl: getCoreIconUrl('t/delete'),
             label: texts.courseai_btn_cancel || 'Delete',
-            onActivate: () => {
+            onActivate: async() => {
                 if (!row) {
                     return;
                 }
-                const isDeleted = row.classList.toggle('dp-item-deleted');
-                deleteControl.classList.toggle('is-active', isDeleted);
+
+                const confirmed = await confirmDelete({
+                    title: texts.courseai_delete_section_confirm_title || 'Delete section',
+                    body: texts.courseai_delete_section_confirm_body || 'Are you sure you want to delete this section?',
+                });
+
+                if (!confirmed || !regenerateDetailedItem || !state.sessionid) {
+                    return;
+                }
+
+                row.classList.add('dp-item-regenerating');
+                try {
+                    const resp = await regenerateDetailedItem({
+                        recordid: state.sessionid,
+                        target_type: 'section',
+                        section_index: Number(sectionIndex),
+                        deleted: true,
+                    });
+                    const rawResult = (resp && resp.result) || '';
+                    const parsed = rawResult
+                        ? (typeof rawResult === 'string' ? JSON.parse(rawResult) : rawResult)
+                        : null;
+
+                    if (!parsed || !parsed.success) {
+                        return;
+                    }
+
+                    // Remove section row from UI.
+                    if (row.parentNode) {
+                        row.parentNode.removeChild(row);
+                    }
+
+                    // Drop section and activity entries from state.
+                    delete state.detailedSectionMeta[sectionIndex];
+                    Object.keys(state.detailedActivityEls)
+                        .filter((key) => key.startsWith(`${sectionIndex}-`))
+                        .forEach((key) => delete state.detailedActivityEls[key]);
+
+                    Object.keys(state.selectedDetailedImages)
+                        .filter((id) => id.startsWith(`${sectionIndex}-`))
+                        .forEach((id) => delete state.selectedDetailedImages[id]);
+
+                    if (Array.isArray(state.latestInitialSections) && state.latestInitialSections[sectionIndex]) {
+                        state.latestInitialSections[sectionIndex].deleted = true;
+                    }
+
+                    updateDetailedHeaderStats();
+                } finally {
+                    row.classList.remove('dp-item-regenerating');
+                }
             },
             disabled: true,
         });
@@ -874,9 +947,76 @@ export const createDetailedUi = (deps) => {
             variant: 'delete',
             iconUrl: getCoreIconUrl('t/delete'),
             label: texts.courseai_btn_cancel || 'Delete',
-            onActivate: () => {
-                const isDeleted = wrap.classList.toggle('dp-item-deleted');
-                deleteControl.classList.toggle('is-active', isDeleted);
+            onActivate: async() => {
+                const key = `${sectionIndex}-${activityIndex}`;
+                const entry = state.detailedActivityEls[key];
+                if (!entry || !regenerateDetailedItem || !state.sessionid) {
+                    return;
+                }
+
+                const confirmed = await confirmDelete({
+                    title: texts.courseai_delete_activity_confirm_title || 'Delete activity',
+                    body: texts.courseai_delete_activity_confirm_body || 'Are you sure you want to delete this activity?',
+                });
+
+                if (!confirmed) {
+                    return;
+                }
+
+                wrap.classList.add('dp-item-regenerating');
+                try {
+                    const resp = await regenerateDetailedItem({
+                        recordid: state.sessionid,
+                        target_type: 'activity',
+                        section_index: Number(sectionIndex),
+                        activity_index: Number(activityIndex),
+                        deleted: true,
+                    });
+                    const rawResult = (resp && resp.result) || '';
+                    const parsed = rawResult
+                        ? (typeof rawResult === 'string' ? JSON.parse(rawResult) : rawResult)
+                        : null;
+
+                    if (!parsed || !parsed.success) {
+                        return;
+                    }
+
+                    if (wrap.parentNode) {
+                        wrap.parentNode.removeChild(wrap);
+                    }
+
+                    if (Array.isArray(state.latestInitialSections)) {
+                        const sectionData = state.latestInitialSections[sectionIndex];
+                        if (sectionData && Array.isArray(sectionData.activities) && sectionData.activities[activityIndex]) {
+                            sectionData.activities[activityIndex].deleted = true;
+                        }
+                    }
+
+                    const meta = state.detailedSectionMeta[sectionIndex];
+                    if (meta) {
+                        meta.total = Math.max(0, Number(meta.total || 0) - 1);
+                        if (entry.done) {
+                            meta.done = Math.max(0, Number(meta.done || 0) - 1);
+                        }
+                        if (meta.metaEl) {
+                            meta.metaEl.textContent = formatTemplate(texts.courseai_section_progress_with_total, {
+                                done: meta.done,
+                                total: meta.total,
+                                description: '',
+                            });
+                        }
+                    }
+
+                    Object.keys(state.selectedDetailedImages)
+                        .filter((id) => id.startsWith(`${sectionIndex}-${activityIndex}-`))
+                        .forEach((id) => delete state.selectedDetailedImages[id]);
+
+                    delete state.detailedActivityEls[key];
+                    updateSectionImageBadge(sectionIndex);
+                    updateDetailedHeaderStats();
+                } finally {
+                    wrap.classList.remove('dp-item-regenerating');
+                }
             },
             disabled: true,
         });

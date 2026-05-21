@@ -366,6 +366,10 @@ $string['courseai_btn_adjust'] = 'Ajustar';
 $string['courseai_btn_approve'] = 'Generar curso';
 $string['courseai_adjust_placeholder'] = 'Indicá qué querés ajustar en la planificación...';
 $string['courseai_btn_cancel'] = 'Cancelar';
+$string['courseai_delete_section_confirm_title'] = 'Eliminar sección';
+$string['courseai_delete_section_confirm_body'] = '¿Seguro que querés eliminar esta sección del plan?';
+$string['courseai_delete_activity_confirm_title'] = 'Eliminar actividad';
+$string['courseai_delete_activity_confirm_body'] = '¿Seguro que querés eliminar esta actividad del plan?';
 $string['courseai_btn_send_adjust'] = 'Enviar ajuste';
 $string['courseai_btn_back_context'] = '← Volver al contexto';
 

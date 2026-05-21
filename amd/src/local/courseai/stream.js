@@ -180,8 +180,12 @@ export const createStreamManager = (deps) => {
             ? state.latestInitialSections
             : [];
 
-        const sections = sourceSections.map((section, sectionIndex) => {
-            const activities = Array.isArray(section.activities) ? section.activities : [];
+        const sections = sourceSections
+            .filter((section) => !section?.deleted)
+            .map((section, sectionIndex) => {
+                const activities = (Array.isArray(section.activities) ? section.activities : [])
+                    .filter((activity) => !activity?.deleted);
+
             return {
                 index: sectionIndex,
                 name: section.name || `${texts.courseai_section_label} ${sectionIndex + 1}`,
@@ -197,7 +201,7 @@ export const createStreamManager = (deps) => {
                     imageTotal: 0,
                 })),
             };
-        });
+            });
 
         const flat = [];
         sections.forEach((section) => {

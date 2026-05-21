@@ -53,6 +53,7 @@ class regenerate_detailed_item extends external_api {
             'section_index' => new external_value(PARAM_INT, '0-based section index'),
             'activity_index' => new external_value(PARAM_INT, '0-based activity index (for activity/image)', VALUE_DEFAULT, -1),
             'instruction' => new external_value(PARAM_TEXT, 'Adjustment text for the regenerated item', VALUE_DEFAULT, ''),
+            'deleted' => new external_value(PARAM_BOOL, 'Mark target as deleted in plan', VALUE_DEFAULT, false),
         ]);
     }
 
@@ -64,6 +65,7 @@ class regenerate_detailed_item extends external_api {
      * @param int $sectionindex Section index
      * @param int $activityindex Activity index (-1 if not applicable)
      * @param string $instruction Adjustment text
+     * @param bool $deleted Mark target as deleted
      * @return array
      */
     public static function execute(
@@ -71,7 +73,8 @@ class regenerate_detailed_item extends external_api {
         string $targettype,
         int $sectionindex,
         int $activityindex = -1,
-        string $instruction = ''
+        string $instruction = '',
+        bool $deleted = false
     ): array {
         global $USER;
 
@@ -81,6 +84,7 @@ class regenerate_detailed_item extends external_api {
             'section_index' => $sectionindex,
             'activity_index' => $activityindex,
             'instruction' => $instruction,
+            'deleted' => $deleted,
         ]);
 
         $context = context_system::instance();
@@ -101,7 +105,8 @@ class regenerate_detailed_item extends external_api {
                 $params['target_type'],
                 $params['section_index'],
                 $params['activity_index'] >= 0 ? $params['activity_index'] : null,
-                $params['instruction']
+                $params['instruction'],
+                (bool)$params['deleted']
             );
         } catch (\moodle_exception $e) {
             throw new \moodle_exception('error_sending_feedback', 'local_coursegen', '', $e->getMessage());
