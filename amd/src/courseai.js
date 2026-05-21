@@ -88,6 +88,33 @@ export const init = async(params) => {
             }
         };
 
+        const applyCourseTitleToHeader = () => {
+            const title = String(state.courseTitle || '').trim();
+            if (!title || !elements.prvHeaderTitle) {
+                return;
+            }
+            elements.prvHeaderTitle.textContent = title;
+        };
+
+        const buildCourseUrlFromResume = (resume) => {
+            const explicitUrl = String(resume?.courseurl || '').trim();
+            if (explicitUrl) {
+                return explicitUrl;
+            }
+
+            const courseId = Number(resume?.courseid || 0);
+            if (courseId <= 0) {
+                return '';
+            }
+
+            const baseUrl = String(window?.M?.cfg?.wwwroot || '').replace(/\/$/, '');
+            if (!baseUrl) {
+                return `/course/view.php?id=${courseId}`;
+            }
+
+            return `${baseUrl}/course/view.php?id=${courseId}`;
+        };
+
         const normalizeSnapshotStatus = (rawStatus) => {
             const upper = String(rawStatus || '').toUpperCase();
             if (!upper) {
@@ -361,6 +388,7 @@ export const init = async(params) => {
                 ?? coursedata.local_coursegen_with_images
                 ?? false
             );
+            state.courseTitle = String(snapshot?.course_identity?.fullname || '').trim();
 
             const initialPrompt =
                 snapshot?.messages?.[0]?.content
@@ -404,9 +432,31 @@ export const init = async(params) => {
                 );
             }
 
+            const sessionStatus = Number(resume?.sessionstatus || 0);
+            const hasCreatedStatus = sessionStatus === 3;
+            const hasCreatedCourse = Number(resume?.courseid || 0) > 0;
+            const isCreated = Boolean(resume?.iscreated) || hasCreatedStatus || hasCreatedCourse;
+
+            if (isCreated) {
+                stepsUi.transitionToPlanning();
+                setPlanningStreamVisible();
+                applyCourseTitleToHeader();
+                if (sectionsForUi.length > 0) {
+                    hydrateDetailedPlanFromSnapshot(sectionsForUi);
+                }
+
+                actions.showCompletionView({
+                    success: true,
+                    courseid: Number(resume?.courseid || 0),
+                    courseurl: buildCourseUrlFromResume(resume),
+                });
+                return true;
+            }
+
             if (status === 'WAITING_APPROVAL' || status === 'PLANNING_ADJUST') {
                 stepsUi.transitionToPlanning();
                 setPlanningStreamVisible();
+                applyCourseTitleToHeader();
                 hydrateDetailedPlanFromSnapshot(sectionsForUi);
                 planningUi.showReviewActions('detailed');
                 return true;
@@ -414,6 +464,7 @@ export const init = async(params) => {
 
             if (status === 'GENERATING' || status === 'PLANNING_ACCEPT') {
                 stepsUi.transitionToPlanning();
+                applyCourseTitleToHeader();
                 stepsUi.setStepState('planning', 'done');
                 stepsUi.setStepState('generating', 'active');
                 state.currentStage = 'generating';
@@ -424,6 +475,7 @@ export const init = async(params) => {
 
             if (status === 'PLANNING' || status === 'PENDING') {
                 stepsUi.transitionToPlanning();
+                applyCourseTitleToHeader();
                 streamManager.openSSEStream(state.streamingurl, 0, 'planning');
                 return true;
             }
@@ -431,6 +483,7 @@ export const init = async(params) => {
             if (status === 'COMPLETED') {
                 stepsUi.transitionToPlanning();
                 setPlanningStreamVisible();
+                applyCourseTitleToHeader();
                 if (sectionsForUi.length > 0) {
                     hydrateDetailedPlanFromSnapshot(sectionsForUi);
                 }

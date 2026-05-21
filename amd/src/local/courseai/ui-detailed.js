@@ -932,11 +932,26 @@ export const createDetailedUi = (deps) => {
             return meta;
         }
 
+        let sectionName = '';
+        if (Array.isArray(state.latestInitialSections)) {
+            const byIndex = state.latestInitialSections[sectionIndex];
+            if (byIndex && typeof byIndex.name === 'string') {
+                sectionName = byIndex.name;
+            }
+        }
+
+        if (!sectionName && Array.isArray(state.planSectionsData)) {
+            const plannedSection = state.planSectionsData.find((section) => Number(section.sectionIndex) === Number(sectionIndex));
+            if (plannedSection && typeof plannedSection.name === 'string') {
+                sectionName = plannedSection.name;
+            }
+        }
+
         const renderIndex = Object.keys(state.detailedSectionMeta).length;
         createDetailedSectionRow({
             sectionIndex,
             renderIndex,
-            sectionName: formatTemplate(texts.courseai_section_label, {section: sectionIndex + 1, name: ''}),
+            sectionName: sectionName || formatTemplate(texts.courseai_section_label, {section: sectionIndex + 1, name: ''}),
             totalActivities: 0
         });
         meta = state.detailedSectionMeta[sectionIndex];
@@ -975,8 +990,14 @@ export const createDetailedUi = (deps) => {
 
     const initDetailedPlanView = (data) => {
         const sourceSections = normalizeInitialSections(data?.sections || []);
+        const renderSections = data?.renderSections !== false;
+
         // Store sections for later use (e.g., partial regeneration)
-        state.latestInitialSections = sourceSections;
+        // but avoid wiping existing section names when the caller only
+        // wants to initialize the container for progressive rendering.
+        if (sourceSections.length > 0) {
+            state.latestInitialSections = sourceSections;
+        }
 
         if (prvSections) {
             prvSections.innerHTML = '';
@@ -1015,6 +1036,10 @@ export const createDetailedUi = (deps) => {
             planningSpinner.classList.remove('done');
         }
 
+        if (!renderSections) {
+            return;
+        }
+
         sourceSections.forEach((section, renderIdx) => {
             const sectionIndex = section.section_index ?? renderIdx;
             const sectionRow = createDetailedSectionRow({
@@ -1043,7 +1068,7 @@ export const createDetailedUi = (deps) => {
 
     const handleDetailedPlanField = (data) => {
         if (state.planningMode !== 'detailed') {
-            initDetailedPlanView({sections: state.latestInitialSections});
+            initDetailedPlanView({renderSections: false});
         }
 
         // On regeneration (round > 1), clear existing section entries once per section

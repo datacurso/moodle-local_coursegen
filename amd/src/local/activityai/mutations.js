@@ -336,6 +336,21 @@ class Mutations {
 
                     resolve();
                     return;
+                } else if (data && data.type === 'failed') {
+                    currentRun.error = String(
+                        data.message || 'The AI service is currently experiencing high demand. Please try again later.'
+                    );
+                    currentRun.status = '';
+                    currentRun.reviewneeded = false;
+                    currentRun.completed = false;
+
+                    state.session.locked = false;
+                    state.session.phase = 'idle';
+
+                    stateManager.setReadOnly(true);
+                    closeStream();
+                    resolve();
+                    return;
                 } else {
                     currentRun.markdown += event ? event.data || '' : '';
                 }
