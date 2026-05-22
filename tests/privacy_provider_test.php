@@ -288,14 +288,7 @@ final class privacy_provider_test extends provider_testcase {
      * @return stdClass
      */
     private function course_rec(): stdClass {
-        $gen = $this->getDataGenerator();
-        $data = (object) [
-            'local_coursegen_create_ai_course' => 0,
-            'local_coursegen_context_type' => '',
-            'local_coursegen_select_system_instruction' => null,
-            'local_coursegen_syllabus_pdf' => 0,
-        ];
-        return $gen->create_course($data);
+        return $this->getDataGenerator()->create_course();
     }
 
     /**

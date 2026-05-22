@@ -26,11 +26,6 @@ defined('MOODLE_INTERNAL') || die();
 
 $callbacks = [
     [
-        'hook' => core_course\hook\after_form_definition::class,
-        'callback' => 'local_coursegen\hook\course_form_hook::after_form_definition',
-        'priority' => 100,
-    ],
-    [
         'hook' => core\hook\output\before_footer_html_generation::class,
         'callback' => 'local_coursegen\hook\chat_hook::before_footer_html_generation',
         'priority' => 900,
