@@ -265,6 +265,7 @@ export const createDetailedUi = (deps) => {
         masterCheckbox.type = 'checkbox';
         masterCheckbox.className = 'dp-image-check-master';
         masterCheckbox.checked = true;
+        masterCheckbox.disabled = Boolean(state.isStreaming);
         masterCheckbox.setAttribute('aria-label', texts.courseai_images_select_all);
 
         const headerLabel = document.createElement('label');
@@ -315,12 +316,18 @@ export const createDetailedUi = (deps) => {
             checkbox.type = 'checkbox';
             checkbox.className = 'dp-image-check';
             checkbox.checked = state.selectedDetailedImages[item.id] !== false;
+            checkbox.disabled = Boolean(state.isStreaming);
             checkbox.setAttribute('aria-label', item.placement || texts.courseai_images_suggested_label);
             imageCard.classList.toggle('dp-image-card--off', !checkbox.checked);
 
             checkboxes.push({checkbox, card: imageCard, id: item.id});
 
             checkbox.addEventListener('change', (event) => {
+                if (state.isStreaming) {
+                    event.preventDefault();
+                    event.target.checked = state.selectedDetailedImages[item.id] !== false;
+                    return;
+                }
                 state.selectedDetailedImages[item.id] = event.target.checked;
                 imageCard.classList.toggle('dp-image-card--off', !event.target.checked);
                 recalculateEntryImageCount(entry, sectionIndex);
@@ -410,6 +417,12 @@ export const createDetailedUi = (deps) => {
         });
 
         masterCheckbox.addEventListener('change', (event) => {
+            if (state.isStreaming) {
+                event.preventDefault();
+                const allChecked = checkboxes.every((cb) => cb.checkbox.checked);
+                masterCheckbox.checked = allChecked;
+                return;
+            }
             const checked = event.target.checked;
             checkboxes.forEach(({checkbox, card, id}) => {
                 checkbox.checked = checked;
@@ -1367,10 +1380,34 @@ export const createDetailedUi = (deps) => {
         markActivityPlanned(data);
     };
 
+    const syncDetailedStructureFromSections = (sections) => {
+        const normalized = normalizeInitialSections(sections || []);
+        if (!normalized.length) {
+            return;
+        }
+
+        if (state.planningMode !== 'detailed') {
+            initDetailedPlanView({sections: normalized, renderSections: false});
+        }
+
+        const totalActivities = normalized.reduce(
+            (acc, section) => acc + ((section.activities || []).length),
+            0
+        );
+        state.detailedTotal = Math.max(state.detailedTotal || 0, totalActivities);
+    };
+
     const enableAllActionControls = () => {
         document.querySelectorAll('.dp-action-btn--disabled').forEach(function(el) {
             el.classList.remove('dp-action-btn--disabled');
             el.setAttribute('tabindex', '0');
+        });
+    };
+
+    const setImageSelectionEnabled = (enabled) => {
+        const isEnabled = Boolean(enabled);
+        document.querySelectorAll('.dp-image-check, .dp-image-check-master').forEach((el) => {
+            el.disabled = !isEnabled;
         });
     };
 
@@ -1379,7 +1416,9 @@ export const createDetailedUi = (deps) => {
         initDetailedPlanView,
         handleDetailedPlanField,
         handleDetailedPlanActivity,
+        syncDetailedStructureFromSections,
         updateDetailedHeaderStats,
         enableAllActionControls,
+        setImageSelectionEnabled,
     };
 };

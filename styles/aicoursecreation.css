@@ -1657,39 +1657,57 @@ svg { display: block; flex-shrink: 0; }
   animation: ps-skeleton-shimmer 2.4s linear infinite;
 }
 
-.ps-activity--pending .ps-status-dot {
-  display: none;
-}
-
 .ps-section--pending .ps-section-name {
   color: transparent;
 }
 
 .ps-activity--in_progress {
-  background: hsl(35 90% 95%);
-  border-color: hsl(35 75% 82%);
+  background: var(--muted);
+  border-color: transparent;
 }
 
 .ps-activity--done {
-  background: hsl(142 52% 94%);
-  border-color: hsl(142 35% 80%);
+  background: var(--muted);
+  border-color: transparent;
 }
 
-.ps-status-dot {
+.ps-status-indicator {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  border: 2px solid var(--border);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  margin-top: 4px;
+}
+
+.ps-status-indicator svg {
   width: 10px;
   height: 10px;
-  border-radius: 50%;
-  flex-shrink: 0;
-  margin-top: 7px;
-  background: hsl(215 16% 78%);
+  fill: none;
+  display: none;
 }
 
-.ps-status-dot--in_progress {
-  background: hsl(8 72% 42%);
+.ps-status-indicator .check-icon {
+  stroke: var(--fg);
+  stroke-width: 3;
 }
 
-.ps-status-dot--done {
-  background: #16a34a;
+.ps-status-indicator .spinner-icon {
+  stroke: var(--muted-fg);
+  stroke-width: 2.5;
+  animation: courseai-spin .8s linear infinite;
+}
+
+.ps-status-indicator--in_progress svg.spinner-icon {
+  display: block;
+}
+
+.ps-status-indicator--done svg.check-icon {
+  display: block;
 }
 
 .ps-activity-info {

@@ -55,6 +55,7 @@ export const createInitialState = ({defaultLang, guidelines, languages}) => {
         createdCourseUrl: '',
         createdCourseResult: null,
         courseTitle: '',
+        isStreaming: false,
         currentStage: 'planning'
     };
 };

@@ -230,8 +230,6 @@ export const createStreamManager = (deps) => {
             const doneCount = section.activities.filter((activity) => activity.status === 'done').length;
             const inProgressCount = section.activities.filter((activity) => activity.status === 'in_progress').length;
             const totalCount = section.activities.length;
-            const visibleCount = doneCount + inProgressCount;
-
             if (doneCount === 0 && inProgressCount === 0) {
                 sectionEl.classList.add('ps-section--pending');
             } else if (inProgressCount > 0) {
@@ -265,7 +263,7 @@ export const createStreamManager = (deps) => {
 
             const countEl = document.createElement('span');
             countEl.className = 'ps-section-count';
-            countEl.textContent = `${visibleCount}/${totalCount}`;
+            countEl.textContent = `${doneCount}/${totalCount}`;
 
             headEl.appendChild(numEl);
             headEl.appendChild(infoEl);
@@ -284,9 +282,13 @@ export const createStreamManager = (deps) => {
                     skeleton.setAttribute('aria-hidden', 'true');
                     itemEl.appendChild(skeleton);
                 } else {
-                    const statusDot = document.createElement('span');
-                    statusDot.className = `ps-status-dot ps-status-dot--${activity.status}`;
-                    statusDot.setAttribute('aria-hidden', 'true');
+                    const statusIndicator = document.createElement('span');
+                    statusIndicator.className = `ps-status-indicator ps-status-indicator--${activity.status}`;
+                    statusIndicator.setAttribute('aria-hidden', 'true');
+                    statusIndicator.innerHTML = '<svg class="spinner-icon" viewBox="0 0 24 24">'
+                        + '<path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path></svg>'
+                        + '<svg class="check-icon" viewBox="0 0 24 24">'
+                        + '<polyline points="20 6 9 17 4 12"></polyline></svg>';
 
                     const badgeEl = document.createElement('span');
                     badgeEl.className = `ps-badge ps-badge--${activity.type}`;
@@ -314,7 +316,7 @@ export const createStreamManager = (deps) => {
                         activityInfo.appendChild(imageProgressTag);
                     }
 
-                    itemEl.appendChild(statusDot);
+                    itemEl.appendChild(statusIndicator);
                     itemEl.appendChild(badgeEl);
                     itemEl.appendChild(activityInfo);
                 }
@@ -455,6 +457,37 @@ export const createStreamManager = (deps) => {
                 total: acc.total + total,
             };
         }, {done: 0, total: 0});
+    };
+
+    const updateGeneratingProgressFromStructuredState = () => {
+        if (state.currentStage !== 'generating') {
+            return;
+        }
+
+        const totalActivities = Math.max(0, Number(state.activityProgressTotal) || 0);
+        const doneActivities = Math.max(0, Math.min(Number(state.activityProgressDone) || 0, totalActivities));
+
+        if (totalActivities <= 0) {
+            return;
+        }
+
+        if (doneActivities < totalActivities) {
+            const activityProgress = Math.round((doneActivities / totalActivities) * 89);
+            stepsUi.setProgress(Math.max(0, Math.min(89, activityProgress)));
+            return;
+        }
+
+        const imageTotals = getTrackerImagesProgress();
+        state.imageProgressDone = imageTotals.done;
+        state.imageProgressTotal = imageTotals.total;
+
+        if (imageTotals.total > 0) {
+            const imageProgress = 90 + Math.round((imageTotals.done / imageTotals.total) * 9);
+            stepsUi.setProgress(Math.max(90, Math.min(99, imageProgress)));
+            return;
+        }
+
+        stepsUi.setProgress(90);
     };
 
     const collectStringValues = (value, output) => {
@@ -611,6 +644,9 @@ export const createStreamManager = (deps) => {
         // Keep compact chat disabled for the whole active stream lifecycle.
         // It is re-enabled explicitly on review/failed/error states.
         setCompactChatState(deps, 'disabled');
+        if (typeof detailedUi.setImageSelectionEnabled === 'function') {
+            detailedUi.setImageSelectionEnabled(false);
+        }
 
         // Only reset planning UI on the first attempt (not on stale-done retries).
         if (retryAttempt === 0) {
@@ -786,6 +822,10 @@ export const createStreamManager = (deps) => {
                             elements.checklist.classList.remove('hidden');
                         }
                     }
+
+                    if (typeof detailedUi.syncDetailedStructureFromSections === 'function') {
+                        detailedUi.syncDetailedStructureFromSections(state.latestInitialSections || []);
+                    }
                     break;
                 }
                 case 'course_identity': {
@@ -960,13 +1000,8 @@ export const createStreamManager = (deps) => {
                     );
 
                     state.activityProgressStarted = (state.activityProgressStarted || 0) + 1;
-                    if (state.currentStage === 'generating' && (state.activityProgressTotal || 0) > 0) {
-                        const startProgress = Math.min(
-                            30,
-                            (state.activityProgressStarted / state.activityProgressTotal) * 30
-                        );
-                        stepsUi.setProgress(Math.round(startProgress));
-                    }
+
+                    updateGeneratingProgressFromStructuredState();
 
                     renderGenerationTracker();
                     break;
@@ -979,13 +1014,7 @@ export const createStreamManager = (deps) => {
                     );
 
                     state.activityProgressDone = (state.activityProgressDone || 0) + 1;
-                    if (state.currentStage === 'generating' && (state.activityProgressTotal || 0) > 0) {
-                        const completeProgress = 30 + Math.min(
-                            60,
-                            (state.activityProgressDone / state.activityProgressTotal) * 60
-                        );
-                        stepsUi.setProgress(Math.round(completeProgress));
-                    }
+                    updateGeneratingProgressFromStructuredState();
 
                     renderGenerationTracker();
                     break;
@@ -996,6 +1025,8 @@ export const createStreamManager = (deps) => {
                         Number(data.activity_index) || 0,
                         'done'
                     );
+                    state.activityProgressDone = (state.activityProgressDone || 0) + 1;
+                    updateGeneratingProgressFromStructuredState();
                     renderGenerationTracker();
                     break;
                 case 'image_progress_init': {
@@ -1010,10 +1041,10 @@ export const createStreamManager = (deps) => {
                     });
 
                     const imageTotals = getTrackerImagesProgress();
+                    state.imageProgressDone = imageTotals.done;
                     state.imageProgressTotal = imageTotals.total;
-                    if (state.currentStage === 'generating' && imageTotals.total > 0) {
-                        stepsUi.setProgress(90);
-                    }
+
+                    updateGeneratingProgressFromStructuredState();
 
                     renderGenerationTracker();
                     break;
@@ -1030,18 +1061,14 @@ export const createStreamManager = (deps) => {
                     state.imageProgressDone = imageTotals.done;
                     state.imageProgressTotal = imageTotals.total;
 
-                    if (state.currentStage === 'generating' && imageTotals.total > 0) {
-                        const imageProgress = Math.min(99, 90 + Math.round((imageTotals.done / imageTotals.total) * 9));
-                        stepsUi.setProgress(imageProgress);
-                    }
+                    updateGeneratingProgressFromStructuredState();
 
                     renderGenerationTracker();
                     break;
                 }
                 case 'image_progress_done':
-                    if (state.currentStage === 'generating') {
-                        stepsUi.setProgress(99);
-                    }
+                    state.imageProgressDone = state.imageProgressTotal || 0;
+                    updateGeneratingProgressFromStructuredState();
                     break;
                 case 'review_needed':
                     stepsUi.setStepState('planning', 'done');
@@ -1062,6 +1089,9 @@ export const createStreamManager = (deps) => {
                     // Enable action buttons (IA/Delete) AFTER re-initialization so newly created controls get enabled
                     if (typeof detailedUi.enableAllActionControls === 'function') {
                         detailedUi.enableAllActionControls();
+                    }
+                    if (typeof detailedUi.setImageSelectionEnabled === 'function') {
+                        detailedUi.setImageSelectionEnabled(true);
                     }
                     planningUi.showReviewActions(state.planningMode === 'detailed' ? 'detailed' : 'markdown');
                     // Re-enable compact chat now that review is ready
@@ -1099,6 +1129,9 @@ export const createStreamManager = (deps) => {
                     if (typeof detailedUi.enableAllActionControls === 'function') {
                         detailedUi.enableAllActionControls();
                     }
+                    if (typeof detailedUi.setImageSelectionEnabled === 'function') {
+                        detailedUi.setImageSelectionEnabled(true);
+                    }
                     // Stream failed - re-enable compact chat for retry
                     setCompactChatState(deps, 'enabled');
                     break;
@@ -1128,6 +1161,9 @@ export const createStreamManager = (deps) => {
             if (streamMode === 'generating') {
                 markAllTrackerActivitiesDone();
             }
+            if (typeof detailedUi.setImageSelectionEnabled === 'function') {
+                detailedUi.setImageSelectionEnabled(true);
+            }
             if (planningSpinner) {
                 planningSpinner.classList.add('done');
             }
@@ -1153,6 +1189,9 @@ export const createStreamManager = (deps) => {
             }
             if (pcSubtitle) {
                 pcSubtitle.textContent = texts.courseai_error_connection;
+            }
+            if (typeof detailedUi.setImageSelectionEnabled === 'function') {
+                detailedUi.setImageSelectionEnabled(true);
             }
             // Connection error - re-enable compact chat for retry
             setCompactChatState(deps, 'enabled');
