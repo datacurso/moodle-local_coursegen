@@ -46,6 +46,8 @@ $PAGE->requires->css('/local/coursegen/styles/sidebar.css');
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\course_session_service;
 
+$resumesessionid = optional_param('sessionid', 0, PARAM_INT);
+
 // Load system instructions (directrices institucionales).
 $systeminstructions = [];
 $records = $DB->get_records('local_coursegen_system_instruction', ['deleted' => 0], 'name ASC');
@@ -116,6 +118,7 @@ $templatecontext = [
     'hassessions' => !empty($recent5),
     'sessions' => $recent5,
     'allsessions' => $allsessionsdata,
+    'isresuming' => $resumesessionid > 0,
 ];
 
 echo $OUTPUT->header();
@@ -137,6 +140,8 @@ $PAGE->requires->js_call_amd('local_coursegen/courseai', 'init', [
         'languages' => $languageoptions,
         'defaultlang' => current_language(),
         'sessions' => $allsessionsdata,
+        'resumesessionid' => $resumesessionid,
+        'isresuming' => $resumesessionid > 0,
     ],
 ]);
 

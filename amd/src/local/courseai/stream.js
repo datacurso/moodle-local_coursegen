@@ -610,11 +610,23 @@ export const createStreamManager = (deps) => {
 
         // Only reset planning UI on the first attempt (not on stale-done retries).
         if (retryAttempt === 0) {
+            if (streamMode !== 'generating') {
+                preservedPhase4Total = 0;
+            }
+
+            const savedLatestInitialSections = Array.isArray(state.latestInitialSections)
+                ? state.latestInitialSections
+                : [];
+
             // PRESERVE phase4TotalActivities BEFORE reset
             const savedPhase4Total = state.phase4TotalActivities || 0;
             window.console.log('[PHASE4-DEBUG] BEFORE-RESET - Saving phase4TotalActivities:', savedPhase4Total);
 
             stepsUi.resetPlanningState({showLoading: streamMode !== 'generating'});
+
+            if (savedLatestInitialSections.length > 0) {
+                state.latestInitialSections = savedLatestInitialSections;
+            }
 
             if (streamMode === 'generating') {
                 ensureStreamContentVisible();
@@ -718,13 +730,27 @@ export const createStreamManager = (deps) => {
                     if (streamContentEl) {
                         streamContentEl.style.display = '';
                     }
-                    // Capture first section name as the course title for the header
-                    if (!state.courseTitle && data.name) {
-                        state.courseTitle = data.name;
-                        if (prvHeaderTitle) {
-                            prvHeaderTitle.textContent = state.courseTitle;
-                        }
+                    const sectionIndex = Number(data.section_index);
+                    if (!Number.isNaN(sectionIndex) && sectionIndex >= 0) {
+                        const nextSections = Array.isArray(state.latestInitialSections)
+                            ? [...state.latestInitialSections]
+                            : [];
+                        const existing = nextSections[sectionIndex] || {};
+                        const incomingActivities = Array.isArray(data.activities) ? data.activities : [];
+
+                        nextSections[sectionIndex] = {
+                            ...existing,
+                            section_index: sectionIndex,
+                            name: data.name || existing.name || '',
+                            description: data.description || existing.description || '',
+                            activities: incomingActivities.length > 0
+                                ? incomingActivities
+                                : (Array.isArray(existing.activities) ? existing.activities : []),
+                        };
+
+                        state.latestInitialSections = nextSections;
                     }
+
                     // Add section to checklist in the left panel (loading state initially)
                     // For regeneration rounds, create a new checklist below the adjustment
                     const round = state.generationRound || 0;
@@ -758,10 +784,20 @@ export const createStreamManager = (deps) => {
                     }
                     break;
                 }
+                case 'course_identity': {
+                    const fullname = String(data.fullname || '').trim();
+                    if (fullname) {
+                        state.courseTitle = fullname;
+                        if (prvHeaderTitle) {
+                            prvHeaderTitle.textContent = fullname;
+                        }
+                    }
+                    break;
+                }
                 case 'detailed_plan_start': {
                     contentReceived = true;
                     detailedUi.initDetailedPlanView(data);
-                    // Set the course title as the header title if captured from structure
+                    // Keep the canonical course title in header when already available
                     if (state.courseTitle && prvHeaderTitle) {
                         prvHeaderTitle.textContent = state.courseTitle;
                     }

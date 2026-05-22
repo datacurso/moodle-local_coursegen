@@ -80,3 +80,20 @@ export const uploadSyllabus = (sessionid, draftitemid) => {
 
     return Ajax.call([request])[0];
 };
+
+/**
+ * Get resumable snapshot for an existing courseai session.
+ *
+ * @param {number} recordid Session record ID
+ * @returns {Promise<Object>} Session snapshot payload
+ */
+export const getSessionState = (recordid) => {
+    const request = {
+        methodname: 'local_coursegen_get_course_session_state',
+        args: {
+            recordid: recordid,
+        },
+    };
+
+    return Ajax.call([request])[0];
+};

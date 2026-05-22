@@ -8,11 +8,8 @@
 
 /**
  * Initialize the sidebar component.
- *
- * @param {Object} state Wizard state object
- * @param {Function} [resetFn] Optional callback to reset wizard to phase 1
  */
-export const initSidebar = (state, resetFn) => {
+export const initSidebar = () => {
     const sidebar = document.getElementById('courseaiSidebar');
     const toggleBtn = document.getElementById('courseaiSidebarToggle');
     const btnNew = document.getElementById('courseaiBtnNew');
@@ -162,11 +159,7 @@ export const initSidebar = (state, resetFn) => {
     if (btnNew) {
         btnNew.addEventListener('click', () => {
             closeSidebar();
-            if (typeof resetFn === 'function') {
-                resetFn();
-            } else {
-                window.location.href = 'aicoursecreation.php';
-            }
+            window.location.href = 'aicoursecreation.php';
         });
     }
 

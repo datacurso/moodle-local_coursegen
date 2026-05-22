@@ -119,6 +119,7 @@ export const createCourseaiActions = (deps) => {
             btnOpenMoodleCourse.disabled = !state.createdCourseUrl;
         }
 
+        stepsUi.setStepState('planning', 'done');
         stepsUi.setStepState('generating', 'done');
         stepsUi.updateFlowNav();
     };
@@ -553,7 +554,7 @@ export const createCourseaiActions = (deps) => {
 
         if (btnCreateAnotherCourse) {
             btnCreateAnotherCourse.addEventListener('click', () => {
-                resetForAnotherCourse();
+                window.location.href = 'aicoursecreation.php';
             });
         }
 
@@ -588,6 +589,7 @@ export const createCourseaiActions = (deps) => {
     };
 
     return {
+        showCompletionView,
         createCourseFromSession,
         handleGenerate,
         sendFeedbackAction,

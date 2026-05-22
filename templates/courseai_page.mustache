@@ -38,8 +38,15 @@
   <div class="container">
     <div class="courseai-workspace" id="courseaiWorkspace">
 
+    {{#isresuming}}
+    <div class="planning-loading" id="resumeLoadingView">
+      <div class="planning-loading-spinner"></div>
+      <p class="planning-loading-text">{{#str}}courseai_state_starting, local_coursegen{{/str}}</p>
+    </div>
+    {{/isresuming}}
+
     <!-- Context step form -->
-    <div class="context-wrap" id="contextView">
+    <div class="context-wrap" id="contextView"{{#isresuming}} style="display:none"{{/isresuming}}>
 
       <div class="courseai-context-editor" id="courseaiContextEditor">
 

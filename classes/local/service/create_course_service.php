@@ -45,6 +45,13 @@ class create_course_service {
 
             require_once($CFG->dirroot . '/course/lib.php');
 
+            $apiservice = new ai_course_api_service();
+            $result = $apiservice->get_course_result((string)$session->get('session_id'));
+
+            // Extract result data.
+            $resultdata = $result['result'] ?? [];
+
+            $coursedata = self::apply_course_identity_to_coursedata($coursedata, $resultdata);
             $coursedata = self::ensure_unique_course_fields($coursedata);
 
             // Create the Moodle course from stored form data.
@@ -57,17 +64,6 @@ class create_course_service {
             $sessionpersistent->set('timemodified', time());
             $sessionpersistent->update();
             course_session_service::update_status($sessionid, course_session::STATUS_CREATING);
-
-            $apiservice = new ai_course_api_service();
-            $result = $apiservice->get_course_result((string)$session->get('session_id'));
-
-            // Extract result data.
-            $resultdata = $result['result'] ?? [];
-
-            $aititle = self::extract_ai_course_title($resultdata);
-            if ($aititle !== '') {
-                $course = self::apply_ai_course_title($course, $aititle);
-            }
 
             // Process sections if provided in the response.
             if (!empty($resultdata['sections_info'])) {
@@ -106,78 +102,51 @@ class create_course_service {
     }
 
     /**
-     * Extract a representative AI-generated course title from the final payload.
+     * Apply Python-provided course identity (fullname/shortname base) to Moodle course data.
      *
-     * @param array $resultdata Final result from AI service.
-     * @return string
+     * @param \stdClass $coursedata Base course data from local session.
+     * @param array $resultdata Final payload from Python service.
+     * @return \stdClass
      */
-    private static function extract_ai_course_title(array $resultdata): string {
-        $sections = $resultdata['sections_info'] ?? [];
-        if (is_array($sections)) {
-            foreach ($sections as $section) {
-                if (!is_array($section)) {
-                    continue;
-                }
-
-                $name = trim(strip_tags((string)($section['name'] ?? '')));
-                if ($name === '') {
-                    continue;
-                }
-
-                if (preg_match('/^(section|secci[oó]n)\s*\d+$/iu', $name)) {
-                    continue;
-                }
-
-                return (string)\core_text::substr($name, 0, 255);
-            }
+    private static function apply_course_identity_to_coursedata(\stdClass $coursedata, array $resultdata): \stdClass {
+        $identity = $resultdata['course_identity'] ?? null;
+        if (!is_array($identity)) {
+            return $coursedata;
         }
 
-        $activities = $resultdata['generated_activities'] ?? [];
-        if (is_array($activities)) {
-            foreach ($activities as $activity) {
-                if (!is_array($activity)) {
-                    continue;
-                }
-
-                $parameters = $activity['parameters'] ?? [];
-                if (!is_array($parameters)) {
-                    continue;
-                }
-
-                $name = trim(strip_tags((string)($parameters['name'] ?? '')));
-                if ($name !== '') {
-                    return (string)\core_text::substr($name, 0, 255);
-                }
-            }
+        $fullname = trim((string)($identity['fullname'] ?? ''));
+        if ($fullname !== '') {
+            $coursedata->fullname = (string)\core_text::substr($fullname, 0, 255);
         }
 
-        return '';
+        $keyword = self::sanitize_shortname_keyword((string)($identity['shortname_keyword'] ?? ''));
+        if ($keyword !== '') {
+            $coursedata->shortname = $keyword;
+        }
+
+        return $coursedata;
     }
 
     /**
-     * Update course fullname with a refined AI-proposed title.
+     * Sanitize a shortname keyword received from the Python service.
      *
-     * @param \stdClass $course Created course object.
-     * @param string $title AI-proposed title.
-     * @return \stdClass
+     * @param string $keyword Keyword candidate.
+     * @return string
      */
-    private static function apply_ai_course_title(\stdClass $course, string $title): \stdClass {
-        global $DB;
-
-        $clean = trim((string)preg_replace('/\s+/u', ' ', $title));
-        if ($clean === '' || $clean === (string)$course->fullname) {
-            return $course;
+    private static function sanitize_shortname_keyword(string $keyword): string {
+        $candidate = trim((string)\core_text::strtolower($keyword));
+        if ($candidate === '') {
+            return '';
         }
 
-        $newfullname = (string)\core_text::substr($clean, 0, 255);
-        $updaterecord = (object)[
-            'id' => $course->id,
-            'fullname' => $newfullname,
-        ];
-        $DB->update_record('course', $updaterecord);
+        $candidate = preg_replace('/[^a-z0-9]+/i', '-', $candidate);
+        $candidate = trim((string)$candidate, '-');
 
-        $course->fullname = $newfullname;
-        return $course;
+        if ($candidate === '') {
+            return '';
+        }
+
+        return (string)\core_text::substr($candidate, 0, 24);
     }
 
     /**
