@@ -153,88 +153,12 @@ svg { display: block; flex-shrink: 0; }
   text-align: left;
 }
 
-/* ─── STEP HEADER ─────────────────────────────────────────────────────── */
-.step-header { margin-bottom: 32px; }
-
-.steps-list {
-  display: flex;
-  align-items: center;
-  list-style: none;
-  gap: 0;
-}
-
-.step-item {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-/* The connector sits between items but is not a list item — handled as flex child */
-.step-connector {
-  flex: 1;
-  height: 2px;
-  background: var(--border);
-  border-radius: 9999px;
-  min-width: 16px;
-}
-
-.step-circle {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 2px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: 700;
-  flex-shrink: 0;
-  background: var(--card);
-  color: var(--muted-fg);
-  transition: all .2s;
-}
-
-.step-item.active .step-circle {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: var(--primary-fg);
-  box-shadow: var(--shadow-elevated);
-}
-.step-item.done .step-circle {
-  background: var(--success);
-  border-color: var(--success);
-  color: var(--success-fg);
-}
-
-.step-label {
-  font-size: 12.5px;
-  font-weight: 600;
-  line-height: 1.2;
-  display: flex;
-  align-items: center;
-  min-height: 32px;
-  white-space: normal;
-  overflow: visible;
-  text-overflow: clip;
-  color: var(--muted-fg);
-}
-.step-item.active .step-label,
-.step-item.done   .step-label { color: var(--fg); }
-
 /* ─── CONTEXT FORM ────────────────────────────────────────────────────── */
 .context-wrap {
   max-width: 768px;
   margin: 0 auto;
   width: 100%;
   margin-bottom: 32px;
-}
-
-.context-wrap--disabled {
-  pointer-events: none;
-  opacity: 0.6;
-  user-select: none;
 }
 
 .context-head {
@@ -261,10 +185,6 @@ svg { display: block; flex-shrink: 0; }
   box-shadow: var(--shadow-elevated);
   overflow: visible;
   transition: border-color .15s, box-shadow .15s;
-}
-.card.drag-over {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px hsl(8, 72%, 42%, 0.15), var(--shadow-elevated);
 }
 
 /* Textarea */
@@ -854,26 +774,6 @@ svg { display: block; flex-shrink: 0; }
   gap: 8px;
   flex-shrink: 0;
 }
-
-.btn-plan-adjust {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 16px;
-  height: 36px;
-  border-radius: 8px;
-  border: 1.5px solid var(--border);
-  background: transparent;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--muted-fg);
-  cursor: pointer;
-  font-family: inherit;
-  transition: border-color .12s, color .12s;
-}
-.btn-plan-adjust:hover:not(:disabled) { border-color: hsl(215, 20%, 70%); color: var(--fg); }
-.btn-plan-adjust:disabled { opacity: .45; cursor: not-allowed; }
-
 .btn-plan-approve {
   display: inline-flex;
   align-items: center;
@@ -892,80 +792,6 @@ svg { display: block; flex-shrink: 0; }
 }
 .btn-plan-approve:hover:not(:disabled) { background: hsl(142, 70%, 34%); }
 .btn-plan-approve:disabled { opacity: .45; cursor: not-allowed; }
-
-.adjust-panel {
-  margin-top: 10px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px 18px;
-}
-
-.adjust-textarea {
-  display: block;
-  width: 100%;
-  min-height: 80px;
-  padding: 10px 14px;
-  font-size: 13.5px;
-  line-height: 1.6;
-  font-family: inherit;
-  color: var(--fg);
-  background: var(--card);
-  border: 1.5px solid var(--border);
-  border-radius: 8px;
-  outline: none;
-  resize: vertical;
-  transition: border-color .15s, box-shadow .15s;
-}
-.adjust-textarea:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px hsl(8, 72%, 42%, 0.12);
-}
-.adjust-textarea::placeholder { color: hsl(215, 20%, 65%); }
-
-.adjust-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.btn-adjust-cancel {
-  display: inline-flex;
-  align-items: center;
-  padding: 0 14px;
-  height: 34px;
-  border-radius: 8px;
-  border: 1.5px solid var(--border);
-  background: transparent;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--muted-fg);
-  cursor: pointer;
-  font-family: inherit;
-  transition: border-color .12s, color .12s;
-}
-.btn-adjust-cancel:hover { border-color: hsl(215, 20%, 70%); color: var(--fg); }
-
-.btn-adjust-send {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 16px;
-  height: 34px;
-  border-radius: 8px;
-  border: none;
-  background: var(--primary);
-  color: var(--primary-fg);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-  transition: background .12s, opacity .12s;
-}
-.btn-adjust-send:hover:not(:disabled) { background: hsl(8, 72%, 37%); }
-.btn-adjust-send:disabled { opacity: .45; cursor: not-allowed; }
-
 .planning-wrap {
   display: flex;
   flex-direction: column;
@@ -1688,58 +1514,15 @@ svg { display: block; flex-shrink: 0; }
   opacity: .5;
 }
 
-.dp-action-icon--ia {
-  filter: none;
-  opacity: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: currentColor;
-}
-
-.dp-action-icon--ia svg {
-  display: block;
-  stroke: currentColor;
-}
-
-.dp-action-btn--ia {
-  background: hsl(0 0% 100% / .98);
-  color: hsl(8 72% 42%);
-  box-shadow: 0 2px 6px hsl(8 72% 20% / .12);
-}
-
-.dp-action-btn--delete {
-  background: hsl(0 0% 100% / .98);
-  color: hsl(8 55% 46%);
-  box-shadow: 0 2px 6px hsl(8 72% 20% / .12);
-}
-
 .dp-action-btn:hover {
   color: hsl(215 28% 34%);
   box-shadow: 0 2px 5px hsl(215 28% 17% / .08);
-}
-
-.dp-action-btn--ia:hover {
-  color: hsl(8 72% 42%);
-  background: hsl(0 0% 100% / .98);
-  box-shadow: 0 2px 6px hsl(8 72% 20% / .12);
-}
-
-.dp-action-btn--delete:hover {
-  color: hsl(8 64% 40%);
-  background: hsl(0 0% 100% / .98);
-  box-shadow: 0 2px 6px hsl(8 72% 20% / .12);
 }
 
 .dp-action-btn:focus,
 .dp-action-btn:focus-visible {
   outline: 2px solid hsl(8 72% 50% / .35);
   outline-offset: 1px;
-}
-
-.dp-action-btn--ia.is-active {
-  color: hsl(8 72% 42%);
-  background: hsl(0 0% 100% / .98);
 }
 
 .dp-item-actions--image .dp-action-btn {
@@ -1751,11 +1534,6 @@ svg { display: block; flex-shrink: 0; }
 
 .dp-item-actions--image .dp-action-btn:hover {
   color: hsl(8 72% 42%);
-}
-
-.dp-action-btn--delete.is-active {
-  color: hsl(8 72% 42%);
-  background: hsl(0 0% 100% / .98);
 }
 
 .prv-section-badge {
@@ -1967,16 +1745,6 @@ svg { display: block; flex-shrink: 0; }
   color: hsl(0 0% 100%);
 }
 
-.dp-item-deleted .prv-section-btn,
-.dp-item-deleted .prv-activity-item {
-  opacity: .55;
-}
-
-.dp-item-deleted .prv-section-title,
-.dp-item-deleted .prv-activity-name {
-  text-decoration: line-through;
-}
-
 .dp-item-has-adjustment .prv-section-btn,
 .dp-item-has-adjustment .prv-activity-item {
   box-shadow: inset 3px 0 0 hsl(252 55% 42% / .55);
@@ -2090,13 +1858,6 @@ svg { display: block; flex-shrink: 0; }
   color: var(--muted-fg);
   margin-top: 2px;
   white-space: nowrap;
-}
-
-.dp-detail-text {
-  font-size: 12px;
-  color: var(--muted-fg);
-  line-height: 1.5;
-  margin: 0;
 }
 
 .dp-images-container {
@@ -2222,54 +1983,4 @@ svg { display: block; flex-shrink: 0; }
   font-size: 12px;
   line-height: 1.5;
   color: hsl(215 15% 30%);
-}
-
-.pc-cancel-row {
-  text-align: center;
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-}
-
-.pc-cancel-btn {
-  background: none;
-  border: none;
-  font-size: 13px;
-  color: var(--muted-fg);
-  cursor: pointer;
-  font-family: inherit;
-  padding: 6px 12px;
-  border-radius: 6px;
-  transition: color .12s, background .12s;
-}
-
-.pc-cancel-btn:hover {
-  background: var(--muted);
-  color: var(--fg);
-}
-
-/* ─── WIZARD CANCEL ROW (outside planning) ────────────────────────── */
-.courseai-cancel-row {
-  margin-top: 20px;
-  margin-bottom: 20px;
-  text-align: center;
-  display: flex;
-  justify-content: center;
-}
-
-.courseai-cancel-btn {
-  background: none;
-  border: none;
-  font-size: 13px;
-  color: var(--muted-fg);
-  cursor: pointer;
-  font-family: inherit;
-  padding: 6px 12px;
-  border-radius: 6px;
-  transition: color .12s, background .12s;
-}
-
-.courseai-cancel-btn:hover {
-  background: var(--muted);
-  color: var(--fg);
 }
