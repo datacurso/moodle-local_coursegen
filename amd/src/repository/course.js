@@ -63,15 +63,17 @@ export async function sendPlanningFeedback({recordid, action, instruction, selec
  *     section_index: number,
  *     activity_index?: number,
  *     instruction?: string,
+ *     deleted?: boolean,
  * }} payload
  * @return {Promise<Object>} response
  */
-export async function regenerateDetailedItem({recordid, target_type, section_index, activity_index, instruction}) {
+export async function regenerateDetailedItem({recordid, target_type, section_index, activity_index, instruction, deleted}) {
     const args = {
         recordid: Number(recordid) || 0,
         target_type,
         section_index: Number(section_index) || 0,
         instruction: instruction || '',
+        deleted: Boolean(deleted),
     };
     if (typeof activity_index === 'number' && activity_index >= 0) {
         args.activity_index = activity_index;

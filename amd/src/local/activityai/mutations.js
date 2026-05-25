@@ -23,8 +23,29 @@
 
 import notification from 'core/notification';
 import * as repository from 'local_coursegen/local/activityai/repository';
+import {loadActivityaiStrings} from 'local_coursegen/local/activityai/i18n';
 
 let eventSource = null;
+
+let uiTexts = {};
+
+const formatTemplate = (template, data = {}) => {
+    if (!template) {
+        return '';
+    }
+
+    return String(template).replace(/\{(\w+)\}/g, (match, key) => {
+        return Object.prototype.hasOwnProperty.call(data, key) ? String(data[key]) : match;
+    });
+};
+
+const ensureUiTexts = async() => {
+    if (!Object.keys(uiTexts).length) {
+        uiTexts = await loadActivityaiStrings();
+    }
+
+    return uiTexts;
+};
 
 const safeJsonParse = (text) => {
     try {
@@ -124,6 +145,8 @@ class Mutations {
      * @param {{prompt: string}} payload
      */
     async submitPrompt(stateManager, payload) {
+        await ensureUiTexts();
+
         const prompt = String(payload.prompt || '').trim();
         if (!prompt) {
             return;
@@ -148,6 +171,8 @@ class Mutations {
             reviewneeded: false,
             completed: false,
             error: '',
+            errorCode: '',
+            retriable: false,
         });
         stateManager.setReadOnly(true);
 
@@ -204,7 +229,9 @@ class Mutations {
             stateManager.setReadOnly(false);
             const run = state.runs.get(runid);
             if (run) {
-                run.error = error && error.message ? String(error.message) : 'Unknown error';
+                run.error = error && error.message ? String(error.message) : uiTexts.activityai_error_unknown;
+                run.errorCode = 'stream_error';
+                run.retriable = false;
             }
             state.session.locked = false;
             state.session.phase = 'idle';
@@ -219,6 +246,8 @@ class Mutations {
      * @param {StateManager} stateManager
      */
     async acceptAndGenerate(stateManager) {
+        await ensureUiTexts();
+
         const state = stateManager.state;
         const courseid = Number(state.page.courseid) || 0;
 
@@ -236,10 +265,12 @@ class Mutations {
             phase: 'generation',
             prompt: '',
             markdown: '',
-            status: 'Plan accepted. Generating...',
+            status: uiTexts.activityai_status_plan_accepted_generating,
             reviewneeded: false,
             completed: false,
             error: '',
+            errorCode: '',
+            retriable: false,
         });
         stateManager.setReadOnly(true);
 
@@ -263,6 +294,8 @@ class Mutations {
      * @returns {Promise<void>}
      */
     async connectStream(stateManager, payload) {
+        await ensureUiTexts();
+
         const state = stateManager.state;
         const runid = Number(payload.runid) || 0;
         const run = state.runs.get(runid);
@@ -298,15 +331,34 @@ class Mutations {
                 }
 
                 if (data && data.type === 'token') {
-                    currentRun.status = 'Generating content...';
+                    currentRun.status = uiTexts.activityai_status_generating_content;
                     currentRun.markdown += data.text || '';
                 } else if (data && data.type === 'status') {
                     currentRun.status = String(data.text || '');
+                } else if (data && data.type === 'image_progress_init') {
+                    const totalImages = Number(data.total_images || 0);
+                    if (totalImages > 0) {
+                        currentRun.status = formatTemplate(uiTexts.activityai_status_generating_images_progress, {
+                            done: 0,
+                            total: totalImages,
+                        });
+                    } else {
+                        currentRun.status = uiTexts.activityai_status_generating_images_simple;
+                    }
+                } else if (data && data.type === 'image_progress_tick') {
+                    const done = Math.max(0, Number(data.done || 0));
+                    const total = Math.max(done, Number(data.total || 0));
+                    currentRun.status = formatTemplate(uiTexts.activityai_status_generating_images_progress, {
+                        done,
+                        total,
+                    });
+                } else if (data && data.type === 'image_progress_done') {
+                    currentRun.status = uiTexts.activityai_status_images_generated;
                 } else if (data && data.type === 'done') {
                     // Ignore.
                 } else if (data && data.type === 'review_needed') {
                     currentRun.reviewneeded = true;
-                    currentRun.status = 'Waiting for your review.';
+                    currentRun.status = uiTexts.activityai_status_waiting_review;
                     state.session.locked = false;
                     state.session.phase = 'review';
                     stateManager.setReadOnly(true);
@@ -315,7 +367,7 @@ class Mutations {
                     return;
                 } else if (data && data.type === 'completed') {
                     currentRun.completed = true;
-                    currentRun.status = 'Completed.';
+                    currentRun.status = uiTexts.activityai_status_completed;
 
                     const shouldCreateActivity = currentRun.phase === 'generation';
 
@@ -338,8 +390,10 @@ class Mutations {
                     return;
                 } else if (data && data.type === 'failed') {
                     currentRun.error = String(
-                        data.message || 'The AI service is currently experiencing high demand. Please try again later.'
+                        data.message || uiTexts.activityai_error_high_demand
                     );
+                    currentRun.errorCode = String(data.code || 'stream_error');
+                    currentRun.retriable = Boolean(data.retriable);
                     currentRun.status = '';
                     currentRun.reviewneeded = false;
                     currentRun.completed = false;
@@ -366,7 +420,9 @@ class Mutations {
                 stateManager.setReadOnly(false);
                 const currentRun = state.runs.get(runid);
                 if (currentRun) {
-                    currentRun.error = 'Disconnected from server.';
+                    currentRun.error = uiTexts.activityai_error_disconnected;
+                    currentRun.errorCode = 'stream_error';
+                    currentRun.retriable = false;
                 }
                 state.session.locked = false;
                 state.session.phase = 'review';
@@ -375,6 +431,60 @@ class Mutations {
                 resolve();
             };
         });
+    }
+
+    /**
+     * Retry a failed run when backend marks it retriable.
+     *
+     * @param {StateManager} stateManager
+     * @param {{runid: number}} payload
+     * @returns {Promise<void>}
+     */
+    async retryRun(stateManager, payload) {
+        await ensureUiTexts();
+
+        const runid = Number(payload?.runid) || 0;
+        const state = stateManager.state;
+        const run = state.runs.get(runid);
+        if (!run || !run.retriable) {
+            return;
+        }
+
+        stateManager.setReadOnly(false);
+        run.error = '';
+        run.errorCode = '';
+        run.retriable = false;
+        stateManager.setReadOnly(true);
+
+        if (run.phase === 'planning') {
+            const retryRunId = Date.now();
+            stateManager.setReadOnly(false);
+            state.session.locked = true;
+            state.session.phase = 'planning';
+            state.runs.set(retryRunId, {
+                id: retryRunId,
+                phase: 'planning',
+                prompt: run.prompt || '',
+                markdown: '',
+                status: uiTexts.activityai_status_retrying,
+                reviewneeded: false,
+                completed: false,
+                error: '',
+                errorCode: '',
+                retriable: false,
+            });
+            stateManager.setReadOnly(true);
+
+            await this.connectStream(stateManager, {runid: retryRunId});
+            return;
+        }
+
+        if (run.phase === 'generation') {
+            await this.acceptAndGenerate(stateManager);
+            return;
+        }
+
+        await this.submitPrompt(stateManager, {prompt: run.prompt || ''});
     }
 
     /**
@@ -404,7 +514,7 @@ class Mutations {
             });
 
             if (!result || !result.ok) {
-                notification.alert('', result?.message || 'Error al crear la actividad.', 'close');
+                notification.alert('', result?.message || uiTexts.activityai_error_create_activity, 'close');
                 return;
             }
 

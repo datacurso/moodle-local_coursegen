@@ -1,9 +1,24 @@
 // This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Courseai action handlers.
+ * Course AI action handlers.
  *
  * @module     local_coursegen/local/courseai/actions
+ * @copyright  2026 Wilber Narvaez <https://datacurso.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 import { setCompactChatState } from './ui-planning';
@@ -336,7 +351,6 @@ export const createCourseaiActions = (deps) => {
             planningUi.syncCompactChatState();
             streamManager.openSSEStream(state.streamingurl);
         } catch (error) {
-            window.console.error('Error generating course:', error);
             await Notification.exception(error);
             stepsUi.renderGenerateButtonDefault();
         }
@@ -363,9 +377,9 @@ export const createCourseaiActions = (deps) => {
                 'stroke-linejoin="round" aria-hidden="true">' +
                 '<rect x="6" y="4" width="4" height="16"/>' +
                 '<rect x="14" y="4" width="4" height="16"/></svg>';
-            btnCompactRegenerate.innerHTML = `${pauseIcon} ${texts.courseai_btn_pause || 'Pausar'}`;
-            btnCompactRegenerate.setAttribute('aria-label', texts.courseai_btn_pause || 'Pausar');
-            btnCompactRegenerate.setAttribute('title', texts.courseai_btn_pause || 'Pausar');
+            btnCompactRegenerate.innerHTML = `${pauseIcon} ${texts.courseai_btn_pause}`;
+            btnCompactRegenerate.setAttribute('aria-label', texts.courseai_btn_pause);
+            btnCompactRegenerate.setAttribute('title', texts.courseai_btn_pause);
             btnCompactRegenerate.disabled = false;
         }
         */
@@ -463,10 +477,8 @@ export const createCourseaiActions = (deps) => {
                 planningUi.syncCompactChatState();
             }
 
-            window.console.log('[PHASE4-DEBUG] BEFORE-STREAM - phase4TotalActivities:', state.phase4TotalActivities);
             const streamMode = action === 'accept' ? 'generating' : 'planning';
             streamManager.openSSEStream(state.streamingurl, 0, streamMode);
-            window.console.log('[PHASE4-DEBUG] AFTER-STREAM - phase4TotalActivities:', state.phase4TotalActivities);
         } catch (error) {
             await Notification.exception(error);
         } finally {

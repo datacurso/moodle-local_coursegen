@@ -1,10 +1,24 @@
-/* eslint-disable */
 // This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
  * AI Course Creation Wizard entrypoint.
  *
  * @module     local_coursegen/courseai
+ * @copyright  2026 Wilber Narvaez <https://datacurso.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 import Notification from 'core/notification';
@@ -40,8 +54,6 @@ import {initSidebar} from 'local_coursegen/local/courseai/sidebar';
  */
 export const init = async(params) => {
     try {
-        window.console.log('CourseAI initialized', params);
-
         const {guidelines, languages, defaultLang} = parseCourseaiData(params);
         const texts = await loadCourseaiStrings();
         const elements = getCourseaiElements();
@@ -130,20 +142,24 @@ export const init = async(params) => {
                 return [];
             }
 
-            return detailedSections.map((section, sectionIndex) => ({
-                section_index: section.section_index ?? sectionIndex,
-                name: section.name || `${texts.courseai_section_label} ${sectionIndex + 1}`,
-                description: section.description || '',
-                activities: (Array.isArray(section.activities) ? section.activities : []).map((activity, activityIndex) => ({
-                    activity_type: activity.activity_type || activity.type || 'page',
-                    title: activity.title || activity.name || `${texts.courseai_activity_default} ${activityIndex + 1}`,
-                    description:
-                        activity.description
-                        || activity?.detailed_plan?.activity_description
-                        || '',
-                    detailed_plan: activity.detailed_plan || {},
-                })),
-            }));
+            return detailedSections
+                .filter((section) => !section?.deleted)
+                .map((section, sectionIndex) => ({
+                    section_index: section.section_index ?? sectionIndex,
+                    name: section.name || `${texts.courseai_section_label} ${sectionIndex + 1}`,
+                    description: section.description || '',
+                    activities: (Array.isArray(section.activities) ? section.activities : [])
+                        .filter((activity) => !activity?.deleted)
+                        .map((activity, activityIndex) => ({
+                            activity_type: activity.activity_type || activity.type || 'page',
+                            title: activity.title || activity.name || `${texts.courseai_activity_default} ${activityIndex + 1}`,
+                            description:
+                                activity.description
+                                || activity?.detailed_plan?.activity_description
+                                || '',
+                            detailed_plan: activity.detailed_plan || {},
+                        })),
+                }));
         };
 
         const hydrateDetailedPlanFromSnapshot = (sections) => {
@@ -258,6 +274,85 @@ export const init = async(params) => {
 
         const resumeSessionId = getResumeSessionId();
 
+        const getMessageRole = (message) => String(message?.role || '').toLowerCase();
+
+        const isAdjustmentMessage = (message, index) => {
+            if (!message || index === 0) {
+                return false;
+            }
+
+            const role = getMessageRole(message);
+            if (role === 'human' || role === 'user') {
+                return Boolean(String(message.content || '').trim());
+            }
+
+            return false;
+        };
+
+        const buildChecklistItem = (section) => {
+            const item = document.createElement('li');
+            item.className = 'courseai-checklist-item is-done';
+            item.setAttribute('data-section-index', String(section.section_index || 0));
+
+            const check = document.createElement('span');
+            check.className = 'courseai-checklist-check';
+            check.innerHTML = '<svg class="spinner-icon" viewBox="0 0 24 24">'
+                + '<path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path></svg>'
+                + '<svg class="check-icon" viewBox="0 0 24 24">'
+                + '<polyline points="20 6 9 17 4 12"></polyline></svg>';
+
+            const name = document.createElement('span');
+            name.className = 'courseai-checklist-name';
+            name.textContent = String(section.name || '');
+
+            item.appendChild(check);
+            item.appendChild(name);
+
+            return item;
+        };
+
+        const buildChecklistRoundFromSections = (sections) => {
+            if (!Array.isArray(sections) || sections.length === 0) {
+                return null;
+            }
+
+            const checklistSections = sections.map((section, index) => {
+                const activities = Array.isArray(section?.activities) ? section.activities : [];
+                const total = activities.length;
+
+                return {
+                    section_index: Number(section?.section_index ?? index),
+                    name: String(section?.name || ''),
+                    done: total,
+                    total,
+                };
+            });
+
+            return {
+                sections: checklistSections,
+            };
+        };
+
+        const renderInitialChecklist = (roundData) => {
+            if (!elements.checklistList || !elements.checklist) {
+                return;
+            }
+
+            const sections = Array.isArray(roundData?.sections) ? roundData.sections : [];
+            elements.checklistList.innerHTML = '';
+
+            if (!sections.length) {
+                elements.checklist.classList.add('hidden');
+                return;
+            }
+
+            sections.forEach((section) => {
+                elements.checklistList.appendChild(buildChecklistItem(section));
+            });
+
+            elements.checklist.classList.remove('hidden');
+        };
+
         const createRoundChecklistElement = (roundData) => {
             const sections = Array.isArray(roundData?.sections) ? roundData.sections : [];
             if (!sections.length) {
@@ -272,52 +367,38 @@ export const init = async(params) => {
 
             const label = document.createElement('span');
             label.className = 'courseai-checklist-label';
-            label.textContent = texts.courseai_checklist_label || 'Course sections';
+            label.textContent = texts.courseai_checklist_label;
             checklist.appendChild(label);
 
             const list = document.createElement('ul');
             list.className = 'courseai-checklist-list';
 
-            sections.forEach((section) => {
-                const item = document.createElement('li');
-                item.className = 'courseai-checklist-item is-done';
-                item.setAttribute('data-section-index', String(section.section_index || 0));
-                const total = Number(section.total || 0);
-                const done = Number(section.done || 0);
-
-                const check = document.createElement('span');
-                check.className = 'courseai-checklist-check';
-                check.innerHTML = '<svg class="spinner-icon" viewBox="0 0 24 24">'
-                    + '<path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path></svg>'
-                    + '<svg class="check-icon" viewBox="0 0 24 24">'
-                    + '<polyline points="20 6 9 17 4 12"></polyline></svg>';
-
-                const name = document.createElement('span');
-                name.className = 'courseai-checklist-name';
-                name.textContent = String(section.name || '');
-
-                const meta = document.createElement('span');
-                meta.className = 'courseai-checklist-meta';
-                meta.textContent = `${done}/${total}`;
-
-                item.appendChild(check);
-                item.appendChild(name);
-                item.appendChild(meta);
-                list.appendChild(item);
-            });
+            sections.forEach((section) => list.appendChild(buildChecklistItem(section)));
 
             checklist.appendChild(list);
             return checklist;
         };
 
-        const restoreAdjustmentHistory = (messages, planningRounds = []) => {
+        const restoreAdjustmentHistory = (messages, planningRounds = [], fallbackSections = []) => {
             if (!elements.adjustmentHistory) {
                 return;
             }
 
             const humanMessages = Array.isArray(messages)
-                ? messages.filter((message, index) => index > 0 && message.role === 'human' && message.content)
+                ? messages.filter((message, index) => isAdjustmentMessage(message, index))
                 : [];
+
+            const rounds = Array.isArray(planningRounds) ? planningRounds : [];
+            const fallbackRound = buildChecklistRoundFromSections(fallbackSections);
+            const roundsByNumber = rounds.reduce((map, roundData, index) => {
+                const roundNumber = Number(roundData?.round ?? index + 1);
+                if (!Number.isNaN(roundNumber) && roundNumber >= 0) {
+                    map[roundNumber] = roundData;
+                }
+                return map;
+            }, {});
+
+            renderInitialChecklist(roundsByNumber[1] || fallbackRound);
 
             if (!humanMessages.length) {
                 elements.adjustmentHistory.classList.add('hidden');
@@ -326,9 +407,6 @@ export const init = async(params) => {
             }
 
             elements.adjustmentHistory.innerHTML = '';
-            const roundsForHistory = Array.isArray(planningRounds)
-                ? planningRounds.slice(Math.max(0, planningRounds.length - humanMessages.length))
-                : [];
 
             humanMessages.forEach((message, idx) => {
                 const round = idx + 1;
@@ -353,7 +431,7 @@ export const init = async(params) => {
                 roundContainer.appendChild(msgEl);
                 roundContainer.appendChild(responseSlot);
 
-                const roundChecklist = createRoundChecklistElement(roundsForHistory[idx]);
+                const roundChecklist = createRoundChecklistElement(roundsByNumber[round + 1] || fallbackRound);
                 if (roundChecklist) {
                     responseSlot.appendChild(roundChecklist);
                 }
@@ -416,12 +494,13 @@ export const init = async(params) => {
             }
 
             planningUi.syncCompactChatState();
-            restoreAdjustmentHistory(snapshot?.messages || [], snapshot?.planning_rounds || []);
 
             const detailedSections = Array.isArray(snapshot.detailed_plan_sections)
                 ? snapshot.detailed_plan_sections
                 : [];
             const sectionsForUi = buildSectionsFromDetailedPlan(detailedSections);
+
+            restoreAdjustmentHistory(snapshot?.messages || [], snapshot?.planning_rounds || [], sectionsForUi);
 
             if (sectionsForUi.length > 0) {
                 state.latestInitialSections = sectionsForUi;
@@ -444,6 +523,9 @@ export const init = async(params) => {
                 if (sectionsForUi.length > 0) {
                     hydrateDetailedPlanFromSnapshot(sectionsForUi);
                 }
+                if (typeof detailedUi.enableAllActionControls === 'function') {
+                    detailedUi.enableAllActionControls();
+                }
 
                 actions.showCompletionView({
                     success: true,
@@ -458,6 +540,9 @@ export const init = async(params) => {
                 setPlanningStreamVisible();
                 applyCourseTitleToHeader();
                 hydrateDetailedPlanFromSnapshot(sectionsForUi);
+                if (typeof detailedUi.enableAllActionControls === 'function') {
+                    detailedUi.enableAllActionControls();
+                }
                 planningUi.showReviewActions('detailed');
                 return true;
             }
@@ -487,6 +572,9 @@ export const init = async(params) => {
                 if (sectionsForUi.length > 0) {
                     hydrateDetailedPlanFromSnapshot(sectionsForUi);
                 }
+                if (typeof detailedUi.enableAllActionControls === 'function') {
+                    detailedUi.enableAllActionControls();
+                }
                 planningUi.showReviewActions('detailed');
                 stepsUi.setStepState('planning', 'done');
                 stepsUi.setStepState('generating', 'done');
@@ -506,7 +594,6 @@ export const init = async(params) => {
                 elements.contextView.style.display = '';
             }
         } catch (resumeError) {
-            window.console.warn('Unable to resume course session', resumeError);
             if (elements.contextView) {
                 elements.contextView.style.display = '';
             }
