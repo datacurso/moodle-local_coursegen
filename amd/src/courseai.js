@@ -1,10 +1,24 @@
-/* eslint-disable */
 // This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
  * AI Course Creation Wizard entrypoint.
  *
  * @module     local_coursegen/courseai
+ * @copyright  2026 Wilber Narvaez <https://datacurso.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 import Notification from 'core/notification';
@@ -40,8 +54,6 @@ import {initSidebar} from 'local_coursegen/local/courseai/sidebar';
  */
 export const init = async(params) => {
     try {
-        window.console.log('CourseAI initialized', params);
-
         const {guidelines, languages, defaultLang} = parseCourseaiData(params);
         const texts = await loadCourseaiStrings();
         const elements = getCourseaiElements();
@@ -355,7 +367,7 @@ export const init = async(params) => {
 
             const label = document.createElement('span');
             label.className = 'courseai-checklist-label';
-            label.textContent = texts.courseai_checklist_label || 'Course sections';
+            label.textContent = texts.courseai_checklist_label;
             checklist.appendChild(label);
 
             const list = document.createElement('ul');
@@ -582,7 +594,6 @@ export const init = async(params) => {
                 elements.contextView.style.display = '';
             }
         } catch (resumeError) {
-            window.console.warn('Unable to resume course session', resumeError);
             if (elements.contextView) {
                 elements.contextView.style.display = '';
             }

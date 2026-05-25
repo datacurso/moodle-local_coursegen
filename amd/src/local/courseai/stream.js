@@ -1,9 +1,24 @@
 // This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * SSE stream manager for courseai.
+ * SSE stream manager for Course AI.
  *
  * @module     local_coursegen/local/courseai/stream
+ * @copyright  2026 Wilber Narvaez <https://datacurso.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 import { setCompactChatState } from './ui-planning';
@@ -660,7 +675,6 @@ export const createStreamManager = (deps) => {
 
             // PRESERVE phase4TotalActivities BEFORE reset
             const savedPhase4Total = state.phase4TotalActivities || 0;
-            window.console.log('[PHASE4-DEBUG] BEFORE-RESET - Saving phase4TotalActivities:', savedPhase4Total);
 
             stepsUi.resetPlanningState({showLoading: streamMode !== 'generating'});
 
@@ -706,7 +720,6 @@ export const createStreamManager = (deps) => {
             if (savedPhase4Total > 0) {
                 state.phase4TotalActivities = savedPhase4Total;
                 preservedPhase4Total = savedPhase4Total;
-                window.console.log('[PHASE4-DEBUG] AFTER-RESET - Restored phase4TotalActivities:', state.phase4TotalActivities);
             }
         }
 
@@ -733,7 +746,7 @@ export const createStreamManager = (deps) => {
                 container.appendChild(list);
                 const label = document.createElement('span');
                 label.className = 'courseai-checklist-label';
-                label.textContent = texts.courseai_checklist_label || 'Course sections';
+                label.textContent = texts.courseai_checklist_label;
                 container.insertBefore(label, list);
                 // Insert checklist into the corresponding round container's response slot
                 const roundEl = els.adjustmentHistory
@@ -907,12 +920,6 @@ export const createStreamManager = (deps) => {
                     // Use module-level preserved value as fallback if state was reset
                     const totalActivities = state.phase4TotalActivities || preservedPhase4Total;
 
-                    window.console.log('[PHASE4-DEBUG] Status event received:', statusText);
-                    window.console.log('[PHASE4-DEBUG] Current stage:', state.currentStage);
-                    window.console.log('[PHASE4-DEBUG] state.phase4TotalActivities:', state.phase4TotalActivities);
-                    window.console.log('[PHASE4-DEBUG] preservedPhase4Total (fallback):', preservedPhase4Total);
-                    window.console.log('[PHASE4-DEBUG] totalActivities (used for calc):', totalActivities);
-
                     // Always update the header subtitle with live status text
                     if (prvHeaderSub) {
                         prvHeaderSub.textContent = statusText;
@@ -933,8 +940,6 @@ export const createStreamManager = (deps) => {
                     // Phase 2: Completing activities (30% → 90%) - granular progress
                     // Use totalActivities (with fallback to module-level variable) to survive resets
                     if (state.currentStage === 'generating' && totalActivities > 0) {
-                        window.console.log('[PHASE4-DEBUG] Inside tracking condition');
-
                         // Phase 1: Detect when an activity/resource STARTS
                         const startPattern = /^(Designing|Generating Assignment content)/i;
                         const isActivityStarting = startPattern.test(statusText);
@@ -946,9 +951,6 @@ export const createStreamManager = (deps) => {
                         );
                         const isActivityComplete = completePattern.test(statusText);
 
-                        window.console.log('[PHASE4-DEBUG] Start pattern match:', isActivityStarting);
-                        window.console.log('[PHASE4-DEBUG] Complete pattern match:', isActivityComplete);
-
                         if (isActivityStarting) {
                             // Phase 1: Track started activities (0% → 30%)
                             state.contentGenerationStarted = (state.contentGenerationStarted || 0) + 1;
@@ -956,8 +958,6 @@ export const createStreamManager = (deps) => {
                                 30,
                                 (state.contentGenerationStarted / totalActivities) * 30
                             );
-                            window.console.log('[PHASE4-DEBUG] PHASE 1 - Started count:', state.contentGenerationStarted);
-                            window.console.log('[PHASE4-DEBUG] PHASE 1 - Setting progress to:', Math.round(startProgress));
                             stepsUi.setProgress(Math.round(startProgress));
                         } else if (isActivityComplete) {
                             // Phase 2: Track completed activities (30% → 90%)
@@ -966,19 +966,8 @@ export const createStreamManager = (deps) => {
                                 60,
                                 (state.contentGenerationCurrent / totalActivities) * 60
                             );
-                            window.console.log('[PHASE4-DEBUG] PHASE 2 - Complete count:', state.contentGenerationCurrent);
-                            window.console.log('[PHASE4-DEBUG] PHASE 2 - Setting progress to:', Math.round(completeProgress));
                             stepsUi.setProgress(Math.round(completeProgress));
-                        } else {
-                            window.console.log('[PHASE4-DEBUG] No pattern matched for this event');
                         }
-                    } else {
-                        window.console.log(
-                            '[PHASE4-DEBUG] NOT in tracking condition. Stage:',
-                            state.currentStage,
-                            'Total:',
-                            totalActivities
-                        );
                     }
                     break;
                 }
@@ -1147,10 +1136,6 @@ export const createStreamManager = (deps) => {
             // stream's "done" was read before the new content arrived (race condition after
             // a Pausar + Regenerar cycle).  Retry automatically up to MAX_STALE_RETRIES times.
             if (!contentReceived && retryAttempt < MAX_STALE_RETRIES) {
-                window.console.log(
-                    '[STREAM] Stale done detected (attempt', retryAttempt + 1, '/', MAX_STALE_RETRIES + ').',
-                    'Retrying in', STALE_RETRY_DELAY_MS, 'ms…'
-                );
                 setTimeout(() => openSSEStream(streamUrl, retryAttempt + 1, streamMode), STALE_RETRY_DELAY_MS);
                 return;
             }

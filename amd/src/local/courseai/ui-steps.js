@@ -1,9 +1,24 @@
 // This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
  * Stepper and navigation UI helpers.
  *
  * @module     local_coursegen/local/courseai/ui-steps
+ * @copyright  2026 Wilber Narvaez <https://datacurso.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 import { setCompactChatState } from './ui-planning';
@@ -68,21 +83,11 @@ export const createStepsUi = (deps) => {
     const setProgress = (pct) => {
         const clamped = Math.min(100, Math.max(0, Math.round(pct)));
 
-        window.console.log('[SETPROGRESS-DEBUG] Called with:', pct, 'clamped to:', clamped);
-        window.console.log('[SETPROGRESS-DEBUG] pcPct element exists:', !!pcPct);
-        window.console.log('[SETPROGRESS-DEBUG] pcBarFill element exists:', !!pcBarFill);
-
         if (pcPct) {
             pcPct.textContent = `${clamped}${texts.courseai_progress_percent}`;
-            window.console.log('[SETPROGRESS-DEBUG] Updated pcPct to:', pcPct.textContent);
-        } else {
-            window.console.warn('[SETPROGRESS-DEBUG] pcPct element is NULL!');
         }
         if (pcBarFill) {
             pcBarFill.style.width = `${clamped}%`;
-            window.console.log('[SETPROGRESS-DEBUG] Updated pcBarFill width to:', pcBarFill.style.width);
-        } else {
-            window.console.warn('[SETPROGRESS-DEBUG] pcBarFill element is NULL!');
         }
     };
 
