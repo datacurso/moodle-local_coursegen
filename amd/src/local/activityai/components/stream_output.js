@@ -25,6 +25,7 @@ import {BaseComponent} from 'core/reactive';
 
 import * as markedModule from 'local_coursegen/marked';
 import {regions, activityRegions} from 'local_coursegen/selectors';
+import {loadActivityaiStrings} from 'local_coursegen/local/activityai/i18n';
 
 export default class extends BaseComponent {
     create() {
@@ -39,6 +40,8 @@ export default class extends BaseComponent {
 
         this.markedParser = markedModule.parse ? markedModule : markedModule.marked;
         this.statusHistoryByRunId = new Map();
+        this.texts = {};
+        this.textsLoadingPromise = null;
     }
 
     getWatchers() {
@@ -49,8 +52,21 @@ export default class extends BaseComponent {
         ];
     }
 
-    stateReady() {
+    async stateReady() {
+        await this._ensureTexts();
         this._renderUpload({element: this.reactive.state.upload});
+    }
+
+    async _ensureTexts() {
+        if (Object.keys(this.texts).length) {
+            return;
+        }
+
+        if (!this.textsLoadingPromise) {
+            this.textsLoadingPromise = loadActivityaiStrings();
+        }
+
+        this.texts = await this.textsLoadingPromise;
     }
 
     _renderUpload({element}) {
@@ -71,7 +87,9 @@ export default class extends BaseComponent {
         selectedFileElement.style.display = 'block';
     }
 
-    _renderRun({element}) {
+    async _renderRun({element}) {
+        await this._ensureTexts();
+
         const root = this.element.closest(activityRegions.root) || this.element;
         const streamSection = root.querySelector(this.selectors.STREAM_SECTION);
         const output = root.querySelector(this.selectors.OUTPUT);
@@ -159,18 +177,42 @@ export default class extends BaseComponent {
                     '<span class="badge badge-light border border-secondary text-muted p-2" ' +
                         'style="font-size: 1rem; line-height: 1.4; font-weight: normal; max-width: 100%; ' +
                         'white-space: normal; word-break: break-word; text-align: left; display: inline-block;">' +
-                        '<i class="fa fa-user mr-1"></i> Tú pediste: ' + safeText(element.prompt) +
+                        '<i class="fa fa-user mr-1"></i> '
+                         + safeText(this.texts.activityai_prompt_prefix) + ' ' + safeText(element.prompt) +
                     '</span>' +
                 '</div>'
             : '';
 
-        const errorHtml = element.error
-            ? '<div class="alert alert-danger my-2">' + safeText(element.error) + '</div>'
-            : '';
+        let errorHtml = '';
+        if (element.error) {
+            const retriable = Boolean(element.retriable);
+            if (retriable) {
+                errorHtml = '' +
+                    '<div class="activityai-retry-alert my-2" data-region="local_coursegen/activity/retry-alert">' +
+                        '<div class="activityai-retry-alert-text">' +
+                            '<i class="fa fa-exclamation-triangle mr-2" aria-hidden="true"></i>' +
+                            '<span>' + safeText(this.texts.activityai_retry_slow_warning) + '</span>' +
+                        '</div>' +
+                        '<button type="button" class="btn btn-outline-secondary btn-sm mt-2" ' +
+                            'data-action="local_coursegen/activity/retry-run" data-run-id="' + safeText(runId) + '">' +
+                            safeText(this.texts.activityai_retry_action) +
+                        '</button>' +
+                    '</div>';
+            } else {
+                errorHtml = '<div class="alert alert-danger my-2">' + safeText(element.error) + '</div>';
+            }
+        }
 
         const markdownHtml = this.markedParser.parse(element.markdown || '');
 
         wrapper.innerHTML = promptHtml + statusBeforeHtml + markdownHtml + statusAfterHtml + errorHtml;
+
+        const retryButton = wrapper.querySelector('[data-action="local_coursegen/activity/retry-run"]');
+        if (retryButton) {
+            retryButton.addEventListener('click', () => {
+                this.reactive.dispatch('retryRun', {runid: runId});
+            });
+        }
 
         if (element.reviewneeded) {
             this._renderReviewActions(output);
@@ -191,12 +233,12 @@ export default class extends BaseComponent {
         const btnAccept = document.createElement('button');
         btnAccept.type = 'button';
         btnAccept.className = 'btn btn-primary mr-2 shadow-sm';
-        btnAccept.textContent = 'Aceptar y crear actividad';
+        btnAccept.textContent = this.texts.accept_planning_create_activity;
 
         const btnAdjust = document.createElement('button');
         btnAdjust.type = 'button';
         btnAdjust.className = 'btn btn-outline-secondary shadow-sm';
-        btnAdjust.textContent = 'Ajustar planificación';
+        btnAdjust.textContent = this.texts.adjust_course_planning;
 
         container.appendChild(btnAccept);
         container.appendChild(btnAdjust);

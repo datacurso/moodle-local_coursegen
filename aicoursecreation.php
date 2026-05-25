@@ -41,6 +41,7 @@ $PAGE->set_title(get_string('createwithai', 'local_coursegen'));
 
 // Load courseai CSS + sidebar CSS.
 $PAGE->requires->css('/local/coursegen/styles/aicoursecreation.css');
+$PAGE->requires->css('/local/coursegen/styles/chatui.css');
 $PAGE->requires->css('/local/coursegen/styles/sidebar.css');
 
 use local_coursegen\local\models\course_session;

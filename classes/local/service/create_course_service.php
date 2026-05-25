@@ -71,20 +71,47 @@ class create_course_service {
             }
 
             // Process generated activities if provided in the response.
+            $activityerrors = [];
             if (!empty($resultdata['generated_activities'])) {
-                self::process_generated_activities($course->id, $resultdata['generated_activities']);
+                $activityerrors = self::process_generated_activities($course->id, $resultdata['generated_activities']);
+            }
+
+            // Ensure section sequences only contain valid course module ids.
+            $removedreferences = self::repair_course_section_sequences($course->id);
+            $remainingorphans = self::count_orphaned_course_module_references($course->id);
+            if ($remainingorphans > 0) {
+                throw new \Exception('Course structure is inconsistent after module creation.');
             }
 
             // Update session status to created.
             course_session_service::update_status($sessionid, course_session::STATUS_CREATED);
 
+            if (!empty($activityerrors)) {
+                debugging(
+                    'local_coursegen: created course with module errors. Session ' . $sessionid
+                    . '. Errors: ' . json_encode($activityerrors, JSON_UNESCAPED_UNICODE)
+                );
+            }
+
+            if ($removedreferences > 0) {
+                debugging(
+                    'local_coursegen: removed orphaned course module references while creating course '
+                    . $course->id . '. Removed: ' . $removedreferences
+                );
+            }
+
             // Return success response.
+            $message = get_string('coursecreated', 'local_coursegen');
+            if (!empty($activityerrors)) {
+                $message .= ' Some activities were skipped due to creation errors.';
+            }
+
             return [
                 'success' => true,
                 'courseid' => $course->id,
                 'shortname' => $course->shortname,
                 'fullname' => $course->fullname,
-                'message' => get_string('coursecreated', 'local_coursegen'),
+                'message' => $message,
                 'courseurl' => course_get_url($course->id)->out(),
             ];
         } catch (\Exception $e) {
@@ -300,12 +327,13 @@ class create_course_service {
      * @param array $activities Generated activities from API.
      * @return void
      */
-    private static function process_generated_activities(int $courseid, array $activities): void {
+    private static function process_generated_activities(int $courseid, array $activities): array {
         global $CFG;
 
         require_once($CFG->dirroot . '/course/modlib.php');
 
         $course = get_course($courseid);
+        $errors = [];
 
         foreach ($activities as $activity) {
             $sectionnum = 0;
@@ -316,6 +344,12 @@ class create_course_service {
             try {
                 create_mod_service::create_from_ai_result($activity, $course, $sectionnum);
             } catch (\Exception $e) {
+                $resource = (string)($activity['resource_type'] ?? 'unknown');
+                $errors[] = [
+                    'resource_type' => $resource,
+                    'section' => (int)$sectionnum,
+                    'message' => $e->getMessage(),
+                ];
                 debugging('Error creating module from AI result: ' . $e->getMessage());
                 // Continue with next activity.
                 continue;
@@ -324,5 +358,122 @@ class create_course_service {
 
         // Rebuild course cache after adding all activities.
         rebuild_course_cache($courseid, true);
+
+        return $errors;
+    }
+
+    /**
+     * Remove invalid course module ids from all section sequences.
+     *
+     * @param int $courseid Course ID.
+     * @return int Number of removed references.
+     */
+    private static function repair_course_section_sequences(int $courseid): int {
+        global $DB;
+
+        $validcmids = self::get_valid_course_module_ids($courseid);
+        $sections = $DB->get_records('course_sections', ['course' => $courseid]);
+        $removed = 0;
+
+        foreach ($sections as $section) {
+            $rawsequence = trim((string)($section->sequence ?? ''));
+            if ($rawsequence === '') {
+                continue;
+            }
+
+            $sequenceids = self::parse_sequence_ids($rawsequence);
+            if (empty($sequenceids)) {
+                if ($rawsequence !== '') {
+                    $DB->set_field('course_sections', 'sequence', '', ['id' => $section->id]);
+                    $removed++;
+                }
+                continue;
+            }
+
+            $filteredids = [];
+            foreach ($sequenceids as $cmid) {
+                if (isset($validcmids[$cmid])) {
+                    $filteredids[] = $cmid;
+                } else {
+                    $removed++;
+                }
+            }
+
+            $newsequence = implode(',', $filteredids);
+            if ($newsequence !== $rawsequence) {
+                $DB->set_field('course_sections', 'sequence', $newsequence, ['id' => $section->id]);
+            }
+        }
+
+        if ($removed > 0) {
+            rebuild_course_cache($courseid, true);
+        }
+
+        return $removed;
+    }
+
+    /**
+     * Count orphaned course module references in section sequences.
+     *
+     * @param int $courseid Course ID.
+     * @return int Number of orphaned references.
+     */
+    private static function count_orphaned_course_module_references(int $courseid): int {
+        global $DB;
+
+        $validcmids = self::get_valid_course_module_ids($courseid);
+        $sections = $DB->get_records('course_sections', ['course' => $courseid], '', 'id,sequence');
+        $orphans = 0;
+
+        foreach ($sections as $section) {
+            $sequenceids = self::parse_sequence_ids((string)($section->sequence ?? ''));
+            foreach ($sequenceids as $cmid) {
+                if (!isset($validcmids[$cmid])) {
+                    $orphans++;
+                }
+            }
+        }
+
+        return $orphans;
+    }
+
+    /**
+     * Parse a Moodle section sequence string into positive module ids.
+     *
+     * @param string $sequence Comma-separated module ids.
+     * @return int[]
+     */
+    private static function parse_sequence_ids(string $sequence): array {
+        if (trim($sequence) === '') {
+            return [];
+        }
+
+        $ids = [];
+        foreach (explode(',', $sequence) as $rawid) {
+            $cmid = (int)trim($rawid);
+            if ($cmid > 0) {
+                $ids[] = $cmid;
+            }
+        }
+
+        return $ids;
+    }
+
+    /**
+     * Get valid course module ids for a course as a lookup map.
+     *
+     * @param int $courseid Course ID.
+     * @return array<int,bool>
+     */
+    private static function get_valid_course_module_ids(int $courseid): array {
+        global $DB;
+
+        $records = $DB->get_records('course_modules', ['course' => $courseid], '', 'id');
+        $lookup = [];
+        foreach ($records as $record) {
+            $lookup[(int)$record->id] = true;
+        }
+
+        return $lookup;
     }
 }

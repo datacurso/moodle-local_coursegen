@@ -1,9 +1,24 @@
 // This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
  * Detailed planning UI helpers.
  *
  * @module     local_coursegen/local/courseai/ui-detailed
+ * @copyright  2026 Wilber Narvaez <https://datacurso.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 import DeleteCancelModal from 'core/modal_delete_cancel';
@@ -210,12 +225,12 @@ export const createDetailedUi = (deps) => {
         const cancel = document.createElement('button');
         cancel.type = 'button';
         cancel.className = 'dp-ai-btn dp-ai-btn--secondary';
-        cancel.textContent = texts.courseai_btn_cancel || 'Cancel';
+        cancel.textContent = texts.courseai_btn_cancel;
 
         const send = document.createElement('button');
         send.type = 'button';
         send.className = 'dp-ai-btn dp-ai-btn--primary';
-        send.textContent = texts.courseai_btn_send_adjust || 'Send';
+        send.textContent = texts.courseai_btn_send_adjust;
 
         const closePanel = (event) => {
             event.preventDefault();
@@ -398,7 +413,7 @@ export const createDetailedUi = (deps) => {
             iaControl = createActionControl({
                 variant: 'ia',
                 iconSvg: iaSparklesSvg,
-                label: texts.courseai_btn_adjust || 'IA',
+                label: texts.courseai_btn_adjust,
                 onActivate: () => imagePanelApi.open(),
                 disabled: true,
             });
@@ -684,7 +699,7 @@ export const createDetailedUi = (deps) => {
         iaControl = createActionControl({
             variant: 'ia',
             iconSvg: iaSparklesSvg,
-            label: texts.courseai_btn_adjust || 'IA',
+            label: texts.courseai_btn_adjust,
             onActivate: () => sectionPanelApi.open(),
             disabled: true,
         });
@@ -692,15 +707,15 @@ export const createDetailedUi = (deps) => {
         deleteControl = createActionControl({
             variant: 'delete',
             iconUrl: getCoreIconUrl('t/delete'),
-            label: texts.courseai_btn_cancel || 'Delete',
+            label: texts.courseai_btn_cancel,
             onActivate: async() => {
                 if (!row) {
                     return;
                 }
 
                 const confirmed = await confirmDelete({
-                    title: texts.courseai_delete_section_confirm_title || 'Delete section',
-                    body: texts.courseai_delete_section_confirm_body || 'Are you sure you want to delete this section?',
+                    title: texts.courseai_delete_section_confirm_title,
+                    body: texts.courseai_delete_section_confirm_body,
                 });
 
                 if (!confirmed || !regenerateDetailedItem || !state.sessionid) {
@@ -951,7 +966,7 @@ export const createDetailedUi = (deps) => {
         iaControl = createActionControl({
             variant: 'ia',
                 iconSvg: iaSparklesSvg,
-            label: texts.courseai_btn_adjust || 'IA',
+            label: texts.courseai_btn_adjust,
             onActivate: () => activityPanelApi.open(),
             disabled: true,
         });
@@ -959,7 +974,7 @@ export const createDetailedUi = (deps) => {
         deleteControl = createActionControl({
             variant: 'delete',
             iconUrl: getCoreIconUrl('t/delete'),
-            label: texts.courseai_btn_cancel || 'Delete',
+            label: texts.courseai_btn_cancel,
             onActivate: async() => {
                 const key = `${sectionIndex}-${activityIndex}`;
                 const entry = state.detailedActivityEls[key];
@@ -968,8 +983,8 @@ export const createDetailedUi = (deps) => {
                 }
 
                 const confirmed = await confirmDelete({
-                    title: texts.courseai_delete_activity_confirm_title || 'Delete activity',
-                    body: texts.courseai_delete_activity_confirm_body || 'Are you sure you want to delete this activity?',
+                    title: texts.courseai_delete_activity_confirm_title,
+                    body: texts.courseai_delete_activity_confirm_body,
                 });
 
                 if (!confirmed) {

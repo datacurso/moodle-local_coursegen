@@ -153,323 +153,12 @@ svg { display: block; flex-shrink: 0; }
   text-align: left;
 }
 
-.courseai-context-chat {
-  display: none;
-}
-
-.courseai-workspace.is-planning .courseai-context-editor {
-  display: none;
-}
-
-.courseai-workspace.is-planning .courseai-context-chat {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  height: 100%;
-  min-height: 0;
-  min-width: 0;
-}
-
-/* Scrollable wrapper for history + checklist + adjustments */
-.courseai-chat-scroll {
-  flex: 1 1 auto;
-  min-height: 0;
-  overflow-y: auto;
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
-}
-
-.courseai-workspace.is-planning .courseai-chat-history {
-  flex: 0 0 auto;
-}
-
-/* Unify initial prompt message style with adjustment messages in the side panel */
-.courseai-context-chat .courseai-chat-message--user {
-  border-radius: 8px;
-  padding: 5px 10px;
-  font-size: 12px;
-}
-
-.courseai-workspace.is-planning .planning-wrap {
-  max-width: none;
-  margin: 0;
-  width: 100%;
-  min-width: 0;
-  min-height: 0;
-  padding-left: 28px;
-  overflow-y: auto;
-}
-
-@media (max-width: 1100px) {
-  .courseai-workspace.is-planning {
-    grid-template-columns: 1fr;
-    height: auto;
-    overflow: visible;
-  }
-  .courseai-workspace.is-planning .context-wrap {
-    position: static;
-    max-height: none;
-    min-height: 0;
-    border-right: none;
-    padding-right: 0;
-  }
-
-  .courseai-workspace.is-planning .planning-wrap {
-    padding-left: 0;
-  }
-
-  .courseai-workspace.is-planning .courseai-context-editor {
-    display: none;
-  }
-
-  .courseai-workspace.is-planning .courseai-context-chat {
-    display: flex;
-  }
-}
-
-.courseai-chat-history {
-  background: transparent;
-  padding: 0;
-}
-
-.courseai-chat-history-label {
-  display: block;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .05em;
-  text-transform: uppercase;
-  color: var(--muted-fg);
-  margin-bottom: 8px;
-}
-
-.courseai-chat-message {
-  display: inline-block;
-  max-width: 100%;
-  border-radius: 14px;
-  padding: 10px 12px;
-  font-size: 14px;
-  line-height: 1.5;
-  word-break: break-word;
-}
-
-.courseai-chat-message--user {
-  background: var(--primary-soft);
-  color: var(--fg);
-}
-
-.courseai-chat-message--user p {
-  margin: 0;
-}
-
-/* ─── SECTION CHECKLIST ───────────────────────────────────────────────── */
-.courseai-checklist {
-  background: var(--card);
-  border-radius: 10px;
-  padding: 12px;
-  font-size: 13px;
-}
-
-.courseai-checklist-label {
-  display: block;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .05em;
-  text-transform: uppercase;
-  color: var(--muted-fg);
-  margin-bottom: 8px;
-}
-
-.courseai-checklist-list {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: flex;
-  flex-direction: column;
-  gap: 6px;
-}
-
-.courseai-checklist-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  color: var(--fg);
-  line-height: 1.4;
-  opacity: .7;
-  transition: opacity .2s;
-}
-
-.courseai-checklist-item.is-done {
-  opacity: 1;
-}
-
-.courseai-checklist-check {
-  flex: 0 0 18px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 2px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  transition: all .2s;
-}
-
-.courseai-checklist-item.is-done .courseai-checklist-check {
-  background: #16a34a;
-  border-color: #16a34a;
-}
-
-.courseai-checklist-check svg {
-  width: 10px;
-  height: 10px;
-  fill: none;
-  display: none;
-}
-
-.courseai-checklist-check .check-icon {
-  stroke: #fff;
-  stroke-width: 3;
-}
-
-.courseai-checklist-check .spinner-icon {
-  stroke: var(--muted-fg);
-  stroke-width: 2.5;
-  animation: courseai-spin .8s linear infinite;
-}
-
-.courseai-checklist-item.is-done .courseai-checklist-check svg.check-icon {
-  display: block;
-}
-
-.courseai-checklist-item.is-loading .courseai-checklist-check svg.spinner-icon {
-  display: block;
-}
-
-@keyframes courseai-spin {
-  to { transform: rotate(360deg); }
-}
-
-.courseai-checklist-name {
-  flex: 1;
-  min-width: 0;
-}
-
-.courseai-checklist-meta {
-  font-size: 11px;
-  font-weight: 700;
-  color: var(--muted-fg);
-  white-space: nowrap;
-}
-
-/* ─── ADJUSTMENT HISTORY ─────────────────────────────────────────────── */
-.courseai-adjustment-history {
-  display: flex;
-  flex-direction: column;
-}
-
-.courseai-adjustment-history:empty {
-  display: none;
-}
-
-.courseai-round {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-}
-
-.courseai-round + .courseai-round {
-  margin-top: 12px;
-  padding-top: 12px;
-}
-
-.courseai-round-response {
-  display: flex;
-  flex-direction: column;
-}
-
-/* ─── STEP HEADER ─────────────────────────────────────────────────────── */
-.step-header { margin-bottom: 32px; }
-
-.steps-list {
-  display: flex;
-  align-items: center;
-  list-style: none;
-  gap: 0;
-}
-
-.step-item {
-  display: flex;
-  flex: 1;
-  align-items: center;
-  gap: 8px;
-  min-width: 0;
-}
-
-/* The connector sits between items but is not a list item — handled as flex child */
-.step-connector {
-  flex: 1;
-  height: 2px;
-  background: var(--border);
-  border-radius: 9999px;
-  min-width: 16px;
-}
-
-.step-circle {
-  width: 36px;
-  height: 36px;
-  border-radius: 50%;
-  border: 2px solid var(--border);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  font-size: 13px;
-  font-weight: 700;
-  flex-shrink: 0;
-  background: var(--card);
-  color: var(--muted-fg);
-  transition: all .2s;
-}
-
-.step-item.active .step-circle {
-  background: var(--primary);
-  border-color: var(--primary);
-  color: var(--primary-fg);
-  box-shadow: var(--shadow-elevated);
-}
-.step-item.done .step-circle {
-  background: var(--success);
-  border-color: var(--success);
-  color: var(--success-fg);
-}
-
-.step-label {
-  font-size: 12.5px;
-  font-weight: 600;
-  line-height: 1.2;
-  display: flex;
-  align-items: center;
-  min-height: 32px;
-  white-space: normal;
-  overflow: visible;
-  text-overflow: clip;
-  color: var(--muted-fg);
-}
-.step-item.active .step-label,
-.step-item.done   .step-label { color: var(--fg); }
-
 /* ─── CONTEXT FORM ────────────────────────────────────────────────────── */
 .context-wrap {
   max-width: 768px;
   margin: 0 auto;
   width: 100%;
   margin-bottom: 32px;
-}
-
-.context-wrap--disabled {
-  pointer-events: none;
-  opacity: 0.6;
-  user-select: none;
 }
 
 .context-head {
@@ -496,10 +185,6 @@ svg { display: block; flex-shrink: 0; }
   box-shadow: var(--shadow-elevated);
   overflow: visible;
   transition: border-color .15s, box-shadow .15s;
-}
-.card.drag-over {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px hsl(8, 72%, 42%, 0.15), var(--shadow-elevated);
 }
 
 /* Textarea */
@@ -1089,26 +774,6 @@ svg { display: block; flex-shrink: 0; }
   gap: 8px;
   flex-shrink: 0;
 }
-
-.btn-plan-adjust {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 16px;
-  height: 36px;
-  border-radius: 8px;
-  border: 1.5px solid var(--border);
-  background: transparent;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--muted-fg);
-  cursor: pointer;
-  font-family: inherit;
-  transition: border-color .12s, color .12s;
-}
-.btn-plan-adjust:hover:not(:disabled) { border-color: hsl(215, 20%, 70%); color: var(--fg); }
-.btn-plan-adjust:disabled { opacity: .45; cursor: not-allowed; }
-
 .btn-plan-approve {
   display: inline-flex;
   align-items: center;
@@ -1127,80 +792,6 @@ svg { display: block; flex-shrink: 0; }
 }
 .btn-plan-approve:hover:not(:disabled) { background: hsl(142, 70%, 34%); }
 .btn-plan-approve:disabled { opacity: .45; cursor: not-allowed; }
-
-.adjust-panel {
-  margin-top: 10px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  padding: 16px 18px;
-}
-
-.adjust-textarea {
-  display: block;
-  width: 100%;
-  min-height: 80px;
-  padding: 10px 14px;
-  font-size: 13.5px;
-  line-height: 1.6;
-  font-family: inherit;
-  color: var(--fg);
-  background: var(--card);
-  border: 1.5px solid var(--border);
-  border-radius: 8px;
-  outline: none;
-  resize: vertical;
-  transition: border-color .15s, box-shadow .15s;
-}
-.adjust-textarea:focus {
-  border-color: var(--primary);
-  box-shadow: 0 0 0 3px hsl(8, 72%, 42%, 0.12);
-}
-.adjust-textarea::placeholder { color: hsl(215, 20%, 65%); }
-
-.adjust-actions {
-  display: flex;
-  justify-content: flex-end;
-  gap: 8px;
-  margin-top: 10px;
-}
-
-.btn-adjust-cancel {
-  display: inline-flex;
-  align-items: center;
-  padding: 0 14px;
-  height: 34px;
-  border-radius: 8px;
-  border: 1.5px solid var(--border);
-  background: transparent;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--muted-fg);
-  cursor: pointer;
-  font-family: inherit;
-  transition: border-color .12s, color .12s;
-}
-.btn-adjust-cancel:hover { border-color: hsl(215, 20%, 70%); color: var(--fg); }
-
-.btn-adjust-send {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 16px;
-  height: 34px;
-  border-radius: 8px;
-  border: none;
-  background: var(--primary);
-  color: var(--primary-fg);
-  font-size: 13px;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-  transition: background .12s, opacity .12s;
-}
-.btn-adjust-send:hover:not(:disabled) { background: hsl(8, 72%, 37%); }
-.btn-adjust-send:disabled { opacity: .45; cursor: not-allowed; }
-
 .planning-wrap {
   display: flex;
   flex-direction: column;
@@ -1923,58 +1514,15 @@ svg { display: block; flex-shrink: 0; }
   opacity: .5;
 }
 
-.dp-action-icon--ia {
-  filter: none;
-  opacity: 1;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  color: currentColor;
-}
-
-.dp-action-icon--ia svg {
-  display: block;
-  stroke: currentColor;
-}
-
-.dp-action-btn--ia {
-  background: hsl(0 0% 100% / .98);
-  color: hsl(8 72% 42%);
-  box-shadow: 0 2px 6px hsl(8 72% 20% / .12);
-}
-
-.dp-action-btn--delete {
-  background: hsl(0 0% 100% / .98);
-  color: hsl(8 55% 46%);
-  box-shadow: 0 2px 6px hsl(8 72% 20% / .12);
-}
-
 .dp-action-btn:hover {
   color: hsl(215 28% 34%);
   box-shadow: 0 2px 5px hsl(215 28% 17% / .08);
-}
-
-.dp-action-btn--ia:hover {
-  color: hsl(8 72% 42%);
-  background: hsl(0 0% 100% / .98);
-  box-shadow: 0 2px 6px hsl(8 72% 20% / .12);
-}
-
-.dp-action-btn--delete:hover {
-  color: hsl(8 64% 40%);
-  background: hsl(0 0% 100% / .98);
-  box-shadow: 0 2px 6px hsl(8 72% 20% / .12);
 }
 
 .dp-action-btn:focus,
 .dp-action-btn:focus-visible {
   outline: 2px solid hsl(8 72% 50% / .35);
   outline-offset: 1px;
-}
-
-.dp-action-btn--ia.is-active {
-  color: hsl(8 72% 42%);
-  background: hsl(0 0% 100% / .98);
 }
 
 .dp-item-actions--image .dp-action-btn {
@@ -1986,11 +1534,6 @@ svg { display: block; flex-shrink: 0; }
 
 .dp-item-actions--image .dp-action-btn:hover {
   color: hsl(8 72% 42%);
-}
-
-.dp-action-btn--delete.is-active {
-  color: hsl(8 72% 42%);
-  background: hsl(0 0% 100% / .98);
 }
 
 .prv-section-badge {
@@ -2202,16 +1745,6 @@ svg { display: block; flex-shrink: 0; }
   color: hsl(0 0% 100%);
 }
 
-.dp-item-deleted .prv-section-btn,
-.dp-item-deleted .prv-activity-item {
-  opacity: .55;
-}
-
-.dp-item-deleted .prv-section-title,
-.dp-item-deleted .prv-activity-name {
-  text-decoration: line-through;
-}
-
 .dp-item-has-adjustment .prv-section-btn,
 .dp-item-has-adjustment .prv-activity-item {
   box-shadow: inset 3px 0 0 hsl(252 55% 42% / .55);
@@ -2325,13 +1858,6 @@ svg { display: block; flex-shrink: 0; }
   color: var(--muted-fg);
   margin-top: 2px;
   white-space: nowrap;
-}
-
-.dp-detail-text {
-  font-size: 12px;
-  color: var(--muted-fg);
-  line-height: 1.5;
-  margin: 0;
 }
 
 .dp-images-container {
@@ -2457,198 +1983,4 @@ svg { display: block; flex-shrink: 0; }
   font-size: 12px;
   line-height: 1.5;
   color: hsl(215 15% 30%);
-}
-
-.pc-cancel-row {
-  text-align: center;
-  display: flex;
-  justify-content: center;
-  gap: 8px;
-}
-
-.pc-cancel-btn {
-  background: none;
-  border: none;
-  font-size: 13px;
-  color: var(--muted-fg);
-  cursor: pointer;
-  font-family: inherit;
-  padding: 6px 12px;
-  border-radius: 6px;
-  transition: color .12s, background .12s;
-}
-
-.pc-cancel-btn:hover {
-  background: var(--muted);
-  color: var(--fg);
-}
-
-/* ─── COMPACT CHAT CARD ───────────────────────────────────────────── */
-.compact-chat-card {
-  background: transparent;
-  padding: 12px;
-  margin-top: auto;
-  transition: opacity .2s, filter .2s;
-  width: 100%;
-  max-width: 100%;
-  min-width: 0;
-  border: 1.5px solid hsl(215, 20%, 82%);
-  border-radius: 10px;
-}
-
-/* Control-level disabled state for compact chat during active streams */
-.compact-controls--disabled {
-  opacity: 0.6;
-  pointer-events: none;
-  user-select: none;
-  filter: grayscale(0.3);
-}
-
-/* Legacy container-level disabled state - keep for backward compatibility but don't use for new code */
-.compact-chat-card--disabled {
-  opacity: 0.6;
-  pointer-events: none;
-  user-select: none;
-  filter: grayscale(0.3);
-}
-
-.compact-prompt-textarea {
-  display: block;
-  width: 100%;
-  min-height: 80px;
-  max-height: 180px;
-  padding: 12px 0;
-  font-size: 14px;
-  line-height: 1.5;
-  font-family: inherit;
-  color: var(--fg);
-  background: transparent;
-  border: none;
-  outline: none;
-  resize: none;
-}
-
-.compact-prompt-textarea::placeholder {
-  color: hsl(215, 20%, 65%);
-}
-
-.compact-chat-toolbar {
-  display: flex;
-  justify-content: space-between;
-  align-items: center;
-  gap: 16px;
-  flex-wrap: nowrap;
-  min-width: 0;
-}
-
-.compact-toolbar-left {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  flex-wrap: nowrap;
-  min-width: 0;
-  flex: 1 1 auto;
-  white-space: nowrap;
-}
-
-.compact-toolbar-right {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex: 0 0 auto;
-}
-
-.compact-chat-toolbar .tbar-btn,
-.compact-chat-toolbar .tbar-select,
-.compact-chat-toolbar .tbar-toggle-wrap,
-.compact-chat-toolbar .tbar-sep {
-  flex: 0 0 auto;
-}
-
-.compact-chat-toolbar .tbar-btn {
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  justify-content: center;
-}
-
-.compact-chat-toolbar .popover-wrap {
-  flex-shrink: 0;
-}
-
-.compact-chat-toolbar .tbar-sep {
-  display: none;
-}
-
-.compact-chat-toolbar .tbar-select {
-  width: 54px;
-  min-width: 54px;
-  padding: 0 6px;
-}
-
-.compact-chat-toolbar .tbar-toggle-wrap {
-  gap: 6px;
-  padding-right: 0;
-}
-
-.btn-compact-regenerate {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: 6px;
-  min-width: 0;
-  padding: 9px 14px;
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-  color: var(--primary-fg);
-  background: var(--primary);
-  border: none;
-  border-radius: 8px;
-  cursor: pointer;
-  font-family: inherit;
-  transition: background .15s, transform .08s;
-  box-shadow: 0 1px 2px rgba(0,0,0,.1);
-}
-
-.btn-compact-regenerate:hover {
-  background: hsl(8, 72%, 38%);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0,0,0,.15);
-}
-
-.btn-compact-regenerate:active {
-  transform: translateY(0);
-}
-
-.btn-compact-regenerate:disabled {
-  opacity: 0.6;
-  cursor: not-allowed;
-  transform: none;
-}
-
-/* ─── WIZARD CANCEL ROW (outside planning) ────────────────────────── */
-.courseai-cancel-row {
-  margin-top: 20px;
-  margin-bottom: 20px;
-  text-align: center;
-  display: flex;
-  justify-content: center;
-}
-
-.courseai-cancel-btn {
-  background: none;
-  border: none;
-  font-size: 13px;
-  color: var(--muted-fg);
-  cursor: pointer;
-  font-family: inherit;
-  padding: 6px 12px;
-  border-radius: 6px;
-  transition: color .12s, background .12s;
-}
-
-.courseai-cancel-btn:hover {
-  background: var(--muted);
-  color: var(--fg);
 }
