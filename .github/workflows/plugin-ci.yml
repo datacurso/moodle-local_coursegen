@@ -104,15 +104,22 @@ jobs:
         if: ${{ !cancelled() }}
         run: moodle-plugin-ci savepoints ./plugin
 
+      - name: Ensure plugin exists in Moodle tree
+        if: ${{ !cancelled() }}
+        run: |
+          if [ ! -d "./moodle/local/coursegen" ]; then
+            mkdir -p ./moodle/local
+            rm -rf ./moodle/local/coursegen
+            cp -R ./plugin ./moodle/local/coursegen
+          fi
+
       - name: Mustache Lint
         if: ${{ !cancelled() }}
-        working-directory: ./moodle/local/coursegen
-        run: moodle-plugin-ci mustache --moodle ../.. .
+        run: moodle-plugin-ci mustache --moodle ./moodle ./moodle/local/coursegen
 
       - name: Grunt
         if: ${{ !cancelled() }}
-        working-directory: ./moodle/local/coursegen
-        run: moodle-plugin-ci grunt --moodle ../.. .
+        run: moodle-plugin-ci grunt --moodle ./moodle ./moodle/local/coursegen
 
       - name: PHPUnit tests
         if: ${{ !cancelled() }}
