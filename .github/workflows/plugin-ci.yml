@@ -106,13 +106,13 @@ jobs:
 
       - name: Mustache Lint
         if: ${{ !cancelled() }}
-        working-directory: ./moodle
-        run: moodle-plugin-ci mustache local/coursegen
+        working-directory: ./moodle/local/coursegen
+        run: moodle-plugin-ci mustache --moodle ../.. .
 
       - name: Grunt
         if: ${{ !cancelled() }}
-        working-directory: ./moodle
-        run: moodle-plugin-ci grunt --moodle . local/coursegen
+        working-directory: ./moodle/local/coursegen
+        run: moodle-plugin-ci grunt --moodle ../.. .
 
       - name: PHPUnit tests
         if: ${{ !cancelled() }}
