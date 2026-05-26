@@ -53,7 +53,7 @@ class mycourses_header_hook {
 
         $buttonhtmlfragment = self::render_button_html();
 
-        ob_start(function(string $htmlbuffer) use ($buttonhtmlfragment): string {
+        ob_start(function (string $htmlbuffer) use ($buttonhtmlfragment): string {
             return self::inject_button_into_buffer($htmlbuffer, $buttonhtmlfragment);
         }, 0, PHP_OUTPUT_HANDLER_CLEANABLE | PHP_OUTPUT_HANDLER_FLUSHABLE);
     }

@@ -27,7 +27,6 @@ namespace local_coursegen\local\image_generation;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class activities {
-
     /** Generation mode: disabled. */
     public const MODE_DISABLED = 'disabled';
 

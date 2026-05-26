@@ -69,11 +69,4 @@ if ($hassiteconfig) {
         'moodle/site:config',
         true
     ));
-
-    $ADMIN->add($pluginname, new admin_externalpage(
-        'local_coursegen_manage_image_generation',
-        get_string('manage_image_generation', 'local_coursegen'),
-        new moodle_url('/local/coursegen/manage_image_generation.php'),
-        'moodle/site:config'
-    ));
 }

@@ -92,11 +92,11 @@ class course_planning_feedback extends external_api {
         $approvalstatus = $params['approval_status'];
         $instruction = $params['instruction'];
         $selectedimageids = array_values(array_filter(array_map(
-            static function(string $value): string {
+            static function (string $value): string {
                 return trim($value);
             },
             $params['selected_image_ids'] ?? []
-        ), static function(string $value): bool {
+        ), static function (string $value): bool {
             return $value !== '';
         }));
 

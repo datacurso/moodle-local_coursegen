@@ -159,7 +159,7 @@ class ai_course_api_service {
 
         if ($selectedimageids !== null) {
             $payload['selected_image_ids'] = array_values(array_map(
-                static function($value): string {
+                static function ($value): string {
                     return trim((string) $value);
                 },
                 $selectedimageids
