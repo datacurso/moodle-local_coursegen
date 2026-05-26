@@ -56,7 +56,7 @@ foreach ($records as $record) {
     $systeminstructions[] = [
         'id' => 'si_' . $record->id,
         'name' => $record->name,
-        'category' => 'General', // The table doesn't have a category field, using default
+        'category' => 'General', // The table doesn't have a category field, using default.
         'description' => $record->content ?? '',
     ];
 }
@@ -76,7 +76,7 @@ foreach ($supportedlangs as $code) {
 }
 
 // Helper to build session data array.
-$buildsessiondata = function($session, $maxtitle = 50) {
+$buildsessiondata = function ($session, $maxtitle = 50) {
     $statuslabels = [
         course_session::STATUS_PENDING => get_string('status_pending', 'local_coursegen'),
         course_session::STATUS_CREATING => get_string('status_creating', 'local_coursegen'),

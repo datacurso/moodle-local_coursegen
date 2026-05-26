@@ -168,7 +168,7 @@ class text_editor_parameter_cleaner {
     private static function replace_html_images(string $text, int $itemid): string {
         return preg_replace_callback(
             '/<img\b[^>]*>/iu',
-            static function(array $matches) use ($itemid): string {
+            static function (array $matches) use ($itemid): string {
                 $imgtag = $matches[0] ?? '';
                 if ($imgtag === '' || !preg_match('/\bsrc\s*=\s*(["\'])(.*?)\1/iu', $imgtag, $srcmatches)) {
                     return $imgtag;
@@ -202,7 +202,7 @@ class text_editor_parameter_cleaner {
     private static function replace_markdown_images(string $text, int $itemid): string {
         return preg_replace_callback(
             '/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/u',
-            static function(array $matches) use ($itemid): string {
+            static function (array $matches) use ($itemid): string {
                 $alt = trim((string)($matches[1] ?? ''));
                 $source = trim((string)($matches[2] ?? ''), '<>');
 
@@ -212,7 +212,8 @@ class text_editor_parameter_cleaner {
                 }
 
                 $escapedalt = htmlspecialchars($alt, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                return '<img src="@@PLUGINFILE@@/' . $filename . '" alt="' . $escapedalt . '" style="max-width:100%;height:auto;" />';
+                return '<img src="@@PLUGINFILE@@/' . $filename
+                    . '" alt="' . $escapedalt . '" style="max-width:100%;height:auto;" />';
             },
             $text
         ) ?? $text;

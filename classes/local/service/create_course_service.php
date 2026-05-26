@@ -78,8 +78,23 @@ class create_course_service {
 
             // Ensure section sequences only contain valid course module ids.
             $removedreferences = self::repair_course_section_sequences($course->id);
+            self::stabilize_course_structure_cache($course->id);
+
             $remainingorphans = self::count_orphaned_course_module_references($course->id);
             if ($remainingorphans > 0) {
+                $removedreferences += self::repair_course_section_sequences($course->id);
+                self::stabilize_course_structure_cache($course->id);
+                $remainingorphans = self::count_orphaned_course_module_references($course->id);
+            }
+
+            $missingmodinfocms = self::count_unresolved_modinfo_sequence_references($course->id);
+            if ($missingmodinfocms > 0) {
+                $removedreferences += self::repair_course_section_sequences($course->id);
+                self::stabilize_course_structure_cache($course->id);
+                $missingmodinfocms = self::count_unresolved_modinfo_sequence_references($course->id);
+            }
+
+            if ($remainingorphans > 0 || $missingmodinfocms > 0) {
                 throw new \Exception('Course structure is inconsistent after module creation.');
             }
 
@@ -113,8 +128,11 @@ class create_course_service {
                 'fullname' => $course->fullname,
                 'message' => $message,
                 'courseurl' => course_get_url($course->id)->out(),
+                'partial' => !empty($activityerrors),
+                'haswarnings' => !empty($activityerrors),
+                'warningscount' => count($activityerrors),
             ];
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             // Update session status to failed if session exists.
             course_session_service::update_status((int)$session->get('id'), course_session::STATUS_FAILED);
 
@@ -124,6 +142,9 @@ class create_course_service {
                 'shortname' => '',
                 'fullname' => '',
                 'message' => $e->getMessage(),
+                'partial' => false,
+                'haswarnings' => false,
+                'warningscount' => 0,
             ];
         }
     }
@@ -343,14 +364,22 @@ class create_course_service {
 
             try {
                 create_mod_service::create_from_ai_result($activity, $course, $sectionnum);
-            } catch (\Exception $e) {
+            } catch (\Throwable $e) {
                 $resource = (string)($activity['resource_type'] ?? 'unknown');
+                $title = (string)($activity['parameters']['name'] ?? $activity['parameters']['title'] ?? '');
                 $errors[] = [
                     'resource_type' => $resource,
                     'section' => (int)$sectionnum,
                     'message' => $e->getMessage(),
+                    'title' => $title,
                 ];
-                debugging('Error creating module from AI result: ' . $e->getMessage());
+                $context = [
+                    'resource_type' => $resource,
+                    'section' => (int)$sectionnum,
+                    'title' => $title,
+                    'error' => $e->getMessage(),
+                ];
+                debugging('local_coursegen: module creation skipped due to error. ' . json_encode($context));
                 // Continue with next activity.
                 continue;
             }
@@ -475,5 +504,46 @@ class create_course_service {
         }
 
         return $lookup;
+    }
+
+    /**
+     * Stabilize cache state for course structure/navigation checks.
+     *
+     * @param int $courseid Course ID.
+     * @return void
+     */
+    private static function stabilize_course_structure_cache(int $courseid): void {
+        \course_modinfo::clear_instance_cache($courseid);
+        rebuild_course_cache($courseid, true);
+        rebuild_course_cache($courseid, false);
+        \course_modinfo::clear_instance_cache($courseid);
+    }
+
+    /**
+     * Count section sequence module ids that cannot be resolved by modinfo.
+     *
+     * @param int $courseid Course ID.
+     * @return int Number of unresolved references.
+     */
+    private static function count_unresolved_modinfo_sequence_references(int $courseid): int {
+        global $DB;
+
+        $course = get_course($courseid);
+        $modinfo = get_fast_modinfo($course);
+        $cms = $modinfo->get_cms();
+
+        $sections = $DB->get_records('course_sections', ['course' => $courseid], '', 'id,sequence');
+        $missing = 0;
+
+        foreach ($sections as $section) {
+            $sequenceids = self::parse_sequence_ids((string)($section->sequence ?? ''));
+            foreach ($sequenceids as $cmid) {
+                if (!isset($cms[$cmid])) {
+                    $missing++;
+                }
+            }
+        }
+
+        return $missing;
     }
 }

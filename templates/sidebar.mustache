@@ -3,16 +3,25 @@
 
     AI Course Creator Sidebar — light minimalist overlay panel.
 
-    Context:
-    - sessions: array of { id, title, statuslabel }
-    - hassessions: boolean
-    - logourl: string
+    Example context (json):
+    {
+        "logourl": "https://example.com/local/coursegen/pix/logo.png",
+        "sessions": [
+            {
+                "id": 1,
+                "title": "Sample session",
+                "statuslabel": "Pending"
+            }
+        ]
+    }
 }}
 <aside class="courseai-sidebar collapsed" id="courseaiSidebar">
   <div class="courseai-sidebar-body">
     <!-- Brand -->
     <div class="courseai-sidebar-brand">
-      <img src="{{logourl}}" alt="" class="courseai-sidebar-logo" />
+      {{#logourl}}
+      <img src="{{logourl}}" alt="" class="courseai-sidebar-logo">
+      {{/logourl}}
       <span class="courseai-sidebar-brand-text">{{#str}}pluginname, local_coursegen{{/str}}</span>
     </div>
 

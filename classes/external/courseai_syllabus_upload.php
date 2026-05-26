@@ -37,7 +37,6 @@ require_once($CFG->libdir . '/externallib.php');
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class courseai_syllabus_upload extends external_api {
-
     /**
      * Returns description of method parameters.
      *
@@ -162,7 +161,6 @@ class courseai_syllabus_upload extends external_api {
                 'filename' => $filename,
                 'message' => get_string('courseai_syllabus_upload_success', 'local_coursegen'),
             ];
-
         } catch (\Exception $e) {
             return [
                 'success' => false,

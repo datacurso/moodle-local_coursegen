@@ -222,7 +222,6 @@ function xmldb_local_coursegen_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026021801) {
-
         // Changing nullability of field courseid on table local_coursegen_course_sessions to null.
         $table = new xmldb_table('local_coursegen_course_sessions');
         $field = new xmldb_field('courseid', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'id');
@@ -245,7 +244,6 @@ function xmldb_local_coursegen_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026021803) {
-
         // Define field coursedata to be added to local_coursegen_course_sessions.
         $table = new xmldb_table('local_coursegen_course_sessions');
         $field = new xmldb_field('coursedata', XMLDB_TYPE_TEXT, null, null, null, null, null, 'courseid');

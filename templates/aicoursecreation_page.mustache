@@ -15,47 +15,18 @@
     along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 }}
 {{!
-    This file is part of Moodle - http://moodle.org/
+    @template local_coursegen/aicoursecreation_page
 
-    Moodle is free software: you can redistribute it and/or modify
-    it under the terms of the GNU General Public License as published by
-    the Free Software Foundation, either version 3 of the License, or
-    (at your option) any later version.
+    Legacy AI course creation page.
+
+    Example context (json):
+    {
+        "recordid": 1,
+        "contexttype": "general",
+        "pdffilename": "",
+        "isresuming": false
+    }
 }}
-
-<style>
-    /* Efecto focus dinámico (sin colores fijos) */
-    .ai-prompt-container {
-        transition: border-color 0.15s ease-in-out, box-shadow 0.15s ease-in-out;
-    }
-    .ai-prompt-container:focus-within {
-        border-color: var(--primary) !important;
-        box-shadow: 0 0 0 0.25rem color-mix(in srgb, var(--primary) 25%, transparent) !important;
-        outline: 0;
-    }
-    
-    .ai-prompt-container textarea:focus {
-        box-shadow: none !important;
-        outline: none !important;
-    }
-
-    .ai-prompt-textarea::-webkit-scrollbar {
-        width: 6px;
-    }
-    .ai-prompt-textarea::-webkit-scrollbar-thumb {
-        background-color: var(--secondary);
-        border-radius: 10px;
-    }
-
-    /* Solo geometría y animación. Cero colores fijos. */
-    .ai-btn-send {
-        width: 42px;
-        height: 42px;
-        border-radius: 50%;
-        flex-shrink: 0;
-        transition: transform 0.1s ease;
-    }
-</style>
 
 <div class="container py-4" data-region="local_coursegen/aicoursecreation/root" data-recordid="{{recordid}}">
     <div class="row justify-content-center">

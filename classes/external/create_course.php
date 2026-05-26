@@ -141,6 +141,14 @@ class create_course extends external_api {
             'fullname' => new external_value(PARAM_TEXT, 'Course fullname'),
             'message' => new external_value(PARAM_TEXT, 'Status message'),
             'courseurl' => new external_value(PARAM_URL, 'Course URL', VALUE_OPTIONAL),
+            'partial' => new external_value(PARAM_BOOL, 'Whether course content was only partially applied', VALUE_DEFAULT, false),
+            'haswarnings' => new external_value(
+                PARAM_BOOL,
+                'Whether activity creation warnings were detected',
+                VALUE_DEFAULT,
+                false
+            ),
+            'warningscount' => new external_value(PARAM_INT, 'Count of skipped activity creations', VALUE_DEFAULT, 0),
         ]);
     }
 }
