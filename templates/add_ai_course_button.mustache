@@ -20,12 +20,13 @@
     AI Course Generation Button Template
 
     Self-contained template with all styling, icons and text included.
-    No context variables required.
 
     Example context (json):
-    {}
+    {
+        "url": "https://example.com/local/coursegen/aicoursecreation.php"
+    }
 }}
-<form action="{{url}}" method="get" id="local_coursegen_aicourseform">
+<form action="{{#url}}{{url}}{{/url}}{{^url}}#{{/url}}" method="get" id="local_coursegen_aicourseform">
     <button type="submit" name="addcourseai"
         class="btn btn-outline-secondary m-1 w-100 datacurso-ai-button"
         data-action="local_coursegen/add_ai_course">
