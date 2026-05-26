@@ -104,22 +104,29 @@ jobs:
         if: ${{ !cancelled() }}
         run: moodle-plugin-ci savepoints ./plugin
 
+      - name: Resolve Moodle and plugin paths
+        if: ${{ !cancelled() }}
+        run: |
+          MOODLEDIR="./moodle"
+          if [ -d "./moodle/public" ]; then
+            MOODLEDIR="./moodle/public"
+          fi
+          echo "MPCI_MOODLE_DIR=${MOODLEDIR}" >> "$GITHUB_ENV"
+          echo "MPCI_PLUGIN_DIR=${MOODLEDIR}/local/coursegen" >> "$GITHUB_ENV"
+
       - name: Ensure plugin exists in Moodle tree
         if: ${{ !cancelled() }}
         run: |
-          if [ ! -d "./moodle/local/coursegen" ]; then
-            mkdir -p ./moodle/local
-            rm -rf ./moodle/local/coursegen
-            cp -R ./plugin ./moodle/local/coursegen
-          fi
+          mkdir -p "$(dirname "$MPCI_PLUGIN_DIR")"
+          rsync -a --delete --exclude '.git' ./plugin/ "$MPCI_PLUGIN_DIR/"
 
       - name: Mustache Lint
         if: ${{ !cancelled() }}
-        run: moodle-plugin-ci mustache --moodle ./moodle ./moodle/local/coursegen
+        run: moodle-plugin-ci mustache --moodle "$MPCI_MOODLE_DIR" "$MPCI_PLUGIN_DIR"
 
       - name: Grunt
         if: ${{ !cancelled() }}
-        run: moodle-plugin-ci grunt --moodle ./moodle ./moodle/local/coursegen
+        run: moodle-plugin-ci grunt --moodle "$MPCI_MOODLE_DIR" --tasks ignorefiles,eslint:amd,rollup:dist "$MPCI_PLUGIN_DIR"
 
       - name: PHPUnit tests
         if: ${{ !cancelled() }}
