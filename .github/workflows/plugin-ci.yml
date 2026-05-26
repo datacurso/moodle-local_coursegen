@@ -106,11 +106,11 @@ jobs:
 
       - name: Mustache Lint
         if: ${{ !cancelled() }}
-        run: moodle-plugin-ci mustache ./plugin
+        run: moodle-plugin-ci mustache ./moodle/local/coursegen
 
       - name: Grunt
         if: ${{ !cancelled() }}
-        run: moodle-plugin-ci grunt ./plugin
+        run: moodle-plugin-ci grunt --moodle ./moodle ./moodle/local/coursegen
 
       - name: PHPUnit tests
         if: ${{ !cancelled() }}

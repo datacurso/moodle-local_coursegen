@@ -69,6 +69,7 @@ class course_planning_feedback extends external_api {
      * @param string $approvalstatus Approval status (accept|adjust)
      * @param string $instruction Optional feedback text
      * @param array $selectedimageids Selected image IDs from detailed planning review
+     * @param bool|null $withimages Whether image generation is enabled
      * @return array
      */
     public static function execute(

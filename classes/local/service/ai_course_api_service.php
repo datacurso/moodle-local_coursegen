@@ -142,6 +142,7 @@ class ai_course_api_service {
      * @param string $approvalstatus Approval status (accept|adjust).
      * @param string $instruction Optional feedback text.
      * @param array|null $selectedimageids Selected image IDs from detailed planning review.
+     * @param bool|null $withimages Whether image generation is enabled.
      * @return array Decoded response from the API.
      */
     public function send_planning_feedback(
