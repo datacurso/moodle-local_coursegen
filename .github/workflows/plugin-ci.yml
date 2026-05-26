@@ -126,7 +126,7 @@ jobs:
 
       - name: Grunt
         if: ${{ !cancelled() }}
-        run: moodle-plugin-ci grunt --moodle "$MPCI_MOODLE_DIR" --tasks ignorefiles,eslint:amd,rollup:dist "$MPCI_PLUGIN_DIR"
+        run: moodle-plugin-ci grunt --moodle "$MPCI_MOODLE_DIR" --tasks ignorefiles --tasks eslint:amd --tasks rollup:dist "$MPCI_PLUGIN_DIR"
 
       - name: PHPUnit tests
         if: ${{ !cancelled() }}
