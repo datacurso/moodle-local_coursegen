@@ -35,6 +35,14 @@ class mycourses_header_hook {
     public static function after_config(after_config $hook): void {
         global $PAGE;
 
+        if (self::is_non_web_runtime()) {
+            return;
+        }
+
+        if (!$PAGE->has_set_url()) {
+            return;
+        }
+
         if (!self::is_my_courses_page($PAGE)) {
             return;
         }
@@ -57,7 +65,28 @@ class mycourses_header_hook {
      * @return bool
      */
     private static function is_my_courses_page(\moodle_page $page): bool {
+        if (!$page->has_set_url()) {
+            return false;
+        }
+
         return $page->url->get_path() === '/my/courses.php';
+    }
+
+    /**
+     * Determine whether current runtime should skip page-level output hooks.
+     *
+     * @return bool
+     */
+    private static function is_non_web_runtime(): bool {
+        if (defined('CLI_SCRIPT') && CLI_SCRIPT) {
+            return true;
+        }
+
+        if (defined('PHPUNIT_TEST') && PHPUNIT_TEST) {
+            return true;
+        }
+
+        return false;
     }
 
     /**
