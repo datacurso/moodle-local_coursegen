@@ -33,11 +33,9 @@ class mycourses_header_hook {
      * @param after_config $hook Hook object.
      */
     public static function after_config(after_config $hook): void {
-        if (self::is_non_web_runtime()) {
-            return;
-        }
+        global $PAGE;
 
-        if (!self::is_my_courses_request()) {
+        if (!self::is_my_courses_page($PAGE)) {
             return;
         }
 
@@ -47,9 +45,9 @@ class mycourses_header_hook {
 
         $buttonhtmlfragment = self::render_button_html();
 
-        ob_start(function (string $htmlbuffer) use ($buttonhtmlfragment): string {
+        ob_start(function(string $htmlbuffer) use ($buttonhtmlfragment): string {
             return self::inject_button_into_buffer($htmlbuffer, $buttonhtmlfragment);
-        }, 0, PHP_OUTPUT_HANDLER_CLEANABLE | PHP_OUTPUT_HANDLER_FLUSHABLE | PHP_OUTPUT_HANDLER_REMOVABLE);
+        }, 0, PHP_OUTPUT_HANDLER_CLEANABLE | PHP_OUTPUT_HANDLER_FLUSHABLE);
     }
 
     /**
@@ -59,52 +57,7 @@ class mycourses_header_hook {
      * @return bool
      */
     private static function is_my_courses_page(\moodle_page $page): bool {
-        if (!$page->has_set_url()) {
-            return false;
-        }
-
         return $page->url->get_path() === '/my/courses.php';
-    }
-
-    /**
-     * Determine whether current runtime should skip page-level output hooks.
-     *
-     * @return bool
-     */
-    private static function is_non_web_runtime(): bool {
-        if (defined('CLI_SCRIPT') && CLI_SCRIPT) {
-            return true;
-        }
-
-        if (defined('PHPUNIT_TEST') && PHPUNIT_TEST) {
-            return true;
-        }
-
-        return false;
-    }
-
-    /**
-     * Determine whether the current HTTP request targets /my/courses.php.
-     *
-     * @return bool
-     */
-    private static function is_my_courses_request(): bool {
-        $scriptname = (string)($_SERVER['SCRIPT_NAME'] ?? '');
-        if ($scriptname !== '' && str_ends_with($scriptname, '/my/courses.php')) {
-            return true;
-        }
-
-        $requesturi = (string)($_SERVER['REQUEST_URI'] ?? '');
-        if ($requesturi === '') {
-            return false;
-        }
-
-        $path = parse_url($requesturi, PHP_URL_PATH);
-        if (!is_string($path) || $path === '') {
-            return false;
-        }
-
-        return str_ends_with($path, '/my/courses.php');
     }
 
     /**
@@ -116,7 +69,7 @@ class mycourses_header_hook {
     private static function user_can_see_button(): bool {
         $systemcontext = \context_system::instance();
 
-        return \has_all_capabilities([
+        return has_all_capabilities([
             'moodle/course:create',
             'local/coursegen:createcoursewithai',
         ], $systemcontext);
@@ -128,20 +81,13 @@ class mycourses_header_hook {
      * @return string
      */
     private static function render_button_html(): string {
+        global $OUTPUT;
+
         $url = (new \moodle_url('/local/coursegen/aicoursecreation.php'))->out(false);
-        $label = \get_string('createwithai', 'local_coursegen');
 
-        $html = '';
-        $html .= '<form action="' . \s($url) . '" method="get" id="local_coursegen_aicourseform">';
-        $html .= '<button type="submit" name="addcourseai"';
-        $html .= ' class="btn btn-outline-secondary m-1 w-100 datacurso-ai-button"';
-        $html .= ' data-action="local_coursegen/add_ai_course">';
-        $html .= '<i class="fa fa-magic" aria-hidden="true"></i> ';
-        $html .= \s($label);
-        $html .= '</button>';
-        $html .= '</form>';
-
-        return $html;
+        return $OUTPUT->render_from_template('local_coursegen/add_ai_course_button', [
+            'url' => $url,
+        ]);
     }
 
     /**
