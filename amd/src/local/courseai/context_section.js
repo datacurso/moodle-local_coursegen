@@ -246,6 +246,40 @@ export const setupContextSection = (deps) => {
         });
     };
 
+    const bindToggleWrap = (toggleWrap, checkbox) => {
+        if (!toggleWrap || !checkbox) {
+            return;
+        }
+
+        const triggerToggle = () => {
+            if (checkbox.disabled) {
+                return;
+            }
+            checkbox.checked = !checkbox.checked;
+            checkbox.dispatchEvent(new Event('change', {bubbles: true}));
+        };
+
+        toggleWrap.addEventListener('click', (event) => {
+            if (event.target === checkbox) {
+                return;
+            }
+            event.preventDefault();
+            triggerToggle();
+        });
+
+        toggleWrap.addEventListener('keydown', (event) => {
+            if (event.key !== ' ' && event.key !== 'Enter') {
+                return;
+            }
+            event.preventDefault();
+            triggerToggle();
+        });
+
+        if (!toggleWrap.hasAttribute('tabindex')) {
+            toggleWrap.setAttribute('tabindex', '0');
+        }
+    };
+
     const showFilePicker = async() => {
         try {
             const pickerdata = await CourseaiRepository.initFilepicker();
@@ -383,6 +417,7 @@ export const setupContextSection = (deps) => {
     }
 
     if (btnWithImages && imgToggleWrap) {
+        bindToggleWrap(imgToggleWrap, btnWithImages);
         btnWithImages.addEventListener('change', () => {
             state.withImages = btnWithImages.checked;
             imgToggleWrap.classList.toggle('on', state.withImages);
@@ -505,6 +540,7 @@ export const setupContextSection = (deps) => {
     }
 
     if (elements.btnCompactWithImages) {
+        bindToggleWrap(elements.compactImgToggleWrap, elements.btnCompactWithImages);
         elements.btnCompactWithImages.addEventListener('change', () => {
             state.withImages = elements.btnCompactWithImages.checked;
             if (elements.compactImgToggleWrap) {
