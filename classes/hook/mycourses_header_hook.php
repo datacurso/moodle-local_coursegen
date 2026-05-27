@@ -45,7 +45,7 @@ class mycourses_header_hook {
 
         $buttonhtmlfragment = self::render_button_html();
 
-        ob_start(function(string $htmlbuffer) use ($buttonhtmlfragment): string {
+        ob_start(function (string $htmlbuffer) use ($buttonhtmlfragment): string {
             return self::inject_button_into_buffer($htmlbuffer, $buttonhtmlfragment);
         }, 0, PHP_OUTPUT_HANDLER_CLEANABLE | PHP_OUTPUT_HANDLER_FLUSHABLE);
     }
@@ -91,91 +91,91 @@ class mycourses_header_hook {
     }
 
     /**
-     * Inject the rendered button HTML into the My courses header actions
-     * container inside the output buffer.
+     * Inject the AI button into the rendered page buffer.
+     *
+     * Tries the header button group first (user has enrolled courses), then
+     * falls back to the empty state action bar (user has no enrolled courses).
      *
      * @param string $htmlbuffer Full page HTML buffer.
      * @param string $buttonhtmlfragment Pre-rendered button HTML.
      * @return string Modified buffer with the button injected, or original
-     *     buffer when the target container cannot be located.
+     *     buffer when no target container can be located.
      */
     private static function inject_button_into_buffer(string $htmlbuffer, string $buttonhtmlfragment): string {
-        $insertionposition = self::resolve_insert_position($htmlbuffer);
+        // Route 1: user has enrolled courses — inject into the header button group.
+        $headergroupstart = self::find_header_button_group_start($htmlbuffer);
+        if ($headergroupstart !== null) {
+            return self::insert_into_buffer($htmlbuffer, $buttonhtmlfragment, $headergroupstart);
+        }
 
-        return self::apply_insertion($htmlbuffer, $buttonhtmlfragment, $insertionposition);
+        // Route 2: no enrolled courses — inject into the "You're not enrolled"
+        // empty state action bar. Wrap in singlebutton to keep it inline.
+        $emptystatebarstart = self::find_empty_state_action_bar_start($htmlbuffer);
+        if ($emptystatebarstart !== null) {
+            $wrappedbutton = \html_writer::div($buttonhtmlfragment, 'singlebutton');
+            return self::insert_into_buffer($htmlbuffer, $wrappedbutton, $emptystatebarstart);
+        }
+
+        return $htmlbuffer;
     }
 
     /**
-     * Locate the position in the buffer where the header actions container
-     * (my-action-buttons-right) is defined.
+     * Find where the "my-action-buttons-right" div content starts.
+     *
+     * Returns the byte offset right after the opening <div ...> tag, or null
+     * when the header button group is not present on the page.
      *
      * @param string $htmlbuffer Full page HTML buffer.
-     * @return int|null Byte offset of the class marker, or null when not
-     *     present.
+     * @return int|null
      */
-    private static function get_actions_container_position(string $htmlbuffer): ?int {
-        $actionscontainerclass = 'my-action-buttons my-action-buttons-right';
-        $actionscontainerposition = strpos($htmlbuffer, $actionscontainerclass);
-
-        if ($actionscontainerposition === false) {
+    private static function find_header_button_group_start(string $htmlbuffer): ?int {
+        $classmarker = 'my-action-buttons my-action-buttons-right';
+        $classposition = strpos($htmlbuffer, $classmarker);
+        if ($classposition === false) {
             return null;
         }
 
-        return $actionscontainerposition;
+        $tagclose = strpos($htmlbuffer, '>', $classposition);
+        return ($tagclose === false) ? null : $tagclose + 1;
     }
 
     /**
-     * Determine the insertion position just after the opening div that holds
-     * the header actions container.
+     * Find where the "action_bar" div inside the empty enrollment state starts.
+     *
+     * This div is rendered by block_myoverview/zero-state.mustache when the
+     * user has no enrolled courses.
+     *
+     * Returns the byte offset right after the opening <div ...> tag, or null
+     * when the empty state action bar is not present on the page.
      *
      * @param string $htmlbuffer Full page HTML buffer.
-     * @param int $actionscontainerposition Position where the class marker was found.
-     * @return int|null Byte offset where the button HTML should be inserted,
-     *     or null when the closing '>' cannot be located.
+     * @return int|null
      */
-    private static function get_insert_position(string $htmlbuffer, int $actionscontainerposition): ?int {
-        $closingdivposition = strpos($htmlbuffer, '>', $actionscontainerposition);
-
-        if ($closingdivposition === false) {
+    private static function find_empty_state_action_bar_start(string $htmlbuffer): ?int {
+        $idmarker = 'id="action_bar"';
+        $idposition = strpos($htmlbuffer, $idmarker);
+        if ($idposition === false) {
             return null;
         }
 
-        return $closingdivposition + 1;
+        $tagclose = strpos($htmlbuffer, '>', $idposition);
+        return ($tagclose === false) ? null : $tagclose + 1;
     }
 
     /**
-     * Resolve the final insertion position in the buffer, or null when the
-     * target container cannot be located.
+     * Insert a string fragment into the buffer at the given byte offset.
      *
      * @param string $htmlbuffer Full page HTML buffer.
-     * @return int|null Byte offset for insertion, or null if not applicable.
+     * @param string $fragment HTML to insert.
+     * @param int|null $position Byte offset for insertion. Null returns the
+     *     original buffer unchanged.
+     * @return string Modified buffer.
      */
-    private static function resolve_insert_position(string $htmlbuffer): ?int {
-        $actionscontainerposition = self::get_actions_container_position($htmlbuffer);
-
-        if ($actionscontainerposition === null) {
-            return null;
-        }
-
-        return self::get_insert_position($htmlbuffer, $actionscontainerposition);
-    }
-
-    /**
-     * Apply the HTML insertion at the given position, returning the original
-     * buffer unchanged when the position is null.
-     *
-     * @param string $htmlbuffer Full page HTML buffer.
-     * @param string $buttonhtmlfragment Pre-rendered button HTML.
-     * @param int|null $insertionposition Calculated insertion byte offset.
-     * @return string
-     */
-    private static function apply_insertion(string $htmlbuffer, string $buttonhtmlfragment, ?int $insertionposition): string {
-        if ($insertionposition === null) {
+    private static function insert_into_buffer(string $htmlbuffer, string $fragment, ?int $position): string {
+        if ($position === null) {
             return $htmlbuffer;
         }
 
-        return substr($htmlbuffer, 0, $insertionposition)
-            . $buttonhtmlfragment
-            . substr($htmlbuffer, $insertionposition);
+        return substr($htmlbuffer, 0, $position) . $fragment . substr($htmlbuffer, $position);
     }
 }
