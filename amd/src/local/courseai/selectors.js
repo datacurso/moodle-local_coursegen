@@ -29,6 +29,15 @@
 export const getCourseaiElements = () => {
     const btnWithImages = document.getElementById('btnWithImages');
     const btnCompactWithImages = document.getElementById('btnCompactWithImages');
+
+    const resolveToggleWrap = (input) => {
+        if (!input) {
+            return null;
+        }
+
+        return input.closest('.tbar-toggle-wrap') || input.closest('label');
+    };
+
     return {
         promptInput: document.getElementById('promptInput'),
         btnGenerate: document.getElementById('btnGenerate'),
@@ -39,7 +48,7 @@ export const getCourseaiElements = () => {
         guidelineList: document.getElementById('guidelineList'),
         langSelect: document.getElementById('langSelect'),
         btnWithImages,
-        imgToggleWrap: btnWithImages ? btnWithImages.closest('label') : null,
+        imgToggleWrap: resolveToggleWrap(btnWithImages),
         courseaiWorkspace: document.getElementById('courseaiWorkspace'),
         contextView: document.getElementById('contextView'),
         planningView: document.getElementById('planningView'),
@@ -86,7 +95,7 @@ export const getCourseaiElements = () => {
         btnCompactRegenerate: document.getElementById('btnCompactRegenerate'),
         compactLangSelect: document.getElementById('compactLangSelect'),
         btnCompactWithImages,
-        compactImgToggleWrap: btnCompactWithImages ? btnCompactWithImages.closest('label') : null,
+        compactImgToggleWrap: resolveToggleWrap(btnCompactWithImages),
         btnCompactSyllabus: document.getElementById('btnCompactSyllabus'),
         btnCompactDirectrices: document.getElementById('btnCompactDirectrices'),
         completionView: document.getElementById('completionView'),

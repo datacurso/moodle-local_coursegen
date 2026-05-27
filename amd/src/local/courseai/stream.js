@@ -1060,6 +1060,8 @@ export const createStreamManager = (deps) => {
                     updateGeneratingProgressFromStructuredState();
                     break;
                 case 'review_needed':
+                    // Defensive unlock: review state must always allow image selection.
+                    state.isStreaming = false;
                     stepsUi.setStepState('planning', 'done');
                     state.currentStage = 'planning';
                     stepsUi.updateFlowNav();
@@ -1100,6 +1102,7 @@ export const createStreamManager = (deps) => {
                     break;
                 }
                 case 'failed':
+                    state.isStreaming = false;
                     if (streamMode === 'generating') {
                         markAllTrackerActivitiesDone();
                     }
@@ -1158,11 +1161,13 @@ export const createStreamManager = (deps) => {
             }
             // Stream completed normally - keep chat disabled during generating phase.
             if (streamMode !== 'generating') {
+                state.isStreaming = false;
                 setCompactChatState(deps, 'enabled');
             }
         });
 
         state.sseSource.onerror = () => {
+            state.isStreaming = false;
             if (typingCursor) {
                 typingCursor.classList.add('hidden');
             }
