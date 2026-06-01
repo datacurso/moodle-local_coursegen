@@ -21,7 +21,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {get_string as getString} from 'core/str';
+import {get_strings} from 'core/str';
 
 const STRING_KEYS = [
     'courseai_header_title',
@@ -151,9 +151,6 @@ const STRING_KEYS = [
  * @returns {Promise<Object>}
  */
 export const loadCourseaiStrings = async() => {
-    const values = await Promise.all(STRING_KEYS.map((key) => getString(key, 'local_coursegen')));
-    return STRING_KEYS.reduce((acc, key, index) => {
-        acc[key] = values[index];
-        return acc;
-    }, {});
+    const values = await get_strings(STRING_KEYS.map((key) => ({key, component: 'local_coursegen'})));
+    return Object.fromEntries(STRING_KEYS.map((key, i) => [key, values[i]]));
 };
