@@ -34,11 +34,16 @@ class create_course_service {
      * processes it. This separation makes the method testable without requiring
      * a live API connection.
      *
+     * Optional overrides allow the user to modify course identity fields
+     * (fullname, shortname, category) before creation, as set via the review modal.
+     *
      * @param course_session $session Planning session persistent.
      * @param array $resultdata Result data from the Datacurso API (course_configuration, sections, activities).
+     * @param array $overrides Optional user overrides for course fields.
+     *     Supported keys: fullname (string), shortname (string), category (int).
      * @return array Result of the course content application.
      */
-    public static function create_course(course_session $session, array $resultdata): array {
+    public static function create_course(course_session $session, array $resultdata, array $overrides = []): array {
         global $CFG;
 
         try {
@@ -52,6 +57,18 @@ class create_course_service {
 
             // Build course data entirely from the API response.
             $coursedata = self::build_course_data_from_api($resultdata);
+
+            // Apply user overrides (from the review modal) on top of AI-generated data.
+            // These take precedence over the API response values.
+            if (!empty($overrides['fullname'])) {
+                $coursedata->fullname = (string)\core_text::substr($overrides['fullname'], 0, 255);
+            }
+            if (!empty($overrides['shortname'])) {
+                $coursedata->shortname = (string)\core_text::substr(trim($overrides['shortname']), 0, 100);
+            }
+            if (!empty($overrides['category'])) {
+                $coursedata->category = (int)$overrides['category'];
+            }
 
             $coursedata = self::ensure_unique_course_fields($coursedata);
 
@@ -188,6 +205,25 @@ class create_course_service {
         $coursedata->category = (int)($config['category'] ?? $defaultcategoryid);
 
         return $coursedata;
+    }
+
+    /**
+     * Get the final course settings from the AI-generated result, without creating the course.
+     *
+     * Used by the review panel to show the user the AI-generated course data
+     * (fullname, shortname, category) before they confirm creation.
+     *
+     * @param course_session $session Planning session persistent.
+     * @param array $resultdata Result data from the Datacurso API.
+     * @return array Settings data with fullname, shortname, category.
+     */
+    public static function get_course_settings(course_session $session, array $resultdata): array {
+        $coursedata = self::build_course_data_from_api($resultdata);
+        return [
+            'fullname' => $coursedata->fullname ?? '',
+            'shortname' => $coursedata->shortname ?? '',
+            'category' => $coursedata->category ?? 0,
+        ];
     }
 
     /**
