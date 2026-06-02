@@ -28,9 +28,11 @@ use external_api;
 use external_function_parameters;
 use external_value;
 use external_single_structure;
+use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
 use moodle_exception;
+use context_system;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -68,12 +70,20 @@ class create_course extends external_api {
             'recordid' => $recordid,
         ]);
 
+        $context = context_system::instance();
+        self::validate_context($context);
+
         $recordid = (int)$params['recordid'];
 
         // Load session (validates ownership).
         $session = course_session_service::get_user_session($recordid, $USER->id);
 
-        return create_course_service::create_course($session);
+        // Fetch the AI-generated result data from the Datacurso API.
+        $apiservice = new ai_course_api_service();
+        $result = $apiservice->get_course_result((string)$session->get('session_id'));
+        $resultdata = $result['result'] ?? [];
+
+        return create_course_service::create_course($session, $resultdata);
     }
 
     /**

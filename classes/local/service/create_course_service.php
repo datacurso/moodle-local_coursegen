@@ -28,12 +28,17 @@ use local_coursegen\local\models\course_session;
  */
 class create_course_service {
     /**
-     * Execute course creation from a stored planning session.
+     * Execute course creation from AI-generated result data.
+     *
+     * The result data must already be fetched from the API; this method only
+     * processes it. This separation makes the method testable without requiring
+     * a live API connection.
      *
      * @param course_session $session Planning session persistent.
+     * @param array $resultdata Result data from the Datacurso API (course_configuration, sections, activities).
      * @return array Result of the course content application.
      */
-    public static function create_course(course_session $session): array {
+    public static function create_course(course_session $session, array $resultdata): array {
         global $CFG;
 
         try {
@@ -44,12 +49,6 @@ class create_course_service {
             \core\session\manager::write_close();
 
             require_once($CFG->dirroot . '/course/lib.php');
-
-            $apiservice = new ai_course_api_service();
-            $result = $apiservice->get_course_result((string)$session->get('session_id'));
-
-            // Extract result data.
-            $resultdata = $result['result'] ?? [];
 
             // Build course data entirely from the API response.
             $coursedata = self::build_course_data_from_api($resultdata);
@@ -133,6 +132,7 @@ class create_course_service {
                 'partial' => !empty($activityerrors),
                 'haswarnings' => !empty($activityerrors),
                 'warningscount' => count($activityerrors),
+                'activityerrors' => $activityerrors,
             ];
         } catch (\Throwable $e) {
             // Update session status to failed if session exists.
