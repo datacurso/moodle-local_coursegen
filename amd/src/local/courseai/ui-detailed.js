@@ -1412,6 +1412,25 @@ export const createDetailedUi = (deps) => {
         state.detailedTotal = Math.max(state.detailedTotal || 0, totalActivities);
     };
 
+    const finalizePlanView = () => {
+        if (prvSpinnerIcon) {
+            prvSpinnerIcon.style.display = 'none';
+        }
+        if (prvCheckIcon) {
+            prvCheckIcon.style.display = '';
+        }
+        if (prvHeader) {
+            prvHeader.classList.remove('prv-header--stream');
+            prvHeader.classList.add('prv-header--done');
+        }
+        if (planningSpinner) {
+            planningSpinner.classList.add('done');
+        }
+        if (prvLiveNote) {
+            prvLiveNote.style.display = 'none';
+        }
+    };
+
     const enableAllActionControls = () => {
         document.querySelectorAll('.dp-action-btn--disabled').forEach(function(el) {
             el.classList.remove('dp-action-btn--disabled');
@@ -1429,6 +1448,7 @@ export const createDetailedUi = (deps) => {
     return {
         normalizeInitialSections,
         initDetailedPlanView,
+        finalizePlanView,
         handleDetailedPlanField,
         handleDetailedPlanActivity,
         syncDetailedStructureFromSections,
