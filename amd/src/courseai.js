@@ -25,7 +25,7 @@ import Notification from 'core/notification';
 import * as CourseaiRepository from 'local_coursegen/repository/courseai';
 import YUI from 'core/yui';
 import * as markedModule from 'local_coursegen/marked';
-import {sendPlanningFeedback, createCourse} from 'local_coursegen/repository/course';
+import {sendPlanningFeedback, createCourse, getCourseSettings} from 'local_coursegen/repository/course';
 
 import {
     parseCourseaiData,
@@ -245,7 +245,58 @@ export const init = async(params) => {
             renderPlanMarkdown,
             createCourseFromSession: async() => {
                 if (actions) {
-                    await actions.createCourseFromSession();
+                    // Advance progress to the review phase so it doesn't appear stuck.
+                    stepsUi.setProgress(92);
+                    if (elements.pcStep) {
+                        elements.pcStep.textContent = texts.courseai_review_step_label;
+                    }
+                    if (elements.pcTitle) {
+                        elements.pcTitle.textContent = texts.courseai_review_title;
+                    }
+                    if (elements.pcSubtitle) {
+                        elements.pcSubtitle.textContent = texts.courseai_review_subtitle;
+                    }
+                    // Swap the checkmark icon for an edit icon to signal user action needed.
+                    const planningSpinner = document.getElementById('planningSpinner');
+                    const planningCheckIcon = document.getElementById('planningCheckIcon');
+                    const pcIconWrap = document.getElementById('pcIconWrap');
+                    if (planningSpinner) {
+                        planningSpinner.style.display = 'none';
+                    }
+                    if (planningCheckIcon) {
+                        planningCheckIcon.style.display = 'none';
+                    }
+                    if (pcIconWrap) {
+                        const existingEdit = document.getElementById('planningEditIcon');
+                        if (!existingEdit) {
+                            const editSvg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+                            editSvg.setAttribute('id', 'planningEditIcon');
+                            editSvg.setAttribute('width', '20');
+                            editSvg.setAttribute('height', '20');
+                            editSvg.setAttribute('viewBox', '0 0 24 24');
+                            editSvg.setAttribute('fill', 'none');
+                            editSvg.setAttribute('stroke', 'currentColor');
+                            editSvg.setAttribute('stroke-width', '2');
+                            editSvg.setAttribute('stroke-linecap', 'round');
+                            editSvg.setAttribute('stroke-linejoin', 'round');
+                            editSvg.style.color = '#fff';
+                            const path1 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                            path1.setAttribute('d', 'M12 20h9');
+                            const path2 = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+                            path2.setAttribute('d', 'M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z');
+                            editSvg.appendChild(path1);
+                            editSvg.appendChild(path2);
+                            pcIconWrap.appendChild(editSvg);
+                        } else {
+                            existingEdit.style.display = '';
+                        }
+                    }
+                    // Show the course review panel before creating.
+                    const overrides = await actions.showCourseReviewPanel();
+                    if (overrides === null) {
+                        return;
+                    }
+                    await actions.createCourseFromSession(overrides);
                 }
             },
             texts,
@@ -260,6 +311,7 @@ export const init = async(params) => {
             CourseaiRepository,
             sendPlanningFeedback,
             createCourse,
+            getCourseSettings,
             updateGenerateButton: contextUi.updateGenerateButton,
             refreshChipsRow: contextUi.refreshChipsRow,
             refreshGuidelineChip: contextUi.refreshGuidelineChip,
