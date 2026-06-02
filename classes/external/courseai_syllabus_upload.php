@@ -50,7 +50,7 @@ class courseai_syllabus_upload extends external_api {
     }
 
     /**
-     * Upload syllabus file to Python API.
+     * Upload syllabus file to Datacurso API.
      *
      * @param int $sessionid Course session ID
      * @param int $draftitemid Draft file area ID
@@ -146,7 +146,7 @@ class courseai_syllabus_upload extends external_api {
             $file = reset($files);
             $filename = $file->get_filename();
 
-            // Upload to Python API.
+            // Upload to Datacurso API.
             $apiservice = new ai_course_api_service();
             $response = $apiservice->upload_syllabus($threadid, $file);
 

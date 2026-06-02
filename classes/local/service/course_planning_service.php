@@ -120,7 +120,7 @@ class course_planning_service {
     /**
      * Build a temporary shortname for the session payload.
      *
-     * Final semantic shortname is provided by Python `course_configuration` and
+     * Final semantic shortname is provided by `course_configuration` and
      * normalized at course creation time.
      *
      * @param int $userid Current user id.

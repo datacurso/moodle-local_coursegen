@@ -154,7 +154,7 @@ class create_course_service {
     /**
      * Build course data object entirely from the API response.
      *
-     * @param array $resultdata Final payload from Python service.
+     * @param array $resultdata Final payload from the Datacurso service.
      * @return \stdClass
      */
     private static function build_course_data_from_api(array $resultdata): \stdClass {
