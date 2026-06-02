@@ -1,3 +1,26 @@
+## 1.5.0
+
+**Released on:** 2026-06-01
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Changed
+
+- **Course creation data now comes from API response**  
+  The `create_course` external function is now a thin controller that only validates params and loads the session. All business logic (coursedata parsing, category resolution, course data building) moved to `create_course_service`. Course data is built entirely from the API's `course_configuration` response instead of the session's stored coursedata.
+- **Removed restrictive shortname sanitization**  
+  Removed `sanitize_shortname_keyword()` which limited shortnames to alphanumeric+hyphens. Shortnames from the API are used directly (trimmed, truncated to 100 chars).
+- **Removed `course_identity` references**  
+  Renamed `apply_course_identity_to_coursedata` to `build_course_data_from_api` and updated all references from `course_identity` to `course_configuration`.
+- **Session coursedata no longer includes course fields**  
+  Removed `category`, `fullname`, and `shortname` from the session's `coursedata` payload in `start_course_planning` — these come from the API at creation time.
+- **Planning UI spinner-to-checkmark transition**  
+  Added `finalizePlanView` to transition the planning loading spinner to a done/checkmark state when streaming completes.
+- **Planning overlay hidden on review state**  
+  Fixed a bug where the centered planning-loading overlay remained visible during detailed planning review.
+- **Version bump**  
+  Internal version bumped to **2026060101** and release bumped to **1.5.0**.
+
 ## 1.4.0
 
 **Released on:** 2026-05-14

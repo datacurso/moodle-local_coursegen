@@ -1062,6 +1062,10 @@ export const createStreamManager = (deps) => {
                 case 'review_needed':
                     // Defensive unlock: review state must always allow image selection.
                     state.isStreaming = false;
+                    // Hide the centered planning-loading overlay — it is never hidden during
+                    // detailed planning because ensureStreamContentVisible() is not called
+                    // for detailed_plan_field/activity events.
+                    ensureStreamContentVisible();
                     stepsUi.setStepState('planning', 'done');
                     state.currentStage = 'planning';
                     stepsUi.updateFlowNav();
@@ -1076,6 +1080,10 @@ export const createStreamManager = (deps) => {
                                 });
                             });
                         });
+                    }
+                    // Plan is fully rendered — transition spinner → done/checkmark state.
+                    if (typeof detailedUi.finalizePlanView === 'function') {
+                        detailedUi.finalizePlanView();
                     }
                     // Enable action buttons (IA/Delete) AFTER re-initialization so newly created controls get enabled
                     if (typeof detailedUi.enableAllActionControls === 'function') {

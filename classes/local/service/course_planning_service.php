@@ -71,20 +71,11 @@ class course_planning_service {
         $threadid = (string)$response['thread_id'];
         $streamingurl = $apiservice->get_course_streaming_url($threadid);
 
-        $defaultcategory = core_course_category::get_default();
-        $defaultcategoryid = $defaultcategory ? (int)$defaultcategory->id : 0;
-
-        $prompttitle = self::build_course_title_from_prompt($prompt, $lang);
-        $generatedshortname = self::build_initial_shortname($userid);
-
         $session = new course_session();
         $session->set('userid', $userid);
         $session->set('session_id', $threadid);
         $session->set('status', course_session::STATUS_PENDING);
         $session->set('coursedata', json_encode([
-            'category' => $defaultcategoryid,
-            'fullname' => $prompttitle,
-            'shortname' => $generatedshortname,
             'local_coursegen_lang' => $lang,
             'local_coursegen_generate_images' => $withimages ? 1 : 0,
             'local_coursegen_context_type' => 'customprompt',
@@ -129,7 +120,7 @@ class course_planning_service {
     /**
      * Build a temporary shortname for the session payload.
      *
-     * Final semantic shortname is provided by Python `course_identity` and
+     * Final semantic shortname is provided by `course_configuration` and
      * normalized at course creation time.
      *
      * @param int $userid Current user id.

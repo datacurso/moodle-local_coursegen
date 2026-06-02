@@ -24,8 +24,6 @@
 
 namespace local_coursegen\external;
 
-use core_course_category;
-use context_coursecat;
 use external_api;
 use external_function_parameters;
 use external_value;
@@ -37,7 +35,6 @@ use moodle_exception;
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir . '/externallib.php');
-require_once($CFG->dirroot . '/course/lib.php');
 
 /**
  * External API for creating courses with AI assistance.
@@ -55,7 +52,10 @@ class create_course extends external_api {
     }
 
     /**
-     * Create a course from stored session data and apply AI-generated content.
+     * Create a course from an AI planning session.
+     *
+     * All business logic (coursedata parsing, category resolution, permission
+     * checks, API dispatch) is handled by the service.
      *
      * @param int $recordid Session record ID in local_coursegen_course_sessions
      * @return array Result of the course content application
@@ -70,62 +70,10 @@ class create_course extends external_api {
 
         $recordid = (int)$params['recordid'];
 
-        // Load session to validate category and capabilities.
+        // Load session (validates ownership).
         $session = course_session_service::get_user_session($recordid, $USER->id);
-        $coursedatajson = $session->get('coursedata');
-        if (empty($coursedatajson)) {
-            throw new moodle_exception('error_no_coursedata_found', 'local_coursegen');
-        }
 
-        $coursedata = json_decode($coursedatajson);
-        if (!is_object($coursedata)) {
-            throw new moodle_exception('error_invalid_coursedata', 'local_coursegen');
-        }
-
-        $coursedata = self::hydrate_minimal_course_fields($coursedata, $recordid);
-
-        if (empty($coursedata->category)) {
-            throw new moodle_exception('error_missing_category', 'local_coursegen');
-        }
-
-        // Validate user has permission to create a course in the target category.
-        $catcontext = context_coursecat::instance($coursedata->category);
-        self::validate_context($catcontext);
-        require_capability('moodle/course:create', $catcontext);
-
-        return create_course_service::create_course($session, $coursedata);
-    }
-
-    /**
-     * Ensure required core fields exist for courseai-created sessions.
-     *
-     * Wizard sessions can be created from a lightweight payload that does not
-     * always contain category/fullname/shortname. This method fills safe
-     * defaults so course creation can continue.
-     *
-     * @param \stdClass $coursedata Stored session course data.
-     * @param int $recordid Session record ID.
-     * @return \stdClass
-     */
-    private static function hydrate_minimal_course_fields(\stdClass $coursedata, int $recordid): \stdClass {
-        if (empty($coursedata->category)) {
-            $defaultcategory = core_course_category::get_default();
-            if ($defaultcategory && !empty($defaultcategory->id)) {
-                $coursedata->category = (int)$defaultcategory->id;
-            }
-        }
-
-        $existingfullname = trim((string)($coursedata->fullname ?? ''));
-
-        if ($existingfullname === '') {
-            $coursedata->fullname = get_string('createwithai', 'local_coursegen') . ' #' . $recordid;
-        }
-
-        if (empty($coursedata->shortname)) {
-            $coursedata->shortname = 'courseai-' . $recordid;
-        }
-
-        return $coursedata;
+        return create_course_service::create_course($session);
     }
 
     /**

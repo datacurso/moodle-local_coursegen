@@ -111,8 +111,8 @@ class start_course_planning extends external_api {
         return new external_single_structure([
             'success' => new external_value(PARAM_BOOL, 'Whether the operation succeeded'),
             'sessionid' => new external_value(PARAM_INT, 'Moodle session ID'),
-            'threadid' => new external_value(PARAM_TEXT, 'Python API thread ID'),
-            'streamingurl' => new external_value(PARAM_TEXT, 'Python API stream URL'),
+            'threadid' => new external_value(PARAM_TEXT, 'Datacurso API thread ID'),
+            'streamingurl' => new external_value(PARAM_TEXT, 'Datacurso API stream URL'),
             'message' => new external_value(PARAM_TEXT, 'Success or error message'),
         ]);
     }

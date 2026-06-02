@@ -16,6 +16,7 @@
 
 namespace local_coursegen\local\service;
 
+use core_course_category;
 use local_coursegen\local\models\course_session;
 
 /**
@@ -30,10 +31,9 @@ class create_course_service {
      * Execute course creation from a stored planning session.
      *
      * @param course_session $session Planning session persistent.
-     * @param \stdClass $coursedata Validated course data stored in the session.
      * @return array Result of the course content application.
      */
-    public static function create_course(course_session $session, \stdClass $coursedata): array {
+    public static function create_course(course_session $session): array {
         global $CFG;
 
         try {
@@ -51,7 +51,9 @@ class create_course_service {
             // Extract result data.
             $resultdata = $result['result'] ?? [];
 
-            $coursedata = self::apply_course_identity_to_coursedata($coursedata, $resultdata);
+            // Build course data entirely from the API response.
+            $coursedata = self::build_course_data_from_api($resultdata);
+
             $coursedata = self::ensure_unique_course_fields($coursedata);
 
             // Create the Moodle course from stored form data.
@@ -150,51 +152,42 @@ class create_course_service {
     }
 
     /**
-     * Apply Python-provided course identity (fullname/shortname base) to Moodle course data.
+     * Build course data object entirely from the API response.
      *
-     * @param \stdClass $coursedata Base course data from local session.
-     * @param array $resultdata Final payload from Python service.
+     * @param array $resultdata Final payload from the Datacurso service.
      * @return \stdClass
      */
-    private static function apply_course_identity_to_coursedata(\stdClass $coursedata, array $resultdata): \stdClass {
-        $identity = $resultdata['course_identity'] ?? null;
-        if (!is_array($identity)) {
+    private static function build_course_data_from_api(array $resultdata): \stdClass {
+        $coursedata = new \stdClass();
+
+        $defaultcategory = core_course_category::get_default();
+        $defaultcategoryid = $defaultcategory ? (int)$defaultcategory->id : 0;
+
+        $config = $resultdata['course_configuration'] ?? null;
+        if (!is_array($config)) {
+            $coursedata->fullname = get_string('createwithai', 'local_coursegen');
+            $coursedata->shortname = 'courseai-' . time();
+            $coursedata->category = $defaultcategoryid;
             return $coursedata;
         }
 
-        $fullname = trim((string)($identity['fullname'] ?? ''));
+        $fullname = trim((string)($config['fullname'] ?? ''));
         if ($fullname !== '') {
             $coursedata->fullname = (string)\core_text::substr($fullname, 0, 255);
+        } else {
+            $coursedata->fullname = get_string('createwithai', 'local_coursegen');
         }
 
-        $keyword = self::sanitize_shortname_keyword((string)($identity['shortname_keyword'] ?? ''));
-        if ($keyword !== '') {
-            $coursedata->shortname = $keyword;
+        $shortname = trim((string)($config['shortname'] ?? ''));
+        if ($shortname !== '') {
+            $coursedata->shortname = (string)\core_text::substr(trim($shortname), 0, 100);
+        } else {
+            $coursedata->shortname = 'courseai-' . time();
         }
+
+        $coursedata->category = (int)($config['category'] ?? $defaultcategoryid);
 
         return $coursedata;
-    }
-
-    /**
-     * Sanitize a shortname keyword received from the Python service.
-     *
-     * @param string $keyword Keyword candidate.
-     * @return string
-     */
-    private static function sanitize_shortname_keyword(string $keyword): string {
-        $candidate = trim((string)\core_text::strtolower($keyword));
-        if ($candidate === '') {
-            return '';
-        }
-
-        $candidate = preg_replace('/[^a-z0-9]+/i', '-', $candidate);
-        $candidate = trim((string)$candidate, '-');
-
-        if ($candidate === '') {
-            return '';
-        }
-
-        return (string)\core_text::substr($candidate, 0, 24);
     }
 
     /**
