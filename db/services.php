@@ -52,6 +52,14 @@ $functions = [
         'ajax' => true,
         'capabilities' => 'moodle/course:create',
     ],
+    'local_coursegen_get_course_settings' => [
+        'classname' => 'local_coursegen\external\get_course_settings',
+        'methodname' => 'execute',
+        'description' => 'Get final AI-generated course settings (fullname, shortname, category) for review',
+        'type' => 'read',
+        'ajax' => true,
+        'capabilities' => 'moodle/course:create',
+    ],
     'local_coursegen_course_planning_feedback' => [
         'classname' => 'local_coursegen\external\course_planning_feedback',
         'methodname' => 'execute',

@@ -87,18 +87,48 @@ export async function regenerateDetailedItem({recordid, target_type, section_ind
 }
 
 /**
+ * Get the final AI-generated course settings (fullname, shortname, category) for review.
+ *
+ * @param {number} recordid The planning session record ID.
+ * @return {Promise<{fullname: string, shortname: string, category: number, categories: Array}>}
+ */
+export async function getCourseSettings(recordid) {
+    return ajax.call([
+        {
+            methodname: 'local_coursegen_get_course_settings',
+            args: {recordid: Number(recordid) || 0},
+        },
+    ])[0];
+}
+
+/**
  * Create a course from a stored planning session and apply AI-generated content.
  *
  * @param {{
  *     recordid: number,
+ *     fullname?: string,
+ *     shortname?: string,
+ *     category?: number,
  * }} payload - The payload to create the course
  * - recordid: The planning session record ID in local_coursegen_course_sessions
+ * - fullname: Optional override for course fullname
+ * - shortname: Optional override for course shortname
+ * - category: Optional override for course category ID
  * @return {Promise<Object>} response
  */
-export async function createCourse({recordid}) {
+export async function createCourse({recordid, fullname, shortname, category}) {
     const args = {
         recordid: Number(recordid) || 0,
     };
+    if (typeof fullname === 'string' && fullname.trim()) {
+        args.fullname = fullname.trim();
+    }
+    if (typeof shortname === 'string' && shortname.trim()) {
+        args.shortname = shortname.trim();
+    }
+    if (typeof category === 'number' && category > 0) {
+        args.category = category;
+    }
     return ajax.call([
         {
             methodname: "local_coursegen_create_course",

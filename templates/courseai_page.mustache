@@ -437,6 +437,54 @@
         </div>
       </div>
 
+      {{! Review step — Bootstrap card shown inline before course creation }}
+      <div class="card" id="courseReviewPanel" style="display:none">
+        <div class="card-body">
+          <div class="d-flex align-items-start mb-3">
+            <span class="d-flex align-items-center justify-content-center mr-3"
+                  style="width:40px;height:40px;border-radius:8px;background:var(--primary-soft, #fef2f0);color:var(--primary, #c2412e);flex-shrink:0">
+              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 20h9"/>
+                <path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"/>
+              </svg>
+            </span>
+            <div>
+              <h5 class="mb-1">{{#str}}courseai_review_title, local_coursegen{{/str}}</h5>
+              <p class="mb-0 text-muted" style="font-size:.875rem">{{#str}}courseai_review_subtitle, local_coursegen{{/str}}</p>
+            </div>
+          </div>
+
+          <div class="form-group">
+            <label for="reviewFullname">{{#str}}courseai_review_fullname_label, local_coursegen{{/str}}</label>
+            <input type="text" id="reviewFullname" class="form-control" maxlength="255"
+                   placeholder="{{#str}}courseai_review_fullname_placeholder, local_coursegen{{/str}}">
+          </div>
+
+          <div class="form-group">
+            <label for="reviewShortname">{{#str}}courseai_review_shortname_label, local_coursegen{{/str}}</label>
+            <input type="text" id="reviewShortname" class="form-control" maxlength="100"
+                   placeholder="{{#str}}courseai_review_shortname_placeholder, local_coursegen{{/str}}">
+            <small class="form-text text-muted">{{#str}}courseai_review_shortname_note, local_coursegen{{/str}}</small>
+          </div>
+
+          <div class="form-group mb-0">
+            <label for="reviewCategory">{{#str}}courseai_review_category_label, local_coursegen{{/str}}</label>
+            <select id="reviewCategory" class="form-control"></select>
+          </div>
+
+          <hr class="my-3">
+
+          <div class="d-flex justify-content-end">
+            <button type="button" class="btn btn-outline-secondary mr-2" id="reviewCancelBtn">
+              {{#str}}courseai_review_cancel, local_coursegen{{/str}}
+            </button>
+            <button type="button" class="btn btn-primary" id="reviewConfirmBtn">
+              {{#str}}courseai_review_confirm, local_coursegen{{/str}}
+            </button>
+          </div>
+        </div>
+      </div>
+
     </div>
 
     </div><!-- .courseai-workspace -->

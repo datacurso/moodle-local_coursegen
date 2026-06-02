@@ -28,9 +28,11 @@ use external_api;
 use external_function_parameters;
 use external_value;
 use external_single_structure;
+use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
 use moodle_exception;
+use context_system;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -48,6 +50,9 @@ class create_course extends external_api {
     public static function execute_parameters() {
         return new external_function_parameters([
             'recordid' => new external_value(PARAM_INT, 'Course planning session record ID'),
+            'fullname' => new external_value(PARAM_TEXT, 'Override course fullname', VALUE_OPTIONAL, ''),
+            'shortname' => new external_value(PARAM_TEXT, 'Override course shortname', VALUE_OPTIONAL, ''),
+            'category' => new external_value(PARAM_INT, 'Override course category ID', VALUE_OPTIONAL, 0),
         ]);
     }
 
@@ -61,19 +66,45 @@ class create_course extends external_api {
      * @return array Result of the course content application
      * @throws moodle_exception
      */
-    public static function execute($recordid) {
+    public static function execute($recordid, $fullname = '', $shortname = '', $category = 0) {
         global $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'recordid' => $recordid,
+            'fullname' => $fullname,
+            'shortname' => $shortname,
+            'category' => $category,
         ]);
+
+        $context = context_system::instance();
+        self::validate_context($context);
 
         $recordid = (int)$params['recordid'];
 
         // Load session (validates ownership).
         $session = course_session_service::get_user_session($recordid, $USER->id);
 
-        return create_course_service::create_course($session);
+        // Fetch the AI-generated result data from the Datacurso API.
+        $apiservice = new ai_course_api_service();
+        $result = $apiservice->get_course_result((string)$session->get('session_id'));
+        $resultdata = $result['result'] ?? [];
+
+        // Build overrides from user-provided params (non-empty values only).
+        $overrides = [];
+        $fullname = trim((string)$params['fullname']);
+        if ($fullname !== '') {
+            $overrides['fullname'] = $fullname;
+        }
+        $shortname = trim((string)$params['shortname']);
+        if ($shortname !== '') {
+            $overrides['shortname'] = $shortname;
+        }
+        $category = (int)$params['category'];
+        if ($category > 0) {
+            $overrides['category'] = $category;
+        }
+
+        return create_course_service::create_course($session, $resultdata, $overrides);
     }
 
     /**
