@@ -22,6 +22,7 @@
  */
 
 import { setCompactChatState } from './ui-planning';
+import FormAutocomplete from 'core/form-autocomplete';
 
 /**
  * Create courseai actions and event bindings.
@@ -37,6 +38,7 @@ export const createCourseaiActions = (deps) => {
         CourseaiRepository,
         sendPlanningFeedback,
         createCourse,
+        getCourseSettings,
         updateGenerateButton,
         refreshChipsRow,
         refreshGuidelineChip,
@@ -70,6 +72,7 @@ export const createCourseaiActions = (deps) => {
         initialPromptHistory,
         initialPromptText,
         adjustmentHistory,
+        pcPct,
     } = elements;
 
     const renderInitialPromptHistory = (message) => {
@@ -183,7 +186,133 @@ export const createCourseaiActions = (deps) => {
         updateGenerateButton();
     };
 
-    const createCourseFromSession = async() => {
+    /**
+     * Show the course review panel inline, load preview data + categories from the backend,
+     * and wait for user confirmation.
+     *
+     * Categories come with full paths already built via
+     * core_course_category::make_categories_list() on the server side.
+     *
+     * Returns an overrides object if confirmed, or null if cancelled.
+     *
+     * @return {Promise<Object|null>}
+     */
+    const showCourseReviewPanel = async() => {
+        const panel = document.getElementById('courseReviewPanel');
+        const fullnameInput = document.getElementById('reviewFullname');
+        const shortnameInput = document.getElementById('reviewShortname');
+        const categorySelect = document.getElementById('reviewCategory');
+        const confirmBtn = document.getElementById('reviewConfirmBtn');
+        const cancelBtn = document.getElementById('reviewCancelBtn');
+
+        if (!panel || !fullnameInput || !categorySelect || !confirmBtn || !cancelBtn) {
+            return {};
+        }
+
+        // Fetch course settings (includes categories with paths from server).
+        let settingsData = null;
+        try {
+            settingsData = await getCourseSettings(state.sessionid);
+        } catch (e) {
+            // Fall through with empty data.
+        }
+
+        // Pre-fill fields from the AI-generated settings.
+        fullnameInput.value = settingsData?.fullname || state.courseTitle || '';
+        shortnameInput.value = settingsData?.shortname || '';
+
+        const defaultCategoryId = settingsData?.category || 0;
+        const categories = settingsData?.categories || [];
+
+        // Populate the select with server-side paths already built.
+        categorySelect.innerHTML = '';
+        const emptyOpt = document.createElement('option');
+        emptyOpt.value = '';
+        emptyOpt.textContent = '-- ' + texts.courseai_review_category_label + ' --';
+        categorySelect.appendChild(emptyOpt);
+
+        categories.forEach((cat) => {
+            const opt = document.createElement('option');
+            opt.value = String(cat.id);
+            opt.textContent = cat.pathname;
+            categorySelect.appendChild(opt);
+        });
+
+        // Select the default category from AI settings.
+        if (defaultCategoryId > 0) {
+            categorySelect.value = String(defaultCategoryId);
+        }
+
+        // Enhance with Moodle autocomplete (searchable, keyboard-friendly).
+        try {
+            FormAutocomplete.enhance(
+                categorySelect,
+                false,
+                texts.courseai_review_category_label || '',
+                texts.courseai_no_results || ''
+            );
+        } catch (e) {
+            // Fall through — plain select still works.
+        }
+
+        // Show the inline panel as a phase card.
+        return new Promise((resolve) => {
+            let resolved = false;
+
+            const cleanup = () => {
+                confirmBtn.removeEventListener('click', onConfirm);
+                cancelBtn.removeEventListener('click', onCancel);
+            };
+
+            const hidePanel = () => {
+                panel.style.display = 'none';
+            };
+
+            const onConfirm = () => {
+                if (resolved) {
+                    return;
+                }
+                resolved = true;
+                cleanup();
+                hidePanel();
+                const overrides = {};
+                const fullname = fullnameInput.value.trim();
+                if (fullname) {
+                    overrides.fullname = fullname;
+                }
+                const shortname = shortnameInput.value.trim();
+                if (shortname) {
+                    overrides.shortname = shortname;
+                }
+                const category = parseInt(categorySelect.value, 10);
+                if (category > 0) {
+                    overrides.category = category;
+                }
+                resolve(overrides);
+            };
+
+            const onCancel = () => {
+                if (resolved) {
+                    return;
+                }
+                resolved = true;
+                cleanup();
+                hidePanel();
+                resolve(null);
+            };
+
+            confirmBtn.addEventListener('click', onConfirm);
+            cancelBtn.addEventListener('click', onCancel);
+
+            // Show the panel inline.
+            panel.style.display = '';
+
+            // Focus the fullname input.
+            setTimeout(() => fullnameInput.focus(), 100);
+        });
+    };
+
+    const createCourseFromSession = async(overrides = null) => {
         if (!state.sessionid) {
             return;
         }
@@ -202,12 +331,13 @@ export const createCourseaiActions = (deps) => {
                 pcSubtitle.textContent = texts.courseai_course_creating_subtitle;
             }
 
-            // Continue progress from content generation phase (should be around 90%)
-            // Quick final push: currentProgress → 95%
-            const startProgress = state.contentGenerationCurrent && state.detailedTotal > 0
-                ? Math.min(90, (state.contentGenerationCurrent / state.detailedTotal) * 90)
-                : 0;
-            const targetProgress = 95;
+            // Read current displayed progress from the DOM so we continue smoothly
+            // from wherever the review panel left off, instead of recalculating
+            // from stale SSE state.
+            const currentPctText = pcPct ? pcPct.textContent : '';
+            const parsedPct = parseInt(currentPctText, 10);
+            const startProgress = !isNaN(parsedPct) && parsedPct >= 0 ? parsedPct : 92;
+            const targetProgress = 98;
             const duration = 2000; // 2 seconds for final push
             const intervalMs = 100;
             const startTime = Date.now();
@@ -226,7 +356,20 @@ export const createCourseaiActions = (deps) => {
                 }
             }, intervalMs);
 
-            const createRequest = createCourse({recordid: state.sessionid});
+            // Build payload with optional overrides.
+            const payload = {recordid: state.sessionid};
+            if (overrides) {
+                if (overrides.fullname) {
+                    payload.fullname = overrides.fullname;
+                }
+                if (overrides.shortname) {
+                    payload.shortname = overrides.shortname;
+                }
+                if (overrides.category) {
+                    payload.category = overrides.category;
+                }
+            }
+            const createRequest = createCourse(payload);
             const timeoutPromise = new Promise((_, reject) => {
                 setTimeout(() => {
                     reject(new Error(texts.courseai_error_connection));
@@ -602,6 +745,7 @@ export const createCourseaiActions = (deps) => {
 
     return {
         showCompletionView,
+        showCourseReviewPanel,
         createCourseFromSession,
         handleGenerate,
         sendFeedbackAction,
