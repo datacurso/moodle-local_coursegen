@@ -143,6 +143,18 @@ const STRING_KEYS = [
     'courseai_images_select_all',
     'courseai_image_count_one',
     'courseai_image_count_many',
+    'courseai_review_title',
+    'courseai_review_subtitle',
+    'courseai_review_step_label',
+    'courseai_review_fullname_label',
+    'courseai_review_fullname_placeholder',
+    'courseai_review_shortname_label',
+    'courseai_review_shortname_placeholder',
+    'courseai_review_shortname_note',
+    'courseai_review_category_label',
+    'courseai_review_category_loading',
+    'courseai_review_cancel',
+    'courseai_review_confirm',
 ];
 
 /**

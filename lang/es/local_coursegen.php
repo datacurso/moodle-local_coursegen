@@ -461,3 +461,17 @@ $string['tooltip_override_activity'] = 'Habilitar sobrescrituras a nivel de acti
 $string['tooltip_override_course'] = 'Habilitar sobrescrituras a nivel de curso.';
 $string['unauthorized'] = 'Acceso no autorizado';
 $string['yesimages'] = 'Generar imágenes';
+
+// Review modal strings.
+$string['courseai_review_title'] = 'Revisar datos del curso';
+$string['courseai_review_subtitle'] = 'Previsualizá y ajustá el nombre, nombre corto y categoría del curso.';
+$string['courseai_review_step_label'] = 'Revisión final';
+$string['courseai_review_fullname_label'] = 'Nombre del curso';
+$string['courseai_review_fullname_placeholder'] = 'Ingresá el nombre completo del curso';
+$string['courseai_review_shortname_label'] = 'Nombre corto';
+$string['courseai_review_shortname_placeholder'] = 'Ingresá un nombre corto (opcional)';
+$string['courseai_review_shortname_note'] = 'Si lo dejás vacío, se generará uno automáticamente.';
+$string['courseai_review_category_label'] = 'Categoría';
+$string['courseai_review_category_loading'] = 'Cargando categorías...';
+$string['courseai_review_cancel'] = 'Cancelar';
+$string['courseai_review_confirm'] = 'Crear curso';

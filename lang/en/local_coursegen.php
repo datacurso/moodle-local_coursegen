@@ -453,3 +453,17 @@ $string['courseai_sessions_backbtn'] = 'Back';
 $string['status_pending'] = 'Planning';
 $string['status_creating'] = 'Creating';
 $string['status_failed'] = 'Failed';
+
+// Review modal strings.
+$string['courseai_review_title'] = 'Review course details';
+$string['courseai_review_subtitle'] = 'Preview and adjust the course name, short name, and category.';
+$string['courseai_review_step_label'] = 'Final review';
+$string['courseai_review_fullname_label'] = 'Course name';
+$string['courseai_review_fullname_placeholder'] = 'Enter the course full name';
+$string['courseai_review_shortname_label'] = 'Short name';
+$string['courseai_review_shortname_placeholder'] = 'Enter a short name (optional)';
+$string['courseai_review_shortname_note'] = 'If left empty, one will be generated automatically.';
+$string['courseai_review_category_label'] = 'Category';
+$string['courseai_review_category_loading'] = 'Loading categories...';
+$string['courseai_review_cancel'] = 'Cancel';
+$string['courseai_review_confirm'] = 'Create course';
