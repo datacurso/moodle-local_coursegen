@@ -1,3 +1,20 @@
+## 1.6.0
+
+**Released on:** 2026-06-02
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Changed
+
+- **Course review panel before creation**  
+  Added a review step in the streaming UI that shows AI-generated course settings (fullname, shortname, category) before the course is created. Users can override any value. The category selector uses Moodle's `form-autocomplete` with full path display (e.g. "Miscellaneous / My Subcategory").
+- **New `get_course_settings` webservice**  
+  Added `local_coursegen_get_course_settings` (read, ajax) that returns the AI-generated course fullname, shortname, category, and the full category list with paths — all from the server via `core_course_category::make_categories_list()`.
+- **Create course accepts overrides**  
+  The `local_coursegen_create_course` webservice now accepts optional `fullname`, `shortname`, and `category` parameters. When provided, they override the AI-generated values.
+- **Version bump**  
+  Internal version bumped to **2026060201** and release bumped to **1.6.0**.
+
 ## 1.5.0
 
 **Released on:** 2026-06-01
