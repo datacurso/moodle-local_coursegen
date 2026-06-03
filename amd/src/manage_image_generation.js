@@ -177,9 +177,10 @@ export const init = () => {
                 }
 
                 const toggle = row.querySelector(imageGenerationRegions.toggleActivity);
+
                 const enabled = toggle && toggle.checked ? 1 : 0;
 
-                // Per-part controls live in the collapse content row for this activity.
+                // Per-part controls live in the collapsed content row for this activity.
                 const contentContainer = form.querySelector(
                     `${imageGenerationRegions.activityContent}[data-content="content-${activityId}"]`
                 );
@@ -201,7 +202,7 @@ export const init = () => {
                         `${imageGenerationRegions.activityPartMaxImages}[data-part-id="${partId}"]`
                     );
 
-                    const maximages = parseInt(maxInput.value, 10) || 0;
+                    const maximages = Number(maxInput.value);
 
                     parts.push({
                         id: partId,
@@ -210,7 +211,11 @@ export const init = () => {
                     });
                 });
 
-                activities.push({id: activityId, enabled, parts});
+                activities.push({
+                    id: activityId,
+                    enabled,
+                    parts,
+                });
             });
 
             const payload = {

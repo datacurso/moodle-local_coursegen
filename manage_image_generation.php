@@ -71,6 +71,9 @@ foreach ($activitydefinitions as $definition) {
                 'label' => $partdefinition['stringlabel'],
                 'enabled' => $partenabled,
                 'maximages' => $maximages,
+                'partmaximageshelp' => $OUTPUT->render(
+                    new \core\output\help_icon('help_maximages_' . $id . '_' . $partid, 'local_coursegen')
+                ),
             ];
         }
     }
@@ -86,8 +89,6 @@ foreach ($activitydefinitions as $definition) {
     ];
 }
 
-$partmaximageshelpicon = new \core\output\help_icon('help_part_maximages', 'local_coursegen');
-
 $context = [
     'overridecourse'   => (bool) get_config('local_coursegen', 'overridecourse'),
     'overrideactivity' => (bool) get_config('local_coursegen', 'overrideactivity'),
@@ -98,7 +99,6 @@ $context = [
     'currentmode'   => $currentmode,
 
     'activities' => $activitiescontext,
-    'partmaximageshelp' => $OUTPUT->render($partmaximageshelpicon),
 ];
 
 echo $OUTPUT->header();
