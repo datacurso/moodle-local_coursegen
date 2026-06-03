@@ -206,13 +206,7 @@ export const init = () => {
                         `${imageGenerationRegions.activityPartMaxImages}[data-part-id="${partId}"]`
                     );
 
-                    let maximages = 0;
-                    if (maxInput) {
-                        const parsed = Number(maxInput.value || 0);
-                        if (!Number.isNaN(parsed)) {
-                            maximages = parsed;
-                        }
-                    }
+                    const maximages = Number(maxInput.value);
 
                     parts.push({
                         id: partId,
