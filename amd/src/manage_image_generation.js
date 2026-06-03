@@ -177,19 +177,15 @@ export const init = () => {
                 }
 
                 const toggle = row.querySelector(imageGenerationRegions.toggleActivity);
-                const promptTextarea = row.querySelector(
-                    imageGenerationRegions.getActivityPromptSelector(activityId)
-                );
 
                 const enabled = toggle && toggle.checked ? 1 : 0;
-                const prompt = promptTextarea ? String(promptTextarea.value || '') : '';
 
                 // Per-part controls live in the collapsed content row for this activity.
                 const contentContainer = form.querySelector(
                     `${imageGenerationRegions.activityContent}[data-content="content-${activityId}"]`
                 );
                 if (!contentContainer) {
-                    activities.push({id: activityId, enabled, prompt, parts: []});
+                    activities.push({id: activityId, enabled, parts: []});
                     return;
                 }
 
@@ -218,7 +214,6 @@ export const init = () => {
                 activities.push({
                     id: activityId,
                     enabled,
-                    prompt,
                     parts,
                 });
             });
