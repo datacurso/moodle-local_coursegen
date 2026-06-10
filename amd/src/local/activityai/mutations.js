@@ -126,6 +126,23 @@ class Mutations {
     }
 
     /**
+     * Update selected language option.
+     *
+     * @param {StateManager} stateManager
+     * @param {string} value
+     */
+    setLang(stateManager, value) {
+        const lang = String(value || '').trim().toLowerCase();
+        if (!lang) {
+            return;
+        }
+
+        stateManager.setReadOnly(false);
+        stateManager.state.session.lang = lang;
+        stateManager.setReadOnly(true);
+    }
+
+    /**
      * Store selected upload info.
      *
      * @param {StateManager} stateManager
@@ -184,6 +201,7 @@ class Mutations {
                     beforemod,
                     prompt,
                     generateimages: state.session.generateimages,
+                    lang: String(state.session.lang || state.page.defaultlang || 'en'),
                 });
 
                 const jobid = response && response.job_id ? String(response.job_id) : '';

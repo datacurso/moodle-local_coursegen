@@ -24,8 +24,18 @@
 
     Example context (json):
     {
-        "activityname": "Discussion Forum",
-        "sectionname": "Week 1"
+        "languages": [
+            {
+                "code": "es",
+                "name": "Spanish (ES)",
+                "selected": true
+            },
+            {
+                "code": "en",
+                "name": "English (EN)",
+                "selected": false
+            }
+        ]
     }
 }}
 <div class="col-lg-10">
@@ -33,7 +43,7 @@
     <form class="local_coursegen_ai_input" novalidate data-region="local_coursegen/activity/form">
         
         <!-- Radios arriba -->
-        <div style="gap: .8rem;" class="mb-2 d-flex align-items-center">
+        <div style="gap: .8rem;" class="mb-2 d-flex align-items-center flex-wrap">
             <label style="gap: .3rem;" class="mb-0 d-flex align-items-center">
                 <input type="radio" name="generate_images" value="0" checked>
                 {{#str}} noimages, local_coursegen {{/str}}
@@ -41,6 +51,13 @@
             <label style="gap: .3rem;" class="mb-0 d-flex align-items-center">
                 <input type="radio" name="generate_images" value="1">
                 {{#str}} yesimages, local_coursegen {{/str}}
+            </label>
+            <label class="mb-0 d-flex align-items-center" style="gap: .4rem;">
+                <select class="custom-select custom-select-sm" data-region="local_coursegen/activity/lang" style="width: auto; min-width: 170px;">
+                    {{#languages}}
+                        <option value="{{code}}" {{#selected}}selected{{/selected}}>{{name}}</option>
+                    {{/languages}}
+                </select>
             </label>
         </div>
 

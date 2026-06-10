@@ -62,10 +62,28 @@ export default class extends BaseComponent {
             this.modal = null;
         }
 
-        const [bodyHTML, footerHTML] = await Promise.all([
-            Templates.render('local_coursegen/add_activity_ai_modal', {}),
-            Templates.render('local_coursegen/activity_chat_footer', {}),
-        ]);
+        const bodyHTML = await Templates.render('local_coursegen/add_activity_ai_modal', {});
+
+        const state = this.reactive.state;
+        const selectedlang = String(state?.session?.lang || state?.page?.defaultlang || 'en').toLowerCase();
+        const languageItems = (state?.page?.languages || []).map((language) => {
+                const code = String(language.code || '').toLowerCase();
+                return {
+                    code,
+                    name: String(language.name || code.toUpperCase()),
+                    selected: code === selectedlang,
+                };
+            });
+        if (languageItems.length === 0) {
+            languageItems.push({
+                code: selectedlang,
+                name: selectedlang.toUpperCase(),
+                selected: true,
+            });
+        }
+
+        const footercontext = {languages: languageItems};
+        const footerHTML = await Templates.render('local_coursegen/activity_chat_footer', footercontext);
 
         const title = await getString('addactivityai_modaltitle', 'local_coursegen');
 
