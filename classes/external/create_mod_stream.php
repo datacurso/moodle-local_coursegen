@@ -53,7 +53,7 @@ class create_mod_stream extends external_api {
                 VALUE_OPTIONAL
             ),
             'beforemod' => new external_value(PARAM_INT, 'Before module id', VALUE_OPTIONAL),
-            'lang' => new external_value(PARAM_LANG, 'Requested language code', VALUE_OPTIONAL),
+            'lang' => new external_value(PARAM_ALPHANUMEXT, 'Requested language code', VALUE_OPTIONAL),
         ]);
     }
 
