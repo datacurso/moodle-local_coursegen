@@ -25,6 +25,7 @@
 
 import {BaseComponent} from 'core/reactive';
 import Modal from 'core/modal';
+import ModalEvents from 'core/modal_events';
 import Templates from 'core/templates';
 import Notification from 'core/notification';
 import {get_string as getString} from 'core/str';
@@ -114,7 +115,7 @@ export default class extends BaseComponent {
             reactive: this.reactive,
         });
 
-        this.modal.getRoot().on('hidden.bs.modal', () => {
+        this.modal.getRoot().on(ModalEvents.hidden, () => {
             this.reactive.dispatch('closeModal');
         });
     }
