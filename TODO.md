@@ -376,13 +376,22 @@ servicio nuevo y con qué campos (incluida la identidad por `id` en lugar de ín
 
 ## Checklist
 
-- [ ] 1. Contrato de feedback unificado (`ActionIntent` sobre `/course/feedback`)
-- [ ] 2. Identidades por UUID + `position` + `deleted` en el modelo del cliente
-- [ ] 3. Lectura de eventos con `message = {string_id, string, string_args}` + localización
-- [ ] 4. Catálogo de 101 claves en `lang/` (con `{$a->...}`)
+- [ ] 1. Contrato de feedback unificado (`ActionIntent` sobre `/course/feedback`) — **BLOQUEADO**: ver nota
+- [ ] 2. Identidades por UUID + `position` + `deleted` en el modelo del cliente — acoplado a §1
+- [x] 3. Lectura de eventos con `message = {string_id, string, string_args}` + localización
+- [x] 4. Catálogo de 101 claves en `lang/` (con `{$a->...}`)  *(en; otros idiomas caen a en)*
 - [ ] 5. Flujo de propuestas (selector único + "Otra cosa" + caídas + aclaración)
 - [ ] 6. Confirmación local de destructivos directos
 - [ ] 7. Acciones de plan faltantes (reorder, add, full_regeneration, adjust_all_details)
-- [ ] 8. `completed` / `failed` / errores HTTP localizados
+- [ ] 8. `completed` / `failed` / errores HTTP localizados — *parcial: `failed` + nuevo `error` hechos*
 - [ ] 9. Reconciliar endpoints removidos (`regenerate-item`, `state`) y el flujo de resume
-- [ ] 10. Verificar eventos estructurales / de progreso contra el contrato nuevo
+- [ ] 10. Verificar eventos estructurales / de progreso contra el contrato nuevo — *verificado: `section`/`activity` traen `id`+`position`, NO `section_index`*
+
+> **Bloqueo de §1 (decisión de producto, no técnica).** Hoy el plugin manda
+> `selected_image_ids` + `with_images` al aprobar (acción `accept`), pero el contrato
+> nuevo `/course/feedback` solo acepta `{thread_id, pending_action}` y `ActionIntent`
+> NO tiene campo de imágenes. Hay que decidir CÓMO se seleccionan/envían las imágenes en
+> el contrato nuevo antes de migrar `accept`. Además §1 per-ítem necesita §2 (UUID) y
+> reescribir los handlers estructurales de `stream.js`/`ui-detailed.js`/`state.js`, y eso
+> solo se puede probar con el servicio nuevo desplegado (hoy el plugin habla con uno que
+> aún usa `section_index` y `/course/regenerate-item`).
