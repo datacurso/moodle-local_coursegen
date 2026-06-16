@@ -21,7 +21,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {get_strings} from 'core/str';
+import {get_strings, get_string} from 'core/str';
 
 const STRING_KEYS = [
     'courseai_header_title',
@@ -165,4 +165,33 @@ const STRING_KEYS = [
 export const loadCourseaiStrings = async() => {
     const values = await get_strings(STRING_KEYS.map((key) => ({key, component: 'local_coursegen'})));
     return Object.fromEntries(STRING_KEYS.map((key, i) => [key, values[i]]));
+};
+
+/**
+ * Localize a backend message into the user's language.
+ *
+ * The backend streams every human-readable message as
+ * `{string_id, string, string_args}`. We localize by `string_id` against the
+ * plugin's lang pack (the catalog is mirrored 1:1), passing `string_args` as
+ * the Moodle `$a` object. When the key is missing locally (e.g. a brand-new
+ * backend string not yet shipped in this lang pack), we fall back to the
+ * server-rendered `string`.
+ *
+ * @param {Object} message - { string_id, string, string_args? }
+ * @returns {Promise<string>}
+ */
+export const localizeMessage = async(message) => {
+    if (!message || !message.string_id) {
+        return (message && message.string) || '';
+    }
+    try {
+        const text = await get_string(message.string_id, 'local_coursegen', message.string_args || null);
+        // Moodle renders "[[key]]" for an unknown string id: prefer the server text.
+        if (typeof text === 'string' && text.startsWith('[[')) {
+            return message.string || text;
+        }
+        return text;
+    } catch (e) {
+        return message.string || '';
+    }
 };

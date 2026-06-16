@@ -22,6 +22,7 @@
  */
 
 import { setCompactChatState } from './ui-planning';
+import { localizeMessage } from './i18n';
 
 // Module-level variable to preserve phase 4 total activities
 // This survives state resets that happen during stream opening
@@ -900,14 +901,20 @@ export const createStreamManager = (deps) => {
                     renderPlanMarkdown();
                     break;
                 case 'status': {
-                    const statusText = data.text || '';
+                    // New contract: status carries a localized message object
+                    // { string_id, string, string_args }. Display the localized text,
+                    // but run the progress heuristics against the stable English
+                    // `string` so the text matching keeps working in any UI language.
+                    // (Legacy `data.text` is kept as a fallback during the transition.)
+                    const statusText = data.message ? await localizeMessage(data.message) : (data.text || '');
+                    const heuristicText = (data.message && data.message.string) || data.text || '';
 
                     // During final generation, keep stream container visible and hide
                     // centered planning spinner regardless of event shape.
                     if (streamMode === 'generating') {
                         ensureStreamContentVisible();
                         if (!state.structuredActivityProgress) {
-                            syncTrackerFromStatus(statusText);
+                            syncTrackerFromStatus(heuristicText);
                         }
                     }
 
@@ -942,14 +949,14 @@ export const createStreamManager = (deps) => {
                     if (state.currentStage === 'generating' && totalActivities > 0) {
                         // Phase 1: Detect when an activity/resource STARTS
                         const startPattern = /^(Designing|Generating Assignment content)/i;
-                        const isActivityStarting = startPattern.test(statusText);
+                        const isActivityStarting = startPattern.test(heuristicText);
 
                         // Phase 2: Detect when an activity/resource COMPLETES
                         const completePattern = new RegExp(
                             'ready|Assembling final|configuration ready|with \\d+ discussion',
                             'i'
                         );
-                        const isActivityComplete = completePattern.test(statusText);
+                        const isActivityComplete = completePattern.test(heuristicText);
 
                         if (isActivityStarting) {
                             // Phase 1: Track started activities (0% → 30%)
@@ -968,6 +975,18 @@ export const createStreamManager = (deps) => {
                             );
                             stepsUi.setProgress(Math.round(completeProgress));
                         }
+                    }
+                    break;
+                }
+                case 'error': {
+                    // Non-fatal generation error (a single activity/step failed):
+                    // show the localized message; the stream keeps going.
+                    const errorText = await localizeMessage(data.message);
+                    if (prvHeaderSub && errorText) {
+                        prvHeaderSub.textContent = errorText;
+                    }
+                    if (pcSubtitle && errorText) {
+                        pcSubtitle.textContent = errorText;
                     }
                     break;
                 }
@@ -1123,7 +1142,9 @@ export const createStreamManager = (deps) => {
                         pcStep.textContent = texts.courseai_state_error;
                     }
                     if (pcSubtitle) {
-                        pcSubtitle.textContent = data.message || texts.courseai_error_generic;
+                        pcSubtitle.textContent = data.message
+                            ? await localizeMessage(data.message)
+                            : texts.courseai_error_generic;
                     }
                     // Re-enable action controls on failure so user can interact with partial plan
                     if (typeof detailedUi.enableAllActionControls === 'function') {
