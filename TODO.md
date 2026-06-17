@@ -33,7 +33,7 @@
 - [ ] [8. `completed` / `failed` / errores HTTP localizados](#8-completed--failed--errores-http-localizados)
 - [ ] [9. Endpoints removidos o cambiados — reconciliar](#9-endpoints-removidos-o-cambiados--reconciliar)
 - [ ] [10. Verificar eventos estructurales / de progreso](#10-verificar-eventos-estructurales--de-progreso)
-- [ ] [11. Curación de imágenes](#11-curación-de-imágenes)
+- [x] [11. Curación de imágenes](#11-curación-de-imágenes)
 
 ---
 
@@ -354,14 +354,19 @@ esas acciones (descartar = borrado lógico; no hay "re-seleccionar").
 - `amd/src/local/courseai/stream.js` — leer las `image_suggestions` (con `id`/`deleted`/`prompt`)
   de `detailed_plan` al renderizar.
 
-**Estado:** parcial (lo base entró con §1). Hechos: botón IA → `replan_image` e ícono de
-descarte → `discard_image`, ambos por `id` UUID; `stream.js` lee `image_suggestions` por
-`detailed_plan`; las descartadas (`deleted`) ya no se pintan. Falta lo propio de §11:
-(a) **eliminar el checkbox de selección** legado (`state.selectedDetailedImages` /
-`courseai_images_select_all`) — la curación es solo descartar/regenerar; (b) **label propio**
-del botón descartar (hoy reusa `courseai_btn_cancel` = "Cancel"; falta `courseai_btn_discard`
-y su registro en strings); (c) **restore** de una imagen descartada (el servicio la mantiene
-en el árbol para permitirlo).
+**Estado:** hecho. Botón IA → `replan_image` e ícono de descarte → `discard_image`, ambos
+por `id` UUID; `stream.js` lee `image_suggestions` por `detailed_plan`; las descartadas
+(`deleted`) ya no se pintan ni cuentan. Se **eliminó el checkbox de selección** legado (per-imagen
+y "seleccionar todo", `courseai_images_select_all`, `setImageSelectionEnabled` y el CSS muerto):
+la curación es solo descartar/regenerar, y `selectedDetailedImages` pasa a ser el registro de
+imágenes activas usado solo para los conteos. El botón descartar usa una string propia
+`courseai_btn_discard` ("Discard").
+
+> **Restore fuera de alcance (bloqueado en el servicio).** El servicio mantiene las imágenes
+> descartadas en el árbol (`deleted:true`) y sus comentarios mencionan "el cliente podría
+> ofrecer restore", pero **no existe ninguna acción `restore_*`** en el contrato (`ResolvedFeedbackAction`)
+> ni nodo que des-marque `deleted`. Implementar restore requiere primero una acción nueva en
+> el servicio; queda como mejora futura.
 
 ---
 
