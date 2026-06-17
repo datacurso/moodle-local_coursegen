@@ -24,32 +24,20 @@
 import ajax from 'core/ajax';
 
 /**
- * Send human feedback for a planning session.
+ * Send a plan action (ActionIntent) for a planning session.
  *
- * @param {{recordid: number, action: string, instruction: string, selectedimageids?: string[]}} payload
+ * @param {{recordid: number, pendingAction: Object}} payload - pendingAction is the
+ *     ActionIntent: {action, target_ids?, parent_section_id?, position?, instruction?}.
  * @return {Promise<Object>} response
  */
-export async function sendPlanningFeedback({recordid, action, instruction, selectedimageids, withimages}) {
-    const args = {
-        recordid: Number(recordid) || 0,
-        ['approval_status']: action,
-        instruction,
-    };
-
-    // Include selected image IDs if provided (can be empty when user deselects all)
-    if (Array.isArray(selectedimageids)) {
-        args.selected_image_ids = selectedimageids;
-    }
-
-    // Include with_images flag when it changes
-    if (typeof withimages === 'boolean') {
-        args.with_images = withimages;
-    }
-
+export async function sendPlanningFeedback({recordid, pendingAction}) {
     return ajax.call([
         {
             methodname: 'local_coursegen_course_planning_feedback',
-            args,
+            args: {
+                recordid: Number(recordid) || 0,
+                pending_action: pendingAction,
+            },
         },
     ])[0];
 }
