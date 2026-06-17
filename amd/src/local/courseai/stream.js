@@ -770,7 +770,37 @@ export const createStreamManager = (deps) => {
             switch (data.type) {
                 case 'activity': {
                     contentReceived = true;
-                    // Activity data consumed internally; no sections view shown
+                    const sectionForActivity = (state.latestInitialSections || []).find(
+                        (s) => s.id === data.section_id
+                    );
+                    if (sectionForActivity) {
+                        const existingActivity = sectionForActivity.activities.find((a) => a.id === data.id);
+                        if (existingActivity) {
+                            existingActivity.title = data.title || existingActivity.title;
+                            existingActivity.deleted = data.deleted;
+                        } else {
+                            sectionForActivity.activities.push({
+                                id: data.id,
+                                position: data.position,
+                                deleted: data.deleted,
+                                activity_type: data.activity_type,
+                                title: data.title,
+                                description: data.description || '',
+                            });
+                        }
+                        // Increment the remaining counter on the checklist item for this section
+                        const round = state.generationRound || 0;
+                        const checklistItem = document.querySelector(
+                            `.courseai-checklist-list [data-section-id="${data.section_id}"][data-round="${round}"]`
+                        );
+                        if (checklistItem && !data.deleted) {
+                            const remaining = parseInt(checklistItem.getAttribute('data-remaining') || '0', 10);
+                            checklistItem.setAttribute('data-remaining', remaining + 1);
+                        }
+                    }
+                    if (typeof detailedUi.syncDetailedStructureFromSections === 'function') {
+                        detailedUi.syncDetailedStructureFromSections(state.latestInitialSections || []);
+                    }
                     break;
                 }
                 case 'section': {
@@ -784,25 +814,24 @@ export const createStreamManager = (deps) => {
                     if (streamContentEl) {
                         streamContentEl.style.display = '';
                     }
-                    const sectionIndex = Number(data.section_index);
-                    if (!Number.isNaN(sectionIndex) && sectionIndex >= 0) {
-                        const nextSections = Array.isArray(state.latestInitialSections)
-                            ? [...state.latestInitialSections]
-                            : [];
-                        const existing = nextSections[sectionIndex] || {};
-                        const incomingActivities = Array.isArray(data.activities) ? data.activities : [];
 
-                        nextSections[sectionIndex] = {
-                            ...existing,
-                            section_index: sectionIndex,
-                            name: data.name || existing.name || '',
-                            description: data.description || existing.description || '',
-                            activities: incomingActivities.length > 0
-                                ? incomingActivities
-                                : (Array.isArray(existing.activities) ? existing.activities : []),
-                        };
-
-                        state.latestInitialSections = nextSections;
+                    const sections = Array.isArray(state.latestInitialSections)
+                        ? state.latestInitialSections
+                        : [];
+                    const existingSection = sections.find((s) => s.id === data.id);
+                    if (existingSection) {
+                        existingSection.name = data.name || existingSection.name;
+                        existingSection.description = data.description || existingSection.description;
+                        existingSection.position = data.position;
+                    } else {
+                        sections.push({
+                            id: data.id,
+                            position: data.position,
+                            name: data.name || '',
+                            description: data.description || '',
+                            activities: [],
+                        });
+                        state.latestInitialSections = sections;
                     }
 
                     // Add section to checklist in the left panel (loading state initially)
@@ -814,10 +843,9 @@ export const createStreamManager = (deps) => {
                     if (targetList && data.name) {
                         const item = document.createElement('li');
                         item.className = 'courseai-checklist-item is-loading';
-                        const activityCount = (data.activities || []).length;
-                        item.setAttribute('data-section-index', data.section_index);
+                        item.setAttribute('data-section-id', data.id);
                         item.setAttribute('data-round', state.generationRound || 0);
-                        item.setAttribute('data-remaining', activityCount);
+                        item.setAttribute('data-remaining', 0);
                         item.innerHTML = '<span class="courseai-checklist-check">'
                             + '<svg class="spinner-icon" viewBox="0 0 24 24">'
                             + '<path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg>'
@@ -852,17 +880,6 @@ export const createStreamManager = (deps) => {
                     }
                     break;
                 }
-                case 'detailed_plan_start': {
-                    contentReceived = true;
-                    detailedUi.initDetailedPlanView(data);
-                    // Keep the canonical course title in header when already available
-                    if (state.courseTitle && prvHeaderTitle) {
-                        prvHeaderTitle.textContent = state.courseTitle;
-                    }
-                    // Show initial progress when detailed planning begins
-                    stepsUi.setProgress(5);
-                    break;
-                }
                 case 'detailed_plan_field':
                     contentReceived = true;
                     detailedUi.handleDetailedPlanField(data);
@@ -877,10 +894,10 @@ export const createStreamManager = (deps) => {
                     stepsUi.setProgress(Math.round(pct));
 
                     // Mark section as done when all its activities are planned
-                    if (data.section_index !== undefined) {
+                    if (data.section_id) {
                         const round = state.generationRound || 0;
                         const items = document.querySelectorAll(
-                            `.courseai-checklist-list [data-section-index="${data.section_index}"][data-round="${round}"]`
+                            `.courseai-checklist-list [data-section-id="${data.section_id}"][data-round="${round}"]`
                         );
                         items.forEach((item) => {
                             const remaining = parseInt(item.getAttribute('data-remaining') || '1', 10);
@@ -1090,13 +1107,17 @@ export const createStreamManager = (deps) => {
                     stepsUi.updateFlowNav();
                     if (Array.isArray(data.current_plan) && data.current_plan.length > 0) {
                         detailedUi.initDetailedPlanView({sections: data.current_plan});
-                        data.current_plan.forEach((section, sectionIndex) => {
-                            (section.activities || []).forEach((activity, activityIndex) => {
-                                detailedUi.handleDetailedPlanActivity({
-                                    section_index: sectionIndex,
-                                    activity_index: activityIndex,
-                                    data: activity.detailed_plan || {}
-                                });
+                        data.current_plan.forEach((section) => {
+                            (section.activities || []).forEach((activity) => {
+                                if (!activity.deleted) {
+                                    detailedUi.handleDetailedPlanActivity({
+                                        section_id: section.id,
+                                        activity_id: activity.id,
+                                        activity_type: activity.activity_type,
+                                        title: activity.title,
+                                        data: activity.detailed_plan || {},
+                                    });
+                                }
                             });
                         });
                     }

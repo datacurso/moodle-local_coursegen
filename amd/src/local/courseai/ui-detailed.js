@@ -41,7 +41,8 @@ export const createDetailedUi = (deps) => {
         setProgress,
         texts,
         formatTemplate,
-        regenerateDetailedItem,
+        sendPlanningFeedback,
+        openSSEStream,
     } = deps;
 
     const {
@@ -98,18 +99,16 @@ export const createDetailedUi = (deps) => {
         badgeEl.style.display = 'none';
     };
 
-    const updateSectionImageBadge = (sectionIndex) => {
-        const meta = state.detailedSectionMeta[sectionIndex];
+    const updateSectionImageBadge = (sectionId) => {
+        const meta = state.detailedSectionMeta[sectionId];
         if (!meta) {
             return;
         }
 
-        const prefix = `${sectionIndex}-`;
-        const count = Object.keys(state.detailedActivityEls).reduce((total, key) => {
-            if (!key.startsWith(prefix)) {
+        const count = Object.values(state.detailedActivityEls).reduce((total, entry) => {
+            if (entry.sectionId !== sectionId) {
                 return total;
             }
-            const entry = state.detailedActivityEls[key];
             return total + (entry.imageCount || 0);
         }, 0);
 
@@ -117,20 +116,21 @@ export const createDetailedUi = (deps) => {
         setImageBadge(meta.imagesBadgeEl, count);
     };
 
-    const recalculateEntryImageCount = (entry, sectionIndex) => {
+    const recalculateEntryImageCount = (entry, sectionId) => {
         if (!entry) {
             return;
         }
 
         const suggestions = Array.isArray(entry.imageSuggestions) ? entry.imageSuggestions : [];
-        const selectedCount = suggestions.reduce((total, suggestion) => {
+        const activeSuggestions = suggestions.filter((suggestion) => !suggestion.deleted);
+        const selectedCount = activeSuggestions.reduce((total, suggestion) => {
             const selected = state.selectedDetailedImages[suggestion.id] !== false;
             return total + (selected ? 1 : 0);
         }, 0);
 
         entry.imageCount = selectedCount;
         setImageBadge(entry.imageBadgeEl, selectedCount);
-        updateSectionImageBadge(sectionIndex);
+        updateSectionImageBadge(sectionId);
         updateDetailedHeaderStats();
     };
 
@@ -269,7 +269,10 @@ export const createDetailedUi = (deps) => {
         };
     };
 
-    const createImagesDetail = ({entry, sectionIndex, activityIndex, imageSuggestions}) => {
+    const createImagesDetail = ({entry, sectionId, imageSuggestions}) => {
+        // Discarded suggestions stay in the server tree marked deleted; never
+        // render them as active cards.
+        const activeImages = (imageSuggestions || []).filter((item) => !item.deleted);
         const container = document.createElement('div');
         container.className = 'dp-images-container';
 
@@ -303,8 +306,8 @@ export const createDetailedUi = (deps) => {
 
         const headerCount = document.createElement('span');
         headerCount.className = 'dp-images-header-count';
-        headerCount.textContent = `${imageSuggestions.length} ${
-            imageSuggestions.length === 1
+        headerCount.textContent = `${activeImages.length} ${
+            activeImages.length === 1
                 ? texts.courseai_image_count_one.replace('{count}', '').trim()
                 : texts.courseai_image_count_many.replace('{count}', '').trim()
         }`;
@@ -320,7 +323,7 @@ export const createDetailedUi = (deps) => {
 
         const checkboxes = [];
 
-        imageSuggestions.forEach((item, imageIdx) => {
+        activeImages.forEach((item) => {
             const imageWrap = document.createElement('div');
             imageWrap.className = 'dp-image-wrap';
 
@@ -345,7 +348,7 @@ export const createDetailedUi = (deps) => {
                 }
                 state.selectedDetailedImages[item.id] = event.target.checked;
                 imageCard.classList.toggle('dp-image-card--off', !event.target.checked);
-                recalculateEntryImageCount(entry, sectionIndex);
+                recalculateEntryImageCount(entry, sectionId);
 
                 const allChecked = checkboxes.every((cb) => cb.checkbox.checked);
                 masterCheckbox.checked = allChecked;
@@ -366,47 +369,26 @@ export const createDetailedUi = (deps) => {
             imageActions.className = 'dp-item-actions dp-item-actions--image';
 
             let iaControl = null;
+            let discardControl = null;
             const imagePanelApi = createInlineAdjustmentPanel({
                 onSubmit: async(value) => {
-                    if (!regenerateDetailedItem || sectionIndex === undefined || activityIndex === undefined) {
+                    if (!sendPlanningFeedback || !item.id) {
                         return;
                     }
                     imageWrap.classList.add('dp-item-regenerating');
-                    iaControl.disabled = true;
+                    iaControl.classList.add('dp-action-btn--disabled');
                     try {
-                        const resp = await regenerateDetailedItem({
-                            recordid: state.sessionid,
-                            target_type: 'image',
-                            section_index: Number(sectionIndex),
-                            activity_index: Number(activityIndex),
+                        const pendingAction = {
+                            action: 'replan_image',
+                            target_ids: [item.id],
                             instruction: value,
-                        });
-                        const rawResult = (resp && resp.result) || '';
-                        const parsed = rawResult
-                            ? (typeof rawResult === 'string' ? JSON.parse(rawResult) : rawResult)
-                            : null;
-
-                        if (parsed && parsed.success && parsed.data) {
-                            // Update DOM elements
-                            placement.textContent = parsed.data.placement
-                                || texts.courseai_activity_default;
-                            description.textContent = parsed.data.description || '';
-
-                            // Update entry state
-                            if (entry && entry.imageSuggestions && entry.imageSuggestions[imageIdx]) {
-                                entry.imageSuggestions[imageIdx].placement = parsed.data.placement || '';
-                                entry.imageSuggestions[imageIdx].description = parsed.data.description || '';
-                            }
-                        }
-
-                        imageWrap.classList.remove('dp-item-regenerating');
-                        imageWrap.classList.add('dp-item-has-adjustment');
-                        iaControl.classList.add('is-active');
-                        enableAllActionControls();
+                        };
+                        await sendPlanningFeedback({recordid: state.sessionid, pendingAction});
+                        openSSEStream(state.streamingurl, 0, 'planning');
                     } catch (e) {
                         imageWrap.classList.remove('dp-item-regenerating');
+                        iaControl.classList.remove('dp-action-btn--disabled');
                     }
-                    iaControl.disabled = false;
                 },
             });
 
@@ -418,7 +400,33 @@ export const createDetailedUi = (deps) => {
                 disabled: true,
             });
 
+            discardControl = createActionControl({
+                variant: 'delete',
+                iconUrl: getCoreIconUrl('t/delete'),
+                label: texts.courseai_btn_cancel,
+                onActivate: async() => {
+                    if (!sendPlanningFeedback || !item.id) {
+                        return;
+                    }
+                    imageWrap.classList.add('dp-item-regenerating');
+                    discardControl.classList.add('dp-action-btn--disabled');
+                    try {
+                        const pendingAction = {
+                            action: 'discard_image',
+                            target_ids: [item.id],
+                        };
+                        await sendPlanningFeedback({recordid: state.sessionid, pendingAction});
+                        openSSEStream(state.streamingurl, 0, 'planning');
+                    } catch (e) {
+                        imageWrap.classList.remove('dp-item-regenerating');
+                        discardControl.classList.remove('dp-action-btn--disabled');
+                    }
+                },
+                disabled: true,
+            });
+
             imageActions.appendChild(iaControl);
+            imageActions.appendChild(discardControl);
 
             body.appendChild(placement);
             body.appendChild(imageActions);
@@ -444,7 +452,7 @@ export const createDetailedUi = (deps) => {
                 state.selectedDetailedImages[id] = checked;
                 card.classList.toggle('dp-image-card--off', !checked);
             });
-            recalculateEntryImageCount(entry, sectionIndex);
+            recalculateEntryImageCount(entry, sectionId);
         });
 
         container.appendChild(header);
@@ -453,7 +461,7 @@ export const createDetailedUi = (deps) => {
         return container;
     };
 
-    const buildActivityDetailContent = ({parsed, entry, sectionIndex, activityIndex}) => {
+    const buildActivityDetailContent = ({parsed, entry}) => {
         const detailFragment = document.createDocumentFragment();
 
         const chapters = Array.isArray(parsed.chapters) ? parsed.chapters : [];
@@ -527,8 +535,7 @@ export const createDetailedUi = (deps) => {
         if (imageSuggestions.length > 0) {
             detailFragment.appendChild(createImagesDetail({
                 entry,
-                sectionIndex,
-                activityIndex,
+                sectionId: entry.sectionId,
                 imageSuggestions,
             }));
         }
@@ -537,21 +544,28 @@ export const createDetailedUi = (deps) => {
     };
 
     const normalizeInitialSections = (sections) => {
-        return (sections || []).map((section, sectionidx) => ({
+        // Soft-deleted elements stay in the server tree but must never render
+        // (a deleted section/activity must not be offered as an action target).
+        const activeSections = (sections || []).filter((section) => !section.deleted);
+        return activeSections.map((section, sectionidx) => ({
             id: section.id || `s${sectionidx}`,
             section_index: section.section_index ?? sectionidx,
+            position: section.position ?? sectionidx,
             name: section.name || formatTemplate(texts.courseai_section_label, {section: sectionidx + 1, name: ''}),
             description: section.description || '',
-            activities: (section.activities || []).map((activity, activityidx) => ({
-                id: activity.id || `s${sectionidx}-a${activityidx}`,
-                activity_type: activity.activity_type || activity.type || 'quiz',
-                title: activity.title || activity.name || `${texts.courseai_activity_default} ${activityidx + 1}`,
-                description: activity.description || ''
-            }))
+            activities: (section.activities || [])
+                .filter((activity) => !activity.deleted)
+                .map((activity, activityidx) => ({
+                    id: activity.id || `s${sectionidx}-a${activityidx}`,
+                    position: activity.position ?? activityidx,
+                    activity_type: activity.activity_type || activity.type || 'quiz',
+                    title: activity.title || activity.name || `${texts.courseai_activity_default} ${activityidx + 1}`,
+                    description: activity.description || ''
+                }))
         }));
     };
 
-    const createDetailedSectionRow = ({sectionIndex, renderIndex, sectionName, totalActivities}) => {
+    const createDetailedSectionRow = ({sectionId, renderIndex, sectionName, totalActivities}) => {
         if (!prvSections) {
             return null;
         }
@@ -614,85 +628,23 @@ export const createDetailedUi = (deps) => {
 
         const sectionPanelApi = createInlineAdjustmentPanel({
             onSubmit: async(value) => {
-                if (!regenerateDetailedItem || !state.sessionid || !row) {
+                if (!sendPlanningFeedback || !state.sessionid || !row) {
                     return;
                 }
                 row.classList.add('dp-item-regenerating');
-                iaControl.disabled = true;
+                iaControl.classList.add('dp-action-btn--disabled');
                 try {
-                    const resp = await regenerateDetailedItem({
-                        recordid: state.sessionid,
-                        target_type: 'section',
-                        section_index: Number(sectionIndex),
+                    const pendingAction = {
+                        action: 'replan_section',
+                        target_ids: [sectionId],
                         instruction: value,
-                    });
-                    const rawResult = (resp && resp.result) || '';
-                    const parsed = rawResult
-                        ? (typeof rawResult === 'string' ? JSON.parse(rawResult) : rawResult)
-                        : null;
-
-                    if (parsed && parsed.success && parsed.section_data) {
-                        const meta = state.detailedSectionMeta[sectionIndex];
-                        if (meta) {
-                            // 1. Remove all old activity wraps from DOM
-                            Array.from(meta.bodyEl.querySelectorAll('.dp-activity-wrap'))
-                                .forEach((el) => el.remove());
-
-                            // 2. Remove old entries from state
-                            Object.keys(state.detailedActivityEls)
-                                .filter((k) => k.startsWith(`${sectionIndex}-`))
-                                .forEach((k) => delete state.detailedActivityEls[k]);
-
-                            // 3. Reset section meta counts
-                            meta.done = 0;
-                            meta.total = (parsed.section_data.activities || []).length;
-                            meta.imagesCount = 0;
-                            meta._prepared = false;
-
-                            // 4. Create new activity rows and mark them as done immediately
-                            (parsed.section_data.activities || []).forEach((act, aIdx) => {
-                                createDetailedActivityRow({
-                                    sectionIndex,
-                                    activityIndex: aIdx,
-                                    activityType: act.activity_type || 'quiz',
-                                    activityTitle: act.title || '',
-                                    bodyEl: meta.bodyEl,
-                                });
-                                // Mark this activity as done with its plan data
-                                markActivityPlanned({
-                                    section_index: sectionIndex,
-                                    activity_index: aIdx,
-                                    activity_type: act.activity_type || 'quiz',
-                                    title: act.title || '',
-                                    data: act.detailed_plan || {},
-                                });
-                            });
-
-                            // 5. Update section meta counter
-                            if (meta.metaEl) {
-                                meta.metaEl.textContent = formatTemplate(
-                                    texts.courseai_section_progress_with_total,
-                                    {done: meta.done, total: meta.total, description: ''}
-                                );
-                            }
-
-                            // 6. Update section title if changed
-                            const titleEl = row.querySelector('.prv-section-title');
-                            if (titleEl && parsed.section_data.name) {
-                                titleEl.textContent = parsed.section_data.name;
-                            }
-                        }
-                    }
-
-                    row.classList.remove('dp-item-regenerating');
-                    row.classList.add('dp-item-has-adjustment');
-                    iaControl.classList.add('is-active');
-                    // Enable newly created activity controls inside this section
-                    enableAllActionControls();
+                    };
+                    await sendPlanningFeedback({recordid: state.sessionid, pendingAction});
+                    openSSEStream(state.streamingurl, 0, 'planning');
                 } catch (e) {
                     row.classList.remove('dp-item-regenerating');
+                    iaControl.classList.remove('dp-action-btn--disabled');
                 }
-                iaControl.disabled = false;
             },
         });
 
@@ -718,49 +670,22 @@ export const createDetailedUi = (deps) => {
                     body: texts.courseai_delete_section_confirm_body,
                 });
 
-                if (!confirmed || !regenerateDetailedItem || !state.sessionid) {
+                if (!confirmed || !sendPlanningFeedback || !state.sessionid) {
                     return;
                 }
 
                 row.classList.add('dp-item-regenerating');
+                deleteControl.classList.add('dp-action-btn--disabled');
                 try {
-                    const resp = await regenerateDetailedItem({
-                        recordid: state.sessionid,
-                        target_type: 'section',
-                        section_index: Number(sectionIndex),
-                        deleted: true,
-                    });
-                    const rawResult = (resp && resp.result) || '';
-                    const parsed = rawResult
-                        ? (typeof rawResult === 'string' ? JSON.parse(rawResult) : rawResult)
-                        : null;
-
-                    if (!parsed || !parsed.success) {
-                        return;
-                    }
-
-                    // Remove section row from UI.
-                    if (row.parentNode) {
-                        row.parentNode.removeChild(row);
-                    }
-
-                    // Drop section and activity entries from state.
-                    delete state.detailedSectionMeta[sectionIndex];
-                    Object.keys(state.detailedActivityEls)
-                        .filter((key) => key.startsWith(`${sectionIndex}-`))
-                        .forEach((key) => delete state.detailedActivityEls[key]);
-
-                    Object.keys(state.selectedDetailedImages)
-                        .filter((id) => id.startsWith(`${sectionIndex}-`))
-                        .forEach((id) => delete state.selectedDetailedImages[id]);
-
-                    if (Array.isArray(state.latestInitialSections) && state.latestInitialSections[sectionIndex]) {
-                        state.latestInitialSections[sectionIndex].deleted = true;
-                    }
-
-                    updateDetailedHeaderStats();
-                } finally {
+                    const pendingAction = {
+                        action: 'delete_section',
+                        target_ids: [sectionId],
+                    };
+                    await sendPlanningFeedback({recordid: state.sessionid, pendingAction});
+                    openSSEStream(state.streamingurl, 0, 'planning');
+                } catch (e) {
                     row.classList.remove('dp-item-regenerating');
+                    deleteControl.classList.remove('dp-action-btn--disabled');
                 }
             },
             disabled: true,
@@ -781,12 +706,13 @@ export const createDetailedUi = (deps) => {
 
         row = document.createElement('div');
         row.className = 'prv-section-row';
+        row.dataset.sectionId = sectionId;
         row.appendChild(btn);
         row.appendChild(sectionPanelApi.panel);
         row.appendChild(bodyEl);
         prvSections.appendChild(row);
 
-        state.detailedSectionMeta[sectionIndex] = {
+        state.detailedSectionMeta[sectionId] = {
             done: 0,
             total: totalActivities,
             imagesCount: 0,
@@ -799,7 +725,7 @@ export const createDetailedUi = (deps) => {
         return {bodyEl};
     };
 
-    const createDetailedActivityRow = ({sectionIndex, activityIndex, activityType, activityTitle, bodyEl}) => {
+    const createDetailedActivityRow = ({sectionId, activityId, activityType, activityTitle, bodyEl}) => {
         const item = document.createElement('button');
         item.type = 'button';
         item.className = 'prv-activity-item prv-activity-item--pending';
@@ -850,116 +776,29 @@ export const createDetailedUi = (deps) => {
 
         const wrap = document.createElement('div');
         wrap.className = 'dp-activity-wrap';
+        wrap.dataset.activityId = activityId;
 
         let iaControl = null;
         let deleteControl = null;
         const activityPanelApi = createInlineAdjustmentPanel({
             onSubmit: async(value) => {
-                if (!regenerateDetailedItem || !state.sessionid) {
+                if (!sendPlanningFeedback || !state.sessionid) {
                     return;
                 }
                 wrap.classList.add('dp-item-regenerating');
-                iaControl.disabled = true;
+                iaControl.classList.add('dp-action-btn--disabled');
                 try {
-                    const resp = await regenerateDetailedItem({
-                        recordid: state.sessionid,
-                        target_type: 'activity',
-                        section_index: Number(sectionIndex),
-                        activity_index: Number(activityIndex),
+                    const pendingAction = {
+                        action: 'replan_activity',
+                        target_ids: [activityId],
                         instruction: value,
-                    });
-                    const rawResult = (resp && resp.result) || '';
-                    const parsed = rawResult
-                        ? (typeof rawResult === 'string' ? JSON.parse(rawResult) : rawResult)
-                        : null;
-
-                    if (parsed && parsed.success && parsed.activity_data) {
-                        const key = `${sectionIndex}-${activityIndex}`;
-                        const entry = state.detailedActivityEls[key];
-                        if (entry) {
-                            const plan = parsed.activity_data.detailed_plan || {};
-
-                            // 1. Clear old description from textDiv
-                            const oldDescs = entry.textDiv.querySelectorAll('.prv-activity-desc');
-                            oldDescs.forEach((el) => el.remove());
-
-                            // 2. Clear old detail content
-                            entry.detailEl.innerHTML = '';
-                            entry.hasDetail = false;
-                            entry.item.classList.remove('prv-activity-item--has-detail');
-                            entry.chevronEl.style.visibility = 'hidden';
-
-                            // 3. Reset counts and suggestions
-                            entry.chapterCount = 0;
-                            entry.questionCount = 0;
-                            entry.imageCount = 0;
-                            entry.imageSuggestions = [];
-
-                            // 4. Clean up old selectedDetailedImages for this activity
-                            const actPrefix = `${sectionIndex}-${activityIndex}-`;
-                            Object.keys(state.selectedDetailedImages).forEach((id) => {
-                                if (id.startsWith(actPrefix)) {
-                                    delete state.selectedDetailedImages[id];
-                                }
-                            });
-
-                            // 5. Set new preview description
-                            entry.previewDescription = plan.activity_description || '';
-
-                            // 6. Add new description
-                            if (entry.previewDescription) {
-                                const desc = document.createElement('p');
-                                desc.className = 'prv-activity-desc';
-                                desc.textContent = entry.previewDescription;
-                                entry.textDiv.appendChild(desc);
-                            }
-
-                            // 7. Rebuild image suggestions
-                            const rawSuggestions = Array.isArray(plan.image_suggestions)
-                                ? plan.image_suggestions
-                                : [];
-                            entry.imageSuggestions = rawSuggestions.map((item, imgIdx) => {
-                                const suggestionId = `${sectionIndex}-${activityIndex}-${imgIdx}`;
-                                if (typeof state.selectedDetailedImages[suggestionId] === 'undefined') {
-                                    state.selectedDetailedImages[suggestionId] = true;
-                                }
-                                return {
-                                    id: suggestionId,
-                                    placement: item.placement || '',
-                                    description: item.description || '',
-                                };
-                            });
-                            plan.image_suggestions = entry.imageSuggestions;
-
-                            // 8. Build new detail content
-                            const detailContent = buildActivityDetailContent({
-                                parsed: plan,
-                                entry,
-                                sectionIndex,
-                                activityIndex,
-                            });
-                            if (detailContent.childNodes.length > 0) {
-                                entry.detailEl.appendChild(detailContent);
-                                entry.hasDetail = true;
-                                entry.item.classList.add('prv-activity-item--has-detail');
-                                entry.chevronEl.style.visibility = 'visible';
-                            }
-
-                            // 9. Update image badges
-                            recalculateEntryImageCount(entry, sectionIndex);
-                            updateSectionImageBadge(sectionIndex);
-                        }
-                    }
-
-                    wrap.classList.remove('dp-item-regenerating');
-                    wrap.classList.add('dp-item-has-adjustment');
-                    iaControl.classList.add('is-active');
-                    // Enable newly created image controls inside this activity
-                    enableAllActionControls();
+                    };
+                    await sendPlanningFeedback({recordid: state.sessionid, pendingAction});
+                    openSSEStream(state.streamingurl, 0, 'planning');
                 } catch (e) {
                     wrap.classList.remove('dp-item-regenerating');
+                    iaControl.classList.remove('dp-action-btn--disabled');
                 }
-                iaControl.disabled = false;
             },
         });
 
@@ -976,9 +815,8 @@ export const createDetailedUi = (deps) => {
             iconUrl: getCoreIconUrl('t/delete'),
             label: texts.courseai_btn_cancel,
             onActivate: async() => {
-                const key = `${sectionIndex}-${activityIndex}`;
-                const entry = state.detailedActivityEls[key];
-                if (!entry || !regenerateDetailedItem || !state.sessionid) {
+                const entry = state.detailedActivityEls[activityId];
+                if (!entry || !sendPlanningFeedback || !state.sessionid) {
                     return;
                 }
 
@@ -992,58 +830,17 @@ export const createDetailedUi = (deps) => {
                 }
 
                 wrap.classList.add('dp-item-regenerating');
+                deleteControl.classList.add('dp-action-btn--disabled');
                 try {
-                    const resp = await regenerateDetailedItem({
-                        recordid: state.sessionid,
-                        target_type: 'activity',
-                        section_index: Number(sectionIndex),
-                        activity_index: Number(activityIndex),
-                        deleted: true,
-                    });
-                    const rawResult = (resp && resp.result) || '';
-                    const parsed = rawResult
-                        ? (typeof rawResult === 'string' ? JSON.parse(rawResult) : rawResult)
-                        : null;
-
-                    if (!parsed || !parsed.success) {
-                        return;
-                    }
-
-                    if (wrap.parentNode) {
-                        wrap.parentNode.removeChild(wrap);
-                    }
-
-                    if (Array.isArray(state.latestInitialSections)) {
-                        const sectionData = state.latestInitialSections[sectionIndex];
-                        if (sectionData && Array.isArray(sectionData.activities) && sectionData.activities[activityIndex]) {
-                            sectionData.activities[activityIndex].deleted = true;
-                        }
-                    }
-
-                    const meta = state.detailedSectionMeta[sectionIndex];
-                    if (meta) {
-                        meta.total = Math.max(0, Number(meta.total || 0) - 1);
-                        if (entry.done) {
-                            meta.done = Math.max(0, Number(meta.done || 0) - 1);
-                        }
-                        if (meta.metaEl) {
-                            meta.metaEl.textContent = formatTemplate(texts.courseai_section_progress_with_total, {
-                                done: meta.done,
-                                total: meta.total,
-                                description: '',
-                            });
-                        }
-                    }
-
-                    Object.keys(state.selectedDetailedImages)
-                        .filter((id) => id.startsWith(`${sectionIndex}-${activityIndex}-`))
-                        .forEach((id) => delete state.selectedDetailedImages[id]);
-
-                    delete state.detailedActivityEls[key];
-                    updateSectionImageBadge(sectionIndex);
-                    updateDetailedHeaderStats();
-                } finally {
+                    const pendingAction = {
+                        action: 'delete_activity',
+                        target_ids: [activityId],
+                    };
+                    await sendPlanningFeedback({recordid: state.sessionid, pendingAction});
+                    openSSEStream(state.streamingurl, 0, 'planning');
+                } catch (e) {
                     wrap.classList.remove('dp-item-regenerating');
+                    deleteControl.classList.remove('dp-action-btn--disabled');
                 }
             },
             disabled: true,
@@ -1063,8 +860,7 @@ export const createDetailedUi = (deps) => {
         progressEl.textContent = texts.courseai_generating_details;
         textDiv.appendChild(progressEl);
 
-        const key = `${sectionIndex}-${activityIndex}`;
-        state.detailedActivityEls[key] = {
+        state.detailedActivityEls[activityId] = {
             item,
             wrap,
             textDiv,
@@ -1072,6 +868,7 @@ export const createDetailedUi = (deps) => {
             detailEl,
             imageBadgeEl,
             chevronEl,
+            sectionId,
             previewDescription: '',
             chapterCount: 0,
             questionCount: 0,
@@ -1082,7 +879,7 @@ export const createDetailedUi = (deps) => {
         };
 
         item.addEventListener('click', () => {
-            const entry = state.detailedActivityEls[key];
+            const entry = state.detailedActivityEls[activityId];
             if (!entry || !entry.hasDetail) {
                 return;
             }
@@ -1091,25 +888,25 @@ export const createDetailedUi = (deps) => {
             entry.chevronEl.classList.toggle('prv-chevron--open', !isOpen);
         });
 
-        return state.detailedActivityEls[key];
+        return state.detailedActivityEls[activityId];
     };
 
-    const ensureDetailedSection = (sectionIndex) => {
-        let meta = state.detailedSectionMeta[sectionIndex];
+    const ensureDetailedSection = (sectionId) => {
+        let meta = state.detailedSectionMeta[sectionId];
         if (meta) {
             return meta;
         }
 
         let sectionName = '';
         if (Array.isArray(state.latestInitialSections)) {
-            const byIndex = state.latestInitialSections[sectionIndex];
-            if (byIndex && typeof byIndex.name === 'string') {
-                sectionName = byIndex.name;
+            const byId = state.latestInitialSections.find((s) => s.id === sectionId);
+            if (byId && typeof byId.name === 'string') {
+                sectionName = byId.name;
             }
         }
 
         if (!sectionName && Array.isArray(state.planSectionsData)) {
-            const plannedSection = state.planSectionsData.find((section) => Number(section.sectionIndex) === Number(sectionIndex));
+            const plannedSection = state.planSectionsData.find((section) => section.id === sectionId);
             if (plannedSection && typeof plannedSection.name === 'string') {
                 sectionName = plannedSection.name;
             }
@@ -1117,12 +914,13 @@ export const createDetailedUi = (deps) => {
 
         const renderIndex = Object.keys(state.detailedSectionMeta).length;
         createDetailedSectionRow({
-            sectionIndex,
+            sectionId,
+            sectionIndex: renderIndex,
             renderIndex,
-            sectionName: sectionName || formatTemplate(texts.courseai_section_label, {section: sectionIndex + 1, name: ''}),
+            sectionName: sectionName || formatTemplate(texts.courseai_section_label, {section: renderIndex + 1, name: ''}),
             totalActivities: 0
         });
-        meta = state.detailedSectionMeta[sectionIndex];
+        meta = state.detailedSectionMeta[sectionId];
         if (meta) {
             meta.bodyEl.style.display = 'flex';
         }
@@ -1130,12 +928,13 @@ export const createDetailedUi = (deps) => {
     };
 
     const ensureDetailedEntry = (data) => {
-        const key = `${data.section_index}-${data.activity_index}`;
-        if (state.detailedActivityEls[key]) {
-            return state.detailedActivityEls[key];
+        const activityId = data.activity_id;
+        if (state.detailedActivityEls[activityId]) {
+            return state.detailedActivityEls[activityId];
         }
 
-        const meta = ensureDetailedSection(data.section_index);
+        const sectionId = data.section_id;
+        const meta = ensureDetailedSection(sectionId);
         if (!meta) {
             return null;
         }
@@ -1148,10 +947,12 @@ export const createDetailedUi = (deps) => {
         });
 
         return createDetailedActivityRow({
-            sectionIndex: data.section_index,
-            activityIndex: data.activity_index,
+            sectionId,
+            activityId,
+            sectionIndex: meta.total - 1,
+            activityIndex: meta.total - 1,
             activityType: data.activity_type || 'quiz',
-            activityTitle: data.title || `${texts.courseai_activity_default} ${data.activity_index + 1}`,
+            activityTitle: data.title || texts.courseai_activity_default,
             bodyEl: meta.bodyEl
         });
     };
@@ -1209,9 +1010,10 @@ export const createDetailedUi = (deps) => {
         }
 
         sourceSections.forEach((section, renderIdx) => {
-            const sectionIndex = section.section_index ?? renderIdx;
+            const sectionId = section.id || `s${renderIdx}`;
             const sectionRow = createDetailedSectionRow({
-                sectionIndex,
+                sectionId,
+                sectionIndex: renderIdx,
                 renderIndex: renderIdx,
                 sectionName: section.name,
                 totalActivities: (section.activities || []).length
@@ -1221,8 +1023,11 @@ export const createDetailedUi = (deps) => {
             }
 
             (section.activities || []).forEach((activity, activityIdx) => {
+                const activityId = activity.id || `${sectionId}-a${activityIdx}`;
                 createDetailedActivityRow({
-                    sectionIndex,
+                    sectionId,
+                    activityId,
+                    sectionIndex: renderIdx,
                     activityIndex: activityIdx,
                     activityType: activity.activity_type || activity.type || 'quiz',
                     activityTitle: activity.title
@@ -1240,12 +1045,12 @@ export const createDetailedUi = (deps) => {
         }
 
         // On regeneration (round > 1), clear existing section entries once per section
-        const secIdx = data.section_index;
-        if (typeof secIdx === 'number' && (state.generationRound || 0) > 1) {
-            const meta = state.detailedSectionMeta[secIdx];
+        const sectionId = data.section_id;
+        if (sectionId && (state.generationRound || 0) > 1) {
+            const meta = state.detailedSectionMeta[sectionId];
             if (meta && !meta._prepared) {
                 meta._prepared = true;
-                clearSectionEntries(secIdx);
+                clearSectionEntries(sectionId);
             }
         }
 
@@ -1263,7 +1068,7 @@ export const createDetailedUi = (deps) => {
         } else if (data.field === 'image_suggestions' && data.item) {
             entry.imageCount += 1;
             setImageBadge(entry.imageBadgeEl, entry.imageCount);
-            updateSectionImageBadge(data.section_index);
+            updateSectionImageBadge(data.section_id);
         } else if (data.field === 'details' && typeof data.value === 'string' && !entry.previewDescription) {
             entry.previewDescription = data.value.trim();
         }
@@ -1316,20 +1121,21 @@ export const createDetailedUi = (deps) => {
 
         const parsed = data.data || {};
         const imageSuggestions = Array.isArray(parsed.image_suggestions) ? parsed.image_suggestions : [];
-        entry.imageSuggestions = imageSuggestions.map((item, index) => {
-            const suggestionId = `${data.section_index}-${data.activity_index}-${index}`;
+        entry.imageSuggestions = imageSuggestions.map((suggestion) => {
+            const suggestionId = suggestion.id;
             if (typeof state.selectedDetailedImages[suggestionId] === 'undefined') {
                 state.selectedDetailedImages[suggestionId] = true;
             }
 
             return {
                 id: suggestionId,
-                placement: item.placement || '',
-                description: item.description || '',
+                placement: suggestion.placement || '',
+                description: suggestion.description || '',
+                deleted: suggestion.deleted || false,
             };
         });
         parsed.image_suggestions = entry.imageSuggestions;
-        recalculateEntryImageCount(entry, data.section_index);
+        recalculateEntryImageCount(entry, data.section_id);
 
         const descriptionText = parsed.activity_description || entry.previewDescription || '';
         if (descriptionText) {
@@ -1342,8 +1148,6 @@ export const createDetailedUi = (deps) => {
         const detailContent = buildActivityDetailContent({
             parsed,
             entry,
-            sectionIndex: data.section_index,
-            activityIndex: data.activity_index,
         });
         if (detailContent.childNodes.length > 0) {
             entry.detailEl.innerHTML = '';
@@ -1353,7 +1157,8 @@ export const createDetailedUi = (deps) => {
             entry.chevronEl.style.visibility = 'visible';
         }
 
-        const meta = state.detailedSectionMeta[data.section_index];
+        const sectionId = data.section_id;
+        const meta = state.detailedSectionMeta[sectionId];
         if (meta) {
             meta.done += 1;
             meta.metaEl.textContent = formatTemplate(texts.courseai_section_progress_with_total, {
@@ -1366,12 +1171,10 @@ export const createDetailedUi = (deps) => {
         updateDetailedHeaderStats();
     };
 
-    const clearSectionEntries = (sectionIndex) => {
+    const clearSectionEntries = (sectionId) => {
         // Remove activity entries for this section so they can be recreated on regeneration
-        const keys = Object.keys(state.detailedActivityEls);
-        keys.forEach((key) => {
-            if (key.startsWith(`${sectionIndex}-`)) {
-                const entry = state.detailedActivityEls[key];
+        Object.entries(state.detailedActivityEls).forEach(([key, entry]) => {
+            if (entry.sectionId === sectionId) {
                 if (entry.item && entry.item.parentNode) {
                     entry.item.remove();
                 }
@@ -1379,11 +1182,11 @@ export const createDetailedUi = (deps) => {
             }
         });
         // Reset section meta so it starts counting from 0
-        if (state.detailedSectionMeta[sectionIndex]) {
-            state.detailedSectionMeta[sectionIndex].done = 0;
-            state.detailedSectionMeta[sectionIndex].total = 0;
-            if (state.detailedSectionMeta[sectionIndex].metaEl) {
-                state.detailedSectionMeta[sectionIndex].metaEl.textContent = '';
+        if (state.detailedSectionMeta[sectionId]) {
+            state.detailedSectionMeta[sectionId].done = 0;
+            state.detailedSectionMeta[sectionId].total = 0;
+            if (state.detailedSectionMeta[sectionId].metaEl) {
+                state.detailedSectionMeta[sectionId].metaEl.textContent = '';
             }
         }
     };
