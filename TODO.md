@@ -27,7 +27,7 @@
 - [x] [2. Identidades por UUID + `position` + borrado lógico](#2-identidades-por-uuid--position--borrado-lógico)
 - [x] [3. Shape de eventos e i18n por `string_id`](#3-shape-de-eventos-e-i18n-por-string_id)
 - [x] [4. Catálogo de language strings (espejo 1:1)](#4-catálogo-de-language-strings-espejo-11)
-- [ ] [5. Flujo de propuestas (confirmación de feedback libre)](#5-flujo-de-propuestas-confirmación-de-feedback-libre)
+- [x] [5. Flujo de propuestas (confirmación de feedback libre)](#5-flujo-de-propuestas-confirmación-de-feedback-libre)
 - [ ] [6. Confirmación local de acciones destructivas directas](#6-confirmación-local-de-acciones-destructivas-directas)
 - [ ] [7. Acciones de plan que faltan en la UI](#7-acciones-de-plan-que-faltan-en-la-ui)
 - [ ] [8. `completed` / `failed` / errores HTTP localizados](#8-completed--failed--errores-http-localizados)
@@ -248,6 +248,15 @@ cada `review_needed` como la fuente de verdad de qué propuestas mostrar.
 - `amd/src/local/courseai/ui-planning.js` y/o un módulo nuevo `ui-proposals.js` — render
   del selector de propuestas, "Otra cosa", caídas y aclaración.
 - `templates/courseai_page.mustache` — bloque de UI para las propuestas.
+
+**Estado:** hecho. Módulo nuevo `ui-proposals.js` (`createProposalsUi` → `renderProposals(data)`/`clear()`):
+selector de elección única (radios) con `summary` localizado y realce `destructive`, opción
+permanente "Otra cosa" con textarea (→ acción `feedback`), botón "Aplicar selección"
+(→ `execute_proposal` con `target_ids:[proposal_id]`), botón "Descartar" (→ `discard_proposals`
+con `target_ids:[]`), `clarification` como caja destacada, y `fallen_proposals` como lista
+informativa no seleccionable. Envía con `sendPlanningFeedback` + re-abre stream en `planning`
+(mismo patrón per-ítem). `stream.js` llama `renderProposals(data)` en `review_needed` y `clear()`
+al reabrir el stream. Strings nuevas en `i18n.js`/`lang/en` y estilos en `aicoursecreation.css`.
 - `amd/src/local/courseai/actions.js` — enviar `execute_proposal` / `discard_proposals` / `feedback`.
 
 ---
