@@ -269,9 +269,10 @@ export const createDetailedUi = (deps) => {
         };
     };
 
-    const createImagesDetail = ({entry, sectionId, imageSuggestions}) => {
-        // Discarded suggestions stay in the server tree marked deleted; never
-        // render them as active cards.
+    const createImagesDetail = ({imageSuggestions}) => {
+        // Images are curated by discard/replan only — there is no per-image
+        // selection checkbox. Discarded suggestions stay in the server tree
+        // marked deleted; never render them as active cards.
         const activeImages = (imageSuggestions || []).filter((item) => !item.deleted);
         const container = document.createElement('div');
         container.className = 'dp-images-container';
@@ -279,14 +280,7 @@ export const createDetailedUi = (deps) => {
         const header = document.createElement('div');
         header.className = 'dp-images-header';
 
-        const masterCheckbox = document.createElement('input');
-        masterCheckbox.type = 'checkbox';
-        masterCheckbox.className = 'dp-image-check-master';
-        masterCheckbox.checked = true;
-        masterCheckbox.disabled = Boolean(state.isStreaming);
-        masterCheckbox.setAttribute('aria-label', texts.courseai_images_select_all);
-
-        const headerLabel = document.createElement('label');
+        const headerLabel = document.createElement('div');
         headerLabel.className = 'dp-images-header-label';
 
         const headerIcon = document.createElement('span');
@@ -312,7 +306,6 @@ export const createDetailedUi = (deps) => {
                 : texts.courseai_image_count_many.replace('{count}', '').trim()
         }`;
 
-        headerLabel.appendChild(masterCheckbox);
         headerLabel.appendChild(headerIcon);
         headerLabel.appendChild(headerTitle);
         header.appendChild(headerLabel);
@@ -321,38 +314,12 @@ export const createDetailedUi = (deps) => {
         const list = document.createElement('div');
         list.className = 'dp-image-list';
 
-        const checkboxes = [];
-
         activeImages.forEach((item) => {
             const imageWrap = document.createElement('div');
             imageWrap.className = 'dp-image-wrap';
 
-            const imageCard = document.createElement('label');
+            const imageCard = document.createElement('div');
             imageCard.className = 'dp-image-card';
-
-            const checkbox = document.createElement('input');
-            checkbox.type = 'checkbox';
-            checkbox.className = 'dp-image-check';
-            checkbox.checked = state.selectedDetailedImages[item.id] !== false;
-            checkbox.disabled = Boolean(state.isStreaming);
-            checkbox.setAttribute('aria-label', item.placement || texts.courseai_images_suggested_label);
-            imageCard.classList.toggle('dp-image-card--off', !checkbox.checked);
-
-            checkboxes.push({checkbox, card: imageCard, id: item.id});
-
-            checkbox.addEventListener('change', (event) => {
-                if (state.isStreaming) {
-                    event.preventDefault();
-                    event.target.checked = state.selectedDetailedImages[item.id] !== false;
-                    return;
-                }
-                state.selectedDetailedImages[item.id] = event.target.checked;
-                imageCard.classList.toggle('dp-image-card--off', !event.target.checked);
-                recalculateEntryImageCount(entry, sectionId);
-
-                const allChecked = checkboxes.every((cb) => cb.checkbox.checked);
-                masterCheckbox.checked = allChecked;
-            });
 
             const placement = document.createElement('p');
             placement.className = 'dp-image-placement';
@@ -403,7 +370,7 @@ export const createDetailedUi = (deps) => {
             discardControl = createActionControl({
                 variant: 'delete',
                 iconUrl: getCoreIconUrl('t/delete'),
-                label: texts.courseai_btn_cancel,
+                label: texts.courseai_btn_discard,
                 onActivate: async() => {
                     if (!sendPlanningFeedback || !item.id) {
                         return;
@@ -432,27 +399,10 @@ export const createDetailedUi = (deps) => {
             body.appendChild(imageActions);
             body.appendChild(description);
 
-            imageCard.appendChild(checkbox);
             imageCard.appendChild(body);
             imageWrap.appendChild(imageCard);
             imageWrap.appendChild(imagePanelApi.panel);
             list.appendChild(imageWrap);
-        });
-
-        masterCheckbox.addEventListener('change', (event) => {
-            if (state.isStreaming) {
-                event.preventDefault();
-                const allChecked = checkboxes.every((cb) => cb.checkbox.checked);
-                masterCheckbox.checked = allChecked;
-                return;
-            }
-            const checked = event.target.checked;
-            checkboxes.forEach(({checkbox, card, id}) => {
-                checkbox.checked = checked;
-                state.selectedDetailedImages[id] = checked;
-                card.classList.toggle('dp-image-card--off', !checked);
-            });
-            recalculateEntryImageCount(entry, sectionId);
         });
 
         container.appendChild(header);
@@ -461,7 +411,7 @@ export const createDetailedUi = (deps) => {
         return container;
     };
 
-    const buildActivityDetailContent = ({parsed, entry}) => {
+    const buildActivityDetailContent = ({parsed}) => {
         const detailFragment = document.createDocumentFragment();
 
         const chapters = Array.isArray(parsed.chapters) ? parsed.chapters : [];
@@ -533,11 +483,7 @@ export const createDetailedUi = (deps) => {
 
         const imageSuggestions = Array.isArray(parsed.image_suggestions) ? parsed.image_suggestions : [];
         if (imageSuggestions.length > 0) {
-            detailFragment.appendChild(createImagesDetail({
-                entry,
-                sectionId: entry.sectionId,
-                imageSuggestions,
-            }));
+            detailFragment.appendChild(createImagesDetail({imageSuggestions}));
         }
 
         return detailFragment;
@@ -1123,7 +1069,11 @@ export const createDetailedUi = (deps) => {
         const imageSuggestions = Array.isArray(parsed.image_suggestions) ? parsed.image_suggestions : [];
         entry.imageSuggestions = imageSuggestions.map((suggestion) => {
             const suggestionId = suggestion.id;
-            if (typeof state.selectedDetailedImages[suggestionId] === 'undefined') {
+            // selectedDetailedImages is the registry of active (non-discarded)
+            // suggestions, used only for image counts; discarded ones drop out.
+            if (suggestion.deleted) {
+                delete state.selectedDetailedImages[suggestionId];
+            } else {
                 state.selectedDetailedImages[suggestionId] = true;
             }
 
@@ -1145,10 +1095,7 @@ export const createDetailedUi = (deps) => {
             entry.textDiv.appendChild(desc);
         }
 
-        const detailContent = buildActivityDetailContent({
-            parsed,
-            entry,
-        });
+        const detailContent = buildActivityDetailContent({parsed});
         if (detailContent.childNodes.length > 0) {
             entry.detailEl.innerHTML = '';
             entry.detailEl.appendChild(detailContent);
@@ -1241,13 +1188,6 @@ export const createDetailedUi = (deps) => {
         });
     };
 
-    const setImageSelectionEnabled = (enabled) => {
-        const isEnabled = Boolean(enabled);
-        document.querySelectorAll('.dp-image-check, .dp-image-check-master').forEach((el) => {
-            el.disabled = !isEnabled;
-        });
-    };
-
     return {
         normalizeInitialSections,
         initDetailedPlanView,
@@ -1257,6 +1197,5 @@ export const createDetailedUi = (deps) => {
         syncDetailedStructureFromSections,
         updateDetailedHeaderStats,
         enableAllActionControls,
-        setImageSelectionEnabled,
     };
 };

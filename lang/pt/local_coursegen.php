@@ -192,7 +192,6 @@ $string['courseai_image_count_many'] = 'Imagens {count}';
 $string['courseai_image_count_one'] = 'imagem';
 $string['courseai_images_arialabel'] = 'Incluir imagens';
 $string['courseai_images_label'] = 'Imagens';
-$string['courseai_images_select_all'] = 'Selecione todas as imagens';
 $string['courseai_images_suggested_label'] = 'imagens sugeridas';
 $string['courseai_images_title'] = 'Incluir sugestões de imagens no curso';
 $string['courseai_initial_prompt_label'] = 'Mensagem inicial';

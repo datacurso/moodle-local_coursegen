@@ -660,9 +660,6 @@ export const createStreamManager = (deps) => {
         // Keep compact chat disabled for the whole active stream lifecycle.
         // It is re-enabled explicitly on review/failed/error states.
         setCompactChatState(deps, 'disabled');
-        if (typeof detailedUi.setImageSelectionEnabled === 'function') {
-            detailedUi.setImageSelectionEnabled(false);
-        }
 
         // Only reset planning UI on the first attempt (not on stale-done retries).
         if (retryAttempt === 0) {
@@ -1129,9 +1126,6 @@ export const createStreamManager = (deps) => {
                     if (typeof detailedUi.enableAllActionControls === 'function') {
                         detailedUi.enableAllActionControls();
                     }
-                    if (typeof detailedUi.setImageSelectionEnabled === 'function') {
-                        detailedUi.setImageSelectionEnabled(true);
-                    }
                     planningUi.showReviewActions(state.planningMode === 'detailed' ? 'detailed' : 'markdown');
                     // Re-enable compact chat now that review is ready
                     setCompactChatState(deps, 'enabled');
@@ -1171,9 +1165,6 @@ export const createStreamManager = (deps) => {
                     if (typeof detailedUi.enableAllActionControls === 'function') {
                         detailedUi.enableAllActionControls();
                     }
-                    if (typeof detailedUi.setImageSelectionEnabled === 'function') {
-                        detailedUi.setImageSelectionEnabled(true);
-                    }
                     // Stream failed - re-enable compact chat for retry
                     setCompactChatState(deps, 'enabled');
                     break;
@@ -1198,9 +1189,6 @@ export const createStreamManager = (deps) => {
             }
             if (streamMode === 'generating') {
                 markAllTrackerActivitiesDone();
-            }
-            if (typeof detailedUi.setImageSelectionEnabled === 'function') {
-                detailedUi.setImageSelectionEnabled(true);
             }
             if (planningSpinner) {
                 planningSpinner.classList.add('done');
@@ -1229,9 +1217,6 @@ export const createStreamManager = (deps) => {
             }
             if (pcSubtitle) {
                 pcSubtitle.textContent = texts.courseai_error_connection;
-            }
-            if (typeof detailedUi.setImageSelectionEnabled === 'function') {
-                detailedUi.setImageSelectionEnabled(true);
             }
             // Connection error - re-enable compact chat for retry
             setCompactChatState(deps, 'enabled');
