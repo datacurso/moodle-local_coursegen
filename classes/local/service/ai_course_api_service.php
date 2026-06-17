@@ -156,40 +156,6 @@ class ai_course_api_service {
     }
 
     /**
-     * Regenerate a single section, activity, or image in the detailed plan.
-     *
-     * @param string $sessionid External session identifier.
-     * @param string $targettype Target type: section, activity, image.
-     * @param int $sectionindex 0-based section index.
-     * @param int|null $activityindex 0-based activity index (null for section).
-     * @param string $instruction User adjustment text.
-     * @param bool $deleted Whether target should be marked as deleted.
-     * @return array Decoded response from the API.
-     */
-    public function regenerate_detailed_item(
-        string $sessionid,
-        string $targettype,
-        int $sectionindex,
-        ?int $activityindex = null,
-        string $instruction = '',
-        bool $deleted = false
-    ): array {
-        $payload = [
-            'thread_id' => $sessionid,
-            'target_type' => $targettype,
-            'section_index' => $sectionindex,
-            'instruction' => $instruction,
-            'deleted' => $deleted,
-        ];
-
-        if ($activityindex !== null) {
-            $payload['activity_index'] = $activityindex;
-        }
-
-        return $this->client->request('POST', '/course/regenerate-item', $payload);
-    }
-
-    /**
      * Send human feedback for an existing AI activity generation job.
      *
      * @param string $threadid External activity generation identifier.

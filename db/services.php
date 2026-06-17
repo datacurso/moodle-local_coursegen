@@ -68,14 +68,6 @@ $functions = [
         'ajax' => true,
         'loginrequired' => true,
     ],
-    'local_coursegen_regenerate_detailed_item' => [
-        'classname' => 'local_coursegen\external\regenerate_detailed_item',
-        'methodname' => 'execute',
-        'description' => 'Regenerate a single section, activity, or image in the detailed plan',
-        'type' => 'write',
-        'ajax' => true,
-        'loginrequired' => true,
-    ],
     'local_coursegen_activity_feedback' => [
         'classname' => 'local_coursegen\\external\\activity_feedback',
         'methodname' => 'execute',

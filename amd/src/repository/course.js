@@ -43,38 +43,6 @@ export async function sendPlanningFeedback({recordid, pendingAction}) {
 }
 
 /**
- * Regenerate a single section, activity, or image in the detailed plan.
- *
- * @param {{
- *     recordid: number,
- *     target_type: string,
- *     section_index: number,
- *     activity_index?: number,
- *     instruction?: string,
- *     deleted?: boolean,
- * }} payload
- * @return {Promise<Object>} response
- */
-export async function regenerateDetailedItem({recordid, target_type, section_index, activity_index, instruction, deleted}) {
-    const args = {
-        recordid: Number(recordid) || 0,
-        target_type,
-        section_index: Number(section_index) || 0,
-        instruction: instruction || '',
-        deleted: Boolean(deleted),
-    };
-    if (typeof activity_index === 'number' && activity_index >= 0) {
-        args.activity_index = activity_index;
-    }
-    return ajax.call([
-        {
-            methodname: 'local_coursegen_regenerate_detailed_item',
-            args,
-        },
-    ])[0];
-}
-
-/**
  * Get the final AI-generated course settings (fullname, shortname, category) for review.
  *
  * @param {number} recordid The planning session record ID.
