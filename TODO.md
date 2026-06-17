@@ -19,6 +19,24 @@
 
 ---
 
+## Checklist
+
+> Cada punto enlaza a la sección donde se detalla. El estado de avance está en esa sección.
+
+- [x] [1. Contrato de feedback unificado (`ActionIntent`)](#1-contrato-de-feedback-unificado-actionintent)
+- [x] [2. Identidades por UUID + `position` + borrado lógico](#2-identidades-por-uuid--position--borrado-lógico)
+- [x] [3. Shape de eventos e i18n por `string_id`](#3-shape-de-eventos-e-i18n-por-string_id)
+- [x] [4. Catálogo de language strings (espejo 1:1)](#4-catálogo-de-language-strings-espejo-11)
+- [ ] [5. Flujo de propuestas (confirmación de feedback libre)](#5-flujo-de-propuestas-confirmación-de-feedback-libre)
+- [ ] [6. Confirmación local de acciones destructivas directas](#6-confirmación-local-de-acciones-destructivas-directas)
+- [ ] [7. Acciones de plan que faltan en la UI](#7-acciones-de-plan-que-faltan-en-la-ui)
+- [ ] [8. `completed` / `failed` / errores HTTP localizados](#8-completed--failed--errores-http-localizados)
+- [ ] [9. Endpoints removidos o cambiados — reconciliar](#9-endpoints-removidos-o-cambiados--reconciliar)
+- [ ] [10. Verificar eventos estructurales / de progreso](#10-verificar-eventos-estructurales--de-progreso)
+- [ ] [11. Curación de imágenes](#11-curación-de-imágenes)
+
+---
+
 ## Resumen del gap (estado actual → requerido)
 
 | Tema | Plugin hoy | Contrato nuevo |
@@ -71,6 +89,20 @@
 - `discard_proposals`: `target_ids` con ids específicos, o vacío = todas.
 - `accept`: cierra la planificación.
 
+**Per-ítem NO es un swap de llamada.** Hoy los botones por ítem llaman a
+`regenerateDetailedItem` de forma SÍNCRONA y reconstruyen el DOM con la respuesta
+(`resp.result.section_data`). El contrato nuevo NO devuelve los datos: hay que **enviar
+`pending_action` y RE-ABRIR el stream** (el mismo patrón que el feedback global), y dejar
+que los eventos re-streameados re-rendericen. Por eso el per-ítem depende de §2 (que el
+stream re-renderice por `id`).
+
+**Estado:** hecho. El camino global (aprobar / texto libre) y el per-ítem
+(`replan_section`/`delete_section`/`replan_activity`/`delete_activity`/`replan_image`/`discard_image`,
+cada uno con `target_ids` UUID → `sendPlanningFeedback` → re-abrir stream en `planning`,
+sin rebuild síncrono) están en `ui-detailed.js`/`actions.js`/`repository/course.js`. El WS
+`regenerate-item` fue eliminado end-to-end (external class, `db/services.php`,
+`ai_course_api_service.php`) con bump de `version.php`.
+
 **Dónde (plugin):**
 - `amd/src/repository/course.js` — reemplazar `sendPlanningFeedback()` y
   `regenerateDetailedItem()` por una sola función que arme y envíe `pending_action`.
@@ -113,6 +145,13 @@ acciones — no puede seguir usando el índice de render.
 - `amd/src/local/courseai/stream.js` — al recibir secciones/actividades, indexar por
   `id`, no por `section_index`.
 
+**Estado:** hecho. Los mapas de `state.js` se clavean por UUID (`detailedActivityEls` por
+`activity_id`, `detailedSectionMeta` por `section_id`, `selectedDetailedImages` por id de
+imagen). `ui-detailed.js` guarda el `id` en `dataset` y lo lee al disparar acciones;
+`normalizeInitialSections` filtra elementos `deleted` (no se pintan ni se ofrecen como
+target) y `createImagesDetail`/`recalculateEntryImageCount` filtran imágenes descartadas.
+`stream.js` indexa por `id` en `section`/`activity`/`detailed_plan_*`/`review_needed`.
+
 ---
 
 ## 3. Shape de eventos e i18n por `string_id`
@@ -144,6 +183,9 @@ y caer a `message.string` solo si la clave no existe.
 - Eliminar las heurísticas que hoy parsean `status.text` para deducir progreso de
   actividad (`stream.js`): el progreso debe leerse de campos estructurados, no del texto.
 
+**Estado:** hecho — `localizeMessage` en `i18n.js`; `status`/`error`/`failed` localizados
+en `stream.js`; las heurísticas de progreso corren contra el `string` inglés estable.
+
 ---
 
 ## 4. Catálogo de language strings (espejo 1:1)
@@ -159,6 +201,8 @@ del servicio son el contrato: deben coincidir con los `{$a->...}` del lang file.
 **Dónde (plugin):** `lang/*/local_coursegen.php`, y el helper de §3.
 
 El catálogo completo (clave → args) está en el **Apéndice A**.
+
+**Estado:** hecho en `lang/en` (101 claves); los otros idiomas caen a `en` por defecto.
 
 ---
 
@@ -251,6 +295,9 @@ exponer como botones directos (con UUID) y cuáles quedan solo vía texto libre:
   — interpretar el `detail` localizado (claves `session_not_found`, `thread_not_found`,
   `result_not_ready`, `intent_*`, `proposal_*`).
 
+**Estado:** parcial — `failed` localizado y el evento `error` nuevo ya están en `stream.js`;
+falta `completed.message` y los errores HTTP.
+
 ---
 
 ## 9. Endpoints removidos o cambiados — reconciliar
@@ -281,6 +328,40 @@ contrato nuevo (pueden haber cambiado de nombre o forma): `section`, `activity`,
 servicio nuevo y con qué campos (incluida la identidad por `id` en lugar de índice).
 
 **Dónde (plugin):** `amd/src/local/courseai/stream.js`, `ui-detailed.js`.
+
+**Estado:** verificado que el servicio nuevo emite `section`/`activity` con `id`+`position`
+(NO `section_index`); falta confirmar `detailed_plan_*` / `*_progress` y adaptar el render.
+
+---
+
+## 11. Curación de imágenes
+
+**Qué cambia.** Las imágenes son sugerencias de la IA que el usuario cura. Llegan en el
+plan, dentro de cada actividad: `detailed_plan.image_suggestions[]`, cada una con
+`{ id, position, deleted, prompt, part }`, acotadas por el `image_policy` (que el plugin ya
+manda en `init`). La curación es por acciones sobre `/course/feedback`:
+- **descartar** una imagen → `discard_image` con `target_ids:[imageId]` (el servicio omite las descartadas al generar).
+- **regenerar** una imagen con instrucción → `replan_image` con `target_ids:[imageId]` + `instruction`.
+
+Ya NO se manda `selected_image_ids` ni `with_images` al aprobar: la curación vive solo en
+esas acciones (descartar = borrado lógico; no hay "re-seleccionar").
+
+**Dónde (plugin):**
+- `amd/src/local/courseai/ui-detailed.js` — el botón IA por imagen → `replan_image`; el
+  control de descarte → `discard_image`; identificar cada imagen por su `id` (UUID) leído de
+  `image_suggestions`. Migrar el checkbox de selección actual (`state.selectedDetailedImages`)
+  al gesto de descarte.
+- `amd/src/local/courseai/stream.js` — leer las `image_suggestions` (con `id`/`deleted`/`prompt`)
+  de `detailed_plan` al renderizar.
+
+**Estado:** parcial (lo base entró con §1). Hechos: botón IA → `replan_image` e ícono de
+descarte → `discard_image`, ambos por `id` UUID; `stream.js` lee `image_suggestions` por
+`detailed_plan`; las descartadas (`deleted`) ya no se pintan. Falta lo propio de §11:
+(a) **eliminar el checkbox de selección** legado (`state.selectedDetailedImages` /
+`courseai_images_select_all`) — la curación es solo descartar/regenerar; (b) **label propio**
+del botón descartar (hoy reusa `courseai_btn_cancel` = "Cancel"; falta `courseai_btn_discard`
+y su registro en strings); (c) **restore** de una imagen descartada (el servicio la mantiene
+en el árbol para permitirlo).
 
 ---
 
@@ -372,27 +453,3 @@ servicio nuevo y con qué campos (incluida la identidad por `id` en lugar de ín
 - `error_generating_feedback_question` — args: step
 - `error_generating_quiz_question` — args: step
 
----
-
-## Checklist
-
-- [ ] 1. Contrato de feedback unificado (`ActionIntent` sobre `/course/feedback`) — *global hecho (aprobar/texto libre → `pending_action`, JS + WS PHP, build OK); falta per-ítem (delete/replan secciones·actividades·imágenes) que necesita §2 (UUID) + quitar `regenerate-item`*
-- [ ] 2. Identidades por UUID + `position` + `deleted` en el modelo del cliente — acoplado a §1
-- [x] 3. Lectura de eventos con `message = {string_id, string, string_args}` + localización
-- [x] 4. Catálogo de 101 claves en `lang/` (con `{$a->...}`)  *(en; otros idiomas caen a en)*
-- [ ] 5. Flujo de propuestas (selector único + "Otra cosa" + caídas + aclaración)
-- [ ] 6. Confirmación local de destructivos directos
-- [ ] 7. Acciones de plan faltantes (reorder, add, full_regeneration, adjust_all_details)
-- [ ] 8. `completed` / `failed` / errores HTTP localizados — *parcial: `failed` + nuevo `error` hechos*
-- [ ] 9. Reconciliar endpoints removidos (`regenerate-item`, `state`) y el flujo de resume
-- [ ] 10. Verificar eventos estructurales / de progreso contra el contrato nuevo — *verificado: `section`/`activity` traen `id`+`position`, NO `section_index`*
-- [ ] 11. Curación de imágenes: las `image_suggestions` (en `detailed_plan`, con `id`/`position`/`deleted`/`prompt`) se muestran por actividad; el botón IA por imagen → `replan_image` (con instrucción), descartar → `discard_image`; identificadas por UUID. **NO** se manda `selected_image_ids` ni `with_images` al aprobar — la curación es solo vía esas acciones.
-
-> **§1 DESBLOQUEADO — el servicio ya implementó el contrato de imágenes.** Las imágenes son
-> sugerencias en el plan (`detailed_plan.image_suggestions` con `id`/`position`/`deleted`/`prompt`),
-> acotadas por `image_policy`, y la curación es vía las acciones `discard_image`/`replan_image`
-> por `/course/feedback` (el servicio omite las descartadas al generar). Lo que el plugin hace hoy
-> (checkbox de imagen + botón IA por imagen vía `regenerate-item`/`selected_image_ids`) migra a:
-> **descartar → `discard_image`**, **regenerar → `replan_image`**, ambas con el `id` (UUID) de la
-> sugerencia (§11). Sigue en pie que §1 está acoplado a §2 (UUID) y que la prueba real necesita el
-> servicio nuevo desplegado (hoy el plugin habla con uno que aún usa `section_index` y `/course/regenerate-item`).
