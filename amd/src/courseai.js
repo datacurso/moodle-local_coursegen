@@ -45,6 +45,7 @@ import {createDetailedUi} from 'local_coursegen/local/courseai/ui-detailed';
 import {createStreamManager} from 'local_coursegen/local/courseai/stream';
 import {createCourseaiActions} from 'local_coursegen/local/courseai/actions';
 import {initSidebar} from 'local_coursegen/local/courseai/sidebar';
+import {createProposalsUi} from 'local_coursegen/local/courseai/ui-proposals';
 
 /**
  * Initialize the courseai page.
@@ -212,6 +213,14 @@ export const init = async(params) => {
             openSSEStream: (url, retry, mode) => streamManager.openSSEStream(url, retry, mode),
         });
 
+        const proposalsUi = createProposalsUi({
+            state,
+            texts,
+            formatTemplate,
+            sendPlanningFeedback,
+            openSSEStream: (url, retry, mode) => streamManager.openSSEStream(url, retry, mode),
+        });
+
         const planningUi = createPlanningUi({
             state,
             elements,
@@ -242,6 +251,7 @@ export const init = async(params) => {
             stepsUi,
             planningUi,
             detailedUi,
+            proposalsUi,
             renderPlanMarkdown,
             createCourseFromSession: async() => {
                 if (actions) {

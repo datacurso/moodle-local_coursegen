@@ -155,6 +155,14 @@ const STRING_KEYS = [
     'courseai_review_category_loading',
     'courseai_review_cancel',
     'courseai_review_confirm',
+    'courseai_proposals_title',
+    'courseai_proposals_clarification_label',
+    'courseai_proposals_other_label',
+    'courseai_proposals_other_placeholder',
+    'courseai_btn_execute_proposal',
+    'courseai_btn_discard_proposals',
+    'courseai_proposals_fallen_label',
+    'courseai_proposals_destructive_badge',
 ];
 
 /**

@@ -1964,4 +1964,259 @@ svg { display: block; flex-shrink: 0; }
   color: hsl(215 15% 30%);
 }
 
+/* ============================================================
+   Proposals UI — free-text feedback interpretation block
+   ============================================================ */
 
+.plan-proposals {
+  margin-top: 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 16px 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.plan-proposals-title {
+  margin: 0;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+/* Clarification box */
+.plan-proposals-clarification {
+  background: hsl(252 55% 42% / .07);
+  border: 1px solid hsl(252 55% 42% / .25);
+  border-radius: 8px;
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.plan-proposals-clarification-label {
+  margin: 0;
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--brand, hsl(252 55% 42%));
+  text-transform: uppercase;
+  letter-spacing: .04em;
+}
+
+.plan-proposals-clarification-text {
+  margin: 0;
+  font-size: 13px;
+  color: var(--fg);
+  line-height: 1.5;
+}
+
+/* Radio group */
+.plan-proposals-group {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+/* Individual proposal card (label wraps radio + text) */
+.plan-proposal-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  padding: 10px 14px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  cursor: pointer;
+  transition: border-color .12s, background .12s;
+  user-select: none;
+  background: var(--bg, #fff);
+  margin: 0;
+}
+
+.plan-proposal-card:hover {
+  border-color: var(--brand, hsl(252 55% 42%));
+  background: hsl(252 55% 42% / .04);
+}
+
+.plan-proposal-card:has(.plan-proposal-radio:checked) {
+  border-color: var(--brand, hsl(252 55% 42%));
+  background: hsl(252 55% 42% / .07);
+}
+
+.plan-proposal-radio {
+  margin-top: 2px;
+  flex-shrink: 0;
+  accent-color: var(--brand, hsl(252 55% 42%));
+  width: 15px;
+  height: 15px;
+  cursor: pointer;
+}
+
+.plan-proposal-summary {
+  font-size: 13px;
+  color: var(--fg);
+  line-height: 1.45;
+  flex: 1;
+}
+
+/* Destructive variant */
+.plan-proposal--destructive {
+  border-color: hsl(8 72% 70%);
+}
+
+.plan-proposal--destructive:hover {
+  border-color: var(--primary, hsl(8 72% 42%));
+  background: hsl(8 72% 42% / .05);
+}
+
+.plan-proposal--destructive:has(.plan-proposal-radio:checked) {
+  border-color: var(--primary, hsl(8 72% 42%));
+  background: hsl(8 72% 42% / .08);
+}
+
+.plan-proposal-destructive-badge {
+  display: inline-flex;
+  align-items: center;
+  height: 18px;
+  padding: 0 7px;
+  border-radius: 9px;
+  background: hsl(8 72% 42% / .12);
+  color: var(--primary, hsl(8 72% 42%));
+  font-size: 11px;
+  font-weight: 600;
+  flex-shrink: 0;
+  white-space: nowrap;
+}
+
+/* "Something else" option */
+.plan-proposal-other-wrap {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.plan-proposal-card--other {
+  border-style: dashed;
+}
+
+.plan-proposal-other-textarea {
+  width: 100%;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  padding: 8px 12px;
+  font-size: 13px;
+  font-family: inherit;
+  color: var(--fg);
+  background: var(--bg, #fff);
+  resize: vertical;
+  min-height: 68px;
+  transition: border-color .12s;
+  box-sizing: border-box;
+}
+
+.plan-proposal-other-textarea:focus {
+  outline: none;
+  border-color: var(--brand, hsl(252 55% 42%));
+}
+
+/* Action button row */
+.plan-proposals-btn-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.btn-proposals-apply {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 16px;
+  border-radius: 8px;
+  border: none;
+  background: var(--brand, hsl(252 55% 42%));
+  color: #fff;
+  font-size: 13px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: background .12s, opacity .12s;
+}
+
+.btn-proposals-apply:hover:not(:disabled) {
+  background: hsl(252 55% 36%);
+}
+
+.btn-proposals-apply:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.btn-proposals-dismiss {
+  display: inline-flex;
+  align-items: center;
+  height: 34px;
+  padding: 0 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted-fg, hsl(215 15% 50%));
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color .12s, color .12s, opacity .12s;
+}
+
+.btn-proposals-dismiss:hover:not(:disabled) {
+  border-color: var(--fg);
+  color: var(--fg);
+}
+
+.btn-proposals-dismiss:disabled {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+/* Fallen (no-longer-possible) proposals list */
+.plan-proposals-fallen {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.plan-proposals-fallen-label {
+  margin: 0;
+  font-size: 11px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: .05em;
+  color: var(--muted-fg, hsl(215 15% 50%));
+}
+
+.plan-proposals-fallen-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.plan-proposals-fallen-item {
+  font-size: 12px;
+  color: var(--muted-fg, hsl(215 15% 50%));
+  line-height: 1.4;
+}
+
+.plan-proposals-fallen-summary {
+  font-weight: 500;
+}
+
+.plan-proposals-fallen-reason {
+  font-style: italic;
+}

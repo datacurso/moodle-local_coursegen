@@ -41,6 +41,7 @@ export const createStreamManager = (deps) => {
         stepsUi,
         planningUi,
         detailedUi,
+        proposalsUi,
         renderPlanMarkdown,
         createCourseFromSession,
         texts,
@@ -661,6 +662,11 @@ export const createStreamManager = (deps) => {
         // It is re-enabled explicitly on review/failed/error states.
         setCompactChatState(deps, 'disabled');
 
+        // Clear stale proposals so they do not linger when a stream resumes.
+        if (proposalsUi && typeof proposalsUi.clear === 'function') {
+            proposalsUi.clear();
+        }
+
         // Only reset planning UI on the first attempt (not on stale-done retries).
         if (retryAttempt === 0) {
             if (streamMode !== 'generating') {
@@ -1127,6 +1133,10 @@ export const createStreamManager = (deps) => {
                         detailedUi.enableAllActionControls();
                     }
                     planningUi.showReviewActions(state.planningMode === 'detailed' ? 'detailed' : 'markdown');
+                    // Render proposals block (proposals, clarification, fallen_proposals).
+                    if (proposalsUi && typeof proposalsUi.renderProposals === 'function') {
+                        proposalsUi.renderProposals(data);
+                    }
                     // Re-enable compact chat now that review is ready
                     setCompactChatState(deps, 'enabled');
                     break;

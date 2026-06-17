@@ -648,3 +648,13 @@ $string['failed_resource_params'] = 'Failed to generate Resource parameters';
 $string['failed_url_params'] = 'Failed to generate URL parameters';
 $string['failed_wiki_structure'] = 'Failed to plan Wiki structure';
 $string['failed_workshop_params'] = 'Failed to generate Workshop parameters';
+
+// Proposals UI — free-text feedback interpretation.
+$string['courseai_proposals_title'] = 'I understood your request like this — pick one:';
+$string['courseai_proposals_clarification_label'] = 'I need a bit more detail';
+$string['courseai_proposals_other_label'] = 'Something else';
+$string['courseai_proposals_other_placeholder'] = 'Describe what you want instead…';
+$string['courseai_btn_execute_proposal'] = 'Apply selection';
+$string['courseai_btn_discard_proposals'] = 'Dismiss suggestions';
+$string['courseai_proposals_fallen_label'] = 'No longer possible';
+$string['courseai_proposals_destructive_badge'] = 'Deletes content';
