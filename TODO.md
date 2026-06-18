@@ -28,8 +28,8 @@
 - [x] [3. Shape de eventos e i18n por `string_id`](#3-shape-de-eventos-e-i18n-por-string_id)
 - [x] [4. Catálogo de language strings (espejo 1:1)](#4-catálogo-de-language-strings-espejo-11)
 - [x] [5. Flujo de propuestas (confirmación de feedback libre)](#5-flujo-de-propuestas-confirmación-de-feedback-libre)
-- [ ] [6. Confirmación local de acciones destructivas directas](#6-confirmación-local-de-acciones-destructivas-directas)
-- [ ] [7. Acciones de plan que faltan en la UI](#7-acciones-de-plan-que-faltan-en-la-ui)
+- [x] [6. Confirmación local de acciones destructivas directas](#6-confirmación-local-de-acciones-destructivas-directas)
+- [x] [7. Acciones de plan que faltan en la UI](#7-acciones-de-plan-que-faltan-en-la-ui)
 - [ ] [8. `completed` / `failed` / errores HTTP localizados](#8-completed--failed--errores-http-localizados)
 - [ ] [9. Endpoints removidos o cambiados — reconciliar](#9-endpoints-removidos-o-cambiados--reconciliar)
 - [ ] [10. Verificar eventos estructurales / de progreso](#10-verificar-eventos-estructurales--de-progreso)
@@ -273,6 +273,10 @@ inmediato. (El flujo de propuestas del §5 aplica SOLO al texto libre.)
   ese patrón pero enviando la acción directa (`delete_section`/`delete_activity`) con UUID.
 - Añadir confirmación local equivalente para `full_regeneration` cuando se exponga (§7).
 
+**Estado:** hecho para los destructivos que existen hoy — `delete_section` y `delete_activity`
+confirman con `DeleteCancelModal` antes de enviar la acción directa con UUID. La confirmación
+de `full_regeneration` se añade junto con su botón en §7 (si se decide exponerlo).
+
 ---
 
 ## 7. Acciones de plan que faltan en la UI
@@ -287,9 +291,15 @@ exponer como botones directos (con UUID) y cuáles quedan solo vía texto libre:
 
 **Dónde (plugin):** `ui-detailed.js`, `ui-planning.js`, `templates/courseai_page.mustache`.
 
----
-
-## 8. `completed` / `failed` / errores HTTP localizados
+**Estado:** hecho según lo decidido. Expuesto como controles directos en `ui-detailed.js`:
+- **Alta**: "+ Añadir sección" (al final → `add_section` con `instruction`) y "+ Añadir actividad"
+  por sección (→ `add_activity` con `parent_section_id` + `instruction`), vía panel inline.
+- **Reordenar**: drag&drop nativo de secciones (→ `reorder_sections` con `target_ids` en el
+  nuevo orden) y de actividades DENTRO de su sección (→ `reorder_activities` con
+  `parent_section_id` + `target_ids`); los movimientos entre secciones se rechazan.
+- `delete_*`/`replan_*`/`discard_image` ya existían como botones per-ítem (§1) con confirmación (§6).
+- `full_regeneration` y `adjust_all_details` **NO** se exponen como botones: quedan por texto
+  libre (flujo de propuestas §5), por decisión de producto.
 
 **Qué cambia.**
 - `completed`: `{ type, message: LocalizedMessage, result: [...] }` — antes solo `result`.
