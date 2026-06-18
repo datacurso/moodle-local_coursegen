@@ -18,6 +18,17 @@ body { background: var(--bg); color: var(--fg); }
   --success:      hsl(142, 70%, 40%);
   --success-fg:   hsl(0, 0%, 100%);
   --radius:       0.75rem;
+  /* Semantic tokens (ui-refactor §7) */
+  --danger:        hsl(8 72% 48%);   --danger-soft:   hsl(8 72% 48% / .10);
+  --info:          hsl(212 90% 50%); --info-soft:     hsl(212 90% 50% / .10);
+  --success-strong: hsl(142 70% 40%); --success-soft: hsl(142 70% 40% / .14);
+  --warn:          hsl(38 92% 50%);  --warn-soft:     hsl(38 92% 50% / .14);
+  /* Motion tokens (ui-refactor §8) */
+  --t-fast:   120ms;
+  --t-base:   200ms;
+  --t-slow:   320ms;
+  --ease:     cubic-bezier(.2, .8, .2, 1);
+  --hold-mark: 1100ms;
   --shadow-card:  0 1px 3px hsl(215, 28%, 17%, 0.06), 0 1px 2px hsl(215, 28%, 17%, 0.04);
   --shadow-elevated: 0 10px 30px -10px hsl(8, 72%, 42%, 0.25);
 }
@@ -2399,4 +2410,127 @@ svg { display: block; flex-shrink: 0; }
 
 .plan-proposals-fallen-reason {
   font-style: italic;
+}
+
+/* ─── Reduced-motion override (ui-refactor §8) ────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* ─── Mark animations (ui-refactor §7 / §8) ──────────────────────────── */
+
+/* danger flash: pulse outline + soft background, holds for --hold-mark */
+@keyframes cg-flash-danger {
+  0%   { outline-color: transparent; background-color: transparent; }
+  15%  { outline-color: var(--danger); background-color: var(--danger-soft); }
+  80%  { outline-color: var(--danger); background-color: var(--danger-soft); }
+  100% { outline-color: var(--danger); background-color: var(--danger-soft); }
+}
+
+.cg-mark-danger {
+  outline: 2px solid var(--danger);
+  outline-offset: 2px;
+  background-color: var(--danger-soft);
+  animation: cg-flash-danger var(--hold-mark, 1100ms) var(--ease, ease) forwards;
+}
+
+/* info flash: pulse outline + soft background, holds for --hold-mark */
+@keyframes cg-flash-info {
+  0%   { outline-color: transparent; background-color: transparent; }
+  15%  { outline-color: var(--info); background-color: var(--info-soft); }
+  80%  { outline-color: var(--info); background-color: var(--info-soft); }
+  100% { outline-color: var(--info); background-color: var(--info-soft); }
+}
+
+.cg-mark-info {
+  outline: 2px solid var(--info);
+  outline-offset: 2px;
+  background-color: var(--info-soft);
+  animation: cg-flash-info var(--hold-mark, 1100ms) var(--ease, ease) forwards;
+}
+
+/* success enter: scale + fade + soft background */
+@keyframes cg-enter-success {
+  0%   { opacity: 0; transform: scale(.98); background-color: transparent; }
+  40%  { opacity: 1; transform: scale(1);   background-color: var(--success-soft); }
+  80%  { background-color: var(--success-soft); }
+  100% { background-color: var(--success-soft); }
+}
+
+.cg-mark-success {
+  outline: 2px solid var(--success-strong);
+  outline-offset: 2px;
+  background-color: var(--success-soft);
+  animation: cg-enter-success var(--hold-mark, 1100ms) var(--ease, ease) forwards;
+}
+
+/* ─── Collapse-and-fade (used by markRemoving) ────────────────────────── */
+.cg-removing {
+  overflow: hidden;
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  transition:
+    opacity    var(--t-slow, 320ms) var(--ease, ease),
+    max-height var(--t-slow, 320ms) var(--ease, ease),
+    padding    var(--t-slow, 320ms) var(--ease, ease),
+    margin     var(--t-slow, 320ms) var(--ease, ease);
+}
+
+/* ─── Skeleton shimmer ────────────────────────────────────────────────── */
+@keyframes cg-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.cg-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--muted, hsl(215 25% 96%))          0%,
+    var(--border, hsl(215 20% 88%))         40%,
+    var(--muted, hsl(215 25% 96%))         60%,
+    var(--muted, hsl(215 25% 96%))        100%
+  );
+  background-size: 200% 100%;
+  animation: cg-shimmer 1.4s linear infinite;
+  border-radius: var(--radius, .75rem);
+  color: transparent;
+}
+
+/* ─── Indeterminate stream bar ────────────────────────────────────────── */
+@keyframes cg-stream-sweep {
+  0%   { left: -40%; }
+  100% { left: 110%; }
+}
+
+.cg-stream-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cg-stream-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--brand, hsl(252 55% 42%)) 50%,
+    transparent 100%
+  );
+  animation: cg-stream-sweep 1.2s var(--ease, ease) infinite;
 }
