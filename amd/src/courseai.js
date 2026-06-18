@@ -48,6 +48,7 @@ import {initSidebar} from 'local_coursegen/local/courseai/sidebar';
 import {createProposalsUi} from 'local_coursegen/local/courseai/ui-proposals';
 import {createRunPlanAction} from 'local_coursegen/local/courseai/actions/plan-action';
 import {createSplitter} from 'local_coursegen/local/courseai/ui/splitter';
+import {createLog} from 'local_coursegen/local/courseai/ui/log';
 
 /**
  * Initialize the courseai page.
@@ -179,6 +180,23 @@ export const init = async(params) => {
             });
         };
 
+        // Decision log (§4) — instantiate before any module that needs it.
+        const logContainer = document.getElementById('cgLog');
+        const logSection = document.getElementById('cgLogSection');
+        const courseaiLog = createLog({container: logContainer});
+
+        /**
+         * Show the log section and emit an entry.
+         *
+         * @param {Object} params
+         */
+        const emitLog = (params) => {
+            if (logSection && logSection.style.display === 'none') {
+                logSection.style.display = '';
+            }
+            courseaiLog.add(params);
+        };
+
         const markedParser = markedModule.parse ? markedModule : markedModule.marked;
         const activityLabels = getActivityLabels(texts);
         const generateButtonHtml = getGenerateButtonHtml(texts);
@@ -218,6 +236,7 @@ export const init = async(params) => {
             texts,
             formatTemplate,
             runPlanAction,
+            emitLog,
         });
 
         const proposalsUi = createProposalsUi({
@@ -225,6 +244,7 @@ export const init = async(params) => {
             texts,
             formatTemplate,
             runPlanAction,
+            emitLog,
         });
 
         const planningUi = createPlanningUi({
@@ -259,6 +279,7 @@ export const init = async(params) => {
             detailedUi,
             proposalsUi,
             renderPlanMarkdown,
+            emitLog,
             createCourseFromSession: async() => {
                 if (actions) {
                     // Advance progress to the review phase so it doesn't appear stuck.
@@ -336,6 +357,7 @@ export const init = async(params) => {
             streamManager,
             texts,
             formatTemplate,
+            emitLog,
         });
 
         actions.bindEvents();

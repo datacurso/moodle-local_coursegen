@@ -46,7 +46,18 @@ const OTHER_VALUE = '__other__';
  * @returns {{ renderProposals: Function, clear: Function }}
  */
 export const createProposalsUi = (deps) => {
-    const {texts, runPlanAction} = deps;
+    const {texts, runPlanAction, emitLog} = deps;
+
+    /**
+     * Emit a log entry if emitLog is wired.
+     *
+     * @param {Object} params
+     */
+    const log = (params) => {
+        if (typeof emitLog === 'function') {
+            emitLog(params);
+        }
+    };
 
     /**
      * Return the #planProposalsBlock element, or null if not in the DOM.
@@ -330,9 +341,25 @@ export const createProposalsUi = (deps) => {
                     otherTextarea.focus();
                     return;
                 }
+                const truncated = instruction.length > 80 ? instruction.slice(0, 80) + '…' : instruction;
+                log({
+                    actor: 'user',
+                    kind: 'info',
+                    message: (texts.courseai_log_proposal_applied || 'You applied: {$a}').replace('{$a}', truncated),
+                });
                 const pendingAction = {action: 'feedback', instruction};
                 await sendAction(block, pendingAction);
             } else {
+                const selectedLabel = selected.closest('.plan-proposal-card');
+                const summaryText = selectedLabel
+                    ? (selectedLabel.querySelector('.plan-proposal-summary') || {}).textContent || ''
+                    : '';
+                const truncated = summaryText.length > 80 ? summaryText.slice(0, 80) + '…' : summaryText;
+                log({
+                    actor: 'user',
+                    kind: 'info',
+                    message: (texts.courseai_log_proposal_applied || 'You applied: {$a}').replace('{$a}', truncated),
+                });
                 const pendingAction = {action: 'execute_proposal', target_ids: [selected.value]};
                 await sendAction(block, pendingAction);
             }
@@ -344,6 +371,11 @@ export const createProposalsUi = (deps) => {
         dismissBtn.textContent = texts.courseai_btn_discard_proposals || 'Dismiss suggestions';
 
         dismissBtn.addEventListener('click', async() => {
+            log({
+                actor: 'user',
+                kind: 'neutral',
+                message: texts.courseai_log_proposals_dismissed || 'You dismissed suggestions',
+            });
             const pendingAction = {action: 'discard_proposals', target_ids: []};
             await sendAction(block, pendingAction);
         });

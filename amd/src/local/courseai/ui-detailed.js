@@ -44,7 +44,19 @@ export const createDetailedUi = (deps) => {
         texts,
         formatTemplate,
         runPlanAction,
+        emitLog,
     } = deps;
+
+    /**
+     * Emit a log entry if emitLog is wired.
+     *
+     * @param {Object} params
+     */
+    const log = (params) => {
+        if (typeof emitLog === 'function') {
+            emitLog(params);
+        }
+    };
 
     const {
         prvSections,
@@ -447,6 +459,11 @@ export const createDetailedUi = (deps) => {
                     focusChange(imageWrap, 'info');
                     imageWrap.classList.add('dp-item-regenerating');
                     iaControl.classList.add('dp-action-btn--disabled');
+                    log({
+                        actor: 'user',
+                        kind: 'info',
+                        message: texts.courseai_log_image_regenerated || 'You regenerated an image suggestion',
+                    });
                     try {
                         const pendingAction = {
                             action: 'replan_image',
@@ -477,6 +494,11 @@ export const createDetailedUi = (deps) => {
                     if (!item.id) {
                         return;
                     }
+                    log({
+                        actor: 'user',
+                        kind: 'danger',
+                        message: texts.courseai_log_image_discarded || 'You discarded an image suggestion',
+                    });
                     imageWrap.classList.add('dp-item-regenerating');
                     discardControl.classList.add('dp-action-btn--disabled');
                     await markRemoving(imageWrap);
@@ -683,6 +705,12 @@ export const createDetailedUi = (deps) => {
                 focusChange(row, 'info');
                 row.classList.add('dp-item-regenerating');
                 iaControl.classList.add('dp-action-btn--disabled');
+                log({
+                    actor: 'user',
+                    kind: 'info',
+                    message: (texts.courseai_log_regenerated_section || 'You regenerated section «{$a}»')
+                        .replace('{$a}', sectionName),
+                });
                 try {
                     const pendingAction = {
                         action: 'replan_section',
@@ -723,6 +751,12 @@ export const createDetailedUi = (deps) => {
                     return;
                 }
 
+                log({
+                    actor: 'user',
+                    kind: 'danger',
+                    message: (texts.courseai_log_deleted_section || 'You deleted section «{$a}»')
+                        .replace('{$a}', sectionName),
+                });
                 row.classList.add('dp-item-regenerating');
                 deleteControl.classList.add('dp-action-btn--disabled');
                 await markRemoving(row);
@@ -765,6 +799,11 @@ export const createDetailedUi = (deps) => {
         const addActivityPanelApi = createTextPanel({texts,
             onSubmit: async(value) => {
                 addActivityBtn.classList.add('dp-add-control--disabled');
+                log({
+                    actor: 'user',
+                    kind: 'success',
+                    message: texts.courseai_log_added_activity || 'You added an activity',
+                });
                 try {
                     const pendingAction = {
                         action: 'add_activity',
@@ -887,6 +926,12 @@ export const createDetailedUi = (deps) => {
                 focusChange(wrap, 'info');
                 wrap.classList.add('dp-item-regenerating');
                 iaControl.classList.add('dp-action-btn--disabled');
+                log({
+                    actor: 'user',
+                    kind: 'info',
+                    message: (texts.courseai_log_regenerated_activity || 'You regenerated activity «{$a}»')
+                        .replace('{$a}', activityTitle),
+                });
                 try {
                     const pendingAction = {
                         action: 'replan_activity',
@@ -928,6 +973,12 @@ export const createDetailedUi = (deps) => {
                     return;
                 }
 
+                log({
+                    actor: 'user',
+                    kind: 'danger',
+                    message: (texts.courseai_log_deleted_activity || 'You deleted activity «{$a}»')
+                        .replace('{$a}', activityTitle),
+                });
                 wrap.classList.add('dp-item-regenerating');
                 deleteControl.classList.add('dp-action-btn--disabled');
                 await markRemoving(wrap);
@@ -1112,6 +1163,11 @@ export const createDetailedUi = (deps) => {
         const addSectionPanelApi = createTextPanel({texts,
             onSubmit: async(value) => {
                 addSectionBtn.classList.add('dp-add-control--disabled');
+                log({
+                    actor: 'user',
+                    kind: 'success',
+                    message: texts.courseai_log_added_section || 'You added a section',
+                });
                 try {
                     const pendingAction = {
                         action: 'add_section',

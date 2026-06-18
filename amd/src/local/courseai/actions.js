@@ -47,7 +47,19 @@ export const createCourseaiActions = (deps) => {
         streamManager,
         texts,
         formatTemplate,
+        emitLog,
     } = deps;
+
+    /**
+     * Emit a log entry if emitLog is wired.
+     *
+     * @param {Object} params
+     */
+    const log = (params) => {
+        if (typeof emitLog === 'function') {
+            emitLog(params);
+        }
+    };
 
     const {
         promptInput,
@@ -417,6 +429,10 @@ export const createCourseaiActions = (deps) => {
         state.initialPrompt = prompt;
         renderInitialPromptHistory(prompt);
 
+        const truncated = prompt.length > 80 ? prompt.slice(0, 80) + '…' : prompt;
+        const userRequestMsg = (texts.courseai_log_user_request || 'You: {$a}').replace('{$a}', truncated);
+        log({actor: 'user', kind: 'user', message: userRequestMsg});
+
         if (btnGenerate) {
             btnGenerate.disabled = true;
             btnGenerate.innerHTML = `
@@ -539,6 +555,13 @@ export const createCourseaiActions = (deps) => {
             const instruction = action === 'adjust' && compactPromptInput
                 ? compactPromptInput.value.trim()
                 : '';
+
+            // Log the user instruction
+            if (action === 'adjust' && instruction) {
+                const truncatedInstruction = instruction.length > 80 ? instruction.slice(0, 80) + '…' : instruction;
+                const adjustMsg = (texts.courseai_log_user_request || 'You: {$a}').replace('{$a}', truncatedInstruction);
+                log({actor: 'user', kind: 'user', message: adjustMsg});
+            }
 
             // Show adjustment as a chat message paired with a response slot
             if (action === 'adjust' && instruction && adjustmentHistory) {

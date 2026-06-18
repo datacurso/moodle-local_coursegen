@@ -104,6 +104,7 @@ export const createStreamManager = (deps) => {
     const {
         state, elements, stepsUi, planningUi, detailedUi,
         proposalsUi, renderPlanMarkdown, createCourseFromSession, texts,
+        emitLog,
     } = deps;
 
     const {
@@ -255,6 +256,7 @@ export const createStreamManager = (deps) => {
             pcStep,
             // Per-attempt mutable flags — handlers write ctx.flags.contentReceived = true.
             flags: {contentReceived: false},
+            emitLog: typeof emitLog === 'function' ? emitLog : () => undefined,
         };
 
         openConnection(streamUrl, retryAttempt, ctx, openSSEStream);

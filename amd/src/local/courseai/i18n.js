@@ -169,6 +169,19 @@ const STRING_KEYS = [
     'courseai_add_activity_placeholder',
     'courseai_drag_handle_label',
     'courseai_resize_panels',
+    'courseai_log_label',
+    'courseai_log_user_request',
+    'courseai_log_ai_section',
+    'courseai_log_deleted_section',
+    'courseai_log_deleted_activity',
+    'courseai_log_regenerated_section',
+    'courseai_log_regenerated_activity',
+    'courseai_log_added_section',
+    'courseai_log_added_activity',
+    'courseai_log_image_discarded',
+    'courseai_log_image_regenerated',
+    'courseai_log_proposal_applied',
+    'courseai_log_proposals_dismissed',
 ];
 
 /**

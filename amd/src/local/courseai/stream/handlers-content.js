@@ -73,7 +73,7 @@ export const handleActivity = (data, ctx) => {
  */
 export const handleSection = (data, ctx) => {
     ctx.flags.contentReceived = true;
-    const {state, elements, detailedUi, texts, getOrCreateRoundChecklist} = ctx;
+    const {state, elements, detailedUi, texts, getOrCreateRoundChecklist, emitLog} = ctx;
 
     const loadingEl = document.getElementById('planningLoading');
     const streamContentEl = document.getElementById('planningStreamContent');
@@ -99,6 +99,13 @@ export const handleSection = (data, ctx) => {
             activities: [],
         });
         state.latestInitialSections = sections;
+    }
+
+    if (typeof emitLog === 'function' && data.name) {
+        const sectionName = data.name || '';
+        const message = (texts.courseai_log_ai_section || 'AI planned section «{$a}»')
+            .replace('{$a}', sectionName);
+        emitLog({actor: 'ai', kind: 'ai', message});
     }
 
     const round = state.generationRound || 0;

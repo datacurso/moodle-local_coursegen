@@ -2556,3 +2556,94 @@ svg { display: block; flex-shrink: 0; }
     background: var(--muted, hsl(215 25% 96%));
   }
 }
+
+/* ─── Decision log (§4) ────────────────────────────────────────────────── */
+.cg-log-section {
+  margin-top: 16px;
+}
+
+.cg-log-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted-fg);
+  margin-bottom: 8px;
+}
+
+.cg-log {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-height: 320px;
+  overflow-y: auto;
+  overflow-x: hidden;
+  overscroll-behavior: contain;
+}
+
+/* Single log entry row */
+.cg-log-entry {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  min-height: 32px;
+  border-radius: 6px;
+  background: transparent;
+  overflow: hidden;
+}
+
+/* Left semantic color bar */
+.cg-log-bar {
+  display: block;
+  flex-shrink: 0;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--muted-fg);
+  align-self: stretch;
+}
+
+/* Kind-based bar colors */
+.cg-log-entry--user    .cg-log-bar { background: var(--brand); }
+.cg-log-entry--ai      .cg-log-bar { background: var(--primary); }
+.cg-log-entry--danger  .cg-log-bar { background: var(--danger); }
+.cg-log-entry--info    .cg-log-bar { background: var(--info); }
+.cg-log-entry--success .cg-log-bar { background: var(--success-strong); }
+.cg-log-entry--neutral .cg-log-bar { background: var(--muted-fg); }
+
+/* Entry body: icon + message + timestamp */
+.cg-log-body {
+  display: flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 6px 6px 6px 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.cg-log-actor {
+  flex-shrink: 0;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.cg-log-msg {
+  flex: 1;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--fg);
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cg-log-ts {
+  flex-shrink: 0;
+  font-size: 11px;
+  color: var(--muted-fg);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cg-log-entry { transition: none; }
+}
