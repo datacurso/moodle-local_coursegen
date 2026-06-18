@@ -126,12 +126,10 @@ export const createProposalsUi = (deps) => {
         if (proposal.destructive) {
             label.classList.add('plan-proposal--destructive');
         }
-        label.htmlFor = `proposal-radio-${proposal.proposal_id}`;
 
         const radio = document.createElement('input');
         radio.type = 'radio';
         radio.name = RADIO_NAME;
-        radio.id = `proposal-radio-${proposal.proposal_id}`;
         radio.value = proposal.proposal_id;
         radio.className = 'plan-proposal-radio';
 
@@ -163,12 +161,10 @@ export const createProposalsUi = (deps) => {
 
         const label = document.createElement('label');
         label.className = 'plan-proposal-card plan-proposal-card--other';
-        label.htmlFor = 'proposal-radio-other';
 
         const radio = document.createElement('input');
         radio.type = 'radio';
         radio.name = RADIO_NAME;
-        radio.id = 'proposal-radio-other';
         radio.value = OTHER_VALUE;
         radio.className = 'plan-proposal-radio';
 
