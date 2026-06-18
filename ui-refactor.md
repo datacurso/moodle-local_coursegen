@@ -1,0 +1,447 @@
+# Refactor de UI e interactividad — `local_coursegen`
+
+> **Objetivo.** Convertir el planificador en una interfaz **viva, inmediata y profesional**: el
+> usuario pide algo y ve resultados al instante, sin spinners genéricos. La **vista central** es una
+> **previsualización del curso con el aspecto de un curso real de Moodle (formato por temas)** que se
+> rellena en streaming y reacciona en tiempo real a cada decisión. La **vista lateral** es un
+> **registro/log** cronológico de todo lo que pide el usuario y todo lo que hace la IA.
+>
+> Este documento cubre **todo lo visual y de interacción**. La arquitectura del código (módulos,
+> reactive, ≤250 líneas) vive en [`TODO-v1.md`](./TODO-v1.md).
+
+---
+
+## Checklist
+
+- [ ] [1. Principios de experiencia](#1-principios-de-experiencia)
+- [ ] [2. Layout: las tres zonas](#2-layout-las-tres-zonas)
+  - [ ] [2.1 Divisor redimensionable entre log y preview (sin anchos fijos)](#21-divisor-redimensionable-entre-log-y-preview-sin-anchos-fijos)
+- [ ] [3. Vista central — preview del curso (estilo Moodle)](#3-vista-central--preview-del-curso)
+  - [ ] [3.1 Fidelidad visual a Moodle (formato por temas)](#31-fidelidad-visual-a-moodle-formato-por-temas)
+  - [ ] [3.2 Anatomía de una sección (preview)](#32-anatomía-de-una-sección-preview)
+  - [ ] [3.3 Anatomía de una actividad (preview)](#33-anatomía-de-una-actividad-preview)
+  - [ ] [3.4 Relleno progresivo (lo central del pedido)](#34-relleno-progresivo-lo-central-del-pedido)
+- [ ] [4. Vista lateral — registro/log de decisiones](#4-vista-lateral--registrolog-de-decisiones)
+  - [ ] [4.1 Qué registra (toda acción, sin excepción)](#41-qué-registra-toda-acción-sin-excepción)
+  - [ ] [4.2 Anatomía de una entrada de log](#42-anatomía-de-una-entrada-de-log)
+  - [ ] [4.3 Comportamiento](#43-comportamiento)
+- [ ] [5. Streaming sin spinners (aparición progresiva)](#5-streaming-sin-spinners)
+  - [ ] [5.1 Reglas](#51-reglas)
+  - [ ] [5.2 Secuencia visual de una sesión](#52-secuencia-visual-de-una-sesión)
+- [ ] [6. Interactividad en tiempo real (el corazón)](#6-interactividad-en-tiempo-real)
+  - [ ] [6.1 Previsualización de selección (antes de confirmar)](#61-previsualización-de-selección-antes-de-confirmar)
+  - [ ] [6.2 Auto-foco al cambio](#62-auto-foco-al-cambio)
+  - [ ] [6.3 De dónde salen los cambios](#63-de-dónde-salen-los-cambios)
+- [ ] [7. Sistema de color semántico y tokens](#7-sistema-de-color-semántico-y-tokens)
+- [ ] [8. Sistema de movimiento (transiciones y timings)](#8-sistema-de-movimiento)
+- [ ] [9. Catálogo de componentes visuales](#9-catálogo-de-componentes-visuales)
+- [ ] [10. Estados globales de la vista](#10-estados-globales-de-la-vista)
+- [ ] [11. Microinteracciones y pulido profesional](#11-microinteracciones-y-pulido-profesional)
+- [ ] [12. Accesibilidad](#12-accesibilidad)
+- [ ] [13. Responsive](#13-responsive)
+- [ ] [14. Mapa de archivos afectados](#14-mapa-de-archivos-afectados)
+
+---
+
+## 1. Principios de experiencia
+
+1. **Inmediatez.** Entre que el usuario manda una instrucción y que ve algo en pantalla NO debe
+   haber latencia perceptible. Lo primero que llega del servidor (nombres de secciones) se pinta al
+   instante; el detalle va rellenando esos huecos.
+2. **Cero spinners genéricos.** Prohibido el spinner centrado "Analyzing…/Cargando…" como estado
+   principal. Se reemplaza por **esqueletos (skeletons) ligados a la estructura real** que se van
+   convirtiendo en contenido. La única señal de "trabajando" admitida es sutil (shimmer en el
+   skeleton, cursor de escritura, barra de progreso fina superior).
+3. **Interfaz viva.** Cada decisión —del usuario o de la IA— produce un **cambio visible y animado**
+   en el preview, en tiempo real, con color semántico (rojo/eliminar, info/regenerar, success/añadir).
+4. **Foco en el cambio.** Cada elemento que cambia se **enfoca automáticamente** (scroll-into-view +
+   resaltado temporal) para que el usuario vea exactamente qué pasó.
+5. **Trazabilidad.** Nada ocurre "en silencio": toda acción queda registrada en el log lateral.
+6. **Profesional.** Densidad cómoda, jerarquía tipográfica clara, sombras suaves, espaciado
+   consistente, transiciones pulidas. Nada tosco. Se respeta `prefers-reduced-motion`.
+7. **Fidelidad Moodle.** El preview se ve como un curso real (formato por temas), reutilizando las
+   clases visuales de `core_courseformat` para que el usuario reconozca el resultado final.
+
+---
+
+## 2. Layout: las tres zonas
+
+```
+┌───────────────────────────────────────────────────────────────────────────┐
+│  NAVBAR (logo · título · cerrar)                                            │
+├───────────────┬─────────────────────────────────────────────┬──────────────┤
+│  LATERAL       │  CENTRAL — PREVIEW DEL CURSO                 │  (panel de    │
+│  REGISTRO/LOG  │  (aspecto curso Moodle, por temas)          │   acciones)   │
+│                │                                             │               │
+│  · pide user   │  ▸ Tema 1: Introducción …                   │  ┌─ propuestas│
+│  · IA cambió   │     ▫ 📄 Página: …                          │  │  ◉ opción A │
+│  · acción btn  │     ▫ ❓ Quiz: …                            │  │  ○ otra …   │
+│  · decisión    │  ▸ Tema 2: …                                │  └─[Aplicar]  │
+│  …(scroll)…    │  … (streaming + transiciones) …             │  [Aprobar]    │
+├───────────────┴─────────────────────────────────────────────┴──────────────┤
+│  CHAT del usuario (input de instrucciones, siempre accesible)               │
+└───────────────────────────────────────────────────────────────────────────┘
+```
+
+- **Grid CSS** (sustituye el grid actual de 2 columnas de `aicoursecreation.css` ~L127-154). Tres
+  regiones: `log` (lateral izq., 300–360px), `preview` (central, `1fr`), y `panel de acciones`
+  (propuestas/aprobar) que puede ser **columna propia a la derecha** o **sobreponerse al pie del
+  preview** (recomendado: barra de acción fija al pie del preview + panel de propuestas dentro del
+  preview, para que la decisión y su efecto estén juntos). El chat es una fila inferior full-width.
+- **Comportamiento de las acciones de feedback**: cuando la IA propone opciones (flujo §5), el
+  selector aparece **dentro/junto al preview**; al elegir una opción, el preview muestra de
+  inmediato la **previsualización del cambio** (zonas en rojo, ver §6). La **decisión tomada** (qué
+  eligió el usuario, qué hará) se anota en el **log lateral**.
+- **Regla de oro del reparto**: *Central = QUÉ va a quedar (el curso). Lateral = QUÉ se decidió y
+  quién lo decidió (la historia). Chat = QUÉ pide el usuario.*
+
+### 2.1 Divisor redimensionable entre log y preview (sin anchos fijos)
+
+La zona **lateral (log)** y la **central (preview)** **NO** tienen ancho fijo: el usuario ajusta el
+reparto **arrastrando** una línea divisoria entre ambas.
+
+- **Línea divisoria visible** (splitter) entre las dos zonas, siempre presente, que invita al arrastre
+  (línea fina + "agarre" central de puntos/barras al hacer hover).
+- **Cursor `col-resize`** (el puntero `<->`) sobre el divisor (y `cursor` activo durante el arrastre).
+- **Implementación**: el grid de §2 usa una columna variable para el log y el divisor como columna
+  propia, p. ej. `grid-template-columns: var(--log-w, 320px) 8px minmax(0, 1fr)`. Al arrastrar el
+  divisor se actualiza la custom property `--log-w` (vía `requestAnimationFrame`, sin reflow por
+  frame), con `clamp()` entre un **mín. y máx.** (ej. `clamp(240px, --log-w, 560px)`) para que el
+  layout nunca se rompa.
+- **Persistencia**: recordar el ancho elegido por usuario mediante preferencia
+  de Moodle vía `core_user/repository` set_user_preference. Al recargar, se restaura.
+- **Doble-click en el divisor** → restablece al ancho por defecto.
+- **Pointer events** (no solo mouse): funciona con `pointerdown/move/up` + `setPointerCapture` para
+  soportar touch/lápiz; se desactiva la selección de texto durante el arrastre (`user-select:none`).
+- **Accesible**: el divisor es `role="separator"` con `aria-orientation="vertical"`,
+  `tabindex="0"` y `aria-valuenow/min/max`; con foco, **←/→** ajustan el ancho en pasos (y `Home`/`End`
+  a mín/máx). Hover/focus engrosa y realza el divisor.
+- El **chat** inferior permanece full-width por debajo de ambas zonas (el divisor solo reparte la fila
+  superior). El mismo mecanismo puede reutilizarse para el divisor preview↔panel de acciones si éste
+  se mantiene como columna propia.
+
+---
+
+## 3. Vista central — preview del curso
+
+### 3.1 Fidelidad visual a Moodle (formato por temas)
+El preview debe parecerse a la vista de curso de Moodle 4.5. Reutilizar las clases visuales de
+`core_courseformat` para heredar el look del tema activo (Boost), envolviendo el markup propio:
+
+- Contenedor de curso: `.course-content` → `ul.topics` (o `.course-section-list`).
+- Sección/tema: `li.section` / `.course-section` con `.section-title` / `.sectionname` y
+  `.section_availability` opcional; resumen en `.summarytext`.
+- Lista de actividades: `ul.section` con `li.activity` `.activity-item`.
+- Actividad: `.activityinstance` › `.activityname` (enlace/título) + `.activityicon`/`.activity-icon`
+  (icono del módulo). Tinte por **purpose** del módulo (mapa de 5 categorías:
+  `administration|assessment|collaboration|communication|content`) con la clase de color de fondo
+  del icono que ya aplica Boost.
+- Iconos de módulo: usar el patrón de URL ya existente en `utils.js` (`getActivityIconUrl`) →
+  `pix/<mod>/icon` por tipo de actividad (quiz, page, book, assign, forum, …).
+
+> No se pueden renderizar las plantillas core directamente (requieren contexto PHP), así que se crean
+> **plantillas Mustache propias** que **reusan las clases CSS de core** para verse idénticas. Ver
+> `preview_section.mustache` / `preview_activity.mustache` en `TODO-v1.md` §4.
+
+### 3.2 Anatomía de una sección (preview)
+- **Cabecera**: número/topic + nombre editable visualmente, contador de actividades, y los
+  **controles por sección** (IA/ajustar, eliminar, añadir actividad, agarre de arrastre). Los
+  controles aparecen sutiles y se realzan en hover (no saturar).
+- **Resumen**: 1–2 líneas de descripción de la sección.
+- **Lista de actividades** (ver 3.3).
+- **Drop zone**: al final, el control "+ Añadir actividad".
+
+### 3.3 Anatomía de una actividad (preview)
+- **Icono del módulo** (con tinte por purpose) a la izquierda.
+- **Título** (nombre de la actividad) + **badge del tipo** (Quiz, Página, Tarea…).
+- **Detalle**: descripción/plan detallado que llega en streaming (capítulos, preguntas, etc.).
+- **Imágenes sugeridas** (§11 del flujo): chips/tarjetas con su prompt; botón IA (`replan_image`) y
+  descartar (`discard_image`). Las descartadas no se pintan.
+- **Controles por ítem**: IA/ajustar (`replan_activity`), eliminar (`delete_activity`), agarre de
+  arrastre. Sutiles, realce en hover; tooltips con `core/str`.
+
+### 3.4 Relleno progresivo (lo central del pedido)
+Secuencia de aparición en la vista central (sin spinner genérico):
+
+1. **Instrucción enviada** → aparece de inmediato el **esqueleto de las secciones** a medida que el
+   servidor emite eventos `section` (nombre + descripción). Cada sección entra con su nombre real ya
+   visible y sus actividades como **filas-esqueleto** (shimmer).
+2. **Plan inicial** → al llegar eventos `activity`, cada fila-esqueleto se convierte en una actividad
+   real (icono + título + badge), aún sin detalle.
+3. **Plan detallado** → al llegar `detailed_plan_field`/`detailed_plan_activity`, cada actividad se
+   **rellena** con su contenido (descripción, capítulos, preguntas, imágenes), con una transición de
+   skeleton→contenido suave. Es el "ir rellenando lo de la planificación detallada".
+4. **Revisión** (`review_needed`) → el preview queda completo y editable; aparecen las acciones.
+
+> La estructura del skeleton **no es genérica**: refleja la cantidad real de secciones/actividades
+> conforme se conocen. El usuario ve "la forma" del curso desde el segundo 1.
+
+---
+
+## 4. Vista lateral — registro/log de decisiones
+
+Inspiración: un **feed cronológico tipo log** (como un panel de actividad/timeline). No es solo el
+índice de secciones de hoy: es el **historial vivo** de la conversación de planificación.
+
+### 4.1 Qué registra (toda acción, sin excepción)
+- **Petición del usuario**: cada instrucción de texto libre que manda.
+- **Interpretación/decisión de la IA**: "Interpreté tu pedido como…" (las propuestas generadas).
+- **Decisión del usuario**: qué propuesta eligió / si descartó / si aprobó.
+- **Acción ejecutada** (de cualquier origen — botón, opción, drag&drop):
+  `Eliminó la sección «X»`, `Regeneró la actividad «Y»`, `Añadió «Z»`, `Reordenó secciones`,
+  `Descartó la imagen de «W»`.
+- **Hitos del flujo**: planificación iniciada, plan listo para revisión, curso generado.
+- **Errores**: localizados, con su motivo.
+
+### 4.2 Anatomía de una entrada de log
+- **Icono/avatar de actor**: 👤 usuario vs ✨ IA vs ⚙️ sistema (color distinto por actor).
+- **Línea principal**: verbo + objetivo con el **nombre real** del elemento (no índices).
+- **Marca de color semántico** a la izquierda (barra fina): rojo (destructivo), info (regenerar),
+  success (alta), neutro (informativo).
+- **Timestamp relativo** ("hace 5 s") que se actualiza.
+- **Detalle expandible** opcional (instrucción completa, motivo de una propuesta caída).
+- **Estado**: pendiente / aplicado / fallido (los pendientes con un sutil pulso).
+
+### 4.3 Comportamiento
+- **Append-only, autoscroll** al fondo cuando llega algo nuevo (con "saltar al final" si el usuario
+  scrolleó arriba).
+- **Sincronía con el preview**: al pasar el cursor (hover) sobre una entrada que referencia un
+  elemento, ese elemento se **resalta** en el preview; al hacer click, **scroll-into-view** a él.
+- Los **nombres de sección** siguen apareciendo aquí mientras se planifica (como hoy), pero
+  integrados como entradas del log (`Planificó la sección «X»`), no como una lista aparte.
+- `aria-live="polite"` para que lectores de pantalla anuncien cada entrada nueva.
+
+---
+
+## 5. Streaming sin spinners
+
+### 5.1 Reglas
+- **Eliminar** el overlay `#planningLoading` ("Analyzing your feedback…") como estado principal.
+- **Skeletons estructurales**: cada sección/actividad conocida se pinta como placeholder con shimmer
+  hasta que llega su contenido; entonces hace cross-fade a real.
+- **Señal de actividad sutil**: barra de progreso fina (2px) en el borde superior del preview
+  mientras hay stream abierto, y/o un cursor de escritura (`▍`) en el texto que se está escribiendo.
+  Nunca un spinner que tape el contenido.
+- **Feedback libre**: al enviar una instrucción de texto, en vez de "Analyzing…", el **chat** muestra
+  un estado inline ("Interpretando…") y el **log** registra la petición de inmediato; las propuestas
+  aparecen cuando llegan.
+
+### 5.2 Secuencia visual de una sesión
+```
+[usuario envía contexto]
+  → preview: skeleton de N secciones aparece (nombres reales conforme llegan)   (evento section)
+  → preview: cada sección llena sus filas de actividad                          (evento activity)
+  → preview: cada actividad se rellena con su detalle                           (detailed_plan_*)
+  → preview: completo + barra superior se apaga                                 (review_needed)
+  → log:     "Plan inicial listo · 5 secciones, 18 actividades"
+```
+
+---
+
+## 6. Interactividad en tiempo real
+
+El núcleo del rediseño. **Tabla canónica acción → feedback visual**:
+
+| Gesto del usuario / IA | Feedback inmediato en el preview | Color | Transición | Foco |
+|---|---|---|---|---|
+| **Seleccionar** una opción que sugiere la IA | Resaltar la(s) **zona(s) afectada(s)** (sección/actividad objetivo) como *preview del cambio* | **danger (rojo)** si es destructiva; **info** si regenera; **success** si añade | `outline` + `flash` suave que **se mantiene** mientras la opción está seleccionada | scroll-into-view a la zona objetivo |
+| **Eliminar** (sección/actividad/imagen) | Resaltado rojo → **fade-out + colapso de altura** → se quita del DOM | **danger** | `flash-danger` (≈250ms) → `collapse-fade` (≈320ms) | scroll al elemento antes de animar |
+| **Regenerar / ajustar** un ítem | El contenido viejo hace **cross-fade** al nuevo; borde **info** parpadea | **info (azul)** | `flash-info` durante el reemplazo; skeleton breve si tarda | scroll-into-view al ítem |
+| **Añadir** un elemento | Se inserta y se **resalta success** un instante; entra con `slide/scale-in` | **success (verde)** | `enter-success` (≈400ms) + hold ≈900ms → fade del realce | scroll-into-view + foco al nuevo |
+| **Reordenar** (drag&drop) | Animación de movimiento de las filas a su nueva posición | neutro/brand | técnica **FLIP** (translate animado) | mantener el arrastrado a la vista |
+| **Aprobar / descartar** | El preview pasa a estado final / se limpian propuestas | neutro | fade de las marcas pendientes | — |
+
+### 6.1 Previsualización de selección (antes de confirmar)
+Cuando el usuario **marca** una propuesta pero **aún no aplica**:
+- El preview entra en modo "preview de cambio": la zona objetivo se marca (rojo si borra, info si
+  regenera, success si añade) **sin** ejecutar nada todavía.
+- Si cambia de opción, la marca anterior se limpia y se marca la nueva.
+- Al **Aplicar**, la marca de preview se convierte en la transición real (eliminar/regenerar/añadir),
+  y el servidor re-streamea el resultado.
+
+### 6.2 Auto-foco al cambio
+- Helper único `focusChange(el, kind)`:
+  1. `el.scrollIntoView({behavior:'smooth', block:'center'})`,
+  2. aplica la clase de realce temporal (`is-marked-{danger|info|success}`),
+  3. la retira tras el hold (timeout) o al siguiente cambio.
+- **Una sola** marca activa por elemento; cambios consecutivos encolan foco (no saltar errático).
+
+### 6.3 De dónde salen los cambios
+- Tras `execute_proposal`/`replan_*`/`delete_*`/`add_*`/`reorder_*` el servidor **re-streamea** el
+  plan. El reconciliador del preview (componente sobre el reactive) hace **diff** entre el plan
+  anterior y el nuevo y dispara la transición correcta por cada elemento que cambió (añadido /
+  eliminado / modificado / movido). Así la animación refleja el cambio real, no una suposición.
+
+---
+
+## 7. Sistema de color semántico y tokens
+
+Reusar y ampliar el bloque `:root` actual de `aicoursecreation.css`. Tokens semánticos:
+
+```css
+:root {
+  /* base ya existente: --bg --fg --card --border --muted-fg --brand --primary --success ... */
+
+  --danger:        hsl(8 72% 48%);     /* destructivo / eliminar / preview de borrado */
+  --danger-soft:   hsl(8 72% 48% / .10);
+  --info:          hsl(212 90% 50%);   /* regenerar / cambio en curso */
+  --info-soft:     hsl(212 90% 50% / .10);
+  --success:       hsl(142 70% 40%);   /* añadir / confirmación */
+  --success-soft:  hsl(142 70% 40% / .12);
+  --warn:          hsl(38 92% 50%);    /* advertencias / propuestas caídas */
+  --warn-soft:     hsl(38 92% 50% / .12);
+}
+```
+
+Uso:
+- **danger** → eliminar, y preview de selección destructiva, barra del log de acciones destructivas.
+- **info** → regenerar/ajustar, cambio en curso.
+- **success** → añadir, alta confirmada.
+- **warn** → propuestas caídas (informativas, no seleccionables), avisos.
+- **brand/primary** → marca, foco, botones primarios (mantener identidad actual).
+
+> Definir todos los realces con el token *soft* para el fondo y el token sólido para el borde/barra.
+
+---
+
+## 8. Sistema de movimiento
+
+Tokens de animación (en `:root`), respetando `prefers-reduced-motion`:
+
+```css
+:root {
+  --t-fast:   120ms;
+  --t-base:   200ms;
+  --t-slow:   320ms;
+  --ease:     cubic-bezier(.2, .8, .2, 1);   /* salida suave */
+  --hold-mark: 1100ms;                        /* cuánto se mantiene un realce success/info */
+}
+@media (prefers-reduced-motion: reduce) {
+  *,*::before,*::after { animation-duration:.001ms !important; transition-duration:.001ms !important; }
+}
+```
+
+Keyframes/clases requeridas (en CSS, aplicadas por el helper `focusChange` / el reconciliador):
+- `@keyframes flash-danger` / `.is-marked-danger` → borde+fondo danger que pulsa y se mantiene.
+- `@keyframes flash-info` / `.is-marked-info` → idem info (regenerar).
+- `@keyframes enter-success` / `.is-marked-success` → entrada con `scale(.98→1)`+fade, fondo success.
+- `.is-removing` → `opacity 1→0` + `max-height`→0 (colapso) en `--t-slow`.
+- `.is-regenerating` → skeleton/blur breve del contenido durante el reemplazo.
+- **FLIP** para reordenar: medir posición previa, aplicar `transform` invertido, animar a `0`.
+- `.skeleton` / `@keyframes shimmer` → placeholder con gradiente animado.
+- Barra superior de progreso fina `.preview-streaming-bar` (indeterminada sutil mientras hay stream).
+
+---
+
+## 9. Catálogo de componentes visuales
+
+Cada uno se rediseña como componente (`TODO-v1.md` §5) + plantilla Mustache:
+
+| Componente | Plantilla | Detalle visual clave |
+|---|---|---|
+| **Sección (preview)** | `preview_section.mustache` | Cabecera tipo tema Moodle, contador, controles en hover, resumen, drop-zone. |
+| **Actividad (preview)** | `preview_activity.mustache` | Icono mod con tinte purpose, título, badge tipo, detalle, controles. |
+| **Imagen sugerida** | `preview_image.mustache` | Tarjeta con prompt/placement, botón IA + descartar; estado "descartada" oculto. |
+| **Selector de propuestas** | `proposal_option.mustache` | Tarjetas de elección única; realce `destructive`; "Otra cosa" con textarea; Aplicar/Descartar. |
+| **Entrada de log** | `log_entry.mustache` | Actor, verbo+target, barra de color, timestamp relativo, expandible, estado. |
+| **Barra de acciones** | (en `preview` o `panel`) | Aprobar (primario) + acceso a texto libre; siempre visible en revisión. |
+| **Chat del usuario** | (footer) | Input claro, estado inline ("Interpretando…"), sin spinner. |
+| **Skeletons** | parte de los anteriores | Filas/bloques con shimmer ligados a la estructura real. |
+| **Pasos/fase** | mínimo | Indicador discreto de fase (contexto→plan→revisión→generación), sin spinner. |
+
+Reglas de estilo comunes: radios `var(--radius)`, sombras `--shadow-card`, foco visible
+(`:focus-visible` con anillo brand), densidad cómoda, tipografía con jerarquía (título sección >
+título actividad > detalle), iconografía consistente (SVG inline o pix de Moodle).
+
+---
+
+## 10. Estados globales de la vista
+
+Cada estado tiene un diseño propio; **ninguno usa el spinner genérico**:
+
+- **Contexto** (antes de planificar): formulario de contexto limpio (lo actual, pulido).
+- **Planificando**: preview con skeletons rellenándose + barra superior fina + log activo.
+- **Revisión** (`review_needed`): preview completo y editable, acciones visibles, propuestas si las hay.
+- **Aplicando un cambio**: solo el/los elementos afectados muestran su transición (info/skeleton);
+  el resto del preview permanece interactivo.
+- **Generando** (tras aprobar): preview pasa a "creando el curso" con progreso real por actividad
+  (no spinner), el log narra cada paso.
+- **Hecho**: confirmación success + enlace al curso.
+- **Error**: tarjeta de error localizada (no overlay), con acción de reintento; el log registra el error.
+
+---
+
+## 11. Microinteracciones y pulido profesional
+
+- **Hover de controles**: los botones por ítem aparecen tenues y se realzan al hacer hover sobre la
+  sección/actividad (no saturar la vista con botones siempre a tope).
+- **Foco accesible**: `:focus-visible` con anillo brand en todos los interactivos.
+- **Tooltips** con `core/str` en los iconos de acción.
+- **Estados de carga locales**: un botón que disparó una acción muestra estado ocupado **en sí mismo**
+  (no bloquea toda la vista).
+- **Sombras y profundidad** sutiles para separar paneles; borde 1px + sombra suave (tokens actuales).
+- **Tipografía**: tamaños y pesos coherentes; truncado con ellipsis donde haga falta; line-height cómodo.
+- **Densidad**: padding consistente (escala de 4px), gaps regulares.
+- **Sin parpadeos**: las transiciones entran/salen suaves; nada de saltos de layout (reservar espacio
+  con el skeleton).
+- **Drag&drop pulido**: agarre claro (handle), `cursor: grab/grabbing`, placeholder de destino,
+  no arrastrar desde texto seleccionable.
+
+---
+
+## 12. Accesibilidad
+
+- **`aria-live`**: el log es `polite`; los cambios importantes del preview se anuncian.
+- **Foco gestionado**: al añadir/regenerar, mover el foco al elemento nuevo/cambiado.
+- **Teclado**: toda acción (seleccionar propuesta, aplicar, eliminar, añadir, reordenar) accesible por
+  teclado; reordenar con teclas además del drag (mover arriba/abajo).
+- **Contraste** AA en texto y en los realces semánticos.
+- **`prefers-reduced-motion`**: desactiva animaciones no esenciales (ver §8); los cambios siguen
+  siendo visibles (color/borde) aunque sin movimiento.
+- **Roles correctos**: `radiogroup`/`radio` en propuestas, `list`/`listitem` en log y secciones.
+
+---
+
+## 13. Responsive
+
+- **Escritorio ancho**: 3 zonas (log · preview · acciones) como en §2.
+- **Medio**: el panel de acciones se integra al pie del preview; log lateral se mantiene.
+- **Angosto/móvil**: paneles colapsables — el log pasa a un cajón (drawer) accesible por botón; el
+  preview ocupa el ancho; el chat queda fijo abajo. Nada se rompe ni hace scroll horizontal.
+
+---
+
+## 14. Mapa de archivos afectados
+
+> Referencias para orientar; el detalle de partición de código está en `TODO-v1.md`.
+
+- **Plantillas (nuevas, Mustache)** en `templates/`: `preview_section.mustache`,
+  `preview_activity.mustache`, `preview_image.mustache`, `log_entry.mustache`,
+  `proposal_option.mustache`. Reusan clases de `core_courseformat` para el look Moodle.
+- **`templates/courseai_page.mustache`** (597): reestructurar el layout a las 3 zonas (§2); quitar el
+  overlay `#planningLoading`; contenedores `#coursePreview`, `#planLog`, barra de acciones, chat.
+- **`styles/aicoursecreation.css`** (2347): añadir tokens semánticos (§7) y de movimiento (§8),
+  keyframes de realce/entrada/salida/shimmer/FLIP, el grid de 3 zonas, los estilos de preview que
+  imitan el curso Moodle, el log, las propuestas y los skeletons. Revisar/limpiar reglas muertas tras
+  retirar el DOM manual.
+- **Componentes JS** (sobre `core/reactive`, ver `TODO-v1.md` §5): `components/preview.js` (render +
+  reconciliador/diff + transiciones + `focusChange`), `components/log.js`, `components/proposals.js`,
+  `components/chat.js`, `components/steps.js`.
+- **`ui/splitter.js`** (nuevo, ≤120 líneas): divisor redimensionable log↔preview (§2.1) — pointer
+  events, `clamp` de `--log-w`, persistencia, teclado, doble-click a default. El layout y el cursor
+  `col-resize` viven en CSS; este módulo solo gestiona el arrastre.
+- **`styles/aicoursecreation.css`**: grid de 3 zonas con la **columna del divisor** y la variable
+  `--log-w`, el estilo del splitter (línea + agarre en hover/focus), `cursor: col-resize`, y
+  `user-select:none` durante el arrastre.
+- **Stream → mutaciones** (`stream/*`): alimenta el estado; el preview reacciona y anima por diff.
+- **`utils.js`**: `focusChange`, helpers de iconos/purpose, formateadores; sin duplicados.
+
+---
+
+## Notas de implementación
+
+- Las animaciones de cambio se disparan **por diff del plan re-streameado**, no por suposición del
+  cliente — así reflejan exactamente lo que hizo el servidor (ver §6.3).
+- El "preview de selección" (rojo antes de aplicar) es puramente visual y se limpia si el usuario
+  cambia de opción o cancela; no muta el plan hasta `Aplicar`.
+- Todo string nuevo (verbos del log, tooltips, estados) va al catálogo `lang/en` + `i18n.js`.
