@@ -665,3 +665,4 @@ $string['courseai_btn_add_activity'] = 'Add activity';
 $string['courseai_add_section_placeholder'] = 'Describe the section to add…';
 $string['courseai_add_activity_placeholder'] = 'Describe the activity to add…';
 $string['courseai_drag_handle_label'] = 'Drag to reorder';
+$string['courseai_resize_panels'] = 'Resize panels';

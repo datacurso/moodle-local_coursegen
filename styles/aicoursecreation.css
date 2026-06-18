@@ -129,8 +129,9 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .courseai-workspace.is-planning {
+  --cg-left-w: 360px;
   display: grid;
-  grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
+  grid-template-columns: clamp(240px, var(--cg-left-w), 560px) 10px minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   height: calc(100vh - 100px);
   overflow: hidden;
@@ -145,8 +146,62 @@ svg { display: block; flex-shrink: 0; }
   display: flex;
   min-width: 0;
   min-height: 0;
-  padding-right: 16px;
-  border-right: 1px solid var(--border);
+  padding-right: 0;
+  border-right: none;
+}
+
+/* ─── RESIZABLE SPLITTER ──────────────────────────────────────────────── */
+.cg-splitter {
+  display: none;
+}
+
+.courseai-workspace.is-planning .cg-splitter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: col-resize;
+  background: var(--border);
+  position: relative;
+  min-height: 0;
+  transition: background .15s;
+  user-select: none;
+}
+
+.courseai-workspace.is-planning .cg-splitter::before {
+  content: '';
+  display: block;
+  width: 2px;
+  height: 48px;
+  border-radius: 2px;
+  background: var(--muted-fg);
+  opacity: 0.4;
+  transition: opacity .15s, background .15s;
+}
+
+.courseai-workspace.is-planning .cg-splitter:hover,
+.courseai-workspace.is-planning .cg-splitter:focus-visible {
+  background: var(--brand-soft);
+}
+
+.courseai-workspace.is-planning .cg-splitter:hover::before,
+.courseai-workspace.is-planning .cg-splitter:focus-visible::before {
+  background: var(--brand);
+  opacity: 0.8;
+}
+
+.courseai-workspace.is-planning .cg-splitter:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+}
+
+.courseai-workspace.cg-resizing {
+  user-select: none;
+  cursor: col-resize;
+}
+
+.courseai-workspace.cg-resizing .cg-splitter::before {
+  background: var(--brand);
+  opacity: 1;
 }
 
 .courseai-workspace.is-planning .context-head {

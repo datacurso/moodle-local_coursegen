@@ -47,6 +47,7 @@ import {createCourseaiActions} from 'local_coursegen/local/courseai/actions';
 import {initSidebar} from 'local_coursegen/local/courseai/sidebar';
 import {createProposalsUi} from 'local_coursegen/local/courseai/ui-proposals';
 import {createRunPlanAction} from 'local_coursegen/local/courseai/actions/plan-action';
+import {createSplitter} from 'local_coursegen/local/courseai/ui/splitter';
 
 /**
  * Initialize the courseai page.
@@ -674,6 +675,12 @@ export const init = async(params) => {
 
         // Initialize sidebar.
         initSidebar(state, actions.resetForAnotherCourse);
+
+        // Initialize resizable splitter (§2.1).
+        createSplitter({
+            workspace: document.getElementById('courseaiWorkspace'),
+            divider: document.getElementById('cgSplitter'),
+        });
     } catch (error) {
         Notification.exception(error);
     }

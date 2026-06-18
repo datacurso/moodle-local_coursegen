@@ -168,6 +168,7 @@ const STRING_KEYS = [
     'courseai_add_section_placeholder',
     'courseai_add_activity_placeholder',
     'courseai_drag_handle_label',
+    'courseai_resize_panels',
 ];
 
 /**
