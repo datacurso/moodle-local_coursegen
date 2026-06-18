@@ -21,6 +21,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {escapeHtml} from 'local_coursegen/local/courseai/utils';
+
 /**
  * Setup context step interactions.
  *
@@ -56,15 +58,6 @@ export const setupContextSection = (deps) => {
         btnWithImages,
         imgToggleWrap,
     } = elements;
-
-    const escapeHtml = (str) => {
-        return String(str || '')
-            .replace(/&/g, '&amp;')
-            .replace(/</g, '&lt;')
-            .replace(/>/g, '&gt;')
-            .replace(/"/g, '&quot;')
-            .replace(/'/g, '&#039;');
-    };
 
     const updateGenerateButton = () => {
         if (btnGenerate && promptInput) {

@@ -23,6 +23,7 @@
 
 import DeleteCancelModal from 'core/modal_delete_cancel';
 import ModalEvents from 'core/modal_events';
+import {createTextPanel} from 'local_coursegen/local/courseai/ui/panel';
 
 /**
  * Create detailed planning helpers.
@@ -41,8 +42,7 @@ export const createDetailedUi = (deps) => {
         setProgress,
         texts,
         formatTemplate,
-        sendPlanningFeedback,
-        openSSEStream,
+        runPlanAction,
     } = deps;
 
     const {
@@ -177,75 +177,6 @@ export const createDetailedUi = (deps) => {
     ].join(' ');
 
     /**
-     * Create an inline text-input panel identical to createInlineAdjustmentPanel
-     * but with a custom placeholder string.
-     *
-     * @param {Object} opts
-     * @param {Function} opts.onSubmit - Called with the trimmed text value.
-     * @param {string}   opts.placeholder - Placeholder text for the textarea.
-     * @returns {{panel: HTMLElement, open: Function}}
-     */
-    const createAddPanel = ({onSubmit, placeholder}) => {
-        const panel = document.createElement('div');
-        panel.className = 'dp-ai-inline';
-        panel.style.display = 'none';
-
-        const textarea = document.createElement('textarea');
-        textarea.className = 'dp-ai-textarea';
-        textarea.placeholder = placeholder || '';
-        textarea.rows = 2;
-
-        const actions = document.createElement('div');
-        actions.className = 'dp-ai-actions';
-
-        const cancel = document.createElement('button');
-        cancel.type = 'button';
-        cancel.className = 'dp-ai-btn dp-ai-btn--secondary';
-        cancel.textContent = texts.courseai_btn_cancel;
-
-        const send = document.createElement('button');
-        send.type = 'button';
-        send.className = 'dp-ai-btn dp-ai-btn--primary';
-        send.textContent = texts.courseai_btn_send_adjust;
-
-        const closePanel = (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            panel.style.display = 'none';
-            textarea.value = '';
-        };
-
-        cancel.addEventListener('click', closePanel);
-        send.addEventListener('click', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            const value = textarea.value.trim();
-            if (!value) {
-                textarea.focus();
-                return;
-            }
-            onSubmit(value);
-            panel.style.display = 'none';
-            textarea.value = '';
-        });
-
-        actions.appendChild(cancel);
-        actions.appendChild(send);
-        panel.appendChild(textarea);
-        panel.appendChild(actions);
-
-        return {
-            panel,
-            open: () => {
-                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-                if (panel.style.display !== 'none') {
-                    textarea.focus();
-                }
-            },
-        };
-    };
-
-    /**
      * Create a dashed "+ Add …" trigger button.
      *
      * @param {string} label - Visible button text.
@@ -366,16 +297,12 @@ export const createDetailedUi = (deps) => {
      * @param {string[]} targetIds - Section UUIDs in new DOM order.
      */
     const sendReorderSections = async(targetIds) => {
-        if (!sendPlanningFeedback || !state.sessionid) {
-            return;
-        }
         try {
             const pendingAction = {
                 action: 'reorder_sections',
                 target_ids: targetIds,
             };
-            await sendPlanningFeedback({recordid: state.sessionid, pendingAction});
-            openSSEStream(state.streamingurl, 0, 'planning');
+            await runPlanAction(pendingAction);
         } catch (e) {
             // Non-fatal: the re-stream on next user action will correct any ordering.
         }
@@ -388,17 +315,13 @@ export const createDetailedUi = (deps) => {
      * @param {string[]} targetIds - Activity UUIDs in new DOM order.
      */
     const sendReorderActivities = async(sectionId, targetIds) => {
-        if (!sendPlanningFeedback || !state.sessionid) {
-            return;
-        }
         try {
             const pendingAction = {
                 action: 'reorder_activities',
                 parent_section_id: sectionId,
                 target_ids: targetIds,
             };
-            await sendPlanningFeedback({recordid: state.sessionid, pendingAction});
-            openSSEStream(state.streamingurl, 0, 'planning');
+            await runPlanAction(pendingAction);
         } catch (e) {
             // Non-fatal.
         }
@@ -445,66 +368,6 @@ export const createDetailedUi = (deps) => {
         });
 
         return control;
-    };
-
-    const createInlineAdjustmentPanel = ({onSubmit}) => {
-        const panel = document.createElement('div');
-        panel.className = 'dp-ai-inline';
-        panel.style.display = 'none';
-
-        const textarea = document.createElement('textarea');
-        textarea.className = 'dp-ai-textarea';
-        textarea.placeholder = texts.courseai_adjust_placeholder || '';
-        textarea.rows = 2;
-
-        const actions = document.createElement('div');
-        actions.className = 'dp-ai-actions';
-
-        const cancel = document.createElement('button');
-        cancel.type = 'button';
-        cancel.className = 'dp-ai-btn dp-ai-btn--secondary';
-        cancel.textContent = texts.courseai_btn_cancel;
-
-        const send = document.createElement('button');
-        send.type = 'button';
-        send.className = 'dp-ai-btn dp-ai-btn--primary';
-        send.textContent = texts.courseai_btn_send_adjust;
-
-        const closePanel = (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            panel.style.display = 'none';
-            textarea.value = '';
-        };
-
-        cancel.addEventListener('click', closePanel);
-        send.addEventListener('click', (event) => {
-            event.preventDefault();
-            event.stopPropagation();
-            const value = textarea.value.trim();
-            if (!value) {
-                textarea.focus();
-                return;
-            }
-            onSubmit(value);
-            panel.style.display = 'none';
-            textarea.value = '';
-        });
-
-        actions.appendChild(cancel);
-        actions.appendChild(send);
-        panel.appendChild(textarea);
-        panel.appendChild(actions);
-
-        return {
-            panel,
-            open: () => {
-                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
-                if (panel.style.display !== 'none') {
-                    textarea.focus();
-                }
-            },
-        };
     };
 
     const createImagesDetail = ({imageSuggestions}) => {
@@ -575,9 +438,9 @@ export const createDetailedUi = (deps) => {
 
             let iaControl = null;
             let discardControl = null;
-            const imagePanelApi = createInlineAdjustmentPanel({
+            const imagePanelApi = createTextPanel({texts,
                 onSubmit: async(value) => {
-                    if (!sendPlanningFeedback || !item.id) {
+                    if (!item.id) {
                         return;
                     }
                     imageWrap.classList.add('dp-item-regenerating');
@@ -588,8 +451,7 @@ export const createDetailedUi = (deps) => {
                             target_ids: [item.id],
                             instruction: value,
                         };
-                        await sendPlanningFeedback({recordid: state.sessionid, pendingAction});
-                        openSSEStream(state.streamingurl, 0, 'planning');
+                        await runPlanAction(pendingAction);
                     } catch (e) {
                         imageWrap.classList.remove('dp-item-regenerating');
                         iaControl.classList.remove('dp-action-btn--disabled');
@@ -610,7 +472,7 @@ export const createDetailedUi = (deps) => {
                 iconUrl: getCoreIconUrl('t/delete'),
                 label: texts.courseai_btn_discard,
                 onActivate: async() => {
-                    if (!sendPlanningFeedback || !item.id) {
+                    if (!item.id) {
                         return;
                     }
                     imageWrap.classList.add('dp-item-regenerating');
@@ -620,8 +482,7 @@ export const createDetailedUi = (deps) => {
                             action: 'discard_image',
                             target_ids: [item.id],
                         };
-                        await sendPlanningFeedback({recordid: state.sessionid, pendingAction});
-                        openSSEStream(state.streamingurl, 0, 'planning');
+                        await runPlanAction(pendingAction);
                     } catch (e) {
                         imageWrap.classList.remove('dp-item-regenerating');
                         discardControl.classList.remove('dp-action-btn--disabled');
@@ -810,9 +671,9 @@ export const createDetailedUi = (deps) => {
         let iaControl = null;
         let deleteControl = null;
 
-        const sectionPanelApi = createInlineAdjustmentPanel({
+        const sectionPanelApi = createTextPanel({texts,
             onSubmit: async(value) => {
-                if (!sendPlanningFeedback || !state.sessionid || !row) {
+                if (!row) {
                     return;
                 }
                 row.classList.add('dp-item-regenerating');
@@ -823,8 +684,7 @@ export const createDetailedUi = (deps) => {
                         target_ids: [sectionId],
                         instruction: value,
                     };
-                    await sendPlanningFeedback({recordid: state.sessionid, pendingAction});
-                    openSSEStream(state.streamingurl, 0, 'planning');
+                    await runPlanAction(pendingAction);
                 } catch (e) {
                     row.classList.remove('dp-item-regenerating');
                     iaControl.classList.remove('dp-action-btn--disabled');
@@ -854,7 +714,7 @@ export const createDetailedUi = (deps) => {
                     body: texts.courseai_delete_section_confirm_body,
                 });
 
-                if (!confirmed || !sendPlanningFeedback || !state.sessionid) {
+                if (!confirmed) {
                     return;
                 }
 
@@ -865,8 +725,7 @@ export const createDetailedUi = (deps) => {
                         action: 'delete_section',
                         target_ids: [sectionId],
                     };
-                    await sendPlanningFeedback({recordid: state.sessionid, pendingAction});
-                    openSSEStream(state.streamingurl, 0, 'planning');
+                    await runPlanAction(pendingAction);
                 } catch (e) {
                     row.classList.remove('dp-item-regenerating');
                     deleteControl.classList.remove('dp-action-btn--disabled');
@@ -896,11 +755,8 @@ export const createDetailedUi = (deps) => {
         sectionHandle.setAttribute('role', 'img');
 
         // "+ Add activity" control at the bottom of this section's body.
-        const addActivityPanelApi = createAddPanel({
+        const addActivityPanelApi = createTextPanel({texts,
             onSubmit: async(value) => {
-                if (!sendPlanningFeedback || !state.sessionid) {
-                    return;
-                }
                 addActivityBtn.classList.add('dp-add-control--disabled');
                 try {
                     const pendingAction = {
@@ -908,8 +764,7 @@ export const createDetailedUi = (deps) => {
                         parent_section_id: sectionId,
                         instruction: value,
                     };
-                    await sendPlanningFeedback({recordid: state.sessionid, pendingAction});
-                    openSSEStream(state.streamingurl, 0, 'planning');
+                    await runPlanAction(pendingAction);
                 } catch (e) {
                     addActivityBtn.classList.remove('dp-add-control--disabled');
                 }
@@ -1020,11 +875,8 @@ export const createDetailedUi = (deps) => {
 
         let iaControl = null;
         let deleteControl = null;
-        const activityPanelApi = createInlineAdjustmentPanel({
+        const activityPanelApi = createTextPanel({texts,
             onSubmit: async(value) => {
-                if (!sendPlanningFeedback || !state.sessionid) {
-                    return;
-                }
                 wrap.classList.add('dp-item-regenerating');
                 iaControl.classList.add('dp-action-btn--disabled');
                 try {
@@ -1033,8 +885,7 @@ export const createDetailedUi = (deps) => {
                         target_ids: [activityId],
                         instruction: value,
                     };
-                    await sendPlanningFeedback({recordid: state.sessionid, pendingAction});
-                    openSSEStream(state.streamingurl, 0, 'planning');
+                    await runPlanAction(pendingAction);
                 } catch (e) {
                     wrap.classList.remove('dp-item-regenerating');
                     iaControl.classList.remove('dp-action-btn--disabled');
@@ -1056,7 +907,7 @@ export const createDetailedUi = (deps) => {
             label: texts.courseai_btn_cancel,
             onActivate: async() => {
                 const entry = state.detailedActivityEls[activityId];
-                if (!entry || !sendPlanningFeedback || !state.sessionid) {
+                if (!entry) {
                     return;
                 }
 
@@ -1076,8 +927,7 @@ export const createDetailedUi = (deps) => {
                         action: 'delete_activity',
                         target_ids: [activityId],
                     };
-                    await sendPlanningFeedback({recordid: state.sessionid, pendingAction});
-                    openSSEStream(state.streamingurl, 0, 'planning');
+                    await runPlanAction(pendingAction);
                 } catch (e) {
                     wrap.classList.remove('dp-item-regenerating');
                     deleteControl.classList.remove('dp-action-btn--disabled');
@@ -1235,19 +1085,15 @@ export const createDetailedUi = (deps) => {
             existing.remove();
         }
 
-        const addSectionPanelApi = createAddPanel({
+        const addSectionPanelApi = createTextPanel({texts,
             onSubmit: async(value) => {
-                if (!sendPlanningFeedback || !state.sessionid) {
-                    return;
-                }
                 addSectionBtn.classList.add('dp-add-control--disabled');
                 try {
                     const pendingAction = {
                         action: 'add_section',
                         instruction: value,
                     };
-                    await sendPlanningFeedback({recordid: state.sessionid, pendingAction});
-                    openSSEStream(state.streamingurl, 0, 'planning');
+                    await runPlanAction(pendingAction);
                 } catch (e) {
                     addSectionBtn.classList.remove('dp-add-control--disabled');
                 }
