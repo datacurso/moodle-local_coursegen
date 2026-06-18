@@ -24,6 +24,7 @@
 import DeleteCancelModal from 'core/modal_delete_cancel';
 import ModalEvents from 'core/modal_events';
 import {createTextPanel} from 'local_coursegen/local/courseai/ui/panel';
+import {focusChange, markRemoving} from 'local_coursegen/local/courseai/ui/highlight';
 
 /**
  * Create detailed planning helpers.
@@ -443,6 +444,7 @@ export const createDetailedUi = (deps) => {
                     if (!item.id) {
                         return;
                     }
+                    focusChange(imageWrap, 'info');
                     imageWrap.classList.add('dp-item-regenerating');
                     iaControl.classList.add('dp-action-btn--disabled');
                     try {
@@ -477,6 +479,7 @@ export const createDetailedUi = (deps) => {
                     }
                     imageWrap.classList.add('dp-item-regenerating');
                     discardControl.classList.add('dp-action-btn--disabled');
+                    await markRemoving(imageWrap);
                     try {
                         const pendingAction = {
                             action: 'discard_image',
@@ -485,6 +488,7 @@ export const createDetailedUi = (deps) => {
                         await runPlanAction(pendingAction);
                     } catch (e) {
                         imageWrap.classList.remove('dp-item-regenerating');
+                        imageWrap.classList.remove('cg-removing');
                         discardControl.classList.remove('dp-action-btn--disabled');
                     }
                 },
@@ -676,6 +680,7 @@ export const createDetailedUi = (deps) => {
                 if (!row) {
                     return;
                 }
+                focusChange(row, 'info');
                 row.classList.add('dp-item-regenerating');
                 iaControl.classList.add('dp-action-btn--disabled');
                 try {
@@ -720,6 +725,7 @@ export const createDetailedUi = (deps) => {
 
                 row.classList.add('dp-item-regenerating');
                 deleteControl.classList.add('dp-action-btn--disabled');
+                await markRemoving(row);
                 try {
                     const pendingAction = {
                         action: 'delete_section',
@@ -728,6 +734,7 @@ export const createDetailedUi = (deps) => {
                     await runPlanAction(pendingAction);
                 } catch (e) {
                     row.classList.remove('dp-item-regenerating');
+                    row.classList.remove('cg-removing');
                     deleteControl.classList.remove('dp-action-btn--disabled');
                 }
             },
@@ -877,6 +884,7 @@ export const createDetailedUi = (deps) => {
         let deleteControl = null;
         const activityPanelApi = createTextPanel({texts,
             onSubmit: async(value) => {
+                focusChange(wrap, 'info');
                 wrap.classList.add('dp-item-regenerating');
                 iaControl.classList.add('dp-action-btn--disabled');
                 try {
@@ -922,6 +930,7 @@ export const createDetailedUi = (deps) => {
 
                 wrap.classList.add('dp-item-regenerating');
                 deleteControl.classList.add('dp-action-btn--disabled');
+                await markRemoving(wrap);
                 try {
                     const pendingAction = {
                         action: 'delete_activity',
@@ -930,6 +939,7 @@ export const createDetailedUi = (deps) => {
                     await runPlanAction(pendingAction);
                 } catch (e) {
                     wrap.classList.remove('dp-item-regenerating');
+                    wrap.classList.remove('cg-removing');
                     deleteControl.classList.remove('dp-action-btn--disabled');
                 }
             },
@@ -1119,6 +1129,32 @@ export const createDetailedUi = (deps) => {
         state.addSectionBtn = addSectionBtn;
     };
 
+    /**
+     * Flash a newly-added activity element with a success highlight.
+     * Called once per added id after a re-render diff.
+     *
+     * @param {string} id - Activity UUID.
+     * @param {boolean} isFirst - Whether this is the first added element (controls scroll).
+     */
+    const flashAddedActivity = (id, isFirst) => {
+        const entry = state.detailedActivityEls[id];
+        if (!entry) {
+            return;
+        }
+        const el = entry.wrap || entry.item;
+        if (!el) {
+            return;
+        }
+        if (isFirst) {
+            focusChange(el, 'success');
+            return;
+        }
+        // For subsequent added items: flash without scrolling (focusChange already scrolls
+        // but we only want one scroll; re-add the class manually without the scroll call).
+        el.classList.add('cg-mark-success');
+        setTimeout(() => el.classList.remove('cg-mark-success'), 1200);
+    };
+
     const initDetailedPlanView = (data) => {
         const sourceSections = normalizeInitialSections(data?.sections || []);
         const renderSections = data?.renderSections !== false;
@@ -1129,6 +1165,13 @@ export const createDetailedUi = (deps) => {
         if (sourceSections.length > 0) {
             state.latestInitialSections = sourceSections;
         }
+
+        // Capture prev activity ids before clearing state (used for diff-based marks below).
+        const prevActivityIds = state.prevActivityIds;
+
+        // A new session is signalled by an empty incoming sections list or a fresh
+        // generationRound (round === 1 means first planning pass).
+        const isNewSession = !sourceSections.length || (state.generationRound || 0) <= 1;
 
         if (prvSections) {
             prvSections.innerHTML = '';
@@ -1168,6 +1211,9 @@ export const createDetailedUi = (deps) => {
         }
 
         if (!renderSections) {
+            // Reset diff baseline: the DOM is cleared, so the next full render
+            // should not flash everything as "new".
+            state.prevActivityIds = undefined;
             return;
         }
 
@@ -1211,6 +1257,29 @@ export const createDetailedUi = (deps) => {
             (ids) => sendReorderSections(ids),
             null
         );
+
+        // --- Diff-based success marks (Task B) ---
+        // Collect the current set of rendered activity ids.
+        const currentActivityIds = new Set(Object.keys(state.detailedActivityEls));
+
+        if (isNewSession || !prevActivityIds) {
+            // First render of a new session: establish baseline without flashing.
+            state.prevActivityIds = currentActivityIds;
+            return;
+        }
+
+        // Determine newly-added ids (present now, absent before).
+        const addedIds = [];
+        currentActivityIds.forEach((id) => {
+            if (!prevActivityIds.has(id)) {
+                addedIds.push(id);
+            }
+        });
+
+        addedIds.forEach((id, idx) => flashAddedActivity(id, idx === 0));
+
+        // Update baseline for the next render.
+        state.prevActivityIds = currentActivityIds;
     };
 
     const handleDetailedPlanField = (data) => {
