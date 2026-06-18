@@ -166,6 +166,244 @@ export const createDetailedUi = (deps) => {
         return M.cfg.wwwroot + '/pix/' + iconkey + '.svg';
     };
 
+    /** SVG grip icon for drag handles (six dots, 10×14 px). */
+    const gripSvg = [
+        '<svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor"',
+        'aria-hidden="true">',
+        '<circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/>',
+        '<circle cx="2" cy="7" r="1.5"/><circle cx="8" cy="7" r="1.5"/>',
+        '<circle cx="2" cy="12" r="1.5"/><circle cx="8" cy="12" r="1.5"/>',
+        '</svg>'
+    ].join(' ');
+
+    /**
+     * Create an inline text-input panel identical to createInlineAdjustmentPanel
+     * but with a custom placeholder string.
+     *
+     * @param {Object} opts
+     * @param {Function} opts.onSubmit - Called with the trimmed text value.
+     * @param {string}   opts.placeholder - Placeholder text for the textarea.
+     * @returns {{panel: HTMLElement, open: Function}}
+     */
+    const createAddPanel = ({onSubmit, placeholder}) => {
+        const panel = document.createElement('div');
+        panel.className = 'dp-ai-inline';
+        panel.style.display = 'none';
+
+        const textarea = document.createElement('textarea');
+        textarea.className = 'dp-ai-textarea';
+        textarea.placeholder = placeholder || '';
+        textarea.rows = 2;
+
+        const actions = document.createElement('div');
+        actions.className = 'dp-ai-actions';
+
+        const cancel = document.createElement('button');
+        cancel.type = 'button';
+        cancel.className = 'dp-ai-btn dp-ai-btn--secondary';
+        cancel.textContent = texts.courseai_btn_cancel;
+
+        const send = document.createElement('button');
+        send.type = 'button';
+        send.className = 'dp-ai-btn dp-ai-btn--primary';
+        send.textContent = texts.courseai_btn_send_adjust;
+
+        const closePanel = (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            panel.style.display = 'none';
+            textarea.value = '';
+        };
+
+        cancel.addEventListener('click', closePanel);
+        send.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const value = textarea.value.trim();
+            if (!value) {
+                textarea.focus();
+                return;
+            }
+            onSubmit(value);
+            panel.style.display = 'none';
+            textarea.value = '';
+        });
+
+        actions.appendChild(cancel);
+        actions.appendChild(send);
+        panel.appendChild(textarea);
+        panel.appendChild(actions);
+
+        return {
+            panel,
+            open: () => {
+                panel.style.display = panel.style.display === 'none' ? 'block' : 'none';
+                if (panel.style.display !== 'none') {
+                    textarea.focus();
+                }
+            },
+        };
+    };
+
+    /**
+     * Create a dashed "+ Add …" trigger button.
+     *
+     * @param {string} label - Visible button text.
+     * @returns {HTMLButtonElement}
+     */
+    const createAddTriggerBtn = (label) => {
+        const btn = document.createElement('button');
+        btn.type = 'button';
+        btn.className = 'dp-add-control dp-add-control--disabled';
+        const icon = document.createElement('span');
+        icon.className = 'dp-add-control__icon';
+        icon.textContent = '+';
+        icon.setAttribute('aria-hidden', 'true');
+        const labelSpan = document.createElement('span');
+        labelSpan.textContent = label;
+        btn.appendChild(icon);
+        btn.appendChild(labelSpan);
+        return btn;
+    };
+
+    /**
+     * Wire drag-and-drop for a container whose direct children are draggable rows.
+     *
+     * @param {HTMLElement} container       - Parent element whose children will be dragged.
+     * @param {string}      itemSelector    - CSS selector matching direct draggable children.
+     * @param {string}      idDataset       - dataset property name that holds the UUID (camelCase).
+     * @param {Function}    onReorder       - Called with the array of UUIDs in new DOM order.
+     * @param {string|null} parentSectionId - Section UUID for activity-level drops; null for sections.
+     */
+    const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, parentSectionId) => {
+        let dragSrcEl = null;
+
+        const onDragStart = (event) => {
+            // Sections contain activity rows; both are draggable. Stop the event
+            // here so an activity drag never bubbles to its section's wirer.
+            event.stopPropagation();
+            const row = event.currentTarget;
+            dragSrcEl = row;
+            row.classList.add('dp-dragging');
+            event.dataTransfer.effectAllowed = 'move';
+            // Store the parent section so cross-section drops can be rejected.
+            event.dataTransfer.setData('text/plain', parentSectionId || '');
+        };
+
+        const onDragOver = (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            event.dataTransfer.dropEffect = 'move';
+            const row = event.currentTarget;
+            if (row !== dragSrcEl) {
+                row.classList.add('dp-drag-over');
+            }
+        };
+
+        const onDragLeave = (event) => {
+            event.stopPropagation();
+            event.currentTarget.classList.remove('dp-drag-over');
+        };
+
+        const onDrop = (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const row = event.currentTarget;
+            row.classList.remove('dp-drag-over');
+            if (!dragSrcEl || dragSrcEl === row) {
+                return;
+            }
+            // Reject cross-section activity drops.
+            const originSection = event.dataTransfer.getData('text/plain');
+            if (parentSectionId !== null && originSection !== (parentSectionId || '')) {
+                return;
+            }
+            // DOM reorder: insert dragSrcEl before the target.
+            const parent = row.parentNode;
+            parent.insertBefore(dragSrcEl, row);
+        };
+
+        const onDragEnd = (event) => {
+            event.stopPropagation();
+            const row = event.currentTarget;
+            row.classList.remove('dp-dragging');
+            container.querySelectorAll(itemSelector).forEach((el) => {
+                el.classList.remove('dp-drag-over');
+            });
+            dragSrcEl = null;
+            // Collect new order and dispatch.
+            const ids = [];
+            container.querySelectorAll(itemSelector).forEach((el) => {
+                const id = el.dataset[idDataset];
+                if (id) {
+                    ids.push(id);
+                }
+            });
+            if (ids.length > 1) {
+                onReorder(ids);
+            }
+        };
+
+        const attachToRow = (row) => {
+            row.setAttribute('draggable', 'true');
+            row.addEventListener('dragstart', onDragStart);
+            row.addEventListener('dragover', onDragOver);
+            row.addEventListener('dragleave', onDragLeave);
+            row.addEventListener('drop', onDrop);
+            row.addEventListener('dragend', onDragEnd);
+        };
+
+        // Attach to all existing rows immediately.
+        container.querySelectorAll(itemSelector).forEach(attachToRow);
+
+        // Return attach so callers can wire newly-created rows.
+        return {attachToRow};
+    };
+
+    /**
+     * Send a reorder_sections action and re-open the SSE stream.
+     *
+     * @param {string[]} targetIds - Section UUIDs in new DOM order.
+     */
+    const sendReorderSections = async(targetIds) => {
+        if (!sendPlanningFeedback || !state.sessionid) {
+            return;
+        }
+        try {
+            const pendingAction = {
+                action: 'reorder_sections',
+                target_ids: targetIds,
+            };
+            await sendPlanningFeedback({recordid: state.sessionid, pendingAction});
+            openSSEStream(state.streamingurl, 0, 'planning');
+        } catch (e) {
+            // Non-fatal: the re-stream on next user action will correct any ordering.
+        }
+    };
+
+    /**
+     * Send a reorder_activities action and re-open the SSE stream.
+     *
+     * @param {string}   sectionId - Parent section UUID.
+     * @param {string[]} targetIds - Activity UUIDs in new DOM order.
+     */
+    const sendReorderActivities = async(sectionId, targetIds) => {
+        if (!sendPlanningFeedback || !state.sessionid) {
+            return;
+        }
+        try {
+            const pendingAction = {
+                action: 'reorder_activities',
+                parent_section_id: sectionId,
+                target_ids: targetIds,
+            };
+            await sendPlanningFeedback({recordid: state.sessionid, pendingAction});
+            openSSEStream(state.streamingurl, 0, 'planning');
+        } catch (e) {
+            // Non-fatal.
+        }
+    };
+
     const createActionControl = ({variant, iconUrl, iconSvg, label, onActivate, disabled}) => {
         const control = document.createElement('span');
         control.className = `dp-action-btn dp-action-btn--${variant}`;
@@ -650,13 +888,67 @@ export const createDetailedUi = (deps) => {
             chevronEl.classList.toggle('prv-chevron--open', !isOpen);
         });
 
+        // Drag handle for section row (appears to the left; only it initiates drag).
+        const sectionHandle = document.createElement('span');
+        sectionHandle.className = 'dp-drag-handle dp-drag-handle--section';
+        sectionHandle.innerHTML = gripSvg;
+        sectionHandle.setAttribute('aria-label', texts.courseai_drag_handle_label || 'Drag to reorder');
+        sectionHandle.setAttribute('role', 'img');
+
+        // "+ Add activity" control at the bottom of this section's body.
+        const addActivityPanelApi = createAddPanel({
+            onSubmit: async(value) => {
+                if (!sendPlanningFeedback || !state.sessionid) {
+                    return;
+                }
+                addActivityBtn.classList.add('dp-add-control--disabled');
+                try {
+                    const pendingAction = {
+                        action: 'add_activity',
+                        parent_section_id: sectionId,
+                        instruction: value,
+                    };
+                    await sendPlanningFeedback({recordid: state.sessionid, pendingAction});
+                    openSSEStream(state.streamingurl, 0, 'planning');
+                } catch (e) {
+                    addActivityBtn.classList.remove('dp-add-control--disabled');
+                }
+            },
+            placeholder: texts.courseai_add_activity_placeholder || 'Describe the activity to add…',
+        });
+
+        const addActivityBtn = createAddTriggerBtn(texts.courseai_btn_add_activity || 'Add activity');
+        addActivityBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            addActivityPanelApi.open();
+        });
+
+        const addActivityWrap = document.createElement('div');
+        addActivityWrap.className = 'dp-add-activity-wrap';
+        addActivityWrap.appendChild(addActivityBtn);
+        addActivityWrap.appendChild(addActivityPanelApi.panel);
+
+        bodyEl.appendChild(addActivityWrap);
+
         row = document.createElement('div');
         row.className = 'prv-section-row';
         row.dataset.sectionId = sectionId;
+        row.appendChild(sectionHandle);
         row.appendChild(btn);
         row.appendChild(sectionPanelApi.panel);
         row.appendChild(bodyEl);
         prvSections.appendChild(row);
+
+        // Wire activity drag-and-drop within this section's body.
+        // The add-activity wrap is not draggable — only dp-activity-wrap children are.
+        const activityDnd = wireDragAndDrop(
+            bodyEl,
+            '.dp-activity-wrap',
+            'activityId',
+            (ids) => sendReorderActivities(sectionId, ids),
+            sectionId
+        );
 
         state.detailedSectionMeta[sectionId] = {
             done: 0,
@@ -665,10 +957,12 @@ export const createDetailedUi = (deps) => {
             metaEl,
             imagesBadgeEl,
             bodyEl,
-            row
+            row,
+            addActivityBtn,
+            activityDnd,
         };
 
-        return {bodyEl};
+        return {bodyEl, activityDnd};
     };
 
     const createDetailedActivityRow = ({sectionId, activityId, activityType, activityTitle, bodyEl}) => {
@@ -795,10 +1089,31 @@ export const createDetailedUi = (deps) => {
         actionsEl.appendChild(iaControl);
         actionsEl.appendChild(deleteControl);
 
+        // Activity drag handle (appears before the item content).
+        const activityHandle = document.createElement('span');
+        activityHandle.className = 'dp-drag-handle dp-drag-handle--activity';
+        activityHandle.innerHTML = gripSvg;
+        activityHandle.setAttribute('aria-label', texts.courseai_drag_handle_label || 'Drag to reorder');
+        activityHandle.setAttribute('role', 'img');
+
+        wrap.appendChild(activityHandle);
         wrap.appendChild(item);
         wrap.appendChild(activityPanelApi.panel);
         wrap.appendChild(detailEl);
-        bodyEl.appendChild(wrap);
+
+        // Insert before the add-activity wrap (last child of bodyEl when present).
+        const addWrap = bodyEl.querySelector('.dp-add-activity-wrap');
+        if (addWrap) {
+            bodyEl.insertBefore(wrap, addWrap);
+        } else {
+            bodyEl.appendChild(wrap);
+        }
+
+        // Wire this new wrap into the section's existing DnD setup.
+        const sectionMeta = state.detailedSectionMeta[sectionId];
+        if (sectionMeta && sectionMeta.activityDnd) {
+            sectionMeta.activityDnd.attachToRow(wrap);
+        }
 
         const textDiv = item.querySelector('.prv-activity-text');
         const progressEl = document.createElement('p');
@@ -903,6 +1218,61 @@ export const createDetailedUi = (deps) => {
         });
     };
 
+    /**
+     * Build and append the global "+ Add section" control into prvSections.
+     * Called once per initDetailedPlanView render (after sections are created).
+     * The control is identified by the class dp-add-section-wrap so it is not
+     * picked up by the section DnD selector (.prv-section-row).
+     */
+    const appendAddSectionControl = () => {
+        if (!prvSections) {
+            return;
+        }
+
+        // Remove any previous instance before re-creating.
+        const existing = prvSections.querySelector('.dp-add-section-wrap');
+        if (existing) {
+            existing.remove();
+        }
+
+        const addSectionPanelApi = createAddPanel({
+            onSubmit: async(value) => {
+                if (!sendPlanningFeedback || !state.sessionid) {
+                    return;
+                }
+                addSectionBtn.classList.add('dp-add-control--disabled');
+                try {
+                    const pendingAction = {
+                        action: 'add_section',
+                        instruction: value,
+                    };
+                    await sendPlanningFeedback({recordid: state.sessionid, pendingAction});
+                    openSSEStream(state.streamingurl, 0, 'planning');
+                } catch (e) {
+                    addSectionBtn.classList.remove('dp-add-control--disabled');
+                }
+            },
+            placeholder: texts.courseai_add_section_placeholder || 'Describe the section to add…',
+        });
+
+        const addSectionBtn = createAddTriggerBtn(texts.courseai_btn_add_section || 'Add section');
+        addSectionBtn.classList.add('dp-add-control--disabled');
+        addSectionBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            addSectionPanelApi.open();
+        });
+
+        const wrap = document.createElement('div');
+        wrap.className = 'dp-add-section-wrap';
+        wrap.appendChild(addSectionBtn);
+        wrap.appendChild(addSectionPanelApi.panel);
+        prvSections.appendChild(wrap);
+
+        // Expose so enableAllActionControls can enable/disable it.
+        state.addSectionBtn = addSectionBtn;
+    };
+
     const initDetailedPlanView = (data) => {
         const sourceSections = normalizeInitialSections(data?.sections || []);
         const renderSections = data?.renderSections !== false;
@@ -983,6 +1353,18 @@ export const createDetailedUi = (deps) => {
                 });
             });
         });
+
+        // "+ Add section" control — appears after all section rows.
+        appendAddSectionControl();
+
+        // Wire section-level drag-and-drop (sections as direct children of prvSections).
+        wireDragAndDrop(
+            prvSections,
+            '.prv-section-row',
+            'sectionId',
+            (ids) => sendReorderSections(ids),
+            null
+        );
     };
 
     const handleDetailedPlanField = (data) => {
@@ -1185,6 +1567,10 @@ export const createDetailedUi = (deps) => {
         document.querySelectorAll('.dp-action-btn--disabled').forEach(function(el) {
             el.classList.remove('dp-action-btn--disabled');
             el.setAttribute('tabindex', '0');
+        });
+        // Enable add-section and all add-activity controls.
+        document.querySelectorAll('.dp-add-control--disabled').forEach(function(el) {
+            el.classList.remove('dp-add-control--disabled');
         });
     };
 

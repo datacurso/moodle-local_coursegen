@@ -1965,6 +1965,131 @@ svg { display: block; flex-shrink: 0; }
 }
 
 /* ============================================================
+   §7 Planning controls — add section/activity + drag-and-drop
+   ============================================================ */
+
+/* "+ Add …" trigger button */
+.dp-add-control {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  width: 100%;
+  padding: 6px 10px;
+  border: 1.5px dashed var(--border);
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted-fg);
+  font-size: 12px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: border-color .15s, color .15s, background .15s;
+  text-align: left;
+}
+
+.dp-add-control:hover {
+  border-color: hsl(8 72% 42% / .55);
+  color: hsl(8 72% 38%);
+  background: hsl(8 72% 50% / .04);
+}
+
+.dp-add-control:focus,
+.dp-add-control:focus-visible {
+  outline: 2px solid hsl(8 72% 50% / .35);
+  outline-offset: 1px;
+}
+
+.dp-add-control--disabled {
+  opacity: 0.35;
+  cursor: default;
+  pointer-events: none;
+}
+
+.dp-add-control__icon {
+  font-size: 16px;
+  line-height: 1;
+  color: hsl(8 72% 42%);
+  flex-shrink: 0;
+}
+
+/* Wrapper that holds the add-section button + its inline panel */
+.dp-add-section-wrap {
+  margin-top: 6px;
+}
+
+/* Inline panel override for add controls (no section indentation needed) */
+.dp-add-section-wrap .dp-ai-inline {
+  border-radius: 8px;
+  margin-top: 4px;
+}
+
+/* Wrapper for add-activity within a section body */
+.dp-add-activity-wrap {
+  margin-top: 2px;
+}
+
+.dp-add-activity-wrap .dp-ai-inline {
+  border-radius: 8px;
+  margin-top: 4px;
+}
+
+/* Drag handle */
+.dp-drag-handle {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  cursor: grab;
+  color: var(--muted-fg);
+  opacity: 0.5;
+  border-radius: 4px;
+  transition: opacity .12s, color .12s;
+}
+
+.dp-drag-handle:hover {
+  opacity: 1;
+  color: hsl(215 18% 40%);
+}
+
+.dp-drag-handle:active {
+  cursor: grabbing;
+}
+
+/* Section drag handle sits to the left of the section btn */
+.prv-section-row {
+  position: relative;
+}
+
+.dp-drag-handle--section {
+  position: absolute;
+  left: 4px;
+  top: 50%;
+  transform: translateY(-50%);
+  z-index: 1;
+}
+
+/* Activity drag handle inside the activity item */
+.dp-drag-handle--activity {
+  margin-right: 2px;
+}
+
+/* Visual feedback during drag */
+.dp-dragging {
+  opacity: 0.45;
+  outline: 2px dashed hsl(8 72% 42% / .45);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+.dp-drag-over {
+  outline: 2px solid hsl(8 72% 42% / .6);
+  outline-offset: 2px;
+  border-radius: 8px;
+}
+
+/* ============================================================
    Proposals UI — free-text feedback interpretation block
    ============================================================ */
 

@@ -658,3 +658,10 @@ $string['courseai_btn_execute_proposal'] = 'Apply selection';
 $string['courseai_btn_discard_proposals'] = 'Dismiss suggestions';
 $string['courseai_proposals_fallen_label'] = 'No longer possible';
 $string['courseai_proposals_destructive_badge'] = 'Deletes content';
+
+// Planning controls — add and drag-and-drop reorder (§7).
+$string['courseai_btn_add_section'] = 'Add section';
+$string['courseai_btn_add_activity'] = 'Add activity';
+$string['courseai_add_section_placeholder'] = 'Describe the section to add…';
+$string['courseai_add_activity_placeholder'] = 'Describe the activity to add…';
+$string['courseai_drag_handle_label'] = 'Drag to reorder';

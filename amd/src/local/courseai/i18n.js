@@ -163,6 +163,11 @@ const STRING_KEYS = [
     'courseai_btn_discard_proposals',
     'courseai_proposals_fallen_label',
     'courseai_proposals_destructive_badge',
+    'courseai_btn_add_section',
+    'courseai_btn_add_activity',
+    'courseai_add_section_placeholder',
+    'courseai_add_activity_placeholder',
+    'courseai_drag_handle_label',
 ];
 
 /**
