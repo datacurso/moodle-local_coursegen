@@ -79,6 +79,9 @@ export const openConnection = (streamUrl, retryAttempt, ctx, openSSEStream) => {
             return;
         }
 
+        if (typeof ctx.hideStreamBar === 'function') {
+            ctx.hideStreamBar();
+        }
         if (typingCursor) {
             typingCursor.classList.add('hidden');
         }
@@ -101,6 +104,9 @@ export const openConnection = (streamUrl, retryAttempt, ctx, openSSEStream) => {
 
     state.sseSource.onerror = () => {
         state.isStreaming = false;
+        if (typeof ctx.hideStreamBar === 'function') {
+            ctx.hideStreamBar();
+        }
         if (typingCursor) {
             typingCursor.classList.add('hidden');
         }

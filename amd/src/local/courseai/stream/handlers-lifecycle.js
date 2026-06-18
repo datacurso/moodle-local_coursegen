@@ -113,11 +113,14 @@ export const handleError = async(data, ctx) => {
 export const handleReviewNeeded = (data, ctx) => {
     const {
         state, stepsUi, planningUi, detailedUi, proposalsUi,
-        ensureStreamContentVisible, setCompactChatState, deps, closeStream,
+        ensureStreamContentVisible, hideStreamBar, setCompactChatState, deps, closeStream,
     } = ctx;
 
     state.isStreaming = false;
     ensureStreamContentVisible();
+    if (typeof hideStreamBar === 'function') {
+        hideStreamBar();
+    }
     stepsUi.setStepState('planning', 'done');
     state.currentStage = 'planning';
     stepsUi.updateFlowNav();
@@ -166,7 +169,11 @@ export const handleCompleted = async(data, ctx) => {
     const {
         state, stepsUi, streamMode, markAllDone,
         setCompletionStatsFromGeneratedResult, closeStream, createCourseFromSession,
+        hideStreamBar,
     } = ctx;
+    if (typeof hideStreamBar === 'function') {
+        hideStreamBar();
+    }
     if (streamMode === 'generating') {
         markAllDone();
     }
@@ -190,9 +197,12 @@ export const handleFailed = async(data, ctx) => {
     const {
         state, stepsUi, detailedUi, texts, streamMode,
         markAllDone, closeStream, setCompactChatState, deps,
-        localizeMessage, planningSpinner, pcStep, pcSubtitle,
+        localizeMessage, planningSpinner, pcStep, pcSubtitle, hideStreamBar,
     } = ctx;
     state.isStreaming = false;
+    if (typeof hideStreamBar === 'function') {
+        hideStreamBar();
+    }
     if (streamMode === 'generating') {
         markAllDone();
     }

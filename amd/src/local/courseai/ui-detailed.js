@@ -976,9 +976,23 @@ export const createDetailedUi = (deps) => {
         }
 
         const textDiv = item.querySelector('.prv-activity-text');
-        const progressEl = document.createElement('p');
-        progressEl.className = 'prv-activity-desc';
-        progressEl.textContent = texts.courseai_generating_details;
+
+        // Skeleton placeholder: two shimmer lines shown while detail is pending.
+        // markActivityPlanned removes progressEl, which clears the skeletons.
+        const progressEl = document.createElement('div');
+        progressEl.className = 'prv-activity-desc cg-skeleton-wrap';
+        progressEl.setAttribute('aria-hidden', 'true');
+
+        const skeletonLine1 = document.createElement('span');
+        skeletonLine1.className = 'cg-skeleton cg-skeleton-line';
+        skeletonLine1.style.width = '80%';
+
+        const skeletonLine2 = document.createElement('span');
+        skeletonLine2.className = 'cg-skeleton cg-skeleton-line';
+        skeletonLine2.style.width = '55%';
+
+        progressEl.appendChild(skeletonLine1);
+        progressEl.appendChild(skeletonLine2);
         textDiv.appendChild(progressEl);
 
         state.detailedActivityEls[activityId] = {
@@ -1331,6 +1345,12 @@ export const createDetailedUi = (deps) => {
             text = `${text} (${summary.join(' · ')})`;
         }
         if (entry.progressEl) {
+            // Replace skeleton placeholder with real text on first field data.
+            if (entry.progressEl.classList.contains('cg-skeleton-wrap')) {
+                entry.progressEl.innerHTML = '';
+                entry.progressEl.className = 'prv-activity-desc';
+                entry.progressEl.removeAttribute('aria-hidden');
+            }
             entry.progressEl.textContent = text;
         }
         if (prvHeaderSub) {

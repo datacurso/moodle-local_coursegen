@@ -66,6 +66,35 @@ const ensureStreamContentVisible = () => {
 };
 
 /**
+ * Attach a thin indeterminate progress bar to the top of the review card.
+ * Idempotent: no-op if the bar is already present.
+ */
+const showStreamBar = () => {
+    const card = document.getElementById('planReviewCard');
+    if (!card || card.querySelector('.cg-stream-bar')) {
+        return;
+    }
+    const bar = document.createElement('div');
+    bar.className = 'cg-stream-bar';
+    bar.setAttribute('aria-hidden', 'true');
+    card.prepend(bar);
+};
+
+/**
+ * Remove the thin indeterminate progress bar from the review card.
+ */
+const hideStreamBar = () => {
+    const card = document.getElementById('planReviewCard');
+    if (!card) {
+        return;
+    }
+    const bar = card.querySelector('.cg-stream-bar');
+    if (bar) {
+        bar.remove();
+    }
+};
+
+/**
  * Create stream manager.
  *
  * @param {Object} deps
@@ -132,6 +161,12 @@ export const createStreamManager = (deps) => {
 
             stepsUi.resetPlanningState({showLoading: streamMode !== 'generating'});
 
+            // Suppress the centered generic spinner immediately for planning streams.
+            // The review card with skeleton rows will render as the first section event arrives.
+            if (streamMode !== 'generating') {
+                ensureStreamContentVisible();
+            }
+
             if (savedLatestInitialSections.length > 0) {
                 state.latestInitialSections = savedLatestInitialSections;
             }
@@ -175,6 +210,11 @@ export const createStreamManager = (deps) => {
             }
         }
 
+        // Show thin stream bar on the review card for planning streams.
+        if (streamMode !== 'generating') {
+            showStreamBar();
+        }
+
         // Build the per-stream context object carried into all handlers.
         const ctx = {
             state,
@@ -189,6 +229,7 @@ export const createStreamManager = (deps) => {
             deps,
             closeStream,
             ensureStreamContentVisible,
+            hideStreamBar,
             setCompactChatState,
             localizeMessage,
             syncTrackerFromStatus,
