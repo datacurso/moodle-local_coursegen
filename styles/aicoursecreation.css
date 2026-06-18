@@ -1435,6 +1435,7 @@ svg { display: block; flex-shrink: 0; }
   line-height: 1;
 }
 
+/* Per-type tints (kept for legacy specificity) */
 .ps-badge--quiz { background: hsl(252, 80%, 92%); color: hsl(252, 60%, 40%); }
 .ps-badge--book { background: hsl(198, 80%, 90%); color: hsl(198, 65%, 32%); }
 .ps-badge--assign { background: hsl(35, 85%, 90%); color: hsl(35, 65%, 32%); }
@@ -1446,13 +1447,23 @@ svg { display: block; flex-shrink: 0; }
 .ps-badge--data { background: hsl(45, 75%, 88%); color: hsl(45, 60%, 30%); }
 .ps-badge--glossary { background: hsl(330, 55%, 90%); color: hsl(330, 50%, 35%); }
 
-/* Initial/detailed review card */
+/* Purpose tints — override per-type when present (set by ui-detailed.js) */
+.dp-purpose-content    { background: var(--info-soft);    color: hsl(212 90% 32%); }
+.dp-purpose-assessment { background: var(--danger-soft);  color: hsl(8 72% 36%); }
+.dp-purpose-collaboration { background: var(--success-soft); color: hsl(142 70% 26%); }
+.dp-purpose-communication { background: var(--warn-soft);  color: hsl(38 80% 28%); }
+
+/* ─────────────────────────────────────────────────────────────
+   §3  Preview panel — Moodle topics-format course view
+   ───────────────────────────────────────────────────────────── */
+
+/* Outer card shell */
 .prv-card {
   position: relative;
-  border-radius: 16px;
+  border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--card);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .07);
+  box-shadow: var(--shadow-card);
   overflow: hidden;
 }
 
@@ -1514,36 +1525,55 @@ svg { display: block; flex-shrink: 0; }
   margin: 0;
 }
 
+/* ── Section row: Moodle topic card ── */
 .prv-section-row {
   border-bottom: 1px solid var(--border);
+  background: var(--card);
+  transition: background var(--t-fast) var(--ease);
 }
 
 .prv-section-row:last-child {
   border-bottom: none;
 }
 
+/* Subtle left accent — echoes Moodle's topic stripe */
+.prv-section-row:not(:first-child) {
+  border-left: 3px solid transparent;
+}
+
 .prv-section-btn {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 20px;
+  gap: 12px;
+  padding: 14px 20px 14px 16px;
   background: none;
   border: none;
   cursor: pointer;
   text-align: left;
-  transition: background .12s;
+  transition: background var(--t-fast) var(--ease);
 }
 
 .prv-section-btn:hover {
-  background: var(--muted);
+  background: hsl(215 30% 97%);
 }
 
+/* ── Action buttons: hidden by default, reveal on row hover ── */
 .dp-item-actions {
   margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  opacity: 0;
+  transition: opacity var(--t-fast) var(--ease);
+}
+
+/* Reveal when the parent row / button is hovered or focused-within */
+.prv-section-btn:hover .dp-item-actions,
+.prv-section-btn:focus-within .dp-item-actions,
+.dp-activity-wrap:hover .dp-item-actions,
+.dp-activity-wrap:focus-within .dp-item-actions {
+  opacity: 1;
 }
 
 .dp-item-actions--section {
@@ -1604,18 +1634,21 @@ svg { display: block; flex-shrink: 0; }
   color: hsl(8 72% 42%);
 }
 
+/* Topic number badge — compact circle */
 .prv-section-badge {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
-  background: hsl(8 72% 42% / .1);
-  color: var(--primary);
-  font-size: 12px;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--primary);
+  color: var(--primary-fg);
+  font-size: 11px;
   font-weight: 700;
+  letter-spacing: -0.01em;
+  box-shadow: 0 1px 3px hsl(8 72% 42% / .25);
 }
 
 .prv-section-info {
@@ -1623,21 +1656,24 @@ svg { display: block; flex-shrink: 0; }
   min-width: 0;
 }
 
+/* Section title: strong, readable, Moodle-like topic heading */
 .prv-section-title {
-  font-size: 13.5px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   color: var(--fg);
-  margin: 0 0 1px;
+  margin: 0 0 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: -0.01em;
 }
 
+/* Activity count: subtle meta pill */
 .prv-section-meta {
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--muted-fg);
   margin: 0;
-  line-height: 1.45;
+  line-height: 1.4;
 }
 
 .prv-section-meta-row {
@@ -1675,26 +1711,29 @@ svg { display: block; flex-shrink: 0; }
   transform: rotate(90deg);
 }
 
+/* Section body: indented activity list */
 .prv-section-body {
-  padding: 4px 20px 14px 58px;
+  padding: 2px 16px 12px 54px;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 4px;
 }
 
+/* ── Activity row: Moodle activityname row style ── */
 .prv-activity-item {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
   border-radius: 8px;
-  background: var(--muted);
-  padding: 8px 10px;
-  transition: opacity .2s;
+  background: transparent;
+  padding: 9px 10px;
+  transition: background var(--t-fast) var(--ease), opacity .2s;
   width: 100%;
   border: none;
   text-align: left;
   appearance: none;
   -webkit-appearance: none;
+  cursor: default;
 }
 
 .prv-activity-item:focus,
@@ -1704,7 +1743,7 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .prv-activity-item--pending {
-  opacity: .35;
+  opacity: .32;
 }
 
 .prv-activity-item--done {
@@ -1743,10 +1782,13 @@ svg { display: block; flex-shrink: 0; }
   line-height: 1.45;
 }
 
+/* ── Activity wrap: card with soft left border ── */
 .dp-activity-wrap {
   border-radius: 8px;
   overflow: hidden;
-  background: var(--muted);
+  background: var(--card);
+  border: 1px solid var(--border);
+  margin-bottom: 0;
 }
 
 .dp-ai-inline {
@@ -1852,8 +1894,10 @@ svg { display: block; flex-shrink: 0; }
   cursor: pointer;
 }
 
+/* Hover: gentle highlight — consistent with Moodle course page items */
+.dp-activity-wrap .prv-activity-item:hover,
 .dp-activity-wrap .prv-activity-item--has-detail:hover {
-  background: rgba(0, 0, 0, .04);
+  background: hsl(215 30% 97%);
 }
 
 .dp-activity-wrap .prv-activity-item:focus,

@@ -866,16 +866,27 @@ export const createDetailedUi = (deps) => {
         return {bodyEl, activityDnd};
     };
 
+    /** Maps activity type → Moodle purpose tint class for the mod-icon chip. */
+    const activityPurpose = {
+        page: 'content', book: 'content', resource: 'content',
+        label: 'content', url: 'content', lesson: 'content',
+        glossary: 'content', data: 'content',
+        quiz: 'assessment', assign: 'assessment',
+        forum: 'collaboration', chat: 'collaboration', workshop: 'collaboration',
+        choice: 'communication', feedback: 'communication', survey: 'communication',
+    };
+
     const createDetailedActivityRow = ({sectionId, activityId, activityType, activityTitle, bodyEl}) => {
         const item = document.createElement('button');
         item.type = 'button';
         item.className = 'prv-activity-item prv-activity-item--pending';
         const iconUrl = getActivityIconUrl(activityType);
+        const purpose = activityPurpose[activityType] || 'content';
         item.innerHTML = `
-            <span class="ps-badge ps-badge--${escapeHtml(activityType)}">
-                <img src="${iconUrl}" 
-                     class="ps-badge-icon" 
-                     alt="" 
+            <span class="ps-badge ps-badge--${escapeHtml(activityType)} dp-purpose-${escapeHtml(purpose)}">
+                <img src="${iconUrl}"
+                     class="ps-badge-icon"
+                     alt=""
                      onerror="this.style.display='none'">
                 <span class="ps-badge-text">
                     ${escapeHtml(activityLabels[activityType] || activityType)}
