@@ -1139,6 +1139,13 @@ export const createStreamManager = (deps) => {
                     }
                     // Re-enable compact chat now that review is ready
                     setCompactChatState(deps, 'enabled');
+                    // review_needed is a terminal pause: the server closes its SSE after
+                    // the interrupt. Close ours too so EventSource does NOT auto-reconnect
+                    // and resume the graph again (a bare resume has no pending_action, so
+                    // planning_approval re-interrupts → review_needed → close → reconnect…
+                    // an endless storm that leaves the UI stuck on "Analyzing your feedback").
+                    // The next user action (accept / feedback / execute_proposal) re-opens it.
+                    closeStream();
                     break;
                 case 'completed': {
                     if (streamMode === 'generating') {
