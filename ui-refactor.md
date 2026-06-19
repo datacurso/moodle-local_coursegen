@@ -605,3 +605,9 @@ Rehacer el look de la vista central para que imite el formato Custom Sections de
   replicar exactamente: chevron, separadores punteados, hover-insert, botón punteado de sección.
 - Verificar con captura/e2e que en hover aparecen las afordancias y que sin hover la vista queda
   **limpia** (sin puntos `::` ni bordes permanentes).
+
+---
+
+## Bugs corregidos
+
+- [x] **`Script error for "Category"`** al crear el curso. Causa: `FormAutocomplete.enhance(selector, tags, ajax, placeholder, ...)` recibía el LABEL `"Category"` en la posición de `ajax` (que es un **nombre de módulo AMD**), así que RequireJS intentaba `require(['Category'])`. Fix en `actions/course-create.js`: alinear los argumentos (`ajax = false`, el label pasa a `placeholder`, + `caseSensitive`/`showSuggestions`). Verificado: ya no hay error JS y el selector de categoría se realza correctamente.
