@@ -154,7 +154,8 @@ export const initDetailedPlanView = (ctx, data) => {
         '.prv-section-row',
         'sectionId',
         (ids) => sendReorderSections(ctx, ids),
-        null
+        null,
+        () => !ctx.state.isStreaming
     );
 
     // Diff-based success marks — collect the current set of rendered activity ids.

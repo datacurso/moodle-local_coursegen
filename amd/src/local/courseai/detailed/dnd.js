@@ -29,12 +29,21 @@
  * @param {string}      idDataset       - dataset property name that holds the UUID (camelCase).
  * @param {Function}    onReorder       - Called with the array of UUIDs in new DOM order.
  * @param {string|null} parentSectionId - Section UUID for activity-level drops; null for sections.
+ * @param {Function}    [canDrag]       - Optional predicate; when it returns false, drags are blocked
+ *                                        (e.g. while the plan is still streaming).
  * @returns {{attachToRow: Function}}
  */
-export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, parentSectionId) => {
+export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, parentSectionId, canDrag) => {
     let dragSrcEl = null;
+    const dragBlocked = () => typeof canDrag === 'function' && !canDrag();
 
     const onDragStart = (event) => {
+        // Reordering is disabled while the plan is streaming (it re-renders and a
+        // reorder would race the in-progress stream): cancel the drag outright.
+        if (dragBlocked()) {
+            event.preventDefault();
+            return;
+        }
         // Sections contain activity rows; both are draggable. Stop the event
         // here so an activity drag never bubbles to its section's wirer.
         event.stopPropagation();
@@ -83,6 +92,10 @@ export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, p
         event.stopPropagation();
         const row = event.currentTarget;
         row.classList.remove('dp-dragging');
+        if (dragBlocked()) {
+            dragSrcEl = null;
+            return;
+        }
         container.querySelectorAll(itemSelector).forEach((el) => {
             el.classList.remove('dp-drag-over');
         });

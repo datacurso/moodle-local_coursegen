@@ -60,7 +60,8 @@ export const ensureSectionRendered = (ctx, section, renderIndex) => {
             '.prv-section-row',
             'sectionId',
             (ids) => sendReorderSections(ctx, ids),
-            null
+            null,
+            () => !ctx.state.isStreaming
         );
     } else {
         state.sectionDnd.attachToRow(meta.row);

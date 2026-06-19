@@ -122,7 +122,8 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
         '.dp-activity-wrap',
         'activityId',
         (ids) => sendReorderActivities(ctx, sectionId, ids),
-        sectionId
+        sectionId,
+        () => !ctx.state.isStreaming
     );
 
     state.detailedSectionMeta[sectionId] = {
