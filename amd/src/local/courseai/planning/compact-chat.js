@@ -91,7 +91,10 @@ export const setCompactChatState = (deps, mode) => {
 
         case 'disabled':
             compactChatCard.style.display = 'block';
-            compactChatCard.classList.add('compact-chat-card--disabled');
+            // NOTE: the card-level `compact-chat-card--disabled` (global opacity +
+            // pointer-events:none) is intentionally NOT applied — it would also block
+            // the Stop button living in the toolbar. Each control is disabled
+            // individually below instead, leaving Stop/Resume usable.
             if (compactPromptInput) {
                 compactPromptInput.classList.add('compact-controls--disabled');
                 compactPromptInput.disabled = true;
