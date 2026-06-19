@@ -25,6 +25,8 @@ import {normalizeInitialSections} from './normalize';
 import {markActivityPlanned, clearSectionEntries, ensureDetailedEntry} from './activity-row';
 import {formatImageCount, setImageBadge, updateSectionImageBadge} from './badges';
 import {initDetailedPlanView} from './init-view';
+import {appendAddSectionControl} from './section-row';
+import {ensureSectionRendered, ensureActivityRendered} from './sync-helpers';
 
 export {initDetailedPlanView, flashAddedActivity} from './init-view';
 
@@ -119,7 +121,11 @@ export const handleDetailedPlanActivity = (ctx, data) => {
 };
 
 /**
- * Sync state from a fresh sections list without a full re-render.
+ * Sync state from a fresh sections list, rendering skeleton rows incrementally.
+ *
+ * Called on every `section` / `activity` stream event. Idempotent: only
+ * creates rows that do not yet exist in detailedSectionMeta / detailedActivityEls,
+ * so repeated calls never re-render or flicker existing rows.
  *
  * @param {Object} ctx
  * @param {Array}  sections
@@ -130,14 +136,39 @@ export const syncDetailedStructureFromSections = (ctx, sections) => {
     if (!normalized.length) {
         return;
     }
+    // One-time init: switch to detailed mode and clear the container.
+    // renderSections:false clears prvSections + resets state maps without
+    // rendering rows — we do that incrementally below.
     if (state.planningMode !== 'detailed') {
         initDetailedPlanView(ctx, {sections: normalized, renderSections: false});
+        // Establish a stable baseline so the diff never fires on streaming rows.
+        state.prevActivityIds = new Set();
     }
+    // Incremental render: create only missing section and activity rows.
+    normalized.forEach((section, sectionIdx) => {
+        const meta = ensureSectionRendered(ctx, section, sectionIdx);
+        if (!meta) {
+            return;
+        }
+        (section.activities || []).forEach((activity, activityIdx) => {
+            ensureActivityRendered(ctx, activity, section.id, activityIdx, meta.bodyEl);
+        });
+    });
+    // Keep the add-section control anchored at the bottom of prvSections.
+    appendAddSectionControl(ctx);
+    // Update the expected total so progress bars scale correctly.
     const totalActivities = normalized.reduce(
         (acc, section) => acc + ((section.activities || []).length),
         0
     );
     state.detailedTotal = Math.max(state.detailedTotal || 0, totalActivities);
+    // Keep baseline in sync with incrementally-added rows so a subsequent
+    // initDetailedPlanView(renderSections:true) does not flash them.
+    if (state.prevActivityIds !== undefined) {
+        Object.keys(state.detailedActivityEls).forEach((id) => {
+            state.prevActivityIds.add(id);
+        });
+    }
 };
 
 /**

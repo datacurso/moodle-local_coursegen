@@ -81,6 +81,7 @@ export const initDetailedPlanView = (ctx, data) => {
     state.detailedActivityEls = {};
     state.detailedSectionMeta = {};
     state.selectedDetailedImages = {};
+    state.sectionDnd = null;
     state.detailedCurrent = 0;
     state.detailedTotal = data?.total_activities ?? sourceSections.reduce(
         (acc, section) => acc + (section.activities || []).length,
@@ -148,7 +149,7 @@ export const initDetailedPlanView = (ctx, data) => {
     appendAddSectionControl(ctx);
 
     // Wire section-level drag-and-drop (sections as direct children of prvSections).
-    wireDragAndDrop(
+    state.sectionDnd = wireDragAndDrop(
         prvSections,
         '.prv-section-row',
         'sectionId',
