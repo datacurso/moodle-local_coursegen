@@ -2620,10 +2620,6 @@ svg { display: block; flex-shrink: 0; }
   display: flex;
   flex-direction: column;
   gap: 4px;
-  max-height: 320px;
-  overflow-y: auto;
-  overflow-x: hidden;
-  overscroll-behavior: contain;
 }
 
 /* Single log entry row */
@@ -2690,4 +2686,76 @@ svg { display: block; flex-shrink: 0; }
 
 @media (prefers-reduced-motion: reduce) {
   .cg-log-entry { transition: none; }
+}
+
+/* ─── Scroll architecture: ONE scroll per column, pinned chat, integrated bars ── */
+
+/* No page scroll while planning — the workspace fills the viewport exactly. */
+html:has(.courseai-workspace.is-planning),
+body:has(.courseai-workspace.is-planning) { overflow: hidden; }
+.aicoursecreation-main:has(.courseai-workspace.is-planning),
+.app-main:has(.courseai-workspace.is-planning) { padding-bottom: 0; }
+
+/* Left column is a flex column: the chat-scroll region grows and scrolls,
+   while the compact chat stays pinned at the bottom (never scrolls away). */
+.courseai-workspace.is-planning .context-wrap {
+  flex-direction: column;
+  overflow: hidden;
+}
+.courseai-workspace.is-planning .courseai-context-chat {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+.courseai-workspace.is-planning .courseai-chat-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+}
+.courseai-workspace.is-planning .compact-chat-card {
+  flex: 0 0 auto;
+  margin-top: 8px;
+}
+
+/* Right column: the single scroll container for the whole preview. */
+.courseai-workspace.is-planning .planning-wrap {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-width: none;
+  margin: 0;
+  padding: 8px 22px 28px;
+}
+
+/* Integrated, thin scrollbars on the two scroll regions only. */
+.courseai-workspace.is-planning .courseai-chat-scroll,
+.courseai-workspace.is-planning .planning-wrap {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(215 18% 80%) transparent;
+}
+.courseai-workspace.is-planning .courseai-chat-scroll::-webkit-scrollbar,
+.courseai-workspace.is-planning .planning-wrap::-webkit-scrollbar {
+  width: 10px;
+  height: 10px;
+}
+.courseai-workspace.is-planning .courseai-chat-scroll::-webkit-scrollbar-track,
+.courseai-workspace.is-planning .planning-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+.courseai-workspace.is-planning .courseai-chat-scroll::-webkit-scrollbar-thumb,
+.courseai-workspace.is-planning .planning-wrap::-webkit-scrollbar-thumb {
+  background: hsl(215 16% 82%);
+  border-radius: 8px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+.courseai-workspace.is-planning .courseai-chat-scroll::-webkit-scrollbar-thumb:hover,
+.courseai-workspace.is-planning .planning-wrap::-webkit-scrollbar-thumb:hover {
+  background: var(--muted-fg);
+  background-clip: padding-box;
 }
