@@ -224,6 +224,8 @@ export const init = async(params) => {
             hydrateDetailedPlanFromSnapshot,
             restoreAdjustmentHistory,
             resumeSessionId,
+            emitLog,
+            texts,
         });
 
         try {

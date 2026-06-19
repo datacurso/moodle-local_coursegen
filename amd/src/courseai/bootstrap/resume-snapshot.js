@@ -42,6 +42,8 @@
  * @param {Function} params.hydrateDetailedPlanFromSnapshot
  * @param {Function} params.restoreAdjustmentHistory
  * @param {number} params.resumeSessionId
+ * @param {Function} params.emitLog
+ * @param {Object} params.texts
  * @returns {Function} async resumeFromSnapshot function
  */
 export const makeResumeFromSnapshot = ({
@@ -62,7 +64,42 @@ export const makeResumeFromSnapshot = ({
     hydrateDetailedPlanFromSnapshot,
     restoreAdjustmentHistory,
     resumeSessionId,
+    emitLog,
+    texts,
 }) => {
+    /**
+     * Rebuild the decision log from the snapshot so reload doesn't lose history.
+     * localStorage does not survive reload in this (Moodle popup) context, so the
+     * snapshot is the source of truth: re-emit an "AI planned section" entry per
+     * section and the user's free-text instructions (skipping the first message,
+     * which is the initial prompt already shown above the log).
+     *
+     * @param {Array} sections - raw plan sections (with names)
+     * @param {Object} snapshot - the resume snapshot
+     */
+    const rebuildDecisionLog = (sections, snapshot) => {
+        if (typeof emitLog !== 'function') {
+            return;
+        }
+        (sections || []).forEach((section) => {
+            const name = String(section?.name || '').trim();
+            if (!name) {
+                return;
+            }
+            const template = texts?.courseai_log_ai_section || 'AI planned section «{$a}»';
+            emitLog({actor: 'ai', kind: 'ai', message: template.replace('{$a}', name)});
+        });
+        const messages = Array.isArray(snapshot?.messages) ? snapshot.messages : [];
+        messages
+            .filter((message) => message && message.type === 'human')
+            .slice(1)
+            .forEach((message) => {
+                const content = String(message.content || '').trim();
+                if (content) {
+                    emitLog({actor: 'user', kind: 'user', message: content});
+                }
+            });
+    };
     /**
      * Attempt to resume the page from a persisted session snapshot.
      *
@@ -146,7 +183,8 @@ export const makeResumeFromSnapshot = ({
             setPlanningStreamVisible();
             applyCourseTitleToHeader();
             if (sectionsForUi.length > 0) {
-                hydrateDetailedPlanFromSnapshot(sectionsForUi);
+                await hydrateDetailedPlanFromSnapshot(detailedSections);
+                rebuildDecisionLog(detailedSections, snapshot);
             }
             if (typeof detailedUi.enableAllActionControls === 'function') {
                 detailedUi.enableAllActionControls();
@@ -164,7 +202,8 @@ export const makeResumeFromSnapshot = ({
             stepsUi.transitionToPlanning();
             setPlanningStreamVisible();
             applyCourseTitleToHeader();
-            hydrateDetailedPlanFromSnapshot(sectionsForUi);
+            await hydrateDetailedPlanFromSnapshot(detailedSections);
+            rebuildDecisionLog(detailedSections, snapshot);
             if (typeof detailedUi.enableAllActionControls === 'function') {
                 detailedUi.enableAllActionControls();
             }
@@ -195,7 +234,8 @@ export const makeResumeFromSnapshot = ({
             setPlanningStreamVisible();
             applyCourseTitleToHeader();
             if (sectionsForUi.length > 0) {
-                hydrateDetailedPlanFromSnapshot(sectionsForUi);
+                await hydrateDetailedPlanFromSnapshot(detailedSections);
+                rebuildDecisionLog(detailedSections, snapshot);
             }
             if (typeof detailedUi.enableAllActionControls === 'function') {
                 detailedUi.enableAllActionControls();

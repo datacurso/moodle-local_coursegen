@@ -507,3 +507,9 @@ dejar el preview/log congelados; al reanudar, reabrir stream (keepPlan) y seguir
 - El "preview de selección" (rojo antes de aplicar) es puramente visual y se limpia si el usuario
   cambia de opción o cancela; no muta el plan hasta `Aplicar`.
 - Todo string nuevo (verbos del log, tooltips, estados) va al catálogo `lang/en` + `i18n.js`.
+
+### Defectos de §15/§16 detectados en uso y corregidos
+
+- [x] **El botón Detener no se podía pulsar.** Durante el streaming, `setCompactChatState('disabled')` añadía `.compact-chat-card--disabled` (legacy) con `pointer-events:none` sobre TODA la tarjeta del chat, y el botón Detener vive dentro. Fix: dejar de aplicar esa clase global (cada control ya se deshabilita individualmente) en `planning/compact-chat.js`; el botón queda usable.
+- [x] **Al recargar se descomponía el plan** (secciones sin actividades "0/N", sección fantasma "Section 4:"). Causa: `hydrateDetailedPlanFromSnapshot` reproducía eventos por índice (`section_index`/`activity_index`) pero el render engancha por **id** (UUID), y el snapshot traía una sección sin nombre. Fix: el hidratador usa ahora el reconciliador en vivo `reconcilePlan(plan_crudo_con_ids)` (`hydrate-plan.js` + `resume-snapshot.js`), y el servicio filtra secciones borradas/sin nombre (ver `TODO-V2.md` §C). **Verificado: nombres iguales, sin fantasma, actividades+detalle restaurados.**
+- [x] **Al recargar se perdía el log de decisiones.** `localStorage` NO sobrevive al reload en el contexto popup de Moodle (verificado). Fix: reconstruir el log desde el snapshot (server-side, que sí persiste) — una entrada "AI planned section «X»" por sección + las instrucciones del usuario (`resume-snapshot.js`). **Verificado: el log se restaura tras recargar.**
