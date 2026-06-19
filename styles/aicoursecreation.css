@@ -2867,6 +2867,13 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
   margin: 0;
   padding: 8px 22px 28px;
 }
+/* The preview is a flex column; without this the fixed-height container would
+   SHRINK the cards to fit (clipping content via .prv-card overflow:hidden) and
+   never overflow. Pinning children to their content height lets the column
+   actually overflow and scroll. */
+.courseai-workspace.is-planning .planning-wrap > * {
+  flex-shrink: 0;
+}
 
 /* Integrated, thin scrollbars on the two scroll regions only. */
 .courseai-workspace.is-planning .courseai-chat-scroll,
