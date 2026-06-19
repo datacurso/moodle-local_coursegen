@@ -35,6 +35,22 @@ export const resetPlanningState = (options = {}, ctx) => {
     const {state, elements, texts, setProgress} = ctx;
     const showLoading = options.showLoading !== false;
 
+    // Action resume (keepPlan): the user adjusted an existing plan and the stream
+    // is re-opening to apply it. Preserve the rendered plan, its DOM and state so
+    // the reconciler can diff against it (no teardown → no global flicker). Just
+    // keep the streamed content visible instead of the loading overlay.
+    if (options.keepPlan === true) {
+        const loadingElKeep = document.getElementById('planningLoading');
+        const streamContentElKeep = document.getElementById('planningStreamContent');
+        if (loadingElKeep) {
+            loadingElKeep.style.display = 'none';
+        }
+        if (streamContentElKeep) {
+            streamContentElKeep.style.display = '';
+        }
+        return;
+    }
+
     state.planBuffer = '';
     state.planningMode = null;
     state.planDetailsOpen = false;
@@ -205,6 +221,10 @@ export const resetPlanningState = (options = {}, ctx) => {
     state.createdCourseUrl = '';
     state.createdCourseResult = null;
     state.generationRound = (state.generationRound || 0) + 1;
+    // Fresh planning round: action log entries return above the checklist, and the
+    // checklist shows live loading again, until the new plan settles at review_needed.
+    state.planEverReviewed = false;
+    document.body.classList.remove('cg-plan-reviewed');
 
     // NOTE: compact chat lifecycle is NOT reset here intentionally.
     // openSSEStream() calls resetPlanningState() at stream start, and the chat

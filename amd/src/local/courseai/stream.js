@@ -95,7 +95,7 @@ export const createStreamManager = (deps) => {
         state.sseSource = null;
     };
 
-    const openSSEStream = (streamUrl, retryAttempt = 0, streamMode = 'planning') => {
+    const openSSEStream = (streamUrl, retryAttempt = 0, streamMode = 'planning', keepPlan = false) => {
         if (!streamUrl) {
             throw new Error(texts.courseai_error_stream_url);
         }
@@ -118,7 +118,7 @@ export const createStreamManager = (deps) => {
                 ? state.latestInitialSections : [];
             const savedPhase4Total = state.phase4TotalActivities || 0;
 
-            stepsUi.resetPlanningState({showLoading: streamMode !== 'generating'});
+            stepsUi.resetPlanningState({showLoading: streamMode !== 'generating' && !keepPlan, keepPlan});
 
             // Suppress the centered generic spinner immediately for planning streams.
             // The review card with skeleton rows will render as the first section event arrives.

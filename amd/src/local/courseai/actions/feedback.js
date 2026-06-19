@@ -201,7 +201,11 @@ export const sendFeedbackAction = async(action, ctx) => {
         }
 
         const streamMode = action === 'accept' ? 'generating' : 'planning';
-        streamManager.openSSEStream(state.streamingurl, 0, streamMode);
+        // keepPlan: an 'adjust' resumes the existing plan to apply free-text feedback,
+        // so preserve the rendered preview and let the reconciler diff against it
+        // (only changed rows animate). 'accept' transitions to generation → full reset.
+        const keepPlan = action !== 'accept';
+        streamManager.openSSEStream(state.streamingurl, 0, streamMode, keepPlan);
     } catch (error) {
         await Notification.exception(error);
     } finally {

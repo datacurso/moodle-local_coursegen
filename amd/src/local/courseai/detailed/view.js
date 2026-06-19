@@ -27,8 +27,19 @@ import {formatImageCount, setImageBadge, updateSectionImageBadge} from './badges
 import {initDetailedPlanView} from './init-view';
 import {appendAddSectionControl} from './section-row';
 import {ensureSectionRendered, ensureActivityRendered} from './sync-helpers';
+import {reconcilePlan as reconcilePlanImpl} from './reconcile';
 
 export {initDetailedPlanView, flashAddedActivity} from './init-view';
+
+/**
+ * Diff-based reconciler: apply minimal DOM mutations after any plan action.
+ * Only changed elements animate; unchanged elements are not touched.
+ *
+ * @param {Object} ctx
+ * @param {Array}  currentPlan  Raw server plan from review_needed.
+ * @returns {Promise<void>}
+ */
+export const reconcilePlan = (ctx, currentPlan) => reconcilePlanImpl(ctx, currentPlan);
 
 /**
  * Handle a streaming field event for an activity in detailed mode.

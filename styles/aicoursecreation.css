@@ -143,9 +143,9 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .courseai-workspace.is-planning {
-  --cg-left-w: 360px;
+  --cg-left-w: 440px;
   display: grid;
-  grid-template-columns: clamp(240px, var(--cg-left-w), 560px) 10px minmax(0, 1fr);
+  grid-template-columns: clamp(280px, var(--cg-left-w), 620px) 10px minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   height: calc(100vh - 100px);
   overflow: hidden;
@@ -2758,6 +2758,11 @@ svg { display: block; flex-shrink: 0; }
   gap: 4px;
 }
 
+/* Action log feed below the checklist: only takes space once it has entries. */
+#cgLogAfter:not(:empty) {
+  margin-top: 14px;
+}
+
 /* Single log entry row */
 .cg-log-entry {
   display: flex;
@@ -2790,7 +2795,7 @@ svg { display: block; flex-shrink: 0; }
 /* Entry body: icon + message + timestamp */
 .cg-log-body {
   display: flex;
-  align-items: baseline;
+  align-items: flex-start;
   gap: 5px;
   padding: 6px 6px 6px 0;
   flex: 1;
@@ -2805,17 +2810,19 @@ svg { display: block; flex-shrink: 0; }
 
 .cg-log-msg {
   flex: 1;
+  min-width: 0;
   font-size: 12.5px;
   line-height: 1.45;
   color: var(--fg);
-  overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
 }
 
 .cg-log-ts {
   flex-shrink: 0;
   font-size: 11px;
+  line-height: 1.45;
   color: var(--muted-fg);
   white-space: nowrap;
 }

@@ -103,20 +103,27 @@ export const handleError = async(data, ctx) => {
 };
 
 /**
- * Handle 'review_needed' event: render the plan, show review actions, and close the
- * stream to prevent EventSource auto-reconnect (which would trigger an endless
- * review_needed storm).
+ * Handle 'review_needed' event: reconcile the plan diff, show review actions,
+ * and close the stream to prevent EventSource auto-reconnect (which would
+ * trigger an endless review_needed storm).
+ *
+ * Uses the diff-based reconciler so only changed elements animate; unchanged
+ * rows are never re-rendered or cleared.
  *
  * @param {Object} data
  * @param {Object} ctx
+ * @returns {Promise<void>}
  */
-export const handleReviewNeeded = (data, ctx) => {
+export const handleReviewNeeded = async(data, ctx) => {
     const {
         state, stepsUi, planningUi, detailedUi, proposalsUi,
         ensureStreamContentVisible, hideStreamBar, setCompactChatState, deps, closeStream,
     } = ctx;
 
     state.isStreaming = false;
+    // The plan has settled at least once: from now on, user-action log entries flow
+    // BELOW the section checklist so the left panel reads as an organic downward chat.
+    state.planEverReviewed = true;
     ensureStreamContentVisible();
     if (typeof hideStreamBar === 'function') {
         hideStreamBar();
@@ -126,29 +133,17 @@ export const handleReviewNeeded = (data, ctx) => {
     stepsUi.updateFlowNav();
 
     if (Array.isArray(data.current_plan) && data.current_plan.length > 0) {
-        detailedUi.initDetailedPlanView({sections: data.current_plan});
-        data.current_plan.forEach((section) => {
-            if (section.deleted) {
-                return;
-            }
-            (section.activities || []).forEach((activity) => {
-                if (activity.deleted) {
-                    return;
-                }
-                detailedUi.handleDetailedPlanActivity({
-                    section_id: section.id,
-                    activity_id: activity.id,
-                    activity_type: activity.activity_type,
-                    title: activity.title,
-                    data: activity.detailed_plan || {},
-                });
-            });
-        });
+        await detailedUi.reconcilePlan(data.current_plan);
     }
 
     if (typeof detailedUi.finalizePlanView === 'function') {
         detailedUi.finalizePlanView();
     }
+
+    // The plan has settled: mark the whole UI as reviewed so every checklist row reads
+    // as done via CSS (see body.cg-plan-reviewed). This is declarative and timing-proof,
+    // so a late buffered section/activity event cannot leave a lingering spinner.
+    document.body.classList.add('cg-plan-reviewed');
     if (typeof detailedUi.enableAllActionControls === 'function') {
         detailedUi.enableAllActionControls();
     }

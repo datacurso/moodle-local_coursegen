@@ -57,13 +57,21 @@ const formatRelative = (createdAt) => {
 };
 
 /**
- * Create a decision-log attached to `container`.
+ * Create a decision-log feed.
+ *
+ * The feed is chronological: planning-phase entries land in `container` (above the
+ * section checklist), and once the plan has settled (isActionPhase() === true) user
+ * actions land in `actionContainer` (below the checklist) so everything flows down
+ * like an organic chat. Each new entry is scrolled into view so the newest sits by
+ * the input.
  *
  * @param {Object} options
- * @param {HTMLElement} options.container - The scrollable log container element.
+ * @param {HTMLElement} options.container        - Planning-phase log container (above checklist).
+ * @param {HTMLElement} [options.actionContainer] - Post-settle log container (below checklist).
+ * @param {Function}    [options.isActionPhase]   - Returns true once action entries belong below the checklist.
  * @returns {{ add: Function, clear: Function }}
  */
-export const createLog = ({container}) => {
+export const createLog = ({container, actionContainer, isActionPhase}) => {
     /** @type {Array<{el: HTMLElement, createdAt: number}>} */
     const entries = [];
 
@@ -94,8 +102,22 @@ export const createLog = ({container}) => {
      * @param {string} params.kind    - 'user'|'ai'|'danger'|'info'|'success'|'neutral'
      * @param {string} params.message - Visible message text.
      */
+    /**
+     * Pick the chronological target: below the checklist once the plan has settled.
+     *
+     * @returns {HTMLElement|null}
+     */
+    const resolveTarget = () => {
+        const useAction = typeof isActionPhase === 'function' && isActionPhase();
+        if (useAction && actionContainer) {
+            return actionContainer;
+        }
+        return container;
+    };
+
     const add = ({actor, kind, message}) => {
-        if (!container) {
+        const target = resolveTarget();
+        if (!target) {
             return;
         }
 
@@ -134,8 +156,14 @@ export const createLog = ({container}) => {
         entry.appendChild(bar);
         entry.appendChild(body);
 
-        container.appendChild(entry);
-        container.scrollTop = container.scrollHeight;
+        target.appendChild(entry);
+        // Pin the feed to the bottom so the newest entry sits next to the input. Defer
+        // to the next frame: a fresh entry may wrap to several lines, so its height is
+        // not laid out yet on the synchronous append. scrollIntoView on the entry is
+        // more reliable than scrollTop math when sibling heights change.
+        window.requestAnimationFrame(() => {
+            entry.scrollIntoView({block: 'nearest', inline: 'nearest'});
+        });
 
         entries.push({el: entry, createdAt});
         startTicker();
@@ -147,6 +175,9 @@ export const createLog = ({container}) => {
     const clear = () => {
         if (container) {
             container.innerHTML = '';
+        }
+        if (actionContainer) {
+            actionContainer.innerHTML = '';
         }
         entries.length = 0;
         if (tickerId !== null) {

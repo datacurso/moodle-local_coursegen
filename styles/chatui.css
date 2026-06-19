@@ -234,6 +234,24 @@
   to { transform: rotate(360deg); }
 }
 
+/* Once the plan has been reviewed the whole structure is final, so every checklist
+   row reads as done — regardless of the per-row streaming counter. This is purely
+   declarative, so it also covers late buffered section/activity events that would
+   otherwise leave a lingering spinner after the stream closed. */
+body.cg-plan-reviewed .courseai-checklist-item {
+  opacity: 1;
+}
+body.cg-plan-reviewed .courseai-checklist-check {
+  background: #16a34a;
+  border-color: #16a34a;
+}
+body.cg-plan-reviewed .courseai-checklist-check svg.spinner-icon {
+  display: none;
+}
+body.cg-plan-reviewed .courseai-checklist-check svg.check-icon {
+  display: block;
+}
+
 .courseai-checklist-name {
   flex: 1;
   min-width: 0;

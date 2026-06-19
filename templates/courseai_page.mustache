@@ -217,6 +217,10 @@
               <span class="courseai-checklist-label">{{#str}}courseai_checklist_label, local_coursegen{{/str}}</span>
               <ul class="courseai-checklist-list" id="courseaiChecklistList"></ul>
             </div>
+
+            <!-- Action log feed (§4): once the plan settles, user actions and their
+                 results flow chronologically BELOW the checklist (organic chat). -->
+            <div class="cg-log" id="cgLogAfter" aria-live="polite"></div>
           </div>
 
           <!-- Adjustment message history (shown after user sends adjustments) -->

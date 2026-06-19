@@ -68,7 +68,7 @@ export const init = async(params) => {
         const state = createInitialState({defaultLang, guidelines, languages});
 
         // Decision log (§4) — instantiate before any module that needs it.
-        const {emitLog} = makeEmitLog();
+        const {emitLog} = makeEmitLog(state);
 
         const markedParser = markedModule.parse ? markedModule : markedModule.marked;
         const activityLabels = getActivityLabels(texts);
@@ -95,7 +95,8 @@ export const init = async(params) => {
         const runPlanAction = createRunPlanAction({
             state,
             sendPlanningFeedback,
-            openSSEStream: (url, retry, mode) => streamManager.openSSEStream(url, retry, mode),
+            openSSEStream: (url, retry, mode, keepPlan) =>
+                streamManager.openSSEStream(url, retry, mode, keepPlan),
         });
 
         const detailedUi = createDetailedUi({

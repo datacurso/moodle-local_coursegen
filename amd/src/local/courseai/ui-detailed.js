@@ -33,6 +33,7 @@ import {
     handleDetailedPlanActivity,
     syncDetailedStructureFromSections,
     enableAllActionControls,
+    reconcilePlan,
 } from './detailed/view';
 import {updateDetailedHeaderStats} from './detailed/badges';
 
@@ -137,5 +138,6 @@ export const createDetailedUi = (deps) => {
         syncDetailedStructureFromSections: (sections) => syncDetailedStructureFromSections(ctx, sections),
         updateDetailedHeaderStats: () => updateDetailedHeaderStats(ctx),
         enableAllActionControls: () => enableAllActionControls(ctx),
+        reconcilePlan: (currentPlan) => reconcilePlan(ctx, currentPlan),
     };
 };

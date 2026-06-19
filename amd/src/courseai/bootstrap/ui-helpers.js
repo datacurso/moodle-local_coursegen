@@ -26,12 +26,22 @@ import {createLog} from 'local_coursegen/local/courseai/ui/log';
 /**
  * Create the decision-log emitter.
  *
+ * Builds a single chronological feed: planning-phase entries render above the
+ * section checklist; once the plan has been reviewed at least once, user actions
+ * render below it (organic downward chat flow).
+ *
+ * @param {Object} state - Shared courseai state (read for the settle flag).
  * @returns {{emitLog: Function}}
  */
-export const makeEmitLog = () => {
+export const makeEmitLog = (state) => {
     const logContainer = document.getElementById('cgLog');
+    const actionContainer = document.getElementById('cgLogAfter');
     const logSection = document.getElementById('cgLogSection');
-    const courseaiLog = createLog({container: logContainer});
+    const courseaiLog = createLog({
+        container: logContainer,
+        actionContainer,
+        isActionPhase: () => Boolean(state && state.planEverReviewed),
+    });
 
     /**
      * Show the log section and emit an entry.
