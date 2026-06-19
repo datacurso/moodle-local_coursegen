@@ -2594,6 +2594,42 @@ svg { display: block; flex-shrink: 0; }
 }
 .btn-compact-regenerate:disabled { opacity: .4; cursor: not-allowed; }
 
+/* ─── Stop / Resume execution-control buttons ────────────────────────── */
+.btn-stop-resume {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  height: 32px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color .12s, color .12s, background .12s;
+  line-height: 1;
+}
+.btn-stop {
+  background: transparent;
+  color: var(--danger, #c0392b);
+  border-color: var(--danger, #c0392b);
+}
+.btn-stop:hover {
+  background: var(--danger-soft, rgba(192, 57, 43, 0.08));
+  border-color: var(--danger, #c0392b);
+}
+.btn-resume {
+  background: var(--primary, hsl(215, 65%, 48%));
+  color: #fff;
+  border-color: transparent;
+}
+.btn-resume:hover {
+  background: var(--primary-hover, hsl(215, 65%, 42%));
+  border-color: transparent;
+}
+body.cg-execution-stopped .btn-compact-regenerate { display: none; }
+
 /* ─── Reduced-motion override (ui-refactor §8) ────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {

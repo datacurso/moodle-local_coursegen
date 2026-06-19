@@ -93,6 +93,8 @@ export const getCourseaiElements = () => {
         compactChipsRow: document.getElementById('compactChipsRow'),
         compactToolbarLeft: document.getElementById('compactToolbarLeft'),
         btnCompactRegenerate: document.getElementById('btnCompactRegenerate'),
+        btnStopExec: document.getElementById('btnStopExec'),
+        btnResumeExec: document.getElementById('btnResumeExec'),
         compactLangSelect: document.getElementById('compactLangSelect'),
         btnCompactWithImages,
         compactImgToggleWrap: resolveToggleWrap(btnCompactWithImages),
