@@ -213,19 +213,37 @@ export const makeResumeFromSnapshot = ({
 
         if (status === 'GENERATING' || status === 'PLANNING_ACCEPT') {
             stepsUi.transitionToPlanning();
+            setPlanningStreamVisible();
             applyCourseTitleToHeader();
+            // Hydrate the rendered plan from the snapshot BEFORE re-opening the
+            // stream so section names and the decision log survive reload. The
+            // stream re-opens with keepPlan=true so it diffs against the hydrated
+            // plan instead of clearing it (resetPlanningState early-returns).
+            if (sectionsForUi.length > 0) {
+                await hydrateDetailedPlanFromSnapshot(detailedSections);
+                rebuildDecisionLog(detailedSections, snapshot);
+            }
             stepsUi.setStepState('planning', 'done');
             stepsUi.setStepState('generating', 'active');
             state.currentStage = 'generating';
             state.phase4TotalActivities = state.totalActivities;
-            streamManager.openSSEStream(state.streamingurl, 0, 'generating');
+            streamManager.openSSEStream(state.streamingurl, 0, 'generating', true);
             return true;
         }
 
         if (status === 'PLANNING' || status === 'PENDING') {
             stepsUi.transitionToPlanning();
+            setPlanningStreamVisible();
             applyCourseTitleToHeader();
-            streamManager.openSSEStream(state.streamingurl, 0, 'planning');
+            // Same as above: hydrate names + log first, then re-open the planning
+            // stream with keepPlan=true. Without this the re-stream renders
+            // placeholder "Section N:" rows (it re-emits activity events but not
+            // section names), which is the reload-broken case from the field.
+            if (sectionsForUi.length > 0) {
+                await hydrateDetailedPlanFromSnapshot(detailedSections);
+                rebuildDecisionLog(detailedSections, snapshot);
+            }
+            streamManager.openSSEStream(state.streamingurl, 0, 'planning', true);
             return true;
         }
 
