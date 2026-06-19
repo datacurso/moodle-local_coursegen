@@ -128,6 +128,9 @@ export const handleReviewNeeded = (data, ctx) => {
     if (Array.isArray(data.current_plan) && data.current_plan.length > 0) {
         detailedUi.initDetailedPlanView({sections: data.current_plan});
         data.current_plan.forEach((section) => {
+            if (section.deleted) {
+                return;
+            }
             (section.activities || []).forEach((activity) => {
                 if (activity.deleted) {
                     return;
