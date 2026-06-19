@@ -100,11 +100,19 @@ export const buildActivityActionControls = (ctx, activityId, activityTitle, wrap
             focusChange(wrap, 'info');
             wrap.classList.add('dp-item-regenerating');
             iaControl.classList.add('dp-action-btn--disabled');
+            // Surface the user's own instruction in the log, then the generic action line.
+            const instruction = (value || '').trim();
+            if (instruction) {
+                log({actor: 'user', kind: 'user', message: instruction});
+            }
             log({
                 actor: 'user', kind: 'info',
                 message: (texts.courseai_log_regenerated_activity || 'You regenerated activity «{$a}»')
                     .replace('{$a}', activityTitle),
             });
+            // Reopen the entry so the streamed regeneration renders live (progress is
+            // visible) and the final reconcile refills it — both paths bail on done.
+            reopenActivityEntry(ctx, activityId);
             try {
                 await runPlanAction({action: 'replan_activity', target_ids: [activityId], instruction: value});
             } catch (e) {
@@ -182,4 +190,53 @@ export const attachSkeletonProgress = (textDiv) => {
     textDiv.appendChild(progressEl);
 
     return progressEl;
+};
+
+/**
+ * Reopen an already-detailed activity entry so its detailed plan can be streamed
+ * and rendered anew (used by per-activity regenerate).
+ *
+ * markActivityPlanned and handleDetailedPlanField both bail on `entry.done`, so a
+ * regenerate over a finished activity would otherwise drop every streamed field and
+ * never refill the row. This resets the entry to its pre-detail state — done flag,
+ * counters, rendered description/detail, and the streaming skeleton — undoing the
+ * previous completion bookkeeping so the new pass re-counts cleanly.
+ *
+ * @param {Object} ctx
+ * @param {string} activityId
+ */
+export const reopenActivityEntry = (ctx, activityId) => {
+    const {state} = ctx;
+    const entry = state.detailedActivityEls[activityId];
+    if (!entry || !entry.done) {
+        return;
+    }
+
+    entry.done = false;
+    state.detailedCurrent = Math.max(0, (state.detailedCurrent || 0) - 1);
+    const meta = state.detailedSectionMeta[entry.sectionId];
+    if (meta) {
+        meta.done = Math.max(0, (meta.done || 0) - 1);
+    }
+
+    const oldDesc = entry.textDiv.querySelector('.prv-activity-desc');
+    if (oldDesc) {
+        oldDesc.remove();
+    }
+    entry.detailEl.innerHTML = '';
+    entry.detailEl.style.display = 'none';
+    entry.hasDetail = false;
+    entry.item.classList.remove('prv-activity-item--done', 'prv-activity-item--has-detail');
+    entry.item.classList.add('prv-activity-item--pending');
+    if (entry.chevronEl) {
+        entry.chevronEl.style.visibility = 'hidden';
+    }
+    entry.previewDescription = '';
+    entry.chapterCount = 0;
+    entry.questionCount = 0;
+    entry.imageCount = 0;
+
+    if (!entry.progressEl) {
+        entry.progressEl = attachSkeletonProgress(entry.textDiv);
+    }
 };

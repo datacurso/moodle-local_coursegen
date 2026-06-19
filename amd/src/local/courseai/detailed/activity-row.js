@@ -243,5 +243,10 @@ export const markActivityPlanned = (ctx, data) => {
         setImageBadge(ctx, meta.imagesBadgeEl, meta.imagesCount || 0);
     }
 
+    // The detail is rendered: clear the "regenerating" dim so the row is live again.
+    if (entry.wrap) {
+        entry.wrap.classList.remove('dp-item-regenerating');
+    }
+
     updateDetailedHeaderStats(ctx);
 };

@@ -222,4 +222,9 @@ export const enableAllActionControls = (ctx) => { // eslint-disable-line no-unus
     document.querySelectorAll('.dp-add-control--disabled').forEach(function(el) {
         el.classList.remove('dp-add-control--disabled');
     });
+    // Safety net: the plan has settled, so no row may stay dimmed as "regenerating"
+    // (e.g. if a regenerate produced identical content and skipped the refill).
+    document.querySelectorAll('.dp-item-regenerating').forEach(function(el) {
+        el.classList.remove('dp-item-regenerating');
+    });
 };
