@@ -121,6 +121,14 @@ export const handleGenerate = async(ctx) => {
         state.threadid = initResponse.threadid || '';
         state.streamingurl = initResponse.streamingurl || '';
 
+        // Persist the session id in the URL so a page reload rehydrates from the
+        // snapshot (resume) instead of starting over — progress is never lost.
+        if (sessionid) {
+            const sessionUrl = new URL(window.location.href);
+            sessionUrl.searchParams.set('sessionid', sessionid);
+            window.history.replaceState({}, '', sessionUrl);
+        }
+
         if (state.syllabusFilename && state.draftitemid) {
             if (btnGenerate) {
                 btnGenerate.innerHTML = `
