@@ -75,10 +75,17 @@ export const showCourseReviewPanel = async(state, elements, texts, getCourseSett
     }
 
     try {
+        // Signature: enhance(selector, tags, ajax, placeholder, caseSensitive,
+        // showSuggestions, noSelectionString). `ajax` is an AMD MODULE NAME — passing
+        // the label here made RequireJS try to load a module called "Category"
+        // ("Script error for 'Category'"). There is no remote datasource, so ajax=false.
         FormAutocomplete.enhance(
             categorySelect,
             false,
+            false,
             texts.courseai_review_category_label || '',
+            false,
+            true,
             texts.courseai_no_results || ''
         );
     } catch (e) {

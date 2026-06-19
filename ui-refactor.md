@@ -507,3 +507,9 @@ dejar el preview/log congelados; al reanudar, reabrir stream (keepPlan) y seguir
 - El "preview de selección" (rojo antes de aplicar) es puramente visual y se limpia si el usuario
   cambia de opción o cancela; no muta el plan hasta `Aplicar`.
 - Todo string nuevo (verbos del log, tooltips, estados) va al catálogo `lang/en` + `i18n.js`.
+
+---
+
+## Bugs corregidos
+
+- [x] **`Script error for "Category"`** al crear el curso. Causa: `FormAutocomplete.enhance(selector, tags, ajax, placeholder, ...)` recibía el LABEL `"Category"` en la posición de `ajax` (que es un **nombre de módulo AMD**), así que RequireJS intentaba `require(['Category'])`. Fix en `actions/course-create.js`: alinear los argumentos (`ajax = false`, el label pasa a `placeholder`, + `caseSensitive`/`showSuggestions`). Verificado: ya no hay error JS y el selector de categoría se realza correctamente.
