@@ -16,99 +16,44 @@
 /**
  * Proposals UI — renders AI-interpreted proposals after free-text feedback.
  *
- * Consumes the `review_needed` event fields: proposals, fallen_proposals,
- * clarification. The user picks one proposal (or types something else, or
- * answers a clarification), then sends the appropriate pendingAction.
- *
  * @module     local_coursegen/local/courseai/ui-proposals
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 import {localizeMessage} from './i18n';
+import {buildProposalCard, buildOtherOption, buildFallenList, RADIO_NAME} from './proposals/dom';
 
 /** ID of the container element rendered by courseai_page.mustache. */
 const BLOCK_ID = 'planProposalsBlock';
-
-/** Name attribute shared by all proposal radio inputs (single-choice group). */
-const RADIO_NAME = 'courseai-proposal-choice';
-
-/** Value used for the "Something else" radio option. */
-const OTHER_VALUE = '__other__';
 
 /**
  * Create the proposals UI controller.
  *
  * @param {Object} deps
- * @param {Object} deps.texts                  - Pre-loaded lang strings from loadCourseaiStrings.
- * @param {Function} deps.formatTemplate       - Template formatter utility.
- * @param {Function} deps.runPlanAction        - Sends a pendingAction and re-opens the SSE stream.
  * @returns {{ renderProposals: Function, clear: Function }}
  */
 export const createProposalsUi = (deps) => {
     const {texts, runPlanAction, emitLog} = deps;
 
-    /**
-     * Emit a log entry if emitLog is wired.
-     *
-     * @param {Object} params
-     */
-    const log = (params) => {
-        if (typeof emitLog === 'function') {
-            emitLog(params);
-        }
-    };
-
-    /**
-     * Return the #planProposalsBlock element, or null if not in the DOM.
-     *
-     * @returns {HTMLElement|null}
-     */
+    const log = (params) => { if (typeof emitLog === 'function') { emitLog(params); } };
     const getBlock = () => document.getElementById(BLOCK_ID);
 
-    /**
-     * Empty the block and hide it.
-     */
     const clear = () => {
         const block = getBlock();
-        if (!block) {
-            return;
-        }
+        if (!block) { return; }
         block.innerHTML = '';
         block.style.display = 'none';
     };
 
-    /**
-     * Disable all interactive controls inside the block (submit-guard).
-     *
-     * @param {HTMLElement} block
-     */
     const disableControls = (block) => {
-        const inputs = block.querySelectorAll('input, textarea, button');
-        inputs.forEach((el) => {
-            el.disabled = true;
-        });
+        block.querySelectorAll('input, textarea, button').forEach((el) => { el.disabled = true; });
     };
 
-    /**
-     * Re-enable all interactive controls inside the block (error recovery).
-     *
-     * @param {HTMLElement} block
-     */
     const enableControls = (block) => {
-        const inputs = block.querySelectorAll('input, textarea, button');
-        inputs.forEach((el) => {
-            el.disabled = false;
-        });
+        block.querySelectorAll('input, textarea, button').forEach((el) => { el.disabled = false; });
     };
 
-    /**
-     * Send a pendingAction and re-open the planning stream.
-     *
-     * @param {HTMLElement} block        - Container (controls are disabled during send).
-     * @param {Object}      pendingAction
-     * @returns {Promise<void>}
-     */
     const sendAction = async(block, pendingAction) => {
         disableControls(block);
         try {
@@ -118,139 +63,6 @@ export const createProposalsUi = (deps) => {
         }
     };
 
-    /**
-     * Build and return a proposal card element (label wrapping a radio input).
-     *
-     * @param {Object} proposal         - ProposedAction from the backend.
-     * @param {string} localizedSummary - Already-resolved summary string.
-     * @returns {HTMLElement}
-     */
-    const buildProposalCard = (proposal, localizedSummary) => {
-        const label = document.createElement('label');
-        label.className = 'plan-proposal-card';
-        if (proposal.destructive) {
-            label.classList.add('plan-proposal--destructive');
-        }
-
-        const radio = document.createElement('input');
-        radio.type = 'radio';
-        radio.name = RADIO_NAME;
-        radio.value = proposal.proposal_id;
-        radio.className = 'plan-proposal-radio';
-
-        const textSpan = document.createElement('span');
-        textSpan.className = 'plan-proposal-summary';
-        textSpan.textContent = localizedSummary;
-
-        label.appendChild(radio);
-        label.appendChild(textSpan);
-
-        if (proposal.destructive) {
-            const badge = document.createElement('span');
-            badge.className = 'plan-proposal-destructive-badge';
-            badge.textContent = texts.courseai_proposals_destructive_badge || 'Deletes content';
-            label.appendChild(badge);
-        }
-
-        return label;
-    };
-
-    /**
-     * Build and return the "Something else" option with its hidden textarea.
-     *
-     * @returns {{ wrapper: HTMLElement, textarea: HTMLTextAreaElement }}
-     */
-    const buildOtherOption = () => {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'plan-proposal-other-wrap';
-
-        const label = document.createElement('label');
-        label.className = 'plan-proposal-card plan-proposal-card--other';
-
-        const radio = document.createElement('input');
-        radio.type = 'radio';
-        radio.name = RADIO_NAME;
-        radio.value = OTHER_VALUE;
-        radio.className = 'plan-proposal-radio';
-
-        const textSpan = document.createElement('span');
-        textSpan.className = 'plan-proposal-summary';
-        textSpan.textContent = texts.courseai_proposals_other_label || 'Something else';
-
-        label.appendChild(radio);
-        label.appendChild(textSpan);
-
-        const textarea = document.createElement('textarea');
-        textarea.className = 'plan-proposal-other-textarea';
-        textarea.placeholder = texts.courseai_proposals_other_placeholder || 'Describe what you want instead…';
-        textarea.rows = 3;
-        textarea.style.display = 'none';
-
-        radio.addEventListener('change', () => {
-            textarea.style.display = radio.checked ? '' : 'none';
-        });
-
-        wrapper.appendChild(label);
-        wrapper.appendChild(textarea);
-
-        return {wrapper, textarea};
-    };
-
-    /**
-     * Build and return the fallen (no-longer-possible) proposals list element.
-     *
-     * @param {Array}  fallenProposals        - fallen_proposals array from the event.
-     * @param {Array}  localizedFallenItems   - Array of {summary, reason} already resolved.
-     * @returns {HTMLElement}
-     */
-    const buildFallenList = (fallenProposals, localizedFallenItems) => {
-        const wrapper = document.createElement('div');
-        wrapper.className = 'plan-proposals-fallen';
-
-        const label = document.createElement('p');
-        label.className = 'plan-proposals-fallen-label';
-        label.textContent = texts.courseai_proposals_fallen_label || 'No longer possible';
-        wrapper.appendChild(label);
-
-        const list = document.createElement('ul');
-        list.className = 'plan-proposals-fallen-list';
-
-        fallenProposals.forEach((fp, i) => {
-            const item = localizedFallenItems[i] || {};
-            const li = document.createElement('li');
-            li.className = 'plan-proposals-fallen-item';
-
-            const summarySpan = document.createElement('span');
-            summarySpan.className = 'plan-proposals-fallen-summary';
-            summarySpan.textContent = item.summary || '';
-
-            const reasonSpan = document.createElement('span');
-            reasonSpan.className = 'plan-proposals-fallen-reason';
-            reasonSpan.textContent = item.reason || '';
-
-            li.appendChild(summarySpan);
-            if (item.reason) {
-                li.appendChild(document.createTextNode(' — '));
-                li.appendChild(reasonSpan);
-            }
-
-            list.appendChild(li);
-        });
-
-        wrapper.appendChild(list);
-        return wrapper;
-    };
-
-    /**
-     * Render proposals, clarification, and fallen proposals into the block.
-     * Hides the block and returns early when there is nothing to show.
-     *
-     * @param {Object} data - The review_needed event payload.
-     * @param {Array}  data.proposals         - ProposedAction[]
-     * @param {Array}  data.fallen_proposals  - { summary, reason }[]
-     * @param {Object|null} data.clarification - LocalizedMessage | null
-     * @returns {Promise<void>}
-     */
     const renderProposals = async(data) => {
         const proposals = Array.isArray(data.proposals) ? data.proposals : [];
         const fallenProposals = Array.isArray(data.fallen_proposals) ? data.fallen_proposals : [];
@@ -262,25 +74,17 @@ export const createProposalsUi = (deps) => {
         }
 
         const block = getBlock();
-        if (!block) {
-            return;
-        }
+        if (!block) { return; }
 
-        // Resolve all localized strings in parallel before touching the DOM.
-        const localizedProposals = await Promise.all(
-            proposals.map((p) => localizeMessage(p.summary))
-        );
-
+        const localizedProposals = await Promise.all(proposals.map((p) => localizeMessage(p.summary)));
         const localizedFallenItems = await Promise.all(
             fallenProposals.map(async(fp) => ({
                 summary: await localizeMessage(fp.summary),
                 reason: await localizeMessage(fp.reason),
             }))
         );
-
         const localizedClarification = clarification ? await localizeMessage(clarification) : null;
 
-        // --- Build DOM ---
         block.innerHTML = '';
 
         if (texts.courseai_proposals_title) {
@@ -293,34 +97,27 @@ export const createProposalsUi = (deps) => {
         if (localizedClarification) {
             const clarBox = document.createElement('div');
             clarBox.className = 'plan-proposals-clarification';
-
             const clarLabel = document.createElement('p');
             clarLabel.className = 'plan-proposals-clarification-label';
             clarLabel.textContent = texts.courseai_proposals_clarification_label || 'I need a bit more detail';
             clarBox.appendChild(clarLabel);
-
             const clarText = document.createElement('p');
             clarText.className = 'plan-proposals-clarification-text';
             clarText.textContent = localizedClarification;
             clarBox.appendChild(clarText);
-
             block.appendChild(clarBox);
         }
 
         const radioGroup = document.createElement('div');
         radioGroup.className = 'plan-proposals-group';
         radioGroup.setAttribute('role', 'radiogroup');
-
         proposals.forEach((proposal, i) => {
-            const card = buildProposalCard(proposal, localizedProposals[i]);
-            radioGroup.appendChild(card);
+            radioGroup.appendChild(buildProposalCard(proposal, localizedProposals[i], texts));
         });
-
-        const {wrapper: otherWrapper, textarea: otherTextarea} = buildOtherOption();
+        const {wrapper: otherWrapper, textarea: otherTextarea} = buildOtherOption(texts);
         radioGroup.appendChild(otherWrapper);
         block.appendChild(radioGroup);
 
-        // --- Action buttons ---
         const btnRow = document.createElement('div');
         btnRow.className = 'plan-proposals-btn-row';
 
@@ -331,37 +128,24 @@ export const createProposalsUi = (deps) => {
 
         applyBtn.addEventListener('click', async() => {
             const selected = block.querySelector(`input[name="${RADIO_NAME}"]:checked`);
-            if (!selected) {
-                return;
-            }
+            if (!selected) { return; }
 
-            if (selected.value === OTHER_VALUE) {
+            if (selected.value === '__other__') {
                 const instruction = otherTextarea.value.trim();
-                if (!instruction) {
-                    otherTextarea.focus();
-                    return;
-                }
+                if (!instruction) { otherTextarea.focus(); return; }
                 const truncated = instruction.length > 80 ? instruction.slice(0, 80) + '…' : instruction;
-                log({
-                    actor: 'user',
-                    kind: 'info',
-                    message: (texts.courseai_log_proposal_applied || 'You applied: {$a}').replace('{$a}', truncated),
-                });
-                const pendingAction = {action: 'feedback', instruction};
-                await sendAction(block, pendingAction);
+                log({actor: 'user', kind: 'info',
+                    message: (texts.courseai_log_proposal_applied || 'You applied: {$a}').replace('{$a}', truncated)});
+                await sendAction(block, {action: 'feedback', instruction});
             } else {
                 const selectedLabel = selected.closest('.plan-proposal-card');
                 const summaryText = selectedLabel
                     ? (selectedLabel.querySelector('.plan-proposal-summary') || {}).textContent || ''
                     : '';
                 const truncated = summaryText.length > 80 ? summaryText.slice(0, 80) + '…' : summaryText;
-                log({
-                    actor: 'user',
-                    kind: 'info',
-                    message: (texts.courseai_log_proposal_applied || 'You applied: {$a}').replace('{$a}', truncated),
-                });
-                const pendingAction = {action: 'execute_proposal', target_ids: [selected.value]};
-                await sendAction(block, pendingAction);
+                log({actor: 'user', kind: 'info',
+                    message: (texts.courseai_log_proposal_applied || 'You applied: {$a}').replace('{$a}', truncated)});
+                await sendAction(block, {action: 'execute_proposal', target_ids: [selected.value]});
             }
         });
 
@@ -369,15 +153,10 @@ export const createProposalsUi = (deps) => {
         dismissBtn.type = 'button';
         dismissBtn.className = 'btn-proposals-dismiss';
         dismissBtn.textContent = texts.courseai_btn_discard_proposals || 'Dismiss suggestions';
-
         dismissBtn.addEventListener('click', async() => {
-            log({
-                actor: 'user',
-                kind: 'neutral',
-                message: texts.courseai_log_proposals_dismissed || 'You dismissed suggestions',
-            });
-            const pendingAction = {action: 'discard_proposals', target_ids: []};
-            await sendAction(block, pendingAction);
+            log({actor: 'user', kind: 'neutral',
+                message: texts.courseai_log_proposals_dismissed || 'You dismissed suggestions'});
+            await sendAction(block, {action: 'discard_proposals', target_ids: []});
         });
 
         btnRow.appendChild(applyBtn);
@@ -385,8 +164,7 @@ export const createProposalsUi = (deps) => {
         block.appendChild(btnRow);
 
         if (fallenProposals.length) {
-            const fallenEl = buildFallenList(fallenProposals, localizedFallenItems);
-            block.appendChild(fallenEl);
+            block.appendChild(buildFallenList(fallenProposals, localizedFallenItems, texts));
         }
 
         block.style.display = '';

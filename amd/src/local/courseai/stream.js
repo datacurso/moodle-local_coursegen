@@ -32,6 +32,7 @@
 
 import {setCompactChatState} from './ui-planning';
 import {localizeMessage} from './i18n';
+import {ensureStreamContentVisible, showStreamBar, hideStreamBar} from './stream/bar';
 import {normalizeText, extractActivityFromStatus, isActivityDoneStatus, getActivityLabel} from './stream/normalize';
 import {
     createGenerationTracker,
@@ -50,49 +51,6 @@ import {openConnection} from './stream/connection';
 // Module-level variable to preserve phase 4 total activities.
 // This survives state resets that happen during stream opening.
 let preservedPhase4Total = 0;
-
-/**
- * Ensure the planning stream content is visible and the loading overlay is hidden.
- */
-const ensureStreamContentVisible = () => {
-    const loadingEl = document.getElementById('planningLoading');
-    const streamContentEl = document.getElementById('planningStreamContent');
-    if (loadingEl) {
-        loadingEl.style.display = 'none';
-    }
-    if (streamContentEl) {
-        streamContentEl.style.display = '';
-    }
-};
-
-/**
- * Attach a thin indeterminate progress bar to the top of the review card.
- * Idempotent: no-op if the bar is already present.
- */
-const showStreamBar = () => {
-    const card = document.getElementById('planReviewCard');
-    if (!card || card.querySelector('.cg-stream-bar')) {
-        return;
-    }
-    const bar = document.createElement('div');
-    bar.className = 'cg-stream-bar';
-    bar.setAttribute('aria-hidden', 'true');
-    card.prepend(bar);
-};
-
-/**
- * Remove the thin indeterminate progress bar from the review card.
- */
-const hideStreamBar = () => {
-    const card = document.getElementById('planReviewCard');
-    if (!card) {
-        return;
-    }
-    const bar = card.querySelector('.cg-stream-bar');
-    if (bar) {
-        bar.remove();
-    }
-};
 
 /**
  * Create stream manager.
