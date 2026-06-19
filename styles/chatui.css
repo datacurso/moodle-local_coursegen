@@ -137,7 +137,8 @@
 }
 
 .courseai-chat-message--user {
-  background: var(--primary-soft);
+  background: var(--muted);
+  border: 1px solid var(--border);
   color: var(--fg);
 }
 
