@@ -114,15 +114,19 @@ class data_settings extends base_settings {
             return;
         }
 
+        // A single problematic field (unknown/disabled type, a DB error, an over-long name, ...)
+        // must never abort the activity creation or the remaining fields: this runs after the
+        // module already exists, so a thrown error would leave a half-built database.
         try {
             $field = data_get_field_new($type, $datainstance);
-        } catch (\moodle_exception $e) {
-            // Unknown or disabled field type -> skip rather than break the activity.
-            return;
+            $field->define_field($formdata);
+            $field->insert_field();
+        } catch (\Throwable $e) {
+            debugging(
+                'local_coursegen: skipped data field "' . $name . '": ' . $e->getMessage(),
+                DEBUG_DEVELOPER
+            );
         }
-
-        $field->define_field($formdata);
-        $field->insert_field();
     }
 
     /**

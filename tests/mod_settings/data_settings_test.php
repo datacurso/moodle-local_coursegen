@@ -133,6 +133,8 @@ final class data_settings_test extends \advanced_testcase {
         ]];
 
         (new data_settings($cm, $modsettings))->add_settings();
+        // The unknown type is caught per-field and logged via debugging() (never aborts the rest).
+        $this->assertDebuggingCalled();
 
         $fields = $DB->get_records('data_fields', ['dataid' => $cm->instance]);
         $this->assertCount(2, $fields);
