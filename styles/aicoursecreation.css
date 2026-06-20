@@ -2850,7 +2850,7 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
     var(--muted, hsl(215 25% 96%))        100%
   );
   background-size: 200% 100%;
-  animation: cg-shimmer 1.4s linear infinite;
+  animation: cg-shimmer 2.4s ease-in-out infinite;
   border-radius: var(--radius, .75rem);
   color: transparent;
 }
