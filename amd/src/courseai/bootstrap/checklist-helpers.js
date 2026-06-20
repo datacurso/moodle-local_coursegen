@@ -74,12 +74,22 @@ export const makeChecklistHelpers = ({state, elements, texts}) => {
     /**
      * Build a single checklist `<li>` DOM element for a section.
      *
+     * A section is rendered as done (check icon) only when all its activities
+     * are actually detailed; otherwise it stays in the spinner state so reload
+     * never marks unfinished sections as completed. History rounds pass
+     * `forceComplete` because they are, by definition, already finished.
+     *
      * @param {Object} section
+     * @param {Object} [options]
+     * @param {boolean} [options.forceComplete] - mark as done regardless of counts
      * @returns {HTMLElement}
      */
-    const buildChecklistItem = (section) => {
+    const buildChecklistItem = (section, options = {}) => {
         const item = document.createElement('li');
-        item.className = 'courseai-checklist-item is-done';
+        const total = Number(section?.total ?? 0);
+        const done = Number(section?.done ?? 0);
+        const complete = options.forceComplete === true || (total > 0 && done >= total);
+        item.className = 'courseai-checklist-item' + (complete ? ' is-done' : '');
         item.setAttribute('data-section-index', String(section.section_index || 0));
 
         const check = document.createElement('span');
@@ -113,11 +123,19 @@ export const makeChecklistHelpers = ({state, elements, texts}) => {
         const checklistSections = sections.map((section, index) => {
             const activities = Array.isArray(section?.activities) ? section.activities : [];
             const total = activities.length;
+            // "Done" = activities that already carry detailed content. Mid-planning
+            // reloads thus show real progress instead of marking everything done.
+            const done = activities.filter((activity) => String(
+                activity?.description
+                || activity?.detailed_plan?.activity_description
+                || activity?.content
+                || ''
+            ).trim() !== '').length;
 
             return {
                 section_index: Number(section?.section_index ?? index),
                 name: String(section?.name || ''),
-                done: total,
+                done,
                 total,
             };
         });
@@ -179,7 +197,7 @@ export const makeChecklistHelpers = ({state, elements, texts}) => {
         const list = document.createElement('ul');
         list.className = 'courseai-checklist-list';
 
-        sections.forEach((section) => list.appendChild(buildChecklistItem(section)));
+        sections.forEach((section) => list.appendChild(buildChecklistItem(section, {forceComplete: true})));
 
         checklist.appendChild(list);
         return checklist;
