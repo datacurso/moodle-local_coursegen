@@ -24,8 +24,8 @@
 import {localizeMessage} from './i18n';
 import {buildProposalCard, buildOtherOption, buildFallenList, RADIO_NAME} from './proposals/dom';
 
-/** ID of the container element rendered by courseai_page.mustache. */
-const BLOCK_ID = 'planProposalsBlock';
+/** ID of the proposals card injected into the LEFT decision-log feed. */
+const BLOCK_ID = 'cgFeedProposals';
 
 /**
  * Create the proposals UI controller.
@@ -37,13 +37,24 @@ export const createProposalsUi = (deps) => {
     const {texts, runPlanAction, emitLog} = deps;
 
     const log = (params) => { if (typeof emitLog === 'function') { emitLog(params); } };
-    const getBlock = () => document.getElementById(BLOCK_ID);
 
     const clear = () => {
-        const block = getBlock();
-        if (!block) { return; }
-        block.innerHTML = '';
-        block.style.display = 'none';
+        const block = document.getElementById(BLOCK_ID);
+        if (block) { block.remove(); }
+    };
+
+    // Proposals render in the SAME left panel as the user's feedback (at the end
+    // of the decision-log feed) — that's where the user is looking — not in the
+    // center. Rebuild fresh each time so the card sits at the bottom of the feed.
+    const getBlock = () => {
+        clear();
+        const feed = document.getElementById('cgLogAfter') || document.getElementById('cgLog');
+        if (!feed) { return null; }
+        const block = document.createElement('div');
+        block.id = BLOCK_ID;
+        block.className = 'cg-feed-proposals';
+        feed.appendChild(block);
+        return block;
     };
 
     const disableControls = (block) => {
@@ -168,6 +179,9 @@ export const createProposalsUi = (deps) => {
         }
 
         block.style.display = '';
+        window.requestAnimationFrame(() => {
+            block.scrollIntoView({block: 'nearest', inline: 'nearest'});
+        });
     };
 
     return {renderProposals, clear};
