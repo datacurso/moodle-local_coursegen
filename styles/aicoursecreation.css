@@ -2594,6 +2594,58 @@ svg { display: block; flex-shrink: 0; }
   font-style: italic;
 }
 
+/* ─── Proposals inside the LEFT decision-log feed (Claude-style picker) ──
+   Same controls as the center block, but a compact card that sits at the end of
+   the feed — right where the user wrote the feedback. */
+.cg-feed-proposals {
+  margin: 10px 0 4px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cg-feed-proposals .plan-proposals-title {
+  font-size: 12.5px;
+}
+
+.cg-feed-proposals .plan-proposals-group {
+  gap: 6px;
+}
+
+.cg-feed-proposals .plan-proposal-card {
+  padding: 9px 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cg-feed-proposals .plan-proposal-summary {
+  font-size: 12.5px;
+  min-width: 0;
+}
+
+.cg-feed-proposals .plan-proposal-destructive-badge {
+  margin-left: auto;
+}
+
+.cg-feed-proposals .plan-proposal-other-textarea {
+  font-size: 12.5px;
+  min-height: 56px;
+}
+
+.cg-feed-proposals .plan-proposals-btn-row {
+  margin-top: 2px;
+}
+
+.cg-feed-proposals .btn-proposals-apply,
+.cg-feed-proposals .btn-proposals-dismiss {
+  height: 32px;
+  font-size: 12.5px;
+}
+
 /* ─── Chat history: initial prompt display ────────────────────────────── */
 .courseai-chat-history {
   margin-bottom: 12px;
