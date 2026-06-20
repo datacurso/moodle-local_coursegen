@@ -54,6 +54,7 @@ export const makeChecklistHelpers = ({state, elements, texts}) => {
         return detailedSections
             .filter((section) => !section?.deleted)
             .map((section, sectionIndex) => ({
+                id: section.id,
                 section_index: section.section_index ?? sectionIndex,
                 name: section.name || `${texts.courseai_section_label} ${sectionIndex + 1}`,
                 description: section.description || '',
@@ -89,8 +90,17 @@ export const makeChecklistHelpers = ({state, elements, texts}) => {
         const total = Number(section?.total ?? 0);
         const done = Number(section?.done ?? 0);
         const complete = options.forceComplete === true || (total > 0 && done >= total);
-        item.className = 'courseai-checklist-item' + (complete ? ' is-done' : '');
+        item.className = 'courseai-checklist-item' + (complete ? ' is-done' : ' is-loading');
         item.setAttribute('data-section-index', String(section.section_index || 0));
+        // Carry the attributes the live stream handler (handleDetailedPlanActivity)
+        // uses, so a reload mid-planning lets the continuing stream mark each
+        // section done as its activities arrive — instead of freezing the
+        // checklist at the snapshot state.
+        if (section.id) {
+            item.setAttribute('data-section-id', String(section.id));
+        }
+        item.setAttribute('data-round', String(state.generationRound || 0));
+        item.setAttribute('data-remaining', String(complete ? 0 : Math.max(0, total - done)));
 
         const check = document.createElement('span');
         check.className = 'courseai-checklist-check';
@@ -123,16 +133,17 @@ export const makeChecklistHelpers = ({state, elements, texts}) => {
         const checklistSections = sections.map((section, index) => {
             const activities = Array.isArray(section?.activities) ? section.activities : [];
             const total = activities.length;
-            // "Done" = activities that already carry detailed content. Mid-planning
-            // reloads thus show real progress instead of marking everything done.
-            const done = activities.filter((activity) => String(
-                activity?.description
-                || activity?.detailed_plan?.activity_description
-                || activity?.content
-                || ''
-            ).trim() !== '').length;
+            // "Done" = activities whose detailed_plan is actually filled. NOTE:
+            // `description` exists from the INITIAL plan, so it cannot mark detail
+            // completion; and buildSectionsFromDetailedPlan maps an undetailed
+            // activity's detailed_plan to `{}` (truthy), so we must check for KEYS.
+            const done = activities.filter((activity) => {
+                const dp = activity?.detailed_plan;
+                return Boolean(dp) && typeof dp === 'object' && Object.keys(dp).length > 0;
+            }).length;
 
             return {
+                id: section?.id,
                 section_index: Number(section?.section_index ?? index),
                 name: String(section?.name || ''),
                 done,
