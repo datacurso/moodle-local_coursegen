@@ -115,6 +115,15 @@ export const makeResumeFromSnapshot = ({
             return false;
         }
 
+        // The snapshot arrived and real content is about to render — drop the
+        // in-place boot skeletons now so they never overlap the hydrated plan.
+        ['cgLeftSkeleton', 'cgCenterSkeleton'].forEach((id) => {
+            const skeleton = document.getElementById(id);
+            if (skeleton) {
+                skeleton.style.display = 'none';
+            }
+        });
+
         const coursedata = parseJsonField(resume.coursedatajson, {});
         const snapshot = parseJsonField(resume.snapshotjson, {});
         const status = normalizeSnapshotStatus(snapshot.status);

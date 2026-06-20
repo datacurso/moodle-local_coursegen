@@ -37,17 +37,12 @@
 <!-- ══════════════════════ MAIN ════════════════════════════════════════ -->
 <main class="app-main aicoursecreation-main">
   <div class="container">
-    <div class="courseai-workspace" id="courseaiWorkspace">
+    <div class="courseai-workspace{{#isresuming}} is-planning{{/isresuming}}" id="courseaiWorkspace">
 
-    {{#isresuming}}
-    <div class="cg-resume-skeleton" id="resumeLoadingView" aria-label="{{#str}}courseai_state_starting, local_coursegen{{/str}}">
-      <div class="cg-resume-skeleton__side">{{> local_coursegen/courseai_skeleton_checks }}</div>
-      <div class="cg-resume-skeleton__main">{{> local_coursegen/courseai_skeleton_cards }}</div>
-    </div>
-    {{/isresuming}}
-
-    <!-- Context step form -->
-    <div class="context-wrap" id="contextView"{{#isresuming}} style="display:none"{{/isresuming}}>
+    <!-- Context step form (in planning mode the editor is hidden by CSS and the
+         left chat column shows instead — so on reload the real chrome renders and
+         only the service-driven content areas show skeletons). -->
+    <div class="context-wrap" id="contextView">
 
       <div class="courseai-context-editor" id="courseaiContextEditor">
 
@@ -214,7 +209,7 @@
 
             <!-- Left loading skeleton: previews the checklist shape while the
                  first instruction streams (hidden once a section arrives). -->
-            <div class="cg-sk-checks-wrap" id="cgLeftSkeleton" style="display:none">{{> local_coursegen/courseai_skeleton_checks }}</div>
+            <div class="cg-sk-checks-wrap" id="cgLeftSkeleton" style="display:{{#isresuming}}block{{/isresuming}}{{^isresuming}}none{{/isresuming}}">{{> local_coursegen/courseai_skeleton_checks }}</div>
 
             <!-- Section checklist shown during streaming -->
             <div class="courseai-checklist hidden" id="courseaiChecklist">
@@ -232,7 +227,7 @@
         </div>
 
         <!-- Compact chat for regeneration -->
-        <div class="compact-chat-card" id="compactChatCard" style="display:none">
+        <div class="compact-chat-card" id="compactChatCard"{{^isresuming}} style="display:none"{{/isresuming}}>
           <textarea
             id="compactPromptInput"
             class="compact-prompt-textarea"
@@ -365,7 +360,7 @@
          aria-valuemin="240" aria-valuemax="560" aria-valuenow="360"></div>
 
     <!-- Step 2: Planning view -->
-    <div class="planning-wrap" id="planningView" style="display:none">
+    <div class="planning-wrap" id="planningView" style="display:{{#isresuming}}flex{{/isresuming}}{{^isresuming}}none{{/isresuming}}">
       <div class="pc-card" id="planningProgressCard" style="display:none">
         <div class="pc-card-main">
           <span class="pc-icon-wrap" id="pcIconWrap" aria-hidden="true">
@@ -412,7 +407,7 @@
       <!-- Initial-streaming loader: an in-place skeleton that previews the
            detailed-plan card shape (no full-screen spinner). Shown while the
            first instruction streams, hidden once the first section arrives. -->
-      <div class="cg-center-skeleton" id="cgCenterSkeleton" style="display:none">{{> local_coursegen/courseai_skeleton_cards }}</div>
+      <div class="cg-center-skeleton" id="cgCenterSkeleton" style="display:{{#isresuming}}block{{/isresuming}}{{^isresuming}}none{{/isresuming}}">{{> local_coursegen/courseai_skeleton_cards }}</div>
 
       <!-- Streaming content containers (hidden initially, shown as content arrives) -->
       <div class="planning-stream-content" id="planningStreamContent" style="display:none">
