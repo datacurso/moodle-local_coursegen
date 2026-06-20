@@ -228,16 +228,34 @@ export const init = async(params) => {
             texts,
         });
 
-        try {
-            setResumeBootLoading(true);
-            const resumed = await resumeFromSnapshot();
-            if (!resumed && elements.contextView) {
-                elements.contextView.style.display = '';
+        // On reload the page is server-rendered in planning mode (is-planning +
+        // in-place skeletons) so the static chrome shows immediately. If there is
+        // nothing to resume, fall back to the context form.
+        const revertToContextView = () => {
+            const workspace = document.getElementById('courseaiWorkspace');
+            if (workspace) {
+                workspace.classList.remove('is-planning');
             }
-        } catch (resumeError) {
+            const planningView = document.getElementById('planningView');
+            if (planningView) {
+                planningView.style.display = 'none';
+            }
+            const compactChat = document.getElementById('compactChatCard');
+            if (compactChat) {
+                compactChat.style.display = 'none';
+            }
             if (elements.contextView) {
                 elements.contextView.style.display = '';
             }
+        };
+
+        try {
+            const resumed = await resumeFromSnapshot();
+            if (!resumed) {
+                revertToContextView();
+            }
+        } catch (resumeError) {
+            revertToContextView();
         } finally {
             setResumeBootLoading(false);
         }
