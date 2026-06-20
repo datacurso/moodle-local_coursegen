@@ -20,7 +20,7 @@
 - [x] [2. Layout: las tres zonas](#2-layout-las-tres-zonas)
   - [x] [2.1 Divisor redimensionable entre log y preview (sin anchos fijos)](#21-divisor-redimensionable-entre-log-y-preview-sin-anchos-fijos)
 - [ ] [3. Vista central — preview del curso (estilo Moodle)](#3-vista-central--preview-del-curso) (parcial: render DOM manual, sin plantillas Mustache)
-  - [ ] [3.1 Fidelidad visual a Moodle (formato por temas)](#31-fidelidad-visual-a-moodle-formato-por-temas) (parcial: CSS propio, no `core_courseformat`)
+  - [ ] [3.1 Fidelidad visual a Moodle (formato **Custom Sections**, NO por temas)](#31-fidelidad-visual-a-moodle-formato-custom-sections-no-formato-por-temas) (parcial: CSS propio; rehacer estilo Custom Sections — ver pendientes al final)
   - [x] [3.2 Anatomía de una sección (preview)](#32-anatomía-de-una-sección-preview)
   - [x] [3.3 Anatomía de una actividad (preview)](#33-anatomía-de-una-actividad-preview)
   - [x] [3.4 Relleno progresivo (lo central del pedido)](#34-relleno-progresivo-lo-central-del-pedido)
@@ -129,11 +129,20 @@ reparto **arrastrando** una línea divisoria entre ambas.
 
 ## 3. Vista central — preview del curso
 
-### 3.1 Fidelidad visual a Moodle (formato por temas)
+### 3.1 Fidelidad visual a Moodle (formato **Custom Sections**, NO formato por temas)
+> CORRECCIÓN (pedido en campo): el objetivo NO es el formato por temas clásico. El preview debe
+> verse como el **formato Custom Sections** de Moodle 4.5 (secciones colapsables con chevron, lápiz
+> de edición, "Collapse all/Expand all" y menú de 3 puntos; actividades como **filas separadas por
+> líneas punteadas** —no tarjetas con borde permanente—; afordancias que aparecen SOLO en hover).
+> Referencia visual: capturas del curso real adjuntas (sección colapsable + filas de actividad con
+> separador punteado + botones inline de "Add activity or resource with AI" al pasar el cursor entre
+> actividades). Ver detalle exhaustivo en "## Pendientes UI — fidelidad Custom Sections + hover" al
+> final de este documento.
+
 El preview debe parecerse a la vista de curso de Moodle 4.5. Reutilizar las clases visuales de
 `core_courseformat` para heredar el look del tema activo (Boost), envolviendo el markup propio:
 
-- Contenedor de curso: `.course-content` → `ul.topics` (o `.course-section-list`).
+- Contenedor de curso: `.course-content` → la lista de secciones del formato Custom Sections.
 - Sección/tema: `li.section` / `.course-section` con `.section-title` / `.sectionname` y
   `.section_availability` opcional; resumen en `.summarytext`.
 - Lista de actividades: `ul.section` con `li.activity` `.activity-item`.
@@ -525,3 +534,74 @@ dejar el preview/log congelados; al reanudar, reabrir stream (keepPlan) y seguir
 3. **Menos colores (no "payaso").** Neutralizar los ~11 badges de tipo de actividad (`ps-badge--quiz/book/assign/forum/lesson/url/resource/page/data/glossary`) a un estilo gris uniforme, y unificar botones a UN color de acento (rojo solo para destructivo). Calmar la paleta tipo Claude (grises + un acento).
 4. **Resaltar elementos afectados al seleccionar una propuesta.** Cuando el usuario marca una opción que afecta secciones/actividades (`proposal.intent.target_ids`), resaltar esos elementos en el centro (`[data-section-id]`/`[data-activity-id]`) SOLO mientras esa opción está seleccionada (clase `.cg-affected`, variante destructiva). Limpiar al cambiar/aplicar/descartar.
 5. **Textarea "Something else" solo cuando está activa.** Hoy el textarea queda visible aunque esté seleccionada otra opción. Mostrarlo solo cuando el radio "Something else" está marcado (handler a nivel de grupo).
+
+---
+
+## Pendientes UI — fidelidad Custom Sections + hover (2ª ronda de campo) — POR IMPLEMENTAR
+
+> Pedido en campo con capturas. El preview central NO debe verse como tarjetas con bordes
+> permanentes ni con puntos de arrastre visibles siempre; debe imitar el **formato Custom Sections**
+> de Moodle 4.5, donde las afordancias aparecen SOLO en hover. Todos estos puntos están PENDIENTES.
+
+### P1. Quitar el remarcado actual (`.cg-affected`) — se ve asqueroso
+- Hoy, al seleccionar una propuesta, se dibuja un **anillo rojo grueso** (`box-shadow: 0 0 0 2px … , 0 0 0 7px …`)
+  tanto en los ítems del **checklist izquierdo** (queda como un óvalo rojo alrededor del texto, feo)
+  como en las **secciones/actividades del centro** (anillo rojo que rompe el layout).
+- **Qué hacer:**
+  - El resaltado de "esto se verá afectado" debe ser **sutil y limpio**, NO un anillo rojo grueso.
+    Propuesta: fondo tenue + borde-izquierdo fino (p.ej. `background: hsl(8 72% 42% / .06)` + `border-left: 3px solid` del color de acento destructivo, o un contorno `outline: 1px` discreto), con transición suave.
+  - **NO** aplicar el resaltado a los ítems del **checklist izquierdo** — el highlight de afectados es
+    para la **vista central** únicamente (el checklist no debe deformarse). Restringir el selector a
+    `.prv-section-row`/`.dp-activity-wrap` del centro (excluir `.courseai-checklist-item`).
+  - Mantener la lógica de "solo mientras la opción está seleccionada" (ya implementada en
+    `ui-proposals.js onSelectionChange`); solo cambia el ESTILO (`.cg-affected` en
+    `aicoursecreation.css`).
+
+### P2. Vista central = formato **Custom Sections** (no tarjetas con borde)
+Rehacer el look de la vista central para que imite el formato Custom Sections de Moodle 4.5:
+- **Sección**: cabecera con **chevron de colapsar/expandir** (círculo azul claro), nombre en negrita
+  con **lápiz de edición** al lado, acciones a la derecha ("Collapse all/Expand all" y menú de 3
+  puntos `⋮`). La sección puede **colapsar** ocultando sus actividades.
+- **Actividades**: **filas** (no tarjetas con borde permanente) **separadas por líneas punteadas**
+  horizontales (`border-top: 1px dashed var(--border)` entre ítems). Cada fila: icono del módulo a la
+  izquierda (con su color real de Moodle por tipo/purpose — OJO: esto reintroduce color pero es el
+  look Moodle; decidir si en el preview se mantiene neutro o se usa el color real), **título como
+  enlace** + lápiz de edición + menú `⋮` a la derecha; debajo, la descripción/plan.
+- Quitar las "tarjetas" con `border` + `border-radius` + `box-shadow` que se usan hoy en
+  `.prv-activity-item`/`.dp-activity-wrap`; reemplazar por filas con separador punteado.
+
+### P3. Hover en actividad: borde SOLO en hover, y arrastre sin los puntos `::` permanentes
+- Hoy cada actividad muestra **siempre** un grip de arrastre visible (los 6 puntos `::`,
+  `.dp-drag-handle`) — el usuario lo califica de "señalización horrible".
+- **Qué hacer:**
+  - **Ocultar el grip `::` por defecto**; el ítem se puede **arrastrar directamente** (toda la fila o
+    desde el handle) **sin** mostrar los puntos permanentemente.
+  - Al **pasar el cursor por encima de una actividad**, recién ahí mostrar una **afordancia sutil**:
+    un borde/realce ligero en la fila (como Moodle) y, si se quiere, el handle de arrastre **aparece
+    solo en hover** (`opacity 0 → 1`). Nada de bordes ni puntos permanentes.
+  - Mantener el drag-and-drop funcional (ya existe `wireDragAndDrop` por `.dp-activity-wrap`), solo
+    cambia la **visibilidad** del handle (CSS: `.dp-drag-handle{opacity:0} .dp-activity-wrap:hover .dp-drag-handle{opacity:1}` o arrastre por toda la fila).
+
+### P4. Botón "Add section" estilo Moodle
+- Referencia: en Moodle el "Add section" es un **botón ancho con borde punteado redondeado**, texto
+  centrado azul "+ Add section" (y la última sección colapsada se ve como una tarjeta con chevron).
+- Hoy el "+ Add section" se ve como un enlace/botón rojo desalineado. **Rehacerlo** como bloque
+  punteado redondeado a todo el ancho, con el "+" y el texto centrados, hover sutil. Mismo criterio
+  para "+ Add activity" (ya es punteado, alinear al estilo Moodle).
+
+### P5. "Add activity" inline al pasar el cursor ENTRE dos actividades
+- Referencia (captura): en Moodle, al pasar el cursor **en el espacio entre dos actividades**, aparece
+  una **línea azul punteada** con dos botones centrados: **"+"** (añadir actividad/recurso) y un botón
+  azul **"✦ Add activity or resource with AI"** (con tooltip).
+- **Qué hacer:** añadir una **drop/insert zone entre actividades** que está oculta por defecto y
+  aparece en hover (línea punteada azul + botones centrados). El "+" abriría el flujo de añadir
+  actividad en esa posición; el botón IA dispararía `add_activity` con contexto de posición. Hoy solo
+  existe "+ Add activity" al final de la sección — falta la inserción **entre** ítems.
+
+### Notas de implementación
+- Estos cambios son CSS + algo de DOM/JS en `detailed/section-row.js`, `detailed/activity-row.js`,
+  `detailed/activity-dom.js` y `styles/aicoursecreation.css`.
+- Reusar clases CSS de `core_courseformat` donde se pueda para heredar el look del tema (Boost), o
+  replicar exactamente: chevron, separadores punteados, hover-insert, botón punteado de sección.
+- Verificar con captura/e2e que en hover aparecen las afordancias y que sin hover la vista queda
+  **limpia** (sin puntos `::` ni bordes permanentes).
