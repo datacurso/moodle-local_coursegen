@@ -897,6 +897,79 @@ svg { display: block; flex-shrink: 0; }
   margin: 0;
 }
 
+/* Reload skeleton — integrated into the planning layout (no full-screen spinner).
+   Mirrors the two-column workspace so the page reads as "loading the plan" rather
+   than a blocking overlay. Hidden by JS (setResumeBootLoading) once hydrated. */
+.cg-resume-skeleton {
+  display: grid;
+  grid-template-columns: clamp(280px, 440px, 620px) 10px minmax(0, 1fr);
+  gap: 0;
+  padding: 24px 0;
+  width: 100%;
+}
+
+.cg-resume-skeleton__side {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  padding: 8px 24px 8px 4px;
+  border-right: 1px solid var(--border, hsl(215 20% 88%));
+}
+
+.cg-resume-skeleton__main {
+  grid-column: 3;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+  padding: 8px 4px 8px 24px;
+}
+
+.cg-resume-skeleton__chip {
+  display: block;
+  height: 34px;
+  width: 100%;
+  border-radius: var(--radius, .75rem);
+  margin-top: 6px;
+}
+
+.cg-resume-skeleton__head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin-bottom: 4px;
+}
+
+.cg-resume-skeleton__dot {
+  display: block;
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.cg-resume-skeleton__card {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  padding: 18px;
+  border: 1px solid var(--border, hsl(215 20% 88%));
+  border-radius: var(--radius, .75rem);
+}
+
+@media (max-width: 900px) {
+  .cg-resume-skeleton {
+    grid-template-columns: 1fr;
+  }
+  .cg-resume-skeleton__side {
+    border-right: 0;
+    border-bottom: 1px solid var(--border, hsl(215 20% 88%));
+  }
+  .cg-resume-skeleton__main {
+    grid-column: 1;
+    padding-left: 4px;
+  }
+}
+
 .planning-stream-content {
   display: flex;
   flex-direction: column;
