@@ -213,6 +213,10 @@ export const makeResumeFromSnapshot = ({
             applyCourseTitleToHeader();
             await hydrateDetailedPlanFromSnapshot(detailedSections);
             rebuildDecisionLog(detailedSections, snapshot);
+            // The plan is at review: future log entries (e.g. the user's next
+            // feedback) must flow at the END of the feed. Set this AFTER the
+            // historical rebuild so the rebuilt planning entries stay on top.
+            state.planEverReviewed = true;
             if (typeof detailedUi.enableAllActionControls === 'function') {
                 detailedUi.enableAllActionControls();
             }
