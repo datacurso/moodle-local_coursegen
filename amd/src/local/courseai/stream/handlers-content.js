@@ -77,11 +77,19 @@ export const handleSection = (data, ctx) => {
 
     const loadingEl = document.getElementById('planningLoading');
     const streamContentEl = document.getElementById('planningStreamContent');
+    const leftSkel = document.getElementById('cgLeftSkeleton');
+    const centerSkel = document.getElementById('cgCenterSkeleton');
     if (loadingEl) {
         loadingEl.style.display = 'none';
     }
     if (streamContentEl) {
         streamContentEl.style.display = '';
+    }
+    if (leftSkel) {
+        leftSkel.style.display = 'none';
+    }
+    if (centerSkel) {
+        centerSkel.style.display = 'none';
     }
 
     const sections = Array.isArray(state.latestInitialSections) ? state.latestInitialSections : [];

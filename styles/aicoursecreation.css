@@ -897,9 +897,99 @@ svg { display: block; flex-shrink: 0; }
   margin: 0;
 }
 
-/* Reload skeleton — integrated into the planning layout (no full-screen spinner).
-   Mirrors the two-column workspace so the page reads as "loading the plan" rather
-   than a blocking overlay. Hidden by JS (setResumeBootLoading) once hydrated. */
+/* ─── Loading skeletons — mimic the real planning UI shape ────────────────
+   Used in three spots that all read the same: the reload overlay (both
+   columns), the first-generation center loader (#planningLoading), and the
+   first-generation left loader (#cgLeftSkeleton). They occupy only the content
+   area (never a full-screen blocking spinner) and preview the layout that will
+   appear: a checklist (circle + line) on the left and activity cards (type
+   chip + title + description lines) in the center. */
+
+/* Primitives */
+.cg-sk-line {
+  display: block;
+  height: 11px;
+  border-radius: 6px;
+}
+
+.cg-sk-checks-wrap {
+  padding: 4px 0 8px;
+}
+
+.cg-sk-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cg-sk-check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+}
+
+.cg-sk-check__dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.cg-sk-check__name {
+  flex: 1;
+  height: 11px;
+  border-radius: 6px;
+}
+
+.cg-sk-section-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 14px;
+}
+
+.cg-sk-section-head__num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.cg-sk-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--border, hsl(215 20% 88%));
+  border-radius: var(--radius, .75rem);
+  margin-bottom: 12px;
+}
+
+.cg-sk-card__chip {
+  width: 56px;
+  height: 24px;
+  border-radius: 7px;
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.cg-sk-card__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.cg-sk-label {
+  width: 38%;
+  height: 9px;
+  border-radius: 5px;
+  margin-bottom: 12px;
+  opacity: .7;
+}
+
+/* Reload overlay — spans the two-column workspace */
 .cg-resume-skeleton {
   display: grid;
   grid-template-columns: clamp(280px, 440px, 620px) 10px minmax(0, 1fr);
@@ -911,49 +1001,19 @@ svg { display: block; flex-shrink: 0; }
 .cg-resume-skeleton__side {
   display: flex;
   flex-direction: column;
-  gap: 10px;
   padding: 8px 24px 8px 4px;
   border-right: 1px solid var(--border, hsl(215 20% 88%));
 }
 
 .cg-resume-skeleton__main {
   grid-column: 3;
-  display: flex;
-  flex-direction: column;
-  gap: 14px;
   padding: 8px 4px 8px 24px;
 }
 
-.cg-resume-skeleton__chip {
-  display: block;
-  height: 34px;
-  width: 100%;
-  border-radius: var(--radius, .75rem);
-  margin-top: 6px;
-}
-
-.cg-resume-skeleton__head {
-  display: flex;
-  align-items: center;
-  gap: 12px;
-  margin-bottom: 4px;
-}
-
-.cg-resume-skeleton__dot {
-  display: block;
-  width: 28px;
-  height: 28px;
-  border-radius: 50%;
-  flex: 0 0 auto;
-}
-
-.cg-resume-skeleton__card {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
-  padding: 18px;
-  border: 1px solid var(--border, hsl(215 20% 88%));
-  border-radius: var(--radius, .75rem);
+/* First-generation center skeleton — a left-aligned card stack in the center
+   column, shown while the first instruction streams. */
+.cg-center-skeleton {
+  padding: 8px 2px;
 }
 
 @media (max-width: 900px) {
