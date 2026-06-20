@@ -2996,6 +2996,21 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
   white-space: nowrap;
 }
 
+/* "AI is analyzing your request" progress entry (free-text feedback). */
+.cg-log-spin {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  border: 2px solid var(--border, hsl(215 20% 88%));
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+
+.cg-log-thinking .cg-log-msg {
+  color: var(--muted-fg);
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cg-log-entry { transition: none; }
 }

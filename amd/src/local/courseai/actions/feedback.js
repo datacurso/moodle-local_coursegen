@@ -22,6 +22,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {showFeedbackThinking} from 'local_coursegen/local/courseai/ui/feedback-progress';
+
 /**
  * Emit a log entry if emitLog is wired.
  *
@@ -69,7 +71,6 @@ export const sendFeedbackAction = async(action, ctx) => {
         planningSpinner,
         pcSubtitle,
         compactPromptInput,
-        adjustmentHistory,
     } = elements;
 
     if (!state.sessionid) {
@@ -112,40 +113,18 @@ export const sendFeedbackAction = async(action, ctx) => {
             ? compactPromptInput.value.trim()
             : '';
 
-        // Log the user instruction
+        // Free-text feedback is a post-review action. Mark the plan reviewed so
+        // the decision-log feed flows at the END (below the checklist) even after
+        // a reload — where the live review_needed handler that normally sets this
+        // never ran. Log the user message ONCE (the unified feed; no separate
+        // adjustment-history bubble) and show a progress indicator so the feed
+        // never looks stuck while the AI interprets the request.
         if (action === 'adjust' && instruction) {
+            state.planEverReviewed = true;
             const truncatedInstruction = instruction.length > 80 ? instruction.slice(0, 80) + '…' : instruction;
             const adjustMsg = (texts.courseai_log_user_request || 'You: {$a}').replace('{$a}', truncatedInstruction);
             log({actor: 'user', kind: 'user', message: adjustMsg}, emitLog);
-        }
-
-        // Show adjustment as a chat message paired with a response slot
-        if (action === 'adjust' && instruction && adjustmentHistory) {
-            const round = (state.generationRound || 0) + 1;
-            const roundContainer = document.createElement('div');
-            roundContainer.className = 'courseai-round';
-            roundContainer.setAttribute('data-round', round);
-
-            const msgEl = document.createElement('div');
-            msgEl.className = 'courseai-chat-history';
-
-            const messageBubble = document.createElement('div');
-            messageBubble.className = 'courseai-chat-message courseai-chat-message--user';
-
-            const messageText = document.createElement('p');
-            messageText.textContent = instruction;
-
-            messageBubble.appendChild(messageText);
-            msgEl.appendChild(messageBubble);
-
-            const responseSlot = document.createElement('div');
-            responseSlot.className = 'courseai-round-response';
-            responseSlot.setAttribute('data-round', round);
-
-            roundContainer.appendChild(msgEl);
-            roundContainer.appendChild(responseSlot);
-            adjustmentHistory.appendChild(roundContainer);
-            adjustmentHistory.classList.remove('hidden');
+            showFeedbackThinking(texts);
             if (compactPromptInput) {
                 compactPromptInput.value = '';
             }
