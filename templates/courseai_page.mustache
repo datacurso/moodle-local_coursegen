@@ -41,30 +41,8 @@
 
     {{#isresuming}}
     <div class="cg-resume-skeleton" id="resumeLoadingView" aria-label="{{#str}}courseai_state_starting, local_coursegen{{/str}}">
-      <div class="cg-resume-skeleton__side">
-        <span class="cg-skeleton cg-skeleton-line" style="width:45%;height:12px"></span>
-        <span class="cg-skeleton cg-resume-skeleton__chip"></span>
-        <span class="cg-skeleton cg-skeleton-line" style="width:80%;margin-top:20px"></span>
-        <span class="cg-skeleton cg-skeleton-line" style="width:70%"></span>
-        <span class="cg-skeleton cg-skeleton-line" style="width:85%"></span>
-        <span class="cg-skeleton cg-skeleton-line" style="width:60%"></span>
-      </div>
-      <div class="cg-resume-skeleton__main">
-        <div class="cg-resume-skeleton__head">
-          <span class="cg-skeleton cg-resume-skeleton__dot"></span>
-          <span class="cg-skeleton cg-skeleton-line" style="width:40%;height:12px"></span>
-        </div>
-        <div class="cg-resume-skeleton__card">
-          <span class="cg-skeleton cg-skeleton-line" style="width:55%;height:12px"></span>
-          <span class="cg-skeleton cg-skeleton-line" style="width:90%"></span>
-          <span class="cg-skeleton cg-skeleton-line" style="width:75%"></span>
-        </div>
-        <div class="cg-resume-skeleton__card">
-          <span class="cg-skeleton cg-skeleton-line" style="width:50%;height:12px"></span>
-          <span class="cg-skeleton cg-skeleton-line" style="width:85%"></span>
-          <span class="cg-skeleton cg-skeleton-line" style="width:70%"></span>
-        </div>
-      </div>
+      <div class="cg-resume-skeleton__side">{{> local_coursegen/courseai_skeleton_checks }}</div>
+      <div class="cg-resume-skeleton__main">{{> local_coursegen/courseai_skeleton_cards }}</div>
     </div>
     {{/isresuming}}
 
@@ -233,6 +211,10 @@
               <span class="cg-log-label">{{#str}}courseai_log_label, local_coursegen{{/str}}</span>
               <div class="cg-log" id="cgLog" aria-live="polite" aria-label="{{#str}}courseai_log_label, local_coursegen{{/str}}"></div>
             </div>
+
+            <!-- Left loading skeleton: previews the checklist shape while the
+                 first instruction streams (hidden once a section arrives). -->
+            <div class="cg-sk-checks-wrap" id="cgLeftSkeleton" style="display:none">{{> local_coursegen/courseai_skeleton_checks }}</div>
 
             <!-- Section checklist shown during streaming -->
             <div class="courseai-checklist hidden" id="courseaiChecklist">
@@ -423,11 +405,14 @@
         <div class="pc-details-panel" id="pcDetailsPanel" style="display:none"></div>
       </div>
 
-      <!-- Centered loading spinner shown during initial streaming -->
-      <div class="planning-loading" id="planningLoading">
-        <div class="planning-loading-spinner"></div>
-        <p class="planning-loading-text">{{#str}}courseai_state_structuring, local_coursegen{{/str}}</p>
-      </div>
+      <!-- Legacy loader element kept for compatibility (toggled by stream code);
+           the visible loader is the in-place skeleton below. -->
+      <div class="planning-loading" id="planningLoading" style="display:none"></div>
+
+      <!-- Initial-streaming loader: an in-place skeleton that previews the
+           detailed-plan card shape (no full-screen spinner). Shown while the
+           first instruction streams, hidden once the first section arrives. -->
+      <div class="cg-center-skeleton" id="cgCenterSkeleton" style="display:none">{{> local_coursegen/courseai_skeleton_cards }}</div>
 
       <!-- Streaming content containers (hidden initially, shown as content arrives) -->
       <div class="planning-stream-content" id="planningStreamContent" style="display:none">
