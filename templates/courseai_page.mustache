@@ -40,9 +40,31 @@
     <div class="courseai-workspace" id="courseaiWorkspace">
 
     {{#isresuming}}
-    <div class="planning-loading" id="resumeLoadingView">
-      <div class="planning-loading-spinner"></div>
-      <p class="planning-loading-text">{{#str}}courseai_state_starting, local_coursegen{{/str}}</p>
+    <div class="cg-resume-skeleton" id="resumeLoadingView" aria-label="{{#str}}courseai_state_starting, local_coursegen{{/str}}">
+      <div class="cg-resume-skeleton__side">
+        <span class="cg-skeleton cg-skeleton-line" style="width:45%;height:12px"></span>
+        <span class="cg-skeleton cg-resume-skeleton__chip"></span>
+        <span class="cg-skeleton cg-skeleton-line" style="width:80%;margin-top:20px"></span>
+        <span class="cg-skeleton cg-skeleton-line" style="width:70%"></span>
+        <span class="cg-skeleton cg-skeleton-line" style="width:85%"></span>
+        <span class="cg-skeleton cg-skeleton-line" style="width:60%"></span>
+      </div>
+      <div class="cg-resume-skeleton__main">
+        <div class="cg-resume-skeleton__head">
+          <span class="cg-skeleton cg-resume-skeleton__dot"></span>
+          <span class="cg-skeleton cg-skeleton-line" style="width:40%;height:12px"></span>
+        </div>
+        <div class="cg-resume-skeleton__card">
+          <span class="cg-skeleton cg-skeleton-line" style="width:55%;height:12px"></span>
+          <span class="cg-skeleton cg-skeleton-line" style="width:90%"></span>
+          <span class="cg-skeleton cg-skeleton-line" style="width:75%"></span>
+        </div>
+        <div class="cg-resume-skeleton__card">
+          <span class="cg-skeleton cg-skeleton-line" style="width:50%;height:12px"></span>
+          <span class="cg-skeleton cg-skeleton-line" style="width:85%"></span>
+          <span class="cg-skeleton cg-skeleton-line" style="width:70%"></span>
+        </div>
+      </div>
     </div>
     {{/isresuming}}
 
