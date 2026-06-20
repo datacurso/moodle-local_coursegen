@@ -143,11 +143,12 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .courseai-workspace.is-planning {
-  /* Wide by default — the conversation/feed is the primary surface (Claude-like),
-     so it occupies ~half the screen. The splitter still lets the user resize. */
-  --cg-left-w: 46vw;
+  /* Wide-ish by default — the conversation/feed is the primary surface. Kept in
+     PX (not vw) so the splitter, which reads/writes this property in px, can drag
+     smoothly and reach the default. Splitter clamps to the same [320,720] range. */
+  --cg-left-w: 560px;
   display: grid;
-  grid-template-columns: clamp(360px, var(--cg-left-w), 820px) 10px minmax(0, 1fr);
+  grid-template-columns: clamp(320px, var(--cg-left-w), 720px) 10px minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   height: calc(100vh - 100px);
   overflow: hidden;

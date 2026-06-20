@@ -24,10 +24,12 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-const STORAGE_KEY = 'local_coursegen_left_w';
-const DEFAULT_W = 360;
-const MIN_W = 240;
-const MAX_W = 560;
+// v2: the width range/default changed (and old values were corrupted by a vw
+// default the splitter could not parse), so ignore any pre-v2 persisted width.
+const STORAGE_KEY = 'local_coursegen_left_w_v2';
+const DEFAULT_W = 560;
+const MIN_W = 320;
+const MAX_W = 720;
 const ARROW_STEP = 24;
 const CSS_PROP = '--cg-left-w';
 const RESIZING_CLASS = 'cg-resizing';
@@ -109,6 +111,7 @@ export const createSplitter = ({workspace, divider}) => {
 
     let startX = 0;
     let startWidth = 0;
+    let latestX = 0;
     let rafId = null;
     let dragging = false;
 
@@ -137,13 +140,16 @@ export const createSplitter = ({workspace, divider}) => {
         if (!dragging) {
             return;
         }
+        // Track the LATEST pointer position; the throttled frame below applies it.
+        // (Using the captured event of the first move made the divider lag and
+        // only "respond when it felt like it".)
+        latestX = e.clientX;
         if (rafId !== null) {
             return;
         }
         rafId = requestAnimationFrame(() => {
             rafId = null;
-            const newWidth = startWidth + (e.clientX - startX);
-            applyWidth(workspace, divider, newWidth);
+            applyWidth(workspace, divider, startWidth + (latestX - startX));
         });
     };
 
