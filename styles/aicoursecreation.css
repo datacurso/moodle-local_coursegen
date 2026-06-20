@@ -143,9 +143,11 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .courseai-workspace.is-planning {
-  --cg-left-w: 440px;
+  /* Wide by default — the conversation/feed is the primary surface (Claude-like),
+     so it occupies ~half the screen. The splitter still lets the user resize. */
+  --cg-left-w: 46vw;
   display: grid;
-  grid-template-columns: clamp(280px, var(--cg-left-w), 620px) 10px minmax(0, 1fr);
+  grid-template-columns: clamp(360px, var(--cg-left-w), 820px) 10px minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   height: calc(100vh - 100px);
   overflow: hidden;
@@ -1571,23 +1573,25 @@ svg { display: block; flex-shrink: 0; }
   line-height: 1;
 }
 
-/* Per-type tints (kept for legacy specificity) */
-.ps-badge--quiz { background: hsl(252, 80%, 92%); color: hsl(252, 60%, 40%); }
-.ps-badge--book { background: hsl(198, 80%, 90%); color: hsl(198, 65%, 32%); }
-.ps-badge--assign { background: hsl(35, 85%, 90%); color: hsl(35, 65%, 32%); }
-.ps-badge--forum { background: hsl(142, 55%, 88%); color: hsl(142, 50%, 28%); }
-.ps-badge--lesson { background: hsl(8, 72%, 90%); color: hsl(8, 65%, 36%); }
-.ps-badge--url { background: hsl(215, 60%, 90%); color: hsl(215, 55%, 35%); }
-.ps-badge--resource { background: hsl(280, 55%, 90%); color: hsl(280, 50%, 35%); }
-.ps-badge--page { background: hsl(170, 55%, 88%); color: hsl(170, 50%, 28%); }
-.ps-badge--data { background: hsl(45, 75%, 88%); color: hsl(45, 60%, 30%); }
-.ps-badge--glossary { background: hsl(330, 55%, 90%); color: hsl(330, 50%, 35%); }
-
-/* Purpose tints — override per-type when present (set by ui-detailed.js) */
-.dp-purpose-content    { background: var(--info-soft);    color: hsl(212 90% 32%); }
-.dp-purpose-assessment { background: var(--danger-soft);  color: hsl(8 72% 36%); }
-.dp-purpose-collaboration { background: var(--success-soft); color: hsl(142 70% 26%); }
-.dp-purpose-communication { background: var(--warn-soft);  color: hsl(38 80% 28%); }
+/* Calm, neutral badges — ONE muted style for every activity type and purpose.
+   The type is conveyed by the icon + label, not by a rainbow of colors. */
+.ps-badge--quiz,
+.ps-badge--book,
+.ps-badge--assign,
+.ps-badge--forum,
+.ps-badge--lesson,
+.ps-badge--url,
+.ps-badge--resource,
+.ps-badge--page,
+.ps-badge--data,
+.ps-badge--glossary,
+.dp-purpose-content,
+.dp-purpose-assessment,
+.dp-purpose-collaboration,
+.dp-purpose-communication {
+  background: var(--muted, hsl(215 25% 95%));
+  color: var(--muted-fg, hsl(215 16% 42%));
+}
 
 /* ─────────────────────────────────────────────────────────────
    §3  Preview panel — Moodle topics-format course view
@@ -2644,6 +2648,18 @@ svg { display: block; flex-shrink: 0; }
 .cg-feed-proposals .btn-proposals-dismiss {
   height: 32px;
   font-size: 12.5px;
+}
+
+/* Center elements a selected proposal will affect — highlighted only while that
+   option is checked (see ui-proposals onSelectionChange). */
+.cg-affected {
+  border-radius: var(--radius);
+  box-shadow: 0 0 0 2px var(--brand, hsl(252 55% 42%)), 0 0 0 7px hsl(252 55% 42% / .12);
+  transition: box-shadow .15s ease;
+}
+
+.cg-affected.cg-affected--destructive {
+  box-shadow: 0 0 0 2px var(--primary, hsl(8 72% 42%)), 0 0 0 7px hsl(8 72% 42% / .12);
 }
 
 /* ─── Chat history: initial prompt display ────────────────────────────── */

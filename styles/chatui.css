@@ -285,15 +285,21 @@ body.cg-plan-reviewed .courseai-checklist-check svg.check-icon {
 
 /* ─── COMPACT CHAT CARD ───────────────────────────────────────────── */
 .compact-chat-card {
-  background: transparent;
-  padding: 12px;
+  background: var(--card, #fff);
+  padding: 8px 10px 8px 14px;
   margin-top: auto;
-  transition: opacity .2s, filter .2s;
+  transition: border-color .15s, box-shadow .15s, opacity .2s, filter .2s;
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  border: 1.5px solid hsl(215, 20%, 82%);
-  border-radius: 10px;
+  border: 1px solid var(--border, hsl(215 20% 88%));
+  border-radius: 18px;
+  box-shadow: 0 1px 2px hsl(215 25% 30% / .04);
+}
+
+.compact-chat-card:focus-within {
+  border-color: hsl(215 20% 72%);
+  box-shadow: 0 2px 10px hsl(215 25% 30% / .08);
 }
 
 /* Control-level disabled state for compact chat during active streams */
@@ -315,11 +321,11 @@ body.cg-plan-reviewed .courseai-checklist-check svg.check-icon {
 .compact-prompt-textarea {
   display: block;
   width: 100%;
-  min-height: 80px;
-  max-height: 180px;
-  padding: 12px 0;
+  min-height: 48px;
+  max-height: 200px;
+  padding: 8px 4px 6px;
   font-size: 14px;
-  line-height: 1.5;
+  line-height: 1.55;
   font-family: inherit;
   color: var(--fg);
   background: transparent;
@@ -397,24 +403,22 @@ body.cg-plan-reviewed .courseai-checklist-check svg.check-icon {
   justify-content: center;
   gap: 6px;
   min-width: 0;
-  padding: 9px 14px;
+  height: 36px;
+  padding: 0 16px;
   font-size: 13px;
   font-weight: 600;
   white-space: nowrap;
   color: var(--primary-fg);
   background: var(--primary);
   border: none;
-  border-radius: 8px;
+  border-radius: 10px;
   cursor: pointer;
   font-family: inherit;
-  transition: background .15s, transform .08s;
-  box-shadow: 0 1px 2px rgba(0,0,0,.1);
+  transition: background .15s, opacity .12s;
 }
 
 .btn-compact-regenerate:hover {
   background: hsl(8, 72%, 38%);
-  transform: translateY(-1px);
-  box-shadow: 0 2px 4px rgba(0,0,0,.15);
 }
 
 .btn-compact-regenerate:active {

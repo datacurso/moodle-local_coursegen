@@ -38,7 +38,38 @@ export const createProposalsUi = (deps) => {
 
     const log = (params) => { if (typeof emitLog === 'function') { emitLog(params); } };
 
+    const AFFECTED_CLASS = 'cg-affected';
+    const AFFECTED_DESTRUCTIVE_CLASS = 'cg-affected--destructive';
+
+    /** Remove the "this will be affected" highlight from every center element. */
+    const clearAffectedHighlights = () => {
+        document.querySelectorAll('.' + AFFECTED_CLASS).forEach((el) => {
+            el.classList.remove(AFFECTED_CLASS, AFFECTED_DESTRUCTIVE_CLASS);
+        });
+    };
+
+    /**
+     * Highlight the center elements a proposal touches (sections/activities).
+     *
+     * @param {Array}   targetIds   - UUIDs of affected sections/activities.
+     * @param {boolean} destructive - whether the proposal deletes content.
+     * @returns {void}
+     */
+    const highlightAffected = (targetIds, destructive) => {
+        (targetIds || []).forEach((id) => {
+            document.querySelectorAll(
+                '[data-section-id="' + id + '"], [data-activity-id="' + id + '"]'
+            ).forEach((el) => {
+                el.classList.add(AFFECTED_CLASS);
+                if (destructive) {
+                    el.classList.add(AFFECTED_DESTRUCTIVE_CLASS);
+                }
+            });
+        });
+    };
+
     const clear = () => {
+        clearAffectedHighlights();
         const block = document.getElementById(BLOCK_ID);
         if (block) { block.remove(); }
     };
@@ -66,6 +97,7 @@ export const createProposalsUi = (deps) => {
     };
 
     const sendAction = async(block, pendingAction) => {
+        clearAffectedHighlights();
         disableControls(block);
         try {
             await runPlanAction(pendingAction);
@@ -128,6 +160,31 @@ export const createProposalsUi = (deps) => {
         const {wrapper: otherWrapper, textarea: otherTextarea} = buildOtherOption(texts);
         radioGroup.appendChild(otherWrapper);
         block.appendChild(radioGroup);
+
+        // Single source of truth for selection side-effects: the "Something else"
+        // textarea is visible ONLY while that option is selected, and the center
+        // preview highlights exactly what the selected proposal will affect.
+        const onSelectionChange = () => {
+            const checked = block.querySelector('input[name="' + RADIO_NAME + '"]:checked');
+            const isOther = Boolean(checked) && checked.value === '__other__';
+            otherTextarea.style.display = isOther ? '' : 'none';
+
+            clearAffectedHighlights();
+            if (checked && !isOther) {
+                let targetIds = [];
+                try {
+                    targetIds = JSON.parse(checked.dataset.targetIds || '[]');
+                } catch (e) {
+                    targetIds = [];
+                }
+                const card = checked.closest('.plan-proposal-card');
+                const destructive = Boolean(card) && card.classList.contains('plan-proposal--destructive');
+                highlightAffected(targetIds, destructive);
+            }
+        };
+        radioGroup.querySelectorAll('input[name="' + RADIO_NAME + '"]').forEach((radio) => {
+            radio.addEventListener('change', onSelectionChange);
+        });
 
         const btnRow = document.createElement('div');
         btnRow.className = 'plan-proposals-btn-row';

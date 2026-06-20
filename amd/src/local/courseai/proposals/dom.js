@@ -47,6 +47,12 @@ export const buildProposalCard = (proposal, localizedSummary, texts) => {
     radio.name = RADIO_NAME;
     radio.value = proposal.proposal_id;
     radio.className = 'plan-proposal-radio';
+    // UUIDs of the sections/activities this proposal touches, so selecting it can
+    // highlight exactly those elements in the center preview.
+    const targetIds = (proposal.intent && Array.isArray(proposal.intent.target_ids))
+        ? proposal.intent.target_ids
+        : [];
+    radio.dataset.targetIds = JSON.stringify(targetIds);
 
     const textSpan = document.createElement('span');
     textSpan.className = 'plan-proposal-summary';
