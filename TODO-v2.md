@@ -284,7 +284,14 @@ El subsistema actual (`detailed/section-dom.js`, `section-row.js`, `activity-dom
 
 ## 7. Pulido de campo (2026-06-22) — POR IMPLEMENTAR
 
-### 7.1 Panel izquierdo = chat de agente moderno (orgánico, sin "INITIAL MESSAGE")
+### 7.1 Panel izquierdo = chat de agente moderno — HECHO
+
+> Implementado y verificado (reload sesión 157, Chromium propio): hilo único, prompt como primer
+> turno de usuario, turnos IA con ✨, checklist como tarjeta de resultado en el hilo, fade+expand en
+> mensajes largos (clamp 160px→expand), distinción sutil IA/usuario, sin rótulos INITIAL MESSAGE/
+> ACTIVITY/COURSE SECTIONS. Reconstrucción del hilo al reload extendida. Cero errores JS.
+
+#### Spec original (referencia)
 **Pedido:** el panel lateral debe SENTIRSE como una **UI de chat moderno de agentes** (estilo Lovable,
 v0.dev, Bolt, Cursor agent, Claude/ChatGPT), no como tres bloques etiquetados sueltos.
 - **Quitar la división "INITIAL MESSAGE"**: el prompt inicial del usuario NO debe ir como un bloque
