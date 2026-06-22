@@ -1705,14 +1705,8 @@ svg { display: block; flex-shrink: 0; }
 
 /* Reveal when the parent row / button is hovered or focused-within */
 .prv-section-btn:hover .dp-item-actions,
-.prv-section-btn:focus-within .dp-item-actions,
-.dp-activity-wrap:hover .dp-item-actions,
-.dp-activity-wrap:focus-within .dp-item-actions {
+.prv-section-btn:focus-within .dp-item-actions {
   opacity: 1;
-}
-
-.dp-item-actions--section {
-  margin-right: 2px;
 }
 
 .dp-item-actions--image {
@@ -1817,25 +1811,6 @@ svg { display: block; flex-shrink: 0; }
   gap: 8px;
 }
 
-.prv-image-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-  padding: 3px 10px;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.3;
-  background: var(--muted);
-  color: var(--muted-fg);
-  box-shadow: none;
-}
-
-.prv-image-pill--small {
-  font-size: 10.5px;
-  padding: 2px 8px;
-}
-
 .prv-chevron {
   flex-shrink: 0;
   color: var(--muted-fg);
@@ -1891,17 +1866,6 @@ svg { display: block; flex-shrink: 0; }
   min-width: 0;
 }
 
-.dp-activity-right {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.dp-activity-chevron {
-  margin-top: 2px;
-}
-
 .prv-activity-name {
   font-size: 13px;
   font-weight: 600;
@@ -1915,28 +1879,6 @@ svg { display: block; flex-shrink: 0; }
   color: var(--muted-fg);
   margin: 0;
   line-height: 1.5;
-}
-
-/* ── Activity wrap: card with soft left border ── */
-/* Activities read like Moodle's Custom Sections: ROWS separated by a dashed
-   line (not bordered cards). A subtle outline appears ONLY on hover. */
-.dp-activity-wrap {
-  position: relative;
-  background: transparent;
-  border: none;
-  border-radius: 8px;
-  margin-bottom: 0;
-}
-
-/* Dashed separator between consecutive activities (not before the first). */
-.dp-activity-wrap + .dp-activity-wrap {
-  border-top: 1px dashed var(--border);
-}
-
-/* Hover affordance — thin outline, no layout shift, only while hovering. */
-.dp-activity-wrap:hover {
-  outline: 2px solid hsl(252 55% 42% / .30);
-  outline-offset: -1px;
 }
 
 .dp-ai-inline {
@@ -2003,15 +1945,6 @@ svg { display: block; flex-shrink: 0; }
   color: hsl(0 0% 100%);
 }
 
-.dp-item-has-adjustment .prv-section-btn,
-.dp-item-has-adjustment .prv-activity-item {
-  box-shadow: inset 3px 0 0 hsl(252 55% 42% / .55);
-}
-
-.dp-item-has-adjustment .dp-image-card {
-  box-shadow: inset 3px 0 0 hsl(252 55% 42% / .55);
-}
-
 /* Regenerating state — loading pulse */
 .dp-item-regenerating {
   opacity: 0.6;
@@ -2029,36 +1962,6 @@ svg { display: block; flex-shrink: 0; }
 @keyframes dp-pulse {
   0%, 100% { opacity: 0.6; }
   50% { opacity: 0.3; }
-}
-
-.dp-activity-wrap .prv-activity-item {
-  border-radius: 0;
-  background: transparent;
-  border: none;
-  outline: none;
-}
-
-.dp-activity-wrap .prv-activity-item--has-detail {
-  cursor: pointer;
-}
-
-/* Hover: gentle highlight — consistent with Moodle course page items */
-.dp-activity-wrap .prv-activity-item:hover,
-.dp-activity-wrap .prv-activity-item--has-detail:hover {
-  background: hsl(215 30% 97%);
-}
-
-.dp-activity-wrap .prv-activity-item:focus,
-.dp-activity-wrap .prv-activity-item:focus-visible {
-  outline: none;
-  border: none;
-  box-shadow: none;
-}
-
-.dp-act-detail {
-  border-top: 1px solid var(--border);
-  padding: 10px 12px 12px;
-  animation: fade-in-up .18s ease both;
 }
 
 .dp-detail-label {
@@ -2303,62 +2206,9 @@ svg { display: block; flex-shrink: 0; }
   margin-top: 4px;
 }
 
-/* Drag handle */
-.dp-drag-handle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 20px;
-  height: 20px;
-  cursor: grab;
-  color: var(--muted-fg);
-  /* Hidden by default — the horrible permanent ':: dots' are gone; the handle
-     fades in only when hovering the activity/section (Moodle behaviour). */
-  opacity: 0;
-  border-radius: 4px;
-  transition: opacity .12s, color .12s;
-}
-
-/* Reveal the grip on row/section hover (or keyboard focus within). */
-.dp-activity-wrap:hover .dp-drag-handle--activity,
-.dp-activity-wrap:focus-within .dp-drag-handle--activity,
-.prv-section-row:hover .dp-drag-handle--section,
-.prv-section-row:focus-within .dp-drag-handle--section {
-  opacity: 0.55;
-}
-
-.dp-drag-handle:hover {
-  opacity: 1;
-  color: hsl(215 18% 40%);
-}
-
-.dp-drag-handle:focus-visible {
-  opacity: 1;
-  outline: 2px solid hsl(252 55% 42% / .4);
-  outline-offset: 1px;
-}
-
-.dp-drag-handle:active {
-  cursor: grabbing;
-}
-
-/* Section drag handle sits to the left of the section btn */
+/* Section row is a positioning context for the simple plan renderer. */
 .prv-section-row {
   position: relative;
-}
-
-.dp-drag-handle--section {
-  position: absolute;
-  left: 4px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 1;
-}
-
-/* Activity drag handle inside the activity item */
-.dp-drag-handle--activity {
-  margin-right: 2px;
 }
 
 /* Visual feedback during drag */
