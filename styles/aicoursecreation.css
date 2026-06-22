@@ -1593,27 +1593,30 @@ svg { display: block; flex-shrink: 0; }
    ───────────────────────────────────────────────────────────── */
 
 /* Outer card shell */
+/* No outer box: the review area is NOT a card. The status line and the sections
+   share the same alignment; no border wraps everything. */
 .prv-card {
   position: relative;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: var(--card);
-  box-shadow: var(--shadow-card);
-  overflow: hidden;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
 }
 
+/* Discreet status line (not a prominent card): small, transparent, no border. */
 .prv-header {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--border);
-  background: var(--card);
-  transition: background .3s;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 2px 10px;
+  border-bottom: none;
+  background: transparent;
+  transition: none;
 }
 
 .prv-header--done {
-  background: hsl(142 56% 96%);
+  background: transparent;
 }
 
 .prv-icon-wrap {
@@ -1621,16 +1624,21 @@ svg { display: block; flex-shrink: 0; }
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 36px;
-  height: 36px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  margin-top: 1px;
+  margin-top: 0;
   background: hsl(var(--primary-hsl, 8 72% 42%) / .12);
   color: var(--primary);
 }
 
+.prv-icon-wrap svg {
+  width: 13px;
+  height: 13px;
+}
+
 .prv-header--done .prv-icon-wrap {
-  background: #16a34a;
+  background: var(--success, #16a34a);
   color: #fff;
 }
 
@@ -1645,19 +1653,24 @@ svg { display: block; flex-shrink: 0; }
 .prv-header-text {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .prv-header-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--fg);
-  margin: 0 0 2px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted-fg);
+  margin: 0;
 }
 
 .prv-header-sub {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--muted-fg);
   margin: 0;
+  opacity: .85;
 }
 
 /* ── Section row: Moodle topic card ── */
@@ -3065,7 +3078,9 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
    so Boost's .section-item provides the only card chrome (no nested padding
    that would offset the replica). */
 #prvSections.cg-course-replica {
-  padding: 16px 18px 8px;
+  /* Align the section list flush with the discreet status line above (same 2px
+     left inset) — sections must not look nested inside an outer box. */
+  padding: 0 2px 8px;
 }
 #prvSections .course-content.course-section-list {
   margin: 0;
