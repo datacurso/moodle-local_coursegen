@@ -3199,3 +3199,121 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
   background: hsl(215 16% 72%);
   background-clip: padding-box;
 }
+
+/* ============================================================
+   §8 Detailed preview — EXACT Custom Sections replica
+   The center preview emits core_courseformat markup so the loaded
+   Boost theme styles it natively (.section-item border, .activity
+   separator, .activity-grid layout, .activityiconcontainer purpose
+   tint). The rules below only cover gaps Boost does not provide in
+   the popup wizard context (no .editing body, no inplace controls):
+   action-control reveal-on-hover, pending/done dim, description and
+   detail slots, and container neutralisation so we do not double-card.
+   ============================================================ */
+
+/* The host #prvSections wraps the ul.course-content scaffold. Neutralise it
+   so Boost's .section-item provides the only card chrome (no nested padding
+   that would offset the replica). */
+#prvSections.cg-course-replica {
+  padding: 16px 18px 8px;
+}
+#prvSections .course-content.course-section-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* Boost gives the first .course-section a top margin; collapse it at the top. */
+#prvSections .course-content > .course-section:first-child {
+  margin-top: 0;
+}
+
+/* Collapse toggle chevron icon sizing inside the section header. */
+#prvSections .icons-collapse-expand .icon {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+}
+#prvSections .icons-collapse-expand {
+  flex-shrink: 0;
+}
+
+/* Section progress / image meta — small muted badges in the header. */
+#prvSections .cg-section-meta,
+#prvSections .cg-image-pill {
+  font-weight: 500;
+  font-size: 11px;
+}
+
+/* Action controls (AI adjust + delete): hidden until the section/activity is
+   hovered or focused, echoing Boost's .focus-control affordances. */
+#prvSections .cg-item-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+#prvSections .cg-item-actions .dp-action-btn {
+  opacity: 0;
+  transition: opacity var(--t-fast, .12s) var(--ease, ease);
+}
+#prvSections .course-section-header:hover .cg-item-actions .dp-action-btn,
+#prvSections .course-section-header:focus-within .cg-item-actions .dp-action-btn,
+#prvSections .activity-item:hover .cg-item-actions .dp-action-btn,
+#prvSections .activity-item:focus-within .cg-item-actions .dp-action-btn {
+  opacity: 1;
+}
+/* Disabled-while-streaming controls stay hidden regardless of hover. */
+#prvSections .cg-item-actions .dp-action-btn.dp-action-btn--disabled {
+  opacity: 0;
+}
+
+/* Activity pending/done dim — Boost has no streaming concept. */
+#prvSections .activity-item.cg-activity--pending {
+  opacity: .4;
+  transition: opacity .2s var(--ease, ease);
+}
+#prvSections .activity-item.cg-activity--done {
+  opacity: 1;
+}
+#prvSections .activity-item.cg-activity--has-detail {
+  cursor: pointer;
+}
+
+/* Streamed description slot (Moodle .activity-description grid area). */
+#prvSections .cg-activity-desc-slot {
+  grid-area: altcontent;
+}
+#prvSections .cg-activity-desc {
+  font-size: 12px;
+  color: var(--muted-fg);
+  margin: 4px 0 0;
+  line-height: 1.5;
+}
+
+/* Collapsible detail slot (chapters / questions / images). */
+#prvSections .cg-activity-detail {
+  grid-area: afterlink;
+  margin-top: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+#prvSections .cg-activity-chevron {
+  display: inline-flex;
+  color: var(--muted-fg);
+  transition: transform .18s;
+}
+#prvSections .cg-activity-chevron--open {
+  transform: rotate(90deg);
+}
+
+/* Add-section / add-activity controls are now <li> in the section lists;
+   strip list styling so the dashed buttons read like Moodle's add-section. */
+#prvSections .dp-add-section-wrap,
+#prvSections .dp-add-activity-wrap {
+  list-style: none;
+}
+#prvSections .dp-add-section-wrap {
+  margin-top: 14px;
+}
+#prvSections ul.section .dp-add-activity-wrap {
+  margin-top: 8px;
+}
