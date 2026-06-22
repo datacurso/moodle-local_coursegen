@@ -57,8 +57,12 @@ export const createProposalsUi = (deps) => {
      */
     const highlightAffected = (targetIds, destructive) => {
         (targetIds || []).forEach((id) => {
+            // Scope to the CENTER preview only — never the left checklist
+            // (.courseai-checklist-item also carries data-section-id and would
+            // otherwise get an ugly outline).
             document.querySelectorAll(
-                '[data-section-id="' + id + '"], [data-activity-id="' + id + '"]'
+                '.prv-section-row[data-section-id="' + id + '"], '
+                + '.dp-activity-wrap[data-activity-id="' + id + '"]'
             ).forEach((el) => {
                 el.classList.add(AFFECTED_CLASS);
                 if (destructive) {
