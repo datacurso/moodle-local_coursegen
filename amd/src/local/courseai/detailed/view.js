@@ -104,7 +104,7 @@ export const handleDetailedPlanField = (ctx, data) => {
         // Replace skeleton placeholder with real text on first field data.
         if (entry.progressEl.classList.contains('cg-skeleton-wrap')) {
             entry.progressEl.innerHTML = '';
-            entry.progressEl.className = 'prv-activity-desc';
+            entry.progressEl.className = 'cg-activity-desc';
             entry.progressEl.removeAttribute('aria-hidden');
         }
         entry.progressEl.textContent = text;

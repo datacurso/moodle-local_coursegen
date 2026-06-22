@@ -61,8 +61,8 @@ export const createProposalsUi = (deps) => {
             // (.courseai-checklist-item also carries data-section-id and would
             // otherwise get an ugly outline).
             document.querySelectorAll(
-                '.prv-section-row[data-section-id="' + id + '"], '
-                + '.dp-activity-wrap[data-activity-id="' + id + '"]'
+                '.course-section[data-section-id="' + id + '"], '
+                + '.activity[data-activity-id="' + id + '"]'
             ).forEach((el) => {
                 el.classList.add(AFFECTED_CLASS);
                 if (destructive) {

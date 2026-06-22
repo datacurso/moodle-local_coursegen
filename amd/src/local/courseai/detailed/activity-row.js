@@ -16,21 +16,24 @@
 /**
  * Activity row factory and state helpers for the detailed plan UI.
  *
+ * Builds a li.activity.activity-wrapper element (Moodle cmitem markup) inside
+ * the section's ul.section cmlist so the loaded Boost theme styles it natively.
+ *
  * @module     local_coursegen/local/courseai/detailed/activity-row
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {gripSvg} from './icons';
 import {buildActivityDetailContent} from './detail-content';
 import {recalculateEntryImageCount, setImageBadge, updateDetailedHeaderStats} from './badges';
 import {buildActivityItem, buildActivityActionControls, attachSkeletonProgress} from './activity-dom';
 import {createDetailedSectionRow} from './section-row';
+import {activityPurpose} from './icons';
 
 export {clearSectionEntries} from './activity-state';
 
 /**
- * Create and append an activity row inside the given section body.
+ * Create and append an activity row inside the given section cmlist.
  *
  * @param {Object} ctx
  * @param {Object} options
@@ -38,21 +41,25 @@ export {clearSectionEntries} from './activity-state';
  * @param {string} options.activityId
  * @param {string} options.activityType
  * @param {string} options.activityTitle
- * @param {HTMLElement} options.bodyEl
+ * @param {HTMLElement} options.bodyEl - The section's ul.section cmlist.
  * @returns {Object} The entry stored in state.detailedActivityEls.
  */
 export const createDetailedActivityRow = (ctx, {sectionId, activityId, activityType, activityTitle, bodyEl}) => {
-    const {state, texts} = ctx;
+    const {state, escapeHtml} = ctx;
 
-    const {item, imageBadgeEl, actionsEl, chevronEl, textDiv} = buildActivityItem(ctx, activityType, activityTitle);
+    const {item, actionsEl, chevronEl, textDiv, detailEl} = buildActivityItem(ctx, activityType, activityTitle);
 
-    const detailEl = document.createElement('div');
-    detailEl.className = 'dp-act-detail';
-    detailEl.style.display = 'none';
-
-    const wrap = document.createElement('div');
-    wrap.className = 'dp-activity-wrap';
+    // li.activity.activity-wrapper — the Moodle cmitem and the DnD unit.
+    const safeType = escapeHtml(activityType);
+    const wrap = document.createElement('li');
+    wrap.className = `activity activity-wrapper ${safeType} modtype_${safeType}`;
+    wrap.setAttribute('data-for', 'cmitem');
+    wrap.setAttribute('data-id', activityId);
+    wrap.setAttribute('data-cmid', activityId);
+    // Kept for the existing DnD wirer (idDataset 'activityId') and ui-proposals.
     wrap.dataset.activityId = activityId;
+    // Pending until streamed/planned (custom dim state — Boost has no such class).
+    item.classList.add('cg-activity--pending');
 
     const {iaControl, deleteControl, activityPanelApi} = buildActivityActionControls(
         ctx, activityId, activityTitle, wrap
@@ -61,19 +68,10 @@ export const createDetailedActivityRow = (ctx, {sectionId, activityId, activityT
     actionsEl.appendChild(iaControl);
     actionsEl.appendChild(deleteControl);
 
-    // Activity drag handle (appears before the item content).
-    const activityHandle = document.createElement('span');
-    activityHandle.className = 'dp-drag-handle dp-drag-handle--activity';
-    activityHandle.innerHTML = gripSvg;
-    activityHandle.setAttribute('aria-label', texts.courseai_drag_handle_label || 'Drag to reorder');
-    activityHandle.setAttribute('role', 'img');
-
-    wrap.appendChild(activityHandle);
     wrap.appendChild(item);
     wrap.appendChild(activityPanelApi.panel);
-    wrap.appendChild(detailEl);
 
-    // Insert before the add-activity wrap (last child of bodyEl when present).
+    // Insert before the add-activity wrap (last child of cmlist when present).
     const addWrap = bodyEl.querySelector('.dp-add-activity-wrap');
     if (addWrap) {
         bodyEl.insertBefore(wrap, addWrap);
@@ -90,11 +88,12 @@ export const createDetailedActivityRow = (ctx, {sectionId, activityId, activityT
     const progressEl = attachSkeletonProgress(textDiv);
 
     state.detailedActivityEls[activityId] = {
-        item, wrap, textDiv, progressEl, detailEl, imageBadgeEl, chevronEl,
+        item, wrap, textDiv, progressEl, detailEl, imageBadgeEl: null, chevronEl,
         sectionId, previewDescription: '', chapterCount: 0, questionCount: 0,
         imageCount: 0, imageSuggestions: [], hasDetail: false, done: false,
     };
 
+    // Toggle the collapsible detail slot when the activity item is clicked.
     item.addEventListener('click', () => {
         const entry = state.detailedActivityEls[activityId];
         if (!entry || !entry.hasDetail) {
@@ -102,7 +101,7 @@ export const createDetailedActivityRow = (ctx, {sectionId, activityId, activityT
         }
         const isOpen = entry.detailEl.style.display !== 'none';
         entry.detailEl.style.display = isOpen ? 'none' : 'block';
-        entry.chevronEl.classList.toggle('prv-chevron--open', !isOpen);
+        entry.chevronEl.classList.toggle('cg-activity-chevron--open', !isOpen);
     });
 
     return state.detailedActivityEls[activityId];
@@ -135,7 +134,6 @@ export const ensureDetailedSection = (ctx, sectionId) => {
         totalActivities: 0,
     });
     meta = state.detailedSectionMeta[sectionId];
-    if (meta) { meta.bodyEl.style.display = 'flex'; }
     return meta;
 };
 
@@ -181,8 +179,8 @@ export const markActivityPlanned = (ctx, data) => {
 
     state.detailedCurrent += 1;
     entry.done = true;
-    entry.item.classList.remove('prv-activity-item--pending');
-    entry.item.classList.add('prv-activity-item--done');
+    entry.item.classList.remove('cg-activity--pending');
+    entry.item.classList.add('cg-activity--done');
 
     // Update progress (cap at 95% to avoid reaching 100% prematurely).
     if (typeof setProgress === 'function') {
@@ -219,8 +217,9 @@ export const markActivityPlanned = (ctx, data) => {
     const descriptionText = parsed.activity_description || entry.previewDescription || '';
     if (descriptionText) {
         const desc = document.createElement('p');
-        desc.className = 'prv-activity-desc';
+        desc.className = 'cg-activity-desc';
         desc.textContent = descriptionText;
+        entry.textDiv.style.display = '';
         entry.textDiv.appendChild(desc);
     }
 
@@ -229,7 +228,7 @@ export const markActivityPlanned = (ctx, data) => {
         entry.detailEl.innerHTML = '';
         entry.detailEl.appendChild(detailContent);
         entry.hasDetail = true;
-        entry.item.classList.add('prv-activity-item--has-detail');
+        entry.item.classList.add('cg-activity--has-detail');
         entry.chevronEl.style.visibility = 'visible';
     }
 
@@ -250,3 +249,6 @@ export const markActivityPlanned = (ctx, data) => {
 
     updateDetailedHeaderStats(ctx);
 };
+
+// activityPurpose re-exported so callers needing the map import from one place.
+export {activityPurpose};

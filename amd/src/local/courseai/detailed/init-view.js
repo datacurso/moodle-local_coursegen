@@ -25,6 +25,7 @@ import {normalizeInitialSections} from './normalize';
 import {createDetailedSectionRow, appendAddSectionControl} from './section-row';
 import {createDetailedActivityRow} from './activity-row';
 import {wireDragAndDrop, sendReorderSections} from './dnd';
+import {getSectionList} from './container';
 
 /**
  * Flash a newly-added activity element with a success highlight.
@@ -148,10 +149,10 @@ export const initDetailedPlanView = (ctx, data) => {
     // "+ Add section" control — appears after all section rows.
     appendAddSectionControl(ctx);
 
-    // Wire section-level drag-and-drop (sections as direct children of prvSections).
+    // Wire section-level drag-and-drop (li.course-section in ul.course-content).
     state.sectionDnd = wireDragAndDrop(
-        prvSections,
-        '.prv-section-row',
+        getSectionList(ctx),
+        '.course-section',
         'sectionId',
         (ids) => sendReorderSections(ctx, ids),
         null,

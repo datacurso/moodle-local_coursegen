@@ -24,6 +24,7 @@
 import {createDetailedSectionRow} from './section-row';
 import {createDetailedActivityRow} from './activity-row';
 import {wireDragAndDrop, sendReorderSections} from './dnd';
+import {getSectionList} from './container';
 
 /**
  * Render a single section row if it has not been created yet.
@@ -50,14 +51,12 @@ export const ensureSectionRendered = (ctx, section, renderIndex) => {
     if (!meta) {
         return null;
     }
-    // Keep the body open so streaming activity rows are visible immediately.
-    meta.bodyEl.style.display = 'flex';
     // Wire the new section row into section-level drag-and-drop.
     // First section: create the wirer; subsequent sections: attach to its API.
     if (!state.sectionDnd) {
         state.sectionDnd = wireDragAndDrop(
-            ctx.elements.prvSections,
-            '.prv-section-row',
+            getSectionList(ctx),
+            '.course-section',
             'sectionId',
             (ids) => sendReorderSections(ctx, ids),
             null,
