@@ -39,6 +39,68 @@ const ACTOR_ICON = {
 };
 
 /**
+ * Collapsed max-height (px) for a turn body before the fade + "show more"
+ * control kicks in. A turn is only truncated when its real content height
+ * (scrollHeight) exceeds this — short turns stay fully visible.
+ */
+const TURN_MAX_HEIGHT = 160;
+
+/** "Show more" / "Show less" labels (kept here so the toggle is self-contained). */
+const TOGGLE_MORE = 'Show more';
+const TOGGLE_LESS = 'Show less';
+
+/**
+ * Build the expand/collapse chevron control for a long turn.
+ *
+ * @param {string} label - Visible label ("Show more").
+ * @returns {HTMLButtonElement}
+ */
+const buildToggle = (label) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'cg-log-toggle';
+    btn.setAttribute('aria-expanded', 'false');
+    const text = document.createElement('span');
+    text.className = 'cg-log-toggle-text';
+    text.textContent = label;
+    const chevron = document.createElement('span');
+    chevron.className = 'cg-log-toggle-chevron';
+    chevron.setAttribute('aria-hidden', 'true');
+    chevron.textContent = '⌄';
+    btn.appendChild(text);
+    btn.appendChild(chevron);
+    return btn;
+};
+
+/**
+ * Attach long-message fade + expand behaviour to a turn body, but only when the
+ * content actually overflows the collapsed height (§7.1). Detection is deferred
+ * to the next frame so layout (line wrapping) has settled before measuring.
+ *
+ * @param {HTMLElement} entry - The turn wrapper (receives the toggle).
+ * @param {HTMLElement} msgEl - The text body to clamp.
+ * @returns {void}
+ */
+const wireFadeExpand = (entry, msgEl) => {
+    window.requestAnimationFrame(() => {
+        if (msgEl.scrollHeight <= TURN_MAX_HEIGHT + 4) {
+            return;
+        }
+        entry.classList.add('cg-log-entry--clamped');
+        const toggle = buildToggle(TOGGLE_MORE);
+        toggle.addEventListener('click', () => {
+            const expanded = entry.classList.toggle('is-expanded');
+            toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            const textEl = toggle.querySelector('.cg-log-toggle-text');
+            if (textEl) {
+                textEl.textContent = expanded ? TOGGLE_LESS : TOGGLE_MORE;
+            }
+        });
+        entry.appendChild(toggle);
+    });
+};
+
+/**
  * Format a relative timestamp string.
  *
  * @param {number} createdAt - ms since epoch at entry creation.
@@ -124,9 +186,14 @@ export const createLog = ({container, actionContainer, isActionPhase}) => {
         const createdAt = Date.now();
         const kindClass = KIND_CLASS[kind] || KIND_CLASS.neutral;
         const icon = ACTOR_ICON[actor] || ACTOR_ICON.system;
+        const isUser = actor === 'user';
 
+        // Each entry is a chat TURN (§7.1): user turns get a faint inset/border so
+        // you can tell who spoke; AI turns stay flat with their ✨ icon. The single
+        // thread is preserved — no opposed bubbles.
         const entry = document.createElement('div');
-        entry.className = 'cg-log-entry ' + kindClass;
+        entry.className = 'cg-log-entry ' + kindClass
+            + (isUser ? ' cg-log-entry--turn-user' : ' cg-log-entry--turn-ai');
         entry.setAttribute('role', 'status');
 
         const bar = document.createElement('span');
@@ -141,6 +208,8 @@ export const createLog = ({container, actionContainer, isActionPhase}) => {
         iconSpan.setAttribute('aria-hidden', 'true');
         iconSpan.textContent = icon;
 
+        // The message text lives in its own clampable element so the fade + expand
+        // control can measure and toggle just the body (not the icon/timestamp).
         const msgSpan = document.createElement('span');
         msgSpan.className = 'cg-log-msg';
         msgSpan.textContent = message;
@@ -157,6 +226,7 @@ export const createLog = ({container, actionContainer, isActionPhase}) => {
         entry.appendChild(body);
 
         target.appendChild(entry);
+        wireFadeExpand(entry, msgSpan);
         // Pin the feed to the bottom so the newest entry sits next to the input. Defer
         // to the next frame: a fresh entry may wrap to several lines, so its height is
         // not laid out yet on the synchronous append. scrollIntoView on the entry is
