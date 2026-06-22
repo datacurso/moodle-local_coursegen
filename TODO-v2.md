@@ -191,3 +191,91 @@
   punteado).
 - Verificar SIEMPRE con captura/e2e (puppeteer) que en hover aparecen las afordancias y que sin hover
   la vista queda limpia (sin `::` ni bordes permanentes), y que el highlight de afectados es sutil.
+
+---
+
+## 6. RÉPLICA EXACTA del centro = copiar el markup real de `core_courseformat` (PEDIDO FIRME)
+
+> El usuario quiere que el preview central sea una **réplica EXACTA** de la vista Custom Sections,
+> **copiando el markup real** de Moodle y **apoyándose en el CSS de Boost que YA está cargado** en la
+> página del wizard (es una página Moodle). NO inventar CSS: emitir las MISMAS clases que
+> `core_courseformat` y dejar que el tema las estilice. Esto es un **rebuild del renderer del preview**
+> (`detailed/*.js`) + re-cableado del streaming/reconciliador a las nuevas clases. Trabajo dedicado.
+
+### 6.1 Markup objetivo (copiar TAL CUAL, rellenando con datos del plan)
+Contenedor (como Moodle): `<ul class="course-content course-section-list ...">` (o el `<ul>` del
+formato) que envuelve las secciones.
+
+**Sección** (`section.mustache`):
+```html
+<li id="section-{n}" class="section course-section main clearfix" data-for="section"
+    data-id="{uuid}" data-number="{n}" data-sectionname="{name}">
+  <div class="section-item">
+    <!-- header.mustache -->
+    <div class="d-flex align-items-center position-relative">
+      <a role="button" data-toggle="collapse" data-for="sectiontoggler"
+         href="#coursecontentcollapseid{uuid}" aria-expanded="true"
+         class="btn btn-icon me-3 icons-collapse-expand justify-content-center">
+        <span class="expanded-icon icon-no-margin p-2">{pix t/expandedchevron}</span>
+        <span class="collapsed-icon icon-no-margin p-2">{pix t/collapsedchevron}</span>
+      </a>
+      <h3 class="h4 sectionname course-content-item d-flex align-self-stretch align-items-center mb-0"
+          data-for="section_title" data-id="{uuid}" data-number="{n}">{name}</h3>
+    </div>
+    <div id="coursecontentcollapseid{uuid}" class="content course-content-item-content collapse show">
+      <!-- resumen opcional + cmlist -->
+      <ul class="section img-text">
+        <!-- cmitem.mustache por actividad (ver 6.2) -->
+      </ul>
+      <!-- addsection/divider opcional -->
+    </div>
+  </div>
+</li>
+```
+
+**Actividad** (`cmitem.mustache` + `cm.mustache` + `cm/activity.mustache` + `cm/cmname.mustache`):
+```html
+<li class="activity activity-wrapper {modtype} modtype_{modtype}" data-for="cmitem"
+    data-id="{uuid}" data-cmid="{uuid}">
+  <!-- divider de inserción (P5) en modo edición -->
+  <div class="activity-item focus-control" data-region="activity-card">
+    {moveicon}  <!-- handle de arrastre, visible solo en hover (Boost) -->
+    <div class="activity-grid">
+      <!-- cmname: icono + nombre -->
+      <div class="activityname">
+        <div class="activityiconcontainer {purpose} courseicon">  <!-- color por purpose lo da Boost -->
+          <img class="activityicon" src="{icon pix mod_xxx}" alt="">
+        </div>
+        <div class="activitytitle ...">
+          <span class="instancename">{title}</span>
+        </div>
+      </div>
+      <!-- descripción/plan detallado (streaming) en un slot propio -->
+    </div>
+  </div>
+</li>
+```
+> El **color del icono por purpose** lo aporta Boost via `.activityiconcontainer.content/.assessment/
+> .collaboration/.communication` (las 5 categorías). El **hover outline**, el **separador**, el
+> **handle solo-hover** y el **botón Add section/divider** vienen GRATIS del CSS de Boost al usar estas
+> clases — por eso no se inventa CSS.
+
+### 6.2 Re-cableado necesario (lo que hace que sea trabajo dedicado, no CSS)
+El subsistema actual (`detailed/section-dom.js`, `section-row.js`, `activity-dom.js`, `activity-row.js`,
+`reconcile.js`, `view.js`, `badges.js`) usa clases propias (`.prv-section-row`, `.dp-activity-wrap`,
+`.prv-activity-item`, `.prv-activity-desc`, skeletons, etc.). Para la réplica hay que:
+1. Reescribir los builders para emitir el markup de 6.1 (clases Moodle), conservando los hooks que el
+   reconciliador necesita: `data-id`/`data-cmid` (= UUID) en `.activity` y `data-id`/`data-number` en
+   `.course-section`.
+2. Apuntar el relleno de detalle (`markActivityPlanned`, skeletons, `fillSkeletonActivities`) a un slot
+   dentro de `.activity-grid` (no a `.prv-activity-desc`).
+3. Re-apuntar `badges.js` (contador X/N) y el highlight `.cg-affected` a `.course-section`/`.activity`.
+4. Re-apuntar el DnD (`wireDragAndDrop`) y los controles IA/eliminar a `.activity-item`/`.section-item`.
+5. Colapso: usar el `data-toggle="collapse"` de Bootstrap (Boost ya trae el JS) en vez del toggle manual.
+6. Verificar que Boost estiliza el markup en el contexto del wizard (puede requerir envolver el preview
+   en un contenedor con las clases de página de curso que activan las reglas `.course-content ...`).
+
+### 6.3 Estado
+- [ ] **Réplica exacta** — PENDIENTE (rebuild dedicado, alto impacto/alto riesgo). Blueprint arriba.
+- [x] Paso intermedio aplicado mientras tanto: iconos con **color suave por purpose** + texto neutro
+  (opción elegida por el usuario), para que ya se acerque al look Custom Sections.
