@@ -279,3 +279,49 @@ El subsistema actual (`detailed/section-dom.js`, `section-row.js`, `activity-dom
 - [ ] **Réplica exacta** — PENDIENTE (rebuild dedicado, alto impacto/alto riesgo). Blueprint arriba.
 - [x] Paso intermedio aplicado mientras tanto: iconos con **color suave por purpose** + texto neutro
   (opción elegida por el usuario), para que ya se acerque al look Custom Sections.
+
+---
+
+## 7. Pulido de campo (2026-06-22) — POR IMPLEMENTAR
+
+### 7.1 Panel izquierdo = chat de agente moderno (orgánico, sin "INITIAL MESSAGE")
+**Pedido:** el panel lateral debe SENTIRSE como una **UI de chat moderno de agentes** (estilo Lovable,
+v0.dev, Bolt, Cursor agent, Claude/ChatGPT), no como tres bloques etiquetados sueltos.
+- **Quitar la división "INITIAL MESSAGE"**: el prompt inicial del usuario NO debe ir como un bloque
+  rotulado aparte arriba; debe ser el **primer turno del chat** (un mensaje del usuario más, dentro
+  del mismo hilo cronológico).
+- Conservar el contenido de **ACTIVITY** (el log de acciones IA/usuario) y **COURSE SECTIONS** (el
+  checklist), pero integrados en un **único hilo conversacional** que fluye de arriba hacia abajo.
+- **Patrones a extraer de esas herramientas (aplicar):**
+  - **Hilo único continuo**, sin headers de sección tipo formulario; a lo sumo separadores muy
+    sutiles o agrupación por turnos.
+  - **Turnos diferenciados**: mensaje del usuario con un estilo (burbuja/alineación/inicial), y las
+    **acciones del agente** como pasos inline con ícono sutil ("✨ Planeó la sección…", "🔧 aplicó…")
+    — como los "steps"/"tool calls" compactos de Lovable/Cursor.
+  - **Indicador de "pensando/trabajando"** inline mientras el agente actúa (ya existe el spinner del
+    feedback; unificarlo al estilo de "agent is working…").
+  - **Input fijo abajo** (ya está), conversación scrolleable arriba, autoscroll al último turno.
+  - **Timestamps discretos**, densidad cómoda, paleta calmada con UN acento, mucho espacio en blanco,
+    bordes mínimos. Nada de cajas rotuladas en mayúsculas tipo "INITIAL MESSAGE"/"ACTIVITY"/"COURSE
+    SECTIONS" como secciones rígidas.
+  - El **checklist de secciones** puede integrarse como un "bloque de resultado" del turno del agente
+    (una tarjeta/lista compacta dentro del hilo), no como una sección fija aparte.
+- Archivos probables: `templates/courseai_page.mustache` (quitar el bloque INITIAL MESSAGE y rótulos),
+  `styles/chatui.css` + `aicoursecreation.css` (estilo de hilo/turnos), `courseai/bootstrap/ui-helpers.js`
+  (emitLog) y `ui/log.js` (render de entradas como turnos de chat), `checklist-helpers.js`.
+- **Acción previa recomendada:** investigar (WebSearch/WebFetch) capturas/patrones actuales de Lovable
+  y v0 para extraer el layout de turnos y aplicarlo con fidelidad.
+
+### 7.2 "Add activity" como en Custom Sections (hover entre actividades, no botón al final)
+**Pedido:** el botón "+ Add activity" con borde punteado al FINAL de cada sección **no debe salir así**.
+Debe comportarse como en la vista de curso real (Custom Sections): **al pasar el cursor sobre una
+actividad** aparece la opción de **añadir una DEBAJO** (y por tanto también ENTRE dos actividades
+existentes, no solo al final). Esto es el P5 ya documentado (§2 P5 + §6.2) — ahora confirmado y con
+matiz extra:
+- **Eliminar** el actual `.dp-add-activity-wrap` (botón punteado al final de la sección).
+- Implementar la **zona de inserción on-hover** (el `.divider` de Moodle, §1.5): entre/junto a cada
+  actividad, oculta por defecto, aparece en hover con un "+" para insertar en esa posición.
+- El servicio YA acepta `position` en `add_activity` (ver §2 P5) → cliente envía `position` = índice de
+  la actividad sobre/bajo la que se inserta.
+- Enfoque de bajo riesgo (no pelear con el reconciliador): franja "insert-after" en el borde inferior
+  de cada `.dp-activity-wrap`/`.activity`, visible solo en hover.
