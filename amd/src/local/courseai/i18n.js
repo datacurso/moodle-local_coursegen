@@ -184,6 +184,16 @@ const STRING_KEYS = [
     'courseai_log_image_regenerated',
     'courseai_log_proposal_applied',
     'courseai_log_proposals_dismissed',
+    'courseai_log_ai_thinking',
+    'courseai_log_ai_working',
+    'courseai_log_ai_course_identity',
+    'courseai_log_ai_review_ready',
+    'courseai_log_ai_proposals_ready',
+    'courseai_log_ai_completed',
+    'courseai_log_user_approved',
+    'courseai_log_reordered_sections',
+    'courseai_log_reordered_activities',
+    'courseai_log_reordered_activities_generic',
 ];
 
 /**

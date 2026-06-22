@@ -683,3 +683,15 @@ $string['courseai_log_image_discarded'] = 'You discarded an image suggestion';
 $string['courseai_log_image_regenerated'] = 'You regenerated an image suggestion';
 $string['courseai_log_proposal_applied'] = 'You applied: {$a}';
 $string['courseai_log_proposals_dismissed'] = 'You dismissed suggestions';
+// Chat-thread completeness sweep (TODO-v2 §7.3 d): every server milestone and
+// user action surfaces as a turn; transient progress uses one live indicator.
+$string['courseai_log_ai_thinking'] = 'Analyzing your request...';
+$string['courseai_log_ai_working'] = 'The assistant is working...';
+$string['courseai_log_ai_course_identity'] = 'Course: {$a}';
+$string['courseai_log_ai_review_ready'] = 'The assistant finished — review the plan';
+$string['courseai_log_ai_proposals_ready'] = 'The assistant prepared suggestions for your review';
+$string['courseai_log_ai_completed'] = 'Course generated';
+$string['courseai_log_user_approved'] = 'You approved the plan';
+$string['courseai_log_reordered_sections'] = 'You reordered the sections';
+$string['courseai_log_reordered_activities'] = 'You reordered activities in: {$a}';
+$string['courseai_log_reordered_activities_generic'] = 'You reordered the activities';
