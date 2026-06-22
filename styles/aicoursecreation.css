@@ -1546,53 +1546,47 @@ svg { display: block; flex-shrink: 0; }
   line-height: 1.45;
 }
 
+/* Moodle Custom Sections style: a soft per-purpose COLORED icon chip + a NEUTRAL
+   type label (no filled rainbow pill). The color lives only on the small icon
+   chip, so the row reads like a real Moodle course item without being noisy. */
 .ps-badge {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  padding: 2px 7px;
-  border-radius: 5px;
+  gap: 6px;
+  padding: 0;
+  background: transparent;
+  color: var(--muted-fg, hsl(215 16% 42%));
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.01em;
   margin-top: 1px;
 }
 
+/* The icon becomes a small rounded chip; its background is the purpose tint. */
 .ps-badge-icon {
-  width: 14px;
-  height: 14px;
-  margin-right: 5px;
+  width: 24px;
+  height: 24px;
+  padding: 5px;
+  box-sizing: border-box;
+  border-radius: 6px;
   flex-shrink: 0;
   display: inline-block;
   vertical-align: middle;
-  filter: brightness(0) saturate(100%);
-  opacity: 0.7;
+  background: var(--muted, hsl(215 25% 95%));
 }
 
 .ps-badge-text {
   display: inline-block;
   line-height: 1;
-}
-
-/* Calm, neutral badges — ONE muted style for every activity type and purpose.
-   The type is conveyed by the icon + label, not by a rainbow of colors. */
-.ps-badge--quiz,
-.ps-badge--book,
-.ps-badge--assign,
-.ps-badge--forum,
-.ps-badge--lesson,
-.ps-badge--url,
-.ps-badge--resource,
-.ps-badge--page,
-.ps-badge--data,
-.ps-badge--glossary,
-.dp-purpose-content,
-.dp-purpose-assessment,
-.dp-purpose-collaboration,
-.dp-purpose-communication {
-  background: var(--muted, hsl(215 25% 95%));
   color: var(--muted-fg, hsl(215 16% 42%));
 }
+
+/* Soft per-purpose tint on the icon chip only (Moodle-like, calm). */
+.dp-purpose-content .ps-badge-icon       { background: hsl(170 55% 90%); }
+.dp-purpose-assessment .ps-badge-icon    { background: hsl(8 72% 92%); }
+.dp-purpose-collaboration .ps-badge-icon { background: hsl(142 50% 90%); }
+.dp-purpose-communication .ps-badge-icon { background: hsl(38 80% 90%); }
 
 /* ─────────────────────────────────────────────────────────────
    §3  Preview panel — Moodle topics-format course view
