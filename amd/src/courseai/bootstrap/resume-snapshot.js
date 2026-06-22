@@ -92,7 +92,7 @@ export const makeResumeFromSnapshot = ({
             if (!name) {
                 return;
             }
-            const template = texts?.courseai_log_ai_section || 'AI planned section «{$a}»';
+            const template = texts?.courseai_log_ai_section || 'AI planned section: {$a}';
             emitLog({actor: 'ai', kind: 'ai', message: template.replace('{$a}', name)});
         });
         const messages = Array.isArray(snapshot?.messages) ? snapshot.messages : [];

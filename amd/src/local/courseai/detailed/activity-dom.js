@@ -170,7 +170,7 @@ export const buildActivityActionControls = (ctx, activityId, activityTitle, wrap
             }
             log({
                 actor: 'user', kind: 'danger',
-                message: (texts.courseai_log_deleted_activity || 'You deleted activity «{$a}»')
+                message: (texts.courseai_log_deleted_activity || 'You deleted activity: {$a}')
                     .replace('{$a}', activityTitle),
             });
             wrap.classList.add('dp-item-regenerating');

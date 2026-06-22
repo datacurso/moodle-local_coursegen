@@ -178,7 +178,7 @@ export const buildSectionActionControls = (ctx, sectionId, sectionName, rowRef) 
             }
             log({
                 actor: 'user', kind: 'danger',
-                message: (texts.courseai_log_deleted_section || 'You deleted section «{$a}»')
+                message: (texts.courseai_log_deleted_section || 'You deleted section: {$a}')
                     .replace('{$a}', sectionName),
             });
             row.classList.add('dp-item-regenerating');
