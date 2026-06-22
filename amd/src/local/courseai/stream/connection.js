@@ -24,6 +24,7 @@
  */
 
 import {routeEvent} from './handlers';
+import {hideWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
 
 /** Maximum number of stale-done retries before giving up. */
 const MAX_STALE_RETRIES = 3;
@@ -79,6 +80,9 @@ export const openConnection = (streamUrl, retryAttempt, ctx, openSSEStream) => {
             return;
         }
 
+        // Terminal 'done' (no retry): drop the live working indicator so it can
+        // never linger when the stream closes without a lifecycle event.
+        hideWorkingIndicator();
         if (typeof ctx.hideStreamBar === 'function') {
             ctx.hideStreamBar();
         }
@@ -104,6 +108,9 @@ export const openConnection = (streamUrl, retryAttempt, ctx, openSSEStream) => {
 
     state.sseSource.onerror = () => {
         state.isStreaming = false;
+        // Connection dropped — clear the live working indicator so it does not
+        // stay pinned forever on abnormal stream termination.
+        hideWorkingIndicator();
         if (typeof ctx.hideStreamBar === 'function') {
             ctx.hideStreamBar();
         }

@@ -130,10 +130,10 @@ export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, p
 };
 
 /**
- * Send a reorder_sections action.
+ * Send a reorder_sections action and log a concise user turn.
  *
- * @param {Object}   ctx
- * @param {string[]} targetIds - Section UUIDs in new DOM order.
+ * @param {Object}   ctx              - ui-detailed ctx; reads runPlanAction, log, texts.
+ * @param {string[]} targetIds        - Section UUIDs in new DOM order.
  */
 export const sendReorderSections = async(ctx, targetIds) => {
     const {runPlanAction, log, texts} = ctx;
@@ -157,11 +157,11 @@ export const sendReorderSections = async(ctx, targetIds) => {
 };
 
 /**
- * Send a reorder_activities action.
+ * Send a reorder_activities action and log a concise user turn.
  *
- * @param {Object}   ctx
- * @param {string}   sectionId - Parent section UUID.
- * @param {string[]} targetIds - Activity UUIDs in new DOM order.
+ * @param {Object}   ctx              - ui-detailed ctx; reads runPlanAction, log, texts, state.
+ * @param {string}   sectionId        - Parent section UUID.
+ * @param {string[]} targetIds        - Activity UUIDs in new DOM order.
  */
 export const sendReorderActivities = async(ctx, sectionId, targetIds) => {
     const {runPlanAction, log, texts, state} = ctx;

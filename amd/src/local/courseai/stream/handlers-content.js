@@ -166,14 +166,17 @@ export const handleCourseIdentity = (data, ctx) => {
         return;
     }
     const {state, texts, emitLog} = ctx;
-    const changed = state.courseTitle !== fullname;
     state.courseTitle = fullname;
     if (ctx.prvHeaderTitle) {
         ctx.prvHeaderTitle.textContent = fullname;
     }
-    // Course identity is a meaningful milestone → one permanent AI turn. Only emit
-    // when the title actually changes so re-streams (replan rounds) don't duplicate.
-    if (changed && typeof emitLog === 'function') {
+    // Course identity is a meaningful milestone → one permanent AI turn. Dedup on
+    // the LAST logged title (not on state.courseTitle, which resetPlanningState
+    // clears on accept) so the same title re-emitted during the generating stream
+    // does not duplicate the turn, while a genuinely new title still logs.
+    const alreadyLogged = state.courseTitleLogged === fullname;
+    if (!alreadyLogged && typeof emitLog === 'function') {
+        state.courseTitleLogged = fullname;
         const message = ((texts && texts.courseai_log_ai_course_identity) || 'Course: {$a}')
             .replace('{$a}', fullname);
         emitLog({actor: 'ai', kind: 'ai', message});

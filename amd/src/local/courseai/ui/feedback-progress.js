@@ -72,7 +72,7 @@ export const showWorkingIndicator = (texts, message) => {
     const resolved = (message && String(message).trim())
         || (texts && texts.courseai_log_ai_working)
         || (texts && texts.courseai_log_ai_thinking)
-        || 'The assistant is working…';
+        || 'The assistant is working...';
 
     let entry = document.getElementById(ENTRY_ID);
     if (entry) {
@@ -109,6 +109,6 @@ export const showWorkingIndicator = (texts, message) => {
  * @returns {void}
  */
 export const showFeedbackThinking = (texts) => {
-    const message = (texts && texts.courseai_log_ai_thinking) || 'Analyzing your request…';
+    const message = (texts && texts.courseai_log_ai_thinking) || 'Analyzing your request...';
     showWorkingIndicator(texts, message);
 };

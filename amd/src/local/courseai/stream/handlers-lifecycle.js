@@ -114,8 +114,11 @@ export const handleError = async(data, ctx) => {
     if (ctx.pcSubtitle && errorText) {
         ctx.pcSubtitle.textContent = errorText;
     }
-    // Nothing the server streams is silent: surface the error as a turn.
-    if (typeof ctx.emitLog === 'function' && errorText) {
+    // Nothing the server streams is silent: surface the error as a turn. 'error'
+    // is non-fatal and may repeat within a round, so dedup consecutive identical
+    // messages to avoid stacking the same turn.
+    if (typeof ctx.emitLog === 'function' && errorText && ctx.state.lastErrorLogged !== errorText) {
+        ctx.state.lastErrorLogged = errorText;
         ctx.emitLog({actor: 'ai', kind: 'danger', message: errorText});
     }
 };
@@ -245,11 +248,12 @@ export const handleFailed = async(data, ctx) => {
     if (typeof ctx.onStreamEnd === 'function') {
         ctx.onStreamEnd();
     }
+    // Localize once and reuse for both the chat turn and the subtitle.
+    const failedText = data.message
+        ? await localizeMessage(data.message)
+        : (texts && texts.courseai_error_generic) || 'Generation failed';
     // Meaningful (fatal) milestone: surface failure as a permanent error turn.
     if (typeof emitLog === 'function') {
-        const failedText = data.message
-            ? await localizeMessage(data.message)
-            : (texts && texts.courseai_error_generic) || 'Generation failed';
         emitLog({actor: 'ai', kind: 'danger', message: failedText});
     }
     if (typeof hideStreamBar === 'function') {
@@ -267,9 +271,7 @@ export const handleFailed = async(data, ctx) => {
         pcStep.textContent = texts.courseai_state_error;
     }
     if (pcSubtitle) {
-        pcSubtitle.textContent = data.message
-            ? await localizeMessage(data.message)
-            : texts.courseai_error_generic;
+        pcSubtitle.textContent = failedText;
     }
     if (typeof detailedUi.enableAllActionControls === 'function') {
         detailedUi.enableAllActionControls();

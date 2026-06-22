@@ -22,7 +22,10 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {showFeedbackThinking} from 'local_coursegen/local/courseai/ui/feedback-progress';
+import {
+    showFeedbackThinking,
+    hideWorkingIndicator,
+} from 'local_coursegen/local/courseai/ui/feedback-progress';
 
 /**
  * Emit a log entry if emitLog is wired.
@@ -198,6 +201,9 @@ export const sendFeedbackAction = async(action, ctx) => {
         const keepPlan = action !== 'accept';
         streamManager.openSSEStream(state.streamingurl, 0, streamMode, keepPlan);
     } catch (error) {
+        // The stream never opened — clear the live indicator so it does not
+        // linger after the error modal closes (no lifecycle event will arrive).
+        hideWorkingIndicator();
         await Notification.exception(error);
     } finally {
         if (btnApprove) {
