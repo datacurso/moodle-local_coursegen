@@ -23,6 +23,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {hideWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
+
 /**
  * Handle 'activity' event: upsert activity into latestInitialSections and
  * increment the checklist item's remaining counter.
@@ -75,6 +77,10 @@ export const handleSection = (data, ctx) => {
     ctx.flags.contentReceived = true;
     const {state, elements, detailedUi, texts, getOrCreateRoundChecklist, emitLog} = ctx;
 
+    // A real milestone (a planned section) has landed — drop the transient live
+    // "working" indicator so it does not sit below the new permanent turn.
+    hideWorkingIndicator();
+
     const loadingEl = document.getElementById('planningLoading');
     const streamContentEl = document.getElementById('planningStreamContent');
     const leftSkel = document.getElementById('cgLeftSkeleton');
@@ -111,7 +117,7 @@ export const handleSection = (data, ctx) => {
 
     if (typeof emitLog === 'function' && data.name) {
         const sectionName = data.name || '';
-        const message = (texts.courseai_log_ai_section || 'AI planned section «{$a}»')
+        const message = (texts.courseai_log_ai_section || 'AI planned section: {$a}')
             .replace('{$a}', sectionName);
         emitLog({actor: 'ai', kind: 'ai', message});
     }
@@ -159,9 +165,18 @@ export const handleCourseIdentity = (data, ctx) => {
     if (!fullname) {
         return;
     }
-    ctx.state.courseTitle = fullname;
+    const {state, texts, emitLog} = ctx;
+    const changed = state.courseTitle !== fullname;
+    state.courseTitle = fullname;
     if (ctx.prvHeaderTitle) {
         ctx.prvHeaderTitle.textContent = fullname;
+    }
+    // Course identity is a meaningful milestone → one permanent AI turn. Only emit
+    // when the title actually changes so re-streams (replan rounds) don't duplicate.
+    if (changed && typeof emitLog === 'function') {
+        const message = ((texts && texts.courseai_log_ai_course_identity) || 'Course: {$a}')
+            .replace('{$a}', fullname);
+        emitLog({actor: 'ai', kind: 'ai', message});
     }
 };
 

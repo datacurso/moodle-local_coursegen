@@ -23,7 +23,10 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {hideFeedbackThinking} from 'local_coursegen/local/courseai/ui/feedback-progress';
+import {
+    hideFeedbackThinking,
+    showWorkingIndicator,
+} from 'local_coursegen/local/courseai/ui/feedback-progress';
 
 /**
  * Handle 'status' event: localize message, update UI text, advance heuristic progress.
@@ -41,6 +44,14 @@ export const handleStatus = async(data, ctx) => {
 
     const statusText = data.message ? await localizeMessage(data.message) : (data.text || '');
     const heuristicText = (data.message && data.message.string) || data.text || '';
+
+    // Surface transient progress as the SINGLE live "working" indicator in the
+    // thread (never one turn per status event) so the panel never looks frozen
+    // while the server streams. It is cleared when content/sections land or on a
+    // terminal lifecycle event.
+    if (statusText) {
+        showWorkingIndicator(texts, statusText);
+    }
 
     if (streamMode === 'generating') {
         ensureStreamContentVisible();
@@ -103,6 +114,10 @@ export const handleError = async(data, ctx) => {
     if (ctx.pcSubtitle && errorText) {
         ctx.pcSubtitle.textContent = errorText;
     }
+    // Nothing the server streams is silent: surface the error as a turn.
+    if (typeof ctx.emitLog === 'function' && errorText) {
+        ctx.emitLog({actor: 'ai', kind: 'danger', message: errorText});
+    }
 };
 
 /**
@@ -119,13 +134,21 @@ export const handleError = async(data, ctx) => {
  */
 export const handleReviewNeeded = async(data, ctx) => {
     const {
-        state, stepsUi, planningUi, detailedUi, proposalsUi,
+        state, stepsUi, planningUi, detailedUi, proposalsUi, texts, emitLog,
         ensureStreamContentVisible, hideStreamBar, setCompactChatState, deps, closeStream,
     } = ctx;
 
     state.isStreaming = false;
-    // The AI responded — drop the "analyzing your request" progress indicator.
+    // The AI responded — drop the live "working" indicator.
     hideFeedbackThinking();
+    // Meaningful milestone: the AI finished this round and is awaiting review.
+    if (typeof emitLog === 'function') {
+        const hasProposals = Array.isArray(data.proposals) && data.proposals.length > 0;
+        const message = hasProposals
+            ? ((texts && texts.courseai_log_ai_proposals_ready) || 'The assistant prepared suggestions for your review')
+            : ((texts && texts.courseai_log_ai_review_ready) || 'The assistant finished — review the plan');
+        emitLog({actor: 'ai', kind: 'ai', message});
+    }
     if (typeof ctx.onStreamEnd === 'function') {
         ctx.onStreamEnd();
     }
@@ -173,12 +196,21 @@ export const handleReviewNeeded = async(data, ctx) => {
  */
 export const handleCompleted = async(data, ctx) => {
     const {
-        state, stepsUi, streamMode, markAllDone,
+        state, stepsUi, streamMode, markAllDone, texts, emitLog,
         setCompletionStatsFromGeneratedResult, closeStream, createCourseFromSession,
         hideStreamBar,
     } = ctx;
+    hideFeedbackThinking();
     if (typeof hideStreamBar === 'function') {
         hideStreamBar();
+    }
+    // Meaningful milestone: generation finished → one permanent success turn.
+    if (typeof emitLog === 'function') {
+        emitLog({
+            actor: 'ai',
+            kind: 'success',
+            message: (texts && texts.courseai_log_ai_completed) || 'Course generated',
+        });
     }
     if (streamMode === 'generating') {
         markAllDone();
@@ -204,13 +236,21 @@ export const handleCompleted = async(data, ctx) => {
  */
 export const handleFailed = async(data, ctx) => {
     const {
-        state, stepsUi, detailedUi, texts, streamMode,
+        state, stepsUi, detailedUi, texts, streamMode, emitLog,
         markAllDone, closeStream, setCompactChatState, deps,
         localizeMessage, planningSpinner, pcStep, pcSubtitle, hideStreamBar,
     } = ctx;
     state.isStreaming = false;
+    hideFeedbackThinking();
     if (typeof ctx.onStreamEnd === 'function') {
         ctx.onStreamEnd();
+    }
+    // Meaningful (fatal) milestone: surface failure as a permanent error turn.
+    if (typeof emitLog === 'function') {
+        const failedText = data.message
+            ? await localizeMessage(data.message)
+            : (texts && texts.courseai_error_generic) || 'Generation failed';
+        emitLog({actor: 'ai', kind: 'danger', message: failedText});
     }
     if (typeof hideStreamBar === 'function') {
         hideStreamBar();
