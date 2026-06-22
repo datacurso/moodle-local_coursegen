@@ -363,9 +363,23 @@ cualquier parte, en detalle.
   (p.ej. "quiero que tenga 2 capitulos solamente — Page: ¿Qué es el Machine Learning?"). Se eliminó el
   doble log (instrucción + línea genérica). Regenerar sección también unificado a un turno con la
   instrucción. Verificado e2e (reload 157): +1 turno, incluye tipo, sin « », cero errores JS.
-- [ ] (d) PRINCIPIO pendiente de barrido completo: revisar que CADA evento de streaming relevante del
-  servidor (status, secciones, actividades, campos detallados, generación de contenido, imágenes,
-  resultados de feedback/propuestas) quede reflejado como turno/estado en el hilo, y que CADA acción
-  del usuario desde cualquier control (add/delete/reorder/regenerate/feedback/aprobar) se muestre como
-  un turno coherente. Auditar todos los puntos de emisión y unificar formato (sin « », con contexto de
-  tipo/nombre cuando aplique).
+- [x] (d) PRINCIPIO — barrido completo HECHO (2026-06-22, branch `feat/chat-emit-sweep`). El hilo
+  izquierdo es ahora un histórico coherente: cada hito del servidor es un TURNO permanente y cada
+  evento transitorio alimenta UN solo indicador "trabajando…".
+  - **Indicador "working" generalizado** (`ui/feedback-progress.js`): `showWorkingIndicator(texts,msg)`/
+    `hideWorkingIndicator()` reutilizan la única entrada `#cgFeedbackThinking`, actualizando el texto
+    in-place. `handleStatus` lo alimenta con el status localizado; se limpia al llegar `section`/
+    contenido y en eventos terminales (review_needed/completed/failed/error), en `done`/`onerror` del
+    EventSource (`connection.js`) y en el catch del feedback `accept`. `showFeedbackThinking`/
+    `hideFeedbackThinking` quedan como alias compatibles.
+  - **Turnos por hito SSE**: `course_identity` → "Course: <título>" (dedup vía `state.courseTitleLogged`,
+    a prueba del reset en accept); `review_needed` → "review the plan" o "prepared suggestions";
+    `completed` → "Course generated"; `error`/`failed` → turno danger (error dedup consecutivo).
+  - **Turnos por acción de usuario**: añadidos los faltantes — aprobar (accept), reordenar secciones,
+    reordenar actividades (nombrando la sección padre). Ya existían: feedback, propuestas apply/dismiss,
+    regenerar/eliminar/añadir sección y actividad (con tipo), imágenes discard/regenerate, stop/resume,
+    prompt inicial. Formato unificado: acción + tipo/nombre, sin « » (fallbacks JS también limpiados).
+  - **Lang**: nuevas strings en `lang/en` + registradas en `i18n.js` KEYS.
+  - **e2e** (reload sesión 157, Chromium propio): cero errores JS, sin « », regenerar actividad = +1
+    turno con tipo ("Page: …"), regenerar sección = +1 turno con "Section: …", feedback muestra el
+    indicador "Analyzing your request…". Captura `/tmp/cg-ui/chat-sweep.png`.
