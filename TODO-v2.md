@@ -312,6 +312,26 @@ v0.dev, Bolt, Cursor agent, Claude/ChatGPT), no como tres bloques etiquetados su
 - **Acción previa recomendada:** investigar (WebSearch/WebFetch) capturas/patrones actuales de Lovable
   y v0 para extraer el layout de turnos y aplicarlo con fidelidad.
 
+**ACLARACIÓN del pedido (2026-06-22) — comportamiento exacto:**
+- Es un **chat en TODO el sentido**: un **histórico cronológico completo** de TODO lo que pasó con la
+  IA. Empieza en el **primer prompt** del usuario y va acumulando **cada acción del usuario** y **cada
+  cosa que la IA va generando** — desde la **planificación inicial** y luego tras **cada solicitud de
+  ajuste** (replan, add/delete, feedback…). El usuario debe poder **ver el histórico de todo** lo que
+  pidió y lo que la IA hizo, en orden.
+- **Mensajes largos = fade + expandir** (como en la captura de referencia, p. ej. ChatGPT/Claude con
+  bloques largos): cuando un mensaje (de la IA o del usuario) es muy largo, mostrarlo **truncado con
+  un degradado de desvanecimiento** al final y un **control (chevron / "ver más")** para **expandir**
+  el contenido completo; volver a colapsar. Aplica **tanto a mensajes de la IA como del usuario**.
+  - Implementación sugerida: contenedor con `max-height` + `overflow:hidden` + máscara/gradiente
+    inferior (`mask-image`/pseudo-elemento), y botón centrado abajo con chevron que togglea
+    `expanded` (quita el max-height y la máscara). Detectar overflow real (scrollHeight > maxHeight)
+    para mostrar el control solo cuando hace falta.
+- **Diferencia sutil IA vs usuario**: NO burbujas opuestas exageradas; una **distinción discreta**
+  (p. ej. el mensaje del usuario con un fondo/borde-izquierdo tenue o alineación leve, y el de la IA
+  plano con su ícono ✨) — suficiente para distinguir quién habló, sin romper el hilo único.
+- Persistencia: el histórico debe **sobrevivir al reload** (ya se reconstruye el log desde el
+  snapshot; extenderlo para que el hilo completo —prompts + acciones IA por ronda— se rearme).
+
 ### 7.2 "Add activity" como en Custom Sections (hover entre actividades, no botón al final)
 **Pedido:** el botón "+ Add activity" con borde punteado al FINAL de cada sección **no debe salir así**.
 Debe comportarse como en la vista de curso real (Custom Sections): **al pasar el cursor sobre una
