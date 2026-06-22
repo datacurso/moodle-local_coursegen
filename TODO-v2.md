@@ -92,12 +92,15 @@
 
 ---
 
-## 2. PENDIENTE — Fidelidad Custom Sections + hover (PRIORITARIO)
+## 2. Fidelidad Custom Sections + hover (P1–P4 HECHOS · P5 pendiente)
+
+> P1–P4 implementados y verificados e2e (2026-06-22): highlight sutil solo-centro, actividades como
+> filas con separador punteado, grip oculto/hover, botón Add section centrado. Falta **P5**.
 
 > Origen: 2ª ronda de campo (capturas). El preview central NO debe verse como tarjetas con bordes y
 > puntos de arrastre permanentes; debe imitar §1.
 
-- [ ] **P1 — Quitar el remarcado feo (`.cg-affected`).** Hoy, al seleccionar una propuesta, se dibuja
+- [x] **P1 — Quitar el remarcado feo (`.cg-affected`).** Hoy, al seleccionar una propuesta, se dibuja
   un **anillo rojo grueso** (`box-shadow: 0 0 0 2px…, 0 0 0 7px…`) en el checklist izquierdo (queda
   como óvalo rojo) y en el centro (rompe el layout). Hacer:
   - Resaltado **sutil** estilo Moodle: en vez de anillo rojo, usar `outline: 2px solid $primary` (o
@@ -106,15 +109,15 @@
     (`.prv-section-row`/`.dp-activity-wrap`), nunca para `.courseai-checklist-item`.
   - Mantener la lógica "solo mientras la opción está seleccionada" (ya en `ui-proposals.js
     onSelectionChange`); cambia solo el CSS `.cg-affected` en `aicoursecreation.css`.
-- [ ] **P2 — Centro = filas con separador punteado (no tarjetas).** Reemplazar las tarjetas
+- [x] **P2 — Centro = filas con separador punteado (no tarjetas).** Reemplazar las tarjetas
   `.prv-activity-item`/`.dp-activity-wrap` (border + radius + shadow) por **filas** separadas con
   `border-top: 1px solid $border` (lectura) / `.divider` punteado (edición), como §1.2. Sección con
   cabecera colapsable (chevron, lápiz, ⋮) como §1.1. Archivos: `detailed/section-row.js`,
   `detailed/activity-row.js`, `detailed/activity-dom.js`, `aicoursecreation.css`.
-- [ ] **P3 — Hover/drag estilo Moodle.** Ocultar el grip `::` (`.dp-drag-handle`) por defecto;
+- [x] **P3 — Hover/drag estilo Moodle.** Ocultar el grip `::` (`.dp-drag-handle`) por defecto;
   mostrarlo SOLO en hover (`opacity 0→1`) o permitir arrastrar toda la fila. Borde/realce de la fila
   SOLO en hover (`outline: 2px solid $primary` como §1.3). Mantener el DnD funcional (`wireDragAndDrop`).
-- [ ] **P4 — Botón "Add section" estilo Moodle.** Bloque ancho punteado redondeado, "+ Add section"
+- [x] **P4 — Botón "Add section" estilo Moodle.** Bloque ancho punteado redondeado, "+ Add section"
   centrado azul, hover con borde sólido (§1.6). Igual criterio para "+ Add activity".
 - [ ] **P5 — "Add activity" inline entre actividades.** Zona de inserción entre cmitems oculta por
   defecto que aparece en hover (línea azul punteada + "+" + botón "✦ Add activity with AI"), como el
