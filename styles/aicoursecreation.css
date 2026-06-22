@@ -1924,12 +1924,25 @@ svg { display: block; flex-shrink: 0; }
 }
 
 /* ── Activity wrap: card with soft left border ── */
+/* Activities read like Moodle's Custom Sections: ROWS separated by a dashed
+   line (not bordered cards). A subtle outline appears ONLY on hover. */
 .dp-activity-wrap {
+  position: relative;
+  background: transparent;
+  border: none;
   border-radius: 8px;
-  overflow: hidden;
-  background: var(--card);
-  border: 1px solid var(--border);
   margin-bottom: 0;
+}
+
+/* Dashed separator between consecutive activities (not before the first). */
+.dp-activity-wrap + .dp-activity-wrap {
+  border-top: 1px dashed var(--border);
+}
+
+/* Hover affordance — thin outline, no layout shift, only while hovering. */
+.dp-activity-wrap:hover {
+  outline: 2px solid hsl(252 55% 42% / .30);
+  outline-offset: -1px;
 }
 
 .dp-ai-inline {
@@ -2241,14 +2254,14 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .dp-add-control:hover {
-  border-color: hsl(8 72% 42% / .55);
-  color: hsl(8 72% 38%);
-  background: hsl(8 72% 50% / .04);
+  border-color: var(--brand, hsl(252 55% 42%));
+  color: var(--brand, hsl(252 55% 42%));
+  background: hsl(252 55% 42% / .05);
 }
 
 .dp-add-control:focus,
 .dp-add-control:focus-visible {
-  outline: 2px solid hsl(8 72% 50% / .35);
+  outline: 2px solid hsl(252 55% 42% / .35);
   outline-offset: 1px;
 }
 
@@ -2261,13 +2274,23 @@ svg { display: block; flex-shrink: 0; }
 .dp-add-control__icon {
   font-size: 16px;
   line-height: 1;
-  color: hsl(8 72% 42%);
+  color: var(--brand, hsl(252 55% 42%));
   flex-shrink: 0;
 }
 
 /* Wrapper that holds the add-section button + its inline panel */
 .dp-add-section-wrap {
-  margin-top: 6px;
+  margin-top: 14px;
+}
+
+/* "Add section" reads like Moodle's: wide, centered, 2px dashed, rounded, brand. */
+.dp-add-section-wrap .dp-add-control {
+  justify-content: center;
+  padding: 14px;
+  border-width: 2px;
+  border-radius: 12px;
+  font-size: 13px;
+  color: var(--brand, hsl(252 55% 42%));
 }
 
 /* Inline panel override for add controls (no section indentation needed) */
@@ -2296,14 +2319,30 @@ svg { display: block; flex-shrink: 0; }
   height: 20px;
   cursor: grab;
   color: var(--muted-fg);
-  opacity: 0.5;
+  /* Hidden by default — the horrible permanent ':: dots' are gone; the handle
+     fades in only when hovering the activity/section (Moodle behaviour). */
+  opacity: 0;
   border-radius: 4px;
   transition: opacity .12s, color .12s;
+}
+
+/* Reveal the grip on row/section hover (or keyboard focus within). */
+.dp-activity-wrap:hover .dp-drag-handle--activity,
+.dp-activity-wrap:focus-within .dp-drag-handle--activity,
+.prv-section-row:hover .dp-drag-handle--section,
+.prv-section-row:focus-within .dp-drag-handle--section {
+  opacity: 0.55;
 }
 
 .dp-drag-handle:hover {
   opacity: 1;
   color: hsl(215 18% 40%);
+}
+
+.dp-drag-handle:focus-visible {
+  opacity: 1;
+  outline: 2px solid hsl(252 55% 42% / .4);
+  outline-offset: 1px;
 }
 
 .dp-drag-handle:active {
@@ -2652,15 +2691,19 @@ svg { display: block; flex-shrink: 0; }
 }
 
 /* Center elements a selected proposal will affect — highlighted only while that
-   option is checked (see ui-proposals onSelectionChange). */
+   option is checked (see ui-proposals onSelectionChange). Subtle, Moodle-like:
+   a thin outline (no layout shift) instead of a heavy ring; a faint tint when
+   the action deletes content. NEVER applied to the left checklist. */
 .cg-affected {
-  border-radius: var(--radius);
-  box-shadow: 0 0 0 2px var(--brand, hsl(252 55% 42%)), 0 0 0 7px hsl(252 55% 42% / .12);
-  transition: box-shadow .15s ease;
+  outline: 2px solid var(--brand, hsl(252 55% 42%));
+  outline-offset: 1px;
+  border-radius: 10px;
+  transition: outline-color .15s ease, background-color .15s ease;
 }
 
 .cg-affected.cg-affected--destructive {
-  box-shadow: 0 0 0 2px var(--primary, hsl(8 72% 42%)), 0 0 0 7px hsl(8 72% 42% / .12);
+  outline-color: var(--primary, hsl(8 72% 42%));
+  background-color: hsl(8 72% 42% / .05);
 }
 
 /* ─── Chat history: initial prompt display ────────────────────────────── */
