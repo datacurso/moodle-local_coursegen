@@ -136,7 +136,15 @@ export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, p
  * @param {string[]} targetIds - Section UUIDs in new DOM order.
  */
 export const sendReorderSections = async(ctx, targetIds) => {
-    const {runPlanAction} = ctx;
+    const {runPlanAction, log, texts} = ctx;
+    // Reordering is a user action → one concise turn (no « »).
+    if (typeof log === 'function') {
+        log({
+            actor: 'user',
+            kind: 'user',
+            message: (texts && texts.courseai_log_reordered_sections) || 'You reordered the sections',
+        });
+    }
     try {
         const pendingAction = {
             action: 'reorder_sections',
@@ -156,7 +164,19 @@ export const sendReorderSections = async(ctx, targetIds) => {
  * @param {string[]} targetIds - Activity UUIDs in new DOM order.
  */
 export const sendReorderActivities = async(ctx, sectionId, targetIds) => {
-    const {runPlanAction} = ctx;
+    const {runPlanAction, log, texts, state} = ctx;
+    // Reordering activities is a user action → one concise turn naming the
+    // parent section when its name is resolvable (no « »).
+    if (typeof log === 'function') {
+        const sections = (state && state.latestInitialSections) || [];
+        const section = sections.find((s) => s && s.id === sectionId);
+        const sectionName = section && String(section.name || '').trim();
+        const message = sectionName
+            ? ((texts && texts.courseai_log_reordered_activities) || 'You reordered activities in: {$a}')
+                .replace('{$a}', sectionName)
+            : ((texts && texts.courseai_log_reordered_activities_generic) || 'You reordered the activities');
+        log({actor: 'user', kind: 'user', message});
+    }
     try {
         const pendingAction = {
             action: 'reorder_activities',

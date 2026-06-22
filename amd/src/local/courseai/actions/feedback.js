@@ -130,6 +130,18 @@ export const sendFeedbackAction = async(action, ctx) => {
             }
         }
 
+        // Approving the plan is a user action too — surface it as a coherent turn
+        // (no « », concise) so the thread never goes silent on approve.
+        if (action === 'accept') {
+            state.planEverReviewed = true;
+            log({
+                actor: 'user',
+                kind: 'success',
+                message: texts.courseai_log_user_approved || 'You approved the plan',
+            }, emitLog);
+            showFeedbackThinking(texts);
+        }
+
         // Plan actions travel as ActionIntents: a bare approve is action
         // 'accept'; free text is action 'feedback'. Image curation no longer
         // rides on accept — it is its own discard_image/replan_image action.
