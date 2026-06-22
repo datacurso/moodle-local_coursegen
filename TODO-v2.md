@@ -352,3 +352,20 @@ matiz extra:
   la actividad sobre/bajo la que se inserta.
 - Enfoque de bajo riesgo (no pelear con el reconciliador): franja "insert-after" en el borde inferior
   de cada `.dp-activity-wrap`/`.activity`, visible solo en hover.
+
+### 7.3 Mensajes del chat: sin « », acción+instrucción en UN turno con tipo — HECHO (parcial)
+**Pedido:** (a) quitar los guillemets « » de los mensajes; (b) el regenerar debe decir el TIPO de
+actividad; (c) la instrucción del usuario + la acción NO deben ser dos turnos sino UNO; (d) PRINCIPIO:
+en el chat se debe mostrar TODO lo que streamea el servidor y TODO lo que el usuario manda desde
+cualquier parte, en detalle.
+- [x] (a) « » eliminados de todos los lang (`«{$a}»` → `: {$a}`; sweep en en/fr/ru).
+- [x] (b)+(c) Regenerar actividad = UN turno de usuario con el tipo: `"{instrucción} — {TipoLabel}: {nombre}"`
+  (p.ej. "quiero que tenga 2 capitulos solamente — Page: ¿Qué es el Machine Learning?"). Se eliminó el
+  doble log (instrucción + línea genérica). Regenerar sección también unificado a un turno con la
+  instrucción. Verificado e2e (reload 157): +1 turno, incluye tipo, sin « », cero errores JS.
+- [ ] (d) PRINCIPIO pendiente de barrido completo: revisar que CADA evento de streaming relevante del
+  servidor (status, secciones, actividades, campos detallados, generación de contenido, imágenes,
+  resultados de feedback/propuestas) quede reflejado como turno/estado en el hilo, y que CADA acción
+  del usuario desde cualquier control (add/delete/reorder/regenerate/feedback/aprobar) se muestre como
+  un turno coherente. Auditar todos los puntos de emisión y unificar formato (sin « », con contexto de
+  tipo/nombre cuando aplique).

@@ -108,10 +108,14 @@ export const buildActivityItem = (ctx, activityType, activityTitle) => {
  * @param {string}      activityId
  * @param {string}      activityTitle
  * @param {HTMLElement} wrap
+ * @param {string}      activityType
  * @returns {{iaControl, deleteControl, activityPanelApi}}
  */
-export const buildActivityActionControls = (ctx, activityId, activityTitle, wrap) => {
-    const {state, texts, runPlanAction, log, createTextPanel, focusChange, markRemoving, confirmDelete} = ctx;
+export const buildActivityActionControls = (ctx, activityId, activityTitle, wrap, activityType) => {
+    const {
+        state, texts, runPlanAction, log, createTextPanel, focusChange, markRemoving,
+        confirmDelete, activityLabels,
+    } = ctx;
 
     let iaControl = null;
     let deleteControl = null;
@@ -122,16 +126,14 @@ export const buildActivityActionControls = (ctx, activityId, activityTitle, wrap
             focusChange(wrap, 'info');
             wrap.classList.add('dp-item-regenerating');
             iaControl.classList.add('dp-action-btn--disabled');
-            // Surface the user's own instruction in the log, then the generic action line.
+            // ONE coherent turn: the user's instruction plus exactly which activity
+            // it targets, naming its TYPE (e.g. "Book: Title"). No separate generic
+            // line, no guillemets.
             const instruction = (value || '').trim();
-            if (instruction) {
-                log({actor: 'user', kind: 'user', message: instruction});
-            }
-            log({
-                actor: 'user', kind: 'info',
-                message: (texts.courseai_log_regenerated_activity || 'You regenerated activity «{$a}»')
-                    .replace('{$a}', activityTitle),
-            });
+            const typeLabel = (activityLabels && activityLabels[activityType]) || activityType || '';
+            const target = typeLabel ? typeLabel + ': ' + activityTitle : activityTitle;
+            const message = instruction ? instruction + ' — ' + target : target;
+            log({actor: 'user', kind: 'user', message});
             // Reopen the entry so the streamed regeneration renders live (progress is
             // visible) and the final reconcile refills it — both paths bail on done.
             reopenActivityEntry(ctx, activityId);

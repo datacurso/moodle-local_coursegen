@@ -62,7 +62,7 @@ export const createDetailedActivityRow = (ctx, {sectionId, activityId, activityT
     item.classList.add('cg-activity--pending');
 
     const {iaControl, deleteControl, activityPanelApi} = buildActivityActionControls(
-        ctx, activityId, activityTitle, wrap
+        ctx, activityId, activityTitle, wrap, activityType
     );
 
     actionsEl.appendChild(iaControl);

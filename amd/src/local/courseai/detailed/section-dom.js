@@ -137,11 +137,14 @@ export const buildSectionActionControls = (ctx, sectionId, sectionName, rowRef) 
             focusChange(row, 'info');
             row.classList.add('dp-item-regenerating');
             iaControl.classList.add('dp-action-btn--disabled');
-            log({
-                actor: 'user', kind: 'info',
-                message: (texts.courseai_log_regenerated_section || 'You regenerated section «{$a}»')
-                    .replace('{$a}', sectionName),
-            });
+            // ONE turn that shows what the user asked AND which section it targets.
+            const instruction = (value || '').trim();
+            const target = (texts.courseai_section_word || 'Section') + ': ' + sectionName;
+            const message = instruction
+                ? instruction + ' — ' + target
+                : (texts.courseai_log_regenerated_section || 'You regenerated section: {$a}')
+                    .replace('{$a}', sectionName);
+            log({actor: 'user', kind: 'user', message});
             try {
                 await runPlanAction({action: 'replan_section', target_ids: [sectionId], instruction: value});
             } catch (e) {
