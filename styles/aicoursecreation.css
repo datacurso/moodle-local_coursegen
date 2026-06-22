@@ -2605,14 +2605,10 @@ svg { display: block; flex-shrink: 0; }
 .courseai-checklist {
   margin-top: 10px;
 }
+/* The uppercase "COURSE SECTIONS" label is gone in §7.1; if any legacy round
+   checklist still emits one, keep it hidden so the thread stays label-free. */
 .courseai-checklist-label {
-  display: block;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  color: var(--muted-fg);
-  margin-bottom: 6px;
+  display: none;
 }
 .courseai-checklist-list {
   list-style: none;
@@ -2624,6 +2620,20 @@ svg { display: block; flex-shrink: 0; }
   font-size: 12.5px;
   color: var(--fg);
   line-height: 1.4;
+}
+
+/* §7.1 — the section checklist is a compact RESULT CARD inside the AI planning
+   turn, not a separate fixed section. Faint card, ✨ marker, sits in the thread. */
+.cg-thread-checklist {
+  margin-top: 6px;
+  margin-left: 22px;
+  padding: 10px 12px;
+  background: var(--card, #fff);
+  border: 1px solid var(--border, hsl(215 20% 90%));
+  border-radius: 12px;
+}
+.cg-thread-checklist .courseai-checklist-list {
+  gap: 6px;
 }
 
 /* ─── Compact chat card (planning sidebar regenerate panel) ───────────── */
@@ -2875,94 +2885,158 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
   }
 }
 
-/* ─── Decision log (§4) ────────────────────────────────────────────────── */
-.cg-log-section {
-  margin-top: 16px;
-}
-
-.cg-log-label {
-  display: block;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  color: var(--muted-fg);
-  margin-bottom: 8px;
+/* ─── Conversation thread (§7.1) ───────────────────────────────────────────
+   One continuous chronological chat. The initial prompt is the first user turn;
+   AI planning/actions follow as flat turns with a ✨ icon. No uppercase section
+   labels, minimal borders, calm palette, comfortable density. */
+.cg-thread {
+  scroll-behavior: smooth;
 }
 
 .cg-log {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 10px;
 }
 
-/* Action log feed below the checklist: only takes space once it has entries. */
-#cgLogAfter:not(:empty) {
-  margin-top: 14px;
+/* The two feed halves sit in one visual thread; keep the rhythm continuous. */
+.cg-thread-feed:not(:empty) + .cg-thread-checklist:not(.hidden),
+.cg-thread-checklist:not(.hidden) {
+  margin-top: 0;
 }
 
-/* Single log entry row */
+/* Continuation feed below the checklist: only takes space once it has turns. */
+#cgLogAfter.cg-thread-feed:not(:empty) {
+  margin-top: 10px;
+}
+
+/* ── A single turn ─────────────────────────────────────────────────────── */
 .cg-log-entry {
+  position: relative;
   display: flex;
-  align-items: stretch;
+  align-items: flex-start;
   gap: 8px;
-  min-height: 32px;
-  border-radius: 6px;
+  border-radius: 12px;
   background: transparent;
-  overflow: hidden;
+  padding: 4px 2px;
 }
 
-/* Left semantic color bar */
+/* Subtle AI vs user distinction (§7.1): user turns get a faint inset card with a
+   left accent; AI turns stay flat. Not opposed bubbles — just enough to read. */
+.cg-log-entry--turn-user {
+  background: var(--muted, hsl(215 25% 97%));
+  border: 1px solid var(--border, hsl(215 20% 90%));
+  border-left: 2px solid var(--brand, #6b4eff);
+  padding: 8px 12px 8px 10px;
+}
+
+.cg-log-entry--turn-ai {
+  padding: 4px 2px 4px 0;
+}
+
+/* Legacy color bar: kept in the DOM for semantics but only shown on the
+   non-turn status kinds (danger/info/success) as a thin accent. */
 .cg-log-bar {
+  display: none;
+}
+.cg-log-entry--danger .cg-log-bar,
+.cg-log-entry--info .cg-log-bar,
+.cg-log-entry--success .cg-log-bar {
   display: block;
   flex-shrink: 0;
   width: 3px;
   border-radius: 3px;
-  background: var(--muted-fg);
   align-self: stretch;
 }
-
-/* Kind-based bar colors */
-.cg-log-entry--user    .cg-log-bar { background: var(--brand); }
-.cg-log-entry--ai      .cg-log-bar { background: var(--primary); }
 .cg-log-entry--danger  .cg-log-bar { background: var(--danger); }
 .cg-log-entry--info    .cg-log-bar { background: var(--info); }
 .cg-log-entry--success .cg-log-bar { background: var(--success-strong); }
-.cg-log-entry--neutral .cg-log-bar { background: var(--muted-fg); }
 
 /* Entry body: icon + message + timestamp */
 .cg-log-body {
   display: flex;
   align-items: flex-start;
-  gap: 5px;
-  padding: 6px 6px 6px 0;
+  gap: 7px;
   flex: 1;
   min-width: 0;
 }
 
 .cg-log-actor {
   flex-shrink: 0;
-  font-size: 13px;
-  line-height: 1;
+  font-size: 14px;
+  line-height: 1.5;
+}
+/* User turns carry their own card affordance; drop the redundant 👤 glyph. */
+.cg-log-entry--turn-user .cg-log-actor {
+  display: none;
 }
 
 .cg-log-msg {
   flex: 1;
   min-width: 0;
-  font-size: 12.5px;
-  line-height: 1.45;
+  font-size: 13px;
+  line-height: 1.5;
   color: var(--fg);
-  white-space: normal;
+  white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
 
 .cg-log-ts {
   flex-shrink: 0;
-  font-size: 11px;
-  line-height: 1.45;
+  font-size: 10.5px;
+  line-height: 1.6;
   color: var(--muted-fg);
   white-space: nowrap;
+  opacity: .7;
+}
+
+/* ── Long-message fade + expand (§7.1) ─────────────────────────────────── */
+/* A turn is clamped only when its body actually overflows; the JS adds
+   .cg-log-entry--clamped and appends the toggle button. */
+.cg-log-entry--clamped {
+  flex-wrap: wrap;
+}
+.cg-log-entry--clamped .cg-log-msg {
+  max-height: 160px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
+}
+.cg-log-entry--clamped.is-expanded .cg-log-msg {
+  max-height: none;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.cg-log-toggle {
+  flex: 0 0 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin: 2px 0 0;
+  padding: 3px 8px;
+  border: none;
+  background: transparent;
+  color: var(--brand, #6b4eff);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background .12s, color .12s;
+}
+.cg-log-toggle:hover {
+  background: var(--muted, hsl(215 25% 96%));
+}
+.cg-log-toggle-chevron {
+  font-size: 13px;
+  line-height: 1;
+  transition: transform .15s ease;
+}
+.is-expanded .cg-log-toggle-chevron {
+  transform: rotate(180deg);
 }
 
 /* "AI is analyzing your request" progress entry (free-text feedback). */
@@ -2970,6 +3044,7 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
   width: 13px;
   height: 13px;
   flex: 0 0 auto;
+  margin-top: 2px;
   border: 2px solid var(--border, hsl(215 20% 88%));
   border-top-color: var(--primary);
   border-radius: 50%;
@@ -2982,6 +3057,8 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .cg-log-entry { transition: none; }
+  .cg-thread { scroll-behavior: auto; }
+  .cg-log-toggle-chevron { transition: none; }
 }
 
 /* ─── Scroll architecture: ONE scroll per column, pinned chat, integrated bars ── */
