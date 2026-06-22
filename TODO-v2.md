@@ -122,6 +122,17 @@
 - [ ] **P5 — "Add activity" inline entre actividades.** Zona de inserción entre cmitems oculta por
   defecto que aparece en hover (línea azul punteada + "+" + botón "✦ Add activity with AI"), como el
   `.divider` de §1.5. Hoy solo existe "+ Add activity" al final de la sección.
+  - **VIABILIDAD CONFIRMADA**: el servicio (`add_activity_node`) YA acepta `pending_action.position`
+    (0=inicio, k=posición, None=fin). Falta solo el cliente.
+  - **Enfoque recomendado** (evita pelear con el reconciliador por UUID): NO insertar zonas libres
+    entre hermanos; en su lugar dar a CADA `.dp-activity-wrap` una **franja "insert-before" en su
+    borde superior** que aparece en hover, con "+" que abre un panel add-activity y envía
+    `add_activity` con `parent_section_id` + `position` = índice actual de esa actividad (entre
+    hermanas no borradas) + `instruction`. Así la zona viaja con la fila que el reconciliador ya
+    gestiona como unidad. Reusar `createTextPanel`/`runPlanAction` de `section-row.js`. Archivos:
+    `detailed/activity-row.js`/`activity-dom.js` + CSS. Zona de inserción entre cmitems oculta por
+  defecto que aparece en hover (línea azul punteada + "+" + botón "✦ Add activity with AI"), como el
+  `.divider` de §1.5. Hoy solo existe "+ Add activity" al final de la sección.
 
 > Decisión abierta: en el preview, ¿iconos de módulo **neutros** (como dejamos los badges) o con el
 > **color real de Moodle por purpose**? El look Moodle usa color por purpose; ya neutralizamos por
