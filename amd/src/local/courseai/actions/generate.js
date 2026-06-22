@@ -72,9 +72,11 @@ export const handleGenerate = async(ctx) => {
     state.initialPrompt = prompt;
     renderInitialPromptHistory(prompt);
 
-    const truncated = prompt.length > 80 ? prompt.slice(0, 80) + '…' : prompt;
-    const userRequestMsg = (texts.courseai_log_user_request || 'You: {$a}').replace('{$a}', truncated);
-    log({actor: 'user', kind: 'user', message: userRequestMsg}, emitLog);
+    // The initial prompt is the FIRST turn of the conversation thread (§7.1):
+    // emit the FULL text (no truncation) — the thread truncates long turns
+    // visually with a fade + "show more" control. No "You:" prefix; the turn's
+    // own styling distinguishes the speaker.
+    log({actor: 'user', kind: 'user', message: prompt}, emitLog);
 
     if (btnGenerate) {
         btnGenerate.disabled = true;

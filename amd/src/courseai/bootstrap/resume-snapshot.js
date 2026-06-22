@@ -68,18 +68,24 @@ export const makeResumeFromSnapshot = ({
     texts,
 }) => {
     /**
-     * Rebuild the decision log from the snapshot so reload doesn't lose history.
-     * localStorage does not survive reload in this (Moodle popup) context, so the
-     * snapshot is the source of truth: re-emit an "AI planned section" entry per
-     * section and the user's free-text instructions (skipping the first message,
-     * which is the initial prompt already shown above the log).
+     * Rebuild the conversation thread from the snapshot so reload doesn't lose
+     * history (§7.1). localStorage does not survive reload in this (Moodle popup)
+     * context, so the snapshot is the source of truth. The thread is rearmed in
+     * chronological order: the initial prompt as the FIRST user turn, then an
+     * "AI planned section" turn per section, then any later user instructions.
      *
      * @param {Array} sections - raw plan sections (with names)
      * @param {Object} snapshot - the resume snapshot
+     * @param {string} initialPrompt - the first user prompt (becomes turn 1)
+     * @returns {void}
      */
-    const rebuildDecisionLog = (sections, snapshot) => {
+    const rebuildDecisionLog = (sections, snapshot, initialPrompt) => {
         if (typeof emitLog !== 'function') {
             return;
+        }
+        const firstPrompt = String(initialPrompt || '').trim();
+        if (firstPrompt) {
+            emitLog({actor: 'user', kind: 'user', message: firstPrompt});
         }
         (sections || []).forEach((section) => {
             const name = String(section?.name || '').trim();
@@ -148,12 +154,6 @@ export const makeResumeFromSnapshot = ({
         if (elements.promptInput) {
             elements.promptInput.value = initialPrompt;
         }
-        if (elements.initialPromptText) {
-            elements.initialPromptText.textContent = initialPrompt;
-        }
-        if (elements.initialPromptHistory) {
-            elements.initialPromptHistory.classList.toggle('hidden', !initialPrompt);
-        }
         if (elements.langSelect) {
             elements.langSelect.value = state.lang;
         }
@@ -193,7 +193,7 @@ export const makeResumeFromSnapshot = ({
             applyCourseTitleToHeader();
             if (sectionsForUi.length > 0) {
                 await hydrateDetailedPlanFromSnapshot(detailedSections);
-                rebuildDecisionLog(detailedSections, snapshot);
+                rebuildDecisionLog(detailedSections, snapshot, initialPrompt);
             }
             if (typeof detailedUi.enableAllActionControls === 'function') {
                 detailedUi.enableAllActionControls();
@@ -212,7 +212,7 @@ export const makeResumeFromSnapshot = ({
             setPlanningStreamVisible();
             applyCourseTitleToHeader();
             await hydrateDetailedPlanFromSnapshot(detailedSections);
-            rebuildDecisionLog(detailedSections, snapshot);
+            rebuildDecisionLog(detailedSections, snapshot, initialPrompt);
             // The plan is at review: future log entries (e.g. the user's next
             // feedback) must flow at the END of the feed. Set this AFTER the
             // historical rebuild so the rebuilt planning entries stay on top.
@@ -234,7 +234,7 @@ export const makeResumeFromSnapshot = ({
             // plan instead of clearing it (resetPlanningState early-returns).
             if (sectionsForUi.length > 0) {
                 await hydrateDetailedPlanFromSnapshot(detailedSections);
-                rebuildDecisionLog(detailedSections, snapshot);
+                rebuildDecisionLog(detailedSections, snapshot, initialPrompt);
             }
             stepsUi.setStepState('planning', 'done');
             stepsUi.setStepState('generating', 'active');
@@ -254,7 +254,7 @@ export const makeResumeFromSnapshot = ({
             // section names), which is the reload-broken case from the field.
             if (sectionsForUi.length > 0) {
                 await hydrateDetailedPlanFromSnapshot(detailedSections);
-                rebuildDecisionLog(detailedSections, snapshot);
+                rebuildDecisionLog(detailedSections, snapshot, initialPrompt);
             }
             streamManager.openSSEStream(state.streamingurl, 0, 'planning', true);
             return true;
@@ -266,7 +266,7 @@ export const makeResumeFromSnapshot = ({
             applyCourseTitleToHeader();
             if (sectionsForUi.length > 0) {
                 await hydrateDetailedPlanFromSnapshot(detailedSections);
-                rebuildDecisionLog(detailedSections, snapshot);
+                rebuildDecisionLog(detailedSections, snapshot, initialPrompt);
             }
             if (typeof detailedUi.enableAllActionControls === 'function') {
                 detailedUi.enableAllActionControls();
