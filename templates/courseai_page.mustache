@@ -192,34 +192,29 @@
       </div>
 
       <div class="courseai-context-chat" id="courseaiContextChat">
-        <div class="courseai-chat-scroll" id="courseaiChatScroll">
+        <div class="courseai-chat-scroll cg-thread" id="courseaiChatScroll">
           <div class="courseai-round" data-round="0">
-            <div class="courseai-chat-history hidden" id="courseaiInitialPromptHistory">
-              <span class="courseai-chat-history-label">{{#str}}courseai_initial_prompt_label, local_coursegen{{/str}}</span>
-              <div class="courseai-chat-message courseai-chat-message--user">
-                <p id="courseaiInitialPromptText"></p>
-              </div>
-            </div>
-
-            <!-- Decision log feed (§4) -->
-            <div class="cg-log-section" id="cgLogSection" style="display:none">
-              <span class="cg-log-label">{{#str}}courseai_log_label, local_coursegen{{/str}}</span>
-              <div class="cg-log" id="cgLog" aria-live="polite" aria-label="{{#str}}courseai_log_label, local_coursegen{{/str}}"></div>
-            </div>
+            <!-- Conversation thread (§7.1): one continuous chronological feed.
+                 The initial prompt is the FIRST user turn (emitted via emitLog),
+                 followed by AI planning turns. No rigid "INITIAL MESSAGE" block
+                 and no uppercase section labels — it reads top-to-bottom. -->
+            <div class="cg-log cg-thread-feed" id="cgLog" aria-live="polite"
+                 aria-label="{{#str}}courseai_log_label, local_coursegen{{/str}}"></div>
 
             <!-- Left loading skeleton: previews the checklist shape while the
                  first instruction streams (hidden once a section arrives). -->
             <div class="cg-sk-checks-wrap" id="cgLeftSkeleton" style="display:{{#isresuming}}block{{/isresuming}}{{^isresuming}}none{{/isresuming}}">{{> local_coursegen/courseai_skeleton_checks }}</div>
 
-            <!-- Section checklist shown during streaming -->
-            <div class="courseai-checklist hidden" id="courseaiChecklist">
-              <span class="courseai-checklist-label">{{#str}}courseai_checklist_label, local_coursegen{{/str}}</span>
+            <!-- Section checklist: a compact result card inside the AI planning
+                 turn. The data hooks (data-section-id/data-round/data-remaining on
+                 each <li>) are consumed by the streaming handlers — do not remove. -->
+            <div class="courseai-checklist cg-thread-checklist hidden" id="courseaiChecklist">
               <ul class="courseai-checklist-list" id="courseaiChecklistList"></ul>
             </div>
 
-            <!-- Action log feed (§4): once the plan settles, user actions and their
-                 results flow chronologically BELOW the checklist (organic chat). -->
-            <div class="cg-log" id="cgLogAfter" aria-live="polite"></div>
+            <!-- Continuation of the thread (§7.1): once the plan settles, user
+                 actions and their results flow chronologically below the checklist. -->
+            <div class="cg-log cg-thread-feed" id="cgLogAfter" aria-live="polite"></div>
           </div>
 
           <!-- Adjustment message history (shown after user sends adjustments) -->
