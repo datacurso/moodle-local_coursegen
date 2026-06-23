@@ -2915,7 +2915,7 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
 .cg-log {
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 20px;
 }
 
 /* The two feed halves sit in one visual thread; keep the rhythm continuous. */
@@ -2943,10 +2943,10 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
 /* Subtle AI vs user distinction (§7.1): user turns get a faint inset card with a
    left accent; AI turns stay flat. Not opposed bubbles — just enough to read. */
 .cg-log-entry--turn-user {
-  background: var(--muted, hsl(215 25% 97%));
-  border: 1px solid var(--border, hsl(215 20% 90%));
-  border-left: 2px solid var(--brand, #6b4eff);
-  padding: 8px 12px 8px 10px;
+  background: #f4f4f5;
+  border: 1px solid #ececee;
+  border-radius: 16px;
+  padding: 16px 20px;
 }
 
 .cg-log-entry--turn-ai {
@@ -2982,8 +2982,9 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
 
 .cg-log-actor {
   flex-shrink: 0;
-  font-size: 14px;
+  font-size: 18px;
   line-height: 1.5;
+  color: #a1a1aa;
 }
 /* User turns carry their own card affordance; drop the redundant 👤 glyph. */
 .cg-log-entry--turn-user .cg-log-actor {
@@ -2993,19 +2994,23 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
 .cg-log-msg {
   flex: 1;
   min-width: 0;
-  font-size: 13px;
-  line-height: 1.55;
+  font-size: 15px;
+  line-height: 1.6;
   color: var(--fg);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
 
+.cg-log-entry--turn-ai .cg-log-msg {
+  color: #18181b;
+}
+
 .cg-log-ts {
   flex-shrink: 0;
   font-size: 10.5px;
   line-height: 1.6;
-  color: var(--muted-fg);
+  color: #8a8a8a;
   white-space: nowrap;
   opacity: .7;
   transition: opacity var(--t-fast, 120ms);
@@ -3046,7 +3051,7 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
   padding: 3px 8px;
   border: none;
   background: transparent;
-  color: var(--brand, #6b4eff);
+  color: var(--primary, #6b4eff);
   font-family: inherit;
   font-size: 11.5px;
   font-weight: 600;
@@ -3110,6 +3115,84 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
   flex: 1 1 auto;
   min-height: 0;
   width: 100%;
+  position: relative;
+}
+
+/* ─── Decision overlay (WU4) ───────────────────────────────────────────── */
+/* Covers the entire left chat area with an opaque white surface. */
+.cg-decision-overlay {
+  position: absolute;
+  inset: 0;
+  z-index: 10;
+  background: #ffffff;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 16px;
+}
+
+.cg-decision-card {
+  width: 100%;
+  max-width: 440px;
+  background: #ffffff;
+  border: 1px solid #e4e4e7;
+  border-radius: 16px;
+  padding: 20px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+}
+
+.cg-decision-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: #18181b;
+  margin: 0;
+}
+
+.cg-decision-body {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.cg-decision-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.cg-decision-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 18px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+
+.cg-decision-btn--accept {
+  background: var(--primary, #6b4eff);
+  color: var(--primary-fg, #fff);
+  border: none;
+}
+
+.cg-decision-btn--accept:hover {
+  opacity: 0.88;
+}
+
+.cg-decision-btn--adjust {
+  background: transparent;
+  color: #18181b;
+  border: 1px solid #e4e4e7;
+}
+
+.cg-decision-btn--adjust:hover {
+  background: #f4f4f5;
 }
 .courseai-workspace.is-planning .courseai-chat-scroll {
   flex: 1 1 auto;

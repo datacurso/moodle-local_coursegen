@@ -45,9 +45,10 @@ const ACTOR_ICON = {
  */
 const TURN_MAX_HEIGHT = 160;
 
-/** "Show more" / "Show less" labels (kept here so the toggle is self-contained). */
+/** "Show more" / "Show less" / "Show full message" labels (kept here so the toggle is self-contained). */
 const TOGGLE_MORE = 'Show more';
 const TOGGLE_LESS = 'Show less';
+const TOGGLE_FULL = 'Show full message';
 
 /**
  * Build the expand/collapse chevron control for a long turn.
@@ -77,23 +78,25 @@ const buildToggle = (label) => {
  * content actually overflows the collapsed height (§7.1). Detection is deferred
  * to the next frame so layout (line wrapping) has settled before measuring.
  *
- * @param {HTMLElement} entry - The turn wrapper (receives the toggle).
- * @param {HTMLElement} msgEl - The text body to clamp.
+ * @param {HTMLElement} entry  - The turn wrapper (receives the toggle).
+ * @param {HTMLElement} msgEl  - The text body to clamp.
+ * @param {boolean}    [isUser] - Whether this is a user turn (changes "Show more" to "Show full message").
  * @returns {void}
  */
-const wireFadeExpand = (entry, msgEl) => {
+const wireFadeExpand = (entry, msgEl, isUser) => {
     window.requestAnimationFrame(() => {
         if (msgEl.scrollHeight <= TURN_MAX_HEIGHT + 4) {
             return;
         }
         entry.classList.add('cg-log-entry--clamped');
-        const toggle = buildToggle(TOGGLE_MORE);
+        const initialLabel = isUser ? TOGGLE_FULL : TOGGLE_MORE;
+        const toggle = buildToggle(initialLabel);
         toggle.addEventListener('click', () => {
             const expanded = entry.classList.toggle('is-expanded');
             toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
             const textEl = toggle.querySelector('.cg-log-toggle-text');
             if (textEl) {
-                textEl.textContent = expanded ? TOGGLE_LESS : TOGGLE_MORE;
+                textEl.textContent = expanded ? TOGGLE_LESS : initialLabel;
             }
         });
         entry.appendChild(toggle);
@@ -226,7 +229,7 @@ export const createLog = ({container, actionContainer, isActionPhase}) => {
         entry.appendChild(body);
 
         target.appendChild(entry);
-        wireFadeExpand(entry, msgSpan);
+        wireFadeExpand(entry, msgSpan, isUser);
         // Pin the feed to the bottom so the newest entry sits next to the input. Defer
         // to the next frame: a fresh entry may wrap to several lines, so its height is
         // not laid out yet on the synchronous append. scrollIntoView on the entry is
