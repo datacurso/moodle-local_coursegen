@@ -28,6 +28,41 @@ export const RADIO_NAME = 'courseai-proposal-choice';
 export const OTHER_VALUE = '__other__';
 
 /**
+ * Resolve a section's display name from the center preview by its UUID.
+ *
+ * @param {string} id - section UUID (data-section-id in the center)
+ * @returns {string} the section name, or '' if not found
+ */
+const sectionNameById = (id) => {
+    if (!id) {
+        return '';
+    }
+    const el = document.querySelector('.course-section[data-section-id="' + id + '"] .sectionname');
+    return el ? el.textContent.trim() : '';
+};
+
+/**
+ * Describe what a proposal will DO, concretely, instead of echoing the raw user
+ * instruction. For "add activity" the backend only captures the action + position +
+ * raw text, so enrich the localized summary with the TARGET section's name (resolved
+ * from the center) so the user sees where the change lands.
+ *
+ * @param {Object} proposal        - ProposedAction from the backend.
+ * @param {string} localizedSummary - Already-resolved summary string.
+ * @returns {string}
+ */
+const describeProposal = (proposal, localizedSummary) => {
+    const intent = proposal.intent || {};
+    if (intent.action === 'add_activity' && intent.parent_section_id) {
+        const name = sectionNameById(intent.parent_section_id);
+        if (name) {
+            return localizedSummary + ' in "' + name + '"';
+        }
+    }
+    return localizedSummary;
+};
+
+/**
  * Build and return a proposal card element (label wrapping a radio input).
  *
  * @param {Object} proposal         - ProposedAction from the backend.
@@ -48,15 +83,22 @@ export const buildProposalCard = (proposal, localizedSummary, texts) => {
     radio.value = proposal.proposal_id;
     radio.className = 'plan-proposal-radio';
     // UUIDs of the sections/activities this proposal touches, so selecting it can
-    // highlight exactly those elements in the center preview.
-    const targetIds = (proposal.intent && Array.isArray(proposal.intent.target_ids))
-        ? proposal.intent.target_ids
-        : [];
+    // highlight exactly those elements in the center preview. The backend sends
+    // target_ids for edit/delete/reorder, and parent_section_id for add_* (where the
+    // new item lands) — include both so every proposal highlights its target.
+    const intent = proposal.intent || {};
+    const targetIds = [];
+    if (Array.isArray(intent.target_ids)) {
+        targetIds.push(...intent.target_ids);
+    }
+    if (intent.parent_section_id) {
+        targetIds.push(intent.parent_section_id);
+    }
     radio.dataset.targetIds = JSON.stringify(targetIds);
 
     const textSpan = document.createElement('span');
     textSpan.className = 'plan-proposal-summary';
-    textSpan.textContent = localizedSummary;
+    textSpan.textContent = describeProposal(proposal, localizedSummary);
 
     label.appendChild(radio);
     label.appendChild(textSpan);

@@ -529,11 +529,11 @@ $string['courseai_review_confirm'] = 'Create course';
 // =====================================================================
 
 // Interpreted-feedback proposals (single-choice summaries).
-$string['proposal_add_section'] = 'Add a new section at {$a->position}: {$a->instruction}';
+$string['proposal_add_section'] = 'Add a new section at {$a->position}';
 $string['proposal_delete_section'] = 'Delete section(s): {$a->names}';
 $string['proposal_reorder_sections'] = 'Reorder the sections to: {$a->names}';
 $string['proposal_replan_section'] = 'Regenerate section(s) {$a->names}: {$a->instruction}';
-$string['proposal_add_activity'] = 'Add a new activity at {$a->position}: {$a->instruction}';
+$string['proposal_add_activity'] = 'Add a new activity at {$a->position}';
 $string['proposal_delete_activity'] = 'Delete activity(ies): {$a->names}';
 $string['proposal_reorder_activities'] = 'Reorder the activities to: {$a->names}';
 $string['proposal_replan_activity'] = 'Regenerate activity(ies) {$a->names}: {$a->instruction}';
@@ -652,7 +652,7 @@ $string['failed_wiki_structure'] = 'Failed to plan Wiki structure';
 $string['failed_workshop_params'] = 'Failed to generate Workshop parameters';
 
 // Proposals UI — free-text feedback interpretation.
-$string['courseai_proposals_title'] = 'I understood your request like this — pick one:';
+$string['courseai_proposals_title'] = 'Here is what I understood. Pick the option you want:';
 $string['courseai_proposals_clarification_label'] = 'I need a bit more detail';
 $string['courseai_proposals_other_label'] = 'Something else';
 $string['courseai_proposals_other_placeholder'] = 'Describe what you want instead…';

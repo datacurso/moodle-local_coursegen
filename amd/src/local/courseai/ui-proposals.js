@@ -57,6 +57,7 @@ export const createProposalsUi = (deps) => {
      * @returns {void}
      */
     const highlightAffected = (targetIds, destructive) => {
+        let firstEl = null;
         (targetIds || []).forEach((id) => {
             // Scope to the CENTER preview only — never the left checklist
             // (.courseai-checklist-item also carries data-section-id and would
@@ -69,8 +70,16 @@ export const createProposalsUi = (deps) => {
                 if (destructive) {
                     el.classList.add(AFFECTED_DESTRUCTIVE_CLASS);
                 }
+                if (!firstEl) {
+                    firstEl = el;
+                }
             });
         });
+        // Bring the affected element into view so the user actually sees what the
+        // selected proposal will change in the center preview.
+        if (firstEl) {
+            firstEl.scrollIntoView({block: 'center', inline: 'nearest', behavior: 'smooth'});
+        }
     };
 
     const clear = () => {
