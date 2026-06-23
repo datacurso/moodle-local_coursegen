@@ -138,7 +138,7 @@ export const handleError = async(data, ctx) => {
 export const handleReviewNeeded = async(data, ctx) => {
     const {
         state, stepsUi, planningUi, detailedUi, proposalsUi, texts, emitLog,
-        ensureStreamContentVisible, hideStreamBar, setCompactChatState, deps, closeStream,
+        ensureStreamContentVisible, hideStreamBar, closeStream,
     } = ctx;
 
     state.isStreaming = false;
@@ -185,7 +185,10 @@ export const handleReviewNeeded = async(data, ctx) => {
     if (proposalsUi && typeof proposalsUi.renderProposals === 'function') {
         proposalsUi.renderProposals(data);
     }
-    setCompactChatState(deps, 'enabled');
+    // Do NOT enable/show the composer here: at review the decision card owns the
+    // bottom slot, and showReviewActions hides the composer. Showing it again would
+    // stack two input boxes. The composer reappears only when the user clicks
+    // "Adjust" (the adjust handler calls setCompactChatState 'enabled').
     // review_needed is a terminal pause — close so EventSource does NOT auto-reconnect.
     closeStream();
 };

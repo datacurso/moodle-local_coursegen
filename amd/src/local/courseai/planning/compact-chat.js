@@ -124,8 +124,17 @@ export const setCompactChatState = (deps, mode) => {
             }
             break;
 
-        case 'enabled':
-            compactChatCard.style.display = 'block';
+        case 'enabled': {
+            // While the decision card owns the bottom slot (review state), keep the
+            // composer hidden so the two input boxes never stack. Any caller that
+            // requests 'enabled' during review (a buffered stream 'done', etc.) still
+            // re-enables the controls, but the field stays hidden. It reappears when
+            // "Adjust" hides the card first (the adjust handler hides the overlay
+            // before calling 'enabled').
+            const decisionOverlay = document.getElementById('cgDecisionOverlay');
+            const decisionVisible = decisionOverlay
+                && window.getComputedStyle(decisionOverlay).display !== 'none';
+            compactChatCard.style.display = decisionVisible ? 'none' : 'block';
             compactChatCard.classList.remove('compact-chat-card--disabled');
             if (compactPromptInput) {
                 compactPromptInput.classList.remove('compact-controls--disabled');
@@ -161,6 +170,7 @@ export const setCompactChatState = (deps, mode) => {
                 state.isStreaming = false;
             }
             break;
+        }
 
         case 'reset':
         default:
