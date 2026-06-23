@@ -28,6 +28,7 @@ import {buildActivityDetailContent} from './detail-content';
 import {recalculateEntryImageCount, setImageBadge, updateDetailedHeaderStats} from './badges';
 import {buildActivityItem, buildActivityActionControls, attachSkeletonProgress} from './activity-dom';
 import {createDetailedSectionRow} from './section-row';
+import {removeTransientActivityPlaceholders} from './pending';
 import {activityPurpose} from './icons';
 
 export {clearSectionEntries} from './activity-state';
@@ -70,6 +71,10 @@ export const createDetailedActivityRow = (ctx, {sectionId, activityId, activityT
 
     wrap.appendChild(item);
     wrap.appendChild(activityPanelApi.panel);
+
+    // A genuinely-new real-UUID row is being rendered: drop any transient apply
+    // placeholder in this section so the shimmer is replaced, never duplicated.
+    removeTransientActivityPlaceholders(bodyEl);
 
     // Insert before the add-activity wrap (last child of cmlist when present).
     const addWrap = bodyEl.querySelector('.dp-add-activity-wrap');

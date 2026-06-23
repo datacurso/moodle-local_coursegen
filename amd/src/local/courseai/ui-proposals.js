@@ -31,11 +31,16 @@ const BLOCK_ID = 'cgFeedProposals';
 /**
  * Create the proposals UI controller.
  *
- * @param {Object} deps
+ * @param {Object}   deps
+ * @param {Object}   deps.texts
+ * @param {Function} deps.runPlanAction
+ * @param {Function} [deps.emitLog]
+ * @param {Object}   [deps.detailedUi] - Detailed renderer; used to skeleton the
+ *                                       proposal's target the moment apply fires.
  * @returns {{ renderProposals: Function, clear: Function }}
  */
 export const createProposalsUi = (deps) => {
-    const {texts, runPlanAction, emitLog} = deps;
+    const {texts, runPlanAction, emitLog, detailedUi} = deps;
 
     const log = (params) => { if (typeof emitLog === 'function') { emitLog(params); } };
 
@@ -271,6 +276,20 @@ export const createProposalsUi = (deps) => {
                 const truncated = summaryText.length > 80 ? summaryText.slice(0, 80) + '…' : summaryText;
                 log({actor: 'user', kind: 'info',
                     message: (texts.courseai_log_proposal_applied || 'You applied: {$a}').replace('{$a}', truncated)});
+                // Client-driven skeleton: put the loading shimmer on EXACTLY the
+                // element this proposal affects right now, before the keepPlan
+                // re-stream (which suppresses structural skeletons) reopens.
+                if (detailedUi && typeof detailedUi.markProposalTargetPending === 'function') {
+                    let intent = null;
+                    try {
+                        intent = JSON.parse(selected.dataset.intent || 'null');
+                    } catch (e) {
+                        intent = null;
+                    }
+                    if (intent) {
+                        detailedUi.markProposalTargetPending(intent);
+                    }
+                }
                 await sendAction(block, {action: 'execute_proposal', target_ids: [selected.value]});
             }
         });
