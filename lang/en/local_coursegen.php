@@ -673,6 +673,7 @@ $string['courseai_resize_panels'] = 'Resize panels';
 $string['courseai_log_label'] = 'Activity';
 $string['courseai_log_user_request'] = 'You: {$a}';
 $string['courseai_log_ai_section'] = 'AI planned section: {$a}';
+$string['courseai_log_ai_planned_structure'] = 'Planned the course structure';
 $string['courseai_log_deleted_section'] = 'You deleted section: {$a}';
 $string['courseai_log_deleted_activity'] = 'You deleted activity: {$a}';
 $string['courseai_log_regenerated_section'] = 'You regenerated section: {$a}';

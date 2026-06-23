@@ -173,7 +173,6 @@ const STRING_KEYS = [
     'courseai_resize_panels',
     'courseai_log_label',
     'courseai_log_user_request',
-    'courseai_log_ai_section',
     'courseai_log_deleted_section',
     'courseai_log_deleted_activity',
     'courseai_log_regenerated_section',
@@ -194,6 +193,7 @@ const STRING_KEYS = [
     'courseai_log_reordered_sections',
     'courseai_log_reordered_activities',
     'courseai_log_reordered_activities_generic',
+    'courseai_log_ai_planned_structure',
 ];
 
 /**
