@@ -532,13 +532,13 @@ $string['courseai_review_confirm'] = 'Create course';
 $string['proposal_add_section'] = 'Add a new section at {$a->position}';
 $string['proposal_delete_section'] = 'Delete section(s): {$a->names}';
 $string['proposal_reorder_sections'] = 'Reorder the sections to: {$a->names}';
-$string['proposal_replan_section'] = 'Regenerate section(s) {$a->names}: {$a->instruction}';
+$string['proposal_replan_section'] = 'Regenerate section(s) {$a->names}';
 $string['proposal_add_activity'] = 'Add a new activity to {$a->section} at {$a->position}';
 $string['proposal_delete_activity'] = 'Delete activity(ies): {$a->names}';
 $string['proposal_reorder_activities'] = 'Reorder the activities to: {$a->names}';
-$string['proposal_replan_activity'] = 'Regenerate activity(ies) {$a->names}: {$a->instruction}';
-$string['proposal_full_regeneration'] = 'Rebuild the WHOLE course structure (previous adjustments are lost): {$a->instruction}';
-$string['proposal_adjust_all_details'] = 'Regenerate every activity\'s content, keeping the sections: {$a->instruction}';
+$string['proposal_replan_activity'] = 'Regenerate activity(ies) {$a->names}';
+$string['proposal_full_regeneration'] = 'Rebuild the WHOLE course structure (previous adjustments are lost)';
+$string['proposal_adjust_all_details'] = 'Regenerate every activity\'s content, keeping the sections';
 
 // Planning pipeline status.
 $string['detecting_activity_types'] = 'Detecting activity types from user instructions...';
