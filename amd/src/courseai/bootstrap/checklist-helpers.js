@@ -200,10 +200,19 @@ export const makeChecklistHelpers = ({state, elements, texts}) => {
             checklist.setAttribute('data-round', String(roundData.round));
         }
 
-        const label = document.createElement('span');
-        label.className = 'courseai-checklist-label';
-        label.textContent = texts.courseai_checklist_label;
-        checklist.appendChild(label);
+        const head = document.createElement('div');
+        head.className = 'cg-group-head';
+        const avatar = document.createElement('span');
+        avatar.className = 'cg-group-avatar';
+        avatar.setAttribute('aria-hidden', 'true');
+        avatar.textContent = '✨';
+        const groupTitle = document.createElement('span');
+        groupTitle.className = 'cg-group-title';
+        groupTitle.textContent = texts.courseai_log_ai_planned_structure
+            || 'Planned the course structure';
+        head.appendChild(avatar);
+        head.appendChild(groupTitle);
+        checklist.appendChild(head);
 
         const list = document.createElement('ul');
         list.className = 'courseai-checklist-list';

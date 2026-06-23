@@ -43,10 +43,19 @@ export const getOrCreateRoundChecklist = (elements, currentRound, texts) => {
     list.className = 'courseai-checklist-list';
     container.appendChild(list);
 
-    const label = document.createElement('span');
-    label.className = 'courseai-checklist-label';
-    label.textContent = texts.courseai_checklist_label;
-    container.insertBefore(label, list);
+    const head = document.createElement('div');
+    head.className = 'cg-group-head';
+    const avatar = document.createElement('span');
+    avatar.className = 'cg-group-avatar';
+    avatar.setAttribute('aria-hidden', 'true');
+    avatar.textContent = '✨';
+    const title = document.createElement('span');
+    title.className = 'cg-group-title';
+    title.textContent = texts.courseai_log_ai_planned_structure
+        || 'Planned the course structure';
+    head.appendChild(avatar);
+    head.appendChild(title);
+    container.insertBefore(head, list);
 
     const roundEl = elements.adjustmentHistory
         ? elements.adjustmentHistory.querySelector(`.courseai-round[data-round="${currentRound}"]`)
