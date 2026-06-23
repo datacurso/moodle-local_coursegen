@@ -149,19 +149,15 @@
 /* ─── SECTION CHECKLIST ───────────────────────────────────────────────── */
 .courseai-checklist {
   background: var(--card);
-  border-radius: 10px;
-  padding: 12px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius, 0.75rem);
+  padding: 12px 14px;
   font-size: 13px;
 }
 
+/* Legacy uppercase label hidden in favour of .cg-group-head (§7.1 redesign). */
 .courseai-checklist-label {
-  display: block;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .05em;
-  text-transform: uppercase;
-  color: var(--muted-fg);
-  margin-bottom: 8px;
+  display: none;
 }
 
 .courseai-checklist-list {

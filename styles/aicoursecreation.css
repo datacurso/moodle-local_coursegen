@@ -2622,18 +2622,37 @@ svg { display: block; flex-shrink: 0; }
   line-height: 1.4;
 }
 
-/* §7.1 — the section checklist is a compact RESULT CARD inside the AI planning
-   turn, not a separate fixed section. Faint card, ✨ marker, sits in the thread. */
+/* §7.1 — the section checklist is a grouped assistant turn block in the thread.
+   Full-width flat card aligned with AI turns; avatar header + section list. */
 .cg-thread-checklist {
   margin-top: 6px;
-  margin-left: 22px;
-  padding: 10px 12px;
+  padding: 12px 14px;
   background: var(--card, #fff);
-  border: 1px solid var(--border, hsl(215 20% 90%));
-  border-radius: 12px;
+  border: 1px solid var(--border, hsl(215 20% 88%));
+  border-radius: var(--radius, 0.75rem);
 }
 .cg-thread-checklist .courseai-checklist-list {
   gap: 6px;
+}
+
+/* Grouped-turn header: ✨ avatar + title row */
+.cg-group-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.cg-group-avatar {
+  font-size: 15px;
+  line-height: 1;
+  flex-shrink: 0;
+}
+.cg-group-title {
+  font-weight: 600;
+  font-size: 13px;
+  color: var(--fg);
+  line-height: 1.4;
 }
 
 /* ─── Compact chat card (planning sidebar regenerate panel) ───────────── */
@@ -2896,7 +2915,7 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
 .cg-log {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 14px;
 }
 
 /* The two feed halves sit in one visual thread; keep the rhythm continuous. */
@@ -2975,7 +2994,7 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
   flex: 1;
   min-width: 0;
   font-size: 13px;
-  line-height: 1.5;
+  line-height: 1.55;
   color: var(--fg);
   white-space: pre-wrap;
   overflow-wrap: anywhere;
@@ -2989,6 +3008,14 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
   color: var(--muted-fg);
   white-space: nowrap;
   opacity: .7;
+  transition: opacity var(--t-fast, 120ms);
+}
+/* On user turns the timestamp is tiny and muted — only reveal fully on hover. */
+.cg-log-entry--turn-user .cg-log-ts {
+  opacity: 0;
+}
+.cg-log-entry--turn-user:hover .cg-log-ts {
+  opacity: .6;
 }
 
 /* ── Long-message fade + expand (§7.1) ─────────────────────────────────── */
@@ -3059,6 +3086,8 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
   .cg-log-entry { transition: none; }
   .cg-thread { scroll-behavior: auto; }
   .cg-log-toggle-chevron { transition: none; }
+  .cg-log-spin { animation: none; }
+  .cg-log-ts { transition: none; }
 }
 
 /* ─── Scroll architecture: ONE scroll per column, pinned chat, integrated bars ── */
