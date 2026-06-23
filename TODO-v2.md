@@ -399,3 +399,97 @@ cualquier parte, en detalle.
   - **e2e** (reload sesión 157, Chromium propio): cero errores JS, sin « », regenerar actividad = +1
     turno con tipo ("Page: …"), regenerar sección = +1 turno con "Section: …", feedback muestra el
     indicador "Analyzing your request…". Captura `/tmp/cg-ui/chat-sweep.png`.
+
+### 7.4 Réplica de la estética de **V0 de Vercel** (modo CLARO) — POR IMPLEMENTAR (PEDIDO FIRME 2026-06-22)
+
+> **Referencia EXACTA: el panel derecho de chat de V0 de Vercel** (capturas aportadas por el usuario,
+> modo claro — **el plugin SOLO tendrá modo claro**). El usuario quiere que el panel IZQUIERDO se vea
+> "magistral" como V0: tan bien organizado y limpio. Decisión confirmada: **paleta CLARA adaptada a la
+> anatomía/tamaños/organización de V0** (no oscuro), cohesionada con el centro claro de Moodle.
+> Rama de trabajo: `feat/chat-polish-v2`.
+
+#### 7.4.1 Tokens de diseño (modo claro, extraídos de las capturas V0)
+- Fondo del panel: **blanco** `#ffffff`.
+- Texto primario: `#18181b` (casi negro). Texto **muteado** (pasos, "Thought for", timestamps,
+  secundario): `#8a8a8a`–`#a1a1aa`.
+- Tarjeta del **mensaje de usuario**: fondo `#f4f4f5` (zinc-100), **sin borde** (o hairline `#ececee`
+  muy tenue), radio **16px**, padding ~`16px 20px`.
+- Línea/bordes sutiles (timeline, separadores, composer): `#e4e4e7` (zinc-200), 1px.
+- Acento (botón primario, foco): el `$primary` de Boost (azul) — UN solo acento.
+- Tipografía: heredar la de la página; lo crítico son **tamaños y espaciado**: cuerpo ~15px,
+  line-height **1.6**, gap entre turnos cómodo (~20–24px), gap entre párrafos ~10–12px.
+
+#### 7.4.2 Anatomía del hilo (mapear a nuestros elementos)
+- **Turno de USUARIO** (`.cg-log-entry--turn-user`): tarjeta `#f4f4f5` radio 16px, ancho casi completo
+  (NO burbuja chica a la derecha). Si es largo → **fade al color de la tarjeta** + enlace centrado
+  **"Show full message"** (renombrar el actual "Show more" del turno de usuario) → expande. (Ya existe
+  `wireFadeExpand`; ajustar etiqueta y el degradado para que termine en `#f4f4f5`.)
+- **Turno del ASISTENTE** (`.cg-log-entry--turn-ai`): **plano, sin tarjeta**, texto primario, markdown,
+  line-height 1.6, párrafos espaciados. El ✨ actual pasa a ser un avatar/ícono sutil al inicio del
+  bloque (no en cada línea).
+- **"Thought for Xs" / "Working"**: línea con ícono muteado + texto gris (reusar
+  `#cgFeedbackThinking`/`showWorkingIndicator`; restyle al look V0: ícono pequeño + texto `#8a8a8a`,
+  sin barra de color).
+- **STEP GROUP (pasos del agente)** = el checklist agrupado (`#courseaiChecklist` / `.cg-group-head`
+  + `.courseai-checklist-list`). Restyle a V0:
+  - **Línea de timeline vertical** a la izquierda (1px `#e4e4e7`) que conecta los pasos.
+  - Cada paso (`.courseai-checklist-item`): ícono pequeño muteado + label gris `#8a8a8a` ~14–15px.
+    Estados: cargando = spinner sutil; hecho = ícono check muteado (NADA de verde fuerte).
+  - **Cabecera colapsable** con **chevron a la izquierda** + título + conteo opcional ("• N
+    secciones"), estilo "⌄ Explore • 4 Files". Click colapsa/expande la lista (Bootstrap collapse o
+    toggle propio). Por defecto expandido.
+- **Footer de turno** (opcional, baja prioridad): "Worked for Xs" + timestamp + "⋯" muteados bajo un
+  turno de IA. Implementar solo si no arriesga el resto.
+
+#### 7.4.3 Composer estilo V0 (= `#compactChatCard`, `chatui.css`)
+- Contenedor redondeado **radio 16px**, borde `#e4e4e7` 1px, fondo blanco, sombra mínima; en foco,
+  anillo de acento sutil.
+- Textarea sin borde propio (el borde lo da el contenedor), placeholder muteado.
+- **Fila inferior**: a la izquierda "+" (adjuntar/acciones, ghost circular) + selector de modelo tipo
+  pill ("◉ Modelo ⌄" — mapear a lang/imágenes/directrices que ya existen, agrupados de forma limpia);
+  a la derecha **botón de envío circular** con flecha ▲ (relleno acento cuando hay texto; el actual
+  `#btnCompactRegenerate`/enviar). Reorganizar la toolbar actual (que tiene muchos botones sueltos)
+  para que respire como V0.
+
+#### 7.4.4 Overlay de DECISIÓN que TAPA el chat (pedido explícito) — el comportamiento clave
+> En V0, cuando el agente necesita que el usuario decida, **oculta el chat** y muestra un **card de
+> preguntas** centrado (opciones tipo radio + "Skip"/"Next" + "1 of N") para que el usuario se enfoque.
+> El usuario quiere ESO para (a) la **aceptación del plan** y (b) las **propuestas/preguntas** de la IA.
+- Cuando llega `review_needed` (plan listo para revisar):
+  - Mostrar en el **panel IZQUIERDO** un **overlay** que **cubre TODO el chat** (hilo + input ocultos),
+    presentando la decisión: **"Accept"** (primario) / **"Adjust"** (secundario). (Mover/relocar
+    `#planActions`+`#btnApprove` —hoy en el CENTRO, `templates/courseai_page.mustache:463`,
+    `planning/review-actions.js`— a este overlay izquierdo; el centro ya no muestra acciones.)
+  - Si hay **propuestas/clarificación** (`data.proposals`, hoy `#cgFeedProposals` vía `ui-proposals.js`
+    en el feed izq): renderizarlas DENTRO del overlay como el **card de preguntas V0** (opciones radio,
+    "Something else" solo al activarse, botones apply/dismiss o Skip/Next). El overlay tapa el chat.
+  - **"Accept"** → flujo actual de aceptar (genera el curso); ocultar overlay.
+  - **"Adjust"** → ocultar overlay y **recién ahí mostrar el input** (`#compactChatCard` →
+    `setCompactChatState('enabled')`) para que el usuario escriba el ajuste. Al enviar, vuelve el hilo.
+- Estética del overlay/card: **copiar tamaños y estilo del card de preguntas de V0** (radio 12–16px,
+  borde `#e4e4e7`, padding ~20px, opciones con círculo + label, footer con conteo + botones).
+- Implementación sugerida: un contenedor `.cg-decision-overlay` posicionado **absolute/sticky** sobre
+  `.courseai-context-chat` (que ya es flex column), con `inset:0` y fondo blanco; togglear visibilidad
+  por estado. Mientras está visible: `#courseaiChatScroll` y `#compactChatCard` ocultos (o el overlay
+  encima con fondo opaco). En `accept`/`adjust` se desmonta.
+
+#### 7.4.5 Archivos a tocar
+- CSS: `styles/aicoursecreation.css` (bloques `.cg-log-entry*` 2933–3068, `.cg-thread-checklist`/
+  `.cg-group-head` 2627–2656, `.plan-actions`/`.btn-plan-approve` 825–866, `.cg-feed-proposals`
+  2501–2548) y `styles/chatui.css` (`.compact-chat-card`/toolbar 283–428).
+- Markup: `templates/courseai_page.mustache` (relocar `#planActions` al panel izq / crear contenedor
+  de overlay dentro de `.courseai-context-chat`; reorganizar la toolbar del composer).
+- JS: `ui/log.js` (etiqueta "Show full message" + fade al `#f4f4f5`), `ui/feedback-progress.js`
+  (restyle indicador), `planning/review-actions.js` (mostrar overlay izq en vez de acciones centro),
+  `ui-proposals.js` (render dentro del overlay), `planning/compact-chat.js` (mostrar input solo en
+  "Adjust"), `checklist-helpers.js` (cabecera colapsable + timeline en el step-group), `actions/feedback.js`
+  (wire de accept/adjust con el overlay). Lang: etiquetas nuevas en `lang/en` + `i18n.js` KEYS.
+- **Verificación obligatoria**: `npx grunt amd --root=local/coursegen`, reload sesión 157 con
+  **Chromium propio de puppeteer** (`/tmp/cg-ui/.chromium-cache`, NUNCA chrome del sistema), cero
+  errores JS, capturas del panel izq comparadas contra las capturas V0. NO push/merge hasta validar.
+
+#### 7.4.6 Estado
+- [x] 7.4.2 Anatomía del hilo (turnos usuario/IA, step-group con timeline + colapsable) — HECHO (feat/chat-polish-v2 b1fc67d + 6b1ab2f).
+- [x] 7.4.3 Composer estilo V0 (botón circular ▲, controles secundarios ghost a la izquierda) — HECHO (f2e4bd6).
+- [x] 7.4.4 Overlay de decisión (accept/adjust + propuestas) que tapa el chat — HECHO (712f36a; ui/decision-overlay.js singleton, #cgDecisionOverlay dentro de #courseaiContextChat).
+  - Verificado con Chromium propio de puppeteer (sesión 157): 0 errores JS, hilo 7 turnos, tarjeta usuario #f4f4f5/16px, timeline + colapsable OK, composer circular 36px/50%, overlay Accept/Adjust presente. Capturas: /tmp/cg-ui/v0-thread.png, v0-composer.png, v0-overlay.png.
