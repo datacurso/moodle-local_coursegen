@@ -192,6 +192,25 @@
       </div>
 
       <div class="courseai-context-chat" id="courseaiContextChat">
+
+        <!-- Decision overlay (WU4): covers the chat scroll area when review_needed fires.
+             Shown/hidden by decision-overlay.js; markup is static so JS only toggles display. -->
+        <div class="cg-decision-overlay" id="cgDecisionOverlay" style="display:none" role="dialog"
+             aria-modal="true" aria-label="{{#str}}courseai_decision_title, local_coursegen{{/str}}">
+          <div class="cg-decision-card">
+            <p class="cg-decision-title">{{#str}}courseai_decision_title, local_coursegen{{/str}}</p>
+            <div class="cg-decision-body" id="cgDecisionBody"></div>
+            <div class="cg-decision-actions">
+              <button class="cg-decision-btn cg-decision-btn--accept" id="cgDecisionAccept" type="button">
+                {{#str}}courseai_decision_accept, local_coursegen{{/str}}
+              </button>
+              <button class="cg-decision-btn cg-decision-btn--adjust" id="cgDecisionAdjust" type="button">
+                {{#str}}courseai_decision_adjust, local_coursegen{{/str}}
+              </button>
+            </div>
+          </div>
+        </div>
+
         <div class="courseai-chat-scroll cg-thread" id="courseaiChatScroll">
           <div class="courseai-round" data-round="0">
             <!-- Conversation thread (§7.1): one continuous chronological feed.
@@ -209,9 +228,11 @@
                  turn. The data hooks (data-section-id/data-round/data-remaining on
                  each <li>) are consumed by the streaming handlers — do not remove. -->
             <div class="courseai-checklist cg-thread-checklist hidden" id="courseaiChecklist">
-              <div class="cg-group-head">
+              <div class="cg-group-head" role="button" tabindex="0" aria-expanded="true">
+                <span class="cg-group-chevron" aria-hidden="true">⌄</span>
                 <span class="cg-group-avatar" aria-hidden="true">✨</span>
                 <span class="cg-group-title">{{#str}}courseai_log_ai_planned_structure, local_coursegen{{/str}}</span>
+                <span class="cg-group-count"></span>
               </div>
               <ul class="courseai-checklist-list" id="courseaiChecklistList"></ul>
             </div>
@@ -329,10 +350,9 @@
 
             <div class="compact-toolbar-right">
               <button class="btn-compact-regenerate" id="btnCompactRegenerate" type="button" aria-label="{{#str}}courseai_btn_regenerate, local_coursegen{{/str}}" title="{{#str}}courseai_btn_regenerate, local_coursegen{{/str}}">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"/>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 19V5M5 12l7-7 7 7"/>
                 </svg>
-                {{#str}}courseai_btn_regenerate, local_coursegen{{/str}}
               </button>
               <button class="btn-stop-resume btn-stop" id="btnStopExec" type="button"
                       style="display:none"

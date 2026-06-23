@@ -696,3 +696,7 @@ $string['courseai_log_user_approved'] = 'You approved the plan';
 $string['courseai_log_reordered_sections'] = 'You reordered the sections';
 $string['courseai_log_reordered_activities'] = 'You reordered activities in: {$a}';
 $string['courseai_log_reordered_activities_generic'] = 'You reordered the activities';
+$string['courseai_checklist_section_count'] = '{$a} sections';
+$string['courseai_decision_title'] = 'Review your course plan';
+$string['courseai_decision_accept'] = 'Accept';
+$string['courseai_decision_adjust'] = 'Adjust';

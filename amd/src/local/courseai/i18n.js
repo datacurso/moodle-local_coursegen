@@ -194,6 +194,10 @@ const STRING_KEYS = [
     'courseai_log_reordered_activities',
     'courseai_log_reordered_activities_generic',
     'courseai_log_ai_planned_structure',
+    'courseai_checklist_section_count',
+    'courseai_decision_title',
+    'courseai_decision_accept',
+    'courseai_decision_adjust',
 ];
 
 /**

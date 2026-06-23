@@ -45,6 +45,13 @@ export const getOrCreateRoundChecklist = (elements, currentRound, texts) => {
 
     const head = document.createElement('div');
     head.className = 'cg-group-head';
+    head.setAttribute('role', 'button');
+    head.setAttribute('tabindex', '0');
+    head.setAttribute('aria-expanded', 'true');
+    const chevron = document.createElement('span');
+    chevron.className = 'cg-group-chevron';
+    chevron.setAttribute('aria-hidden', 'true');
+    chevron.textContent = '⌄';
     const avatar = document.createElement('span');
     avatar.className = 'cg-group-avatar';
     avatar.setAttribute('aria-hidden', 'true');
@@ -53,8 +60,12 @@ export const getOrCreateRoundChecklist = (elements, currentRound, texts) => {
     title.className = 'cg-group-title';
     title.textContent = texts.courseai_log_ai_planned_structure
         || 'Planned the course structure';
+    const countSpan = document.createElement('span');
+    countSpan.className = 'cg-group-count';
+    head.appendChild(chevron);
     head.appendChild(avatar);
     head.appendChild(title);
+    head.appendChild(countSpan);
     container.insertBefore(head, list);
 
     const roundEl = elements.adjustmentHistory
