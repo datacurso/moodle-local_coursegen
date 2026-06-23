@@ -2696,34 +2696,10 @@ svg { display: block; flex-shrink: 0; }
   gap: 2px;
 }
 
-.compact-toolbar-right {
-  display: flex;
-  align-items: center;
-}
-
-.btn-compact-regenerate {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 14px;
-  height: 32px;
-  border-radius: 7px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--muted-fg);
-  font-size: 12.5px;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-  transition: border-color .12s, color .12s, background .12s;
-  line-height: 1;
-}
-.btn-compact-regenerate:hover:not(:disabled) {
-  border-color: hsl(215, 20%, 72%);
-  color: var(--fg);
-  background: var(--muted);
-}
-.btn-compact-regenerate:disabled { opacity: .4; cursor: not-allowed; }
+/* NOTE: the send button (.btn-compact-regenerate) and .compact-toolbar-right are
+   styled canonically in chatui.css (circular V0 send button). The old rounded-rect
+   pill rules that used to live here were removed because they conflicted by load
+   order and produced a weird half-rect/half-red button. */
 
 /* ─── Stop / Resume execution-control buttons ────────────────────────── */
 .btn-stop-resume {

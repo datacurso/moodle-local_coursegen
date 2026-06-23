@@ -409,21 +409,26 @@ body.cg-plan-reviewed .courseai-checklist-check svg.check-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
+  width: 34px;
+  height: 34px;
   padding: 0;
   flex-shrink: 0;
-  color: var(--primary-fg, #fff);
-  background: var(--muted-fg);
-  border: none;
+  /* Idle: a discreet white circle with a hairline border and a grey arrow, so it
+     reads clearly on the grey toolbar without shouting (V0). */
+  color: var(--muted-fg);
+  background: var(--card);
+  border: 1px solid var(--border);
   border-radius: 50%;
   cursor: pointer;
   font-family: inherit;
-  transition: background .15s, opacity .12s, transform .1s;
+  transition: background .15s, color .15s, border-color .15s, opacity .12s, transform .1s;
 }
 
+/* Ready (has text): fill with the plugin accent + white arrow. */
 .btn-compact-regenerate.is-ready {
+  color: var(--primary-fg, #fff);
   background: var(--primary, #6b4eff);
+  border-color: var(--primary, #6b4eff);
 }
 
 .btn-compact-regenerate:hover {
