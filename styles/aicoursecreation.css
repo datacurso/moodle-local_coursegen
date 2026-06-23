@@ -2655,46 +2655,10 @@ svg { display: block; flex-shrink: 0; }
   line-height: 1.4;
 }
 
-/* ─── Compact chat card (planning sidebar regenerate panel) ───────────── */
-.compact-chat-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-card);
-  overflow: hidden;
-}
-
-.compact-prompt-textarea {
-  display: block;
-  width: 100%;
-  min-height: 68px;
-  padding: 12px 14px;
-  font-size: 13px;
-  line-height: 1.55;
-  font-family: inherit;
-  color: var(--fg);
-  background: var(--card);
-  border: none;
-  outline: none;
-  resize: none;
-}
-.compact-prompt-textarea::placeholder { color: hsl(215, 20%, 65%); }
-
-.compact-chat-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 7px 10px;
-  border-top: 1px solid var(--border);
-  background: hsl(215, 25%, 97%);
-}
-
-.compact-toolbar-left {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
+/* NOTE: the compact chat card, textarea, toolbar and toolbar-left are styled
+   canonically in chatui.css (seamless Claude-style composer). The duplicate rules
+   that used to live here were removed — their toolbar had a border-top divider and
+   a grey background strip that made the composer look like two stacked boxes. */
 
 /* NOTE: the send button (.btn-compact-regenerate) and .compact-toolbar-right are
    styled canonically in chatui.css (circular V0 send button). The old rounded-rect
@@ -3191,6 +3155,9 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
 .courseai-workspace.is-planning .compact-chat-card {
   flex: 0 0 auto;
   margin-top: 8px;
+  /* The scroll reserves 4px on the right for its scrollbar; match that so the
+     composer aligns with the message thread and never sits under the scrollbar. */
+  width: calc(100% - 4px);
 }
 
 /* Right column: the single scroll container for the whole preview. */

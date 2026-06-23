@@ -294,7 +294,8 @@ body.cg-plan-reviewed .courseai-checklist-check svg.check-icon {
 /* ─── COMPACT CHAT CARD ───────────────────────────────────────────── */
 .compact-chat-card {
   background: var(--card);
-  padding: 8px 10px 8px 14px;
+  /* Seamless Claude-style composer: one card, even padding, no inner divider. */
+  padding: 10px 12px 8px;
   margin-top: auto;
   transition: border-color .15s, box-shadow .15s, opacity .2s, filter .2s;
   width: 100%;
@@ -329,9 +330,11 @@ body.cg-plan-reviewed .courseai-checklist-check svg.check-icon {
 .compact-prompt-textarea {
   display: block;
   width: 100%;
-  min-height: 48px;
+  min-height: 44px;
   max-height: 200px;
-  padding: 8px 4px 6px;
+  /* Horizontal inset matches the toolbar controls below so text and icons share
+     the same left edge (Claude). The card supplies the outer padding. */
+  padding: 4px 2px 8px;
   font-size: 14px;
   line-height: 1.55;
   font-family: inherit;
@@ -353,6 +356,10 @@ body.cg-plan-reviewed .courseai-checklist-check svg.check-icon {
   gap: 16px;
   flex-wrap: nowrap;
   min-width: 0;
+  /* No divider, no grey strip — the toolbar floats inside the single card (Claude). */
+  border: none;
+  background: transparent;
+  padding: 2px 0 0;
 }
 
 .compact-toolbar-left {
