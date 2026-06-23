@@ -71,8 +71,11 @@ export const getDecisionOverlay = (texts) => {
     }
 
     /**
-     * Show the overlay: makes the overlay visible and hides the scroll region.
-     * The compactChatCard is hidden so the composer does not float over the overlay.
+     * Show the decision card: it sits at the bottom of the chat column, in the
+     * composer's slot. ONLY the input field is replaced — the message thread above
+     * stays visible and scrollable (per the user's clarification: "tapar el chat"
+     * meant only the write field, not the messages). So the scroll region is left
+     * untouched; only the composer is hidden so the card takes its place.
      *
      * @returns {void}
      */
@@ -81,18 +84,18 @@ export const getDecisionOverlay = (texts) => {
             return;
         }
         overlay.style.display = 'flex';
-        if (chatScroll) {
-            chatScroll.style.visibility = 'hidden';
-        }
         if (compactChatCard) {
             compactChatCard.style.display = 'none';
+        }
+        // Keep the newest turn in view above the card.
+        if (chatScroll) {
+            chatScroll.scrollTop = chatScroll.scrollHeight;
         }
     };
 
     /**
-     * Hide the overlay and restore the scroll region and compact chat visibility.
-     * The compact chat display is not forced here — callers (review-actions, feedback)
-     * manage its state via setCompactChatState.
+     * Hide the decision card. The compact chat display is not forced here — callers
+     * (review-actions, feedback) manage its state via setCompactChatState.
      *
      * @returns {void}
      */
@@ -101,9 +104,6 @@ export const getDecisionOverlay = (texts) => {
             return;
         }
         overlay.style.display = 'none';
-        if (chatScroll) {
-            chatScroll.style.visibility = '';
-        }
     };
 
     /**

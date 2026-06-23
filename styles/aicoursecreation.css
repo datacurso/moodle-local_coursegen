@@ -3118,29 +3118,28 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
   position: relative;
 }
 
-/* ─── Decision overlay (WU4) ───────────────────────────────────────────── */
-/* Covers the entire left chat area with an opaque white surface. */
+/* ─── Decision card (WU4) ──────────────────────────────────────────────── */
+/* The plan-review decision sits at the BOTTOM of the chat column, in the
+   composer's slot — it replaces ONLY the input field, NOT the message thread,
+   which stays visible and scrollable above (like V0's question card). `order`
+   pins it last in the flex column; the composer is hidden while it shows. */
 .cg-decision-overlay {
-  position: absolute;
-  inset: 0;
-  z-index: 10;
-  background: var(--card);
+  order: 10;
+  flex: 0 0 auto;
+  margin-top: auto;
   display: flex;
-  align-items: center;
-  justify-content: center;
-  padding: 16px;
+  flex-direction: column;
 }
 
 .cg-decision-card {
   width: 100%;
-  max-width: 440px;
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: 16px;
-  padding: 20px;
+  padding: 18px;
   display: flex;
   flex-direction: column;
-  gap: 16px;
+  gap: 14px;
 }
 
 .cg-decision-title {
