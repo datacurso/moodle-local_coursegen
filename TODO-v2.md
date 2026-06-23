@@ -290,6 +290,14 @@ El subsistema actual (`detailed/section-dom.js`, `section-row.js`, `activity-dom
 > turno de usuario, turnos IA con ✨, checklist como tarjeta de resultado en el hilo, fade+expand en
 > mensajes largos (clamp 160px→expand), distinción sutil IA/usuario, sin rótulos INITIAL MESSAGE/
 > ACTIVITY/COURSE SECTIONS. Reconstrucción del hilo al reload extendida. Cero errores JS.
+>
+> **Rediseño agrupado aplicado (branch `feat/chat-polish-v2`, 2026-06-22):** eliminados los N turnos
+> planos "AI planned section: X" (uno por sección); el checklist `#courseaiChecklist` actúa ahora
+> como UN único turno de asistente agrupado con cabecera `.cg-group-head` (avatar ✨ +
+> `courseai_log_ai_planned_structure`). Al reload, `rebuildDecisionLog` ya no emite N turnos de
+> sección; hace visible el checklist directamente y deduplica mensajes humanos consecutivos
+> (compara con `lastEmitted`). Gap del log subido a 14px, line-height a 1.55, timestamp del
+> turno-usuario solo visible en hover.
 
 #### Spec original (referencia)
 **Pedido:** el panel lateral debe SENTIRSE como una **UI de chat moderno de agentes** (estilo Lovable,
@@ -353,7 +361,15 @@ matiz extra:
 - Enfoque de bajo riesgo (no pelear con el reconciliador): franja "insert-after" en el borde inferior
   de cada `.dp-activity-wrap`/`.activity`, visible solo en hover.
 
-### 7.3 Mensajes del chat: sin « », acción+instrucción en UN turno con tipo — HECHO (parcial)
+### 7.3 Mensajes del chat: sin « », acción+instrucción en UN turno con tipo — HECHO (parcial, server store PENDING)
+
+> **PENDING — almacén server-side de hilo:** los turnos de tipo "AI response" (contexto de
+> acción regenerar, aprobar, reordenar) NO están en el snapshot actual del servidor y no pueden
+> persistir completamente entre reloads sin un thread store server-side. Actualmente solo se
+> reconstruyen: el prompt inicial, el checklist agrupado de secciones y los mensajes humanos
+> posteriores. Los turnos de acción de IA (post-approve, post-regenerate, etc.) se pierden en
+> reload. Resolución completa requiere persistir el hilo completo en la BD (fuera de scope de esta
+> rama). Marcado como **PENDING** hasta que se implemente la persistencia server-side del hilo.
 **Pedido:** (a) quitar los guillemets « » de los mensajes; (b) el regenerar debe decir el TIPO de
 actividad; (c) la instrucción del usuario + la acción NO deben ser dos turnos sino UNO; (d) PRINCIPIO:
 en el chat se debe mostrar TODO lo que streamea el servidor y TODO lo que el usuario manda desde
