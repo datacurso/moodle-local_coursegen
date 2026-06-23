@@ -2702,6 +2702,10 @@ svg { display: block; flex-shrink: 0; }
   line-height: 1;
   flex-shrink: 0;
 }
+/* No glyph → no empty box / stray gap. */
+.cg-group-avatar:empty {
+  display: none;
+}
 .cg-group-title {
   font-weight: 600;
   font-size: 13px;

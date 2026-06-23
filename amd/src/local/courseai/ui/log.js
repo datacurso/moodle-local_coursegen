@@ -31,10 +31,10 @@ const KIND_CLASS = {
     neutral: 'cg-log-entry--neutral',
 };
 
-/** Actor icon rendered before the message text. */
+/** Actor icon rendered before the message text. AI turns carry no glyph. */
 const ACTOR_ICON = {
     user:    '👤',
-    ai:      '✨',
+    ai:      '',
     system:  '⚙️',
 };
 
@@ -188,12 +188,14 @@ export const createLog = ({container, actionContainer, isActionPhase}) => {
 
         const createdAt = Date.now();
         const kindClass = KIND_CLASS[kind] || KIND_CLASS.neutral;
-        const icon = ACTOR_ICON[actor] || ACTOR_ICON.system;
+        const icon = Object.prototype.hasOwnProperty.call(ACTOR_ICON, actor)
+            ? ACTOR_ICON[actor]
+            : ACTOR_ICON.system;
         const isUser = actor === 'user';
 
         // Each entry is a chat TURN (§7.1): user turns get a faint inset/border so
-        // you can tell who spoke; AI turns stay flat with their ✨ icon. The single
-        // thread is preserved — no opposed bubbles.
+        // you can tell who spoke; AI turns stay flat (no glyph). The single thread
+        // is preserved — no opposed bubbles.
         const entry = document.createElement('div');
         entry.className = 'cg-log-entry ' + kindClass
             + (isUser ? ' cg-log-entry--turn-user' : ' cg-log-entry--turn-ai');
@@ -206,10 +208,12 @@ export const createLog = ({container, actionContainer, isActionPhase}) => {
         const body = document.createElement('span');
         body.className = 'cg-log-body';
 
-        const iconSpan = document.createElement('span');
-        iconSpan.className = 'cg-log-actor';
-        iconSpan.setAttribute('aria-hidden', 'true');
-        iconSpan.textContent = icon;
+        const iconSpan = icon ? document.createElement('span') : null;
+        if (iconSpan) {
+            iconSpan.className = 'cg-log-actor';
+            iconSpan.setAttribute('aria-hidden', 'true');
+            iconSpan.textContent = icon;
+        }
 
         // The message text lives in its own clampable element so the fade + expand
         // control can measure and toggle just the body (not the icon/timestamp).
@@ -221,7 +225,9 @@ export const createLog = ({container, actionContainer, isActionPhase}) => {
         tsSpan.className = 'cg-log-ts';
         tsSpan.textContent = 'now';
 
-        body.appendChild(iconSpan);
+        if (iconSpan) {
+            body.appendChild(iconSpan);
+        }
         body.appendChild(msgSpan);
         body.appendChild(tsSpan);
 

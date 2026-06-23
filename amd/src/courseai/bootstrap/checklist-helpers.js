@@ -212,7 +212,6 @@ export const makeChecklistHelpers = ({state, elements, texts}) => {
         const avatar = document.createElement('span');
         avatar.className = 'cg-group-avatar';
         avatar.setAttribute('aria-hidden', 'true');
-        avatar.textContent = '✨';
         const groupTitle = document.createElement('span');
         groupTitle.className = 'cg-group-title';
         groupTitle.textContent = texts.courseai_log_ai_planned_structure

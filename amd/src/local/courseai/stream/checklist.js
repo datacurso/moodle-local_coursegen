@@ -55,7 +55,6 @@ export const getOrCreateRoundChecklist = (elements, currentRound, texts) => {
     const avatar = document.createElement('span');
     avatar.className = 'cg-group-avatar';
     avatar.setAttribute('aria-hidden', 'true');
-    avatar.textContent = '✨';
     const title = document.createElement('span');
     title.className = 'cg-group-title';
     title.textContent = texts.courseai_log_ai_planned_structure
