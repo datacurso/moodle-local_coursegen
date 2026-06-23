@@ -144,20 +144,25 @@ export const handleReviewNeeded = async(data, ctx) => {
     state.isStreaming = false;
     // The AI responded — drop the live "working" indicator.
     hideFeedbackThinking();
-    // Meaningful milestone: the AI finished this round and is awaiting review.
+    // The plan has settled: from now on log entries flow BELOW the section checklist.
+    // Set this BEFORE emitting the milestone so the AI's "review the plan" message
+    // lands AFTER the planned-structure group (chronological: plan first, then the
+    // prompt to review), not above it.
+    state.planEverReviewed = true;
+    // Meaningful milestone: the AI finished this round and is awaiting review. Phrased
+    // as the assistant talking to the user (first person, no dashes).
     if (typeof emitLog === 'function') {
         const hasProposals = Array.isArray(data.proposals) && data.proposals.length > 0;
         const message = hasProposals
-            ? ((texts && texts.courseai_log_ai_proposals_ready) || 'The assistant prepared suggestions for your review')
-            : ((texts && texts.courseai_log_ai_review_ready) || 'The assistant finished — review the plan');
+            ? ((texts && texts.courseai_log_ai_proposals_ready)
+                || 'I prepared a few suggestions for you. Review them and choose how you want to continue.')
+            : ((texts && texts.courseai_log_ai_review_ready)
+                || 'I finished planning your course. Take a look at the plan and tell me if you want any changes.');
         emitLog({actor: 'ai', kind: 'ai', message});
     }
     if (typeof ctx.onStreamEnd === 'function') {
         ctx.onStreamEnd();
     }
-    // The plan has settled at least once: from now on, user-action log entries flow
-    // BELOW the section checklist so the left panel reads as an organic downward chat.
-    state.planEverReviewed = true;
     ensureStreamContentVisible();
     if (typeof hideStreamBar === 'function') {
         hideStreamBar();
