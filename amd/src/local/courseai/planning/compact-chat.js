@@ -251,5 +251,20 @@ export const wireReadyToggle = (elements) => {
     };
 
     compactPromptInput.addEventListener('input', sync);
+
+    // Enter sends the free-text feedback (Shift+Enter inserts a newline), like any
+    // modern chat composer. Ignore when empty or while the send button is disabled
+    // (a stream is in flight).
+    compactPromptInput.addEventListener('keydown', (event) => {
+        if (event.key !== 'Enter' || event.shiftKey) {
+            return;
+        }
+        event.preventDefault();
+        if (btnCompactRegenerate.disabled || !compactPromptInput.value.trim()) {
+            return;
+        }
+        btnCompactRegenerate.click();
+    });
+
     sync();
 };

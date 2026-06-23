@@ -2547,6 +2547,60 @@ svg { display: block; flex-shrink: 0; }
   font-size: 12.5px;
 }
 
+/* ─── Proposals INSIDE the decision card — flat, no nested boxes ──────────
+   The decision card is already the single container, so the proposals block
+   must not be another card, the clarification must not be a tinted box, and
+   options are divider-separated rows (V0/Claude clarification style). */
+.cg-decision-overlay .cg-feed-proposals {
+  margin: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  gap: 10px;
+}
+.cg-decision-overlay .plan-proposals-clarification {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  gap: 4px;
+}
+.cg-decision-overlay .plan-proposals-clarification-label {
+  color: var(--muted-fg);
+}
+.cg-decision-overlay .plan-proposals-group {
+  gap: 0;
+  border-top: 1px solid var(--border);
+}
+.cg-decision-overlay .plan-proposal-card {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  border-bottom: 1px solid var(--border);
+  padding: 12px 4px;
+}
+.cg-decision-overlay .plan-proposal-card:hover,
+.cg-decision-overlay .plan-proposal-card:has(.plan-proposal-radio:checked) {
+  border-color: transparent;
+  border-bottom: 1px solid var(--border);
+  background: var(--muted);
+}
+.cg-decision-overlay .plan-proposal-other-wrap {
+  gap: 0;
+}
+.cg-decision-overlay .plan-proposal-card--other {
+  border-bottom: none;
+}
+/* Pencil affordance before "Something else", like the reference. */
+.cg-decision-overlay .plan-proposal-card--other .plan-proposal-summary::before {
+  content: '\270E\00a0';
+  color: var(--muted-fg);
+}
+.cg-decision-overlay .plan-proposal-other-textarea {
+  margin-top: 4px;
+}
+
 /* Center elements a selected proposal will affect — highlighted only while that
    option is checked (see ui-proposals onSelectionChange). Subtle, Moodle-like:
    a thin outline (no layout shift) instead of a heavy ring; a faint tint when

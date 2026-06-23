@@ -103,6 +103,11 @@ export const createProposalsUi = (deps) => {
         if (actions) { actions.style.display = visible ? '' : 'none'; }
         const subtitle = document.querySelector('.cg-decision-overlay .cg-decision-subtitle');
         if (subtitle) { subtitle.style.display = visible ? '' : 'none'; }
+        // With proposals present, the proposals block carries its own heading, so the
+        // generic "Review your course plan" title is redundant — hide it to avoid a
+        // second stacked header.
+        const title = document.querySelector('.cg-decision-overlay .cg-decision-title');
+        if (title) { title.style.display = visible ? '' : 'none'; }
     };
 
     const clear = () => {
