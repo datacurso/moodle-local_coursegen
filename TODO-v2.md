@@ -495,3 +495,145 @@ cualquier parte, en detalle.
 - [x] 7.4.3 Composer estilo V0 (botón circular ▲, controles secundarios ghost a la izquierda) — HECHO (f2e4bd6).
 - [x] 7.4.4 Overlay de decisión (accept/adjust + propuestas) que tapa el chat — HECHO (712f36a; ui/decision-overlay.js singleton, #cgDecisionOverlay dentro de #courseaiContextChat).
   - Verificado con Chromium propio de puppeteer (sesión 157): 0 errores JS, hilo 7 turnos, tarjeta usuario #f4f4f5/16px, timeline + colapsable OK, composer circular 36px/50%, overlay Accept/Adjust presente. Capturas: /tmp/cg-ui/v0-thread.png, v0-composer.png, v0-overlay.png.
+
+---
+
+## Render left thread from server-side message store (single source of truth)
+
+> **DESIGN ONLY — not yet implemented.** Companion to the SERVICE design in
+> `course_ai/TODO-V2.md` → section "Server-side message thread store (single source of truth)".
+> The SERVICE becomes the authority for the left-chat thread: it persists every renderable
+> message (user actions, AI milestones, selected statuses) as an ordered, typed log. On reload the
+> plugin makes ONE call and renders the returned `thread` array in order, keyed by `type`. The
+> disparate, lossy reconstruction is DELETED.
+
+### SCOPE CLARIFICATION (2026-06-23) — left = full plain-text history, center = latest only
+
+The left panel must show the **complete planning transcript in plain text**, not just section
+names: every AI output in full (sections + activities + descriptions + each activity's full
+`detailed_plan`) and every user action, accumulating in chronological order. The CENTER preview
+keeps showing only the **latest** reconciled version (unchanged: `hydrate-plan.js` + reconciler).
+So the difference is history (left) vs latest state (center). Each AI-output `thread` message
+carries the FULL content of that step (structured `payload` + a plain-text block in
+`content.string`); the plugin renders it via a **plain-text block renderer** (reusing the existing
+`wireFadeExpand` clamp for long blocks). The grouped "checklist of names" becomes/append-augments
+these full-text blocks. The `type → renderer` map below gains a "plain-text content block" target
+for AI-output types.
+
+### Why (what we lose today)
+
+On reload the plugin calls `local_coursegen_get_course_session_state`
+(`amd/src/repository/courseai.js:89-98` → `classes/external/get_course_session_state.php`, which
+proxies the service `GET /course/state/{thread_id}` and returns it verbatim as `snapshotjson`).
+`bootstrap/resume-snapshot.js::rebuildDecisionLog` (resume-snapshot.js:84-137) then rebuilds the
+thread from: the initial prompt, a dedup of `snapshot.messages` filtered to `type === 'human'`,
+and ONE status-derived AI milestone (`WAITING_APPROVAL`/`PLANNING_ADJUST` → review/proposals;
+`COMPLETED` → completed). Everything else is LOST: `ai_course_identity`, `ai_error`/`ai_failed`,
+all user-action labels (accept, dismiss, stop, resume, add/delete/reorder/replan section/activity,
+image discard/regenerate — every `emitLog` call across `amd/src/` that is fired live only). No
+localStorage carries thread state in the popup. The full inventory of every `emitLog` site, its
+trigger, and its canonical `type` is in the SERVICE doc's TYPE enum and was produced from:
+`actions/generate.js:79`, `actions/feedback.js:133,144`, `stream/handlers-lifecycle.js:122,161,220,265`,
+`stream/handlers-content.js:182`, `ui-proposals.js:273,282,307`, `actions/execution-control.js:118,148`,
+`detailed/dnd.js:142,178`, `detailed/images.js:116,151`, `detailed/section-dom.js:147,179`,
+`detailed/section-row.js:98,209`, `detailed/activity-dom.js:136,171`.
+
+### Service contract consumed (see SERVICE doc for full JSON)
+
+`get_course_session_state` returns `snapshotjson`, which now includes a `thread` array (the
+SERVICE adds it to `GET /course/state`). Each element:
+
+```jsonc
+{ "seq": 0,
+  "type": "user_prompt | user_action | ai_course_identity | ai_planned_structure |
+           ai_review_ready | ai_proposals_ready | ai_proposals_card | ai_completed |
+           ai_failed | ai_error | status",
+  "role": "user | assistant | system",
+  "content": { "string_id": "log_user_approved|null", "string": "fallback EN", "string_args": { } },
+  "payload": { "subtype": "accept|adjust|…", "round": 1, "sections": [], "proposals": [], "…": "…" },
+  "created_at": "ISO-8601" }
+```
+
+`status`-typed rows are TRANSIENT and are already EXCLUDED from `thread` by the service (the
+working indicator on reload is driven by the session `status`, not by replaying a stored status).
+The plugin localizes each message by `content.string_id` + `content.string_args` against the
+Moodle lang file (the same KEYS already in `local/courseai/i18n.js` / `lang/en`), falling back to
+`content.string` for free-form text (`string_id === null`).
+
+### `type` → existing renderer map
+
+A single `renderThreadMessage(msg)` dispatcher routes each `type` to the renderer that ALREADY
+exists, so we reuse the current DOM/visual language:
+
+| `type` (+ subtype) | Existing renderer | Notes |
+|---|---|---|
+| `user_prompt` | `ui/log.js` `add({actor:'user',kind:'user'})` | turn 1; full text |
+| `user_action` (adjust/accept/proposal_*/dismiss/stop/resume/add/delete/reorder/replan/image) | `ui/log.js` `add({actor:'user', kind:…})` | kind chosen from subtype (success for accept/add, danger for delete/discard, neutral for dismiss/stop/resume, info for proposal_applied, user for adjust/reorder/replan); localize via `string_id` |
+| `ai_course_identity` | `ui/log.js` `add({actor:'ai',kind:'ai'})` | "Course: {fullname}" from `payload.fullname` |
+| `ai_planned_structure` | `stream/checklist.js` + `bootstrap/checklist-helpers.js` | grouped checklist card for `payload.round` from `payload.sections` (replaces the live `renderInitialChecklist`/round path on reload) |
+| `ai_review_ready` / `ai_proposals_ready` | `ui/log.js` `add({actor:'ai',kind:'ai'})` | the milestone log turn |
+| `ai_proposals_card` | `ui-proposals.js` `renderProposals(payload)` | the interactive proposals/clarification card (only the latest, if session is at review) |
+| `ai_completed` | `ui/log.js` `add({actor:'ai',kind:'success'})` | |
+| `ai_failed` / `ai_error` | `ui/log.js` `add({actor:'ai',kind:'danger'})` | |
+| `status` | NOT replayed | working indicator comes from live `status`/SSE only |
+
+`role`/`seq` ordering: render strictly in ascending `seq`. The `planEverReviewed` flag (which
+splits `#cgLog` vs `#cgLogAfter` in `ui/log.js`) is set when the first review milestone is
+replayed, so post-review turns land in `#cgLogAfter` exactly as live.
+
+### Live behavior (unchanged in spirit)
+
+During an ACTIVE session the plugin still renders from SSE in real time via the existing
+`stream/handlers-*.js` and `emitLog` calls. The ONLY change: the SERVICE also persists each of
+those messages as it emits them, so reload is a pure replay of the same sequence. The plugin's
+live `emitLog` becomes a real-time echo of what the server is simultaneously recording — no
+behavior change for the user mid-session.
+
+### Refactor / deletions
+
+- **DELETE** the heuristic reconstruction in `bootstrap/resume-snapshot.js`
+  (`rebuildDecisionLog`, resume-snapshot.js:84-137) — replaced by `thread`-array replay.
+- **DELETE / simplify** `bootstrap/adjustment-history.js` round rebuild from human messages
+  (adjustment-history.js:58-128): rounds now come from `ai_planned_structure` + `user_action`
+  entries in `thread`, in order.
+- **KEEP** the plan/center reconciler hydration (`bootstrap/hydrate-plan.js`,
+  `detailed/reconcile*.js`) — the plan tree still comes from `snapshot.detailed_plan_sections`;
+  this design only changes the LEFT THREAD, not the center plan.
+- **NO localStorage** thread logic to remove (none exists beyond the splitter width in
+  `ui/splitter.js`, which stays).
+
+### Back-compat
+
+If `snapshot.thread` is empty or absent (old sessions created before the SERVICE migration), FALL
+BACK to the current `rebuildDecisionLog` path. Keep the fallback until no pre-migration live
+sessions remain, then remove it.
+
+### Phased checklist (PLUGIN — after SERVICE S-1..S-4 land)
+
+- [x] **P-1**: Added `renderThreadMessage(msg, ctx)` dispatcher + `replayThread(thread, ctx)` in
+      `amd/src/courseai/bootstrap/thread-replay.js` (`makeThreadReplay`). Iterates ascending `seq`,
+      routes by `type` to the existing renderers; AI-output types (`ai_planned_structure`) render the
+      full `content.string` as an AI plain-text block via `ui/log.js add` (white-space:pre-wrap +
+      `wireFadeExpand` clamp). Localizes via `string_id`/`string_args`, falls back to `string`.
+- [x] **P-2**: In `bootstrap/resume-snapshot.js`, added `rebuildThread()`: when `snapshot.thread` is
+      non-empty it replays via `replayThread` INSTEAD of `rebuildDecisionLog`, and
+      `restoreAdjustmentHistory` is skipped. Empty/absent thread falls back to `rebuildDecisionLog`.
+      Plan reconciliation (`hydrate-plan.js`) untouched.
+- [x] **P-3**: Added the service `string_id`s (`ai_planned_structure`, `log_*`, plus
+      `course_completed`/`course_failed`/`review_plan_detailed`) to `lang/en/local_coursegen.php` and
+      `local/courseai/i18n.js` STRING_KEYS so they prefetch.
+- [ ] **P-4**: Delete `rebuildDecisionLog` and the human-message round rebuild once `thread` is
+      always present; keep the empty-`thread` fallback only during the deprecation window.
+- [ ] **P-5 Verify**: `npx grunt amd --root=local/coursegen`; reload an in-flight session with
+      puppeteer's own Chromium (`/tmp/cg-ui/.chromium-cache`, NEVER system chrome); confirm the
+      full thread (every user action + AI milestone) survives reload, zero JS errors, screenshots
+      vs current. NO push/merge until validated.
+
+### Open decisions (mirror the SERVICE doc; confirm together)
+
+1. Endpoint shape: consume `thread` inside `snapshotjson` (no Moodle WS change needed — recommended)
+   vs add a dedicated WS for thread-only. Recommend the former.
+2. Whether `ai_proposals_card` replays the FULL card or just the milestone log line when the
+   session is past review (recommend: card only when session is currently at review, else the
+   milestone log turn).
+3. Confirm the kind-per-subtype mapping in the renderer table matches the current visual language.

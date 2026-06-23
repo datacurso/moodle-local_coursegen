@@ -3004,6 +3004,16 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
   color: var(--fg);
 }
 
+/* AI-output plain-text block (server-side thread replay): the full planning
+   transcript step (sections + activities + descriptions + detailed_plan) is
+   rendered verbatim as an AI turn. white-space:pre-wrap (inherited above)
+   preserves newlines and indentation; tab-size keeps nested plan lines aligned.
+   The existing fade/expand clamp (.cg-log-entry--clamped) handles long blocks. */
+.cg-log-entry--turn-ai .cg-log-msg {
+  tab-size: 2;
+  -moz-tab-size: 2;
+}
+
 .cg-log-ts {
   flex-shrink: 0;
   font-size: 10.5px;

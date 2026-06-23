@@ -198,6 +198,29 @@ const STRING_KEYS = [
     'courseai_decision_title',
     'courseai_decision_accept',
     'courseai_decision_adjust',
+    // Server-side thread log string_ids (match the service Message names). Prefetched
+    // so replayThread localizes the full transcript on reload without N round-trips.
+    'ai_planned_structure',
+    'log_user_approved',
+    'log_user_adjusted',
+    'log_proposal_applied',
+    'log_proposal_custom',
+    'log_proposals_dismissed',
+    'log_user_stopped',
+    'log_user_resumed',
+    'log_add_section',
+    'log_delete_section',
+    'log_reorder_sections',
+    'log_replan_section',
+    'log_add_activity',
+    'log_delete_activity',
+    'log_reorder_activities',
+    'log_replan_activity',
+    'log_discard_image',
+    'log_replan_image',
+    'course_completed',
+    'course_failed',
+    'review_plan_detailed',
 ];
 
 /**
