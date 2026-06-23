@@ -43,6 +43,7 @@
  * @param {Function} params.restoreAdjustmentHistory
  * @param {number} params.resumeSessionId
  * @param {Function} params.emitLog
+ * @param {Object} params.texts - localized strings (for reconstructed AI milestones)
  * @returns {Function} async resumeFromSnapshot function
  */
 export const makeResumeFromSnapshot = ({
@@ -64,6 +65,7 @@ export const makeResumeFromSnapshot = ({
     restoreAdjustmentHistory,
     resumeSessionId,
     emitLog,
+    texts,
 }) => {
     /**
      * Rebuild the conversation thread from the snapshot so reload doesn't lose
@@ -76,9 +78,10 @@ export const makeResumeFromSnapshot = ({
      * @param {Array} sections - raw plan sections (with names)
      * @param {Object} snapshot - the resume snapshot
      * @param {string} initialPrompt - the first user prompt (becomes turn 1)
+     * @param {string} status - the normalized snapshot status (drives the AI milestone)
      * @returns {void}
      */
-    const rebuildDecisionLog = (sections, snapshot, initialPrompt) => {
+    const rebuildDecisionLog = (sections, snapshot, initialPrompt, status) => {
         if (typeof emitLog !== 'function') {
             return;
         }
@@ -108,6 +111,29 @@ export const makeResumeFromSnapshot = ({
                     lastEmitted = content;
                 }
             });
+        // The snapshot stores ONLY human messages, so the assistant's own turns
+        // (e.g. "I finished planning your course…") would vanish on reload. Rebuild
+        // the AI's closing milestone for the CURRENT state deterministically, placed
+        // below the planned-structure group (flag the plan reviewed first so it lands
+        // in #cgLogAfter). Generating/planning states reopen the stream, which emits
+        // its own fresh milestones, so they are skipped here.
+        if (status === 'WAITING_APPROVAL' || status === 'PLANNING_ADJUST') {
+            state.planEverReviewed = true;
+            const hasProposals = Array.isArray(snapshot?.proposals) && snapshot.proposals.length > 0;
+            const aiMessage = hasProposals
+                ? ((texts && texts.courseai_log_ai_proposals_ready)
+                    || 'I prepared a few suggestions for you. Review them and choose how you want to continue.')
+                : ((texts && texts.courseai_log_ai_review_ready)
+                    || 'I finished planning your course. Take a look at the plan and tell me if you want any changes.');
+            emitLog({actor: 'ai', kind: 'ai', message: aiMessage});
+        } else if (status === 'COMPLETED') {
+            state.planEverReviewed = true;
+            emitLog({
+                actor: 'ai',
+                kind: 'success',
+                message: (texts && texts.courseai_log_ai_completed) || 'Your course is ready. I created it in Moodle.',
+            });
+        }
     };
     /**
      * Attempt to resume the page from a persisted session snapshot.
@@ -196,7 +222,7 @@ export const makeResumeFromSnapshot = ({
             applyCourseTitleToHeader();
             if (sectionsForUi.length > 0) {
                 await hydrateDetailedPlanFromSnapshot(detailedSections);
-                rebuildDecisionLog(detailedSections, snapshot, initialPrompt);
+                rebuildDecisionLog(detailedSections, snapshot, initialPrompt, status);
             }
             if (typeof detailedUi.enableAllActionControls === 'function') {
                 detailedUi.enableAllActionControls();
@@ -215,7 +241,7 @@ export const makeResumeFromSnapshot = ({
             setPlanningStreamVisible();
             applyCourseTitleToHeader();
             await hydrateDetailedPlanFromSnapshot(detailedSections);
-            rebuildDecisionLog(detailedSections, snapshot, initialPrompt);
+            rebuildDecisionLog(detailedSections, snapshot, initialPrompt, status);
             // The plan is at review: future log entries (e.g. the user's next
             // feedback) must flow at the END of the feed. Set this AFTER the
             // historical rebuild so the rebuilt planning entries stay on top.
@@ -237,7 +263,7 @@ export const makeResumeFromSnapshot = ({
             // plan instead of clearing it (resetPlanningState early-returns).
             if (sectionsForUi.length > 0) {
                 await hydrateDetailedPlanFromSnapshot(detailedSections);
-                rebuildDecisionLog(detailedSections, snapshot, initialPrompt);
+                rebuildDecisionLog(detailedSections, snapshot, initialPrompt, status);
             }
             stepsUi.setStepState('planning', 'done');
             stepsUi.setStepState('generating', 'active');
@@ -257,7 +283,7 @@ export const makeResumeFromSnapshot = ({
             // section names), which is the reload-broken case from the field.
             if (sectionsForUi.length > 0) {
                 await hydrateDetailedPlanFromSnapshot(detailedSections);
-                rebuildDecisionLog(detailedSections, snapshot, initialPrompt);
+                rebuildDecisionLog(detailedSections, snapshot, initialPrompt, status);
             }
             streamManager.openSSEStream(state.streamingurl, 0, 'planning', true);
             return true;
@@ -269,7 +295,7 @@ export const makeResumeFromSnapshot = ({
             applyCourseTitleToHeader();
             if (sectionsForUi.length > 0) {
                 await hydrateDetailedPlanFromSnapshot(detailedSections);
-                rebuildDecisionLog(detailedSections, snapshot, initialPrompt);
+                rebuildDecisionLog(detailedSections, snapshot, initialPrompt, status);
             }
             if (typeof detailedUi.enableAllActionControls === 'function') {
                 detailedUi.enableAllActionControls();
