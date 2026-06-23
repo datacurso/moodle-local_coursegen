@@ -409,16 +409,20 @@ body.cg-plan-reviewed .courseai-checklist-check svg.check-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 34px;
-  height: 34px;
+  /* Compact, square-ish send button like Claude/V0 — NOT a wide pill. The min/max
+     guards stop any inherited padding/min-width from stretching it. */
+  width: 32px;
+  min-width: 32px;
+  max-width: 32px;
+  height: 32px;
   padding: 0;
-  flex-shrink: 0;
-  /* Idle: a discreet white circle with a hairline border and a grey arrow, so it
-     reads clearly on the grey toolbar without shouting (V0). */
+  flex: 0 0 32px;
+  /* Idle: a discreet white squircle with a hairline border and a grey arrow, so it
+     reads clearly on the grey toolbar without shouting. */
   color: var(--muted-fg);
   background: var(--card);
   border: 1px solid var(--border);
-  border-radius: 50%;
+  border-radius: 9px;
   cursor: pointer;
   font-family: inherit;
   transition: background .15s, color .15s, border-color .15s, opacity .12s, transform .1s;
