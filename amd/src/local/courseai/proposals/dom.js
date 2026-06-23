@@ -48,16 +48,17 @@ export const buildProposalCard = (proposal, localizedSummary, texts) => {
     radio.name = RADIO_NAME;
     radio.value = proposal.proposal_id;
     radio.className = 'plan-proposal-radio';
-    // UUIDs of the sections/activities this proposal touches, so selecting it can
-    // highlight exactly those elements in the center preview. The backend sends
-    // target_ids for edit/delete/reorder, and parent_section_id for add_* (where the
-    // new item lands) — include both so every proposal highlights its target.
+    // UUIDs of the sections/activities this proposal touches, so selecting it
+    // highlights EXACTLY those elements in the center preview. Prefer the explicit
+    // target_ids (edit/delete/reorder/regenerate target real elements); only fall
+    // back to parent_section_id for add_* actions, where the target does not exist
+    // yet and the parent section is the thing being affected. Never highlight the
+    // whole section when a single activity is the target.
     const intent = proposal.intent || {};
     const targetIds = [];
-    if (Array.isArray(intent.target_ids)) {
+    if (Array.isArray(intent.target_ids) && intent.target_ids.length) {
         targetIds.push(...intent.target_ids);
-    }
-    if (intent.parent_section_id) {
+    } else if (intent.parent_section_id) {
         targetIds.push(intent.parent_section_id);
     }
     radio.dataset.targetIds = JSON.stringify(targetIds);
