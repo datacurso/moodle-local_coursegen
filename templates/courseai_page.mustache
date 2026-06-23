@@ -248,14 +248,16 @@
           <div class="courseai-adjustment-history hidden" id="courseaiAdjustmentHistory"></div>
         </div>
 
+        <!-- After "Adjust", the decision card is replaced by the composer; this slim
+             bar (a SEPARATE element above the composer, with a gap) keeps Accept
+             reachable so the user can always change their mind. -->
+        <div class="cg-accept-bar" id="cgAcceptBar" style="display:none">
+          <span class="cg-accept-bar-text">{{#str}}courseai_decision_still_accept, local_coursegen{{/str}}</span>
+          <button class="cg-accept-bar-btn" id="cgAcceptInline" type="button">{{#str}}courseai_decision_accept, local_coursegen{{/str}}</button>
+        </div>
+
         <!-- Compact chat for regeneration -->
         <div class="compact-chat-card" id="compactChatCard"{{^isresuming}} style="display:none"{{/isresuming}}>
-          <!-- After "Adjust", the decision card is replaced by the composer; this slim
-               bar keeps Accept reachable so the user can always change their mind. -->
-          <div class="cg-accept-bar" id="cgAcceptBar" style="display:none">
-            <span class="cg-accept-bar-text">{{#str}}courseai_decision_still_accept, local_coursegen{{/str}}</span>
-            <button class="cg-accept-bar-btn" id="cgAcceptInline" type="button">{{#str}}courseai_decision_accept, local_coursegen{{/str}}</button>
-          </div>
           <textarea
             id="compactPromptInput"
             class="compact-prompt-textarea"
