@@ -27,40 +27,6 @@ export const RADIO_NAME = 'courseai-proposal-choice';
 /** Value used for the "Something else" radio option. */
 export const OTHER_VALUE = '__other__';
 
-/**
- * Resolve a section's display name from the center preview by its UUID.
- *
- * @param {string} id - section UUID (data-section-id in the center)
- * @returns {string} the section name, or '' if not found
- */
-const sectionNameById = (id) => {
-    if (!id) {
-        return '';
-    }
-    const el = document.querySelector('.course-section[data-section-id="' + id + '"] .sectionname');
-    return el ? el.textContent.trim() : '';
-};
-
-/**
- * Describe what a proposal will DO, concretely, instead of echoing the raw user
- * instruction. For "add activity" the backend only captures the action + position +
- * raw text, so enrich the localized summary with the TARGET section's name (resolved
- * from the center) so the user sees where the change lands.
- *
- * @param {Object} proposal        - ProposedAction from the backend.
- * @param {string} localizedSummary - Already-resolved summary string.
- * @returns {string}
- */
-const describeProposal = (proposal, localizedSummary) => {
-    const intent = proposal.intent || {};
-    if (intent.action === 'add_activity' && intent.parent_section_id) {
-        const name = sectionNameById(intent.parent_section_id);
-        if (name) {
-            return localizedSummary + ' in "' + name + '"';
-        }
-    }
-    return localizedSummary;
-};
 
 /**
  * Build and return a proposal card element (label wrapping a radio input).
@@ -98,7 +64,7 @@ export const buildProposalCard = (proposal, localizedSummary, texts) => {
 
     const textSpan = document.createElement('span');
     textSpan.className = 'plan-proposal-summary';
-    textSpan.textContent = describeProposal(proposal, localizedSummary);
+    textSpan.textContent = localizedSummary;
 
     label.appendChild(radio);
     label.appendChild(textSpan);
