@@ -43,7 +43,6 @@
  * @param {Function} params.restoreAdjustmentHistory
  * @param {number} params.resumeSessionId
  * @param {Function} params.emitLog
- * @param {Object} params.texts
  * @returns {Function} async resumeFromSnapshot function
  */
 export const makeResumeFromSnapshot = ({
@@ -65,14 +64,14 @@ export const makeResumeFromSnapshot = ({
     restoreAdjustmentHistory,
     resumeSessionId,
     emitLog,
-    texts,
 }) => {
     /**
      * Rebuild the conversation thread from the snapshot so reload doesn't lose
      * history (§7.1). localStorage does not survive reload in this (Moodle popup)
      * context, so the snapshot is the source of truth. The thread is rearmed in
-     * chronological order: the initial prompt as the FIRST user turn, then an
-     * "AI planned section" turn per section, then any later user instructions.
+     * chronological order: the initial prompt as the FIRST user turn, then any
+     * later distinct human instructions. The section checklist card (#courseaiChecklist)
+     * is un-hidden when sections exist — it acts as the grouped AI planning turn.
      *
      * @param {Array} sections - raw plan sections (with names)
      * @param {Object} snapshot - the resume snapshot
@@ -87,22 +86,26 @@ export const makeResumeFromSnapshot = ({
         if (firstPrompt) {
             emitLog({actor: 'user', kind: 'user', message: firstPrompt});
         }
-        (sections || []).forEach((section) => {
-            const name = String(section?.name || '').trim();
-            if (!name) {
-                return;
+        // Un-hide the grouped checklist card when sections exist so it serves as
+        // the single "AI planned the structure" turn without emitting N flat rows.
+        if ((sections || []).length > 0) {
+            const checklistEl = document.getElementById('courseaiChecklist');
+            if (checklistEl) {
+                checklistEl.classList.remove('hidden');
             }
-            const template = texts?.courseai_log_ai_section || 'AI planned section: {$a}';
-            emitLog({actor: 'ai', kind: 'ai', message: template.replace('{$a}', name)});
-        });
+        }
+        // Emit remaining DISTINCT human messages (skip messages that duplicate the
+        // initial prompt or consecutive duplicates).
         const messages = Array.isArray(snapshot?.messages) ? snapshot.messages : [];
+        let lastEmitted = firstPrompt;
         messages
             .filter((message) => message && message.type === 'human')
             .slice(1)
             .forEach((message) => {
                 const content = String(message.content || '').trim();
-                if (content) {
+                if (content && content !== lastEmitted) {
                     emitLog({actor: 'user', kind: 'user', message: content});
+                    lastEmitted = content;
                 }
             });
     };

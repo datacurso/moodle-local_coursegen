@@ -225,7 +225,6 @@ export const init = async(params) => {
             restoreAdjustmentHistory,
             resumeSessionId,
             emitLog,
-            texts,
         });
 
         // On reload the page is server-rendered in planning mode (is-planning +

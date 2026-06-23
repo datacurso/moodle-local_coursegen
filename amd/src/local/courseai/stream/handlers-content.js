@@ -75,7 +75,7 @@ export const handleActivity = (data, ctx) => {
  */
 export const handleSection = (data, ctx) => {
     ctx.flags.contentReceived = true;
-    const {state, elements, detailedUi, texts, getOrCreateRoundChecklist, emitLog} = ctx;
+    const {state, elements, detailedUi, texts, getOrCreateRoundChecklist} = ctx;
 
     // A real milestone (a planned section) has landed — drop the transient live
     // "working" indicator so it does not sit below the new permanent turn.
@@ -113,13 +113,6 @@ export const handleSection = (data, ctx) => {
             activities: [],
         });
         state.latestInitialSections = sections;
-    }
-
-    if (typeof emitLog === 'function' && data.name) {
-        const sectionName = data.name || '';
-        const message = (texts.courseai_log_ai_section || 'AI planned section: {$a}')
-            .replace('{$a}', sectionName);
-        emitLog({actor: 'ai', kind: 'ai', message});
     }
 
     const round = state.generationRound || 0;
