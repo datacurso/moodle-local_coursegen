@@ -3145,6 +3145,41 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
 .cg-decision-btn--adjust:hover {
   background: var(--muted);
 }
+
+/* Slim "you can still accept" bar shown inside the composer after Adjust, so the
+   user can always change their mind and accept the current plan. */
+.cg-accept-bar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 4px 4px 10px;
+  margin-bottom: 8px;
+  border-bottom: 1px solid var(--border);
+}
+.cg-accept-bar-text {
+  font-size: 12.5px;
+  color: var(--muted-fg);
+  line-height: 1.4;
+}
+.cg-accept-bar-btn {
+  flex: 0 0 auto;
+  height: 30px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary);
+  color: var(--primary-fg);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.cg-accept-bar-btn:hover {
+  opacity: 0.88;
+}
+
 .courseai-workspace.is-planning .courseai-chat-scroll {
   flex: 1 1 auto;
   min-height: 0;

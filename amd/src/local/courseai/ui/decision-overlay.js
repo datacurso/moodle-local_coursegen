@@ -87,6 +87,11 @@ export const getDecisionOverlay = (texts) => {
         if (compactChatCard) {
             compactChatCard.style.display = 'none';
         }
+        // The full card has its own Accept — drop the composer's inline accept bar.
+        const acceptBar = document.getElementById('cgAcceptBar');
+        if (acceptBar) {
+            acceptBar.style.display = 'none';
+        }
         // Keep the newest turn in view above the card.
         if (chatScroll) {
             chatScroll.scrollTop = chatScroll.scrollHeight;

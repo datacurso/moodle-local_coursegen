@@ -55,6 +55,13 @@ export const setCompactChatState = (deps, mode) => {
         'stroke-linejoin="round" aria-hidden="true">' +
         '<path d="M12 19V5M5 12l7-7 7 7"/></svg>';
 
+    // The inline "still accept" bar is only meaningful right after Adjust; any other
+    // composer state change clears it (the Adjust handler re-shows it after 'enabled').
+    const acceptBar = document.getElementById('cgAcceptBar');
+    if (acceptBar) {
+        acceptBar.style.display = 'none';
+    }
+
     switch (mode) {
         case 'hidden':
             compactChatCard.style.display = 'none';

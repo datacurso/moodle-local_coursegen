@@ -139,6 +139,8 @@ export const showReviewActions = (mode, ctx) => {
     const overlay = getDecisionOverlay(texts);
     const acceptBtn = document.getElementById('cgDecisionAccept');
     const adjustBtn = document.getElementById('cgDecisionAdjust');
+    const acceptBar = document.getElementById('cgAcceptBar');
+    const acceptInline = document.getElementById('cgAcceptInline');
     const {btnApprove, compactPromptInput} = elements;
 
     if (acceptBtn && !acceptBtn.dataset.cgWired) {
@@ -150,11 +152,26 @@ export const showReviewActions = (mode, ctx) => {
         });
     }
 
+    // The inline "Accept" in the composer bar delegates to the same approve flow, so
+    // the user can accept even after choosing Adjust (they can always change their mind).
+    if (acceptInline && !acceptInline.dataset.cgWired) {
+        acceptInline.dataset.cgWired = '1';
+        acceptInline.addEventListener('click', () => {
+            if (btnApprove) {
+                btnApprove.click();
+            }
+        });
+    }
+
     if (adjustBtn && !adjustBtn.dataset.cgWired) {
         adjustBtn.dataset.cgWired = '1';
         adjustBtn.addEventListener('click', () => {
             overlay.hide();
             setCompactChatState(deps, 'enabled');
+            // Keep Accept reachable next to the composer.
+            if (acceptBar) {
+                acceptBar.style.display = 'flex';
+            }
             if (compactPromptInput) {
                 compactPromptInput.focus();
             }
