@@ -45,11 +45,12 @@ import {createDetailedUi} from 'local_coursegen/local/courseai/ui-detailed';
 import {createStreamManager} from 'local_coursegen/local/courseai/stream';
 import {createCourseaiActions} from 'local_coursegen/local/courseai/actions';
 import {initSidebar} from 'local_coursegen/local/courseai/sidebar';
+import {wireReadyToggle} from 'local_coursegen/local/courseai/planning/compact-chat';
 import {createProposalsUi} from 'local_coursegen/local/courseai/ui-proposals';
 import {createRunPlanAction} from 'local_coursegen/local/courseai/actions/plan-action';
 import {createSplitter} from 'local_coursegen/local/courseai/ui/splitter';
 import {makeResumeHelpers} from 'local_coursegen/courseai/bootstrap/resume-helpers';
-import {makeChecklistHelpers} from 'local_coursegen/courseai/bootstrap/checklist-helpers';
+import {makeChecklistHelpers, initChecklistCollapse} from 'local_coursegen/courseai/bootstrap/checklist-helpers';
 import {makeResumeFromSnapshot} from 'local_coursegen/courseai/bootstrap/resume-snapshot';
 import {makeCreateCourseCallback} from 'local_coursegen/courseai/bootstrap/create-course-callback';
 import {makeEmitLog, makeRenderPlanMarkdown} from 'local_coursegen/courseai/bootstrap/ui-helpers';
@@ -271,6 +272,13 @@ export const init = async(params) => {
             workspace: document.getElementById('courseaiWorkspace'),
             divider: document.getElementById('cgSplitter'),
         });
+
+        // Wire collapsible checklist delegate listener (WU2).
+        initChecklistCollapse();
+
+        // Wire send-button ready-state toggle (WU3): accent-fills #btnCompactRegenerate
+        // when the compact textarea has non-empty text.
+        wireReadyToggle(elements);
     } catch (error) {
         Notification.exception(error);
     }

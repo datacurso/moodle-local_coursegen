@@ -50,13 +50,10 @@ export const setCompactChatState = (deps, mode) => {
         return;
     }
 
-    const sparkleIcon = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" ' +
-        'stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
+    const upArrowIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" ' +
+        'stroke="currentColor" stroke-width="2.5" stroke-linecap="round" ' +
         'stroke-linejoin="round" aria-hidden="true">' +
-        '<path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 ' +
-        '9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 ' +
-        '15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 ' +
-        '6.135a.5.5 0 0 1-.962 0z"/></svg>';
+        '<path d="M12 19V5M5 12l7-7 7 7"/></svg>';
 
     switch (mode) {
         case 'hidden':
@@ -155,7 +152,7 @@ export const setCompactChatState = (deps, mode) => {
             if (btnCompactRegenerate) {
                 btnCompactRegenerate.disabled = false;
                 if (texts?.courseai_btn_regenerate) {
-                    btnCompactRegenerate.innerHTML = `${sparkleIcon} ${texts.courseai_btn_regenerate}`;
+                    btnCompactRegenerate.innerHTML = upArrowIcon;
                     btnCompactRegenerate.setAttribute('aria-label', texts.courseai_btn_regenerate);
                     btnCompactRegenerate.setAttribute('title', texts.courseai_btn_regenerate);
                 }
@@ -194,7 +191,7 @@ export const setCompactChatState = (deps, mode) => {
             if (btnCompactRegenerate) {
                 btnCompactRegenerate.disabled = false;
                 if (texts?.courseai_btn_regenerate) {
-                    btnCompactRegenerate.innerHTML = `${sparkleIcon} ${texts.courseai_btn_regenerate}`;
+                    btnCompactRegenerate.innerHTML = upArrowIcon;
                     btnCompactRegenerate.setAttribute('aria-label', texts.courseai_btn_regenerate);
                     btnCompactRegenerate.setAttribute('title', texts.courseai_btn_regenerate);
                 }
@@ -204,4 +201,38 @@ export const setCompactChatState = (deps, mode) => {
             }
             break;
     }
+};
+
+/**
+ * Wire a single input listener on #compactPromptInput that toggles the
+ * `.is-ready` class on #btnCompactRegenerate when the textarea has non-empty
+ * trimmed text. The button is accent-filled when ready. Safe to call multiple
+ * times — guards against duplicate listeners with a dataset flag.
+ *
+ * @param {Object} elements - The courseai elements object (must include compactPromptInput,
+ *                            btnCompactRegenerate).
+ * @returns {void}
+ */
+export const wireReadyToggle = (elements) => {
+    const {compactPromptInput, btnCompactRegenerate} = elements;
+    if (!compactPromptInput || !btnCompactRegenerate) {
+        return;
+    }
+    if (compactPromptInput.dataset.cgReadyWired) {
+        return;
+    }
+    compactPromptInput.dataset.cgReadyWired = '1';
+
+    /**
+     * Sync the is-ready class on the send button based on textarea content.
+     *
+     * @returns {void}
+     */
+    const sync = () => {
+        const hasText = compactPromptInput.value.trim().length > 0;
+        btnCompactRegenerate.classList.toggle('is-ready', hasText);
+    };
+
+    compactPromptInput.addEventListener('input', sync);
+    sync();
 };
