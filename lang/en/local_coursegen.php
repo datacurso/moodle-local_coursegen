@@ -698,5 +698,6 @@ $string['courseai_log_reordered_activities'] = 'You reordered activities in: {$a
 $string['courseai_log_reordered_activities_generic'] = 'You reordered the activities';
 $string['courseai_checklist_section_count'] = '{$a} sections';
 $string['courseai_decision_title'] = 'Review your course plan';
+$string['courseai_decision_subtitle'] = 'Your plan is ready. Accept it to generate the course, or adjust it to refine the structure.';
 $string['courseai_decision_accept'] = 'Accept';
 $string['courseai_decision_adjust'] = 'Adjust';

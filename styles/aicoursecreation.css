@@ -3120,6 +3120,17 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
 
 /* ─── Decision overlay (WU4) ───────────────────────────────────────────── */
 /* Covers the entire left chat area with an opaque white surface. */
+/* V0 light accent: the chat column (thread + composer + decision overlay) uses a
+   neutral near-black accent like Vercel V0, NOT the plugin's loud red --primary, so
+   primary actions read as refined black instead of clownish red. Scoped here so the
+   rest of the plugin keeps its existing palette; the override cascades to the composer
+   (chatui.css var(--primary)) and to the overlay, which is nested in this column. */
+.courseai-context-chat {
+  --primary:      #18181b;
+  --primary-fg:   #ffffff;
+  --primary-soft: hsl(240, 5%, 96%);
+}
+
 .cg-decision-overlay {
   position: absolute;
   inset: 0;
@@ -3150,9 +3161,21 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
   margin: 0;
 }
 
+.cg-decision-subtitle {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: #8a8a8a;
+  margin: -6px 0 0;
+}
+
 .cg-decision-body {
   min-height: 0;
   overflow-y: auto;
+}
+
+/* No proposals → no empty slot eating the card's flex gap. */
+.cg-decision-body:empty {
+  display: none;
 }
 
 .cg-decision-actions {
