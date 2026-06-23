@@ -456,8 +456,10 @@ cualquier parte, en detalle.
 > preguntas** centrado (opciones tipo radio + "Skip"/"Next" + "1 of N") para que el usuario se enfoque.
 > El usuario quiere ESO para (a) la **aceptación del plan** y (b) las **propuestas/preguntas** de la IA.
 - Cuando llega `review_needed` (plan listo para revisar):
-  - Mostrar en el **panel IZQUIERDO** un **overlay** que **cubre TODO el chat** (hilo + input ocultos),
-    presentando la decisión: **"Accept"** (primario) / **"Adjust"** (secundario). (Mover/relocar
+  - Mostrar en el **panel IZQUIERDO** una **card de decisión que ocupa SOLO el lugar del input** (el
+    campo de escritura), al fondo; el **hilo de mensajes sigue visible y scrolleable arriba**
+    (aclaración del usuario: "tapar el chat" = solo el campo de escritura, NO los mensajes). Presenta
+    la decisión: **"Accept"** (primario) / **"Adjust"** (secundario). (Mover/relocar
     `#planActions`+`#btnApprove` —hoy en el CENTRO, `templates/courseai_page.mustache:463`,
     `planning/review-actions.js`— a este overlay izquierdo; el centro ya no muestra acciones.)
   - Si hay **propuestas/clarificación** (`data.proposals`, hoy `#cgFeedProposals` vía `ui-proposals.js`
