@@ -205,6 +205,7 @@ export const createStreamManager = (deps) => {
             setCompletionStatsFromGeneratedResult,
             getOrCreateRoundChecklist,
             streamMode,
+            keepPlan,
             retryAttempt,
             openSSEStream,
             preservedPhase4Total: () => preservedPhase4Total,

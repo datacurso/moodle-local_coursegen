@@ -55,9 +55,13 @@ export const handleDetailedPlanField = (ctx, data) => {
         initDetailedPlanView(ctx, {renderSections: false});
     }
 
-    // On regeneration (round > 1), clear existing section entries once per section.
+    // On a full regeneration (round > 1), clear existing section entries once per
+    // section so they re-stream from scratch. This must NOT run on a keepPlan
+    // re-stream (apply selection / adjust): keepPlan preserves the rendered plan so
+    // the reconciler can diff against it, and only the new/affected activity should
+    // skeleton — wiping every section here reverts all existing rows to skeletons.
     const sectionId = data.section_id;
-    if (sectionId && (state.generationRound || 0) > 1) {
+    if (sectionId && (state.generationRound || 0) > 1 && !ctx.keepPlan) {
         const meta = state.detailedSectionMeta[sectionId];
         if (meta && !meta._prepared) {
             meta._prepared = true;
