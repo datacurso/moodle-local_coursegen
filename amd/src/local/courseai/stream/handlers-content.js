@@ -62,7 +62,12 @@ export const handleActivity = (data, ctx) => {
             checklistItem.setAttribute('data-remaining', remaining + 1);
         }
     }
-    if (typeof detailedUi.syncDetailedStructureFromSections === 'function') {
+    // On a keepPlan re-stream (apply selection / adjust) the server re-streams the
+    // existing plan structure without real UUIDs, so the structural sync would render
+    // positional-placeholder skeleton rows (s{i}-a{j}) duplicating the already-rendered
+    // real-UUID rows. Skip it: the genuinely-new activity still skeletons and fills via
+    // its real-UUID detailed_plan_activity path (ensureDetailedEntry creates the row).
+    if (!ctx.keepPlan && typeof detailedUi.syncDetailedStructureFromSections === 'function') {
         detailedUi.syncDetailedStructureFromSections(state.latestInitialSections || []);
     }
 };
@@ -142,7 +147,9 @@ export const handleSection = (data, ctx) => {
         }
     }
 
-    if (typeof detailedUi.syncDetailedStructureFromSections === 'function') {
+    // See handleActivity: skip the structural placeholder skeleton render during a
+    // keepPlan re-stream so it never duplicates the kept real-UUID rows.
+    if (!ctx.keepPlan && typeof detailedUi.syncDetailedStructureFromSections === 'function') {
         detailedUi.syncDetailedStructureFromSections(state.latestInitialSections || []);
     }
 };
