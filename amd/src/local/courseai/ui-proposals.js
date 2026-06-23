@@ -82,10 +82,30 @@ export const createProposalsUi = (deps) => {
         }
     };
 
+    /**
+     * Show or hide the decision card's generic Accept/Adjust row and subtitle.
+     *
+     * When proposals occupy the card body they bring their own Apply/Dismiss
+     * actions, so the generic Accept/Adjust row must NOT also show — there must be
+     * exactly one set of actions at a time. With no proposals (plain review) the
+     * generic row is the only one and stays visible.
+     *
+     * @param {boolean} visible - true to show the generic decision row/subtitle.
+     * @returns {void}
+     */
+    const toggleDecisionActions = (visible) => {
+        const actions = document.querySelector('.cg-decision-overlay .cg-decision-actions');
+        if (actions) { actions.style.display = visible ? '' : 'none'; }
+        const subtitle = document.querySelector('.cg-decision-overlay .cg-decision-subtitle');
+        if (subtitle) { subtitle.style.display = visible ? '' : 'none'; }
+    };
+
     const clear = () => {
         clearAffectedHighlights();
         const block = document.getElementById(BLOCK_ID);
         if (block) { block.remove(); }
+        // No proposals card → the generic Accept/Adjust row is the only decision UI.
+        toggleDecisionActions(true);
     };
 
     // WU4: When the decision overlay is present and visible, inject proposals into
@@ -97,6 +117,10 @@ export const createProposalsUi = (deps) => {
         const overlayBody = overlay.getBody();
         if (overlayBody) {
             // Overlay available — render proposals inside the decision card body.
+            // The proposals bring their own Apply/Dismiss, so suppress the generic
+            // Accept/Adjust row (and the subtitle that points at it): exactly one
+            // set of actions shows at a time.
+            toggleDecisionActions(false);
             const block = document.createElement('div');
             block.id = BLOCK_ID;
             block.className = 'cg-feed-proposals';
