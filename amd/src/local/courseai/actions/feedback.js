@@ -26,6 +26,7 @@ import {
     showFeedbackThinking,
     hideWorkingIndicator,
 } from 'local_coursegen/local/courseai/ui/feedback-progress';
+import {getDecisionOverlay} from 'local_coursegen/local/courseai/ui/decision-overlay';
 
 /**
  * Emit a log entry if emitLog is wired.
@@ -79,6 +80,9 @@ export const sendFeedbackAction = async(action, ctx) => {
     if (!state.sessionid) {
         return;
     }
+
+    // WU4: hide the decision overlay as soon as the user acts (accept or adjust).
+    getDecisionOverlay().hide();
 
     if (btnApprove) {
         btnApprove.disabled = true;

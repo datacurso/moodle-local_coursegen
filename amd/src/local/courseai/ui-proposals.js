@@ -23,6 +23,7 @@
 
 import {localizeMessage} from './i18n';
 import {buildProposalCard, buildOtherOption, buildFallenList, RADIO_NAME} from './proposals/dom';
+import {getDecisionOverlay} from './ui/decision-overlay';
 
 /** ID of the proposals card injected into the LEFT decision-log feed. */
 const BLOCK_ID = 'cgFeedProposals';
@@ -78,11 +79,22 @@ export const createProposalsUi = (deps) => {
         if (block) { block.remove(); }
     };
 
-    // Proposals render in the SAME left panel as the user's feedback (at the end
-    // of the decision-log feed) — that's where the user is looking — not in the
-    // center. Rebuild fresh each time so the card sits at the bottom of the feed.
+    // WU4: When the decision overlay is present and visible, inject proposals into
+    // its body slot so they appear inside the centered decision card rather than
+    // appended to the log feed. Fall back to the feed when the overlay is absent.
     const getBlock = () => {
         clear();
+        const overlay = getDecisionOverlay(texts);
+        const overlayBody = overlay.getBody();
+        if (overlayBody) {
+            // Overlay available — render proposals inside the decision card body.
+            const block = document.createElement('div');
+            block.id = BLOCK_ID;
+            block.className = 'cg-feed-proposals';
+            overlayBody.innerHTML = '';
+            overlayBody.appendChild(block);
+            return block;
+        }
         const feed = document.getElementById('cgLogAfter') || document.getElementById('cgLog');
         if (!feed) { return null; }
         const block = document.createElement('div');
@@ -100,9 +112,18 @@ export const createProposalsUi = (deps) => {
         block.querySelectorAll('input, textarea, button').forEach((el) => { el.disabled = false; });
     };
 
+    /**
+     * Send a proposal plan action and hide the overlay.
+     *
+     * @param {HTMLElement} block       - The proposals card DOM element.
+     * @param {Object}      pendingAction - The plan action to send.
+     * @returns {Promise<void>}
+     */
     const sendAction = async(block, pendingAction) => {
         clearAffectedHighlights();
         disableControls(block);
+        // WU4: hide the overlay as soon as an action is dispatched.
+        getDecisionOverlay().hide();
         try {
             await runPlanAction(pendingAction);
         } catch (e) {
