@@ -69,14 +69,23 @@ export const openConnection = (streamUrl, retryAttempt, ctx, openSSEStream) => {
         showWorkingIndicator(texts);
     }
 
-    state.sseSource.addEventListener('message', async(event) => {
+    // Serialize handlers so SSE events are processed STRICTLY in arrival order.
+    // EventSource does NOT await an async 'message' listener, so two events that
+    // arrive back-to-back run their async handlers concurrently — and a slower
+    // one can finish AFTER a later event and undo its work. Concretely: a fast
+    // reorder emits `status` then `review_needed`; handleStatus awaits
+    // localizeMessage and re-showed the "working" indicator AFTER
+    // handleReviewNeeded had already cleared it, leaving it stuck. Chaining each
+    // routeEvent on the previous keeps ordering and fixes that class of races.
+    let eventQueue = Promise.resolve();
+    state.sseSource.addEventListener('message', (event) => {
         let data = null;
         try {
             data = JSON.parse(event.data);
         } catch (e) {
             return;
         }
-        await routeEvent(data, ctx);
+        eventQueue = eventQueue.then(() => routeEvent(data, ctx)).catch(() => {});
     });
 
     state.sseSource.addEventListener('done', () => {
