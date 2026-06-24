@@ -224,7 +224,7 @@
 
             <!-- Left loading skeleton: previews the checklist shape while the
                  first instruction streams (hidden once a section arrives). -->
-            <div class="cg-sk-checks-wrap" id="cgLeftSkeleton" style="display:{{#isresuming}}block{{/isresuming}}{{^isresuming}}none{{/isresuming}}">{{> local_coursegen/courseai_skeleton_checks }}</div>
+            <div class="cg-sk-checks-wrap" id="cgLeftSkeleton" style="display:none">{{> local_coursegen/courseai_skeleton_checks }}</div>
 
             <!-- Section checklist: a compact result card inside the AI planning
                  turn. The data hooks (data-section-id/data-round/data-remaining on

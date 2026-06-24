@@ -79,8 +79,12 @@ export const resetPlanningState = (options = {}, ctx) => {
     // Both skeletons preview the layout while the first instruction streams; the
     // stream code may flip planningLoading/streamContent on connect, but these
     // dedicated elements are only cleared on real content (handleSection).
+    // The LEFT panel always shows a message first (the user prompt turn + the
+    // working/status indicator), so a left skeleton is redundant and would
+    // coexist with that message — never show it. The CENTER has no message, so
+    // its skeleton still previews the course layout while content streams.
     if (leftSkel) {
-        leftSkel.style.display = showLoading ? '' : 'none';
+        leftSkel.style.display = 'none';
     }
     if (centerSkel) {
         centerSkel.style.display = showLoading ? '' : 'none';
