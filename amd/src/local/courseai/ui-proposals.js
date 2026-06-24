@@ -265,8 +265,8 @@ export const createProposalsUi = (deps) => {
                 const instruction = otherTextarea.value.trim();
                 if (!instruction) { otherTextarea.focus(); return; }
                 const truncated = instruction.length > 80 ? instruction.slice(0, 80) + '…' : instruction;
-                log({actor: 'user', kind: 'info',
-                    message: (texts.courseai_log_proposal_applied || 'You applied: {$a}').replace('{$a}', truncated)});
+                const appliedLabel = texts.courseai_log_proposal_applied || 'You applied';
+                log({actor: 'user', kind: 'info', message: appliedLabel + ': ' + truncated});
                 await sendAction(block, {action: 'feedback', instruction});
             } else {
                 const selectedLabel = selected.closest('.plan-proposal-card');
@@ -274,8 +274,8 @@ export const createProposalsUi = (deps) => {
                     ? (selectedLabel.querySelector('.plan-proposal-summary') || {}).textContent || ''
                     : '';
                 const truncated = summaryText.length > 80 ? summaryText.slice(0, 80) + '…' : summaryText;
-                log({actor: 'user', kind: 'info',
-                    message: (texts.courseai_log_proposal_applied || 'You applied: {$a}').replace('{$a}', truncated)});
+                const appliedLabel = texts.courseai_log_proposal_applied || 'You applied';
+                log({actor: 'user', kind: 'info', message: truncated ? appliedLabel + ': ' + truncated : appliedLabel});
                 await sendAction(block, {action: 'execute_proposal', target_ids: [selected.value]});
             }
         });
