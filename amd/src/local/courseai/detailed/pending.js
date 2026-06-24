@@ -216,6 +216,12 @@ export const markProposalTargetPending = (ctx, intent) => {
         case 'replan_activity':
             targetIds.forEach((id) => reopenActivityEntry(ctx, id));
             break;
+        case 'replace_activity':
+            // The old activity is deleted and a new one of a different type takes
+            // its slot. Skeleton the existing target row so the user sees exactly
+            // which element is being replaced while the replacement streams in.
+            targetIds.forEach((id) => reopenActivityEntry(ctx, id));
+            break;
         case 'replan_section':
             targetIds.forEach((sectionId) => reopenSectionActivities(ctx, sectionId));
             break;

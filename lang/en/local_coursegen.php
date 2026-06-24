@@ -537,6 +537,7 @@ $string['proposal_add_activity'] = 'Add a new activity to {$a->section} at {$a->
 $string['proposal_delete_activity'] = 'Delete activity(ies): {$a->names}';
 $string['proposal_reorder_activities'] = 'Reorder the activities to: {$a->names}';
 $string['proposal_replan_activity'] = 'Regenerate activity(ies) {$a->names}';
+$string['proposal_replace_activity'] = 'Replace activity(ies) {$a->names} with a new one';
 $string['proposal_full_regeneration'] = 'Rebuild the WHOLE course structure (previous adjustments are lost)';
 $string['proposal_adjust_all_details'] = 'Regenerate every activity\'s content, keeping the sections';
 
