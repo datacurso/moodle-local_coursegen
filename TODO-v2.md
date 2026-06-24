@@ -147,8 +147,10 @@
   muestre como estado principal.
 - [ ] **Hover en entrada del log → resalta el elemento en el preview** (§4.3): al pasar el cursor por
   una entrada del log lateral, resaltar la sección/actividad correspondiente en el centro.
-- [~] **Previsualización de selección antes de confirmar** (§6.1): las propuestas ya se previsualizan
-  (highlight de afectados), pero falta pulir el "marcado pre-aplicar" (ligado a P1).
+- [x] **Previsualización de selección antes de confirmar** (§6.1) — HECHO (2026-06-24): las propuestas
+  previsualizan el elemento afectado (highlight `cg-affected`) al seleccionar, y al APLICAR se pone el
+  skeleton SOLO en el elemento objetivo (`markProposalTargetPending` en `detailed/pending.js`,
+  restaurado de 415e71f). Verificado e2e (1 actividad con shimmer, resto intacto).
 - [ ] **Plantillas Mustache propias** (§3, §9, §14): hoy el preview se construye por DOM manual en JS.
   Crear las plantillas (`preview_section.mustache`, `preview_activity.mustache`, etc.) que reusen las
   clases de `core_courseformat` para heredar el tema. (Mejora de mantenibilidad; opcional pero pedido.)
@@ -156,6 +158,24 @@
   correctos en las propuestas, foco visible.
 - [ ] **Responsive** (§13): comportamiento en <1100px (el grid colapsa a 1 columna; revisar chat,
   proposals, skeletons en móvil/tablet).
+
+---
+
+## 3.bis Sesión 2026-06-24 (feat/chat-polish-v2 · PR #15) — peticiones nuevas, HECHAS
+
+> Pedidos que surgieron en esta sesión (no estaban en el TODO original). Todos verificados e2e con el
+> Chromium propio de puppeteer, 0 errores JS. Commits en `feat/chat-polish-v2`.
+
+- [x] **Vista central SIEMPRE editable**, independiente del modo edición de Moodle (`detailed/container.js`
+  añade `editing` al host; afordances scoped a `.editing &`). El plugin no depende de `body.editing`. (9901a81)
+- [x] **Cursor de arrastre consistente** en TODAS las actividades (`cursor: move`, no `pointer`). (e5567bf)
+- [x] **Colapso de sección por chevron** arreglado (quitado el doble-toggle de Bootstrap `data-toggle="collapse"` + `stopPropagation`; `toggleSectionCollapse` lo maneja). (6ac57b2)
+- [x] **Secciones arrastrables** con resaltado (outline) + cursor `move` al pasar por encima de la sección (fuera de actividades, `:not(:has(.activity:hover))`). (f057b82)
+- [x] **El panel izquierdo NUNCA queda en blanco**: indicador "working" continuo durante el RTT de `initSession` (transición de vista antes del await) y durante reconexiones del `EventSource` (solo `readyState=CLOSED` es fatal; `CONNECTING` mantiene vivo). (bbcfeaa)
+- [x] **El feedback del usuario aparece** en su turno (era lang sin placeholder `{$a}`; ahora compone `label + ': ' + texto`). (6426169)
+- [x] **`replace_activity`** (servicio): "cambia X por una <otro tipo>" reemplaza la actividad por una nueva del tipo pedido (delete+add, mismo slot); el plugin pone skeleton en el objetivo. Servicio PR #91 (893befc) + plugin (fa36eec). Verificado: book→assign.
+- [x] **Transcript del plan en MARKDOWN, por sección, en TIEMPO REAL** (live) e idéntico al recargar (`ui/plan-transcript.js`, `ui/markdown.js`, `marked`); cada sección aparece con spinner y se rellena conforme stream; CSS compacto `.cg-log-md` (headings ~1em, clamp 160px). (de59ddb; servicio 0446d28)
+- [x] **Proposals**: describen lo que la IA hará (no parafrasean el prompt), regenerar NO es destructivo, resaltan solo el elemento afectado, tarjeta plana, Enter envía, sin ✨. (servicio + plugin)
 
 ---
 
@@ -282,7 +302,7 @@ El subsistema actual (`detailed/section-dom.js`, `section-row.js`, `activity-dom
 
 ---
 
-## 7. Pulido de campo (2026-06-22) — POR IMPLEMENTAR
+## 7. Pulido de campo (2026-06-22) — MAYORMENTE HECHO (7.1, 7.3, 7.4 hechos; 7.2 pendiente)
 
 ### 7.1 Panel izquierdo = chat de agente moderno — HECHO
 
@@ -408,7 +428,7 @@ cualquier parte, en detalle.
     turno con tipo ("Page: …"), regenerar sección = +1 turno con "Section: …", feedback muestra el
     indicador "Analyzing your request…". Captura `/tmp/cg-ui/chat-sweep.png`.
 
-### 7.4 Réplica de la estética de **V0 de Vercel** (modo CLARO) — POR IMPLEMENTAR (PEDIDO FIRME 2026-06-22)
+### 7.4 Réplica de la estética de **V0 de Vercel** (modo CLARO) — HECHO (modo claro con TOKENS DEL PLUGIN, no colores de V0; refinado 2026-06-24)
 
 > **Referencia EXACTA: el panel derecho de chat de V0 de Vercel** (capturas aportadas por el usuario,
 > modo claro — **el plugin SOLO tendrá modo claro**). El usuario quiere que el panel IZQUIERDO se vea
@@ -499,16 +519,23 @@ cualquier parte, en detalle.
   errores JS, capturas del panel izq comparadas contra las capturas V0. NO push/merge hasta validar.
 
 #### 7.4.6 Estado
+- [x] 7.4.1 Tokens modo claro — HECHO, pero con los **tokens del PLUGIN** (`--primary: hsl(8,72%,42%)` rojo), NO los colores negros de V0 (corrección 2026-06-24, commit 62f76f0; el usuario rechazó la paleta V0).
 - [x] 7.4.2 Anatomía del hilo (turnos usuario/IA, step-group con timeline + colapsable) — HECHO (feat/chat-polish-v2 b1fc67d + 6b1ab2f).
-- [x] 7.4.3 Composer estilo V0 (botón circular ▲, controles secundarios ghost a la izquierda) — HECHO (f2e4bd6).
+- [x] 7.4.3 Composer estilo V0 (botón circular ▲, controles secundarios ghost a la izquierda) — HECHO (f2e4bd6); botón de envío compacto 32px squircle.
 - [x] 7.4.4 Overlay de decisión (accept/adjust + propuestas) que tapa el chat — HECHO (712f36a; ui/decision-overlay.js singleton, #cgDecisionOverlay dentro de #courseaiContextChat).
   - Verificado con Chromium propio de puppeteer (sesión 157): 0 errores JS, hilo 7 turnos, tarjeta usuario #f4f4f5/16px, timeline + colapsable OK, composer circular 36px/50%, overlay Accept/Adjust presente. Capturas: /tmp/cg-ui/v0-thread.png, v0-composer.png, v0-overlay.png.
+- [x] 7.4.4-refinado (2026-06-24): el overlay tapa SOLO el composer (el hilo sigue visible); barra "still accept" (`#cgAcceptBar`) separada sobre el composer tras "Adjust" para poder aceptar siempre; una sola decisión/menú a la vez; Enter envía el feedback libre; eliminado el glifo ✨. Verificado e2e.
 
 ---
 
-## Render left thread from server-side message store (single source of truth)
+## Render left thread from server-side message store (single source of truth) — IMPLEMENTADO (PR #15 + servicio PR #91, 2026-06-24)
 
-> **DESIGN ONLY — not yet implemented.** Companion to the SERVICE design in
+> **IMPLEMENTADO.** El thread store server-side está construido: el servicio persiste cada mensaje
+> renderable y lo manda en `snapshot.thread`; el plugin lo reproduce con `replayThread` (P-1..P-3
+> hechos, P-5 verificado). La estructura del plan se muestra como transcript markdown POR SECCIÓN en
+> tiempo real (live) e idéntica al recargar (`ui/plan-transcript.js`, `ui/markdown.js`). Cabos
+> sueltos en §7.3 (título/errores no persistidos; nombre `ai_course_identity` en el plugin).
+> (Diseño original conservado abajo como referencia.) Companion to the SERVICE design in
 > `course_ai/TODO-V2.md` → section "Server-side message thread store (single source of truth)".
 > The SERVICE becomes the authority for the left-chat thread: it persists every renderable
 > message (user actions, AI milestones, selected statuses) as an ordered, typed log. On reload the
@@ -632,10 +659,10 @@ sessions remain, then remove it.
       `local/courseai/i18n.js` STRING_KEYS so they prefetch.
 - [ ] **P-4**: Delete `rebuildDecisionLog` and the human-message round rebuild once `thread` is
       always present; keep the empty-`thread` fallback only during the deprecation window.
-- [ ] **P-5 Verify**: `npx grunt amd --root=local/coursegen`; reload an in-flight session with
-      puppeteer's own Chromium (`/tmp/cg-ui/.chromium-cache`, NEVER system chrome); confirm the
-      full thread (every user action + AI milestone) survives reload, zero JS errors, screenshots
-      vs current. NO push/merge until validated.
+- [x] **P-5 Verify** — HECHO (2026-06-24, Chromium propio de puppeteer). Verificado e2e que el
+      thread sobrevive al reload renderizando el transcript markdown por sección idéntico a la vista
+      en vivo (mismo HTML: h3/strong/listas, htmlLen 9438), 0 errores JS. Capturas: rt-mid/rt-final/
+      rt-reload, md-live/md-reload.
 
 ### Open decisions (mirror the SERVICE doc; confirm together)
 
