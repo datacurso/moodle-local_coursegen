@@ -3393,8 +3393,13 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
 #prvSections .activity-item.cg-activity--done {
   opacity: 1;
 }
+/* Activities with detail are clickable to expand, but the whole row is also
+   draggable (the preview is always editable). Keep the drag (move) cursor for
+   consistency across ALL activities — Boost gives the first one `move`, and this
+   used to override the rest to `pointer`, so only the first showed the drag
+   affordance. The chevron/controls keep their own pointer cursor. */
 #prvSections .activity-item.cg-activity--has-detail {
-  cursor: pointer;
+  cursor: move;
 }
 
 /* Streamed description slot (Moodle .activity-description grid area). */
