@@ -361,15 +361,23 @@ matiz extra:
 - Enfoque de bajo riesgo (no pelear con el reconciliador): franja "insert-after" en el borde inferior
   de cada `.dp-activity-wrap`/`.activity`, visible solo en hover.
 
-### 7.3 Mensajes del chat: sin « », acción+instrucción en UN turno con tipo — HECHO (parcial, server store PENDING)
+### 7.3 Mensajes del chat: sin « », acción+instrucción en UN turno con tipo — HECHO (server store IMPLEMENTADO; cabos sueltos abajo)
 
-> **PENDING — almacén server-side de hilo:** los turnos de tipo "AI response" (contexto de
-> acción regenerar, aprobar, reordenar) NO están en el snapshot actual del servidor y no pueden
-> persistir completamente entre reloads sin un thread store server-side. Actualmente solo se
-> reconstruyen: el prompt inicial, el checklist agrupado de secciones y los mensajes humanos
-> posteriores. Los turnos de acción de IA (post-approve, post-regenerate, etc.) se pierden en
-> reload. Resolución completa requiere persistir el hilo completo en la BD (fuera de scope de esta
-> rama). Marcado como **PENDING** hasta que se implemente la persistencia server-side del hilo.
+> **HECHO — almacén server-side de hilo (servicio PR #91 + plugin PR #15).** El servicio persiste
+> cada mensaje renderable en `thread_messages` (tipado + ordenado) y lo manda en `snapshot.thread`;
+> el plugin lo reproduce al recargar con `thread-replay.js` (`replayThread`). La estructura del plan
+> se muestra como **transcript markdown por sección, en tiempo real** (live) e **idéntica al recargar**
+> (`ui/plan-transcript.js` + `ui/markdown.js`, render con `marked`). Diseño completo en el TODO-V2 del
+> servicio (sección "Thread-store").
+>
+> **PENDIENTE (cabos sueltos — registrados para no perderlos; detalle en servicio `TODO-V2.md`):**
+> - [ ] **Título del curso**: el servicio NO lo persiste al thread (solo evento SSE en vivo) → no
+>   aparece al recargar. Además el plugin sigue usando el nombre viejo `ai_course_identity`
+>   (`thread-replay.js` AI_MILESTONE_KIND, `handlers-content.js`, `i18n.js`, lang
+>   `courseai_log_ai_course_identity`); el servicio ya lo renombró a `ai_course_configuration`.
+>   Falta alinear el plugin a `course_configuration` cuando el servicio wiree el append.
+> - [ ] **Errores**: el slot `ai_error` existe en el servicio pero no se appendea → los turnos de
+>   error no se reproducen al recargar.
 **Pedido:** (a) quitar los guillemets « » de los mensajes; (b) el regenerar debe decir el TIPO de
 actividad; (c) la instrucción del usuario + la acción NO deben ser dos turnos sino UNO; (d) PRINCIPIO:
 en el chat se debe mostrar TODO lo que streamea el servidor y TODO lo que el usuario manda desde
