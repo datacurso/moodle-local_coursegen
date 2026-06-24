@@ -120,6 +120,15 @@ export const openConnection = (streamUrl, retryAttempt, ctx, openSSEStream) => {
     });
 
     state.sseSource.onerror = () => {
+        // EventSource auto-reconnects on TRANSIENT drops (proxy/idle timeout between
+        // sparse planning events). The browser fires 'onerror' with readyState
+        // CONNECTING while it silently retries — this is NOT fatal. Treating it as
+        // fatal (hiding the indicator, enabling chat, showing a connection error)
+        // made the LEFT panel flap to blank every few seconds during slow phases.
+        // Keep everything alive while reconnecting; only CLOSED is a real failure.
+        if (state.sseSource && state.sseSource.readyState === EventSource.CONNECTING) {
+            return;
+        }
         state.isStreaming = false;
         // Connection dropped — clear the live working indicator so it does not
         // stay pinned forever on abnormal stream termination.
