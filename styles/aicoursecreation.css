@@ -3402,6 +3402,40 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
   cursor: move;
 }
 
+/* ── Section drag affordance (mirror of Boost's editable .activity-item) ──
+   Sections are reorderable too (init-view.js wires DnD on .course-section). Boost
+   only shows the move cursor/outline via `.editing .course-section-header.draggable`,
+   but the `.draggable` class is added by Moodle's reactive engine, which we do NOT
+   run in this AMD popup. So we scope our own rules on the replica.
+
+   Hovering the SECTION (header or its card chrome, but NOT an inner activity) gives
+   the whole section a move cursor and a hover outline. The `:not(:has(.activity:hover))`
+   guard (same technique Boost uses for activities) suppresses the section highlight
+   while the cursor is over an inner activity, so the two never double-highlight. */
+#prvSections .course-section .section-item {
+  cursor: move;
+}
+#prvSections .course-section .section-item .activity-item,
+#prvSections .course-section .section-item .activity-item .a,
+#prvSections .course-section .section-item .icons-collapse-expand,
+#prvSections .course-section .section-item .cg-item-actions,
+#prvSections .course-section .section-item .dp-add-activity-wrap,
+#prvSections .course-section .section-item .dp-add-section-wrap {
+  cursor: default;
+}
+/* Inner activities keep their own move cursor (Boost .editing affordance). */
+#prvSections .course-section .section-item .activity-item.cg-activity--has-detail,
+#prvSections .course-section .section-item .activity-item:hover {
+  cursor: move;
+}
+/* Hover outline on the section card — suppressed while hovering an inner activity
+   so only ONE element (the activity, not the whole section) highlights at a time. */
+#prvSections .course-section .section-item:hover:not(:has(.activity:hover)) {
+  outline: 2px solid hsl(8 72% 42% / .45);
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+
 /* Streamed description slot (Moodle .activity-description grid area). */
 #prvSections .cg-activity-desc-slot {
   grid-area: altcontent;
