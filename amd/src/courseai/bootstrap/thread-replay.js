@@ -179,7 +179,10 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
                 ? header + '\n\n' + body
                 : (body || header);
             if (text) {
-                emitLog({actor: 'ai', kind: 'ai', message: text});
+                // The body is light Markdown (### section, **activity** _(type)_,
+                // nested bullets) — render it as scoped HTML so reload matches the
+                // live transcript exactly.
+                emitLog({actor: 'ai', kind: 'ai', message: text, markdown: true});
             }
             return;
         }

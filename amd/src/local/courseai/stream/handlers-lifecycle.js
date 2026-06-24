@@ -156,6 +156,31 @@ export const handleReviewNeeded = async(data, ctx) => {
     state.isStreaming = false;
     // The AI responded — drop the live "working" indicator.
     hideFeedbackThinking();
+
+    // The LEFT panel must show the SAME full planned-structure transcript live as
+    // on reload. The service ships it as Markdown in `planned_structure` (the exact
+    // string it also persists as ai_planned_structure). Render it here as a scoped
+    // Markdown turn and hide the compact checklist, so generation and reload look
+    // identical. Emit it BEFORE marking the plan reviewed so this round's structure
+    // lands in the plan position (#cgLog on the first round); the review milestone
+    // below then flows after it.
+    if (typeof emitLog === 'function' && data.planned_structure) {
+        const planHeader = (texts && texts.courseai_log_ai_planned_structure) || '';
+        const planBody = String(data.planned_structure).trim();
+        const planMessage = planHeader && planBody
+            ? planHeader + '\n\n' + planBody
+            : (planBody || planHeader);
+        if (planMessage) {
+            emitLog({actor: 'ai', kind: 'ai', message: planMessage, markdown: true});
+        }
+        // The transcript replaces the compact checklist — hide every checklist
+        // group so the two representations never coexist.
+        document.querySelectorAll('.courseai-checklist').forEach((el) => {
+            el.classList.add('hidden');
+            el.style.display = 'none';
+        });
+    }
+
     // The plan has settled: from now on log entries flow BELOW the section checklist.
     // Set this BEFORE emitting the milestone so the AI's "review the plan" message
     // lands AFTER the planned-structure group (chronological: plan first, then the
