@@ -163,32 +163,32 @@
 .courseai-checklist-list {
   list-style: none;
   margin: 0;
-  padding: 0 0 0 20px;
+  padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 14px;
   position: relative;
 }
 
-.courseai-checklist-list::before {
-  content: '';
-  position: absolute;
-  left: 8px;
-  top: 9px;
-  bottom: 9px;
-  width: 1px;
-  background: var(--border);
-}
-
+/* Each section = an INDEPENDENT, full-width block (no connecting timeline line,
+   no wrapping card). A hairline separates consecutive sections. */
 .courseai-checklist-item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+  display: block;
+  width: 100%;
   color: var(--muted-fg);
   font-size: 14px;
   line-height: 1.4;
   opacity: .7;
   transition: opacity .2s;
+}
+.courseai-checklist-item + .courseai-checklist-item {
+  border-top: 1px solid var(--border);
+  padding-top: 14px;
+}
+.courseai-checklist-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
 }
 
 .courseai-checklist-item.is-done {
@@ -242,16 +242,13 @@
   to { transform: rotate(360deg); }
 }
 
-/* Per-section Markdown detail: sits BELOW the section name (wraps to its own line,
-   indented under the name past the check icon). Compact via .cg-log-md; long
-   details clamp with a "Show more"/"Show less" toggle. */
-.courseai-checklist-item {
-  flex-wrap: wrap;
-}
+/* Per-section Markdown detail: a full-width block BELOW the section name,
+   indented to align under the name (past the check icon). Compact via .cg-log-md;
+   long details clamp with a "Show more"/"Show less" toggle. */
 .courseai-checklist-detail {
-  flex-basis: 100%;
-  width: 100%;
-  margin: 4px 0 2px 26px;
+  display: block;
+  width: auto;
+  margin: 6px 0 0 26px;
   color: var(--fg);
   font-size: 13.5px;
   line-height: 1.55;
@@ -263,8 +260,8 @@
 .courseai-checklist-detail.cg-detail-clamped {
   max-height: 200px;
   overflow: hidden;
-  -webkit-mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 70%, transparent 100%);
+  -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 72%, transparent 100%);
 }
 .courseai-checklist-detail.cg-detail-clamped.is-expanded {
   max-height: none;
@@ -272,8 +269,8 @@
   mask-image: none;
 }
 .cg-detail-toggle {
-  flex-basis: 100%;
-  margin: 2px 0 6px 26px;
+  display: inline-flex;
+  margin: 4px 0 0 26px;
 }
 
 /* Once the plan has been reviewed the whole structure is final, so every checklist

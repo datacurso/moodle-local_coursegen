@@ -240,12 +240,14 @@ export const rebuildTranscriptFromPlan = (plan) => {
         const md = renderMarkdown(formatSectionMd({
             name: '', description: section.description || '', activities,
         }));
-        item.innerHTML = '<span class="courseai-checklist-check">'
+        item.innerHTML = '<div class="courseai-checklist-head">'
+            + '<span class="courseai-checklist-check">'
             + '<svg class="spinner-icon" viewBox="0 0 24 24">'
             + '<path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg>'
             + '<svg class="check-icon" viewBox="0 0 24 24">'
             + '<polyline points="20 6 9 17 4 12"/></svg></span>'
             + '<span class="courseai-checklist-name">' + (section.name || '') + '</span>'
+            + '</div>'
             + '<div class="courseai-checklist-detail cg-log-md">' + md + '</div>';
         list.appendChild(item);
         clampDetail(item.querySelector('.courseai-checklist-detail'));

@@ -2678,12 +2678,10 @@ svg { display: block; flex-shrink: 0; }
 
 /* §7.1 — the section checklist is a grouped assistant turn block in the thread.
    Full-width flat card aligned with AI turns; avatar header + section list. */
+/* No wrapping card: the step group is just the header + a list of independent,
+   full-width section items (no border/background/padding box around them). */
 .cg-thread-checklist {
   margin-top: 6px;
-  padding: 12px 14px;
-  background: var(--card, #fff);
-  border: 1px solid var(--border, hsl(215 20% 88%));
-  border-radius: var(--radius, 0.75rem);
 }
 .cg-thread-checklist .courseai-checklist-list {
   gap: 6px;
