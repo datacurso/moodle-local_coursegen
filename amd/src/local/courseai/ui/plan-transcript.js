@@ -35,7 +35,7 @@
 import {renderMarkdown, formatSectionMd} from 'local_coursegen/local/courseai/ui/markdown';
 
 /** Collapsed max-height (px) before the detail fades + shows a "Show more" toggle. */
-const CLAMP_PX = 200;
+const CLAMP_PX = 120;
 
 /** @type {Map<string, Object>} sectionId -> accumulated section data. */
 const sections = new Map();
@@ -70,14 +70,23 @@ const clampDetail = (el) => {
         const toggle = document.createElement('button');
         toggle.type = 'button';
         toggle.className = 'cg-log-toggle cg-detail-toggle';
-        toggle.innerHTML = '<span class="cg-log-toggle-text">Show more</span>'
-            + '<span class="cg-log-toggle-chevron" aria-hidden="true">⌄</span>';
-        toggle.addEventListener('click', () => {
-            const expanded = el.classList.toggle('is-expanded');
+        const setLabel = (expanded) => {
             toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-            const label = toggle.querySelector('.cg-log-toggle-text');
-            if (label) {
-                label.textContent = expanded ? 'Show less' : 'Show more';
+            toggle.innerHTML = '<span class="cg-log-toggle-text">'
+                + (expanded ? 'Show less' : 'Show more') + '</span>'
+                + '<span class="cg-log-toggle-chevron" aria-hidden="true">⌄</span>';
+        };
+        const apply = (expanded) => {
+            el.classList.toggle('is-expanded', expanded);
+            setLabel(expanded);
+        };
+        setLabel(false);
+        toggle.addEventListener('click', () => apply(!el.classList.contains('is-expanded')));
+        // The whole faded (collapsed) detail is a click target → the user can
+        // expand by clicking anywhere in the fade zone, not only on the button.
+        el.addEventListener('click', () => {
+            if (!el.classList.contains('is-expanded')) {
+                apply(true);
             }
         });
         el.insertAdjacentElement('afterend', toggle);

@@ -166,29 +166,36 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 14px;
+  gap: 26px;
   position: relative;
 }
 
 /* Each section = an INDEPENDENT, full-width block (no connecting timeline line,
-   no wrapping card). A hairline separates consecutive sections. */
+   no wrapping card). A clear separator divides consecutive sections. */
 .courseai-checklist-item {
   display: block;
   width: 100%;
   color: var(--muted-fg);
   font-size: 14px;
   line-height: 1.4;
-  opacity: .7;
+  opacity: .75;
   transition: opacity .2s;
 }
 .courseai-checklist-item + .courseai-checklist-item {
-  border-top: 1px solid var(--border);
-  padding-top: 14px;
+  border-top: 2px solid var(--border);
+  padding-top: 26px;
 }
 .courseai-checklist-head {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+/* The section name carries the weight — bigger and bolder than the detail. */
+.courseai-checklist-name {
+  font-size: 15.5px;
+  font-weight: 700;
+  color: var(--fg);
+  line-height: 1.35;
 }
 
 .courseai-checklist-item.is-done {
@@ -258,19 +265,24 @@
   display: none;
 }
 .courseai-checklist-detail.cg-detail-clamped {
-  max-height: 200px;
+  max-height: 120px;
   overflow: hidden;
-  -webkit-mask-image: linear-gradient(to bottom, #000 72%, transparent 100%);
-  mask-image: linear-gradient(to bottom, #000 72%, transparent 100%);
+  cursor: pointer;
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
 }
 .courseai-checklist-detail.cg-detail-clamped.is-expanded {
   max-height: none;
+  cursor: auto;
   -webkit-mask-image: none;
   mask-image: none;
 }
+/* Centered "Show more"/"Show less" under the section detail. */
 .cg-detail-toggle {
-  display: inline-flex;
-  margin: 4px 0 0 26px;
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin: 6px 0 0 0;
 }
 
 /* Once the plan has been reviewed the whole structure is final, so every checklist
