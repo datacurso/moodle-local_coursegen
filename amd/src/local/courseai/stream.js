@@ -47,6 +47,7 @@ import {renderGenerationTracker} from './stream/tracker-renderer';
 import {setCompletionStatsFromGeneratedResult as setCompletionStats} from './stream/completion';
 import {getOrCreateRoundChecklist} from './stream/checklist';
 import {openConnection} from './stream/connection';
+import {resetTranscript} from './ui/plan-transcript';
 
 // Module-level variable to preserve phase 4 total activities.
 // This survives state resets that happen during stream opening.
@@ -123,6 +124,13 @@ export const createStreamManager = (deps) => {
             const savedPhase4Total = state.phase4TotalActivities || 0;
 
             stepsUi.resetPlanningState({showLoading: streamMode !== 'generating' && !keepPlan, keepPlan});
+
+            // Fresh planning round → clear the live LEFT transcript so a new plan
+            // never stacks on the previous one. keepPlan adjusts keep the existing
+            // transcript (review_needed rebuilds it from the authoritative plan).
+            if (streamMode !== 'generating' && !keepPlan) {
+                resetTranscript();
+            }
 
             // Suppress the centered generic spinner immediately for planning streams.
             // The review card with skeleton rows will render as the first section event arrives.

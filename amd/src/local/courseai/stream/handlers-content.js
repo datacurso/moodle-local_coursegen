@@ -24,6 +24,11 @@
  */
 
 import {hideWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
+import {
+    transcriptOnSection,
+    transcriptOnActivity,
+    transcriptOnActivityDetail,
+} from 'local_coursegen/local/courseai/ui/plan-transcript';
 
 /**
  * Handle 'activity' event: upsert activity into latestInitialSections and
@@ -61,6 +66,10 @@ export const handleActivity = (data, ctx) => {
             const remaining = parseInt(checklistItem.getAttribute('data-remaining') || '0', 10);
             checklistItem.setAttribute('data-remaining', remaining + 1);
         }
+    }
+    // Live LEFT transcript: add this activity under its section block (real time).
+    if (!ctx.keepPlan) {
+        transcriptOnActivity(data);
     }
     // On a keepPlan re-stream (apply selection / adjust) the server re-streams the
     // existing plan structure without real UUIDs, so the structural sync would render
@@ -126,25 +135,23 @@ export const handleSection = (data, ctx) => {
         : getOrCreateRoundChecklist(elements, round, texts);
 
     if (targetList && data.name) {
+        // The checklist <li> is KEPT (hidden) only for its per-section activity
+        // counter (data-remaining), which detailed_plan_activity decrements. The
+        // VISIBLE representation is now the live Markdown transcript below — the
+        // checklist is never unhidden.
         const item = document.createElement('li');
         item.className = 'courseai-checklist-item is-loading';
         item.setAttribute('data-section-id', data.id);
         item.setAttribute('data-round', state.generationRound || 0);
         item.setAttribute('data-remaining', 0);
-        item.innerHTML = '<span class="courseai-checklist-check">'
-            + '<svg class="spinner-icon" viewBox="0 0 24 24">'
-            + '<path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg>'
-            + '<svg class="check-icon" viewBox="0 0 24 24">'
-            + '<polyline points="20 6 9 17 4 12"/></svg></span>'
-            + '<span class="courseai-checklist-name">' + data.name + '</span>';
+        item.innerHTML = '<span class="courseai-checklist-name">' + data.name + '</span>';
         targetList.appendChild(item);
-        const listParent = targetList.closest('.courseai-checklist');
-        if (listParent) {
-            listParent.classList.remove('hidden');
-        }
-        if (elements.checklist) {
-            elements.checklist.classList.remove('hidden');
-        }
+    }
+
+    // Live LEFT transcript: show this section (with a spinner) the moment it
+    // lands; its activities + details fill in below it in real time.
+    if (!ctx.keepPlan) {
+        transcriptOnSection(data, texts);
     }
 
     // See handleActivity: skip the structural placeholder skeleton render during a
@@ -206,6 +213,11 @@ export const handleDetailedPlanActivity = (data, ctx) => {
     ctx.flags.contentReceived = true;
     const {state, detailedUi, stepsUi} = ctx;
     detailedUi.handleDetailedPlanActivity(data);
+    // Live LEFT transcript: attach this activity's detailed plan and drop the
+    // section spinner once all its activities are planned.
+    if (!ctx.keepPlan) {
+        transcriptOnActivityDetail(data);
+    }
     state.activitiesPlannedCount = (state.activitiesPlannedCount || 0) + 1;
     const totalDetailed = state.detailedTotal || 1;
     const pct = Math.min(90, (state.activitiesPlannedCount / totalDetailed) * 90);

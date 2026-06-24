@@ -21,32 +21,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import * as markedModule from 'local_coursegen/marked';
-
-/**
- * Render a Markdown string to HTML for a turn body, reusing the bundled
- * ``marked`` module. The plan transcript (sections/activities/details) arrives
- * as light Markdown and is shown identically live and on reload; the scoped
- * ``.cg-log-md`` CSS keeps headings compact so nothing reads oversized.
- *
- * No DOMPurify is bundled, so as a defensive measure (the content is
- * server-rendered plan text) script/style/embed blocks and inline event-handler
- * attributes are stripped from the output.
- *
- * @param {string} md - Markdown source.
- * @returns {string} Sanitized HTML, or '' when no parser is available.
- */
-const renderMarkdown = (md) => {
-    const parse = markedModule.parse
-        || (markedModule.marked && markedModule.marked.parse)
-        || (markedModule.default && markedModule.default.parse);
-    if (typeof parse !== 'function') {
-        return '';
-    }
-    return parse(String(md || ''))
-        .replace(/<\/?(?:script|style|iframe|object|embed|link|meta)[^>]*>/gi, '')
-        .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
-};
+import {renderMarkdown} from 'local_coursegen/local/courseai/ui/markdown';
 
 /** Map kind → CSS modifier class applied to the left color bar. */
 const KIND_CLASS = {

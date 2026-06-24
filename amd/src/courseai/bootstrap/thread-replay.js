@@ -32,6 +32,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {rebuildTranscriptFromPlan} from 'local_coursegen/local/courseai/ui/plan-transcript';
+
 /**
  * AI-output message types whose visible content is the FULL pre-rendered plain
  * text of that planning step (`content.string`). They render as an AI turn
@@ -114,9 +116,10 @@ const resolveText = async(content, localizeMessage) => {
  * @param {Function} params.emitLog - decision-log emitter ({actor, kind, message}).
  * @param {Function} params.localizeMessage - async localizer for LocalizedMessage.
  * @param {Function} [params.renderProposals] - ui-proposals renderProposals(payload).
+ * @param {Object} [params.texts] - Localized strings (transcript header on replay).
  * @returns {{replayThread: Function, renderThreadMessage: Function}}
  */
-export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposals}) => {
+export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposals, texts}) => {
     /**
      * Render a single thread message into the left feed.
      *
@@ -173,15 +176,21 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
             // string_id is only a short header label. Show the header + the full
             // plain-text body so the left panel is the complete transcript, not a
             // one-line label.
+            // Prefer rebuilding the per-section transcript from the persisted
+            // structured plan (payload.plan) so reload renders EXACTLY like the
+            // live per-section transcript. Fall back to the pre-rendered Markdown
+            // block (content.string) for old sessions that have no payload.plan.
+            const planTree = (payload && Array.isArray(payload.plan)) ? payload.plan : null;
+            if (planTree && planTree.length) {
+                rebuildTranscriptFromPlan(planTree, texts);
+                return;
+            }
             const header = await resolveText(content, localizeMessage);
             const body = String((content && content.string) || '').trim();
             const text = body && header && header !== body
                 ? header + '\n\n' + body
                 : (body || header);
             if (text) {
-                // The body is light Markdown (### section, **activity** _(type)_,
-                // nested bullets) — render it as scoped HTML so reload matches the
-                // live transcript exactly.
                 emitLog({actor: 'ai', kind: 'ai', message: text, markdown: true});
             }
             return;
