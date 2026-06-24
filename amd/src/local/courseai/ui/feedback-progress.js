@@ -69,6 +69,12 @@ export const showWorkingIndicator = (texts, message) => {
     if (!feed) {
         return;
     }
+    // Once any message is shown in the left panel (even this generic working
+    // status), the boot skeleton is redundant — drop it so they never coexist.
+    const leftSkeleton = document.getElementById('cgLeftSkeleton');
+    if (leftSkeleton) {
+        leftSkeleton.style.display = 'none';
+    }
     const resolved = (message && String(message).trim())
         || (texts && texts.courseai_log_ai_working)
         || (texts && texts.courseai_log_ai_thinking)

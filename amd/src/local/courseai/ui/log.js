@@ -235,6 +235,12 @@ export const createLog = ({container, actionContainer, isActionPhase}) => {
         entry.appendChild(body);
 
         target.appendChild(entry);
+        // A real turn is now visible in the left panel → the boot skeleton is
+        // redundant; hide it so a skeleton never coexists with a message.
+        const leftSkeleton = document.getElementById('cgLeftSkeleton');
+        if (leftSkeleton) {
+            leftSkeleton.style.display = 'none';
+        }
         wireFadeExpand(entry, msgSpan, isUser);
         // Pin the feed to the bottom so the newest entry sits next to the input. Defer
         // to the next frame: a fresh entry may wrap to several lines, so its height is
