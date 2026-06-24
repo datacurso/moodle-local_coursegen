@@ -2939,8 +2939,11 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
 /* Subtle AI vs user distinction (§7.1): user turns get a faint inset card with a
    left accent; AI turns stay flat. Not opposed bubbles — just enough to read. */
 .cg-log-entry--turn-user {
-  background: var(--muted);
-  border: 1px solid var(--border);
+  /* Neutral zinc card (V0 look) — a warm-neutral grey combines with the red
+     accent, unlike the cool bluish --muted which read as "off". No border: the
+     fill + radius define it cleanly. */
+  background: hsl(240, 5%, 96%);
+  border: none;
   border-radius: 16px;
   padding: 16px 20px;
 }
@@ -3100,7 +3103,9 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
   padding: 3px 8px;
   border: none;
   background: transparent;
-  color: var(--primary, #6b4eff);
+  /* Calm, muted "Show more" — not the loud red accent (reserved for primary
+     actions); a secondary control should not pull focus. */
+  color: var(--muted-fg);
   font-family: inherit;
   font-size: 11.5px;
   font-weight: 600;
