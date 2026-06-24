@@ -162,36 +162,19 @@ export const handleReviewNeeded = async(data, ctx) => {
     // The AI responded — drop the live "working" indicator.
     hideFeedbackThinking();
 
-    // The LEFT panel shows the planned structure as a LIVE per-section transcript
-    // built during the stream (sections appear with a spinner, activities + detail
-    // fill in below them in real time). At review it is already on screen — just
-    // settle it (drop the spinners). If no transcript was built (e.g. a resume that
-    // jumped straight to review), fall back to the server's one-shot
-    // `planned_structure` Markdown block so the panel is never empty. Emit BEFORE
-    // marking the plan reviewed so this round's structure stays in the plan
-    // position (#cgLog); the review milestone below flows after it.
-    if (Array.isArray(data.current_plan) && data.current_plan.length) {
-        // Authoritative rebuild from the settled plan: reconciles the live
-        // incremental blocks (and fixes keepPlan / full-regeneration rounds).
-        rebuildTranscriptFromPlan(data.current_plan, texts);
+    // The section checklist stays as-is (name + spinner→check). Its per-section
+    // Markdown detail (description + activities) sits below each item:
+    //  - initial round: the live accumulator already filled each detail in real
+    //    time → just settle them (clamp long ones with "Show more"/"Show less").
+    //  - keepPlan adjust: the live detail fill is skipped during the re-stream, so
+    //    rebuild the checklist + details from the authoritative current_plan.
+    if (ctx.keepPlan && Array.isArray(data.current_plan) && data.current_plan.length) {
+        rebuildTranscriptFromPlan(data.current_plan);
     } else if (transcriptHasContent()) {
         finalizeTranscript();
-    } else if (typeof emitLog === 'function' && data.planned_structure) {
-        const planHeader = (texts && texts.courseai_log_ai_planned_structure) || '';
-        const planBody = String(data.planned_structure).trim();
-        const planMessage = planHeader && planBody
-            ? planHeader + '\n\n' + planBody
-            : (planBody || planHeader);
-        if (planMessage) {
-            emitLog({actor: 'ai', kind: 'ai', message: planMessage, markdown: true});
-        }
+    } else if (Array.isArray(data.current_plan) && data.current_plan.length) {
+        rebuildTranscriptFromPlan(data.current_plan);
     }
-    // The compact checklist is retired in favour of the transcript — keep every
-    // checklist group hidden defensively.
-    document.querySelectorAll('.courseai-checklist').forEach((el) => {
-        el.classList.add('hidden');
-        el.style.display = 'none';
-    });
 
     // The plan has settled: from now on log entries flow BELOW the section checklist.
     // Set this BEFORE emitting the milestone so the AI's "review the plan" message

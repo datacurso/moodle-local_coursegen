@@ -135,23 +135,36 @@ export const handleSection = (data, ctx) => {
         : getOrCreateRoundChecklist(elements, round, texts);
 
     if (targetList && data.name) {
-        // The checklist <li> is KEPT (hidden) only for its per-section activity
-        // counter (data-remaining), which detailed_plan_activity decrements. The
-        // VISIBLE representation is now the live Markdown transcript below — the
-        // checklist is never unhidden.
+        // Section checklist item: name with a spinner (left) that flips to a check
+        // when all its activities are detailed (data-remaining → 0, see
+        // handleDetailedPlanActivity). Below the name sits an (initially empty)
+        // Markdown detail filled in real time by the transcript accumulator.
         const item = document.createElement('li');
         item.className = 'courseai-checklist-item is-loading';
         item.setAttribute('data-section-id', data.id);
         item.setAttribute('data-round', state.generationRound || 0);
         item.setAttribute('data-remaining', 0);
-        item.innerHTML = '<span class="courseai-checklist-name">' + data.name + '</span>';
+        item.innerHTML = '<span class="courseai-checklist-check">'
+            + '<svg class="spinner-icon" viewBox="0 0 24 24">'
+            + '<path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg>'
+            + '<svg class="check-icon" viewBox="0 0 24 24">'
+            + '<polyline points="20 6 9 17 4 12"/></svg></span>'
+            + '<span class="courseai-checklist-name">' + data.name + '</span>'
+            + '<div class="courseai-checklist-detail cg-log-md"></div>';
         targetList.appendChild(item);
+        const listParent = targetList.closest('.courseai-checklist');
+        if (listParent) {
+            listParent.classList.remove('hidden');
+        }
+        if (elements.checklist) {
+            elements.checklist.classList.remove('hidden');
+        }
     }
 
-    // Live LEFT transcript: show this section (with a spinner) the moment it
-    // lands; its activities + details fill in below it in real time.
+    // Fill this section's Markdown detail (description + activities) below its
+    // checklist item, in real time as the stream arrives.
     if (!ctx.keepPlan) {
-        transcriptOnSection(data, texts);
+        transcriptOnSection(data);
     }
 
     // See handleActivity: skip the structural placeholder skeleton render during a

@@ -14,18 +14,18 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Live, per-section planning transcript for the LEFT panel.
+ * Per-section Markdown DETAIL under each section checklist item.
  *
- * The structure is shown in REAL TIME as the SSE stream arrives, not in one
- * block at the end: each section appears with a loading spinner the moment its
- * ``section`` event lands, then its activities and each activity's detailed plan
- * fill in below it (rendered as scoped Markdown) as the ``activity`` /
- * ``detailed_plan_activity`` events arrive. A section's spinner drops once all
- * its activities have been planned.
+ * The section checklist is unchanged: each section shows its name with a spinner
+ * (left) that flips to a check when its activities are all detailed. This module
+ * ONLY fills the Markdown detail that sits BELOW each section's name — the
+ * section's description + its activities (+ each activity's detailed plan) — and
+ * clamps it with a "Show more"/"Show less" toggle, exactly like the old single
+ * block but now split per section. It updates in real time as the stream arrives
+ * and is rebuilt identically on reload.
  *
- * Self-contained: the stream handlers import and call these functions directly
- * (no ctx threading). State is module-level (one wizard instance per page) and
- * is cleared by ``resetTranscript`` at the start of every stream/round.
+ * Self-contained: stream handlers import and call these directly (no ctx). State
+ * is module-level (one wizard per page) and cleared by resetTranscript per round.
  *
  * @module     local_coursegen/local/courseai/ui/plan-transcript
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -34,170 +34,121 @@
 
 import {renderMarkdown, formatSectionMd} from 'local_coursegen/local/courseai/ui/markdown';
 
-/** Id of the transcript wrapper injected into the planning feed (#cgLog). */
-const WRAP_ID = 'cgPlanTranscript';
+/** Collapsed max-height (px) before the detail fades + shows a "Show more" toggle. */
+const CLAMP_PX = 200;
 
-/** @type {Map<string, Object>} sectionId -> section render state. */
+/** @type {Map<string, Object>} sectionId -> accumulated section data. */
 const sections = new Map();
 
 /**
- * Spinner markup for a section still being detailed.
+ * Locate a section's detail container (below its checklist item name).
  *
- * @returns {string}
+ * @param {string} sectionId
+ * @returns {HTMLElement|null}
  */
-const spinnerHtml = () => '<span class="cg-plan-spin" aria-hidden="true">'
-    + '<svg viewBox="0 0 24 24"><path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg>'
-    + '</span>';
+const detailEl = (sectionId) => document.querySelector(
+    '.courseai-checklist-item[data-section-id="' + sectionId + '"] .courseai-checklist-detail'
+);
 
 /**
- * Clear the transcript: drop module state and remove the wrapper from the DOM.
- * Called at the start of each stream/round so a fresh plan never stacks on an
- * old one.
+ * Attach a "Show more"/"Show less" clamp to a detail block once it overflows.
+ * Mirrors the long-message fade+expand used elsewhere (160–200px + mask).
+ *
+ * @param {HTMLElement} el - The detail container.
+ * @returns {void}
+ */
+const clampDetail = (el) => {
+    if (!el || el.dataset.cgClamp) {
+        return;
+    }
+    window.requestAnimationFrame(() => {
+        if (el.scrollHeight <= CLAMP_PX + 4) {
+            return;
+        }
+        el.dataset.cgClamp = '1';
+        el.classList.add('cg-detail-clamped');
+        const toggle = document.createElement('button');
+        toggle.type = 'button';
+        toggle.className = 'cg-log-toggle cg-detail-toggle';
+        toggle.innerHTML = '<span class="cg-log-toggle-text">Show more</span>'
+            + '<span class="cg-log-toggle-chevron" aria-hidden="true">⌄</span>';
+        toggle.addEventListener('click', () => {
+            const expanded = el.classList.toggle('is-expanded');
+            toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
+            const label = toggle.querySelector('.cg-log-toggle-text');
+            if (label) {
+                label.textContent = expanded ? 'Show less' : 'Show more';
+            }
+        });
+        el.insertAdjacentElement('afterend', toggle);
+    });
+};
+
+/**
+ * Render one section's accumulated data into its detail container as Markdown.
+ *
+ * @param {string} sectionId
+ * @returns {void}
+ */
+const renderDetail = (sectionId) => {
+    const entry = sections.get(sectionId);
+    const target = detailEl(sectionId);
+    if (!entry || !target) {
+        return;
+    }
+    const md = formatSectionMd({
+        // The section NAME is already the checklist item label — don't repeat it
+        // in the detail; show only the description + activities.
+        name: '',
+        description: entry.description,
+        activities: entry.activityOrder.map((id) => entry.activities.get(id)),
+    });
+    target.innerHTML = renderMarkdown(md);
+};
+
+/**
+ * Clear accumulated state at the start of a fresh planning round.
  *
  * @returns {void}
  */
 export const resetTranscript = () => {
     sections.clear();
-    const wrap = document.getElementById(WRAP_ID);
-    if (wrap) {
-        wrap.remove();
-    }
 };
 
 /**
- * Get (creating if needed) the transcript wrapper inside the planning feed.
+ * Handle a 'section' event: start accumulating this section's detail.
  *
- * @param {Object} texts - Localized strings (for the lead line).
- * @returns {HTMLElement|null}
- */
-const ensureWrap = (texts) => {
-    let wrap = document.getElementById(WRAP_ID);
-    if (wrap) {
-        return wrap;
-    }
-    const feed = document.getElementById('cgLog');
-    if (!feed) {
-        return null;
-    }
-    wrap = document.createElement('div');
-    wrap.id = WRAP_ID;
-    wrap.className = 'cg-plan-transcript';
-    const head = document.createElement('div');
-    head.className = 'cg-plan-transcript-head';
-    head.textContent = (texts && texts.courseai_log_ai_planned_structure)
-        || 'Here is the structure I planned for your course';
-    wrap.appendChild(head);
-    feed.appendChild(wrap);
-    // The compact boot checklist/skeleton is replaced by this live transcript.
-    const leftSkeleton = document.getElementById('cgLeftSkeleton');
-    if (leftSkeleton) {
-        leftSkeleton.style.display = 'none';
-    }
-    return wrap;
-};
-
-/**
- * Create (and append) an empty section block + its render state.
- *
- * @param {HTMLElement} wrap      - The transcript wrapper.
- * @param {string}      sectionId - Section UUID.
- * @returns {Object} The section render state.
- */
-const createSectionEntry = (wrap, sectionId) => {
-    const block = document.createElement('div');
-    block.className = 'cg-plan-section is-loading';
-    block.setAttribute('data-section-id', sectionId);
-    const mdEl = document.createElement('div');
-    mdEl.className = 'cg-log-md cg-plan-section-md';
-    const spin = document.createElement('span');
-    spin.className = 'cg-plan-section-spin';
-    spin.innerHTML = spinnerHtml();
-    block.appendChild(mdEl);
-    block.appendChild(spin);
-    wrap.appendChild(block);
-    const entry = {
-        block, mdEl, spin,
-        name: '', description: '',
-        activities: new Map(), activityOrder: [],
-        expected: 0, planned: 0,
-    };
-    sections.set(sectionId, entry);
-    return entry;
-};
-
-/**
- * Drop a section block's loading spinner (its detail has settled).
- *
- * @param {Object} entry - The section render state.
+ * @param {Object} data - {id, name, description}
  * @returns {void}
  */
-const settleSection = (entry) => {
-    entry.block.classList.remove('is-loading');
-    if (entry.spin) {
-        entry.spin.remove();
-        entry.spin = null;
-    }
-};
-
-/**
- * Re-render one section block's Markdown body from its accumulated data.
- *
- * @param {Object} entry - The section render state.
- * @returns {void}
- */
-const renderSection = (entry) => {
-    if (!entry || !entry.mdEl) {
-        return;
-    }
-    const md = formatSectionMd({
-        name: entry.name,
-        description: entry.description,
-        activities: entry.activityOrder.map((id) => entry.activities.get(id)),
-    });
-    entry.mdEl.innerHTML = renderMarkdown(md);
-};
-
-/**
- * Handle a ``section`` event: create (or update) the section's transcript block
- * with its heading + description and a loading spinner.
- *
- * @param {Object} data  - The section SSE payload {id, name, description}.
- * @param {Object} texts - Localized strings.
- * @returns {void}
- */
-export const transcriptOnSection = (data, texts) => {
+export const transcriptOnSection = (data) => {
     if (!data || !data.id) {
-        return;
-    }
-    const wrap = ensureWrap(texts);
-    if (!wrap) {
         return;
     }
     let entry = sections.get(data.id);
     if (!entry) {
-        entry = createSectionEntry(wrap, data.id);
+        entry = {
+            description: '', activities: new Map(), activityOrder: [],
+            expected: 0, planned: 0,
+        };
+        sections.set(data.id, entry);
     }
-    entry.name = data.name || entry.name;
     entry.description = data.description || entry.description;
-    renderSection(entry);
-    window.requestAnimationFrame(() => {
-        entry.block.scrollIntoView({block: 'nearest', inline: 'nearest'});
-    });
+    renderDetail(data.id);
 };
 
 /**
- * Handle an ``activity`` event: add the activity (title/type/description) to its
- * section block and bump the section's expected-activity count.
+ * Handle an 'activity' event: add it to its section's detail.
  *
- * @param {Object} data - The activity SSE payload {id, section_id, title, ...}.
+ * @param {Object} data - {id, section_id, title, activity_type, description, deleted}
  * @returns {void}
  */
 export const transcriptOnActivity = (data) => {
-    if (!data || !data.section_id) {
+    if (!data || !data.section_id || data.deleted) {
         return;
     }
     const entry = sections.get(data.section_id);
-    if (!entry || data.deleted) {
+    if (!entry) {
         return;
     }
     if (!entry.activities.has(data.id)) {
@@ -210,14 +161,14 @@ export const transcriptOnActivity = (data) => {
         description: data.description || '',
         detailedPlan: (entry.activities.get(data.id) || {}).detailedPlan || null,
     });
-    renderSection(entry);
+    renderDetail(data.section_id);
 };
 
 /**
- * Handle a ``detailed_plan_activity`` event: attach the activity's full detailed
- * plan, re-render, and drop the section's spinner once every activity is planned.
+ * Handle a 'detailed_plan_activity' event: attach the full detailed plan and,
+ * once every activity in the section is planned, clamp the detail.
  *
- * @param {Object} data - The detail SSE payload {activity_id, section_id, data}.
+ * @param {Object} data - {activity_id, section_id, data}
  * @returns {void}
  */
 export const transcriptOnActivityDetail = (data) => {
@@ -233,83 +184,73 @@ export const transcriptOnActivityDetail = (data) => {
         activity.detailedPlan = data.data || activity.detailedPlan || null;
     }
     entry.planned += 1;
-    renderSection(entry);
+    renderDetail(data.section_id);
     if (entry.expected > 0 && entry.planned >= entry.expected) {
-        settleSection(entry);
+        clampDetail(detailEl(data.section_id));
     }
 };
 
-/**
- * Rebuild the whole transcript from an authoritative plan tree (the
- * ``review_needed`` ``current_plan``). Reconciles in place by section id —
- * existing blocks are updated (no flash), missing ones created, stale ones
- * removed — so the final transcript is always correct regardless of how the
- * round streamed (initial planning, a keepPlan adjust, or a full regeneration).
- * Spinners are dropped: the plan has settled.
- *
- * @param {Array}  plan  - Plan sections (each with activities[].detailed_plan).
- * @param {Object} texts - Localized strings.
- * @returns {void}
- */
-export const rebuildTranscriptFromPlan = (plan, texts) => {
-    const wrap = ensureWrap(texts);
-    if (!wrap) {
-        return;
-    }
-    const seen = new Set();
-    (plan || []).forEach((section) => {
-        if (!section || section.deleted || !String(section.name || '').trim()) {
-            return;
-        }
-        seen.add(section.id);
-        let entry = sections.get(section.id);
-        if (!entry) {
-            entry = createSectionEntry(wrap, section.id);
-        }
-        entry.name = section.name;
-        entry.description = section.description || '';
-        const activities = (section.activities || [])
-            .filter((activity) => !activity.deleted)
-            .map((activity) => ({
-                title: activity.title,
-                activity_type: activity.activity_type,
-                description: activity.description || '',
-                detailedPlan: activity.detailed_plan || null,
-            }));
-        entry.mdEl.innerHTML = renderMarkdown(formatSectionMd({
-            name: entry.name,
-            description: entry.description,
-            activities,
-        }));
-        settleSection(entry);
-    });
-    sections.forEach((entry, id) => {
-        if (!seen.has(id)) {
-            entry.block.remove();
-            sections.delete(id);
-        }
-    });
-};
-
-/**
- * Whether a live transcript was built this stream (so lifecycle handlers know
- * not to also emit the one-shot fallback block).
- *
- * @returns {boolean}
- */
+/** @returns {boolean} Whether any section detail was accumulated this round. */
 export const transcriptHasContent = () => sections.size > 0;
 
 /**
- * Finalize the transcript: drop every remaining spinner (the plan has settled).
+ * Finalize: clamp every section's detail (the plan has settled).
  *
  * @returns {void}
  */
 export const finalizeTranscript = () => {
-    sections.forEach((entry) => {
-        entry.block.classList.remove('is-loading');
-        if (entry.spin) {
-            entry.spin.remove();
-            entry.spin = null;
-        }
+    sections.forEach((entry, id) => clampDetail(detailEl(id)));
+};
+
+/**
+ * Build the WHOLE section checklist (items + Markdown details) from an
+ * authoritative plan tree — used on RELOAD and to reconcile at review so the
+ * panel looks identical to the live build. Each item is rendered done (check);
+ * its detail is the section's description + activities as clamped Markdown.
+ *
+ * @param {Array} plan - Plan sections (each with activities[].detailed_plan).
+ * @returns {void}
+ */
+export const rebuildTranscriptFromPlan = (plan) => {
+    const list = document.getElementById('courseaiChecklistList');
+    const checklist = document.getElementById('courseaiChecklist');
+    if (!list) {
+        return;
+    }
+    const visible = (plan || []).filter(
+        (s) => s && !s.deleted && String(s.name || '').trim()
+    );
+    if (!visible.length) {
+        return;
+    }
+    list.innerHTML = '';
+    visible.forEach((section) => {
+        const item = document.createElement('li');
+        item.className = 'courseai-checklist-item is-done';
+        item.setAttribute('data-section-id', String(section.id || ''));
+        item.setAttribute('data-remaining', '0');
+        const activities = (section.activities || [])
+            .filter((a) => !a.deleted)
+            .map((a) => ({
+                title: a.title,
+                activity_type: a.activity_type,
+                description: a.description || '',
+                detailedPlan: a.detailed_plan || null,
+            }));
+        const md = renderMarkdown(formatSectionMd({
+            name: '', description: section.description || '', activities,
+        }));
+        item.innerHTML = '<span class="courseai-checklist-check">'
+            + '<svg class="spinner-icon" viewBox="0 0 24 24">'
+            + '<path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg>'
+            + '<svg class="check-icon" viewBox="0 0 24 24">'
+            + '<polyline points="20 6 9 17 4 12"/></svg></span>'
+            + '<span class="courseai-checklist-name">' + (section.name || '') + '</span>'
+            + '<div class="courseai-checklist-detail cg-log-md">' + md + '</div>';
+        list.appendChild(item);
+        clampDetail(item.querySelector('.courseai-checklist-detail'));
     });
+    if (checklist) {
+        checklist.classList.remove('hidden');
+    }
 };

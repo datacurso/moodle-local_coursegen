@@ -116,10 +116,9 @@ const resolveText = async(content, localizeMessage) => {
  * @param {Function} params.emitLog - decision-log emitter ({actor, kind, message}).
  * @param {Function} params.localizeMessage - async localizer for LocalizedMessage.
  * @param {Function} [params.renderProposals] - ui-proposals renderProposals(payload).
- * @param {Object} [params.texts] - Localized strings (transcript header on replay).
  * @returns {{replayThread: Function, renderThreadMessage: Function}}
  */
-export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposals, texts}) => {
+export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposals}) => {
     /**
      * Render a single thread message into the left feed.
      *
@@ -182,7 +181,7 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
             // block (content.string) for old sessions that have no payload.plan.
             const planTree = (payload && Array.isArray(payload.plan)) ? payload.plan : null;
             if (planTree && planTree.length) {
-                rebuildTranscriptFromPlan(planTree, texts);
+                rebuildTranscriptFromPlan(planTree);
                 return;
             }
             const header = await resolveText(content, localizeMessage);

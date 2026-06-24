@@ -3057,49 +3057,6 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
 .cg-log-md hr { border: 0; border-top: 1px solid var(--border); margin: 0.6em 0; }
 .cg-log-md a { color: var(--primary, inherit); }
 
-/* ── Live per-section planning transcript (real-time) ──────────────────────
-   Each section appears the moment its event lands and fills in below it
-   (activities + detail) as the stream arrives; a spinner marks a section whose
-   detail is still streaming. The section bodies reuse .cg-log-md (compact). */
-.cg-plan-transcript {
-  margin: 2px 0 6px;
-}
-.cg-plan-transcript-head {
-  font-size: 15px;
-  line-height: 1.6;
-  color: var(--fg);
-  margin-bottom: 6px;
-}
-.cg-plan-section {
-  position: relative;
-  padding-right: 20px;
-}
-.cg-plan-section + .cg-plan-section {
-  border-top: 1px solid var(--border);
-  margin-top: 10px;
-  padding-top: 10px;
-}
-.cg-plan-section-spin {
-  position: absolute;
-  top: 4px;
-  right: 0;
-  width: 14px;
-  height: 14px;
-  color: var(--primary, hsl(8, 72%, 42%));
-}
-.cg-plan-spin svg {
-  width: 14px;
-  height: 14px;
-  fill: none;
-  stroke: currentColor;
-  stroke-width: 2.5;
-  animation: cg-plan-spin-rot .7s linear infinite;
-}
-@keyframes cg-plan-spin-rot { to { transform: rotate(360deg); } }
-@media (prefers-reduced-motion: reduce) {
-  .cg-plan-spin svg { animation: none; }
-}
-
 .cg-log-ts {
   flex-shrink: 0;
   font-size: 10.5px;
