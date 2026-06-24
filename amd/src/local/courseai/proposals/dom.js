@@ -62,10 +62,6 @@ export const buildProposalCard = (proposal, localizedSummary, texts) => {
         targetIds.push(intent.parent_section_id);
     }
     radio.dataset.targetIds = JSON.stringify(targetIds);
-    // Full intent (action + target_ids + parent_section_id + position) so the apply
-    // handler can put the loading skeleton on EXACTLY the element this proposal
-    // affects the moment it is dispatched (see markProposalTargetPending).
-    radio.dataset.intent = JSON.stringify(intent);
 
     const textSpan = document.createElement('span');
     textSpan.className = 'plan-proposal-summary';

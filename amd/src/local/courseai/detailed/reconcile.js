@@ -41,7 +41,6 @@ import {markActivityPlanned} from './activity-row';
 import {appendAddSectionControl} from './section-row';
 import {focusChange} from 'local_coursegen/local/courseai/ui/highlight';
 import {removeVanishedActivities, removeVanishedSections, reorderAll} from './reconcile-dom';
-import {removeAllTransientPlaceholders} from './pending';
 
 // ---------------------------------------------------------------------------
 // Content signature
@@ -209,10 +208,6 @@ const fillSkeletonActivities = (ctx, activeSections) => {
  */
 export const reconcilePlan = async(ctx, currentPlan) => {
     const {state} = ctx;
-
-    // Defensive: clear any transient apply placeholder that the row factories did
-    // not already replace, so no orphaned shimmer survives the settle.
-    removeAllTransientPlaceholders();
 
     const activeSections = buildActiveStructure(currentPlan);
     const activeSectionIds = new Set(activeSections.map((s) => s.id));

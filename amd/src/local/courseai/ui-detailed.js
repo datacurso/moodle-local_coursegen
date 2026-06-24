@@ -36,7 +36,6 @@ import {
     reconcilePlan,
 } from './detailed/view';
 import {updateDetailedHeaderStats} from './detailed/badges';
-import {markProposalTargetPending} from './detailed/pending';
 
 /**
  * Build the confirmDelete helper bound to DeleteCancelModal.
@@ -140,6 +139,5 @@ export const createDetailedUi = (deps) => {
         updateDetailedHeaderStats: () => updateDetailedHeaderStats(ctx),
         enableAllActionControls: () => enableAllActionControls(ctx),
         reconcilePlan: (currentPlan) => reconcilePlan(ctx, currentPlan),
-        markProposalTargetPending: (intent) => markProposalTargetPending(ctx, intent),
     };
 };

@@ -27,7 +27,6 @@
 import {createAddTriggerBtn} from './icons';
 import {wireDragAndDrop, sendReorderActivities} from './dnd';
 import {buildSectionRowSkeleton, buildSectionActionControls} from './section-dom';
-import {removeTransientSectionPlaceholders} from './pending';
 import {getSectionList} from './container';
 
 /**
@@ -146,9 +145,6 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
     // Kept for the existing DnD wirer (idDataset 'sectionId') and ui-proposals.
     row.dataset.sectionId = sectionId;
     row.appendChild(sectionItem);
-    // A genuinely-new real-UUID section is being rendered: drop any transient
-    // apply placeholder so the shimmer is replaced, never duplicated.
-    removeTransientSectionPlaceholders(ctx);
     sectionList.appendChild(row);
 
     // Set row reference for panel/action callbacks.

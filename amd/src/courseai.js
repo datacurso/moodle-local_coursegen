@@ -122,7 +122,6 @@ export const init = async(params) => {
             formatTemplate,
             runPlanAction,
             emitLog,
-            detailedUi,
         });
 
         const planningUi = createPlanningUi({
