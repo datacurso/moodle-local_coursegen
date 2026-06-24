@@ -26,6 +26,7 @@
 import {
     hideFeedbackThinking,
     showWorkingIndicator,
+    leftHasRealContent,
 } from 'local_coursegen/local/courseai/ui/feedback-progress';
 
 /**
@@ -106,8 +107,19 @@ export const handleStatus = async(data, ctx) => {
  * @returns {Promise<void>}
  */
 export const handleError = async(data, ctx) => {
-    hideFeedbackThinking();
     const errorText = await ctx.localizeMessage(data.message);
+    // 'error' is NON-FATAL and can arrive mid-early-phase before any section has
+    // landed. Clearing the live working indicator here used to leave the LEFT
+    // panel blank for a long stretch until the next status/section. Instead, keep
+    // the single live indicator visible and track the error text on it — but only
+    // while the LEFT still has no real content (checklist/structure). Once real
+    // content exists, the indicator is no longer the left's only signal, so drop
+    // it as before (a terminal lifecycle event will manage it from there).
+    if (leftHasRealContent()) {
+        hideFeedbackThinking();
+    } else if (errorText) {
+        showWorkingIndicator(ctx.texts, errorText);
+    }
     if (ctx.prvHeaderSub && errorText) {
         ctx.prvHeaderSub.textContent = errorText;
     }

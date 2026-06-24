@@ -33,6 +33,24 @@
 const ENTRY_ID = 'cgFeedbackThinking';
 
 /**
+ * Whether the LEFT panel already shows real planned content (the structure /
+ * checklist turn), as opposed to only the transient working indicator.
+ *
+ * Used by non-fatal handlers (e.g. 'error') to decide whether dropping the live
+ * indicator is safe: if there is no real content yet, dropping it would leave the
+ * left panel blank, so callers keep the indicator visible instead.
+ *
+ * @returns {boolean} True once a visible checklist with at least one item exists.
+ */
+export const leftHasRealContent = () => {
+    const checklist = document.querySelector('.courseai-checklist:not(.hidden)');
+    if (checklist && checklist.querySelector('.courseai-checklist-item')) {
+        return true;
+    }
+    return false;
+};
+
+/**
  * Remove the live "working" indicator if present.
  *
  * @returns {void}

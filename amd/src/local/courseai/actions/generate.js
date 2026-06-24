@@ -21,6 +21,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {showWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
+
 /**
  * Emit a log entry if emitLog is wired.
  *
@@ -77,6 +79,13 @@ export const handleGenerate = async(ctx) => {
     // visually with a fade + "show more" control. No "You:" prefix; the turn's
     // own styling distinguishes the speaker.
     log({actor: 'user', kind: 'user', message: prompt}, emitLog);
+
+    // The LEFT panel must NEVER be blank after the prompt turn. initSession (and an
+    // optional syllabus upload) is a network round-trip BEFORE the SSE stream opens,
+    // so show the single live "working" indicator right now — handleStatus updates it
+    // in place once the stream produces its first status, and it is cleared only when
+    // real structure lands. Without this the left sits blank for the whole init RTT.
+    showWorkingIndicator(texts);
 
     if (btnGenerate) {
         btnGenerate.disabled = true;

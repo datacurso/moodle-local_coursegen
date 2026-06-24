@@ -24,7 +24,10 @@
  */
 
 import {routeEvent} from './handlers';
-import {hideWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
+import {
+    hideWorkingIndicator,
+    showWorkingIndicator,
+} from 'local_coursegen/local/courseai/ui/feedback-progress';
 
 /** Maximum number of stale-done retries before giving up. */
 const MAX_STALE_RETRIES = 3;
@@ -55,6 +58,16 @@ export const openConnection = (streamUrl, retryAttempt, ctx, openSSEStream) => {
     ctx.flags.contentReceived = false;
 
     state.sseSource = new EventSource(streamUrl);
+
+    // Show a working indicator the instant the stream opens, so the left panel is
+    // NEVER blank between the prompt turn and the first server status (the first
+    // status can take a while). handleStatus updates this SAME entry in place as
+    // statuses arrive, so the message is continuous — it only changes when the
+    // next one is ready, and is cleared only when real content lands. Skip if an
+    // indicator is already present (e.g. feedback's "Analyzing your request…").
+    if (!document.getElementById('cgFeedbackThinking')) {
+        showWorkingIndicator(texts);
+    }
 
     state.sseSource.addEventListener('message', async(event) => {
         let data = null;
