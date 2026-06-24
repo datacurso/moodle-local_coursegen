@@ -46,7 +46,7 @@ const AI_OUTPUT_TYPES = new Set(['ai_planned_structure']);
  * The map value is the log `kind`.
  */
 const AI_MILESTONE_KIND = {
-    ai_course_identity: 'ai',
+    ai_course_configuration: 'ai',
     ai_review_ready: 'ai',
     ai_proposals_ready: 'ai',
     ai_completed: 'success',

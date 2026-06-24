@@ -689,7 +689,7 @@ $string['courseai_log_proposals_dismissed'] = 'You dismissed suggestions';
 // user action surfaces as a turn; transient progress uses one live indicator.
 $string['courseai_log_ai_thinking'] = 'Analyzing your request...';
 $string['courseai_log_ai_working'] = 'The assistant is working...';
-$string['courseai_log_ai_course_identity'] = 'Course';
+$string['courseai_log_ai_course_configuration'] = 'Course: {$a}';
 $string['courseai_log_ai_review_ready'] = 'I finished planning your course. Take a look at the plan and tell me if you want any changes.';
 $string['courseai_log_ai_proposals_ready'] = 'I prepared a few suggestions for you. Review them and choose how you want to continue.';
 $string['courseai_log_ai_completed'] = 'Your course is ready. I created it in Moodle.';
@@ -709,6 +709,7 @@ $string['courseai_decision_adjust'] = 'Adjust';
 // and are localized by string_id + string_args. AI-output blocks (ai_planned_structure)
 // show content.string (the full pre-rendered plan text), so the label here is secondary.
 $string['ai_planned_structure'] = 'Here is the structure I planned for your course';
+$string['ai_course_configuration'] = 'Course: {$a->fullname}';
 $string['log_user_approved'] = 'You approved the plan';
 $string['log_user_adjusted'] = 'You requested changes';
 $string['log_proposal_applied'] = 'You applied a suggestion';

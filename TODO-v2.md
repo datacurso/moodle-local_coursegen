@@ -390,14 +390,16 @@ matiz extra:
 > (`ui/plan-transcript.js` + `ui/markdown.js`, render con `marked`). Diseño completo en el TODO-V2 del
 > servicio (sección "Thread-store").
 >
-> **PENDIENTE (cabos sueltos — registrados para no perderlos; detalle en servicio `TODO-V2.md`):**
-> - [ ] **Título del curso**: el servicio NO lo persiste al thread (solo evento SSE en vivo) → no
->   aparece al recargar. Además el plugin sigue usando el nombre viejo `ai_course_identity`
->   (`thread-replay.js` AI_MILESTONE_KIND, `handlers-content.js`, `i18n.js`, lang
->   `courseai_log_ai_course_identity`); el servicio ya lo renombró a `ai_course_configuration`.
->   Falta alinear el plugin a `course_configuration` cuando el servicio wiree el append.
-> - [ ] **Errores**: el slot `ai_error` existe en el servicio pero no se appendea → los turnos de
->   error no se reproducen al recargar.
+> **Cabos sueltos — RESUELTOS (2026-06-24; detalle en servicio `TODO-V2.md`):**
+> - [x] **Título del curso** (PR #15 + servicio PR #91): el servicio lo persiste al thread
+>   (`AI_COURSE_CONFIGURATION`) y el plugin está alineado a `course_configuration` (`handlers.js`
+>   registra `course_configuration: handleCourseConfiguration`, `thread-replay.js`
+>   `ai_course_configuration`, `i18n.js`, lang `courseai_log_ai_course_configuration`="Course: {$a}"
+>   + `ai_course_configuration`="Course: {$a->fullname}"). Se arregló además que el evento EN VIVO
+>   estaba roto (plugin escuchaba `course_identity` vs `course_configuration` del servicio) y que el
+>   lang viejo era 'Course' sin `{$a}`. Verificado e2e: "Course: <título>" en vivo y al recargar.
+> - [x] **Errores**: el fallo FATAL ya se persiste (`AI_FAILED`) y se reproduce (`ai_failed: danger`);
+>   no hay emisor de errores no-fatales en el servicio (slot `ai_error` sin uso).
 **Pedido:** (a) quitar los guillemets « » de los mensajes; (b) el regenerar debe decir el TIPO de
 actividad; (c) la instrucción del usuario + la acción NO deben ser dos turnos sino UNO; (d) PRINCIPIO:
 en el chat se debe mostrar TODO lo que streamea el servidor y TODO lo que el usuario manda desde

@@ -185,7 +185,7 @@ const STRING_KEYS = [
     'courseai_log_proposals_dismissed',
     'courseai_log_ai_thinking',
     'courseai_log_ai_working',
-    'courseai_log_ai_course_identity',
+    'courseai_log_ai_course_configuration',
     'courseai_log_ai_review_ready',
     'courseai_log_ai_proposals_ready',
     'courseai_log_ai_completed',
@@ -201,6 +201,7 @@ const STRING_KEYS = [
     // Server-side thread log string_ids (match the service Message names). Prefetched
     // so replayThread localizes the full transcript on reload without N round-trips.
     'ai_planned_structure',
+    'ai_course_configuration',
     'log_user_approved',
     'log_user_adjusted',
     'log_proposal_applied',

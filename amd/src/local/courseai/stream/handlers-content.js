@@ -162,12 +162,15 @@ export const handleSection = (data, ctx) => {
 };
 
 /**
- * Handle 'course_identity' event: update course title in state and header.
+ * Handle 'course_configuration' event: update course title in state and header.
+ *
+ * (The service renamed this milestone from course_identity → course_configuration;
+ * the SSE event carries `fullname`/`shortname`.)
  *
  * @param {Object} data
  * @param {Object} ctx
  */
-export const handleCourseIdentity = (data, ctx) => {
+export const handleCourseConfiguration = (data, ctx) => {
     const fullname = String(data.fullname || '').trim();
     if (!fullname) {
         return;
@@ -184,7 +187,7 @@ export const handleCourseIdentity = (data, ctx) => {
     const alreadyLogged = state.courseTitleLogged === fullname;
     if (!alreadyLogged && typeof emitLog === 'function') {
         state.courseTitleLogged = fullname;
-        const message = ((texts && texts.courseai_log_ai_course_identity) || 'Course: {$a}')
+        const message = ((texts && texts.courseai_log_ai_course_configuration) || 'Course: {$a}')
             .replace('{$a}', fullname);
         emitLog({actor: 'ai', kind: 'ai', message});
     }
