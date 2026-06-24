@@ -45,7 +45,12 @@ export const getSectionList = (ctx) => {
     if (!list) {
         // Scope wrapper: gives the preview the course-page ancestor classes so
         // any Boost rule scoped under .course-content / .format-topics applies.
-        host.classList.add('format-topics', 'cg-course-replica');
+        // `editing` is added LOCALLY (Boost scopes its edit affordances as
+        // `.editing &`, i.e. any `.editing` ancestor) so the preview is ALWAYS
+        // editable — drag handles, hover affordances and inline controls work
+        // regardless of Moodle's global edit-mode toggle. The preview is never a
+        // read-only course view, so it must not depend on the page edit mode.
+        host.classList.add('format-topics', 'cg-course-replica', 'editing');
         list = document.createElement('ul');
         list.className = 'course-content course-section-list';
         host.appendChild(list);
