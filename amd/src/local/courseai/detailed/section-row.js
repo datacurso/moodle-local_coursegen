@@ -83,9 +83,13 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
     headerEl.appendChild(titleEl);
     headerEl.appendChild(actionsEl);
 
-    // The collapse toggle expands/collapses the section content panel.
+    // The collapse toggle expands/collapses the section content panel. We own this
+    // explicitly (see section-dom.js): stopPropagation prevents any delegated
+    // document-level handler (e.g. Bootstrap's collapse data-api) from also acting
+    // on the click and cancelling our toggle.
     chevronEl.addEventListener('click', (event) => {
         event.preventDefault();
+        event.stopPropagation();
         toggleSectionCollapse(bodyEl, chevronEl);
     });
 

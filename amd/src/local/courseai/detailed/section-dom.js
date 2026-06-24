@@ -38,7 +38,10 @@ import {iaSparklesSvg, getCoreIconUrl} from './icons';
 const buildCollapseToggle = (uuid, sectionName) => {
     const toggle = document.createElement('a');
     toggle.setAttribute('role', 'button');
-    toggle.setAttribute('data-toggle', 'collapse');
+    // NOTE: deliberately NO data-toggle="collapse". Boost loads Bootstrap 4 whose
+    // delegated [data-toggle="collapse"] document handler would ALSO toggle the
+    // panel on click, fighting our own handler (two toggles = no net change). We
+    // own the collapse explicitly via the click listener in section-row.js.
     toggle.setAttribute('data-for', 'sectiontoggler');
     toggle.setAttribute('href', `#coursecontentcollapseid${uuid}`);
     toggle.setAttribute('aria-expanded', 'true');
