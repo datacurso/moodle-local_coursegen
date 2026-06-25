@@ -129,14 +129,9 @@ export const sendFeedbackAction = async(action, ctx) => {
         if (action === 'adjust' && instruction) {
             state.planEverReviewed = true;
             const truncatedInstruction = instruction.length > 80 ? instruction.slice(0, 80) + '…' : instruction;
-            // Show the user's OWN words in their turn (e.g. "You: Cambia el primer libro…").
-            // The lang string `courseai_log_user_request` is the bare "You" label — it has
-            // NO {$a} placeholder, so the old `.replace('{$a}', …)` silently dropped the
-            // instruction and the turn rendered just "You". Compose label + instruction
-            // explicitly here so it mirrors the thread-replay path (label + ': ' + text).
-            const requestLabel = texts.courseai_log_user_request || 'You';
-            const adjustMsg = requestLabel + ': ' + truncatedInstruction;
-            log({actor: 'user', kind: 'user', message: adjustMsg}, emitLog);
+            // The turn is already a right-aligned user bubble, so a "You:" label is
+            // redundant — show just the user's own words.
+            log({actor: 'user', kind: 'user', message: truncatedInstruction}, emitLog);
             showFeedbackThinking(texts);
             if (compactPromptInput) {
                 compactPromptInput.value = '';

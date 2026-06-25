@@ -164,7 +164,7 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
         switch (subtype) {
             case 'accept': return T('courseai_log_user_approved', 'You approved the plan');
             case 'adjust':
-            case 'feedback': return T('courseai_log_user_request', 'You') + ': ' + clip;
+            case 'feedback': return clip;
             case 'proposal_custom': return T('courseai_log_proposal_applied', 'You applied') + ': ' + clip;
             case 'proposals_dismissed': return T('courseai_log_proposals_dismissed', 'You dismissed suggestions');
             case 'stop': return T('courseai_btn_stop', 'Stop');
