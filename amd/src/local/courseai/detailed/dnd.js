@@ -35,7 +35,21 @@
  */
 export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, parentSectionId, canDrag) => {
     let dragSrcEl = null;
+    // Order snapshot taken when the drag starts, so onDragEnd can tell a real
+    // reorder from a no-op (dropping a row back onto its own slot). A no-op must
+    // NOT log "You moved X to position N" nor hit the service.
+    let orderAtStart = [];
     const dragBlocked = () => typeof canDrag === 'function' && !canDrag();
+    const currentOrder = () => {
+        const ids = [];
+        container.querySelectorAll(itemSelector).forEach((el) => {
+            const id = el.dataset[idDataset];
+            if (id) {
+                ids.push(id);
+            }
+        });
+        return ids;
+    };
 
     const onDragStart = (event) => {
         // Reordering is disabled while the plan is streaming (it re-renders and a
@@ -49,6 +63,7 @@ export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, p
         event.stopPropagation();
         const row = event.currentTarget;
         dragSrcEl = row;
+        orderAtStart = currentOrder();
         row.classList.add('dp-dragging');
         event.dataTransfer.effectAllowed = 'move';
         // Store the parent section so cross-section drops can be rejected.
@@ -118,14 +133,14 @@ export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, p
         const movedId = (row && row.dataset[idDataset]) || null;
         dragSrcEl = null;
         // Collect new order and dispatch.
-        const ids = [];
-        container.querySelectorAll(itemSelector).forEach((el) => {
-            const id = el.dataset[idDataset];
-            if (id) {
-                ids.push(id);
-            }
-        });
-        if (ids.length > 1) {
+        const ids = currentOrder();
+        // No-op guard: if the order is unchanged (the row was dropped back onto
+        // its own slot), there is nothing to report — skip the log AND the
+        // service call so we never show "moved to position N" for a non-move.
+        const unchanged = ids.length === orderAtStart.length
+            && ids.every((id, i) => id === orderAtStart[i]);
+        orderAtStart = [];
+        if (ids.length > 1 && !unchanged) {
             onReorder(ids, movedId);
         }
     };

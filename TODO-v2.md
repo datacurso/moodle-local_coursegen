@@ -412,6 +412,12 @@ matiz extra:
 >   `course_planning_feedback.php` declara `moved_id` en el schema externo (sin esto Moodle
 >   rechazaba el call entero → el reorden no persistía); lang `log_moved_activity` + registro en
 >   `i18n.js STRING_KEYS`; el servicio persiste el mismo string_id con `string_args` {title, position}.
+> - [x] **Reorden no-op no se loguea** (`dnd.js`, 2026-06-24). Soltar una actividad en su MISMA
+>   posición mostraba "You moved X to position N" (p.ej. mover el quiz que ya estaba en la pos 2 →
+>   "moved to position 2") sin que nada se moviera. `wireDragAndDrop` ahora toma un snapshot del
+>   orden en `dragstart` (`orderAtStart`) y en `dragend` compara con el orden actual; si es idéntico
+>   se omite `onReorder` (ni log ni call al servicio). Verificado: drag no-op = 0 turnos, 0 POSTs;
+>   reorden real sigue `IDENTICAL: true`.
 **Pedido:** (a) quitar los guillemets « » de los mensajes; (b) el regenerar debe decir el TIPO de
 actividad; (c) la instrucción del usuario + la acción NO deben ser dos turnos sino UNO; (d) PRINCIPIO:
 en el chat se debe mostrar TODO lo que streamea el servidor y TODO lo que el usuario manda desde
