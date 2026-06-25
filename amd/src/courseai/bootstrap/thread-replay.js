@@ -138,6 +138,46 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
     const activityLabels = getActivityLabels(texts || {});
 
     /**
+     * Prefetched lang string with an English fallback.
+     *
+     * @param {string} key - Lang string id.
+     * @param {string} fallback - English fallback when the string is absent.
+     * @returns {string}
+     */
+    const T = (key, fallback) => (texts && texts[key]) || fallback;
+
+    /**
+     * Render a user_action turn EXACTLY as its LIVE handler does (canonical),
+     * from the prefetched lang strings + the message's frozen payload — so reload
+     * matches live verbatim. Returns null for subtypes handled elsewhere
+     * (delete_x / reorder_activities via string_args; replan_x composed above),
+     * which fall through to the catalog/string_args path.
+     *
+     * @param {string} subtype
+     * @param {Object} payload
+     * @returns {string|null}
+     */
+    const liveUserTurn = (subtype, payload) => {
+        const raw = String((payload && payload.instruction) || '').trim();
+        // The live feedback/proposal turns truncate the user's text at 80 chars.
+        const clip = raw.length > 80 ? raw.slice(0, 80) + '…' : raw;
+        switch (subtype) {
+            case 'accept': return T('courseai_log_user_approved', 'You approved the plan');
+            case 'adjust':
+            case 'feedback': return T('courseai_log_user_request', 'You') + ': ' + clip;
+            case 'proposals_dismissed': return T('courseai_log_proposals_dismissed', 'You dismissed suggestions');
+            case 'stop': return T('courseai_btn_stop', 'Stop');
+            case 'resume': return T('courseai_btn_resume', 'Resume');
+            case 'add_section': return T('courseai_log_added_section', 'You added a section');
+            case 'add_activity': return T('courseai_log_added_activity', 'You added an activity');
+            case 'reorder_sections': return T('courseai_log_reordered_sections', 'You reordered the sections');
+            case 'discard_image': return T('courseai_log_image_discarded', 'You discarded an image suggestion');
+            case 'replan_image': return T('courseai_log_image_regenerated', 'You regenerated an image suggestion');
+            default: return null;
+        }
+    };
+
+    /**
      * Compose a replan_activity user turn EXACTLY as the live handler does
      * ("{instruction} — {TypeLabel}: {title}"), so reload === live. Reads the
      * title + type FROZEN into the message payload at persist time (NOT from the
@@ -237,6 +277,15 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
                     emitLog({actor: 'user', kind, message: composed});
                     return;
                 }
+            }
+            // Subtypes whose live turn is a fixed plugin phrasing (stop/resume/
+            // accept/add/dismiss/images/adjust): render the SAME text live shows.
+            const liveText = liveUserTurn(subtype, payload);
+            if (liveText !== null) {
+                if (liveText) {
+                    emitLog({actor: 'user', kind, message: liveText});
+                }
+                return;
             }
             const label = await resolveText(content, localizeMessage);
             // Show the user's own words when the action carried free text (adjust,
