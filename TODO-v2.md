@@ -400,6 +400,18 @@ matiz extra:
 >   lang viejo era 'Course' sin `{$a}`. Verificado e2e: "Course: <título>" en vivo y al recargar.
 > - [x] **Errores**: el fallo FATAL ya se persiste (`AI_FAILED`) y se reproduce (`ai_failed: danger`);
 >   no hay emisor de errores no-fatales en el servicio (slot `ai_error` sin uso).
+> - [x] **Reload === live, "ni un detalle más ni uno menos"** (PR #15 + servicio PR #91, 2026-06-24).
+>   El reload-diff (Puppeteer vs Moodle real) reveló 3 mismatches; los 3 corregidos →
+>   `IDENTICAL: true`, 0 errores JS. (1) Texto de hito de review en reload usaba el catálogo
+>   genérico del servicio → `thread-replay.js` ahora mapea (`MILESTONE_PLUGIN_TEXT`) a la misma
+>   key prefetched que usa el handler en vivo (`courseai_log_ai_review_ready`/`_proposals_ready`/
+>   `_completed`); re-añadido `texts` a `makeThreadReplay` (+ call en `courseai.js`). (2) Rounds de
+>   review duplicados al recargar → idempotencia en el servicio (ver `TODO-V2.md` servicio).
+>   (3) **Reorden detallado**: el vivo mostraba `You moved X to position N` pero el reload mostraba
+>   el genérico `You reordered the activities` → `dnd.js` ahora envía `moved_id` en la acción;
+>   `course_planning_feedback.php` declara `moved_id` en el schema externo (sin esto Moodle
+>   rechazaba el call entero → el reorden no persistía); lang `log_moved_activity` + registro en
+>   `i18n.js STRING_KEYS`; el servicio persiste el mismo string_id con `string_args` {title, position}.
 **Pedido:** (a) quitar los guillemets « » de los mensajes; (b) el regenerar debe decir el TIPO de
 actividad; (c) la instrucción del usuario + la acción NO deben ser dos turnos sino UNO; (d) PRINCIPIO:
 en el chat se debe mostrar TODO lo que streamea el servidor y TODO lo que el usuario manda desde

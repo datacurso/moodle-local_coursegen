@@ -217,6 +217,7 @@ export const init = async(params) => {
             emitLog,
             localizeMessage,
             renderProposals: proposalsUi.renderProposals,
+            texts,
         });
 
         const resumeFromSnapshot = makeResumeFromSnapshot({

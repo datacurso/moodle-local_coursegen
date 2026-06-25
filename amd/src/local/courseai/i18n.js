@@ -220,6 +220,7 @@ const STRING_KEYS = [
     'log_add_activity',
     'log_delete_activity',
     'log_reorder_activities',
+    'log_moved_activity',
     'log_replan_activity',
     'log_discard_image',
     'log_replan_image',

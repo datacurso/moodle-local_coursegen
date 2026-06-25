@@ -55,6 +55,17 @@ const AI_MILESTONE_KIND = {
 };
 
 /**
+ * Milestone types whose displayed text must match the LIVE turn (the plugin's
+ * own phrasing), NOT the service's generic catalog string. Maps the type to the
+ * prefetched lang key the live handler uses, so reload === live.
+ */
+const MILESTONE_PLUGIN_TEXT = {
+    ai_review_ready: 'courseai_log_ai_review_ready',
+    ai_proposals_ready: 'courseai_log_ai_proposals_ready',
+    ai_completed: 'courseai_log_ai_completed',
+};
+
+/**
  * Milestone types that mark the plan as reviewed at least once, so subsequent
  * turns land below the checklist (#cgLogAfter) exactly as they do live.
  */
@@ -116,9 +127,10 @@ const resolveText = async(content, localizeMessage) => {
  * @param {Function} params.emitLog - decision-log emitter ({actor, kind, message}).
  * @param {Function} params.localizeMessage - async localizer for LocalizedMessage.
  * @param {Function} [params.renderProposals] - ui-proposals renderProposals(payload).
+ * @param {Object} [params.texts] - Prefetched lang strings (milestone phrasing must match live).
  * @returns {{replayThread: Function, renderThreadMessage: Function}}
  */
-export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposals}) => {
+export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposals, texts}) => {
     /**
      * Render a single thread message into the left feed.
      *
@@ -211,9 +223,13 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
             return;
         }
 
-        // 5. AI lifecycle milestones — single AI turn line.
+        // 5. AI lifecycle milestones — single AI turn line. For review/proposals/
+        // completed, use the SAME plugin phrasing the live handler emits (so reload
+        // matches live exactly); otherwise fall back to the server-rendered text.
         if (Object.prototype.hasOwnProperty.call(AI_MILESTONE_KIND, type)) {
-            const text = await resolveText(content, localizeMessage);
+            const pluginKey = MILESTONE_PLUGIN_TEXT[type];
+            const pluginText = pluginKey && texts && texts[pluginKey];
+            const text = pluginText || await resolveText(content, localizeMessage);
             if (text) {
                 emitLog({actor: 'ai', kind: AI_MILESTONE_KIND[type], message: text});
             }

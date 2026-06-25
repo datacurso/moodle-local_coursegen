@@ -728,6 +728,7 @@ $string['log_replan_section'] = 'You asked me to replan a section';
 $string['log_add_activity'] = 'You added an activity';
 $string['log_delete_activity'] = 'You deleted an activity';
 $string['log_reorder_activities'] = 'You reordered the activities';
+$string['log_moved_activity'] = 'You moved "{$a->title}" to position {$a->position}';
 $string['log_replan_activity'] = 'You asked me to replan an activity';
 $string['log_discard_image'] = 'You discarded an image suggestion';
 $string['log_replan_image'] = 'You asked me to regenerate an image';

@@ -213,6 +213,9 @@ export const sendReorderActivities = async(ctx, sectionId, targetIds, movedId) =
             action: 'reorder_activities',
             parent_section_id: sectionId,
             target_ids: targetIds,
+            // WHICH activity the user dragged, so the service persists the same
+            // "You moved X to position N" turn we logged live (reload === live).
+            moved_id: movedId || null,
         };
         await runPlanAction(pendingAction);
     } catch (e) {
