@@ -138,41 +138,22 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
     const activityLabels = getActivityLabels(texts || {});
 
     /**
-     * Find an activity (by id) anywhere in a plan tree.
-     *
-     * @param {Array} plan
-     * @param {string} activityId
-     * @returns {Object|null}
-     */
-    const findActivityInPlan = (plan, activityId) => {
-        for (const section of plan || []) {
-            for (const activity of (section.activities || [])) {
-                if (activity && activity.id === activityId) {
-                    return activity;
-                }
-            }
-        }
-        return null;
-    };
-
-    /**
      * Compose a replan_activity user turn EXACTLY as the live handler does
-     * ("{instruction} — {TypeLabel}: {title}"), so reload === live. Returns null
-     * when the target activity can't be resolved (caller falls back to the
-     * generic persisted label).
+     * ("{instruction} — {TypeLabel}: {title}"), so reload === live. Reads the
+     * title + type FROZEN into the message payload at persist time (NOT from the
+     * current plan), so the turn stays historically accurate even if the activity
+     * changes later. Returns null when the message has no frozen detail (older
+     * pre-fix messages → caller falls back to the generic persisted label).
      *
-     * @param {Object} payload - user_action payload ({target_ids, instruction}).
-     * @param {Array} plan - latest plan tree (for title + type).
+     * @param {Object} payload - user_action payload ({title, activity_type, instruction}).
      * @returns {string|null}
      */
-    const composeReplanActivityTurn = (payload, plan) => {
-        const id = ((payload && payload.target_ids) || [])[0];
-        const activity = id ? findActivityInPlan(plan, id) : null;
-        if (!activity) {
+    const composeReplanActivityTurn = (payload) => {
+        const activityTitle = String((payload && payload.title) || '').trim();
+        if (!activityTitle) {
             return null;
         }
-        const activityType = activity.activity_type || '';
-        const activityTitle = activity.title || '';
+        const activityType = (payload && payload.activity_type) || '';
         const typeLabel = (activityLabels && activityLabels[activityType]) || activityType || '';
         const target = typeLabel ? typeLabel + ': ' + activityTitle : activityTitle;
         const instruction = String((payload && payload.instruction) || '').trim();
@@ -221,7 +202,7 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
             // instead of the generic persisted label. Falls back to the generic
             // path when the target can't be resolved.
             if (subtype === 'replan_activity') {
-                const composed = composeReplanActivityTurn(payload, ctx.plan);
+                const composed = composeReplanActivityTurn(payload);
                 if (composed) {
                     emitLog({actor: 'user', kind, message: composed});
                     return;
@@ -344,14 +325,6 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
         // already orders by seq, but never trust ordering on the wire).
         const ordered = thread.slice().sort((a, b) => Number(a.seq || 0) - Number(b.seq || 0));
         const lastIndex = ordered.length - 1;
-        // The latest persisted plan tree (activity titles/types are stable across a
-        // replan) — used to compose the replan_activity turn exactly like live.
-        let latestPlan = [];
-        ordered.forEach((m) => {
-            if (m.type === 'ai_planned_structure' && m.payload && Array.isArray(m.payload.plan)) {
-                latestPlan = m.payload.plan;
-            }
-        });
         // Count review milestones (review_ready / proposals_ready) as we go: the
         // 1st marks the initial-planning review, every later one a post-adjustment
         // review. Lets renderThreadMessage pick the matching milestone phrasing.
@@ -374,7 +347,6 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
                 isLast: i === lastIndex,
                 firstReview: isReviewMilestone ? reviewMilestones === 1 : undefined,
                 regenScope: pendingRegen,
-                plan: latestPlan,
             });
             // A replan user_action arms the regen scope for the following
             // ai_planned_structure; any other user_action clears it (reorder/add/
