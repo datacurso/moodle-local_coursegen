@@ -33,6 +33,7 @@ import {
     finalizeTranscript,
     rebuildTranscriptFromPlan,
 } from 'local_coursegen/local/courseai/ui/plan-transcript';
+import {finalizeRegen} from 'local_coursegen/local/courseai/ui/regen-block';
 
 /**
  * Handle 'status' event: localize message, update UI text, advance heuristic progress.
@@ -168,13 +169,24 @@ export const handleReviewNeeded = async(data, ctx) => {
     //    time → just settle them (clamp long ones with "Show more"/"Show less").
     //  - keepPlan adjust: the live detail fill is skipped during the re-stream, so
     //    rebuild the checklist + details from the authoritative current_plan.
-    if (ctx.keepPlan && Array.isArray(data.current_plan) && data.current_plan.length) {
+    // Activity regeneration: the regenerated activity streamed into its OWN block
+    // (regen-block) — finalize it (clamp) and leave the top "structure I planned"
+    // checklist FROZEN. Do NOT rebuild the top here, otherwise it would overwrite
+    // the initial snapshot. reorder/initial (regenScope null) keep the old path.
+    const isActivityRegen = state.regenScope && state.regenScope.action === 'replan_activity';
+    if (isActivityRegen) {
+        finalizeRegen();
+    } else if (ctx.keepPlan && Array.isArray(data.current_plan) && data.current_plan.length) {
         rebuildTranscriptFromPlan(data.current_plan);
     } else if (transcriptHasContent()) {
         finalizeTranscript();
     } else if (Array.isArray(data.current_plan) && data.current_plan.length) {
         rebuildTranscriptFromPlan(data.current_plan);
     }
+    // Consume the regeneration scope for this round (set in runPlanAction). Cleared
+    // here AND on failure/error handlers so a later reorder/accept is never mistaken
+    // for a regen.
+    state.regenScope = null;
 
     // The plan has settled: from now on log entries flow BELOW the section checklist.
     // Set this BEFORE emitting the milestone so the AI's "review the plan" message
@@ -295,6 +307,10 @@ export const handleFailed = async(data, ctx) => {
     } = ctx;
     state.isStreaming = false;
     hideFeedbackThinking();
+    // A failed replan must not leave the regen scope set (a later reorder/accept
+    // would be misrouted) — drop the half-built block and clear the flag.
+    finalizeRegen();
+    state.regenScope = null;
     if (typeof ctx.onStreamEnd === 'function') {
         ctx.onStreamEnd();
     }

@@ -42,6 +42,17 @@ export const createRunPlanAction = ({state, sendPlanningFeedback, openSSEStream}
         if (!sendPlanningFeedback || !state.sessionid) {
             return;
         }
+        // Mark a regeneration so the stream handlers route this round's content
+        // into a NEW left-panel block (below the user's instruction) instead of
+        // rebuilding the top "structure I planned" checklist. ONLY replans set
+        // this — reorder/add/delete/accept leave it null, so their flow (already
+        // verified) is untouched. Cleared by the lifecycle handlers at stream end.
+        const action = intent && intent.action;
+        if (action === 'replan_activity' || action === 'replan_section') {
+            state.regenScope = {action, targetIds: (intent.target_ids || []).slice()};
+        } else {
+            state.regenScope = null;
+        }
         await sendPlanningFeedback({recordid: state.sessionid, pendingAction: intent});
         // keepPlan: this resumes an existing plan to apply an action — preserve the
         // rendered preview so the reconciler diffs against it (no teardown/flicker).

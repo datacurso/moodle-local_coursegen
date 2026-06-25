@@ -418,6 +418,26 @@ matiz extra:
 >   orden en `dragstart` (`orderAtStart`) y en `dragend` compara con el orden actual; si es idéntico
 >   se omite `onReorder` (ni log ni call al servicio). Verificado: drag no-op = 0 turnos, 0 POSTs;
 >   reorden real sigue `IDENTICAL: true`.
+> - [x] **Bloque de regeneración en el panel izquierdo (replan_activity)** (2026-06-24, plugin-only).
+>   Al pedir replanificar una ACTIVIDAD, ahora aparece un bloque NUEVO debajo de la instrucción —
+>   igual al de la planificación inicial (item con spinner→check + detalle markdown clampado con
+>   View more/less), streameando en vivo— con el head = TÍTULO DE LA ACTIVIDAD + su icono (el mismo
+>   monologo.svg del centro, más pequeño). El checklist de arriba queda CONGELADO como la foto
+>   inicial. Diseño aditivo con compuerta `state.regenScope` (se setea SOLO en replan vía
+>   `runPlanAction`; reorden/inicial/accept lo dejan en `null`, así que su flujo verificado queda
+>   intacto). Nuevo módulo `ui/regen-block.js`; hooks con compuerta en `handlers-content`
+>   (`handleDetailedPlanActivity`) y `handlers-lifecycle` (`handleReviewNeeded` finaliza el bloque y
+>   NO reconstruye el top; limpieza en `handleFailed`). Reload: `thread-replay` reconstruye el bloque
+>   desde `user_action(target_ids)` + el `ai_planned_structure` siguiente (mismo renderer), y compone
+>   el turno de instrucción ("{instruction} — {TypeLabel}: {title}") idéntico al vivo. Helpers nuevos:
+>   `formatActivityDetailMd`, `clampDetail` exportado. CSS `.cg-activity-icon`. Verificado e2e (test
+>   `replan-block.mjs`): bloque + secuencia `IDENTICAL` live===reload, icono presente, 0 errores JS;
+>   reorden/inicial siguen `IDENTICAL` (test `reload-diff.mjs`).
+> - [ ] **Bloque de regeneración para replan_SECTION** (pendiente). Falta cablear el caso de sección:
+>   enrutar los eventos `section`/`activity`/`detalle` del replan de sección al bloque (head = nombre
+>   de sección, como inicial, detalle = descripción + actividades), evitar que `handleSection`
+>   contamine el checklist de arriba, y componer su turno de instrucción idéntico al vivo en reload.
+>   Hoy un replan_section cae al comportamiento viejo (reconstruye el top + turno genérico al reload).
 > - [x] **Hito de review distingue planificación inicial de ajustes posteriores** (2026-06-24).
 >   "I finished planning your course…" solo tiene sentido tras la planificación INICIAL; tras un
 >   ajuste (reorden, etc.) debe decir "I applied your changes. Take a look and tell me if you want

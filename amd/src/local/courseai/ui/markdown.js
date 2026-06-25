@@ -65,6 +65,48 @@ export const renderMarkdown = (md) => {
  *     chapters?: [{title, summary}], questions?: [{question, type}] }.
  * @returns {string} Markdown for the section.
  */
+/**
+ * Render ONE activity's BODY (description + detailed plan) to Markdown, WITHOUT
+ * the title line. Used by the regeneration block, where the activity title +
+ * icon live in the item head (like a section name) and only the body goes in
+ * the clamped detail. Mirrors the per-activity portion of formatSectionMd.
+ *
+ * @param {Object} activity - { description, detailedPlan } (title/type ignored here).
+ * @returns {string} Markdown for the activity body.
+ */
+export const formatActivityDetailMd = (activity) => {
+    if (!activity) {
+        return '';
+    }
+    const lines = [];
+    const activityDesc = String(activity.description || '').trim();
+    if (activityDesc) {
+        lines.push(activityDesc);
+    }
+    const detail = activity.detailedPlan || null;
+    if (detail) {
+        const chapters = Array.isArray(detail.chapters) ? detail.chapters : [];
+        const questions = Array.isArray(detail.questions) ? detail.questions : [];
+        if (chapters.length) {
+            lines.push('');
+            chapters.forEach((chapter, index) => {
+                const cTitle = String(chapter.title || '').trim();
+                const cSummary = String(chapter.summary || '').trim();
+                lines.push((index + 1) + '. **' + cTitle + '**' + (cSummary ? ' — ' + cSummary : ''));
+            });
+        }
+        if (questions.length) {
+            lines.push('');
+            questions.forEach((question, index) => {
+                const qText = String(question.question || '').trim();
+                const qType = String(question.type || '').trim();
+                lines.push((index + 1) + '. ' + qText + (qType ? ' _(' + qType + ')_' : ''));
+            });
+        }
+    }
+    return lines.join('\n').trim();
+};
+
 export const formatSectionMd = (section) => {
     if (!section) {
         return '';

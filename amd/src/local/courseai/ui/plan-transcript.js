@@ -74,7 +74,7 @@ const detailEl = (sectionId) => document.querySelector(
  * @param {HTMLElement} el - The detail container.
  * @returns {void}
  */
-const clampDetail = (el) => {
+export const clampDetail = (el) => {
     if (!el || el.dataset.cgClamp) {
         return;
     }

@@ -190,6 +190,15 @@
   align-items: center;
   gap: 8px;
 }
+/* Activity-type icon in a regeneration item head: the SAME monologo.svg the
+   center view uses, just smaller, sitting between the check circle and the
+   activity title. */
+.cg-activity-icon {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
 /* The section name carries the weight — bigger and bolder than the detail. */
 .courseai-checklist-name {
   font-size: 15.5px;

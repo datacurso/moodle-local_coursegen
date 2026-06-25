@@ -29,6 +29,11 @@ import {
     transcriptOnActivity,
     transcriptOnActivityDetail,
 } from 'local_coursegen/local/courseai/ui/plan-transcript';
+import {
+    isRegenActive,
+    startRegenActivities,
+    regenOnActivityDetail,
+} from 'local_coursegen/local/courseai/ui/regen-block';
 
 /**
  * Handle 'activity' event: upsert activity into latestInitialSections and
@@ -235,6 +240,18 @@ export const handleDetailedPlanActivity = (data, ctx) => {
     // section spinner once all its activities are planned.
     if (!ctx.keepPlan) {
         transcriptOnActivityDetail(data);
+    }
+    // Activity regeneration: stream the regenerated activity into a NEW left-panel
+    // block (icon + activity title head + clamped detail), creating it lazily on
+    // the first detail event. Gated on regenScope so reorder/initial are untouched.
+    if (state.regenScope && state.regenScope.action === 'replan_activity') {
+        if (!isRegenActive()) {
+            startRegenActivities({
+                targetIds: state.regenScope.targetIds,
+                plan: state.latestInitialSections || [],
+            });
+        }
+        regenOnActivityDetail(data);
     }
     state.activitiesPlannedCount = (state.activitiesPlannedCount || 0) + 1;
     const totalDetailed = state.detailedTotal || 1;
