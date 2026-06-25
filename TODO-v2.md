@@ -412,6 +412,14 @@ matiz extra:
 >   `course_planning_feedback.php` declara `moved_id` en el schema externo (sin esto Moodle
 >   rechazaba el call entero → el reorden no persistía); lang `log_moved_activity` + registro en
 >   `i18n.js STRING_KEYS`; el servicio persiste el mismo string_id con `string_args` {title, position}.
+> - [x] **Reorden tras RELOAD mostraba el genérico** (`checklist-helpers.js`, 2026-06-24). Tras
+>   recargar, `sendReorderActivities` caía a "You reordered the activities in: <sección>" en vez de
+>   "You moved X to position N". Causa: `buildSectionsFromDetailedPlan` reconstruía
+>   `state.latestInitialSections` SIN el `id` de cada actividad, así que el lookup por id del
+>   arrastrado fallaba. El path vivo funcionaba (`handleActivity` setea el id); el resumido lo perdía.
+>   Fix: arrastrar `activity.id` en el rebuild. **Lección de verificación**: el `reload-diff` solo
+>   reordenaba ANTES de recargar y solo comparaba live===reload (no que el reorden siguiera detallado),
+>   así que el caso reorden-DESPUÉS-de-recargar nunca se cubrió. Ahora verificado e2e.
 > - [x] **Reorden no-op no se loguea** (`dnd.js`, 2026-06-24). Soltar una actividad en su MISMA
 >   posición mostraba "You moved X to position N" (p.ej. mover el quiz que ya estaba en la pos 2 →
 >   "moved to position 2") sin que nada se moviera. `wireDragAndDrop` ahora toma un snapshot del
