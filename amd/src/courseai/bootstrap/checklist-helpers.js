@@ -61,6 +61,11 @@ export const makeChecklistHelpers = ({state, elements, texts}) => {
                 activities: (Array.isArray(section.activities) ? section.activities : [])
                     .filter((activity) => !activity?.deleted)
                     .map((activity, activityIndex) => ({
+                        // Carry the UUID so post-reload id-based lookups work (e.g.
+                        // sendReorderActivities matches the dragged activity by id to
+                        // name it + its position; without id it fell back to the
+                        // generic "You reordered the activities in: <section>").
+                        id: activity.id,
                         activity_type: activity.activity_type || activity.type || 'page',
                         title: activity.title || activity.name || `${texts.courseai_activity_default} ${activityIndex + 1}`,
                         description:
