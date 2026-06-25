@@ -67,10 +67,7 @@ export const createTextPanel = ({onSubmit, texts, placeholder}) => {
         textarea.value = '';
     };
 
-    cancel.addEventListener('click', closePanel);
-    send.addEventListener('click', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
+    const submit = () => {
         const value = textarea.value.trim();
         if (!value) {
             textarea.focus();
@@ -79,6 +76,22 @@ export const createTextPanel = ({onSubmit, texts, placeholder}) => {
         onSubmit(value);
         panel.style.display = 'none';
         textarea.value = '';
+    };
+
+    cancel.addEventListener('click', closePanel);
+    send.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        submit();
+    });
+    // Enter sends the adjustment (like the Send button); Shift+Enter keeps the
+    // newline so multi-line instructions are still possible.
+    textarea.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            event.stopPropagation();
+            submit();
+        }
     });
 
     actions.appendChild(cancel);
