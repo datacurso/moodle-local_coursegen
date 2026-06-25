@@ -22,6 +22,7 @@
  */
 
 import {renderMarkdown} from 'local_coursegen/local/courseai/ui/markdown';
+import {get_string} from 'core/str';
 
 /** Map kind → CSS modifier class applied to the left color bar. */
 const KIND_CLASS = {
@@ -47,10 +48,27 @@ const ACTOR_ICON = {
  */
 const TURN_MAX_HEIGHT = 160;
 
-/** "Show more" / "Show less" / "Show full message" labels (kept here so the toggle is self-contained). */
-const TOGGLE_MORE = 'Show more';
-const TOGGLE_LESS = 'Show less';
-const TOGGLE_FULL = 'Show full message';
+// "Show more"/"Show less"/"Show full message" labels — sourced from the lang pack
+// (the English text is only a fallback until get_string resolves).
+let TOGGLE_MORE = 'Show more';
+let TOGGLE_LESS = 'Show less';
+let TOGGLE_FULL = 'Show full message';
+const _resolveLabel = (key, set) => get_string(key, 'local_coursegen')
+    .then((s) => {
+        if (typeof s === 'string' && s.indexOf('[[') !== 0) {
+            set(s);
+        }
+    })
+    .catch(() => {});
+_resolveLabel('courseai_show_more', (s) => {
+    TOGGLE_MORE = s;
+});
+_resolveLabel('courseai_show_less', (s) => {
+    TOGGLE_LESS = s;
+});
+_resolveLabel('courseai_show_full_message', (s) => {
+    TOGGLE_FULL = s;
+});
 
 /**
  * Build the expand/collapse chevron control for a long turn.

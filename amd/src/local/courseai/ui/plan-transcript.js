@@ -33,9 +33,26 @@
  */
 
 import {renderMarkdown, formatSectionMd} from 'local_coursegen/local/courseai/ui/markdown';
+import {get_string} from 'core/str';
 
 /** Collapsed max-height (px) before the detail fades + shows a "Show more" toggle. */
 const CLAMP_PX = 120;
+
+/** Toggle labels from the lang pack (English text is only a fallback). */
+let SHOW_MORE = 'Show more';
+let SHOW_LESS = 'Show less';
+get_string('courseai_show_more', 'local_coursegen')
+    .then((s) => {
+        if (typeof s === 'string' && s.indexOf('[[') !== 0) {
+            SHOW_MORE = s;
+        }
+    }).catch(() => {});
+get_string('courseai_show_less', 'local_coursegen')
+    .then((s) => {
+        if (typeof s === 'string' && s.indexOf('[[') !== 0) {
+            SHOW_LESS = s;
+        }
+    }).catch(() => {});
 
 /** @type {Map<string, Object>} sectionId -> accumulated section data. */
 const sections = new Map();
@@ -73,7 +90,7 @@ const clampDetail = (el) => {
         const setLabel = (expanded) => {
             toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
             toggle.innerHTML = '<span class="cg-log-toggle-text">'
-                + (expanded ? 'Show less' : 'Show more') + '</span>'
+                + (expanded ? SHOW_LESS : SHOW_MORE) + '</span>'
                 + '<span class="cg-log-toggle-chevron" aria-hidden="true">⌄</span>';
         };
         const apply = (expanded) => {
