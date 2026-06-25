@@ -161,6 +161,29 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
     };
 
     /**
+     * Compose a replan_section user turn EXACTLY as the live handler does
+     * (section-dom.js): "{instruction} — {SectionWord}: {name}" with an
+     * instruction, else "You regenerated section: {name}". Reads the section name
+     * FROZEN into the payload at persist time. Returns null when absent.
+     *
+     * @param {Object} payload - user_action payload ({name, instruction}).
+     * @returns {string|null}
+     */
+    const composeReplanSectionTurn = (payload) => {
+        const name = String((payload && payload.name) || '').trim();
+        if (!name) {
+            return null;
+        }
+        const instruction = String((payload && payload.instruction) || '').trim();
+        if (instruction) {
+            const word = (texts && texts.courseai_section_word) || 'Section';
+            return instruction + ' — ' + word + ': ' + name;
+        }
+        return ((texts && texts.courseai_log_regenerated_section) || 'You regenerated section: {$a}')
+            .replace('{$a}', name);
+    };
+
+    /**
      * Render a single thread message into the left feed.
      *
      * @param {Object} msg - { seq, type, role, content, payload, created_at }
@@ -203,6 +226,13 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
             // path when the target can't be resolved.
             if (subtype === 'replan_activity') {
                 const composed = composeReplanActivityTurn(payload);
+                if (composed) {
+                    emitLog({actor: 'user', kind, message: composed});
+                    return;
+                }
+            }
+            if (subtype === 'replan_section' || subtype === 'replan_sections') {
+                const composed = composeReplanSectionTurn(payload);
                 if (composed) {
                     emitLog({actor: 'user', kind, message: composed});
                     return;
