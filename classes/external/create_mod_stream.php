@@ -119,6 +119,19 @@ class create_mod_stream extends external_api {
                 $payload['context_type'] = $coursecontext->context_type;
             }
 
+            // Tell the service which H5P framework (core API) this Moodle runs, so it packages the
+            // generated .h5p with libraries compatible with that version (v127 vs v128 library set).
+            try {
+                (new \core_h5p\factory())->get_core(); // ensures the active H5P handler is autoloaded.
+                $coreapi = \core_h5p\core::$coreApi;
+                if (!empty($coreapi['majorVersion'])) {
+                    $payload['h5p_core_api'] = $coreapi['majorVersion'] . '.' . $coreapi['minorVersion'];
+                }
+            } catch (\Throwable $e) {
+                // Leave unset; the service falls back to its most-compatible library set.
+                debugging('local_coursegen: could not resolve H5P core API: ' . $e->getMessage(), DEBUG_DEVELOPER);
+            }
+
             $apiservice = new ai_course_api_service();
             $result = $apiservice->start_activity($payload);
 
