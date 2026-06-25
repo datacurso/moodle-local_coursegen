@@ -85,6 +85,13 @@ export const openConnection = (streamUrl, retryAttempt, ctx, openSSEStream) => {
         } catch (e) {
             return;
         }
+        // This attempt produced a real message, so a following 'done' is NOT a
+        // stale buffered one (the stale-done guard only fires when a 'done'
+        // arrives with NO message before it). Set it SYNCHRONOUSLY — before the
+        // async queue — so a fast adjustment (e.g. reorder, which emits only
+        // status + review_needed and no content events) is never retried, which
+        // was duplicating the "I finished planning" milestone.
+        ctx.flags.contentReceived = true;
         eventQueue = eventQueue.then(() => routeEvent(data, ctx)).catch(() => {});
     });
 

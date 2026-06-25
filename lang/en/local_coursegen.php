@@ -696,6 +696,7 @@ $string['courseai_log_ai_completed'] = 'Your course is ready. I created it in Mo
 $string['courseai_log_user_approved'] = 'You approved the plan';
 $string['courseai_log_reordered_sections'] = 'You reordered the sections';
 $string['courseai_log_reordered_activities'] = 'You reordered the activities in: {$a}';
+$string['courseai_log_moved_activity'] = 'You moved "{$a->title}" to position {$a->position}';
 $string['courseai_log_reordered_activities_generic'] = 'You reordered the activities';
 $string['courseai_checklist_section_count'] = '{$a} sections';
 $string['courseai_decision_title'] = 'Review your course plan';

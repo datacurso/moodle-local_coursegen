@@ -99,6 +99,9 @@ export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, p
         container.querySelectorAll(itemSelector).forEach((el) => {
             el.classList.remove('dp-drag-over');
         });
+        // The dragged row (its id) is what moved — pass it so the log can name
+        // the moved element and its new position, not just the parent.
+        const movedId = (row && row.dataset[idDataset]) || null;
         dragSrcEl = null;
         // Collect new order and dispatch.
         const ids = [];
@@ -109,7 +112,7 @@ export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, p
             }
         });
         if (ids.length > 1) {
-            onReorder(ids);
+            onReorder(ids, movedId);
         }
     };
 
@@ -162,19 +165,33 @@ export const sendReorderSections = async(ctx, targetIds) => {
  * @param {Object}   ctx              - ui-detailed ctx; reads runPlanAction, log, texts, state.
  * @param {string}   sectionId        - Parent section UUID.
  * @param {string[]} targetIds        - Activity UUIDs in new DOM order.
+ * @param {string}   [movedId]        - UUID of the activity the user dragged.
  */
-export const sendReorderActivities = async(ctx, sectionId, targetIds) => {
+export const sendReorderActivities = async(ctx, sectionId, targetIds, movedId) => {
     const {runPlanAction, log, texts, state} = ctx;
-    // Reordering activities is a user action → one concise turn naming the
-    // parent section when its name is resolvable (no « »).
+    // Reordering activities is a user action → one concise turn that names WHICH
+    // activity moved and to WHICH (1-based) position; falls back to the section
+    // name, then a generic line (no « »).
     if (typeof log === 'function') {
         const sections = (state && state.latestInitialSections) || [];
         const section = sections.find((s) => s && s.id === sectionId);
-        const sectionName = section && String(section.name || '').trim();
-        const message = sectionName
-            ? ((texts && texts.courseai_log_reordered_activities) || 'You reordered activities in: {$a}')
-                .replace('{$a}', sectionName)
-            : ((texts && texts.courseai_log_reordered_activities_generic) || 'You reordered the activities');
+        const sectionName = (section && String(section.name || '').trim()) || '';
+        const activities = (section && section.activities) || [];
+        const moved = activities.find((a) => a && a.id === movedId);
+        const movedTitle = moved && String(moved.title || '').trim();
+        const newPos = movedId ? targetIds.indexOf(movedId) + 1 : 0;
+        let message;
+        if (movedTitle && newPos > 0) {
+            message = ((texts && texts.courseai_log_moved_activity)
+                || 'You moved "{$a->title}" to position {$a->position}')
+                .replace('{$a->title}', movedTitle)
+                .replace('{$a->position}', String(newPos));
+        } else if (sectionName) {
+            message = ((texts && texts.courseai_log_reordered_activities) || 'You reordered the activities in: {$a}')
+                .replace('{$a}', sectionName);
+        } else {
+            message = (texts && texts.courseai_log_reordered_activities_generic) || 'You reordered the activities';
+        }
         log({actor: 'user', kind: 'user', message});
     }
     try {

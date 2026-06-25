@@ -164,7 +164,7 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
         cmlistEl,
         '.activity',
         'activityId',
-        (ids) => sendReorderActivities(ctx, sectionId, ids),
+        (ids, movedId) => sendReorderActivities(ctx, sectionId, ids, movedId),
         sectionId,
         () => !ctx.state.isStreaming
     );
