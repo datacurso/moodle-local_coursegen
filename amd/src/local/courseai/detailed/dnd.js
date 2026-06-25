@@ -83,9 +83,23 @@ export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, p
         if (parentSectionId !== null && originSection !== (parentSectionId || '')) {
             return;
         }
-        // DOM reorder: insert dragSrcEl before the target.
+        // DOM reorder, DIRECTION-AWARE: inserting always-before the target makes
+        // it impossible to move an element DOWN past a target (or back to a lower
+        // slot) — it'd just land before it again and "stick". So when dragging
+        // DOWNWARD (source currently before the target) insert AFTER the target;
+        // when dragging UPWARD (source after the target) insert BEFORE it.
         const parent = row.parentNode;
-        parent.insertBefore(dragSrcEl, row);
+        // draggingDown = the target is a LATER sibling of the dragged row (walk
+        // forward from the source until we hit the target). Avoids bitwise
+        // compareDocumentPosition (lint) and text-node ambiguity.
+        let draggingDown = false;
+        for (let node = dragSrcEl.nextSibling; node; node = node.nextSibling) {
+            if (node === row) {
+                draggingDown = true;
+                break;
+            }
+        }
+        parent.insertBefore(dragSrcEl, draggingDown ? row.nextSibling : row);
     };
 
     const onDragEnd = (event) => {
