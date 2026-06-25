@@ -165,6 +165,7 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
             case 'accept': return T('courseai_log_user_approved', 'You approved the plan');
             case 'adjust':
             case 'feedback': return T('courseai_log_user_request', 'You') + ': ' + clip;
+            case 'proposal_custom': return T('courseai_log_proposal_applied', 'You applied') + ': ' + clip;
             case 'proposals_dismissed': return T('courseai_log_proposals_dismissed', 'You dismissed suggestions');
             case 'stop': return T('courseai_btn_stop', 'Stop');
             case 'resume': return T('courseai_btn_resume', 'Resume');
@@ -277,6 +278,17 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
                     emitLog({actor: 'user', kind, message: composed});
                     return;
                 }
+            }
+            // Applying a picked proposal: render "You applied: <summary>" from the
+            // frozen proposal summary, exactly as the live card turn did.
+            if (subtype === 'proposal_applied') {
+                const applied = T('courseai_log_proposal_applied', 'You applied');
+                const summaryText = (payload && payload.summary)
+                    ? await resolveText(payload.summary, localizeMessage)
+                    : '';
+                const clip = summaryText.length > 80 ? summaryText.slice(0, 80) + '…' : summaryText;
+                emitLog({actor: 'user', kind, message: clip ? applied + ': ' + clip : applied});
+                return;
             }
             // Subtypes whose live turn is a fixed plugin phrasing (stop/resume/
             // accept/add/dismiss/images/adjust): render the SAME text live shows.

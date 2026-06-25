@@ -272,7 +272,10 @@ export const createProposalsUi = (deps) => {
                 const truncated = instruction.length > 80 ? instruction.slice(0, 80) + '…' : instruction;
                 const appliedLabel = texts.courseai_log_proposal_applied || 'You applied';
                 log({actor: 'user', kind: 'info', message: appliedLabel + ': ' + truncated});
-                await sendAction(block, {action: 'feedback', instruction});
+                // proposal_custom: recorded by the service as "proposal_custom"
+                // (labelled "You applied: …" on reload), NOT a plain compact-chat
+                // "feedback" turn ("You: …").
+                await sendAction(block, {action: 'feedback', instruction, proposal_custom: true});
             } else {
                 const selectedLabel = selected.closest('.plan-proposal-card');
                 const summaryText = selectedLabel
