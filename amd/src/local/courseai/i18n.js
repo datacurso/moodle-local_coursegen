@@ -194,6 +194,7 @@ const STRING_KEYS = [
     'courseai_log_reordered_activities',
     'courseai_log_reordered_activities_generic',
     'courseai_log_moved_activity',
+    'courseai_log_ai_review_updated',
     'courseai_show_more',
     'courseai_show_less',
     'courseai_show_full_message',

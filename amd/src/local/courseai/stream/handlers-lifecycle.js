@@ -180,16 +180,26 @@ export const handleReviewNeeded = async(data, ctx) => {
     // Set this BEFORE emitting the milestone so the AI's "review the plan" message
     // lands AFTER the planned-structure group (chronological: plan first, then the
     // prompt to review), not above it.
+    // Capture BEFORE flipping the flag: the FIRST review follows the initial
+    // planning ("I finished planning…"); every later review follows a user
+    // adjustment, so it must read "I applied your changes…" instead.
+    const firstReview = !state.planEverReviewed;
     state.planEverReviewed = true;
     // Meaningful milestone: the AI finished this round and is awaiting review. Phrased
     // as the assistant talking to the user (first person, no dashes).
     if (typeof emitLog === 'function') {
         const hasProposals = Array.isArray(data.proposals) && data.proposals.length > 0;
-        const message = hasProposals
-            ? ((texts && texts.courseai_log_ai_proposals_ready)
-                || 'I prepared a few suggestions for you. Review them and choose how you want to continue.')
-            : ((texts && texts.courseai_log_ai_review_ready)
-                || 'I finished planning your course. Take a look at the plan and tell me if you want any changes.');
+        let message;
+        if (hasProposals) {
+            message = (texts && texts.courseai_log_ai_proposals_ready)
+                || 'I prepared a few suggestions for you. Review them and choose how you want to continue.';
+        } else if (firstReview) {
+            message = (texts && texts.courseai_log_ai_review_ready)
+                || 'I finished planning your course. Take a look at the plan and tell me if you want any changes.';
+        } else {
+            message = (texts && texts.courseai_log_ai_review_updated)
+                || 'I applied your changes. Take a look and tell me if you want anything else.';
+        }
         emitLog({actor: 'ai', kind: 'ai', message});
     }
     if (typeof ctx.onStreamEnd === 'function') {

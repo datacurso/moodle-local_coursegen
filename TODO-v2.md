@@ -418,6 +418,16 @@ matiz extra:
 >   orden en `dragstart` (`orderAtStart`) y en `dragend` compara con el orden actual; si es idéntico
 >   se omite `onReorder` (ni log ni call al servicio). Verificado: drag no-op = 0 turnos, 0 POSTs;
 >   reorden real sigue `IDENTICAL: true`.
+> - [x] **Hito de review distingue planificación inicial de ajustes posteriores** (2026-06-24).
+>   "I finished planning your course…" solo tiene sentido tras la planificación INICIAL; tras un
+>   ajuste (reorden, etc.) debe decir "I applied your changes. Take a look and tell me if you want
+>   anything else." Nuevo lang `courseai_log_ai_review_updated` (+ STRING_KEYS). Vivo
+>   (`handlers-lifecycle.js`): captura `firstReview = !state.planEverReviewed` ANTES de setear el
+>   flag. Reload (`thread-replay.js`): `replayThread` cuenta los hitos de review y pasa
+>   `firstReview = (enésimo === 1)` — NO se puede usar `planEverReviewed` en reload porque el
+>   `ai_proposals_card` previo ya lo activa. Solo el 1er `ai_review_ready` usa el texto inicial.
+>   Verificado e2e: review inicial vs 2 reordenes → "I finished planning" / "I applied your changes"
+>   ×2, `IDENTICAL: true`, 0 errores JS.
 **Pedido:** (a) quitar los guillemets « » de los mensajes; (b) el regenerar debe decir el TIPO de
 actividad; (c) la instrucción del usuario + la acción NO deben ser dos turnos sino UNO; (d) PRINCIPIO:
 en el chat se debe mostrar TODO lo que streamea el servidor y TODO lo que el usuario manda desde

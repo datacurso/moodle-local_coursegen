@@ -227,7 +227,16 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
         // completed, use the SAME plugin phrasing the live handler emits (so reload
         // matches live exactly); otherwise fall back to the server-rendered text.
         if (Object.prototype.hasOwnProperty.call(AI_MILESTONE_KIND, type)) {
-            const pluginKey = MILESTONE_PLUGIN_TEXT[type];
+            let pluginKey = MILESTONE_PLUGIN_TEXT[type];
+            // The first review milestone follows the INITIAL planning; later ones
+            // follow a user adjustment. Mirror the live phrasing so reload === live:
+            // only the FIRST review_ready says "I finished planning…", the rest say
+            // "I applied your changes…". (ctx.firstReview is set by replayThread,
+            // which counts review milestones — planEverReviewed can't be used here
+            // because the preceding ai_proposals_card already flips it.)
+            if (type === 'ai_review_ready' && ctx.firstReview === false) {
+                pluginKey = 'courseai_log_ai_review_updated';
+            }
             const pluginText = pluginKey && texts && texts[pluginKey];
             const text = pluginText || await resolveText(content, localizeMessage);
             if (text) {
@@ -262,13 +271,23 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
         // already orders by seq, but never trust ordering on the wire).
         const ordered = thread.slice().sort((a, b) => Number(a.seq || 0) - Number(b.seq || 0));
         const lastIndex = ordered.length - 1;
+        // Count review milestones (review_ready / proposals_ready) as we go: the
+        // 1st marks the initial-planning review, every later one a post-adjustment
+        // review. Lets renderThreadMessage pick the matching milestone phrasing.
+        let reviewMilestones = 0;
         for (let i = 0; i < ordered.length; i++) {
+            const t = ordered[i].type;
+            const isReviewMilestone = t === 'ai_review_ready' || t === 'ai_proposals_ready';
+            if (isReviewMilestone) {
+                reviewMilestones += 1;
+            }
             // Sequential await is intentional: turns must render in order, and
             // each emitLog appends to the live feed.
             // eslint-disable-next-line no-await-in-loop
             await renderThreadMessage(ordered[i], {
                 atReview: Boolean(ctx.atReview),
                 isLast: i === lastIndex,
+                firstReview: isReviewMilestone ? reviewMilestones === 1 : undefined,
             });
         }
     };

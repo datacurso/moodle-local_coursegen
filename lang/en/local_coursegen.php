@@ -691,6 +691,7 @@ $string['courseai_log_ai_thinking'] = 'Analyzing your request...';
 $string['courseai_log_ai_working'] = 'The assistant is working...';
 $string['courseai_log_ai_course_configuration'] = 'Course: {$a}';
 $string['courseai_log_ai_review_ready'] = 'I finished planning your course. Take a look at the plan and tell me if you want any changes.';
+$string['courseai_log_ai_review_updated'] = 'I applied your changes. Take a look and tell me if you want anything else.';
 $string['courseai_log_ai_proposals_ready'] = 'I prepared a few suggestions for you. Review them and choose how you want to continue.';
 $string['courseai_log_ai_completed'] = 'Your course is ready. I created it in Moodle.';
 $string['courseai_log_user_approved'] = 'You approved the plan';
