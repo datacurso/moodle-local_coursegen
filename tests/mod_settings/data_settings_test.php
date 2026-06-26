@@ -156,4 +156,45 @@ final class data_settings_test extends \advanced_testcase {
 
         $this->assertSame(0, $DB->count_records('data_fields', ['dataid' => $cm->instance]));
     }
+
+    /**
+     * The database is sorted by its first sortable (identifying) field, not by time added.
+     */
+    public function test_default_sort_is_set_to_primary_field(): void {
+        $this->resetAfterTest();
+        global $DB;
+
+        $cm = $this->make_data_cm();
+        $modsettings = ['fields' => [
+            ['type' => 'textarea', 'name' => 'Resena'],   // non-sortable, first -> skipped as primary
+            ['type' => 'text', 'name' => 'Titulo'],        // first sortable -> primary
+            ['type' => 'number', 'name' => 'Anio'],
+        ]];
+
+        (new data_settings($cm, $modsettings))->add_settings();
+
+        $data = $DB->get_record('data', ['id' => $cm->instance]);
+        $titulo = $DB->get_record('data_fields', ['dataid' => $cm->instance, 'name' => 'Titulo']);
+        $this->assertEquals($titulo->id, $data->defaultsort);
+        $this->assertEquals(0, (int) $data->defaultsortdir);
+    }
+
+    /**
+     * With only non-sortable field types, the default time-added sort is kept (defaultsort = 0).
+     */
+    public function test_default_sort_kept_when_no_sortable_field(): void {
+        $this->resetAfterTest();
+        global $DB;
+
+        $cm = $this->make_data_cm();
+        $modsettings = ['fields' => [
+            ['type' => 'textarea', 'name' => 'Texto'],
+            ['type' => 'picture', 'name' => 'Foto'],
+        ]];
+
+        (new data_settings($cm, $modsettings))->add_settings();
+
+        $data = $DB->get_record('data', ['id' => $cm->instance]);
+        $this->assertEquals(0, (int) $data->defaultsort);
+    }
 }
