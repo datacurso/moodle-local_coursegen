@@ -180,6 +180,45 @@ final class data_settings_test extends \advanced_testcase {
     }
 
     /**
+     * Custom display templates in the payload are written to the data instance.
+     */
+    public function test_sets_custom_templates_when_present(): void {
+        $this->resetAfterTest();
+        global $DB;
+
+        $cm = $this->make_data_cm();
+        $modsettings = [
+            'fields' => [['type' => 'text', 'name' => 'Titulo']],
+            'templates' => [
+                'listtemplate' => '<div>[[Titulo]] ##edit## ##delete## ##more##</div>',
+                'singletemplate' => '<h2>[[Titulo]]</h2> ##edit## ##delete## ##approve##',
+            ],
+        ];
+
+        (new data_settings($cm, $modsettings))->add_settings();
+
+        $data = $DB->get_record('data', ['id' => $cm->instance]);
+        $this->assertStringContainsString('[[Titulo]]', $data->listtemplate);
+        $this->assertStringContainsString('[[Titulo]]', $data->singletemplate);
+    }
+
+    /**
+     * With no templates in the payload the template columns are left untouched (Moodle defaults).
+     */
+    public function test_templates_absent_leaves_columns_unchanged(): void {
+        $this->resetAfterTest();
+        global $DB;
+
+        $cm = $this->make_data_cm();
+        $before = $DB->get_record('data', ['id' => $cm->instance]);
+        (new data_settings($cm, ['fields' => [['type' => 'text', 'name' => 'X']]]))->add_settings();
+        $after = $DB->get_record('data', ['id' => $cm->instance]);
+
+        $this->assertSame($before->listtemplate, $after->listtemplate);
+        $this->assertSame($before->singletemplate, $after->singletemplate);
+    }
+
+    /**
      * With only non-sortable field types, the default time-added sort is kept (defaultsort = 0).
      */
     public function test_default_sort_kept_when_no_sortable_field(): void {

@@ -95,6 +95,35 @@ class data_settings extends base_settings {
         }
 
         $this->set_default_sort($datainstance, $created);
+        $this->set_templates($datainstance);
+    }
+
+    /**
+     * Apply the AI-designed display templates (already validated service-side) to the database.
+     *
+     * Only the list/single columns are written, and only the non-empty ones; an absent or empty
+     * template leaves the column untouched so Moodle auto-generates its default.
+     *
+     * @param stdClass $datainstance The database activity record.
+     */
+    protected function set_templates(stdClass $datainstance): void {
+        global $DB;
+
+        $templates = $this->modsettings['templates'] ?? null;
+        if (empty($templates) || !is_array($templates)) {
+            return;
+        }
+
+        $update = ['id' => $datainstance->id];
+        foreach (['listtemplate', 'singletemplate'] as $name) {
+            $value = trim((string) ($templates[$name] ?? ''));
+            if ($value !== '') {
+                $update[$name] = $value;
+            }
+        }
+        if (count($update) > 1) {
+            $DB->update_record('data', (object) $update);
+        }
     }
 
     /**
