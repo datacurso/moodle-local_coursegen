@@ -78,11 +78,15 @@ export const clampDetail = (el) => {
     if (!el || el.dataset.cgClamp) {
         return;
     }
+    // Claim SYNCHRONOUSLY (not inside the rAF): clampDetail is called from several
+    // paths (per-section completion + finalize + rebuild), and if two calls land
+    // before the rAF fires they would each insert a toggle → the duplicate "Show
+    // more". Marking the element now blocks the second call.
+    el.dataset.cgClamp = '1';
     window.requestAnimationFrame(() => {
         if (el.scrollHeight <= CLAMP_PX + 4) {
             return;
         }
-        el.dataset.cgClamp = '1';
         el.classList.add('cg-detail-clamped');
         const toggle = document.createElement('button');
         toggle.type = 'button';
