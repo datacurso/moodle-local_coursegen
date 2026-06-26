@@ -58,6 +58,7 @@ const STRING_KEYS = [
     'courseai_prv_live_note',
     'courseai_plan_actions_hint',
     'courseai_btn_adjust',
+    'courseai_btn_retry',
     'courseai_btn_approve',
     'courseai_adjust_placeholder',
     'courseai_btn_cancel',

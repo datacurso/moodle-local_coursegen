@@ -322,6 +322,24 @@ export const handleFailed = async(data, ctx) => {
     if (typeof emitLog === 'function') {
         emitLog({actor: 'ai', kind: 'danger', message: failedText});
     }
+    // Retryable failure (the model gave up after exhausting its automatic
+    // retries): offer a manual "Retry" button that re-opens the stream so the
+    // graph re-runs the failed step — a fresh run restarts the retry counter.
+    if (data && data.retryable && state.streamingurl && typeof ctx.openSSEStream === 'function') {
+        const feed = document.getElementById('cgLogAfter') || document.getElementById('cgLog');
+        if (feed && !feed.querySelector('.cg-retry-btn')) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'cg-retry-btn';
+            btn.textContent = (texts && texts.courseai_btn_retry) || 'Retry';
+            btn.addEventListener('click', () => {
+                btn.remove();
+                state.isStreaming = true;
+                ctx.openSSEStream(state.streamingurl, 0, streamMode, true);
+            });
+            feed.appendChild(btn);
+        }
+    }
     if (typeof hideStreamBar === 'function') {
         hideStreamBar();
     }

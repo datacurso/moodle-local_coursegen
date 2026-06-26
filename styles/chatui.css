@@ -199,6 +199,26 @@
   height: 18px;
   object-fit: contain;
 }
+
+/* Manual "Retry" button shown after a model call exhausts its automatic retries. */
+.cg-retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 4px;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent, #5b3df5);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.cg-retry-btn:hover {
+  opacity: .9;
+}
 /* The section name carries the weight — bigger and bolder than the detail. */
 .courseai-checklist-name {
   font-size: 15.5px;
