@@ -96,6 +96,99 @@ class data_settings extends base_settings {
 
         $this->set_default_sort($datainstance, $created);
         $this->set_templates($datainstance);
+        $this->seed_example_entries($datainstance, $created);
+    }
+
+    /**
+     * Seed the AI-generated example entries (already validated service-side) as approved records.
+     *
+     * Each value is serialised into data_content per field type (direct insert — mod_data's
+     * update_content is form-shaped for some types). An entry that errors is skipped (a bad
+     * example must never break the activity). Unseedable types and unknown fields are ignored.
+     *
+     * @param stdClass $datainstance The database activity record.
+     * @param array $created Created fields as objects with ->id, ->type, ->name.
+     */
+    protected function seed_example_entries(stdClass $datainstance, array $created): void {
+        global $USER;
+
+        $entries = $this->modsettings['example_entries'] ?? [];
+        if (empty($entries) || !is_array($entries)) {
+            return;
+        }
+
+        $byname = [];
+        foreach ($created as $field) {
+            $byname[\core_text::strtolower($field->name)] = $field;
+        }
+
+        foreach ($entries as $entry) {
+            $values = is_array($entry) ? ($entry['values'] ?? []) : [];
+            if (empty($values) || !is_array($values)) {
+                continue;
+            }
+            try {
+                $recordid = data_add_record($datainstance, 0, $USER->id, true);
+                foreach ($values as $pair) {
+                    if (!is_array($pair)) {
+                        continue;
+                    }
+                    $field = $byname[\core_text::strtolower(trim((string) ($pair['field_name'] ?? '')))] ?? null;
+                    if ($field !== null) {
+                        $this->insert_content($recordid, $field, (string) ($pair['value'] ?? ''));
+                    }
+                }
+            } catch (\Throwable $e) {
+                debugging('local_coursegen: skipped example entry: ' . $e->getMessage(), DEBUG_DEVELOPER);
+            }
+        }
+    }
+
+    /**
+     * Serialise one field value into a data_content row according to the field type.
+     *
+     * @param int $recordid The entry record id.
+     * @param stdClass $field The created field (->id, ->type).
+     * @param string $rawvalue The validated value as text.
+     */
+    protected function insert_content(int $recordid, stdClass $field, string $rawvalue): void {
+        global $DB;
+
+        $value = trim($rawvalue);
+        if ($value === '' || in_array($field->type, ['file', 'picture'], true)) {
+            return;
+        }
+
+        $content = (object) ['fieldid' => $field->id, 'recordid' => $recordid, 'content' => $value];
+        switch ($field->type) {
+            case 'date':
+                $timestamp = strtotime($value);
+                if ($timestamp === false) {
+                    return;
+                }
+                $content->content = (string) $timestamp;
+                break;
+            case 'multimenu':
+            case 'checkbox':
+                $parts = array_filter(array_map('trim', explode(',', $value)), static fn($p) => $p !== '');
+                if (empty($parts)) {
+                    return;
+                }
+                $content->content = implode('##', $parts);
+                break;
+            case 'latlong':
+                $parts = array_map('trim', explode(',', $value));
+                if (count($parts) < 2 || !is_numeric($parts[0]) || !is_numeric($parts[1])) {
+                    return;
+                }
+                $content->content = $parts[0];
+                $content->content1 = $parts[1];
+                break;
+            case 'textarea':
+                $content->content1 = FORMAT_HTML;
+                break;
+        }
+        $DB->insert_record('data_content', $content);
     }
 
     /**
@@ -186,7 +279,7 @@ class data_settings extends base_settings {
             $field = data_get_field_new($type, $datainstance);
             $field->define_field($formdata);
             $field->insert_field();
-            return (object) ['id' => (int) $field->field->id, 'type' => $type];
+            return (object) ['id' => (int) $field->field->id, 'type' => $type, 'name' => $name];
         } catch (\Throwable $e) {
             debugging(
                 'local_coursegen: skipped data field "' . $name . '": ' . $e->getMessage(),

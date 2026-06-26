@@ -219,6 +219,95 @@ final class data_settings_test extends \advanced_testcase {
     }
 
     /**
+     * Example entries are seeded as approved records, each field value serialised per type.
+     */
+    public function test_seeds_example_entries(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();   // data_add_record approves only with mod/data:approve.
+        global $DB;
+
+        $cm = $this->make_data_cm();
+        $modsettings = [
+            'fields' => [
+                ['type' => 'text', 'name' => 'Titulo'],
+                ['type' => 'menu', 'name' => 'Genero', 'options' => ['Novela', 'Ensayo']],
+                ['type' => 'checkbox', 'name' => 'Tags', 'options' => ['A', 'B', 'C']],
+                ['type' => 'date', 'name' => 'Anio'],
+            ],
+            'example_entries' => [
+                ['values' => [
+                    ['field_name' => 'Titulo', 'value' => 'Cien años de soledad'],
+                    ['field_name' => 'Genero', 'value' => 'Novela'],
+                    ['field_name' => 'Tags', 'value' => 'A, C'],
+                    ['field_name' => 'Anio', 'value' => '1967-05-30'],
+                ]],
+            ],
+        ];
+
+        (new data_settings($cm, $modsettings))->add_settings();
+
+        $records = $DB->get_records('data_records', ['dataid' => $cm->instance]);
+        $this->assertCount(1, $records);
+        $record = reset($records);
+        $this->assertEquals(1, (int) $record->approved);
+
+        $byfield = [];
+        foreach ($DB->get_records('data_fields', ['dataid' => $cm->instance]) as $f) {
+            $byfield[$f->name] = $f->id;
+        }
+        $content = static function (int $fieldid) use ($DB, $record) {
+            return $DB->get_field('data_content', 'content',
+                ['recordid' => $record->id, 'fieldid' => $fieldid]);
+        };
+
+        $this->assertSame('Cien años de soledad', $content($byfield['Titulo']));
+        $this->assertSame('Novela', $content($byfield['Genero']));
+        $this->assertSame('A##C', $content($byfield['Tags']));        // multi -> ## delimited
+        $this->assertSame((string) strtotime('1967-05-30'), $content($byfield['Anio']));  // date -> timestamp
+    }
+
+    /**
+     * No example entries in the payload -> no records created.
+     */
+    public function test_no_example_entries_creates_no_records(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        global $DB;
+
+        $cm = $this->make_data_cm();
+        (new data_settings($cm, ['fields' => [['type' => 'text', 'name' => 'X']]]))->add_settings();
+
+        $this->assertSame(0, $DB->count_records('data_records', ['dataid' => $cm->instance]));
+    }
+
+    /**
+     * Unseedable types (picture/file) in an entry are skipped; the rest of the entry is stored.
+     */
+    public function test_seed_skips_unseedable_field(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        global $DB;
+
+        $cm = $this->make_data_cm();
+        $modsettings = [
+            'fields' => [['type' => 'text', 'name' => 'T'], ['type' => 'picture', 'name' => 'Foto']],
+            'example_entries' => [['values' => [
+                ['field_name' => 'T', 'value' => 'hola'],
+                ['field_name' => 'Foto', 'value' => 'foto.jpg'],
+            ]]],
+        ];
+
+        (new data_settings($cm, $modsettings))->add_settings();
+
+        $records = $DB->get_records('data_records', ['dataid' => $cm->instance]);
+        $record = reset($records);
+        $foto = $DB->get_record('data_fields', ['dataid' => $cm->instance, 'name' => 'Foto']);
+        $t = $DB->get_record('data_fields', ['dataid' => $cm->instance, 'name' => 'T']);
+        $this->assertSame(0, $DB->count_records('data_content', ['recordid' => $record->id, 'fieldid' => $foto->id]));
+        $this->assertSame(1, $DB->count_records('data_content', ['recordid' => $record->id, 'fieldid' => $t->id]));
+    }
+
+    /**
      * With only non-sortable field types, the default time-added sort is kept (defaultsort = 0).
      */
     public function test_default_sort_kept_when_no_sortable_field(): void {
