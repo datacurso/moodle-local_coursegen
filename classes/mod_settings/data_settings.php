@@ -39,6 +39,9 @@ class data_settings extends base_settings {
     /** @var string[] Field types that store their choices, one per line, in param1. */
     private const CHOICE_TYPES = ['menu', 'multimenu', 'radiobutton', 'checkbox'];
 
+    /** @var string[] Field types that make a sensible default sort key (identifying columns). */
+    private const SORTABLE_TYPES = ['text', 'number', 'date', 'url', 'menu', 'radiobutton'];
+
     /**
      * Per-type param defaults applied when creating a field programmatically.
      *
@@ -81,9 +84,41 @@ class data_settings extends base_settings {
             return;
         }
 
+        $created = [];
         foreach ($fields as $fieldspec) {
             if (is_array($fieldspec)) {
-                $this->create_field($datainstance, $fieldspec);
+                $field = $this->create_field($datainstance, $fieldspec);
+                if ($field !== null) {
+                    $created[] = $field;
+                }
+            }
+        }
+
+        $this->set_default_sort($datainstance, $created);
+    }
+
+    /**
+     * Sort the database by its primary identifying field instead of by time added.
+     *
+     * Picks the first created field of a sortable type (text/number/date/url/menu/radiobutton);
+     * if every field is a non-sortable type (textarea/file/picture/latlong/multimenu/checkbox)
+     * the default time-added sort is kept (defaultsort stays 0). Runs after the fields exist so
+     * the chosen defaultsort always points at a real field id.
+     *
+     * @param stdClass $datainstance The database activity record.
+     * @param array $created Created fields as objects with ->id and ->type, in creation order.
+     */
+    protected function set_default_sort(stdClass $datainstance, array $created): void {
+        global $DB;
+
+        foreach ($created as $field) {
+            if (in_array($field->type, self::SORTABLE_TYPES, true)) {
+                $DB->update_record('data', (object) [
+                    'id' => $datainstance->id,
+                    'defaultsort' => $field->id,
+                    'defaultsortdir' => 0,
+                ]);
+                return;
             }
         }
     }
@@ -97,21 +132,22 @@ class data_settings extends base_settings {
      *
      * @param stdClass $datainstance The database activity record.
      * @param array $spec The field definition (type, name, description, required, options).
+     * @return stdClass|null The created field (->id, ->type), or null when skipped/failed.
      */
-    protected function create_field(stdClass $datainstance, array $spec): void {
+    protected function create_field(stdClass $datainstance, array $spec): ?stdClass {
         $type = trim((string) ($spec['type'] ?? ''));
         $name = trim((string) ($spec['name'] ?? ''));
         if ($type === '' || $name === '') {
-            return;
+            return null;
         }
         if (data_fieldname_exists($name, $datainstance->id)) {
-            return;
+            return null;
         }
 
         $formdata = $this->build_formdata($type, $name, $spec);
         // A choice field with no usable options cannot be filled in -> skip it.
         if (in_array($type, self::CHOICE_TYPES, true) && trim((string) ($formdata->param1 ?? '')) === '') {
-            return;
+            return null;
         }
 
         // A single problematic field (unknown/disabled type, a DB error, an over-long name, ...)
@@ -121,11 +157,13 @@ class data_settings extends base_settings {
             $field = data_get_field_new($type, $datainstance);
             $field->define_field($formdata);
             $field->insert_field();
+            return (object) ['id' => (int) $field->field->id, 'type' => $type];
         } catch (\Throwable $e) {
             debugging(
                 'local_coursegen: skipped data field "' . $name . '": ' . $e->getMessage(),
                 DEBUG_DEVELOPER
             );
+            return null;
         }
     }
 
