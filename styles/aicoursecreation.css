@@ -3502,42 +3502,33 @@ body.cg-generating #prvSections .cg-gen-active .activity-item {
   filter: grayscale(1);
   transition: opacity .35s ease, filter .35s ease;
 }
-/* IN PROGRESS — still "off", plus a spinner on the icon (this one is being built). */
-body.cg-generating #prvSections .cg-gen-active .activity-icon::after {
+/* IN PROGRESS — a slow, soft "skeleton" shimmer sweeps left→right across the
+   (desaturated) card, so it reads as actively-being-built. Gentle white highlight
+   and a slow cycle so it feels calm and never clashes with the UI palette — no
+   loud badge or colour block. */
+@keyframes cg-gen-shimmer {
+  from { background-position: 165% 0; }
+  to { background-position: -65% 0; }
+}
+body.cg-generating #prvSections .cg-gen-active .activity-grid { position: relative; }
+body.cg-generating #prvSections .cg-gen-active .activity-grid::after {
   content: '';
   position: absolute;
-  right: -5px;
-  bottom: -5px;
-  width: 15px;
-  height: 15px;
-  border-radius: 50%;
-  box-sizing: border-box;
-  border: 2px solid hsl(8 72% 42% / .25);
-  border-top-color: var(--primary);
-  background: #fff;
-  box-shadow: 0 0 0 2px #fff;
-  animation: spin .8s linear infinite;
+  inset: 0;
+  pointer-events: none;
+  border-radius: 6px;
+  background: linear-gradient(100deg,
+    transparent 43%,
+    rgba(255, 255, 255, .6) 50%,
+    transparent 57%);
+  background-size: 230% 100%;
+  animation: cg-gen-shimmer 2.4s linear infinite;
 }
-/* DONE — the card "turns on": full opacity + full colour + a green check. */
+/* DONE — the card simply "turns on" (full colour). The colour return IS the
+   success signal, so nothing clashes with the icon palette: no badge. */
 body.cg-generating #prvSections .cg-gen-done .activity-item {
   opacity: 1;
   filter: none;
-}
-body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
-  content: '\2713';
-  position: absolute;
-  right: -6px;
-  bottom: -6px;
-  width: 17px;
-  height: 17px;
-  border-radius: 50%;
-  background: hsl(142 64% 38%);
-  color: #fff;
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 17px;
-  text-align: center;
-  box-shadow: 0 0 0 2px #fff;
 }
 /* Activities with detail are clickable to expand, but the whole row is also
    draggable (the preview is always editable). Keep the drag (move) cursor for

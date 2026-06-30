@@ -830,3 +830,7 @@ sessions remain, then remove it.
   generación se suprime cualquier borde/outline de hover/focus (incl. cg-affected) — no son clickeables
   como para resaltar. (4) El "desactivado" pasó de opacity .5+grayscale a grayscale(1)+opacity .82 para
   no lavar el chevron de contenido colapsado (ahora visible en generación como en planificación).
+- [x] Indicador de progreso/éxito rediseñado (la insignia verde rompía la estética): IN PROGRESS =
+  card desaturada (grayscale) + SHIMMER skeleton suave (barrido blanco izq→der, 2.4s linear, blanco
+  .6, sin color fuerte) — agradable y acorde a la UI. DONE = la card vuelve a color pleno (el color es
+  el éxito), SIN insignia/badge. Se quitaron el spinner y el check verde del icono.
