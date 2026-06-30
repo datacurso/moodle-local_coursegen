@@ -730,3 +730,27 @@ sessions remain, then remove it.
    session is past review (recommend: card only when session is currently at review, else the
    milestone log turn).
 3. Confirm the kind-per-subtype mapping in the renderer table matches the current visual language.
+
+---
+
+## Streaming en vivo de add/regen de SECCIÓN al bloque de abajo — HECHO (2026-06-30)
+
+- [x] **Bug**: add/regen de sección streameaba sus eventos al checklist de ARRIBA (lo ensuciaba: la
+  sección aparecía ENCIMA de la instrucción, top live=4 vs reload=2) y el detalle solo se veía de
+  golpe al final, nunca en tiempo real.
+- [x] **Fix (plugin-only para el live)**: `regen-block.js` ahora streamea la sección a su propio
+  bloque abajo (estructura/actividad/detalle → bloque, spinner→done en vivo). `handlers-content.js`
+  rutea los eventos de add/regen-sección al bloque y congela el top; nombra el turno "You added
+  section: X" cuando llega el nombre. `handlers-lifecycle.js` solo finaliza el bloque ya streameado en
+  review (sin rebuild del top, sin turno duplicado). Orden del chat: turno → bloque en vivo →
+  milestone, idéntico live y reload.
+- [x] **Propuestas rutean como los controles inline**: `plan-action.js` acepta `scopeIntent`;
+  `ui-proposals.js` pasa el intent real resuelto de la propuesta al aplicar → setea el mismo
+  `addScope`/`regenScope` (antes solo lo hacían los controles inline). Verificado e2e en el flujo del
+  composer (Adjust→feedback→propuestas→aplicar): tiempo-real (longitudes 774→2061→3386 con spinner),
+  top congelado (=2), reload idéntico estructural.
+- [x] **Highlight de la sección ancla**: elegir una propuesta de add_section no resaltaba nada
+  (sin target id). Ahora deriva la sección "después de la cual" desde `intent.position` y la resalta en
+  el centro (`affectedCount=1` verificado).
+- [x] **thread-replay**: un row `proposal_applied` rutea la ronda siguiente por su `resolved_action`
+  persistido, así reload coincide con live (bloque + top congelado).
