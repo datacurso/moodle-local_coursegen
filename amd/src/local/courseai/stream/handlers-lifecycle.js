@@ -33,7 +33,7 @@ import {
     finalizeTranscript,
     rebuildTranscriptFromPlan,
 } from 'local_coursegen/local/courseai/ui/plan-transcript';
-import {finalizeRegen} from 'local_coursegen/local/courseai/ui/regen-block';
+import {finalizeRegen, rebuildRegenFromPlan} from 'local_coursegen/local/courseai/ui/regen-block';
 import {addedSectionTurn, addedActivityTurn} from 'local_coursegen/local/courseai/ui/added-turn';
 
 /**
@@ -175,8 +175,21 @@ export const handleReviewNeeded = async(data, ctx) => {
     // checklist FROZEN. Do NOT rebuild the top here, otherwise it would overwrite
     // the initial snapshot. reorder/initial (regenScope null) keep the old path.
     const isActivityRegen = state.regenScope && state.regenScope.action === 'replan_activity';
+    const isSectionRegen = state.regenScope && state.regenScope.action === 'replan_section';
     if (isActivityRegen) {
         finalizeRegen();
+    } else if (isSectionRegen) {
+        // Show the regenerated section(s) as an inline detail block (name +
+        // description + activities), like the activity regen — top stays frozen.
+        rebuildRegenFromPlan({
+            action: 'replan_section',
+            targetIds: state.regenScope.targetIds,
+            plan: data.current_plan,
+        });
+    } else if (state.addScope) {
+        // Adding: the new element is shown as an inline block below (see the
+        // addScope block); keep the top "structure I planned" checklist frozen.
+        // (no top rebuild)
     } else if (ctx.keepPlan && Array.isArray(data.current_plan) && data.current_plan.length) {
         rebuildTranscriptFromPlan(data.current_plan);
     } else if (transcriptHasContent()) {
@@ -193,11 +206,28 @@ export const handleReviewNeeded = async(data, ctx) => {
     // didn't exist yet). Now that the plan settled, name the element the model
     // created — the one in current_plan whose id was not present before the add.
     if (state.addScope) {
-        const added = state.addScope.action === 'add_section'
-            ? addedSectionTurn(texts, data.current_plan, state.addScope.beforeIds)
-            : addedActivityTurn(texts, data.current_plan, state.addScope.parentSectionId, state.addScope.beforeIds);
+        const isAddSection = state.addScope.action === 'add_section';
+        const beforeIds = state.addScope.beforeIds || [];
+        const added = isAddSection
+            ? addedSectionTurn(texts, data.current_plan, beforeIds)
+            : addedActivityTurn(texts, data.current_plan, state.addScope.parentSectionId, beforeIds);
         if (added && typeof emitLog === 'function') {
             emitLog({actor: 'user', kind: 'success', message: added});
+        }
+        // Show the added element's detail block, like a regeneration.
+        const plan = Array.isArray(data.current_plan) ? data.current_plan : [];
+        if (isAddSection) {
+            const newSection = plan.find((s) => s && !s.deleted && beforeIds.indexOf(s.id) === -1);
+            if (newSection) {
+                rebuildRegenFromPlan({action: 'replan_section', targetIds: [newSection.id], plan});
+            }
+        } else {
+            const parent = plan.find((s) => s && s.id === state.addScope.parentSectionId);
+            const newAct = ((parent && parent.activities) || [])
+                .find((a) => a && !a.deleted && beforeIds.indexOf(a.id) === -1);
+            if (newAct) {
+                rebuildRegenFromPlan({action: 'replan_activity', targetIds: [newAct.id], plan});
+            }
         }
         state.addScope = null;
     }

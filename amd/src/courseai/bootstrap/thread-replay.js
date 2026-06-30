@@ -333,12 +333,29 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
                 // (the id not in before_ids) here, since the name didn't exist when
                 // the action was recorded.
                 if (ctx.addScope) {
-                    const added = ctx.addScope.action === 'add_section'
-                        ? addedSectionTurn(texts, planTree, ctx.addScope.beforeIds)
-                        : addedActivityTurn(texts, planTree, ctx.addScope.parentSectionId, ctx.addScope.beforeIds);
+                    const beforeIds = ctx.addScope.beforeIds || [];
+                    const isAddSection = ctx.addScope.action === 'add_section';
+                    const added = isAddSection
+                        ? addedSectionTurn(texts, planTree, beforeIds)
+                        : addedActivityTurn(texts, planTree, ctx.addScope.parentSectionId, beforeIds);
                     if (added) {
                         emitLog({actor: 'user', kind: 'success', message: added});
                     }
+                    // Show the added element's detail block (top stays frozen).
+                    if (isAddSection) {
+                        const ns = planTree.find((s) => s && !s.deleted && beforeIds.indexOf(s.id) === -1);
+                        if (ns) {
+                            rebuildRegenFromPlan({action: 'replan_section', targetIds: [ns.id], plan: planTree});
+                        }
+                    } else {
+                        const parent = planTree.find((s) => s && s.id === ctx.addScope.parentSectionId);
+                        const na = ((parent && parent.activities) || [])
+                            .find((a) => a && !a.deleted && beforeIds.indexOf(a.id) === -1);
+                        if (na) {
+                            rebuildRegenFromPlan({action: 'replan_activity', targetIds: [na.id], plan: planTree});
+                        }
+                    }
+                    return;
                 }
                 // If this round was a REPLAN (the preceding user_action was a
                 // replan_activity/replan_section), render its regenerated subtree as
@@ -346,7 +363,8 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
                 // leave the top "structure I planned" checklist frozen. Otherwise
                 // (initial plan or reorder) rebuild the top as before, preserving the
                 // already-verified reorder reload parity.
-                if (ctx.regenScope && ctx.regenScope.action === 'replan_activity') {
+                if (ctx.regenScope
+                    && (ctx.regenScope.action === 'replan_activity' || ctx.regenScope.action === 'replan_section')) {
                     rebuildRegenFromPlan({
                         action: ctx.regenScope.action,
                         targetIds: ctx.regenScope.targetIds,
