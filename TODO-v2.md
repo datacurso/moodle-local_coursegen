@@ -824,3 +824,9 @@ sessions remain, then remove it.
   drag-and-drop en toda la generación: `state.isStreaming=true` en el bloque generating de stream.js
   (el gate de composer planApproved→hidden saltaba el branch disabled que lo seteaba). Verificado:
   dragstart prevented=true, sin dp-dragging; estados gris→color+check.
+- [x] Pulido cursor/hover/chevron: (1) cursor de SECCIÓN = default en generación (ya no move/drag).
+  (2) Las cards muestran cursor POINTER solo si tienen contenido colapsable (cg-activity--has-detail),
+  default si no — en planificación Y generación (se quitó el cursor move de actividades). (3) En
+  generación se suprime cualquier borde/outline de hover/focus (incl. cg-affected) — no son clickeables
+  como para resaltar. (4) El "desactivado" pasó de opacity .5+grayscale a grayscale(1)+opacity .82 para
+  no lavar el chevron de contenido colapsado (ahora visible en generación como en planificación).

@@ -3475,11 +3475,31 @@ body.cg-generating #prvSections .dp-add-section-wrap { display: none !important;
 body.cg-generating #prvSections .activity-item.cg-activity--has-detail { cursor: pointer !important; }
 body.cg-generating #prvSections .activity-icon { position: relative; }
 
-/* PENDING + IN PROGRESS — the card is "off": dimmed + desaturated. */
+/* Sections are NOT draggable during generation: default cursor, and no hover
+   outline. Plain (non-collapsible) activities also keep the default cursor. */
+body.cg-generating #prvSections .course-section .section-item,
+body.cg-generating #prvSections .course-section-header,
+body.cg-generating #prvSections .course-section .section-item .activity-item:not(.cg-activity--has-detail) {
+  cursor: default !important;
+}
+/* No blue/red hover or focus ring during generation — the rows are read-only
+   progress, so a prominent hover affordance is misleading. */
+body.cg-generating #prvSections .course-section .section-item:hover { outline: none !important; }
+body.cg-generating #prvSections .activity-item:hover,
+body.cg-generating #prvSections .activity-item:focus,
+body.cg-generating #prvSections .activity-item:focus-visible,
+body.cg-generating #prvSections .cg-affected {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* PENDING + IN PROGRESS — the card is "off": desaturated (grayscale) + slightly
+   faded. Grayscale (not heavy opacity) keeps the collapse chevron and content
+   readable, so the "there is collapsible content" indicator still shows. */
 body.cg-generating #prvSections .cg-gen-pending .activity-item,
 body.cg-generating #prvSections .cg-gen-active .activity-item {
-  opacity: .5;
-  filter: grayscale(.85);
+  opacity: .82;
+  filter: grayscale(1);
   transition: opacity .35s ease, filter .35s ease;
 }
 /* IN PROGRESS — still "off", plus a spinner on the icon (this one is being built). */
@@ -3524,8 +3544,10 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
    consistency across ALL activities — Boost gives the first one `move`, and this
    used to override the rest to `pointer`, so only the first showed the drag
    affordance. The chevron/controls keep their own pointer cursor. */
+/* A card shows the click (pointer) cursor ONLY when it has collapsible content
+   (it can be expanded); plain activities keep the default cursor. */
 #prvSections .activity-item.cg-activity--has-detail {
-  cursor: move;
+  cursor: pointer;
 }
 
 /* ── Section drag affordance (mirror of Boost's editable .activity-item) ──
@@ -3549,10 +3571,10 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
 #prvSections .course-section .section-item .dp-add-section-wrap {
   cursor: default;
 }
-/* Inner activities keep their own move cursor (Boost .editing affordance). */
-#prvSections .course-section .section-item .activity-item.cg-activity--has-detail,
-#prvSections .course-section .section-item .activity-item:hover {
-  cursor: move;
+/* Inner activities: only collapsible ones show the click (pointer) cursor; the
+   rest keep the default cursor (no drag affordance on the cursor). */
+#prvSections .course-section .section-item .activity-item.cg-activity--has-detail {
+  cursor: pointer;
 }
 /* Hover outline on the section card — suppressed while hovering an inner activity
    so only ONE element (the activity, not the whole section) highlights at a time. */
