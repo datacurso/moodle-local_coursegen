@@ -819,3 +819,8 @@ sessions remain, then remove it.
   shimmer animado sobre el contenido (visible, estilo skeleton de planificación); DONE = check verde en
   el icono; PENDING = atenuado. Restaurado `cursor: pointer` en actividades expandibles (se rompió con
   cursor:default); solo se ocultan los botones de edición (read-only).
+- [x] Ajuste visual + DnD: la card ahora se ve DESACTIVADA (atenuada + desaturada) mientras pending/
+  in_progress y se ACTIVA (color pleno + check) al crearse, en vez del shimmer. Y se DESACTIVA el
+  drag-and-drop en toda la generación: `state.isStreaming=true` en el bloque generating de stream.js
+  (el gate de composer planApproved→hidden saltaba el branch disabled que lo seteaba). Verificado:
+  dragstart prevented=true, sin dp-dragging; estados gris→color+check.

@@ -148,6 +148,11 @@ export const createStreamManager = (deps) => {
                 // read-only live progress view (per-activity spinner→check), so the whole
                 // wizard stays unified. Show that view and keep the old progress card hidden.
                 document.body.classList.add('cg-generating');
+                // Hard-disable drag-and-drop for the whole generation phase: reordering is
+                // ONLY for planning. The dnd wirer cancels drags while isStreaming is true,
+                // but the composer-hidden gate skips the 'disabled' branch that normally
+                // sets it — so set it explicitly here.
+                state.isStreaming = true;
                 // The plan preview cards live inside #planReviewCard (hidden once a stream
                 // starts); show it as the live progress view and keep the old progress
                 // card hidden. switchPlanMode keeps the detailed sub-view active.
