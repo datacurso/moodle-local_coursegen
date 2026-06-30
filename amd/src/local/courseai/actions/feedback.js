@@ -87,6 +87,7 @@ export const sendFeedbackAction = async(action, ctx) => {
     // composer is hidden from this point on (through generation and completion).
     if (action === 'accept') {
         state.planApproved = true;
+        document.body.classList.add('cg-plan-approved');
     }
 
     // WU4: hide the decision overlay as soon as the user acts (accept or adjust).

@@ -50,6 +50,16 @@ export const setCompactChatState = (deps, mode) => {
         return;
     }
 
+    // 'reset' is a genuine fresh start (a new course; resetPlanningState early-returns
+    // on keepPlan re-streams, so accept→generation/adjust never reach here): clear the
+    // approved flag/class BEFORE the gate so the composer can come back for a new run.
+    if (mode === 'reset') {
+        if (state) {
+            state.planApproved = false;
+        }
+        document.body.classList.remove('cg-plan-approved');
+    }
+
     // Once the plan is approved the course is created and can no longer be edited
     // from this wizard, so the composer is gone for good — through generation and
     // after it completes. Every later state change (disabled/enabled/reset from the

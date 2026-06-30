@@ -302,9 +302,7 @@ export const makeResumeFromSnapshot = ({
             // generation stream re-opens so its setCompactChatState calls collapse to
             // hidden, and hide the card now in case it was shown on resume.
             state.planApproved = true;
-            if (elements.compactChatCard) {
-                elements.compactChatCard.style.display = 'none';
-            }
+            document.body.classList.add('cg-plan-approved');
             stepsUi.transitionToPlanning();
             setPlanningStreamVisible();
             applyCourseTitleToHeader();
@@ -342,7 +340,10 @@ export const makeResumeFromSnapshot = ({
 
         if (status === 'COMPLETED') {
             // Course already created → no composer (it cannot be edited from here).
+            // The body class hides it via CSS regardless of the showReviewActions
+            // call below (which would otherwise re-enable the composer).
             state.planApproved = true;
+            document.body.classList.add('cg-plan-approved');
             stepsUi.transitionToPlanning();
             setPlanningStreamVisible();
             applyCourseTitleToHeader();
@@ -354,12 +355,6 @@ export const makeResumeFromSnapshot = ({
                 detailedUi.enableAllActionControls();
             }
             planningUi.showReviewActions('detailed');
-            // showReviewActions re-enables the composer (setCompactChatState 'enabled');
-            // an approved/created course is no longer editable here, so hide it AFTER
-            // that call so the late write wins (the gate also collapses it to hidden).
-            if (elements.compactChatCard) {
-                elements.compactChatCard.style.display = 'none';
-            }
             stepsUi.setStepState('planning', 'done');
             stepsUi.setStepState('generating', 'done');
             state.currentStage = 'completed';

@@ -781,3 +781,7 @@ sessions remain, then remove it.
   antes del primer setCompactChatState) y en reload (`resume-snapshot.js`) para GENERATING/PLANNING_ACCEPT
   y COMPLETED (+ hide directo del card). Verificado: oculto en generación/completado/reload; visible en
   review/adjust (planApproved=false).
+- [x] FIX completado en vivo: el gate por JS perdía la carrera con setCompactChatState('enabled') al
+  terminar la generación. Solución declarativa robusta: clase `body.cg-plan-approved` + CSS
+  `#compactChatCard { display:none !important }` (gana sobre cualquier display inline). Se limpia en
+  `setCompactChatState('reset')` (curso nuevo). Verificado: oculto tras aceptar, tras completar EN VIVO y tras reload.
