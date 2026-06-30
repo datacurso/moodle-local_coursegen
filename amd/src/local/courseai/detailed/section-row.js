@@ -150,7 +150,15 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
     // A genuinely-new real-UUID section is being rendered: drop any transient
     // apply placeholder so the shimmer is replaced, never duplicated.
     removeTransientSectionPlaceholders(ctx);
-    sectionList.appendChild(row);
+    // Keep the global "+ Add section" control pinned to the very bottom: insert a
+    // newly-streamed section BEFORE it, so the button never lands mid-list while a
+    // section is being added at the end (it stays below the last rendered section).
+    const addSectionWrap = sectionList.querySelector('.dp-add-section-wrap');
+    if (addSectionWrap) {
+        sectionList.insertBefore(row, addSectionWrap);
+    } else {
+        sectionList.appendChild(row);
+    }
 
     // Set row reference for panel/action callbacks.
     rowRef.current = row;
