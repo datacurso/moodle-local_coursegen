@@ -481,8 +481,14 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
             // ai_planned_structure; any other user_action clears them (reorder/
             // delete rebuild the top normally).
             if (t === 'user_action') {
-                const sub = (msg.payload && msg.payload.subtype) || '';
                 const pl = msg.payload || {};
+                // A proposal hides the REAL action behind "proposal_applied"; the
+                // service froze the resolved action on the row, so route the NEXT plan
+                // by that (block + frozen top) — exactly like the inline controls — not
+                // as a top rebuild. Direct actions use their own subtype.
+                const sub = pl.subtype === 'proposal_applied'
+                    ? (pl.resolved_action || '')
+                    : (pl.subtype || '');
                 pendingRegen = (sub === 'replan_activity' || sub === 'replan_section')
                     ? {action: sub, targetIds: pl.target_ids || []}
                     : null;

@@ -88,6 +88,34 @@ export const createProposalsUi = (deps) => {
     };
 
     /**
+     * Derive the anchor section id for an add_section proposal that has no target
+     * id of its own: the section the new one will sit AFTER (the one at
+     * position − 1 in the center preview order). Returns [] when not derivable.
+     *
+     * @param {HTMLInputElement} radio - The selected proposal radio (carries data-intent).
+     * @returns {string[]}
+     */
+    const anchorTargetFromIntent = (radio) => {
+        let intent = null;
+        try {
+            intent = JSON.parse(radio.dataset.intent || 'null');
+        } catch (e) {
+            intent = null;
+        }
+        if (!intent || typeof intent.position !== 'number') {
+            return [];
+        }
+        const sections = Array.from(document.querySelectorAll('.course-section[data-section-id]'));
+        if (!sections.length) {
+            return [];
+        }
+        const idx = Math.min(Math.max(0, intent.position - 1), sections.length - 1);
+        const anchor = sections[idx];
+        const id = anchor && anchor.getAttribute('data-section-id');
+        return id ? [id] : [];
+    };
+
+    /**
      * Show or hide the decision card's generic Accept/Adjust row and subtitle.
      *
      * When proposals occupy the card body they bring their own Apply/Dismiss
@@ -158,17 +186,20 @@ export const createProposalsUi = (deps) => {
     /**
      * Send a proposal plan action and hide the overlay.
      *
-     * @param {HTMLElement} block       - The proposals card DOM element.
-     * @param {Object}      pendingAction - The plan action to send.
+     * @param {HTMLElement} block         - The proposals card DOM element.
+     * @param {Object}      pendingAction - The plan action to send (e.g. execute_proposal).
+     * @param {Object}      [scopeIntent] - The proposal's REAL resolved intent (add_section,
+     *                                       replan_section, …) so the left-panel routing
+     *                                       (block vs frozen top) matches the inline controls.
      * @returns {Promise<void>}
      */
-    const sendAction = async(block, pendingAction) => {
+    const sendAction = async(block, pendingAction, scopeIntent) => {
         clearAffectedHighlights();
         disableControls(block);
         // WU4: hide the overlay as soon as an action is dispatched.
         getDecisionOverlay().hide();
         try {
-            await runPlanAction(pendingAction);
+            await runPlanAction(pendingAction, scopeIntent);
         } catch (e) {
             enableControls(block);
         }
@@ -245,6 +276,13 @@ export const createProposalsUi = (deps) => {
                 } catch (e) {
                     targetIds = [];
                 }
+                // add_section touches no existing element (the section does not exist
+                // yet), so it has no target id. Anchor the highlight on the section the
+                // new one will sit AFTER (position − 1 in the center order) so the user
+                // sees WHERE it lands when they pick "add a section after X".
+                if (!targetIds.length) {
+                    targetIds = anchorTargetFromIntent(checked);
+                }
                 const card = checked.closest('.plan-proposal-card');
                 const destructive = Boolean(card) && card.classList.contains('plan-proposal--destructive');
                 highlightAffected(targetIds, destructive);
@@ -284,21 +322,22 @@ export const createProposalsUi = (deps) => {
                 const truncated = summaryText.length > 80 ? summaryText.slice(0, 80) + '…' : summaryText;
                 const appliedLabel = texts.courseai_log_proposal_applied || 'You applied';
                 log({actor: 'user', kind: 'info', message: truncated ? appliedLabel + ': ' + truncated : appliedLabel});
+                // The proposal's REAL resolved intent (add_section, replan_section, …)
+                // drives both the client-side skeleton AND the left-panel routing scope,
+                // so applying a proposal behaves exactly like the inline controls.
+                let intent = null;
+                try {
+                    intent = JSON.parse(selected.dataset.intent || 'null');
+                } catch (e) {
+                    intent = null;
+                }
                 // Client-driven skeleton: put the loading shimmer on EXACTLY the
                 // element this proposal affects right now, before the keepPlan
                 // re-stream (which suppresses structural skeletons) reopens.
-                if (detailedUi && typeof detailedUi.markProposalTargetPending === 'function') {
-                    let intent = null;
-                    try {
-                        intent = JSON.parse(selected.dataset.intent || 'null');
-                    } catch (e) {
-                        intent = null;
-                    }
-                    if (intent) {
-                        detailedUi.markProposalTargetPending(intent);
-                    }
+                if (intent && detailedUi && typeof detailedUi.markProposalTargetPending === 'function') {
+                    detailedUi.markProposalTargetPending(intent);
                 }
-                await sendAction(block, {action: 'execute_proposal', target_ids: [selected.value]});
+                await sendAction(block, {action: 'execute_proposal', target_ids: [selected.value]}, intent);
             }
         });
 

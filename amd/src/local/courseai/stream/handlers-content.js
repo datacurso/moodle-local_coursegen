@@ -33,7 +33,24 @@ import {
     isRegenActive,
     startRegenActivities,
     regenOnActivityDetail,
+    regenOnSectionStructure,
+    regenOnSectionActivity,
+    regenOnSectionActivityDetail,
 } from 'local_coursegen/local/courseai/ui/regen-block';
+
+/**
+ * Whether the current stream is ADDING or REGENERATING a whole section. Those
+ * stream their structure + activities into a bottom block (regen-block) in real
+ * time, leaving the top "structure I planned" checklist frozen. Activity-only
+ * regen (replan_activity) and add_activity keep their own paths.
+ *
+ * @param {Object} state
+ * @returns {boolean}
+ */
+const inSectionScope = (state) => Boolean(
+    (state.regenScope && state.regenScope.action === 'replan_section')
+    || (state.addScope && state.addScope.action === 'add_section')
+);
 
 /**
  * Handle 'activity' event: upsert activity into latestInitialSections and
@@ -63,17 +80,22 @@ export const handleActivity = (data, ctx) => {
                 description: data.description || '',
             });
         }
-        const round = state.generationRound || 0;
-        const checklistItem = document.querySelector(
-            `.courseai-checklist-list [data-section-id="${data.section_id}"][data-round="${round}"]`
-        );
-        if (checklistItem && !data.deleted) {
-            const remaining = parseInt(checklistItem.getAttribute('data-remaining') || '0', 10);
-            checklistItem.setAttribute('data-remaining', remaining + 1);
+        if (!inSectionScope(state)) {
+            const round = state.generationRound || 0;
+            const checklistItem = document.querySelector(
+                `.courseai-checklist-list [data-section-id="${data.section_id}"][data-round="${round}"]`
+            );
+            if (checklistItem && !data.deleted) {
+                const remaining = parseInt(checklistItem.getAttribute('data-remaining') || '0', 10);
+                checklistItem.setAttribute('data-remaining', remaining + 1);
+            }
         }
     }
-    // Live LEFT transcript: add this activity under its section block (real time).
-    if (!ctx.keepPlan) {
+    // Add/regen of a section streams its activities into the bottom block in real
+    // time; otherwise add this activity under its section in the LEFT transcript.
+    if (inSectionScope(state)) {
+        regenOnSectionActivity(data);
+    } else if (!ctx.keepPlan) {
         transcriptOnActivity(data);
     }
     // On a keepPlan re-stream (apply selection / adjust) the server re-streams the
@@ -132,6 +154,24 @@ export const handleSection = (data, ctx) => {
             activities: [],
         });
         state.latestInitialSections = sections;
+    }
+
+    if (inSectionScope(state)) {
+        // Adding or regenerating a section: stream it into the bottom block in real
+        // time (regen-block), exactly like an activity regen — NEVER touch the top
+        // "structure I planned" checklist (a chat appends at the end; it does not
+        // rewrite what is already above). When ADDING, name the "You added section:
+        // X" turn the instant the section name lands, so the chat order reads
+        // turn → streaming block → review milestone.
+        if (state.addScope && state.addScope.action === 'add_section'
+            && !state.addScope.turnEmitted && data.name && typeof ctx.emitLog === 'function') {
+            const msg = ((texts && texts.courseai_log_added_section_named) || 'You added section: {$a->name}')
+                .replace('{$a->name}', data.name);
+            ctx.emitLog({actor: 'user', kind: 'success', message: msg});
+            state.addScope.turnEmitted = true;
+        }
+        regenOnSectionStructure(data);
+        return;
     }
 
     const round = state.generationRound || 0;
@@ -241,10 +281,15 @@ export const handleDetailedPlanActivity = (data, ctx) => {
     if (!ctx.keepPlan) {
         transcriptOnActivityDetail(data);
     }
-    // Activity regeneration: stream the regenerated activity into a NEW left-panel
-    // block (icon + activity title head + clamped detail), creating it lazily on
-    // the first detail event. Gated on regenScope so reorder/initial are untouched.
-    if (state.regenScope && state.regenScope.action === 'replan_activity') {
+    // Section add/regen: fill the streaming section's body in the bottom block as
+    // each activity's detailed plan arrives (real time), flipping it to done when
+    // every activity is planned. Activity regen keeps its own per-activity block.
+    if (inSectionScope(state)) {
+        regenOnSectionActivityDetail(data);
+    } else if (state.regenScope && state.regenScope.action === 'replan_activity') {
+        // Activity regeneration: stream the regenerated activity into a NEW left-panel
+        // block (icon + activity title head + clamped detail), creating it lazily on
+        // the first detail event. Gated on regenScope so reorder/initial are untouched.
         if (!isRegenActive()) {
             startRegenActivities({
                 targetIds: state.regenScope.targetIds,

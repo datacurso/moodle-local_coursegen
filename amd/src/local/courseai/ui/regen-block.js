@@ -48,6 +48,15 @@ let activeList = null;
 let activeItems = new Map();
 /** @type {Map<string, string>} activity id -> its description (from the plan). */
 let activeDesc = new Map();
+/**
+ * Live section streaming: section id -> { item, description, activities }.
+ * Used while ADDING or REGENERATING a section, where the section's structure and
+ * its activities stream in event-by-event (no pre-known ids), so each section's
+ * detail is re-rendered as activities and their detailed plans arrive.
+ *
+ * @type {Map<string, {item: HTMLElement, description: string, activities: Map<string, Object>}>}
+ */
+let sectionEntries = new Map();
 
 /**
  * The spinner/check circle markup shared with the initial-planning checklist.
@@ -148,6 +157,7 @@ export const startRegenActivities = ({targetIds, plan}) => {
     activeList = list;
     activeItems = new Map();
     activeDesc = new Map();
+    sectionEntries = new Map();
     (targetIds || []).forEach((id) => {
         const activity = findActivity(plan, id);
         // A replan keeps the activity's description (only its detailed_plan is
@@ -193,6 +203,123 @@ export const regenOnActivityDetail = (data) => {
 };
 
 /**
+ * Lazily create the regen block container the first time a section streams in.
+ *
+ * @returns {HTMLElement|null} The shared <ul>, or null when the feed is missing.
+ */
+const ensureSectionBlock = () => {
+    if (!activeList) {
+        activeList = createBlock();
+        sectionEntries = new Map();
+    }
+    return activeList;
+};
+
+/**
+ * Re-render a streaming section's Markdown detail (description + its activities,
+ * each with whatever detailed plan has arrived so far). Called on every section,
+ * activity, and detail event so the body grows in real time.
+ *
+ * @param {Object} entry - The section entry from {@link sectionEntries}.
+ * @returns {void}
+ */
+const renderSectionEntry = (entry) => {
+    const detail = entry.item.querySelector('.courseai-checklist-detail');
+    if (!detail) {
+        return;
+    }
+    const activities = [...entry.activities.values()]
+        .sort((a, b) => (a.position || 0) - (b.position || 0))
+        .map((a) => ({
+            title: a.title,
+            activity_type: a.activity_type,
+            description: a.description || '',
+            detailedPlan: a.detailedPlan || null,
+        }));
+    detail.innerHTML = renderMarkdown(formatSectionMd({
+        name: '',
+        description: entry.description || '',
+        activities,
+    }));
+};
+
+/**
+ * Begin (or update) a streaming section item as its ``section`` event arrives
+ * while adding or regenerating a section. Creates the bottom block lazily and one
+ * spinner item per section — the top "structure I planned" checklist is untouched.
+ *
+ * @param {Object} data - { id, name, description } from the section event.
+ * @returns {void}
+ */
+export const regenOnSectionStructure = (data) => {
+    const list = ensureSectionBlock();
+    if (!list) {
+        return;
+    }
+    let entry = sectionEntries.get(data.id);
+    if (!entry) {
+        const item = buildItem({id: data.id, title: data.name || '', done: false});
+        list.appendChild(item);
+        entry = {item, description: data.description || '', activities: new Map()};
+        sectionEntries.set(data.id, entry);
+    } else {
+        entry.description = data.description || entry.description;
+        const nameEl = entry.item.querySelector('.courseai-checklist-name');
+        if (nameEl && data.name) {
+            nameEl.textContent = data.name;
+        }
+    }
+    renderSectionEntry(entry);
+};
+
+/**
+ * Attach a streaming activity (title/type/description) to its section's body as
+ * its ``activity`` event arrives. No-op until the parent section streamed in.
+ *
+ * @param {Object} data - { section_id, id, title, activity_type, description, position }
+ * @returns {void}
+ */
+export const regenOnSectionActivity = (data) => {
+    const entry = sectionEntries.get(data.section_id);
+    if (!entry) {
+        return;
+    }
+    const existing = entry.activities.get(data.id) || {};
+    entry.activities.set(data.id, {
+        title: data.title || existing.title || '',
+        activity_type: data.activity_type || existing.activity_type || '',
+        description: data.description || existing.description || '',
+        detailedPlan: existing.detailedPlan || null,
+        position: typeof data.position === 'number' ? data.position : (existing.position || 0),
+    });
+    renderSectionEntry(entry);
+};
+
+/**
+ * Fill a streaming activity's detailed plan as its ``detailed_plan_activity`` event
+ * arrives, and flip the section item to done once every activity has its plan.
+ *
+ * @param {Object} data - { section_id, activity_id, data: <detailedPlan> }
+ * @returns {void}
+ */
+export const regenOnSectionActivityDetail = (data) => {
+    const entry = sectionEntries.get(data.section_id);
+    if (!entry) {
+        return;
+    }
+    const act = entry.activities.get(data.activity_id);
+    if (act) {
+        act.detailedPlan = data.data || act.detailedPlan || null;
+    }
+    renderSectionEntry(entry);
+    const all = [...entry.activities.values()];
+    if (all.length && all.every((a) => a.detailedPlan)) {
+        entry.item.classList.remove('is-loading');
+        entry.item.classList.add('is-done');
+    }
+};
+
+/**
  * Finalize the live regen block: clamp every item's detail (the round settled).
  *
  * @returns {void}
@@ -205,6 +332,7 @@ export const finalizeRegen = () => {
     activeList = null;
     activeItems = new Map();
     activeDesc = new Map();
+    sectionEntries = new Map();
 };
 
 /**
