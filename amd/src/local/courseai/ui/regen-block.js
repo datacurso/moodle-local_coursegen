@@ -395,21 +395,47 @@ export const rebuildRegenFromPlan = ({action, targetIds, plan}) => {
 };
 
 /**
- * Render the COMPLETE approved plan as ONE detail block — every active, named
- * section with its description, activities and each activity's detailed plan
- * (clamped) — shown right after the "You approved the plan" turn. Reuses the
- * section renderer so the live build (cached plan) and the reload build
- * (persisted approved snapshot) are byte-for-byte identical.
+ * Render the COMPLETE approved plan as ONE single condensed element — every active,
+ * named section (its name as a heading, description, activities and each activity's
+ * detailed plan) concatenated into ONE Markdown body with ONE "Show more"/"Show
+ * less" toggle, shown right after the "You approved the plan" turn. A single block
+ * (not one clamped block per section) avoids the repetitive per-section toggles.
+ * Live (cached plan) and reload (persisted approved snapshot) build it from the
+ * same plan, so they are byte-for-byte identical.
  *
  * @param {Array} plan - The approved plan tree (detailed_plan on activities).
  * @returns {void}
  */
 export const renderApprovedPlanSummary = (plan) => {
-    const ids = (plan || [])
-        .filter((s) => s && !s.deleted && String(s.name || '').trim())
-        .map((s) => s.id);
-    if (!ids.length) {
+    const sections = (plan || []).filter((s) => s && !s.deleted && String(s.name || '').trim());
+    if (!sections.length) {
         return;
     }
-    rebuildRegenFromPlan({action: 'replan_section', targetIds: ids, plan});
+    const md = sections.map((section) => formatSectionMd({
+        name: section.name,
+        description: section.description || '',
+        activities: (section.activities || [])
+            .filter((a) => a && !a.deleted)
+            .map((a) => ({
+                title: a.title,
+                activity_type: a.activity_type,
+                description: a.description || '',
+                detailedPlan: a.detailed_plan || null,
+            })),
+    })).filter(Boolean).join('\n\n');
+    if (!md) {
+        return;
+    }
+    const feed = document.getElementById('cgLogAfter') || document.getElementById('cgLog');
+    if (!feed) {
+        return;
+    }
+    const container = document.createElement('div');
+    container.className = 'courseai-checklist cg-regen-block cg-approved-summary';
+    const detail = document.createElement('div');
+    detail.className = 'courseai-checklist-detail cg-log-md';
+    detail.innerHTML = renderMarkdown(md);
+    container.appendChild(detail);
+    feed.appendChild(container);
+    clampDetail(detail);
 };

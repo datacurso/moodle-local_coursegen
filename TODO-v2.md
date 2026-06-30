@@ -760,8 +760,10 @@ sessions remain, then remove it.
 ## Resumen del plan aprobado tras "You approved the plan" — HECHO (2026-06-30)
 
 - [x] Tras aceptar, se muestra el detalle COMPLETO de todo lo aprobado (todas las secciones con
-  descripción, actividades y detailed_plan, clamp con Show more) justo debajo del turno "You approved
-  the plan". Render compartido `renderApprovedPlanSummary` (reusa el render de secciones del regen-block).
+  descripción, actividades y detailed_plan) justo debajo del turno "You approved the plan", como UN
+  SOLO elemento condensado con UN solo "Show more" (no un bloque+toggle por sección, que duplicaba).
+  `renderApprovedPlanSummary` concatena `formatSectionMd` de cada sección (nombre como `### heading`)
+  en un único cuerpo markdown + `clampDetail`. Verificado: summaryCount=1, toggles=1, live==reload.
 - [x] En vivo: desde `state.lastReviewedPlan` (cacheado en `handleReviewNeeded` desde `current_plan`);
   fallback `latestInitialSections`. En reload: thread-replay detecta el snapshot `ai_planned_structure`
   con `payload.approved` y renderiza lo mismo (cachea `lastReviewedPlan` para un accept post-reload).
