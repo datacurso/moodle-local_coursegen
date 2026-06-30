@@ -171,7 +171,6 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
             case 'resume': return T('courseai_btn_resume', 'Resume');
             case 'add_section': return T('courseai_log_added_section', 'You added a section');
             case 'add_activity': return T('courseai_log_added_activity', 'You added an activity');
-            case 'reorder_sections': return T('courseai_log_reordered_sections', 'You reordered the sections');
             case 'discard_image': return T('courseai_log_image_discarded', 'You discarded an image suggestion');
             case 'replan_image': return T('courseai_log_image_regenerated', 'You regenerated an image suggestion');
             default: return null;

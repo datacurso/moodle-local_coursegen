@@ -164,23 +164,37 @@ export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, p
 /**
  * Send a reorder_sections action and log a concise user turn.
  *
- * @param {Object}   ctx              - ui-detailed ctx; reads runPlanAction, log, texts.
+ * @param {Object}   ctx              - ui-detailed ctx; reads runPlanAction, log, texts, state.
  * @param {string[]} targetIds        - Section UUIDs in new DOM order.
+ * @param {string}   [movedId]        - UUID of the section the user dragged.
  */
-export const sendReorderSections = async(ctx, targetIds) => {
-    const {runPlanAction, log, texts} = ctx;
-    // Reordering is a user action → one concise turn (no « »).
+export const sendReorderSections = async(ctx, targetIds, movedId) => {
+    const {runPlanAction, log, texts, state} = ctx;
+    // Name WHICH section moved and to WHICH (1-based) position; fall back to the
+    // generic line when the dragged section can't be resolved (no « »).
     if (typeof log === 'function') {
-        log({
-            actor: 'user',
-            kind: 'user',
-            message: (texts && texts.courseai_log_reordered_sections) || 'You reordered the sections',
-        });
+        const sections = (state && state.latestInitialSections) || [];
+        const moved = sections.find((s) => s && s.id === movedId);
+        const movedName = moved && String(moved.name || '').trim();
+        const newPos = movedId ? targetIds.indexOf(movedId) + 1 : 0;
+        let message;
+        if (movedName && newPos > 0) {
+            message = ((texts && texts.courseai_log_moved_section)
+                || 'You moved section "{$a->name}" to position {$a->position}')
+                .replace('{$a->name}', movedName)
+                .replace('{$a->position}', String(newPos));
+        } else {
+            message = (texts && texts.courseai_log_reordered_sections) || 'You reordered the sections';
+        }
+        log({actor: 'user', kind: 'user', message});
     }
     try {
         const pendingAction = {
             action: 'reorder_sections',
             target_ids: targetIds,
+            // WHICH section the user dragged, so the service persists the same
+            // "You moved section X to position N" turn (reload === live).
+            moved_id: movedId || null,
         };
         await runPlanAction(pendingAction);
     } catch (e) {

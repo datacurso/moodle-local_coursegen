@@ -58,7 +58,7 @@ export const ensureSectionRendered = (ctx, section, renderIndex) => {
             getSectionList(ctx),
             '.course-section',
             'sectionId',
-            (ids) => sendReorderSections(ctx, ids),
+            (ids, movedId) => sendReorderSections(ctx, ids, movedId),
             null,
             () => !ctx.state.isStreaming
         );
