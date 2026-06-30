@@ -144,8 +144,22 @@ export const createStreamManager = (deps) => {
 
             if (streamMode === 'generating') {
                 ensureStreamContentVisible();
+                // Generation reuses the SAME plan cards as planning (#prvSections) as a
+                // read-only live progress view (per-activity spinner→check), so the whole
+                // wizard stays unified. Show that view and keep the old progress card hidden.
+                document.body.classList.add('cg-generating');
+                // The plan preview cards live inside #planReviewCard (hidden once a stream
+                // starts); show it as the live progress view and keep the old progress
+                // card hidden. switchPlanMode keeps the detailed sub-view active.
+                const reviewCard = elements.planReviewCard || document.getElementById('planReviewCard');
+                if (reviewCard) {
+                    reviewCard.style.display = '';
+                }
+                if (typeof stepsUi.switchPlanMode === 'function') {
+                    stepsUi.switchPlanMode('detailed');
+                }
                 if (planningProgressCard) {
-                    planningProgressCard.style.display = '';
+                    planningProgressCard.style.display = 'none';
                 }
                 if (pcToggleRow) {
                     pcToggleRow.style.display = 'flex';
@@ -171,6 +185,9 @@ export const createStreamManager = (deps) => {
                 state.activityProgressTotal = 0;
                 state.activityProgressStarted = 0;
                 state.activityProgressDone = 0;
+                // keepPlan preserved the review cards intact (full descriptions) — just
+                // mark the per-activity status on them (all pending, spinner→check as
+                // each is created in Moodle).
                 renderTracker();
             }
 

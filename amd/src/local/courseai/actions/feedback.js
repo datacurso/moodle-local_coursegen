@@ -214,10 +214,12 @@ export const sendFeedbackAction = async(action, ctx) => {
         }
 
         const streamMode = action === 'accept' ? 'generating' : 'planning';
-        // keepPlan: an 'adjust' resumes the existing plan to apply free-text feedback,
-        // so preserve the rendered preview and let the reconciler diff against it
-        // (only changed rows animate). 'accept' transitions to generation → full reset.
-        const keepPlan = action !== 'accept';
+        // keepPlan: preserve the rendered plan preview. 'adjust' lets the reconciler
+        // diff against it; 'accept' now KEEPS it too, because generation reuses the
+        // SAME cards as a live progress view (per-activity spinner→check) instead of a
+        // separate progress panel — so the cards (with their full descriptions) must
+        // survive the transition rather than being torn down and re-skeletoned.
+        const keepPlan = true;
         streamManager.openSSEStream(state.streamingurl, 0, streamMode, keepPlan);
     } catch (error) {
         // The stream never opened — clear the live indicator so it does not

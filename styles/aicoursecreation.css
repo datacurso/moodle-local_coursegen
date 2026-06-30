@@ -3460,6 +3460,52 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
 #prvSections .activity-item.cg-activity--done {
   opacity: 1;
 }
+
+/* ── Generation phase: reuse the plan cards as a read-only LIVE progress view ──
+   Scoped to body.cg-generating so the editable planning view is never affected.
+   The cg-gen-* status class lands on the activity <li> (.activity-wrapper, which
+   carries data-activity-id), so anchor the status dot there: hollow = waiting,
+   spinner = being created in Moodle, green check = created. Editing hidden. */
+body.cg-generating #prvSections .activity-wrapper { position: relative; }
+body.cg-generating #prvSections .activity-item { opacity: 1 !important; }
+body.cg-generating #prvSections .cg-item-actions,
+body.cg-generating #prvSections .dp-add-activity-wrap,
+body.cg-generating #prvSections .dp-add-section-wrap,
+body.cg-generating #prvSections .activity-item .icons-collapse-expand { display: none !important; }
+body.cg-generating #prvSections .activity-wrapper,
+body.cg-generating #prvSections .activity-item,
+body.cg-generating #prvSections .course-section .section-item { cursor: default !important; }
+body.cg-generating #prvSections .cg-gen-pending::after,
+body.cg-generating #prvSections .cg-gen-active::after,
+body.cg-generating #prvSections .cg-gen-done::after {
+  content: '';
+  position: absolute;
+  top: 18px;
+  right: 16px;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  box-sizing: border-box;
+}
+body.cg-generating #prvSections .cg-gen-pending::after {
+  border: 2px solid var(--border);
+  background: #fff;
+}
+body.cg-generating #prvSections .cg-gen-active::after {
+  border: 2px solid hsl(8 72% 42% / .25);
+  border-top-color: var(--primary);
+  animation: spin .8s linear infinite;
+}
+body.cg-generating #prvSections .cg-gen-done::after {
+  content: '\2713';
+  border: none;
+  background: hsl(142 64% 38%);
+  color: #fff;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 18px;
+  text-align: center;
+}
 /* Activities with detail are clickable to expand, but the whole row is also
    draggable (the preview is always editable). Keep the drag (move) cursor for
    consistency across ALL activities — Boost gives the first one `move`, and this

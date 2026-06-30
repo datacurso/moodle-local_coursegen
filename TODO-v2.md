@@ -785,3 +785,20 @@ sessions remain, then remove it.
   terminar la generación. Solución declarativa robusta: clase `body.cg-plan-approved` + CSS
   `#compactChatCard { display:none !important }` (gana sobre cualquier display inline). Se limpia en
   `setCompactChatState('reset')` (curso nuevo). Verificado: oculto tras aceptar, tras completar EN VIVO y tras reload.
+
+---
+
+## Fase de generación unificada con la planificación — HECHO (2026-06-30)
+
+- [x] La generación ya NO usa el panel custom (pc-card con barra roja, círculos "01", badges
+  "Book/Quiz"). Ahora reusa LAS MISMAS tarjetas de planificación (#prvSections, dentro de
+  #planReviewCard) como vista de progreso read-only: cada actividad muestra spinner→check verde a la
+  derecha a medida que se crea en Moodle. Coherencia total con la planificación.
+- [x] `accept` ahora usa `keepPlan=true` para preservar las tarjetas del review (con descripciones
+  completas) en vez de teardown+skeleton. `stream.js` (modo generating) muestra `#planReviewCard`,
+  oculta el pc-card y agrega `body.cg-generating`. `tracker.js` agrega `id` al modelo;
+  `tracker-renderer.renderGenerationTracker` ahora sincroniza el estado por actividad sobre las filas
+  reales (por `data-activity-id`) con clases `cg-gen-pending/active/done` (el `cg-gen-*` cae en el
+  `<li.activity-wrapper>`). CSS scoped a `body.cg-generating`: indicador de estado (hueco→spinner→check)
+  + oculta acciones/dnd (read-only). `showCompletionView` limpia `cg-generating` y muestra el panel de
+  éxito. Verificado e2e: vivo, reload durante generación y completion.

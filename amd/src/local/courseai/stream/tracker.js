@@ -45,6 +45,7 @@ export const createGenerationTracker = (state, texts) => {
                 activities: activities.map((activity, activityIndex) => ({
                     sectionIndex,
                     activityIndex,
+                    id: activity.id,
                     title: activity.title
                         || activity.name
                         || `${texts.courseai_activity_default} ${activityIndex + 1}`,

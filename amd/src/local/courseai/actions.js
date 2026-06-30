@@ -82,6 +82,10 @@ export const createCourseaiActions = (deps) => {
         if (planningProgressCard) { planningProgressCard.style.display = 'none'; }
         if (elements.planReviewCard) { elements.planReviewCard.style.display = 'none'; }
         if (planActions) { planActions.style.display = 'none'; }
+        // Generation is over: drop the live progress view (the plan cards) so only the
+        // success panel shows, and clear the generation styling.
+        document.body.classList.remove('cg-generating');
+        if (elements.planDetailedView) { elements.planDetailedView.style.display = 'none'; }
         if (completionView) { completionView.style.display = 'flex'; }
         if (btnOpenMoodleCourse) { btnOpenMoodleCourse.disabled = !state.createdCourseUrl; }
         stepsUi.setStepState('planning', 'done');
