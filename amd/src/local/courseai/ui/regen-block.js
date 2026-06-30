@@ -393,3 +393,23 @@ export const rebuildRegenFromPlan = ({action, targetIds, plan}) => {
         clampDetail(item.querySelector('.courseai-checklist-detail'));
     });
 };
+
+/**
+ * Render the COMPLETE approved plan as ONE detail block — every active, named
+ * section with its description, activities and each activity's detailed plan
+ * (clamped) — shown right after the "You approved the plan" turn. Reuses the
+ * section renderer so the live build (cached plan) and the reload build
+ * (persisted approved snapshot) are byte-for-byte identical.
+ *
+ * @param {Array} plan - The approved plan tree (detailed_plan on activities).
+ * @returns {void}
+ */
+export const renderApprovedPlanSummary = (plan) => {
+    const ids = (plan || [])
+        .filter((s) => s && !s.deleted && String(s.name || '').trim())
+        .map((s) => s.id);
+    if (!ids.length) {
+        return;
+    }
+    rebuildRegenFromPlan({action: 'replan_section', targetIds: ids, plan});
+};

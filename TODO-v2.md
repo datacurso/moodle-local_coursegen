@@ -754,3 +754,16 @@ sessions remain, then remove it.
   el centro (`affectedCount=1` verificado).
 - [x] **thread-replay**: un row `proposal_applied` rutea la ronda siguiente por su `resolved_action`
   persistido, así reload coincide con live (bloque + top congelado).
+
+---
+
+## Resumen del plan aprobado tras "You approved the plan" — HECHO (2026-06-30)
+
+- [x] Tras aceptar, se muestra el detalle COMPLETO de todo lo aprobado (todas las secciones con
+  descripción, actividades y detailed_plan, clamp con Show more) justo debajo del turno "You approved
+  the plan". Render compartido `renderApprovedPlanSummary` (reusa el render de secciones del regen-block).
+- [x] En vivo: desde `state.lastReviewedPlan` (cacheado en `handleReviewNeeded` desde `current_plan`);
+  fallback `latestInitialSections`. En reload: thread-replay detecta el snapshot `ai_planned_structure`
+  con `payload.approved` y renderiza lo mismo (cachea `lastReviewedPlan` para un accept post-reload).
+- [x] El servicio persiste el snapshot aprobado (PR de servicio aparte). Verificado e2e: live==reload
+  idéntico (3 secciones con detalle), reorden/inicial sin regresión.

@@ -33,7 +33,7 @@
  */
 
 import {rebuildTranscriptFromPlan} from 'local_coursegen/local/courseai/ui/plan-transcript';
-import {rebuildRegenFromPlan} from 'local_coursegen/local/courseai/ui/regen-block';
+import {rebuildRegenFromPlan, renderApprovedPlanSummary} from 'local_coursegen/local/courseai/ui/regen-block';
 import {addedSectionTurn, addedActivityTurn} from 'local_coursegen/local/courseai/ui/added-turn';
 import {getActivityLabels} from 'local_coursegen/local/courseai/utils';
 
@@ -328,6 +328,16 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
             // block (content.string) for old sessions that have no payload.plan.
             const planTree = (payload && Array.isArray(payload.plan)) ? payload.plan : null;
             if (planTree && planTree.length) {
+                // Cache the latest plan so a post-reload "accept" can render the
+                // approved summary from it (the live handler caches current_plan).
+                state.lastReviewedPlan = planTree;
+                // The approved snapshot (recorded on accept, flagged in payload)
+                // shows the FULL detail of the accepted plan right after the "You
+                // approved the plan" turn — never a top rebuild.
+                if (payload.approved) {
+                    renderApprovedPlanSummary(planTree);
+                    return;
+                }
                 // If the preceding user_action was an ADD, this plan is the first to
                 // hold the new element — emit "You added section/activity: <name>"
                 // (the id not in before_ids) here, since the name didn't exist when

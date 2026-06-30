@@ -164,6 +164,13 @@ export const handleReviewNeeded = async(data, ctx) => {
     // The AI responded — drop the live "working" indicator.
     hideFeedbackThinking();
 
+    // Cache the latest fully-detailed plan so that, when the user approves, the
+    // accept handler can render the complete approved-plan detail summary without
+    // waiting for a round-trip (the persisted approved snapshot drives reload).
+    if (Array.isArray(data.current_plan) && data.current_plan.length) {
+        state.lastReviewedPlan = data.current_plan;
+    }
+
     // The section checklist stays as-is (name + spinner→check). Its per-section
     // Markdown detail (description + activities) sits below each item:
     //  - initial round: the live accumulator already filled each detail in real

@@ -27,6 +27,7 @@ import {
     hideWorkingIndicator,
 } from 'local_coursegen/local/courseai/ui/feedback-progress';
 import {getDecisionOverlay} from 'local_coursegen/local/courseai/ui/decision-overlay';
+import {renderApprovedPlanSummary} from 'local_coursegen/local/courseai/ui/regen-block';
 
 /**
  * Emit a log entry if emitLog is wired.
@@ -147,6 +148,11 @@ export const sendFeedbackAction = async(action, ctx) => {
                 kind: 'success',
                 message: texts.courseai_log_user_approved || 'You approved the plan',
             }, emitLog);
+            // Show the COMPLETE detail of everything the user just approved (every
+            // section, its activities and detailed plans) right below the turn, so
+            // the approval is concrete. The persisted approved snapshot renders the
+            // same block on reload (see thread-replay).
+            renderApprovedPlanSummary(state.lastReviewedPlan || state.latestInitialSections || []);
             showFeedbackThinking(texts);
         }
 
