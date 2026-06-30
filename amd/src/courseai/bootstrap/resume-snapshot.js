@@ -343,9 +343,6 @@ export const makeResumeFromSnapshot = ({
         if (status === 'COMPLETED') {
             // Course already created → no composer (it cannot be edited from here).
             state.planApproved = true;
-            if (elements.compactChatCard) {
-                elements.compactChatCard.style.display = 'none';
-            }
             stepsUi.transitionToPlanning();
             setPlanningStreamVisible();
             applyCourseTitleToHeader();
@@ -357,6 +354,12 @@ export const makeResumeFromSnapshot = ({
                 detailedUi.enableAllActionControls();
             }
             planningUi.showReviewActions('detailed');
+            // showReviewActions re-enables the composer (setCompactChatState 'enabled');
+            // an approved/created course is no longer editable here, so hide it AFTER
+            // that call so the late write wins (the gate also collapses it to hidden).
+            if (elements.compactChatCard) {
+                elements.compactChatCard.style.display = 'none';
+            }
             stepsUi.setStepState('planning', 'done');
             stepsUi.setStepState('generating', 'done');
             state.currentStage = 'completed';
