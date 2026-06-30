@@ -67,6 +67,15 @@ export const createCourseaiActions = (deps) => {
         state.createdCourseResult = result || null;
         state.createdCourseUrl = result?.courseurl || '';
         state.currentStage = 'completed';
+        // The course is created and can no longer be edited from this wizard, so the
+        // composer must be gone on the success view. Hide it explicitly here (not only
+        // via the body-class CSS) so a stale/aggregated stylesheet can't leave it
+        // visible, and keep the declarative class in sync.
+        state.planApproved = true;
+        document.body.classList.add('cg-plan-approved');
+        if (elements.compactChatCard) {
+            elements.compactChatCard.style.display = 'none';
+        }
         if (completionSummary) {
             completionSummary.textContent = buildCompletionSummary(state, texts, formatTemplate);
         }
