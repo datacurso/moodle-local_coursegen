@@ -55,7 +55,7 @@ const toggleSectionCollapse = (bodyEl, chevron) => {
  * @returns {{bodyEl: HTMLElement, activityDnd: Object}|null}
  */
 export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionName, totalActivities}) => {
-    const {state, texts, runPlanAction, log, createTextPanel} = ctx;
+    const {state, texts, runPlanAction, createTextPanel} = ctx;
     const sectionList = getSectionList(ctx);
 
     if (!sectionList) {
@@ -99,11 +99,8 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
         texts,
         onSubmit: async(value) => {
             addActivityBtn.classList.add('dp-add-control--disabled');
-            log({
-                actor: 'user',
-                kind: 'success',
-                message: texts.courseai_log_added_activity || 'You added an activity',
-            });
+            // No turn here: the new activity has no name yet. handleReviewNeeded
+            // emits "You added activity: <name>" once the model has generated it.
             try {
                 await runPlanAction({
                     action: 'add_activity',
@@ -193,7 +190,7 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
  * @param {Object} ctx
  */
 export const appendAddSectionControl = (ctx) => {
-    const {state, texts, runPlanAction, log, createTextPanel} = ctx;
+    const {state, texts, runPlanAction, createTextPanel} = ctx;
     const sectionList = getSectionList(ctx);
 
     if (!sectionList) {
@@ -210,11 +207,8 @@ export const appendAddSectionControl = (ctx) => {
         texts,
         onSubmit: async(value) => {
             addSectionBtn.classList.add('dp-add-control--disabled');
-            log({
-                actor: 'user',
-                kind: 'success',
-                message: texts.courseai_log_added_section || 'You added a section',
-            });
+            // No turn here: the new section has no name yet. handleReviewNeeded
+            // emits "You added section: <name>" once the model has generated it.
             try {
                 await runPlanAction({action: 'add_section', instruction: value});
             } catch (e) {

@@ -193,6 +193,8 @@ const STRING_KEYS = [
     'courseai_log_user_approved',
     'courseai_log_reordered_sections',
     'courseai_log_moved_section',
+    'courseai_log_added_section_named',
+    'courseai_log_added_activity_named',
     'courseai_log_reordered_activities',
     'courseai_log_reordered_activities_generic',
     'courseai_log_moved_activity',

@@ -34,6 +34,7 @@
 
 import {rebuildTranscriptFromPlan} from 'local_coursegen/local/courseai/ui/plan-transcript';
 import {rebuildRegenFromPlan} from 'local_coursegen/local/courseai/ui/regen-block';
+import {addedSectionTurn, addedActivityTurn} from 'local_coursegen/local/courseai/ui/added-turn';
 import {getActivityLabels} from 'local_coursegen/local/courseai/utils';
 
 /**
@@ -169,8 +170,6 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
             case 'proposals_dismissed': return T('courseai_log_proposals_dismissed', 'You dismissed suggestions');
             case 'stop': return T('courseai_btn_stop', 'Stop');
             case 'resume': return T('courseai_btn_resume', 'Resume');
-            case 'add_section': return T('courseai_log_added_section', 'You added a section');
-            case 'add_activity': return T('courseai_log_added_activity', 'You added an activity');
             case 'discard_image': return T('courseai_log_image_discarded', 'You discarded an image suggestion');
             case 'replan_image': return T('courseai_log_image_regenerated', 'You regenerated an image suggestion');
             default: return null;
@@ -278,6 +277,12 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
                     return;
                 }
             }
+            // Adding an element: render NOTHING here — the added element's name
+            // lives in the NEXT ai_planned_structure, so the named turn is emitted
+            // there (see the AI_OUTPUT block, using payload.before_ids).
+            if (subtype === 'add_section' || subtype === 'add_activity') {
+                return;
+            }
             // Applying a picked proposal: render "You applied: <summary>" from the
             // frozen proposal summary, exactly as the live card turn did.
             if (subtype === 'proposal_applied') {
@@ -323,6 +328,18 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
             // block (content.string) for old sessions that have no payload.plan.
             const planTree = (payload && Array.isArray(payload.plan)) ? payload.plan : null;
             if (planTree && planTree.length) {
+                // If the preceding user_action was an ADD, this plan is the first to
+                // hold the new element — emit "You added section/activity: <name>"
+                // (the id not in before_ids) here, since the name didn't exist when
+                // the action was recorded.
+                if (ctx.addScope) {
+                    const added = ctx.addScope.action === 'add_section'
+                        ? addedSectionTurn(texts, planTree, ctx.addScope.beforeIds)
+                        : addedActivityTurn(texts, planTree, ctx.addScope.parentSectionId, ctx.addScope.beforeIds);
+                    if (added) {
+                        emitLog({actor: 'user', kind: 'success', message: added});
+                    }
+                }
                 // If this round was a REPLAN (the preceding user_action was a
                 // replan_activity/replan_section), render its regenerated subtree as
                 // a NEW block below the instruction — mirroring the live build — and
@@ -422,6 +439,9 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
         // When the previous message was a replan user_action, the NEXT
         // ai_planned_structure renders as a regeneration block (not a top rebuild).
         let pendingRegen = null;
+        // When the previous message was an ADD user_action, the NEXT
+        // ai_planned_structure is where the new element first has a name.
+        let pendingAdd = null;
         for (let i = 0; i < ordered.length; i++) {
             const msg = ordered[i];
             const t = msg.type;
@@ -437,14 +457,19 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
                 isLast: i === lastIndex,
                 firstReview: isReviewMilestone ? reviewMilestones === 1 : undefined,
                 regenScope: pendingRegen,
+                addScope: pendingAdd,
             });
-            // A replan user_action arms the regen scope for the following
-            // ai_planned_structure; any other user_action clears it (reorder/add/
+            // A replan/add user_action arms the scope for the following
+            // ai_planned_structure; any other user_action clears them (reorder/
             // delete rebuild the top normally).
             if (t === 'user_action') {
                 const sub = (msg.payload && msg.payload.subtype) || '';
+                const pl = msg.payload || {};
                 pendingRegen = (sub === 'replan_activity' || sub === 'replan_section')
-                    ? {action: sub, targetIds: (msg.payload && msg.payload.target_ids) || []}
+                    ? {action: sub, targetIds: pl.target_ids || []}
+                    : null;
+                pendingAdd = (sub === 'add_section' || sub === 'add_activity')
+                    ? {action: sub, parentSectionId: pl.parent_section_id, beforeIds: pl.before_ids || []}
                     : null;
             }
         }

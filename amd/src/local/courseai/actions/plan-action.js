@@ -53,6 +53,19 @@ export const createRunPlanAction = ({state, sendPlanningFeedback, openSSEStream}
         } else {
             state.regenScope = null;
         }
+        // Adding an element: snapshot the ids that exist NOW so review_needed can
+        // name the one the model just created (the id not in this set). Cleared by
+        // the lifecycle handlers, like regenScope.
+        if (action === 'add_section') {
+            const secs = (state.latestInitialSections || []).filter((s) => s && !s.deleted);
+            state.addScope = {action, beforeIds: secs.map((s) => s.id)};
+        } else if (action === 'add_activity') {
+            const parent = (state.latestInitialSections || []).find((s) => s && s.id === intent.parent_section_id);
+            const acts = (parent && parent.activities || []).filter((a) => a && !a.deleted);
+            state.addScope = {action, parentSectionId: intent.parent_section_id, beforeIds: acts.map((a) => a.id)};
+        } else {
+            state.addScope = null;
+        }
         await sendPlanningFeedback({recordid: state.sessionid, pendingAction: intent});
         // keepPlan: this resumes an existing plan to apply an action — preserve the
         // rendered preview so the reconciler diffs against it (no teardown/flicker).

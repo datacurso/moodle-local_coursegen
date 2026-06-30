@@ -34,6 +34,7 @@ import {
     rebuildTranscriptFromPlan,
 } from 'local_coursegen/local/courseai/ui/plan-transcript';
 import {finalizeRegen} from 'local_coursegen/local/courseai/ui/regen-block';
+import {addedSectionTurn, addedActivityTurn} from 'local_coursegen/local/courseai/ui/added-turn';
 
 /**
  * Handle 'status' event: localize message, update UI text, advance heuristic progress.
@@ -188,6 +189,19 @@ export const handleReviewNeeded = async(data, ctx) => {
     // for a regen.
     state.regenScope = null;
 
+    // Adding an element: the click-time turn was intentionally silent (the name
+    // didn't exist yet). Now that the plan settled, name the element the model
+    // created — the one in current_plan whose id was not present before the add.
+    if (state.addScope) {
+        const added = state.addScope.action === 'add_section'
+            ? addedSectionTurn(texts, data.current_plan, state.addScope.beforeIds)
+            : addedActivityTurn(texts, data.current_plan, state.addScope.parentSectionId, state.addScope.beforeIds);
+        if (added && typeof emitLog === 'function') {
+            emitLog({actor: 'user', kind: 'success', message: added});
+        }
+        state.addScope = null;
+    }
+
     // The plan has settled: from now on log entries flow BELOW the section checklist.
     // Set this BEFORE emitting the milestone so the AI's "review the plan" message
     // lands AFTER the planned-structure group (chronological: plan first, then the
@@ -311,6 +325,7 @@ export const handleFailed = async(data, ctx) => {
     // would be misrouted) — drop the half-built block and clear the flag.
     finalizeRegen();
     state.regenScope = null;
+    state.addScope = null;
     if (typeof ctx.onStreamEnd === 'function') {
         ctx.onStreamEnd();
     }
