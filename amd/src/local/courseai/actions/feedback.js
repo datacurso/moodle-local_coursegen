@@ -82,6 +82,13 @@ export const sendFeedbackAction = async(action, ctx) => {
         return;
     }
 
+    // Approving is terminal for this wizard: the course is created and can no longer
+    // be edited from here. Mark it BEFORE the first setCompactChatState below so the
+    // composer is hidden from this point on (through generation and completion).
+    if (action === 'accept') {
+        state.planApproved = true;
+    }
+
     // WU4: hide the decision overlay as soon as the user acts (accept or adjust).
     getDecisionOverlay().hide();
 

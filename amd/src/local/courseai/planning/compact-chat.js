@@ -50,6 +50,14 @@ export const setCompactChatState = (deps, mode) => {
         return;
     }
 
+    // Once the plan is approved the course is created and can no longer be edited
+    // from this wizard, so the composer is gone for good — through generation and
+    // after it completes. Every later state change (disabled/enabled/reset from the
+    // generation stream, completion, failure or reload) collapses to 'hidden'.
+    if (state && state.planApproved) {
+        mode = 'hidden';
+    }
+
     const upArrowIcon = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" ' +
         'stroke="currentColor" stroke-width="2.5" stroke-linecap="round" ' +
         'stroke-linejoin="round" aria-hidden="true">' +

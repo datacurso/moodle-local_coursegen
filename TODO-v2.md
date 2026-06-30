@@ -769,3 +769,15 @@ sessions remain, then remove it.
   con `payload.approved` y renderiza lo mismo (cachea `lastReviewedPlan` para un accept post-reload).
 - [x] El servicio persiste el snapshot aprobado (PR de servicio aparte). Verificado e2e: live==reload
   idéntico (3 secciones con detalle), reorden/inicial sin regresión.
+
+---
+
+## Ocultar el composer una vez aprobado el plan — HECHO (2026-06-30)
+
+- [x] Tras aprobar la planificación el curso se crea y ya no se puede editar desde el wizard, así que el
+  composer (#compactChatCard) se oculta desde la aprobación, durante toda la generación y tras completar.
+  Bandera centralizada `state.planApproved`: el gate al inicio de `setCompactChatState` colapsa cualquier
+  modo (disabled/enabled/reset) a `hidden` una vez aprobado. Se setea en `feedback.js` (action='accept',
+  antes del primer setCompactChatState) y en reload (`resume-snapshot.js`) para GENERATING/PLANNING_ACCEPT
+  y COMPLETED (+ hide directo del card). Verificado: oculto en generación/completado/reload; visible en
+  review/adjust (planApproved=false).
