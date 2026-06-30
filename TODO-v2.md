@@ -802,3 +802,20 @@ sessions remain, then remove it.
   `<li.activity-wrapper>`). CSS scoped a `body.cg-generating`: indicador de estado (hueco→spinner→check)
   + oculta acciones/dnd (read-only). `showCompletionView` limpia `cg-generating` y muestra el panel de
   éxito. Verificado e2e: vivo, reload durante generación y completion.
+
+---
+
+## Estado por actividad exacto + shimmer en generación — HECHO (2026-06-30)
+
+- [x] BUG: en generación casi todas las actividades salían como "generadas" desde el inicio. Causa: las
+  actividades se generan en PARALELO (asyncio.gather) y el plugin usaba una heurística de texto
+  secuencial que marcaba "done" en cascada al empezar la siguiente. Fix: progreso ESTRUCTURADO por
+  índice — el servicio (`process_activity_node`) emite `activity_progress_init{total}` +
+  `activity_progress_start/done{index}` por actividad (índice de cola = índice de `tracker.flat`, ambos
+  en orden de posición). El plugin (`handlers-progress` + `setTrackerFlatStatus`) marca `tracker.flat`
+  por índice y `renderGenerationTracker` lo refleja en la fila real por `data-activity-id`. Verificado:
+  progresión real pending→in_progress→done (t=0 todas A, ~17-21s pasan a D), sin "done" prematuro.
+- [x] Indicador claro por estado (scoped `body.cg-generating`): IN PROGRESS = spinner en el icono +
+  shimmer animado sobre el contenido (visible, estilo skeleton de planificación); DONE = check verde en
+  el icono; PENDING = atenuado. Restaurado `cursor: pointer` en actividades expandibles (se rompió con
+  cursor:default); solo se ocultan los botones de edición (read-only).

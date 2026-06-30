@@ -3463,48 +3463,71 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
 
 /* ── Generation phase: reuse the plan cards as a read-only LIVE progress view ──
    Scoped to body.cg-generating so the editable planning view is never affected.
-   The cg-gen-* status class lands on the activity <li> (.activity-wrapper, which
-   carries data-activity-id), so anchor the status dot there: hollow = waiting,
-   spinner = being created in Moodle, green check = created. Editing hidden. */
-body.cg-generating #prvSections .activity-wrapper { position: relative; }
-body.cg-generating #prvSections .activity-item { opacity: 1 !important; }
+   The cg-gen-* status class lands on the activity <li> (.activity-wrapper). Three
+   UNAMBIGUOUS states: PENDING = dimmed (clearly not yet); IN PROGRESS = full
+   opacity + a shimmer sweep over the (visible) content + a spinner on the icon
+   (the same "being worked on" feel as the planning skeleton, but the real content
+   stays); DONE = full opacity + a green check on the icon. Edit affordances are
+   hidden, but expandable activities STAY clickable to view their detail. */
+@keyframes cg-gen-shimmer {
+  from { background-position: 180% 0; }
+  to { background-position: -80% 0; }
+}
 body.cg-generating #prvSections .cg-item-actions,
 body.cg-generating #prvSections .dp-add-activity-wrap,
-body.cg-generating #prvSections .dp-add-section-wrap,
-body.cg-generating #prvSections .activity-item .icons-collapse-expand { display: none !important; }
-body.cg-generating #prvSections .activity-wrapper,
-body.cg-generating #prvSections .activity-item,
-body.cg-generating #prvSections .course-section .section-item { cursor: default !important; }
-body.cg-generating #prvSections .cg-gen-pending::after,
-body.cg-generating #prvSections .cg-gen-active::after,
-body.cg-generating #prvSections .cg-gen-done::after {
+body.cg-generating #prvSections .dp-add-section-wrap { display: none !important; }
+body.cg-generating #prvSections .activity-item.cg-activity--has-detail { cursor: pointer !important; }
+body.cg-generating #prvSections .activity-icon { position: relative; }
+
+/* PENDING — waiting. */
+body.cg-generating #prvSections .cg-gen-pending .activity-item { opacity: .4; }
+
+/* IN PROGRESS — shimmer sweep over the visible content + spinner on the icon. */
+body.cg-generating #prvSections .cg-gen-active .activity-item { opacity: 1; }
+body.cg-generating #prvSections .cg-gen-active .activity-grid { position: relative; }
+body.cg-generating #prvSections .cg-gen-active .activity-grid::after {
   content: '';
   position: absolute;
-  top: 18px;
-  right: 16px;
-  width: 18px;
-  height: 18px;
+  inset: -4px -2px;
+  border-radius: 8px;
+  pointer-events: none;
+  background: linear-gradient(100deg, transparent 35%, hsl(8 72% 42% / .16) 50%, transparent 65%);
+  background-size: 220% 100%;
+  animation: cg-gen-shimmer 1.25s linear infinite;
+}
+body.cg-generating #prvSections .cg-gen-active .activity-icon::after {
+  content: '';
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 15px;
+  height: 15px;
   border-radius: 50%;
   box-sizing: border-box;
-}
-body.cg-generating #prvSections .cg-gen-pending::after {
-  border: 2px solid var(--border);
-  background: #fff;
-}
-body.cg-generating #prvSections .cg-gen-active::after {
   border: 2px solid hsl(8 72% 42% / .25);
   border-top-color: var(--primary);
+  background: #fff;
+  box-shadow: 0 0 0 2px #fff;
   animation: spin .8s linear infinite;
 }
-body.cg-generating #prvSections .cg-gen-done::after {
+
+/* DONE — green check badge on the icon. */
+body.cg-generating #prvSections .cg-gen-done .activity-item { opacity: 1; }
+body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
   content: '\2713';
-  border: none;
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
   background: hsl(142 64% 38%);
   color: #fff;
-  font-size: 11px;
+  font-size: 10px;
   font-weight: 700;
-  line-height: 18px;
+  line-height: 17px;
   text-align: center;
+  box-shadow: 0 0 0 2px #fff;
 }
 /* Activities with detail are clickable to expand, but the whole row is also
    draggable (the preview is always editable). Keep the drag (move) cursor for

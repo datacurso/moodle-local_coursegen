@@ -90,6 +90,22 @@ export const findNextPendingIndex = (state, startFrom = 0) => {
 };
 
 /**
+ * Set the status of the flat activity at index (structured progress by queue
+ * index, which matches the service generation order).
+ *
+ * @param {Object} state
+ * @param {number} index
+ * @param {string} status - 'pending' | 'in_progress' | 'done'
+ */
+export const setTrackerFlatStatus = (state, index, status) => {
+    const tracker = state.generationTracker;
+    if (!tracker || !Array.isArray(tracker.flat) || index < 0 || index >= tracker.flat.length) {
+        return;
+    }
+    tracker.flat[index].status = status;
+};
+
+/**
  * Mark the flat activity at index as done.
  *
  * @param {Object} state

@@ -24,6 +24,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {setTrackerFlatStatus} from 'local_coursegen/local/courseai/stream/tracker';
+
 /**
  * Handle 'activity_progress_init': switch to structured progress mode.
  *
@@ -48,11 +50,7 @@ export const handleActivityProgressInit = (data, ctx) => {
  * @param {Object} ctx
  */
 export const handleActivityProgressStart = (data, ctx) => {
-    ctx.updateTrackerActivityStatusByCoordinates(
-        Number(data.section_index) || 0,
-        Number(data.activity_index) || 0,
-        'in_progress'
-    );
+    setTrackerFlatStatus(ctx.state, Number(data.index), 'in_progress');
     ctx.state.activityProgressStarted = (ctx.state.activityProgressStarted || 0) + 1;
     ctx.updateProgress();
     ctx.renderTracker();
@@ -65,11 +63,7 @@ export const handleActivityProgressStart = (data, ctx) => {
  * @param {Object} ctx
  */
 export const handleActivityProgressDone = (data, ctx) => {
-    ctx.updateTrackerActivityStatusByCoordinates(
-        Number(data.section_index) || 0,
-        Number(data.activity_index) || 0,
-        'done'
-    );
+    setTrackerFlatStatus(ctx.state, Number(data.index), 'done');
     ctx.state.activityProgressDone = (ctx.state.activityProgressDone || 0) + 1;
     ctx.updateProgress();
     ctx.renderTracker();
@@ -82,11 +76,7 @@ export const handleActivityProgressDone = (data, ctx) => {
  * @param {Object} ctx
  */
 export const handleActivityProgressFailed = (data, ctx) => {
-    ctx.updateTrackerActivityStatusByCoordinates(
-        Number(data.section_index) || 0,
-        Number(data.activity_index) || 0,
-        'done'
-    );
+    setTrackerFlatStatus(ctx.state, Number(data.index), 'done');
     ctx.state.activityProgressDone = (ctx.state.activityProgressDone || 0) + 1;
     ctx.updateProgress();
     ctx.renderTracker();
