@@ -78,7 +78,6 @@ export const createCourseaiActions = (deps) => {
         if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
             return;
         }
-        container.innerHTML = '';
         const colors = ['#ED6E54', '#F1AA1E', '#5B4590', '#3B9EE5', '#E5528A', '#3FBF6F'];
         const rand = (min, max) => min + Math.random() * (max - min);
         const count = 40;
@@ -111,13 +110,15 @@ export const createCourseaiActions = (deps) => {
                 + fallY.toFixed(1) + 'px)) scale(.9) rotate(' + spin.toFixed(0) + 'deg)';
             // Quick burst out (to ~0.28), then a SLOW gravity fall + late fade so the
             // tail lingers — the last third of the (longer) duration is the settle.
-            piece.animate([
+            const anim = piece.animate([
                 {transform: 'translate(-50%,-50%) scale(.4) rotate(0deg)', opacity: 0, offset: 0},
                 {opacity: 1, offset: 0.1},
                 {transform: peak, opacity: 1, offset: 0.28},
                 {transform: mid, opacity: 1, offset: 0.68},
                 {transform: end, opacity: 0, offset: 1}
             ], {duration: rand(1700, 2700), easing: 'cubic-bezier(.1,.55,.25,1)', fill: 'forwards'});
+            // Clean each piece up when it finishes (both bursts leave no DOM behind).
+            anim.onfinish = () => piece.remove();
         }
     };
 
@@ -164,8 +165,10 @@ export const createCourseaiActions = (deps) => {
                 chatScroll.scrollTop = chatScroll.scrollHeight;
             });
         }
-        // Celebratory confetti burst from the completion badge.
-        fireConfetti(document.getElementById('pcConfetti'));
+        // Celebratory confetti — a DOUBLE pop (a second burst shortly after the first).
+        const confettiLayer = document.getElementById('pcConfetti');
+        fireConfetti(confettiLayer);
+        window.setTimeout(() => fireConfetti(confettiLayer), 550);
     };
 
     const resetForAnotherCourse = () => {
