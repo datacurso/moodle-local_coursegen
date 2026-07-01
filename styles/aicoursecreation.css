@@ -3734,7 +3734,9 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
 }
 /* Bigger gap between sections (edit view separates the section cards clearly). */
 #prvSections .course-content > .course-section:not(:first-child) {
-  margin-top: 30px;
+  /* ~32px ≈ Moodle's composed between-section gap in the edit view (section
+     spacer + the divider element's own vertical margins). */
+  margin-top: 32px;
 }
 
 /* ── On-hover "add activity" divider button (Moodle edit-view affordance) ──
@@ -3802,12 +3804,12 @@ body.cg-generating #prvSections .cg-insert-zone {
 }
 #prvSections .cg-insert-zone--section {
   position: absolute;
-  /* Span the full 30px gap above the section so the line + button sit in the MIDDLE
+  /* Span the full 32px gap above the section so the line + button sit in the MIDDLE
      of the gap, not crowded against either card. */
-  top: -30px;
+  top: -32px;
   left: 0;
   right: 0;
-  height: 30px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
