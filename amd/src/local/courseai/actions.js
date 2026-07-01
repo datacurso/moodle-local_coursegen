@@ -63,6 +63,56 @@ export const createCourseaiActions = (deps) => {
         }
     };
 
+    /**
+     * Fire a celebratory confetti burst from the completion badge: colourful pieces
+     * shoot outward from the cone and arc down under gravity, spinning and fading.
+     * Uses the Web Animations API (no external assets). Skipped under reduced motion.
+     *
+     * @param {HTMLElement} container - The .pc-confetti layer inside the badge.
+     * @returns {void}
+     */
+    const fireConfetti = (container) => {
+        if (!container) {
+            return;
+        }
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            return;
+        }
+        container.innerHTML = '';
+        const colors = ['#ED6E54', '#F1AA1E', '#5B4590', '#3B9EE5', '#E5528A', '#3FBF6F'];
+        const rand = (min, max) => min + Math.random() * (max - min);
+        const count = 28;
+        for (let i = 0; i < count; i++) {
+            const piece = document.createElement('i');
+            const circle = i % 3 === 0;
+            const w = circle ? rand(5, 8) : rand(4, 7);
+            const h = circle ? w : rand(8, 14);
+            piece.style.cssText = 'position:absolute;top:42%;left:50%;'
+                + 'width:' + w.toFixed(1) + 'px;height:' + h.toFixed(1) + 'px;'
+                + 'background:' + colors[i % colors.length] + ';'
+                + 'border-radius:' + (circle ? '50%' : '1px') + ';will-change:transform,opacity;';
+            container.appendChild(piece);
+            // Burst mostly upward/outward (a popper fires up), then gravity pulls it down.
+            const angle = rand(-165, -15) * Math.PI / 180;
+            const dist = rand(46, 96);
+            const bx = Math.cos(angle) * dist;
+            const by = Math.sin(angle) * dist;
+            const fallY = by + rand(70, 130);
+            const drift = bx + rand(-14, 14);
+            const spin = (i % 2 ? 1 : -1) * rand(240, 620);
+            const peak = 'translate(calc(-50% + ' + bx.toFixed(1) + 'px), calc(-50% + '
+                + by.toFixed(1) + 'px)) scale(1) rotate(' + (spin * 0.45).toFixed(0) + 'deg)';
+            const end = 'translate(calc(-50% + ' + drift.toFixed(1) + 'px), calc(-50% + '
+                + fallY.toFixed(1) + 'px)) scale(.9) rotate(' + spin.toFixed(0) + 'deg)';
+            piece.animate([
+                {transform: 'translate(-50%,-50%) scale(.4) rotate(0deg)', opacity: 0, offset: 0},
+                {opacity: 1, offset: 0.12},
+                {transform: peak, opacity: 1, offset: 0.4},
+                {transform: end, opacity: 0, offset: 1}
+            ], {duration: rand(900, 1500), easing: 'cubic-bezier(.18,.7,.35,1)', fill: 'forwards'});
+        }
+    };
+
     const showCompletionView = (result) => {
         state.createdCourseResult = result || null;
         state.createdCourseUrl = result?.courseurl || '';
@@ -106,6 +156,8 @@ export const createCourseaiActions = (deps) => {
                 chatScroll.scrollTop = chatScroll.scrollHeight;
             });
         }
+        // Celebratory confetti burst from the completion badge.
+        fireConfetti(document.getElementById('pcConfetti'));
     };
 
     const resetForAnotherCourse = () => {
