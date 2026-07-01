@@ -47,6 +47,7 @@ import {renderGenerationTracker} from './stream/tracker-renderer';
 import {setCompletionStatsFromGeneratedResult as setCompletionStats} from './stream/completion';
 import {getOrCreateRoundChecklist} from './stream/checklist';
 import {openConnection} from './stream/connection';
+import {showWorkingIndicator} from './ui/feedback-progress';
 import {resetTranscript} from './ui/plan-transcript';
 
 // Module-level variable to preserve phase 4 total activities.
@@ -186,6 +187,14 @@ export const createStreamManager = (deps) => {
                 if (prvHeaderSub) {
                     prvHeaderSub.textContent = texts.courseai_course_creating_subtitle;
                 }
+                // Sync the LEFT working indicator with the CENTER header. The Accept action
+                // left it on "Analyzing your request…"; during generation the center shows
+                // "Generating course content…" and suppressRaw stops per-activity narration
+                // from updating the left one — so it would sit frozen on the stale accept
+                // text while the center says something else (a jarring desync). Set it to the
+                // SAME message the center subtitle shows so both panels tell one story. The
+                // composer is hidden here (plan approved), so it anchors in #cgWorkingSlot.
+                showWorkingIndicator(texts, texts.courseai_course_creating_subtitle);
                 // The plan preview cards live inside #planReviewCard (hidden once a stream
                 // starts); show it as the live progress view and keep the old progress
                 // card hidden. switchPlanMode keeps the detailed sub-view active.
