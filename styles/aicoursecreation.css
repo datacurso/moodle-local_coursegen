@@ -3172,6 +3172,17 @@ body.cg-plan-approved #compactChatCard { display: none !important; }
   color: var(--muted-fg);
 }
 
+/* The working/thinking indicator is always ONE short line, so its spinner must
+   sit vertically CENTERED with the text. The feed default (align-items:flex-start
+   + a 2px nudge on the spinner) top-aligns it, which left the spinner floating
+   above the text — glaring now that it lives in the anchored bottom card. */
+.cg-log-thinking .cg-log-body {
+  align-items: center;
+}
+.cg-log-thinking .cg-log-spin {
+  margin-top: 0;
+}
+
 @media (prefers-reduced-motion: reduce) {
   .cg-log-entry { transition: none; }
   .cg-thread { scroll-behavior: auto; }
