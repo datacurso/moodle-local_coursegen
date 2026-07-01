@@ -3573,16 +3573,29 @@ body.cg-generating #prvSections .cg-affected {
   box-shadow: none !important;
 }
 
-/* PENDING + IN PROGRESS — the card is "off": desaturated (grayscale) + slightly
-   faded. Grayscale (not heavy opacity) keeps the collapse chevron and content
-   readable, so the "there is collapsible content" indicator still shows. */
-body.cg-generating #prvSections .cg-gen-pending .activity-item,
-body.cg-generating #prvSections .cg-gen-active .activity-item {
+/* PENDING — the whole card is "off": desaturated (grayscale) + slightly faded.
+   Grayscale (not heavy opacity) keeps the collapse chevron/content readable. */
+body.cg-generating #prvSections .cg-gen-pending .activity-item {
   opacity: .82;
   filter: grayscale(1);
   transition: opacity .35s ease, filter .35s ease;
 }
-/* IN PROGRESS — a small spinner on the icon (this one is being built). */
+/* IN PROGRESS — do NOT grayscale the whole card: a filter on .activity-item would
+   also grey the coral spinner below (it is a descendant). Only mute the TEXT so it
+   still reads as not-yet-final, while the icon + spinner keep the brand colour to
+   mark "this one is being built now". A soft overall opacity keeps it gentle. */
+body.cg-generating #prvSections .cg-gen-active .activity-item {
+  opacity: .9;
+  transition: opacity .35s ease, filter .35s ease;
+}
+body.cg-generating #prvSections .cg-gen-active .activity-name-area,
+body.cg-generating #prvSections .cg-gen-active .cg-activity-desc-slot,
+body.cg-generating #prvSections .cg-gen-active .cg-activity-detail {
+  filter: grayscale(1);
+  opacity: .85;
+}
+/* IN PROGRESS — a small spinner on the icon in the brand coral, kept SOFT (light
+   coral ring + slightly dimmed by the card opacity) so it is present but not loud. */
 body.cg-generating #prvSections .cg-gen-active .activity-icon::after {
   content: '';
   position: absolute;
@@ -3592,7 +3605,7 @@ body.cg-generating #prvSections .cg-gen-active .activity-icon::after {
   height: 15px;
   border-radius: 50%;
   box-sizing: border-box;
-  border: 2px solid hsl(10 81% 42% / .25);
+  border: 2px solid hsl(10 81% 63% / .3);
   border-top-color: var(--primary);
   background: #fff;
   box-shadow: 0 0 0 2px #fff;
