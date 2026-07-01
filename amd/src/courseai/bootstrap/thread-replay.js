@@ -277,10 +277,25 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
                     return;
                 }
             }
-            // Adding an element: render NOTHING here — the added element's name
-            // lives in the NEXT ai_planned_structure, so the named turn is emitted
-            // there (see the AI_OUTPUT block, using payload.before_ids).
+            // Adding an element: render the user's REQUEST turn (matching what the live
+            // client logs when submitting the "+" inline add), so it survives reload.
+            // The "You added X" confirmation is emitted separately from the NEXT
+            // ai_planned_structure (using payload.before_ids), so both appear — like live.
             if (subtype === 'add_section' || subtype === 'add_activity') {
+                const instruction = String((payload && payload.instruction) || '').trim();
+                if (instruction) {
+                    let message;
+                    if (subtype === 'add_activity') {
+                        const sectionName = String((payload && payload.section_name) || '').trim();
+                        message = T('proposal_add_activity', 'Add an activity to {$a->section}: {$a->instruction}')
+                            .replace('{$a->section}', sectionName)
+                            .replace('{$a->instruction}', instruction);
+                    } else {
+                        message = T('proposal_add_section', 'Add a section: {$a->instruction}')
+                            .replace('{$a->instruction}', instruction);
+                    }
+                    emitLog({actor: 'user', kind: 'user', message});
+                }
                 return;
             }
             // Applying a picked proposal: render "You applied: <summary>" from the
