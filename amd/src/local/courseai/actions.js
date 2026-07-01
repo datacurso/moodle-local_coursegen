@@ -100,16 +100,23 @@ export const createCourseaiActions = (deps) => {
             const fallY = by + rand(70, 130);
             const drift = bx + rand(-14, 14);
             const spin = (i % 2 ? 1 : -1) * rand(240, 620);
+            const midX = bx + (drift - bx) * 0.5;
+            const midY = by + (fallY - by) * 0.5;
             const peak = 'translate(calc(-50% + ' + bx.toFixed(1) + 'px), calc(-50% + '
-                + by.toFixed(1) + 'px)) scale(1) rotate(' + (spin * 0.45).toFixed(0) + 'deg)';
+                + by.toFixed(1) + 'px)) scale(1) rotate(' + (spin * 0.35).toFixed(0) + 'deg)';
+            const mid = 'translate(calc(-50% + ' + midX.toFixed(1) + 'px), calc(-50% + '
+                + midY.toFixed(1) + 'px)) scale(1) rotate(' + (spin * 0.7).toFixed(0) + 'deg)';
             const end = 'translate(calc(-50% + ' + drift.toFixed(1) + 'px), calc(-50% + '
                 + fallY.toFixed(1) + 'px)) scale(.9) rotate(' + spin.toFixed(0) + 'deg)';
+            // Quick burst out (to ~0.28), then a SLOW gravity fall + late fade so the
+            // tail lingers — the last third of the (longer) duration is the settle.
             piece.animate([
                 {transform: 'translate(-50%,-50%) scale(.4) rotate(0deg)', opacity: 0, offset: 0},
-                {opacity: 1, offset: 0.12},
-                {transform: peak, opacity: 1, offset: 0.4},
+                {opacity: 1, offset: 0.1},
+                {transform: peak, opacity: 1, offset: 0.28},
+                {transform: mid, opacity: 1, offset: 0.68},
                 {transform: end, opacity: 0, offset: 1}
-            ], {duration: rand(900, 1500), easing: 'cubic-bezier(.18,.7,.35,1)', fill: 'forwards'});
+            ], {duration: rand(1700, 2700), easing: 'cubic-bezier(.1,.55,.25,1)', fill: 'forwards'});
         }
     };
 
