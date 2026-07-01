@@ -3496,17 +3496,26 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
 #prvSections .cg-item-actions {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  /* A touch more breathing room between the row controls (was cramped at 6px). */
+  gap: 9px;
 }
 #prvSections .cg-item-actions .dp-action-btn {
   opacity: 1;
-  transition: opacity var(--t-fast, .12s) var(--ease, ease);
+  transition: background-color var(--t-fast, .12s) var(--ease, ease),
+              color var(--t-fast, .12s) var(--ease, ease);
   /* Flat, like Moodle's row controls — the base drop shadow made them look like
      raised, shadowed chips, which read as noisy in the clean preview. */
   box-shadow: none;
 }
+/* Clear (but light) hover feedback so it is obvious which control is about to be
+   clicked: the chip fills a shade darker and its glyph deepens. No shadow. */
 #prvSections .cg-item-actions .dp-action-btn:hover {
   box-shadow: none;
+  background: hsl(215 26% 90%);
+  color: hsl(215 28% 28%);
+}
+#prvSections .cg-item-actions .dp-action-btn:hover .dp-action-icon {
+  opacity: .7;
 }
 /* The collapse chevron (collapsible-content indicator) sits LAST in the cluster
    (rightmost) in BOTH phases, so it is consistently flush-right — in generation
