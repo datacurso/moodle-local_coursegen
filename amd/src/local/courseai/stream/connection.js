@@ -129,12 +129,23 @@ export const openConnection = (streamUrl, retryAttempt, ctx, openSSEStream) => {
             detailedUi.enableAllActionControls();
         }
         // Stream completed normally — keep chat disabled during generating phase.
-        // setCompactChatState('enabled') already keeps the composer hidden while the
-        // decision card owns the bottom slot (it checks the overlay's visibility), so
-        // a 'done' that races a review_needed does not surface the composer.
         if (streamMode !== 'generating') {
             state.isStreaming = false;
-            setCompactChatState(deps, 'enabled');
+            // Defer the composer-enable behind the event queue. This 'done' listener
+            // runs SYNCHRONOUSLY, outside the async message queue, so it can fire
+            // BEFORE a just-arrived review_needed has been processed. At that instant
+            // the decision overlay is not visible yet, so setCompactChatState('enabled')
+            // would surface the composer for one frame until review_needed hides it —
+            // a 1-frame flash. Chaining onto eventQueue runs the enable AFTER
+            // review_needed settles, so we skip it entirely once a review has claimed
+            // the bottom slot (cg-plan-reviewed). The safety-net enable still fires when
+            // the stream ended WITHOUT a review (stale/dead stream), so the user is
+            // never left without a composer.
+            eventQueue = eventQueue.then(() => {
+                if (!document.body.classList.contains('cg-plan-reviewed')) {
+                    setCompactChatState(deps, 'enabled');
+                }
+            });
         }
     });
 

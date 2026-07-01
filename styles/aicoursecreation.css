@@ -3333,6 +3333,31 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
   opacity: 0.88;
 }
 
+/* ─── Working-status slot (bottom pinned) ──────────────────────────────────
+   During an action re-stream the composer is hidden; without a bottom element
+   the "assistant is working" feedback (a feed turn) would float above an empty
+   void down to the panel edge. This slot lives in the composer's bottom slot so
+   the feedback reads as an anchored status bar. Empty the rest of the time. */
+.cg-working-slot {
+  flex: 0 0 auto;
+  width: calc(100% - 4px);
+  margin-top: 8px;
+}
+.cg-working-slot:empty {
+  display: none;
+  margin-top: 0;
+}
+/* The thinking entry, when hosted here, becomes a slim card (not a flat feed
+   turn) so it visually anchors the bottom like the composer/accept bar do. */
+.cg-working-slot .cg-log-thinking {
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
 .courseai-workspace.is-planning .courseai-chat-scroll {
   flex: 1 1 auto;
   min-height: 0;

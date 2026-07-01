@@ -885,3 +885,13 @@ FromPlan pintaba el detalle completo y clampDetail lo recortaba un frame despué
   SÍNCRONO antes del await reconcilePlan (~1s), y se revirtió el debounce de 400ms del overlay (retrasaba
   el card 400ms y lo hacía aparecer de golpe). Verificado con trace: working→overlay directo, SIN fase
   de composer (antes 0.8s→0.3s→0s). Commit 89883bc.
+- [x] Working indicator anclado al fondo + fix del último frame (2026-06-30): tras ocultar el composer,
+  el indicador "The assistant is working…" (turno del feed) flotaba sobre un vacío hasta el borde del
+  panel ("se va muy abajo, se ve terrible"). Medido con puppeteer: 109px de vacío debajo. Fix: nuevo slot
+  inferior fijo `#cgWorkingSlot` (en el slot del composer, `:empty`→display:none); `showWorkingIndicator`
+  enruta el indicador AHÍ cuando el composer está oculto (re-stream de acción) — barra slim tipo card
+  anclada al fondo como el composer; en planificación inicial (composer visible) sigue inline en el feed.
+  Se reubica si la visibilidad del composer cambia entre updates. Y se re-aplicó el diferido del enable
+  del handler `done` detrás del eventQueue (gate `!cg-plan-reviewed`): el `done` corre síncrono fuera de
+  la cola y podía mostrar el composer 1 frame antes de que review_needed mostrara el overlay. Verificado:
+  0 frames de composer (W→O directo), indicador anclado abajo (835-885, fuera del scroll).

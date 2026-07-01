@@ -83,7 +83,18 @@ export const hideFeedbackThinking = () => {
  * @returns {void}
  */
 export const showWorkingIndicator = (texts, message) => {
-    const feed = document.getElementById('cgLogAfter') || document.getElementById('cgLog');
+    // Pick the host by the bottom slot's state. During an ACTION re-stream the
+    // composer is hidden, so a feed turn would float above an empty bottom void
+    // ("the message goes way down"). Pin it in the bottom working slot instead —
+    // where the composer/decision card normally sit — so it reads as an anchored
+    // status bar. During initial planning (composer VISIBLE, disabled) keep it
+    // inline in the feed, next to the composer, as before.
+    const composer = document.getElementById('compactChatCard');
+    const composerHidden = !composer || window.getComputedStyle(composer).display === 'none';
+    const slot = document.getElementById('cgWorkingSlot');
+    const feed = (composerHidden && slot)
+        ? slot
+        : (document.getElementById('cgLogAfter') || document.getElementById('cgLog'));
     if (!feed) {
         return;
     }
@@ -100,6 +111,11 @@ export const showWorkingIndicator = (texts, message) => {
 
     let entry = document.getElementById(ENTRY_ID);
     if (entry) {
+        // Relocate if the bottom-slot decision flipped since the entry was created
+        // (e.g. composer went from visible to hidden between two status updates).
+        if (entry.parentElement !== feed) {
+            feed.appendChild(entry);
+        }
         const msgEl = entry.querySelector('.cg-log-msg');
         if (msgEl) {
             msgEl.textContent = resolved;

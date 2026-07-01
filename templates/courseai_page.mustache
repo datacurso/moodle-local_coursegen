@@ -256,6 +256,13 @@
           <button class="cg-accept-bar-btn" id="cgAcceptInline" type="button">{{#str}}courseai_decision_accept, local_coursegen{{/str}}</button>
         </div>
 
+        <!-- Pinned working-status slot: during an ACTION re-stream (reorder, replan,
+             add, delete, adjust) the composer is hidden, so the "assistant is working"
+             feedback is shown HERE — in the bottom slot where the composer/decision
+             card sit — instead of as a chat turn floating over the empty composer void
+             ("the message goes way down"). Empty (display:none via :empty) otherwise. -->
+        <div class="cg-working-slot" id="cgWorkingSlot" aria-live="polite"></div>
+
         <!-- Compact chat for regeneration -->
         <div class="compact-chat-card" id="compactChatCard"{{^isresuming}} style="display:none"{{/isresuming}}>
           <textarea
