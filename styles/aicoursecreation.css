@@ -3823,6 +3823,15 @@ body.cg-generating #prvSections .cg-insert-zone {
   display: none !important;
 }
 
+/* Inline add-panel: opens right at the clicked "+" divider (between two rows),
+   where the user clicked — not in the section's bottom panel. */
+#prvSections .dp-inline-add {
+  margin: 10px 0;
+}
+#prvSections .dp-inline-add .dp-ai-inline {
+  margin: 0;
+}
+
 /* ── On-hover "add SECTION" divider between sections (Moodle's between-sections
    add affordance) ── Same "+" button, but it sits in the GAP above each section
    and inserts a new section at that slot. Only BETWEEN sections, so the divider

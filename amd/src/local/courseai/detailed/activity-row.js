@@ -103,7 +103,8 @@ export const createDetailedActivityRow = (ctx, {sectionId, activityId, activityT
         const list = wrap.parentElement;
         const rows = list ? Array.prototype.slice.call(list.querySelectorAll('.activity')) : [];
         const index = rows.indexOf(wrap);
-        meta.openAddActivityAt(index >= 0 ? index : null);
+        // Pass this activity as the anchor so the input opens INLINE right here.
+        meta.openAddActivityAt(index >= 0 ? index : null, wrap);
     });
     // A drag started on the zone must not drag the row.
     insertZone.addEventListener('dragstart', (event) => {

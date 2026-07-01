@@ -25,6 +25,7 @@
  */
 
 import {createAddTriggerBtn} from './icons';
+import {openInlineAddPanel} from 'local_coursegen/local/courseai/ui/panel';
 import {wireDragAndDrop, sendReorderActivities} from './dnd';
 import {buildSectionRowSkeleton, buildSectionActionControls} from './section-dom';
 import {removeTransientSectionPlaceholders} from './pending';
@@ -128,10 +129,30 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
         placeholder: texts.courseai_add_activity_placeholder || 'Describe the activity to add…',
     });
 
-    // Open the shared add-activity panel targeting a specific slot. Wired to the
-    // on-hover "+" dividers between activities (see activity-row.js). The panel is the
-    // section's single bottom panel; only the target slot differs.
-    const openAddActivityAt = (position) => {
+    // Open the add-activity input at a slot. With an anchor (the "+" divider between
+    // rows), the input appears INLINE right there — where the user clicked — instead of
+    // the section's bottom panel. Without an anchor (the bottom button) it uses the
+    // shared bottom panel and appends.
+    const openAddActivityAt = (position, anchorEl) => {
+        if (anchorEl) {
+            openInlineAddPanel({
+                anchor: anchorEl,
+                texts,
+                placeholder: texts.courseai_add_activity_placeholder || 'Describe the activity to add…',
+                onSubmit: async(value) => {
+                    try {
+                        const intent = {action: 'add_activity', parent_section_id: sectionId, instruction: value};
+                        if (typeof position === 'number' && position >= 0) {
+                            intent.position = position;
+                        }
+                        await runPlanAction(intent);
+                    } catch (e) {
+                        // Non-fatal: the next action re-streams and corrects state.
+                    }
+                },
+            });
+            return;
+        }
         pendingPosition = typeof position === 'number' ? position : null;
         addActivityPanelApi.open();
     };
@@ -196,7 +217,8 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
         // (computed at click time, so reorders never leave a stale slot).
         const secs = Array.prototype.slice.call(sectionList.querySelectorAll('.course-section'));
         const index = secs.indexOf(row);
-        state.openAddSectionAt(index >= 0 ? index : null);
+        // Pass this section row as the anchor so the input opens INLINE right here.
+        state.openAddSectionAt(index >= 0 ? index : null, row);
     });
     sectionInsertZone.addEventListener('dragstart', (event) => {
         event.preventDefault();
@@ -298,9 +320,29 @@ export const appendAddSectionControl = (ctx) => {
         placeholder: texts.courseai_add_section_placeholder || 'Describe the section to add…',
     });
 
-    // Open the shared add-section panel targeting a specific slot. Wired to the
-    // on-hover "+" dividers between sections (see createDetailedSectionRow).
-    state.openAddSectionAt = (position) => {
+    // Open the add-section input at a slot. With an anchor (the "+" divider between
+    // sections) the input opens INLINE right there — where the user clicked — instead
+    // of the bottom panel. Without an anchor (the bottom button) it appends.
+    state.openAddSectionAt = (position, anchorEl) => {
+        if (anchorEl) {
+            openInlineAddPanel({
+                anchor: anchorEl,
+                texts,
+                placeholder: texts.courseai_add_section_placeholder || 'Describe the section to add…',
+                onSubmit: async(value) => {
+                    try {
+                        const intent = {action: 'add_section', instruction: value};
+                        if (typeof position === 'number' && position >= 0) {
+                            intent.position = position;
+                        }
+                        await runPlanAction(intent);
+                    } catch (e) {
+                        // Non-fatal: the next action re-streams and corrects state.
+                    }
+                },
+            });
+            return;
+        }
         pendingSectionPosition = typeof position === 'number' ? position : null;
         addSectionPanelApi.open();
     };
