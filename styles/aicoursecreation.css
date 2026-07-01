@@ -3699,3 +3699,53 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
 #prvSections .course-content > .course-section:not(:first-child) {
   margin-top: 22px;
 }
+
+/* ── On-hover "add activity" divider button (Moodle edit-view affordance) ──
+   A "+" centered on the dashed line above each activity. Hovering the divider gap
+   reveals it; clicking inserts a new activity at THAT slot (position-aware), so the
+   user can add BETWEEN rows, not only at the end. Mirrors Boost's
+   `.divider .divider-content` + `.btn.add-content`, wired to our add-activity flow.
+   The zone is a child of the .activity wrap (rides along on reorder). */
+#prvSections .course-section .activity {
+  position: relative;
+}
+#prvSections .cg-insert-zone {
+  position: absolute;
+  top: -13px;
+  left: 0;
+  right: 0;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+}
+#prvSections .cg-insert-btn {
+  opacity: 0;
+  transition: opacity .12s ease, background-color .12s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 32px;
+  height: 26px;
+  padding: 0;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary);
+  color: var(--primary-fg);
+  cursor: pointer;
+  /* White halo so the dashed line never runs through the button — the same visual
+     trick Boost's .divider-content uses (a white band cutting the hr). */
+  box-shadow: 0 0 0 4px #fff;
+}
+#prvSections .cg-insert-zone:hover .cg-insert-btn,
+#prvSections .cg-insert-btn:focus-visible {
+  opacity: 1;
+}
+#prvSections .cg-insert-btn:hover {
+  filter: brightness(0.92);
+}
+/* The insert divider is a PLANNING-only edit affordance. Generation is read-only. */
+body.cg-generating #prvSections .cg-insert-zone {
+  display: none !important;
+}

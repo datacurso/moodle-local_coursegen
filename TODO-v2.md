@@ -367,7 +367,21 @@ v0.dev, Bolt, Cursor agent, Claude/ChatGPT), no como tres bloques etiquetados su
 - Persistencia: el histórico debe **sobrevivir al reload** (ya se reconstruye el log desde el
   snapshot; extenderlo para que el hilo completo —prompts + acciones IA por ronda— se rearme).
 
-### 7.2 "Add activity" como en Custom Sections (hover entre actividades, no botón al final)
+### 7.2 "Add activity" como en Custom Sections (hover entre actividades) — HECHO (2026-07-01)
+> [x] Réplica de la vista de EDICIÓN de Moodle (el wizard no tiene body.editing, así que Boost
+>   pintaba la vista de estudiante): (a) separadores DASHED entre actividades + bajo el header
+>   (`2px dashed #dee2e6` = $divider-width dashed $divider-color, valores reales de Boost) + mayor
+>   gap entre secciones (22px). Aplica a planificación Y generación. (b) Botón "+" de inserción
+>   on-hover sobre el divisor (mirror de `.divider .divider-content`/`.btn.add-content`): zona hija
+>   de cada `.activity` (viaja en reorder, no confunde al reconciliador ni al DnD), botón `+` que
+>   aparece en hover con halo blanco cortando la línea. Al click abre el panel de add-activity de la
+>   sección con `position` = índice DINÁMICO de esa actividad (insert BEFORE = ese slot). Oculto en
+>   generación (read-only). Verificado e2e con puppeteer: 4 zonas/botones, hover revela el +, click
+>   abre panel, y la nueva actividad aterriza en el índice correcto (insert antes de act2 → índice 1,
+>   entre las dos originales). El servicio ya honra `position`. Se mantiene el botón "Add activity"
+>   del final (append) como en Moodle (add buttons siempre visibles al cierre de sección).
+
+### 7.2-orig "Add activity" como en Custom Sections (hover entre actividades, no botón al final)
 **Pedido:** el botón "+ Add activity" con borde punteado al FINAL de cada sección **no debe salir así**.
 Debe comportarse como en la vista de curso real (Custom Sections): **al pasar el cursor sobre una
 actividad** aparece la opción de **añadir una DEBAJO** (y por tanto también ENTRE dos actividades

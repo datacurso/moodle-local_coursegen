@@ -72,6 +72,47 @@ export const createDetailedActivityRow = (ctx, {sectionId, activityId, activityT
     wrap.appendChild(item);
     wrap.appendChild(activityPanelApi.panel);
 
+    // On-hover insertion divider (Moodle edit-view affordance): a "+" button centered
+    // on the dashed line above this activity. Hovering the top strip reveals it; a click
+    // opens the section's add-activity panel targeting THIS row's slot, so the new
+    // activity lands BETWEEN rows (not only at the end). The button is a child of the
+    // .activity wrap, so it rides along on reorder and never confuses the reconciler
+    // (which reorders .activity nodes) or the DnD wirer (which keys on .activity).
+    const insertZone = document.createElement('div');
+    insertZone.className = 'cg-insert-zone';
+    insertZone.setAttribute('contenteditable', 'false');
+    insertZone.setAttribute('draggable', 'false');
+    const insertBtn = document.createElement('button');
+    insertBtn.type = 'button';
+    insertBtn.className = 'cg-insert-btn';
+    const insertLabel = (ctx.texts && ctx.texts.courseai_btn_add_activity) || 'Add activity';
+    insertBtn.setAttribute('aria-label', insertLabel);
+    insertBtn.setAttribute('title', insertLabel);
+    insertBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" '
+        + 'stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">'
+        + '<path d="M12 5v14M5 12h14"/></svg>';
+    insertBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const meta = state.detailedSectionMeta[sectionId];
+        if (!meta || typeof meta.openAddActivityAt !== 'function') {
+            return;
+        }
+        // Insert BEFORE this activity: its CURRENT index among the section's rows
+        // (computed at click time, so reorders never leave a stale slot).
+        const list = wrap.parentElement;
+        const rows = list ? Array.prototype.slice.call(list.querySelectorAll('.activity')) : [];
+        const index = rows.indexOf(wrap);
+        meta.openAddActivityAt(index >= 0 ? index : null);
+    });
+    // A drag started on the zone must not drag the row.
+    insertZone.addEventListener('dragstart', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+    });
+    insertZone.appendChild(insertBtn);
+    wrap.insertBefore(insertZone, wrap.firstChild);
+
     // A genuinely-new real-UUID row is being rendered: drop any transient apply
     // placeholder in this section so the shimmer is replaced, never duplicated.
     removeTransientActivityPlaceholders(bodyEl);

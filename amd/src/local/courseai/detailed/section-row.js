@@ -94,25 +94,47 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
         toggleSectionCollapse(bodyEl, chevronEl);
     });
 
+    // Insertion position for the NEXT add-activity submit. null = append at the end
+    // (the bottom "+ Add activity" button); a number = insert at that slot (set by an
+    // on-hover divider "+" between two activities, so the user can add BETWEEN rows,
+    // exactly like Moodle's edit view). Reset to null after every submit.
+    let pendingPosition = null;
+
     // "+ Add activity" control at the bottom of this section's content panel.
     const addActivityPanelApi = createTextPanel({
         texts,
         onSubmit: async(value) => {
             addActivityBtn.classList.add('dp-add-control--disabled');
+            const position = pendingPosition;
+            pendingPosition = null;
             // No turn here: the new activity has no name yet. handleReviewNeeded
             // emits "You added activity: <name>" once the model has generated it.
             try {
-                await runPlanAction({
+                const intent = {
                     action: 'add_activity',
                     parent_section_id: sectionId,
                     instruction: value,
-                });
+                };
+                // Only send an explicit slot when inserting between rows; omit it for
+                // the bottom button so the service appends (unchanged behaviour).
+                if (typeof position === 'number' && position >= 0) {
+                    intent.position = position;
+                }
+                await runPlanAction(intent);
             } catch (e) {
                 addActivityBtn.classList.remove('dp-add-control--disabled');
             }
         },
         placeholder: texts.courseai_add_activity_placeholder || 'Describe the activity to add…',
     });
+
+    // Open the shared add-activity panel targeting a specific slot. Wired to the
+    // on-hover "+" dividers between activities (see activity-row.js). The panel is the
+    // section's single bottom panel; only the target slot differs.
+    const openAddActivityAt = (position) => {
+        pendingPosition = typeof position === 'number' ? position : null;
+        addActivityPanelApi.open();
+    };
 
     const addActivityBtn = createAddTriggerBtn(texts.courseai_btn_add_activity || 'Add activity');
     addActivityBtn.addEventListener('click', (event) => {
@@ -186,6 +208,8 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
         row,
         addActivityBtn,
         activityDnd,
+        // Called by an on-hover "+" divider to open the add panel at a given slot.
+        openAddActivityAt,
     };
 
     return {bodyEl: cmlistEl, activityDnd};
