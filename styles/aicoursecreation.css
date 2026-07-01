@@ -1061,25 +1061,20 @@ svg { display: block; flex-shrink: 0; }
   gap: 10px;
 }
 
-/* Celebration badge: a soft coral disc holding the party-popper. On completion the
-   popper FIRES — colourful confetti bursts outward from the cone (the .pc-confetti
-   particles below) — while the disc/emoji just settle in gently. */
+/* Celebration badge: just the party-popper (no disc). On completion the popper
+   FIRES — colourful confetti bursts far outward from the cone (the .pc-confetti
+   particles below), while the cone itself settles in gently. */
 .pc-completion-icon {
   position: relative;
   overflow: visible;
-  width: 66px;
-  height: 66px;
-  border-radius: 50%;
-  background: hsl(10 85% 93%);
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 6px 16px -10px hsl(10 81% 42% / .45);
   animation: cg-completion-appear .35s ease-out both;
 }
 
 .pc-completion-emoji {
-  font-size: 30px;
+  font-size: 46px;
   line-height: 1;
   display: inline-block;
   position: relative;

@@ -81,7 +81,7 @@ export const createCourseaiActions = (deps) => {
         container.innerHTML = '';
         const colors = ['#ED6E54', '#F1AA1E', '#5B4590', '#3B9EE5', '#E5528A', '#3FBF6F'];
         const rand = (min, max) => min + Math.random() * (max - min);
-        const count = 28;
+        const count = 40;
         for (let i = 0; i < count; i++) {
             const piece = document.createElement('i');
             const circle = i % 3 === 0;
@@ -93,12 +93,13 @@ export const createCourseaiActions = (deps) => {
                 + 'border-radius:' + (circle ? '50%' : '1px') + ';will-change:transform,opacity;';
             container.appendChild(piece);
             // Burst mostly upward/outward (a popper fires up), then gravity pulls it down.
-            const angle = rand(-165, -15) * Math.PI / 180;
-            const dist = rand(46, 96);
+            // Long throws so the confetti reaches far across the view.
+            const angle = rand(-178, -2) * Math.PI / 180;
+            const dist = rand(150, 360);
             const bx = Math.cos(angle) * dist;
             const by = Math.sin(angle) * dist;
-            const fallY = by + rand(70, 130);
-            const drift = bx + rand(-14, 14);
+            const fallY = by + rand(230, 520);
+            const drift = bx + rand(-40, 40);
             const spin = (i % 2 ? 1 : -1) * rand(240, 620);
             const midX = bx + (drift - bx) * 0.5;
             const midY = by + (fallY - by) * 0.5;
