@@ -3724,7 +3724,7 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
 }
 /* Bigger gap between sections (edit view separates the section cards clearly). */
 #prvSections .course-content > .course-section:not(:first-child) {
-  margin-top: 22px;
+  margin-top: 30px;
 }
 
 /* ── On-hover "add activity" divider button (Moodle edit-view affordance) ──
@@ -3753,11 +3753,13 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  width: 32px;
-  height: 26px;
+  /* Flat (wider than tall), like Moodle's divider "+" — a square chip looked bulky
+     and, being taller than the gap, crowded the cards ("super pegado"). */
+  width: 30px;
+  height: 20px;
   padding: 0;
   border: none;
-  border-radius: 8px;
+  border-radius: 5px;
   background: var(--primary);
   color: var(--primary-fg);
   cursor: pointer;
@@ -3786,10 +3788,12 @@ body.cg-generating #prvSections .cg-insert-zone {
 }
 #prvSections .cg-insert-zone--section {
   position: absolute;
-  top: -17px;
+  /* Span the full 30px gap above the section so the line + button sit in the MIDDLE
+     of the gap, not crowded against either card. */
+  top: -30px;
   left: 0;
   right: 0;
-  height: 24px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
