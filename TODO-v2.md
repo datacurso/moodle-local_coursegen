@@ -870,7 +870,18 @@ FromPlan pintaba el detalle completo y clampDetail lo recortaba un frame despué
   card "Review your course plan" quedaba apilado con el composer. runPlanAction ahora oculta el decision
   overlay al iniciar la acción (como ya hacía feedback.js para adjust/accept); reaparece en el próximo
   review_needed. Verificado: overlay=none durante la acción, vuelve a review al terminar.
-- [x] Flash del decision card entre acciones: (1) debounce de 400ms en show() del decision-overlay,
-  cancelado por hide(), para que no parpadee entre acciones rápidas; (2) hide en dragstart (dnd) para
-  que el card NO se vea durante el gesto de arrastre; re-show en dragend si el drag fue cancelado/no-op.
-  Verificado: review=flex, dragstart→none, cancel→flex (debounced), reorder real→oculto durante y vuelve.
+- [x] Flash del decision card entre acciones: hide en dragstart (dnd) para que el card NO se vea durante
+  el gesto de arrastre; re-show en dragend si el drag fue cancelado/no-op.
+  Verificado: review=flex, dragstart→none, cancel→flex, reorder real→oculto durante y vuelve.
+- [x] Flash del COMPOSER durante re-streams de acción (ROOT CAUSE, 2026-06-30): al hacer una acción
+  (reorder/replan/add/delete) el composer parpadeaba ~200ms antes de que apareciera el decision card.
+  Investigación con trace instrumentado (setCompactChatState + handleReviewNeeded + done) probó que NO
+  era blanco/salto (altura constante 667) ni el handler `done` (nunca corría), sino que `openSSEStream`
+  (stream.js) llamaba `setCompactChatState('disabled')` = display:block al abrir el stream de la acción.
+  Fix definitivo: en re-streams keepPlan (acción sobre plan ya revisado) el composer se mantiene HIDDEN
+  (el decision card + working indicator ya ocupan el fondo); solo el stream de planificación inicial
+  muestra el composer disabled con Stop. Se setea state.isStreaming explícito (hidden no lo hace).
+  Además handleReviewNeeded muestra el decision card (overlay + showReviewActions + renderProposals)
+  SÍNCRONO antes del await reconcilePlan (~1s), y se revirtió el debounce de 400ms del overlay (retrasaba
+  el card 400ms y lo hacía aparecer de golpe). Verificado con trace: working→overlay directo, SIN fase
+  de composer (antes 0.8s→0.3s→0s). Commit 89883bc.
