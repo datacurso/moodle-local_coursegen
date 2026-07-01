@@ -28,7 +28,7 @@ import {createAddTriggerBtn} from './icons';
 import {openInlineAddPanel} from 'local_coursegen/local/courseai/ui/panel';
 import {wireDragAndDrop, sendReorderActivities} from './dnd';
 import {buildSectionRowSkeleton, buildSectionActionControls} from './section-dom';
-import {removeTransientSectionPlaceholders} from './pending';
+import {removeTransientSectionPlaceholders, markProposalTargetPending} from './pending';
 import {getSectionList} from './container';
 
 /**
@@ -56,7 +56,7 @@ const toggleSectionCollapse = (bodyEl, chevron) => {
  * @returns {{bodyEl: HTMLElement, activityDnd: Object}|null}
  */
 export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionName, totalActivities}) => {
-    const {state, texts, runPlanAction, createTextPanel} = ctx;
+    const {state, texts, runPlanAction, createTextPanel, log} = ctx;
     const sectionList = getSectionList(ctx);
 
     if (!sectionList) {
@@ -140,11 +140,23 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
                 texts,
                 placeholder: texts.courseai_add_activity_placeholder || 'Describe the activity to add…',
                 onSubmit: async(value) => {
+                    const intent = {action: 'add_activity', parent_section_id: sectionId, instruction: value};
+                    if (typeof position === 'number' && position >= 0) {
+                        intent.position = position;
+                    }
+                    // Log the user's request in the left thread (prefixed with the action)
+                    // so it reads like a chat turn: "Add an activity to <section>: <text>".
+                    if (typeof log === 'function') {
+                        const msg = ((texts && texts.proposal_add_activity)
+                            || 'Add an activity to {$a->section}: {$a->instruction}')
+                            .replace('{$a->section}', sectionName || '')
+                            .replace('{$a->instruction}', value);
+                        log({actor: 'user', kind: 'user', message: msg});
+                    }
+                    // Show a skeleton placeholder at the target slot so the CENTER shows
+                    // WHERE the new activity will land while it streams in.
+                    markProposalTargetPending(ctx, intent);
                     try {
-                        const intent = {action: 'add_activity', parent_section_id: sectionId, instruction: value};
-                        if (typeof position === 'number' && position >= 0) {
-                            intent.position = position;
-                        }
                         await runPlanAction(intent);
                     } catch (e) {
                         // Non-fatal: the next action re-streams and corrects state.
@@ -281,7 +293,7 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
  * @param {Object} ctx
  */
 export const appendAddSectionControl = (ctx) => {
-    const {state, texts, runPlanAction, createTextPanel} = ctx;
+    const {state, texts, runPlanAction, createTextPanel, log} = ctx;
     const sectionList = getSectionList(ctx);
 
     if (!sectionList) {
@@ -330,11 +342,21 @@ export const appendAddSectionControl = (ctx) => {
                 texts,
                 placeholder: texts.courseai_add_section_placeholder || 'Describe the section to add…',
                 onSubmit: async(value) => {
+                    const intent = {action: 'add_section', instruction: value};
+                    if (typeof position === 'number' && position >= 0) {
+                        intent.position = position;
+                    }
+                    // Log the user's request in the left thread (prefixed with the action).
+                    if (typeof log === 'function') {
+                        const msg = ((texts && texts.proposal_add_section)
+                            || 'Add a section: {$a->instruction}')
+                            .replace('{$a->instruction}', value);
+                        log({actor: 'user', kind: 'user', message: msg});
+                    }
+                    // Skeleton placeholder at the target slot: shows WHERE the new section
+                    // will land while it streams in.
+                    markProposalTargetPending(ctx, intent);
                     try {
-                        const intent = {action: 'add_section', instruction: value};
-                        if (typeof position === 'number' && position >= 0) {
-                            intent.position = position;
-                        }
                         await runPlanAction(intent);
                     } catch (e) {
                         // Non-fatal: the next action re-streams and corrects state.
