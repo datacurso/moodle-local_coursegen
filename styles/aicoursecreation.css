@@ -1061,9 +1061,12 @@ svg { display: block; flex-shrink: 0; }
   gap: 10px;
 }
 
-/* Celebration badge: a soft coral disc that POPS in when the course is ready, with
-   the party emoji bursting out — a small, tasteful moment on completion. */
+/* Celebration badge: a soft coral disc holding the party-popper. On completion the
+   popper FIRES — colourful confetti bursts outward from the cone (the .pc-confetti
+   particles below) — while the disc/emoji just settle in gently. */
 .pc-completion-icon {
+  position: relative;
+  overflow: visible;
   width: 66px;
   height: 66px;
   border-radius: 50%;
@@ -1072,31 +1075,54 @@ svg { display: block; flex-shrink: 0; }
   align-items: center;
   justify-content: center;
   box-shadow: 0 6px 16px -10px hsl(10 81% 42% / .45);
-  animation: cg-completion-pop .5s cubic-bezier(.2, .9, .3, 1.4) both;
+  animation: cg-completion-appear .35s ease-out both;
 }
 
 .pc-completion-emoji {
   font-size: 30px;
   line-height: 1;
   display: inline-block;
-  transform-origin: center;
-  animation: cg-completion-burst .6s .08s cubic-bezier(.2, .9, .3, 1.4) both;
+  position: relative;
+  z-index: 1;
 }
 
-@keyframes cg-completion-pop {
-  0%   { transform: scale(.4); opacity: 0; }
-  60%  { transform: scale(1.12); opacity: 1; }
+/* Confetti pieces shot out of the cone. Each <i> carries its own direction (--dx,
+   --dy), spin (--r) and colour (--c) inline; they fly outward and fade on show. */
+.pc-confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+.pc-confetti i {
+  position: absolute;
+  top: 44%;
+  left: 50%;
+  width: 7px;
+  height: 7px;
+  border-radius: 2px;
+  background: var(--c);
+  opacity: 0;
+  animation: cg-confetti .8s cubic-bezier(.15, .7, .35, 1) .1s both;
+}
+.pc-confetti i:nth-child(even) {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+}
+@keyframes cg-completion-appear {
+  0%   { transform: scale(.6); opacity: 0; }
   100% { transform: scale(1); opacity: 1; }
 }
-@keyframes cg-completion-burst {
-  0%   { transform: scale(.3) rotate(-18deg); }
-  55%  { transform: scale(1.3) rotate(10deg); }
-  80%  { transform: scale(.95) rotate(-3deg); }
-  100% { transform: scale(1) rotate(0); }
+@keyframes cg-confetti {
+  0%   { transform: translate(-50%, -50%) scale(.2) rotate(0); opacity: 0; }
+  12%  { opacity: 1; }
+  100% { transform: translate(calc(-50% + var(--dx)), calc(-50% + var(--dy))) scale(1) rotate(var(--r)); opacity: 0; }
 }
 @media (prefers-reduced-motion: reduce) {
   .pc-completion-icon,
-  .pc-completion-emoji { animation: none; }
+  .pc-confetti i { animation: none; }
+  .pc-confetti { display: none; }
 }
 
 .pc-completion-title {
