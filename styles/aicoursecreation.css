@@ -3675,3 +3675,27 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
 #prvSections ul.section .dp-add-activity-wrap {
   margin-top: 8px;
 }
+
+/* ── Replicate Moodle's course EDIT view: DASHED separators + roomier spacing ──
+   The wizard page has no `body.editing`, so Boost paints the plain STUDENT view:
+   a 1px SOLID separator between activities and tight section spacing. The user
+   wants the EDIT view instead — where activities are split by a DASHED divider
+   (Boost `.divider hr` = `$divider-width dashed $divider-color` = 2px dashed
+   gray-300 #dee2e6) and sections sit further apart. Match those exact values.
+   Applies to BOTH planning and generation (same #prvSections cards). */
+#prvSections .course-section .activity {
+  border-top: 2px dashed #dee2e6;
+  margin-top: 10px;
+  padding-top: 10px;
+}
+/* Dashed line ALSO above the first activity (between the section header and the
+   first row), exactly like the edit view — Boost drops the first row's border. */
+#prvSections .course-section .section .activity:first-child {
+  border-top: 2px dashed #dee2e6;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+/* Bigger gap between sections (edit view separates the section cards clearly). */
+#prvSections .course-content > .course-section:not(:first-child) {
+  margin-top: 22px;
+}
