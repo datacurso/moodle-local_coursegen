@@ -165,11 +165,13 @@ export const createCourseaiActions = (deps) => {
                 chatScroll.scrollTop = chatScroll.scrollHeight;
             });
         }
-        // Celebratory confetti — a DOUBLE pop. The second burst fires ~1.2s later so it
-        // reads as a distinct second pop, not almost together with the first.
+        // Celebratory confetti — a DOUBLE pop. Both bursts run the SAME animation; the
+        // second fires ~2s later, once the first has largely cleared, so it plays on a
+        // clean stage and its slow fall is fully visible (not lost among the first's
+        // pieces, which made it read as a quick flash).
         const confettiLayer = document.getElementById('pcConfetti');
         fireConfetti(confettiLayer);
-        window.setTimeout(() => fireConfetti(confettiLayer), 1200);
+        window.setTimeout(() => fireConfetti(confettiLayer), 2000);
     };
 
     const resetForAnotherCourse = () => {
