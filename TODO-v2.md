@@ -838,3 +838,6 @@ sessions remain, then remove it.
   (in_progress) + check en el icono (done), con gris→color. Y BUG arreglado: el cursor move (drag) de
   planificación se había roto al cambiarlo a pointer; restaurado move en planificación (generación
   mantiene default/pointer read-only vía body.cg-generating).
+- [x] Checks de generación: verde → color sobrio del check de sección (var(--muted-fg), círculo gris
+  outline). Aplica al check de actividad (icono) Y al circulito de la cabecera (.prv-header--done
+  .prv-icon-wrap, antes var(--success) verde). El verde "rompía la estética / payaso".

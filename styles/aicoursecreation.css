@@ -1638,8 +1638,10 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .prv-header--done .prv-icon-wrap {
-  background: var(--success, #16a34a);
-  color: #fff;
+  box-sizing: border-box;
+  background: transparent;
+  border: 1.5px solid var(--muted-fg);
+  color: var(--muted-fg);
 }
 
 @keyframes prv-spin {
@@ -3518,7 +3520,8 @@ body.cg-generating #prvSections .cg-gen-active .activity-icon::after {
   box-shadow: 0 0 0 2px #fff;
   animation: spin .8s linear infinite;
 }
-/* DONE — the card "turns on" (full colour) + a check badge on the icon. */
+/* DONE — the card "turns on" (full colour) + a sober check badge on the icon
+   (same muted tone as the section checklist check, NOT a loud green). */
 body.cg-generating #prvSections .cg-gen-done .activity-item {
   opacity: 1;
   filter: none;
@@ -3530,12 +3533,14 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
   bottom: -6px;
   width: 17px;
   height: 17px;
+  box-sizing: border-box;
   border-radius: 50%;
-  background: hsl(142 64% 38%);
-  color: #fff;
-  font-size: 10px;
+  background: #fff;
+  border: 1.5px solid var(--muted-fg);
+  color: var(--muted-fg);
+  font-size: 9px;
   font-weight: 700;
-  line-height: 17px;
+  line-height: 14px;
   text-align: center;
   box-shadow: 0 0 0 2px #fff;
 }
