@@ -3793,6 +3793,31 @@ body.cg-generating #prvSections .cg-insert-zone {
   justify-content: center;
   z-index: 4;
 }
+/* On hover the whole divider appears: a dashed line spanning the gap WITH the "+"
+   centered on it (exactly like Moodle's between-sections divider). Between section
+   cards there is no static line, so it is drawn here and revealed on hover. The line
+   and the button share the accent colour, so the button merges seamlessly into the
+   line (Moodle's blue line → blue button), no white halo needed. */
+#prvSections .cg-insert-zone--section::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 50%;
+  border-top: 2px dashed var(--primary);
+  opacity: 0;
+  transition: opacity .12s ease;
+  z-index: 0;
+}
+#prvSections .cg-insert-zone--section:hover::before,
+#prvSections .cg-insert-zone--section:focus-within::before {
+  opacity: 1;
+}
+/* The "+" sits ON the line (above the dashed rule). */
+#prvSections .cg-insert-zone--section .cg-insert-btn {
+  position: relative;
+  z-index: 1;
+}
 /* Moodle shows dividers only BETWEEN sections — no "insert above the very top". */
 #prvSections .course-content > .course-section:first-child .cg-insert-zone--section {
   display: none;
