@@ -22,6 +22,7 @@
  */
 
 import {showWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
+import {getDecisionOverlay} from 'local_coursegen/local/courseai/ui/decision-overlay';
 
 /**
  * Create a runPlanAction function that sends one ActionIntent as pending_action
@@ -47,6 +48,12 @@ export const createRunPlanAction = ({state, texts, sendPlanningFeedback, openSSE
         if (!sendPlanningFeedback || !state.sessionid) {
             return;
         }
+        // Hide the review decision card (Accept/Adjust) the instant an action starts:
+        // a stream is now in flight and the composer takes the bottom slot (with Stop),
+        // so the decision card must NOT remain stacked below it. It reappears at the
+        // next review_needed. (feedback.js already does this for adjust/accept; do it
+        // here so drag-reorder / inline replan / delete behave the same.)
+        getDecisionOverlay().hide();
         // Show the "working" indicator (spinner + message) IMMEDIATELY — before the
         // sendPlanningFeedback round-trip — so the left panel never goes blank while
         // an action (reorder, replan, add, apply proposal…) is being dispatched, and

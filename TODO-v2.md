@@ -866,3 +866,7 @@ sessions remain, then remove it.
   inmediato, sin blanco). (2) El salto brusco al aparecer "I applied your changes": rebuildTranscript
 FromPlan pintaba el detalle completo y clampDetail lo recortaba un frame después (flash de altura).
   Ahora se pre-recorta (cg-detail-clamped) antes de pintar y clampDetail lo des-recorta si es corto.
+- [x] Superposición fea: al hacer una acción por drag/inline (reorder/replan/add/delete) el decision
+  card "Review your course plan" quedaba apilado con el composer. runPlanAction ahora oculta el decision
+  overlay al iniciar la acción (como ya hacía feedback.js para adjust/accept); reaparece en el próximo
+  review_needed. Verificado: overlay=none durante la acción, vuelve a review al terminar.
