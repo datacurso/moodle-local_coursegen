@@ -332,6 +332,21 @@ body.cg-plan-reviewed .courseai-checklist-check svg.check-icon {
   display: block;
 }
 
+/* EXCEPTION — a LIVE regen row. After the plan is reviewed the user can still
+   regenerate/add a section: that streams a fresh row that is `is-loading` while
+   body.cg-plan-reviewed is set. The reviewed rules above force the CHECK visible
+   and the loading rule (.is-loading … .spinner-icon) forces the SPINNER visible,
+   so BOTH render, overlapping into a broken glyph (a checkmark tangled with a
+   spinning arc). While a row is still loading it must read as a clean spinner:
+   hide the check and keep the light ring, exactly like the initial-planning
+   spinner. Once it flips to is-done the reviewed/done rules show the check. */
+body.cg-plan-reviewed .courseai-checklist-item.is-loading .courseai-checklist-check svg.check-icon {
+  display: none;
+}
+body.cg-plan-reviewed .courseai-checklist-item.is-loading .courseai-checklist-check {
+  border-color: var(--border);
+}
+
 .courseai-checklist-name {
   flex: 1;
   min-width: 0;

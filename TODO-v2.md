@@ -895,3 +895,12 @@ FromPlan pintaba el detalle completo y clampDetail lo recortaba un frame despué
   del handler `done` detrás del eventQueue (gate `!cg-plan-reviewed`): el `done` corre síncrono fuera de
   la cola y podía mostrar el composer 1 frame antes de que review_needed mostrara el overlay. Verificado:
   0 frames de composer (W→O directo), indicador anclado abajo (835-885, fuera del scroll).
+- [x] Spinner roto en regen/add de seccion en vivo (2026-06-30): al regenerar/anadir una seccion DESPUES
+  de revisar el plan, el header de la seccion mostraba un icono confuso ("que carajos es eso"). Causa
+  (reproducido con puppeteer): el item de regen es `is-loading` mientras `body.cg-plan-reviewed` esta
+  activo; conflicto de especificidad CSS -> `.is-loading ... .spinner-icon{display:block}` mostraba el
+  SPINNER y `body.cg-plan-reviewed ... .check-icon{display:block}` mostraba el CHECK a la vez -> ambos
+  SVGs superpuestos en el circulo de 18px (arco girando + checkmark enredados). Ademas el anillo salia
+  en --muted-fg (oscuro pesado). Fix (chatui.css, CSS puro): reglas de mayor especificidad para el item
+  is-loading bajo cg-plan-reviewed -> ocultan el check-icon y dejan el anillo en --border (claro), igual
+  que el spinner de planificacion inicial. Verificado: checkDisplay=none, border light, spinner limpio.
