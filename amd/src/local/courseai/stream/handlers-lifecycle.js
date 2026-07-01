@@ -35,6 +35,7 @@ import {
 } from 'local_coursegen/local/courseai/ui/plan-transcript';
 import {finalizeRegen, rebuildRegenFromPlan} from 'local_coursegen/local/courseai/ui/regen-block';
 import {addedActivityTurn} from 'local_coursegen/local/courseai/ui/added-turn';
+import {getDecisionOverlay} from 'local_coursegen/local/courseai/ui/decision-overlay';
 
 /**
  * Handle 'status' event: localize message, update UI text, advance heuristic progress.
@@ -274,6 +275,23 @@ export const handleReviewNeeded = async(data, ctx) => {
     state.currentStage = 'planning';
     stepsUi.updateFlowNav();
 
+    // Show the bottom review UI (decision card) FIRST — BEFORE the async center
+    // reconcile below. reconcilePlan awaits ~1s, and during that gap the composer
+    // (Stop/input) was left visible and flashed for a beat before the decision card
+    // finally replaced it. Rendering the decision card now claims the bottom slot
+    // immediately (it hides the composer), so nothing flashes while the center
+    // reconciles in the background.
+    document.body.classList.add('cg-plan-reviewed');
+    // Claim the bottom slot for the decision card SYNCHRONOUSLY first: this hides the
+    // composer immediately. Otherwise showReviewActions → setCompactChatState('enabled')
+    // shows the composer (the overlay isn't visible yet) and renderProposals (async,
+    // localizes) only hides it a beat later → the composer flashes for ~0.3s.
+    getDecisionOverlay().show();
+    planningUi.showReviewActions(state.planningMode === 'detailed' ? 'detailed' : 'markdown');
+    if (proposalsUi && typeof proposalsUi.renderProposals === 'function') {
+        proposalsUi.renderProposals(data);
+    }
+
     if (Array.isArray(data.current_plan) && data.current_plan.length > 0) {
         await detailedUi.reconcilePlan(data.current_plan);
     }
@@ -281,22 +299,11 @@ export const handleReviewNeeded = async(data, ctx) => {
     if (typeof detailedUi.finalizePlanView === 'function') {
         detailedUi.finalizePlanView();
     }
-
-    // The plan has settled: mark the whole UI as reviewed so every checklist row reads
-    // as done via CSS (see body.cg-plan-reviewed). This is declarative and timing-proof,
-    // so a late buffered section/activity event cannot leave a lingering spinner.
-    document.body.classList.add('cg-plan-reviewed');
     if (typeof detailedUi.enableAllActionControls === 'function') {
         detailedUi.enableAllActionControls();
     }
-    planningUi.showReviewActions(state.planningMode === 'detailed' ? 'detailed' : 'markdown');
-    if (proposalsUi && typeof proposalsUi.renderProposals === 'function') {
-        proposalsUi.renderProposals(data);
-    }
     // Do NOT enable/show the composer here: at review the decision card owns the
-    // bottom slot, and showReviewActions hides the composer. Showing it again would
-    // stack two input boxes. The composer reappears only when the user clicks
-    // "Adjust" (the adjust handler calls setCompactChatState 'enabled').
+    // bottom slot. The composer reappears only when the user clicks "Adjust".
     // review_needed is a terminal pause — close so EventSource does NOT auto-reconnect.
     closeStream();
 };

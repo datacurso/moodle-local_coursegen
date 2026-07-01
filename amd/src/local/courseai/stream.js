@@ -102,8 +102,18 @@ export const createStreamManager = (deps) => {
         }
         closeStream();
 
-        // Keep compact chat disabled for the whole active stream lifecycle.
-        setCompactChatState(deps, 'disabled');
+        // Keep compact chat disabled for the whole active stream lifecycle. EXCEPTION:
+        // a keepPlan re-stream is an ACTION on an already-reviewed plan (reorder, replan,
+        // add, delete). There the decision card owns the bottom slot and a working
+        // indicator already gives feedback — showing the composer here (even disabled,
+        // display:block) flashes it into view for the ~200ms until review_needed re-shows
+        // the decision card. So keep it HIDDEN for keepPlan re-streams; only the initial
+        // planning stream shows the disabled composer (with Stop). 'hidden' does not set
+        // isStreaming, so set it explicitly to keep drag/actions blocked during the run.
+        setCompactChatState(deps, keepPlan ? 'hidden' : 'disabled');
+        if (keepPlan && state) {
+            state.isStreaming = true;
+        }
 
         if (typeof deps.onStreamStart === 'function') {
             deps.onStreamStart();

@@ -129,6 +129,9 @@ export const openConnection = (streamUrl, retryAttempt, ctx, openSSEStream) => {
             detailedUi.enableAllActionControls();
         }
         // Stream completed normally — keep chat disabled during generating phase.
+        // setCompactChatState('enabled') already keeps the composer hidden while the
+        // decision card owns the bottom slot (it checks the overlay's visibility), so
+        // a 'done' that races a review_needed does not surface the composer.
         if (streamMode !== 'generating') {
             state.isStreaming = false;
             setCompactChatState(deps, 'enabled');
