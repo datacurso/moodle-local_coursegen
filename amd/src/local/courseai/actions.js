@@ -91,6 +91,21 @@ export const createCourseaiActions = (deps) => {
         stepsUi.setStepState('planning', 'done');
         stepsUi.setStepState('generating', 'done');
         stepsUi.updateFlowNav();
+        // Drop any lingering "working" indicator (e.g. the one shown when the user hit
+        // Accept). Generation is over, so it must not sit in the bottom slot beside the
+        // success view.
+        const workingEntry = document.getElementById('cgFeedbackThinking');
+        if (workingEntry) { workingEntry.remove(); }
+        // Pin the left thread to the bottom so the final "Your course is ready" turn is
+        // comfortably visible. Without this the newest turns sit below the fold and the
+        // user has to scroll down to see the completion message. Deferred to the next
+        // frame so it runs after this view's layout changes settle.
+        const chatScroll = document.getElementById('courseaiChatScroll');
+        if (chatScroll) {
+            window.requestAnimationFrame(() => {
+                chatScroll.scrollTop = chatScroll.scrollHeight;
+            });
+        }
     };
 
     const resetForAnotherCourse = () => {
