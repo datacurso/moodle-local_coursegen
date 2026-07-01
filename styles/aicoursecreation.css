@@ -3502,43 +3502,53 @@ body.cg-generating #prvSections .cg-gen-active .activity-item {
   filter: grayscale(1);
   transition: opacity .35s ease, filter .35s ease;
 }
-/* IN PROGRESS — a slow, soft "skeleton" shimmer sweeps left→right across the
-   (desaturated) card, so it reads as actively-being-built. Gentle white highlight
-   and a slow cycle so it feels calm and never clashes with the UI palette — no
-   loud badge or colour block. */
-@keyframes cg-gen-shimmer {
-  from { background-position: 165% 0; }
-  to { background-position: -65% 0; }
-}
-body.cg-generating #prvSections .cg-gen-active .activity-grid { position: relative; }
-body.cg-generating #prvSections .cg-gen-active .activity-grid::after {
+/* IN PROGRESS — a small spinner on the icon (this one is being built). */
+body.cg-generating #prvSections .cg-gen-active .activity-icon::after {
   content: '';
   position: absolute;
-  inset: 0;
-  pointer-events: none;
-  border-radius: 6px;
-  background: linear-gradient(100deg,
-    transparent 43%,
-    rgba(255, 255, 255, .6) 50%,
-    transparent 57%);
-  background-size: 230% 100%;
-  animation: cg-gen-shimmer 2.4s linear infinite;
+  right: -5px;
+  bottom: -5px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  box-sizing: border-box;
+  border: 2px solid hsl(8 72% 42% / .25);
+  border-top-color: var(--primary);
+  background: #fff;
+  box-shadow: 0 0 0 2px #fff;
+  animation: spin .8s linear infinite;
 }
-/* DONE — the card simply "turns on" (full colour). The colour return IS the
-   success signal, so nothing clashes with the icon palette: no badge. */
+/* DONE — the card "turns on" (full colour) + a check badge on the icon. */
 body.cg-generating #prvSections .cg-gen-done .activity-item {
   opacity: 1;
   filter: none;
+}
+body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
+  content: '\2713';
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 17px;
+  height: 17px;
+  border-radius: 50%;
+  background: hsl(142 64% 38%);
+  color: #fff;
+  font-size: 10px;
+  font-weight: 700;
+  line-height: 17px;
+  text-align: center;
+  box-shadow: 0 0 0 2px #fff;
 }
 /* Activities with detail are clickable to expand, but the whole row is also
    draggable (the preview is always editable). Keep the drag (move) cursor for
    consistency across ALL activities — Boost gives the first one `move`, and this
    used to override the rest to `pointer`, so only the first showed the drag
    affordance. The chevron/controls keep their own pointer cursor. */
-/* A card shows the click (pointer) cursor ONLY when it has collapsible content
-   (it can be expanded); plain activities keep the default cursor. */
+/* During PLANNING the cards are draggable → keep the move (drag) cursor. The
+   generation phase overrides this to default/pointer (read-only), see the
+   body.cg-generating rules above. */
 #prvSections .activity-item.cg-activity--has-detail {
-  cursor: pointer;
+  cursor: move;
 }
 
 /* ── Section drag affordance (mirror of Boost's editable .activity-item) ──
@@ -3562,10 +3572,11 @@ body.cg-generating #prvSections .cg-gen-done .activity-item {
 #prvSections .course-section .section-item .dp-add-section-wrap {
   cursor: default;
 }
-/* Inner activities: only collapsible ones show the click (pointer) cursor; the
-   rest keep the default cursor (no drag affordance on the cursor). */
-#prvSections .course-section .section-item .activity-item.cg-activity--has-detail {
-  cursor: pointer;
+/* Inner activities keep their move (drag) cursor during planning (Boost .editing
+   affordance). Generation overrides to default/pointer via body.cg-generating. */
+#prvSections .course-section .section-item .activity-item.cg-activity--has-detail,
+#prvSections .course-section .section-item .activity-item:hover {
+  cursor: move;
 }
 /* Hover outline on the section card — suppressed while hovering an inner activity
    so only ONE element (the activity, not the whole section) highlights at a time. */

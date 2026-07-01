@@ -834,3 +834,7 @@ sessions remain, then remove it.
   card desaturada (grayscale) + SHIMMER skeleton suave (barrido blanco izq→der, 2.4s linear, blanco
   .6, sin color fuerte) — agradable y acorde a la UI. DONE = la card vuelve a color pleno (el color es
   el éxito), SIN insignia/badge. Se quitaron el spinner y el check verde del icono.
+- [x] Revertido el shimmer (no gustó) → restaurado el indicador de circulito: spinner en el icono
+  (in_progress) + check en el icono (done), con gris→color. Y BUG arreglado: el cursor move (drag) de
+  planificación se había roto al cambiarlo a pointer; restaurado move en planificación (generación
+  mantiene default/pointer read-only vía body.cg-generating).
