@@ -904,3 +904,15 @@ FromPlan pintaba el detalle completo y clampDetail lo recortaba un frame despué
   en --muted-fg (oscuro pesado). Fix (chatui.css, CSS puro): reglas de mayor especificidad para el item
   is-loading bajo cg-plan-reviewed -> ocultan el check-icon y dejan el anillo en --border (claro), igual
   que el spinner de planificacion inicial. Verificado: checkDisplay=none, border light, spinner limpio.
+- [x] Sync centro<->izquierda + scroll en completion + alineacion del spinner (2026-06-30, 3 fixes):
+  (a) DESYNC en generacion: el accept dejaba el indicador izquierdo en "Analyzing your request..." pero
+  el header central mostraba "Generating course content..."; suppressRaw evita que la narracion por
+  actividad actualice el izquierdo, dejandolo congelado y contradiciendo al centro. Fix: el bloque
+  generating de stream.js setea el indicador izquierdo al MISMO mensaje del subtitulo central
+  (course_creating_subtitle). Verificado con puppeteer: left==centerSub en toda la generacion.
+  (b) COMPLETION: el thread quedaba scrolleado arriba (el turno final "Your course is ready" bajo el
+  fold) y el indicador de trabajo quedaba pegado en el slot inferior junto al success view.
+  showCompletionView ahora remueve el indicador y ancla el scroll al fondo (rAF). Verificado: atBottom.
+  (c) SPINNER descuadrado: el indicador heredaba el align-items:flex-start del feed (+2px), dejando el
+  spinner arriba del texto. Fix (css): .cg-log-thinking .cg-log-body align-items:center + margin-top 0.
+  Verificado: midpoints spinner/texto identicos (delta 0).
