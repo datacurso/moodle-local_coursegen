@@ -2196,7 +2196,7 @@ svg { display: block; flex-shrink: 0; }
 .dp-add-control__icon {
   font-size: 16px;
   line-height: 1;
-  color: var(--brand, hsl(260 37% 42%));
+  color: var(--primary);
   flex-shrink: 0;
 }
 
@@ -2205,23 +2205,25 @@ svg { display: block; flex-shrink: 0; }
   margin-top: 14px;
 }
 
-/* "Add section" reads like Moodle's: wide, centered, 2px dashed, rounded, brand. */
+/* "Add section" reads like Moodle's: wide, centered, 2px dashed, rounded. At REST it
+   is a subtle dashed outline with accent text (no fill); it uses the SAME accent as
+   the other add buttons for a single, cohesive palette (Moodle uses one accent too). */
 .dp-add-section-wrap .dp-add-control {
   justify-content: center;
   padding: 14px;
   border-width: 2px;
   border-radius: 12px;
   font-size: 13px;
-  color: var(--brand, hsl(260 37% 42%));
+  color: var(--primary);
   transition: background-color .15s, border-color .15s, color .15s;
 }
-/* On hover it FILLS with a soft brand tint and a solid brand border — exactly like
-   Moodle's "Add section" button turning filled on hover (dashed → solid + light bg). */
+/* On hover it FILLS with a light accent tint and a SOLID accent border — exactly like
+   Moodle's "Add section" turning filled on hover (dashed → solid + light background). */
 .dp-add-section-wrap .dp-add-control:hover {
-  background: hsl(260 37% 42% / .10);
+  background: hsl(10 85% 94%);
   border-style: solid;
-  border-color: var(--brand, hsl(260 37% 42%));
-  color: var(--brand, hsl(260 37% 42%));
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 /* Inline panel override for add controls (no section indentation needed) */
