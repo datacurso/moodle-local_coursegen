@@ -841,3 +841,7 @@ sessions remain, then remove it.
 - [x] Checks de generación: verde → color sobrio del check de sección (var(--muted-fg), círculo gris
   outline). Aplica al check de actividad (icono) Y al circulito de la cabecera (.prv-header--done
   .prv-icon-wrap, antes var(--success) verde). El verde "rompía la estética / payaso".
+- [x] Cabecera de generación: mostraba el check "done" heredado del review mientras aún generaba;
+  en el bloque generating de stream.js se resetea a SPINNER (remove prv-header--done, show spinner,
+  hide check) hasta completar. Y el check de actividad ahora usa el SVG polyline del check de sección
+  (crisp, en círculo gris) en vez de un glifo ✓ de texto (se veía feo).

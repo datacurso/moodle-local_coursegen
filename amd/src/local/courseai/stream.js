@@ -153,6 +153,20 @@ export const createStreamManager = (deps) => {
                 // but the composer-hidden gate skips the 'disabled' branch that normally
                 // sets it — so set it explicitly here.
                 state.isStreaming = true;
+                // The header carried the planning-review DONE check; generation is still
+                // in progress, so put the header back to its spinner until it completes.
+                const prvHeaderEl = document.getElementById('prvHeader');
+                const prvSpinEl = document.getElementById('prvSpinnerIcon');
+                const prvCheckEl = document.getElementById('prvCheckIcon');
+                if (prvHeaderEl) {
+                    prvHeaderEl.classList.remove('prv-header--done');
+                }
+                if (prvSpinEl) {
+                    prvSpinEl.style.display = '';
+                }
+                if (prvCheckEl) {
+                    prvCheckEl.style.display = 'none';
+                }
                 // The plan preview cards live inside #planReviewCard (hidden once a stream
                 // starts); show it as the live progress view and keep the old progress
                 // card hidden. switchPlanMode keeps the detailed sub-view active.
