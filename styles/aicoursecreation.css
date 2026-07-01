@@ -2211,6 +2211,15 @@ svg { display: block; flex-shrink: 0; }
   border-radius: 12px;
   font-size: 13px;
   color: var(--brand, hsl(252 55% 42%));
+  transition: background-color .15s, border-color .15s, color .15s;
+}
+/* On hover it FILLS with a soft brand tint and a solid brand border — exactly like
+   Moodle's "Add section" button turning filled on hover (dashed → solid + light bg). */
+.dp-add-section-wrap .dp-add-control:hover {
+  background: hsl(252 55% 42% / .10);
+  border-style: solid;
+  border-color: var(--brand, hsl(252 55% 42%));
+  color: var(--brand, hsl(252 55% 42%));
 }
 
 /* Inline panel override for add controls (no section indentation needed) */
@@ -3488,6 +3497,12 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
 #prvSections .cg-item-actions .dp-action-btn {
   opacity: 1;
   transition: opacity var(--t-fast, .12s) var(--ease, ease);
+  /* Flat, like Moodle's row controls — the base drop shadow made them look like
+     raised, shadowed chips, which read as noisy in the clean preview. */
+  box-shadow: none;
+}
+#prvSections .cg-item-actions .dp-action-btn:hover {
+  box-shadow: none;
 }
 /* The collapse chevron (collapsible-content indicator) sits LAST in the cluster
    (rightmost) in BOTH phases, so it is consistently flush-right — in generation
@@ -3744,9 +3759,9 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
   background: var(--primary);
   color: var(--primary-fg);
   cursor: pointer;
-  /* White halo so the dashed line never runs through the button — the same visual
-     trick Boost's .divider-content uses (a white band cutting the hr). */
-  box-shadow: 0 0 0 4px #fff;
+  /* No halo — the opaque button covers the dashed line where it sits; a white
+     box-shadow halo read as an ugly shadow around the button. */
+  box-shadow: none;
 }
 #prvSections .cg-insert-zone:hover .cg-insert-btn,
 #prvSections .cg-insert-btn:focus-visible {
@@ -3758,6 +3773,29 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
 /* The insert divider is a PLANNING-only edit affordance. Generation is read-only. */
 body.cg-generating #prvSections .cg-insert-zone {
   display: none !important;
+}
+
+/* ── On-hover "add SECTION" divider between sections (Moodle's between-sections
+   add affordance) ── Same "+" button, but it sits in the GAP above each section
+   and inserts a new section at that slot. Only BETWEEN sections, so the divider
+   above the very first section is hidden. */
+#prvSections .course-section {
+  position: relative;
+}
+#prvSections .cg-insert-zone--section {
+  position: absolute;
+  top: -17px;
+  left: 0;
+  right: 0;
+  height: 24px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+}
+/* Moodle shows dividers only BETWEEN sections — no "insert above the very top". */
+#prvSections .course-content > .course-section:first-child .cg-insert-zone--section {
+  display: none;
 }
 
 /* ── Bottom "Add activity" = Moodle's section-closing add button ──
@@ -3798,8 +3836,9 @@ body.cg-generating #prvSections .cg-insert-zone {
   padding: 4px 14px;
   font-size: 13px;
   line-height: 1.35;
-  /* White halo so the dashed line never runs through the button (Boost's trick). */
-  box-shadow: 0 0 0 5px #fff;
+  /* No shadow/halo — the opaque button already covers the dashed line where it sits
+     (the line shows on both sides). A white box-shadow "halo" read as an ugly shadow. */
+  box-shadow: none;
 }
 #prvSections .dp-add-activity-wrap .dp-add-control:hover {
   background: var(--primary);
