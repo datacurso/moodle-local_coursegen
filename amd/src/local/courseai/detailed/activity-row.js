@@ -114,17 +114,21 @@ export const createDetailedActivityRow = (ctx, {sectionId, activityId, activityT
     insertZone.appendChild(insertBtn);
     wrap.insertBefore(insertZone, wrap.firstChild);
 
-    // A genuinely-new real-UUID row is being rendered: drop any transient apply
-    // placeholder in this section so the shimmer is replaced, never duplicated.
-    removeTransientActivityPlaceholders(bodyEl);
-
-    // Insert before the add-activity wrap (last child of cmlist when present).
+    // Place the new row where a transient placeholder marks its slot (an add at a
+    // specific position): insert IN ITS PLACE so the row appears at the right slot
+    // immediately — no append-at-the-end-then-reorder jump. Falls back to before the
+    // add-activity sentinel (append) when there is no placeholder. The transient is
+    // removed AFTER, so it is replaced in place, never duplicated.
+    const transient = bodyEl.querySelector('[data-cg-transient="activity"]');
     const addWrap = bodyEl.querySelector('.dp-add-activity-wrap');
-    if (addWrap) {
+    if (transient) {
+        bodyEl.insertBefore(wrap, transient);
+    } else if (addWrap) {
         bodyEl.insertBefore(wrap, addWrap);
     } else {
         bodyEl.appendChild(wrap);
     }
+    removeTransientActivityPlaceholders(bodyEl);
 
     // Wire this new wrap into the section's existing DnD setup.
     const sectionMeta = state.detailedSectionMeta[sectionId];

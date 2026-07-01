@@ -240,18 +240,21 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
     row.appendChild(sectionInsertZone);
 
     row.appendChild(sectionItem);
-    // A genuinely-new real-UUID section is being rendered: drop any transient
-    // apply placeholder so the shimmer is replaced, never duplicated.
-    removeTransientSectionPlaceholders(ctx);
-    // Keep the global "+ Add section" control pinned to the very bottom: insert a
-    // newly-streamed section BEFORE it, so the button never lands mid-list while a
-    // section is being added at the end (it stays below the last rendered section).
+    // Place the new section where a transient placeholder marks its slot (an add at a
+    // specific position): insert IN ITS PLACE so it appears at the right slot
+    // immediately — no append-at-the-end-then-reorder jump. Otherwise insert before the
+    // "+ Add section" control (append, kept pinned to the bottom). The transient is
+    // removed AFTER, so it is replaced in place, never duplicated.
+    const transientSection = sectionList.querySelector('[data-cg-transient="section"]');
     const addSectionWrap = sectionList.querySelector('.dp-add-section-wrap');
-    if (addSectionWrap) {
+    if (transientSection) {
+        sectionList.insertBefore(row, transientSection);
+    } else if (addSectionWrap) {
         sectionList.insertBefore(row, addSectionWrap);
     } else {
         sectionList.appendChild(row);
     }
+    removeTransientSectionPlaceholders(ctx);
 
     // Set row reference for panel/action callbacks.
     rowRef.current = row;

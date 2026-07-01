@@ -210,10 +210,6 @@ const fillSkeletonActivities = (ctx, activeSections) => {
 export const reconcilePlan = async(ctx, currentPlan) => {
     const {state} = ctx;
 
-    // Defensive: clear any transient apply placeholder that the row factories did
-    // not already replace, so no orphaned shimmer survives the settle.
-    removeAllTransientPlaceholders();
-
     const activeSections = buildActiveStructure(currentPlan);
     const activeSectionIds = new Set(activeSections.map((s) => s.id));
     const activeActivityIds = new Set(activeSections.flatMap((s) => s.activities.map((a) => a.id)));
@@ -248,4 +244,11 @@ export const reconcilePlan = async(ctx, currentPlan) => {
 
     // Step 6 — Fill skeleton activities that now carry a detailed_plan.
     fillSkeletonActivities(ctx, activeSections);
+
+    // Defensive cleanup LAST: the row factories replace a transient placeholder in
+    // place (inserting the real row where the placeholder sat, so it lands at the
+    // right slot with no append-then-reorder jump). Only placeholders with no real
+    // row are removed here — clearing them up-front would rob the factories of the
+    // slot marker and reintroduce the jump.
+    removeAllTransientPlaceholders();
 };
