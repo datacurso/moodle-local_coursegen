@@ -21,17 +21,20 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {showWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
+
 /**
  * Create a runPlanAction function that sends one ActionIntent as pending_action
  * and re-opens the planning SSE stream.
  *
  * @param {Object}   opts
  * @param {Object}   opts.state                  - Shared mutable state (needs sessionid, streamingurl).
+ * @param {Object}   opts.texts                  - Localized strings (for the instant working indicator).
  * @param {Function} opts.sendPlanningFeedback    - WS helper to send a pendingAction.
  * @param {Function} opts.openSSEStream           - Opens/re-opens the SSE stream.
  * @returns {Function} async (intent: Object) => void
  */
-export const createRunPlanAction = ({state, sendPlanningFeedback, openSSEStream}) => {
+export const createRunPlanAction = ({state, texts, sendPlanningFeedback, openSSEStream}) => {
     /**
      * Send one ActionIntent as pending_action and re-open the planning stream.
      *
@@ -44,6 +47,12 @@ export const createRunPlanAction = ({state, sendPlanningFeedback, openSSEStream}
         if (!sendPlanningFeedback || !state.sessionid) {
             return;
         }
+        // Show the "working" indicator (spinner + message) IMMEDIATELY — before the
+        // sendPlanningFeedback round-trip — so the left panel never goes blank while
+        // an action (reorder, replan, add, apply proposal…) is being dispatched, and
+        // the user gets instant feedback that their request started. handleStatus
+        // updates this same entry in place as the server responds.
+        showWorkingIndicator(texts);
         // What gets SENT is `intent` (e.g. {action:'execute_proposal', …} when applying
         // a proposal). What decides the LEFT-panel routing is the REAL action, which for
         // a proposal lives in scopeIntent (the proposal's resolved intent). Inline controls

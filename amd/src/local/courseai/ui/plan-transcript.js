@@ -85,6 +85,10 @@ export const clampDetail = (el) => {
     el.dataset.cgClamp = '1';
     window.requestAnimationFrame(() => {
         if (el.scrollHeight <= CLAMP_PX + 4) {
+            // Short enough — make sure it is NOT clamped (callers may pre-apply the
+            // clamp class before this measures, to avoid a full-height→clamped flash
+            // when a whole transcript is rebuilt at once; see rebuildTranscriptFromPlan).
+            el.classList.remove('cg-detail-clamped');
             return;
         }
         el.classList.add('cg-detail-clamped');
@@ -280,7 +284,15 @@ export const rebuildTranscriptFromPlan = (plan) => {
             + '</div>'
             + '<div class="courseai-checklist-detail cg-log-md">' + md + '</div>';
         list.appendChild(item);
-        clampDetail(item.querySelector('.courseai-checklist-detail'));
+        const detail = item.querySelector('.courseai-checklist-detail');
+        if (detail) {
+            // Pre-clamp so the rebuilt transcript paints ALREADY collapsed — otherwise
+            // it renders full-height for a frame and then clampDetail shrinks it,
+            // which shifts everything below and reads as a jarring "jump" on actions.
+            // clampDetail then measures and un-clamps any item that is actually short.
+            detail.classList.add('cg-detail-clamped');
+            clampDetail(detail);
+        }
     });
     if (checklist) {
         checklist.classList.remove('hidden');

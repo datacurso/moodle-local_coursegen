@@ -860,3 +860,9 @@ sessions remain, then remove it.
   prvHeaderSub); la cabecera muestra un mensaje estable (course_creating) y se resuelve a CHECK cuando
   todas las actividades terminan (resolveGenerationHeaderIfDone en handlers-progress). Verificado:
   4/4 checks ⇒ header check, header nunca muestra narración cruda.
+- [x] Acciones (reorder/replan/add/delete/apply): (1) el panel izquierdo quedaba en blanco durante
+  el round-trip antes de que el stream mostrara el indicador → ahora runPlanAction muestra el working
+  indicator (spinner + "The assistant is working…") ANTES del await sendPlanningFeedback (feedback
+  inmediato, sin blanco). (2) El salto brusco al aparecer "I applied your changes": rebuildTranscript
+FromPlan pintaba el detalle completo y clampDetail lo recortaba un frame después (flash de altura).
+  Ahora se pre-recorta (cg-detail-clamped) antes de pintar y clampDetail lo des-recorta si es corto.
