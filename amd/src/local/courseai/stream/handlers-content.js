@@ -275,7 +275,14 @@ export const handleDetailedPlanField = (data, ctx) => {
 export const handleDetailedPlanActivity = (data, ctx) => {
     ctx.flags.contentReceived = true;
     const {state, detailedUi, stepsUi} = ctx;
-    detailedUi.handleDetailedPlanActivity(data);
+    // Render per-activity detail into the CENTRE only for the initial (non-keepPlan)
+    // stream. On a keepPlan re-stream (add / adjust / regen) the centre is PRESERVED
+    // and reconciled ONCE at review_needed — rendering it live here made a new
+    // activity look "done" in the centre while the left/header still showed
+    // "Planning …" (a desync). The transient skeleton marks the slot meanwhile.
+    if (!ctx.keepPlan) {
+        detailedUi.handleDetailedPlanActivity(data);
+    }
     // Live LEFT transcript: attach this activity's detailed plan and drop the
     // section spinner once all its activities are planned.
     if (!ctx.keepPlan) {
