@@ -47,7 +47,7 @@ export const handleStatus = async(data, ctx) => {
     const {
         state, stepsUi, texts, streamMode, syncTrackerFromStatus,
         ensureStreamContentVisible, localizeMessage,
-        prvHeaderSub, pcSubtitle, prvLiveNote,
+        prvHeaderSub, pcSubtitle,
     } = ctx;
 
     const statusText = data.message ? await localizeMessage(data.message) : (data.text || '');
@@ -80,10 +80,6 @@ export const handleStatus = async(data, ctx) => {
     }
     if (pcSubtitle) {
         pcSubtitle.textContent = statusText;
-    }
-    if (state.planningMode === 'detailed' && prvLiveNote) {
-        prvLiveNote.style.display = 'block';
-        prvLiveNote.textContent = texts.courseai_live_note_detailed;
     }
 
     if (state.currentStage !== 'generating' || totalActivities <= 0) {

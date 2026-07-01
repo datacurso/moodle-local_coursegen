@@ -845,3 +845,7 @@ sessions remain, then remove it.
   en el bloque generating de stream.js se resetea a SPINNER (remove prv-header--done, show spinner,
   hide check) hasta completar. Y el check de actividad ahora usa el SVG polyline del check de sección
   (crisp, en círculo gris) en vez de un glifo ✓ de texto (se veía feo).
+- [x] Cabecera de generación: el subtítulo de status cambiaba de 1↔2 líneas por evento → temblores en
+  toda la pantalla. Fijado a 1 línea con ellipsis (.prv-header-text en columna + .prv-header-sub nowrap
+  + text-overflow) → altura constante (46px). Y se eliminó el live note "Showing real-time detailed
+  planning progress." (quitado el bloque en handleStatus + del destructure).
