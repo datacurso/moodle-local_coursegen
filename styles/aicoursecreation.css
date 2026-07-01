@@ -3639,6 +3639,10 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
 /* Streamed description slot (Moodle .activity-description grid area). */
 #prvSections .cg-activity-desc-slot {
   grid-area: altcontent;
+  /* Boost's .activity-description carries a 1px solid top border, which drew an
+     ugly line between the activity NAME and its description (Moodle's real course
+     view has no such line — the description flows straight under the name). Drop it. */
+  border-top: none;
 }
 #prvSections .cg-activity-desc {
   font-size: 12px;
@@ -3748,4 +3752,55 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
 /* The insert divider is a PLANNING-only edit affordance. Generation is read-only. */
 body.cg-generating #prvSections .cg-insert-zone {
   display: none !important;
+}
+
+/* ── Bottom "Add activity" = Moodle's section-closing add button ──
+   Moodle centers a SOLID button on the section's closing dashed line (the line
+   runs on both sides). We have a single button, so it sits in the MIDDLE of that
+   last divider — not a full-width dashed box (the previous look the user rejected). */
+#prvSections .dp-add-activity-wrap {
+  position: relative;
+  display: block;
+  margin-top: 14px;
+  padding-top: 2px;
+}
+/* The closing dashed line, behind the centered button. Anchored near the button's
+   vertical centre (top offset), so opening the add panel below never shifts it. */
+#prvSections .dp-add-activity-wrap::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 18px;
+  border-top: 2px dashed #dee2e6;
+  z-index: 0;
+}
+#prvSections .dp-add-activity-wrap .dp-add-control {
+  position: relative;
+  z-index: 1;
+  width: fit-content;
+  margin: 0 auto;
+  justify-content: center;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary);
+  color: var(--primary-fg);
+  padding: 7px 16px;
+  font-size: 13px;
+  /* White halo so the dashed line never runs through the button (Boost's trick). */
+  box-shadow: 0 0 0 5px #fff;
+}
+#prvSections .dp-add-activity-wrap .dp-add-control:hover {
+  background: var(--primary);
+  color: var(--primary-fg);
+  filter: brightness(0.92);
+}
+#prvSections .dp-add-activity-wrap .dp-add-control .dp-add-control__icon {
+  color: var(--primary-fg);
+}
+/* The add panel opens full-width below the centered button (not centered/shrunk). */
+#prvSections .dp-add-activity-wrap .dp-ai-inline {
+  position: relative;
+  z-index: 1;
+  margin-top: 8px;
 }
