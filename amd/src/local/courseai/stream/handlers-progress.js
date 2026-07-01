@@ -25,6 +25,35 @@
  */
 
 import {setTrackerFlatStatus} from 'local_coursegen/local/courseai/stream/tracker';
+import {hideWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
+
+/**
+ * When every activity has been generated, resolve the header spinner to a check
+ * and drop the live "working" indicator, so the header/left stay in sync with the
+ * all-checked cards (no lingering spinner or stale status line).
+ *
+ * @param {Object} state
+ * @returns {void}
+ */
+const resolveGenerationHeaderIfDone = (state) => {
+    const total = state.activityProgressTotal || 0;
+    if (total <= 0 || (state.activityProgressDone || 0) < total) {
+        return;
+    }
+    const hdr = document.getElementById('prvHeader');
+    const spin = document.getElementById('prvSpinnerIcon');
+    const chk = document.getElementById('prvCheckIcon');
+    if (hdr) {
+        hdr.classList.add('prv-header--done');
+    }
+    if (spin) {
+        spin.style.display = 'none';
+    }
+    if (chk) {
+        chk.style.display = '';
+    }
+    hideWorkingIndicator();
+};
 
 /**
  * Handle 'activity_progress_init': switch to structured progress mode.
@@ -67,6 +96,7 @@ export const handleActivityProgressDone = (data, ctx) => {
     ctx.state.activityProgressDone = (ctx.state.activityProgressDone || 0) + 1;
     ctx.updateProgress();
     ctx.renderTracker();
+    resolveGenerationHeaderIfDone(ctx.state);
 };
 
 /**
@@ -80,6 +110,7 @@ export const handleActivityProgressFailed = (data, ctx) => {
     ctx.state.activityProgressDone = (ctx.state.activityProgressDone || 0) + 1;
     ctx.updateProgress();
     ctx.renderTracker();
+    resolveGenerationHeaderIfDone(ctx.state);
 };
 
 /**

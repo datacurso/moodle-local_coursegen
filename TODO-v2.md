@@ -853,3 +853,10 @@ sessions remain, then remove it.
   init-view.js mostraba el live note al iniciar la vista detallada de PLANIFICACIÓN → ahora oculto.
   + min-height en .prv-header-sub para reservar la línea (altura de cabecera constante desde el inicio).
   Verificado: generación [46] estable, planificación sin el live note (var. 2px imperceptible).
+- [x] Sincronización centro↔cabecera/izquierda en generación: la narración cruda por-actividad
+  ("Assembling final Quiz package…", "Generating Chapter…") desfasaba con los checks (generación
+  PARALELA → una card en check mientras la línea narra otra) y el spinner de la cabecera no se resolvía.
+  Fix: durante generación estructurada se SUPRIME la narración cruda (handleStatus: working indicator +
+  prvHeaderSub); la cabecera muestra un mensaje estable (course_creating) y se resuelve a CHECK cuando
+  todas las actividades terminan (resolveGenerationHeaderIfDone en handlers-progress). Verificado:
+  4/4 checks ⇒ header check, header nunca muestra narración cruda.

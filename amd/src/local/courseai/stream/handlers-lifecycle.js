@@ -53,11 +53,19 @@ export const handleStatus = async(data, ctx) => {
     const statusText = data.message ? await localizeMessage(data.message) : (data.text || '');
     const heuristicText = (data.message && data.message.string) || data.text || '';
 
+    // During STRUCTURED generation the per-activity cards (spinner→check) are the
+    // single source of truth. Suppress the raw per-activity narration ("Assembling
+    // final Quiz package…", "Generating Chapter…") in the header/working indicator:
+    // it fires per activity and, with parallel generation, contradicts the cards
+    // (one card checked while the line narrates another). The structured handlers
+    // own the header text/state instead, so both panels stay perfectly in sync.
+    const suppressRaw = streamMode === 'generating' && state.structuredActivityProgress;
+
     // Surface transient progress as the SINGLE live "working" indicator in the
     // thread (never one turn per status event) so the panel never looks frozen
     // while the server streams. It is cleared when content/sections land or on a
     // terminal lifecycle event.
-    if (statusText) {
+    if (statusText && !suppressRaw) {
         showWorkingIndicator(texts, statusText);
     }
 
@@ -69,16 +77,16 @@ export const handleStatus = async(data, ctx) => {
     }
 
     const loadingTextEl = document.querySelector('.planning-loading-text');
-    if (loadingTextEl && statusText) {
+    if (loadingTextEl && statusText && !suppressRaw) {
         loadingTextEl.textContent = statusText;
     }
 
     const totalActivities = state.phase4TotalActivities || ctx.preservedPhase4Total();
 
-    if (prvHeaderSub) {
+    if (prvHeaderSub && !suppressRaw) {
         prvHeaderSub.textContent = statusText;
     }
-    if (pcSubtitle) {
+    if (pcSubtitle && !suppressRaw) {
         pcSubtitle.textContent = statusText;
     }
 

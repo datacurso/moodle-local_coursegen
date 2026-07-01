@@ -167,6 +167,15 @@ export const createStreamManager = (deps) => {
                 if (prvCheckEl) {
                     prvCheckEl.style.display = 'none';
                 }
+                // Stable generation header (the per-activity narration is suppressed —
+                // handleStatus — so it never desyncs from the cards). The cards are the
+                // live per-activity progress; the header just states the phase.
+                if (prvHeaderTitle) {
+                    prvHeaderTitle.textContent = texts.courseai_course_creating;
+                }
+                if (prvHeaderSub) {
+                    prvHeaderSub.textContent = texts.courseai_course_creating_subtitle;
+                }
                 // The plan preview cards live inside #planReviewCard (hidden once a stream
                 // starts); show it as the live progress view and keep the old progress
                 // card hidden. switchPlanMode keeps the detailed sub-view active.
