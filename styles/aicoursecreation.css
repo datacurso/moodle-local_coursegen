@@ -7,11 +7,13 @@ body { background: var(--bg); color: var(--fg); }
   --bg:           hsl(210, 40%, 98%);
   --fg:           hsl(215, 28%, 17%);
   --card:         hsl(0, 0%, 100%);
-  --primary:      hsl(8, 72%, 42%);
+  /* Brand palette aligned with datacurso.com: primary = warm coral (was a harsh
+     dark red that clashed with the brand), secondary/brand = the brand purple. */
+  --primary:      hsl(10, 81%, 63%);
   --primary-fg:   hsl(0, 0%, 100%);
-  --primary-soft: hsl(9, 100%, 96%);
-  --brand:        hsl(252, 55%, 42%);
-  --brand-soft:   hsl(252, 70%, 96%);
+  --primary-soft: hsl(10, 81%, 96%);
+  --brand:        hsl(260, 37%, 42%);
+  --brand-soft:   hsl(260, 40%, 96%);
   --muted:        hsl(215, 25%, 96%);
   --muted-fg:     hsl(215, 16%, 47%);
   --border:       hsl(215, 20%, 88%);
@@ -19,7 +21,7 @@ body { background: var(--bg); color: var(--fg); }
   --success-fg:   hsl(0, 0%, 100%);
   --radius:       0.75rem;
   /* Semantic tokens (ui-refactor §7) */
-  --danger:        hsl(8 72% 48%);   --danger-soft:   hsl(8 72% 48% / .10);
+  --danger:        hsl(10 81% 48%);   --danger-soft:   hsl(10 81% 48% / .10);
   --info:          hsl(212 90% 50%); --info-soft:     hsl(212 90% 50% / .10);
   --success-strong: hsl(142 70% 40%); --success-soft: hsl(142 70% 40% / .14);
   --warn:          hsl(38 92% 50%);  --warn-soft:     hsl(38 92% 50% / .14);
@@ -30,7 +32,7 @@ body { background: var(--bg); color: var(--fg); }
   --ease:     cubic-bezier(.2, .8, .2, 1);
   --hold-mark: 1100ms;
   --shadow-card:  0 1px 3px hsl(215, 28%, 17%, 0.06), 0 1px 2px hsl(215, 28%, 17%, 0.04);
-  --shadow-elevated: 0 10px 30px -10px hsl(8, 72%, 42%, 0.25);
+  --shadow-elevated: 0 10px 30px -10px hsl(10, 81%, 42%, 0.25);
   --surface-2:     hsl(215, 20%, 94%);    /* slightly darker than --muted, for nested surfaces */
   --shadow-card:   0 1px 2px hsl(215 28% 17% / .05);   /* override: softer than current */
   --shadow-elevated: 0 4px 16px -4px hsl(215 28% 17% / .10);  /* override: neutral, not red */
@@ -300,12 +302,12 @@ svg { display: block; flex-shrink: 0; }
 .chip-syllabus {
   background: var(--brand-soft);
   color: var(--brand);
-  border: 1px solid hsl(252, 55%, 42%, 0.3);
+  border: 1px solid hsl(260, 37%, 42%, 0.3);
 }
 .chip-guideline {
   background: var(--primary-soft);
   color: var(--primary);
-  border: 1px solid hsl(8, 72%, 42%, 0.3);
+  border: 1px solid hsl(10, 81%, 42%, 0.3);
 }
 .chip-name {
   max-width: 160px;
@@ -326,8 +328,8 @@ svg { display: block; flex-shrink: 0; }
   line-height: 1;
   transition: background .12s;
 }
-.chip-syllabus .chip-btn:hover  { background: hsl(252, 55%, 42%, 0.15); }
-.chip-guideline .chip-btn:hover { background: hsl(8, 72%, 42%, 0.15); }
+.chip-syllabus .chip-btn:hover  { background: hsl(260, 37%, 42%, 0.15); }
+.chip-guideline .chip-btn:hover { background: hsl(10, 81%, 42%, 0.15); }
 
 /* Toolbar */
 .card-toolbar {
@@ -467,7 +469,7 @@ svg { display: block; flex-shrink: 0; }
   transition: background .12s, opacity .12s;
   line-height: 1;
 }
-.btn-generate:hover             { background: hsl(8, 72%, 37%); }
+.btn-generate:hover             { background: hsl(10, 81%, 37%); }
 .btn-generate:disabled          { opacity: .45; cursor: not-allowed; }
 .btn-generate:disabled:hover    { background: var(--primary); }
 
@@ -558,7 +560,7 @@ svg { display: block; flex-shrink: 0; }
 }
 .pop-search-inner input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px hsl(8, 72%, 42%, 0.15);
+  box-shadow: 0 0 0 3px hsl(10, 81%, 42%, 0.15);
   outline: none;
 }
 
@@ -862,7 +864,7 @@ svg { display: block; flex-shrink: 0; }
   font-family: inherit;
   transition: background .12s, opacity .12s;
 }
-.btn-plan-approve:hover:not(:disabled) { background: hsl(8, 72%, 36%); }
+.btn-plan-approve:hover:not(:disabled) { background: hsl(10, 81%, 36%); }
 .btn-plan-approve:disabled { opacity: .45; cursor: not-allowed; }
 .planning-wrap {
   display: flex;
@@ -1063,12 +1065,12 @@ svg { display: block; flex-shrink: 0; }
   width: 82px;
   height: 82px;
   border-radius: 50%;
-  background: linear-gradient(145deg, hsl(8, 78%, 48%), hsl(8, 72%, 42%));
+  background: linear-gradient(145deg, hsl(10, 81%, 48%), hsl(10, 81%, 42%));
   color: #fff;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 16px 26px -18px hsl(8, 72%, 42%, .75);
+  box-shadow: 0 16px 26px -18px hsl(10, 81%, 42%, .75);
 }
 
 .pc-completion-emoji {
@@ -1119,14 +1121,14 @@ svg { display: block; flex-shrink: 0; }
 
 .btn-completion-primary {
   border: none;
-  background: linear-gradient(145deg, hsl(8, 78%, 48%), hsl(8, 72%, 42%));
+  background: linear-gradient(145deg, hsl(10, 81%, 48%), hsl(10, 81%, 42%));
   color: #fff;
-  box-shadow: 0 12px 22px -16px hsl(8, 72%, 42%, .75);
+  box-shadow: 0 12px 22px -16px hsl(10, 81%, 42%, .75);
   cursor: pointer;
 }
 
 .btn-completion-primary:hover:not(:disabled) {
-  background: linear-gradient(145deg, hsl(8, 78%, 44%), hsl(8, 72%, 38%));
+  background: linear-gradient(145deg, hsl(10, 81%, 44%), hsl(10, 81%, 38%));
 }
 
 .btn-completion-primary:disabled {
@@ -1224,7 +1226,7 @@ svg { display: block; flex-shrink: 0; }
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: hsl(8 72% 42% / .10);
+  background: hsl(10 81% 42% / .10);
 }
 
 .pc-spin {
@@ -1350,7 +1352,7 @@ svg { display: block; flex-shrink: 0; }
   width: 28px;
   height: 28px;
   border-radius: 7px;
-  background: hsl(8, 72%, 42%, 0.1);
+  background: hsl(10, 81%, 42%, 0.1);
   color: var(--primary);
   font-size: 12px;
   font-weight: 700;
@@ -1584,7 +1586,7 @@ svg { display: block; flex-shrink: 0; }
 
 /* Soft per-purpose tint on the icon chip only (Moodle-like, calm). */
 .dp-purpose-content .ps-badge-icon       { background: hsl(170 55% 90%); }
-.dp-purpose-assessment .ps-badge-icon    { background: hsl(8 72% 92%); }
+.dp-purpose-assessment .ps-badge-icon    { background: hsl(10 81% 92%); }
 .dp-purpose-collaboration .ps-badge-icon { background: hsl(142 50% 90%); }
 .dp-purpose-communication .ps-badge-icon { background: hsl(38 80% 90%); }
 
@@ -1771,7 +1773,7 @@ svg { display: block; flex-shrink: 0; }
 
 .dp-action-btn:focus,
 .dp-action-btn:focus-visible {
-  outline: 2px solid hsl(8 72% 50% / .35);
+  outline: 2px solid hsl(10 81% 50% / .35);
   outline-offset: 1px;
 }
 
@@ -1783,7 +1785,7 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .dp-item-actions--image .dp-action-btn:hover {
-  color: hsl(8 72% 42%);
+  color: hsl(10 81% 42%);
 }
 
 /* Topic number badge — compact circle */
@@ -1936,8 +1938,8 @@ svg { display: block; flex-shrink: 0; }
 .dp-ai-textarea:focus,
 .dp-ai-textarea:focus-visible {
   outline: none;
-  border-color: hsl(8 72% 42% / .45);
-  box-shadow: 0 0 0 2px hsl(8 72% 50% / .16);
+  border-color: hsl(10 81% 42% / .45);
+  box-shadow: 0 0 0 2px hsl(10 81% 50% / .16);
 }
 
 .dp-ai-actions {
@@ -1963,8 +1965,8 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .dp-ai-btn--primary {
-  background: hsl(8 72% 42%);
-  border-color: hsl(8 72% 42%);
+  background: hsl(10 81% 42%);
+  border-color: hsl(10 81% 42%);
   color: hsl(0 0% 100%);
 }
 
@@ -2120,7 +2122,7 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .dp-image-card:hover {
-  box-shadow: 0 2px 4px hsl(8 72% 20% / .08);
+  box-shadow: 0 2px 4px hsl(10 81% 20% / .08);
 }
 
 .dp-image-body {
@@ -2174,14 +2176,14 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .dp-add-control:hover {
-  border-color: var(--brand, hsl(252 55% 42%));
-  color: var(--brand, hsl(252 55% 42%));
-  background: hsl(252 55% 42% / .05);
+  border-color: var(--brand, hsl(260 37% 42%));
+  color: var(--brand, hsl(260 37% 42%));
+  background: hsl(260 37% 42% / .05);
 }
 
 .dp-add-control:focus,
 .dp-add-control:focus-visible {
-  outline: 2px solid hsl(252 55% 42% / .35);
+  outline: 2px solid hsl(260 37% 42% / .35);
   outline-offset: 1px;
 }
 
@@ -2194,7 +2196,7 @@ svg { display: block; flex-shrink: 0; }
 .dp-add-control__icon {
   font-size: 16px;
   line-height: 1;
-  color: var(--brand, hsl(252 55% 42%));
+  color: var(--brand, hsl(260 37% 42%));
   flex-shrink: 0;
 }
 
@@ -2210,16 +2212,16 @@ svg { display: block; flex-shrink: 0; }
   border-width: 2px;
   border-radius: 12px;
   font-size: 13px;
-  color: var(--brand, hsl(252 55% 42%));
+  color: var(--brand, hsl(260 37% 42%));
   transition: background-color .15s, border-color .15s, color .15s;
 }
 /* On hover it FILLS with a soft brand tint and a solid brand border — exactly like
    Moodle's "Add section" button turning filled on hover (dashed → solid + light bg). */
 .dp-add-section-wrap .dp-add-control:hover {
-  background: hsl(252 55% 42% / .10);
+  background: hsl(260 37% 42% / .10);
   border-style: solid;
-  border-color: var(--brand, hsl(252 55% 42%));
-  color: var(--brand, hsl(252 55% 42%));
+  border-color: var(--brand, hsl(260 37% 42%));
+  color: var(--brand, hsl(260 37% 42%));
 }
 
 /* Inline panel override for add controls (no section indentation needed) */
@@ -2246,13 +2248,13 @@ svg { display: block; flex-shrink: 0; }
 /* Visual feedback during drag */
 .dp-dragging {
   opacity: 0.45;
-  outline: 2px dashed hsl(8 72% 42% / .45);
+  outline: 2px dashed hsl(10 81% 42% / .45);
   outline-offset: 2px;
   border-radius: 8px;
 }
 
 .dp-drag-over {
-  outline: 2px solid hsl(8 72% 42% / .6);
+  outline: 2px solid hsl(10 81% 42% / .6);
   outline-offset: 2px;
   border-radius: 8px;
 }
@@ -2281,8 +2283,8 @@ svg { display: block; flex-shrink: 0; }
 
 /* Clarification box */
 .plan-proposals-clarification {
-  background: hsl(252 55% 42% / .07);
-  border: 1px solid hsl(252 55% 42% / .25);
+  background: hsl(260 37% 42% / .07);
+  border: 1px solid hsl(260 37% 42% / .25);
   border-radius: 8px;
   padding: 10px 14px;
   display: flex;
@@ -2294,7 +2296,7 @@ svg { display: block; flex-shrink: 0; }
   margin: 0;
   font-size: 12px;
   font-weight: 600;
-  color: var(--brand, hsl(252 55% 42%));
+  color: var(--brand, hsl(260 37% 42%));
   text-transform: uppercase;
   letter-spacing: .04em;
 }
@@ -2329,19 +2331,19 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .plan-proposal-card:hover {
-  border-color: var(--brand, hsl(252 55% 42%));
-  background: hsl(252 55% 42% / .04);
+  border-color: var(--brand, hsl(260 37% 42%));
+  background: hsl(260 37% 42% / .04);
 }
 
 .plan-proposal-card:has(.plan-proposal-radio:checked) {
-  border-color: var(--brand, hsl(252 55% 42%));
-  background: hsl(252 55% 42% / .07);
+  border-color: var(--brand, hsl(260 37% 42%));
+  background: hsl(260 37% 42% / .07);
 }
 
 .plan-proposal-radio {
   margin-top: 2px;
   flex-shrink: 0;
-  accent-color: var(--brand, hsl(252 55% 42%));
+  accent-color: var(--brand, hsl(260 37% 42%));
   width: 15px;
   height: 15px;
   cursor: pointer;
@@ -2356,17 +2358,17 @@ svg { display: block; flex-shrink: 0; }
 
 /* Destructive variant */
 .plan-proposal--destructive {
-  border-color: hsl(8 72% 70%);
+  border-color: hsl(10 81% 70%);
 }
 
 .plan-proposal--destructive:hover {
-  border-color: var(--primary, hsl(8 72% 42%));
-  background: hsl(8 72% 42% / .05);
+  border-color: var(--primary, hsl(10 81% 42%));
+  background: hsl(10 81% 42% / .05);
 }
 
 .plan-proposal--destructive:has(.plan-proposal-radio:checked) {
-  border-color: var(--primary, hsl(8 72% 42%));
-  background: hsl(8 72% 42% / .08);
+  border-color: var(--primary, hsl(10 81% 42%));
+  background: hsl(10 81% 42% / .08);
 }
 
 .plan-proposal-destructive-badge {
@@ -2375,8 +2377,8 @@ svg { display: block; flex-shrink: 0; }
   height: 18px;
   padding: 0 7px;
   border-radius: 9px;
-  background: hsl(8 72% 42% / .12);
-  color: var(--primary, hsl(8 72% 42%));
+  background: hsl(10 81% 42% / .12);
+  color: var(--primary, hsl(10 81% 42%));
   font-size: 11px;
   font-weight: 600;
   flex-shrink: 0;
@@ -2411,7 +2413,7 @@ svg { display: block; flex-shrink: 0; }
 
 .plan-proposal-other-textarea:focus {
   outline: none;
-  border-color: var(--brand, hsl(252 55% 42%));
+  border-color: var(--brand, hsl(260 37% 42%));
 }
 
 /* Action button row */
@@ -2429,7 +2431,7 @@ svg { display: block; flex-shrink: 0; }
   padding: 0 16px;
   border-radius: 8px;
   border: none;
-  background: var(--brand, hsl(252 55% 42%));
+  background: var(--brand, hsl(260 37% 42%));
   color: #fff;
   font-size: 13px;
   font-weight: 600;
@@ -2439,7 +2441,7 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .btn-proposals-apply:hover:not(:disabled) {
-  background: hsl(252 55% 36%);
+  background: hsl(260 37% 36%);
 }
 
 .btn-proposals-apply:disabled {
@@ -2625,15 +2627,15 @@ svg { display: block; flex-shrink: 0; }
    a thin outline (no layout shift) instead of a heavy ring; a faint tint when
    the action deletes content. NEVER applied to the left checklist. */
 .cg-affected {
-  outline: 2px solid var(--brand, hsl(252 55% 42%));
+  outline: 2px solid var(--brand, hsl(260 37% 42%));
   outline-offset: 1px;
   border-radius: 10px;
   transition: outline-color .15s ease, background-color .15s ease;
 }
 
 .cg-affected.cg-affected--destructive {
-  outline-color: var(--primary, hsl(8 72% 42%));
-  background-color: hsl(8 72% 42% / .05);
+  outline-color: var(--primary, hsl(10 81% 42%));
+  background-color: hsl(10 81% 42% / .05);
 }
 
 /* ─── Chat history: initial prompt display ────────────────────────────── */
@@ -2893,7 +2895,7 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
   background: linear-gradient(
     90deg,
     transparent 0%,
-    var(--brand, hsl(252 55% 42%)) 50%,
+    var(--brand, hsl(260 37% 42%)) 50%,
     transparent 100%
   );
   animation: cg-stream-sweep 1.2s var(--ease, ease) infinite;
@@ -3579,7 +3581,7 @@ body.cg-generating #prvSections .cg-gen-active .activity-icon::after {
   height: 15px;
   border-radius: 50%;
   box-sizing: border-box;
-  border: 2px solid hsl(8 72% 42% / .25);
+  border: 2px solid hsl(10 81% 42% / .25);
   border-top-color: var(--primary);
   background: #fff;
   box-shadow: 0 0 0 2px #fff;
@@ -3652,7 +3654,7 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
 /* Hover outline on the section card — suppressed while hovering an inner activity
    so only ONE element (the activity, not the whole section) highlights at a time. */
 #prvSections .course-section .section-item:hover:not(:has(.activity:hover)) {
-  outline: 2px solid hsl(8 72% 42% / .45);
+  outline: 2px solid hsl(10 81% 42% / .45);
   outline-offset: -2px;
   border-radius: 8px;
 }
