@@ -3658,6 +3658,14 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
   outline-offset: -2px;
   border-radius: 8px;
 }
+/* Boost paints the activity hover/focus outline in Moodle's blue (#0f6cbf). Recolour
+   it to the brand accent so it matches the buttons — in Moodle this row outline is the
+   same colour as the buttons on hover, not a foreign blue. */
+#prvSections .activity-item:hover,
+#prvSections .activity-item:focus-within,
+#prvSections .activity-item.focus-control:focus-within {
+  outline-color: var(--primary);
+}
 
 /* Streamed description slot (Moodle .activity-description grid area). */
 #prvSections .cg-activity-desc-slot {
@@ -3760,19 +3768,23 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
   padding: 0;
   border: none;
   border-radius: 5px;
-  background: var(--primary);
-  color: var(--primary-fg);
+  /* Soft at REST, solid on HOVER — like Moodle's add buttons (light tint that fills
+     to the solid accent when hovered). */
+  background: hsl(10 85% 91%);
+  color: hsl(10 62% 42%);
   cursor: pointer;
   /* No halo — the opaque button covers the dashed line where it sits; a white
      box-shadow halo read as an ugly shadow around the button. */
   box-shadow: none;
+  transition: opacity .12s ease, background-color .12s ease, color .12s ease;
 }
 #prvSections .cg-insert-zone:hover .cg-insert-btn,
 #prvSections .cg-insert-btn:focus-visible {
   opacity: 1;
 }
 #prvSections .cg-insert-btn:hover {
-  filter: brightness(0.92);
+  background: var(--primary);
+  color: var(--primary-fg);
 }
 /* The insert divider is a PLANNING-only edit affordance. Generation is read-only. */
 body.cg-generating #prvSections .cg-insert-zone {
@@ -3860,8 +3872,10 @@ body.cg-generating #prvSections .cg-insert-zone {
   gap: 5px;
   border: none;
   border-radius: 6px;
-  background: var(--primary);
-  color: var(--primary-fg);
+  /* Soft at REST, solid on HOVER — like Moodle's "Add an activity or resource"
+     button (a light tint that fills to the solid accent + white text on hover). */
+  background: hsl(10 85% 91%);
+  color: hsl(10 62% 42%);
   /* Flat like Moodle's add button — tight vertical padding + controlled line-height
      so the icon does not inflate the height (was noticeably taller than Moodle's). */
   padding: 4px 14px;
@@ -3870,14 +3884,15 @@ body.cg-generating #prvSections .cg-insert-zone {
   /* No shadow/halo — the opaque button already covers the dashed line where it sits
      (the line shows on both sides). A white box-shadow "halo" read as an ugly shadow. */
   box-shadow: none;
+  transition: background-color .12s ease, color .12s ease;
 }
 #prvSections .dp-add-activity-wrap .dp-add-control:hover {
   background: var(--primary);
   color: var(--primary-fg);
-  filter: brightness(0.92);
 }
 #prvSections .dp-add-activity-wrap .dp-add-control .dp-add-control__icon {
-  color: var(--primary-fg);
+  /* Follow the button text colour: coral at rest, white on hover. */
+  color: inherit;
   font-size: 14px;
 }
 /* The add panel opens full-width below the centered button (not centered/shrunk). */
