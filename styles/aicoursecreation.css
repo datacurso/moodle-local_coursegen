@@ -3781,12 +3781,17 @@ body.cg-generating #prvSections .cg-insert-zone {
   width: fit-content;
   margin: 0 auto;
   justify-content: center;
+  align-items: center;
+  gap: 5px;
   border: none;
-  border-radius: 8px;
+  border-radius: 6px;
   background: var(--primary);
   color: var(--primary-fg);
-  padding: 7px 16px;
+  /* Flat like Moodle's add button — tight vertical padding + controlled line-height
+     so the icon does not inflate the height (was noticeably taller than Moodle's). */
+  padding: 4px 14px;
   font-size: 13px;
+  line-height: 1.35;
   /* White halo so the dashed line never runs through the button (Boost's trick). */
   box-shadow: 0 0 0 5px #fff;
 }
@@ -3797,6 +3802,7 @@ body.cg-generating #prvSections .cg-insert-zone {
 }
 #prvSections .dp-add-activity-wrap .dp-add-control .dp-add-control__icon {
   color: var(--primary-fg);
+  font-size: 14px;
 }
 /* The add panel opens full-width below the centered button (not centered/shrunk). */
 #prvSections .dp-add-activity-wrap .dp-ai-inline {
