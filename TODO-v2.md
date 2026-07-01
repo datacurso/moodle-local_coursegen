@@ -870,3 +870,7 @@ FromPlan pintaba el detalle completo y clampDetail lo recortaba un frame despué
   card "Review your course plan" quedaba apilado con el composer. runPlanAction ahora oculta el decision
   overlay al iniciar la acción (como ya hacía feedback.js para adjust/accept); reaparece en el próximo
   review_needed. Verificado: overlay=none durante la acción, vuelve a review al terminar.
+- [x] Flash del decision card entre acciones: (1) debounce de 400ms en show() del decision-overlay,
+  cancelado por hide(), para que no parpadee entre acciones rápidas; (2) hide en dragstart (dnd) para
+  que el card NO se vea durante el gesto de arrastre; re-show en dragend si el drag fue cancelado/no-op.
+  Verificado: review=flex, dragstart→none, cancel→flex (debounced), reorder real→oculto durante y vuelve.

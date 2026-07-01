@@ -29,6 +29,19 @@
 /** Module-level singleton so every caller shares the same controller. */
 let instance = null;
 
+/** Pending debounced show() timer — see show()/hide(). */
+let pendingShowTimer = null;
+
+/**
+ * Small delay before the review decision card actually appears. When the user
+ * fires several quick adjustments in a row (e.g. drag-reordering), each action
+ * returns to "review" for a beat before the next one starts; without this the
+ * Accept/Adjust card would flash in and out between every action. Deferring the
+ * show and cancelling it on the next hide() means the card only appears once the
+ * user pauses — never as a flash mid-editing.
+ */
+const SHOW_DELAY_MS = 400;
+
 /**
  * Return (or lazily create) the singleton decision-overlay controller.
  *
@@ -83,19 +96,24 @@ export const getDecisionOverlay = (texts) => {
         if (!overlay) {
             return;
         }
-        overlay.style.display = 'flex';
-        if (compactChatCard) {
-            compactChatCard.style.display = 'none';
-        }
-        // The full card has its own Accept — drop the composer's inline accept bar.
-        const acceptBar = document.getElementById('cgAcceptBar');
-        if (acceptBar) {
-            acceptBar.style.display = 'none';
-        }
-        // Keep the newest turn in view above the card.
-        if (chatScroll) {
-            chatScroll.scrollTop = chatScroll.scrollHeight;
-        }
+        // Debounced: only reveal the card once the user pauses (SHOW_DELAY_MS with no
+        // intervening hide), so it never flashes between back-to-back adjustments.
+        clearTimeout(pendingShowTimer);
+        pendingShowTimer = setTimeout(() => {
+            overlay.style.display = 'flex';
+            if (compactChatCard) {
+                compactChatCard.style.display = 'none';
+            }
+            // The full card has its own Accept — drop the composer's inline accept bar.
+            const acceptBar = document.getElementById('cgAcceptBar');
+            if (acceptBar) {
+                acceptBar.style.display = 'none';
+            }
+            // Keep the newest turn in view above the card.
+            if (chatScroll) {
+                chatScroll.scrollTop = chatScroll.scrollHeight;
+            }
+        }, SHOW_DELAY_MS);
     };
 
     /**
@@ -105,6 +123,9 @@ export const getDecisionOverlay = (texts) => {
      * @returns {void}
      */
     const hide = () => {
+        // Cancel any pending (debounced) show so a just-started action never lets the
+        // card flash in a beat later.
+        clearTimeout(pendingShowTimer);
         if (!overlay) {
             return;
         }
