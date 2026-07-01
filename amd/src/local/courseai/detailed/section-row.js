@@ -168,6 +168,43 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
     row.setAttribute('data-sectionname', sectionName || '');
     // Kept for the existing DnD wirer (idDataset 'sectionId') and ui-proposals.
     row.dataset.sectionId = sectionId;
+
+    // On-hover "+" divider ABOVE this section (add a section at THIS slot), mirroring
+    // the between-activities divider and Moodle's between-sections add affordance. The
+    // zone is a child of the section <li> so it rides along on reorder (reconciler-safe).
+    // CSS hides it on the FIRST section (Moodle shows dividers only BETWEEN sections).
+    const sectionInsertZone = document.createElement('div');
+    sectionInsertZone.className = 'cg-insert-zone cg-insert-zone--section';
+    sectionInsertZone.setAttribute('contenteditable', 'false');
+    sectionInsertZone.setAttribute('draggable', 'false');
+    const sectionInsertBtn = document.createElement('button');
+    sectionInsertBtn.type = 'button';
+    sectionInsertBtn.className = 'cg-insert-btn';
+    const secInsertLabel = (texts && texts.courseai_btn_add_section) || 'Add section';
+    sectionInsertBtn.setAttribute('aria-label', secInsertLabel);
+    sectionInsertBtn.setAttribute('title', secInsertLabel);
+    sectionInsertBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" '
+        + 'stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">'
+        + '<path d="M12 5v14M5 12h14"/></svg>';
+    sectionInsertBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (typeof state.openAddSectionAt !== 'function') {
+            return;
+        }
+        // Insert BEFORE this section: its CURRENT index among the rendered sections
+        // (computed at click time, so reorders never leave a stale slot).
+        const secs = Array.prototype.slice.call(sectionList.querySelectorAll('.course-section'));
+        const index = secs.indexOf(row);
+        state.openAddSectionAt(index >= 0 ? index : null);
+    });
+    sectionInsertZone.addEventListener('dragstart', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+    });
+    sectionInsertZone.appendChild(sectionInsertBtn);
+    row.appendChild(sectionInsertZone);
+
     row.appendChild(sectionItem);
     // A genuinely-new real-UUID section is being rendered: drop any transient
     // apply placeholder so the shimmer is replaced, never duplicated.
@@ -235,20 +272,38 @@ export const appendAddSectionControl = (ctx) => {
         existing.remove();
     }
 
+    // Insertion slot for the NEXT add-section submit. null = append at the end (the
+    // bottom "+ Add section" button); a number = insert at that slot (set by an
+    // on-hover "+" divider between two sections). Reset after every submit.
+    let pendingSectionPosition = null;
+
     const addSectionPanelApi = createTextPanel({
         texts,
         onSubmit: async(value) => {
             addSectionBtn.classList.add('dp-add-control--disabled');
+            const position = pendingSectionPosition;
+            pendingSectionPosition = null;
             // No turn here: the new section has no name yet. handleReviewNeeded
             // emits "You added section: <name>" once the model has generated it.
             try {
-                await runPlanAction({action: 'add_section', instruction: value});
+                const intent = {action: 'add_section', instruction: value};
+                if (typeof position === 'number' && position >= 0) {
+                    intent.position = position;
+                }
+                await runPlanAction(intent);
             } catch (e) {
                 addSectionBtn.classList.remove('dp-add-control--disabled');
             }
         },
         placeholder: texts.courseai_add_section_placeholder || 'Describe the section to add…',
     });
+
+    // Open the shared add-section panel targeting a specific slot. Wired to the
+    // on-hover "+" dividers between sections (see createDetailedSectionRow).
+    state.openAddSectionAt = (position) => {
+        pendingSectionPosition = typeof position === 'number' ? position : null;
+        addSectionPanelApi.open();
+    };
 
     const addSectionBtn = createAddTriggerBtn(texts.courseai_btn_add_section || 'Add section');
     addSectionBtn.classList.add('dp-add-control--disabled');
