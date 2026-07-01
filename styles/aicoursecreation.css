@@ -1677,6 +1677,7 @@ svg { display: block; flex-shrink: 0; }
   margin: 0;
   opacity: .85;
   max-width: 100%;
+  min-height: 16px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;

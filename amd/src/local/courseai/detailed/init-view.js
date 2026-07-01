@@ -94,9 +94,11 @@ export const initDetailedPlanView = (ctx, data) => {
     if (planReviewCard) {
         planReviewCard.style.display = '';
     }
+    // The "Showing real-time detailed planning progress" live note is intentionally
+    // NOT shown (unwanted, and its appearance made the header height jump).
     if (prvLiveNote) {
-        prvLiveNote.style.display = 'block';
-        prvLiveNote.textContent = texts.courseai_live_note_detailed;
+        prvLiveNote.style.display = 'none';
+        prvLiveNote.textContent = '';
     }
     if (prvSpinnerIcon) {
         prvSpinnerIcon.style.display = '';

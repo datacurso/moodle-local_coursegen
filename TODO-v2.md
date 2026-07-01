@@ -849,3 +849,7 @@ sessions remain, then remove it.
   toda la pantalla. Fijado a 1 línea con ellipsis (.prv-header-text en columna + .prv-header-sub nowrap
   + text-overflow) → altura constante (46px). Y se eliminó el live note "Showing real-time detailed
   planning progress." (quitado el bloque en handleStatus + del destructure).
+- [x] El fix de jitter/live-note aplica a AMBAS fases: además de handleStatus (generación),
+  init-view.js mostraba el live note al iniciar la vista detallada de PLANIFICACIÓN → ahora oculto.
+  + min-height en .prv-header-sub para reservar la línea (altura de cabecera constante desde el inicio).
+  Verificado: generación [46] estable, planificación sin el live note (var. 2px imperceptible).
