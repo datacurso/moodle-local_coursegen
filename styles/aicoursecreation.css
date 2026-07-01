@@ -3476,24 +3476,26 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
   font-size: 11px;
 }
 
-/* Action controls (AI adjust + delete): hidden until the section/activity is
-   hovered or focused, echoing Boost's .focus-control affordances. */
+/* Action controls (AI adjust + delete). In PLANNING they are ALWAYS visible: a
+   hover-only reveal left the collapse chevron sitting alone with phantom empty
+   space beside it (where the invisible buttons still took room), which read as
+   misaligned. Keeping them shown fills that space and the row reads cleanly. */
 #prvSections .cg-item-actions {
   display: inline-flex;
   align-items: center;
   gap: 6px;
 }
 #prvSections .cg-item-actions .dp-action-btn {
-  opacity: 0;
+  opacity: 1;
   transition: opacity var(--t-fast, .12s) var(--ease, ease);
 }
-#prvSections .course-section-header:hover .cg-item-actions .dp-action-btn,
-#prvSections .course-section-header:focus-within .cg-item-actions .dp-action-btn,
-#prvSections .activity-item:hover .cg-item-actions .dp-action-btn,
-#prvSections .activity-item:focus-within .cg-item-actions .dp-action-btn {
-  opacity: 1;
+/* The collapse chevron (collapsible-content indicator) sits LAST in the cluster
+   (rightmost) in BOTH phases, so it is consistently flush-right — in generation
+   the action buttons are gone and only this chevron remains, aligned at the end. */
+#prvSections .cg-activity-chevron {
+  order: 10;
 }
-/* Disabled-while-streaming controls stay hidden regardless of hover. */
+/* Disabled-while-streaming controls stay hidden regardless. */
 #prvSections .cg-item-actions .dp-action-btn.dp-action-btn--disabled {
   opacity: 0;
 }
@@ -3515,7 +3517,11 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
    spinner on the icon while in progress and a green check when done. Edit
    affordances are hidden; expandable activities STAY clickable. Drag-and-drop is
    off the whole phase (state.isStreaming gates the wirer). */
-body.cg-generating #prvSections .cg-item-actions,
+/* Generation is read-only: drop the edit controls (AI-adjust + delete) and the
+   add buttons. But KEEP the collapse chevron — activities with content stay
+   expandable — so hide only the .dp-action-btn inside the cluster, not the whole
+   cluster (which also holds the chevron). The chevron then sits alone, flush-right. */
+body.cg-generating #prvSections .cg-item-actions .dp-action-btn,
 body.cg-generating #prvSections .dp-add-activity-wrap,
 body.cg-generating #prvSections .dp-add-section-wrap { display: none !important; }
 body.cg-generating #prvSections .activity-item.cg-activity--has-detail { cursor: pointer !important; }
