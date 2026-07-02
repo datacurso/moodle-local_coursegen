@@ -337,16 +337,6 @@ export const handleCompleted = async(data, ctx) => {
     if (typeof hideStreamBar === 'function') {
         hideStreamBar();
     }
-    // Header: NOW the whole flow is truly done (activities + images + config + cleanup),
-    // so swap the still-running spinner for the check. The spinner was intentionally
-    // kept spinning through the tail phases (see resolveGenerationHeaderIfDone) so the
-    // final ~minute never looked frozen.
-    const prvHeader = document.getElementById('prvHeader');
-    const prvSpinner = document.getElementById('prvSpinnerIcon');
-    const prvCheck = document.getElementById('prvCheckIcon');
-    if (prvHeader) { prvHeader.classList.add('prv-header--done'); }
-    if (prvSpinner) { prvSpinner.style.display = 'none'; }
-    if (prvCheck) { prvCheck.style.display = ''; }
     // Meaningful milestone: generation finished → one permanent success turn.
     if (typeof emitLog === 'function') {
         emitLog({

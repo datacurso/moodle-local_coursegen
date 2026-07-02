@@ -25,30 +25,34 @@
  */
 
 import {setTrackerFlatStatus} from 'local_coursegen/local/courseai/stream/tracker';
+import {hideWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
 
 /**
- * When every activity's CONTENT has been generated, the graph still runs the tail
- * phases (image generation, course-config inference, cleanup, persist) before the
- * 'completed' event fires. Do NOT declare the header done here — that dropped the
- * spinner and showed the check while the tail (which can take a couple of minutes with
- * images) was still running, so the UI looked frozen. Instead KEEP the spinner and
- * show a "finalizing your course…" subtitle; handleCompleted flips to the check when
- * the whole flow is truly done.
+ * When every activity has been generated, resolve the header spinner to a check
+ * and drop the live "working" indicator, so the header/left stay in sync with the
+ * all-checked cards (no lingering spinner or stale status line).
  *
  * @param {Object} state
- * @param {Object} [ctx]  Stream ctx (for texts); optional.
  * @returns {void}
  */
-const resolveGenerationHeaderIfDone = (state, ctx) => {
+const resolveGenerationHeaderIfDone = (state) => {
     const total = state.activityProgressTotal || 0;
     if (total <= 0 || (state.activityProgressDone || 0) < total) {
         return;
     }
-    const sub = document.getElementById('prvHeaderSub');
-    if (sub) {
-        sub.textContent = (ctx && ctx.texts && ctx.texts.courseai_finalizing_course)
-            || 'Finalizing your course…';
+    const hdr = document.getElementById('prvHeader');
+    const spin = document.getElementById('prvSpinnerIcon');
+    const chk = document.getElementById('prvCheckIcon');
+    if (hdr) {
+        hdr.classList.add('prv-header--done');
     }
+    if (spin) {
+        spin.style.display = 'none';
+    }
+    if (chk) {
+        chk.style.display = '';
+    }
+    hideWorkingIndicator();
 };
 
 /**
@@ -92,7 +96,7 @@ export const handleActivityProgressDone = (data, ctx) => {
     ctx.state.activityProgressDone = (ctx.state.activityProgressDone || 0) + 1;
     ctx.updateProgress();
     ctx.renderTracker();
-    resolveGenerationHeaderIfDone(ctx.state, ctx);
+    resolveGenerationHeaderIfDone(ctx.state);
 };
 
 /**
@@ -106,7 +110,7 @@ export const handleActivityProgressFailed = (data, ctx) => {
     ctx.state.activityProgressDone = (ctx.state.activityProgressDone || 0) + 1;
     ctx.updateProgress();
     ctx.renderTracker();
-    resolveGenerationHeaderIfDone(ctx.state, ctx);
+    resolveGenerationHeaderIfDone(ctx.state);
 };
 
 /**
