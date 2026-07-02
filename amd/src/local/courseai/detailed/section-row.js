@@ -108,19 +108,23 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
             addActivityBtn.classList.add('dp-add-control--disabled');
             const position = pendingPosition;
             pendingPosition = null;
-            // No turn here: the new activity has no name yet. handleReviewNeeded
-            // emits "You added activity: <name>" once the model has generated it.
+            const intent = {
+                action: 'add_activity',
+                parent_section_id: sectionId,
+                instruction: value,
+            };
+            // Only send an explicit slot when inserting between rows; omit it for
+            // the bottom button so the service appends (unchanged behaviour).
+            if (typeof position === 'number' && position >= 0) {
+                intent.position = position;
+            }
+            // Same as the inline "+" divider and the chat proposal flow: show the
+            // user's request as a left turn AND a placement skeleton in the centre.
+            if (typeof log === 'function') {
+                log({actor: 'user', kind: 'user', message: value});
+            }
+            markProposalTargetPending(ctx, intent);
             try {
-                const intent = {
-                    action: 'add_activity',
-                    parent_section_id: sectionId,
-                    instruction: value,
-                };
-                // Only send an explicit slot when inserting between rows; omit it for
-                // the bottom button so the service appends (unchanged behaviour).
-                if (typeof position === 'number' && position >= 0) {
-                    intent.position = position;
-                }
                 await runPlanAction(intent);
             } catch (e) {
                 addActivityBtn.classList.remove('dp-add-control--disabled');
@@ -144,14 +148,10 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
                     if (typeof position === 'number' && position >= 0) {
                         intent.position = position;
                     }
-                    // Log the user's request in the left thread (prefixed with the action)
-                    // so it reads like a chat turn: "Add an activity to <section>: <text>".
+                    // Show the user's request verbatim as a left-panel turn (their own
+                    // message, like a chat bubble) — not the AI's understanding.
                     if (typeof log === 'function') {
-                        const msg = ((texts && texts.proposal_add_activity)
-                            || 'Add an activity to {$a->section}: {$a->instruction}')
-                            .replace('{$a->section}', sectionName || '')
-                            .replace('{$a->instruction}', value);
-                        log({actor: 'user', kind: 'user', message: msg});
+                        log({actor: 'user', kind: 'user', message: value});
                     }
                     // Show a skeleton placeholder at the target slot so the CENTER shows
                     // WHERE the new activity will land while it streams in.
@@ -320,13 +320,18 @@ export const appendAddSectionControl = (ctx) => {
             addSectionBtn.classList.add('dp-add-control--disabled');
             const position = pendingSectionPosition;
             pendingSectionPosition = null;
-            // No turn here: the new section has no name yet. handleReviewNeeded
-            // emits "You added section: <name>" once the model has generated it.
+            const intent = {action: 'add_section', instruction: value};
+            if (typeof position === 'number' && position >= 0) {
+                intent.position = position;
+            }
+            // Same as the inline "+" divider and the chat proposal flow: show the
+            // user's request as a left turn AND a placement skeleton in the centre, so
+            // clicking the bottom "+ Add section" button looks identical to the others.
+            if (typeof log === 'function') {
+                log({actor: 'user', kind: 'user', message: value});
+            }
+            markProposalTargetPending(ctx, intent);
             try {
-                const intent = {action: 'add_section', instruction: value};
-                if (typeof position === 'number' && position >= 0) {
-                    intent.position = position;
-                }
                 await runPlanAction(intent);
             } catch (e) {
                 addSectionBtn.classList.remove('dp-add-control--disabled');
@@ -349,12 +354,10 @@ export const appendAddSectionControl = (ctx) => {
                     if (typeof position === 'number' && position >= 0) {
                         intent.position = position;
                     }
-                    // Log the user's request in the left thread (prefixed with the action).
+                    // Show the user's request verbatim as a left-panel turn (their own
+                    // message, like a chat bubble) — not the AI's understanding.
                     if (typeof log === 'function') {
-                        const msg = ((texts && texts.proposal_add_section)
-                            || 'Add a section: {$a->instruction}')
-                            .replace('{$a->instruction}', value);
-                        log({actor: 'user', kind: 'user', message: msg});
+                        log({actor: 'user', kind: 'user', message: value});
                     }
                     // Skeleton placeholder at the target slot: shows WHERE the new section
                     // will land while it streams in.
