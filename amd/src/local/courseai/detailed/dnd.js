@@ -156,6 +156,16 @@ export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, p
     };
 
     const attachToRow = (row) => {
+        if (!row) {
+            return;
+        }
+        // Idempotent: a row can be re-offered (e.g. reconcile's settle pass re-attaches
+        // every section to catch rows created off the DnD path). Attaching twice would
+        // stack duplicate listeners, so wire each row exactly once.
+        if (row.dataset.cgDndWired === '1') {
+            return;
+        }
+        row.dataset.cgDndWired = '1';
         row.setAttribute('draggable', 'true');
         row.addEventListener('dragstart', onDragStart);
         row.addEventListener('dragover', onDragOver);

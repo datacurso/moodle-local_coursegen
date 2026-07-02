@@ -252,7 +252,18 @@ export const reconcilePlan = async(ctx, currentPlan) => {
     // slot marker and reintroduce the jump.
     removeAllTransientPlaceholders();
 
-    // Settle point: sync every section's activity-count badge to its REAL rows, so an
-    // added/reloaded section shows "N activities" and never a stale "2/0".
-    activeSections.forEach((section) => refreshSectionMeta(ctx, section.id));
+    // Settle point: sync every section's activity-count badge to its REAL rows (so an
+    // added/reloaded section shows "N activities", never a stale "2/0"), AND make sure
+    // every section row is wired for drag-and-drop. A section row can be created off the
+    // DnD path (ensureDetailedSection, when an activity arrives before its section is
+    // rendered), and ensureSectionRendered then early-returns without attaching — so the
+    // added section ended up NOT draggable. attachToRow is idempotent, so re-attaching
+    // already-wired rows is a no-op.
+    activeSections.forEach((section) => {
+        refreshSectionMeta(ctx, section.id);
+        const meta = state.detailedSectionMeta[section.id];
+        if (meta && meta.row && state.sectionDnd) {
+            state.sectionDnd.attachToRow(meta.row);
+        }
+    });
 };

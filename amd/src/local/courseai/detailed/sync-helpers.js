@@ -37,8 +37,15 @@ import {getSectionList} from './container';
  */
 export const ensureSectionRendered = (ctx, section, renderIndex) => {
     const {state} = ctx;
-    if (state.detailedSectionMeta[section.id]) {
-        return state.detailedSectionMeta[section.id];
+    const existing = state.detailedSectionMeta[section.id];
+    if (existing) {
+        // The row may have been created off the DnD path (ensureDetailedSection, when an
+        // activity arrived before its section was rendered), so it was never made
+        // draggable. Wire it here too — attachToRow is idempotent.
+        if (state.sectionDnd && existing.row) {
+            state.sectionDnd.attachToRow(existing.row);
+        }
+        return existing;
     }
     createDetailedSectionRow(ctx, {
         sectionId: section.id,
