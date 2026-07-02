@@ -2357,6 +2357,33 @@ svg { display: block; flex-shrink: 0; }
   cursor: pointer;
 }
 
+/* Moodle/Bootstrap paints a default BLUE focus ring (box-shadow) on form inputs.
+   Override it with a brand-coloured ring so the checked proposal reads on-brand,
+   not blue. The live card lives in .plan-proposals-group (NOT .plan-proposals), so
+   target the element classes directly + !important to beat Moodle's base rule. */
+.plan-proposal-radio:focus,
+.plan-proposal-radio:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 3px hsl(260 37% 42% / .35) !important;
+}
+
+/* Moodle base list/label styles override our card border to a grey bottom rule,
+   so the SELECTED card lost its brand outline. Force the brand border here. */
+.plan-proposal-card {
+  border: 1px solid var(--border, #dee2e6) !important;
+}
+
+.plan-proposal-card:has(.plan-proposal-radio:checked) {
+  border-color: var(--brand, hsl(260 37% 42%)) !important;
+  background: hsl(260 37% 42% / .07) !important;
+}
+
+/* Destructive selected card keeps the coral (primary) accent. */
+.plan-proposal--destructive:has(.plan-proposal-radio:checked) {
+  border-color: var(--primary, hsl(10 81% 63%)) !important;
+  background: hsl(10 81% 63% / .09) !important;
+}
+
 .plan-proposal-summary {
   font-size: 13px;
   color: var(--fg);
