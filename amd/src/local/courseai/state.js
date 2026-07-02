@@ -71,6 +71,8 @@ export const createInitialState = ({defaultLang, guidelines, languages}) => {
         createdCourseResult: null,
         courseTitle: '',
         isStreaming: false,
-        currentStage: 'planning'
+        planEverReviewed: false,
+        currentStage: 'planning',
+        stopped: false,
     };
 };

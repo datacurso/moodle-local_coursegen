@@ -13,33 +13,38 @@
 
 ## Checklist
 
-- [ ] [1. Principios de experiencia](#1-principios-de-experiencia)
-- [ ] [2. Layout: las tres zonas](#2-layout-las-tres-zonas)
-  - [ ] [2.1 Divisor redimensionable entre log y preview (sin anchos fijos)](#21-divisor-redimensionable-entre-log-y-preview-sin-anchos-fijos)
-- [ ] [3. Vista central — preview del curso (estilo Moodle)](#3-vista-central--preview-del-curso)
-  - [ ] [3.1 Fidelidad visual a Moodle (formato por temas)](#31-fidelidad-visual-a-moodle-formato-por-temas)
-  - [ ] [3.2 Anatomía de una sección (preview)](#32-anatomía-de-una-sección-preview)
-  - [ ] [3.3 Anatomía de una actividad (preview)](#33-anatomía-de-una-actividad-preview)
-  - [ ] [3.4 Relleno progresivo (lo central del pedido)](#34-relleno-progresivo-lo-central-del-pedido)
-- [ ] [4. Vista lateral — registro/log de decisiones](#4-vista-lateral--registrolog-de-decisiones)
-  - [ ] [4.1 Qué registra (toda acción, sin excepción)](#41-qué-registra-toda-acción-sin-excepción)
-  - [ ] [4.2 Anatomía de una entrada de log](#42-anatomía-de-una-entrada-de-log)
-  - [ ] [4.3 Comportamiento](#43-comportamiento)
-- [ ] [5. Streaming sin spinners (aparición progresiva)](#5-streaming-sin-spinners)
-  - [ ] [5.1 Reglas](#51-reglas)
-  - [ ] [5.2 Secuencia visual de una sesión](#52-secuencia-visual-de-una-sesión)
-- [ ] [6. Interactividad en tiempo real (el corazón)](#6-interactividad-en-tiempo-real)
-  - [ ] [6.1 Previsualización de selección (antes de confirmar)](#61-previsualización-de-selección-antes-de-confirmar)
-  - [ ] [6.2 Auto-foco al cambio](#62-auto-foco-al-cambio)
-  - [ ] [6.3 De dónde salen los cambios](#63-de-dónde-salen-los-cambios)
-- [ ] [7. Sistema de color semántico y tokens](#7-sistema-de-color-semántico-y-tokens)
-- [ ] [8. Sistema de movimiento (transiciones y timings)](#8-sistema-de-movimiento)
-- [ ] [9. Catálogo de componentes visuales](#9-catálogo-de-componentes-visuales)
-- [ ] [10. Estados globales de la vista](#10-estados-globales-de-la-vista)
-- [ ] [11. Microinteracciones y pulido profesional](#11-microinteracciones-y-pulido-profesional)
-- [ ] [12. Accesibilidad](#12-accesibilidad)
+> Estado: `[x]` hecho · `[ ] (parcial)` parcialmente cubierto · `[ ]` pendiente.
+> Auditado contra el código el 2026-06-19 (commits hasta `56c393f`).
+
+- [ ] [1. Principios de experiencia](#1-principios-de-experiencia) (parcial: spinner `#planningLoading` aún vive junto a los skeletons)
+- [x] [2. Layout: las tres zonas](#2-layout-las-tres-zonas)
+  - [x] [2.1 Divisor redimensionable entre log y preview (sin anchos fijos)](#21-divisor-redimensionable-entre-log-y-preview-sin-anchos-fijos)
+- [ ] [3. Vista central — preview del curso (estilo Moodle)](#3-vista-central--preview-del-curso) (parcial: render DOM manual, sin plantillas Mustache)
+  - [ ] [3.1 Fidelidad visual a Moodle (formato por temas)](#31-fidelidad-visual-a-moodle-formato-por-temas) (parcial: CSS propio, no `core_courseformat`)
+  - [x] [3.2 Anatomía de una sección (preview)](#32-anatomía-de-una-sección-preview)
+  - [x] [3.3 Anatomía de una actividad (preview)](#33-anatomía-de-una-actividad-preview)
+  - [x] [3.4 Relleno progresivo (lo central del pedido)](#34-relleno-progresivo-lo-central-del-pedido)
+- [x] [4. Vista lateral — registro/log de decisiones](#4-vista-lateral--registrolog-de-decisiones)
+  - [x] [4.1 Qué registra (toda acción, sin excepción)](#41-qué-registra-toda-acción-sin-excepción)
+  - [x] [4.2 Anatomía de una entrada de log](#42-anatomía-de-una-entrada-de-log)
+  - [ ] [4.3 Comportamiento](#43-comportamiento) (parcial: append + autoscroll + aria-live; falta hover-entrada → resalta en preview)
+- [ ] [5. Streaming sin spinners (aparición progresiva)](#5-streaming-sin-spinners) (parcial: skeletons + barra fina hechos, pero `#planningLoading` sigue)
+  - [ ] [5.1 Reglas](#51-reglas) (parcial)
+  - [ ] [5.2 Secuencia visual de una sesión](#52-secuencia-visual-de-una-sesión) (parcial)
+- [x] [6. Interactividad en tiempo real (el corazón)](#6-interactividad-en-tiempo-real)
+  - [ ] [6.1 Previsualización de selección (antes de confirmar)](#61-previsualización-de-selección-antes-de-confirmar) (parcial: propuestas sí; marcado pre-aplicar no confirmado)
+  - [x] [6.2 Auto-foco al cambio](#62-auto-foco-al-cambio)
+  - [x] [6.3 De dónde salen los cambios](#63-de-dónde-salen-los-cambios)
+- [x] [7. Sistema de color semántico y tokens](#7-sistema-de-color-semántico-y-tokens)
+- [x] [8. Sistema de movimiento (transiciones y timings)](#8-sistema-de-movimiento)
+- [ ] [9. Catálogo de componentes visuales](#9-catálogo-de-componentes-visuales) (parcial: componentes en JS; sin plantillas Mustache)
+- [ ] [10. Estados globales de la vista](#10-estados-globales-de-la-vista) (parcial: estados planning/review/`cg-plan-reviewed` ok; spinner inicial sigue)
+- [x] [11. Microinteracciones y pulido profesional](#11-microinteracciones-y-pulido-profesional)
+- [ ] [12. Accesibilidad](#12-accesibilidad) (parcial: aria-live + teclado del divisor; falta reorder por teclado y roles radio)
 - [ ] [13. Responsive](#13-responsive)
-- [ ] [14. Mapa de archivos afectados](#14-mapa-de-archivos-afectados)
+- [ ] [14. Mapa de archivos afectados](#14-mapa-de-archivos-afectados) (parcial: faltan las 5 plantillas Mustache)
+- [ ] [15. Persistencia de sesión: recargar sin perder avance](#15-persistencia-de-sesión-recargar-sin-perder-avance) (NUEVO)
+- [ ] [16. Detener / reanudar la ejecución](#16-detener--reanudar-la-ejecución) (NUEVO)
 
 ---
 
@@ -435,6 +440,63 @@ Cada estado tiene un diseño propio; **ninguno usa el spinner genérico**:
   `user-select:none` durante el arrastre.
 - **Stream → mutaciones** (`stream/*`): alimenta el estado; el preview reacciona y anima por diff.
 - **`utils.js`**: `focusChange`, helpers de iconos/purpose, formateadores; sin duplicados.
+
+---
+
+## 15. Persistencia de sesión: recargar sin perder avance
+
+> NUEVO. El usuario debe poder **recargar la página** (F5, cierre accidental, navegación) y
+> reencontrar el plan/curso **en el mismo punto**, sin perder lo avanzado.
+
+**Estado base (servicio):** YA soportado server-side vía el checkpointer de LangGraph — los
+servicios releen el snapshot del `thread_id` (`_get_state`) en cada apertura de stream y reanudan
+con `Command(resume=...)` si hay un snapshot en curso. **Lo que falta es del lado plugin.**
+
+**Reglas:**
+1. Al cargar la página, si hay un `recordid`/`thread_id` de una sesión en curso (persistido en la
+   URL o en `user preferences`), el plugin debe **rehidratar la vista** desde el snapshot del
+   servicio: estructura del plan, planes detallados, estado de revisión/streaming, y el log de
+   decisiones hasta donde quedó.
+2. La rehidratación debe respetar el reconciliador por UUID (no re-renderizar desde cero): pinta el
+   plan tal como estaba, sin animaciones de "nuevo".
+3. Si al recargar el servidor seguía generando, el plugin reabre el stream y continúa mostrando el
+   avance (no reinicia).
+4. El `recordid` se persiste de forma estable (URL param o `core_user` pref) para sobrevivir la
+   recarga.
+
+**Trabajo plugin:** revisar/endurecer `courseai/bootstrap/resume-snapshot.js` para reconstruir el
+preview + el log desde el snapshot; persistir/leer el `recordid`; reabrir el stream en estado
+correcto (planning vs generating) usando el flag `keepPlan`.
+
+**Trabajo servicio (si hace falta):** garantizar que el snapshot incluye lo necesario para
+reconstruir el log/decisiones; ver el TODO del servicio (`TODO-V2.md`, sección de control de
+ejecución y persistencia).
+
+## 16. Detener / reanudar la ejecución
+
+> NUEVO. Un botón **Detener** que pausa la ejecución cuando el usuario quiera, con posibilidad de
+> **reanudar** cuando quiera. Detener **solo pausa** (no cancela/descarta), corta el consumo de
+> tokens de Gemini, y la interfaz queda **congelada como estaba al momento del stop pero sin los
+> estados de loading**.
+
+**Reglas (UI):**
+1. **Botón Detener** visible durante cualquier fase activa (planificación detallada / generación).
+   Al presionarlo: cierra el stream del cliente y pide al servicio detener la ejecución.
+2. **Congelar sin loadings:** todo lo ya renderizado se conserva exactamente como estaba; se
+   retiran TODOS los estados de carga (skeletons, barra de stream, spinner `#planningLoading`,
+   `dp-item-regenerating`, pulsos). Nada de spinners "colgados".
+3. **Botón Reanudar:** reabre el stream y continúa desde donde el servicio dejó el checkpoint
+   (mismo mecanismo que §15). El usuario reanuda cuando quiera.
+4. El detener debe reflejarse en el **conteo de tokens**: no se cobran/cuentan tokens de Gemini
+   posteriores al stop (lo ya consumido hasta el corte sí se reporta).
+
+**Estado base (servicio):** NO existe cancelación de una ejecución en curso (solo el `interrupt`
+de aprobación, que es otra cosa). Hace falta soporte de servicio para detener la tarea del grafo,
+cerrar el stream de Gemini, persistir el checkpoint en el punto de corte y reportar solo los tokens
+consumidos. Ver `TODO-V2.md` (control de ejecución).
+
+**Trabajo plugin:** botón Detener/Reanudar; al detener, limpiar todos los estados de loading y
+dejar el preview/log congelados; al reanudar, reabrir stream (keepPlan) y seguir.
 
 ---
 

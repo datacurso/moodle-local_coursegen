@@ -206,11 +206,21 @@
               </div>
             </div>
 
+            <!-- Decision log feed (§4) -->
+            <div class="cg-log-section" id="cgLogSection" style="display:none">
+              <span class="cg-log-label">{{#str}}courseai_log_label, local_coursegen{{/str}}</span>
+              <div class="cg-log" id="cgLog" aria-live="polite" aria-label="{{#str}}courseai_log_label, local_coursegen{{/str}}"></div>
+            </div>
+
             <!-- Section checklist shown during streaming -->
             <div class="courseai-checklist hidden" id="courseaiChecklist">
               <span class="courseai-checklist-label">{{#str}}courseai_checklist_label, local_coursegen{{/str}}</span>
               <ul class="courseai-checklist-list" id="courseaiChecklistList"></ul>
             </div>
+
+            <!-- Action log feed (§4): once the plan settles, user actions and their
+                 results flow chronologically BELOW the checklist (organic chat). -->
+            <div class="cg-log" id="cgLogAfter" aria-live="polite"></div>
           </div>
 
           <!-- Adjustment message history (shown after user sends adjustments) -->
@@ -326,12 +336,29 @@
                 </svg>
                 {{#str}}courseai_btn_regenerate, local_coursegen{{/str}}
               </button>
+              <button class="btn-stop-resume btn-stop" id="btnStopExec" type="button"
+                      style="display:none"
+                      aria-label="{{#str}}courseai_btn_stop, local_coursegen{{/str}}"
+                      title="{{#str}}courseai_btn_stop, local_coursegen{{/str}}">
+                {{#str}}courseai_btn_stop, local_coursegen{{/str}}
+              </button>
+              <button class="btn-stop-resume btn-resume" id="btnResumeExec" type="button"
+                      style="display:none"
+                      aria-label="{{#str}}courseai_btn_resume, local_coursegen{{/str}}"
+                      title="{{#str}}courseai_btn_resume, local_coursegen{{/str}}">
+                {{#str}}courseai_btn_resume, local_coursegen{{/str}}
+              </button>
             </div>
           </div>
         </div>
       </div>
 
     </div><!-- .context-wrap -->
+
+    <!-- Resizable divider (§2.1) — visible only in .is-planning (3-column grid) -->
+    <div class="cg-splitter" id="cgSplitter" role="separator" aria-orientation="vertical" tabindex="0"
+         aria-label="{{#str}}courseai_resize_panels, local_coursegen{{/str}}"
+         aria-valuemin="240" aria-valuemax="560" aria-valuenow="360"></div>
 
     <!-- Step 2: Planning view -->
     <div class="planning-wrap" id="planningView" style="display:none">
