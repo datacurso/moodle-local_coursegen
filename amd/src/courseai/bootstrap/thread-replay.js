@@ -223,6 +223,35 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
     };
 
     /**
+     * Compose an add_activity user turn EXACTLY as the live handler does
+     * (section-row.js composeAddTurn): "{instruction} — «{section}», position {N}".
+     * The section name is frozen into the payload at persist time; the 1-based slot
+     * comes from the persisted explicit position, or (for an append) the count of
+     * activities that existed BEFORE insertion — frozen in before_ids. Falls back to
+     * the raw instruction when section/slot can't be resolved (older messages).
+     *
+     * @param {Object} payload - {instruction, section_name, position, before_ids}.
+     * @returns {string|null}
+     */
+    const composeAddActivityTurn = (payload) => {
+        const instruction = String((payload && payload.instruction) || '').trim();
+        const section = String((payload && payload.section_name) || '').trim();
+        let slot0 = null;
+        if (payload && typeof payload.position === 'number') {
+            slot0 = payload.position;
+        } else if (payload && Array.isArray(payload.before_ids)) {
+            slot0 = payload.before_ids.length;
+        }
+        if (!section || slot0 === null) {
+            return instruction || null;
+        }
+        const target = T('courseai_log_add_activity_target', '«{$a->section}», position {$a->position}')
+            .replace('{$a->section}', section)
+            .replace('{$a->position}', String(slot0 + 1));
+        return instruction ? instruction + ' — ' + target : target;
+    };
+
+    /**
      * Render a single thread message into the left feed.
      *
      * @param {Object} msg - { seq, type, role, content, payload, created_at }
@@ -281,20 +310,21 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
             // client logs when submitting the "+" inline add), so it survives reload.
             // The "You added X" confirmation is emitted separately from the NEXT
             // ai_planned_structure (using payload.before_ids), so both appear — like live.
-            if (subtype === 'add_section' || subtype === 'add_activity') {
+            // Adding an ACTIVITY: name the target section + position, EXACTLY as the live
+            // "+ add activity" button logs it (section-row.js composeAddTurn), so reload
+            // === live. Adding a SECTION: echo the user's own words verbatim, like the
+            // live add-section input does (no broken proposal template, no {$a->position}).
+            if (subtype === 'add_activity') {
+                const composed = composeAddActivityTurn(payload);
+                if (composed) {
+                    emitLog({actor: 'user', kind: 'user', message: composed});
+                }
+                return;
+            }
+            if (subtype === 'add_section') {
                 const instruction = String((payload && payload.instruction) || '').trim();
                 if (instruction) {
-                    let message;
-                    if (subtype === 'add_activity') {
-                        const sectionName = String((payload && payload.section_name) || '').trim();
-                        message = T('proposal_add_activity', 'Add an activity to {$a->section}: {$a->instruction}')
-                            .replace('{$a->section}', sectionName)
-                            .replace('{$a->instruction}', instruction);
-                    } else {
-                        message = T('proposal_add_section', 'Add a section: {$a->instruction}')
-                            .replace('{$a->instruction}', instruction);
-                    }
-                    emitLog({actor: 'user', kind: 'user', message});
+                    emitLog({actor: 'user', kind: 'user', message: instruction});
                 }
                 return;
             }

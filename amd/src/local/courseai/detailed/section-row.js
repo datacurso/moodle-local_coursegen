@@ -101,6 +101,25 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
     // exactly like Moodle's edit view). Reset to null after every submit.
     let pendingPosition = null;
 
+    // Count the section's CURRENT active activities (rendered rows, excluding transient
+    // skeletons). Used to name the APPEND slot in the user turn with NO service round-trip:
+    // the button already knows the section, and the append slot is simply "after the ones
+    // that exist now".
+    const countActiveActivities = () => (cmlistEl
+        ? cmlistEl.querySelectorAll('.activity[data-activity-id]:not([data-cg-transient])').length
+        : 0);
+
+    // Compose the add-activity user turn EXACTLY like reload does (thread-replay.js
+    // composeAddActivityTurn): "{instruction} — «{section}», position {N}" with N the
+    // 1-based slot. Both sides identical → the turn survives reload byte-for-byte.
+    const composeAddTurn = (instruction, slot0) => {
+        const target = (texts.courseai_log_add_activity_target || '«{$a->section}», position {$a->position}')
+            .replace('{$a->section}', sectionName)
+            .replace('{$a->position}', String(slot0 + 1));
+        const instr = String(instruction || '').trim();
+        return instr ? instr + ' — ' + target : target;
+    };
+
     // "+ Add activity" control at the bottom of this section's content panel.
     const addActivityPanelApi = createTextPanel({
         texts,
@@ -118,10 +137,13 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
             if (typeof position === 'number' && position >= 0) {
                 intent.position = position;
             }
-            // Same as the inline "+" divider and the chat proposal flow: show the
-            // user's request as a left turn AND a placement skeleton in the centre.
+            // The slot the activity lands in: the explicit divider slot, or the append
+            // slot (after the current activities) for the bottom button.
+            const slot0 = (typeof position === 'number' && position >= 0) ? position : countActiveActivities();
+            // Show the user's request as a left turn — now naming the target section and
+            // position (both known here, no service call), AND a placement skeleton centre.
             if (typeof log === 'function') {
-                log({actor: 'user', kind: 'user', message: value});
+                log({actor: 'user', kind: 'user', message: composeAddTurn(value, slot0)});
             }
             markProposalTargetPending(ctx, intent);
             try {
@@ -148,10 +170,11 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
                     if (typeof position === 'number' && position >= 0) {
                         intent.position = position;
                     }
-                    // Show the user's request verbatim as a left-panel turn (their own
-                    // message, like a chat bubble) — not the AI's understanding.
+                    const slot0 = (typeof position === 'number' && position >= 0) ? position : countActiveActivities();
+                    // Show the user's request as a left-panel turn, naming the target section
+                    // and position (both known from the button, no service round-trip).
                     if (typeof log === 'function') {
-                        log({actor: 'user', kind: 'user', message: value});
+                        log({actor: 'user', kind: 'user', message: composeAddTurn(value, slot0)});
                     }
                     // Show a skeleton placeholder at the target slot so the CENTER shows
                     // WHERE the new activity will land while it streams in.
