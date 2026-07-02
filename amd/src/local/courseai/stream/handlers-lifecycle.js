@@ -199,6 +199,12 @@ export const handleReviewNeeded = async(data, ctx) => {
     } else if (state.addScope) {
         // add_activity: shown below at review time (it has no live section block).
         // (no top rebuild)
+    } else if (state.freezeTranscript) {
+        // Reorder / delete: the "structure I planned" checklist stays FROZEN (it is
+        // history). The change shows as a "You moved/deleted …" turn below and the
+        // centre already reflects it; rebuilding the top would rewrite the past and
+        // pull previously-added sections up into the original snapshot. Just settle.
+        finalizeTranscript();
     } else if (ctx.keepPlan && Array.isArray(data.current_plan) && data.current_plan.length) {
         rebuildTranscriptFromPlan(data.current_plan);
     } else if (transcriptHasContent()) {
@@ -210,6 +216,7 @@ export const handleReviewNeeded = async(data, ctx) => {
     // here AND on failure/error handlers so a later reorder/accept is never mistaken
     // for a regen.
     state.regenScope = null;
+    state.freezeTranscript = false;
 
     // Adding an element: the click-time turn was intentionally silent (the name
     // didn't exist yet).
