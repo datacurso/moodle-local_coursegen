@@ -189,6 +189,30 @@ export const ensureDetailedSection = (ctx, sectionId) => {
 };
 
 /**
+ * Set a section's meta badge to its REAL activity count ("N activities"), counted
+ * from the rendered rows. The old badge interpolated a running done/total pair, but
+ * ``total`` was only incremented on the streaming path and stayed 0 on the reconcile
+ * path (add_section / reload), so the badge showed nonsense like "2/0". Counting the
+ * actual, non-transient activity rows is always correct regardless of how they got
+ * there.
+ *
+ * @param {Object} ctx
+ * @param {string} sectionId
+ * @returns {void}
+ */
+export const refreshSectionMeta = (ctx, sectionId) => {
+    const {state, texts} = ctx;
+    const meta = state && state.detailedSectionMeta[sectionId];
+    if (!meta || !meta.metaEl || !meta.bodyEl) {
+        return;
+    }
+    const count = meta.bodyEl.querySelectorAll('.activity[data-activity-id]:not([data-cg-transient])').length;
+    const label = (texts && texts.courseai_activities_count) || 'activities';
+    meta.total = count;
+    meta.metaEl.textContent = count + ' ' + label;
+};
+
+/**
  * Ensure an activity entry exists for data.activity_id; create lazily if needed.
  *
  * @param {Object} ctx
@@ -196,23 +220,23 @@ export const ensureDetailedSection = (ctx, sectionId) => {
  * @returns {Object|null}
  */
 export const ensureDetailedEntry = (ctx, data) => {
-    const {state, texts, formatTemplate} = ctx;
+    const {state, texts} = ctx;
     const activityId = data.activity_id;
     if (state.detailedActivityEls[activityId]) { return state.detailedActivityEls[activityId]; }
     const sectionId = data.section_id;
     const meta = ensureDetailedSection(ctx, sectionId);
     if (!meta) { return null; }
-    meta.total += 1;
-    meta.metaEl.textContent = formatTemplate(texts.courseai_section_progress_with_total, {
-        done: meta.done, total: meta.total, description: '',
-    });
-    return createDetailedActivityRow(ctx, {
+    const activityIndex = meta.bodyEl.querySelectorAll('.activity[data-activity-id]:not([data-cg-transient])').length;
+    const entry = createDetailedActivityRow(ctx, {
         sectionId, activityId,
-        sectionIndex: meta.total - 1, activityIndex: meta.total - 1,
+        sectionIndex: activityIndex, activityIndex,
         activityType: data.activity_type || 'quiz',
         activityTitle: data.title || texts.courseai_activity_default,
         bodyEl: meta.bodyEl,
     });
+    // Badge reflects the REAL row count (correct on every path), not a running counter.
+    refreshSectionMeta(ctx, sectionId);
+    return entry;
 };
 
 /**
@@ -222,7 +246,7 @@ export const ensureDetailedEntry = (ctx, data) => {
  * @param {Object} data
  */
 export const markActivityPlanned = (ctx, data) => {
-    const {state, texts, formatTemplate, setProgress} = ctx;
+    const {state, setProgress} = ctx;
     const entry = ensureDetailedEntry(ctx, data);
     if (!entry || entry.done) {
         return;
@@ -287,9 +311,9 @@ export const markActivityPlanned = (ctx, data) => {
     const meta = state.detailedSectionMeta[sectionId];
     if (meta) {
         meta.done += 1;
-        meta.metaEl.textContent = formatTemplate(texts.courseai_section_progress_with_total, {
-            done: meta.done, total: meta.total, description: '',
-        });
+        // Planning an activity does not change the row count, but keep the badge in
+        // sync with the real rows anyway (and never show a done/total pair).
+        refreshSectionMeta(ctx, sectionId);
         setImageBadge(ctx, meta.imagesBadgeEl, meta.imagesCount || 0);
     }
 

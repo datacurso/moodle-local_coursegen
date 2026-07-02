@@ -71,12 +71,12 @@ const buildCollapseToggle = (uuid, sectionName) => {
 export const buildSectionRowSkeleton = (ctx, sectionId, renderIndex, sectionName, totalActivities) => {
     const {texts, formatTemplate, escapeHtml} = ctx;
 
-    // Progress meta line — kept as a sectionbadge-like element inside the header.
+    // Activity-count badge — a plain "{N} activities" count (Moodle-style), refreshed
+    // from the real rows by refreshSectionMeta. NOT a done/total progress pair, which
+    // desynced across the streaming vs reconcile paths and showed nonsense like "2/0".
     const metaEl = document.createElement('span');
     metaEl.className = 'cg-section-meta badge bg-light text-muted';
-    metaEl.textContent = formatTemplate(texts.courseai_section_progress_with_total, {
-        done: 0, total: totalActivities, description: '',
-    });
+    metaEl.textContent = (totalActivities || 0) + ' ' + (texts.courseai_activities_count || 'activities');
 
     const imagesBadgeEl = document.createElement('span');
     imagesBadgeEl.className = 'cg-image-pill badge bg-light text-muted ms-2';

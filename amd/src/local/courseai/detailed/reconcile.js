@@ -37,7 +37,7 @@
  */
 
 import {ensureSectionRendered, ensureActivityRendered} from './sync-helpers';
-import {markActivityPlanned} from './activity-row';
+import {markActivityPlanned, refreshSectionMeta} from './activity-row';
 import {appendAddSectionControl} from './section-row';
 import {focusChange} from 'local_coursegen/local/courseai/ui/highlight';
 import {removeVanishedActivities, removeVanishedSections, reorderAll} from './reconcile-dom';
@@ -251,4 +251,8 @@ export const reconcilePlan = async(ctx, currentPlan) => {
     // row are removed here — clearing them up-front would rob the factories of the
     // slot marker and reintroduce the jump.
     removeAllTransientPlaceholders();
+
+    // Settle point: sync every section's activity-count badge to its REAL rows, so an
+    // added/reloaded section shows "N activities" and never a stale "2/0".
+    activeSections.forEach((section) => refreshSectionMeta(ctx, section.id));
 };
