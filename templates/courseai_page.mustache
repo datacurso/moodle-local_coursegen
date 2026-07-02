@@ -37,17 +37,12 @@
 <!-- ══════════════════════ MAIN ════════════════════════════════════════ -->
 <main class="app-main aicoursecreation-main">
   <div class="container">
-    <div class="courseai-workspace" id="courseaiWorkspace">
+    <div class="courseai-workspace{{#isresuming}} is-planning{{/isresuming}}" id="courseaiWorkspace">
 
-    {{#isresuming}}
-    <div class="planning-loading" id="resumeLoadingView">
-      <div class="planning-loading-spinner"></div>
-      <p class="planning-loading-text">{{#str}}courseai_state_starting, local_coursegen{{/str}}</p>
-    </div>
-    {{/isresuming}}
-
-    <!-- Context step form -->
-    <div class="context-wrap" id="contextView"{{#isresuming}} style="display:none"{{/isresuming}}>
+    <!-- Context step form (in planning mode the editor is hidden by CSS and the
+         left chat column shows instead — so on reload the real chrome renders and
+         only the service-driven content areas show skeletons). -->
+    <div class="context-wrap" id="contextView">
 
       <div class="courseai-context-editor" id="courseaiContextEditor">
 
@@ -212,6 +207,10 @@
               <div class="cg-log" id="cgLog" aria-live="polite" aria-label="{{#str}}courseai_log_label, local_coursegen{{/str}}"></div>
             </div>
 
+            <!-- Left loading skeleton: previews the checklist shape while the
+                 first instruction streams (hidden once a section arrives). -->
+            <div class="cg-sk-checks-wrap" id="cgLeftSkeleton" style="display:{{#isresuming}}block{{/isresuming}}{{^isresuming}}none{{/isresuming}}">{{> local_coursegen/courseai_skeleton_checks }}</div>
+
             <!-- Section checklist shown during streaming -->
             <div class="courseai-checklist hidden" id="courseaiChecklist">
               <span class="courseai-checklist-label">{{#str}}courseai_checklist_label, local_coursegen{{/str}}</span>
@@ -228,7 +227,7 @@
         </div>
 
         <!-- Compact chat for regeneration -->
-        <div class="compact-chat-card" id="compactChatCard" style="display:none">
+        <div class="compact-chat-card" id="compactChatCard"{{^isresuming}} style="display:none"{{/isresuming}}>
           <textarea
             id="compactPromptInput"
             class="compact-prompt-textarea"
@@ -361,7 +360,7 @@
          aria-valuemin="240" aria-valuemax="560" aria-valuenow="360"></div>
 
     <!-- Step 2: Planning view -->
-    <div class="planning-wrap" id="planningView" style="display:none">
+    <div class="planning-wrap" id="planningView" style="display:{{#isresuming}}flex{{/isresuming}}{{^isresuming}}none{{/isresuming}}">
       <div class="pc-card" id="planningProgressCard" style="display:none">
         <div class="pc-card-main">
           <span class="pc-icon-wrap" id="pcIconWrap" aria-hidden="true">
@@ -401,11 +400,14 @@
         <div class="pc-details-panel" id="pcDetailsPanel" style="display:none"></div>
       </div>
 
-      <!-- Centered loading spinner shown during initial streaming -->
-      <div class="planning-loading" id="planningLoading">
-        <div class="planning-loading-spinner"></div>
-        <p class="planning-loading-text">{{#str}}courseai_state_structuring, local_coursegen{{/str}}</p>
-      </div>
+      <!-- Legacy loader element kept for compatibility (toggled by stream code);
+           the visible loader is the in-place skeleton below. -->
+      <div class="planning-loading" id="planningLoading" style="display:none"></div>
+
+      <!-- Initial-streaming loader: an in-place skeleton that previews the
+           detailed-plan card shape (no full-screen spinner). Shown while the
+           first instruction streams, hidden once the first section arrives. -->
+      <div class="cg-center-skeleton" id="cgCenterSkeleton" style="display:{{#isresuming}}block{{/isresuming}}{{^isresuming}}none{{/isresuming}}">{{> local_coursegen/courseai_skeleton_cards }}</div>
 
       <!-- Streaming content containers (hidden initially, shown as content arrives) -->
       <div class="planning-stream-content" id="planningStreamContent" style="display:none">

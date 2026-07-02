@@ -23,6 +23,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {hideFeedbackThinking} from 'local_coursegen/local/courseai/ui/feedback-progress';
+
 /**
  * Handle 'status' event: localize message, update UI text, advance heuristic progress.
  *
@@ -93,6 +95,7 @@ export const handleStatus = async(data, ctx) => {
  * @returns {Promise<void>}
  */
 export const handleError = async(data, ctx) => {
+    hideFeedbackThinking();
     const errorText = await ctx.localizeMessage(data.message);
     if (ctx.prvHeaderSub && errorText) {
         ctx.prvHeaderSub.textContent = errorText;
@@ -121,6 +124,8 @@ export const handleReviewNeeded = async(data, ctx) => {
     } = ctx;
 
     state.isStreaming = false;
+    // The AI responded — drop the "analyzing your request" progress indicator.
+    hideFeedbackThinking();
     if (typeof ctx.onStreamEnd === 'function') {
         ctx.onStreamEnd();
     }

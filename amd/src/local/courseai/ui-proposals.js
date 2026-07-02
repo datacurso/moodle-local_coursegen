@@ -24,8 +24,8 @@
 import {localizeMessage} from './i18n';
 import {buildProposalCard, buildOtherOption, buildFallenList, RADIO_NAME} from './proposals/dom';
 
-/** ID of the container element rendered by courseai_page.mustache. */
-const BLOCK_ID = 'planProposalsBlock';
+/** ID of the proposals card injected into the LEFT decision-log feed. */
+const BLOCK_ID = 'cgFeedProposals';
 
 /**
  * Create the proposals UI controller.
@@ -37,13 +37,59 @@ export const createProposalsUi = (deps) => {
     const {texts, runPlanAction, emitLog} = deps;
 
     const log = (params) => { if (typeof emitLog === 'function') { emitLog(params); } };
-    const getBlock = () => document.getElementById(BLOCK_ID);
+
+    const AFFECTED_CLASS = 'cg-affected';
+    const AFFECTED_DESTRUCTIVE_CLASS = 'cg-affected--destructive';
+
+    /** Remove the "this will be affected" highlight from every center element. */
+    const clearAffectedHighlights = () => {
+        document.querySelectorAll('.' + AFFECTED_CLASS).forEach((el) => {
+            el.classList.remove(AFFECTED_CLASS, AFFECTED_DESTRUCTIVE_CLASS);
+        });
+    };
+
+    /**
+     * Highlight the center elements a proposal touches (sections/activities).
+     *
+     * @param {Array}   targetIds   - UUIDs of affected sections/activities.
+     * @param {boolean} destructive - whether the proposal deletes content.
+     * @returns {void}
+     */
+    const highlightAffected = (targetIds, destructive) => {
+        (targetIds || []).forEach((id) => {
+            // Scope to the CENTER preview only — never the left checklist
+            // (.courseai-checklist-item also carries data-section-id and would
+            // otherwise get an ugly outline).
+            document.querySelectorAll(
+                '.prv-section-row[data-section-id="' + id + '"], '
+                + '.dp-activity-wrap[data-activity-id="' + id + '"]'
+            ).forEach((el) => {
+                el.classList.add(AFFECTED_CLASS);
+                if (destructive) {
+                    el.classList.add(AFFECTED_DESTRUCTIVE_CLASS);
+                }
+            });
+        });
+    };
 
     const clear = () => {
-        const block = getBlock();
-        if (!block) { return; }
-        block.innerHTML = '';
-        block.style.display = 'none';
+        clearAffectedHighlights();
+        const block = document.getElementById(BLOCK_ID);
+        if (block) { block.remove(); }
+    };
+
+    // Proposals render in the SAME left panel as the user's feedback (at the end
+    // of the decision-log feed) — that's where the user is looking — not in the
+    // center. Rebuild fresh each time so the card sits at the bottom of the feed.
+    const getBlock = () => {
+        clear();
+        const feed = document.getElementById('cgLogAfter') || document.getElementById('cgLog');
+        if (!feed) { return null; }
+        const block = document.createElement('div');
+        block.id = BLOCK_ID;
+        block.className = 'cg-feed-proposals';
+        feed.appendChild(block);
+        return block;
     };
 
     const disableControls = (block) => {
@@ -55,6 +101,7 @@ export const createProposalsUi = (deps) => {
     };
 
     const sendAction = async(block, pendingAction) => {
+        clearAffectedHighlights();
         disableControls(block);
         try {
             await runPlanAction(pendingAction);
@@ -118,6 +165,31 @@ export const createProposalsUi = (deps) => {
         radioGroup.appendChild(otherWrapper);
         block.appendChild(radioGroup);
 
+        // Single source of truth for selection side-effects: the "Something else"
+        // textarea is visible ONLY while that option is selected, and the center
+        // preview highlights exactly what the selected proposal will affect.
+        const onSelectionChange = () => {
+            const checked = block.querySelector('input[name="' + RADIO_NAME + '"]:checked');
+            const isOther = Boolean(checked) && checked.value === '__other__';
+            otherTextarea.style.display = isOther ? '' : 'none';
+
+            clearAffectedHighlights();
+            if (checked && !isOther) {
+                let targetIds = [];
+                try {
+                    targetIds = JSON.parse(checked.dataset.targetIds || '[]');
+                } catch (e) {
+                    targetIds = [];
+                }
+                const card = checked.closest('.plan-proposal-card');
+                const destructive = Boolean(card) && card.classList.contains('plan-proposal--destructive');
+                highlightAffected(targetIds, destructive);
+            }
+        };
+        radioGroup.querySelectorAll('input[name="' + RADIO_NAME + '"]').forEach((radio) => {
+            radio.addEventListener('change', onSelectionChange);
+        });
+
         const btnRow = document.createElement('div');
         btnRow.className = 'plan-proposals-btn-row';
 
@@ -168,6 +240,9 @@ export const createProposalsUi = (deps) => {
         }
 
         block.style.display = '';
+        window.requestAnimationFrame(() => {
+            block.scrollIntoView({block: 'nearest', inline: 'nearest'});
+        });
     };
 
     return {renderProposals, clear};

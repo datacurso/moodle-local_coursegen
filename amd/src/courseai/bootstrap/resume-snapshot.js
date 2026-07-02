@@ -42,6 +42,8 @@
  * @param {Function} params.hydrateDetailedPlanFromSnapshot
  * @param {Function} params.restoreAdjustmentHistory
  * @param {number} params.resumeSessionId
+ * @param {Function} params.emitLog
+ * @param {Object} params.texts
  * @returns {Function} async resumeFromSnapshot function
  */
 export const makeResumeFromSnapshot = ({
@@ -62,7 +64,42 @@ export const makeResumeFromSnapshot = ({
     hydrateDetailedPlanFromSnapshot,
     restoreAdjustmentHistory,
     resumeSessionId,
+    emitLog,
+    texts,
 }) => {
+    /**
+     * Rebuild the decision log from the snapshot so reload doesn't lose history.
+     * localStorage does not survive reload in this (Moodle popup) context, so the
+     * snapshot is the source of truth: re-emit an "AI planned section" entry per
+     * section and the user's free-text instructions (skipping the first message,
+     * which is the initial prompt already shown above the log).
+     *
+     * @param {Array} sections - raw plan sections (with names)
+     * @param {Object} snapshot - the resume snapshot
+     */
+    const rebuildDecisionLog = (sections, snapshot) => {
+        if (typeof emitLog !== 'function') {
+            return;
+        }
+        (sections || []).forEach((section) => {
+            const name = String(section?.name || '').trim();
+            if (!name) {
+                return;
+            }
+            const template = texts?.courseai_log_ai_section || 'AI planned section «{$a}»';
+            emitLog({actor: 'ai', kind: 'ai', message: template.replace('{$a}', name)});
+        });
+        const messages = Array.isArray(snapshot?.messages) ? snapshot.messages : [];
+        messages
+            .filter((message) => message && message.type === 'human')
+            .slice(1)
+            .forEach((message) => {
+                const content = String(message.content || '').trim();
+                if (content) {
+                    emitLog({actor: 'user', kind: 'user', message: content});
+                }
+            });
+    };
     /**
      * Attempt to resume the page from a persisted session snapshot.
      *
@@ -77,6 +114,15 @@ export const makeResumeFromSnapshot = ({
         if (!resume || !resume.success) {
             return false;
         }
+
+        // The snapshot arrived and real content is about to render — drop the
+        // in-place boot skeletons now so they never overlap the hydrated plan.
+        ['cgLeftSkeleton', 'cgCenterSkeleton'].forEach((id) => {
+            const skeleton = document.getElementById(id);
+            if (skeleton) {
+                skeleton.style.display = 'none';
+            }
+        });
 
         const coursedata = parseJsonField(resume.coursedatajson, {});
         const snapshot = parseJsonField(resume.snapshotjson, {});
@@ -146,7 +192,8 @@ export const makeResumeFromSnapshot = ({
             setPlanningStreamVisible();
             applyCourseTitleToHeader();
             if (sectionsForUi.length > 0) {
-                hydrateDetailedPlanFromSnapshot(sectionsForUi);
+                await hydrateDetailedPlanFromSnapshot(detailedSections);
+                rebuildDecisionLog(detailedSections, snapshot);
             }
             if (typeof detailedUi.enableAllActionControls === 'function') {
                 detailedUi.enableAllActionControls();
@@ -164,7 +211,12 @@ export const makeResumeFromSnapshot = ({
             stepsUi.transitionToPlanning();
             setPlanningStreamVisible();
             applyCourseTitleToHeader();
-            hydrateDetailedPlanFromSnapshot(sectionsForUi);
+            await hydrateDetailedPlanFromSnapshot(detailedSections);
+            rebuildDecisionLog(detailedSections, snapshot);
+            // The plan is at review: future log entries (e.g. the user's next
+            // feedback) must flow at the END of the feed. Set this AFTER the
+            // historical rebuild so the rebuilt planning entries stay on top.
+            state.planEverReviewed = true;
             if (typeof detailedUi.enableAllActionControls === 'function') {
                 detailedUi.enableAllActionControls();
             }
@@ -174,19 +226,37 @@ export const makeResumeFromSnapshot = ({
 
         if (status === 'GENERATING' || status === 'PLANNING_ACCEPT') {
             stepsUi.transitionToPlanning();
+            setPlanningStreamVisible();
             applyCourseTitleToHeader();
+            // Hydrate the rendered plan from the snapshot BEFORE re-opening the
+            // stream so section names and the decision log survive reload. The
+            // stream re-opens with keepPlan=true so it diffs against the hydrated
+            // plan instead of clearing it (resetPlanningState early-returns).
+            if (sectionsForUi.length > 0) {
+                await hydrateDetailedPlanFromSnapshot(detailedSections);
+                rebuildDecisionLog(detailedSections, snapshot);
+            }
             stepsUi.setStepState('planning', 'done');
             stepsUi.setStepState('generating', 'active');
             state.currentStage = 'generating';
             state.phase4TotalActivities = state.totalActivities;
-            streamManager.openSSEStream(state.streamingurl, 0, 'generating');
+            streamManager.openSSEStream(state.streamingurl, 0, 'generating', true);
             return true;
         }
 
         if (status === 'PLANNING' || status === 'PENDING') {
             stepsUi.transitionToPlanning();
+            setPlanningStreamVisible();
             applyCourseTitleToHeader();
-            streamManager.openSSEStream(state.streamingurl, 0, 'planning');
+            // Same as above: hydrate names + log first, then re-open the planning
+            // stream with keepPlan=true. Without this the re-stream renders
+            // placeholder "Section N:" rows (it re-emits activity events but not
+            // section names), which is the reload-broken case from the field.
+            if (sectionsForUi.length > 0) {
+                await hydrateDetailedPlanFromSnapshot(detailedSections);
+                rebuildDecisionLog(detailedSections, snapshot);
+            }
+            streamManager.openSSEStream(state.streamingurl, 0, 'planning', true);
             return true;
         }
 
@@ -195,7 +265,8 @@ export const makeResumeFromSnapshot = ({
             setPlanningStreamVisible();
             applyCourseTitleToHeader();
             if (sectionsForUi.length > 0) {
-                hydrateDetailedPlanFromSnapshot(sectionsForUi);
+                await hydrateDetailedPlanFromSnapshot(detailedSections);
+                rebuildDecisionLog(detailedSections, snapshot);
             }
             if (typeof detailedUi.enableAllActionControls === 'function') {
                 detailedUi.enableAllActionControls();

@@ -143,9 +143,12 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .courseai-workspace.is-planning {
-  --cg-left-w: 440px;
+  /* Wide-ish by default — the conversation/feed is the primary surface. Kept in
+     PX (not vw) so the splitter, which reads/writes this property in px, can drag
+     smoothly and reach the default. Splitter clamps to the same [320,720] range. */
+  --cg-left-w: 560px;
   display: grid;
-  grid-template-columns: clamp(280px, var(--cg-left-w), 620px) 10px minmax(0, 1fr);
+  grid-template-columns: clamp(320px, var(--cg-left-w), 720px) 10px minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   height: calc(100vh - 100px);
   overflow: hidden;
@@ -897,6 +900,139 @@ svg { display: block; flex-shrink: 0; }
   margin: 0;
 }
 
+/* ─── Loading skeletons — mimic the real planning UI shape ────────────────
+   Used in three spots that all read the same: the reload overlay (both
+   columns), the first-generation center loader (#planningLoading), and the
+   first-generation left loader (#cgLeftSkeleton). They occupy only the content
+   area (never a full-screen blocking spinner) and preview the layout that will
+   appear: a checklist (circle + line) on the left and activity cards (type
+   chip + title + description lines) in the center. */
+
+/* Primitives */
+.cg-sk-line {
+  display: block;
+  height: 11px;
+  border-radius: 6px;
+}
+
+.cg-sk-checks-wrap {
+  padding: 4px 0 8px;
+}
+
+.cg-sk-checks {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.cg-sk-check {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  padding: 9px 0;
+}
+
+.cg-sk-check__dot {
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.cg-sk-check__name {
+  flex: 1;
+  height: 11px;
+  border-radius: 6px;
+}
+
+.cg-sk-section-head {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  margin: 4px 0 14px;
+}
+
+.cg-sk-section-head__num {
+  width: 28px;
+  height: 28px;
+  border-radius: 50%;
+  flex: 0 0 auto;
+}
+
+.cg-sk-card {
+  display: flex;
+  align-items: flex-start;
+  gap: 14px;
+  padding: 16px 18px;
+  border: 1px solid var(--border, hsl(215 20% 88%));
+  border-radius: var(--radius, .75rem);
+  margin-bottom: 12px;
+}
+
+.cg-sk-card__chip {
+  width: 56px;
+  height: 24px;
+  border-radius: 7px;
+  flex: 0 0 auto;
+  margin-top: 2px;
+}
+
+.cg-sk-card__body {
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 9px;
+}
+
+.cg-sk-label {
+  width: 38%;
+  height: 9px;
+  border-radius: 5px;
+  margin-bottom: 12px;
+  opacity: .7;
+}
+
+/* Reload overlay — spans the two-column workspace */
+.cg-resume-skeleton {
+  display: grid;
+  grid-template-columns: clamp(280px, 440px, 620px) 10px minmax(0, 1fr);
+  gap: 0;
+  padding: 24px 0;
+  width: 100%;
+}
+
+.cg-resume-skeleton__side {
+  display: flex;
+  flex-direction: column;
+  padding: 8px 24px 8px 4px;
+  border-right: 1px solid var(--border, hsl(215 20% 88%));
+}
+
+.cg-resume-skeleton__main {
+  grid-column: 3;
+  padding: 8px 4px 8px 24px;
+}
+
+/* First-generation center skeleton — a left-aligned card stack in the center
+   column, shown while the first instruction streams. */
+.cg-center-skeleton {
+  padding: 8px 2px;
+}
+
+@media (max-width: 900px) {
+  .cg-resume-skeleton {
+    grid-template-columns: 1fr;
+  }
+  .cg-resume-skeleton__side {
+    border-right: 0;
+    border-bottom: 1px solid var(--border, hsl(215 20% 88%));
+  }
+  .cg-resume-skeleton__main {
+    grid-column: 1;
+    padding-left: 4px;
+  }
+}
+
 .planning-stream-content {
   display: flex;
   flex-direction: column;
@@ -1410,51 +1546,47 @@ svg { display: block; flex-shrink: 0; }
   line-height: 1.45;
 }
 
+/* Moodle Custom Sections style: a soft per-purpose COLORED icon chip + a NEUTRAL
+   type label (no filled rainbow pill). The color lives only on the small icon
+   chip, so the row reads like a real Moodle course item without being noisy. */
 .ps-badge {
   display: inline-flex;
   align-items: center;
   flex-shrink: 0;
-  padding: 2px 7px;
-  border-radius: 5px;
+  gap: 6px;
+  padding: 0;
+  background: transparent;
+  color: var(--muted-fg, hsl(215 16% 42%));
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   letter-spacing: 0.01em;
   margin-top: 1px;
 }
 
+/* The icon becomes a small rounded chip; its background is the purpose tint. */
 .ps-badge-icon {
-  width: 14px;
-  height: 14px;
-  margin-right: 5px;
+  width: 24px;
+  height: 24px;
+  padding: 5px;
+  box-sizing: border-box;
+  border-radius: 6px;
   flex-shrink: 0;
   display: inline-block;
   vertical-align: middle;
-  filter: brightness(0) saturate(100%);
-  opacity: 0.7;
+  background: var(--muted, hsl(215 25% 95%));
 }
 
 .ps-badge-text {
   display: inline-block;
   line-height: 1;
+  color: var(--muted-fg, hsl(215 16% 42%));
 }
 
-/* Per-type tints (kept for legacy specificity) */
-.ps-badge--quiz { background: hsl(252, 80%, 92%); color: hsl(252, 60%, 40%); }
-.ps-badge--book { background: hsl(198, 80%, 90%); color: hsl(198, 65%, 32%); }
-.ps-badge--assign { background: hsl(35, 85%, 90%); color: hsl(35, 65%, 32%); }
-.ps-badge--forum { background: hsl(142, 55%, 88%); color: hsl(142, 50%, 28%); }
-.ps-badge--lesson { background: hsl(8, 72%, 90%); color: hsl(8, 65%, 36%); }
-.ps-badge--url { background: hsl(215, 60%, 90%); color: hsl(215, 55%, 35%); }
-.ps-badge--resource { background: hsl(280, 55%, 90%); color: hsl(280, 50%, 35%); }
-.ps-badge--page { background: hsl(170, 55%, 88%); color: hsl(170, 50%, 28%); }
-.ps-badge--data { background: hsl(45, 75%, 88%); color: hsl(45, 60%, 30%); }
-.ps-badge--glossary { background: hsl(330, 55%, 90%); color: hsl(330, 50%, 35%); }
-
-/* Purpose tints — override per-type when present (set by ui-detailed.js) */
-.dp-purpose-content    { background: var(--info-soft);    color: hsl(212 90% 32%); }
-.dp-purpose-assessment { background: var(--danger-soft);  color: hsl(8 72% 36%); }
-.dp-purpose-collaboration { background: var(--success-soft); color: hsl(142 70% 26%); }
-.dp-purpose-communication { background: var(--warn-soft);  color: hsl(38 80% 28%); }
+/* Soft per-purpose tint on the icon chip only (Moodle-like, calm). */
+.dp-purpose-content .ps-badge-icon       { background: hsl(170 55% 90%); }
+.dp-purpose-assessment .ps-badge-icon    { background: hsl(8 72% 92%); }
+.dp-purpose-collaboration .ps-badge-icon { background: hsl(142 50% 90%); }
+.dp-purpose-communication .ps-badge-icon { background: hsl(38 80% 90%); }
 
 /* ─────────────────────────────────────────────────────────────
    §3  Preview panel — Moodle topics-format course view
@@ -1786,12 +1918,25 @@ svg { display: block; flex-shrink: 0; }
 }
 
 /* ── Activity wrap: card with soft left border ── */
+/* Activities read like Moodle's Custom Sections: ROWS separated by a dashed
+   line (not bordered cards). A subtle outline appears ONLY on hover. */
 .dp-activity-wrap {
+  position: relative;
+  background: transparent;
+  border: none;
   border-radius: 8px;
-  overflow: hidden;
-  background: var(--card);
-  border: 1px solid var(--border);
   margin-bottom: 0;
+}
+
+/* Dashed separator between consecutive activities (not before the first). */
+.dp-activity-wrap + .dp-activity-wrap {
+  border-top: 1px dashed var(--border);
+}
+
+/* Hover affordance — thin outline, no layout shift, only while hovering. */
+.dp-activity-wrap:hover {
+  outline: 2px solid hsl(252 55% 42% / .30);
+  outline-offset: -1px;
 }
 
 .dp-ai-inline {
@@ -2103,14 +2248,14 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .dp-add-control:hover {
-  border-color: hsl(8 72% 42% / .55);
-  color: hsl(8 72% 38%);
-  background: hsl(8 72% 50% / .04);
+  border-color: var(--brand, hsl(252 55% 42%));
+  color: var(--brand, hsl(252 55% 42%));
+  background: hsl(252 55% 42% / .05);
 }
 
 .dp-add-control:focus,
 .dp-add-control:focus-visible {
-  outline: 2px solid hsl(8 72% 50% / .35);
+  outline: 2px solid hsl(252 55% 42% / .35);
   outline-offset: 1px;
 }
 
@@ -2123,13 +2268,23 @@ svg { display: block; flex-shrink: 0; }
 .dp-add-control__icon {
   font-size: 16px;
   line-height: 1;
-  color: hsl(8 72% 42%);
+  color: var(--brand, hsl(252 55% 42%));
   flex-shrink: 0;
 }
 
 /* Wrapper that holds the add-section button + its inline panel */
 .dp-add-section-wrap {
-  margin-top: 6px;
+  margin-top: 14px;
+}
+
+/* "Add section" reads like Moodle's: wide, centered, 2px dashed, rounded, brand. */
+.dp-add-section-wrap .dp-add-control {
+  justify-content: center;
+  padding: 14px;
+  border-width: 2px;
+  border-radius: 12px;
+  font-size: 13px;
+  color: var(--brand, hsl(252 55% 42%));
 }
 
 /* Inline panel override for add controls (no section indentation needed) */
@@ -2158,14 +2313,30 @@ svg { display: block; flex-shrink: 0; }
   height: 20px;
   cursor: grab;
   color: var(--muted-fg);
-  opacity: 0.5;
+  /* Hidden by default — the horrible permanent ':: dots' are gone; the handle
+     fades in only when hovering the activity/section (Moodle behaviour). */
+  opacity: 0;
   border-radius: 4px;
   transition: opacity .12s, color .12s;
+}
+
+/* Reveal the grip on row/section hover (or keyboard focus within). */
+.dp-activity-wrap:hover .dp-drag-handle--activity,
+.dp-activity-wrap:focus-within .dp-drag-handle--activity,
+.prv-section-row:hover .dp-drag-handle--section,
+.prv-section-row:focus-within .dp-drag-handle--section {
+  opacity: 0.55;
 }
 
 .dp-drag-handle:hover {
   opacity: 1;
   color: hsl(215 18% 40%);
+}
+
+.dp-drag-handle:focus-visible {
+  opacity: 1;
+  outline: 2px solid hsl(252 55% 42% / .4);
+  outline-offset: 1px;
 }
 
 .dp-drag-handle:active {
@@ -2461,6 +2632,74 @@ svg { display: block; flex-shrink: 0; }
   font-style: italic;
 }
 
+/* ─── Proposals inside the LEFT decision-log feed (Claude-style picker) ──
+   Same controls as the center block, but a compact card that sits at the end of
+   the feed — right where the user wrote the feedback. */
+.cg-feed-proposals {
+  margin: 10px 0 4px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  padding: 12px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.cg-feed-proposals .plan-proposals-title {
+  font-size: 12.5px;
+}
+
+.cg-feed-proposals .plan-proposals-group {
+  gap: 6px;
+}
+
+.cg-feed-proposals .plan-proposal-card {
+  padding: 9px 12px;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.cg-feed-proposals .plan-proposal-summary {
+  font-size: 12.5px;
+  min-width: 0;
+}
+
+.cg-feed-proposals .plan-proposal-destructive-badge {
+  margin-left: auto;
+}
+
+.cg-feed-proposals .plan-proposal-other-textarea {
+  font-size: 12.5px;
+  min-height: 56px;
+}
+
+.cg-feed-proposals .plan-proposals-btn-row {
+  margin-top: 2px;
+}
+
+.cg-feed-proposals .btn-proposals-apply,
+.cg-feed-proposals .btn-proposals-dismiss {
+  height: 32px;
+  font-size: 12.5px;
+}
+
+/* Center elements a selected proposal will affect — highlighted only while that
+   option is checked (see ui-proposals onSelectionChange). Subtle, Moodle-like:
+   a thin outline (no layout shift) instead of a heavy ring; a faint tint when
+   the action deletes content. NEVER applied to the left checklist. */
+.cg-affected {
+  outline: 2px solid var(--brand, hsl(252 55% 42%));
+  outline-offset: 1px;
+  border-radius: 10px;
+  transition: outline-color .15s ease, background-color .15s ease;
+}
+
+.cg-affected.cg-affected--destructive {
+  outline-color: var(--primary, hsl(8 72% 42%));
+  background-color: hsl(8 72% 42% / .05);
+}
+
 /* ─── Chat history: initial prompt display ────────────────────────────── */
 .courseai-chat-history {
   margin-bottom: 12px;
@@ -2717,7 +2956,7 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
     var(--muted, hsl(215 25% 96%))        100%
   );
   background-size: 200% 100%;
-  animation: cg-shimmer 1.4s linear infinite;
+  animation: cg-shimmer 2.4s ease-in-out infinite;
   border-radius: var(--radius, .75rem);
   color: transparent;
 }
@@ -2861,6 +3100,21 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
   line-height: 1.45;
   color: var(--muted-fg);
   white-space: nowrap;
+}
+
+/* "AI is analyzing your request" progress entry (free-text feedback). */
+.cg-log-spin {
+  width: 13px;
+  height: 13px;
+  flex: 0 0 auto;
+  border: 2px solid var(--border, hsl(215 20% 88%));
+  border-top-color: var(--primary);
+  border-radius: 50%;
+  animation: spin .8s linear infinite;
+}
+
+.cg-log-thinking .cg-log-msg {
+  color: var(--muted-fg);
 }
 
 @media (prefers-reduced-motion: reduce) {
