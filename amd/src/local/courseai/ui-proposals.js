@@ -102,14 +102,27 @@ export const createProposalsUi = (deps) => {
         } catch (e) {
             intent = null;
         }
-        if (!intent || typeof intent.position !== 'number') {
+        if (!intent || intent.action !== 'add_section') {
             return [];
         }
         const sections = Array.from(document.querySelectorAll('.course-section[data-section-id]'));
         if (!sections.length) {
             return [];
         }
-        const idx = Math.min(Math.max(0, intent.position - 1), sections.length - 1);
+        // Mirror the server's reference logic (proposals.py _position_reference): a
+        // null/absent position (or one past the end) appends → anchor on the LAST
+        // section; position 0 anchors on the first; otherwise on the previous sibling.
+        // The old code required a NUMBER, so "add at the end" (position null) matched
+        // nothing and highlighted no element in the center.
+        const pos = intent.position;
+        let idx;
+        if (typeof pos !== 'number' || pos >= sections.length) {
+            idx = sections.length - 1;
+        } else if (pos <= 0) {
+            idx = 0;
+        } else {
+            idx = pos - 1;
+        }
         const anchor = sections[idx];
         const id = anchor && anchor.getAttribute('data-section-id');
         return id ? [id] : [];
