@@ -2019,6 +2019,14 @@ svg { display: block; flex-shrink: 0; }
   align-items: flex-start;
 }
 
+/* Book subchapter: indented under its parent chapter, with a hairline guide so the
+   chapter → subchapter nesting reads at a glance (Moodle books nest exactly 1 level). */
+.dp-item--sub {
+  margin-left: 18px;
+  padding-left: 10px;
+  border-left: 2px solid var(--border, rgba(0, 0, 0, 0.08));
+}
+
 .dp-item-num {
   flex-shrink: 0;
   font-family: monospace;
