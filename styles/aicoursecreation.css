@@ -3715,6 +3715,33 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
   outline-offset: -2px;
   border-radius: 8px;
 }
+
+/* Section highlight ("remarcado") alignment — same fix as the activity rows above.
+   The cg-mark-* highlight was drawn on the OUTER li.course-section (sharp 0-radius
+   corners, outline +2px OUTWARD), while the section hover outline sits on the inner
+   .section-item (2px, offset -2px, 8px radius). The sharp outer highlight stuck out
+   4px past the rounded inset hover border. Draw the highlight on the SAME
+   .section-item box the hover uses so the two coincide exactly. */
+#prvSections .course-section.cg-mark-success,
+#prvSections .course-section.cg-mark-info,
+#prvSections .course-section.cg-mark-danger {
+  outline: none;
+}
+#prvSections .course-section.cg-mark-success .section-item {
+  outline: 2px solid var(--success-strong);
+}
+#prvSections .course-section.cg-mark-info .section-item {
+  outline: 2px solid var(--info);
+}
+#prvSections .course-section.cg-mark-danger .section-item {
+  outline: 2px solid var(--danger);
+}
+#prvSections .course-section.cg-mark-success .section-item,
+#prvSections .course-section.cg-mark-info .section-item,
+#prvSections .course-section.cg-mark-danger .section-item {
+  outline-offset: -2px;
+  border-radius: 8px;
+}
 /* Boost paints the activity hover/focus outline in Moodle's blue (#0f6cbf). Recolour
    it to the brand accent so it matches the buttons — in Moodle this row outline is the
    same colour as the buttons on hover, not a foreign blue. */
