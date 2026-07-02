@@ -97,6 +97,7 @@ const STRING_KEYS = [
     'courseai_plan_detailed_markdown_subtitle',
     'courseai_generating_details',
     'courseai_generating_details_for',
+    'courseai_finalizing_course',
     'courseai_section_label',
     'courseai_section_progress_with_total',
     'courseai_section_progress_no_total',

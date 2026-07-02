@@ -447,6 +447,7 @@ $string['courseai_plan_detailed_markdown_title'] = 'Detailed plan generated';
 $string['courseai_plan_detailed_markdown_subtitle'] = 'Review the content and approve to start generation.';
 $string['courseai_generating_details'] = 'Generating details...';
 $string['courseai_generating_details_for'] = 'Planning: {name}';
+$string['courseai_finalizing_course'] = 'Finalizing your course…';
 $string['courseai_section_label'] = 'Section {section}: {name}';
 $string['courseai_section_progress_with_total'] = '{done}/{total} activities · {description}';
 $string['courseai_section_progress_no_total'] = 'Activities · {description}';
