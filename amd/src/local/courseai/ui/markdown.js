@@ -102,27 +102,15 @@ const detailListsMd = (detail) => {
         if (!items.length) {
             return;
         }
+        // A real Markdown bullet list — one item per line — so `marked` renders each
+        // on its own <li>. Book subchapters (subchapter=1) become a nested bullet
+        // (2-space indent) under the preceding chapter, so the hierarchy is visible.
         lines.push('');
-        let chapterNo = 0;
-        let subNo = 0;
-        items.forEach((raw, index) => {
+        items.forEach((raw) => {
             const {primary, secondary} = readItem(raw);
             const isSub = field === 'chapters' && raw && typeof raw === 'object' && Number(raw.subchapter) === 1;
-            let num;
-            if (field === 'chapters') {
-                if (isSub) {
-                    subNo += 1;
-                    num = (chapterNo || 1) + '.' + subNo;
-                } else {
-                    chapterNo += 1;
-                    subNo = 0;
-                    num = chapterNo + '.';
-                }
-            } else {
-                num = (index + 1) + '.';
-            }
-            const indent = isSub ? '    ' : '';
-            lines.push(indent + num + ' **' + primary + '**' + (secondary ? ' — ' + secondary : ''));
+            const indent = isSub ? '  ' : '';
+            lines.push(indent + '- **' + primary + '**' + (secondary ? ' — ' + secondary : ''));
         });
     });
     return lines;

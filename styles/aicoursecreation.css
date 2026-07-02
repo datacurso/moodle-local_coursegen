@@ -2019,12 +2019,22 @@ svg { display: block; flex-shrink: 0; }
   align-items: flex-start;
 }
 
-/* Book subchapter: indented under its parent chapter, with a hairline guide so the
-   chapter → subchapter nesting reads at a glance (Moodle books nest exactly 1 level). */
+/* Book subchapter: clearly indented under its parent chapter, with a vertical guide
+   line so the chapter → subchapter nesting reads at a glance (Moodle books nest
+   exactly 1 level). The muted, smaller number reinforces that it's a child. */
 .dp-item--sub {
-  margin-left: 18px;
-  padding-left: 10px;
-  border-left: 2px solid var(--border, rgba(0, 0, 0, 0.08));
+  margin-left: 26px;
+  padding-left: 12px;
+  border-left: 2px solid var(--primary, #ed6e54);
+}
+
+.dp-item--sub .dp-item-num {
+  font-size: 11px;
+  opacity: 0.75;
+}
+
+.dp-item--sub .dp-item-title {
+  font-weight: 500;
 }
 
 .dp-item-num {
