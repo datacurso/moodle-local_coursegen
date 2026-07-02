@@ -3724,6 +3724,37 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
   outline-color: var(--primary);
 }
 
+/* Highlight ("remarcado") alignment ─────────────────────────────────────────
+   The add/change/delete highlight (cg-mark-*) was drawn on the OUTER wrap
+   (li.activity: sharp 0-radius corners, outline pushed +2px OUTWARD), while the
+   hover outline lives on the INNER .activity-item (2px, offset 0, 16px radius).
+   The two boxes differ in size, corner radius and offset, so when a just-added
+   row is hovered the sharp outer highlight stuck out past the rounded hover
+   border — the "desastre" the user saw. Fix: strip the outline from the wrap and
+   draw the highlight on the SAME .activity-item box the hover uses (same 2px
+   width, offset 0, inherited 16px radius). Now hover and highlight occupy the
+   EXACT same box: one clean rounded outline, neither ever sticking out past the
+   other. The wrap keeps its soft background + enter/flash animation. */
+#prvSections .activity.cg-mark-success,
+#prvSections .activity.cg-mark-info,
+#prvSections .activity.cg-mark-danger {
+  outline: none;
+}
+#prvSections .activity.cg-mark-success .activity-item {
+  outline: 2px solid var(--success-strong);
+}
+#prvSections .activity.cg-mark-info .activity-item {
+  outline: 2px solid var(--info);
+}
+#prvSections .activity.cg-mark-danger .activity-item {
+  outline: 2px solid var(--danger);
+}
+#prvSections .activity.cg-mark-success .activity-item,
+#prvSections .activity.cg-mark-info .activity-item,
+#prvSections .activity.cg-mark-danger .activity-item {
+  outline-offset: 0;
+}
+
 /* Streamed description slot (Moodle .activity-description grid area). */
 #prvSections .cg-activity-desc-slot {
   grid-area: altcontent;
