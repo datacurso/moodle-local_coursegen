@@ -199,14 +199,19 @@ export const handleReviewNeeded = async(data, ctx) => {
     } else if (state.addScope) {
         // add_activity: shown below at review time (it has no live section block).
         // (no top rebuild)
-    } else if (state.freezeTranscript) {
-        // Reorder / delete: the "structure I planned" checklist stays FROZEN (it is
-        // history). The change shows as a "You moved/deleted …" turn below and the
-        // centre already reflects it; rebuilding the top would rewrite the past and
-        // pull previously-added sections up into the original snapshot. Just settle.
-        finalizeTranscript();
-    } else if (ctx.keepPlan && Array.isArray(data.current_plan) && data.current_plan.length) {
-        rebuildTranscriptFromPlan(data.current_plan);
+    } else if (ctx.keepPlan) {
+        // DEFAULT for ANY keepPlan change: the top "structure I planned" checklist is
+        // FROZEN history — reorder, delete, adjust, replace, or any future action may
+        // NOT rewrite it (that pulled later additions up into the original snapshot).
+        // The change shows as a turn below and the centre already reflects it, so just
+        // settle. The SOLE exception is a full course regeneration, which the user
+        // explicitly asked to rebuild the WHOLE plan — there the top is replaced.
+        if (state.keepPlanAction === 'full_regeneration'
+            && Array.isArray(data.current_plan) && data.current_plan.length) {
+            rebuildTranscriptFromPlan(data.current_plan);
+        } else {
+            finalizeTranscript();
+        }
     } else if (transcriptHasContent()) {
         finalizeTranscript();
     } else if (Array.isArray(data.current_plan) && data.current_plan.length) {
@@ -216,7 +221,7 @@ export const handleReviewNeeded = async(data, ctx) => {
     // here AND on failure/error handlers so a later reorder/accept is never mistaken
     // for a regen.
     state.regenScope = null;
-    state.freezeTranscript = false;
+    state.keepPlanAction = null;
 
     // Adding an element: the click-time turn was intentionally silent (the name
     // didn't exist yet).

@@ -89,16 +89,13 @@ export const createRunPlanAction = ({state, texts, sendPlanningFeedback, openSSE
         } else {
             state.addScope = null;
         }
-        // Structural-only changes (reorder / delete) must NOT rewrite the frozen
-        // "structure I planned" checklist at review: the change is shown as a turn
-        // below AND reflected live in the centre. Unlike replan/add they have no
-        // below-block, so without this flag they fall through to a full top rebuild
-        // (rebuildTranscriptFromPlan) that pulls previously-added sections UP into the
-        // original snapshot — the "adding stuff above after I asked for changes" bug.
-        state.freezeTranscript = (
-            action === 'reorder_sections' || action === 'reorder_activities'
-            || action === 'delete_section' || action === 'delete_activity'
-        );
+        // Remember the resolved action so review_needed knows whether it may touch the
+        // top "structure I planned" checklist. That checklist is FROZEN history: by
+        // default NO keepPlan change (reorder, delete, adjust, replace, or any future
+        // action) may rewrite it — the change shows as a turn below and the centre
+        // reflects it. Rewriting the top pulls later additions up into the original
+        // snapshot (the "adding stuff above after I asked for changes" bug).
+        state.keepPlanAction = action || null;
         await sendPlanningFeedback({recordid: state.sessionid, pendingAction: intent});
         // keepPlan: this resumes an existing plan to apply an action — preserve the
         // rendered preview so the reconciler diffs against it (no teardown/flicker).
