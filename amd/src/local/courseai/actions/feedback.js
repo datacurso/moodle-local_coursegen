@@ -137,10 +137,10 @@ export const sendFeedbackAction = async(action, ctx) => {
         // never looks stuck while the AI interprets the request.
         if (action === 'adjust' && instruction) {
             state.planEverReviewed = true;
-            const truncatedInstruction = instruction.length > 80 ? instruction.slice(0, 80) + '…' : instruction;
-            // The turn is already a right-aligned user bubble, so a "You:" label is
-            // redundant — show just the user's own words.
-            log({actor: 'user', kind: 'user', message: truncatedInstruction}, emitLog);
+            // Show the user's FULL words — never pre-truncate to a hard "…". The
+            // decision log's own fade + "Show full message" control (log.js
+            // wireFadeExpand) gracefully clamps only genuinely long turns.
+            log({actor: 'user', kind: 'user', message: instruction}, emitLog);
             showFeedbackThinking(texts);
             if (compactPromptInput) {
                 compactPromptInput.value = '';

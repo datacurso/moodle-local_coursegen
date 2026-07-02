@@ -159,14 +159,14 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
      * @returns {string|null}
      */
     const liveUserTurn = (subtype, payload) => {
+        // Show the user's FULL text on reload too (matching live) — the log's own
+        // fade + "Show full message" control clamps long turns, so no 80-char cut.
         const raw = String((payload && payload.instruction) || '').trim();
-        // The live feedback/proposal turns truncate the user's text at 80 chars.
-        const clip = raw.length > 80 ? raw.slice(0, 80) + '…' : raw;
         switch (subtype) {
             case 'accept': return T('courseai_log_user_approved', 'You approved the plan');
             case 'adjust':
-            case 'feedback': return clip;
-            case 'proposal_custom': return T('courseai_log_proposal_applied', 'You applied') + ': ' + clip;
+            case 'feedback': return raw;
+            case 'proposal_custom': return T('courseai_log_proposal_applied', 'You applied') + ': ' + raw;
             case 'proposals_dismissed': return T('courseai_log_proposals_dismissed', 'You dismissed suggestions');
             case 'stop': return T('courseai_btn_stop', 'Stop');
             case 'resume': return T('courseai_btn_resume', 'Resume');
