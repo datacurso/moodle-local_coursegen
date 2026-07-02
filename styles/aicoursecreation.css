@@ -3726,15 +3726,20 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
 #prvSections .course-section.cg-mark-info,
 #prvSections .course-section.cg-mark-danger {
   outline: none;
+  background-color: transparent;
+  animation: none;
 }
 #prvSections .course-section.cg-mark-success .section-item {
   outline: 2px solid var(--success-strong);
+  background-color: var(--success-soft);
 }
 #prvSections .course-section.cg-mark-info .section-item {
   outline: 2px solid var(--info);
+  background-color: var(--info-soft);
 }
 #prvSections .course-section.cg-mark-danger .section-item {
   outline: 2px solid var(--danger);
+  background-color: var(--danger-soft);
 }
 #prvSections .course-section.cg-mark-success .section-item,
 #prvSections .course-section.cg-mark-info .section-item,
@@ -3761,20 +3766,27 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
    draw the highlight on the SAME .activity-item box the hover uses (same 2px
    width, offset 0, inherited 16px radius). Now hover and highlight occupy the
    EXACT same box: one clean rounded outline, neither ever sticking out past the
-   other. The wrap keeps its soft background + enter/flash animation. */
+   other. The outline AND the soft background BOTH move to .activity-item — leaving
+   the background on the outer wrap made a sharp-cornered fill that overflowed past
+   the rounded outline. The wrap's own outline/background/animation are cleared. */
 #prvSections .activity.cg-mark-success,
 #prvSections .activity.cg-mark-info,
 #prvSections .activity.cg-mark-danger {
   outline: none;
+  background-color: transparent;
+  animation: none;
 }
 #prvSections .activity.cg-mark-success .activity-item {
   outline: 2px solid var(--success-strong);
+  background-color: var(--success-soft);
 }
 #prvSections .activity.cg-mark-info .activity-item {
   outline: 2px solid var(--info);
+  background-color: var(--info-soft);
 }
 #prvSections .activity.cg-mark-danger .activity-item {
   outline: 2px solid var(--danger);
+  background-color: var(--danger-soft);
 }
 #prvSections .activity.cg-mark-success .activity-item,
 #prvSections .activity.cg-mark-info .activity-item,
