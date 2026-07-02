@@ -337,13 +337,13 @@ export const createProposalsUi = (deps) => {
             if (selected.value === '__other__') {
                 const instruction = otherTextarea.value.trim();
                 if (!instruction) { otherTextarea.focus(); return; }
-                const truncated = instruction.length > 80 ? instruction.slice(0, 80) + '…' : instruction;
-                const appliedLabel = texts.courseai_log_proposal_applied || 'You applied';
-                log({actor: 'user', kind: 'info', message: appliedLabel + ': ' + truncated});
-                // proposal_custom: recorded by the service as "proposal_custom"
-                // (labelled "You applied: …" on reload), NOT a plain compact-chat
-                // "feedback" turn ("You: …").
-                await sendAction(block, {action: 'feedback', instruction, proposal_custom: true});
+                // "Something else" is a NEW instruction/correction — NOT an applied
+                // change. Log it as the user's own turn (their words, like any chat
+                // feedback) and send a plain feedback so the resolver re-interprets it
+                // WITH the conversation context. Labelling it "You applied …" was wrong:
+                // nothing is applied yet — it produces fresh proposals or a question.
+                log({actor: 'user', kind: 'user', message: instruction});
+                await sendAction(block, {action: 'feedback', instruction});
             } else {
                 const selectedLabel = selected.closest('.plan-proposal-card');
                 const summaryText = selectedLabel
