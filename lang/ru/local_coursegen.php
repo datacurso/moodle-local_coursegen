@@ -192,7 +192,6 @@ $string['courseai_image_count_many'] = '{count} изображения';
 $string['courseai_image_count_one'] = '{count} изображение';
 $string['courseai_images_arialabel'] = 'Включить изображения';
 $string['courseai_images_label'] = 'Изображения';
-$string['courseai_images_select_all'] = 'Выбрать все изображения';
 $string['courseai_images_suggested_label'] = 'предлагаемые изображения';
 $string['courseai_images_title'] = 'Включите в курс предложения изображений';
 $string['courseai_initial_prompt_label'] = 'Первоначальное сообщение';

@@ -572,30 +572,31 @@ export const createCourseaiActions = (deps) => {
                 }
             }
 
-            const feedbackPayload = {
-                recordid: state.sessionid,
-                action,
+            // Plan actions travel as ActionIntents: a bare approve is action
+            // 'accept'; free text is action 'feedback'. Image curation no longer
+            // rides on accept — it is its own discard_image/replan_image action.
+            const pendingAction = {
+                action: action === 'accept' ? 'accept' : 'feedback',
                 instruction,
-                withimages: state.withImages,
             };
 
-            // Include selected image IDs when approving the plan.
             if (action === 'accept') {
-                const selectedImageIds = Object.keys(state.selectedDetailedImages)
-                    .filter((id) => state.selectedDetailedImages[id] !== false);
-                feedbackPayload.selectedimageids = selectedImageIds;
-
                 // PRESERVE detailedTotal BEFORE any state changes or stream opening
                 state.phase4TotalActivities = state.detailedTotal || 0;
 
+                const keptImages = Object.keys(state.selectedDetailedImages)
+                    .filter((id) => state.selectedDetailedImages[id] !== false).length;
                 state.completionStats = {
                     units: state.totalSections || Object.keys(state.detailedSectionMeta || {}).length || 0,
                     activities: state.totalActivities || state.detailedTotal || 0,
-                    images: selectedImageIds.length,
+                    images: keptImages,
                 };
             }
 
-            const feedbackResponse = await sendPlanningFeedback(feedbackPayload);
+            const feedbackResponse = await sendPlanningFeedback({
+                recordid: state.sessionid,
+                pendingAction,
+            });
 
             if (!feedbackResponse || !feedbackResponse.success) {
                 throw new Error(feedbackResponse?.message || texts.courseai_error_send_feedback);

@@ -42,10 +42,10 @@ import {createContextUi} from 'local_coursegen/local/courseai/ui-context';
 import {createStepsUi} from 'local_coursegen/local/courseai/ui-steps';
 import {createPlanningUi} from 'local_coursegen/local/courseai/ui-planning';
 import {createDetailedUi} from 'local_coursegen/local/courseai/ui-detailed';
-import {regenerateDetailedItem} from 'local_coursegen/repository/course';
 import {createStreamManager} from 'local_coursegen/local/courseai/stream';
 import {createCourseaiActions} from 'local_coursegen/local/courseai/actions';
 import {initSidebar} from 'local_coursegen/local/courseai/sidebar';
+import {createProposalsUi} from 'local_coursegen/local/courseai/ui-proposals';
 
 /**
  * Initialize the courseai page.
@@ -209,7 +209,16 @@ export const init = async(params) => {
             setProgress: stepsUi.setProgress,
             texts,
             formatTemplate,
-            regenerateDetailedItem,
+            sendPlanningFeedback,
+            openSSEStream: (url, retry, mode) => streamManager.openSSEStream(url, retry, mode),
+        });
+
+        const proposalsUi = createProposalsUi({
+            state,
+            texts,
+            formatTemplate,
+            sendPlanningFeedback,
+            openSSEStream: (url, retry, mode) => streamManager.openSSEStream(url, retry, mode),
         });
 
         const planningUi = createPlanningUi({
@@ -242,6 +251,7 @@ export const init = async(params) => {
             stepsUi,
             planningUi,
             detailedUi,
+            proposalsUi,
             renderPlanMarkdown,
             createCourseFromSession: async() => {
                 if (actions) {

@@ -50,15 +50,18 @@ class course_planning_feedback extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'recordid' => new external_value(PARAM_INT, 'ID from local_coursegen_course_sessions'),
-            'approval_status' => new external_value(PARAM_ALPHANUMEXT, 'Feedback action, e.g. accept or adjust'),
-            'instruction' => new external_value(PARAM_TEXT, 'Feedback text for adjusting the plan', VALUE_DEFAULT, ''),
-            'selected_image_ids' => new external_multiple_structure(
-                new external_value(PARAM_ALPHANUMEXT, 'Selected detailed image ID'),
-                'Selected image IDs from detailed planning review',
-                VALUE_DEFAULT,
-                []
-            ),
-            'with_images' => new external_value(PARAM_BOOL, 'Whether image generation is enabled', VALUE_DEFAULT, null),
+            'pending_action' => new external_single_structure([
+                'action' => new external_value(PARAM_ALPHANUMEXT, 'Action to run, e.g. accept, feedback, delete_section, discard_image'),
+                'target_ids' => new external_multiple_structure(
+                    new external_value(PARAM_RAW, 'Target UUID (section, activity, or image suggestion)'),
+                    'UUIDs the action targets',
+                    VALUE_DEFAULT,
+                    []
+                ),
+                'parent_section_id' => new external_value(PARAM_RAW, 'Parent section UUID', VALUE_DEFAULT, null, NULL_ALLOWED),
+                'position' => new external_value(PARAM_INT, 'Insertion position', VALUE_DEFAULT, null, NULL_ALLOWED),
+                'instruction' => new external_value(PARAM_TEXT, "User's free-text instruction", VALUE_DEFAULT, ''),
+            ]),
         ]);
     }
 
@@ -66,40 +69,22 @@ class course_planning_feedback extends external_api {
      * Send feedback for the given planning session.
      *
      * @param int $recordid Session record id in local_coursegen_course_sessions
-     * @param string $approvalstatus Approval status (accept|adjust)
-     * @param string $instruction Optional feedback text
-     * @param array $selectedimageids Selected image IDs from detailed planning review
-     * @param bool|null $withimages Whether image generation is enabled
+     * @param array $pendingaction The ActionIntent to run
      * @return array
      */
     public static function execute(
         int $recordid,
-        string $approvalstatus,
-        string $instruction = '',
-        array $selectedimageids = [],
-        ?bool $withimages = null
+        array $pendingaction
     ): array {
         global $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'recordid' => $recordid,
-            'approval_status' => $approvalstatus,
-            'instruction' => $instruction,
-            'selected_image_ids' => $selectedimageids,
-            'with_images' => $withimages,
+            'pending_action' => $pendingaction,
         ]);
 
         $recordid = $params['recordid'];
-        $approvalstatus = $params['approval_status'];
-        $instruction = $params['instruction'];
-        $selectedimageids = array_values(array_filter(array_map(
-            static function (string $value): string {
-                return trim($value);
-            },
-            $params['selected_image_ids'] ?? []
-        ), static function (string $value): bool {
-            return $value !== '';
-        }));
+        $pendingaction = $params['pending_action'];
 
         $context = context_system::instance();
         self::validate_context($context);
@@ -113,26 +98,15 @@ class course_planning_feedback extends external_api {
 
         $apiservice = new ai_course_api_service();
 
-        $withimages = $params['with_images'] ?? null;
-
         try {
-            $result = $apiservice->send_planning_feedback(
-                $sessionid,
-                $approvalstatus,
-                $instruction,
-                $selectedimageids,
-                $withimages
-            );
+            $apiservice->send_planning_feedback($sessionid, $pendingaction);
         } catch (\moodle_exception $e) {
             throw new \moodle_exception('error_sending_feedback', 'local_coursegen', '', $e->getMessage());
         }
 
-        $action = $result['action'] ?? null;
-
         return [
             'success' => true,
             'message' => get_string('message_sent_successfully', 'local_coursegen'),
-            'action' => $action,
         ];
     }
 
@@ -145,7 +119,6 @@ class course_planning_feedback extends external_api {
         return new external_single_structure([
             'success' => new external_value(PARAM_BOOL, 'Success status'),
             'message' => new external_value(PARAM_TEXT, 'Status message'),
-            'action' => new external_value(PARAM_TEXT, 'Action decided by backend (approve/adjust)', VALUE_OPTIONAL),
         ]);
     }
 }

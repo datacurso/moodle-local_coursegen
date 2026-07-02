@@ -21,7 +21,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {get_strings} from 'core/str';
+import {get_strings, get_string} from 'core/str';
 
 const STRING_KEYS = [
     'courseai_header_title',
@@ -61,6 +61,7 @@ const STRING_KEYS = [
     'courseai_btn_approve',
     'courseai_adjust_placeholder',
     'courseai_btn_cancel',
+    'courseai_btn_discard',
     'courseai_delete_section_confirm_title',
     'courseai_delete_section_confirm_body',
     'courseai_delete_activity_confirm_title',
@@ -140,7 +141,6 @@ const STRING_KEYS = [
     'courseai_questions_label',
     'courseai_notes_label',
     'courseai_images_suggested_label',
-    'courseai_images_select_all',
     'courseai_image_count_one',
     'courseai_image_count_many',
     'courseai_review_title',
@@ -155,6 +155,19 @@ const STRING_KEYS = [
     'courseai_review_category_loading',
     'courseai_review_cancel',
     'courseai_review_confirm',
+    'courseai_proposals_title',
+    'courseai_proposals_clarification_label',
+    'courseai_proposals_other_label',
+    'courseai_proposals_other_placeholder',
+    'courseai_btn_execute_proposal',
+    'courseai_btn_discard_proposals',
+    'courseai_proposals_fallen_label',
+    'courseai_proposals_destructive_badge',
+    'courseai_btn_add_section',
+    'courseai_btn_add_activity',
+    'courseai_add_section_placeholder',
+    'courseai_add_activity_placeholder',
+    'courseai_drag_handle_label',
 ];
 
 /**
@@ -165,4 +178,33 @@ const STRING_KEYS = [
 export const loadCourseaiStrings = async() => {
     const values = await get_strings(STRING_KEYS.map((key) => ({key, component: 'local_coursegen'})));
     return Object.fromEntries(STRING_KEYS.map((key, i) => [key, values[i]]));
+};
+
+/**
+ * Localize a backend message into the user's language.
+ *
+ * The backend streams every human-readable message as
+ * `{string_id, string, string_args}`. We localize by `string_id` against the
+ * plugin's lang pack (the catalog is mirrored 1:1), passing `string_args` as
+ * the Moodle `$a` object. When the key is missing locally (e.g. a brand-new
+ * backend string not yet shipped in this lang pack), we fall back to the
+ * server-rendered `string`.
+ *
+ * @param {Object} message - { string_id, string, string_args? }
+ * @returns {Promise<string>}
+ */
+export const localizeMessage = async(message) => {
+    if (!message || !message.string_id) {
+        return (message && message.string) || '';
+    }
+    try {
+        const text = await get_string(message.string_id, 'local_coursegen', message.string_args || null);
+        // Moodle renders "[[key]]" for an unknown string id: prefer the server text.
+        if (typeof text === 'string' && text.startsWith('[[')) {
+            return message.string || text;
+        }
+        return text;
+    } catch (e) {
+        return message.string || '';
+    }
 };

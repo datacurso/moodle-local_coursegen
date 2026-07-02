@@ -57,9 +57,9 @@ export const createInitialState = ({defaultLang, guidelines, languages}) => {
         detailedCurrent: 0,
         planSectionsData: [],
         latestInitialSections: [],
-        detailedActivityEls: {},
-        detailedSectionMeta: {},
-        selectedDetailedImages: {},
+        detailedActivityEls: {}, // keyed by activity_id (UUID string)
+        detailedSectionMeta: {}, // keyed by section_id (UUID string)
+        selectedDetailedImages: {}, // keyed by image suggestion id (UUID string)
         structuredActivityProgress: false,
         activityProgressTotal: 0,
         activityProgressStarted: 0,

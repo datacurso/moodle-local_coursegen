@@ -139,75 +139,20 @@ class ai_course_api_service {
      * Send human feedback for an existing AI course planning session.
      *
      * @param string $sessionid External planning session identifier.
-     * @param string $approvalstatus Approval status (accept|adjust).
-     * @param string $instruction Optional feedback text.
-     * @param array|null $selectedimageids Selected image IDs from detailed planning review.
-     * @param bool|null $withimages Whether image generation is enabled.
+     * @param array $pendingaction The ActionIntent to run (action, target_ids,
+     *     parent_section_id, position, instruction).
      * @return array Decoded response from the API.
      */
     public function send_planning_feedback(
         string $sessionid,
-        string $approvalstatus,
-        string $instruction = '',
-        ?array $selectedimageids = null,
-        ?bool $withimages = null
-    ): array {
-        $payload = [
-            'approval_status' => $approvalstatus,
-            'instruction' => $instruction,
-            'thread_id' => $sessionid,
-        ];
-
-        if ($selectedimageids !== null) {
-            $payload['selected_image_ids'] = array_values(array_map(
-                static function ($value): string {
-                    return trim((string) $value);
-                },
-                $selectedimageids
-            ));
-        }
-
-        if ($withimages !== null) {
-            $payload['with_images'] = $withimages;
-        }
-
-        $endpoint = '/course/feedback';
-
-        return $this->client->request('POST', $endpoint, $payload);
-    }
-
-    /**
-     * Regenerate a single section, activity, or image in the detailed plan.
-     *
-     * @param string $sessionid External session identifier.
-     * @param string $targettype Target type: section, activity, image.
-     * @param int $sectionindex 0-based section index.
-     * @param int|null $activityindex 0-based activity index (null for section).
-     * @param string $instruction User adjustment text.
-     * @param bool $deleted Whether target should be marked as deleted.
-     * @return array Decoded response from the API.
-     */
-    public function regenerate_detailed_item(
-        string $sessionid,
-        string $targettype,
-        int $sectionindex,
-        ?int $activityindex = null,
-        string $instruction = '',
-        bool $deleted = false
+        array $pendingaction
     ): array {
         $payload = [
             'thread_id' => $sessionid,
-            'target_type' => $targettype,
-            'section_index' => $sectionindex,
-            'instruction' => $instruction,
-            'deleted' => $deleted,
+            'pending_action' => $pendingaction,
         ];
 
-        if ($activityindex !== null) {
-            $payload['activity_index'] = $activityindex;
-        }
-
-        return $this->client->request('POST', '/course/regenerate-item', $payload);
+        return $this->client->request('POST', '/course/feedback', $payload);
     }
 
     /**

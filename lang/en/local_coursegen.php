@@ -409,6 +409,7 @@ $string['courseai_btn_adjust'] = 'Adjust';
 $string['courseai_btn_approve'] = 'Generate course';
 $string['courseai_adjust_placeholder'] = 'Tell what you want to adjust in the planning...';
 $string['courseai_btn_cancel'] = 'Cancel';
+$string['courseai_btn_discard'] = 'Discard';
 $string['courseai_delete_section_confirm_title'] = 'Delete section';
 $string['courseai_delete_section_confirm_body'] = 'Are you sure you want to delete this section from the plan?';
 $string['courseai_delete_activity_confirm_title'] = 'Delete activity';
@@ -487,7 +488,6 @@ $string['courseai_chapters_label'] = 'chapters';
 $string['courseai_questions_label'] = 'questions';
 $string['courseai_notes_label'] = 'notes';
 $string['courseai_images_suggested_label'] = 'suggested images';
-$string['courseai_images_select_all'] = 'Select all images';
 $string['courseai_image_count_one'] = '{count} image';
 $string['courseai_image_count_many'] = '{count} images';
 $string['courseai_untitled'] = 'Untitled course';
@@ -518,3 +518,150 @@ $string['courseai_review_category_label'] = 'Category';
 $string['courseai_review_category_loading'] = 'Loading categories...';
 $string['courseai_review_cancel'] = 'Cancel';
 $string['courseai_review_confirm'] = 'Create course';
+
+// =====================================================================
+// Backend message catalog — mirrors the service i18n catalog 1:1.
+// The backend streams { string_id, string, string_args }; the client
+// localizes by string_id and falls back to the sent `string`.
+// `string_args` keys map to the {$a->...} placeholders below.
+// =====================================================================
+
+// Interpreted-feedback proposals (single-choice summaries).
+$string['proposal_add_section'] = 'Add a new section at {$a->position}: {$a->instruction}';
+$string['proposal_delete_section'] = 'Delete section(s): {$a->names}';
+$string['proposal_reorder_sections'] = 'Reorder the sections to: {$a->names}';
+$string['proposal_replan_section'] = 'Regenerate section(s) {$a->names}: {$a->instruction}';
+$string['proposal_add_activity'] = 'Add a new activity at {$a->position}: {$a->instruction}';
+$string['proposal_delete_activity'] = 'Delete activity(ies): {$a->names}';
+$string['proposal_reorder_activities'] = 'Reorder the activities to: {$a->names}';
+$string['proposal_replan_activity'] = 'Regenerate activity(ies) {$a->names}: {$a->instruction}';
+$string['proposal_full_regeneration'] = 'Rebuild the WHOLE course structure (previous adjustments are lost): {$a->instruction}';
+$string['proposal_adjust_all_details'] = 'Regenerate every activity\'s content, keeping the sections: {$a->instruction}';
+
+// Planning pipeline status.
+$string['detecting_activity_types'] = 'Detecting activity types from user instructions...';
+$string['generating_initial_structure'] = 'Generating initial course structure…';
+$string['generating_detailed_plans'] = 'Generating detailed activity plans…';
+$string['planning_activity'] = 'Planning {$a->type} \'{$a->title}\'…';
+$string['creating_section'] = 'Creating a new section…';
+$string['replanning_sections'] = 'Replanning section(s)…';
+$string['sections_deleted'] = 'Deleted {$a->count} section(s) from the plan.';
+$string['sections_reordered'] = 'Sections reordered.';
+$string['creating_activity'] = 'Creating a new activity…';
+$string['replanning_activities'] = 'Replanning activity(ies)…';
+$string['activities_deleted'] = 'Deleted {$a->count} activity(ies) from the plan.';
+$string['activities_reordered'] = 'Activities reordered.';
+$string['analyzing_feedback'] = 'Analyzing your feedback…';
+$string['generating_images'] = 'Generating images...';
+$string['images_generated'] = 'Images generated';
+
+// Activity-graph status.
+$string['detecting_activity_type'] = 'Detecting requested activity type...';
+$string['analyzing_activity_plan'] = 'Analyzing activity plan structure...';
+
+// Generation errors.
+$string['error_processing_activity'] = 'Major error processing activity \'{$a->title}\': {$a->error}';
+$string['error_planning_activity'] = 'Error planning {$a->type} \'{$a->title}\': {$a->error}';
+
+// Review interrupts and clarification.
+$string['review_plan_detailed'] = 'Approve the detailed plan or send adjustments.';
+$string['review_plan_activity'] = 'Approve this plan or send adjustments.';
+$string['clarification'] = '{$a->question}';
+$string['clarification_fallback'] = 'Could you point at the exact section or activity you mean, and what you would like to change?';
+
+// Run lifecycle.
+$string['course_completed'] = 'Course generated successfully.';
+$string['course_failed'] = 'Course generation failed.';
+$string['activity_completed'] = 'Activity generated successfully.';
+$string['activity_failed'] = 'Activity generation failed.';
+
+// HTTP errors.
+$string['session_not_found'] = 'Session not found';
+$string['thread_not_found'] = 'Thread not found';
+$string['result_not_ready'] = 'Result not generated yet';
+
+// Validation errors (InvalidIntent → 422).
+$string['intent_requires_targets'] = 'action \'{$a->action}\' requires target_ids';
+$string['intent_single_target'] = 'action \'{$a->action}\' accepts at most one target';
+$string['intent_unknown_proposal_targets'] = 'unknown or expired proposal targets: {$a->targets}';
+$string['intent_unknown_targets'] = 'unknown or deleted {$a->kind} targets: {$a->targets}';
+$string['intent_requires_parent'] = 'action \'{$a->action}\' requires a valid parent_section_id';
+$string['intent_targets_outside_parent'] = 'targets do not belong to the parent section: {$a->targets}';
+$string['proposal_not_found'] = 'unknown or expired proposal: {$a->proposal_id}';
+$string['proposal_not_executable'] = 'The chosen proposal is no longer executable: {$a->reason}';
+
+// Content generators — intros.
+$string['generating_assignment'] = 'Generating Assignment content for: {$a->title}...';
+$string['designing_book'] = 'Designing Book: {$a->title}...';
+$string['generating_choice'] = 'Generating Choice (Consulta) content for: {$a->title}...';
+$string['designing_database'] = 'Designing Database activity: {$a->title}...';
+$string['generating_feedback'] = 'Generating Feedback content for: {$a->title}...';
+$string['designing_folder'] = 'Designing Folder: {$a->title}...';
+$string['designing_forum'] = 'Designing Forum: {$a->title}...';
+$string['designing_glossary'] = 'Designing Glossary: {$a->title}...';
+$string['designing_label'] = 'Designing Label: {$a->title}...';
+$string['designing_lesson'] = 'Designing Lesson: {$a->title}...';
+$string['designing_page'] = 'Designing Page: {$a->title}...';
+$string['designing_quiz'] = 'Designing Quiz Blueprint for: {$a->title}...';
+$string['designing_resource'] = 'Designing Resource: {$a->title}...';
+$string['designing_url'] = 'Designing URL activity: {$a->title}...';
+$string['planning_wiki'] = 'Planning Wiki: {$a->title}...';
+$string['generating_workshop'] = 'Generating Workshop (Taller) content for: {$a->title}...';
+
+// Content generators — progress / ready.
+$string['book_config_ready'] = 'Book configuration ready. Generating {$a->total} chapters...';
+$string['generating_chapter'] = 'Generating Chapter {$a->step}/{$a->total}: \'{$a->title}\'...';
+$string['feedback_blueprint_ready'] = 'Feedback blueprint ready. Generating {$a->total} questions...';
+$string['generating_feedback_question'] = 'Generating question {$a->step}/{$a->total} ({$a->type})...';
+$string['assembling_feedback'] = 'Assembling final Feedback package...';
+$string['folder_ready'] = 'Folder ready: \'{$a->name}\'';
+$string['forum_ready'] = 'Forum ready: \'{$a->name}\'';
+$string['forum_ready_with_discussions'] = 'Forum ready: \'{$a->name}\' with {$a->count} discussion(s)';
+$string['label_ready'] = 'Label ready: \'{$a->name}\'';
+$string['page_ready'] = 'Page ready: \'{$a->name}\'';
+$string['quiz_config_ready'] = 'Quiz configuration ready. Generating {$a->total} questions...';
+$string['generating_quiz_question'] = 'Generating Q{$a->step}/{$a->total} ({$a->type}): \'{$a->question}\'...';
+$string['assembling_quiz'] = 'Assembling final Quiz package...';
+$string['transforming_document'] = 'Transforming document into requested file format...';
+$string['drafting_wiki_page'] = 'Drafting Wiki page {$a->step}/{$a->total}: {$a->title}...';
+$string['wiki_ready'] = 'Wiki ready: \'{$a->name}\' with {$a->count} pages.';
+$string['writing_workshop_instructions'] = 'Writing the Workshop instructions and context...';
+$string['assembling_workshop_assessment'] = 'Assembling the peer-assessment settings...';
+
+// Content generators — errors.
+$string['failed_assignment_params'] = 'Failed to generate Assignment parameters';
+$string['failed_book_params'] = 'Failed to generate Book parameters';
+$string['error_generating_chapter'] = 'Error generating Chapter {$a->step}: {$a->error}. Skipping.';
+$string['failed_choice_params'] = 'Failed to generate Choice parameters: {$a->error}';
+$string['failed_database_params'] = 'Failed to generate Data parameters';
+$string['failed_feedback_blueprint'] = 'Failed to generate Feedback blueprint';
+$string['error_generating_feedback_question'] = 'Error generating question {$a->step}. Skipping.';
+$string['failed_folder_params'] = 'Failed to generate Folder parameters';
+$string['failed_forum_params'] = 'Failed to generate Forum parameters';
+$string['failed_glossary_params'] = 'Failed to generate Glossary parameters';
+$string['failed_label_params'] = 'Failed to generate Label parameters';
+$string['failed_lesson_params'] = 'Failed to generate Lesson parameters';
+$string['failed_page_params'] = 'Failed to generate Page parameters';
+$string['failed_quiz_params'] = 'Failed to generate Quiz parameters';
+$string['error_generating_quiz_question'] = 'Error generating Q{$a->step}. Skipping.';
+$string['failed_resource_params'] = 'Failed to generate Resource parameters';
+$string['failed_url_params'] = 'Failed to generate URL parameters';
+$string['failed_wiki_structure'] = 'Failed to plan Wiki structure';
+$string['failed_workshop_params'] = 'Failed to generate Workshop parameters';
+
+// Proposals UI — free-text feedback interpretation.
+$string['courseai_proposals_title'] = 'I understood your request like this — pick one:';
+$string['courseai_proposals_clarification_label'] = 'I need a bit more detail';
+$string['courseai_proposals_other_label'] = 'Something else';
+$string['courseai_proposals_other_placeholder'] = 'Describe what you want instead…';
+$string['courseai_btn_execute_proposal'] = 'Apply selection';
+$string['courseai_btn_discard_proposals'] = 'Dismiss suggestions';
+$string['courseai_proposals_fallen_label'] = 'No longer possible';
+$string['courseai_proposals_destructive_badge'] = 'Deletes content';
+
+// Planning controls — add and drag-and-drop reorder (§7).
+$string['courseai_btn_add_section'] = 'Add section';
+$string['courseai_btn_add_activity'] = 'Add activity';
+$string['courseai_add_section_placeholder'] = 'Describe the section to add…';
+$string['courseai_add_activity_placeholder'] = 'Describe the activity to add…';
+$string['courseai_drag_handle_label'] = 'Drag to reorder';

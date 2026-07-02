@@ -22,6 +22,7 @@
  */
 
 import { setCompactChatState } from './ui-planning';
+import { localizeMessage } from './i18n';
 
 // Module-level variable to preserve phase 4 total activities
 // This survives state resets that happen during stream opening
@@ -40,6 +41,7 @@ export const createStreamManager = (deps) => {
         stepsUi,
         planningUi,
         detailedUi,
+        proposalsUi,
         renderPlanMarkdown,
         createCourseFromSession,
         texts,
@@ -659,8 +661,10 @@ export const createStreamManager = (deps) => {
         // Keep compact chat disabled for the whole active stream lifecycle.
         // It is re-enabled explicitly on review/failed/error states.
         setCompactChatState(deps, 'disabled');
-        if (typeof detailedUi.setImageSelectionEnabled === 'function') {
-            detailedUi.setImageSelectionEnabled(false);
+
+        // Clear stale proposals so they do not linger when a stream resumes.
+        if (proposalsUi && typeof proposalsUi.clear === 'function') {
+            proposalsUi.clear();
         }
 
         // Only reset planning UI on the first attempt (not on stale-done retries).
@@ -769,7 +773,37 @@ export const createStreamManager = (deps) => {
             switch (data.type) {
                 case 'activity': {
                     contentReceived = true;
-                    // Activity data consumed internally; no sections view shown
+                    const sectionForActivity = (state.latestInitialSections || []).find(
+                        (s) => s.id === data.section_id
+                    );
+                    if (sectionForActivity) {
+                        const existingActivity = sectionForActivity.activities.find((a) => a.id === data.id);
+                        if (existingActivity) {
+                            existingActivity.title = data.title || existingActivity.title;
+                            existingActivity.deleted = data.deleted;
+                        } else {
+                            sectionForActivity.activities.push({
+                                id: data.id,
+                                position: data.position,
+                                deleted: data.deleted,
+                                activity_type: data.activity_type,
+                                title: data.title,
+                                description: data.description || '',
+                            });
+                        }
+                        // Increment the remaining counter on the checklist item for this section
+                        const round = state.generationRound || 0;
+                        const checklistItem = document.querySelector(
+                            `.courseai-checklist-list [data-section-id="${data.section_id}"][data-round="${round}"]`
+                        );
+                        if (checklistItem && !data.deleted) {
+                            const remaining = parseInt(checklistItem.getAttribute('data-remaining') || '0', 10);
+                            checklistItem.setAttribute('data-remaining', remaining + 1);
+                        }
+                    }
+                    if (typeof detailedUi.syncDetailedStructureFromSections === 'function') {
+                        detailedUi.syncDetailedStructureFromSections(state.latestInitialSections || []);
+                    }
                     break;
                 }
                 case 'section': {
@@ -783,25 +817,24 @@ export const createStreamManager = (deps) => {
                     if (streamContentEl) {
                         streamContentEl.style.display = '';
                     }
-                    const sectionIndex = Number(data.section_index);
-                    if (!Number.isNaN(sectionIndex) && sectionIndex >= 0) {
-                        const nextSections = Array.isArray(state.latestInitialSections)
-                            ? [...state.latestInitialSections]
-                            : [];
-                        const existing = nextSections[sectionIndex] || {};
-                        const incomingActivities = Array.isArray(data.activities) ? data.activities : [];
 
-                        nextSections[sectionIndex] = {
-                            ...existing,
-                            section_index: sectionIndex,
-                            name: data.name || existing.name || '',
-                            description: data.description || existing.description || '',
-                            activities: incomingActivities.length > 0
-                                ? incomingActivities
-                                : (Array.isArray(existing.activities) ? existing.activities : []),
-                        };
-
-                        state.latestInitialSections = nextSections;
+                    const sections = Array.isArray(state.latestInitialSections)
+                        ? state.latestInitialSections
+                        : [];
+                    const existingSection = sections.find((s) => s.id === data.id);
+                    if (existingSection) {
+                        existingSection.name = data.name || existingSection.name;
+                        existingSection.description = data.description || existingSection.description;
+                        existingSection.position = data.position;
+                    } else {
+                        sections.push({
+                            id: data.id,
+                            position: data.position,
+                            name: data.name || '',
+                            description: data.description || '',
+                            activities: [],
+                        });
+                        state.latestInitialSections = sections;
                     }
 
                     // Add section to checklist in the left panel (loading state initially)
@@ -813,10 +846,9 @@ export const createStreamManager = (deps) => {
                     if (targetList && data.name) {
                         const item = document.createElement('li');
                         item.className = 'courseai-checklist-item is-loading';
-                        const activityCount = (data.activities || []).length;
-                        item.setAttribute('data-section-index', data.section_index);
+                        item.setAttribute('data-section-id', data.id);
                         item.setAttribute('data-round', state.generationRound || 0);
-                        item.setAttribute('data-remaining', activityCount);
+                        item.setAttribute('data-remaining', 0);
                         item.innerHTML = '<span class="courseai-checklist-check">'
                             + '<svg class="spinner-icon" viewBox="0 0 24 24">'
                             + '<path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg>'
@@ -851,17 +883,6 @@ export const createStreamManager = (deps) => {
                     }
                     break;
                 }
-                case 'detailed_plan_start': {
-                    contentReceived = true;
-                    detailedUi.initDetailedPlanView(data);
-                    // Keep the canonical course title in header when already available
-                    if (state.courseTitle && prvHeaderTitle) {
-                        prvHeaderTitle.textContent = state.courseTitle;
-                    }
-                    // Show initial progress when detailed planning begins
-                    stepsUi.setProgress(5);
-                    break;
-                }
                 case 'detailed_plan_field':
                     contentReceived = true;
                     detailedUi.handleDetailedPlanField(data);
@@ -876,10 +897,10 @@ export const createStreamManager = (deps) => {
                     stepsUi.setProgress(Math.round(pct));
 
                     // Mark section as done when all its activities are planned
-                    if (data.section_index !== undefined) {
+                    if (data.section_id) {
                         const round = state.generationRound || 0;
                         const items = document.querySelectorAll(
-                            `.courseai-checklist-list [data-section-index="${data.section_index}"][data-round="${round}"]`
+                            `.courseai-checklist-list [data-section-id="${data.section_id}"][data-round="${round}"]`
                         );
                         items.forEach((item) => {
                             const remaining = parseInt(item.getAttribute('data-remaining') || '1', 10);
@@ -900,14 +921,20 @@ export const createStreamManager = (deps) => {
                     renderPlanMarkdown();
                     break;
                 case 'status': {
-                    const statusText = data.text || '';
+                    // New contract: status carries a localized message object
+                    // { string_id, string, string_args }. Display the localized text,
+                    // but run the progress heuristics against the stable English
+                    // `string` so the text matching keeps working in any UI language.
+                    // (Legacy `data.text` is kept as a fallback during the transition.)
+                    const statusText = data.message ? await localizeMessage(data.message) : (data.text || '');
+                    const heuristicText = (data.message && data.message.string) || data.text || '';
 
                     // During final generation, keep stream container visible and hide
                     // centered planning spinner regardless of event shape.
                     if (streamMode === 'generating') {
                         ensureStreamContentVisible();
                         if (!state.structuredActivityProgress) {
-                            syncTrackerFromStatus(statusText);
+                            syncTrackerFromStatus(heuristicText);
                         }
                     }
 
@@ -942,14 +969,14 @@ export const createStreamManager = (deps) => {
                     if (state.currentStage === 'generating' && totalActivities > 0) {
                         // Phase 1: Detect when an activity/resource STARTS
                         const startPattern = /^(Designing|Generating Assignment content)/i;
-                        const isActivityStarting = startPattern.test(statusText);
+                        const isActivityStarting = startPattern.test(heuristicText);
 
                         // Phase 2: Detect when an activity/resource COMPLETES
                         const completePattern = new RegExp(
                             'ready|Assembling final|configuration ready|with \\d+ discussion',
                             'i'
                         );
-                        const isActivityComplete = completePattern.test(statusText);
+                        const isActivityComplete = completePattern.test(heuristicText);
 
                         if (isActivityStarting) {
                             // Phase 1: Track started activities (0% → 30%)
@@ -968,6 +995,18 @@ export const createStreamManager = (deps) => {
                             );
                             stepsUi.setProgress(Math.round(completeProgress));
                         }
+                    }
+                    break;
+                }
+                case 'error': {
+                    // Non-fatal generation error (a single activity/step failed):
+                    // show the localized message; the stream keeps going.
+                    const errorText = await localizeMessage(data.message);
+                    if (prvHeaderSub && errorText) {
+                        prvHeaderSub.textContent = errorText;
+                    }
+                    if (pcSubtitle && errorText) {
+                        pcSubtitle.textContent = errorText;
                     }
                     break;
                 }
@@ -1071,13 +1110,17 @@ export const createStreamManager = (deps) => {
                     stepsUi.updateFlowNav();
                     if (Array.isArray(data.current_plan) && data.current_plan.length > 0) {
                         detailedUi.initDetailedPlanView({sections: data.current_plan});
-                        data.current_plan.forEach((section, sectionIndex) => {
-                            (section.activities || []).forEach((activity, activityIndex) => {
-                                detailedUi.handleDetailedPlanActivity({
-                                    section_index: sectionIndex,
-                                    activity_index: activityIndex,
-                                    data: activity.detailed_plan || {}
-                                });
+                        data.current_plan.forEach((section) => {
+                            (section.activities || []).forEach((activity) => {
+                                if (!activity.deleted) {
+                                    detailedUi.handleDetailedPlanActivity({
+                                        section_id: section.id,
+                                        activity_id: activity.id,
+                                        activity_type: activity.activity_type,
+                                        title: activity.title,
+                                        data: activity.detailed_plan || {},
+                                    });
+                                }
                             });
                         });
                     }
@@ -1089,12 +1132,20 @@ export const createStreamManager = (deps) => {
                     if (typeof detailedUi.enableAllActionControls === 'function') {
                         detailedUi.enableAllActionControls();
                     }
-                    if (typeof detailedUi.setImageSelectionEnabled === 'function') {
-                        detailedUi.setImageSelectionEnabled(true);
-                    }
                     planningUi.showReviewActions(state.planningMode === 'detailed' ? 'detailed' : 'markdown');
+                    // Render proposals block (proposals, clarification, fallen_proposals).
+                    if (proposalsUi && typeof proposalsUi.renderProposals === 'function') {
+                        proposalsUi.renderProposals(data);
+                    }
                     // Re-enable compact chat now that review is ready
                     setCompactChatState(deps, 'enabled');
+                    // review_needed is a terminal pause: the server closes its SSE after
+                    // the interrupt. Close ours too so EventSource does NOT auto-reconnect
+                    // and resume the graph again (a bare resume has no pending_action, so
+                    // planning_approval re-interrupts → review_needed → close → reconnect…
+                    // an endless storm that leaves the UI stuck on "Analyzing your feedback").
+                    // The next user action (accept / feedback / execute_proposal) re-opens it.
+                    closeStream();
                     break;
                 case 'completed': {
                     if (streamMode === 'generating') {
@@ -1123,14 +1174,13 @@ export const createStreamManager = (deps) => {
                         pcStep.textContent = texts.courseai_state_error;
                     }
                     if (pcSubtitle) {
-                        pcSubtitle.textContent = data.message || texts.courseai_error_generic;
+                        pcSubtitle.textContent = data.message
+                            ? await localizeMessage(data.message)
+                            : texts.courseai_error_generic;
                     }
                     // Re-enable action controls on failure so user can interact with partial plan
                     if (typeof detailedUi.enableAllActionControls === 'function') {
                         detailedUi.enableAllActionControls();
-                    }
-                    if (typeof detailedUi.setImageSelectionEnabled === 'function') {
-                        detailedUi.setImageSelectionEnabled(true);
                     }
                     // Stream failed - re-enable compact chat for retry
                     setCompactChatState(deps, 'enabled');
@@ -1156,9 +1206,6 @@ export const createStreamManager = (deps) => {
             }
             if (streamMode === 'generating') {
                 markAllTrackerActivitiesDone();
-            }
-            if (typeof detailedUi.setImageSelectionEnabled === 'function') {
-                detailedUi.setImageSelectionEnabled(true);
             }
             if (planningSpinner) {
                 planningSpinner.classList.add('done');
@@ -1187,9 +1234,6 @@ export const createStreamManager = (deps) => {
             }
             if (pcSubtitle) {
                 pcSubtitle.textContent = texts.courseai_error_connection;
-            }
-            if (typeof detailedUi.setImageSelectionEnabled === 'function') {
-                detailedUi.setImageSelectionEnabled(true);
             }
             // Connection error - re-enable compact chat for retry
             setCompactChatState(deps, 'enabled');
