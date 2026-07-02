@@ -14,7 +14,9 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Course AI action handlers.
+ * Course AI action handlers — orchestrator.
+ *
+ * Assembles the public action API from focused submodules and wires DOM events.
  *
  * @module     local_coursegen/local/courseai/actions
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -23,6 +25,10 @@
 
 import { setCompactChatState } from './ui-planning';
 import FormAutocomplete from 'core/form-autocomplete';
+import { buildCompletionSummary } from './actions/summary';
+import { showCourseReviewPanel, createCourseFromSession } from './actions/course-create';
+import { sendFeedbackAction } from './actions/feedback';
+import { handleGenerate } from './actions/generate';
 
 /**
  * Create courseai actions and event bindings.
@@ -32,47 +38,20 @@ import FormAutocomplete from 'core/form-autocomplete';
  */
 export const createCourseaiActions = (deps) => {
     const {
-        state,
-        elements,
-        Notification,
-        CourseaiRepository,
-        sendPlanningFeedback,
-        createCourse,
-        getCourseSettings,
-        updateGenerateButton,
-        refreshChipsRow,
-        refreshGuidelineChip,
-        stepsUi,
-        planningUi,
-        streamManager,
-        texts,
-        formatTemplate,
+        state, elements, Notification, CourseaiRepository,
+        sendPlanningFeedback, createCourse, getCourseSettings,
+        updateGenerateButton, refreshChipsRow, refreshGuidelineChip,
+        stepsUi, planningUi, streamManager, texts, formatTemplate, emitLog,
     } = deps;
 
     const {
-        promptInput,
-        btnGenerate,
-        btnApprove,
-        planActions,
-        planningSpinner,
-        pcSubtitle,
-        pcToggleBtn,
-        pcDetailsPanel,
-        pcChevron,
-        planningProgressCard,
-        completionView,
-        completionSummary,
-        btnOpenMoodleCourse,
-        btnCreateAnotherCourse,
-        btnWithImages,
-        imgToggleWrap,
-        langSelect,
-        compactPromptInput,
-        btnCompactRegenerate,
-        initialPromptHistory,
-        initialPromptText,
-        adjustmentHistory,
-        pcPct,
+        promptInput, btnGenerate, btnApprove, planActions,
+        pcToggleBtn, pcDetailsPanel, pcChevron,
+        planningProgressCard, completionView, completionSummary,
+        btnOpenMoodleCourse, btnCreateAnotherCourse,
+        btnWithImages, imgToggleWrap, langSelect,
+        compactPromptInput, btnCompactRegenerate,
+        initialPromptHistory, initialPromptText,
     } = elements;
 
     const renderInitialPromptHistory = (message) => {
@@ -84,59 +63,18 @@ export const createCourseaiActions = (deps) => {
         }
     };
 
-    const getSummaryCounts = () => {
-        if (state.completionStats) {
-            return state.completionStats;
-        }
-
-        const units = state.totalSections || Object.keys(state.detailedSectionMeta || {}).length || 0;
-        const activities = state.totalActivities || state.detailedTotal || 0;
-        const images = Object.keys(state.selectedDetailedImages || {})
-            .filter((id) => state.selectedDetailedImages[id] !== false).length;
-
-        return {units, activities, images};
-    };
-
-    const buildCompletionSummary = () => {
-        const {units, activities, images} = getSummaryCounts();
-        if (state.withImages) {
-            return formatTemplate(texts.courseai_completion_summary_with_images, {
-                units,
-                activities,
-                images,
-            });
-        }
-
-        return formatTemplate(texts.courseai_completion_summary_no_images, {
-            units,
-            activities,
-        });
-    };
-
     const showCompletionView = (result) => {
         state.createdCourseResult = result || null;
         state.createdCourseUrl = result?.courseurl || '';
         state.currentStage = 'completed';
-
         if (completionSummary) {
-            completionSummary.textContent = buildCompletionSummary();
+            completionSummary.textContent = buildCompletionSummary(state, texts, formatTemplate);
         }
-        if (planningProgressCard) {
-            planningProgressCard.style.display = 'none';
-        }
-        if (elements.planReviewCard) {
-            elements.planReviewCard.style.display = 'none';
-        }
-        if (planActions) {
-            planActions.style.display = 'none';
-        }
-        if (completionView) {
-            completionView.style.display = 'flex';
-        }
-        if (btnOpenMoodleCourse) {
-            btnOpenMoodleCourse.disabled = !state.createdCourseUrl;
-        }
-
+        if (planningProgressCard) { planningProgressCard.style.display = 'none'; }
+        if (elements.planReviewCard) { elements.planReviewCard.style.display = 'none'; }
+        if (planActions) { planActions.style.display = 'none'; }
+        if (completionView) { completionView.style.display = 'flex'; }
+        if (btnOpenMoodleCourse) { btnOpenMoodleCourse.disabled = !state.createdCourseUrl; }
         stepsUi.setStepState('planning', 'done');
         stepsUi.setStepState('generating', 'done');
         stepsUi.updateFlowNav();
@@ -156,29 +94,14 @@ export const createCourseaiActions = (deps) => {
         state.createdCourseUrl = '';
         state.createdCourseResult = null;
         state.initialPrompt = '';
-
-        if (promptInput) {
-            promptInput.value = '';
-        }
-        if (langSelect) {
-            langSelect.value = state.lang;
-        }
-        if (btnWithImages) {
-            btnWithImages.checked = false;
-        }
-        if (imgToggleWrap) {
-            imgToggleWrap.classList.remove('on');
-        }
-
+        if (promptInput) { promptInput.value = ''; }
+        if (langSelect) { langSelect.value = state.lang; }
+        if (btnWithImages) { btnWithImages.checked = false; }
+        if (imgToggleWrap) { imgToggleWrap.classList.remove('on'); }
         const chipSyllabus = document.getElementById('chipSyllabus');
-        if (chipSyllabus) {
-            chipSyllabus.classList.add('hidden');
-        }
+        if (chipSyllabus) { chipSyllabus.classList.add('hidden'); }
         const chipSyllabusName = document.getElementById('chipSyllabusName');
-        if (chipSyllabusName) {
-            chipSyllabusName.textContent = '';
-        }
-
+        if (chipSyllabusName) { chipSyllabusName.textContent = ''; }
         refreshGuidelineChip();
         refreshChipsRow();
         renderInitialPromptHistory('');
@@ -186,451 +109,20 @@ export const createCourseaiActions = (deps) => {
         updateGenerateButton();
     };
 
-    /**
-     * Show the course review panel inline, load preview data + categories from the backend,
-     * and wait for user confirmation.
-     *
-     * Categories come with full paths already built via
-     * core_course_category::make_categories_list() on the server side.
-     *
-     * Returns an overrides object if confirmed, or null if cancelled.
-     *
-     * @return {Promise<Object|null>}
-     */
-    const showCourseReviewPanel = async() => {
-        const panel = document.getElementById('courseReviewPanel');
-        const fullnameInput = document.getElementById('reviewFullname');
-        const shortnameInput = document.getElementById('reviewShortname');
-        const categorySelect = document.getElementById('reviewCategory');
-        const confirmBtn = document.getElementById('reviewConfirmBtn');
-        const cancelBtn = document.getElementById('reviewCancelBtn');
+    /** Shared generate context built once and reused in multiple event listeners. */
+    const genCtx = () => ({
+        state, elements, texts,
+        CourseaiRepository, stepsUi, planningUi, streamManager,
+        Notification, renderInitialPromptHistory, emitLog,
+    });
 
-        if (!panel || !fullnameInput || !categorySelect || !confirmBtn || !cancelBtn) {
-            return {};
-        }
-
-        // Fetch course settings (includes categories with paths from server).
-        let settingsData = null;
-        try {
-            settingsData = await getCourseSettings(state.sessionid);
-        } catch (e) {
-            // Fall through with empty data.
-        }
-
-        // Pre-fill fields from the AI-generated settings.
-        fullnameInput.value = settingsData?.fullname || state.courseTitle || '';
-        shortnameInput.value = settingsData?.shortname || '';
-
-        const defaultCategoryId = settingsData?.category || 0;
-        const categories = settingsData?.categories || [];
-
-        // Populate the select with server-side paths already built.
-        categorySelect.innerHTML = '';
-        const emptyOpt = document.createElement('option');
-        emptyOpt.value = '';
-        emptyOpt.textContent = '-- ' + texts.courseai_review_category_label + ' --';
-        categorySelect.appendChild(emptyOpt);
-
-        categories.forEach((cat) => {
-            const opt = document.createElement('option');
-            opt.value = String(cat.id);
-            opt.textContent = cat.pathname;
-            categorySelect.appendChild(opt);
-        });
-
-        // Select the default category from AI settings.
-        if (defaultCategoryId > 0) {
-            categorySelect.value = String(defaultCategoryId);
-        }
-
-        // Enhance with Moodle autocomplete (searchable, keyboard-friendly).
-        try {
-            FormAutocomplete.enhance(
-                categorySelect,
-                false,
-                texts.courseai_review_category_label || '',
-                texts.courseai_no_results || ''
-            );
-        } catch (e) {
-            // Fall through — plain select still works.
-        }
-
-        // Show the inline panel as a phase card.
-        return new Promise((resolve) => {
-            let resolved = false;
-
-            const cleanup = () => {
-                confirmBtn.removeEventListener('click', onConfirm);
-                cancelBtn.removeEventListener('click', onCancel);
-            };
-
-            const hidePanel = () => {
-                panel.style.display = 'none';
-            };
-
-            const onConfirm = () => {
-                if (resolved) {
-                    return;
-                }
-                resolved = true;
-                cleanup();
-                hidePanel();
-                const overrides = {};
-                const fullname = fullnameInput.value.trim();
-                if (fullname) {
-                    overrides.fullname = fullname;
-                }
-                const shortname = shortnameInput.value.trim();
-                if (shortname) {
-                    overrides.shortname = shortname;
-                }
-                const category = parseInt(categorySelect.value, 10);
-                if (category > 0) {
-                    overrides.category = category;
-                }
-                resolve(overrides);
-            };
-
-            const onCancel = () => {
-                if (resolved) {
-                    return;
-                }
-                resolved = true;
-                cleanup();
-                hidePanel();
-                resolve(null);
-            };
-
-            confirmBtn.addEventListener('click', onConfirm);
-            cancelBtn.addEventListener('click', onCancel);
-
-            // Show the panel inline.
-            panel.style.display = '';
-
-            // Focus the fullname input.
-            setTimeout(() => fullnameInput.focus(), 100);
-        });
-    };
-
-    const createCourseFromSession = async(overrides = null) => {
-        if (!state.sessionid) {
-            return;
-        }
-
-        const CREATE_COURSE_TIMEOUT_MS = 180000;
-        let progressInterval = null;
-
-        try {
-            if (elements.pcStep) {
-                elements.pcStep.textContent = texts.courseai_state_completed;
-            }
-            if (elements.pcTitle) {
-                elements.pcTitle.textContent = texts.courseai_course_creating;
-            }
-            if (pcSubtitle) {
-                pcSubtitle.textContent = texts.courseai_course_creating_subtitle;
-            }
-
-            // Read current displayed progress from the DOM so we continue smoothly
-            // from wherever the review panel left off, instead of recalculating
-            // from stale SSE state.
-            const currentPctText = pcPct ? pcPct.textContent : '';
-            const parsedPct = parseInt(currentPctText, 10);
-            const startProgress = !isNaN(parsedPct) && parsedPct >= 0 ? parsedPct : 92;
-            const targetProgress = 98;
-            const duration = 2000; // 2 seconds for final push
-            const intervalMs = 100;
-            const startTime = Date.now();
-
-            progressInterval = setInterval(() => {
-                const elapsed = Date.now() - startTime;
-                const progress = Math.min(1, elapsed / duration);
-                // Ease-out for smooth finish
-                const eased = 1 - Math.pow(1 - progress, 3);
-                const currentProgress = startProgress + (eased * (targetProgress - startProgress));
-                stepsUi.setProgress(Math.round(currentProgress));
-
-                // Stop interval when target reached
-                if (currentProgress >= targetProgress) {
-                    clearInterval(progressInterval);
-                }
-            }, intervalMs);
-
-            // Build payload with optional overrides.
-            const payload = {recordid: state.sessionid};
-            if (overrides) {
-                if (overrides.fullname) {
-                    payload.fullname = overrides.fullname;
-                }
-                if (overrides.shortname) {
-                    payload.shortname = overrides.shortname;
-                }
-                if (overrides.category) {
-                    payload.category = overrides.category;
-                }
-            }
-            const createRequest = createCourse(payload);
-            const timeoutPromise = new Promise((_, reject) => {
-                setTimeout(() => {
-                    reject(new Error(texts.courseai_error_connection));
-                }, CREATE_COURSE_TIMEOUT_MS);
-            });
-            const result = await Promise.race([createRequest, timeoutPromise]);
-
-            // Stop simulation and jump to 100%
-            if (progressInterval) {
-                clearInterval(progressInterval);
-            }
-            stepsUi.setProgress(100);
-
-            if (!result || !result.success) {
-                throw new Error(result?.message || texts.courseai_error_create_course);
-            }
-
-            showCompletionView(result);
-            return result;
-        } catch (error) {
-            if (progressInterval) {
-                clearInterval(progressInterval);
-            }
-
-            if (elements.pcStep) {
-                elements.pcStep.textContent = texts.courseai_state_error;
-            }
-            if (pcSubtitle) {
-                pcSubtitle.textContent = error?.message || texts.courseai_error_create_course;
-            }
-            await Notification.exception(error);
-            return null;
-        }
-    };
-
-    const handleGenerate = async() => {
-        const prompt = promptInput ? promptInput.value.trim() : '';
-        if (prompt.length < 10) {
-            if (promptInput) {
-                promptInput.focus();
-            }
-            return;
-        }
-
-        state.initialPrompt = prompt;
-        renderInitialPromptHistory(prompt);
-
-        if (btnGenerate) {
-            btnGenerate.disabled = true;
-            btnGenerate.innerHTML = `
-                <svg
-                    width="14"
-                    height="14"
-                    viewBox="0 0 24 24"
-                    fill="none"
-                    stroke="currentColor"
-                    stroke-width="2"
-                    stroke-linecap="round"
-                    aria-hidden="true"
-                    class="spinner"
-                >
-                    <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-                </svg>
-                ${texts.courseai_generate_starting}
-            `;
-        }
-
-        try {
-            let systeminstructionid = 0;
-            if (state.selectedGuidelineId) {
-                const match = state.selectedGuidelineId.match(/^si_(\d+)$/);
-                if (match) {
-                    systeminstructionid = parseInt(match[1], 10);
-                }
-            }
-
-            const initResponse = await CourseaiRepository.initSession({
-                prompt,
-                lang: state.lang,
-                withimages: state.withImages,
-                systeminstructionid,
-            });
-
-            if (!initResponse.success) {
-                throw new Error(initResponse.message || texts.courseai_error_init_session);
-            }
-
-            const sessionid = initResponse.sessionid;
-            state.sessionid = sessionid;
-            state.threadid = initResponse.threadid || '';
-            state.streamingurl = initResponse.streamingurl || '';
-
-            if (state.syllabusFilename && state.draftitemid) {
-                if (btnGenerate) {
-                    btnGenerate.innerHTML = `
-                        <svg
-                            width="14"
-                            height="14"
-                            viewBox="0 0 24 24"
-                            fill="none"
-                            stroke="currentColor"
-                            stroke-width="2"
-                            stroke-linecap="round"
-                            aria-hidden="true"
-                            class="spinner"
-                        >
-                            <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
-                        </svg>
-                        ${texts.courseai_generate_uploading_syllabus}
-                    `;
-                }
-
-                const uploadResponse = await CourseaiRepository.uploadSyllabus(sessionid, state.draftitemid);
-                if (!uploadResponse.success) {
-                    throw new Error(uploadResponse.message || texts.courseai_error_upload_syllabus);
-                }
-            }
-
-            stepsUi.transitionToPlanning();
-            // Sync chips (syllabus, guideline, images, lang) to the compact chat immediately
-            // so they are visible from the moment phase 2 streaming begins.
-            planningUi.syncCompactChatState();
-            streamManager.openSSEStream(state.streamingurl);
-        } catch (error) {
-            await Notification.exception(error);
-            stepsUi.renderGenerateButtonDefault();
-        }
-    };
-
-    const sendFeedbackAction = async(action) => {
-        if (!state.sessionid) {
-            return;
-        }
-
-        if (btnApprove) {
-            btnApprove.disabled = true;
-        }
-        if (planActions) {
-            planActions.style.display = 'none';
-        }
-        // Disable controls and Regenerar button during stream
-        setCompactChatState(deps, 'disabled');
-        /* PAUSAR — to be implemented later
-        if (action === 'adjust' && btnCompactRegenerate) {
-            state.isStreaming = true;
-            const pauseIcon = '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" ' +
-                'stroke="currentColor" stroke-width="2" stroke-linecap="round" ' +
-                'stroke-linejoin="round" aria-hidden="true">' +
-                '<rect x="6" y="4" width="4" height="16"/>' +
-                '<rect x="14" y="4" width="4" height="16"/></svg>';
-            btnCompactRegenerate.innerHTML = `${pauseIcon} ${texts.courseai_btn_pause}`;
-            btnCompactRegenerate.setAttribute('aria-label', texts.courseai_btn_pause);
-            btnCompactRegenerate.setAttribute('title', texts.courseai_btn_pause);
-            btnCompactRegenerate.disabled = false;
-        }
-        */
-        if (planningSpinner) {
-            planningSpinner.classList.remove('done');
-        }
-        if (pcSubtitle) {
-            pcSubtitle.textContent = action === 'accept'
-                ? texts.courseai_status_approving
-                : texts.courseai_status_adjusting;
-        }
-
-        try {
-            const instruction = action === 'adjust' && compactPromptInput
-                ? compactPromptInput.value.trim()
-                : '';
-
-            // Show adjustment as a chat message paired with a response slot
-            if (action === 'adjust' && instruction && adjustmentHistory) {
-                const round = (state.generationRound || 0) + 1;
-                const roundContainer = document.createElement('div');
-                roundContainer.className = 'courseai-round';
-                roundContainer.setAttribute('data-round', round);
-
-                const msgEl = document.createElement('div');
-                msgEl.className = 'courseai-chat-history';
-
-                const messageBubble = document.createElement('div');
-                messageBubble.className = 'courseai-chat-message courseai-chat-message--user';
-
-                const messageText = document.createElement('p');
-                messageText.textContent = instruction;
-
-                messageBubble.appendChild(messageText);
-                msgEl.appendChild(messageBubble);
-
-                const responseSlot = document.createElement('div');
-                responseSlot.className = 'courseai-round-response';
-                responseSlot.setAttribute('data-round', round);
-
-                roundContainer.appendChild(msgEl);
-                roundContainer.appendChild(responseSlot);
-                adjustmentHistory.appendChild(roundContainer);
-                adjustmentHistory.classList.remove('hidden');
-                if (compactPromptInput) {
-                    compactPromptInput.value = '';
-                }
-            }
-
-            // Plan actions travel as ActionIntents: a bare approve is action
-            // 'accept'; free text is action 'feedback'. Image curation no longer
-            // rides on accept — it is its own discard_image/replan_image action.
-            const pendingAction = {
-                action: action === 'accept' ? 'accept' : 'feedback',
-                instruction,
-            };
-
-            if (action === 'accept') {
-                // PRESERVE detailedTotal BEFORE any state changes or stream opening
-                state.phase4TotalActivities = state.detailedTotal || 0;
-
-                const keptImages = Object.keys(state.selectedDetailedImages)
-                    .filter((id) => state.selectedDetailedImages[id] !== false).length;
-                state.completionStats = {
-                    units: state.totalSections || Object.keys(state.detailedSectionMeta || {}).length || 0,
-                    activities: state.totalActivities || state.detailedTotal || 0,
-                    images: keptImages,
-                };
-            }
-
-            const feedbackResponse = await sendPlanningFeedback({
-                recordid: state.sessionid,
-                pendingAction,
-            });
-
-            if (!feedbackResponse || !feedbackResponse.success) {
-                throw new Error(feedbackResponse?.message || texts.courseai_error_send_feedback);
-            }
-
-            if (action === 'accept') {
-                stepsUi.setStepState('planning', 'done');
-                stepsUi.setStepState('generating', 'active');
-                state.currentStage = 'generating';
-
-                // Initialize content generation tracking
-                state.contentGenerationStarted = 0;
-                state.contentGenerationCurrent = 0;
-
-                stepsUi.setProgress(0);
-                stepsUi.updateFlowNav();
-            }
-
-            // Sync chips to compact chat so they remain visible during phase 3 streaming.
-            // For 'adjust' actions the text is kept so the user sees what they submitted.
-            if (action === 'accept') {
-                planningUi.syncCompactChatState();
-            }
-
-            const streamMode = action === 'accept' ? 'generating' : 'planning';
-            streamManager.openSSEStream(state.streamingurl, 0, streamMode);
-        } catch (error) {
-            await Notification.exception(error);
-        } finally {
-            if (btnApprove) {
-                btnApprove.disabled = false;
-            }
-        }
-    };
+    /** Shared feedback context. */
+    const fbCtx = () => ({
+        state, elements, texts, Notification,
+        setCompactChatState, deps,
+        sendPlanningFeedback, streamManager,
+        stepsUi, planningUi, emitLog,
+    });
 
     const bindEvents = () => {
         if (promptInput) {
@@ -638,15 +130,13 @@ export const createCourseaiActions = (deps) => {
             promptInput.addEventListener('keydown', (e) => {
                 if (e.key === 'Enter' && !e.shiftKey) {
                     e.preventDefault();
-                    handleGenerate();
+                    handleGenerate(genCtx());
                 }
             });
         }
-
         if (btnGenerate) {
-            btnGenerate.addEventListener('click', handleGenerate);
+            btnGenerate.addEventListener('click', () => handleGenerate(genCtx()));
         }
-
         if (pcToggleBtn) {
             pcToggleBtn.addEventListener('click', () => {
                 state.planDetailsOpen = !state.planDetailsOpen;
@@ -659,76 +149,49 @@ export const createCourseaiActions = (deps) => {
                 }
             });
         }
-
         if (btnApprove) {
-            btnApprove.addEventListener('click', () => sendFeedbackAction('accept'));
+            btnApprove.addEventListener('click', () => sendFeedbackAction('accept', fbCtx()));
         }
-
-        // Compact chat regeneration / pause
         if (btnCompactRegenerate) {
             btnCompactRegenerate.addEventListener('click', () => {
-                // While streaming this control must remain non-interactive.
-                if (state.isStreaming) {
-                    return;
-                }
-
-                // Otherwise, regenerate
+                if (state.isStreaming) { return; }
                 const instruction = compactPromptInput ? compactPromptInput.value.trim() : '';
                 if (instruction.length < 10) {
-                    if (compactPromptInput) {
-                        compactPromptInput.focus();
-                    }
+                    if (compactPromptInput) { compactPromptInput.focus(); }
                     return;
                 }
-                sendFeedbackAction('adjust');
+                sendFeedbackAction('adjust', fbCtx());
             });
         }
-
-        // Sync compact chat input with main prompt input
         if (compactPromptInput && promptInput) {
             compactPromptInput.addEventListener('input', () => {
                 promptInput.value = compactPromptInput.value;
             });
         }
-
-        // Wizard cancel button - return to phase 1
         const btnWizardCancel = document.getElementById('btnWizardCancel');
         if (btnWizardCancel) {
-            btnWizardCancel.addEventListener('click', () => {
-                stepsUi.backToContext();
-            });
+            btnWizardCancel.addEventListener('click', () => stepsUi.backToContext());
         }
-
         if (btnOpenMoodleCourse) {
             btnOpenMoodleCourse.addEventListener('click', () => {
-                if (!state.createdCourseUrl) {
-                    return;
-                }
+                if (!state.createdCourseUrl) { return; }
                 window.open(state.createdCourseUrl, '_blank', 'noopener,noreferrer');
             });
         }
-
         if (btnCreateAnotherCourse) {
             btnCreateAnotherCourse.addEventListener('click', () => {
                 window.location.href = 'aicoursecreation.php';
             });
         }
-
         window.clearSyllabus = () => {
             state.syllabusFile = null;
             state.syllabusFilename = null;
             state.draftitemid = null;
-            // Hide main chip
             const chipSyllabus = document.getElementById('chipSyllabus');
-            if (chipSyllabus) {
-                chipSyllabus.classList.add('hidden');
-            }
+            if (chipSyllabus) { chipSyllabus.classList.add('hidden'); }
             refreshChipsRow();
-            // Also hide compact chip
             const compactChipSyllabus = document.getElementById('compactChipSyllabus');
-            if (compactChipSyllabus) {
-                compactChipSyllabus.classList.add('hidden');
-            }
+            if (compactChipSyllabus) { compactChipSyllabus.classList.add('hidden'); }
             const compactChipsRow = document.getElementById('compactChipsRow');
             const compactChipGuideline = document.getElementById('compactChipGuideline');
             if (compactChipsRow) {
@@ -736,20 +199,22 @@ export const createCourseaiActions = (deps) => {
                 compactChipsRow.style.display = hasGuideline ? 'flex' : 'none';
             }
         };
-
         window.clearGuideline = () => {
             state.selectedGuidelineId = null;
-            // refreshGuidelineChip already updates both main and compact chips
             refreshGuidelineChip();
         };
     };
 
     return {
         showCompletionView,
-        showCourseReviewPanel,
-        createCourseFromSession,
-        handleGenerate,
-        sendFeedbackAction,
+        showCourseReviewPanel: () => showCourseReviewPanel(
+            state, elements, texts, getCourseSettings, FormAutocomplete
+        ),
+        createCourseFromSession: (overrides = null) => createCourseFromSession(
+            state, elements, texts, stepsUi, Notification, createCourse, showCompletionView, overrides
+        ),
+        handleGenerate: () => handleGenerate(genCtx()),
+        sendFeedbackAction: (action) => sendFeedbackAction(action, fbCtx()),
         resetForAnotherCourse,
         bindEvents,
     };

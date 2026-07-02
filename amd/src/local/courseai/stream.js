@@ -32,6 +32,7 @@
 
 import {setCompactChatState} from './ui-planning';
 import {localizeMessage} from './i18n';
+import {ensureStreamContentVisible, showStreamBar, hideStreamBar} from './stream/bar';
 import {normalizeText, extractActivityFromStatus, isActivityDoneStatus, getActivityLabel} from './stream/normalize';
 import {
     createGenerationTracker,
@@ -52,20 +53,6 @@ import {openConnection} from './stream/connection';
 let preservedPhase4Total = 0;
 
 /**
- * Ensure the planning stream content is visible and the loading overlay is hidden.
- */
-const ensureStreamContentVisible = () => {
-    const loadingEl = document.getElementById('planningLoading');
-    const streamContentEl = document.getElementById('planningStreamContent');
-    if (loadingEl) {
-        loadingEl.style.display = 'none';
-    }
-    if (streamContentEl) {
-        streamContentEl.style.display = '';
-    }
-};
-
-/**
  * Create stream manager.
  *
  * @param {Object} deps
@@ -75,6 +62,7 @@ export const createStreamManager = (deps) => {
     const {
         state, elements, stepsUi, planningUi, detailedUi,
         proposalsUi, renderPlanMarkdown, createCourseFromSession, texts,
+        emitLog,
     } = deps;
 
     const {
@@ -107,7 +95,7 @@ export const createStreamManager = (deps) => {
         state.sseSource = null;
     };
 
-    const openSSEStream = (streamUrl, retryAttempt = 0, streamMode = 'planning') => {
+    const openSSEStream = (streamUrl, retryAttempt = 0, streamMode = 'planning', keepPlan = false) => {
         if (!streamUrl) {
             throw new Error(texts.courseai_error_stream_url);
         }
@@ -130,7 +118,13 @@ export const createStreamManager = (deps) => {
                 ? state.latestInitialSections : [];
             const savedPhase4Total = state.phase4TotalActivities || 0;
 
-            stepsUi.resetPlanningState({showLoading: streamMode !== 'generating'});
+            stepsUi.resetPlanningState({showLoading: streamMode !== 'generating' && !keepPlan, keepPlan});
+
+            // Suppress the centered generic spinner immediately for planning streams.
+            // The review card with skeleton rows will render as the first section event arrives.
+            if (streamMode !== 'generating') {
+                ensureStreamContentVisible();
+            }
 
             if (savedLatestInitialSections.length > 0) {
                 state.latestInitialSections = savedLatestInitialSections;
@@ -175,6 +169,11 @@ export const createStreamManager = (deps) => {
             }
         }
 
+        // Show thin stream bar on the review card for planning streams.
+        if (streamMode !== 'generating') {
+            showStreamBar();
+        }
+
         // Build the per-stream context object carried into all handlers.
         const ctx = {
             state,
@@ -189,6 +188,7 @@ export const createStreamManager = (deps) => {
             deps,
             closeStream,
             ensureStreamContentVisible,
+            hideStreamBar,
             setCompactChatState,
             localizeMessage,
             syncTrackerFromStatus,
@@ -214,6 +214,7 @@ export const createStreamManager = (deps) => {
             pcStep,
             // Per-attempt mutable flags — handlers write ctx.flags.contentReceived = true.
             flags: {contentReceived: false},
+            emitLog: typeof emitLog === 'function' ? emitLog : () => undefined,
         };
 
         openConnection(streamUrl, retryAttempt, ctx, openSSEStream);

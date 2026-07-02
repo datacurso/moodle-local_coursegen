@@ -18,8 +18,22 @@ body { background: var(--bg); color: var(--fg); }
   --success:      hsl(142, 70%, 40%);
   --success-fg:   hsl(0, 0%, 100%);
   --radius:       0.75rem;
+  /* Semantic tokens (ui-refactor §7) */
+  --danger:        hsl(8 72% 48%);   --danger-soft:   hsl(8 72% 48% / .10);
+  --info:          hsl(212 90% 50%); --info-soft:     hsl(212 90% 50% / .10);
+  --success-strong: hsl(142 70% 40%); --success-soft: hsl(142 70% 40% / .14);
+  --warn:          hsl(38 92% 50%);  --warn-soft:     hsl(38 92% 50% / .14);
+  /* Motion tokens (ui-refactor §8) */
+  --t-fast:   120ms;
+  --t-base:   200ms;
+  --t-slow:   320ms;
+  --ease:     cubic-bezier(.2, .8, .2, 1);
+  --hold-mark: 1100ms;
   --shadow-card:  0 1px 3px hsl(215, 28%, 17%, 0.06), 0 1px 2px hsl(215, 28%, 17%, 0.04);
   --shadow-elevated: 0 10px 30px -10px hsl(8, 72%, 42%, 0.25);
+  --surface-2:     hsl(215, 20%, 94%);    /* slightly darker than --muted, for nested surfaces */
+  --shadow-card:   0 1px 2px hsl(215 28% 17% / .05);   /* override: softer than current */
+  --shadow-elevated: 0 4px 16px -4px hsl(215 28% 17% / .10);  /* override: neutral, not red */
 }
 
 /* ─── Reset ───────────────────────────────────────────────────────────── */
@@ -129,8 +143,9 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .courseai-workspace.is-planning {
+  --cg-left-w: 440px;
   display: grid;
-  grid-template-columns: minmax(320px, 380px) minmax(0, 1fr);
+  grid-template-columns: clamp(280px, var(--cg-left-w), 620px) 10px minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   height: calc(100vh - 100px);
   overflow: hidden;
@@ -145,8 +160,62 @@ svg { display: block; flex-shrink: 0; }
   display: flex;
   min-width: 0;
   min-height: 0;
-  padding-right: 16px;
-  border-right: 1px solid var(--border);
+  padding-right: 0;
+  border-right: none;
+}
+
+/* ─── RESIZABLE SPLITTER ──────────────────────────────────────────────── */
+.cg-splitter {
+  display: none;
+}
+
+.courseai-workspace.is-planning .cg-splitter {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: col-resize;
+  background: var(--border);
+  position: relative;
+  min-height: 0;
+  transition: background .15s;
+  user-select: none;
+}
+
+.courseai-workspace.is-planning .cg-splitter::before {
+  content: '';
+  display: block;
+  width: 2px;
+  height: 48px;
+  border-radius: 2px;
+  background: var(--muted-fg);
+  opacity: 0.4;
+  transition: opacity .15s, background .15s;
+}
+
+.courseai-workspace.is-planning .cg-splitter:hover,
+.courseai-workspace.is-planning .cg-splitter:focus-visible {
+  background: var(--brand-soft);
+}
+
+.courseai-workspace.is-planning .cg-splitter:hover::before,
+.courseai-workspace.is-planning .cg-splitter:focus-visible::before {
+  background: var(--brand);
+  opacity: 0.8;
+}
+
+.courseai-workspace.is-planning .cg-splitter:focus-visible {
+  outline: 2px solid var(--brand);
+  outline-offset: -2px;
+}
+
+.courseai-workspace.cg-resizing {
+  user-select: none;
+  cursor: col-resize;
+}
+
+.courseai-workspace.cg-resizing .cg-splitter::before {
+  background: var(--brand);
+  opacity: 1;
 }
 
 .courseai-workspace.is-planning .context-head {
@@ -182,7 +251,7 @@ svg { display: block; flex-shrink: 0; }
   background: var(--card);
   border: 1px solid var(--border);
   border-radius: var(--radius);
-  box-shadow: var(--shadow-elevated);
+  box-shadow: var(--shadow-card);
   overflow: visible;
   transition: border-color .15s, box-shadow .15s;
 }
@@ -782,15 +851,15 @@ svg { display: block; flex-shrink: 0; }
   height: 36px;
   border-radius: 8px;
   border: none;
-  background: var(--success);
-  color: var(--success-fg);
+  background: var(--primary);
+  color: var(--primary-fg);
   font-size: 13px;
   font-weight: 600;
   cursor: pointer;
   font-family: inherit;
   transition: background .12s, opacity .12s;
 }
-.btn-plan-approve:hover:not(:disabled) { background: hsl(142, 70%, 34%); }
+.btn-plan-approve:hover:not(:disabled) { background: hsl(8, 72%, 36%); }
 .btn-plan-approve:disabled { opacity: .45; cursor: not-allowed; }
 .planning-wrap {
   display: flex;
@@ -1019,13 +1088,13 @@ svg { display: block; flex-shrink: 0; }
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: var(--primary);
+  background: hsl(8 72% 42% / .10);
 }
 
 .pc-spin {
   width: 22px;
   height: 22px;
-  color: #fff;
+  color: var(--primary);
   animation: spin 1s linear infinite;
 }
 
@@ -1034,7 +1103,7 @@ svg { display: block; flex-shrink: 0; }
 #planningCheckIcon {
   width: 20px;
   height: 20px;
-  color: #fff;
+  color: var(--primary);
 }
 .pc-info { flex: 1; min-width: 0; }
 
@@ -1369,6 +1438,7 @@ svg { display: block; flex-shrink: 0; }
   line-height: 1;
 }
 
+/* Per-type tints (kept for legacy specificity) */
 .ps-badge--quiz { background: hsl(252, 80%, 92%); color: hsl(252, 60%, 40%); }
 .ps-badge--book { background: hsl(198, 80%, 90%); color: hsl(198, 65%, 32%); }
 .ps-badge--assign { background: hsl(35, 85%, 90%); color: hsl(35, 65%, 32%); }
@@ -1380,12 +1450,24 @@ svg { display: block; flex-shrink: 0; }
 .ps-badge--data { background: hsl(45, 75%, 88%); color: hsl(45, 60%, 30%); }
 .ps-badge--glossary { background: hsl(330, 55%, 90%); color: hsl(330, 50%, 35%); }
 
-/* Initial/detailed review card */
+/* Purpose tints — override per-type when present (set by ui-detailed.js) */
+.dp-purpose-content    { background: var(--info-soft);    color: hsl(212 90% 32%); }
+.dp-purpose-assessment { background: var(--danger-soft);  color: hsl(8 72% 36%); }
+.dp-purpose-collaboration { background: var(--success-soft); color: hsl(142 70% 26%); }
+.dp-purpose-communication { background: var(--warn-soft);  color: hsl(38 80% 28%); }
+
+/* ─────────────────────────────────────────────────────────────
+   §3  Preview panel — Moodle topics-format course view
+   ───────────────────────────────────────────────────────────── */
+
+/* Outer card shell */
 .prv-card {
-  border-radius: 16px;
+  position: relative;
+  border-radius: var(--radius);
   border: 1px solid var(--border);
   background: var(--card);
-  box-shadow: 0 1px 3px rgba(0, 0, 0, .07);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
 }
 
 .prv-header {
@@ -1446,36 +1528,55 @@ svg { display: block; flex-shrink: 0; }
   margin: 0;
 }
 
+/* ── Section row: Moodle topic card ── */
 .prv-section-row {
   border-bottom: 1px solid var(--border);
+  background: var(--card);
+  transition: background var(--t-fast) var(--ease);
 }
 
 .prv-section-row:last-child {
   border-bottom: none;
 }
 
+/* Subtle left accent — echoes Moodle's topic stripe */
+.prv-section-row:not(:first-child) {
+  border-left: 3px solid transparent;
+}
+
 .prv-section-btn {
   width: 100%;
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 12px 20px;
+  gap: 12px;
+  padding: 14px 20px 14px 16px;
   background: none;
   border: none;
   cursor: pointer;
   text-align: left;
-  transition: background .12s;
+  transition: background var(--t-fast) var(--ease);
 }
 
 .prv-section-btn:hover {
-  background: var(--muted);
+  background: hsl(215 30% 97%);
 }
 
+/* ── Action buttons: hidden by default, reveal on row hover ── */
 .dp-item-actions {
   margin-left: auto;
   display: inline-flex;
   align-items: center;
   gap: 6px;
+  opacity: 0;
+  transition: opacity var(--t-fast) var(--ease);
+}
+
+/* Reveal when the parent row / button is hovered or focused-within */
+.prv-section-btn:hover .dp-item-actions,
+.prv-section-btn:focus-within .dp-item-actions,
+.dp-activity-wrap:hover .dp-item-actions,
+.dp-activity-wrap:focus-within .dp-item-actions {
+  opacity: 1;
 }
 
 .dp-item-actions--section {
@@ -1536,18 +1637,21 @@ svg { display: block; flex-shrink: 0; }
   color: hsl(8 72% 42%);
 }
 
+/* Topic number badge — compact circle */
 .prv-section-badge {
   display: flex;
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 28px;
-  height: 28px;
-  border-radius: 7px;
-  background: hsl(8 72% 42% / .1);
-  color: var(--primary);
-  font-size: 12px;
-  font-weight: 700;
+  width: 26px;
+  height: 26px;
+  border-radius: 50%;
+  background: var(--surface-2);
+  color: var(--muted-fg);
+  font-size: 11px;
+  font-weight: 600;
+  letter-spacing: 0;
+  box-shadow: none;
 }
 
 .prv-section-info {
@@ -1555,21 +1659,24 @@ svg { display: block; flex-shrink: 0; }
   min-width: 0;
 }
 
+/* Section title: strong, readable, Moodle-like topic heading */
 .prv-section-title {
-  font-size: 13.5px;
-  font-weight: 600;
+  font-size: 14px;
+  font-weight: 700;
   color: var(--fg);
-  margin: 0 0 1px;
+  margin: 0 0 2px;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
+  letter-spacing: -0.01em;
 }
 
+/* Activity count: subtle meta pill */
 .prv-section-meta {
-  font-size: 12px;
+  font-size: 11.5px;
   color: var(--muted-fg);
   margin: 0;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
 .prv-section-meta-row {
@@ -1585,11 +1692,11 @@ svg { display: block; flex-shrink: 0; }
   border-radius: 12px;
   padding: 3px 10px;
   font-size: 11px;
-  font-weight: 700;
+  font-weight: 600;
   line-height: 1.3;
-  background: hsl(8 72% 50%);
-  color: hsl(0 0% 100%);
-  box-shadow: 0 1px 2px hsl(8 72% 20% / .15);
+  background: var(--muted);
+  color: var(--muted-fg);
+  box-shadow: none;
 }
 
 .prv-image-pill--small {
@@ -1607,26 +1714,29 @@ svg { display: block; flex-shrink: 0; }
   transform: rotate(90deg);
 }
 
+/* Section body: indented activity list */
 .prv-section-body {
-  padding: 4px 20px 14px 58px;
+  padding: 4px 16px 16px 54px;
   display: flex;
   flex-direction: column;
   gap: 6px;
 }
 
+/* ── Activity row: Moodle activityname row style ── */
 .prv-activity-item {
   display: flex;
-  align-items: flex-start;
-  gap: 8px;
+  align-items: center;
+  gap: 10px;
   border-radius: 8px;
-  background: var(--muted);
-  padding: 8px 10px;
-  transition: opacity .2s;
+  background: transparent;
+  padding: 10px 10px;
+  transition: background var(--t-fast) var(--ease), opacity .2s;
   width: 100%;
   border: none;
   text-align: left;
   appearance: none;
   -webkit-appearance: none;
+  cursor: default;
 }
 
 .prv-activity-item:focus,
@@ -1636,7 +1746,7 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .prv-activity-item--pending {
-  opacity: .35;
+  opacity: .32;
 }
 
 .prv-activity-item--done {
@@ -1672,18 +1782,21 @@ svg { display: block; flex-shrink: 0; }
   font-size: 11.5px;
   color: var(--muted-fg);
   margin: 0;
-  line-height: 1.45;
+  line-height: 1.5;
 }
 
+/* ── Activity wrap: card with soft left border ── */
 .dp-activity-wrap {
   border-radius: 8px;
   overflow: hidden;
-  background: var(--muted);
+  background: var(--card);
+  border: 1px solid var(--border);
+  margin-bottom: 0;
 }
 
 .dp-ai-inline {
-  border-top: 1px dashed hsl(8 72% 42% / .3);
-  background: hsl(8 72% 50% / .03);
+  border-top: 1px dashed var(--border);
+  background: var(--bg);
   padding: 8px 10px 10px;
 }
 
@@ -1784,8 +1897,10 @@ svg { display: block; flex-shrink: 0; }
   cursor: pointer;
 }
 
+/* Hover: gentle highlight — consistent with Moodle course page items */
+.dp-activity-wrap .prv-activity-item:hover,
 .dp-activity-wrap .prv-activity-item--has-detail:hover {
-  background: rgba(0, 0, 0, .04);
+  background: hsl(215 30% 97%);
 }
 
 .dp-activity-wrap .prv-activity-item:focus,
@@ -1865,7 +1980,7 @@ svg { display: block; flex-shrink: 0; }
   border: none;
   border-radius: 12px;
   padding: 12px 14px;
-  background: hsl(8 72% 50% / .03);
+  background: var(--surface-2);
 }
 
 .dp-images-header {
@@ -1874,7 +1989,7 @@ svg { display: block; flex-shrink: 0; }
   justify-content: space-between;
   margin-bottom: 12px;
   padding-bottom: 10px;
-  border-bottom: 1px solid hsl(8 72% 50% / .15);
+  border-bottom: 1px solid var(--border);
 }
 
 .dp-images-header-label {
@@ -1887,7 +2002,7 @@ svg { display: block; flex-shrink: 0; }
 .dp-images-header-icon {
   display: inline-flex;
   align-items: center;
-  color: hsl(8 72% 50%);
+  color: var(--muted-fg);
   margin-left: 2px;
 }
 
@@ -1900,16 +2015,16 @@ svg { display: block; flex-shrink: 0; }
   font-size: 10px;
   font-weight: 700;
   letter-spacing: .06em;
-  color: hsl(8 72% 40%);
+  color: var(--muted-fg);
 }
 
 .dp-images-header-count {
   font-size: 11px;
   font-weight: 600;
-  color: hsl(8 72% 50%);
+  color: var(--fg);
   padding: 2px 8px;
-  background: hsl(8 72% 50% / .12);
-  border: 1px solid hsl(8 72% 50% / .3);
+  background: var(--muted);
+  border: 1px solid var(--border);
   border-radius: 6px;
 }
 
@@ -1951,9 +2066,9 @@ svg { display: block; flex-shrink: 0; }
   font-size: 10px;
   font-weight: 700;
   letter-spacing: .02em;
-  color: hsl(8 72% 50%);
-  background: hsl(8 72% 50% / .12);
-  border: 1px solid hsl(8 72% 50% / .3);
+  color: var(--muted-fg);
+  background: var(--muted);
+  border: 1px solid var(--border);
   border-radius: 6px;
 }
 
@@ -2344,4 +2459,453 @@ svg { display: block; flex-shrink: 0; }
 
 .plan-proposals-fallen-reason {
   font-style: italic;
+}
+
+/* ─── Chat history: initial prompt display ────────────────────────────── */
+.courseai-chat-history {
+  margin-bottom: 12px;
+}
+
+.courseai-chat-history-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted-fg);
+  margin-bottom: 6px;
+}
+
+/* User message bubble — calm neutral, not pink */
+.courseai-chat-message--user {
+  background: var(--muted);
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  padding: 10px 14px;
+  font-size: 13px;
+  line-height: 1.55;
+  color: var(--fg);
+}
+
+.courseai-chat-message--user p {
+  margin: 0;
+}
+
+/* Adjustment history messages */
+.courseai-adjustment-history {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+/* Checklist items */
+.courseai-checklist {
+  margin-top: 10px;
+}
+.courseai-checklist-label {
+  display: block;
+  font-size: 10px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted-fg);
+  margin-bottom: 6px;
+}
+.courseai-checklist-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  font-size: 12.5px;
+  color: var(--fg);
+  line-height: 1.4;
+}
+
+/* ─── Compact chat card (planning sidebar regenerate panel) ───────────── */
+.compact-chat-card {
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: var(--shadow-card);
+  overflow: hidden;
+}
+
+.compact-prompt-textarea {
+  display: block;
+  width: 100%;
+  min-height: 68px;
+  padding: 12px 14px;
+  font-size: 13px;
+  line-height: 1.55;
+  font-family: inherit;
+  color: var(--fg);
+  background: var(--card);
+  border: none;
+  outline: none;
+  resize: none;
+}
+.compact-prompt-textarea::placeholder { color: hsl(215, 20%, 65%); }
+
+.compact-chat-toolbar {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 7px 10px;
+  border-top: 1px solid var(--border);
+  background: hsl(215, 25%, 97%);
+}
+
+.compact-toolbar-left {
+  display: flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.compact-toolbar-right {
+  display: flex;
+  align-items: center;
+}
+
+.btn-compact-regenerate {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 0 14px;
+  height: 32px;
+  border-radius: 7px;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted-fg);
+  font-size: 12.5px;
+  font-weight: 600;
+  cursor: pointer;
+  font-family: inherit;
+  transition: border-color .12s, color .12s, background .12s;
+  line-height: 1;
+}
+.btn-compact-regenerate:hover:not(:disabled) {
+  border-color: hsl(215, 20%, 72%);
+  color: var(--fg);
+  background: var(--muted);
+}
+.btn-compact-regenerate:disabled { opacity: .4; cursor: not-allowed; }
+
+/* ─── Reduced-motion override (ui-refactor §8) ────────────────────────── */
+@media (prefers-reduced-motion: reduce) {
+  *, *::before, *::after {
+    animation-duration: .01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: .01ms !important;
+  }
+}
+
+/* ─── Mark animations (ui-refactor §7 / §8) ──────────────────────────── */
+
+/* danger flash: pulse outline + soft background, holds for --hold-mark */
+@keyframes cg-flash-danger {
+  0%   { outline-color: transparent; background-color: transparent; }
+  15%  { outline-color: var(--danger); background-color: var(--danger-soft); }
+  80%  { outline-color: var(--danger); background-color: var(--danger-soft); }
+  100% { outline-color: var(--danger); background-color: var(--danger-soft); }
+}
+
+.cg-mark-danger {
+  outline: 2px solid var(--danger);
+  outline-offset: 2px;
+  background-color: var(--danger-soft);
+  animation: cg-flash-danger var(--hold-mark, 1100ms) var(--ease, ease) forwards;
+}
+
+/* info flash: pulse outline + soft background, holds for --hold-mark */
+@keyframes cg-flash-info {
+  0%   { outline-color: transparent; background-color: transparent; }
+  15%  { outline-color: var(--info); background-color: var(--info-soft); }
+  80%  { outline-color: var(--info); background-color: var(--info-soft); }
+  100% { outline-color: var(--info); background-color: var(--info-soft); }
+}
+
+.cg-mark-info {
+  outline: 2px solid var(--info);
+  outline-offset: 2px;
+  background-color: var(--info-soft);
+  animation: cg-flash-info var(--hold-mark, 1100ms) var(--ease, ease) forwards;
+}
+
+/* success enter: scale + fade + soft background */
+@keyframes cg-enter-success {
+  0%   { opacity: 0; transform: scale(.98); background-color: transparent; }
+  40%  { opacity: 1; transform: scale(1);   background-color: var(--success-soft); }
+  80%  { background-color: var(--success-soft); }
+  100% { background-color: var(--success-soft); }
+}
+
+.cg-mark-success {
+  outline: 2px solid var(--success-strong);
+  outline-offset: 2px;
+  background-color: var(--success-soft);
+  animation: cg-enter-success var(--hold-mark, 1100ms) var(--ease, ease) forwards;
+}
+
+/* ─── Collapse-and-fade (used by markRemoving) ────────────────────────── */
+.cg-removing {
+  overflow: hidden;
+  opacity: 0;
+  max-height: 0;
+  padding-top: 0;
+  padding-bottom: 0;
+  margin-top: 0;
+  margin-bottom: 0;
+  transition:
+    opacity    var(--t-slow, 320ms) var(--ease, ease),
+    max-height var(--t-slow, 320ms) var(--ease, ease),
+    padding    var(--t-slow, 320ms) var(--ease, ease),
+    margin     var(--t-slow, 320ms) var(--ease, ease);
+}
+
+/* ─── Skeleton shimmer ────────────────────────────────────────────────── */
+@keyframes cg-shimmer {
+  0%   { background-position: -200% 0; }
+  100% { background-position:  200% 0; }
+}
+
+.cg-skeleton {
+  background: linear-gradient(
+    90deg,
+    var(--muted, hsl(215 25% 96%))          0%,
+    var(--border, hsl(215 20% 88%))         40%,
+    var(--muted, hsl(215 25% 96%))         60%,
+    var(--muted, hsl(215 25% 96%))        100%
+  );
+  background-size: 200% 100%;
+  animation: cg-shimmer 1.4s linear infinite;
+  border-radius: var(--radius, .75rem);
+  color: transparent;
+}
+
+/* ─── Indeterminate stream bar ────────────────────────────────────────── */
+@keyframes cg-stream-sweep {
+  0%   { left: -40%; }
+  100% { left: 110%; }
+}
+
+.cg-stream-bar {
+  position: absolute;
+  top: 0;
+  left: 0;
+  width: 100%;
+  height: 2px;
+  overflow: hidden;
+  pointer-events: none;
+}
+
+.cg-stream-bar::after {
+  content: '';
+  position: absolute;
+  top: 0;
+  width: 40%;
+  height: 100%;
+  background: linear-gradient(
+    90deg,
+    transparent 0%,
+    var(--brand, hsl(252 55% 42%)) 50%,
+    transparent 100%
+  );
+  animation: cg-stream-sweep 1.2s var(--ease, ease) infinite;
+}
+
+/* ─── Activity detail skeleton lines ──────────────────────────────────── */
+.cg-skeleton-line {
+  display: block;
+  height: 10px;
+  border-radius: 6px;
+  margin-bottom: 6px;
+}
+
+.cg-skeleton-line:last-child {
+  margin-bottom: 0;
+  width: 65%;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cg-skeleton {
+    animation: none;
+    background: var(--muted, hsl(215 25% 96%));
+  }
+}
+
+/* ─── Decision log (§4) ────────────────────────────────────────────────── */
+.cg-log-section {
+  margin-top: 16px;
+}
+
+.cg-log-label {
+  display: block;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: .06em;
+  text-transform: uppercase;
+  color: var(--muted-fg);
+  margin-bottom: 8px;
+}
+
+.cg-log {
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+/* Action log feed below the checklist: only takes space once it has entries. */
+#cgLogAfter:not(:empty) {
+  margin-top: 14px;
+}
+
+/* Single log entry row */
+.cg-log-entry {
+  display: flex;
+  align-items: stretch;
+  gap: 8px;
+  min-height: 32px;
+  border-radius: 6px;
+  background: transparent;
+  overflow: hidden;
+}
+
+/* Left semantic color bar */
+.cg-log-bar {
+  display: block;
+  flex-shrink: 0;
+  width: 3px;
+  border-radius: 3px;
+  background: var(--muted-fg);
+  align-self: stretch;
+}
+
+/* Kind-based bar colors */
+.cg-log-entry--user    .cg-log-bar { background: var(--brand); }
+.cg-log-entry--ai      .cg-log-bar { background: var(--primary); }
+.cg-log-entry--danger  .cg-log-bar { background: var(--danger); }
+.cg-log-entry--info    .cg-log-bar { background: var(--info); }
+.cg-log-entry--success .cg-log-bar { background: var(--success-strong); }
+.cg-log-entry--neutral .cg-log-bar { background: var(--muted-fg); }
+
+/* Entry body: icon + message + timestamp */
+.cg-log-body {
+  display: flex;
+  align-items: flex-start;
+  gap: 5px;
+  padding: 6px 6px 6px 0;
+  flex: 1;
+  min-width: 0;
+}
+
+.cg-log-actor {
+  flex-shrink: 0;
+  font-size: 13px;
+  line-height: 1;
+}
+
+.cg-log-msg {
+  flex: 1;
+  min-width: 0;
+  font-size: 12.5px;
+  line-height: 1.45;
+  color: var(--fg);
+  white-space: normal;
+  overflow-wrap: anywhere;
+  word-break: break-word;
+}
+
+.cg-log-ts {
+  flex-shrink: 0;
+  font-size: 11px;
+  line-height: 1.45;
+  color: var(--muted-fg);
+  white-space: nowrap;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cg-log-entry { transition: none; }
+}
+
+/* ─── Scroll architecture: ONE scroll per column, pinned chat, integrated bars ── */
+
+/* No page scroll while planning — the workspace fills the viewport exactly. */
+html:has(.courseai-workspace.is-planning),
+body:has(.courseai-workspace.is-planning) { overflow: hidden; }
+.aicoursecreation-main:has(.courseai-workspace.is-planning),
+.app-main:has(.courseai-workspace.is-planning) { padding-bottom: 0; }
+
+/* Left column is a flex column: the chat-scroll region grows and scrolls,
+   while the compact chat stays pinned at the bottom (never scrolls away). */
+.courseai-workspace.is-planning .context-wrap {
+  flex-direction: column;
+  overflow: hidden;
+}
+.courseai-workspace.is-planning .courseai-context-chat {
+  display: flex;
+  flex-direction: column;
+  flex: 1 1 auto;
+  min-height: 0;
+  width: 100%;
+}
+.courseai-workspace.is-planning .courseai-chat-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  padding-right: 4px;
+}
+.courseai-workspace.is-planning .compact-chat-card {
+  flex: 0 0 auto;
+  margin-top: 8px;
+}
+
+/* Right column: the single scroll container for the whole preview. */
+.courseai-workspace.is-planning .planning-wrap {
+  height: 100%;
+  min-height: 0;
+  overflow-y: auto;
+  overflow-x: hidden;
+  max-width: none;
+  margin: 0;
+  padding: 8px 22px 28px;
+}
+/* The preview is a flex column; without this the fixed-height container would
+   SHRINK the cards to fit (clipping content via .prv-card overflow:hidden) and
+   never overflow. Pinning children to their content height lets the column
+   actually overflow and scroll. */
+.courseai-workspace.is-planning .planning-wrap > * {
+  flex-shrink: 0;
+}
+
+/* Integrated, thin scrollbars on the two scroll regions only. */
+.courseai-workspace.is-planning .courseai-chat-scroll,
+.courseai-workspace.is-planning .planning-wrap {
+  scrollbar-width: thin;
+  scrollbar-color: hsl(215 18% 80%) transparent;
+}
+.courseai-workspace.is-planning .courseai-chat-scroll::-webkit-scrollbar,
+.courseai-workspace.is-planning .planning-wrap::-webkit-scrollbar {
+  width: 6px;
+  height: 6px;
+}
+.courseai-workspace.is-planning .courseai-chat-scroll::-webkit-scrollbar-track,
+.courseai-workspace.is-planning .planning-wrap::-webkit-scrollbar-track {
+  background: transparent;
+}
+.courseai-workspace.is-planning .courseai-chat-scroll::-webkit-scrollbar-thumb,
+.courseai-workspace.is-planning .planning-wrap::-webkit-scrollbar-thumb {
+  background: hsl(215 16% 86%);
+  border-radius: 8px;
+  border: 3px solid transparent;
+  background-clip: padding-box;
+}
+.courseai-workspace.is-planning .courseai-chat-scroll::-webkit-scrollbar-thumb:hover,
+.courseai-workspace.is-planning .planning-wrap::-webkit-scrollbar-thumb:hover {
+  background: hsl(215 16% 72%);
+  background-clip: padding-box;
 }

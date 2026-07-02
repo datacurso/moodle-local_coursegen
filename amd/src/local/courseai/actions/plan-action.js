@@ -43,6 +43,8 @@ export const createRunPlanAction = ({state, sendPlanningFeedback, openSSEStream}
             return;
         }
         await sendPlanningFeedback({recordid: state.sessionid, pendingAction: intent});
-        openSSEStream(state.streamingurl, 0, 'planning');
+        // keepPlan: this resumes an existing plan to apply an action — preserve the
+        // rendered preview so the reconciler diffs against it (no teardown/flicker).
+        openSSEStream(state.streamingurl, 0, 'planning', true);
     };
 };

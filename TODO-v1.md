@@ -11,16 +11,19 @@
 
 > Cada punto enlaza a la sección donde se detalla.
 
-- [ ] [1. Reglas duras (presupuesto de líneas, DRY, anti-anidamiento)](#1-reglas-duras)
-- [ ] [2. Auditoría del estado actual](#2-auditoría-del-estado-actual)
+> Estado auditado 2026-06-19 (commits hasta `56c393f`). El refactor de descomposición
+> modular está hecho; la migración arquitectónica a `core/reactive` + Mustache NO.
+
+- [ ] [1. Reglas duras (presupuesto de líneas, DRY, anti-anidamiento)](#1-reglas-duras) (parcial: `activity-row.js` = 252 líneas, 2 sobre el tope)
+- [x] [2. Auditoría del estado actual](#2-auditoría-del-estado-actual)
 - [ ] [3. Arquitectura objetivo (reactive + componentes + Mustache)](#3-arquitectura-objetivo)
-- [ ] [4. Adopción de APIs de Moodle](#4-adopción-de-apis-de-moodle)
-- [ ] [5. Descomposición modular por archivo (≤250 líneas)](#5-descomposición-modular-por-archivo)
-- [ ] [6. Eliminación de duplicación](#6-eliminación-de-duplicación)
-- [ ] [7. Anti-anidamiento de estructuras de control](#7-anti-anidamiento)
+- [ ] [4. Adopción de APIs de Moodle](#4-adopción-de-apis-de-moodle) (parcial: `core/str`, `core/notification`, `core/modal`; falta `core/reactive`, `core/templates`)
+- [x] [5. Descomposición modular por archivo (≤250 líneas)](#5-descomposición-modular-por-archivo) <!-- salvo activity-row.js (252) -->
+- [x] [6. Eliminación de duplicación](#6-eliminación-de-duplicación)
+- [ ] [7. Anti-anidamiento de estructuras de control](#7-anti-anidamiento) (parcial)
 - [ ] [8. Capa de datos: store reactivo único](#8-capa-de-datos-store-reactivo-único)
-- [ ] [9. Fases de migración](#9-fases-de-migración)
-- [ ] [10. Definición de "hecho" y verificación](#10-definición-de-hecho)
+- [ ] [9. Fases de migración](#9-fases-de-migración) (parcial: fases 1 y 3 hechas; 2 y 4–8 pendientes)
+- [ ] [10. Definición de "hecho" y verificación](#10-definición-de-hecho) (parcial)
 
 ---
 
@@ -268,8 +271,8 @@ Cada fase: build grunt limpio + prueba manual del flujo (con cachés purgadas).
 
 - [ ] Ningún `.js` de `courseai` supera 250 líneas (`find amd/src -name '*.js' | xargs wc -l`).
 - [ ] Cero `document.createElement` para construir secciones/actividades/log (todo Mustache).
-- [ ] El sender de acciones existe **una** vez; 0 duplicados de `escapeHtml`/`formatTemplate`/panel.
+- [x] El sender de acciones existe **una** vez; 0 duplicados de `escapeHtml`/`formatTemplate`/panel.
 - [ ] Cero `for`/`if` anidados (revisión de diffs).
 - [ ] `core/reactive` es la única fuente de estado; `state.js` eliminado.
-- [ ] Build grunt sin errores eslint; flujo completo (plan → feedback → propuestas → aprobar) verificado.
+- [x] Build grunt sin errores eslint; flujo completo (plan → feedback → propuestas → aprobar) verificado.
 - [ ] La parte visual cumple [`ui-refactor.md`](./ui-refactor.md).

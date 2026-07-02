@@ -665,3 +665,19 @@ $string['courseai_btn_add_activity'] = 'Add activity';
 $string['courseai_add_section_placeholder'] = 'Describe the section to add…';
 $string['courseai_add_activity_placeholder'] = 'Describe the activity to add…';
 $string['courseai_drag_handle_label'] = 'Drag to reorder';
+$string['courseai_resize_panels'] = 'Resize panels';
+
+// Decision log (§4).
+$string['courseai_log_label'] = 'Activity';
+$string['courseai_log_user_request'] = 'You: {$a}';
+$string['courseai_log_ai_section'] = 'AI planned section «{$a}»';
+$string['courseai_log_deleted_section'] = 'You deleted section «{$a}»';
+$string['courseai_log_deleted_activity'] = 'You deleted activity «{$a}»';
+$string['courseai_log_regenerated_section'] = 'You regenerated section «{$a}»';
+$string['courseai_log_regenerated_activity'] = 'You regenerated activity «{$a}»';
+$string['courseai_log_added_section'] = 'You added a section';
+$string['courseai_log_added_activity'] = 'You added an activity';
+$string['courseai_log_image_discarded'] = 'You discarded an image suggestion';
+$string['courseai_log_image_regenerated'] = 'You regenerated an image suggestion';
+$string['courseai_log_proposal_applied'] = 'You applied: {$a}';
+$string['courseai_log_proposals_dismissed'] = 'You dismissed suggestions';
