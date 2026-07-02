@@ -36,11 +36,42 @@ export const createRunPlanAction = ({state, sendPlanningFeedback, openSSEStream}
      * Send one ActionIntent as pending_action and re-open the planning stream.
      *
      * @param {Object} intent - The pendingAction object to send.
+     * @param {Object} [scopeIntent] - The REAL resolved intent driving the left-panel
+     *     routing when `intent` is a wrapper (e.g. execute_proposal). Defaults to `intent`.
      * @returns {Promise<void>}
      */
-    return async(intent) => {
+    return async(intent, scopeIntent) => {
         if (!sendPlanningFeedback || !state.sessionid) {
             return;
+        }
+        // What gets SENT is `intent` (e.g. {action:'execute_proposal', …} when applying
+        // a proposal). What decides the LEFT-panel routing is the REAL action, which for
+        // a proposal lives in scopeIntent (the proposal's resolved intent). Inline controls
+        // pass no scopeIntent, so the sent intent IS the scope source — behaviour unchanged.
+        const scope = scopeIntent || intent;
+        // Mark a regeneration so the stream handlers route this round's content
+        // into a NEW left-panel block (below the user's instruction) instead of
+        // rebuilding the top "structure I planned" checklist. ONLY replans set
+        // this — reorder/add/delete/accept leave it null, so their flow (already
+        // verified) is untouched. Cleared by the lifecycle handlers at stream end.
+        const action = scope && scope.action;
+        if (action === 'replan_activity' || action === 'replan_section') {
+            state.regenScope = {action, targetIds: (scope.target_ids || []).slice()};
+        } else {
+            state.regenScope = null;
+        }
+        // Adding an element: snapshot the ids that exist NOW so review_needed can
+        // name the one the model just created (the id not in this set). Cleared by
+        // the lifecycle handlers, like regenScope.
+        if (action === 'add_section') {
+            const secs = (state.latestInitialSections || []).filter((s) => s && !s.deleted);
+            state.addScope = {action, beforeIds: secs.map((s) => s.id)};
+        } else if (action === 'add_activity') {
+            const parent = (state.latestInitialSections || []).find((s) => s && s.id === scope.parent_section_id);
+            const acts = (parent && parent.activities || []).filter((a) => a && !a.deleted);
+            state.addScope = {action, parentSectionId: scope.parent_section_id, beforeIds: acts.map((a) => a.id)};
+        } else {
+            state.addScope = null;
         }
         await sendPlanningFeedback({recordid: state.sessionid, pendingAction: intent});
         // keepPlan: this resumes an existing plan to apply an action — preserve the

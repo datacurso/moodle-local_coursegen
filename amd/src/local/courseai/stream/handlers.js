@@ -32,7 +32,7 @@
 import {
     handleActivity,
     handleSection,
-    handleCourseIdentity,
+    handleCourseConfiguration,
     handleDetailedPlanField,
     handleDetailedPlanActivity,
     handleToken,
@@ -59,7 +59,7 @@ import {
 const HANDLERS = {
     activity: handleActivity,
     section: handleSection,
-    course_identity: handleCourseIdentity,
+    course_configuration: handleCourseConfiguration,
     detailed_plan_field: handleDetailedPlanField,
     detailed_plan_activity: handleDetailedPlanActivity,
     token: handleToken,

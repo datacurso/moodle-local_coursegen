@@ -192,38 +192,68 @@
       </div>
 
       <div class="courseai-context-chat" id="courseaiContextChat">
-        <div class="courseai-chat-scroll" id="courseaiChatScroll">
-          <div class="courseai-round" data-round="0">
-            <div class="courseai-chat-history hidden" id="courseaiInitialPromptHistory">
-              <span class="courseai-chat-history-label">{{#str}}courseai_initial_prompt_label, local_coursegen{{/str}}</span>
-              <div class="courseai-chat-message courseai-chat-message--user">
-                <p id="courseaiInitialPromptText"></p>
-              </div>
-            </div>
 
-            <!-- Decision log feed (§4) -->
-            <div class="cg-log-section" id="cgLogSection" style="display:none">
-              <span class="cg-log-label">{{#str}}courseai_log_label, local_coursegen{{/str}}</span>
-              <div class="cg-log" id="cgLog" aria-live="polite" aria-label="{{#str}}courseai_log_label, local_coursegen{{/str}}"></div>
+        <!-- Decision card (WU4): on review_needed it takes the composer's slot at the
+             bottom of the chat column — the message thread above stays visible. CSS
+             order:10 pins it last; decision-overlay.js toggles display. -->
+        <div class="cg-decision-overlay" id="cgDecisionOverlay" style="display:none" role="group"
+             aria-label="{{#str}}courseai_decision_title, local_coursegen{{/str}}">
+          <div class="cg-decision-card">
+            <p class="cg-decision-title">{{#str}}courseai_decision_title, local_coursegen{{/str}}</p>
+            <p class="cg-decision-subtitle">{{#str}}courseai_decision_subtitle, local_coursegen{{/str}}</p>
+            <div class="cg-decision-body" id="cgDecisionBody"></div>
+            <div class="cg-decision-actions">
+              <button class="cg-decision-btn cg-decision-btn--accept" id="cgDecisionAccept" type="button">
+                {{#str}}courseai_decision_accept, local_coursegen{{/str}}
+              </button>
+              <button class="cg-decision-btn cg-decision-btn--adjust" id="cgDecisionAdjust" type="button">
+                {{#str}}courseai_decision_adjust, local_coursegen{{/str}}
+              </button>
             </div>
+          </div>
+        </div>
+
+        <div class="courseai-chat-scroll cg-thread" id="courseaiChatScroll">
+          <div class="courseai-round" data-round="0">
+            <!-- Conversation thread (§7.1): one continuous chronological feed.
+                 The initial prompt is the FIRST user turn (emitted via emitLog),
+                 followed by AI planning turns. No rigid "INITIAL MESSAGE" block
+                 and no uppercase section labels — it reads top-to-bottom. -->
+            <div class="cg-log cg-thread-feed" id="cgLog" aria-live="polite"
+                 aria-label="{{#str}}courseai_log_label, local_coursegen{{/str}}"></div>
 
             <!-- Left loading skeleton: previews the checklist shape while the
                  first instruction streams (hidden once a section arrives). -->
-            <div class="cg-sk-checks-wrap" id="cgLeftSkeleton" style="display:{{#isresuming}}block{{/isresuming}}{{^isresuming}}none{{/isresuming}}">{{> local_coursegen/courseai_skeleton_checks }}</div>
+            <div class="cg-sk-checks-wrap" id="cgLeftSkeleton" style="display:none">{{> local_coursegen/courseai_skeleton_checks }}</div>
 
-            <!-- Section checklist shown during streaming -->
-            <div class="courseai-checklist hidden" id="courseaiChecklist">
-              <span class="courseai-checklist-label">{{#str}}courseai_checklist_label, local_coursegen{{/str}}</span>
+            <!-- Section checklist: a compact result card inside the AI planning
+                 turn. The data hooks (data-section-id/data-round/data-remaining on
+                 each <li>) are consumed by the streaming handlers — do not remove. -->
+            <div class="courseai-checklist cg-thread-checklist hidden" id="courseaiChecklist">
+              <div class="cg-group-head" role="button" tabindex="0" aria-expanded="true">
+                <span class="cg-group-chevron" aria-hidden="true">⌄</span>
+                <span class="cg-group-avatar" aria-hidden="true"></span>
+                <span class="cg-group-title">{{#str}}courseai_log_ai_planned_structure, local_coursegen{{/str}}</span>
+                <span class="cg-group-count"></span>
+              </div>
               <ul class="courseai-checklist-list" id="courseaiChecklistList"></ul>
             </div>
 
-            <!-- Action log feed (§4): once the plan settles, user actions and their
-                 results flow chronologically BELOW the checklist (organic chat). -->
-            <div class="cg-log" id="cgLogAfter" aria-live="polite"></div>
+            <!-- Continuation of the thread (§7.1): once the plan settles, user
+                 actions and their results flow chronologically below the checklist. -->
+            <div class="cg-log cg-thread-feed" id="cgLogAfter" aria-live="polite"></div>
           </div>
 
           <!-- Adjustment message history (shown after user sends adjustments) -->
           <div class="courseai-adjustment-history hidden" id="courseaiAdjustmentHistory"></div>
+        </div>
+
+        <!-- After "Adjust", the decision card is replaced by the composer; this slim
+             bar (a SEPARATE element above the composer, with a gap) keeps Accept
+             reachable so the user can always change their mind. -->
+        <div class="cg-accept-bar" id="cgAcceptBar" style="display:none">
+          <span class="cg-accept-bar-text">{{#str}}courseai_decision_still_accept, local_coursegen{{/str}}</span>
+          <button class="cg-accept-bar-btn" id="cgAcceptInline" type="button">{{#str}}courseai_decision_accept, local_coursegen{{/str}}</button>
         </div>
 
         <!-- Compact chat for regeneration -->
@@ -330,10 +360,9 @@
 
             <div class="compact-toolbar-right">
               <button class="btn-compact-regenerate" id="btnCompactRegenerate" type="button" aria-label="{{#str}}courseai_btn_regenerate, local_coursegen{{/str}}" title="{{#str}}courseai_btn_regenerate, local_coursegen{{/str}}">
-                <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"/>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <path d="M12 19V5M5 12l7-7 7 7"/>
                 </svg>
-                {{#str}}courseai_btn_regenerate, local_coursegen{{/str}}
               </button>
               <button class="btn-stop-resume btn-stop" id="btnStopExec" type="button"
                       style="display:none"

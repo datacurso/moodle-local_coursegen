@@ -35,7 +35,21 @@
  */
 export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, parentSectionId, canDrag) => {
     let dragSrcEl = null;
+    // Order snapshot taken when the drag starts, so onDragEnd can tell a real
+    // reorder from a no-op (dropping a row back onto its own slot). A no-op must
+    // NOT log "You moved X to position N" nor hit the service.
+    let orderAtStart = [];
     const dragBlocked = () => typeof canDrag === 'function' && !canDrag();
+    const currentOrder = () => {
+        const ids = [];
+        container.querySelectorAll(itemSelector).forEach((el) => {
+            const id = el.dataset[idDataset];
+            if (id) {
+                ids.push(id);
+            }
+        });
+        return ids;
+    };
 
     const onDragStart = (event) => {
         // Reordering is disabled while the plan is streaming (it re-renders and a
@@ -49,6 +63,7 @@ export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, p
         event.stopPropagation();
         const row = event.currentTarget;
         dragSrcEl = row;
+        orderAtStart = currentOrder();
         row.classList.add('dp-dragging');
         event.dataTransfer.effectAllowed = 'move';
         // Store the parent section so cross-section drops can be rejected.
@@ -83,9 +98,23 @@ export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, p
         if (parentSectionId !== null && originSection !== (parentSectionId || '')) {
             return;
         }
-        // DOM reorder: insert dragSrcEl before the target.
+        // DOM reorder, DIRECTION-AWARE: inserting always-before the target makes
+        // it impossible to move an element DOWN past a target (or back to a lower
+        // slot) — it'd just land before it again and "stick". So when dragging
+        // DOWNWARD (source currently before the target) insert AFTER the target;
+        // when dragging UPWARD (source after the target) insert BEFORE it.
         const parent = row.parentNode;
-        parent.insertBefore(dragSrcEl, row);
+        // draggingDown = the target is a LATER sibling of the dragged row (walk
+        // forward from the source until we hit the target). Avoids bitwise
+        // compareDocumentPosition (lint) and text-node ambiguity.
+        let draggingDown = false;
+        for (let node = dragSrcEl.nextSibling; node; node = node.nextSibling) {
+            if (node === row) {
+                draggingDown = true;
+                break;
+            }
+        }
+        parent.insertBefore(dragSrcEl, draggingDown ? row.nextSibling : row);
     };
 
     const onDragEnd = (event) => {
@@ -99,17 +128,20 @@ export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, p
         container.querySelectorAll(itemSelector).forEach((el) => {
             el.classList.remove('dp-drag-over');
         });
+        // The dragged row (its id) is what moved — pass it so the log can name
+        // the moved element and its new position, not just the parent.
+        const movedId = (row && row.dataset[idDataset]) || null;
         dragSrcEl = null;
         // Collect new order and dispatch.
-        const ids = [];
-        container.querySelectorAll(itemSelector).forEach((el) => {
-            const id = el.dataset[idDataset];
-            if (id) {
-                ids.push(id);
-            }
-        });
-        if (ids.length > 1) {
-            onReorder(ids);
+        const ids = currentOrder();
+        // No-op guard: if the order is unchanged (the row was dropped back onto
+        // its own slot), there is nothing to report — skip the log AND the
+        // service call so we never show "moved to position N" for a non-move.
+        const unchanged = ids.length === orderAtStart.length
+            && ids.every((id, i) => id === orderAtStart[i]);
+        orderAtStart = [];
+        if (ids.length > 1 && !unchanged) {
+            onReorder(ids, movedId);
         }
     };
 
@@ -130,17 +162,39 @@ export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, p
 };
 
 /**
- * Send a reorder_sections action.
+ * Send a reorder_sections action and log a concise user turn.
  *
- * @param {Object}   ctx
- * @param {string[]} targetIds - Section UUIDs in new DOM order.
+ * @param {Object}   ctx              - ui-detailed ctx; reads runPlanAction, log, texts, state.
+ * @param {string[]} targetIds        - Section UUIDs in new DOM order.
+ * @param {string}   [movedId]        - UUID of the section the user dragged.
  */
-export const sendReorderSections = async(ctx, targetIds) => {
-    const {runPlanAction} = ctx;
+export const sendReorderSections = async(ctx, targetIds, movedId) => {
+    const {runPlanAction, log, texts, state} = ctx;
+    // Name WHICH section moved and to WHICH (1-based) position; fall back to the
+    // generic line when the dragged section can't be resolved (no « »).
+    if (typeof log === 'function') {
+        const sections = (state && state.latestInitialSections) || [];
+        const moved = sections.find((s) => s && s.id === movedId);
+        const movedName = moved && String(moved.name || '').trim();
+        const newPos = movedId ? targetIds.indexOf(movedId) + 1 : 0;
+        let message;
+        if (movedName && newPos > 0) {
+            message = ((texts && texts.courseai_log_moved_section)
+                || 'You moved section "{$a->name}" to position {$a->position}')
+                .replace('{$a->name}', movedName)
+                .replace('{$a->position}', String(newPos));
+        } else {
+            message = (texts && texts.courseai_log_reordered_sections) || 'You reordered the sections';
+        }
+        log({actor: 'user', kind: 'user', message});
+    }
     try {
         const pendingAction = {
             action: 'reorder_sections',
             target_ids: targetIds,
+            // WHICH section the user dragged, so the service persists the same
+            // "You moved section X to position N" turn (reload === live).
+            moved_id: movedId || null,
         };
         await runPlanAction(pendingAction);
     } catch (e) {
@@ -149,19 +203,48 @@ export const sendReorderSections = async(ctx, targetIds) => {
 };
 
 /**
- * Send a reorder_activities action.
+ * Send a reorder_activities action and log a concise user turn.
  *
- * @param {Object}   ctx
- * @param {string}   sectionId - Parent section UUID.
- * @param {string[]} targetIds - Activity UUIDs in new DOM order.
+ * @param {Object}   ctx              - ui-detailed ctx; reads runPlanAction, log, texts, state.
+ * @param {string}   sectionId        - Parent section UUID.
+ * @param {string[]} targetIds        - Activity UUIDs in new DOM order.
+ * @param {string}   [movedId]        - UUID of the activity the user dragged.
  */
-export const sendReorderActivities = async(ctx, sectionId, targetIds) => {
-    const {runPlanAction} = ctx;
+export const sendReorderActivities = async(ctx, sectionId, targetIds, movedId) => {
+    const {runPlanAction, log, texts, state} = ctx;
+    // Reordering activities is a user action → one concise turn that names WHICH
+    // activity moved and to WHICH (1-based) position; falls back to the section
+    // name, then a generic line (no « »).
+    if (typeof log === 'function') {
+        const sections = (state && state.latestInitialSections) || [];
+        const section = sections.find((s) => s && s.id === sectionId);
+        const sectionName = (section && String(section.name || '').trim()) || '';
+        const activities = (section && section.activities) || [];
+        const moved = activities.find((a) => a && a.id === movedId);
+        const movedTitle = moved && String(moved.title || '').trim();
+        const newPos = movedId ? targetIds.indexOf(movedId) + 1 : 0;
+        let message;
+        if (movedTitle && newPos > 0) {
+            message = ((texts && texts.courseai_log_moved_activity)
+                || 'You moved "{$a->title}" to position {$a->position}')
+                .replace('{$a->title}', movedTitle)
+                .replace('{$a->position}', String(newPos));
+        } else if (sectionName) {
+            message = ((texts && texts.courseai_log_reordered_activities) || 'You reordered the activities in: {$a}')
+                .replace('{$a}', sectionName);
+        } else {
+            message = (texts && texts.courseai_log_reordered_activities_generic) || 'You reordered the activities';
+        }
+        log({actor: 'user', kind: 'user', message});
+    }
     try {
         const pendingAction = {
             action: 'reorder_activities',
             parent_section_id: sectionId,
             target_ids: targetIds,
+            // WHICH activity the user dragged, so the service persists the same
+            // "You moved X to position N" turn we logged live (reload === live).
+            moved_id: movedId || null,
         };
         await runPlanAction(pendingAction);
     } catch (e) {

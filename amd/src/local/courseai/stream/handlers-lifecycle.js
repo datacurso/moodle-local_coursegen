@@ -23,7 +23,18 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {hideFeedbackThinking} from 'local_coursegen/local/courseai/ui/feedback-progress';
+import {
+    hideFeedbackThinking,
+    showWorkingIndicator,
+    leftHasRealContent,
+} from 'local_coursegen/local/courseai/ui/feedback-progress';
+import {
+    transcriptHasContent,
+    finalizeTranscript,
+    rebuildTranscriptFromPlan,
+} from 'local_coursegen/local/courseai/ui/plan-transcript';
+import {finalizeRegen, rebuildRegenFromPlan} from 'local_coursegen/local/courseai/ui/regen-block';
+import {addedActivityTurn} from 'local_coursegen/local/courseai/ui/added-turn';
 
 /**
  * Handle 'status' event: localize message, update UI text, advance heuristic progress.
@@ -41,6 +52,14 @@ export const handleStatus = async(data, ctx) => {
 
     const statusText = data.message ? await localizeMessage(data.message) : (data.text || '');
     const heuristicText = (data.message && data.message.string) || data.text || '';
+
+    // Surface transient progress as the SINGLE live "working" indicator in the
+    // thread (never one turn per status event) so the panel never looks frozen
+    // while the server streams. It is cleared when content/sections land or on a
+    // terminal lifecycle event.
+    if (statusText) {
+        showWorkingIndicator(texts, statusText);
+    }
 
     if (streamMode === 'generating') {
         ensureStreamContentVisible();
@@ -95,13 +114,31 @@ export const handleStatus = async(data, ctx) => {
  * @returns {Promise<void>}
  */
 export const handleError = async(data, ctx) => {
-    hideFeedbackThinking();
     const errorText = await ctx.localizeMessage(data.message);
+    // 'error' is NON-FATAL and can arrive mid-early-phase before any section has
+    // landed. Clearing the live working indicator here used to leave the LEFT
+    // panel blank for a long stretch until the next status/section. Instead, keep
+    // the single live indicator visible and track the error text on it — but only
+    // while the LEFT still has no real content (checklist/structure). Once real
+    // content exists, the indicator is no longer the left's only signal, so drop
+    // it as before (a terminal lifecycle event will manage it from there).
+    if (leftHasRealContent()) {
+        hideFeedbackThinking();
+    } else if (errorText) {
+        showWorkingIndicator(ctx.texts, errorText);
+    }
     if (ctx.prvHeaderSub && errorText) {
         ctx.prvHeaderSub.textContent = errorText;
     }
     if (ctx.pcSubtitle && errorText) {
         ctx.pcSubtitle.textContent = errorText;
+    }
+    // Nothing the server streams is silent: surface the error as a turn. 'error'
+    // is non-fatal and may repeat within a round, so dedup consecutive identical
+    // messages to avoid stacking the same turn.
+    if (typeof ctx.emitLog === 'function' && errorText && ctx.state.lastErrorLogged !== errorText) {
+        ctx.state.lastErrorLogged = errorText;
+        ctx.emitLog({actor: 'ai', kind: 'danger', message: errorText});
     }
 };
 
@@ -119,19 +156,105 @@ export const handleError = async(data, ctx) => {
  */
 export const handleReviewNeeded = async(data, ctx) => {
     const {
-        state, stepsUi, planningUi, detailedUi, proposalsUi,
-        ensureStreamContentVisible, hideStreamBar, setCompactChatState, deps, closeStream,
+        state, stepsUi, planningUi, detailedUi, proposalsUi, texts, emitLog,
+        ensureStreamContentVisible, hideStreamBar, closeStream,
     } = ctx;
 
     state.isStreaming = false;
-    // The AI responded — drop the "analyzing your request" progress indicator.
+    // The AI responded — drop the live "working" indicator.
     hideFeedbackThinking();
+
+    // The section checklist stays as-is (name + spinner→check). Its per-section
+    // Markdown detail (description + activities) sits below each item:
+    //  - initial round: the live accumulator already filled each detail in real
+    //    time → just settle them (clamp long ones with "Show more"/"Show less").
+    //  - keepPlan adjust: the live detail fill is skipped during the re-stream, so
+    //    rebuild the checklist + details from the authoritative current_plan.
+    // Activity regeneration: the regenerated activity streamed into its OWN block
+    // (regen-block) — finalize it (clamp) and leave the top "structure I planned"
+    // checklist FROZEN. Do NOT rebuild the top here, otherwise it would overwrite
+    // the initial snapshot. reorder/initial (regenScope null) keep the old path.
+    const isActivityRegen = state.regenScope && state.regenScope.action === 'replan_activity';
+    const isSectionRegen = state.regenScope && state.regenScope.action === 'replan_section';
+    const isAddSection = state.addScope && state.addScope.action === 'add_section';
+    if (isActivityRegen || isSectionRegen || isAddSection) {
+        // Activity regen, section regen and section add ALL streamed live into their
+        // OWN bottom block (regen-block) as their events arrived — just settle it
+        // (clamp long details). The top "structure I planned" checklist stays FROZEN;
+        // rebuilding it here would overwrite the initial snapshot and re-touch what
+        // is already above (a chat appends at the end, it never rewrites the past).
+        finalizeRegen();
+    } else if (state.addScope) {
+        // add_activity: shown below at review time (it has no live section block).
+        // (no top rebuild)
+    } else if (ctx.keepPlan && Array.isArray(data.current_plan) && data.current_plan.length) {
+        rebuildTranscriptFromPlan(data.current_plan);
+    } else if (transcriptHasContent()) {
+        finalizeTranscript();
+    } else if (Array.isArray(data.current_plan) && data.current_plan.length) {
+        rebuildTranscriptFromPlan(data.current_plan);
+    }
+    // Consume the regeneration scope for this round (set in runPlanAction). Cleared
+    // here AND on failure/error handlers so a later reorder/accept is never mistaken
+    // for a regen.
+    state.regenScope = null;
+
+    // Adding an element: the click-time turn was intentionally silent (the name
+    // didn't exist yet).
+    //  - add_section already named its "You added section: X" turn AND streamed its
+    //    detail block live as the events arrived (handleSection / regen-block), so
+    //    there is nothing to render here — the live block was just finalized above.
+    //  - add_activity has no live block, so name it and show its detail block now,
+    //    from the settled plan (the element whose id was not present before the add).
+    if (state.addScope) {
+        if (state.addScope.action !== 'add_section') {
+            const beforeIds = state.addScope.beforeIds || [];
+            const added = addedActivityTurn(
+                texts, data.current_plan, state.addScope.parentSectionId, beforeIds
+            );
+            if (added && typeof emitLog === 'function') {
+                emitLog({actor: 'user', kind: 'success', message: added});
+            }
+            const plan = Array.isArray(data.current_plan) ? data.current_plan : [];
+            const parent = plan.find((s) => s && s.id === state.addScope.parentSectionId);
+            const newAct = ((parent && parent.activities) || [])
+                .find((a) => a && !a.deleted && beforeIds.indexOf(a.id) === -1);
+            if (newAct) {
+                rebuildRegenFromPlan({action: 'replan_activity', targetIds: [newAct.id], plan});
+            }
+        }
+        state.addScope = null;
+    }
+
+    // The plan has settled: from now on log entries flow BELOW the section checklist.
+    // Set this BEFORE emitting the milestone so the AI's "review the plan" message
+    // lands AFTER the planned-structure group (chronological: plan first, then the
+    // prompt to review), not above it.
+    // Capture BEFORE flipping the flag: the FIRST review follows the initial
+    // planning ("I finished planning…"); every later review follows a user
+    // adjustment, so it must read "I applied your changes…" instead.
+    const firstReview = !state.planEverReviewed;
+    state.planEverReviewed = true;
+    // Meaningful milestone: the AI finished this round and is awaiting review. Phrased
+    // as the assistant talking to the user (first person, no dashes).
+    if (typeof emitLog === 'function') {
+        const hasProposals = Array.isArray(data.proposals) && data.proposals.length > 0;
+        let message;
+        if (hasProposals) {
+            message = (texts && texts.courseai_log_ai_proposals_ready)
+                || 'I prepared a few suggestions for you. Review them and choose how you want to continue.';
+        } else if (firstReview) {
+            message = (texts && texts.courseai_log_ai_review_ready)
+                || 'I finished planning your course. Take a look at the plan and tell me if you want any changes.';
+        } else {
+            message = (texts && texts.courseai_log_ai_review_updated)
+                || 'I applied your changes. Take a look and tell me if you want anything else.';
+        }
+        emitLog({actor: 'ai', kind: 'ai', message});
+    }
     if (typeof ctx.onStreamEnd === 'function') {
         ctx.onStreamEnd();
     }
-    // The plan has settled at least once: from now on, user-action log entries flow
-    // BELOW the section checklist so the left panel reads as an organic downward chat.
-    state.planEverReviewed = true;
     ensureStreamContentVisible();
     if (typeof hideStreamBar === 'function') {
         hideStreamBar();
@@ -159,7 +282,10 @@ export const handleReviewNeeded = async(data, ctx) => {
     if (proposalsUi && typeof proposalsUi.renderProposals === 'function') {
         proposalsUi.renderProposals(data);
     }
-    setCompactChatState(deps, 'enabled');
+    // Do NOT enable/show the composer here: at review the decision card owns the
+    // bottom slot, and showReviewActions hides the composer. Showing it again would
+    // stack two input boxes. The composer reappears only when the user clicks
+    // "Adjust" (the adjust handler calls setCompactChatState 'enabled').
     // review_needed is a terminal pause — close so EventSource does NOT auto-reconnect.
     closeStream();
 };
@@ -173,12 +299,21 @@ export const handleReviewNeeded = async(data, ctx) => {
  */
 export const handleCompleted = async(data, ctx) => {
     const {
-        state, stepsUi, streamMode, markAllDone,
+        state, stepsUi, streamMode, markAllDone, texts, emitLog,
         setCompletionStatsFromGeneratedResult, closeStream, createCourseFromSession,
         hideStreamBar,
     } = ctx;
+    hideFeedbackThinking();
     if (typeof hideStreamBar === 'function') {
         hideStreamBar();
+    }
+    // Meaningful milestone: generation finished → one permanent success turn.
+    if (typeof emitLog === 'function') {
+        emitLog({
+            actor: 'ai',
+            kind: 'success',
+            message: (texts && texts.courseai_log_ai_completed) || 'Course generated',
+        });
     }
     if (streamMode === 'generating') {
         markAllDone();
@@ -204,13 +339,45 @@ export const handleCompleted = async(data, ctx) => {
  */
 export const handleFailed = async(data, ctx) => {
     const {
-        state, stepsUi, detailedUi, texts, streamMode,
+        state, stepsUi, detailedUi, texts, streamMode, emitLog,
         markAllDone, closeStream, setCompactChatState, deps,
         localizeMessage, planningSpinner, pcStep, pcSubtitle, hideStreamBar,
     } = ctx;
     state.isStreaming = false;
+    hideFeedbackThinking();
+    // A failed replan must not leave the regen scope set (a later reorder/accept
+    // would be misrouted) — drop the half-built block and clear the flag.
+    finalizeRegen();
+    state.regenScope = null;
+    state.addScope = null;
     if (typeof ctx.onStreamEnd === 'function') {
         ctx.onStreamEnd();
+    }
+    // Localize once and reuse for both the chat turn and the subtitle.
+    const failedText = data.message
+        ? await localizeMessage(data.message)
+        : (texts && texts.courseai_error_generic) || 'Generation failed';
+    // Meaningful (fatal) milestone: surface failure as a permanent error turn.
+    if (typeof emitLog === 'function') {
+        emitLog({actor: 'ai', kind: 'danger', message: failedText});
+    }
+    // Retryable failure (the model gave up after exhausting its automatic
+    // retries): offer a manual "Retry" button that re-opens the stream so the
+    // graph re-runs the failed step — a fresh run restarts the retry counter.
+    if (data && data.retryable && state.streamingurl && typeof ctx.openSSEStream === 'function') {
+        const feed = document.getElementById('cgLogAfter') || document.getElementById('cgLog');
+        if (feed && !feed.querySelector('.cg-retry-btn')) {
+            const btn = document.createElement('button');
+            btn.type = 'button';
+            btn.className = 'cg-retry-btn';
+            btn.textContent = (texts && texts.courseai_btn_retry) || 'Retry';
+            btn.addEventListener('click', () => {
+                btn.remove();
+                state.isStreaming = true;
+                ctx.openSSEStream(state.streamingurl, 0, streamMode, true);
+            });
+            feed.appendChild(btn);
+        }
     }
     if (typeof hideStreamBar === 'function') {
         hideStreamBar();
@@ -227,9 +394,7 @@ export const handleFailed = async(data, ctx) => {
         pcStep.textContent = texts.courseai_state_error;
     }
     if (pcSubtitle) {
-        pcSubtitle.textContent = data.message
-            ? await localizeMessage(data.message)
-            : texts.courseai_error_generic;
+        pcSubtitle.textContent = failedText;
     }
     if (typeof detailedUi.enableAllActionControls === 'function') {
         detailedUi.enableAllActionControls();

@@ -1593,27 +1593,30 @@ svg { display: block; flex-shrink: 0; }
    ───────────────────────────────────────────────────────────── */
 
 /* Outer card shell */
+/* No outer box: the review area is NOT a card. The status line and the sections
+   share the same alignment; no border wraps everything. */
 .prv-card {
   position: relative;
-  border-radius: var(--radius);
-  border: 1px solid var(--border);
-  background: var(--card);
-  box-shadow: var(--shadow-card);
-  overflow: hidden;
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+  overflow: visible;
 }
 
+/* Discreet status line (not a prominent card): small, transparent, no border. */
 .prv-header {
   display: flex;
-  align-items: flex-start;
-  gap: 12px;
-  padding: 20px 24px;
-  border-bottom: 1px solid var(--border);
-  background: var(--card);
-  transition: background .3s;
+  align-items: center;
+  gap: 8px;
+  padding: 2px 2px 10px;
+  border-bottom: none;
+  background: transparent;
+  transition: none;
 }
 
 .prv-header--done {
-  background: hsl(142 56% 96%);
+  background: transparent;
 }
 
 .prv-icon-wrap {
@@ -1621,16 +1624,21 @@ svg { display: block; flex-shrink: 0; }
   align-items: center;
   justify-content: center;
   flex-shrink: 0;
-  width: 36px;
-  height: 36px;
+  width: 20px;
+  height: 20px;
   border-radius: 50%;
-  margin-top: 1px;
+  margin-top: 0;
   background: hsl(var(--primary-hsl, 8 72% 42%) / .12);
   color: var(--primary);
 }
 
+.prv-icon-wrap svg {
+  width: 13px;
+  height: 13px;
+}
+
 .prv-header--done .prv-icon-wrap {
-  background: #16a34a;
+  background: var(--success, #16a34a);
   color: #fff;
 }
 
@@ -1645,19 +1653,24 @@ svg { display: block; flex-shrink: 0; }
 .prv-header-text {
   flex: 1;
   min-width: 0;
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  flex-wrap: wrap;
 }
 
 .prv-header-title {
-  font-size: 15px;
-  font-weight: 700;
-  color: var(--fg);
-  margin: 0 0 2px;
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--muted-fg);
+  margin: 0;
 }
 
 .prv-header-sub {
-  font-size: 13px;
+  font-size: 12px;
   color: var(--muted-fg);
   margin: 0;
+  opacity: .85;
 }
 
 /* ── Section row: Moodle topic card ── */
@@ -1705,14 +1718,8 @@ svg { display: block; flex-shrink: 0; }
 
 /* Reveal when the parent row / button is hovered or focused-within */
 .prv-section-btn:hover .dp-item-actions,
-.prv-section-btn:focus-within .dp-item-actions,
-.dp-activity-wrap:hover .dp-item-actions,
-.dp-activity-wrap:focus-within .dp-item-actions {
+.prv-section-btn:focus-within .dp-item-actions {
   opacity: 1;
-}
-
-.dp-item-actions--section {
-  margin-right: 2px;
 }
 
 .dp-item-actions--image {
@@ -1817,25 +1824,6 @@ svg { display: block; flex-shrink: 0; }
   gap: 8px;
 }
 
-.prv-image-pill {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  border-radius: 12px;
-  padding: 3px 10px;
-  font-size: 11px;
-  font-weight: 600;
-  line-height: 1.3;
-  background: var(--muted);
-  color: var(--muted-fg);
-  box-shadow: none;
-}
-
-.prv-image-pill--small {
-  font-size: 10.5px;
-  padding: 2px 8px;
-}
-
 .prv-chevron {
   flex-shrink: 0;
   color: var(--muted-fg);
@@ -1891,17 +1879,6 @@ svg { display: block; flex-shrink: 0; }
   min-width: 0;
 }
 
-.dp-activity-right {
-  margin-left: auto;
-  display: flex;
-  align-items: center;
-  gap: 6px;
-}
-
-.dp-activity-chevron {
-  margin-top: 2px;
-}
-
 .prv-activity-name {
   font-size: 13px;
   font-weight: 600;
@@ -1915,28 +1892,6 @@ svg { display: block; flex-shrink: 0; }
   color: var(--muted-fg);
   margin: 0;
   line-height: 1.5;
-}
-
-/* ── Activity wrap: card with soft left border ── */
-/* Activities read like Moodle's Custom Sections: ROWS separated by a dashed
-   line (not bordered cards). A subtle outline appears ONLY on hover. */
-.dp-activity-wrap {
-  position: relative;
-  background: transparent;
-  border: none;
-  border-radius: 8px;
-  margin-bottom: 0;
-}
-
-/* Dashed separator between consecutive activities (not before the first). */
-.dp-activity-wrap + .dp-activity-wrap {
-  border-top: 1px dashed var(--border);
-}
-
-/* Hover affordance — thin outline, no layout shift, only while hovering. */
-.dp-activity-wrap:hover {
-  outline: 2px solid hsl(252 55% 42% / .30);
-  outline-offset: -1px;
 }
 
 .dp-ai-inline {
@@ -2003,15 +1958,6 @@ svg { display: block; flex-shrink: 0; }
   color: hsl(0 0% 100%);
 }
 
-.dp-item-has-adjustment .prv-section-btn,
-.dp-item-has-adjustment .prv-activity-item {
-  box-shadow: inset 3px 0 0 hsl(252 55% 42% / .55);
-}
-
-.dp-item-has-adjustment .dp-image-card {
-  box-shadow: inset 3px 0 0 hsl(252 55% 42% / .55);
-}
-
 /* Regenerating state — loading pulse */
 .dp-item-regenerating {
   opacity: 0.6;
@@ -2029,36 +1975,6 @@ svg { display: block; flex-shrink: 0; }
 @keyframes dp-pulse {
   0%, 100% { opacity: 0.6; }
   50% { opacity: 0.3; }
-}
-
-.dp-activity-wrap .prv-activity-item {
-  border-radius: 0;
-  background: transparent;
-  border: none;
-  outline: none;
-}
-
-.dp-activity-wrap .prv-activity-item--has-detail {
-  cursor: pointer;
-}
-
-/* Hover: gentle highlight — consistent with Moodle course page items */
-.dp-activity-wrap .prv-activity-item:hover,
-.dp-activity-wrap .prv-activity-item--has-detail:hover {
-  background: hsl(215 30% 97%);
-}
-
-.dp-activity-wrap .prv-activity-item:focus,
-.dp-activity-wrap .prv-activity-item:focus-visible {
-  outline: none;
-  border: none;
-  box-shadow: none;
-}
-
-.dp-act-detail {
-  border-top: 1px solid var(--border);
-  padding: 10px 12px 12px;
-  animation: fade-in-up .18s ease both;
 }
 
 .dp-detail-label {
@@ -2303,62 +2219,9 @@ svg { display: block; flex-shrink: 0; }
   margin-top: 4px;
 }
 
-/* Drag handle */
-.dp-drag-handle {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  width: 20px;
-  height: 20px;
-  cursor: grab;
-  color: var(--muted-fg);
-  /* Hidden by default — the horrible permanent ':: dots' are gone; the handle
-     fades in only when hovering the activity/section (Moodle behaviour). */
-  opacity: 0;
-  border-radius: 4px;
-  transition: opacity .12s, color .12s;
-}
-
-/* Reveal the grip on row/section hover (or keyboard focus within). */
-.dp-activity-wrap:hover .dp-drag-handle--activity,
-.dp-activity-wrap:focus-within .dp-drag-handle--activity,
-.prv-section-row:hover .dp-drag-handle--section,
-.prv-section-row:focus-within .dp-drag-handle--section {
-  opacity: 0.55;
-}
-
-.dp-drag-handle:hover {
-  opacity: 1;
-  color: hsl(215 18% 40%);
-}
-
-.dp-drag-handle:focus-visible {
-  opacity: 1;
-  outline: 2px solid hsl(252 55% 42% / .4);
-  outline-offset: 1px;
-}
-
-.dp-drag-handle:active {
-  cursor: grabbing;
-}
-
-/* Section drag handle sits to the left of the section btn */
+/* Section row is a positioning context for the simple plan renderer. */
 .prv-section-row {
   position: relative;
-}
-
-.dp-drag-handle--section {
-  position: absolute;
-  left: 4px;
-  top: 50%;
-  transform: translateY(-50%);
-  z-index: 1;
-}
-
-/* Activity drag handle inside the activity item */
-.dp-drag-handle--activity {
-  margin-right: 2px;
 }
 
 /* Visual feedback during drag */
@@ -2684,6 +2547,60 @@ svg { display: block; flex-shrink: 0; }
   font-size: 12.5px;
 }
 
+/* ─── Proposals INSIDE the decision card — flat, no nested boxes ──────────
+   The decision card is already the single container, so the proposals block
+   must not be another card, the clarification must not be a tinted box, and
+   options are divider-separated rows (V0/Claude clarification style). */
+.cg-decision-overlay .cg-feed-proposals {
+  margin: 0;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  gap: 10px;
+}
+.cg-decision-overlay .plan-proposals-clarification {
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 0;
+  gap: 4px;
+}
+.cg-decision-overlay .plan-proposals-clarification-label {
+  color: var(--muted-fg);
+}
+.cg-decision-overlay .plan-proposals-group {
+  gap: 0;
+  border-top: 1px solid var(--border);
+}
+.cg-decision-overlay .plan-proposal-card {
+  border: none;
+  border-radius: 0;
+  background: transparent;
+  border-bottom: 1px solid var(--border);
+  padding: 12px 4px;
+}
+.cg-decision-overlay .plan-proposal-card:hover,
+.cg-decision-overlay .plan-proposal-card:has(.plan-proposal-radio:checked) {
+  border-color: transparent;
+  border-bottom: 1px solid var(--border);
+  background: var(--muted);
+}
+.cg-decision-overlay .plan-proposal-other-wrap {
+  gap: 0;
+}
+.cg-decision-overlay .plan-proposal-card--other {
+  border-bottom: none;
+}
+/* Pencil affordance before "Something else", like the reference. */
+.cg-decision-overlay .plan-proposal-card--other .plan-proposal-summary::before {
+  content: '\270E\00a0';
+  color: var(--muted-fg);
+}
+.cg-decision-overlay .plan-proposal-other-textarea {
+  margin-top: 4px;
+}
+
 /* Center elements a selected proposal will affect — highlighted only while that
    option is checked (see ui-proposals onSelectionChange). Subtle, Moodle-like:
    a thin outline (no layout shift) instead of a heavy ring; a faint tint when
@@ -2742,14 +2659,10 @@ svg { display: block; flex-shrink: 0; }
 .courseai-checklist {
   margin-top: 10px;
 }
+/* The uppercase "COURSE SECTIONS" label is gone in §7.1; if any legacy round
+   checklist still emits one, keep it hidden so the thread stays label-free. */
 .courseai-checklist-label {
-  display: block;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  color: var(--muted-fg);
-  margin-bottom: 6px;
+  display: none;
 }
 .courseai-checklist-list {
   list-style: none;
@@ -2763,75 +2676,50 @@ svg { display: block; flex-shrink: 0; }
   line-height: 1.4;
 }
 
-/* ─── Compact chat card (planning sidebar regenerate panel) ───────────── */
-.compact-chat-card {
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: var(--shadow-card);
-  overflow: hidden;
+/* §7.1 — the section checklist is a grouped assistant turn block in the thread.
+   Full-width flat card aligned with AI turns; avatar header + section list. */
+/* No wrapping card: the step group is just the header + a list of independent,
+   full-width section items (no border/background/padding box around them). */
+.cg-thread-checklist {
+  margin-top: 6px;
 }
-
-.compact-prompt-textarea {
-  display: block;
-  width: 100%;
-  min-height: 68px;
-  padding: 12px 14px;
-  font-size: 13px;
-  line-height: 1.55;
-  font-family: inherit;
-  color: var(--fg);
-  background: var(--card);
-  border: none;
-  outline: none;
-  resize: none;
-}
-.compact-prompt-textarea::placeholder { color: hsl(215, 20%, 65%); }
-
-.compact-chat-toolbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  padding: 7px 10px;
-  border-top: 1px solid var(--border);
-  background: hsl(215, 25%, 97%);
-}
-
-.compact-toolbar-left {
-  display: flex;
-  align-items: center;
-  gap: 2px;
-}
-
-.compact-toolbar-right {
-  display: flex;
-  align-items: center;
-}
-
-.btn-compact-regenerate {
-  display: inline-flex;
-  align-items: center;
+.cg-thread-checklist .courseai-checklist-list {
   gap: 6px;
-  padding: 0 14px;
-  height: 32px;
-  border-radius: 7px;
-  border: 1px solid var(--border);
-  background: transparent;
-  color: var(--muted-fg);
-  font-size: 12.5px;
-  font-weight: 600;
-  cursor: pointer;
-  font-family: inherit;
-  transition: border-color .12s, color .12s, background .12s;
+}
+
+/* Grouped-turn header: ✨ avatar + title row */
+.cg-group-head {
+  display: flex;
+  flex-direction: row;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+.cg-group-avatar {
+  font-size: 15px;
   line-height: 1;
+  flex-shrink: 0;
 }
-.btn-compact-regenerate:hover:not(:disabled) {
-  border-color: hsl(215, 20%, 72%);
+/* No glyph → no empty box / stray gap. */
+.cg-group-avatar:empty {
+  display: none;
+}
+.cg-group-title {
+  font-weight: 600;
+  font-size: 13px;
   color: var(--fg);
-  background: var(--muted);
+  line-height: 1.4;
 }
-.btn-compact-regenerate:disabled { opacity: .4; cursor: not-allowed; }
+
+/* NOTE: the compact chat card, textarea, toolbar and toolbar-left are styled
+   canonically in chatui.css (seamless Claude-style composer). The duplicate rules
+   that used to live here were removed — their toolbar had a border-top divider and
+   a grey background strip that made the composer look like two stacked boxes. */
+
+/* NOTE: the send button (.btn-compact-regenerate) and .compact-toolbar-right are
+   styled canonically in chatui.css (circular V0 send button). The old rounded-rect
+   pill rules that used to live here were removed because they conflicted by load
+   order and produced a weird half-rect/half-red button. */
 
 /* ─── Stop / Resume execution-control buttons ────────────────────────── */
 .btn-stop-resume {
@@ -3012,94 +2900,229 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
   }
 }
 
-/* ─── Decision log (§4) ────────────────────────────────────────────────── */
-.cg-log-section {
-  margin-top: 16px;
-}
-
-.cg-log-label {
-  display: block;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  color: var(--muted-fg);
-  margin-bottom: 8px;
+/* ─── Conversation thread (§7.1) ───────────────────────────────────────────
+   One continuous chronological chat. The initial prompt is the first user turn;
+   AI planning/actions follow as flat turns with a ✨ icon. No uppercase section
+   labels, minimal borders, calm palette, comfortable density. */
+.cg-thread {
+  scroll-behavior: smooth;
 }
 
 .cg-log {
   display: flex;
   flex-direction: column;
-  gap: 4px;
+  gap: 20px;
 }
 
-/* Action log feed below the checklist: only takes space once it has entries. */
-#cgLogAfter:not(:empty) {
-  margin-top: 14px;
+/* The two feed halves sit in one visual thread; keep the rhythm continuous. */
+.cg-thread-feed:not(:empty) + .cg-thread-checklist:not(.hidden),
+.cg-thread-checklist:not(.hidden) {
+  margin-top: 0;
 }
 
-/* Single log entry row */
+/* Continuation feed below the checklist: only takes space once it has turns. */
+#cgLogAfter.cg-thread-feed:not(:empty) {
+  margin-top: 10px;
+}
+
+/* ── A single turn ─────────────────────────────────────────────────────── */
 .cg-log-entry {
+  position: relative;
   display: flex;
-  align-items: stretch;
+  align-items: flex-start;
   gap: 8px;
-  min-height: 32px;
-  border-radius: 6px;
+  border-radius: 12px;
   background: transparent;
-  overflow: hidden;
+  padding: 4px 2px;
 }
 
-/* Left semantic color bar */
+/* Subtle AI vs user distinction (§7.1): user turns get a faint inset card with a
+   left accent; AI turns stay flat. Not opposed bubbles — just enough to read. */
+.cg-log-entry--turn-user {
+  /* Neutral zinc card (V0 look) — a warm-neutral grey combines with the red
+     accent, unlike the cool bluish --muted which read as "off". No border: the
+     fill + radius define it cleanly. */
+  background: hsl(240, 5%, 96%);
+  border: none;
+  border-radius: 16px;
+  padding: 16px 20px;
+}
+
+.cg-log-entry--turn-ai {
+  padding: 4px 2px 4px 0;
+}
+
+/* Legacy color bar: kept in the DOM for semantics but only shown on the
+   non-turn status kinds (danger/info/success) as a thin accent. */
 .cg-log-bar {
+  display: none;
+}
+.cg-log-entry--danger .cg-log-bar,
+.cg-log-entry--info .cg-log-bar,
+.cg-log-entry--success .cg-log-bar {
   display: block;
   flex-shrink: 0;
   width: 3px;
   border-radius: 3px;
-  background: var(--muted-fg);
   align-self: stretch;
 }
-
-/* Kind-based bar colors */
-.cg-log-entry--user    .cg-log-bar { background: var(--brand); }
-.cg-log-entry--ai      .cg-log-bar { background: var(--primary); }
 .cg-log-entry--danger  .cg-log-bar { background: var(--danger); }
 .cg-log-entry--info    .cg-log-bar { background: var(--info); }
 .cg-log-entry--success .cg-log-bar { background: var(--success-strong); }
-.cg-log-entry--neutral .cg-log-bar { background: var(--muted-fg); }
 
 /* Entry body: icon + message + timestamp */
 .cg-log-body {
   display: flex;
   align-items: flex-start;
-  gap: 5px;
-  padding: 6px 6px 6px 0;
+  gap: 7px;
   flex: 1;
   min-width: 0;
 }
 
 .cg-log-actor {
   flex-shrink: 0;
-  font-size: 13px;
-  line-height: 1;
+  font-size: 18px;
+  line-height: 1.5;
+  color: var(--muted-fg);
+}
+/* User turns carry their own card affordance; drop the redundant 👤 glyph. */
+.cg-log-entry--turn-user .cg-log-actor {
+  display: none;
 }
 
 .cg-log-msg {
   flex: 1;
   min-width: 0;
-  font-size: 12.5px;
-  line-height: 1.45;
+  font-size: 15px;
+  line-height: 1.6;
   color: var(--fg);
-  white-space: normal;
+  white-space: pre-wrap;
   overflow-wrap: anywhere;
   word-break: break-word;
 }
 
+.cg-log-entry--turn-ai .cg-log-msg {
+  color: var(--fg);
+}
+
+/* AI-output plain-text block (server-side thread replay): the full planning
+   transcript step (sections + activities + descriptions + detailed_plan) is
+   rendered verbatim as an AI turn. white-space:pre-wrap (inherited above)
+   preserves newlines and indentation; tab-size keeps nested plan lines aligned.
+   The existing fade/expand clamp (.cg-log-entry--clamped) handles long blocks. */
+.cg-log-entry--turn-ai .cg-log-msg {
+  tab-size: 2;
+  -moz-tab-size: 2;
+}
+
+/* Markdown-rendered transcript turn (planned structure): the body is real HTML
+   from `marked`, not preformatted text, so it must flow normally (override the
+   pre-wrap above) and use scoped, COMPACT typography — headings never read
+   oversized, lists stay tight — coherent with the rest of the chat panel. The
+   existing clamp (.cg-log-entry--clamped, 160px + "Show more") keeps long
+   transcripts from ever filling the panel. */
+.cg-log-msg.cg-log-md {
+  white-space: normal;
+  tab-size: initial;
+}
+.cg-log-md > :first-child { margin-top: 0; }
+.cg-log-md > :last-child { margin-bottom: 0; }
+.cg-log-md h1,
+.cg-log-md h2,
+.cg-log-md h3,
+.cg-log-md h4,
+.cg-log-md h5,
+.cg-log-md h6 {
+  font-size: 1em;
+  font-weight: 700;
+  line-height: 1.4;
+  margin: 0.8em 0 0.25em;
+  color: var(--fg);
+}
+.cg-log-md h3 { font-size: 1.04em; }
+.cg-log-md p { margin: 0.35em 0; }
+.cg-log-md ul,
+.cg-log-md ol { margin: 0.3em 0; padding-left: 1.25em; }
+.cg-log-md li { margin: 0.12em 0; }
+.cg-log-md li > ul,
+.cg-log-md li > ol { margin: 0.12em 0; }
+.cg-log-md strong { font-weight: 700; }
+.cg-log-md em { font-style: italic; color: var(--muted-fg); }
+.cg-log-md code {
+  font-family: var(--font-mono, monospace);
+  font-size: 0.92em;
+  background: var(--muted, rgba(0, 0, 0, .05));
+  padding: 0.05em 0.3em;
+  border-radius: 4px;
+}
+.cg-log-md hr { border: 0; border-top: 1px solid var(--border); margin: 0.6em 0; }
+.cg-log-md a { color: var(--primary, inherit); }
+
 .cg-log-ts {
   flex-shrink: 0;
-  font-size: 11px;
-  line-height: 1.45;
+  font-size: 10.5px;
+  line-height: 1.6;
   color: var(--muted-fg);
   white-space: nowrap;
+  opacity: .7;
+  transition: opacity var(--t-fast, 120ms);
+}
+/* On user turns the timestamp is tiny and muted — only reveal fully on hover. */
+.cg-log-entry--turn-user .cg-log-ts {
+  opacity: 0;
+}
+.cg-log-entry--turn-user:hover .cg-log-ts {
+  opacity: .6;
+}
+
+/* ── Long-message fade + expand (§7.1) ─────────────────────────────────── */
+/* A turn is clamped only when its body actually overflows; the JS adds
+   .cg-log-entry--clamped and appends the toggle button. */
+.cg-log-entry--clamped {
+  flex-wrap: wrap;
+}
+.cg-log-entry--clamped .cg-log-msg {
+  max-height: 160px;
+  overflow: hidden;
+  -webkit-mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 60%, transparent 100%);
+}
+.cg-log-entry--clamped.is-expanded .cg-log-msg {
+  max-height: none;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+
+.cg-log-toggle {
+  flex: 0 0 100%;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  margin: 2px 0 0;
+  padding: 3px 8px;
+  border: none;
+  background: transparent;
+  /* Calm, muted "Show more" — not the loud red accent (reserved for primary
+     actions); a secondary control should not pull focus. */
+  color: var(--muted-fg);
+  font-family: inherit;
+  font-size: 11.5px;
+  font-weight: 600;
+  cursor: pointer;
+  border-radius: 6px;
+  transition: background .12s, color .12s;
+}
+.cg-log-toggle:hover {
+  background: var(--muted, hsl(215 25% 96%));
+}
+.cg-log-toggle-chevron {
+  font-size: 13px;
+  line-height: 1;
+  transition: transform .15s ease;
+}
+.is-expanded .cg-log-toggle-chevron {
+  transform: rotate(180deg);
 }
 
 /* "AI is analyzing your request" progress entry (free-text feedback). */
@@ -3107,6 +3130,7 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
   width: 13px;
   height: 13px;
   flex: 0 0 auto;
+  margin-top: 2px;
   border: 2px solid var(--border, hsl(215 20% 88%));
   border-top-color: var(--primary);
   border-radius: 50%;
@@ -3119,6 +3143,10 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
 
 @media (prefers-reduced-motion: reduce) {
   .cg-log-entry { transition: none; }
+  .cg-thread { scroll-behavior: auto; }
+  .cg-log-toggle-chevron { transition: none; }
+  .cg-log-spin { animation: none; }
+  .cg-log-ts { transition: none; }
 }
 
 /* ─── Scroll architecture: ONE scroll per column, pinned chat, integrated bars ── */
@@ -3141,7 +3169,139 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
   flex: 1 1 auto;
   min-height: 0;
   width: 100%;
+  position: relative;
 }
+
+/* ─── Decision card (WU4) ──────────────────────────────────────────────── */
+/* The plan-review decision sits at the BOTTOM of the chat column, in the
+   composer's slot — it replaces ONLY the input field, NOT the message thread,
+   which stays visible and scrollable above (like V0's question card). `order`
+   pins it last in the flex column; the composer is hidden while it shows. */
+.cg-decision-overlay {
+  order: 10;
+  flex: 0 0 auto;
+  margin-top: auto;
+  display: flex;
+  flex-direction: column;
+}
+
+.cg-decision-card {
+  width: 100%;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  padding: 18px;
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+.cg-decision-title {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--fg);
+  margin: 0;
+}
+
+.cg-decision-subtitle {
+  font-size: 13.5px;
+  line-height: 1.55;
+  color: var(--muted-fg);
+  margin: -6px 0 0;
+}
+
+.cg-decision-body {
+  min-height: 0;
+  overflow-y: auto;
+}
+
+/* No proposals → no empty slot eating the card's flex gap. */
+.cg-decision-body:empty {
+  display: none;
+}
+
+.cg-decision-actions {
+  display: flex;
+  gap: 8px;
+  justify-content: flex-end;
+}
+
+.cg-decision-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 36px;
+  padding: 0 18px;
+  font-size: 14px;
+  font-weight: 500;
+  font-family: inherit;
+  border-radius: 8px;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+
+.cg-decision-btn--accept {
+  background: var(--primary, #6b4eff);
+  color: var(--primary-fg, #fff);
+  border: none;
+}
+
+.cg-decision-btn--accept:hover {
+  opacity: 0.88;
+}
+
+.cg-decision-btn--adjust {
+  background: transparent;
+  color: var(--fg);
+  border: 1px solid var(--border);
+}
+
+.cg-decision-btn--adjust:hover {
+  background: var(--muted);
+}
+
+/* Slim "you can still accept" bar shown inside the composer after Adjust, so the
+   user can always change their mind and accept the current plan. */
+/* A standalone card ABOVE the composer (separate element), with a gap between
+   them — not glued to the chat box. */
+.cg-accept-bar {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  width: calc(100% - 4px);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 10px 14px;
+  margin: 0;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+.cg-accept-bar-text {
+  font-size: 12.5px;
+  color: var(--muted-fg);
+  line-height: 1.4;
+}
+.cg-accept-bar-btn {
+  flex: 0 0 auto;
+  height: 30px;
+  padding: 0 14px;
+  border: none;
+  border-radius: 8px;
+  background: var(--primary);
+  color: var(--primary-fg);
+  font-size: 13px;
+  font-weight: 600;
+  font-family: inherit;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.cg-accept-bar-btn:hover {
+  opacity: 0.88;
+}
+
 .courseai-workspace.is-planning .courseai-chat-scroll {
   flex: 1 1 auto;
   min-height: 0;
@@ -3152,6 +3312,9 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
 .courseai-workspace.is-planning .compact-chat-card {
   flex: 0 0 auto;
   margin-top: 8px;
+  /* The scroll reserves 4px on the right for its scrollbar; match that so the
+     composer aligns with the message thread and never sits under the scrollbar. */
+  width: calc(100% - 4px);
 }
 
 /* Right column: the single scroll container for the whole preview. */
@@ -3198,4 +3361,163 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
 .courseai-workspace.is-planning .planning-wrap::-webkit-scrollbar-thumb:hover {
   background: hsl(215 16% 72%);
   background-clip: padding-box;
+}
+
+/* ============================================================
+   §8 Detailed preview — EXACT Custom Sections replica
+   The center preview emits core_courseformat markup so the loaded
+   Boost theme styles it natively (.section-item border, .activity
+   separator, .activity-grid layout, .activityiconcontainer purpose
+   tint). The rules below only cover gaps Boost does not provide in
+   the popup wizard context (no .editing body, no inplace controls):
+   action-control reveal-on-hover, pending/done dim, description and
+   detail slots, and container neutralisation so we do not double-card.
+   ============================================================ */
+
+/* The host #prvSections wraps the ul.course-content scaffold. Neutralise it
+   so Boost's .section-item provides the only card chrome (no nested padding
+   that would offset the replica). */
+#prvSections.cg-course-replica {
+  /* Align the section list flush with the discreet status line above (same 2px
+     left inset) — sections must not look nested inside an outer box. */
+  padding: 0 2px 8px;
+}
+#prvSections .course-content.course-section-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+/* Boost gives the first .course-section a top margin; collapse it at the top. */
+#prvSections .course-content > .course-section:first-child {
+  margin-top: 0;
+}
+
+/* Collapse toggle chevron icon sizing inside the section header. */
+#prvSections .icons-collapse-expand .icon {
+  width: 14px;
+  height: 14px;
+  margin: 0;
+}
+#prvSections .icons-collapse-expand {
+  flex-shrink: 0;
+}
+
+/* Section progress / image meta — small muted badges in the header. */
+#prvSections .cg-section-meta,
+#prvSections .cg-image-pill {
+  font-weight: 500;
+  font-size: 11px;
+}
+
+/* Action controls (AI adjust + delete): hidden until the section/activity is
+   hovered or focused, echoing Boost's .focus-control affordances. */
+#prvSections .cg-item-actions {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+#prvSections .cg-item-actions .dp-action-btn {
+  opacity: 0;
+  transition: opacity var(--t-fast, .12s) var(--ease, ease);
+}
+#prvSections .course-section-header:hover .cg-item-actions .dp-action-btn,
+#prvSections .course-section-header:focus-within .cg-item-actions .dp-action-btn,
+#prvSections .activity-item:hover .cg-item-actions .dp-action-btn,
+#prvSections .activity-item:focus-within .cg-item-actions .dp-action-btn {
+  opacity: 1;
+}
+/* Disabled-while-streaming controls stay hidden regardless of hover. */
+#prvSections .cg-item-actions .dp-action-btn.dp-action-btn--disabled {
+  opacity: 0;
+}
+
+/* Activity pending/done dim — Boost has no streaming concept. */
+#prvSections .activity-item.cg-activity--pending {
+  opacity: .4;
+  transition: opacity .2s var(--ease, ease);
+}
+#prvSections .activity-item.cg-activity--done {
+  opacity: 1;
+}
+/* Activities with detail are clickable to expand, but the whole row is also
+   draggable (the preview is always editable). Keep the drag (move) cursor for
+   consistency across ALL activities — Boost gives the first one `move`, and this
+   used to override the rest to `pointer`, so only the first showed the drag
+   affordance. The chevron/controls keep their own pointer cursor. */
+#prvSections .activity-item.cg-activity--has-detail {
+  cursor: move;
+}
+
+/* ── Section drag affordance (mirror of Boost's editable .activity-item) ──
+   Sections are reorderable too (init-view.js wires DnD on .course-section). Boost
+   only shows the move cursor/outline via `.editing .course-section-header.draggable`,
+   but the `.draggable` class is added by Moodle's reactive engine, which we do NOT
+   run in this AMD popup. So we scope our own rules on the replica.
+
+   Hovering the SECTION (header or its card chrome, but NOT an inner activity) gives
+   the whole section a move cursor and a hover outline. The `:not(:has(.activity:hover))`
+   guard (same technique Boost uses for activities) suppresses the section highlight
+   while the cursor is over an inner activity, so the two never double-highlight. */
+#prvSections .course-section .section-item {
+  cursor: move;
+}
+#prvSections .course-section .section-item .activity-item,
+#prvSections .course-section .section-item .activity-item .a,
+#prvSections .course-section .section-item .icons-collapse-expand,
+#prvSections .course-section .section-item .cg-item-actions,
+#prvSections .course-section .section-item .dp-add-activity-wrap,
+#prvSections .course-section .section-item .dp-add-section-wrap {
+  cursor: default;
+}
+/* Inner activities keep their own move cursor (Boost .editing affordance). */
+#prvSections .course-section .section-item .activity-item.cg-activity--has-detail,
+#prvSections .course-section .section-item .activity-item:hover {
+  cursor: move;
+}
+/* Hover outline on the section card — suppressed while hovering an inner activity
+   so only ONE element (the activity, not the whole section) highlights at a time. */
+#prvSections .course-section .section-item:hover:not(:has(.activity:hover)) {
+  outline: 2px solid hsl(8 72% 42% / .45);
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+
+/* Streamed description slot (Moodle .activity-description grid area). */
+#prvSections .cg-activity-desc-slot {
+  grid-area: altcontent;
+}
+#prvSections .cg-activity-desc {
+  font-size: 12px;
+  color: var(--muted-fg);
+  margin: 4px 0 0;
+  line-height: 1.5;
+}
+
+/* Collapsible detail slot (chapters / questions / images). */
+#prvSections .cg-activity-detail {
+  grid-area: afterlink;
+  margin-top: 8px;
+  border-top: 1px solid var(--border);
+  padding-top: 8px;
+}
+#prvSections .cg-activity-chevron {
+  display: inline-flex;
+  color: var(--muted-fg);
+  transition: transform .18s;
+}
+#prvSections .cg-activity-chevron--open {
+  transform: rotate(90deg);
+}
+
+/* Add-section / add-activity controls are now <li> in the section lists;
+   strip list styling so the dashed buttons read like Moodle's add-section. */
+#prvSections .dp-add-section-wrap,
+#prvSections .dp-add-activity-wrap {
+  list-style: none;
+}
+#prvSections .dp-add-section-wrap {
+  margin-top: 14px;
+}
+#prvSections ul.section .dp-add-activity-wrap {
+  margin-top: 8px;
 }

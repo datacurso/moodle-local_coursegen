@@ -16,6 +16,9 @@
 /**
  * Section row factory for the detailed plan UI.
  *
+ * Builds a li.section.course-section element (Moodle "Custom sections" markup)
+ * appended into the ul.course-content container so Boost styles it natively.
+ *
  * @module     local_coursegen/local/courseai/detailed/section-row
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -24,9 +27,24 @@
 import {createAddTriggerBtn} from './icons';
 import {wireDragAndDrop, sendReorderActivities} from './dnd';
 import {buildSectionRowSkeleton, buildSectionActionControls} from './section-dom';
+import {removeTransientSectionPlaceholders} from './pending';
+import {getSectionList} from './container';
 
 /**
- * Create and append a section row to prvSections.
+ * Toggle the collapse panel of a section (Boost .collapse / .collapsed classes).
+ *
+ * @param {HTMLElement}     bodyEl   - The .content.collapse panel.
+ * @param {HTMLAnchorElement} chevron - The icons-collapse-expand toggle anchor.
+ */
+const toggleSectionCollapse = (bodyEl, chevron) => {
+    const isOpen = bodyEl.classList.contains('show');
+    bodyEl.classList.toggle('show', !isOpen);
+    chevron.classList.toggle('collapsed', isOpen);
+    chevron.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+};
+
+/**
+ * Create and append a section row to the course-content list.
  *
  * @param {Object} ctx
  * @param {Object} options
@@ -37,45 +55,52 @@ import {buildSectionRowSkeleton, buildSectionActionControls} from './section-dom
  * @returns {{bodyEl: HTMLElement, activityDnd: Object}|null}
  */
 export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionName, totalActivities}) => {
-    const {state, texts, runPlanAction, log, createTextPanel} = ctx;
-    const prvSections = ctx.elements.prvSections;
+    const {state, texts, runPlanAction, createTextPanel} = ctx;
+    const sectionList = getSectionList(ctx);
 
-    if (!prvSections) {
+    if (!sectionList) {
         return null;
     }
 
     const {
-        metaEl, imagesBadgeEl, bodyEl, chevronEl, btn,
-        infoDiv, actionsEl, sectionHandle, rowRef,
+        metaEl, imagesBadgeEl, bodyEl, cmlistEl, chevronEl, titleEl, actionsEl, rowRef,
     } = buildSectionRowSkeleton(ctx, sectionId, renderIndex, sectionName, totalActivities);
 
     const {iaControl, deleteControl, sectionPanelApi} = buildSectionActionControls(
         ctx, sectionId, sectionName, rowRef
     );
 
+    actionsEl.appendChild(metaEl);
+    actionsEl.appendChild(imagesBadgeEl);
     actionsEl.appendChild(iaControl);
     actionsEl.appendChild(deleteControl);
 
-    btn.appendChild(infoDiv);
-    btn.appendChild(actionsEl);
-    btn.appendChild(chevronEl);
+    // Section header — Moodle: div.d-flex.align-items-center wrapping toggle + title.
+    const headerEl = document.createElement('div');
+    headerEl.className = 'course-section-header d-flex align-items-center position-relative';
+    headerEl.setAttribute('data-for', 'section_title');
+    headerEl.setAttribute('data-id', sectionId);
+    headerEl.appendChild(chevronEl);
+    headerEl.appendChild(titleEl);
+    headerEl.appendChild(actionsEl);
 
-    btn.addEventListener('click', () => {
-        const isOpen = bodyEl.style.display !== 'none';
-        bodyEl.style.display = isOpen ? 'none' : 'flex';
-        chevronEl.classList.toggle('prv-chevron--open', !isOpen);
+    // The collapse toggle expands/collapses the section content panel. We own this
+    // explicitly (see section-dom.js): stopPropagation prevents any delegated
+    // document-level handler (e.g. Bootstrap's collapse data-api) from also acting
+    // on the click and cancelling our toggle.
+    chevronEl.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        toggleSectionCollapse(bodyEl, chevronEl);
     });
 
-    // "+ Add activity" control at the bottom of this section's body.
+    // "+ Add activity" control at the bottom of this section's content panel.
     const addActivityPanelApi = createTextPanel({
         texts,
         onSubmit: async(value) => {
             addActivityBtn.classList.add('dp-add-control--disabled');
-            log({
-                actor: 'user',
-                kind: 'success',
-                message: texts.courseai_log_added_activity || 'You added an activity',
-            });
+            // No turn here: the new activity has no name yet. handleReviewNeeded
+            // emits "You added activity: <name>" once the model has generated it.
             try {
                 await runPlanAction({
                     action: 'add_activity',
@@ -96,32 +121,55 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
         addActivityPanelApi.open();
     });
 
-    const addActivityWrap = document.createElement('div');
+    const addActivityWrap = document.createElement('li');
     addActivityWrap.className = 'dp-add-activity-wrap';
     addActivityWrap.appendChild(addActivityBtn);
     addActivityWrap.appendChild(addActivityPanelApi.panel);
 
-    bodyEl.appendChild(addActivityWrap);
+    // The cmlist holds activity rows AND the trailing add-activity control, so
+    // the reconciler reorders activity nodes against the add-activity sentinel.
+    cmlistEl.appendChild(addActivityWrap);
 
-    const row = document.createElement('div');
-    row.className = 'prv-section-row';
+    // Section item card (Moodle: div.section-item with border + radius from Boost).
+    const sectionItem = document.createElement('div');
+    sectionItem.className = 'section-item';
+    sectionItem.appendChild(headerEl);
+    sectionItem.appendChild(sectionPanelApi.panel);
+    sectionItem.appendChild(bodyEl);
+
+    const row = document.createElement('li');
+    row.id = `section-${renderIndex + 1}`;
+    row.className = 'section course-section main clearfix';
+    row.setAttribute('data-for', 'section');
+    row.setAttribute('data-id', sectionId);
+    row.setAttribute('data-number', String(renderIndex + 1));
+    row.setAttribute('data-sectionname', sectionName || '');
+    // Kept for the existing DnD wirer (idDataset 'sectionId') and ui-proposals.
     row.dataset.sectionId = sectionId;
-    row.appendChild(sectionHandle);
-    row.appendChild(btn);
-    row.appendChild(sectionPanelApi.panel);
-    row.appendChild(bodyEl);
-    prvSections.appendChild(row);
+    row.appendChild(sectionItem);
+    // A genuinely-new real-UUID section is being rendered: drop any transient
+    // apply placeholder so the shimmer is replaced, never duplicated.
+    removeTransientSectionPlaceholders(ctx);
+    // Keep the global "+ Add section" control pinned to the very bottom: insert a
+    // newly-streamed section BEFORE it, so the button never lands mid-list while a
+    // section is being added at the end (it stays below the last rendered section).
+    const addSectionWrap = sectionList.querySelector('.dp-add-section-wrap');
+    if (addSectionWrap) {
+        sectionList.insertBefore(row, addSectionWrap);
+    } else {
+        sectionList.appendChild(row);
+    }
 
     // Set row reference for panel/action callbacks.
     rowRef.current = row;
 
-    // Wire activity drag-and-drop within this section's body.
-    // The add-activity wrap is not draggable — only dp-activity-wrap children are.
+    // Wire activity drag-and-drop within this section's cmlist.
+    // The add-activity wrap is not draggable — only .activity children are.
     const activityDnd = wireDragAndDrop(
-        bodyEl,
-        '.dp-activity-wrap',
+        cmlistEl,
+        '.activity',
         'activityId',
-        (ids) => sendReorderActivities(ctx, sectionId, ids),
+        (ids, movedId) => sendReorderActivities(ctx, sectionId, ids, movedId),
         sectionId,
         () => !ctx.state.isStreaming
     );
@@ -132,31 +180,33 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
         imagesCount: 0,
         metaEl,
         imagesBadgeEl,
-        bodyEl,
+        bodyEl: cmlistEl,
+        contentEl: bodyEl,
+        chevronEl,
         row,
         addActivityBtn,
         activityDnd,
     };
 
-    return {bodyEl, activityDnd};
+    return {bodyEl: cmlistEl, activityDnd};
 };
 
 /**
- * Build and append the global "+ Add section" control into prvSections.
+ * Build and append the global "+ Add section" control into the section list.
  * Called once per initDetailedPlanView render (after sections are created).
  *
  * @param {Object} ctx
  */
 export const appendAddSectionControl = (ctx) => {
-    const {state, texts, runPlanAction, log, createTextPanel} = ctx;
-    const prvSections = ctx.elements.prvSections;
+    const {state, texts, runPlanAction, createTextPanel} = ctx;
+    const sectionList = getSectionList(ctx);
 
-    if (!prvSections) {
+    if (!sectionList) {
         return;
     }
 
     // Remove any previous instance before re-creating.
-    const existing = prvSections.querySelector('.dp-add-section-wrap');
+    const existing = sectionList.querySelector('.dp-add-section-wrap');
     if (existing) {
         existing.remove();
     }
@@ -165,11 +215,8 @@ export const appendAddSectionControl = (ctx) => {
         texts,
         onSubmit: async(value) => {
             addSectionBtn.classList.add('dp-add-control--disabled');
-            log({
-                actor: 'user',
-                kind: 'success',
-                message: texts.courseai_log_added_section || 'You added a section',
-            });
+            // No turn here: the new section has no name yet. handleReviewNeeded
+            // emits "You added section: <name>" once the model has generated it.
             try {
                 await runPlanAction({action: 'add_section', instruction: value});
             } catch (e) {
@@ -187,11 +234,11 @@ export const appendAddSectionControl = (ctx) => {
         addSectionPanelApi.open();
     });
 
-    const wrap = document.createElement('div');
+    const wrap = document.createElement('li');
     wrap.className = 'dp-add-section-wrap';
     wrap.appendChild(addSectionBtn);
     wrap.appendChild(addSectionPanelApi.panel);
-    prvSections.appendChild(wrap);
+    sectionList.appendChild(wrap);
 
     // Expose so enableAllActionControls can enable/disable it.
     state.addSectionBtn = addSectionBtn;

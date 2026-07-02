@@ -25,6 +25,7 @@
  */
 
 import {focusChange, markRemoving} from 'local_coursegen/local/courseai/ui/highlight';
+import {getSectionList} from './container';
 
 // ---------------------------------------------------------------------------
 // Remove vanished entries
@@ -116,17 +117,17 @@ const reorderNodes = (container, orderedNodes, sentinel) => {
  * @param {Array}  activeSections  Ordered active section descriptors.
  */
 export const reorderAll = (ctx, activeSections) => {
-    const {state, elements} = ctx;
-    const prvSections = elements.prvSections;
+    const {state} = ctx;
+    const sectionList = getSectionList(ctx);
 
     const sectionNodes = activeSections
         .map((s) => state.detailedSectionMeta[s.id])
         .filter(Boolean)
         .map((meta) => meta.row);
 
-    const addSectionWrap = prvSections ? prvSections.querySelector('.dp-add-section-wrap') : null;
-    if (prvSections) {
-        reorderNodes(prvSections, sectionNodes, addSectionWrap);
+    const addSectionWrap = sectionList ? sectionList.querySelector('.dp-add-section-wrap') : null;
+    if (sectionList) {
+        reorderNodes(sectionList, sectionNodes, addSectionWrap);
     }
 
     activeSections.forEach((section) => {

@@ -22,7 +22,11 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {showFeedbackThinking} from 'local_coursegen/local/courseai/ui/feedback-progress';
+import {
+    showFeedbackThinking,
+    hideWorkingIndicator,
+} from 'local_coursegen/local/courseai/ui/feedback-progress';
+import {getDecisionOverlay} from 'local_coursegen/local/courseai/ui/decision-overlay';
 
 /**
  * Emit a log entry if emitLog is wired.
@@ -77,6 +81,9 @@ export const sendFeedbackAction = async(action, ctx) => {
         return;
     }
 
+    // WU4: hide the decision overlay as soon as the user acts (accept or adjust).
+    getDecisionOverlay().hide();
+
     if (btnApprove) {
         btnApprove.disabled = true;
     }
@@ -122,12 +129,25 @@ export const sendFeedbackAction = async(action, ctx) => {
         if (action === 'adjust' && instruction) {
             state.planEverReviewed = true;
             const truncatedInstruction = instruction.length > 80 ? instruction.slice(0, 80) + '…' : instruction;
-            const adjustMsg = (texts.courseai_log_user_request || 'You: {$a}').replace('{$a}', truncatedInstruction);
-            log({actor: 'user', kind: 'user', message: adjustMsg}, emitLog);
+            // The turn is already a right-aligned user bubble, so a "You:" label is
+            // redundant — show just the user's own words.
+            log({actor: 'user', kind: 'user', message: truncatedInstruction}, emitLog);
             showFeedbackThinking(texts);
             if (compactPromptInput) {
                 compactPromptInput.value = '';
             }
+        }
+
+        // Approving the plan is a user action too — surface it as a coherent turn
+        // (no « », concise) so the thread never goes silent on approve.
+        if (action === 'accept') {
+            state.planEverReviewed = true;
+            log({
+                actor: 'user',
+                kind: 'success',
+                message: texts.courseai_log_user_approved || 'You approved the plan',
+            }, emitLog);
+            showFeedbackThinking(texts);
         }
 
         // Plan actions travel as ActionIntents: a bare approve is action
@@ -186,6 +206,9 @@ export const sendFeedbackAction = async(action, ctx) => {
         const keepPlan = action !== 'accept';
         streamManager.openSSEStream(state.streamingurl, 0, streamMode, keepPlan);
     } catch (error) {
+        // The stream never opened — clear the live indicator so it does not
+        // linger after the error modal closes (no lifecycle event will arrive).
+        hideWorkingIndicator();
         await Notification.exception(error);
     } finally {
         if (btnApprove) {

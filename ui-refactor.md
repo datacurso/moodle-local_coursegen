@@ -517,6 +517,11 @@ dejar el preview/log congelados; al reanudar, reabrir stream (keepPlan) y seguir
   cambia de opción o cancela; no muta el plan hasta `Aplicar`.
 - Todo string nuevo (verbos del log, tooltips, estados) va al catálogo `lang/en` + `i18n.js`.
 
+---
+
+## Bugs corregidos
+
+- [x] **`Script error for "Category"`** al crear el curso. Causa: `FormAutocomplete.enhance(selector, tags, ajax, placeholder, ...)` recibía el LABEL `"Category"` en la posición de `ajax` (que es un **nombre de módulo AMD**), así que RequireJS intentaba `require(['Category'])`. Fix en `actions/course-create.js`: alinear los argumentos (`ajax = false`, el label pasa a `placeholder`, + `caseSensitive`/`showSuggestions`). Verificado: ya no hay error JS y el selector de categoría se realza correctamente.
 ### Defectos de §15/§16 detectados en uso y corregidos
 
 - [x] **El botón Detener no se podía pulsar.** Durante el streaming, `setCompactChatState('disabled')` añadía `.compact-chat-card--disabled` (legacy) con `pointer-events:none` sobre TODA la tarjeta del chat, y el botón Detener vive dentro. Fix: dejar de aplicar esa clase global (cada control ya se deshabilita individualmente) en `planning/compact-chat.js`; el botón queda usable.

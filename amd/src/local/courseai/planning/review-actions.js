@@ -15,12 +15,15 @@
 
 /**
  * showReviewActions helper — finalises the planning stream UI and reveals
- * the approve/adjust action row.
+ * the decision overlay (WU4: the center #planActions is suppressed in favour
+ * of the left-panel overlay).
  *
  * @module     local_coursegen/local/courseai/planning/review-actions
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
+import {getDecisionOverlay} from 'local_coursegen/local/courseai/ui/decision-overlay';
 
 /**
  * Transition the planning panel to "review ready" state.
@@ -31,6 +34,7 @@
  *
  * @param {string} mode - 'detailed' | anything else (markdown/sections)
  * @param {Object} ctx
+ * @returns {void}
  */
 export const showReviewActions = (mode, ctx) => {
     const {elements, texts, setProgress, setCompactChatState, deps, syncCompactChatState} = ctx;
@@ -124,7 +128,55 @@ export const showReviewActions = (mode, ctx) => {
         }
     }
 
+    // WU4: Keep #planActions hidden — the decision overlay covers the left panel
+    // instead. #btnApprove stays in the DOM (actions.js wires its click handler)
+    // and the overlay Accept button delegates to it via click().
     if (planActions) {
-        planActions.style.display = 'flex';
+        planActions.style.display = 'none';
     }
+
+    // Wire overlay Accept → btnApprove.click() and Adjust → hide overlay + show composer.
+    const overlay = getDecisionOverlay(texts);
+    const acceptBtn = document.getElementById('cgDecisionAccept');
+    const adjustBtn = document.getElementById('cgDecisionAdjust');
+    const acceptBar = document.getElementById('cgAcceptBar');
+    const acceptInline = document.getElementById('cgAcceptInline');
+    const {btnApprove, compactPromptInput} = elements;
+
+    if (acceptBtn && !acceptBtn.dataset.cgWired) {
+        acceptBtn.dataset.cgWired = '1';
+        acceptBtn.addEventListener('click', () => {
+            if (btnApprove) {
+                btnApprove.click();
+            }
+        });
+    }
+
+    // The inline "Accept" in the composer bar delegates to the same approve flow, so
+    // the user can accept even after choosing Adjust (they can always change their mind).
+    if (acceptInline && !acceptInline.dataset.cgWired) {
+        acceptInline.dataset.cgWired = '1';
+        acceptInline.addEventListener('click', () => {
+            if (btnApprove) {
+                btnApprove.click();
+            }
+        });
+    }
+
+    if (adjustBtn && !adjustBtn.dataset.cgWired) {
+        adjustBtn.dataset.cgWired = '1';
+        adjustBtn.addEventListener('click', () => {
+            overlay.hide();
+            setCompactChatState(deps, 'enabled');
+            // Keep Accept reachable next to the composer.
+            if (acceptBar) {
+                acceptBar.style.display = 'flex';
+            }
+            if (compactPromptInput) {
+                compactPromptInput.focus();
+            }
+        });
+    }
+
+    overlay.show();
 };

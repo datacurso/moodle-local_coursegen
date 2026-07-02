@@ -16,6 +16,12 @@
 /**
  * Low-level DOM builders for activity rows in the detailed plan UI.
  *
+ * Emits the same markup as core_courseformat (cm.mustache + cm/activity +
+ * cm/cmname + cm/cmicon): li.activity.activity-wrapper > div.activity-item >
+ * div.activity-grid > .activity-name-area > .activityname (icon + name). The
+ * loaded Boost theme provides the grid, separators, hover outline and the
+ * purpose-tinted icon — no hand-written approximations.
+ *
  * @module     local_coursegen/local/courseai/detailed/activity-dom
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -25,42 +31,61 @@ import {createActionControl} from './controls';
 import {iaSparklesSvg, getCoreIconUrl, activityPurpose} from './icons';
 
 /**
- * Build the item button and its inner structure for an activity row.
+ * Build the activity-item content (icon + name + actions) in Moodle markup.
  *
  * @param {Object} ctx
  * @param {string} activityType
  * @param {string} activityTitle
- * @returns {{item, rightEl, imageBadgeEl, actionsEl, chevronEl, textDiv}}
+ * @returns {{item, actionsEl, chevronEl, textDiv, detailEl}}
  */
 export const buildActivityItem = (ctx, activityType, activityTitle) => {
-    const {escapeHtml, activityLabels, getActivityIconUrl} = ctx;
-
-    const item = document.createElement('button');
-    item.type = 'button';
-    item.className = 'prv-activity-item prv-activity-item--pending';
+    const {escapeHtml, getActivityIconUrl} = ctx;
 
     const iconUrl = getActivityIconUrl(activityType);
     const purpose = activityPurpose[activityType] || 'content';
+    const safeType = escapeHtml(activityType);
 
-    item.innerHTML =
-        `<span class="ps-badge ps-badge--${escapeHtml(activityType)} dp-purpose-${escapeHtml(purpose)}">` +
-        `<img src="${iconUrl}" class="ps-badge-icon" alt="" onerror="this.style.display='none'">` +
-        `<span class="ps-badge-text">${escapeHtml(activityLabels[activityType] || activityType)}</span>` +
-        `</span>` +
-        `<div class="prv-activity-text"><p class="prv-activity-name">${escapeHtml(activityTitle)}</p></div>`;
+    // div.activity-item.focus-control — the Boost card wrapper.
+    const item = document.createElement('div');
+    item.className = 'activity-item focus-control';
+    item.setAttribute('data-region', 'activity-card');
+    item.setAttribute('data-activityname', activityTitle);
 
-    const rightEl = document.createElement('div');
-    rightEl.className = 'dp-activity-right';
+    // div.activity-grid — Boost grid layout (icon | name | … | actions).
+    const grid = document.createElement('div');
+    grid.className = 'activity-grid';
 
-    const imageBadgeEl = document.createElement('span');
-    imageBadgeEl.className = 'prv-image-pill prv-image-pill--small';
-    imageBadgeEl.style.display = 'none';
+    // Icon container — purpose tint comes from Boost (.activityiconcontainer.<purpose>).
+    grid.innerHTML =
+        `<div class="activity-icon activityiconcontainer smaller ${escapeHtml(purpose)} courseicon ` +
+        'align-self-start me-2">' +
+        `<img src="${iconUrl}" class="activityicon" alt="" data-region="activity-icon" ` +
+        `onerror="this.style.display='none'"></div>` +
+        '<div class="activity-name-area activity-instance d-flex flex-column me-2">' +
+        `<div class="activitytitle modtype_${safeType} position-relative align-self-start">` +
+        `<div class="activityname"><span class="instancename">${escapeHtml(activityTitle)}</span></div>` +
+        '</div></div>';
 
+    // Description slot inside the grid (Moodle: .activity-altcontent.activity-description).
+    // Holds the streamed activity description / skeleton — always visible once present.
+    const textDiv = document.createElement('div');
+    textDiv.className = 'activity-altcontent activity-description cg-activity-desc-slot';
+    textDiv.style.display = 'none';
+    grid.appendChild(textDiv);
+
+    // Collapsible detail slot (chapters / questions / images) — hidden until expanded.
+    const detailEl = document.createElement('div');
+    detailEl.className = 'activity-altcontent cg-activity-detail';
+    detailEl.style.display = 'none';
+    grid.appendChild(detailEl);
+
+    // Actions cluster (AI adjust + delete) — Boost grid area "actions".
     const actionsEl = document.createElement('div');
-    actionsEl.className = 'dp-item-actions';
+    actionsEl.className = 'activity-actions cg-item-actions align-self-start ms-sm-2';
 
+    // Expand/collapse chevron for the detail slot.
     const chevronEl = document.createElement('span');
-    chevronEl.className = 'prv-chevron dp-activity-chevron';
+    chevronEl.className = 'cg-activity-chevron';
     chevronEl.style.visibility = 'hidden';
     chevronEl.innerHTML = [
         '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"',
@@ -68,15 +93,12 @@ export const buildActivityItem = (ctx, activityType, activityTitle) => {
         'stroke-linejoin="round" aria-hidden="true">',
         '<polyline points="9 18 15 12 9 6"/></svg>'
     ].join(' ');
+    actionsEl.appendChild(chevronEl);
+    grid.appendChild(actionsEl);
 
-    rightEl.appendChild(imageBadgeEl);
-    rightEl.appendChild(actionsEl);
-    rightEl.appendChild(chevronEl);
-    item.appendChild(rightEl);
+    item.appendChild(grid);
 
-    const textDiv = item.querySelector('.prv-activity-text');
-
-    return {item, rightEl, imageBadgeEl, actionsEl, chevronEl, textDiv};
+    return {item, actionsEl, chevronEl, textDiv, detailEl};
 };
 
 /**
@@ -86,10 +108,14 @@ export const buildActivityItem = (ctx, activityType, activityTitle) => {
  * @param {string}      activityId
  * @param {string}      activityTitle
  * @param {HTMLElement} wrap
+ * @param {string}      activityType
  * @returns {{iaControl, deleteControl, activityPanelApi}}
  */
-export const buildActivityActionControls = (ctx, activityId, activityTitle, wrap) => {
-    const {state, texts, runPlanAction, log, createTextPanel, focusChange, markRemoving, confirmDelete} = ctx;
+export const buildActivityActionControls = (ctx, activityId, activityTitle, wrap, activityType) => {
+    const {
+        state, texts, runPlanAction, log, createTextPanel, focusChange, markRemoving,
+        confirmDelete, activityLabels,
+    } = ctx;
 
     let iaControl = null;
     let deleteControl = null;
@@ -100,16 +126,14 @@ export const buildActivityActionControls = (ctx, activityId, activityTitle, wrap
             focusChange(wrap, 'info');
             wrap.classList.add('dp-item-regenerating');
             iaControl.classList.add('dp-action-btn--disabled');
-            // Surface the user's own instruction in the log, then the generic action line.
+            // ONE coherent turn: the user's instruction plus exactly which activity
+            // it targets, naming its TYPE (e.g. "Book: Title"). No separate generic
+            // line, no guillemets.
             const instruction = (value || '').trim();
-            if (instruction) {
-                log({actor: 'user', kind: 'user', message: instruction});
-            }
-            log({
-                actor: 'user', kind: 'info',
-                message: (texts.courseai_log_regenerated_activity || 'You regenerated activity «{$a}»')
-                    .replace('{$a}', activityTitle),
-            });
+            const typeLabel = (activityLabels && activityLabels[activityType]) || activityType || '';
+            const target = typeLabel ? typeLabel + ': ' + activityTitle : activityTitle;
+            const message = instruction ? instruction + ' — ' + target : target;
+            log({actor: 'user', kind: 'user', message});
             // Reopen the entry so the streamed regeneration renders live (progress is
             // visible) and the final reconcile refills it — both paths bail on done.
             reopenActivityEntry(ctx, activityId);
@@ -146,7 +170,7 @@ export const buildActivityActionControls = (ctx, activityId, activityTitle, wrap
             }
             log({
                 actor: 'user', kind: 'danger',
-                message: (texts.courseai_log_deleted_activity || 'You deleted activity «{$a}»')
+                message: (texts.courseai_log_deleted_activity || 'You deleted activity: {$a}')
                     .replace('{$a}', activityTitle),
             });
             wrap.classList.add('dp-item-regenerating');
@@ -167,14 +191,14 @@ export const buildActivityActionControls = (ctx, activityId, activityTitle, wrap
 };
 
 /**
- * Attach a skeleton progress placeholder to textDiv.
+ * Attach a skeleton progress placeholder into the detail slot.
  *
- * @param {HTMLElement} textDiv
+ * @param {HTMLElement} textDiv - The in-grid detail slot (.cg-activity-detail).
  * @returns {HTMLElement} progressEl
  */
 export const attachSkeletonProgress = (textDiv) => {
     const progressEl = document.createElement('div');
-    progressEl.className = 'prv-activity-desc cg-skeleton-wrap';
+    progressEl.className = 'cg-activity-desc cg-skeleton-wrap';
     progressEl.setAttribute('aria-hidden', 'true');
 
     const skeletonLine1 = document.createElement('span');
@@ -187,6 +211,7 @@ export const attachSkeletonProgress = (textDiv) => {
 
     progressEl.appendChild(skeletonLine1);
     progressEl.appendChild(skeletonLine2);
+    textDiv.style.display = '';
     textDiv.appendChild(progressEl);
 
     return progressEl;
@@ -219,15 +244,15 @@ export const reopenActivityEntry = (ctx, activityId) => {
         meta.done = Math.max(0, (meta.done || 0) - 1);
     }
 
-    const oldDesc = entry.textDiv.querySelector('.prv-activity-desc');
+    const oldDesc = entry.textDiv.querySelector('.cg-activity-desc');
     if (oldDesc) {
         oldDesc.remove();
     }
     entry.detailEl.innerHTML = '';
     entry.detailEl.style.display = 'none';
     entry.hasDetail = false;
-    entry.item.classList.remove('prv-activity-item--done', 'prv-activity-item--has-detail');
-    entry.item.classList.add('prv-activity-item--pending');
+    entry.item.classList.remove('cg-activity--done', 'cg-activity--has-detail');
+    entry.item.classList.add('cg-activity--pending');
     if (entry.chevronEl) {
         entry.chevronEl.style.visibility = 'hidden';
     }

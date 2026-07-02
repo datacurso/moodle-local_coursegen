@@ -60,6 +60,8 @@ class course_planning_feedback extends external_api {
                 ),
                 'parent_section_id' => new external_value(PARAM_RAW, 'Parent section UUID', VALUE_DEFAULT, null, NULL_ALLOWED),
                 'position' => new external_value(PARAM_INT, 'Insertion position', VALUE_DEFAULT, null, NULL_ALLOWED),
+                'moved_id' => new external_value(PARAM_RAW, 'UUID of the item dragged in a reorder', VALUE_DEFAULT, null, NULL_ALLOWED),
+                'proposal_custom' => new external_value(PARAM_BOOL, 'Feedback typed into the proposals card "other" option', VALUE_DEFAULT, false),
                 'instruction' => new external_value(PARAM_TEXT, "User's free-text instruction", VALUE_DEFAULT, ''),
             ]),
         ]);

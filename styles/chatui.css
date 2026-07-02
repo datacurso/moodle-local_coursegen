@@ -148,20 +148,16 @@
 
 /* ─── SECTION CHECKLIST ───────────────────────────────────────────────── */
 .courseai-checklist {
-  background: var(--card);
-  border-radius: 10px;
-  padding: 12px;
+  background: transparent;
+  border: none;
+  border-radius: 0;
+  padding: 4px 0;
   font-size: 13px;
 }
 
+/* Legacy uppercase label hidden in favour of .cg-group-head (§7.1 redesign). */
 .courseai-checklist-label {
-  display: block;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .05em;
-  text-transform: uppercase;
-  color: var(--muted-fg);
-  margin-bottom: 8px;
+  display: none;
 }
 
 .courseai-checklist-list {
@@ -170,17 +166,65 @@
   padding: 0;
   display: flex;
   flex-direction: column;
-  gap: 6px;
+  gap: 26px;
+  position: relative;
 }
 
+/* Each section = an INDEPENDENT, full-width block (no connecting timeline line,
+   no wrapping card). A clear separator divides consecutive sections. */
 .courseai-checklist-item {
+  display: block;
+  width: 100%;
+  color: var(--muted-fg);
+  font-size: 14px;
+  line-height: 1.4;
+  opacity: .75;
+  transition: opacity .2s;
+}
+.courseai-checklist-item + .courseai-checklist-item {
+  border-top: 1px solid var(--border);
+  padding-top: 24px;
+}
+.courseai-checklist-head {
   display: flex;
   align-items: center;
   gap: 8px;
+}
+/* Activity-type icon in a regeneration item head: the SAME monologo.svg the
+   center view uses, just smaller, sitting between the check circle and the
+   activity title. */
+.cg-activity-icon {
+  flex: 0 0 18px;
+  width: 18px;
+  height: 18px;
+  object-fit: contain;
+}
+
+/* Manual "Retry" button shown after a model call exhausts its automatic retries. */
+.cg-retry-btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  margin: 8px 0 4px;
+  padding: 8px 18px;
+  border: none;
+  border-radius: 8px;
+  background: var(--accent, #5b3df5);
+  color: #fff;
+  font-size: 13.5px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: opacity .15s;
+}
+.cg-retry-btn:hover {
+  opacity: .9;
+}
+/* The section name carries the weight — bigger and bolder than the detail. */
+.courseai-checklist-name {
+  font-size: 15.5px;
+  font-weight: 700;
   color: var(--fg);
-  line-height: 1.4;
-  opacity: .7;
-  transition: opacity .2s;
+  line-height: 1.35;
 }
 
 .courseai-checklist-item.is-done {
@@ -200,8 +244,8 @@
 }
 
 .courseai-checklist-item.is-done .courseai-checklist-check {
-  background: #16a34a;
-  border-color: #16a34a;
+  background: transparent;
+  border-color: var(--muted-fg);
 }
 
 .courseai-checklist-check svg {
@@ -212,7 +256,7 @@
 }
 
 .courseai-checklist-check .check-icon {
-  stroke: #fff;
+  stroke: var(--muted-fg);
   stroke-width: 3;
 }
 
@@ -234,6 +278,42 @@
   to { transform: rotate(360deg); }
 }
 
+/* Per-section Markdown detail: a full-width block BELOW the section name,
+   indented to align under the name (past the check icon). Compact via .cg-log-md;
+   long details clamp with a "Show more"/"Show less" toggle. */
+.courseai-checklist-detail {
+  display: block;
+  width: auto;
+  margin: 6px 0 0 26px;
+  color: var(--fg);
+  font-size: 13.5px;
+  line-height: 1.55;
+  position: relative;
+}
+.courseai-checklist-detail:empty {
+  display: none;
+}
+.courseai-checklist-detail.cg-detail-clamped {
+  max-height: 120px;
+  overflow: hidden;
+  cursor: pointer;
+  -webkit-mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+  mask-image: linear-gradient(to bottom, #000 55%, transparent 100%);
+}
+.courseai-checklist-detail.cg-detail-clamped.is-expanded {
+  max-height: none;
+  cursor: auto;
+  -webkit-mask-image: none;
+  mask-image: none;
+}
+/* Centered "Show more"/"Show less" under the section detail. */
+.cg-detail-toggle {
+  display: flex;
+  justify-content: center;
+  width: 100%;
+  margin: 6px 0 0 0;
+}
+
 /* Once the plan has been reviewed the whole structure is final, so every checklist
    row reads as done — regardless of the per-row streaming counter. This is purely
    declarative, so it also covers late buffered section/activity events that would
@@ -242,8 +322,8 @@ body.cg-plan-reviewed .courseai-checklist-item {
   opacity: 1;
 }
 body.cg-plan-reviewed .courseai-checklist-check {
-  background: #16a34a;
-  border-color: #16a34a;
+  background: transparent;
+  border-color: var(--muted-fg);
 }
 body.cg-plan-reviewed .courseai-checklist-check svg.spinner-icon {
   display: none;
@@ -285,21 +365,22 @@ body.cg-plan-reviewed .courseai-checklist-check svg.check-icon {
 
 /* ─── COMPACT CHAT CARD ───────────────────────────────────────────── */
 .compact-chat-card {
-  background: var(--card, #fff);
-  padding: 8px 10px 8px 14px;
+  background: var(--card);
+  /* Seamless Claude-style composer: one card, even padding, no inner divider. */
+  padding: 10px 12px 8px;
   margin-top: auto;
   transition: border-color .15s, box-shadow .15s, opacity .2s, filter .2s;
   width: 100%;
   max-width: 100%;
   min-width: 0;
-  border: 1px solid var(--border, hsl(215 20% 88%));
-  border-radius: 18px;
-  box-shadow: 0 1px 2px hsl(215 25% 30% / .04);
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
 }
 
 .compact-chat-card:focus-within {
-  border-color: hsl(215 20% 72%);
-  box-shadow: 0 2px 10px hsl(215 25% 30% / .08);
+  border-color: var(--primary, #6b4eff);
+  box-shadow: 0 0 0 3px color-mix(in srgb, var(--primary, #6b4eff) 15%, transparent);
 }
 
 /* Control-level disabled state for compact chat during active streams */
@@ -321,9 +402,11 @@ body.cg-plan-reviewed .courseai-checklist-check svg.check-icon {
 .compact-prompt-textarea {
   display: block;
   width: 100%;
-  min-height: 48px;
+  min-height: 44px;
   max-height: 200px;
-  padding: 8px 4px 6px;
+  /* Horizontal inset matches the toolbar controls below so text and icons share
+     the same left edge (Claude). The card supplies the outer padding. */
+  padding: 4px 2px 8px;
   font-size: 14px;
   line-height: 1.55;
   font-family: inherit;
@@ -335,7 +418,7 @@ body.cg-plan-reviewed .courseai-checklist-check svg.check-icon {
 }
 
 .compact-prompt-textarea::placeholder {
-  color: hsl(215, 20%, 65%);
+  color: var(--muted-fg);
 }
 
 .compact-chat-toolbar {
@@ -345,6 +428,10 @@ body.cg-plan-reviewed .courseai-checklist-check svg.check-icon {
   gap: 16px;
   flex-wrap: nowrap;
   min-width: 0;
+  /* No divider, no grey strip — the toolbar floats inside the single card (Claude). */
+  border: none;
+  background: transparent;
+  padding: 2px 0 0;
 }
 
 .compact-toolbar-left {
@@ -401,32 +488,88 @@ body.cg-plan-reviewed .courseai-checklist-check svg.check-icon {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 6px;
-  min-width: 0;
-  height: 36px;
-  padding: 0 16px;
-  font-size: 13px;
-  font-weight: 600;
-  white-space: nowrap;
-  color: var(--primary-fg);
-  background: var(--primary);
-  border: none;
-  border-radius: 10px;
+  /* Compact, square-ish send button like Claude/V0 — NOT a wide pill. The min/max
+     guards stop any inherited padding/min-width from stretching it. */
+  width: 32px;
+  min-width: 32px;
+  max-width: 32px;
+  height: 32px;
+  padding: 0;
+  flex: 0 0 32px;
+  /* Idle: a discreet white squircle with a hairline border and a grey arrow, so it
+     reads clearly on the grey toolbar without shouting. */
+  color: var(--muted-fg);
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 9px;
   cursor: pointer;
   font-family: inherit;
-  transition: background .15s, opacity .12s;
+  transition: background .15s, color .15s, border-color .15s, opacity .12s, transform .1s;
+}
+
+/* Ready (has text): fill with the plugin accent + white arrow. */
+.btn-compact-regenerate.is-ready {
+  color: var(--primary-fg, #fff);
+  background: var(--primary, #6b4eff);
+  border-color: var(--primary, #6b4eff);
 }
 
 .btn-compact-regenerate:hover {
-  background: hsl(8, 72%, 38%);
+  opacity: 0.85;
 }
 
 .btn-compact-regenerate:active {
-  transform: translateY(0);
+  transform: scale(0.95);
 }
 
 .btn-compact-regenerate:disabled {
-  opacity: 0.6;
+  opacity: 0.45;
   cursor: not-allowed;
   transform: none;
+}
+
+/* ─── COLLAPSIBLE CHECKLIST ───────────────────────────────────────────── */
+.courseai-checklist.is-collapsed .courseai-checklist-list {
+  display: none;
+}
+
+.cg-group-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+  padding: 4px 0;
+}
+
+.cg-group-chevron {
+  font-size: 14px;
+  line-height: 1;
+  color: var(--muted-fg);
+  transition: transform 0.15s ease;
+  display: inline-block;
+}
+
+.courseai-checklist.is-collapsed .cg-group-chevron {
+  transform: rotate(-90deg);
+}
+
+.cg-group-count {
+  font-size: 12px;
+  color: var(--muted-fg);
+  margin-left: 2px;
+}
+
+.cg-group-avatar {
+  font-size: 14px;
+  color: var(--muted-fg);
+  flex-shrink: 0;
+}
+
+.cg-group-title {
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted-fg);
+  flex: 1;
+  min-width: 0;
 }

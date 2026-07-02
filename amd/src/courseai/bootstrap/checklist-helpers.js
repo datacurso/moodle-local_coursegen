@@ -61,6 +61,11 @@ export const makeChecklistHelpers = ({state, elements, texts}) => {
                 activities: (Array.isArray(section.activities) ? section.activities : [])
                     .filter((activity) => !activity?.deleted)
                     .map((activity, activityIndex) => ({
+                        // Carry the UUID so post-reload id-based lookups work (e.g.
+                        // sendReorderActivities matches the dragged activity by id to
+                        // name it + its position; without id it fell back to the
+                        // generic "You reordered the activities in: <section>").
+                        id: activity.id,
                         activity_type: activity.activity_type || activity.type || 'page',
                         title: activity.title || activity.name || `${texts.courseai_activity_default} ${activityIndex + 1}`,
                         description:
@@ -200,10 +205,33 @@ export const makeChecklistHelpers = ({state, elements, texts}) => {
             checklist.setAttribute('data-round', String(roundData.round));
         }
 
-        const label = document.createElement('span');
-        label.className = 'courseai-checklist-label';
-        label.textContent = texts.courseai_checklist_label;
-        checklist.appendChild(label);
+        const head = document.createElement('div');
+        head.className = 'cg-group-head';
+        head.setAttribute('role', 'button');
+        head.setAttribute('tabindex', '0');
+        head.setAttribute('aria-expanded', 'true');
+        const chevron = document.createElement('span');
+        chevron.className = 'cg-group-chevron';
+        chevron.setAttribute('aria-hidden', 'true');
+        chevron.textContent = '⌄';
+        const avatar = document.createElement('span');
+        avatar.className = 'cg-group-avatar';
+        avatar.setAttribute('aria-hidden', 'true');
+        const groupTitle = document.createElement('span');
+        groupTitle.className = 'cg-group-title';
+        groupTitle.textContent = texts.courseai_log_ai_planned_structure
+            || 'Planned the course structure';
+        const countSpan = document.createElement('span');
+        countSpan.className = 'cg-group-count';
+        const sectionCount = sections.length;
+        const countTemplate = (texts.courseai_checklist_section_count || '{$a} sections')
+            .replace('{$a}', sectionCount);
+        countSpan.textContent = '• ' + countTemplate;
+        head.appendChild(chevron);
+        head.appendChild(avatar);
+        head.appendChild(groupTitle);
+        head.appendChild(countSpan);
+        checklist.appendChild(head);
 
         const list = document.createElement('ul');
         list.className = 'courseai-checklist-list';
@@ -243,4 +271,63 @@ export const makeChecklistHelpers = ({state, elements, texts}) => {
         createRoundChecklistElement,
         restoreAdjustmentHistory,
     };
+};
+
+/**
+ * Initialise a single delegated click/keyboard listener that collapses or expands
+ * any .cg-group-head inside a .courseai-checklist element. Safe to call multiple
+ * times — guards against duplicate registration with a dataset flag.
+ *
+ * @returns {void}
+ */
+export const initChecklistCollapse = () => {
+    if (document.documentElement.dataset.cgCollapseInit) {
+        return;
+    }
+    document.documentElement.dataset.cgCollapseInit = '1';
+
+    /**
+     * Toggle collapse state for the checklist containing this head element.
+     *
+     * @param {HTMLElement} head - The .cg-group-head element that was clicked.
+     * @returns {void}
+     */
+    const toggle = (head) => {
+        const checklist = head.closest('.courseai-checklist');
+        if (!checklist) {
+            return;
+        }
+        const collapsed = checklist.classList.toggle('is-collapsed');
+        head.setAttribute('aria-expanded', collapsed ? 'false' : 'true');
+    };
+
+    /**
+     * Handle document click: toggle any .cg-group-head that was clicked.
+     *
+     * @param {MouseEvent} e - The click event.
+     * @returns {void}
+     */
+    document.addEventListener('click', (e) => {
+        const head = e.target.closest('.cg-group-head');
+        if (head) {
+            toggle(head);
+        }
+    });
+
+    /**
+     * Handle document keydown: toggle focused .cg-group-head on Enter or Space.
+     *
+     * @param {KeyboardEvent} e - The keydown event.
+     * @returns {void}
+     */
+    document.addEventListener('keydown', (e) => {
+        if (e.key !== 'Enter' && e.key !== ' ') {
+            return;
+        }
+        const head = e.target.closest('.cg-group-head');
+        if (head && head.getAttribute('role') === 'button') {
+            e.preventDefault();
+            toggle(head);
+        }
+    });
 };
