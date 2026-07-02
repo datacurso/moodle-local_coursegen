@@ -161,6 +161,14 @@ class data_settings extends base_settings {
 
         $content = (object) ['fieldid' => $field->id, 'recordid' => $recordid, 'content' => $value];
         switch ($field->type) {
+            case 'number':
+                // Moodle stores numbers via floatval; keep non-numeric text out of the column
+                // (it would display raw and break sorting on that field).
+                if (!is_numeric($value)) {
+                    return;
+                }
+                $content->content = (string) (float) $value;
+                break;
             case 'date':
                 $timestamp = strtotime($value);
                 if ($timestamp === false) {

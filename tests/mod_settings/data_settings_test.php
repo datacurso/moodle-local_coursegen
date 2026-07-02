@@ -281,6 +281,32 @@ final class data_settings_test extends \advanced_testcase {
     }
 
     /**
+     * Non-numeric values for a number field are skipped (Moodle stores floats there); numeric
+     * values are stored normalised.
+     */
+    public function test_seed_number_field_requires_numeric(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        global $DB;
+
+        $cm = $this->make_data_cm();
+        $modsettings = [
+            'fields' => [['type' => 'text', 'name' => 'T'], ['type' => 'number', 'name' => 'Precio']],
+            'example_entries' => [
+                ['values' => [['field_name' => 'T', 'value' => 'a'], ['field_name' => 'Precio', 'value' => '1.2 billones']]],
+                ['values' => [['field_name' => 'T', 'value' => 'b'], ['field_name' => 'Precio', 'value' => '42.5']]],
+            ],
+        ];
+
+        (new data_settings($cm, $modsettings))->add_settings();
+
+        $precio = $DB->get_record('data_fields', ['dataid' => $cm->instance, 'name' => 'Precio']);
+        $contents = $DB->get_records('data_content', ['fieldid' => $precio->id]);
+        $this->assertCount(1, $contents);   // the non-numeric one was skipped
+        $this->assertEquals(42.5, (float) reset($contents)->content);
+    }
+
+    /**
      * Unseedable types (picture/file) in an entry are skipped; the rest of the entry is stored.
      */
     public function test_seed_skips_unseedable_field(): void {
