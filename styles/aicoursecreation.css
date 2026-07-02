@@ -3794,6 +3794,35 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
   outline-offset: 0;
 }
 
+/* Proposal-selection highlight (.cg-affected) alignment — same fix as the marks and
+   the hover. .cg-affected is added to the OUTER wrap, but the hover outline lives on
+   the inner .activity-item/.section-item, so a hovered selected row showed the purple
+   affected outline (wrap box, 10px radius) misaligned around the coral hover outline
+   (inner box, 16px radius). Draw the affected outline on the SAME inner box the hover
+   uses so the two coincide exactly. */
+#prvSections .activity.cg-affected,
+#prvSections .course-section.cg-affected {
+  outline: none;
+  background-color: transparent;
+}
+#prvSections .activity.cg-affected .activity-item {
+  outline: 2px solid var(--brand, hsl(260 37% 42%));
+  outline-offset: 0;
+}
+#prvSections .course-section.cg-affected .section-item {
+  outline: 2px solid var(--brand, hsl(260 37% 42%));
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+#prvSections .activity.cg-affected--destructive .activity-item {
+  outline-color: var(--primary, hsl(10 81% 63%));
+  background-color: hsl(10 81% 63% / .06);
+}
+#prvSections .course-section.cg-affected--destructive .section-item {
+  outline-color: var(--primary, hsl(10 81% 63%));
+  background-color: hsl(10 81% 63% / .06);
+}
+
 /* Streamed description slot (Moodle .activity-description grid area). */
 #prvSections .cg-activity-desc-slot {
   grid-area: altcontent;
