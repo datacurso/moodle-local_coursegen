@@ -63,21 +63,115 @@ export const createCourseaiActions = (deps) => {
         }
     };
 
+    /**
+     * Fire a celebratory confetti burst from the completion badge: colourful pieces
+     * shoot outward from the cone and arc down under gravity, spinning and fading.
+     * Uses the Web Animations API (no external assets). Skipped under reduced motion.
+     *
+     * @param {HTMLElement} container - The .pc-confetti layer inside the badge.
+     * @returns {void}
+     */
+    const fireConfetti = (container) => {
+        if (!container) {
+            return;
+        }
+        if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+            return;
+        }
+        const colors = ['#ED6E54', '#F1AA1E', '#5B4590', '#3B9EE5', '#E5528A', '#3FBF6F'];
+        const rand = (min, max) => min + Math.random() * (max - min);
+        const count = 40;
+        for (let i = 0; i < count; i++) {
+            const piece = document.createElement('i');
+            const circle = i % 3 === 0;
+            const w = circle ? rand(5, 8) : rand(4, 7);
+            const h = circle ? w : rand(8, 14);
+            piece.style.cssText = 'position:absolute;top:42%;left:50%;'
+                + 'width:' + w.toFixed(1) + 'px;height:' + h.toFixed(1) + 'px;'
+                + 'background:' + colors[i % colors.length] + ';'
+                + 'border-radius:' + (circle ? '50%' : '1px') + ';will-change:transform,opacity;';
+            container.appendChild(piece);
+            // Burst mostly upward/outward (a popper fires up), then gravity pulls it down.
+            // Long throws so the confetti reaches far across the view.
+            const angle = rand(-178, -2) * Math.PI / 180;
+            const dist = rand(150, 360);
+            const bx = Math.cos(angle) * dist;
+            const by = Math.sin(angle) * dist;
+            const fallY = by + rand(230, 520);
+            const drift = bx + rand(-40, 40);
+            const spin = (i % 2 ? 1 : -1) * rand(240, 620);
+            const midX = bx + (drift - bx) * 0.5;
+            const midY = by + (fallY - by) * 0.5;
+            const peak = 'translate(calc(-50% + ' + bx.toFixed(1) + 'px), calc(-50% + '
+                + by.toFixed(1) + 'px)) scale(1) rotate(' + (spin * 0.35).toFixed(0) + 'deg)';
+            const mid = 'translate(calc(-50% + ' + midX.toFixed(1) + 'px), calc(-50% + '
+                + midY.toFixed(1) + 'px)) scale(1) rotate(' + (spin * 0.7).toFixed(0) + 'deg)';
+            const end = 'translate(calc(-50% + ' + drift.toFixed(1) + 'px), calc(-50% + '
+                + fallY.toFixed(1) + 'px)) scale(.9) rotate(' + spin.toFixed(0) + 'deg)';
+            // Quick burst out (to ~0.28), then a SLOW gravity fall + late fade so the
+            // tail lingers — the last third of the (longer) duration is the settle.
+            const anim = piece.animate([
+                {transform: 'translate(-50%,-50%) scale(.4) rotate(0deg)', opacity: 0, offset: 0},
+                {opacity: 1, offset: 0.1},
+                {transform: peak, opacity: 1, offset: 0.28},
+                {transform: mid, opacity: 1, offset: 0.68},
+                {transform: end, opacity: 0, offset: 1}
+            ], {duration: rand(1700, 2700), easing: 'cubic-bezier(.1,.55,.25,1)', fill: 'forwards'});
+            // Clean each piece up when it finishes (both bursts leave no DOM behind).
+            anim.onfinish = () => piece.remove();
+        }
+    };
+
     const showCompletionView = (result) => {
         state.createdCourseResult = result || null;
         state.createdCourseUrl = result?.courseurl || '';
         state.currentStage = 'completed';
+        // The course is created and can no longer be edited from this wizard, so the
+        // composer must be gone on the success view. Hide it explicitly here (not only
+        // via the body-class CSS) so a stale/aggregated stylesheet can't leave it
+        // visible, and keep the declarative class in sync.
+        state.planApproved = true;
+        document.body.classList.add('cg-plan-approved');
+        if (elements.compactChatCard) {
+            elements.compactChatCard.style.display = 'none';
+        }
         if (completionSummary) {
             completionSummary.textContent = buildCompletionSummary(state, texts, formatTemplate);
         }
         if (planningProgressCard) { planningProgressCard.style.display = 'none'; }
         if (elements.planReviewCard) { elements.planReviewCard.style.display = 'none'; }
         if (planActions) { planActions.style.display = 'none'; }
+        // Generation is over: drop the live progress view (the plan cards) so only the
+        // success panel shows, and clear the generation styling.
+        document.body.classList.remove('cg-generating');
+        if (elements.planDetailedView) { elements.planDetailedView.style.display = 'none'; }
         if (completionView) { completionView.style.display = 'flex'; }
         if (btnOpenMoodleCourse) { btnOpenMoodleCourse.disabled = !state.createdCourseUrl; }
         stepsUi.setStepState('planning', 'done');
         stepsUi.setStepState('generating', 'done');
         stepsUi.updateFlowNav();
+        // Drop any lingering "working" indicator (e.g. the one shown when the user hit
+        // Accept). Generation is over, so it must not sit in the bottom slot beside the
+        // success view.
+        const workingEntry = document.getElementById('cgFeedbackThinking');
+        if (workingEntry) { workingEntry.remove(); }
+        // Pin the left thread to the bottom so the final "Your course is ready" turn is
+        // comfortably visible. Without this the newest turns sit below the fold and the
+        // user has to scroll down to see the completion message. Deferred to the next
+        // frame so it runs after this view's layout changes settle.
+        const chatScroll = document.getElementById('courseaiChatScroll');
+        if (chatScroll) {
+            window.requestAnimationFrame(() => {
+                chatScroll.scrollTop = chatScroll.scrollHeight;
+            });
+        }
+        // Celebratory confetti — a DOUBLE pop. Both bursts run the SAME animation; the
+        // second fires ~1.5s later: late enough to read as a distinct second pop, but
+        // while the first is still falling so there is NO empty gap between them (2s
+        // left a dead pause; 1.2s felt almost simultaneous).
+        const confettiLayer = document.getElementById('pcConfetti');
+        fireConfetti(confettiLayer);
+        window.setTimeout(() => fireConfetti(confettiLayer), 1500);
     };
 
     const resetForAnotherCourse = () => {

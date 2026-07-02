@@ -42,11 +42,19 @@ export const resetPlanningState = (options = {}, ctx) => {
     if (options.keepPlan === true) {
         const loadingElKeep = document.getElementById('planningLoading');
         const streamContentElKeep = document.getElementById('planningStreamContent');
+        const leftSkelKeep = document.getElementById('cgLeftSkeleton');
+        const centerSkelKeep = document.getElementById('cgCenterSkeleton');
         if (loadingElKeep) {
             loadingElKeep.style.display = 'none';
         }
         if (streamContentElKeep) {
             streamContentElKeep.style.display = '';
+        }
+        if (leftSkelKeep) {
+            leftSkelKeep.style.display = 'none';
+        }
+        if (centerSkelKeep) {
+            centerSkelKeep.style.display = 'none';
         }
         return;
     }
@@ -60,11 +68,26 @@ export const resetPlanningState = (options = {}, ctx) => {
     // Reset loading/stream content visibility
     const loadingEl = document.getElementById('planningLoading');
     const streamContentEl = document.getElementById('planningStreamContent');
+    const leftSkel = document.getElementById('cgLeftSkeleton');
+    const centerSkel = document.getElementById('cgCenterSkeleton');
     if (loadingEl) {
-        loadingEl.style.display = showLoading ? '' : 'none';
+        loadingEl.style.display = 'none';
     }
     if (streamContentEl) {
         streamContentEl.style.display = showLoading ? 'none' : '';
+    }
+    // Both skeletons preview the layout while the first instruction streams; the
+    // stream code may flip planningLoading/streamContent on connect, but these
+    // dedicated elements are only cleared on real content (handleSection).
+    // The LEFT panel always shows a message first (the user prompt turn + the
+    // working/status indicator), so a left skeleton is redundant and would
+    // coexist with that message — never show it. The CENTER has no message, so
+    // its skeleton still previews the course layout while content streams.
+    if (leftSkel) {
+        leftSkel.style.display = 'none';
+    }
+    if (centerSkel) {
+        centerSkel.style.display = showLoading ? '' : 'none';
     }
 
     const {

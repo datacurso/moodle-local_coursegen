@@ -25,6 +25,7 @@ import {normalizeInitialSections} from './normalize';
 import {createDetailedSectionRow, appendAddSectionControl} from './section-row';
 import {createDetailedActivityRow} from './activity-row';
 import {wireDragAndDrop, sendReorderSections} from './dnd';
+import {getSectionList} from './container';
 
 /**
  * Flash a newly-added activity element with a success highlight.
@@ -93,9 +94,11 @@ export const initDetailedPlanView = (ctx, data) => {
     if (planReviewCard) {
         planReviewCard.style.display = '';
     }
+    // The "Showing real-time detailed planning progress" live note is intentionally
+    // NOT shown (unwanted, and its appearance made the header height jump).
     if (prvLiveNote) {
-        prvLiveNote.style.display = 'block';
-        prvLiveNote.textContent = texts.courseai_live_note_detailed;
+        prvLiveNote.style.display = 'none';
+        prvLiveNote.textContent = '';
     }
     if (prvSpinnerIcon) {
         prvSpinnerIcon.style.display = '';
@@ -148,12 +151,12 @@ export const initDetailedPlanView = (ctx, data) => {
     // "+ Add section" control — appears after all section rows.
     appendAddSectionControl(ctx);
 
-    // Wire section-level drag-and-drop (sections as direct children of prvSections).
+    // Wire section-level drag-and-drop (li.course-section in ul.course-content).
     state.sectionDnd = wireDragAndDrop(
-        prvSections,
-        '.prv-section-row',
+        getSectionList(ctx),
+        '.course-section',
         'sectionId',
-        (ids) => sendReorderSections(ctx, ids),
+        (ids, movedId) => sendReorderSections(ctx, ids, movedId),
         null,
         () => !ctx.state.isStreaming
     );

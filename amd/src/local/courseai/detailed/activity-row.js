@@ -16,21 +16,25 @@
 /**
  * Activity row factory and state helpers for the detailed plan UI.
  *
+ * Builds a li.activity.activity-wrapper element (Moodle cmitem markup) inside
+ * the section's ul.section cmlist so the loaded Boost theme styles it natively.
+ *
  * @module     local_coursegen/local/courseai/detailed/activity-row
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {gripSvg} from './icons';
 import {buildActivityDetailContent} from './detail-content';
 import {recalculateEntryImageCount, setImageBadge, updateDetailedHeaderStats} from './badges';
 import {buildActivityItem, buildActivityActionControls, attachSkeletonProgress} from './activity-dom';
 import {createDetailedSectionRow} from './section-row';
+import {removeTransientActivityPlaceholders} from './pending';
+import {activityPurpose} from './icons';
 
 export {clearSectionEntries} from './activity-state';
 
 /**
- * Create and append an activity row inside the given section body.
+ * Create and append an activity row inside the given section cmlist.
  *
  * @param {Object} ctx
  * @param {Object} options
@@ -38,48 +42,93 @@ export {clearSectionEntries} from './activity-state';
  * @param {string} options.activityId
  * @param {string} options.activityType
  * @param {string} options.activityTitle
- * @param {HTMLElement} options.bodyEl
+ * @param {HTMLElement} options.bodyEl - The section's ul.section cmlist.
  * @returns {Object} The entry stored in state.detailedActivityEls.
  */
 export const createDetailedActivityRow = (ctx, {sectionId, activityId, activityType, activityTitle, bodyEl}) => {
-    const {state, texts} = ctx;
+    const {state, escapeHtml} = ctx;
 
-    const {item, imageBadgeEl, actionsEl, chevronEl, textDiv} = buildActivityItem(ctx, activityType, activityTitle);
+    const {item, actionsEl, chevronEl, textDiv, detailEl} = buildActivityItem(ctx, activityType, activityTitle);
 
-    const detailEl = document.createElement('div');
-    detailEl.className = 'dp-act-detail';
-    detailEl.style.display = 'none';
-
-    const wrap = document.createElement('div');
-    wrap.className = 'dp-activity-wrap';
+    // li.activity.activity-wrapper — the Moodle cmitem and the DnD unit.
+    const safeType = escapeHtml(activityType);
+    const wrap = document.createElement('li');
+    wrap.className = `activity activity-wrapper ${safeType} modtype_${safeType}`;
+    wrap.setAttribute('data-for', 'cmitem');
+    wrap.setAttribute('data-id', activityId);
+    wrap.setAttribute('data-cmid', activityId);
+    // Kept for the existing DnD wirer (idDataset 'activityId') and ui-proposals.
     wrap.dataset.activityId = activityId;
+    // Pending until streamed/planned (custom dim state — Boost has no such class).
+    item.classList.add('cg-activity--pending');
 
     const {iaControl, deleteControl, activityPanelApi} = buildActivityActionControls(
-        ctx, activityId, activityTitle, wrap
+        ctx, activityId, activityTitle, wrap, activityType
     );
 
     actionsEl.appendChild(iaControl);
     actionsEl.appendChild(deleteControl);
 
-    // Activity drag handle (appears before the item content).
-    const activityHandle = document.createElement('span');
-    activityHandle.className = 'dp-drag-handle dp-drag-handle--activity';
-    activityHandle.innerHTML = gripSvg;
-    activityHandle.setAttribute('aria-label', texts.courseai_drag_handle_label || 'Drag to reorder');
-    activityHandle.setAttribute('role', 'img');
-
-    wrap.appendChild(activityHandle);
     wrap.appendChild(item);
     wrap.appendChild(activityPanelApi.panel);
-    wrap.appendChild(detailEl);
 
-    // Insert before the add-activity wrap (last child of bodyEl when present).
+    // On-hover insertion divider (Moodle edit-view affordance): a "+" button centered
+    // on the dashed line above this activity. Hovering the top strip reveals it; a click
+    // opens the section's add-activity panel targeting THIS row's slot, so the new
+    // activity lands BETWEEN rows (not only at the end). The button is a child of the
+    // .activity wrap, so it rides along on reorder and never confuses the reconciler
+    // (which reorders .activity nodes) or the DnD wirer (which keys on .activity).
+    const insertZone = document.createElement('div');
+    insertZone.className = 'cg-insert-zone';
+    insertZone.setAttribute('contenteditable', 'false');
+    insertZone.setAttribute('draggable', 'false');
+    const insertBtn = document.createElement('button');
+    insertBtn.type = 'button';
+    insertBtn.className = 'cg-insert-btn';
+    const insertLabel = (ctx.texts && ctx.texts.courseai_btn_add_activity) || 'Add activity';
+    insertBtn.setAttribute('aria-label', insertLabel);
+    insertBtn.setAttribute('title', insertLabel);
+    insertBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" '
+        + 'stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">'
+        + '<path d="M12 5v14M5 12h14"/></svg>';
+    insertBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const meta = state.detailedSectionMeta[sectionId];
+        if (!meta || typeof meta.openAddActivityAt !== 'function') {
+            return;
+        }
+        // Insert BEFORE this activity: its CURRENT index among the section's rows
+        // (computed at click time, so reorders never leave a stale slot).
+        const list = wrap.parentElement;
+        const rows = list ? Array.prototype.slice.call(list.querySelectorAll('.activity')) : [];
+        const index = rows.indexOf(wrap);
+        // Pass this activity as the anchor so the input opens INLINE right here.
+        meta.openAddActivityAt(index >= 0 ? index : null, wrap);
+    });
+    // A drag started on the zone must not drag the row.
+    insertZone.addEventListener('dragstart', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+    });
+    insertZone.appendChild(insertBtn);
+    wrap.insertBefore(insertZone, wrap.firstChild);
+
+    // Place the new row where a transient placeholder marks its slot (an add at a
+    // specific position): insert IN ITS PLACE so the row appears at the right slot
+    // immediately — no append-at-the-end-then-reorder jump. Falls back to before the
+    // add-activity sentinel (append) when there is no placeholder. The transient is
+    // removed AFTER, so it is replaced in place, never duplicated.
+    const transient = bodyEl.querySelector('[data-cg-transient="activity"]');
     const addWrap = bodyEl.querySelector('.dp-add-activity-wrap');
-    if (addWrap) {
+    if (transient) {
+        bodyEl.insertBefore(wrap, transient);
+    } else if (addWrap) {
         bodyEl.insertBefore(wrap, addWrap);
     } else {
         bodyEl.appendChild(wrap);
     }
+    removeTransientActivityPlaceholders(bodyEl);
 
     // Wire this new wrap into the section's existing DnD setup.
     const sectionMeta = state.detailedSectionMeta[sectionId];
@@ -90,11 +139,12 @@ export const createDetailedActivityRow = (ctx, {sectionId, activityId, activityT
     const progressEl = attachSkeletonProgress(textDiv);
 
     state.detailedActivityEls[activityId] = {
-        item, wrap, textDiv, progressEl, detailEl, imageBadgeEl, chevronEl,
+        item, wrap, textDiv, progressEl, detailEl, imageBadgeEl: null, chevronEl,
         sectionId, previewDescription: '', chapterCount: 0, questionCount: 0,
         imageCount: 0, imageSuggestions: [], hasDetail: false, done: false,
     };
 
+    // Toggle the collapsible detail slot when the activity item is clicked.
     item.addEventListener('click', () => {
         const entry = state.detailedActivityEls[activityId];
         if (!entry || !entry.hasDetail) {
@@ -102,7 +152,7 @@ export const createDetailedActivityRow = (ctx, {sectionId, activityId, activityT
         }
         const isOpen = entry.detailEl.style.display !== 'none';
         entry.detailEl.style.display = isOpen ? 'none' : 'block';
-        entry.chevronEl.classList.toggle('prv-chevron--open', !isOpen);
+        entry.chevronEl.classList.toggle('cg-activity-chevron--open', !isOpen);
     });
 
     return state.detailedActivityEls[activityId];
@@ -135,8 +185,31 @@ export const ensureDetailedSection = (ctx, sectionId) => {
         totalActivities: 0,
     });
     meta = state.detailedSectionMeta[sectionId];
-    if (meta) { meta.bodyEl.style.display = 'flex'; }
     return meta;
+};
+
+/**
+ * Set a section's meta badge to its REAL activity count ("N activities"), counted
+ * from the rendered rows. The old badge interpolated a running done/total pair, but
+ * ``total`` was only incremented on the streaming path and stayed 0 on the reconcile
+ * path (add_section / reload), so the badge showed nonsense like "2/0". Counting the
+ * actual, non-transient activity rows is always correct regardless of how they got
+ * there.
+ *
+ * @param {Object} ctx
+ * @param {string} sectionId
+ * @returns {void}
+ */
+export const refreshSectionMeta = (ctx, sectionId) => {
+    const {state, texts} = ctx;
+    const meta = state && state.detailedSectionMeta[sectionId];
+    if (!meta || !meta.metaEl || !meta.bodyEl) {
+        return;
+    }
+    const count = meta.bodyEl.querySelectorAll('.activity[data-activity-id]:not([data-cg-transient])').length;
+    const label = (texts && texts.courseai_activities_count) || 'activities';
+    meta.total = count;
+    meta.metaEl.textContent = count + ' ' + label;
 };
 
 /**
@@ -147,23 +220,23 @@ export const ensureDetailedSection = (ctx, sectionId) => {
  * @returns {Object|null}
  */
 export const ensureDetailedEntry = (ctx, data) => {
-    const {state, texts, formatTemplate} = ctx;
+    const {state, texts} = ctx;
     const activityId = data.activity_id;
     if (state.detailedActivityEls[activityId]) { return state.detailedActivityEls[activityId]; }
     const sectionId = data.section_id;
     const meta = ensureDetailedSection(ctx, sectionId);
     if (!meta) { return null; }
-    meta.total += 1;
-    meta.metaEl.textContent = formatTemplate(texts.courseai_section_progress_with_total, {
-        done: meta.done, total: meta.total, description: '',
-    });
-    return createDetailedActivityRow(ctx, {
+    const activityIndex = meta.bodyEl.querySelectorAll('.activity[data-activity-id]:not([data-cg-transient])').length;
+    const entry = createDetailedActivityRow(ctx, {
         sectionId, activityId,
-        sectionIndex: meta.total - 1, activityIndex: meta.total - 1,
+        sectionIndex: activityIndex, activityIndex,
         activityType: data.activity_type || 'quiz',
         activityTitle: data.title || texts.courseai_activity_default,
         bodyEl: meta.bodyEl,
     });
+    // Badge reflects the REAL row count (correct on every path), not a running counter.
+    refreshSectionMeta(ctx, sectionId);
+    return entry;
 };
 
 /**
@@ -173,7 +246,7 @@ export const ensureDetailedEntry = (ctx, data) => {
  * @param {Object} data
  */
 export const markActivityPlanned = (ctx, data) => {
-    const {state, texts, formatTemplate, setProgress} = ctx;
+    const {state, setProgress} = ctx;
     const entry = ensureDetailedEntry(ctx, data);
     if (!entry || entry.done) {
         return;
@@ -181,8 +254,8 @@ export const markActivityPlanned = (ctx, data) => {
 
     state.detailedCurrent += 1;
     entry.done = true;
-    entry.item.classList.remove('prv-activity-item--pending');
-    entry.item.classList.add('prv-activity-item--done');
+    entry.item.classList.remove('cg-activity--pending');
+    entry.item.classList.add('cg-activity--done');
 
     // Update progress (cap at 95% to avoid reaching 100% prematurely).
     if (typeof setProgress === 'function') {
@@ -219,8 +292,9 @@ export const markActivityPlanned = (ctx, data) => {
     const descriptionText = parsed.activity_description || entry.previewDescription || '';
     if (descriptionText) {
         const desc = document.createElement('p');
-        desc.className = 'prv-activity-desc';
+        desc.className = 'cg-activity-desc';
         desc.textContent = descriptionText;
+        entry.textDiv.style.display = '';
         entry.textDiv.appendChild(desc);
     }
 
@@ -229,7 +303,7 @@ export const markActivityPlanned = (ctx, data) => {
         entry.detailEl.innerHTML = '';
         entry.detailEl.appendChild(detailContent);
         entry.hasDetail = true;
-        entry.item.classList.add('prv-activity-item--has-detail');
+        entry.item.classList.add('cg-activity--has-detail');
         entry.chevronEl.style.visibility = 'visible';
     }
 
@@ -237,9 +311,9 @@ export const markActivityPlanned = (ctx, data) => {
     const meta = state.detailedSectionMeta[sectionId];
     if (meta) {
         meta.done += 1;
-        meta.metaEl.textContent = formatTemplate(texts.courseai_section_progress_with_total, {
-            done: meta.done, total: meta.total, description: '',
-        });
+        // Planning an activity does not change the row count, but keep the badge in
+        // sync with the real rows anyway (and never show a done/total pair).
+        refreshSectionMeta(ctx, sectionId);
         setImageBadge(ctx, meta.imagesBadgeEl, meta.imagesCount || 0);
     }
 
@@ -250,3 +324,6 @@ export const markActivityPlanned = (ctx, data) => {
 
     updateDetailedHeaderStats(ctx);
 };
+
+// activityPurpose re-exported so callers needing the map import from one place.
+export {activityPurpose};

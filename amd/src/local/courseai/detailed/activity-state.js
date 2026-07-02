@@ -31,8 +31,11 @@ export const clearSectionEntries = (ctx, sectionId) => {
     const {state} = ctx;
     Object.entries(state.detailedActivityEls).forEach(([key, entry]) => {
         if (entry.sectionId === sectionId) {
-            if (entry.item && entry.item.parentNode) {
-                entry.item.remove();
+            // Remove the whole li.activity wrap (the DnD unit), not just the
+            // inner div.activity-item.
+            const node = entry.wrap || entry.item;
+            if (node && node.parentNode) {
+                node.remove();
             }
             delete state.detailedActivityEls[key];
         }

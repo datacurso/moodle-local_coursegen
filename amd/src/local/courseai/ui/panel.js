@@ -30,12 +30,13 @@
  *
  * @param {Object}   opts
  * @param {Function} opts.onSubmit    - Called with the trimmed text value when send is clicked.
+ * @param {Function} [opts.onCancel]  - Called when the panel is cancelled (Cancel button).
  * @param {Object}   opts.texts       - Pre-loaded lang strings (courseai_btn_cancel, courseai_btn_send_adjust,
  *                                      courseai_adjust_placeholder).
  * @param {string}   [opts.placeholder] - Optional placeholder text; defaults to texts.courseai_adjust_placeholder.
  * @returns {{ panel: HTMLElement, open: Function }}
  */
-export const createTextPanel = ({onSubmit, texts, placeholder}) => {
+export const createTextPanel = ({onSubmit, onCancel, texts, placeholder}) => {
     const resolvedPlaceholder = placeholder !== undefined ? placeholder : (texts.courseai_adjust_placeholder || '');
 
     const panel = document.createElement('div');
@@ -65,12 +66,12 @@ export const createTextPanel = ({onSubmit, texts, placeholder}) => {
         event.stopPropagation();
         panel.style.display = 'none';
         textarea.value = '';
+        if (typeof onCancel === 'function') {
+            onCancel();
+        }
     };
 
-    cancel.addEventListener('click', closePanel);
-    send.addEventListener('click', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
+    const submit = () => {
         const value = textarea.value.trim();
         if (!value) {
             textarea.focus();
@@ -79,6 +80,22 @@ export const createTextPanel = ({onSubmit, texts, placeholder}) => {
         onSubmit(value);
         panel.style.display = 'none';
         textarea.value = '';
+    };
+
+    cancel.addEventListener('click', closePanel);
+    send.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        submit();
+    });
+    // Enter sends the adjustment (like the Send button); Shift+Enter keeps the
+    // newline so multi-line instructions are still possible.
+    textarea.addEventListener('keydown', (event) => {
+        if (event.key === 'Enter' && !event.shiftKey) {
+            event.preventDefault();
+            event.stopPropagation();
+            submit();
+        }
     });
 
     actions.appendChild(cancel);
@@ -95,4 +112,40 @@ export const createTextPanel = ({onSubmit, texts, placeholder}) => {
             }
         },
     };
+};
+
+/**
+ * Open a text panel INLINE at a specific spot — inserted right before `anchor` in the
+ * DOM — so the input appears exactly where the user clicked the "+" insert divider,
+ * not in the section's shared bottom panel. Only one inline panel exists at a time;
+ * it removes itself on submit or cancel.
+ *
+ * @param {Object}      opts
+ * @param {HTMLElement} opts.anchor      - The element the panel is inserted BEFORE (the
+ *                                         activity/section at the clicked position).
+ * @param {Object}      opts.texts       - Localized strings.
+ * @param {string}      [opts.placeholder] - Textarea placeholder.
+ * @param {Function}    opts.onSubmit    - Called with the trimmed value on send.
+ * @returns {void}
+ */
+export const openInlineAddPanel = ({anchor, texts, placeholder, onSubmit}) => {
+    // Only one inline add-panel at a time.
+    document.querySelectorAll('.dp-inline-add').forEach((el) => el.remove());
+    if (!anchor || !anchor.parentNode) {
+        return;
+    }
+    const wrap = document.createElement('div');
+    wrap.className = 'dp-inline-add';
+    const api = createTextPanel({
+        texts,
+        placeholder,
+        onSubmit: (value) => {
+            wrap.remove();
+            onSubmit(value);
+        },
+        onCancel: () => wrap.remove(),
+    });
+    wrap.appendChild(api.panel);
+    anchor.parentNode.insertBefore(wrap, anchor);
+    api.open();
 };

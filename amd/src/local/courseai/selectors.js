@@ -83,6 +83,8 @@ export const getCourseaiElements = () => {
         planActions: document.getElementById('planActions'),
         planActionsHint: document.getElementById('planActionsHint'),
         btnApprove: document.getElementById('btnApprove'),
+        contextChat: document.getElementById('courseaiContextChat'),
+        chatScroll: document.getElementById('courseaiChatScroll'),
         compactChatCard: document.getElementById('compactChatCard'),
         compactPromptInput: document.getElementById('compactPromptInput'),
         initialPromptHistory: document.getElementById('courseaiInitialPromptHistory'),

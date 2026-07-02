@@ -21,6 +21,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {showWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
+
 /**
  * Emit a log entry if emitLog is wired.
  *
@@ -72,9 +74,25 @@ export const handleGenerate = async(ctx) => {
     state.initialPrompt = prompt;
     renderInitialPromptHistory(prompt);
 
-    const truncated = prompt.length > 80 ? prompt.slice(0, 80) + '…' : prompt;
-    const userRequestMsg = (texts.courseai_log_user_request || 'You: {$a}').replace('{$a}', truncated);
-    log({actor: 'user', kind: 'user', message: userRequestMsg}, emitLog);
+    // The initial prompt is the FIRST turn of the conversation thread (§7.1):
+    // emit the FULL text (no truncation) — the thread truncates long turns
+    // visually with a fade + "show more" control. No "You:" prefix; the turn's
+    // own styling distinguishes the speaker.
+    log({actor: 'user', kind: 'user', message: prompt}, emitLog);
+
+    // The LEFT panel must NEVER be blank after the prompt turn. The planning view
+    // (which hosts the conversation thread + working indicator) used to be revealed
+    // only AFTER initSession resolved — a network round-trip — so the indicator was
+    // appended into a still-hidden container (offsetParent null) and the user saw the
+    // prompt with blank space below for the whole init RTT. Reveal the planning view
+    // NOW, before the await, then show the live "working" indicator inside it.
+    // transitionToPlanning only flips view state (no sessionid/streamingurl needed),
+    // so it is safe to call this early; on init failure the catch reverts via
+    // backToContext. handleStatus updates this same indicator in place once the
+    // stream produces its first status; it is cleared only when real structure lands.
+    stepsUi.transitionToPlanning();
+    planningUi.syncCompactChatState();
+    showWorkingIndicator(texts);
 
     if (btnGenerate) {
         btnGenerate.disabled = true;
@@ -155,13 +173,16 @@ export const handleGenerate = async(ctx) => {
             }
         }
 
-        stepsUi.transitionToPlanning();
-        // Sync chips (syllabus, guideline, images, lang) to the compact chat immediately
-        // so they are visible from the moment phase 2 streaming begins.
-        planningUi.syncCompactChatState();
+        // View + chips were already transitioned before the await; just open the stream.
         streamManager.openSSEStream(state.streamingurl);
     } catch (error) {
         await Notification.exception(error);
-        stepsUi.renderGenerateButtonDefault();
+        // The planning view was revealed before the await; init failed, so revert to the
+        // context form. backToContext clears the prompt input, so restore it afterwards
+        // (preserving the typed prompt) — the user can simply retry without re-typing.
+        stepsUi.backToContext();
+        if (promptInput) {
+            promptInput.value = prompt;
+        }
     }
 };

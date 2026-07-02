@@ -27,6 +27,7 @@ export const RADIO_NAME = 'courseai-proposal-choice';
 /** Value used for the "Something else" radio option. */
 export const OTHER_VALUE = '__other__';
 
+
 /**
  * Build and return a proposal card element (label wrapping a radio input).
  *
@@ -47,6 +48,27 @@ export const buildProposalCard = (proposal, localizedSummary, texts) => {
     radio.name = RADIO_NAME;
     radio.value = proposal.proposal_id;
     radio.className = 'plan-proposal-radio';
+    // UUIDs of the sections/activities this proposal touches, so selecting it
+    // highlights EXACTLY those elements in the center preview. Prefer the explicit
+    // target_ids (edit/delete/reorder/regenerate target real elements); only fall
+    // back to parent_section_id for add_* actions, where the target does not exist
+    // yet and the parent section is the thing being affected. Never highlight the
+    // whole section when a single activity is the target.
+    const intent = proposal.intent || {};
+    const targetIds = [];
+    if (Array.isArray(intent.target_ids) && intent.target_ids.length) {
+        targetIds.push(...intent.target_ids);
+    }
+    // add_* actions have no target id yet (the element does not exist). Their highlight
+    // is resolved at select time to the MOST SPECIFIC reference element — the neighbour
+    // activity for add_activity, the neighbour section for add_section — by
+    // anchorTargetFromIntent, so leave targetIds empty here rather than falling back to
+    // the whole parent section (which would highlight too broad an element).
+    radio.dataset.targetIds = JSON.stringify(targetIds);
+    // Full intent (action + target_ids + parent_section_id + position) so the apply
+    // handler can put the loading skeleton on EXACTLY the element this proposal
+    // affects the moment it is dispatched (see markProposalTargetPending).
+    radio.dataset.intent = JSON.stringify(intent);
 
     const textSpan = document.createElement('span');
     textSpan.className = 'plan-proposal-summary';

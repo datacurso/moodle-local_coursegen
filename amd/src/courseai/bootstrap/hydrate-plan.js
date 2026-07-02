@@ -29,23 +29,22 @@
  */
 export const makeHydratePlan = (detailedUi) => {
     /**
-     * Hydrate the detailed plan UI from a snapshot's section array.
+     * Hydrate the detailed plan UI from a snapshot's RAW plan sections.
      *
-     * @param {Array} sections
-     * @returns {void}
+     * Uses the same diff reconciler as the live review (`reconcilePlan`) instead
+     * of replaying index-keyed activity events: the live path keys by section/
+     * activity UUID, so the index-based replay never attached the activities
+     * (sections rendered as empty "0/N" shells on reload). The sections passed
+     * here must be the raw plan (with `id` and nested `detailed_plan`), not the
+     * index-stripped UI shape.
+     *
+     * @param {Array} sections - raw plan sections (with ids + detailed_plan)
+     * @returns {Promise<void>}
      */
-    return (sections) => {
-        detailedUi.initDetailedPlanView({sections});
-        sections.forEach((section, sectionIndex) => {
-            (section.activities || []).forEach((activity, activityIndex) => {
-                detailedUi.handleDetailedPlanActivity({
-                    section_index: section.section_index ?? sectionIndex,
-                    activity_index: activityIndex,
-                    title: activity.title,
-                    activity_type: activity.activity_type,
-                    data: activity.detailed_plan || {},
-                });
-            });
-        });
+    return async(sections) => {
+        // Prepare the detailed view container + reset the diff maps so the
+        // reconciler renders everything fresh (no animations on an empty map).
+        detailedUi.initDetailedPlanView({renderSections: false});
+        await detailedUi.reconcilePlan(sections);
     };
 };

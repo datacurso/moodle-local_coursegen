@@ -16,85 +16,103 @@
 /**
  * Low-level DOM builders for section rows in the detailed plan UI.
  *
+ * Emits the same markup as core_courseformat (section.mustache + section/header
+ * + section/content + cmlist) so the loaded Boost theme styles the preview
+ * identically to a real "Custom sections" course view.
+ *
  * @module     local_coursegen/local/courseai/detailed/section-dom
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 import {createActionControl} from './controls';
-import {iaSparklesSvg, getCoreIconUrl, gripSvg} from './icons';
+import {iaSparklesSvg, getCoreIconUrl} from './icons';
 
 /**
- * Build the skeleton elements for a section row (meta, badge, body, chevron, btn).
+ * Build the chevron toggle anchor (Boost icons-collapse-expand) for a section.
+ *
+ * @param {string} uuid        - Section UUID, used for the collapse target id.
+ * @param {string} sectionName - Accessible label for the toggle.
+ * @returns {HTMLAnchorElement}
+ */
+const buildCollapseToggle = (uuid, sectionName) => {
+    const toggle = document.createElement('a');
+    toggle.setAttribute('role', 'button');
+    // NOTE: deliberately NO data-toggle="collapse". Boost loads Bootstrap 4 whose
+    // delegated [data-toggle="collapse"] document handler would ALSO toggle the
+    // panel on click, fighting our own handler (two toggles = no net change). We
+    // own the collapse explicitly via the click listener in section-row.js.
+    toggle.setAttribute('data-for', 'sectiontoggler');
+    toggle.setAttribute('href', `#coursecontentcollapseid${uuid}`);
+    toggle.setAttribute('aria-expanded', 'true');
+    toggle.setAttribute('aria-controls', `coursecontentcollapseid${uuid}`);
+    toggle.setAttribute('aria-label', sectionName || '');
+    toggle.className = 'btn btn-icon me-3 icons-collapse-expand justify-content-center';
+    const expandedUrl = getCoreIconUrl('t/expandedchevron');
+    const collapsedUrl = getCoreIconUrl('t/collapsedchevron');
+    toggle.innerHTML =
+        '<span class="expanded-icon icon-no-margin p-2">' +
+        `<img src="${expandedUrl}" alt="" class="icon"></span>` +
+        '<span class="collapsed-icon icon-no-margin p-2">' +
+        `<img src="${collapsedUrl}" alt="" class="icon"></span>`;
+    return toggle;
+};
+
+/**
+ * Build the skeleton elements for a section row using Moodle markup.
  *
  * @param {Object} ctx
  * @param {string} sectionId
  * @param {number} renderIndex
  * @param {string} sectionName
  * @param {number} totalActivities
- * @returns {{metaEl, imagesBadgeEl, bodyEl, chevronEl, btn, infoDiv, actionsEl, sectionHandle, rowRef}}
+ * @returns {Object} Element references used to assemble the row.
  */
 export const buildSectionRowSkeleton = (ctx, sectionId, renderIndex, sectionName, totalActivities) => {
-    const {texts, formatTemplate} = ctx;
+    const {texts, formatTemplate, escapeHtml} = ctx;
 
-    const metaEl = document.createElement('p');
-    metaEl.className = 'prv-section-meta';
-    metaEl.textContent = formatTemplate(texts.courseai_section_progress_with_total, {
-        done: 0, total: totalActivities, description: '',
-    });
+    // Activity-count badge — a plain "{N} activities" count (Moodle-style), refreshed
+    // from the real rows by refreshSectionMeta. NOT a done/total progress pair, which
+    // desynced across the streaming vs reconcile paths and showed nonsense like "2/0".
+    const metaEl = document.createElement('span');
+    metaEl.className = 'cg-section-meta badge bg-light text-muted';
+    metaEl.textContent = (totalActivities || 0) + ' ' + (texts.courseai_activities_count || 'activities');
 
     const imagesBadgeEl = document.createElement('span');
-    imagesBadgeEl.className = 'prv-image-pill';
+    imagesBadgeEl.className = 'cg-image-pill badge bg-light text-muted ms-2';
     imagesBadgeEl.style.display = 'none';
 
-    const metaRowEl = document.createElement('div');
-    metaRowEl.className = 'prv-section-meta-row';
-    metaRowEl.appendChild(metaEl);
-    metaRowEl.appendChild(imagesBadgeEl);
+    // Collapse toggle (chevron) — Boost swaps the icon via the .collapsed class.
+    const chevronEl = buildCollapseToggle(sectionId, sectionName);
 
-    const bodyEl = document.createElement('div');
-    bodyEl.className = 'prv-section-body';
-    bodyEl.style.display = 'none';
-
-    const chevronEl = document.createElement('span');
-    chevronEl.className = 'prv-chevron';
-    chevronEl.innerHTML = [
-        '<svg width="14" height="14" viewBox="0 0 24 24" fill="none"',
-        'stroke="currentColor" stroke-width="2.5" stroke-linecap="round"',
-        'stroke-linejoin="round" aria-hidden="true">',
-        '<polyline points="9 18 15 12 9 6"/></svg>'
-    ].join(' ');
-
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'prv-section-btn';
-    btn.innerHTML = `<span class="prv-section-badge">${renderIndex + 1}</span>`;
-
-    const infoDiv = document.createElement('div');
-    infoDiv.className = 'prv-section-info';
-
-    const titleEl = document.createElement('p');
-    titleEl.className = 'prv-section-title';
+    // Section title heading (Moodle uses h3.h4.sectionname).
+    const titleEl = document.createElement('h3');
+    titleEl.className = 'h4 sectionname course-content-item d-flex align-self-stretch align-items-center mb-0';
+    titleEl.setAttribute('data-for', 'section_title');
+    titleEl.setAttribute('data-id', sectionId);
+    titleEl.setAttribute('data-number', String(renderIndex + 1));
     titleEl.textContent = sectionName
         || formatTemplate(texts.courseai_section_label, {section: renderIndex + 1, name: ''});
 
-    infoDiv.appendChild(titleEl);
-    infoDiv.appendChild(metaRowEl);
+    // Collapse panel (the section body / content) holding the cmlist.
+    const bodyEl = document.createElement('div');
+    bodyEl.id = `coursecontentcollapseid${escapeHtml(sectionId)}`;
+    bodyEl.className = 'content course-content-item-content collapse show';
 
+    // Activity list (ul.section.img-text) — activity <li> rows live here.
+    const cmlistEl = document.createElement('ul');
+    cmlistEl.className = 'section m-0 p-0 img-text d-block';
+    cmlistEl.setAttribute('data-for', 'cmlist');
+    bodyEl.appendChild(cmlistEl);
+
+    // Action controls cluster (AI adjust + delete) — placed in the header.
     const actionsEl = document.createElement('div');
-    actionsEl.className = 'dp-item-actions dp-item-actions--section';
-
-    // Drag handle for section row (appears to the left; only it initiates drag).
-    const sectionHandle = document.createElement('span');
-    sectionHandle.className = 'dp-drag-handle dp-drag-handle--section';
-    sectionHandle.innerHTML = gripSvg;
-    sectionHandle.setAttribute('aria-label', texts.courseai_drag_handle_label || 'Drag to reorder');
-    sectionHandle.setAttribute('role', 'img');
+    actionsEl.className = 'cg-item-actions cg-item-actions--section ms-auto d-flex align-items-center';
 
     // Mutable row reference for panel callbacks (assigned after DOM assembly).
     const rowRef = {current: null};
 
-    return {metaEl, imagesBadgeEl, bodyEl, chevronEl, btn, infoDiv, actionsEl, sectionHandle, rowRef};
+    return {metaEl, imagesBadgeEl, bodyEl, cmlistEl, chevronEl, titleEl, actionsEl, rowRef};
 };
 
 /**
@@ -122,11 +140,14 @@ export const buildSectionActionControls = (ctx, sectionId, sectionName, rowRef) 
             focusChange(row, 'info');
             row.classList.add('dp-item-regenerating');
             iaControl.classList.add('dp-action-btn--disabled');
-            log({
-                actor: 'user', kind: 'info',
-                message: (texts.courseai_log_regenerated_section || 'You regenerated section «{$a}»')
-                    .replace('{$a}', sectionName),
-            });
+            // ONE turn that shows what the user asked AND which section it targets.
+            const instruction = (value || '').trim();
+            const target = (texts.courseai_section_word || 'Section') + ': ' + sectionName;
+            const message = instruction
+                ? instruction + ' — ' + target
+                : (texts.courseai_log_regenerated_section || 'You regenerated section: {$a}')
+                    .replace('{$a}', sectionName);
+            log({actor: 'user', kind: 'user', message});
             try {
                 await runPlanAction({action: 'replan_section', target_ids: [sectionId], instruction: value});
             } catch (e) {
@@ -160,7 +181,7 @@ export const buildSectionActionControls = (ctx, sectionId, sectionName, rowRef) 
             }
             log({
                 actor: 'user', kind: 'danger',
-                message: (texts.courseai_log_deleted_section || 'You deleted section «{$a}»')
+                message: (texts.courseai_log_deleted_section || 'You deleted section: {$a}')
                     .replace('{$a}', sectionName),
             });
             row.classList.add('dp-item-regenerating');

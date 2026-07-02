@@ -36,7 +36,6 @@ import {createLog} from 'local_coursegen/local/courseai/ui/log';
 export const makeEmitLog = (state) => {
     const logContainer = document.getElementById('cgLog');
     const actionContainer = document.getElementById('cgLogAfter');
-    const logSection = document.getElementById('cgLogSection');
     const courseaiLog = createLog({
         container: logContainer,
         actionContainer,
@@ -44,15 +43,15 @@ export const makeEmitLog = (state) => {
     });
 
     /**
-     * Show the log section and emit an entry.
+     * Emit a turn into the conversation thread.
+     *
+     * The thread feed (#cgLog) is always visible now — there is no rigid log
+     * section to reveal — so this just forwards to the feed renderer.
      *
      * @param {Object} logParams
      * @returns {void}
      */
     const emitLog = (logParams) => {
-        if (logSection && logSection.style.display === 'none') {
-            logSection.style.display = '';
-        }
         courseaiLog.add(logParams);
     };
 

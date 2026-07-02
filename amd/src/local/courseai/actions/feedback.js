@@ -22,6 +22,13 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {
+    showFeedbackThinking,
+    hideWorkingIndicator,
+} from 'local_coursegen/local/courseai/ui/feedback-progress';
+import {getDecisionOverlay} from 'local_coursegen/local/courseai/ui/decision-overlay';
+import {renderApprovedPlanSummary} from 'local_coursegen/local/courseai/ui/regen-block';
+
 /**
  * Emit a log entry if emitLog is wired.
  *
@@ -69,12 +76,22 @@ export const sendFeedbackAction = async(action, ctx) => {
         planningSpinner,
         pcSubtitle,
         compactPromptInput,
-        adjustmentHistory,
     } = elements;
 
     if (!state.sessionid) {
         return;
     }
+
+    // Approving is terminal for this wizard: the course is created and can no longer
+    // be edited from here. Mark it BEFORE the first setCompactChatState below so the
+    // composer is hidden from this point on (through generation and completion).
+    if (action === 'accept') {
+        state.planApproved = true;
+        document.body.classList.add('cg-plan-approved');
+    }
+
+    // WU4: hide the decision overlay as soon as the user acts (accept or adjust).
+    getDecisionOverlay().hide();
 
     if (btnApprove) {
         btnApprove.disabled = true;
@@ -112,43 +129,39 @@ export const sendFeedbackAction = async(action, ctx) => {
             ? compactPromptInput.value.trim()
             : '';
 
-        // Log the user instruction
+        // Free-text feedback is a post-review action. Mark the plan reviewed so
+        // the decision-log feed flows at the END (below the checklist) even after
+        // a reload — where the live review_needed handler that normally sets this
+        // never ran. Log the user message ONCE (the unified feed; no separate
+        // adjustment-history bubble) and show a progress indicator so the feed
+        // never looks stuck while the AI interprets the request.
         if (action === 'adjust' && instruction) {
+            state.planEverReviewed = true;
             const truncatedInstruction = instruction.length > 80 ? instruction.slice(0, 80) + '…' : instruction;
-            const adjustMsg = (texts.courseai_log_user_request || 'You: {$a}').replace('{$a}', truncatedInstruction);
-            log({actor: 'user', kind: 'user', message: adjustMsg}, emitLog);
-        }
-
-        // Show adjustment as a chat message paired with a response slot
-        if (action === 'adjust' && instruction && adjustmentHistory) {
-            const round = (state.generationRound || 0) + 1;
-            const roundContainer = document.createElement('div');
-            roundContainer.className = 'courseai-round';
-            roundContainer.setAttribute('data-round', round);
-
-            const msgEl = document.createElement('div');
-            msgEl.className = 'courseai-chat-history';
-
-            const messageBubble = document.createElement('div');
-            messageBubble.className = 'courseai-chat-message courseai-chat-message--user';
-
-            const messageText = document.createElement('p');
-            messageText.textContent = instruction;
-
-            messageBubble.appendChild(messageText);
-            msgEl.appendChild(messageBubble);
-
-            const responseSlot = document.createElement('div');
-            responseSlot.className = 'courseai-round-response';
-            responseSlot.setAttribute('data-round', round);
-
-            roundContainer.appendChild(msgEl);
-            roundContainer.appendChild(responseSlot);
-            adjustmentHistory.appendChild(roundContainer);
-            adjustmentHistory.classList.remove('hidden');
+            // The turn is already a right-aligned user bubble, so a "You:" label is
+            // redundant — show just the user's own words.
+            log({actor: 'user', kind: 'user', message: truncatedInstruction}, emitLog);
+            showFeedbackThinking(texts);
             if (compactPromptInput) {
                 compactPromptInput.value = '';
             }
+        }
+
+        // Approving the plan is a user action too — surface it as a coherent turn
+        // (no « », concise) so the thread never goes silent on approve.
+        if (action === 'accept') {
+            state.planEverReviewed = true;
+            log({
+                actor: 'user',
+                kind: 'success',
+                message: texts.courseai_log_user_approved || 'You approved the plan',
+            }, emitLog);
+            // Show the COMPLETE detail of everything the user just approved (every
+            // section, its activities and detailed plans) right below the turn, so
+            // the approval is concrete. The persisted approved snapshot renders the
+            // same block on reload (see thread-replay).
+            renderApprovedPlanSummary(state.lastReviewedPlan || state.latestInitialSections || []);
+            showFeedbackThinking(texts);
         }
 
         // Plan actions travel as ActionIntents: a bare approve is action
@@ -201,12 +214,17 @@ export const sendFeedbackAction = async(action, ctx) => {
         }
 
         const streamMode = action === 'accept' ? 'generating' : 'planning';
-        // keepPlan: an 'adjust' resumes the existing plan to apply free-text feedback,
-        // so preserve the rendered preview and let the reconciler diff against it
-        // (only changed rows animate). 'accept' transitions to generation → full reset.
-        const keepPlan = action !== 'accept';
+        // keepPlan: preserve the rendered plan preview. 'adjust' lets the reconciler
+        // diff against it; 'accept' now KEEPS it too, because generation reuses the
+        // SAME cards as a live progress view (per-activity spinner→check) instead of a
+        // separate progress panel — so the cards (with their full descriptions) must
+        // survive the transition rather than being torn down and re-skeletoned.
+        const keepPlan = true;
         streamManager.openSSEStream(state.streamingurl, 0, streamMode, keepPlan);
     } catch (error) {
+        // The stream never opened — clear the live indicator so it does not
+        // linger after the error modal closes (no lifecycle event will arrive).
+        hideWorkingIndicator();
         await Notification.exception(error);
     } finally {
         if (btnApprove) {

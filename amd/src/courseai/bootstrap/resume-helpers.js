@@ -58,19 +58,21 @@ export const makeResumeHelpers = ({state, elements, texts, params}) => {
         return fromUrl > 0 ? fromUrl : 0;
     };
 
-    const resumeLoadingView = document.getElementById('resumeLoadingView');
-
     /**
-     * Show or hide the resume boot loading overlay.
+     * Show or hide the in-place boot skeletons (left checklist + center cards).
+     * On reload the real planning chrome renders immediately; only these
+     * service-driven content areas show a skeleton until the snapshot hydrates.
      *
      * @param {boolean} loading
      * @returns {void}
      */
     const setResumeBootLoading = (loading) => {
-        if (!resumeLoadingView) {
-            return;
-        }
-        resumeLoadingView.style.display = loading ? '' : 'none';
+        ['cgLeftSkeleton', 'cgCenterSkeleton'].forEach((id) => {
+            const el = document.getElementById(id);
+            if (el) {
+                el.style.display = loading ? '' : 'none';
+            }
+        });
     };
 
     /**

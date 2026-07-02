@@ -24,6 +24,10 @@
  */
 
 import {routeEvent} from './handlers';
+import {
+    hideWorkingIndicator,
+    showWorkingIndicator,
+} from 'local_coursegen/local/courseai/ui/feedback-progress';
 
 /** Maximum number of stale-done retries before giving up. */
 const MAX_STALE_RETRIES = 3;
@@ -55,14 +59,40 @@ export const openConnection = (streamUrl, retryAttempt, ctx, openSSEStream) => {
 
     state.sseSource = new EventSource(streamUrl);
 
-    state.sseSource.addEventListener('message', async(event) => {
+    // Show a working indicator the instant the stream opens, so the left panel is
+    // NEVER blank between the prompt turn and the first server status (the first
+    // status can take a while). handleStatus updates this SAME entry in place as
+    // statuses arrive, so the message is continuous — it only changes when the
+    // next one is ready, and is cleared only when real content lands. Skip if an
+    // indicator is already present (e.g. feedback's "Analyzing your request…").
+    if (!document.getElementById('cgFeedbackThinking')) {
+        showWorkingIndicator(texts);
+    }
+
+    // Serialize handlers so SSE events are processed STRICTLY in arrival order.
+    // EventSource does NOT await an async 'message' listener, so two events that
+    // arrive back-to-back run their async handlers concurrently — and a slower
+    // one can finish AFTER a later event and undo its work. Concretely: a fast
+    // reorder emits `status` then `review_needed`; handleStatus awaits
+    // localizeMessage and re-showed the "working" indicator AFTER
+    // handleReviewNeeded had already cleared it, leaving it stuck. Chaining each
+    // routeEvent on the previous keeps ordering and fixes that class of races.
+    let eventQueue = Promise.resolve();
+    state.sseSource.addEventListener('message', (event) => {
         let data = null;
         try {
             data = JSON.parse(event.data);
         } catch (e) {
             return;
         }
-        await routeEvent(data, ctx);
+        // This attempt produced a real message, so a following 'done' is NOT a
+        // stale buffered one (the stale-done guard only fires when a 'done'
+        // arrives with NO message before it). Set it SYNCHRONOUSLY — before the
+        // async queue — so a fast adjustment (e.g. reorder, which emits only
+        // status + review_needed and no content events) is never retried, which
+        // was duplicating the "I finished planning" milestone.
+        ctx.flags.contentReceived = true;
+        eventQueue = eventQueue.then(() => routeEvent(data, ctx)).catch(() => {});
     });
 
     state.sseSource.addEventListener('done', () => {
@@ -79,6 +109,9 @@ export const openConnection = (streamUrl, retryAttempt, ctx, openSSEStream) => {
             return;
         }
 
+        // Terminal 'done' (no retry): drop the live working indicator so it can
+        // never linger when the stream closes without a lifecycle event.
+        hideWorkingIndicator();
         if (typeof ctx.hideStreamBar === 'function') {
             ctx.hideStreamBar();
         }
@@ -98,12 +131,38 @@ export const openConnection = (streamUrl, retryAttempt, ctx, openSSEStream) => {
         // Stream completed normally — keep chat disabled during generating phase.
         if (streamMode !== 'generating') {
             state.isStreaming = false;
-            setCompactChatState(deps, 'enabled');
+            // Defer the composer-enable behind the event queue. This 'done' listener
+            // runs SYNCHRONOUSLY, outside the async message queue, so it can fire
+            // BEFORE a just-arrived review_needed has been processed. At that instant
+            // the decision overlay is not visible yet, so setCompactChatState('enabled')
+            // would surface the composer for one frame until review_needed hides it —
+            // a 1-frame flash. Chaining onto eventQueue runs the enable AFTER
+            // review_needed settles, so we skip it entirely once a review has claimed
+            // the bottom slot (cg-plan-reviewed). The safety-net enable still fires when
+            // the stream ended WITHOUT a review (stale/dead stream), so the user is
+            // never left without a composer.
+            eventQueue = eventQueue.then(() => {
+                if (!document.body.classList.contains('cg-plan-reviewed')) {
+                    setCompactChatState(deps, 'enabled');
+                }
+            });
         }
     });
 
     state.sseSource.onerror = () => {
+        // EventSource auto-reconnects on TRANSIENT drops (proxy/idle timeout between
+        // sparse planning events). The browser fires 'onerror' with readyState
+        // CONNECTING while it silently retries — this is NOT fatal. Treating it as
+        // fatal (hiding the indicator, enabling chat, showing a connection error)
+        // made the LEFT panel flap to blank every few seconds during slow phases.
+        // Keep everything alive while reconnecting; only CLOSED is a real failure.
+        if (state.sseSource && state.sseSource.readyState === EventSource.CONNECTING) {
+            return;
+        }
         state.isStreaming = false;
+        // Connection dropped — clear the live working indicator so it does not
+        // stay pinned forever on abnormal stream termination.
+        hideWorkingIndicator();
         if (typeof ctx.hideStreamBar === 'function') {
             ctx.hideStreamBar();
         }

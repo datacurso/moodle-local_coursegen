@@ -35,7 +35,7 @@ import {
     getGenerateButtonHtml,
     formatTemplate,
 } from 'local_coursegen/local/courseai/utils';
-import {loadCourseaiStrings} from 'local_coursegen/local/courseai/i18n';
+import {loadCourseaiStrings, localizeMessage} from 'local_coursegen/local/courseai/i18n';
 import {getCourseaiElements} from 'local_coursegen/local/courseai/selectors';
 import {createInitialState} from 'local_coursegen/local/courseai/state';
 import {createContextUi} from 'local_coursegen/local/courseai/ui-context';
@@ -45,12 +45,14 @@ import {createDetailedUi} from 'local_coursegen/local/courseai/ui-detailed';
 import {createStreamManager} from 'local_coursegen/local/courseai/stream';
 import {createCourseaiActions} from 'local_coursegen/local/courseai/actions';
 import {initSidebar} from 'local_coursegen/local/courseai/sidebar';
+import {wireReadyToggle} from 'local_coursegen/local/courseai/planning/compact-chat';
 import {createProposalsUi} from 'local_coursegen/local/courseai/ui-proposals';
 import {createRunPlanAction} from 'local_coursegen/local/courseai/actions/plan-action';
 import {createSplitter} from 'local_coursegen/local/courseai/ui/splitter';
 import {makeResumeHelpers} from 'local_coursegen/courseai/bootstrap/resume-helpers';
-import {makeChecklistHelpers} from 'local_coursegen/courseai/bootstrap/checklist-helpers';
+import {makeChecklistHelpers, initChecklistCollapse} from 'local_coursegen/courseai/bootstrap/checklist-helpers';
 import {makeResumeFromSnapshot} from 'local_coursegen/courseai/bootstrap/resume-snapshot';
+import {makeThreadReplay} from 'local_coursegen/courseai/bootstrap/thread-replay';
 import {makeCreateCourseCallback} from 'local_coursegen/courseai/bootstrap/create-course-callback';
 import {makeEmitLog, makeRenderPlanMarkdown} from 'local_coursegen/courseai/bootstrap/ui-helpers';
 import {makeHydratePlan} from 'local_coursegen/courseai/bootstrap/hydrate-plan';
@@ -95,6 +97,7 @@ export const init = async(params) => {
 
         const runPlanAction = createRunPlanAction({
             state,
+            texts,
             sendPlanningFeedback,
             openSSEStream: (url, retry, mode, keepPlan) =>
                 streamManager.openSSEStream(url, retry, mode, keepPlan),
@@ -120,6 +123,7 @@ export const init = async(params) => {
             formatTemplate,
             runPlanAction,
             emitLog,
+            detailedUi,
         });
 
         const planningUi = createPlanningUi({
@@ -206,6 +210,17 @@ export const init = async(params) => {
         const hydrateDetailedPlanFromSnapshot = makeHydratePlan(detailedUi);
         const resumeSessionId = getResumeSessionId();
 
+        // Server-side thread replay (single source of truth for the left feed on
+        // reload). Falls back to the legacy rebuild inside resume-snapshot when
+        // the snapshot carries no thread (pre-migration sessions).
+        const {replayThread} = makeThreadReplay({
+            state,
+            emitLog,
+            localizeMessage,
+            renderProposals: proposalsUi.renderProposals,
+            texts,
+        });
+
         const resumeFromSnapshot = makeResumeFromSnapshot({
             state,
             elements,
@@ -224,18 +239,39 @@ export const init = async(params) => {
             hydrateDetailedPlanFromSnapshot,
             restoreAdjustmentHistory,
             resumeSessionId,
+            emitLog,
+            texts,
+            replayThread,
         });
 
-        try {
-            setResumeBootLoading(true);
-            const resumed = await resumeFromSnapshot();
-            if (!resumed && elements.contextView) {
-                elements.contextView.style.display = '';
+        // On reload the page is server-rendered in planning mode (is-planning +
+        // in-place skeletons) so the static chrome shows immediately. If there is
+        // nothing to resume, fall back to the context form.
+        const revertToContextView = () => {
+            const workspace = document.getElementById('courseaiWorkspace');
+            if (workspace) {
+                workspace.classList.remove('is-planning');
             }
-        } catch (resumeError) {
+            const planningView = document.getElementById('planningView');
+            if (planningView) {
+                planningView.style.display = 'none';
+            }
+            const compactChat = document.getElementById('compactChatCard');
+            if (compactChat) {
+                compactChat.style.display = 'none';
+            }
             if (elements.contextView) {
                 elements.contextView.style.display = '';
             }
+        };
+
+        try {
+            const resumed = await resumeFromSnapshot();
+            if (!resumed) {
+                revertToContextView();
+            }
+        } catch (resumeError) {
+            revertToContextView();
         } finally {
             setResumeBootLoading(false);
         }
@@ -252,6 +288,13 @@ export const init = async(params) => {
             workspace: document.getElementById('courseaiWorkspace'),
             divider: document.getElementById('cgSplitter'),
         });
+
+        // Wire collapsible checklist delegate listener (WU2).
+        initChecklistCollapse();
+
+        // Wire send-button ready-state toggle (WU3): accent-fills #btnCompactRegenerate
+        // when the compact textarea has non-empty text.
+        wireReadyToggle(elements);
     } catch (error) {
         Notification.exception(error);
     }

@@ -24,6 +24,7 @@
 import {createDetailedSectionRow} from './section-row';
 import {createDetailedActivityRow} from './activity-row';
 import {wireDragAndDrop, sendReorderSections} from './dnd';
+import {getSectionList} from './container';
 
 /**
  * Render a single section row if it has not been created yet.
@@ -36,8 +37,15 @@ import {wireDragAndDrop, sendReorderSections} from './dnd';
  */
 export const ensureSectionRendered = (ctx, section, renderIndex) => {
     const {state} = ctx;
-    if (state.detailedSectionMeta[section.id]) {
-        return state.detailedSectionMeta[section.id];
+    const existing = state.detailedSectionMeta[section.id];
+    if (existing) {
+        // The row may have been created off the DnD path (ensureDetailedSection, when an
+        // activity arrived before its section was rendered), so it was never made
+        // draggable. Wire it here too — attachToRow is idempotent.
+        if (state.sectionDnd && existing.row) {
+            state.sectionDnd.attachToRow(existing.row);
+        }
+        return existing;
     }
     createDetailedSectionRow(ctx, {
         sectionId: section.id,
@@ -50,16 +58,14 @@ export const ensureSectionRendered = (ctx, section, renderIndex) => {
     if (!meta) {
         return null;
     }
-    // Keep the body open so streaming activity rows are visible immediately.
-    meta.bodyEl.style.display = 'flex';
     // Wire the new section row into section-level drag-and-drop.
     // First section: create the wirer; subsequent sections: attach to its API.
     if (!state.sectionDnd) {
         state.sectionDnd = wireDragAndDrop(
-            ctx.elements.prvSections,
-            '.prv-section-row',
+            getSectionList(ctx),
+            '.course-section',
             'sectionId',
-            (ids) => sendReorderSections(ctx, ids),
+            (ids, movedId) => sendReorderSections(ctx, ids, movedId),
             null,
             () => !ctx.state.isStreaming
         );
