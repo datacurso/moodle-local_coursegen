@@ -930,3 +930,12 @@ FromPlan pintaba el detalle completo y clampDetail lo recortaba un frame despué
   (c) SPINNER descuadrado: el indicador heredaba el align-items:flex-start del feed (+2px), dejando el
   spinner arriba del texto. Fix (css): .cg-log-thinking .cg-log-body align-items:center + margin-top 0.
   Verificado: midpoints spinner/texto identicos (delta 0).
+- [x] **Gating de finalización por actividad (no marcar generada hasta terminar TODO).** Se revirtió el
+  band-aid del mensaje genérico "Finalizing your course…" (commit 2fd7e6e): `resolveGenerationHeaderIfDone`
+  vuelve a su versión original (marca el header con check cuando TODAS las actividades terminan) y se
+  quitaron el string `courseai_finalizing_course` (lang + prefetch i18n) y la finalización manual del
+  header en `handleCompleted`. El cliente no necesita lógica nueva: el fix real es del servicio (emitir
+  `activity_progress_done` recién tras resolver las imágenes de cada actividad), así el spinner por
+  actividad y el del header cubren correctamente contenido + settings + imágenes. Verificado e2e
+  (Puppeteer, imágenes on): filas quedan en loading hasta que sus imágenes resuelven, luego `cg-gen-done`
+  escalonado; header a check; sin mensaje genérico.
