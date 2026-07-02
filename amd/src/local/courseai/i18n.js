@@ -137,6 +137,8 @@ const STRING_KEYS = [
     'courseai_status_adjusting',
     'courseai_btn_regenerate',
     'courseai_btn_pause',
+    'courseai_btn_stop',
+    'courseai_btn_resume',
     'courseai_chapters_label',
     'courseai_questions_label',
     'courseai_notes_label',

@@ -121,6 +121,9 @@ export const handleReviewNeeded = async(data, ctx) => {
     } = ctx;
 
     state.isStreaming = false;
+    if (typeof ctx.onStreamEnd === 'function') {
+        ctx.onStreamEnd();
+    }
     // The plan has settled at least once: from now on, user-action log entries flow
     // BELOW the section checklist so the left panel reads as an organic downward chat.
     state.planEverReviewed = true;
@@ -181,6 +184,9 @@ export const handleCompleted = async(data, ctx) => {
     state.currentStage = 'generating';
     stepsUi.updateFlowNav();
     closeStream();
+    if (typeof ctx.onStreamEnd === 'function') {
+        ctx.onStreamEnd();
+    }
     await createCourseFromSession();
 };
 
@@ -198,6 +204,9 @@ export const handleFailed = async(data, ctx) => {
         localizeMessage, planningSpinner, pcStep, pcSubtitle, hideStreamBar,
     } = ctx;
     state.isStreaming = false;
+    if (typeof ctx.onStreamEnd === 'function') {
+        ctx.onStreamEnd();
+    }
     if (typeof hideStreamBar === 'function') {
         hideStreamBar();
     }

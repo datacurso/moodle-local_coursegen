@@ -104,6 +104,10 @@ export const createStreamManager = (deps) => {
         // Keep compact chat disabled for the whole active stream lifecycle.
         setCompactChatState(deps, 'disabled');
 
+        if (typeof deps.onStreamStart === 'function') {
+            deps.onStreamStart();
+        }
+
         // Clear stale proposals so they do not linger when a stream resumes.
         if (proposalsUi && typeof proposalsUi.clear === 'function') {
             proposalsUi.clear();
@@ -215,6 +219,7 @@ export const createStreamManager = (deps) => {
             // Per-attempt mutable flags — handlers write ctx.flags.contentReceived = true.
             flags: {contentReceived: false},
             emitLog: typeof emitLog === 'function' ? emitLog : () => undefined,
+            onStreamEnd: typeof deps.onStreamEnd === 'function' ? deps.onStreamEnd : () => undefined,
         };
 
         openConnection(streamUrl, retryAttempt, ctx, openSSEStream);

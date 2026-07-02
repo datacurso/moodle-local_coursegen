@@ -54,6 +54,7 @@ import {makeResumeFromSnapshot} from 'local_coursegen/courseai/bootstrap/resume-
 import {makeCreateCourseCallback} from 'local_coursegen/courseai/bootstrap/create-course-callback';
 import {makeEmitLog, makeRenderPlanMarkdown} from 'local_coursegen/courseai/bootstrap/ui-helpers';
 import {makeHydratePlan} from 'local_coursegen/courseai/bootstrap/hydrate-plan';
+import {createExecutionControls} from 'local_coursegen/local/courseai/actions/execution-control';
 
 /**
  * Initialize the courseai page.
@@ -136,6 +137,7 @@ export const init = async(params) => {
         const renderPlanMarkdown = makeRenderPlanMarkdown({markedParser, state, elements});
 
         let actions = null;
+        const streamLifecycle = {};
         const createCourseFromSession = makeCreateCourseCallback({
             elements,
             stepsUi,
@@ -154,6 +156,8 @@ export const init = async(params) => {
             emitLog,
             createCourseFromSession,
             texts,
+            onStreamStart: () => streamLifecycle.onStreamStart && streamLifecycle.onStreamStart(),
+            onStreamEnd: () => streamLifecycle.onStreamEnd && streamLifecycle.onStreamEnd(),
         });
 
         stepsUi.bindCloseStream(streamManager.closeStream);
@@ -178,6 +182,11 @@ export const init = async(params) => {
         });
 
         actions.bindEvents();
+
+        const executionControls = createExecutionControls({state, elements, streamManager, texts, emitLog});
+        executionControls.bindEvents();
+        streamLifecycle.onStreamStart = executionControls.showStop;
+        streamLifecycle.onStreamEnd = executionControls.hideControls;
 
         const {
             getResumeSessionId,
