@@ -3120,6 +3120,25 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
 .cg-log-md li { margin: 0.12em 0; }
 .cg-log-md li > ul,
 .cg-log-md li > ol { margin: 0.12em 0; }
+
+/* Hierarchical numbering for ordered lists in the transcript (1, 1.1, 1.2, 2, …):
+   suppress the native marker and render nested counters, so book subchapters read
+   as 1.1/1.2 and every list keeps its numbering — one item per line. Flat lists just
+   show 1, 2, 3. */
+.cg-log-md ol {
+  counter-reset: cg-li;
+  list-style: none;
+  padding-left: 0;
+}
+.cg-log-md ol ol { padding-left: 1.4em; }
+.cg-log-md ol > li { counter-increment: cg-li; }
+.cg-log-md ol > li::before {
+  content: counters(cg-li, ".") ". ";
+  color: var(--muted-fg);
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  margin-right: 0.35em;
+}
 .cg-log-md strong { font-weight: 700; }
 .cg-log-md em { font-style: italic; color: var(--muted-fg); }
 /* Approved-plan summary: one condensed element holds EVERY section, so each
