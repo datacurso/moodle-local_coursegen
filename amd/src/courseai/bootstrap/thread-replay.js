@@ -252,6 +252,32 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
     };
 
     /**
+     * Compose an add_section user turn EXACTLY as the live handler does
+     * (section-row.js composeAddSectionTurn): "{instruction} — position {N}". The
+     * 1-based slot comes from the persisted explicit position, or (for an append)
+     * the count of sections that existed BEFORE insertion — frozen in before_ids.
+     * Falls back to the raw instruction when the slot can't be resolved.
+     *
+     * @param {Object} payload - {instruction, position, before_ids}.
+     * @returns {string|null}
+     */
+    const composeAddSectionTurn = (payload) => {
+        const instruction = String((payload && payload.instruction) || '').trim();
+        let slot0 = null;
+        if (payload && typeof payload.position === 'number') {
+            slot0 = payload.position;
+        } else if (payload && Array.isArray(payload.before_ids)) {
+            slot0 = payload.before_ids.length;
+        }
+        if (slot0 === null) {
+            return instruction || null;
+        }
+        const target = T('courseai_log_add_section_target', 'position {$a->position}')
+            .replace('{$a->position}', String(slot0 + 1));
+        return instruction ? instruction + ' — ' + target : target;
+    };
+
+    /**
      * Render a single thread message into the left feed.
      *
      * @param {Object} msg - { seq, type, role, content, payload, created_at }
@@ -322,9 +348,9 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
                 return;
             }
             if (subtype === 'add_section') {
-                const instruction = String((payload && payload.instruction) || '').trim();
-                if (instruction) {
-                    emitLog({actor: 'user', kind: 'user', message: instruction});
+                const composed = composeAddSectionTurn(payload);
+                if (composed) {
+                    emitLog({actor: 'user', kind: 'user', message: composed});
                 }
                 return;
             }
