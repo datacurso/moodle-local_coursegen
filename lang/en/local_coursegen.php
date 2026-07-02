@@ -532,7 +532,7 @@ $string['courseai_review_confirm'] = 'Create course';
 // =====================================================================
 
 // Interpreted-feedback proposals (single-choice summaries).
-$string['proposal_add_section'] = 'Add a section: {$a->instruction}';
+$string['proposal_add_section'] = 'Add a section at {$a->position}';
 $string['proposal_delete_section'] = 'Delete section(s): {$a->names}';
 $string['proposal_reorder_sections'] = 'Reorder the sections to: {$a->names}';
 $string['proposal_replan_section'] = 'Regenerate section {$a->names}: {$a->instruction}';
