@@ -37,7 +37,7 @@
  */
 
 import {ensureSectionRendered, ensureActivityRendered} from './sync-helpers';
-import {markActivityPlanned} from './activity-row';
+import {markActivityPlanned, refreshSectionMeta} from './activity-row';
 import {appendAddSectionControl} from './section-row';
 import {focusChange} from 'local_coursegen/local/courseai/ui/highlight';
 import {removeVanishedActivities, removeVanishedSections, reorderAll} from './reconcile-dom';
@@ -210,10 +210,6 @@ const fillSkeletonActivities = (ctx, activeSections) => {
 export const reconcilePlan = async(ctx, currentPlan) => {
     const {state} = ctx;
 
-    // Defensive: clear any transient apply placeholder that the row factories did
-    // not already replace, so no orphaned shimmer survives the settle.
-    removeAllTransientPlaceholders();
-
     const activeSections = buildActiveStructure(currentPlan);
     const activeSectionIds = new Set(activeSections.map((s) => s.id));
     const activeActivityIds = new Set(activeSections.flatMap((s) => s.activities.map((a) => a.id)));
@@ -248,4 +244,26 @@ export const reconcilePlan = async(ctx, currentPlan) => {
 
     // Step 6 — Fill skeleton activities that now carry a detailed_plan.
     fillSkeletonActivities(ctx, activeSections);
+
+    // Defensive cleanup LAST: the row factories replace a transient placeholder in
+    // place (inserting the real row where the placeholder sat, so it lands at the
+    // right slot with no append-then-reorder jump). Only placeholders with no real
+    // row are removed here — clearing them up-front would rob the factories of the
+    // slot marker and reintroduce the jump.
+    removeAllTransientPlaceholders();
+
+    // Settle point: sync every section's activity-count badge to its REAL rows (so an
+    // added/reloaded section shows "N activities", never a stale "2/0"), AND make sure
+    // every section row is wired for drag-and-drop. A section row can be created off the
+    // DnD path (ensureDetailedSection, when an activity arrives before its section is
+    // rendered), and ensureSectionRendered then early-returns without attaching — so the
+    // added section ended up NOT draggable. attachToRow is idempotent, so re-attaching
+    // already-wired rows is a no-op.
+    activeSections.forEach((section) => {
+        refreshSectionMeta(ctx, section.id);
+        const meta = state.detailedSectionMeta[section.id];
+        if (meta && meta.row && state.sectionDnd) {
+            state.sectionDnd.attachToRow(meta.row);
+        }
+    });
 };

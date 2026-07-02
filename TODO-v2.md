@@ -367,7 +367,21 @@ v0.dev, Bolt, Cursor agent, Claude/ChatGPT), no como tres bloques etiquetados su
 - Persistencia: el histórico debe **sobrevivir al reload** (ya se reconstruye el log desde el
   snapshot; extenderlo para que el hilo completo —prompts + acciones IA por ronda— se rearme).
 
-### 7.2 "Add activity" como en Custom Sections (hover entre actividades, no botón al final)
+### 7.2 "Add activity" como en Custom Sections (hover entre actividades) — HECHO (2026-07-01)
+> [x] Réplica de la vista de EDICIÓN de Moodle (el wizard no tiene body.editing, así que Boost
+>   pintaba la vista de estudiante): (a) separadores DASHED entre actividades + bajo el header
+>   (`2px dashed #dee2e6` = $divider-width dashed $divider-color, valores reales de Boost) + mayor
+>   gap entre secciones (22px). Aplica a planificación Y generación. (b) Botón "+" de inserción
+>   on-hover sobre el divisor (mirror de `.divider .divider-content`/`.btn.add-content`): zona hija
+>   de cada `.activity` (viaja en reorder, no confunde al reconciliador ni al DnD), botón `+` que
+>   aparece en hover con halo blanco cortando la línea. Al click abre el panel de add-activity de la
+>   sección con `position` = índice DINÁMICO de esa actividad (insert BEFORE = ese slot). Oculto en
+>   generación (read-only). Verificado e2e con puppeteer: 4 zonas/botones, hover revela el +, click
+>   abre panel, y la nueva actividad aterriza en el índice correcto (insert antes de act2 → índice 1,
+>   entre las dos originales). El servicio ya honra `position`. Se mantiene el botón "Add activity"
+>   del final (append) como en Moodle (add buttons siempre visibles al cierre de sección).
+
+### 7.2-orig "Add activity" como en Custom Sections (hover entre actividades, no botón al final)
 **Pedido:** el botón "+ Add activity" con borde punteado al FINAL de cada sección **no debe salir así**.
 Debe comportarse como en la vista de curso real (Custom Sections): **al pasar el cursor sobre una
 actividad** aparece la opción de **añadir una DEBAJO** (y por tanto también ENTRE dos actividades
@@ -754,3 +768,165 @@ sessions remain, then remove it.
   el centro (`affectedCount=1` verificado).
 - [x] **thread-replay**: un row `proposal_applied` rutea la ronda siguiente por su `resolved_action`
   persistido, así reload coincide con live (bloque + top congelado).
+
+---
+
+## Resumen del plan aprobado tras "You approved the plan" — HECHO (2026-06-30)
+
+- [x] Tras aceptar, se muestra el detalle COMPLETO de todo lo aprobado (todas las secciones con
+  descripción, actividades y detailed_plan) justo debajo del turno "You approved the plan", como UN
+  SOLO elemento condensado con UN solo "Show more" (no un bloque+toggle por sección, que duplicaba).
+  `renderApprovedPlanSummary` concatena `formatSectionMd` de cada sección (nombre como `### heading`)
+  en un único cuerpo markdown + `clampDetail`. Verificado: summaryCount=1, toggles=1, live==reload.
+- [x] En vivo: desde `state.lastReviewedPlan` (cacheado en `handleReviewNeeded` desde `current_plan`);
+  fallback `latestInitialSections`. En reload: thread-replay detecta el snapshot `ai_planned_structure`
+  con `payload.approved` y renderiza lo mismo (cachea `lastReviewedPlan` para un accept post-reload).
+- [x] El servicio persiste el snapshot aprobado (PR de servicio aparte). Verificado e2e: live==reload
+  idéntico (3 secciones con detalle), reorden/inicial sin regresión.
+
+---
+
+## Ocultar el composer una vez aprobado el plan — HECHO (2026-06-30)
+
+- [x] Tras aprobar la planificación el curso se crea y ya no se puede editar desde el wizard, así que el
+  composer (#compactChatCard) se oculta desde la aprobación, durante toda la generación y tras completar.
+  Bandera centralizada `state.planApproved`: el gate al inicio de `setCompactChatState` colapsa cualquier
+  modo (disabled/enabled/reset) a `hidden` una vez aprobado. Se setea en `feedback.js` (action='accept',
+  antes del primer setCompactChatState) y en reload (`resume-snapshot.js`) para GENERATING/PLANNING_ACCEPT
+  y COMPLETED (+ hide directo del card). Verificado: oculto en generación/completado/reload; visible en
+  review/adjust (planApproved=false).
+- [x] FIX completado en vivo: el gate por JS perdía la carrera con setCompactChatState('enabled') al
+  terminar la generación. Solución declarativa robusta: clase `body.cg-plan-approved` + CSS
+  `#compactChatCard { display:none !important }` (gana sobre cualquier display inline). Se limpia en
+  `setCompactChatState('reset')` (curso nuevo). Verificado: oculto tras aceptar, tras completar EN VIVO y tras reload.
+
+---
+
+## Fase de generación unificada con la planificación — HECHO (2026-06-30)
+
+- [x] La generación ya NO usa el panel custom (pc-card con barra roja, círculos "01", badges
+  "Book/Quiz"). Ahora reusa LAS MISMAS tarjetas de planificación (#prvSections, dentro de
+  #planReviewCard) como vista de progreso read-only: cada actividad muestra spinner→check verde a la
+  derecha a medida que se crea en Moodle. Coherencia total con la planificación.
+- [x] `accept` ahora usa `keepPlan=true` para preservar las tarjetas del review (con descripciones
+  completas) en vez de teardown+skeleton. `stream.js` (modo generating) muestra `#planReviewCard`,
+  oculta el pc-card y agrega `body.cg-generating`. `tracker.js` agrega `id` al modelo;
+  `tracker-renderer.renderGenerationTracker` ahora sincroniza el estado por actividad sobre las filas
+  reales (por `data-activity-id`) con clases `cg-gen-pending/active/done` (el `cg-gen-*` cae en el
+  `<li.activity-wrapper>`). CSS scoped a `body.cg-generating`: indicador de estado (hueco→spinner→check)
+  + oculta acciones/dnd (read-only). `showCompletionView` limpia `cg-generating` y muestra el panel de
+  éxito. Verificado e2e: vivo, reload durante generación y completion.
+
+---
+
+## Estado por actividad exacto + shimmer en generación — HECHO (2026-06-30)
+
+- [x] BUG: en generación casi todas las actividades salían como "generadas" desde el inicio. Causa: las
+  actividades se generan en PARALELO (asyncio.gather) y el plugin usaba una heurística de texto
+  secuencial que marcaba "done" en cascada al empezar la siguiente. Fix: progreso ESTRUCTURADO por
+  índice — el servicio (`process_activity_node`) emite `activity_progress_init{total}` +
+  `activity_progress_start/done{index}` por actividad (índice de cola = índice de `tracker.flat`, ambos
+  en orden de posición). El plugin (`handlers-progress` + `setTrackerFlatStatus`) marca `tracker.flat`
+  por índice y `renderGenerationTracker` lo refleja en la fila real por `data-activity-id`. Verificado:
+  progresión real pending→in_progress→done (t=0 todas A, ~17-21s pasan a D), sin "done" prematuro.
+- [x] Indicador claro por estado (scoped `body.cg-generating`): IN PROGRESS = spinner en el icono +
+  shimmer animado sobre el contenido (visible, estilo skeleton de planificación); DONE = check verde en
+  el icono; PENDING = atenuado. Restaurado `cursor: pointer` en actividades expandibles (se rompió con
+  cursor:default); solo se ocultan los botones de edición (read-only).
+- [x] Ajuste visual + DnD: la card ahora se ve DESACTIVADA (atenuada + desaturada) mientras pending/
+  in_progress y se ACTIVA (color pleno + check) al crearse, en vez del shimmer. Y se DESACTIVA el
+  drag-and-drop en toda la generación: `state.isStreaming=true` en el bloque generating de stream.js
+  (el gate de composer planApproved→hidden saltaba el branch disabled que lo seteaba). Verificado:
+  dragstart prevented=true, sin dp-dragging; estados gris→color+check.
+- [x] Pulido cursor/hover/chevron: (1) cursor de SECCIÓN = default en generación (ya no move/drag).
+  (2) Las cards muestran cursor POINTER solo si tienen contenido colapsable (cg-activity--has-detail),
+  default si no — en planificación Y generación (se quitó el cursor move de actividades). (3) En
+  generación se suprime cualquier borde/outline de hover/focus (incl. cg-affected) — no son clickeables
+  como para resaltar. (4) El "desactivado" pasó de opacity .5+grayscale a grayscale(1)+opacity .82 para
+  no lavar el chevron de contenido colapsado (ahora visible en generación como en planificación).
+- [x] Indicador de progreso/éxito rediseñado (la insignia verde rompía la estética): IN PROGRESS =
+  card desaturada (grayscale) + SHIMMER skeleton suave (barrido blanco izq→der, 2.4s linear, blanco
+  .6, sin color fuerte) — agradable y acorde a la UI. DONE = la card vuelve a color pleno (el color es
+  el éxito), SIN insignia/badge. Se quitaron el spinner y el check verde del icono.
+- [x] Revertido el shimmer (no gustó) → restaurado el indicador de circulito: spinner en el icono
+  (in_progress) + check en el icono (done), con gris→color. Y BUG arreglado: el cursor move (drag) de
+  planificación se había roto al cambiarlo a pointer; restaurado move en planificación (generación
+  mantiene default/pointer read-only vía body.cg-generating).
+- [x] Checks de generación: verde → color sobrio del check de sección (var(--muted-fg), círculo gris
+  outline). Aplica al check de actividad (icono) Y al circulito de la cabecera (.prv-header--done
+  .prv-icon-wrap, antes var(--success) verde). El verde "rompía la estética / payaso".
+- [x] Cabecera de generación: mostraba el check "done" heredado del review mientras aún generaba;
+  en el bloque generating de stream.js se resetea a SPINNER (remove prv-header--done, show spinner,
+  hide check) hasta completar. Y el check de actividad ahora usa el SVG polyline del check de sección
+  (crisp, en círculo gris) en vez de un glifo ✓ de texto (se veía feo).
+- [x] Cabecera de generación: el subtítulo de status cambiaba de 1↔2 líneas por evento → temblores en
+  toda la pantalla. Fijado a 1 línea con ellipsis (.prv-header-text en columna + .prv-header-sub nowrap
+  + text-overflow) → altura constante (46px). Y se eliminó el live note "Showing real-time detailed
+  planning progress." (quitado el bloque en handleStatus + del destructure).
+- [x] El fix de jitter/live-note aplica a AMBAS fases: además de handleStatus (generación),
+  init-view.js mostraba el live note al iniciar la vista detallada de PLANIFICACIÓN → ahora oculto.
+  + min-height en .prv-header-sub para reservar la línea (altura de cabecera constante desde el inicio).
+  Verificado: generación [46] estable, planificación sin el live note (var. 2px imperceptible).
+- [x] Sincronización centro↔cabecera/izquierda en generación: la narración cruda por-actividad
+  ("Assembling final Quiz package…", "Generating Chapter…") desfasaba con los checks (generación
+  PARALELA → una card en check mientras la línea narra otra) y el spinner de la cabecera no se resolvía.
+  Fix: durante generación estructurada se SUPRIME la narración cruda (handleStatus: working indicator +
+  prvHeaderSub); la cabecera muestra un mensaje estable (course_creating) y se resuelve a CHECK cuando
+  todas las actividades terminan (resolveGenerationHeaderIfDone en handlers-progress). Verificado:
+  4/4 checks ⇒ header check, header nunca muestra narración cruda.
+- [x] Acciones (reorder/replan/add/delete/apply): (1) el panel izquierdo quedaba en blanco durante
+  el round-trip antes de que el stream mostrara el indicador → ahora runPlanAction muestra el working
+  indicator (spinner + "The assistant is working…") ANTES del await sendPlanningFeedback (feedback
+  inmediato, sin blanco). (2) El salto brusco al aparecer "I applied your changes": rebuildTranscript
+FromPlan pintaba el detalle completo y clampDetail lo recortaba un frame después (flash de altura).
+  Ahora se pre-recorta (cg-detail-clamped) antes de pintar y clampDetail lo des-recorta si es corto.
+- [x] Superposición fea: al hacer una acción por drag/inline (reorder/replan/add/delete) el decision
+  card "Review your course plan" quedaba apilado con el composer. runPlanAction ahora oculta el decision
+  overlay al iniciar la acción (como ya hacía feedback.js para adjust/accept); reaparece en el próximo
+  review_needed. Verificado: overlay=none durante la acción, vuelve a review al terminar.
+- [x] Flash del decision card entre acciones: hide en dragstart (dnd) para que el card NO se vea durante
+  el gesto de arrastre; re-show en dragend si el drag fue cancelado/no-op.
+  Verificado: review=flex, dragstart→none, cancel→flex, reorder real→oculto durante y vuelve.
+- [x] Flash del COMPOSER durante re-streams de acción (ROOT CAUSE, 2026-06-30): al hacer una acción
+  (reorder/replan/add/delete) el composer parpadeaba ~200ms antes de que apareciera el decision card.
+  Investigación con trace instrumentado (setCompactChatState + handleReviewNeeded + done) probó que NO
+  era blanco/salto (altura constante 667) ni el handler `done` (nunca corría), sino que `openSSEStream`
+  (stream.js) llamaba `setCompactChatState('disabled')` = display:block al abrir el stream de la acción.
+  Fix definitivo: en re-streams keepPlan (acción sobre plan ya revisado) el composer se mantiene HIDDEN
+  (el decision card + working indicator ya ocupan el fondo); solo el stream de planificación inicial
+  muestra el composer disabled con Stop. Se setea state.isStreaming explícito (hidden no lo hace).
+  Además handleReviewNeeded muestra el decision card (overlay + showReviewActions + renderProposals)
+  SÍNCRONO antes del await reconcilePlan (~1s), y se revirtió el debounce de 400ms del overlay (retrasaba
+  el card 400ms y lo hacía aparecer de golpe). Verificado con trace: working→overlay directo, SIN fase
+  de composer (antes 0.8s→0.3s→0s). Commit 89883bc.
+- [x] Working indicator anclado al fondo + fix del último frame (2026-06-30): tras ocultar el composer,
+  el indicador "The assistant is working…" (turno del feed) flotaba sobre un vacío hasta el borde del
+  panel ("se va muy abajo, se ve terrible"). Medido con puppeteer: 109px de vacío debajo. Fix: nuevo slot
+  inferior fijo `#cgWorkingSlot` (en el slot del composer, `:empty`→display:none); `showWorkingIndicator`
+  enruta el indicador AHÍ cuando el composer está oculto (re-stream de acción) — barra slim tipo card
+  anclada al fondo como el composer; en planificación inicial (composer visible) sigue inline en el feed.
+  Se reubica si la visibilidad del composer cambia entre updates. Y se re-aplicó el diferido del enable
+  del handler `done` detrás del eventQueue (gate `!cg-plan-reviewed`): el `done` corre síncrono fuera de
+  la cola y podía mostrar el composer 1 frame antes de que review_needed mostrara el overlay. Verificado:
+  0 frames de composer (W→O directo), indicador anclado abajo (835-885, fuera del scroll).
+- [x] Spinner roto en regen/add de seccion en vivo (2026-06-30): al regenerar/anadir una seccion DESPUES
+  de revisar el plan, el header de la seccion mostraba un icono confuso ("que carajos es eso"). Causa
+  (reproducido con puppeteer): el item de regen es `is-loading` mientras `body.cg-plan-reviewed` esta
+  activo; conflicto de especificidad CSS -> `.is-loading ... .spinner-icon{display:block}` mostraba el
+  SPINNER y `body.cg-plan-reviewed ... .check-icon{display:block}` mostraba el CHECK a la vez -> ambos
+  SVGs superpuestos en el circulo de 18px (arco girando + checkmark enredados). Ademas el anillo salia
+  en --muted-fg (oscuro pesado). Fix (chatui.css, CSS puro): reglas de mayor especificidad para el item
+  is-loading bajo cg-plan-reviewed -> ocultan el check-icon y dejan el anillo en --border (claro), igual
+  que el spinner de planificacion inicial. Verificado: checkDisplay=none, border light, spinner limpio.
+- [x] Sync centro<->izquierda + scroll en completion + alineacion del spinner (2026-06-30, 3 fixes):
+  (a) DESYNC en generacion: el accept dejaba el indicador izquierdo en "Analyzing your request..." pero
+  el header central mostraba "Generating course content..."; suppressRaw evita que la narracion por
+  actividad actualice el izquierdo, dejandolo congelado y contradiciendo al centro. Fix: el bloque
+  generating de stream.js setea el indicador izquierdo al MISMO mensaje del subtitulo central
+  (course_creating_subtitle). Verificado con puppeteer: left==centerSub en toda la generacion.
+  (b) COMPLETION: el thread quedaba scrolleado arriba (el turno final "Your course is ready" bajo el
+  fold) y el indicador de trabajo quedaba pegado en el slot inferior junto al success view.
+  showCompletionView ahora remueve el indicador y ancla el scroll al fondo (rAF). Verificado: atBottom.
+  (c) SPINNER descuadrado: el indicador heredaba el align-items:flex-start del feed (+2px), dejando el
+  spinner arriba del texto. Fix (css): .cg-log-thinking .cg-log-body align-items:center + margin-top 0.
+  Verificado: midpoints spinner/texto identicos (delta 0).

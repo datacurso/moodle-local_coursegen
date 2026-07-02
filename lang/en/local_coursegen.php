@@ -447,6 +447,7 @@ $string['courseai_plan_detailed_markdown_title'] = 'Detailed plan generated';
 $string['courseai_plan_detailed_markdown_subtitle'] = 'Review the content and approve to start generation.';
 $string['courseai_generating_details'] = 'Generating details...';
 $string['courseai_generating_details_for'] = 'Planning: {name}';
+$string['courseai_finalizing_course'] = 'Finalizing your course…';
 $string['courseai_section_label'] = 'Section {section}: {name}';
 $string['courseai_section_progress_with_total'] = '{done}/{total} activities · {description}';
 $string['courseai_section_progress_no_total'] = 'Activities · {description}';
@@ -471,7 +472,7 @@ $string['courseai_completion_title'] = 'Course generated successfully!';
 $string['courseai_completion_summary_default'] = 'Your course is ready in Moodle.';
 $string['courseai_completion_summary_no_images'] = '{activities} activities were created in {units} sections.';
 $string['courseai_completion_summary_with_images'] = '{activities} activities were created in {units} sections and {images} images.';
-$string['courseai_completion_btn_open_course'] = 'Open course in Moodle';
+$string['courseai_completion_btn_open_course'] = 'Open course';
 $string['courseai_completion_btn_create_another'] = 'Create another course';
 $string['courseai_back_to_context'] = 'Back to context';
 $string['courseai_live_note_detailed'] = 'Showing real-time detailed planning progress.';
@@ -532,18 +533,18 @@ $string['courseai_review_confirm'] = 'Create course';
 // =====================================================================
 
 // Interpreted-feedback proposals (single-choice summaries).
-$string['proposal_add_section'] = 'Add a section: {$a->instruction}';
+$string['proposal_add_section'] = 'Add a section {$a->position}';
 $string['proposal_delete_section'] = 'Delete section(s): {$a->names}';
 $string['proposal_reorder_sections'] = 'Reorder the sections to: {$a->names}';
-$string['proposal_replan_section'] = 'Regenerate section {$a->names}: {$a->instruction}';
-$string['proposal_add_activity'] = 'Add an activity to {$a->section}: {$a->instruction}';
+$string['proposal_replan_section'] = 'Regenerate the content of section {$a->names}';
+$string['proposal_add_activity'] = 'Add an activity to section «{$a->section}» {$a->position}';
 $string['proposal_delete_activity'] = 'Delete activity(ies): {$a->names}';
 $string['proposal_reorder_activities'] = 'Reorder the activities to: {$a->names}';
-$string['proposal_replan_activity'] = 'Regenerate activity {$a->names}: {$a->instruction}';
-$string['proposal_replace_activity'] = 'Replace {$a->names}: {$a->instruction}';
-$string['proposal_replan_image'] = 'Regenerate image(s) {$a->names}: {$a->instruction}';
-$string['proposal_full_regeneration'] = 'Rebuild the WHOLE course structure (previous adjustments are lost): {$a->instruction}';
-$string['proposal_adjust_all_details'] = 'Regenerate every activity\'s content, keeping the sections: {$a->instruction}';
+$string['proposal_replan_activity'] = 'Regenerate the content of activity {$a->names}';
+$string['proposal_replace_activity'] = 'Replace activity {$a->names}';
+$string['proposal_replan_image'] = 'Regenerate image(s) {$a->names}';
+$string['proposal_full_regeneration'] = 'Rebuild the WHOLE course structure (previous adjustments are lost)';
+$string['proposal_adjust_all_details'] = 'Regenerate every activity\'s content, keeping the sections';
 
 // Planning pipeline status.
 $string['detecting_activity_types'] = 'Detecting activity types from user instructions...';

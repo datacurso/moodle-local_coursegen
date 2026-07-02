@@ -102,17 +102,47 @@ export const createProposalsUi = (deps) => {
         } catch (e) {
             intent = null;
         }
-        if (!intent || typeof intent.position !== 'number') {
+        if (!intent) {
             return [];
         }
-        const sections = Array.from(document.querySelectorAll('.course-section[data-section-id]'));
-        if (!sections.length) {
-            return [];
+        // Mirror the server's reference logic (proposals.py _position_reference): a
+        // null/absent position (or one past the end) appends → anchor on the LAST
+        // sibling; position 0 anchors on the first; otherwise on the previous sibling.
+        // (The old code required a NUMBER, so "add at the end" — position null —
+        // matched nothing and highlighted no element in the center.)
+        const anchorIndex = (count) => {
+            const pos = intent.position;
+            if (typeof pos !== 'number' || pos >= count) {
+                return count - 1;
+            }
+            return pos <= 0 ? 0 : pos - 1;
+        };
+        if (intent.action === 'add_section') {
+            const sections = Array.from(document.querySelectorAll('.course-section[data-section-id]'));
+            if (!sections.length) {
+                return [];
+            }
+            const id = sections[anchorIndex(sections.length)].getAttribute('data-section-id');
+            return id ? [id] : [];
         }
-        const idx = Math.min(Math.max(0, intent.position - 1), sections.length - 1);
-        const anchor = sections[idx];
-        const id = anchor && anchor.getAttribute('data-section-id');
-        return id ? [id] : [];
+        // add_activity: highlight the MOST SPECIFIC reference — the neighbour ACTIVITY
+        // it lands after/before, not the whole parent section. Fall back to the parent
+        // section only when it has no activities yet (no neighbour to anchor to).
+        if (intent.action === 'add_activity' && intent.parent_section_id) {
+            const section = document.querySelector(
+                '.course-section[data-section-id="' + intent.parent_section_id + '"]'
+            );
+            if (!section) {
+                return [];
+            }
+            const activities = Array.from(section.querySelectorAll('.activity[data-activity-id]'));
+            if (!activities.length) {
+                return [intent.parent_section_id];
+            }
+            const id = activities[anchorIndex(activities.length)].getAttribute('data-activity-id');
+            return id ? [id] : [intent.parent_section_id];
+        }
+        return [];
     };
 
     /**
@@ -307,13 +337,13 @@ export const createProposalsUi = (deps) => {
             if (selected.value === '__other__') {
                 const instruction = otherTextarea.value.trim();
                 if (!instruction) { otherTextarea.focus(); return; }
-                const truncated = instruction.length > 80 ? instruction.slice(0, 80) + '…' : instruction;
-                const appliedLabel = texts.courseai_log_proposal_applied || 'You applied';
-                log({actor: 'user', kind: 'info', message: appliedLabel + ': ' + truncated});
-                // proposal_custom: recorded by the service as "proposal_custom"
-                // (labelled "You applied: …" on reload), NOT a plain compact-chat
-                // "feedback" turn ("You: …").
-                await sendAction(block, {action: 'feedback', instruction, proposal_custom: true});
+                // "Something else" is a NEW instruction/correction — NOT an applied
+                // change. Log it as the user's own turn (their words, like any chat
+                // feedback) and send a plain feedback so the resolver re-interprets it
+                // WITH the conversation context. Labelling it "You applied …" was wrong:
+                // nothing is applied yet — it produces fresh proposals or a question.
+                log({actor: 'user', kind: 'user', message: instruction});
+                await sendAction(block, {action: 'feedback', instruction});
             } else {
                 const selectedLabel = selected.closest('.plan-proposal-card');
                 const summaryText = selectedLabel

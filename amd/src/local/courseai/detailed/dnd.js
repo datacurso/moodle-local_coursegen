@@ -21,6 +21,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {getDecisionOverlay} from 'local_coursegen/local/courseai/ui/decision-overlay';
+
 /**
  * Wire drag-and-drop for a container whose direct children are draggable rows.
  *
@@ -61,6 +63,10 @@ export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, p
         // Sections contain activity rows; both are draggable. Stop the event
         // here so an activity drag never bubbles to its section's wirer.
         event.stopPropagation();
+        // Dragging is an edit intent: hide the review decision card immediately so it
+        // is not visible during the drag gesture (a cancelled drag re-shows it in
+        // onDragEnd; a real reorder keeps it hidden until the next review settles).
+        getDecisionOverlay().hide();
         const row = event.currentTarget;
         dragSrcEl = row;
         orderAtStart = currentOrder();
@@ -142,10 +148,24 @@ export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, p
         orderAtStart = [];
         if (ids.length > 1 && !unchanged) {
             onReorder(ids, movedId);
+        } else {
+            // Cancelled / dropped back in place: no action runs, so bring the review
+            // decision card back (it was hidden on dragstart).
+            getDecisionOverlay().show();
         }
     };
 
     const attachToRow = (row) => {
+        if (!row) {
+            return;
+        }
+        // Idempotent: a row can be re-offered (e.g. reconcile's settle pass re-attaches
+        // every section to catch rows created off the DnD path). Attaching twice would
+        // stack duplicate listeners, so wire each row exactly once.
+        if (row.dataset.cgDndWired === '1') {
+            return;
+        }
+        row.dataset.cgDndWired = '1';
         row.setAttribute('draggable', 'true');
         row.addEventListener('dragstart', onDragStart);
         row.addEventListener('dragover', onDragOver);

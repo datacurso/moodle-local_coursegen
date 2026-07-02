@@ -27,6 +27,7 @@ import {
     hideWorkingIndicator,
 } from 'local_coursegen/local/courseai/ui/feedback-progress';
 import {getDecisionOverlay} from 'local_coursegen/local/courseai/ui/decision-overlay';
+import {renderApprovedPlanSummary} from 'local_coursegen/local/courseai/ui/regen-block';
 
 /**
  * Emit a log entry if emitLog is wired.
@@ -79,6 +80,14 @@ export const sendFeedbackAction = async(action, ctx) => {
 
     if (!state.sessionid) {
         return;
+    }
+
+    // Approving is terminal for this wizard: the course is created and can no longer
+    // be edited from here. Mark it BEFORE the first setCompactChatState below so the
+    // composer is hidden from this point on (through generation and completion).
+    if (action === 'accept') {
+        state.planApproved = true;
+        document.body.classList.add('cg-plan-approved');
     }
 
     // WU4: hide the decision overlay as soon as the user acts (accept or adjust).
@@ -147,6 +156,11 @@ export const sendFeedbackAction = async(action, ctx) => {
                 kind: 'success',
                 message: texts.courseai_log_user_approved || 'You approved the plan',
             }, emitLog);
+            // Show the COMPLETE detail of everything the user just approved (every
+            // section, its activities and detailed plans) right below the turn, so
+            // the approval is concrete. The persisted approved snapshot renders the
+            // same block on reload (see thread-replay).
+            renderApprovedPlanSummary(state.lastReviewedPlan || state.latestInitialSections || []);
             showFeedbackThinking(texts);
         }
 
@@ -200,10 +214,12 @@ export const sendFeedbackAction = async(action, ctx) => {
         }
 
         const streamMode = action === 'accept' ? 'generating' : 'planning';
-        // keepPlan: an 'adjust' resumes the existing plan to apply free-text feedback,
-        // so preserve the rendered preview and let the reconciler diff against it
-        // (only changed rows animate). 'accept' transitions to generation → full reset.
-        const keepPlan = action !== 'accept';
+        // keepPlan: preserve the rendered plan preview. 'adjust' lets the reconciler
+        // diff against it; 'accept' now KEEPS it too, because generation reuses the
+        // SAME cards as a live progress view (per-activity spinner→check) instead of a
+        // separate progress panel — so the cards (with their full descriptions) must
+        // survive the transition rather than being torn down and re-skeletoned.
+        const keepPlan = true;
         streamManager.openSSEStream(state.streamingurl, 0, streamMode, keepPlan);
     } catch (error) {
         // The stream never opened — clear the live indicator so it does not

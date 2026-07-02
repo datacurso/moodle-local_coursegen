@@ -297,6 +297,12 @@ export const makeResumeFromSnapshot = ({
         }
 
         if (status === 'GENERATING' || status === 'PLANNING_ACCEPT') {
+            // The plan is already approved → the composer stays hidden (the course is
+            // created and cannot be edited from this wizard). Set the flag BEFORE the
+            // generation stream re-opens so its setCompactChatState calls collapse to
+            // hidden, and hide the card now in case it was shown on resume.
+            state.planApproved = true;
+            document.body.classList.add('cg-plan-approved');
             stepsUi.transitionToPlanning();
             setPlanningStreamVisible();
             applyCourseTitleToHeader();
@@ -333,6 +339,11 @@ export const makeResumeFromSnapshot = ({
         }
 
         if (status === 'COMPLETED') {
+            // Course already created → no composer (it cannot be edited from here).
+            // The body class hides it via CSS regardless of the showReviewActions
+            // call below (which would otherwise re-enable the composer).
+            state.planApproved = true;
+            document.body.classList.add('cg-plan-approved');
             stepsUi.transitionToPlanning();
             setPlanningStreamVisible();
             applyCourseTitleToHeader();

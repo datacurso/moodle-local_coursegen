@@ -24,6 +24,33 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {setTrackerFlatStatus} from 'local_coursegen/local/courseai/stream/tracker';
+
+/**
+ * When every activity's CONTENT has been generated, the graph still runs the tail
+ * phases (image generation, course-config inference, cleanup, persist) before the
+ * 'completed' event fires. Do NOT declare the header done here — that dropped the
+ * spinner and showed the check while the tail (which can take a couple of minutes with
+ * images) was still running, so the UI looked frozen. Instead KEEP the spinner and
+ * show a "finalizing your course…" subtitle; handleCompleted flips to the check when
+ * the whole flow is truly done.
+ *
+ * @param {Object} state
+ * @param {Object} [ctx]  Stream ctx (for texts); optional.
+ * @returns {void}
+ */
+const resolveGenerationHeaderIfDone = (state, ctx) => {
+    const total = state.activityProgressTotal || 0;
+    if (total <= 0 || (state.activityProgressDone || 0) < total) {
+        return;
+    }
+    const sub = document.getElementById('prvHeaderSub');
+    if (sub) {
+        sub.textContent = (ctx && ctx.texts && ctx.texts.courseai_finalizing_course)
+            || 'Finalizing your course…';
+    }
+};
+
 /**
  * Handle 'activity_progress_init': switch to structured progress mode.
  *
@@ -48,11 +75,7 @@ export const handleActivityProgressInit = (data, ctx) => {
  * @param {Object} ctx
  */
 export const handleActivityProgressStart = (data, ctx) => {
-    ctx.updateTrackerActivityStatusByCoordinates(
-        Number(data.section_index) || 0,
-        Number(data.activity_index) || 0,
-        'in_progress'
-    );
+    setTrackerFlatStatus(ctx.state, Number(data.index), 'in_progress');
     ctx.state.activityProgressStarted = (ctx.state.activityProgressStarted || 0) + 1;
     ctx.updateProgress();
     ctx.renderTracker();
@@ -65,14 +88,11 @@ export const handleActivityProgressStart = (data, ctx) => {
  * @param {Object} ctx
  */
 export const handleActivityProgressDone = (data, ctx) => {
-    ctx.updateTrackerActivityStatusByCoordinates(
-        Number(data.section_index) || 0,
-        Number(data.activity_index) || 0,
-        'done'
-    );
+    setTrackerFlatStatus(ctx.state, Number(data.index), 'done');
     ctx.state.activityProgressDone = (ctx.state.activityProgressDone || 0) + 1;
     ctx.updateProgress();
     ctx.renderTracker();
+    resolveGenerationHeaderIfDone(ctx.state, ctx);
 };
 
 /**
@@ -82,14 +102,11 @@ export const handleActivityProgressDone = (data, ctx) => {
  * @param {Object} ctx
  */
 export const handleActivityProgressFailed = (data, ctx) => {
-    ctx.updateTrackerActivityStatusByCoordinates(
-        Number(data.section_index) || 0,
-        Number(data.activity_index) || 0,
-        'done'
-    );
+    setTrackerFlatStatus(ctx.state, Number(data.index), 'done');
     ctx.state.activityProgressDone = (ctx.state.activityProgressDone || 0) + 1;
     ctx.updateProgress();
     ctx.renderTracker();
+    resolveGenerationHeaderIfDone(ctx.state, ctx);
 };
 
 /**

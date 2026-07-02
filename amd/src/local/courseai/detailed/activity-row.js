@@ -72,17 +72,63 @@ export const createDetailedActivityRow = (ctx, {sectionId, activityId, activityT
     wrap.appendChild(item);
     wrap.appendChild(activityPanelApi.panel);
 
-    // A genuinely-new real-UUID row is being rendered: drop any transient apply
-    // placeholder in this section so the shimmer is replaced, never duplicated.
-    removeTransientActivityPlaceholders(bodyEl);
+    // On-hover insertion divider (Moodle edit-view affordance): a "+" button centered
+    // on the dashed line above this activity. Hovering the top strip reveals it; a click
+    // opens the section's add-activity panel targeting THIS row's slot, so the new
+    // activity lands BETWEEN rows (not only at the end). The button is a child of the
+    // .activity wrap, so it rides along on reorder and never confuses the reconciler
+    // (which reorders .activity nodes) or the DnD wirer (which keys on .activity).
+    const insertZone = document.createElement('div');
+    insertZone.className = 'cg-insert-zone';
+    insertZone.setAttribute('contenteditable', 'false');
+    insertZone.setAttribute('draggable', 'false');
+    const insertBtn = document.createElement('button');
+    insertBtn.type = 'button';
+    insertBtn.className = 'cg-insert-btn';
+    const insertLabel = (ctx.texts && ctx.texts.courseai_btn_add_activity) || 'Add activity';
+    insertBtn.setAttribute('aria-label', insertLabel);
+    insertBtn.setAttribute('title', insertLabel);
+    insertBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" '
+        + 'stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">'
+        + '<path d="M12 5v14M5 12h14"/></svg>';
+    insertBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const meta = state.detailedSectionMeta[sectionId];
+        if (!meta || typeof meta.openAddActivityAt !== 'function') {
+            return;
+        }
+        // Insert BEFORE this activity: its CURRENT index among the section's rows
+        // (computed at click time, so reorders never leave a stale slot).
+        const list = wrap.parentElement;
+        const rows = list ? Array.prototype.slice.call(list.querySelectorAll('.activity')) : [];
+        const index = rows.indexOf(wrap);
+        // Pass this activity as the anchor so the input opens INLINE right here.
+        meta.openAddActivityAt(index >= 0 ? index : null, wrap);
+    });
+    // A drag started on the zone must not drag the row.
+    insertZone.addEventListener('dragstart', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+    });
+    insertZone.appendChild(insertBtn);
+    wrap.insertBefore(insertZone, wrap.firstChild);
 
-    // Insert before the add-activity wrap (last child of cmlist when present).
+    // Place the new row where a transient placeholder marks its slot (an add at a
+    // specific position): insert IN ITS PLACE so the row appears at the right slot
+    // immediately — no append-at-the-end-then-reorder jump. Falls back to before the
+    // add-activity sentinel (append) when there is no placeholder. The transient is
+    // removed AFTER, so it is replaced in place, never duplicated.
+    const transient = bodyEl.querySelector('[data-cg-transient="activity"]');
     const addWrap = bodyEl.querySelector('.dp-add-activity-wrap');
-    if (addWrap) {
+    if (transient) {
+        bodyEl.insertBefore(wrap, transient);
+    } else if (addWrap) {
         bodyEl.insertBefore(wrap, addWrap);
     } else {
         bodyEl.appendChild(wrap);
     }
+    removeTransientActivityPlaceholders(bodyEl);
 
     // Wire this new wrap into the section's existing DnD setup.
     const sectionMeta = state.detailedSectionMeta[sectionId];
@@ -143,6 +189,30 @@ export const ensureDetailedSection = (ctx, sectionId) => {
 };
 
 /**
+ * Set a section's meta badge to its REAL activity count ("N activities"), counted
+ * from the rendered rows. The old badge interpolated a running done/total pair, but
+ * ``total`` was only incremented on the streaming path and stayed 0 on the reconcile
+ * path (add_section / reload), so the badge showed nonsense like "2/0". Counting the
+ * actual, non-transient activity rows is always correct regardless of how they got
+ * there.
+ *
+ * @param {Object} ctx
+ * @param {string} sectionId
+ * @returns {void}
+ */
+export const refreshSectionMeta = (ctx, sectionId) => {
+    const {state, texts} = ctx;
+    const meta = state && state.detailedSectionMeta[sectionId];
+    if (!meta || !meta.metaEl || !meta.bodyEl) {
+        return;
+    }
+    const count = meta.bodyEl.querySelectorAll('.activity[data-activity-id]:not([data-cg-transient])').length;
+    const label = (texts && texts.courseai_activities_count) || 'activities';
+    meta.total = count;
+    meta.metaEl.textContent = count + ' ' + label;
+};
+
+/**
  * Ensure an activity entry exists for data.activity_id; create lazily if needed.
  *
  * @param {Object} ctx
@@ -150,23 +220,23 @@ export const ensureDetailedSection = (ctx, sectionId) => {
  * @returns {Object|null}
  */
 export const ensureDetailedEntry = (ctx, data) => {
-    const {state, texts, formatTemplate} = ctx;
+    const {state, texts} = ctx;
     const activityId = data.activity_id;
     if (state.detailedActivityEls[activityId]) { return state.detailedActivityEls[activityId]; }
     const sectionId = data.section_id;
     const meta = ensureDetailedSection(ctx, sectionId);
     if (!meta) { return null; }
-    meta.total += 1;
-    meta.metaEl.textContent = formatTemplate(texts.courseai_section_progress_with_total, {
-        done: meta.done, total: meta.total, description: '',
-    });
-    return createDetailedActivityRow(ctx, {
+    const activityIndex = meta.bodyEl.querySelectorAll('.activity[data-activity-id]:not([data-cg-transient])').length;
+    const entry = createDetailedActivityRow(ctx, {
         sectionId, activityId,
-        sectionIndex: meta.total - 1, activityIndex: meta.total - 1,
+        sectionIndex: activityIndex, activityIndex,
         activityType: data.activity_type || 'quiz',
         activityTitle: data.title || texts.courseai_activity_default,
         bodyEl: meta.bodyEl,
     });
+    // Badge reflects the REAL row count (correct on every path), not a running counter.
+    refreshSectionMeta(ctx, sectionId);
+    return entry;
 };
 
 /**
@@ -176,7 +246,7 @@ export const ensureDetailedEntry = (ctx, data) => {
  * @param {Object} data
  */
 export const markActivityPlanned = (ctx, data) => {
-    const {state, texts, formatTemplate, setProgress} = ctx;
+    const {state, setProgress} = ctx;
     const entry = ensureDetailedEntry(ctx, data);
     if (!entry || entry.done) {
         return;
@@ -241,9 +311,9 @@ export const markActivityPlanned = (ctx, data) => {
     const meta = state.detailedSectionMeta[sectionId];
     if (meta) {
         meta.done += 1;
-        meta.metaEl.textContent = formatTemplate(texts.courseai_section_progress_with_total, {
-            done: meta.done, total: meta.total, description: '',
-        });
+        // Planning an activity does not change the row count, but keep the badge in
+        // sync with the real rows anyway (and never show a done/total pair).
+        refreshSectionMeta(ctx, sectionId);
         setImageBadge(ctx, meta.imagesBadgeEl, meta.imagesCount || 0);
     }
 

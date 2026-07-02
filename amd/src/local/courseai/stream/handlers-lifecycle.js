@@ -35,6 +35,7 @@ import {
 } from 'local_coursegen/local/courseai/ui/plan-transcript';
 import {finalizeRegen, rebuildRegenFromPlan} from 'local_coursegen/local/courseai/ui/regen-block';
 import {addedActivityTurn} from 'local_coursegen/local/courseai/ui/added-turn';
+import {getDecisionOverlay} from 'local_coursegen/local/courseai/ui/decision-overlay';
 
 /**
  * Handle 'status' event: localize message, update UI text, advance heuristic progress.
@@ -47,17 +48,25 @@ export const handleStatus = async(data, ctx) => {
     const {
         state, stepsUi, texts, streamMode, syncTrackerFromStatus,
         ensureStreamContentVisible, localizeMessage,
-        prvHeaderSub, pcSubtitle, prvLiveNote,
+        prvHeaderSub, pcSubtitle,
     } = ctx;
 
     const statusText = data.message ? await localizeMessage(data.message) : (data.text || '');
     const heuristicText = (data.message && data.message.string) || data.text || '';
 
+    // During STRUCTURED generation the per-activity cards (spinner→check) are the
+    // single source of truth. Suppress the raw per-activity narration ("Assembling
+    // final Quiz package…", "Generating Chapter…") in the header/working indicator:
+    // it fires per activity and, with parallel generation, contradicts the cards
+    // (one card checked while the line narrates another). The structured handlers
+    // own the header text/state instead, so both panels stay perfectly in sync.
+    const suppressRaw = streamMode === 'generating' && state.structuredActivityProgress;
+
     // Surface transient progress as the SINGLE live "working" indicator in the
     // thread (never one turn per status event) so the panel never looks frozen
     // while the server streams. It is cleared when content/sections land or on a
     // terminal lifecycle event.
-    if (statusText) {
+    if (statusText && !suppressRaw) {
         showWorkingIndicator(texts, statusText);
     }
 
@@ -69,21 +78,17 @@ export const handleStatus = async(data, ctx) => {
     }
 
     const loadingTextEl = document.querySelector('.planning-loading-text');
-    if (loadingTextEl && statusText) {
+    if (loadingTextEl && statusText && !suppressRaw) {
         loadingTextEl.textContent = statusText;
     }
 
     const totalActivities = state.phase4TotalActivities || ctx.preservedPhase4Total();
 
-    if (prvHeaderSub) {
+    if (prvHeaderSub && !suppressRaw) {
         prvHeaderSub.textContent = statusText;
     }
-    if (pcSubtitle) {
+    if (pcSubtitle && !suppressRaw) {
         pcSubtitle.textContent = statusText;
-    }
-    if (state.planningMode === 'detailed' && prvLiveNote) {
-        prvLiveNote.style.display = 'block';
-        prvLiveNote.textContent = texts.courseai_live_note_detailed;
     }
 
     if (state.currentStage !== 'generating' || totalActivities <= 0) {
@@ -164,6 +169,13 @@ export const handleReviewNeeded = async(data, ctx) => {
     // The AI responded — drop the live "working" indicator.
     hideFeedbackThinking();
 
+    // Cache the latest fully-detailed plan so that, when the user approves, the
+    // accept handler can render the complete approved-plan detail summary without
+    // waiting for a round-trip (the persisted approved snapshot drives reload).
+    if (Array.isArray(data.current_plan) && data.current_plan.length) {
+        state.lastReviewedPlan = data.current_plan;
+    }
+
     // The section checklist stays as-is (name + spinner→check). Its per-section
     // Markdown detail (description + activities) sits below each item:
     //  - initial round: the live accumulator already filled each detail in real
@@ -187,8 +199,19 @@ export const handleReviewNeeded = async(data, ctx) => {
     } else if (state.addScope) {
         // add_activity: shown below at review time (it has no live section block).
         // (no top rebuild)
-    } else if (ctx.keepPlan && Array.isArray(data.current_plan) && data.current_plan.length) {
-        rebuildTranscriptFromPlan(data.current_plan);
+    } else if (ctx.keepPlan) {
+        // DEFAULT for ANY keepPlan change: the top "structure I planned" checklist is
+        // FROZEN history — reorder, delete, adjust, replace, or any future action may
+        // NOT rewrite it (that pulled later additions up into the original snapshot).
+        // The change shows as a turn below and the centre already reflects it, so just
+        // settle. The SOLE exception is a full course regeneration, which the user
+        // explicitly asked to rebuild the WHOLE plan — there the top is replaced.
+        if (state.keepPlanAction === 'full_regeneration'
+            && Array.isArray(data.current_plan) && data.current_plan.length) {
+            rebuildTranscriptFromPlan(data.current_plan);
+        } else {
+            finalizeTranscript();
+        }
     } else if (transcriptHasContent()) {
         finalizeTranscript();
     } else if (Array.isArray(data.current_plan) && data.current_plan.length) {
@@ -198,6 +221,7 @@ export const handleReviewNeeded = async(data, ctx) => {
     // here AND on failure/error handlers so a later reorder/accept is never mistaken
     // for a regen.
     state.regenScope = null;
+    state.keepPlanAction = null;
 
     // Adding an element: the click-time turn was intentionally silent (the name
     // didn't exist yet).
@@ -263,6 +287,23 @@ export const handleReviewNeeded = async(data, ctx) => {
     state.currentStage = 'planning';
     stepsUi.updateFlowNav();
 
+    // Show the bottom review UI (decision card) FIRST — BEFORE the async center
+    // reconcile below. reconcilePlan awaits ~1s, and during that gap the composer
+    // (Stop/input) was left visible and flashed for a beat before the decision card
+    // finally replaced it. Rendering the decision card now claims the bottom slot
+    // immediately (it hides the composer), so nothing flashes while the center
+    // reconciles in the background.
+    document.body.classList.add('cg-plan-reviewed');
+    // Claim the bottom slot for the decision card SYNCHRONOUSLY first: this hides the
+    // composer immediately. Otherwise showReviewActions → setCompactChatState('enabled')
+    // shows the composer (the overlay isn't visible yet) and renderProposals (async,
+    // localizes) only hides it a beat later → the composer flashes for ~0.3s.
+    getDecisionOverlay().show();
+    planningUi.showReviewActions(state.planningMode === 'detailed' ? 'detailed' : 'markdown');
+    if (proposalsUi && typeof proposalsUi.renderProposals === 'function') {
+        proposalsUi.renderProposals(data);
+    }
+
     if (Array.isArray(data.current_plan) && data.current_plan.length > 0) {
         await detailedUi.reconcilePlan(data.current_plan);
     }
@@ -270,22 +311,11 @@ export const handleReviewNeeded = async(data, ctx) => {
     if (typeof detailedUi.finalizePlanView === 'function') {
         detailedUi.finalizePlanView();
     }
-
-    // The plan has settled: mark the whole UI as reviewed so every checklist row reads
-    // as done via CSS (see body.cg-plan-reviewed). This is declarative and timing-proof,
-    // so a late buffered section/activity event cannot leave a lingering spinner.
-    document.body.classList.add('cg-plan-reviewed');
     if (typeof detailedUi.enableAllActionControls === 'function') {
         detailedUi.enableAllActionControls();
     }
-    planningUi.showReviewActions(state.planningMode === 'detailed' ? 'detailed' : 'markdown');
-    if (proposalsUi && typeof proposalsUi.renderProposals === 'function') {
-        proposalsUi.renderProposals(data);
-    }
     // Do NOT enable/show the composer here: at review the decision card owns the
-    // bottom slot, and showReviewActions hides the composer. Showing it again would
-    // stack two input boxes. The composer reappears only when the user clicks
-    // "Adjust" (the adjust handler calls setCompactChatState 'enabled').
+    // bottom slot. The composer reappears only when the user clicks "Adjust".
     // review_needed is a terminal pause — close so EventSource does NOT auto-reconnect.
     closeStream();
 };
@@ -307,6 +337,16 @@ export const handleCompleted = async(data, ctx) => {
     if (typeof hideStreamBar === 'function') {
         hideStreamBar();
     }
+    // Header: NOW the whole flow is truly done (activities + images + config + cleanup),
+    // so swap the still-running spinner for the check. The spinner was intentionally
+    // kept spinning through the tail phases (see resolveGenerationHeaderIfDone) so the
+    // final ~minute never looked frozen.
+    const prvHeader = document.getElementById('prvHeader');
+    const prvSpinner = document.getElementById('prvSpinnerIcon');
+    const prvCheck = document.getElementById('prvCheckIcon');
+    if (prvHeader) { prvHeader.classList.add('prv-header--done'); }
+    if (prvSpinner) { prvSpinner.style.display = 'none'; }
+    if (prvCheck) { prvCheck.style.display = ''; }
     // Meaningful milestone: generation finished → one permanent success turn.
     if (typeof emitLog === 'function') {
         emitLog({

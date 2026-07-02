@@ -97,6 +97,7 @@ export const init = async(params) => {
 
         const runPlanAction = createRunPlanAction({
             state,
+            texts,
             sendPlanningFeedback,
             openSSEStream: (url, retry, mode, keepPlan) =>
                 streamManager.openSSEStream(url, retry, mode, keepPlan),

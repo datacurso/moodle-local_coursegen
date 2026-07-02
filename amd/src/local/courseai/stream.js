@@ -47,6 +47,7 @@ import {renderGenerationTracker} from './stream/tracker-renderer';
 import {setCompletionStatsFromGeneratedResult as setCompletionStats} from './stream/completion';
 import {getOrCreateRoundChecklist} from './stream/checklist';
 import {openConnection} from './stream/connection';
+import {showWorkingIndicator} from './ui/feedback-progress';
 import {resetTranscript} from './ui/plan-transcript';
 
 // Module-level variable to preserve phase 4 total activities.
@@ -102,8 +103,18 @@ export const createStreamManager = (deps) => {
         }
         closeStream();
 
-        // Keep compact chat disabled for the whole active stream lifecycle.
-        setCompactChatState(deps, 'disabled');
+        // Keep compact chat disabled for the whole active stream lifecycle. EXCEPTION:
+        // a keepPlan re-stream is an ACTION on an already-reviewed plan (reorder, replan,
+        // add, delete). There the decision card owns the bottom slot and a working
+        // indicator already gives feedback — showing the composer here (even disabled,
+        // display:block) flashes it into view for the ~200ms until review_needed re-shows
+        // the decision card. So keep it HIDDEN for keepPlan re-streams; only the initial
+        // planning stream shows the disabled composer (with Stop). 'hidden' does not set
+        // isStreaming, so set it explicitly to keep drag/actions blocked during the run.
+        setCompactChatState(deps, keepPlan ? 'hidden' : 'disabled');
+        if (keepPlan && state) {
+            state.isStreaming = true;
+        }
 
         if (typeof deps.onStreamStart === 'function') {
             deps.onStreamStart();
@@ -144,8 +155,58 @@ export const createStreamManager = (deps) => {
 
             if (streamMode === 'generating') {
                 ensureStreamContentVisible();
+                // Generation reuses the SAME plan cards as planning (#prvSections) as a
+                // read-only live progress view (per-activity spinner→check), so the whole
+                // wizard stays unified. Show that view and keep the old progress card hidden.
+                document.body.classList.add('cg-generating');
+                // Hard-disable drag-and-drop for the whole generation phase: reordering is
+                // ONLY for planning. The dnd wirer cancels drags while isStreaming is true,
+                // but the composer-hidden gate skips the 'disabled' branch that normally
+                // sets it — so set it explicitly here.
+                state.isStreaming = true;
+                // The header carried the planning-review DONE check; generation is still
+                // in progress, so put the header back to its spinner until it completes.
+                const prvHeaderEl = document.getElementById('prvHeader');
+                const prvSpinEl = document.getElementById('prvSpinnerIcon');
+                const prvCheckEl = document.getElementById('prvCheckIcon');
+                if (prvHeaderEl) {
+                    prvHeaderEl.classList.remove('prv-header--done');
+                }
+                if (prvSpinEl) {
+                    prvSpinEl.style.display = '';
+                }
+                if (prvCheckEl) {
+                    prvCheckEl.style.display = 'none';
+                }
+                // Stable generation header (the per-activity narration is suppressed —
+                // handleStatus — so it never desyncs from the cards). The cards are the
+                // live per-activity progress; the header just states the phase.
+                if (prvHeaderTitle) {
+                    prvHeaderTitle.textContent = texts.courseai_course_creating;
+                }
+                if (prvHeaderSub) {
+                    prvHeaderSub.textContent = texts.courseai_course_creating_subtitle;
+                }
+                // Sync the LEFT working indicator with the CENTER header. The Accept action
+                // left it on "Analyzing your request…"; during generation the center shows
+                // "Generating course content…" and suppressRaw stops per-activity narration
+                // from updating the left one — so it would sit frozen on the stale accept
+                // text while the center says something else (a jarring desync). Set it to the
+                // SAME message the center subtitle shows so both panels tell one story. The
+                // composer is hidden here (plan approved), so it anchors in #cgWorkingSlot.
+                showWorkingIndicator(texts, texts.courseai_course_creating_subtitle);
+                // The plan preview cards live inside #planReviewCard (hidden once a stream
+                // starts); show it as the live progress view and keep the old progress
+                // card hidden. switchPlanMode keeps the detailed sub-view active.
+                const reviewCard = elements.planReviewCard || document.getElementById('planReviewCard');
+                if (reviewCard) {
+                    reviewCard.style.display = '';
+                }
+                if (typeof stepsUi.switchPlanMode === 'function') {
+                    stepsUi.switchPlanMode('detailed');
+                }
                 if (planningProgressCard) {
-                    planningProgressCard.style.display = '';
+                    planningProgressCard.style.display = 'none';
                 }
                 if (pcToggleRow) {
                     pcToggleRow.style.display = 'flex';
@@ -171,6 +232,9 @@ export const createStreamManager = (deps) => {
                 state.activityProgressTotal = 0;
                 state.activityProgressStarted = 0;
                 state.activityProgressDone = 0;
+                // keepPlan preserved the review cards intact (full descriptions) — just
+                // mark the per-activity status on them (all pending, spinner→check as
+                // each is created in Moodle).
                 renderTracker();
             }
 

@@ -25,9 +25,10 @@
  */
 
 import {createAddTriggerBtn} from './icons';
+import {openInlineAddPanel} from 'local_coursegen/local/courseai/ui/panel';
 import {wireDragAndDrop, sendReorderActivities} from './dnd';
 import {buildSectionRowSkeleton, buildSectionActionControls} from './section-dom';
-import {removeTransientSectionPlaceholders} from './pending';
+import {removeTransientSectionPlaceholders, markProposalTargetPending} from './pending';
 import {getSectionList} from './container';
 
 /**
@@ -55,7 +56,7 @@ const toggleSectionCollapse = (bodyEl, chevron) => {
  * @returns {{bodyEl: HTMLElement, activityDnd: Object}|null}
  */
 export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionName, totalActivities}) => {
-    const {state, texts, runPlanAction, createTextPanel} = ctx;
+    const {state, texts, runPlanAction, createTextPanel, log} = ctx;
     const sectionList = getSectionList(ctx);
 
     if (!sectionList) {
@@ -94,25 +95,79 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
         toggleSectionCollapse(bodyEl, chevronEl);
     });
 
+    // Insertion position for the NEXT add-activity submit. null = append at the end
+    // (the bottom "+ Add activity" button); a number = insert at that slot (set by an
+    // on-hover divider "+" between two activities, so the user can add BETWEEN rows,
+    // exactly like Moodle's edit view). Reset to null after every submit.
+    let pendingPosition = null;
+
     // "+ Add activity" control at the bottom of this section's content panel.
     const addActivityPanelApi = createTextPanel({
         texts,
         onSubmit: async(value) => {
             addActivityBtn.classList.add('dp-add-control--disabled');
-            // No turn here: the new activity has no name yet. handleReviewNeeded
-            // emits "You added activity: <name>" once the model has generated it.
+            const position = pendingPosition;
+            pendingPosition = null;
+            const intent = {
+                action: 'add_activity',
+                parent_section_id: sectionId,
+                instruction: value,
+            };
+            // Only send an explicit slot when inserting between rows; omit it for
+            // the bottom button so the service appends (unchanged behaviour).
+            if (typeof position === 'number' && position >= 0) {
+                intent.position = position;
+            }
+            // Same as the inline "+" divider and the chat proposal flow: show the
+            // user's request as a left turn AND a placement skeleton in the centre.
+            if (typeof log === 'function') {
+                log({actor: 'user', kind: 'user', message: value});
+            }
+            markProposalTargetPending(ctx, intent);
             try {
-                await runPlanAction({
-                    action: 'add_activity',
-                    parent_section_id: sectionId,
-                    instruction: value,
-                });
+                await runPlanAction(intent);
             } catch (e) {
                 addActivityBtn.classList.remove('dp-add-control--disabled');
             }
         },
         placeholder: texts.courseai_add_activity_placeholder || 'Describe the activity to add…',
     });
+
+    // Open the add-activity input at a slot. With an anchor (the "+" divider between
+    // rows), the input appears INLINE right there — where the user clicked — instead of
+    // the section's bottom panel. Without an anchor (the bottom button) it uses the
+    // shared bottom panel and appends.
+    const openAddActivityAt = (position, anchorEl) => {
+        if (anchorEl) {
+            openInlineAddPanel({
+                anchor: anchorEl,
+                texts,
+                placeholder: texts.courseai_add_activity_placeholder || 'Describe the activity to add…',
+                onSubmit: async(value) => {
+                    const intent = {action: 'add_activity', parent_section_id: sectionId, instruction: value};
+                    if (typeof position === 'number' && position >= 0) {
+                        intent.position = position;
+                    }
+                    // Show the user's request verbatim as a left-panel turn (their own
+                    // message, like a chat bubble) — not the AI's understanding.
+                    if (typeof log === 'function') {
+                        log({actor: 'user', kind: 'user', message: value});
+                    }
+                    // Show a skeleton placeholder at the target slot so the CENTER shows
+                    // WHERE the new activity will land while it streams in.
+                    markProposalTargetPending(ctx, intent);
+                    try {
+                        await runPlanAction(intent);
+                    } catch (e) {
+                        // Non-fatal: the next action re-streams and corrects state.
+                    }
+                },
+            });
+            return;
+        }
+        pendingPosition = typeof position === 'number' ? position : null;
+        addActivityPanelApi.open();
+    };
 
     const addActivityBtn = createAddTriggerBtn(texts.courseai_btn_add_activity || 'Add activity');
     addActivityBtn.addEventListener('click', (event) => {
@@ -146,19 +201,60 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
     row.setAttribute('data-sectionname', sectionName || '');
     // Kept for the existing DnD wirer (idDataset 'sectionId') and ui-proposals.
     row.dataset.sectionId = sectionId;
+
+    // On-hover "+" divider ABOVE this section (add a section at THIS slot), mirroring
+    // the between-activities divider and Moodle's between-sections add affordance. The
+    // zone is a child of the section <li> so it rides along on reorder (reconciler-safe).
+    // CSS hides it on the FIRST section (Moodle shows dividers only BETWEEN sections).
+    const sectionInsertZone = document.createElement('div');
+    sectionInsertZone.className = 'cg-insert-zone cg-insert-zone--section';
+    sectionInsertZone.setAttribute('contenteditable', 'false');
+    sectionInsertZone.setAttribute('draggable', 'false');
+    const sectionInsertBtn = document.createElement('button');
+    sectionInsertBtn.type = 'button';
+    sectionInsertBtn.className = 'cg-insert-btn';
+    const secInsertLabel = (texts && texts.courseai_btn_add_section) || 'Add section';
+    sectionInsertBtn.setAttribute('aria-label', secInsertLabel);
+    sectionInsertBtn.setAttribute('title', secInsertLabel);
+    sectionInsertBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" '
+        + 'stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">'
+        + '<path d="M12 5v14M5 12h14"/></svg>';
+    sectionInsertBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (typeof state.openAddSectionAt !== 'function') {
+            return;
+        }
+        // Insert BEFORE this section: its CURRENT index among the rendered sections
+        // (computed at click time, so reorders never leave a stale slot).
+        const secs = Array.prototype.slice.call(sectionList.querySelectorAll('.course-section'));
+        const index = secs.indexOf(row);
+        // Pass this section row as the anchor so the input opens INLINE right here.
+        state.openAddSectionAt(index >= 0 ? index : null, row);
+    });
+    sectionInsertZone.addEventListener('dragstart', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+    });
+    sectionInsertZone.appendChild(sectionInsertBtn);
+    row.appendChild(sectionInsertZone);
+
     row.appendChild(sectionItem);
-    // A genuinely-new real-UUID section is being rendered: drop any transient
-    // apply placeholder so the shimmer is replaced, never duplicated.
-    removeTransientSectionPlaceholders(ctx);
-    // Keep the global "+ Add section" control pinned to the very bottom: insert a
-    // newly-streamed section BEFORE it, so the button never lands mid-list while a
-    // section is being added at the end (it stays below the last rendered section).
+    // Place the new section where a transient placeholder marks its slot (an add at a
+    // specific position): insert IN ITS PLACE so it appears at the right slot
+    // immediately — no append-at-the-end-then-reorder jump. Otherwise insert before the
+    // "+ Add section" control (append, kept pinned to the bottom). The transient is
+    // removed AFTER, so it is replaced in place, never duplicated.
+    const transientSection = sectionList.querySelector('[data-cg-transient="section"]');
     const addSectionWrap = sectionList.querySelector('.dp-add-section-wrap');
-    if (addSectionWrap) {
+    if (transientSection) {
+        sectionList.insertBefore(row, transientSection);
+    } else if (addSectionWrap) {
         sectionList.insertBefore(row, addSectionWrap);
     } else {
         sectionList.appendChild(row);
     }
+    removeTransientSectionPlaceholders(ctx);
 
     // Set row reference for panel/action callbacks.
     rowRef.current = row;
@@ -186,6 +282,8 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
         row,
         addActivityBtn,
         activityDnd,
+        // Called by an on-hover "+" divider to open the add panel at a given slot.
+        openAddActivityAt,
     };
 
     return {bodyEl: cmlistEl, activityDnd};
@@ -198,7 +296,7 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
  * @param {Object} ctx
  */
 export const appendAddSectionControl = (ctx) => {
-    const {state, texts, runPlanAction, createTextPanel} = ctx;
+    const {state, texts, runPlanAction, createTextPanel, log} = ctx;
     const sectionList = getSectionList(ctx);
 
     if (!sectionList) {
@@ -211,20 +309,71 @@ export const appendAddSectionControl = (ctx) => {
         existing.remove();
     }
 
+    // Insertion slot for the NEXT add-section submit. null = append at the end (the
+    // bottom "+ Add section" button); a number = insert at that slot (set by an
+    // on-hover "+" divider between two sections). Reset after every submit.
+    let pendingSectionPosition = null;
+
     const addSectionPanelApi = createTextPanel({
         texts,
         onSubmit: async(value) => {
             addSectionBtn.classList.add('dp-add-control--disabled');
-            // No turn here: the new section has no name yet. handleReviewNeeded
-            // emits "You added section: <name>" once the model has generated it.
+            const position = pendingSectionPosition;
+            pendingSectionPosition = null;
+            const intent = {action: 'add_section', instruction: value};
+            if (typeof position === 'number' && position >= 0) {
+                intent.position = position;
+            }
+            // Same as the inline "+" divider and the chat proposal flow: show the
+            // user's request as a left turn AND a placement skeleton in the centre, so
+            // clicking the bottom "+ Add section" button looks identical to the others.
+            if (typeof log === 'function') {
+                log({actor: 'user', kind: 'user', message: value});
+            }
+            markProposalTargetPending(ctx, intent);
             try {
-                await runPlanAction({action: 'add_section', instruction: value});
+                await runPlanAction(intent);
             } catch (e) {
                 addSectionBtn.classList.remove('dp-add-control--disabled');
             }
         },
         placeholder: texts.courseai_add_section_placeholder || 'Describe the section to add…',
     });
+
+    // Open the add-section input at a slot. With an anchor (the "+" divider between
+    // sections) the input opens INLINE right there — where the user clicked — instead
+    // of the bottom panel. Without an anchor (the bottom button) it appends.
+    state.openAddSectionAt = (position, anchorEl) => {
+        if (anchorEl) {
+            openInlineAddPanel({
+                anchor: anchorEl,
+                texts,
+                placeholder: texts.courseai_add_section_placeholder || 'Describe the section to add…',
+                onSubmit: async(value) => {
+                    const intent = {action: 'add_section', instruction: value};
+                    if (typeof position === 'number' && position >= 0) {
+                        intent.position = position;
+                    }
+                    // Show the user's request verbatim as a left-panel turn (their own
+                    // message, like a chat bubble) — not the AI's understanding.
+                    if (typeof log === 'function') {
+                        log({actor: 'user', kind: 'user', message: value});
+                    }
+                    // Skeleton placeholder at the target slot: shows WHERE the new section
+                    // will land while it streams in.
+                    markProposalTargetPending(ctx, intent);
+                    try {
+                        await runPlanAction(intent);
+                    } catch (e) {
+                        // Non-fatal: the next action re-streams and corrects state.
+                    }
+                },
+            });
+            return;
+        }
+        pendingSectionPosition = typeof position === 'number' ? position : null;
+        addSectionPanelApi.open();
+    };
 
     const addSectionBtn = createAddTriggerBtn(texts.courseai_btn_add_section || 'Add section');
     addSectionBtn.classList.add('dp-add-control--disabled');

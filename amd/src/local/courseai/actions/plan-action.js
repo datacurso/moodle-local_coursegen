@@ -21,17 +21,21 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {showWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
+import {getDecisionOverlay} from 'local_coursegen/local/courseai/ui/decision-overlay';
+
 /**
  * Create a runPlanAction function that sends one ActionIntent as pending_action
  * and re-opens the planning SSE stream.
  *
  * @param {Object}   opts
  * @param {Object}   opts.state                  - Shared mutable state (needs sessionid, streamingurl).
+ * @param {Object}   opts.texts                  - Localized strings (for the instant working indicator).
  * @param {Function} opts.sendPlanningFeedback    - WS helper to send a pendingAction.
  * @param {Function} opts.openSSEStream           - Opens/re-opens the SSE stream.
  * @returns {Function} async (intent: Object) => void
  */
-export const createRunPlanAction = ({state, sendPlanningFeedback, openSSEStream}) => {
+export const createRunPlanAction = ({state, texts, sendPlanningFeedback, openSSEStream}) => {
     /**
      * Send one ActionIntent as pending_action and re-open the planning stream.
      *
@@ -44,6 +48,18 @@ export const createRunPlanAction = ({state, sendPlanningFeedback, openSSEStream}
         if (!sendPlanningFeedback || !state.sessionid) {
             return;
         }
+        // Hide the review decision card (Accept/Adjust) the instant an action starts:
+        // a stream is now in flight and the composer takes the bottom slot (with Stop),
+        // so the decision card must NOT remain stacked below it. It reappears at the
+        // next review_needed. (feedback.js already does this for adjust/accept; do it
+        // here so drag-reorder / inline replan / delete behave the same.)
+        getDecisionOverlay().hide();
+        // Show the "working" indicator (spinner + message) IMMEDIATELY — before the
+        // sendPlanningFeedback round-trip — so the left panel never goes blank while
+        // an action (reorder, replan, add, apply proposal…) is being dispatched, and
+        // the user gets instant feedback that their request started. handleStatus
+        // updates this same entry in place as the server responds.
+        showWorkingIndicator(texts);
         // What gets SENT is `intent` (e.g. {action:'execute_proposal', …} when applying
         // a proposal). What decides the LEFT-panel routing is the REAL action, which for
         // a proposal lives in scopeIntent (the proposal's resolved intent). Inline controls
@@ -73,6 +89,13 @@ export const createRunPlanAction = ({state, sendPlanningFeedback, openSSEStream}
         } else {
             state.addScope = null;
         }
+        // Remember the resolved action so review_needed knows whether it may touch the
+        // top "structure I planned" checklist. That checklist is FROZEN history: by
+        // default NO keepPlan change (reorder, delete, adjust, replace, or any future
+        // action) may rewrite it — the change shows as a turn below and the centre
+        // reflects it. Rewriting the top pulls later additions up into the original
+        // snapshot (the "adding stuff above after I asked for changes" bug).
+        state.keepPlanAction = action || null;
         await sendPlanningFeedback({recordid: state.sessionid, pendingAction: intent});
         // keepPlan: this resumes an existing plan to apply an action — preserve the
         // rendered preview so the reconciler diffs against it (no teardown/flicker).

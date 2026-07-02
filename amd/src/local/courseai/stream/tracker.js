@@ -45,6 +45,7 @@ export const createGenerationTracker = (state, texts) => {
                 activities: activities.map((activity, activityIndex) => ({
                     sectionIndex,
                     activityIndex,
+                    id: activity.id,
                     title: activity.title
                         || activity.name
                         || `${texts.courseai_activity_default} ${activityIndex + 1}`,
@@ -86,6 +87,22 @@ export const findNextPendingIndex = (state, startFrom = 0) => {
         }
     }
     return -1;
+};
+
+/**
+ * Set the status of the flat activity at index (structured progress by queue
+ * index, which matches the service generation order).
+ *
+ * @param {Object} state
+ * @param {number} index
+ * @param {string} status - 'pending' | 'in_progress' | 'done'
+ */
+export const setTrackerFlatStatus = (state, index, status) => {
+    const tracker = state.generationTracker;
+    if (!tracker || !Array.isArray(tracker.flat) || index < 0 || index >= tracker.flat.length) {
+        return;
+    }
+    tracker.flat[index].status = status;
 };
 
 /**

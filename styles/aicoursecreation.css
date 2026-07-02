@@ -7,11 +7,13 @@ body { background: var(--bg); color: var(--fg); }
   --bg:           hsl(210, 40%, 98%);
   --fg:           hsl(215, 28%, 17%);
   --card:         hsl(0, 0%, 100%);
-  --primary:      hsl(8, 72%, 42%);
+  /* Brand palette aligned with datacurso.com: primary = warm coral (was a harsh
+     dark red that clashed with the brand), secondary/brand = the brand purple. */
+  --primary:      hsl(10, 81%, 63%);
   --primary-fg:   hsl(0, 0%, 100%);
-  --primary-soft: hsl(9, 100%, 96%);
-  --brand:        hsl(252, 55%, 42%);
-  --brand-soft:   hsl(252, 70%, 96%);
+  --primary-soft: hsl(10, 81%, 96%);
+  --brand:        hsl(260, 37%, 42%);
+  --brand-soft:   hsl(260, 40%, 96%);
   --muted:        hsl(215, 25%, 96%);
   --muted-fg:     hsl(215, 16%, 47%);
   --border:       hsl(215, 20%, 88%);
@@ -19,7 +21,7 @@ body { background: var(--bg); color: var(--fg); }
   --success-fg:   hsl(0, 0%, 100%);
   --radius:       0.75rem;
   /* Semantic tokens (ui-refactor §7) */
-  --danger:        hsl(8 72% 48%);   --danger-soft:   hsl(8 72% 48% / .10);
+  --danger:        hsl(10 81% 48%);   --danger-soft:   hsl(10 81% 48% / .10);
   --info:          hsl(212 90% 50%); --info-soft:     hsl(212 90% 50% / .10);
   --success-strong: hsl(142 70% 40%); --success-soft: hsl(142 70% 40% / .14);
   --warn:          hsl(38 92% 50%);  --warn-soft:     hsl(38 92% 50% / .14);
@@ -30,7 +32,7 @@ body { background: var(--bg); color: var(--fg); }
   --ease:     cubic-bezier(.2, .8, .2, 1);
   --hold-mark: 1100ms;
   --shadow-card:  0 1px 3px hsl(215, 28%, 17%, 0.06), 0 1px 2px hsl(215, 28%, 17%, 0.04);
-  --shadow-elevated: 0 10px 30px -10px hsl(8, 72%, 42%, 0.25);
+  --shadow-elevated: 0 10px 30px -10px hsl(10, 81%, 42%, 0.25);
   --surface-2:     hsl(215, 20%, 94%);    /* slightly darker than --muted, for nested surfaces */
   --shadow-card:   0 1px 2px hsl(215 28% 17% / .05);   /* override: softer than current */
   --shadow-elevated: 0 4px 16px -4px hsl(215 28% 17% / .10);  /* override: neutral, not red */
@@ -300,12 +302,12 @@ svg { display: block; flex-shrink: 0; }
 .chip-syllabus {
   background: var(--brand-soft);
   color: var(--brand);
-  border: 1px solid hsl(252, 55%, 42%, 0.3);
+  border: 1px solid hsl(260, 37%, 42%, 0.3);
 }
 .chip-guideline {
   background: var(--primary-soft);
   color: var(--primary);
-  border: 1px solid hsl(8, 72%, 42%, 0.3);
+  border: 1px solid hsl(10, 81%, 42%, 0.3);
 }
 .chip-name {
   max-width: 160px;
@@ -326,8 +328,8 @@ svg { display: block; flex-shrink: 0; }
   line-height: 1;
   transition: background .12s;
 }
-.chip-syllabus .chip-btn:hover  { background: hsl(252, 55%, 42%, 0.15); }
-.chip-guideline .chip-btn:hover { background: hsl(8, 72%, 42%, 0.15); }
+.chip-syllabus .chip-btn:hover  { background: hsl(260, 37%, 42%, 0.15); }
+.chip-guideline .chip-btn:hover { background: hsl(10, 81%, 42%, 0.15); }
 
 /* Toolbar */
 .card-toolbar {
@@ -467,7 +469,7 @@ svg { display: block; flex-shrink: 0; }
   transition: background .12s, opacity .12s;
   line-height: 1;
 }
-.btn-generate:hover             { background: hsl(8, 72%, 37%); }
+.btn-generate:hover             { background: hsl(10, 76%, 56%); }
 .btn-generate:disabled          { opacity: .45; cursor: not-allowed; }
 .btn-generate:disabled:hover    { background: var(--primary); }
 
@@ -558,7 +560,7 @@ svg { display: block; flex-shrink: 0; }
 }
 .pop-search-inner input:focus {
   border-color: var(--primary);
-  box-shadow: 0 0 0 3px hsl(8, 72%, 42%, 0.15);
+  box-shadow: 0 0 0 3px hsl(10, 81%, 42%, 0.15);
   outline: none;
 }
 
@@ -862,7 +864,7 @@ svg { display: block; flex-shrink: 0; }
   font-family: inherit;
   transition: background .12s, opacity .12s;
 }
-.btn-plan-approve:hover:not(:disabled) { background: hsl(8, 72%, 36%); }
+.btn-plan-approve:hover:not(:disabled) { background: hsl(10, 76%, 56%); }
 .btn-plan-approve:disabled { opacity: .45; cursor: not-allowed; }
 .planning-wrap {
   display: flex;
@@ -1049,47 +1051,67 @@ svg { display: block; flex-shrink: 0; }
 .pc-completion-card {
   background: #fff;
   border: 1px solid var(--border);
-  border-radius: 18px;
-  box-shadow: 0 10px 30px -18px rgba(20, 30, 55, .28);
-  padding: 36px 24px;
+  border-radius: 16px;
+  box-shadow: var(--shadow-card);
+  padding: 32px 24px;
   display: flex;
   flex-direction: column;
   align-items: center;
   text-align: center;
-  gap: 12px;
+  gap: 10px;
 }
 
+/* Celebration badge: just the party-popper (no disc). On completion the popper
+   FIRES — colourful confetti bursts far outward from the cone (the .pc-confetti
+   particles below), while the cone itself settles in gently. */
 .pc-completion-icon {
-  width: 82px;
-  height: 82px;
-  border-radius: 50%;
-  background: linear-gradient(145deg, hsl(8, 78%, 48%), hsl(8, 72%, 42%));
-  color: #fff;
+  position: relative;
+  overflow: visible;
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  box-shadow: 0 16px 26px -18px hsl(8, 72%, 42%, .75);
+  animation: cg-completion-appear .35s ease-out both;
 }
 
 .pc-completion-emoji {
-  font-size: 34px;
+  font-size: 46px;
   line-height: 1;
+  display: inline-block;
+  position: relative;
+  z-index: 1;
+}
+
+/* Confetti layer. The pieces are created and animated by JS (Web Animations API)
+   in showCompletionView so they get real physics — an outward burst that arcs down
+   under gravity, spinning and fading. Overflow is visible so they clear the disc. */
+.pc-confetti {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+@keyframes cg-completion-appear {
+  0%   { transform: scale(.6); opacity: 0; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@media (prefers-reduced-motion: reduce) {
+  .pc-completion-icon { animation: none; }
 }
 
 .pc-completion-title {
   margin: 0;
-  font-size: 24px;
-  line-height: 1.25;
-  font-weight: 800;
+  font-size: 20px;
+  line-height: 1.3;
+  font-weight: 700;
   color: var(--fg);
 }
 
 .pc-completion-summary {
   margin: 0;
-  font-size: 16px;
+  font-size: 14px;
   line-height: 1.5;
   color: var(--muted-fg);
-  max-width: 620px;
+  max-width: 520px;
 }
 
 .pc-completion-actions {
@@ -1098,35 +1120,36 @@ svg { display: block; flex-shrink: 0; }
   align-items: center;
   justify-content: center;
   flex-wrap: wrap;
-  gap: 12px;
+  gap: 10px;
 }
 
+/* Modest buttons in the brand line — a flat coral primary (no heavy gradient/shadow)
+   and a quiet outline secondary, matching the add/decision buttons elsewhere. */
 .btn-completion-primary,
 .btn-completion-secondary {
   display: inline-flex;
   align-items: center;
   justify-content: center;
-  gap: 8px;
-  min-width: 250px;
-  height: 46px;
-  padding: 0 20px;
-  border-radius: 14px;
-  font-size: 16px;
-  font-weight: 700;
+  gap: 7px;
+  min-width: 150px;
+  height: 40px;
+  padding: 0 18px;
+  border-radius: 10px;
+  font-size: 14px;
+  font-weight: 600;
   font-family: inherit;
-  transition: transform .12s ease, background .12s ease, border-color .12s ease, color .12s ease, opacity .12s ease;
+  transition: background .12s ease, border-color .12s ease, color .12s ease, opacity .12s ease;
 }
 
 .btn-completion-primary {
   border: none;
-  background: linear-gradient(145deg, hsl(8, 78%, 48%), hsl(8, 72%, 42%));
-  color: #fff;
-  box-shadow: 0 12px 22px -16px hsl(8, 72%, 42%, .75);
+  background: var(--primary);
+  color: var(--primary-fg);
   cursor: pointer;
 }
 
 .btn-completion-primary:hover:not(:disabled) {
-  background: linear-gradient(145deg, hsl(8, 78%, 44%), hsl(8, 72%, 38%));
+  background: hsl(10 76% 56%);
 }
 
 .btn-completion-primary:disabled {
@@ -1142,8 +1165,9 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .btn-completion-secondary:hover:not(:disabled) {
-  border-color: hsl(215, 20%, 70%);
-  color: var(--fg);
+  border-color: var(--primary);
+  color: var(--primary);
+  background: hsl(10 85% 97%);
 }
 
 .btn-completion-secondary:disabled {
@@ -1151,22 +1175,6 @@ svg { display: block; flex-shrink: 0; }
   cursor: not-allowed;
 }
 
-@media (max-width: 1200px) {
-  .pc-completion-title {
-    font-size: 24px;
-  }
-
-  .pc-completion-summary {
-    font-size: 16px;
-  }
-
-  .btn-completion-primary,
-  .btn-completion-secondary {
-    min-width: 240px;
-    font-size: 16px;
-    height: 46px;
-  }
-}
 
 @media (max-width: 768px) {
   .pc-completion-card {
@@ -1224,7 +1232,7 @@ svg { display: block; flex-shrink: 0; }
   width: 48px;
   height: 48px;
   border-radius: 50%;
-  background: hsl(8 72% 42% / .10);
+  background: hsl(10 81% 42% / .10);
 }
 
 .pc-spin {
@@ -1350,7 +1358,7 @@ svg { display: block; flex-shrink: 0; }
   width: 28px;
   height: 28px;
   border-radius: 7px;
-  background: hsl(8, 72%, 42%, 0.1);
+  background: hsl(10, 81%, 42%, 0.1);
   color: var(--primary);
   font-size: 12px;
   font-weight: 700;
@@ -1584,7 +1592,7 @@ svg { display: block; flex-shrink: 0; }
 
 /* Soft per-purpose tint on the icon chip only (Moodle-like, calm). */
 .dp-purpose-content .ps-badge-icon       { background: hsl(170 55% 90%); }
-.dp-purpose-assessment .ps-badge-icon    { background: hsl(8 72% 92%); }
+.dp-purpose-assessment .ps-badge-icon    { background: hsl(10 81% 92%); }
 .dp-purpose-collaboration .ps-badge-icon { background: hsl(142 50% 90%); }
 .dp-purpose-communication .ps-badge-icon { background: hsl(38 80% 90%); }
 
@@ -1638,8 +1646,10 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .prv-header--done .prv-icon-wrap {
-  background: var(--success, #16a34a);
-  color: #fff;
+  box-sizing: border-box;
+  background: transparent;
+  border: 1.5px solid var(--muted-fg);
+  color: var(--muted-fg);
 }
 
 @keyframes prv-spin {
@@ -1654,9 +1664,9 @@ svg { display: block; flex-shrink: 0; }
   flex: 1;
   min-width: 0;
   display: flex;
-  align-items: baseline;
-  gap: 8px;
-  flex-wrap: wrap;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: 1px;
 }
 
 .prv-header-title {
@@ -1666,11 +1676,19 @@ svg { display: block; flex-shrink: 0; }
   margin: 0;
 }
 
+/* The live status line changes text on every event; clamp it to ONE line with an
+   ellipsis so its height never changes (a wrapping 2nd line made the whole panel
+   below jump/vibrate as the text length varied). */
 .prv-header-sub {
   font-size: 12px;
   color: var(--muted-fg);
   margin: 0;
   opacity: .85;
+  max-width: 100%;
+  min-height: 16px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 /* ── Section row: Moodle topic card ── */
@@ -1761,7 +1779,7 @@ svg { display: block; flex-shrink: 0; }
 
 .dp-action-btn:focus,
 .dp-action-btn:focus-visible {
-  outline: 2px solid hsl(8 72% 50% / .35);
+  outline: 2px solid hsl(10 81% 50% / .35);
   outline-offset: 1px;
 }
 
@@ -1773,7 +1791,7 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .dp-item-actions--image .dp-action-btn:hover {
-  color: hsl(8 72% 42%);
+  color: hsl(10 81% 42%);
 }
 
 /* Topic number badge — compact circle */
@@ -1926,8 +1944,8 @@ svg { display: block; flex-shrink: 0; }
 .dp-ai-textarea:focus,
 .dp-ai-textarea:focus-visible {
   outline: none;
-  border-color: hsl(8 72% 42% / .45);
-  box-shadow: 0 0 0 2px hsl(8 72% 50% / .16);
+  border-color: hsl(10 81% 42% / .45);
+  box-shadow: 0 0 0 2px hsl(10 81% 50% / .16);
 }
 
 .dp-ai-actions {
@@ -1953,8 +1971,8 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .dp-ai-btn--primary {
-  background: hsl(8 72% 42%);
-  border-color: hsl(8 72% 42%);
+  background: hsl(10 81% 42%);
+  border-color: hsl(10 81% 42%);
   color: hsl(0 0% 100%);
 }
 
@@ -2110,7 +2128,7 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .dp-image-card:hover {
-  box-shadow: 0 2px 4px hsl(8 72% 20% / .08);
+  box-shadow: 0 2px 4px hsl(10 81% 20% / .08);
 }
 
 .dp-image-body {
@@ -2164,14 +2182,14 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .dp-add-control:hover {
-  border-color: var(--brand, hsl(252 55% 42%));
-  color: var(--brand, hsl(252 55% 42%));
-  background: hsl(252 55% 42% / .05);
+  border-color: var(--brand, hsl(260 37% 42%));
+  color: var(--brand, hsl(260 37% 42%));
+  background: hsl(260 37% 42% / .05);
 }
 
 .dp-add-control:focus,
 .dp-add-control:focus-visible {
-  outline: 2px solid hsl(252 55% 42% / .35);
+  outline: 2px solid hsl(260 37% 42% / .35);
   outline-offset: 1px;
 }
 
@@ -2184,7 +2202,7 @@ svg { display: block; flex-shrink: 0; }
 .dp-add-control__icon {
   font-size: 16px;
   line-height: 1;
-  color: var(--brand, hsl(252 55% 42%));
+  color: var(--primary);
   flex-shrink: 0;
 }
 
@@ -2193,14 +2211,25 @@ svg { display: block; flex-shrink: 0; }
   margin-top: 14px;
 }
 
-/* "Add section" reads like Moodle's: wide, centered, 2px dashed, rounded, brand. */
+/* "Add section" reads like Moodle's: wide, centered, 2px dashed, rounded. At REST it
+   is a subtle dashed outline with accent text (no fill); it uses the SAME accent as
+   the other add buttons for a single, cohesive palette (Moodle uses one accent too). */
 .dp-add-section-wrap .dp-add-control {
   justify-content: center;
   padding: 14px;
   border-width: 2px;
   border-radius: 12px;
   font-size: 13px;
-  color: var(--brand, hsl(252 55% 42%));
+  color: var(--primary);
+  transition: background-color .15s, border-color .15s, color .15s;
+}
+/* On hover it FILLS with a light accent tint and a SOLID accent border — exactly like
+   Moodle's "Add section" turning filled on hover (dashed → solid + light background). */
+.dp-add-section-wrap .dp-add-control:hover {
+  background: hsl(10 85% 94%);
+  border-style: solid;
+  border-color: var(--primary);
+  color: var(--primary);
 }
 
 /* Inline panel override for add controls (no section indentation needed) */
@@ -2227,13 +2256,13 @@ svg { display: block; flex-shrink: 0; }
 /* Visual feedback during drag */
 .dp-dragging {
   opacity: 0.45;
-  outline: 2px dashed hsl(8 72% 42% / .45);
+  outline: 2px dashed hsl(10 81% 42% / .45);
   outline-offset: 2px;
   border-radius: 8px;
 }
 
 .dp-drag-over {
-  outline: 2px solid hsl(8 72% 42% / .6);
+  outline: 2px solid hsl(10 81% 42% / .6);
   outline-offset: 2px;
   border-radius: 8px;
 }
@@ -2262,8 +2291,8 @@ svg { display: block; flex-shrink: 0; }
 
 /* Clarification box */
 .plan-proposals-clarification {
-  background: hsl(252 55% 42% / .07);
-  border: 1px solid hsl(252 55% 42% / .25);
+  background: hsl(260 37% 42% / .07);
+  border: 1px solid hsl(260 37% 42% / .25);
   border-radius: 8px;
   padding: 10px 14px;
   display: flex;
@@ -2275,7 +2304,7 @@ svg { display: block; flex-shrink: 0; }
   margin: 0;
   font-size: 12px;
   font-weight: 600;
-  color: var(--brand, hsl(252 55% 42%));
+  color: var(--brand, hsl(260 37% 42%));
   text-transform: uppercase;
   letter-spacing: .04em;
 }
@@ -2310,22 +2339,49 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .plan-proposal-card:hover {
-  border-color: var(--brand, hsl(252 55% 42%));
-  background: hsl(252 55% 42% / .04);
+  border-color: var(--brand, hsl(260 37% 42%));
+  background: hsl(260 37% 42% / .04);
 }
 
 .plan-proposal-card:has(.plan-proposal-radio:checked) {
-  border-color: var(--brand, hsl(252 55% 42%));
-  background: hsl(252 55% 42% / .07);
+  border-color: var(--brand, hsl(260 37% 42%));
+  background: hsl(260 37% 42% / .07);
 }
 
 .plan-proposal-radio {
   margin-top: 2px;
   flex-shrink: 0;
-  accent-color: var(--brand, hsl(252 55% 42%));
+  accent-color: var(--brand, hsl(260 37% 42%));
   width: 15px;
   height: 15px;
   cursor: pointer;
+}
+
+/* Moodle/Bootstrap paints a default BLUE focus ring (box-shadow) on form inputs.
+   Override it with a brand-coloured ring so the checked proposal reads on-brand,
+   not blue. The live card lives in .plan-proposals-group (NOT .plan-proposals), so
+   target the element classes directly + !important to beat Moodle's base rule. */
+.plan-proposal-radio:focus,
+.plan-proposal-radio:focus-visible {
+  outline: none !important;
+  box-shadow: 0 0 0 3px hsl(260 37% 42% / .35) !important;
+}
+
+/* Moodle base list/label styles override our card border to a grey bottom rule,
+   so the SELECTED card lost its brand outline. Force the brand border here. */
+.plan-proposal-card {
+  border: 1px solid var(--border, #dee2e6) !important;
+}
+
+.plan-proposal-card:has(.plan-proposal-radio:checked) {
+  border-color: var(--brand, hsl(260 37% 42%)) !important;
+  background: hsl(260 37% 42% / .07) !important;
+}
+
+/* Destructive selected card keeps the coral (primary) accent. */
+.plan-proposal--destructive:has(.plan-proposal-radio:checked) {
+  border-color: var(--primary, hsl(10 81% 63%)) !important;
+  background: hsl(10 81% 63% / .09) !important;
 }
 
 .plan-proposal-summary {
@@ -2337,17 +2393,17 @@ svg { display: block; flex-shrink: 0; }
 
 /* Destructive variant */
 .plan-proposal--destructive {
-  border-color: hsl(8 72% 70%);
+  border-color: hsl(10 81% 70%);
 }
 
 .plan-proposal--destructive:hover {
-  border-color: var(--primary, hsl(8 72% 42%));
-  background: hsl(8 72% 42% / .05);
+  border-color: var(--primary, hsl(10 81% 42%));
+  background: hsl(10 81% 42% / .05);
 }
 
 .plan-proposal--destructive:has(.plan-proposal-radio:checked) {
-  border-color: var(--primary, hsl(8 72% 42%));
-  background: hsl(8 72% 42% / .08);
+  border-color: var(--primary, hsl(10 81% 42%));
+  background: hsl(10 81% 42% / .08);
 }
 
 .plan-proposal-destructive-badge {
@@ -2356,8 +2412,8 @@ svg { display: block; flex-shrink: 0; }
   height: 18px;
   padding: 0 7px;
   border-radius: 9px;
-  background: hsl(8 72% 42% / .12);
-  color: var(--primary, hsl(8 72% 42%));
+  background: hsl(10 81% 42% / .12);
+  color: var(--primary, hsl(10 81% 42%));
   font-size: 11px;
   font-weight: 600;
   flex-shrink: 0;
@@ -2392,7 +2448,7 @@ svg { display: block; flex-shrink: 0; }
 
 .plan-proposal-other-textarea:focus {
   outline: none;
-  border-color: var(--brand, hsl(252 55% 42%));
+  border-color: var(--brand, hsl(260 37% 42%));
 }
 
 /* Action button row */
@@ -2410,7 +2466,7 @@ svg { display: block; flex-shrink: 0; }
   padding: 0 16px;
   border-radius: 8px;
   border: none;
-  background: var(--brand, hsl(252 55% 42%));
+  background: var(--brand, hsl(260 37% 42%));
   color: #fff;
   font-size: 13px;
   font-weight: 600;
@@ -2420,7 +2476,7 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .btn-proposals-apply:hover:not(:disabled) {
-  background: hsl(252 55% 36%);
+  background: hsl(260 37% 36%);
 }
 
 .btn-proposals-apply:disabled {
@@ -2606,15 +2662,15 @@ svg { display: block; flex-shrink: 0; }
    a thin outline (no layout shift) instead of a heavy ring; a faint tint when
    the action deletes content. NEVER applied to the left checklist. */
 .cg-affected {
-  outline: 2px solid var(--brand, hsl(252 55% 42%));
+  outline: 2px solid var(--brand, hsl(260 37% 42%));
   outline-offset: 1px;
   border-radius: 10px;
   transition: outline-color .15s ease, background-color .15s ease;
 }
 
 .cg-affected.cg-affected--destructive {
-  outline-color: var(--primary, hsl(8 72% 42%));
-  background-color: hsl(8 72% 42% / .05);
+  outline-color: var(--primary, hsl(10 81% 42%));
+  background-color: hsl(10 81% 42% / .05);
 }
 
 /* ─── Chat history: initial prompt display ────────────────────────────── */
@@ -2874,7 +2930,7 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
   background: linear-gradient(
     90deg,
     transparent 0%,
-    var(--brand, hsl(252 55% 42%)) 50%,
+    var(--brand, hsl(260 37% 42%)) 50%,
     transparent 100%
   );
   animation: cg-stream-sweep 1.2s var(--ease, ease) infinite;
@@ -3048,6 +3104,27 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
 .cg-log-md li > ol { margin: 0.12em 0; }
 .cg-log-md strong { font-weight: 700; }
 .cg-log-md em { font-style: italic; color: var(--muted-fg); }
+/* Approved-plan summary: one condensed element holds EVERY section, so each
+   section heading (### name) must clearly outrank the bold activity titles
+   (**title**) nested under it — otherwise sections and activities look identical
+   (same size/weight). Scoped to the summary so the generic transcript is untouched. */
+.cg-approved-summary .cg-log-md h3 {
+  font-size: 1.25em;
+  font-weight: 800;
+  margin-top: 1.25em;
+  padding-top: 0.6em;
+  border-top: 1px solid var(--border);
+}
+.cg-approved-summary .cg-log-md > h3:first-child {
+  margin-top: 0;
+  padding-top: 0;
+  border-top: 0;
+}
+/* Once the plan is approved the course is created and is no longer editable from
+   this wizard, so the composer must stay gone — through generation, completion and
+   reload. A declarative body class wins over whatever inline display any later
+   setCompactChatState('enabled') sets (timing-proof, like body.cg-plan-reviewed). */
+body.cg-plan-approved #compactChatCard { display: none !important; }
 .cg-log-md code {
   font-family: var(--font-mono, monospace);
   font-size: 0.92em;
@@ -3139,6 +3216,17 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
 
 .cg-log-thinking .cg-log-msg {
   color: var(--muted-fg);
+}
+
+/* The working/thinking indicator is always ONE short line, so its spinner must
+   sit vertically CENTERED with the text. The feed default (align-items:flex-start
+   + a 2px nudge on the spinner) top-aligns it, which left the spinner floating
+   above the text — glaring now that it lives in the anchored bottom card. */
+.cg-log-thinking .cg-log-body {
+  align-items: center;
+}
+.cg-log-thinking .cg-log-spin {
+  margin-top: 0;
 }
 
 @media (prefers-reduced-motion: reduce) {
@@ -3302,6 +3390,31 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
   opacity: 0.88;
 }
 
+/* ─── Working-status slot (bottom pinned) ──────────────────────────────────
+   During an action re-stream the composer is hidden; without a bottom element
+   the "assistant is working" feedback (a feed turn) would float above an empty
+   void down to the panel edge. This slot lives in the composer's bottom slot so
+   the feedback reads as an anchored status bar. Empty the rest of the time. */
+.cg-working-slot {
+  flex: 0 0 auto;
+  width: calc(100% - 4px);
+  margin-top: 8px;
+}
+.cg-working-slot:empty {
+  display: none;
+  margin-top: 0;
+}
+/* The thinking entry, when hosted here, becomes a slim card (not a flat feed
+   turn) so it visually anchors the bottom like the composer/accept bar do. */
+.cg-working-slot .cg-log-thinking {
+  margin: 0;
+  padding: 12px 14px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+}
+
 .courseai-workspace.is-planning .courseai-chat-scroll {
   flex: 1 1 auto;
   min-height: 0;
@@ -3409,24 +3522,41 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
   font-size: 11px;
 }
 
-/* Action controls (AI adjust + delete): hidden until the section/activity is
-   hovered or focused, echoing Boost's .focus-control affordances. */
+/* Action controls (AI adjust + delete). In PLANNING they are ALWAYS visible: a
+   hover-only reveal left the collapse chevron sitting alone with phantom empty
+   space beside it (where the invisible buttons still took room), which read as
+   misaligned. Keeping them shown fills that space and the row reads cleanly. */
 #prvSections .cg-item-actions {
   display: inline-flex;
   align-items: center;
-  gap: 6px;
+  /* A touch more breathing room between the row controls (was cramped at 6px). */
+  gap: 9px;
 }
 #prvSections .cg-item-actions .dp-action-btn {
-  opacity: 0;
-  transition: opacity var(--t-fast, .12s) var(--ease, ease);
-}
-#prvSections .course-section-header:hover .cg-item-actions .dp-action-btn,
-#prvSections .course-section-header:focus-within .cg-item-actions .dp-action-btn,
-#prvSections .activity-item:hover .cg-item-actions .dp-action-btn,
-#prvSections .activity-item:focus-within .cg-item-actions .dp-action-btn {
   opacity: 1;
+  transition: background-color var(--t-fast, .12s) var(--ease, ease),
+              color var(--t-fast, .12s) var(--ease, ease);
+  /* Flat, like Moodle's row controls — the base drop shadow made them look like
+     raised, shadowed chips, which read as noisy in the clean preview. */
+  box-shadow: none;
 }
-/* Disabled-while-streaming controls stay hidden regardless of hover. */
+/* Clear (but light) hover feedback so it is obvious which control is about to be
+   clicked: the chip fills a shade darker and its glyph deepens. No shadow. */
+#prvSections .cg-item-actions .dp-action-btn:hover {
+  box-shadow: none;
+  background: hsl(215 26% 90%);
+  color: hsl(215 28% 28%);
+}
+#prvSections .cg-item-actions .dp-action-btn:hover .dp-action-icon {
+  opacity: .7;
+}
+/* The collapse chevron (collapsible-content indicator) sits LAST in the cluster
+   (rightmost) in BOTH phases, so it is consistently flush-right — in generation
+   the action buttons are gone and only this chevron remains, aligned at the end. */
+#prvSections .cg-activity-chevron {
+  order: 10;
+}
+/* Disabled-while-streaming controls stay hidden regardless. */
 #prvSections .cg-item-actions .dp-action-btn.dp-action-btn--disabled {
   opacity: 0;
 }
@@ -3439,11 +3569,114 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
 #prvSections .activity-item.cg-activity--done {
   opacity: 1;
 }
+
+/* ── Generation phase: reuse the plan cards as a read-only LIVE progress view ──
+   Scoped to body.cg-generating so the editable planning view is never touched.
+   The cg-gen-* status class lands on the activity <li> (.activity-wrapper). The
+   card looks DISABLED (dimmed + desaturated) while its content is pending/being
+   created, and ACTIVATES (full opacity + colour) the moment it is created — with a
+   spinner on the icon while in progress and a green check when done. Edit
+   affordances are hidden; expandable activities STAY clickable. Drag-and-drop is
+   off the whole phase (state.isStreaming gates the wirer). */
+/* Generation is read-only: drop the edit controls (AI-adjust + delete) and the
+   add buttons. But KEEP the collapse chevron — activities with content stay
+   expandable — so hide only the .dp-action-btn inside the cluster, not the whole
+   cluster (which also holds the chevron). The chevron then sits alone, flush-right. */
+body.cg-generating #prvSections .cg-item-actions .dp-action-btn,
+body.cg-generating #prvSections .dp-add-activity-wrap,
+body.cg-generating #prvSections .dp-add-section-wrap { display: none !important; }
+body.cg-generating #prvSections .activity-item.cg-activity--has-detail { cursor: pointer !important; }
+body.cg-generating #prvSections .activity-icon { position: relative; }
+
+/* Sections are NOT draggable during generation: default cursor, and no hover
+   outline. Plain (non-collapsible) activities also keep the default cursor. */
+body.cg-generating #prvSections .course-section .section-item,
+body.cg-generating #prvSections .course-section-header,
+body.cg-generating #prvSections .course-section .section-item .activity-item:not(.cg-activity--has-detail) {
+  cursor: default !important;
+}
+/* No blue/red hover or focus ring during generation — the rows are read-only
+   progress, so a prominent hover affordance is misleading. */
+body.cg-generating #prvSections .course-section .section-item:hover { outline: none !important; }
+body.cg-generating #prvSections .activity-item:hover,
+body.cg-generating #prvSections .activity-item:focus,
+body.cg-generating #prvSections .activity-item:focus-visible,
+body.cg-generating #prvSections .cg-affected {
+  outline: none !important;
+  box-shadow: none !important;
+}
+
+/* PENDING — the whole card is "off": desaturated (grayscale) + slightly faded.
+   Grayscale (not heavy opacity) keeps the collapse chevron/content readable. */
+body.cg-generating #prvSections .cg-gen-pending .activity-item {
+  opacity: .82;
+  filter: grayscale(1);
+  transition: opacity .35s ease, filter .35s ease;
+}
+/* IN PROGRESS — do NOT grayscale the whole card: a filter on .activity-item would
+   also grey the coral spinner below (it is a descendant). Only mute the TEXT so it
+   still reads as not-yet-final, while the icon + spinner keep the brand colour to
+   mark "this one is being built now". A soft overall opacity keeps it gentle. */
+body.cg-generating #prvSections .cg-gen-active .activity-item {
+  opacity: .9;
+  transition: opacity .35s ease, filter .35s ease;
+}
+body.cg-generating #prvSections .cg-gen-active .activity-name-area,
+body.cg-generating #prvSections .cg-gen-active .cg-activity-desc-slot,
+body.cg-generating #prvSections .cg-gen-active .cg-activity-detail {
+  filter: grayscale(1);
+  opacity: .85;
+}
+/* IN PROGRESS — a small spinner on the icon in the brand coral, kept SOFT (light
+   coral ring + slightly dimmed by the card opacity) so it is present but not loud. */
+body.cg-generating #prvSections .cg-gen-active .activity-icon::after {
+  content: '';
+  position: absolute;
+  right: -5px;
+  bottom: -5px;
+  width: 15px;
+  height: 15px;
+  border-radius: 50%;
+  box-sizing: border-box;
+  border: 2px solid hsl(10 81% 63% / .3);
+  border-top-color: var(--primary);
+  background: #fff;
+  box-shadow: 0 0 0 2px #fff;
+  animation: spin .8s linear infinite;
+}
+/* DONE — the card "turns on" (full colour) + a sober check badge on the icon
+   (same muted tone as the section checklist check, NOT a loud green). */
+body.cg-generating #prvSections .cg-gen-done .activity-item {
+  opacity: 1;
+  filter: none;
+}
+body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
+  content: '';
+  position: absolute;
+  right: -6px;
+  bottom: -6px;
+  width: 18px;
+  height: 18px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  background-color: #fff;
+  border: 1.5px solid var(--muted-fg);
+  box-shadow: 0 0 0 2px #fff;
+  /* Same crisp SVG checkmark as the section checklist check (stroke = --muted-fg
+     hsl(215 16% 47%) ≈ #65758b), not a cramped text glyph. */
+  background-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='%2365758b' stroke-width='3.5' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E");
+  background-size: 10px 10px;
+  background-position: center;
+  background-repeat: no-repeat;
+}
 /* Activities with detail are clickable to expand, but the whole row is also
    draggable (the preview is always editable). Keep the drag (move) cursor for
    consistency across ALL activities — Boost gives the first one `move`, and this
    used to override the rest to `pointer`, so only the first showed the drag
    affordance. The chevron/controls keep their own pointer cursor. */
+/* During PLANNING the cards are draggable → keep the move (drag) cursor. The
+   generation phase overrides this to default/pointer (read-only), see the
+   body.cg-generating rules above. */
 #prvSections .activity-item.cg-activity--has-detail {
   cursor: move;
 }
@@ -3469,7 +3702,8 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
 #prvSections .course-section .section-item .dp-add-section-wrap {
   cursor: default;
 }
-/* Inner activities keep their own move cursor (Boost .editing affordance). */
+/* Inner activities keep their move (drag) cursor during planning (Boost .editing
+   affordance). Generation overrides to default/pointer via body.cg-generating. */
 #prvSections .course-section .section-item .activity-item.cg-activity--has-detail,
 #prvSections .course-section .section-item .activity-item:hover {
   cursor: move;
@@ -3477,14 +3711,125 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
 /* Hover outline on the section card — suppressed while hovering an inner activity
    so only ONE element (the activity, not the whole section) highlights at a time. */
 #prvSections .course-section .section-item:hover:not(:has(.activity:hover)) {
-  outline: 2px solid hsl(8 72% 42% / .45);
+  outline: 2px solid hsl(10 81% 42% / .45);
   outline-offset: -2px;
   border-radius: 8px;
+}
+
+/* Section highlight ("remarcado") alignment — same fix as the activity rows above.
+   The cg-mark-* highlight was drawn on the OUTER li.course-section (sharp 0-radius
+   corners, outline +2px OUTWARD), while the section hover outline sits on the inner
+   .section-item (2px, offset -2px, 8px radius). The sharp outer highlight stuck out
+   4px past the rounded inset hover border. Draw the highlight on the SAME
+   .section-item box the hover uses so the two coincide exactly. */
+#prvSections .course-section.cg-mark-success,
+#prvSections .course-section.cg-mark-info,
+#prvSections .course-section.cg-mark-danger {
+  outline: none;
+  background-color: transparent;
+  animation: none;
+}
+#prvSections .course-section.cg-mark-success .section-item {
+  outline: 2px solid var(--success-strong);
+  background-color: var(--success-soft);
+}
+#prvSections .course-section.cg-mark-info .section-item {
+  outline: 2px solid var(--info);
+  background-color: var(--info-soft);
+}
+#prvSections .course-section.cg-mark-danger .section-item {
+  outline: 2px solid var(--danger);
+  background-color: var(--danger-soft);
+}
+#prvSections .course-section.cg-mark-success .section-item,
+#prvSections .course-section.cg-mark-info .section-item,
+#prvSections .course-section.cg-mark-danger .section-item {
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+/* Boost paints the activity hover/focus outline in Moodle's blue (#0f6cbf). Recolour
+   it to the brand accent so it matches the buttons — in Moodle this row outline is the
+   same colour as the buttons on hover, not a foreign blue. */
+#prvSections .activity-item:hover,
+#prvSections .activity-item:focus-within,
+#prvSections .activity-item.focus-control:focus-within {
+  outline-color: var(--primary);
+}
+
+/* Highlight ("remarcado") alignment ─────────────────────────────────────────
+   The add/change/delete highlight (cg-mark-*) was drawn on the OUTER wrap
+   (li.activity: sharp 0-radius corners, outline pushed +2px OUTWARD), while the
+   hover outline lives on the INNER .activity-item (2px, offset 0, 16px radius).
+   The two boxes differ in size, corner radius and offset, so when a just-added
+   row is hovered the sharp outer highlight stuck out past the rounded hover
+   border — the "desastre" the user saw. Fix: strip the outline from the wrap and
+   draw the highlight on the SAME .activity-item box the hover uses (same 2px
+   width, offset 0, inherited 16px radius). Now hover and highlight occupy the
+   EXACT same box: one clean rounded outline, neither ever sticking out past the
+   other. The outline AND the soft background BOTH move to .activity-item — leaving
+   the background on the outer wrap made a sharp-cornered fill that overflowed past
+   the rounded outline. The wrap's own outline/background/animation are cleared. */
+#prvSections .activity.cg-mark-success,
+#prvSections .activity.cg-mark-info,
+#prvSections .activity.cg-mark-danger {
+  outline: none;
+  background-color: transparent;
+  animation: none;
+}
+#prvSections .activity.cg-mark-success .activity-item {
+  outline: 2px solid var(--success-strong);
+  background-color: var(--success-soft);
+}
+#prvSections .activity.cg-mark-info .activity-item {
+  outline: 2px solid var(--info);
+  background-color: var(--info-soft);
+}
+#prvSections .activity.cg-mark-danger .activity-item {
+  outline: 2px solid var(--danger);
+  background-color: var(--danger-soft);
+}
+#prvSections .activity.cg-mark-success .activity-item,
+#prvSections .activity.cg-mark-info .activity-item,
+#prvSections .activity.cg-mark-danger .activity-item {
+  outline-offset: 0;
+}
+
+/* Proposal-selection highlight (.cg-affected) alignment — same fix as the marks and
+   the hover. .cg-affected is added to the OUTER wrap, but the hover outline lives on
+   the inner .activity-item/.section-item, so a hovered selected row showed the purple
+   affected outline (wrap box, 10px radius) misaligned around the coral hover outline
+   (inner box, 16px radius). Draw the affected outline on the SAME inner box the hover
+   uses so the two coincide exactly. */
+#prvSections .activity.cg-affected,
+#prvSections .course-section.cg-affected {
+  outline: none;
+  background-color: transparent;
+}
+#prvSections .activity.cg-affected .activity-item {
+  outline: 2px solid var(--brand, hsl(260 37% 42%));
+  outline-offset: 0;
+}
+#prvSections .course-section.cg-affected .section-item {
+  outline: 2px solid var(--brand, hsl(260 37% 42%));
+  outline-offset: -2px;
+  border-radius: 8px;
+}
+#prvSections .activity.cg-affected--destructive .activity-item {
+  outline-color: var(--primary, hsl(10 81% 63%));
+  background-color: hsl(10 81% 63% / .06);
+}
+#prvSections .course-section.cg-affected--destructive .section-item {
+  outline-color: var(--primary, hsl(10 81% 63%));
+  background-color: hsl(10 81% 63% / .06);
 }
 
 /* Streamed description slot (Moodle .activity-description grid area). */
 #prvSections .cg-activity-desc-slot {
   grid-area: altcontent;
+  /* Boost's .activity-description carries a 1px solid top border, which drew an
+     ugly line between the activity NAME and its description (Moodle's real course
+     view has no such line — the description flows straight under the name). Drop it. */
+  border-top: none;
 }
 #prvSections .cg-activity-desc {
   font-size: 12px;
@@ -3519,5 +3864,207 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
   margin-top: 14px;
 }
 #prvSections ul.section .dp-add-activity-wrap {
+  margin-top: 8px;
+}
+
+/* ── Replicate Moodle's course EDIT view: DASHED separators + roomier spacing ──
+   The wizard page has no `body.editing`, so Boost paints the plain STUDENT view:
+   a 1px SOLID separator between activities and tight section spacing. The user
+   wants the EDIT view instead — where activities are split by a DASHED divider
+   (Boost `.divider hr` = `$divider-width dashed $divider-color` = 2px dashed
+   gray-300 #dee2e6) and sections sit further apart. Match those exact values.
+   Applies to BOTH planning and generation (same #prvSections cards). */
+#prvSections .course-section .activity {
+  border-top: 2px dashed #dee2e6;
+  margin-top: 10px;
+  padding-top: 10px;
+}
+/* Dashed line ALSO above the first activity (between the section header and the
+   first row), exactly like the edit view — Boost drops the first row's border. */
+#prvSections .course-section .section .activity:first-child {
+  border-top: 2px dashed #dee2e6;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+/* Bigger gap between sections (edit view separates the section cards clearly). */
+#prvSections .course-content > .course-section:not(:first-child) {
+  /* ~32px ≈ Moodle's composed between-section gap in the edit view (section
+     spacer + the divider element's own vertical margins). */
+  margin-top: 32px;
+}
+
+/* ── On-hover "add activity" divider button (Moodle edit-view affordance) ──
+   A "+" centered on the dashed line above each activity. Hovering the divider gap
+   reveals it; clicking inserts a new activity at THAT slot (position-aware), so the
+   user can add BETWEEN rows, not only at the end. Mirrors Boost's
+   `.divider .divider-content` + `.btn.add-content`, wired to our add-activity flow.
+   The zone is a child of the .activity wrap (rides along on reorder). */
+#prvSections .course-section .activity {
+  position: relative;
+}
+#prvSections .cg-insert-zone {
+  position: absolute;
+  top: -13px;
+  left: 0;
+  right: 0;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+}
+#prvSections .cg-insert-btn {
+  opacity: 0;
+  transition: opacity .12s ease, background-color .12s ease;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  /* Flat (wider than tall), like Moodle's divider "+" — a square chip looked bulky
+     and, being taller than the gap, crowded the cards ("super pegado"). */
+  width: 30px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  /* Soft at REST, solid on HOVER — like Moodle's add buttons (light tint that fills
+     to the solid accent when hovered). */
+  background: hsl(10 85% 91%);
+  color: hsl(10 62% 42%);
+  cursor: pointer;
+  /* No halo — the opaque button covers the dashed line where it sits; a white
+     box-shadow halo read as an ugly shadow around the button. */
+  box-shadow: none;
+  transition: opacity .12s ease, background-color .12s ease, color .12s ease;
+}
+#prvSections .cg-insert-zone:hover .cg-insert-btn,
+#prvSections .cg-insert-btn:focus-visible {
+  opacity: 1;
+}
+#prvSections .cg-insert-btn:hover {
+  background: var(--primary);
+  color: var(--primary-fg);
+}
+/* The insert divider is a PLANNING-only edit affordance. Generation is read-only. */
+body.cg-generating #prvSections .cg-insert-zone {
+  display: none !important;
+}
+
+/* Inline add-panel: opens right at the clicked "+" divider (between two rows),
+   where the user clicked — not in the section's bottom panel. */
+#prvSections .dp-inline-add {
+  margin: 10px 0;
+}
+#prvSections .dp-inline-add .dp-ai-inline {
+  margin: 0;
+}
+
+/* ── On-hover "add SECTION" divider between sections (Moodle's between-sections
+   add affordance) ── Same "+" button, but it sits in the GAP above each section
+   and inserts a new section at that slot. Only BETWEEN sections, so the divider
+   above the very first section is hidden. */
+#prvSections .course-section {
+  position: relative;
+}
+#prvSections .cg-insert-zone--section {
+  position: absolute;
+  /* Span the full 32px gap above the section so the line + button sit in the MIDDLE
+     of the gap, not crowded against either card. */
+  top: -32px;
+  left: 0;
+  right: 0;
+  height: 32px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+}
+/* On hover the whole divider appears: a dashed line spanning the gap WITH the "+"
+   centered on it (exactly like Moodle's between-sections divider). Between section
+   cards there is no static line, so it is drawn here and revealed on hover. The line
+   and the button share the accent colour, so the button merges seamlessly into the
+   line (Moodle's blue line → blue button), no white halo needed. */
+#prvSections .cg-insert-zone--section::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 50%;
+  border-top: 2px dashed var(--primary);
+  opacity: 0;
+  transition: opacity .12s ease;
+  z-index: 0;
+}
+#prvSections .cg-insert-zone--section:hover::before,
+#prvSections .cg-insert-zone--section:focus-within::before {
+  opacity: 1;
+}
+/* The "+" sits ON the line (above the dashed rule). */
+#prvSections .cg-insert-zone--section .cg-insert-btn {
+  position: relative;
+  z-index: 1;
+}
+/* Moodle shows dividers only BETWEEN sections — no "insert above the very top". */
+#prvSections .course-content > .course-section:first-child .cg-insert-zone--section {
+  display: none;
+}
+
+/* ── Bottom "Add activity" = Moodle's section-closing add button ──
+   Moodle centers a SOLID button on the section's closing dashed line (the line
+   runs on both sides). We have a single button, so it sits in the MIDDLE of that
+   last divider — not a full-width dashed box (the previous look the user rejected). */
+#prvSections .dp-add-activity-wrap {
+  position: relative;
+  display: block;
+  margin-top: 14px;
+  padding-top: 2px;
+}
+/* The closing dashed line, behind the centered button. Anchored near the button's
+   vertical centre (top offset), so opening the add panel below never shifts it. */
+#prvSections .dp-add-activity-wrap::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 18px;
+  border-top: 2px dashed #dee2e6;
+  z-index: 0;
+}
+#prvSections .dp-add-activity-wrap .dp-add-control {
+  position: relative;
+  z-index: 1;
+  width: fit-content;
+  margin: 0 auto;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  border-radius: 6px;
+  /* Soft at REST, solid on HOVER — like Moodle's "Add an activity or resource"
+     button (a light tint that fills to the solid accent + white text on hover). */
+  background: hsl(10 85% 91%);
+  color: hsl(10 62% 42%);
+  /* Flat like Moodle's add button — tight vertical padding + controlled line-height
+     so the icon does not inflate the height (was noticeably taller than Moodle's). */
+  padding: 4px 14px;
+  font-size: 13px;
+  line-height: 1.35;
+  /* No shadow/halo — the opaque button already covers the dashed line where it sits
+     (the line shows on both sides). A white box-shadow "halo" read as an ugly shadow. */
+  box-shadow: none;
+  transition: background-color .12s ease, color .12s ease;
+}
+#prvSections .dp-add-activity-wrap .dp-add-control:hover {
+  background: var(--primary);
+  color: var(--primary-fg);
+}
+#prvSections .dp-add-activity-wrap .dp-add-control .dp-add-control__icon {
+  /* Follow the button text colour: coral at rest, white on hover. */
+  color: inherit;
+  font-size: 14px;
+}
+/* The add panel opens full-width below the centered button (not centered/shrunk). */
+#prvSections .dp-add-activity-wrap .dp-ai-inline {
+  position: relative;
+  z-index: 1;
   margin-top: 8px;
 }
