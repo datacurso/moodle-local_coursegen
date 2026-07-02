@@ -58,9 +58,12 @@ export const buildProposalCard = (proposal, localizedSummary, texts) => {
     const targetIds = [];
     if (Array.isArray(intent.target_ids) && intent.target_ids.length) {
         targetIds.push(...intent.target_ids);
-    } else if (intent.parent_section_id) {
-        targetIds.push(intent.parent_section_id);
     }
+    // add_* actions have no target id yet (the element does not exist). Their highlight
+    // is resolved at select time to the MOST SPECIFIC reference element — the neighbour
+    // activity for add_activity, the neighbour section for add_section — by
+    // anchorTargetFromIntent, so leave targetIds empty here rather than falling back to
+    // the whole parent section (which would highlight too broad an element).
     radio.dataset.targetIds = JSON.stringify(targetIds);
     // Full intent (action + target_ids + parent_section_id + position) so the apply
     // handler can put the loading skeleton on EXACTLY the element this proposal

@@ -102,30 +102,47 @@ export const createProposalsUi = (deps) => {
         } catch (e) {
             intent = null;
         }
-        if (!intent || intent.action !== 'add_section') {
-            return [];
-        }
-        const sections = Array.from(document.querySelectorAll('.course-section[data-section-id]'));
-        if (!sections.length) {
+        if (!intent) {
             return [];
         }
         // Mirror the server's reference logic (proposals.py _position_reference): a
         // null/absent position (or one past the end) appends → anchor on the LAST
-        // section; position 0 anchors on the first; otherwise on the previous sibling.
-        // The old code required a NUMBER, so "add at the end" (position null) matched
-        // nothing and highlighted no element in the center.
-        const pos = intent.position;
-        let idx;
-        if (typeof pos !== 'number' || pos >= sections.length) {
-            idx = sections.length - 1;
-        } else if (pos <= 0) {
-            idx = 0;
-        } else {
-            idx = pos - 1;
+        // sibling; position 0 anchors on the first; otherwise on the previous sibling.
+        // (The old code required a NUMBER, so "add at the end" — position null —
+        // matched nothing and highlighted no element in the center.)
+        const anchorIndex = (count) => {
+            const pos = intent.position;
+            if (typeof pos !== 'number' || pos >= count) {
+                return count - 1;
+            }
+            return pos <= 0 ? 0 : pos - 1;
+        };
+        if (intent.action === 'add_section') {
+            const sections = Array.from(document.querySelectorAll('.course-section[data-section-id]'));
+            if (!sections.length) {
+                return [];
+            }
+            const id = sections[anchorIndex(sections.length)].getAttribute('data-section-id');
+            return id ? [id] : [];
         }
-        const anchor = sections[idx];
-        const id = anchor && anchor.getAttribute('data-section-id');
-        return id ? [id] : [];
+        // add_activity: highlight the MOST SPECIFIC reference — the neighbour ACTIVITY
+        // it lands after/before, not the whole parent section. Fall back to the parent
+        // section only when it has no activities yet (no neighbour to anchor to).
+        if (intent.action === 'add_activity' && intent.parent_section_id) {
+            const section = document.querySelector(
+                '.course-section[data-section-id="' + intent.parent_section_id + '"]'
+            );
+            if (!section) {
+                return [];
+            }
+            const activities = Array.from(section.querySelectorAll('.activity[data-activity-id]'));
+            if (!activities.length) {
+                return [intent.parent_section_id];
+            }
+            const id = activities[anchorIndex(activities.length)].getAttribute('data-activity-id');
+            return id ? [id] : [intent.parent_section_id];
+        }
+        return [];
     };
 
     /**
