@@ -40,15 +40,13 @@ const OTHER_VALUE = '__other__';
  * Create the proposals UI controller.
  *
  * @param {Object} deps
- * @param {Object} deps.state                  - Shared mutable state (needs state.sessionid, state.streamingurl).
  * @param {Object} deps.texts                  - Pre-loaded lang strings from loadCourseaiStrings.
  * @param {Function} deps.formatTemplate       - Template formatter utility.
- * @param {Function} deps.sendPlanningFeedback - WS helper to send a pendingAction.
- * @param {Function} deps.openSSEStream        - Opens/re-opens the SSE stream.
+ * @param {Function} deps.runPlanAction        - Sends a pendingAction and re-opens the SSE stream.
  * @returns {{ renderProposals: Function, clear: Function }}
  */
 export const createProposalsUi = (deps) => {
-    const {state, texts, sendPlanningFeedback, openSSEStream} = deps;
+    const {texts, runPlanAction} = deps;
 
     /**
      * Return the #planProposalsBlock element, or null if not in the DOM.
@@ -101,13 +99,9 @@ export const createProposalsUi = (deps) => {
      * @returns {Promise<void>}
      */
     const sendAction = async(block, pendingAction) => {
-        if (!sendPlanningFeedback || !state.sessionid) {
-            return;
-        }
         disableControls(block);
         try {
-            await sendPlanningFeedback({recordid: state.sessionid, pendingAction});
-            openSSEStream(state.streamingurl, 0, 'planning');
+            await runPlanAction(pendingAction);
         } catch (e) {
             enableControls(block);
         }
