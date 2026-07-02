@@ -136,4 +136,36 @@ final class assign_settings_test extends \advanced_testcase {
         $criteria = $DB->get_records('gradingform_rubric_criteria', ['definitionid' => $definition->id]);
         $this->assertCount(1, $criteria);
     }
+
+    /**
+     * A failure while writing the definition must not abort the activity NOR leave the
+     * assignment in rubric mode without a definition (the "rubric not defined" broken state):
+     * the method is reverted and the assignment keeps simple grading.
+     */
+    public function test_rubric_failure_reverts_to_simple_grading(): void {
+        $this->resetAfterTest();
+        global $CFG, $DB;
+        require_once($CFG->dirroot . '/grade/grading/lib.php');
+
+        $cm = $this->make_assign_cm();
+        $broken = new class($cm, $this->sample_rubric()) extends assign_settings {
+            /**
+             * Blow up mid-flow, after the active method has already been switched to rubric.
+             *
+             * @param array $rubric The rubric payload.
+             * @return string
+             */
+            protected function rubric_name(array $rubric): string {
+                throw new \RuntimeException('boom');
+            }
+        };
+
+        $broken->add_settings();   // must NOT throw
+        $this->assertDebuggingCalled();
+
+        $context = \context_module::instance($cm->coursemodule);
+        $manager = get_grading_manager($context, 'mod_assign', 'submissions');
+        $this->assertNotEquals('rubric', $manager->get_active_method());
+        $this->assertSame(0, $DB->count_records('grading_definitions'));
+    }
 }

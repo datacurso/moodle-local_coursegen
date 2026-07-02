@@ -54,21 +54,39 @@ class assign_settings extends base_settings {
 
         $context = context_module::instance($this->cm->coursemodule);
 
-        // Order mirrors core\'s core_grading_external::save_definitions: activate the method on the
-        // area first (creates the area if needed), then write the definition through its controller.
+        // This runs AFTER the assignment exists: an uncaught error here would abort the creation
+        // request while leaving a half-configured module behind — worst case in rubric mode with
+        // no definition ("rubric not defined", ungradeable). On any failure, revert to simple
+        // grading and let the activity creation succeed (mirrors the service-side degradation).
         $gradingmanager = get_grading_manager($context, 'mod_assign', 'submissions');
-        $gradingmanager->set_active_method('rubric');
-        $controller = $gradingmanager->get_controller('rubric');
+        try {
+            // Order mirrors core's core_grading_external::save_definitions: activate the method on
+            // the area first (creates the area if needed), then write the definition through its
+            // controller.
+            $gradingmanager->set_active_method('rubric');
+            $controller = $gradingmanager->get_controller('rubric');
 
-        $definition = new stdClass();
-        $definition->name = $this->rubric_name($rubric);
-        // file_postupdate_standard_editor (called inside the controller) requires the editor field.
-        $definition->description_editor = ['text' => '', 'format' => FORMAT_HTML, 'itemid' => 0];
-        // READY so the rubric is usable immediately; an empty status would persist as DRAFT.
-        $definition->status = gradingform_controller::DEFINITION_STATUS_READY;
-        $definition->rubric = ['criteria' => $criteria];
+            $definition = new stdClass();
+            $definition->name = $this->rubric_name($rubric);
+            // file_postupdate_standard_editor (called inside the controller) requires the editor field.
+            $definition->description_editor = ['text' => '', 'format' => FORMAT_HTML, 'itemid' => 0];
+            // READY so the rubric is usable immediately; an empty status would persist as DRAFT.
+            $definition->status = gradingform_controller::DEFINITION_STATUS_READY;
+            $definition->rubric = ['criteria' => $criteria];
 
-        $controller->update_definition($definition);
+            $controller->update_definition($definition);
+        } catch (\Throwable $e) {
+            try {
+                $gradingmanager->set_active_method(null);
+            } catch (\Throwable $ignored) {
+                // Best-effort revert; the debugging line below still reports the original error.
+                $ignored = null;
+            }
+            debugging(
+                'local_coursegen: rubric creation failed; assignment keeps simple grading: ' . $e->getMessage(),
+                DEBUG_DEVELOPER
+            );
+        }
     }
 
     /**
