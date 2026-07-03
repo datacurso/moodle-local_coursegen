@@ -38,7 +38,107 @@ export const createDetailLabel = (ctx, text) => { // eslint-disable-line no-unus
 };
 
 /**
- * Build a DocumentFragment with chapters, questions, and image suggestions.
+ * The sub-element lists a plan card can show, mapped to their i18n label. Adding a
+ * new list-bearing activity type = ONE entry here + its list field in the service
+ * schema; nothing else in the plugin changes. `nested` (book) renders chapter →
+ * subchapter numbering; `secondaryAs` picks how the item's second line shows
+ * ('badge' = the quiz-style type chip, 'sub' = a muted sub-line).
+ */
+const LIST_FIELDS = [
+    {field: 'chapters', labelKey: 'courseai_chapters_label', nested: true, secondaryAs: 'sub'},
+    {field: 'questions', labelKey: 'courseai_questions_label', secondaryAs: 'badge'},
+    {field: 'pages', labelKey: 'courseai_pages_label', secondaryAs: 'sub'},
+    {field: 'discussions', labelKey: 'courseai_discussions_label', secondaryAs: 'sub'},
+    {field: 'entries', labelKey: 'courseai_entries_label', secondaryAs: 'sub'},
+    {field: 'options', labelKey: 'courseai_options_label', secondaryAs: 'sub'},
+];
+
+/**
+ * Read an item's primary + secondary text tolerantly across the shapes the service
+ * emits: {title, summary} (chapters/pages/discussions/entries), {question, type}
+ * (quiz), a plain string (choice options).
+ *
+ * @param {Object|string} it
+ * @returns {{primary: string, secondary: string}}
+ */
+const readItem = (it) => {
+    if (typeof it === 'string') {
+        return {primary: it, secondary: ''};
+    }
+    const primary = it.title || it.question || it.name || it.concept || '';
+    const secondary = it.summary || it.type || it.description || '';
+    return {primary: String(primary), secondary: String(secondary)};
+};
+
+/**
+ * Build a <ul> for one sub-element list (questions/chapters/pages/…). Book chapters
+ * (nested) number as 1, 1.1, 1.2, 2, … and indent subchapters so the hierarchy reads.
+ *
+ * @param {Array} items
+ * @param {Object} cfg - one LIST_FIELDS entry.
+ * @returns {HTMLUListElement}
+ */
+const buildItemList = (items, cfg) => {
+    const list = document.createElement('ul');
+    list.className = 'dp-item-list';
+
+    let chapterNo = 0;
+    let subNo = 0;
+
+    items.forEach((raw, index) => {
+        const {primary, secondary} = readItem(raw);
+        const isSub = cfg.nested && raw && typeof raw === 'object' && Number(raw.subchapter) === 1;
+
+        const item = document.createElement('li');
+        item.className = isSub ? 'dp-item dp-item--sub' : 'dp-item';
+
+        const number = document.createElement('span');
+        number.className = 'dp-item-num';
+        if (cfg.nested) {
+            if (isSub) {
+                subNo += 1;
+                number.textContent = `${chapterNo || 1}.${subNo}`;
+            } else {
+                chapterNo += 1;
+                subNo = 0;
+                number.textContent = `${chapterNo}.`;
+            }
+        } else {
+            number.textContent = `${index + 1}.`;
+        }
+
+        const body = document.createElement('div');
+        const title = document.createElement('p');
+        title.className = 'dp-item-title';
+        title.textContent = primary;
+        body.appendChild(title);
+
+        if (secondary && cfg.secondaryAs === 'sub') {
+            const sub = document.createElement('p');
+            sub.className = 'dp-item-sub';
+            sub.textContent = secondary;
+            body.appendChild(sub);
+        }
+
+        item.appendChild(number);
+        item.appendChild(body);
+
+        if (secondary && cfg.secondaryAs === 'badge') {
+            const badge = document.createElement('span');
+            badge.className = 'dp-q-type';
+            badge.textContent = secondary;
+            item.appendChild(badge);
+        }
+
+        list.appendChild(item);
+    });
+
+    return list;
+};
+
+/**
+ * Build a DocumentFragment with every sub-element list the activity carries
+ * (chapters, questions, pages, discussions, entries, options…) plus image suggestions.
  *
  * @param {Object} ctx
  * @param {Object} options
@@ -49,76 +149,14 @@ export const buildActivityDetailContent = (ctx, {parsed}) => {
     const {texts} = ctx;
     const detailFragment = document.createDocumentFragment();
 
-    const chapters = Array.isArray(parsed.chapters) ? parsed.chapters : [];
-    if (chapters.length > 0) {
-        detailFragment.appendChild(createDetailLabel(ctx, texts.courseai_chapters_label));
-        const list = document.createElement('ul');
-        list.className = 'dp-item-list';
-
-        chapters.forEach((chapter, index) => {
-            const item = document.createElement('li');
-            item.className = 'dp-item';
-
-            const number = document.createElement('span');
-            number.className = 'dp-item-num';
-            number.textContent = `${index + 1}.`;
-
-            const body = document.createElement('div');
-            const title = document.createElement('p');
-            title.className = 'dp-item-title';
-            title.textContent = chapter.title || '';
-            body.appendChild(title);
-
-            if (chapter.summary) {
-                const sub = document.createElement('p');
-                sub.className = 'dp-item-sub';
-                sub.textContent = chapter.summary;
-                body.appendChild(sub);
-            }
-
-            item.appendChild(number);
-            item.appendChild(body);
-            list.appendChild(item);
-        });
-
-        detailFragment.appendChild(list);
-    }
-
-    const questions = Array.isArray(parsed.questions) ? parsed.questions : [];
-    if (questions.length > 0) {
-        detailFragment.appendChild(createDetailLabel(ctx, texts.courseai_questions_label));
-        const list = document.createElement('ul');
-        list.className = 'dp-item-list';
-
-        questions.forEach((question, index) => {
-            const item = document.createElement('li');
-            item.className = 'dp-item';
-
-            const number = document.createElement('span');
-            number.className = 'dp-item-num';
-            number.textContent = `${index + 1}.`;
-
-            const body = document.createElement('div');
-            const title = document.createElement('p');
-            title.className = 'dp-item-title';
-            title.textContent = question.question || '';
-            body.appendChild(title);
-
-            item.appendChild(number);
-            item.appendChild(body);
-
-            if (question.type) {
-                const type = document.createElement('span');
-                type.className = 'dp-q-type';
-                type.textContent = question.type;
-                item.appendChild(type);
-            }
-
-            list.appendChild(item);
-        });
-
-        detailFragment.appendChild(list);
-    }
+    LIST_FIELDS.forEach((cfg) => {
+        const items = Array.isArray(parsed[cfg.field]) ? parsed[cfg.field] : [];
+        if (items.length === 0) {
+            return;
+        }
+        detailFragment.appendChild(createDetailLabel(ctx, texts[cfg.labelKey] || cfg.field));
+        detailFragment.appendChild(buildItemList(items, cfg));
+    });
 
     const imageSuggestions = Array.isArray(parsed.image_suggestions) ? parsed.image_suggestions : [];
     if (imageSuggestions.length > 0) {
