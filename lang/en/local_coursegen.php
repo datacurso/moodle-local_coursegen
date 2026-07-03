@@ -689,6 +689,7 @@ $string['courseai_log_added_activity'] = 'You added an activity';
 $string['courseai_log_added_section_named'] = 'You added section: {$a->name}';
 $string['courseai_log_added_activity_named'] = 'You added activity: {$a->title}';
 $string['courseai_log_add_activity_target'] = '«{$a->section}», position {$a->position}';
+$string['courseai_log_add_section_target'] = 'position {$a->position}';
 $string['courseai_log_image_discarded'] = 'You discarded an image suggestion';
 $string['courseai_log_image_regenerated'] = 'You regenerated an image suggestion';
 $string['courseai_log_proposal_applied'] = 'You applied';
