@@ -103,6 +103,12 @@ export const createSplitter = ({workspace, divider}) => {
         return;
     }
 
+    // ARIA range state lives here (not in the template): static aria-value*
+    // attributes on role="separator" fail the HTML validator in CI.
+    divider.setAttribute('aria-valuemin', String(MIN_W));
+    divider.setAttribute('aria-valuemax', String(MAX_W));
+    divider.setAttribute('aria-valuenow', String(DEFAULT_W));
+
     // Restore persisted width on init.
     const stored = readPersistedWidth();
     if (stored !== null) {

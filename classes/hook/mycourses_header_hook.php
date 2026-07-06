@@ -33,9 +33,14 @@ class mycourses_header_hook {
      * @param after_config $hook Hook object.
      */
     public static function after_config(after_config $hook): void {
-        global $PAGE;
+        // after_config fires on EVERY request, including CLI (phpunit init,
+        // cron, admin scripts), AJAX and web services — none of them render a
+        // My courses page to decorate.
+        if (CLI_SCRIPT || AJAX_SCRIPT || WS_SERVER) {
+            return;
+        }
 
-        if (!self::is_my_courses_page($PAGE)) {
+        if (!self::is_my_courses_page()) {
             return;
         }
 
@@ -53,11 +58,22 @@ class mycourses_header_hook {
     /**
      * Determine if the current page is the My courses page.
      *
-     * @param \moodle_page $page Current page instance.
+     * after_config fires BEFORE the page script calls $PAGE->set_url(), and
+     * reading $PAGE->url before that emits a debugging notice ("This page did
+     * not call $PAGE->set_url"). The path is resolved from the request script
+     * instead, using the page URL only when it was already set.
+     *
      * @return bool
      */
-    private static function is_my_courses_page(\moodle_page $page): bool {
-        return $page->url->get_path() === '/my/courses.php';
+    private static function is_my_courses_page(): bool {
+        global $PAGE;
+
+        if ($PAGE && $PAGE->has_set_url()) {
+            return str_ends_with($PAGE->url->get_path(), '/my/courses.php');
+        }
+
+        $script = (string)($_SERVER['SCRIPT_NAME'] ?? '');
+        return str_ends_with($script, '/my/courses.php');
     }
 
     /**
