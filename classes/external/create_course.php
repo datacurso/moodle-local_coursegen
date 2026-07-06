@@ -63,6 +63,9 @@ class create_course extends external_api {
      * checks, API dispatch) is handled by the service.
      *
      * @param int $recordid Session record ID in local_coursegen_course_sessions
+     * @param string $fullname Optional override for the course fullname
+     * @param string $shortname Optional override for the course shortname
+     * @param int $category Optional override for the course category ID
      * @return array Result of the course content application
      * @throws moodle_exception
      */
