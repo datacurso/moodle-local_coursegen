@@ -80,6 +80,22 @@ export const createPlanningUi = (deps) => {
             }
         }
 
+        // Sync subsections toggle
+        const btnWithSubsections = document.getElementById('btnWithSubsections');
+        const btnCompactWithSubsections = document.getElementById('btnCompactWithSubsections');
+        const subToggleTrack = document.getElementById('subToggleTrack');
+        const compactSubToggleTrack = document.getElementById('compactSubToggleTrack');
+        if (btnWithSubsections && btnCompactWithSubsections) {
+            btnCompactWithSubsections.checked = btnWithSubsections.checked;
+            if (compactSubToggleTrack && subToggleTrack) {
+                if (btnWithSubsections.checked) {
+                    compactSubToggleTrack.parentElement.classList.add('on');
+                } else {
+                    compactSubToggleTrack.parentElement.classList.remove('on');
+                }
+            }
+        }
+
         // Sync syllabus chip
         const chipSyllabus = document.getElementById('chipSyllabus');
         const compactChipSyllabus = document.getElementById('compactChipSyllabus');

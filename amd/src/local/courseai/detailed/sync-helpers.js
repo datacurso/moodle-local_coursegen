@@ -80,11 +80,12 @@ export const ensureSectionRendered = (ctx, section, renderIndex) => {
  *
  * @param {Object}      ctx
  * @param {Object}      activity      - Normalized activity object.
- * @param {string}      sectionId
+ * @param {string}      sectionId     - Top-level parent section UUID.
  * @param {number}      activityIndex
- * @param {HTMLElement} bodyEl
+ * @param {HTMLElement} bodyEl        - Target list (section cmlist or a subsection's nested list).
+ * @param {string}      [subsectionId] - Set when the activity nests inside a subsection.
  */
-export const ensureActivityRendered = (ctx, activity, sectionId, activityIndex, bodyEl) => {
+export const ensureActivityRendered = (ctx, activity, sectionId, activityIndex, bodyEl, subsectionId) => {
     const {state} = ctx;
     if (state.detailedActivityEls[activity.id]) {
         return;
@@ -97,5 +98,6 @@ export const ensureActivityRendered = (ctx, activity, sectionId, activityIndex, 
         activityType: activity.activity_type,
         activityTitle: activity.title,
         bodyEl,
+        subsectionId,
     });
 };

@@ -128,6 +128,7 @@ export const handleGenerate = async(ctx) => {
             lang: state.lang,
             withimages: state.withImages,
             systeminstructionid,
+            withsubsections: state.withSubsections,
         });
 
         if (!initResponse.success) {

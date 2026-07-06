@@ -32,6 +32,8 @@
 import {
     handleActivity,
     handleSection,
+    handleSubsection,
+    handlePlanNotice,
     handleCourseConfiguration,
     handleDetailedPlanField,
     handleDetailedPlanActivity,
@@ -59,6 +61,8 @@ import {
 const HANDLERS = {
     activity: handleActivity,
     section: handleSection,
+    subsection: handleSubsection,
+    plan_notice: handlePlanNotice,
     course_configuration: handleCourseConfiguration,
     detailed_plan_field: handleDetailedPlanField,
     detailed_plan_activity: handleDetailedPlanActivity,

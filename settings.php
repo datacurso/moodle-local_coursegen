@@ -54,6 +54,15 @@ if ($hassiteconfig) {
         PARAM_URL
     ));
 
+    // Custom checkbox: rejects enabling the feature while mod_subsection is
+    // disabled, so generated subsections can never silently flatten.
+    $settings->add(new \local_coursegen\admin\setting_enablesubsections(
+        'local_coursegen/enablesubsections',
+        get_string('enablesubsections', 'local_coursegen'),
+        get_string('enablesubsections_desc', 'local_coursegen'),
+        0
+    ));
+
     $ADMIN->add($pluginname, $settings);
     // Add Manage system instructions page.
     $ADMIN->add($pluginname, new admin_externalpage(

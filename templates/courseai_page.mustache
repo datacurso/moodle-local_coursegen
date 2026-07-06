@@ -169,6 +169,22 @@
               <input type="checkbox" id="btnWithImages" class="hidden" aria-label="{{#str}}courseai_images_arialabel, local_coursegen{{/str}}">
             </div>
 
+            {{#subsectionsenabled}}
+            <!-- With subsections toggle switch -->
+            <div class="tbar-toggle-wrap" title="{{#str}}courseai_subsections_title, local_coursegen{{/str}}">
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0">
+                <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+                <line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
+                <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+              </svg>
+              <span class="tbar-toggle-label">{{#str}}courseai_subsections_label, local_coursegen{{/str}}</span>
+              <div class="toggle-track" id="subToggleTrack">
+                <div class="toggle-thumb"></div>
+              </div>
+              <input type="checkbox" id="btnWithSubsections" class="hidden" aria-label="{{#str}}courseai_subsections_arialabel, local_coursegen{{/str}}">
+            </div>
+            {{/subsectionsenabled}}
+
           </div>
 
           <div class="tbar-right">
@@ -363,6 +379,20 @@
                 </div>
                 <input type="checkbox" id="btnCompactWithImages" class="hidden" aria-label="{{#str}}courseai_images_arialabel, local_coursegen{{/str}}">
               </div>
+
+              {{#subsectionsenabled}}
+              <div class="tbar-toggle-wrap" title="{{#str}}courseai_subsections_title, local_coursegen{{/str}}">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0">
+                  <line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>
+                  <line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>
+                  <line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>
+                </svg>
+                <div class="toggle-track" id="compactSubToggleTrack">
+                  <div class="toggle-thumb"></div>
+                </div>
+                <input type="checkbox" id="btnCompactWithSubsections" class="hidden" aria-label="{{#str}}courseai_subsections_arialabel, local_coursegen{{/str}}">
+              </div>
+              {{/subsectionsenabled}}
             </div>
 
             <div class="compact-toolbar-right">

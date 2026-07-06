@@ -35,20 +35,35 @@ export const normalizeInitialSections = (ctx, sections) => {
     const {texts, formatTemplate} = ctx;
     const activeSections = (sections || []).filter((section) => !section.deleted);
 
-    return activeSections.map((section, sectionidx) => ({
-        id: section.id || `s${sectionidx}`,
-        section_index: section.section_index ?? sectionidx,
-        position: section.position ?? sectionidx,
-        name: section.name || formatTemplate(texts.courseai_section_label, {section: sectionidx + 1, name: ''}),
-        description: section.description || '',
-        activities: (section.activities || [])
-            .filter((activity) => !activity.deleted)
-            .map((activity, activityidx) => ({
-                id: activity.id || `s${sectionidx}-a${activityidx}`,
-                position: activity.position ?? activityidx,
-                activity_type: activity.activity_type || activity.type || 'quiz',
-                title: activity.title || activity.name || `${texts.courseai_activity_default} ${activityidx + 1}`,
-                description: activity.description || ''
-            }))
-    }));
+    const normalizeActivities = (activities, sectionidx) => (activities || [])
+        .filter((activity) => !activity.deleted)
+        .map((activity, activityidx) => ({
+            id: activity.id || `s${sectionidx}-a${activityidx}`,
+            position: activity.position ?? activityidx,
+            activity_type: activity.activity_type || activity.type || 'quiz',
+            title: activity.title || activity.name || `${texts.courseai_activity_default} ${activityidx + 1}`,
+            description: activity.description || ''
+        }));
+
+    return activeSections.map((section, sectionidx) => {
+        const normalized = {
+            id: section.id || `s${sectionidx}`,
+            section_index: section.section_index ?? sectionidx,
+            position: section.position ?? sectionidx,
+            name: section.name || formatTemplate(texts.courseai_section_label, {section: sectionidx + 1, name: ''}),
+            description: section.description || '',
+            activities: normalizeActivities(section.activities, sectionidx)
+        };
+        const activeSubsections = (section.subsections || []).filter((subsection) => !subsection.deleted);
+        if (activeSubsections.length > 0) {
+            normalized.subsections = activeSubsections.map((subsection, subidx) => ({
+                id: subsection.id || `s${sectionidx}-sub${subidx}`,
+                position: subsection.position ?? subidx,
+                name: subsection.name || '',
+                description: subsection.description || '',
+                activities: normalizeActivities(subsection.activities, sectionidx)
+            }));
+        }
+        return normalized;
+    });
 };

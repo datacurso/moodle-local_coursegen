@@ -153,6 +153,23 @@ export const wireCompactControls = ({
         });
     }
 
+    if (elements.btnCompactWithSubsections) {
+        bindToggleWrap(elements.compactSubToggleWrap, elements.btnCompactWithSubsections);
+        elements.btnCompactWithSubsections.addEventListener('change', () => {
+            state.withSubsections = elements.btnCompactWithSubsections.checked;
+            if (elements.compactSubToggleWrap) {
+                elements.compactSubToggleWrap.classList.toggle('on', state.withSubsections);
+            }
+            // Keep main in sync
+            if (elements.btnWithSubsections) {
+                elements.btnWithSubsections.checked = state.withSubsections;
+            }
+            if (elements.subToggleWrap) {
+                elements.subToggleWrap.classList.toggle('on', state.withSubsections);
+            }
+        });
+    }
+
     // Compact guideline eye button: preview the currently selected guideline
     const compactChipGuidelineEyeBtn = document.getElementById('compactChipGuidelineEyeBtn');
     if (compactChipGuidelineEyeBtn) {

@@ -4103,3 +4103,37 @@ body.cg-generating #prvSections .cg-insert-zone {
   z-index: 1;
   margin-top: 8px;
 }
+
+/* ── Subsections (nested blocks inside a section's cmlist) ─────────────── */
+#prvSections .cg-subsection {
+  list-style: none;
+  margin: 10px 8px 10px 24px;
+  border: 1px solid var(--cg-border, #dee2e6);
+  border-radius: 8px;
+  background: var(--cg-bg-subtle, rgba(0, 0, 0, 0.015));
+  overflow: hidden;
+}
+
+#prvSections .cg-subsection-header {
+  padding: 8px 12px;
+  border-bottom: 1px solid var(--cg-border, #dee2e6);
+  background: rgba(0, 0, 0, 0.02);
+}
+
+#prvSections .cg-subsection-icon {
+  color: #6c757d;
+}
+
+#prvSections .cg-subsection-name {
+  font-size: 0.95rem;
+  font-weight: 600;
+  margin: 0;
+}
+
+#prvSections .cg-subsection-list {
+  list-style: none;
+}
+
+#prvSections .cg-subsection-list .activity {
+  margin-left: 0;
+}

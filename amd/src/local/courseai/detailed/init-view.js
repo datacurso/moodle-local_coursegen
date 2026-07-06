@@ -81,6 +81,7 @@ export const initDetailedPlanView = (ctx, data) => {
     }
     state.detailedActivityEls = {};
     state.detailedSectionMeta = {};
+    state.detailedSubsectionMeta = {};
     state.selectedDetailedImages = {};
     state.sectionDnd = null;
     state.detailedCurrent = 0;

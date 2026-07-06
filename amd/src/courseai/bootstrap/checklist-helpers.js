@@ -51,30 +51,46 @@ export const makeChecklistHelpers = ({state, elements, texts}) => {
             return [];
         }
 
+        const mapActivities = (activities) => (Array.isArray(activities) ? activities : [])
+            .filter((activity) => !activity?.deleted)
+            .map((activity, activityIndex) => ({
+                // Carry the UUID so post-reload id-based lookups work (e.g.
+                // sendReorderActivities matches the dragged activity by id to
+                // name it + its position; without id it fell back to the
+                // generic "You reordered the activities in: <section>").
+                id: activity.id,
+                activity_type: activity.activity_type || activity.type || 'page',
+                title: activity.title || activity.name || `${texts.courseai_activity_default} ${activityIndex + 1}`,
+                description:
+                    activity.description
+                    || activity?.detailed_plan?.activity_description
+                    || '',
+                detailed_plan: activity.detailed_plan || {},
+            }));
+
         return detailedSections
             .filter((section) => !section?.deleted)
-            .map((section, sectionIndex) => ({
-                id: section.id,
-                section_index: section.section_index ?? sectionIndex,
-                name: section.name || `${texts.courseai_section_label} ${sectionIndex + 1}`,
-                description: section.description || '',
-                activities: (Array.isArray(section.activities) ? section.activities : [])
-                    .filter((activity) => !activity?.deleted)
-                    .map((activity, activityIndex) => ({
-                        // Carry the UUID so post-reload id-based lookups work (e.g.
-                        // sendReorderActivities matches the dragged activity by id to
-                        // name it + its position; without id it fell back to the
-                        // generic "You reordered the activities in: <section>").
-                        id: activity.id,
-                        activity_type: activity.activity_type || activity.type || 'page',
-                        title: activity.title || activity.name || `${texts.courseai_activity_default} ${activityIndex + 1}`,
-                        description:
-                            activity.description
-                            || activity?.detailed_plan?.activity_description
-                            || '',
-                        detailed_plan: activity.detailed_plan || {},
-                    })),
-            }));
+            .map((section, sectionIndex) => {
+                const built = {
+                    id: section.id,
+                    section_index: section.section_index ?? sectionIndex,
+                    name: section.name || `${texts.courseai_section_label} ${sectionIndex + 1}`,
+                    description: section.description || '',
+                    activities: mapActivities(section.activities),
+                };
+                const subsections = (Array.isArray(section.subsections) ? section.subsections : [])
+                    .filter((subsection) => !subsection?.deleted);
+                if (subsections.length > 0) {
+                    built.subsections = subsections.map((subsection, subIndex) => ({
+                        id: subsection.id,
+                        position: subsection.position ?? subIndex,
+                        name: subsection.name || '',
+                        description: subsection.description || '',
+                        activities: mapActivities(subsection.activities),
+                    }));
+                }
+                return built;
+            });
     };
 
     /**

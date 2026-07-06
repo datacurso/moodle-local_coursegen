@@ -88,11 +88,23 @@ class create_course_service {
                 self::process_course_sections($course->id, $resultdata['sections_info']);
             }
 
+            // Index declared subsections (Moodle 4.5 delegated sections) so the
+            // activity loop can materialize each one lazily, in presentation order.
+            $subsections = self::index_declared_subsections($resultdata['subsections_info'] ?? []);
+
             // Process generated activities if provided in the response.
             $activityerrors = [];
             if (!empty($resultdata['generated_activities'])) {
-                $activityerrors = self::process_generated_activities($course->id, $resultdata['generated_activities']);
+                $activityerrors = self::process_generated_activities(
+                    $course->id,
+                    $resultdata['generated_activities'],
+                    $subsections
+                );
             }
+
+            // Subsections declared without activities materialize at the end of
+            // their parent section.
+            self::materialize_remaining_subsections($course->id, $subsections, $activityerrors);
 
             // Ensure section sequences only contain valid course module ids.
             $removedreferences = self::repair_course_section_sequences($course->id);
@@ -371,24 +383,193 @@ class create_course_service {
     }
 
     /**
+     * Index the subsections declared by the AI, keyed by their id.
+     *
+     * Each entry tracks the delegated section number once materialized, so
+     * every nested activity after the first reuses the same subsection.
+     *
+     * @param array $subsectionsinfo subsections_info from the API result.
+     * @return array<string,array{name:string,description:string,parentsection:int,delegatedsectionnum:?int}>
+     */
+    private static function index_declared_subsections(array $subsectionsinfo): array {
+        $subsections = [];
+        foreach ($subsectionsinfo as $info) {
+            $id = (string)($info['id'] ?? '');
+            if ($id === '') {
+                continue;
+            }
+            $subsections[$id] = [
+                'name' => trim((string)($info['name'] ?? '')),
+                'description' => trim((string)($info['description'] ?? '')),
+                'parentsection' => (int)($info['parent_section'] ?? 0),
+                'delegatedsectionnum' => null,
+            ];
+        }
+        return $subsections;
+    }
+
+    /**
+     * Whether subsections can be materialized in this course.
+     *
+     * Requires the subsection activity module to be enabled and the course
+     * format to support delegated section components (topics/weeks in 4.5).
+     *
+     * @param \stdClass $course Course record.
+     * @return bool
+     */
+    private static function can_materialize_subsections(\stdClass $course): bool {
+        $enabledmods = \core_plugin_manager::instance()->get_enabled_plugins('mod');
+        if (!array_key_exists('subsection', $enabledmods)) {
+            return false;
+        }
+        return course_get_format($course)->supports_components();
+    }
+
+    /**
+     * Create the mod_subsection instance for one declared subsection.
+     *
+     * The subsection module lands at the current end of the parent section's
+     * sequence — calling this when its first activity appears preserves the
+     * AI's presentation order. Returns the delegated section number where the
+     * subsection's activities must be created.
+     *
+     * @param \stdClass $course Course record.
+     * @param array $subsection Entry from index_declared_subsections().
+     * @return int Delegated section number.
+     */
+    private static function materialize_subsection(\stdClass $course, array $subsection): int {
+        global $DB;
+
+        $resultinfo = [
+            'resource_type' => 'subsection',
+            'parameters' => [
+                'modulename' => 'subsection',
+                'name' => $subsection['name'] !== '' ? $subsection['name'] : get_string('pluginname', 'mod_subsection'),
+                'visible' => 1,
+                'visibleoncoursepage' => 1,
+                'groupmode' => 0,
+                'groupingid' => 0,
+                'completion' => 0,
+                'completiongradeitemnumber' => '',
+                'completionview' => 0,
+                'completionexpected' => 0,
+                'completionpassgrade' => 0,
+                'mod_settings' => [],
+            ],
+        ];
+
+        $newcm = create_mod_service::create_from_ai_result($resultinfo, $course, $subsection['parentsection']);
+
+        $delegated = $DB->get_record('course_sections', [
+            'course' => $course->id,
+            'component' => 'mod_subsection',
+            'itemid' => (int)$newcm->instance,
+        ], '*', MUST_EXIST);
+
+        if ($subsection['description'] !== '') {
+            $DB->update_record('course_sections', (object)[
+                'id' => $delegated->id,
+                'summary' => $subsection['description'],
+                'summaryformat' => FORMAT_HTML,
+            ]);
+        }
+
+        return (int)$delegated->section;
+    }
+
+    /**
+     * Materialize subsections that no activity referenced during creation.
+     *
+     * @param int $courseid Course ID.
+     * @param array $subsections Index from index_declared_subsections(), possibly mutated.
+     * @param array $activityerrors Error accumulator (by reference semantics via return not needed; appended).
+     * @return void
+     */
+    private static function materialize_remaining_subsections(int $courseid, array $subsections, array &$activityerrors): void {
+        $pending = array_filter($subsections, static function (array $subsection): bool {
+            return $subsection['delegatedsectionnum'] === null;
+        });
+        if (empty($pending)) {
+            return;
+        }
+
+        $course = get_course($courseid);
+        if (!self::can_materialize_subsections($course)) {
+            return;
+        }
+
+        foreach ($pending as $subsection) {
+            try {
+                self::materialize_subsection($course, $subsection);
+            } catch (\Throwable $e) {
+                $activityerrors[] = [
+                    'resource_type' => 'subsection',
+                    'section' => (int)$subsection['parentsection'],
+                    'message' => $e->getMessage(),
+                    'title' => (string)$subsection['name'],
+                ];
+                debugging('local_coursegen: empty subsection creation skipped. ' . $e->getMessage());
+            }
+        }
+
+        rebuild_course_cache($courseid, true);
+    }
+
+    /**
      * Process generated activities from API response.
+     *
+     * Activities carrying a top-level subsection_id are created inside the
+     * delegated section of the matching declared subsection; the subsection
+     * module itself is materialized lazily when its first activity appears,
+     * which keeps the AI's presentation order inside the parent section.
+     * When subsections cannot be materialized (module disabled or format
+     * without component support) nested activities flatten into their parent
+     * section, in the same order.
      *
      * @param int $courseid Course ID.
      * @param array $activities Generated activities from API.
-     * @return void
+     * @param array $subsections Declared subsections index, mutated as they materialize.
+     * @return array Activity creation errors.
      */
-    private static function process_generated_activities(int $courseid, array $activities): array {
+    private static function process_generated_activities(int $courseid, array $activities, array &$subsections = []): array {
         global $CFG;
 
         require_once($CFG->dirroot . '/course/modlib.php');
 
         $course = get_course($courseid);
         $errors = [];
+        $subsectionsavailable = !empty($subsections) && self::can_materialize_subsections($course);
+        if (!empty($subsections) && !$subsectionsavailable) {
+            debugging('local_coursegen: subsections in result but mod_subsection unavailable; flattening into parent sections.');
+        }
 
         foreach ($activities as $activity) {
             $sectionnum = 0;
             if (isset($activity['parameters']) && isset($activity['parameters']['section'])) {
                 $sectionnum = $activity['parameters']['section'];
+            }
+
+            $subsectionid = (string)($activity['subsection_id'] ?? '');
+            if ($subsectionid !== '' && $subsectionsavailable && isset($subsections[$subsectionid])) {
+                try {
+                    if ($subsections[$subsectionid]['delegatedsectionnum'] === null) {
+                        $subsections[$subsectionid]['delegatedsectionnum'] =
+                            self::materialize_subsection($course, $subsections[$subsectionid]);
+                    }
+                    $sectionnum = $subsections[$subsectionid]['delegatedsectionnum'];
+                } catch (\Throwable $e) {
+                    // Fall back to the parent section for this and later
+                    // activities of the subsection (parameters.section is
+                    // always the top-level parent).
+                    $errors[] = [
+                        'resource_type' => 'subsection',
+                        'section' => (int)$sectionnum,
+                        'message' => $e->getMessage(),
+                        'title' => (string)$subsections[$subsectionid]['name'],
+                    ];
+                    unset($subsections[$subsectionid]);
+                    debugging('local_coursegen: subsection creation failed, flattening its activities. ' . $e->getMessage());
+                }
             }
 
             try {

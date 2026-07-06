@@ -26,6 +26,7 @@ import {markActivityPlanned, clearSectionEntries, ensureDetailedEntry} from './a
 import {formatImageCount, setImageBadge, updateSectionImageBadge} from './badges';
 import {initDetailedPlanView} from './init-view';
 import {appendAddSectionControl} from './section-row';
+import {ensureSubsectionRendered} from './subsection-row';
 import {ensureSectionRendered, ensureActivityRendered} from './sync-helpers';
 import {reconcilePlan as reconcilePlanImpl} from './reconcile';
 
@@ -168,12 +169,30 @@ export const syncDetailedStructureFromSections = (ctx, sections) => {
         (section.activities || []).forEach((activity, activityIdx) => {
             ensureActivityRendered(ctx, activity, section.id, activityIdx, meta.bodyEl);
         });
+        (section.subsections || []).forEach((subsection) => {
+            const submeta = ensureSubsectionRendered(ctx, {
+                subsectionId: subsection.id,
+                sectionId: section.id,
+                name: subsection.name,
+                parentBodyEl: meta.bodyEl,
+            });
+            if (!submeta) {
+                return;
+            }
+            (subsection.activities || []).forEach((activity, activityIdx) => {
+                ensureActivityRendered(ctx, activity, section.id, activityIdx, submeta.listEl, subsection.id);
+            });
+        });
     });
     // Keep the add-section control anchored at the bottom of prvSections.
     appendAddSectionControl(ctx);
     // Update the expected total so progress bars scale correctly.
     const totalActivities = normalized.reduce(
-        (acc, section) => acc + ((section.activities || []).length),
+        (acc, section) => acc + ((section.activities || []).length)
+            + (section.subsections || []).reduce(
+                (subacc, subsection) => subacc + ((subsection.activities || []).length),
+                0
+            ),
         0
     );
     state.detailedTotal = Math.max(state.detailedTotal || 0, totalActivities);

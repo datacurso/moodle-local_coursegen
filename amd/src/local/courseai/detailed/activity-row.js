@@ -28,6 +28,7 @@ import {buildActivityDetailContent} from './detail-content';
 import {recalculateEntryImageCount, setImageBadge, updateDetailedHeaderStats} from './badges';
 import {buildActivityItem, buildActivityActionControls, attachSkeletonProgress} from './activity-dom';
 import {createDetailedSectionRow} from './section-row';
+import {ensureSubsectionRendered} from './subsection-row';
 import {removeTransientActivityPlaceholders} from './pending';
 import {activityPurpose} from './icons';
 
@@ -42,10 +43,11 @@ export {clearSectionEntries} from './activity-state';
  * @param {string} options.activityId
  * @param {string} options.activityType
  * @param {string} options.activityTitle
- * @param {HTMLElement} options.bodyEl - The section's ul.section cmlist.
+ * @param {HTMLElement} options.bodyEl - The section's ul.section cmlist (or a subsection's nested list).
+ * @param {string} [options.subsectionId] - Set when the row lives inside a subsection.
  * @returns {Object} The entry stored in state.detailedActivityEls.
  */
-export const createDetailedActivityRow = (ctx, {sectionId, activityId, activityType, activityTitle, bodyEl}) => {
+export const createDetailedActivityRow = (ctx, {sectionId, activityId, activityType, activityTitle, bodyEl, subsectionId}) => {
     const {state, escapeHtml} = ctx;
 
     const {item, actionsEl, chevronEl, textDiv, detailEl} = buildActivityItem(ctx, activityType, activityTitle);
@@ -78,41 +80,46 @@ export const createDetailedActivityRow = (ctx, {sectionId, activityId, activityT
     // activity lands BETWEEN rows (not only at the end). The button is a child of the
     // .activity wrap, so it rides along on reorder and never confuses the reconciler
     // (which reorders .activity nodes) or the DnD wirer (which keys on .activity).
-    const insertZone = document.createElement('div');
-    insertZone.className = 'cg-insert-zone';
-    insertZone.setAttribute('contenteditable', 'false');
-    insertZone.setAttribute('draggable', 'false');
-    const insertBtn = document.createElement('button');
-    insertBtn.type = 'button';
-    insertBtn.className = 'cg-insert-btn';
-    const insertLabel = (ctx.texts && ctx.texts.courseai_btn_add_activity) || 'Add activity';
-    insertBtn.setAttribute('aria-label', insertLabel);
-    insertBtn.setAttribute('title', insertLabel);
-    insertBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" '
-        + 'stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">'
-        + '<path d="M12 5v14M5 12h14"/></svg>';
-    insertBtn.addEventListener('click', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        const meta = state.detailedSectionMeta[sectionId];
-        if (!meta || typeof meta.openAddActivityAt !== 'function') {
-            return;
-        }
-        // Insert BEFORE this activity: its CURRENT index among the section's rows
-        // (computed at click time, so reorders never leave a stale slot).
-        const list = wrap.parentElement;
-        const rows = list ? Array.prototype.slice.call(list.querySelectorAll('.activity')) : [];
-        const index = rows.indexOf(wrap);
-        // Pass this activity as the anchor so the input opens INLINE right here.
-        meta.openAddActivityAt(index >= 0 ? index : null, wrap);
-    });
-    // A drag started on the zone must not drag the row.
-    insertZone.addEventListener('dragstart', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-    });
-    insertZone.appendChild(insertBtn);
-    wrap.insertBefore(insertZone, wrap.firstChild);
+    // Rows inside a subsection have no between-rows insert affordance (the
+    // parent section's add panel targets the SECTION slot space, not the
+    // subsection's) and never join the parent's drag-and-drop.
+    if (!subsectionId) {
+        const insertZone = document.createElement('div');
+        insertZone.className = 'cg-insert-zone';
+        insertZone.setAttribute('contenteditable', 'false');
+        insertZone.setAttribute('draggable', 'false');
+        const insertBtn = document.createElement('button');
+        insertBtn.type = 'button';
+        insertBtn.className = 'cg-insert-btn';
+        const insertLabel = (ctx.texts && ctx.texts.courseai_btn_add_activity) || 'Add activity';
+        insertBtn.setAttribute('aria-label', insertLabel);
+        insertBtn.setAttribute('title', insertLabel);
+        insertBtn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" '
+            + 'stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">'
+            + '<path d="M12 5v14M5 12h14"/></svg>';
+        insertBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            const meta = state.detailedSectionMeta[sectionId];
+            if (!meta || typeof meta.openAddActivityAt !== 'function') {
+                return;
+            }
+            // Insert BEFORE this activity: its CURRENT index among the section's rows
+            // (computed at click time, so reorders never leave a stale slot).
+            const list = wrap.parentElement;
+            const rows = list ? Array.prototype.slice.call(list.querySelectorAll('.activity')) : [];
+            const index = rows.indexOf(wrap);
+            // Pass this activity as the anchor so the input opens INLINE right here.
+            meta.openAddActivityAt(index >= 0 ? index : null, wrap);
+        });
+        // A drag started on the zone must not drag the row.
+        insertZone.addEventListener('dragstart', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+        });
+        insertZone.appendChild(insertBtn);
+        wrap.insertBefore(insertZone, wrap.firstChild);
+    }
 
     // Place the new row where a transient placeholder marks its slot (an add at a
     // specific position): insert IN ITS PLACE so the row appears at the right slot
@@ -130,9 +137,11 @@ export const createDetailedActivityRow = (ctx, {sectionId, activityId, activityT
     }
     removeTransientActivityPlaceholders(bodyEl);
 
-    // Wire this new wrap into the section's existing DnD setup.
+    // Wire this new wrap into the section's existing DnD setup. Nested rows are
+    // never draggable: reordering across the subsection boundary would send the
+    // parent section mixed-level ids, which the service rejects.
     const sectionMeta = state.detailedSectionMeta[sectionId];
-    if (sectionMeta && sectionMeta.activityDnd) {
+    if (!subsectionId && sectionMeta && sectionMeta.activityDnd) {
         sectionMeta.activityDnd.attachToRow(wrap);
     }
 
@@ -140,7 +149,8 @@ export const createDetailedActivityRow = (ctx, {sectionId, activityId, activityT
 
     state.detailedActivityEls[activityId] = {
         item, wrap, textDiv, progressEl, detailEl, imageBadgeEl: null, chevronEl,
-        sectionId, previewDescription: '', chapterCount: 0, questionCount: 0,
+        sectionId, subsectionId: subsectionId || null,
+        previewDescription: '', chapterCount: 0, questionCount: 0,
         imageCount: 0, imageSuggestions: [], hasDetail: false, done: false,
     };
 
@@ -226,17 +236,50 @@ export const ensureDetailedEntry = (ctx, data) => {
     const sectionId = data.section_id;
     const meta = ensureDetailedSection(ctx, sectionId);
     if (!meta) { return null; }
-    const activityIndex = meta.bodyEl.querySelectorAll('.activity[data-activity-id]:not([data-cg-transient])').length;
+
+    // Nested activity: its row lives inside the subsection's nested list.
+    let bodyEl = meta.bodyEl;
+    let subsectionId = null;
+    if (data.subsection_id) {
+        const submeta = ensureSubsectionRendered(ctx, {
+            subsectionId: data.subsection_id,
+            sectionId,
+            name: data.subsection_name || findSubsectionName(state, sectionId, data.subsection_id),
+            parentBodyEl: meta.bodyEl,
+        });
+        if (submeta) {
+            bodyEl = submeta.listEl;
+            subsectionId = data.subsection_id;
+        }
+    }
+
+    const activityIndex = bodyEl.querySelectorAll('.activity[data-activity-id]:not([data-cg-transient])').length;
     const entry = createDetailedActivityRow(ctx, {
         sectionId, activityId,
         sectionIndex: activityIndex, activityIndex,
         activityType: data.activity_type || 'quiz',
         activityTitle: data.title || texts.courseai_activity_default,
-        bodyEl: meta.bodyEl,
+        bodyEl,
+        subsectionId,
     });
     // Badge reflects the REAL row count (correct on every path), not a running counter.
     refreshSectionMeta(ctx, sectionId);
     return entry;
+};
+
+/**
+ * Look up a subsection's name in the in-memory plan tree.
+ *
+ * @param {Object} state
+ * @param {string} sectionId
+ * @param {string} subsectionId
+ * @returns {string}
+ */
+const findSubsectionName = (state, sectionId, subsectionId) => {
+    const sections = Array.isArray(state.latestInitialSections) ? state.latestInitialSections : [];
+    const section = sections.find((s) => s.id === sectionId);
+    const subsection = ((section && section.subsections) || []).find((sub) => sub.id === subsectionId);
+    return (subsection && subsection.name) || '';
 };
 
 /**

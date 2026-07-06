@@ -66,12 +66,31 @@ export const handleActivity = (data, ctx) => {
         (s) => s.id === data.section_id
     );
     if (sectionForActivity) {
-        const existingActivity = sectionForActivity.activities.find((a) => a.id === data.id);
+        // Nested activities live inside their subsection's activities list, so
+        // the state mirrors the server plan tree; section_id stays the
+        // TOP-LEVEL parent, which keeps the checklist counters working.
+        let container = sectionForActivity;
+        if (data.subsection_id) {
+            const subsections = sectionForActivity.subsections || (sectionForActivity.subsections = []);
+            let subsection = subsections.find((sub) => sub.id === data.subsection_id);
+            if (!subsection) {
+                subsection = {
+                    id: data.subsection_id,
+                    position: subsections.length,
+                    name: data.subsection_name || '',
+                    description: '',
+                    activities: [],
+                };
+                subsections.push(subsection);
+            }
+            container = subsection;
+        }
+        const existingActivity = container.activities.find((a) => a.id === data.id);
         if (existingActivity) {
             existingActivity.title = data.title || existingActivity.title;
             existingActivity.deleted = data.deleted;
         } else {
-            sectionForActivity.activities.push({
+            container.activities.push({
                 id: data.id,
                 position: data.position,
                 deleted: data.deleted,
@@ -219,6 +238,65 @@ export const handleSection = (data, ctx) => {
     if (!ctx.keepPlan && typeof detailedUi.syncDetailedStructureFromSections === 'function') {
         detailedUi.syncDetailedStructureFromSections(state.latestInitialSections || []);
     }
+};
+
+/**
+ * Handle 'subsection' event: upsert the subsection into its parent section's
+ * tree and render its nested block in the detailed view.
+ *
+ * @param {Object} data
+ * @param {Object} ctx
+ */
+export const handleSubsection = (data, ctx) => {
+    ctx.flags.contentReceived = true;
+    const {state, detailedUi} = ctx;
+
+    const section = (state.latestInitialSections || []).find((s) => s.id === data.section_id);
+    if (section) {
+        const subsections = section.subsections || (section.subsections = []);
+        const existing = subsections.find((sub) => sub.id === data.id);
+        if (existing) {
+            existing.name = data.name || existing.name;
+            existing.description = data.description || existing.description;
+            existing.position = data.position;
+        } else {
+            subsections.push({
+                id: data.id,
+                position: data.position,
+                name: data.name || '',
+                description: data.description || '',
+                activities: [],
+            });
+        }
+    }
+
+    // Section add/regen streams into the bottom block; the nested rows render
+    // when the plan settles at review_needed (reconcile). Same for keepPlan.
+    if (inSectionScope(state) || ctx.keepPlan) {
+        return;
+    }
+    if (typeof detailedUi.syncDetailedStructureFromSections === 'function') {
+        detailedUi.syncDetailedStructureFromSections(state.latestInitialSections || []);
+    }
+};
+
+/**
+ * Handle 'plan_notice' event: an informative note from the planner (e.g. the
+ * user asked for subsections but the feature is disabled, so the plan was
+ * organized flat). The text arrives already localized (the LLM writes it in
+ * the user's language) and is logged as a permanent AI turn; the service
+ * persists the same text as an ai_notice thread row, so reload re-renders it
+ * identically via thread-replay.
+ *
+ * @param {Object} data
+ * @param {Object} ctx
+ */
+export const handlePlanNotice = (data, ctx) => {
+    const message = String(data.message || '').trim();
+    if (!message || typeof ctx.emitLog !== 'function') {
+        return;
+    }
+    ctx.emitLog({actor: 'ai', kind: 'info', message});
 };
 
 /**

@@ -59,6 +59,8 @@ export const setupContextSection = (deps) => {
         langSelect,
         btnWithImages,
         imgToggleWrap,
+        btnWithSubsections,
+        subToggleWrap,
     } = elements;
 
     // ─── Core helpers ────────────────────────────────────────────────────────
@@ -191,6 +193,20 @@ export const setupContextSection = (deps) => {
             }
             if (elements.compactImgToggleWrap) {
                 elements.compactImgToggleWrap.classList.toggle('on', state.withImages);
+            }
+        });
+    }
+
+    if (btnWithSubsections && subToggleWrap) {
+        bindToggleWrap(subToggleWrap, btnWithSubsections);
+        btnWithSubsections.addEventListener('change', () => {
+            state.withSubsections = btnWithSubsections.checked;
+            subToggleWrap.classList.toggle('on', state.withSubsections);
+            if (elements.btnCompactWithSubsections) {
+                elements.btnCompactWithSubsections.checked = state.withSubsections;
+            }
+            if (elements.compactSubToggleWrap) {
+                elements.compactSubToggleWrap.classList.toggle('on', state.withSubsections);
             }
         });
     }

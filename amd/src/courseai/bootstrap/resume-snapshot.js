@@ -210,6 +210,11 @@ export const makeResumeFromSnapshot = ({
             ?? coursedata.local_coursegen_with_images
             ?? false
         );
+        state.withSubsections = Boolean(
+            snapshot?.request_config?.with_subsections
+            ?? coursedata.local_coursegen_generate_subsections
+            ?? false
+        );
         state.courseTitle = String(snapshot?.course_identity?.fullname || '').trim();
 
         const initialPrompt =
@@ -229,6 +234,12 @@ export const makeResumeFromSnapshot = ({
         }
         if (elements.imgToggleWrap) {
             elements.imgToggleWrap.classList.toggle('on', state.withImages);
+        }
+        if (elements.btnWithSubsections) {
+            elements.btnWithSubsections.checked = state.withSubsections;
+        }
+        if (elements.subToggleWrap) {
+            elements.subToggleWrap.classList.toggle('on', state.withSubsections);
         }
 
         planningUi.syncCompactChatState();

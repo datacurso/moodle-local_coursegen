@@ -50,6 +50,7 @@ export const createCourseaiActions = (deps) => {
         planningProgressCard, completionView, completionSummary,
         btnOpenMoodleCourse, btnCreateAnotherCourse,
         btnWithImages, imgToggleWrap, langSelect,
+        btnWithSubsections, subToggleWrap,
         compactPromptInput, btnCompactRegenerate,
         initialPromptHistory, initialPromptText,
     } = elements;
@@ -183,6 +184,7 @@ export const createCourseaiActions = (deps) => {
         state.syllabusFilename = null;
         state.draftitemid = null;
         state.withImages = false;
+        state.withSubsections = false;
         state.lang = state.defaultLang;
         state.completionStats = null;
         state.createdCourseUrl = '';
@@ -192,6 +194,8 @@ export const createCourseaiActions = (deps) => {
         if (langSelect) { langSelect.value = state.lang; }
         if (btnWithImages) { btnWithImages.checked = false; }
         if (imgToggleWrap) { imgToggleWrap.classList.remove('on'); }
+        if (btnWithSubsections) { btnWithSubsections.checked = false; }
+        if (subToggleWrap) { subToggleWrap.classList.remove('on'); }
         const chipSyllabus = document.getElementById('chipSyllabus');
         if (chipSyllabus) { chipSyllabus.classList.add('hidden'); }
         const chipSyllabusName = document.getElementById('chipSyllabusName');

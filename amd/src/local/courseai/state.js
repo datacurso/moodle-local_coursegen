@@ -45,6 +45,7 @@ export const createInitialState = ({defaultLang, guidelines, languages}) => {
         initialPrompt: '',
         lang: defaultLang,
         withImages: false,
+        withSubsections: false,
         guidelines,
         languages,
         sseSource: null,
@@ -59,6 +60,7 @@ export const createInitialState = ({defaultLang, guidelines, languages}) => {
         latestInitialSections: [],
         detailedActivityEls: {}, // keyed by activity_id (UUID string)
         detailedSectionMeta: {}, // keyed by section_id (UUID string)
+        detailedSubsectionMeta: {}, // keyed by subsection_id (UUID string)
         selectedDetailedImages: {}, // keyed by image suggestion id (UUID string)
         structuredActivityProgress: false,
         activityProgressTotal: 0,

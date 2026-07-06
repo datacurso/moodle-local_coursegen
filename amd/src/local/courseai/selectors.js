@@ -29,6 +29,8 @@
 export const getCourseaiElements = () => {
     const btnWithImages = document.getElementById('btnWithImages');
     const btnCompactWithImages = document.getElementById('btnCompactWithImages');
+    const btnWithSubsections = document.getElementById('btnWithSubsections');
+    const btnCompactWithSubsections = document.getElementById('btnCompactWithSubsections');
 
     const resolveToggleWrap = (input) => {
         if (!input) {
@@ -49,6 +51,8 @@ export const getCourseaiElements = () => {
         langSelect: document.getElementById('langSelect'),
         btnWithImages,
         imgToggleWrap: resolveToggleWrap(btnWithImages),
+        btnWithSubsections,
+        subToggleWrap: resolveToggleWrap(btnWithSubsections),
         courseaiWorkspace: document.getElementById('courseaiWorkspace'),
         contextView: document.getElementById('contextView'),
         planningView: document.getElementById('planningView'),
@@ -100,6 +104,8 @@ export const getCourseaiElements = () => {
         compactLangSelect: document.getElementById('compactLangSelect'),
         btnCompactWithImages,
         compactImgToggleWrap: resolveToggleWrap(btnCompactWithImages),
+        btnCompactWithSubsections,
+        compactSubToggleWrap: resolveToggleWrap(btnCompactWithSubsections),
         btnCompactSyllabus: document.getElementById('btnCompactSyllabus'),
         btnCompactDirectrices: document.getElementById('btnCompactDirectrices'),
         completionView: document.getElementById('completionView'),

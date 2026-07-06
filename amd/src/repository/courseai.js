@@ -31,6 +31,7 @@ import Ajax from 'core/ajax';
  * @param {string} params.lang Language code (es, en, etc.)
  * @param {boolean} params.withimages Include image suggestions
  * @param {number} params.systeminstructionid System instruction ID (optional)
+ * @param {boolean} params.withsubsections Organise sections into subsections
  * @returns {Promise<Object>} Response with sessionid, threadid and streamingurl
  */
 export const initSession = (params) => {
@@ -41,6 +42,7 @@ export const initSession = (params) => {
             lang: params.lang || 'es',
             withimages: params.withimages || false,
             systeminstructionid: params.systeminstructionid || 0,
+            withsubsections: params.withsubsections || false,
         },
     };
 

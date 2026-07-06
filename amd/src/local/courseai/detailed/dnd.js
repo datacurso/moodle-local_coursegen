@@ -42,9 +42,14 @@ export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, p
     // NOT log "You moved X to position N" nor hit the service.
     let orderAtStart = [];
     const dragBlocked = () => typeof canDrag === 'function' && !canDrag();
+    // Only DIRECT children count: a section cmlist may hold nested subsection
+    // lists whose activity rows must never join the parent's order payload.
+    const directItems = () => Array.prototype.filter.call(
+        container.children, (el) => el.matches(itemSelector)
+    );
     const currentOrder = () => {
         const ids = [];
-        container.querySelectorAll(itemSelector).forEach((el) => {
+        directItems().forEach((el) => {
             const id = el.dataset[idDataset];
             if (id) {
                 ids.push(id);
@@ -131,7 +136,7 @@ export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, p
             dragSrcEl = null;
             return;
         }
-        container.querySelectorAll(itemSelector).forEach((el) => {
+        directItems().forEach((el) => {
             el.classList.remove('dp-drag-over');
         });
         // The dragged row (its id) is what moved — pass it so the log can name
@@ -175,7 +180,7 @@ export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, p
     };
 
     // Attach to all existing rows immediately.
-    container.querySelectorAll(itemSelector).forEach(attachToRow);
+    directItems().forEach(attachToRow);
 
     // Return attach so callers can wire newly-created rows.
     return {attachToRow};

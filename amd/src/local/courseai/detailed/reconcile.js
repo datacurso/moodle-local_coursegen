@@ -39,7 +39,8 @@
 import {ensureSectionRendered, ensureActivityRendered} from './sync-helpers';
 import {markActivityPlanned, refreshSectionMeta} from './activity-row';
 import {appendAddSectionControl} from './section-row';
-import {focusChange} from 'local_coursegen/local/courseai/ui/highlight';
+import {ensureSubsectionRendered} from './subsection-row';
+import {focusChange, markRemoving} from 'local_coursegen/local/courseai/ui/highlight';
 import {removeVanishedActivities, removeVanishedSections, reorderAll} from './reconcile-dom';
 import {removeAllTransientPlaceholders} from './pending';
 
@@ -71,19 +72,31 @@ const buildActiveStructure = (currentPlan) => {
     const activeSections = currentPlan.filter((s) => s.deleted !== true);
     activeSections.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
 
+    const mapActivities = (activities) => {
+        const active = (activities || []).filter((a) => a.deleted !== true);
+        active.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+        return active.map((a) => ({
+            id: a.id,
+            position: a.position ?? 0,
+            activity_type: a.activity_type || a.type || 'quiz',
+            title: a.title || '',
+            detailed_plan: a.detailed_plan,
+        }));
+    };
+
     return activeSections.map((section) => {
-        const activeActivities = (section.activities || []).filter((a) => a.deleted !== true);
-        activeActivities.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
+        const activeSubsections = (section.subsections || []).filter((sub) => sub.deleted !== true);
+        activeSubsections.sort((a, b) => (a.position ?? 0) - (b.position ?? 0));
         return {
             id: section.id,
             position: section.position ?? 0,
             name: section.name,
-            activities: activeActivities.map((a) => ({
-                id: a.id,
-                position: a.position ?? 0,
-                activity_type: a.activity_type || a.type || 'quiz',
-                title: a.title || '',
-                detailed_plan: a.detailed_plan,
+            activities: mapActivities(section.activities),
+            subsections: activeSubsections.map((sub) => ({
+                id: sub.id,
+                position: sub.position ?? 0,
+                name: sub.name || '',
+                activities: mapActivities(sub.activities),
             })),
         };
     });
@@ -122,14 +135,15 @@ const addOrKeepSection = (ctx, section, renderIndex, silent) => {
  * @param {number}      activityIdx
  * @param {HTMLElement} bodyEl
  * @param {boolean}     silent        Skip success flash when true.
+ * @param {string}      [subsectionId] Set when the activity nests inside a subsection.
  * @returns {boolean} True when markActivityPlanned was already called here.
  */
-const addOrUpdateActivity = (ctx, activity, sectionId, activityIdx, bodyEl, silent) => {
+const addOrUpdateActivity = (ctx, activity, sectionId, activityIdx, bodyEl, silent, subsectionId) => {
     const {state} = ctx;
     const existing = state.detailedActivityEls[activity.id];
 
     if (!existing) {
-        ensureActivityRendered(ctx, activity, sectionId, activityIdx, bodyEl);
+        ensureActivityRendered(ctx, activity, sectionId, activityIdx, bodyEl, subsectionId);
         const entry = state.detailedActivityEls[activity.id];
         if (!silent && entry && entry.wrap) {
             focusChange(entry.wrap, 'success');
@@ -149,6 +163,7 @@ const addOrUpdateActivity = (ctx, activity, sectionId, activityIdx, bodyEl, sile
 
     markActivityPlanned(ctx, {
         section_id: sectionId,
+        subsection_id: subsectionId || undefined,
         activity_id: activity.id,
         activity_type: activity.activity_type,
         title: activity.title,
@@ -159,6 +174,30 @@ const addOrUpdateActivity = (ctx, activity, sectionId, activityIdx, bodyEl, sile
         focusChange(existing.wrap, 'info');
     }
     return true;
+};
+
+/**
+ * Fade-remove rendered subsection rows whose ids are absent from the active set.
+ * Their nested activity entries are removed beforehand by removeVanishedActivities.
+ *
+ * @param {Object}      ctx
+ * @param {Set<string>} activeSubsectionIds
+ * @returns {Promise<void>}
+ */
+const removeVanishedSubsections = async(ctx, activeSubsectionIds) => {
+    const {state} = ctx;
+    const rendered = state.detailedSubsectionMeta || {};
+    const toRemove = Object.keys(rendered).filter((id) => !activeSubsectionIds.has(id));
+
+    await Promise.all(toRemove.map(async(id) => {
+        const meta = rendered[id];
+        if (!meta || !meta.row) {
+            return;
+        }
+        await markRemoving(meta.row);
+        meta.row.remove();
+        delete rendered[id];
+    }));
 };
 
 // ---------------------------------------------------------------------------
@@ -174,23 +213,28 @@ const addOrUpdateActivity = (ctx, activity, sectionId, activityIdx, bodyEl, sile
  */
 const fillSkeletonActivities = (ctx, activeSections) => {
     const {state} = ctx;
+    const fillOne = (sectionId, activity, subsectionId) => {
+        if (!activity.detailed_plan) {
+            return;
+        }
+        const entry = state.detailedActivityEls[activity.id];
+        if (!entry || entry.done) {
+            return;
+        }
+        markActivityPlanned(ctx, {
+            section_id: sectionId,
+            subsection_id: subsectionId || undefined,
+            activity_id: activity.id,
+            activity_type: activity.activity_type,
+            title: activity.title,
+            data: activity.detailed_plan,
+        });
+        entry._sig = activitySig(activity.title, activity.detailed_plan);
+    };
     activeSections.forEach((section) => {
-        section.activities.forEach((activity) => {
-            if (!activity.detailed_plan) {
-                return;
-            }
-            const entry = state.detailedActivityEls[activity.id];
-            if (!entry || entry.done) {
-                return;
-            }
-            markActivityPlanned(ctx, {
-                section_id: section.id,
-                activity_id: activity.id,
-                activity_type: activity.activity_type,
-                title: activity.title,
-                data: activity.detailed_plan,
-            });
-            entry._sig = activitySig(activity.title, activity.detailed_plan);
+        section.activities.forEach((activity) => fillOne(section.id, activity));
+        (section.subsections || []).forEach((subsection) => {
+            subsection.activities.forEach((activity) => fillOne(section.id, activity, subsection.id));
         });
     });
 };
@@ -212,7 +256,13 @@ export const reconcilePlan = async(ctx, currentPlan) => {
 
     const activeSections = buildActiveStructure(currentPlan);
     const activeSectionIds = new Set(activeSections.map((s) => s.id));
-    const activeActivityIds = new Set(activeSections.flatMap((s) => s.activities.map((a) => a.id)));
+    const activeActivityIds = new Set(activeSections.flatMap((s) => [
+        ...s.activities.map((a) => a.id),
+        ...s.subsections.flatMap((sub) => sub.activities.map((a) => a.id)),
+    ]));
+    const activeSubsectionIds = new Set(
+        activeSections.flatMap((s) => s.subsections.map((sub) => sub.id))
+    );
 
     // Initial-render guard: suppress success flashes when maps are empty.
     const isInitialRender = (
@@ -220,8 +270,9 @@ export const reconcilePlan = async(ctx, currentPlan) => {
         && Object.keys(state.detailedActivityEls).length === 0
     );
 
-    // Step 2 — Remove vanished entries (activities first, then sections).
+    // Step 2 — Remove vanished entries (activities first, then subsections, then sections).
     await removeVanishedActivities(ctx, activeActivityIds);
+    await removeVanishedSubsections(ctx, activeSubsectionIds);
     await removeVanishedSections(ctx, activeSectionIds);
 
     // Steps 3+4 — Add new entries; update changed activities.
@@ -234,6 +285,46 @@ export const reconcilePlan = async(ctx, currentPlan) => {
         section.activities.forEach((activity, activityIdx) => {
             addOrUpdateActivity(ctx, activity, section.id, activityIdx, meta.bodyEl, isInitialRender);
         });
+        section.subsections.forEach((subsection) => {
+            const wasRendered = Boolean(
+                state.detailedSubsectionMeta && state.detailedSubsectionMeta[subsection.id]
+            );
+            const submeta = ensureSubsectionRendered(ctx, {
+                subsectionId: subsection.id,
+                sectionId: section.id,
+                name: subsection.name,
+                parentBodyEl: meta.bodyEl,
+            });
+            if (!submeta) {
+                return;
+            }
+            if (!wasRendered && !isInitialRender && submeta.row) {
+                focusChange(submeta.row, 'success');
+            }
+            subsection.activities.forEach((activity, activityIdx) => {
+                addOrUpdateActivity(
+                    ctx, activity, section.id, activityIdx, submeta.listEl, isInitialRender, subsection.id
+                );
+            });
+        });
+        // Keep subsection rows in position order, after the direct activities and
+        // before the "+ Add activity" sentinel. Only mutate when out of order.
+        const addWrap = meta.bodyEl.querySelector(':scope > .dp-add-activity-wrap');
+        if (addWrap && section.subsections.length > 0) {
+            const desired = section.subsections
+                .map((subsection) => state.detailedSubsectionMeta[subsection.id])
+                .filter((sub) => sub && sub.row)
+                .map((sub) => sub.row);
+            const current = Array.prototype.filter.call(
+                meta.bodyEl.children, (el) => el.classList.contains('cg-subsection')
+            );
+            const inOrder = desired.length === current.length
+                && desired.every((node, i) => node === current[i])
+                && (desired.length === 0 || desired[desired.length - 1].nextElementSibling === addWrap);
+            if (!inOrder) {
+                desired.forEach((node) => meta.bodyEl.insertBefore(node, addWrap));
+            }
+        }
     });
 
     // Keep the add-section control anchored at the bottom.

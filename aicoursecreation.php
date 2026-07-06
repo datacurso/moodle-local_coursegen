@@ -110,6 +110,9 @@ foreach ($allrecords as $session) {
 // Get logo URL.
 $logourl = new moodle_url('/local/coursegen/pix/logo.png');
 
+// Subsections toggle only renders when the feature is enabled and mod_subsection is available.
+$subsectionsenabled = \local_coursegen\local\service\course_planning_service::subsections_available();
+
 // Prepare template context.
 $templatecontext = [
     'guidelines' => json_encode($systeminstructions),
@@ -120,6 +123,7 @@ $templatecontext = [
     'sessions' => $recent5,
     'allsessions' => $allsessionsdata,
     'isresuming' => $resumesessionid > 0,
+    'subsectionsenabled' => $subsectionsenabled,
 ];
 
 echo $OUTPUT->header();

@@ -28,6 +28,22 @@ use local_coursegen\local\models\course_session;
  */
 class course_planning_service {
     /**
+     * Whether AI-generated subsections are available on this site.
+     *
+     * Requires the admin setting to be enabled AND the subsection activity
+     * module (Moodle 4.5 delegated sections) to be enabled.
+     *
+     * @return bool
+     */
+    public static function subsections_available(): bool {
+        if (!get_config('local_coursegen', 'enablesubsections')) {
+            return false;
+        }
+        $enabledmods = \core_plugin_manager::instance()->get_enabled_plugins('mod');
+        return array_key_exists('subsection', $enabledmods);
+    }
+
+    /**
      * Start a course planning session and persist local session data.
      *
      * @param string $prompt Course description prompt.
@@ -35,6 +51,7 @@ class course_planning_service {
      * @param bool $withimages Include image suggestions.
      * @param int $systeminstructionid Optional system instruction id.
      * @param int $userid Current user id.
+     * @param bool $withsubsections Allow the AI to group activities into subsections.
      * @return array
      */
     public static function start_course_planning(
@@ -42,13 +59,18 @@ class course_planning_service {
         string $lang,
         bool $withimages,
         int $systeminstructionid,
-        int $userid
+        int $userid,
+        bool $withsubsections = false
     ): array {
         $instructions = null;
         if ($systeminstructionid > 0) {
             $content = system_instruction_service::get_instruction_content($systeminstructionid);
             $instructions = $content !== '' ? $content : null;
         }
+
+        // Server-side gate: the flag only travels when the feature is enabled
+        // and mod_subsection is available, whatever the client sent.
+        $withsubsections = $withsubsections && self::subsections_available();
 
         $apiservice = new ai_course_api_service();
 
@@ -57,6 +79,7 @@ class course_planning_service {
             'instructions' => $instructions,
             'lang' => $lang,
             'with_images' => $withimages,
+            'with_subsections' => $withsubsections,
         ];
 
         if ($withimages) {
@@ -85,6 +108,7 @@ class course_planning_service {
         $session->set('coursedata', json_encode([
             'local_coursegen_lang' => $lang,
             'local_coursegen_generate_images' => $withimages ? 1 : 0,
+            'local_coursegen_generate_subsections' => $withsubsections ? 1 : 0,
             'local_coursegen_context_type' => 'customprompt',
             'local_coursegen_custom_prompt' => $prompt,
             'local_coursegen_use_system_instruction' => $systeminstructionid > 0 ? 1 : 0,

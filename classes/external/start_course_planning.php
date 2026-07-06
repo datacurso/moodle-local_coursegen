@@ -51,6 +51,7 @@ class start_course_planning extends external_api {
                 VALUE_DEFAULT,
                 0
             ),
+            'withsubsections' => new external_value(PARAM_BOOL, 'Organise sections into subsections', VALUE_DEFAULT, false),
         ]);
     }
 
@@ -61,13 +62,15 @@ class start_course_planning extends external_api {
      * @param string $lang Language code.
      * @param bool $withimages Include image suggestions.
      * @param int $systeminstructionid System instruction ID.
+     * @param bool $withsubsections Organise sections into subsections.
      * @return array
      */
     public static function execute(
         string $prompt,
         string $lang = 'es',
         bool $withimages = false,
-        int $systeminstructionid = 0
+        int $systeminstructionid = 0,
+        bool $withsubsections = false
     ): array {
         global $USER;
 
@@ -76,6 +79,7 @@ class start_course_planning extends external_api {
             'lang' => $lang,
             'withimages' => $withimages,
             'systeminstructionid' => $systeminstructionid,
+            'withsubsections' => $withsubsections,
         ]);
 
         $context = context_system::instance();
@@ -89,7 +93,8 @@ class start_course_planning extends external_api {
                 $params['lang'],
                 (bool)$params['withimages'],
                 (int)$params['systeminstructionid'],
-                (int)$USER->id
+                (int)$USER->id,
+                (bool)$params['withsubsections']
             );
         } catch (\Exception $e) {
             return [

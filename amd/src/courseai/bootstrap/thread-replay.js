@@ -55,6 +55,9 @@ const AI_MILESTONE_KIND = {
     ai_completed: 'success',
     ai_failed: 'danger',
     ai_error: 'danger',
+    // Planner notice (e.g. subsections requested but disabled): same 'info'
+    // kind the live plan_notice handler uses, so reload === live.
+    ai_notice: 'info',
 };
 
 /**
