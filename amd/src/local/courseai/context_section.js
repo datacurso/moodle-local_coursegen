@@ -98,10 +98,16 @@ export const setupContextSection = (deps) => {
         chipsRow.style.display = (hasSyllabus || hasGuideline) ? 'flex' : 'none';
     };
 
-    const closeGuidelinePopover = () => {
+    const closeGuidelinePopover = ({returnFocus = false} = {}) => {
         state.guidelinePopoverOpen = false;
         if (guidelinesPopover) {
             guidelinesPopover.classList.remove('open');
+        }
+        if (btnDirectrices) {
+            btnDirectrices.setAttribute('aria-expanded', 'false');
+            if (returnFocus) {
+                btnDirectrices.focus();
+            }
         }
     };
 
@@ -140,10 +146,14 @@ export const setupContextSection = (deps) => {
     if (btnDirectrices && guidelinesPopover) {
         btnDirectrices.addEventListener('click', (e) => {
             e.stopPropagation();
-            state.guidelinePopoverOpen = !state.guidelinePopoverOpen;
-            guidelinesPopover.classList.toggle('open', state.guidelinePopoverOpen);
+            // Base the toggle on the panel's real visible state, not on the shared
+            // flag: a sibling popover (compact) can leave the flag out of sync.
+            const willOpen = !guidelinesPopover.classList.contains('open');
+            state.guidelinePopoverOpen = willOpen;
+            guidelinesPopover.classList.toggle('open', willOpen);
+            btnDirectrices.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
 
-            if (state.guidelinePopoverOpen && guidelineSearch) {
+            if (willOpen && guidelineSearch) {
                 guidelineSearch.value = '';
                 state.guidelineSearchQuery = '';
                 renderGuidelineList();
@@ -152,12 +162,21 @@ export const setupContextSection = (deps) => {
         });
     }
 
+    // Close on outside click. Guard on THIS panel's own .open class rather than the
+    // shared state flag, so the compact popover's document listener can't clobber it.
     document.addEventListener('click', (e) => {
-        if (state.guidelinePopoverOpen &&
-            guidelinesPopover &&
+        if (guidelinesPopover &&
+            guidelinesPopover.classList.contains('open') &&
             !guidelinesPopover.contains(e.target) &&
             e.target !== btnDirectrices) {
             closeGuidelinePopover();
+        }
+    });
+
+    // Close on Escape and return focus to the trigger (accessibility).
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape' && guidelinesPopover && guidelinesPopover.classList.contains('open')) {
+            closeGuidelinePopover({returnFocus: true});
         }
     });
 
