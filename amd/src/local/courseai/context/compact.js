@@ -68,9 +68,11 @@ export const wireCompactControls = ({
     if (btnCompactDirectrices && compactGuidelinesPopover) {
         btnCompactDirectrices.addEventListener('click', (e) => {
             e.stopPropagation();
-            state.guidelinePopoverOpen = !state.guidelinePopoverOpen;
-            compactGuidelinesPopover.classList.toggle('open', state.guidelinePopoverOpen);
-            if (state.guidelinePopoverOpen && compactGuidelineSearch) {
+            const willOpen = !compactGuidelinesPopover.classList.contains('open');
+            state.guidelinePopoverOpen = willOpen;
+            compactGuidelinesPopover.classList.toggle('open', willOpen);
+            btnCompactDirectrices.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+            if (willOpen && compactGuidelineSearch) {
                 compactGuidelineSearch.value = '';
                 state.guidelineSearchQuery = '';
                 renderCompactGuidelineList();
@@ -107,20 +109,35 @@ export const wireCompactControls = ({
         });
     }
 
-    // Close compact popover on outside click
+    // Close compact popover on outside click. Guard on THIS panel's own .open class
+    // (not the shared state flag) so it never clobbers the main popover's state.
     if (document.body && compactGuidelinesPopover) {
         document.body.addEventListener('click', (e) => {
-            if (!state.guidelinePopoverOpen) {
+            if (!compactGuidelinesPopover.classList.contains('open')) {
                 return;
             }
             if (
-                compactGuidelinesPopover &&
                 !compactGuidelinesPopover.contains(e.target) &&
                 e.target !== btnCompactDirectrices &&
                 !btnCompactDirectrices?.contains(e.target)
             ) {
                 compactGuidelinesPopover.classList.remove('open');
                 state.guidelinePopoverOpen = false;
+                if (btnCompactDirectrices) {
+                    btnCompactDirectrices.setAttribute('aria-expanded', 'false');
+                }
+            }
+        });
+
+        // Close on Escape and return focus to the trigger (accessibility).
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape' && compactGuidelinesPopover.classList.contains('open')) {
+                compactGuidelinesPopover.classList.remove('open');
+                state.guidelinePopoverOpen = false;
+                if (btnCompactDirectrices) {
+                    btnCompactDirectrices.setAttribute('aria-expanded', 'false');
+                    btnCompactDirectrices.focus();
+                }
             }
         });
     }
