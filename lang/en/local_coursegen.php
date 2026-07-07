@@ -401,6 +401,7 @@ $string['courseai_lang_arialabel'] = 'Language';
 $string['courseai_images_title'] = 'Include image suggestions in the course';
 $string['courseai_options_menu'] = 'Creation options';
 $string['courseai_lang_menu_label'] = 'Language';
+$string['courseai_lang_search_placeholder'] = 'Search language…';
 $string['courseai_subsections_title'] = 'Organise sections into subsections';
 $string['courseai_subsections_label'] = 'Subsections';
 $string['courseai_subsections_arialabel'] = 'Include subsections';

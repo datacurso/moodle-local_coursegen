@@ -196,6 +196,7 @@ $string['courseai_images_suggested_label'] = 'gambar yang disarankan';
 $string['courseai_images_title'] = 'Sertakan saran gambar dalam kursus';
 $string['courseai_options_menu'] = 'Opsi pembuatan';
 $string['courseai_lang_menu_label'] = 'Bahasa';
+$string['courseai_lang_search_placeholder'] = 'Cari bahasa…';
 $string['courseai_subsections_title'] = 'Atur bagian ke dalam subbagian';
 $string['courseai_subsections_label'] = 'Subbagian';
 $string['courseai_subsections_arialabel'] = 'Sertakan subbagian';

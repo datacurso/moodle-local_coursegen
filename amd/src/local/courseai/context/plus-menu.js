@@ -19,8 +19,8 @@
  * Pure presentation layer: the real controls keep their ids and listeners
  * (hidden checkboxes for the toggles, the hidden language select as the
  * single source of truth, the syllabus/guidelines buttons re-styled as menu
- * items). This module only handles opening/closing the panel, the language
- * flyout submenu, and closing the menu when an action item is used.
+ * items). This module handles opening/closing the panel and the searchable
+ * language popover (same interaction pattern as the guidelines popover).
  *
  * @module     local_coursegen/local/courseai/context/plus-menu
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -28,99 +28,125 @@
  */
 
 /**
+ * Escape a string for safe interpolation into innerHTML.
+ *
+ * @param {string} value
+ * @returns {string}
+ */
+const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
+    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
+}[char]));
+
+/**
  * Wire one "+" options menu instance.
  *
  * @param {Object} options
  * @param {HTMLElement|null} options.button      - The "+" trigger button.
  * @param {HTMLElement|null} options.panel       - The dropdown panel.
- * @param {HTMLElement|null} options.langItem    - The language menu item (flyout trigger).
+ * @param {HTMLElement|null} options.langItem    - The language menu item (popover trigger).
  * @param {HTMLElement|null} options.langValue   - Span showing the current language code.
- * @param {HTMLElement|null} options.langSubmenu - The <ul> flyout with language options.
+ * @param {HTMLElement|null} options.langPopover - The searchable language popover panel.
+ * @param {HTMLElement|null} options.langSearch  - The popover's search input.
+ * @param {HTMLElement|null} options.langList    - The popover's <ul> results list.
+ * @param {HTMLElement|null} options.langCloseBtn - The popover's close (X) button.
  * @param {HTMLSelectElement|null} options.langSelect - The hidden select (source of truth).
- * @param {Array} options.languages - [{code}] available languages.
+ * @param {Array} options.languages - [{code, name}] available languages.
  * @param {Function} [options.onOpen] - Called right before the panel opens
  *     (e.g. to close the guidelines popover so both never overlap).
- * @returns {{close: Function}|null} Menu API, or null when the toolbar is absent.
+ * @returns {{close: Function, closeLangPopover: Function}|null} Menu API, or
+ *     null when the toolbar is absent.
  */
-export const wirePlusMenu = ({button, panel, langItem, langValue, langSubmenu, langSelect, languages, onOpen}) => {
+export const wirePlusMenu = ({
+    button, panel, langItem, langValue, langPopover, langSearch, langList, langCloseBtn,
+    langSelect, languages, onOpen,
+}) => {
     if (!button || !panel) {
         return null;
     }
 
-    const closeSubmenu = () => {
-        if (langSubmenu) {
-            langSubmenu.classList.remove('open');
-        }
-        if (langItem) {
-            langItem.setAttribute('aria-expanded', 'false');
+    // Normalized [{code, name}] list; falls back to the hidden select's
+    // options (es/en defaults) when the site list is empty.
+    const langEntries = (languages && languages.length > 0)
+        ? languages.map((lang) => ({
+            code: String(lang.code || '').toLowerCase(),
+            name: String(lang.name || String(lang.code || '').toUpperCase()),
+        })).filter((lang) => lang.code)
+        : Array.prototype.map.call((langSelect && langSelect.options) || [], (opt) => ({
+            code: String(opt.value).toLowerCase(),
+            name: String(opt.value).toUpperCase(),
+        }));
+
+    const closeLangPopover = () => {
+        if (langPopover) {
+            langPopover.classList.remove('open');
         }
     };
 
     const close = () => {
         panel.classList.remove('open');
         button.setAttribute('aria-expanded', 'false');
-        closeSubmenu();
     };
 
     const open = () => {
         if (typeof onOpen === 'function') {
             onOpen();
         }
+        closeLangPopover();
         panel.classList.add('open');
         button.setAttribute('aria-expanded', 'true');
     };
 
     const isOpen = () => panel.classList.contains('open');
 
-    const refreshLangUi = () => {
-        const current = langSelect ? String(langSelect.value || '').toLowerCase() : '';
-        if (langValue) {
-            langValue.textContent = current.toUpperCase();
-        }
-        if (langSubmenu) {
-            langSubmenu.querySelectorAll('.plus-menu-sub__item').forEach((item) => {
-                item.classList.toggle('is-selected', item.dataset.lang === current);
-            });
+    const refreshLangValue = () => {
+        if (langValue && langSelect) {
+            langValue.textContent = String(langSelect.value || '').toUpperCase();
         }
     };
 
-    const renderLangSubmenu = () => {
-        if (!langSubmenu || !langSelect) {
+    const renderLangList = (query) => {
+        if (!langList || !langSelect) {
             return;
         }
-        // Languages come from the site config; fall back to whatever options
-        // the hidden select carries (es/en defaults) when the list is empty.
-        const codes = (languages && languages.length > 0)
-            ? languages.map((lang) => String(lang.code || '').toLowerCase()).filter(Boolean)
-            : Array.prototype.map.call(langSelect.options, (opt) => String(opt.value).toLowerCase());
+        const current = String(langSelect.value || '').toLowerCase();
+        const needle = String(query || '').trim().toLowerCase();
+        const matches = langEntries.filter((lang) => !needle
+            || lang.name.toLowerCase().includes(needle)
+            || lang.code.includes(needle));
 
-        langSubmenu.innerHTML = '';
-        codes.forEach((code) => {
-            const item = document.createElement('li');
-            item.setAttribute('role', 'none');
-            const btn = document.createElement('button');
-            btn.type = 'button';
-            btn.className = 'plus-menu-sub__item';
-            btn.setAttribute('role', 'menuitemradio');
-            btn.dataset.lang = code;
-            btn.innerHTML = '<svg class="plus-menu-sub__check" width="12" height="12" viewBox="0 0 24 24" '
-                + 'fill="none" stroke="currentColor" stroke-width="2.6" stroke-linecap="round" '
-                + 'stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>'
-                + '<span>🌐 ' + code.toUpperCase() + '</span>';
-            btn.addEventListener('click', (event) => {
-                event.preventDefault();
-                event.stopPropagation();
-                langSelect.value = code;
-                // Existing listeners propagate the change into the shared
-                // state and the mirrored toolbar.
-                langSelect.dispatchEvent(new Event('change', {bubbles: false}));
-                refreshLangUi();
-                closeSubmenu();
-            });
-            item.appendChild(btn);
-            langSubmenu.appendChild(item);
-        });
-        refreshLangUi();
+        if (matches.length === 0) {
+            langList.innerHTML = '<li class="pop-empty">—</li>';
+            return;
+        }
+
+        langList.innerHTML = matches.map((lang) => (
+            `<li class="pop-item pop-item--lang${lang.code === current ? ' selected' : ''}" data-lang="${lang.code}">
+                <button class="pop-select-btn" type="button" data-lang="${lang.code}">
+                    <span class="pop-lang-check">
+                        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
+                             stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                            <polyline points="20 6 9 17 4 12"/>
+                        </svg>
+                    </span>
+                    <span class="pop-item-name">${escapeHtml(lang.name)}</span>
+                </button>
+            </li>`
+        )).join('');
+    };
+
+    const openLangPopover = () => {
+        if (!langPopover) {
+            return;
+        }
+        close();
+        if (langSearch) {
+            langSearch.value = '';
+        }
+        renderLangList('');
+        langPopover.classList.add('open');
+        if (langSearch) {
+            langSearch.focus();
+        }
     };
 
     button.addEventListener('click', (event) => {
@@ -130,10 +156,7 @@ export const wirePlusMenu = ({button, panel, langItem, langValue, langSubmenu, l
             close();
             return;
         }
-        // The submenu is rebuilt on every open: the language list is static
-        // but the selection mark must reflect the CURRENT value (it can be
-        // changed from the mirrored toolbar or a session resume).
-        renderLangSubmenu();
+        refreshLangValue();
         open();
     });
 
@@ -141,16 +164,44 @@ export const wirePlusMenu = ({button, panel, langItem, langValue, langSubmenu, l
         langItem.addEventListener('click', (event) => {
             event.preventDefault();
             event.stopPropagation();
-            const expanded = langSubmenu && langSubmenu.classList.contains('open');
-            if (expanded) {
-                closeSubmenu();
+            openLangPopover();
+        });
+    }
+
+    if (langSearch) {
+        langSearch.addEventListener('input', () => {
+            renderLangList(langSearch.value);
+        });
+    }
+
+    if (langList) {
+        langList.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const btn = event.target.closest('[data-lang]');
+            if (!btn || !langSelect) {
                 return;
             }
-            refreshLangUi();
-            if (langSubmenu) {
-                langSubmenu.classList.add('open');
-            }
-            langItem.setAttribute('aria-expanded', 'true');
+            langSelect.value = btn.dataset.lang;
+            // Existing listeners propagate the change into the shared state
+            // and the mirrored toolbar.
+            langSelect.dispatchEvent(new Event('change', {bubbles: false}));
+            refreshLangValue();
+            closeLangPopover();
+        });
+    }
+
+    if (langCloseBtn) {
+        langCloseBtn.addEventListener('click', (event) => {
+            event.stopPropagation();
+            closeLangPopover();
+        });
+    }
+
+    if (langPopover) {
+        // Clicks inside the popover (search input, list scroll) must not
+        // reach the document-level closers.
+        langPopover.addEventListener('click', (event) => {
+            event.stopPropagation();
         });
     }
 
@@ -176,20 +227,31 @@ export const wirePlusMenu = ({button, panel, langItem, langValue, langSubmenu, l
         if (isOpen() && !panel.contains(event.target) && event.target !== button && !button.contains(event.target)) {
             close();
         }
+        if (langPopover && langPopover.classList.contains('open')
+                && !langPopover.contains(event.target) && event.target !== langItem) {
+            closeLangPopover();
+        }
     });
 
     document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape' && isOpen()) {
+        if (event.key !== 'Escape') {
+            return;
+        }
+        if (langPopover && langPopover.classList.contains('open')) {
+            closeLangPopover();
+            return;
+        }
+        if (isOpen()) {
             close();
         }
     });
 
     // Keep the language row in sync when the value changes elsewhere (the
-    // mirrored toolbar's submenu, or a resume restoring the saved language).
+    // mirrored toolbar, or a resume restoring the saved language).
     if (langSelect) {
-        langSelect.addEventListener('change', refreshLangUi);
+        langSelect.addEventListener('change', refreshLangValue);
     }
-    renderLangSubmenu();
+    refreshLangValue();
 
-    return {close};
+    return {close, closeLangPopover};
 };

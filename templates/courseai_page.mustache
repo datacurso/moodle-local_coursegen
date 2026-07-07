@@ -138,23 +138,20 @@
                   <span class="guideline-badge hidden" id="guidelineBadge"></span>
                 </button>
 
-                <!-- Idioma: flyout submenu (Claude-style) -->
-                <div class="plus-menu-subwrap">
-                  <button class="plus-menu-item" id="pmLangItem" type="button" role="menuitem"
-                          aria-haspopup="true" aria-expanded="false"
-                          title="{{#str}}courseai_lang_title, local_coursegen{{/str}}">
-                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
-                      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                    </svg>
-                    <span class="plus-menu-item__label">{{#str}}courseai_lang_menu_label, local_coursegen{{/str}}</span>
-                    <span class="plus-menu-item__value" id="pmLangValue"></span>
-                    <svg class="plus-menu-item__chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                      <polyline points="9 18 15 12 9 6"/>
-                    </svg>
-                  </button>
-                  <ul class="plus-menu-sub" id="pmLangSub" role="menu" aria-label="{{#str}}courseai_lang_arialabel, local_coursegen{{/str}}"></ul>
-                </div>
+                <!-- Idioma: opens a searchable popover (same pattern as guidelines) -->
+                <button class="plus-menu-item" id="pmLangItem" type="button" role="menuitem"
+                        aria-haspopup="dialog"
+                        title="{{#str}}courseai_lang_title, local_coursegen{{/str}}">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+                    <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                  </svg>
+                  <span class="plus-menu-item__label">{{#str}}courseai_lang_menu_label, local_coursegen{{/str}}</span>
+                  <span class="plus-menu-item__value" id="pmLangValue"></span>
+                  <svg class="plus-menu-item__chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <polyline points="9 18 15 12 9 6"/>
+                  </svg>
+                </button>
 
                 <!-- With images toggle switch -->
                 <div class="tbar-toggle-wrap plus-menu-item plus-menu-item--toggle" title="{{#str}}courseai_images_title, local_coursegen{{/str}}" role="menuitemcheckbox" tabindex="0">
@@ -185,6 +182,25 @@
                 </div>
                 {{/subsectionsenabled}}
 
+              </div>
+
+              <!-- Language popover: searchable list, same pattern as guidelines -->
+              <div class="popover-panel popover-panel--down" id="langPopover" role="dialog" aria-label="{{#str}}courseai_lang_arialabel, local_coursegen{{/str}}">
+                <button class="pop-close-btn" id="langPopoverClose" type="button" aria-label="{{#str}}closebuttontitle, core{{/str}}">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+                <div class="pop-search-row">
+                  <div class="pop-search-inner">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="11" cy="11" r="8"/>
+                      <path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <input type="text" id="langSearch" placeholder="{{#str}}courseai_lang_search_placeholder, local_coursegen{{/str}}" autocomplete="off" />
+                  </div>
+                </div>
+                <ul class="pop-list" id="langList" role="listbox" aria-label="{{#str}}courseai_lang_arialabel, local_coursegen{{/str}}"></ul>
               </div>
 
               <!-- Guidelines popover: anchored to the "+" area so it opens next to the menu -->
@@ -389,22 +405,19 @@
                     <span class="guideline-badge hidden" id="compactGuidelineBadge"></span>
                   </button>
 
-                  <div class="plus-menu-subwrap">
-                    <button class="plus-menu-item" id="pmCompactLangItem" type="button" role="menuitem"
-                            aria-haspopup="true" aria-expanded="false"
-                            title="{{#str}}courseai_lang_title, local_coursegen{{/str}}">
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
-                        <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
-                      </svg>
-                      <span class="plus-menu-item__label">{{#str}}courseai_lang_menu_label, local_coursegen{{/str}}</span>
-                      <span class="plus-menu-item__value" id="pmCompactLangValue"></span>
-                      <svg class="plus-menu-item__chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                        <polyline points="9 18 15 12 9 6"/>
-                      </svg>
-                    </button>
-                    <ul class="plus-menu-sub" id="pmCompactLangSub" role="menu" aria-label="{{#str}}courseai_lang_arialabel, local_coursegen{{/str}}"></ul>
-                  </div>
+                  <button class="plus-menu-item" id="pmCompactLangItem" type="button" role="menuitem"
+                          aria-haspopup="dialog"
+                          title="{{#str}}courseai_lang_title, local_coursegen{{/str}}">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="12" cy="12" r="10"/><line x1="2" y1="12" x2="22" y2="12"/>
+                      <path d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+                    </svg>
+                    <span class="plus-menu-item__label">{{#str}}courseai_lang_menu_label, local_coursegen{{/str}}</span>
+                    <span class="plus-menu-item__value" id="pmCompactLangValue"></span>
+                    <svg class="plus-menu-item__chevron" width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <polyline points="9 18 15 12 9 6"/>
+                    </svg>
+                  </button>
 
                   <div class="tbar-toggle-wrap plus-menu-item plus-menu-item--toggle" title="{{#str}}courseai_images_title, local_coursegen{{/str}}" role="menuitemcheckbox" tabindex="0">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0">
@@ -433,6 +446,24 @@
                   </div>
                   {{/subsectionsenabled}}
 
+                </div>
+
+                <div class="popover-panel" id="langPopoverCompact" role="dialog" aria-label="{{#str}}courseai_lang_arialabel, local_coursegen{{/str}}">
+                  <button class="pop-close-btn" id="langPopoverCompactClose" type="button" aria-label="{{#str}}closebuttontitle, core{{/str}}">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </button>
+                  <div class="pop-search-row">
+                    <div class="pop-search-inner">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.35-4.35"/>
+                      </svg>
+                      <input type="text" id="langSearchCompact" placeholder="{{#str}}courseai_lang_search_placeholder, local_coursegen{{/str}}" autocomplete="off" />
+                    </div>
+                  </div>
+                  <ul class="pop-list" id="langListCompact" role="listbox" aria-label="{{#str}}courseai_lang_arialabel, local_coursegen{{/str}}"></ul>
                 </div>
 
                 <div class="popover-panel" id="guidelinesPopoverCompact" role="dialog" aria-label="{{#str}}courseai_guidelines_dialog_label, local_coursegen{{/str}}">

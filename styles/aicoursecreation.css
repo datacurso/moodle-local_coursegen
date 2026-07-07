@@ -1175,7 +1175,6 @@ svg { display: block; flex-shrink: 0; }
   cursor: not-allowed;
 }
 
-
 @media (max-width: 768px) {
   .pc-completion-card {
     padding: 24px 16px;
@@ -4247,65 +4246,6 @@ body.cg-generating #prvSections .cg-insert-zone {
   margin-left: auto;
 }
 
-/* Language flyout submenu (Claude-style, opens beside the item). */
-.plus-menu-subwrap {
-  position: relative;
-}
-
-.plus-menu-sub {
-  position: absolute;
-  left: calc(100% + 6px);
-  top: 0;
-  min-width: 130px;
-  margin: 0;
-  padding: 6px;
-  list-style: none;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: var(--radius);
-  box-shadow: 0 4px 24px hsl(215, 28%, 17%, 0.15);
-  display: none;
-  z-index: 61;
-}
-
-.plus-menu-sub.open {
-  display: block;
-}
-
-.plus-menu-panel--up .plus-menu-sub {
-  top: auto;
-  bottom: 0;
-}
-
-.plus-menu-sub__item {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  width: 100%;
-  padding: 7px 10px;
-  border: none;
-  border-radius: 8px;
-  background: transparent;
-  color: inherit;
-  font-size: 0.85rem;
-  text-align: left;
-  cursor: pointer;
-}
-
-.plus-menu-sub__item:hover,
-.plus-menu-sub__item:focus-visible {
-  background: var(--muted);
-}
-
-.plus-menu-sub__check {
-  visibility: hidden;
-  flex-shrink: 0;
-}
-
-.plus-menu-sub__item.is-selected .plus-menu-sub__check {
-  visibility: visible;
-}
-
 /* Guidelines popover: downward variant (main form, matches the "+" menu). */
 .popover-panel--down {
   top: calc(100% + 8px);
@@ -4339,4 +4279,24 @@ body.cg-generating #prvSections .cg-insert-zone {
 /* Leave room for the close button above the search input. */
 .popover-panel .pop-search-row {
   padding-right: 38px;
+}
+
+/* Language rows inside the searchable language popover. */
+.pop-item--lang .pop-select-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+}
+
+.pop-lang-check {
+  display: inline-flex;
+  width: 14px;
+  flex-shrink: 0;
+  color: var(--muted-fg, #6c757d);
+  visibility: hidden;
+}
+
+.pop-item--lang.selected .pop-lang-check {
+  visibility: visible;
 }

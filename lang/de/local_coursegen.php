@@ -196,6 +196,7 @@ $string['courseai_images_suggested_label'] = 'vorgeschlagene Bilder';
 $string['courseai_images_title'] = 'Integrieren Sie Bildvorschläge in den Kurs';
 $string['courseai_options_menu'] = 'Erstellungsoptionen';
 $string['courseai_lang_menu_label'] = 'Sprache';
+$string['courseai_lang_search_placeholder'] = 'Sprache suchen…';
 $string['courseai_subsections_title'] = 'Abschnitte in Unterabschnitte gliedern';
 $string['courseai_subsections_label'] = 'Unterabschnitte';
 $string['courseai_subsections_arialabel'] = 'Unterabschnitte einbeziehen';

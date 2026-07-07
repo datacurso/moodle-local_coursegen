@@ -196,6 +196,7 @@ $string['courseai_images_suggested_label'] = 'предлагаемые изоб�
 $string['courseai_images_title'] = 'Включите в курс предложения изображений';
 $string['courseai_options_menu'] = 'Параметры создания';
 $string['courseai_lang_menu_label'] = 'Язык';
+$string['courseai_lang_search_placeholder'] = 'Поиск языка…';
 $string['courseai_subsections_title'] = 'Организовать разделы в подразделы';
 $string['courseai_subsections_label'] = 'Подразделы';
 $string['courseai_subsections_arialabel'] = 'Включить подразделы';
