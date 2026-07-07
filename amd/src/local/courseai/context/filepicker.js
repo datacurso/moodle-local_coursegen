@@ -33,6 +33,16 @@ export const bindToggleWrap = (toggleWrap, checkbox) => {
         return;
     }
 
+    // Keep aria-checked in sync on wraps exposed as menuitemcheckbox (the
+    // "+" menu toggle rows declare the attribute statically in the template).
+    const syncAriaChecked = () => {
+        if (toggleWrap.hasAttribute('aria-checked')) {
+            toggleWrap.setAttribute('aria-checked', checkbox.checked ? 'true' : 'false');
+        }
+    };
+    checkbox.addEventListener('change', syncAriaChecked);
+    syncAriaChecked();
+
     const triggerToggle = () => {
         if (checkbox.disabled) {
             return;
