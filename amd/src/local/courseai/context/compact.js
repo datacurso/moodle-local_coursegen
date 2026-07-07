@@ -21,6 +21,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {wirePlusMenu} from 'local_coursegen/local/courseai/context/plus-menu';
+
 /**
  * Wire the compact chat toolbar controls so they remain functional in phases 2 and 3.
  *
@@ -126,6 +128,36 @@ export const wireCompactControls = ({
     }
 
     const compactLangSelectEl = document.getElementById('compactLangSelect');
+
+    const closeCompactGuidelinesPopover = () => {
+        if (compactGuidelinesPopover) {
+            compactGuidelinesPopover.classList.remove('open');
+        }
+        state.guidelinePopoverOpen = false;
+    };
+
+    // Compact "+" options menu, mirroring the main toolbar's menu. Opening it
+    // closes the compact guidelines popover so both never overlap.
+    wirePlusMenu({
+        button: elements.btnCompactPlusMenu,
+        panel: elements.compactPlusMenuPanel,
+        langItem: elements.pmCompactLangItem,
+        langValue: elements.pmCompactLangValue,
+        langSubmenu: elements.pmCompactLangSub,
+        langSelect: compactLangSelectEl,
+        languages: state.languages || [],
+        onOpen: closeCompactGuidelinesPopover,
+    });
+
+    // Explicit close (X) for the compact guidelines popover.
+    const compactGuidelinesClose = document.getElementById('guidelinesPopoverCompactClose');
+    if (compactGuidelinesClose) {
+        compactGuidelinesClose.addEventListener('click', (event) => {
+            event.stopPropagation();
+            closeCompactGuidelinesPopover();
+        });
+    }
+
     if (compactLangSelectEl) {
         compactLangSelectEl.addEventListener('change', () => {
             state.lang = compactLangSelectEl.value;

@@ -4137,3 +4137,206 @@ body.cg-generating #prvSections .cg-insert-zone {
 #prvSections .cg-subsection-list .activity {
   margin-left: 0;
 }
+
+/* ── "+" options menu (ChatGPT-style toolbar) ──────────────────────────── */
+.plus-menu-wrap {
+  position: relative;
+  display: inline-flex;
+}
+
+.plus-menu-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border-radius: 50%;
+  border: 1px solid var(--border);
+  background: transparent;
+  color: var(--muted-fg, #6c757d);
+  cursor: pointer;
+  transition: background 0.15s ease, color 0.15s ease;
+}
+
+.plus-menu-btn:hover,
+.plus-menu-btn[aria-expanded="true"] {
+  background: var(--muted);
+  color: var(--fg, #212529);
+}
+
+.plus-menu-item:hover svg:first-child,
+.plus-menu-item:focus-visible svg:first-child {
+  color: var(--fg, #212529);
+}
+
+.plus-menu-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  min-width: 250px;
+  padding: 6px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 24px hsl(215, 28%, 17%, 0.15);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(4px);
+  transition: opacity 0.12s ease, transform 0.12s ease;
+  z-index: 60;
+}
+
+.plus-menu-panel.open {
+  opacity: 1;
+  pointer-events: auto;
+  transform: translateY(0);
+}
+
+/* Compact toolbar (planning phase) sits at the bottom: its menu opens upward. */
+.plus-menu-panel--up {
+  top: auto;
+  bottom: calc(100% + 8px);
+}
+
+.plus-menu-item {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.875rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.plus-menu-item:hover,
+.plus-menu-item:focus-visible {
+  background: var(--muted);
+}
+
+.plus-menu-item svg:first-child {
+  flex-shrink: 0;
+  color: var(--muted-fg, #6c757d);
+}
+
+.plus-menu-item__label {
+  flex: 1 1 auto;
+  white-space: nowrap;
+}
+
+.plus-menu-item__value {
+  font-size: 0.78rem;
+  color: var(--muted-fg, #6c757d);
+}
+
+.plus-menu-item__chevron {
+  flex-shrink: 0;
+  color: var(--muted-fg, #6c757d);
+}
+
+/* Toggle rows reuse the .tbar-toggle-wrap machinery inside a menu row. */
+.plus-menu-item--toggle {
+  user-select: none;
+}
+
+.plus-menu-item--toggle .toggle-track {
+  margin-left: auto;
+}
+
+/* Language flyout submenu (Claude-style, opens beside the item). */
+.plus-menu-subwrap {
+  position: relative;
+}
+
+.plus-menu-sub {
+  position: absolute;
+  left: calc(100% + 6px);
+  top: 0;
+  min-width: 130px;
+  margin: 0;
+  padding: 6px;
+  list-style: none;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius);
+  box-shadow: 0 4px 24px hsl(215, 28%, 17%, 0.15);
+  display: none;
+  z-index: 61;
+}
+
+.plus-menu-sub.open {
+  display: block;
+}
+
+.plus-menu-panel--up .plus-menu-sub {
+  top: auto;
+  bottom: 0;
+}
+
+.plus-menu-sub__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 7px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  font-size: 0.85rem;
+  text-align: left;
+  cursor: pointer;
+}
+
+.plus-menu-sub__item:hover,
+.plus-menu-sub__item:focus-visible {
+  background: var(--muted);
+}
+
+.plus-menu-sub__check {
+  visibility: hidden;
+  flex-shrink: 0;
+}
+
+.plus-menu-sub__item.is-selected .plus-menu-sub__check {
+  visibility: visible;
+}
+
+/* Guidelines popover: downward variant (main form, matches the "+" menu). */
+.popover-panel--down {
+  top: calc(100% + 8px);
+  bottom: auto;
+}
+
+/* Explicit close button on popovers. */
+.pop-close-btn {
+  position: absolute;
+  top: 6px;
+  right: 6px;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 26px;
+  height: 26px;
+  border: none;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted-fg, #6c757d);
+  cursor: pointer;
+  z-index: 2;
+}
+
+.pop-close-btn:hover,
+.pop-close-btn:focus-visible {
+  background: var(--muted);
+  color: var(--fg, #212529);
+}
+
+/* Leave room for the close button above the search input. */
+.popover-panel .pop-search-row {
+  padding-right: 38px;
+}

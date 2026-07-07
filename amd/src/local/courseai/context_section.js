@@ -24,6 +24,7 @@
 import {createGuidelineHandlers} from 'local_coursegen/local/courseai/context/guideline';
 import {wireCompactControls} from 'local_coursegen/local/courseai/context/compact';
 import {bindToggleWrap, showFilePicker as openFilePicker} from 'local_coursegen/local/courseai/context/filepicker';
+import {wirePlusMenu} from 'local_coursegen/local/courseai/context/plus-menu';
 import {refreshGuidelineChip as doRefreshGuidelineChip} from 'local_coursegen/local/courseai/context/chip';
 
 /**
@@ -194,6 +195,30 @@ export const setupContextSection = (deps) => {
             if (elements.compactImgToggleWrap) {
                 elements.compactImgToggleWrap.classList.toggle('on', state.withImages);
             }
+        });
+    }
+
+    // "+" options menu: presentation layer over the controls wired above.
+    // Wired AFTER the language options are populated so the flyout lists them.
+    // Opening the menu closes the guidelines popover (and vice versa via the
+    // menu item), so both panels never overlap around the same anchor.
+    wirePlusMenu({
+        button: elements.btnPlusMenu,
+        panel: elements.plusMenuPanel,
+        langItem: elements.pmLangItem,
+        langValue: elements.pmLangValue,
+        langSubmenu: elements.pmLangSub,
+        langSelect,
+        languages: state.languages || languages || [],
+        onOpen: closeGuidelinePopover,
+    });
+
+    // Explicit close (X) for the guidelines popover.
+    const guidelinesPopoverClose = document.getElementById('guidelinesPopoverClose');
+    if (guidelinesPopoverClose) {
+        guidelinesPopoverClose.addEventListener('click', (event) => {
+            event.stopPropagation();
+            closeGuidelinePopover();
         });
     }
 
