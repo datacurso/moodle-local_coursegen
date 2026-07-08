@@ -199,7 +199,17 @@ export const sendReorderSections = async(ctx, targetIds, movedId) => {
     // generic line when the dragged section can't be resolved (no « »).
     if (typeof log === 'function') {
         const sections = (state && state.latestInitialSections) || [];
-        const moved = sections.find((s) => s && s.id === movedId);
+        // The dragged element may be a top-level section or a nested subsection
+        // (subsections reorder with the same reorder_sections action).
+        let moved = sections.find((s) => s && s.id === movedId);
+        if (!moved) {
+            for (const section of sections) {
+                moved = ((section && section.subsections) || []).find((sub) => sub && sub.id === movedId);
+                if (moved) {
+                    break;
+                }
+            }
+        }
         const movedName = moved && String(moved.name || '').trim();
         const newPos = movedId ? targetIds.indexOf(movedId) + 1 : 0;
         let message;
@@ -242,7 +252,16 @@ export const sendReorderActivities = async(ctx, sectionId, targetIds, movedId) =
     // name, then a generic line (no « »).
     if (typeof log === 'function') {
         const sections = (state && state.latestInitialSections) || [];
-        const section = sections.find((s) => s && s.id === sectionId);
+        // The parent container may be a top-level section or a subsection.
+        let section = sections.find((s) => s && s.id === sectionId);
+        if (!section) {
+            for (const candidate of sections) {
+                section = ((candidate && candidate.subsections) || []).find((sub) => sub && sub.id === sectionId);
+                if (section) {
+                    break;
+                }
+            }
+        }
         const sectionName = (section && String(section.name || '').trim()) || '';
         const activities = (section && section.activities) || [];
         const moved = activities.find((a) => a && a.id === movedId);

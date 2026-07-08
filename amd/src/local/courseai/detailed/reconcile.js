@@ -39,7 +39,7 @@
 import {ensureSectionRendered, ensureActivityRendered} from './sync-helpers';
 import {markActivityPlanned, refreshSectionMeta} from './activity-row';
 import {appendAddSectionControl} from './section-row';
-import {ensureSubsectionRendered} from './subsection-row';
+import {ensureSubsectionRendered, refreshSubsectionMeta} from './subsection-row';
 import {focusChange, markRemoving} from 'local_coursegen/local/courseai/ui/highlight';
 import {removeVanishedActivities, removeVanishedSections, reorderAll} from './reconcile-dom';
 import {removeAllTransientPlaceholders} from './pending';
@@ -306,6 +306,7 @@ export const reconcilePlan = async(ctx, currentPlan) => {
                     ctx, activity, section.id, activityIdx, submeta.listEl, isInitialRender, subsection.id
                 );
             });
+            refreshSubsectionMeta(ctx, subsection.id);
         });
         // Keep subsection rows in position order, after the direct activities and
         // before the "+ Add activity" sentinel. Only mutate when out of order.

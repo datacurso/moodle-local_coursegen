@@ -28,7 +28,7 @@ import {buildActivityDetailContent} from './detail-content';
 import {recalculateEntryImageCount, setImageBadge, updateDetailedHeaderStats} from './badges';
 import {buildActivityItem, buildActivityActionControls, attachSkeletonProgress} from './activity-dom';
 import {createDetailedSectionRow} from './section-row';
-import {ensureSubsectionRendered} from './subsection-row';
+import {ensureSubsectionRendered, refreshSubsectionMeta} from './subsection-row';
 import {removeTransientActivityPlaceholders} from './pending';
 import {activityPurpose} from './icons';
 
@@ -137,12 +137,19 @@ export const createDetailedActivityRow = (ctx, {sectionId, activityId, activityT
     }
     removeTransientActivityPlaceholders(bodyEl);
 
-    // Wire this new wrap into the section's existing DnD setup. Nested rows are
-    // never draggable: reordering across the subsection boundary would send the
-    // parent section mixed-level ids, which the service rejects.
-    const sectionMeta = state.detailedSectionMeta[sectionId];
-    if (!subsectionId && sectionMeta && sectionMeta.activityDnd) {
-        sectionMeta.activityDnd.attachToRow(wrap);
+    // Wire this new wrap into its CONTAINER's DnD setup: nested rows reorder
+    // within their subsection's list, direct rows within the section's cmlist.
+    // Cross-container drops are rejected by the origin check in the wirer.
+    if (subsectionId) {
+        const submeta = state.detailedSubsectionMeta && state.detailedSubsectionMeta[subsectionId];
+        if (submeta && submeta.activityDnd) {
+            submeta.activityDnd.attachToRow(wrap);
+        }
+    } else {
+        const sectionMeta = state.detailedSectionMeta[sectionId];
+        if (sectionMeta && sectionMeta.activityDnd) {
+            sectionMeta.activityDnd.attachToRow(wrap);
+        }
     }
 
     const progressEl = attachSkeletonProgress(textDiv);
@@ -264,6 +271,9 @@ export const ensureDetailedEntry = (ctx, data) => {
     });
     // Badge reflects the REAL row count (correct on every path), not a running counter.
     refreshSectionMeta(ctx, sectionId);
+    if (subsectionId) {
+        refreshSubsectionMeta(ctx, subsectionId);
+    }
     return entry;
 };
 

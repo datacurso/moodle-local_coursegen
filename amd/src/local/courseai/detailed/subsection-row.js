@@ -16,11 +16,14 @@
 /**
  * Subsection row factory for the detailed plan UI.
  *
- * A subsection renders as a nested block INSIDE its parent section's cmlist:
- * a header (name + AI-adjust/delete controls) and a nested ul holding the
- * subsection's activity rows. The row deliberately has no `.activity` class,
- * so the parent section's activity drag-and-drop never captures it, and its
- * nested list is a separate container so parent reorders never mix levels.
+ * A subsection renders NESTED inside its parent section's cmlist using the
+ * SAME Moodle "Custom sections" markup the section rows use (section-item
+ * card, Boost collapse chevron, sectionname title, activity-count badge), so
+ * the preview mirrors how mod_subsection looks in the real course.
+ *
+ * The row deliberately has no `.activity` class, so the parent section's
+ * activity drag-and-drop never captures it, and its nested cmlist is a
+ * separate container so parent reorders never mix levels.
  *
  * The action controls reuse the SECTION intents (replan_section /
  * delete_section) with the subsection id as target — the service resolves
@@ -31,7 +34,22 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {buildSectionActionControls} from './section-dom';
+import {buildSectionRowSkeleton, buildSectionActionControls} from './section-dom';
+import {wireDragAndDrop, sendReorderSections, sendReorderActivities} from './dnd';
+
+/**
+ * Toggle the collapse panel (Boost .collapse / .collapsed classes), same
+ * behavior as the section rows.
+ *
+ * @param {HTMLElement} bodyEl - The .content.collapse panel.
+ * @param {HTMLAnchorElement} chevron - The icons-collapse-expand toggle anchor.
+ */
+const toggleCollapse = (bodyEl, chevron) => {
+    const isOpen = bodyEl.classList.contains('show');
+    bodyEl.classList.toggle('show', !isOpen);
+    chevron.classList.toggle('collapsed', isOpen);
+    chevron.setAttribute('aria-expanded', isOpen ? 'false' : 'true');
+};
 
 /**
  * Ensure the nested row for a subsection exists inside its parent section.
@@ -52,6 +70,12 @@ export const ensureSubsectionRendered = (ctx, {subsectionId, sectionId, name, pa
     }
     const existing = state.detailedSubsectionMeta[subsectionId];
     if (existing) {
+        // Re-offered row (reconcile settle pass): make sure it is wired into
+        // the parent's subsection DnD — attachToRow is idempotent.
+        const parentMeta = state.detailedSectionMeta[existing.sectionId];
+        if (parentMeta && parentMeta.subsectionDnd && existing.row) {
+            parentMeta.subsectionDnd.attachToRow(existing.row);
+        }
         return existing;
     }
     if (!parentBodyEl) {
@@ -59,51 +83,51 @@ export const ensureSubsectionRendered = (ctx, {subsectionId, sectionId, name, pa
     }
 
     const label = name || (texts && texts.courseai_subsection_label) || 'Subsection';
+    const renderIndex = Object.keys(state.detailedSubsectionMeta).length;
 
-    const row = document.createElement('li');
-    row.className = 'cg-subsection';
-    row.setAttribute('data-subsection-id', subsectionId);
-    row.dataset.subsectionId = subsectionId;
-    row.setAttribute('draggable', 'false');
-
-    const headerEl = document.createElement('div');
-    headerEl.className = 'cg-subsection-header d-flex align-items-center';
-
-    const iconEl = document.createElement('span');
-    iconEl.className = 'cg-subsection-icon d-inline-flex align-items-center me-2';
-    iconEl.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" '
-        + 'stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">'
-        + '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/>'
-        + '<line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/>'
-        + '<line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/></svg>';
-
-    const titleEl = document.createElement('h4');
-    titleEl.className = 'cg-subsection-name h5 mb-0 d-flex align-items-center';
-    titleEl.textContent = label;
-
-    const actionsEl = document.createElement('div');
-    actionsEl.className = 'cg-item-actions cg-item-actions--section ms-auto d-flex align-items-center';
+    // Same skeleton the section rows use: meta badge, Boost collapse chevron,
+    // sectionname title, .content.collapse body with its cmlist.
+    const {
+        metaEl, imagesBadgeEl, bodyEl, cmlistEl, chevronEl, titleEl, actionsEl, rowRef,
+    } = buildSectionRowSkeleton(ctx, subsectionId, renderIndex, label, 0);
 
     // Reuse the section action controls: the service resolves subsection ids
     // for replan_section / delete_section, so the same pipeline applies.
-    const rowRef = {current: null};
     const {iaControl, deleteControl, sectionPanelApi} = buildSectionActionControls(
         ctx, subsectionId, label, rowRef
     );
+    actionsEl.appendChild(metaEl);
+    actionsEl.appendChild(imagesBadgeEl);
     actionsEl.appendChild(iaControl);
     actionsEl.appendChild(deleteControl);
 
-    headerEl.appendChild(iconEl);
+    const headerEl = document.createElement('div');
+    headerEl.className = 'course-section-header d-flex align-items-center position-relative';
+    headerEl.setAttribute('data-for', 'section_title');
+    headerEl.setAttribute('data-id', subsectionId);
+    headerEl.appendChild(chevronEl);
     headerEl.appendChild(titleEl);
     headerEl.appendChild(actionsEl);
 
-    const listEl = document.createElement('ul');
-    listEl.className = 'cg-subsection-list section m-0 p-0 img-text d-block';
-    listEl.setAttribute('data-for', 'cmlist');
+    chevronEl.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        toggleCollapse(bodyEl, chevronEl);
+    });
 
-    row.appendChild(headerEl);
-    row.appendChild(sectionPanelApi.panel);
-    row.appendChild(listEl);
+    const sectionItem = document.createElement('div');
+    sectionItem.className = 'section-item';
+    sectionItem.appendChild(headerEl);
+    sectionItem.appendChild(sectionPanelApi.panel);
+    sectionItem.appendChild(bodyEl);
+
+    const row = document.createElement('li');
+    // cg-subsection marks the nesting level (reconciler / CSS indent); the
+    // Moodle classes make Boost style it exactly like a section card.
+    row.className = 'cg-subsection section course-section main clearfix';
+    row.setAttribute('data-subsection-id', subsectionId);
+    row.dataset.subsectionId = subsectionId;
+    row.appendChild(sectionItem);
     rowRef.current = row;
 
     // Subsections always land after the direct activities, before the parent's
@@ -115,11 +139,64 @@ export const ensureSubsectionRendered = (ctx, {subsectionId, sectionId, name, pa
         parentBodyEl.appendChild(row);
     }
 
+    // Activity drag-and-drop WITHIN this subsection: same reorder_activities
+    // action, with the subsection as the parent container (the service
+    // validates targets against it and cross-container drops are rejected by
+    // the origin check in the drop handler).
+    const activityDnd = wireDragAndDrop(
+        cmlistEl,
+        '.activity',
+        'activityId',
+        (ids, movedId) => sendReorderActivities(ctx, subsectionId, ids, movedId),
+        subsectionId,
+        () => !ctx.state.isStreaming
+    );
+
+    // Subsection drag-and-drop within the PARENT section: reorder_sections
+    // with subsection ids (the service reorders them inside their parent).
+    // One wirer per parent section, created with the first subsection.
+    const parentMeta = state.detailedSectionMeta[sectionId];
+    if (parentMeta) {
+        if (!parentMeta.subsectionDnd) {
+            parentMeta.subsectionDnd = wireDragAndDrop(
+                parentBodyEl,
+                '.cg-subsection',
+                'subsectionId',
+                (ids, movedId) => sendReorderSections(ctx, ids, movedId),
+                sectionId,
+                () => !ctx.state.isStreaming
+            );
+        } else {
+            parentMeta.subsectionDnd.attachToRow(row);
+        }
+    }
+
     state.detailedSubsectionMeta[subsectionId] = {
         row,
-        listEl,
+        listEl: cmlistEl,
+        metaEl,
         sectionId,
         name: label,
+        activityDnd,
     };
     return state.detailedSubsectionMeta[subsectionId];
+};
+
+/**
+ * Sync a subsection's activity-count badge to its REAL rendered rows (same
+ * approach as refreshSectionMeta for sections).
+ *
+ * @param {Object} ctx
+ * @param {string} subsectionId
+ * @returns {void}
+ */
+export const refreshSubsectionMeta = (ctx, subsectionId) => {
+    const {state, texts} = ctx;
+    const meta = state.detailedSubsectionMeta && state.detailedSubsectionMeta[subsectionId];
+    if (!meta || !meta.metaEl || !meta.listEl) {
+        return;
+    }
+    const count = meta.listEl.querySelectorAll('.activity[data-activity-id]:not([data-cg-transient])').length;
+    const label = (texts && texts.courseai_activities_count) || 'activities';
+    meta.metaEl.textContent = count + ' ' + label;
 };

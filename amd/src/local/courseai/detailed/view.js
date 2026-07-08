@@ -26,7 +26,7 @@ import {markActivityPlanned, clearSectionEntries, ensureDetailedEntry} from './a
 import {formatImageCount, setImageBadge, updateSectionImageBadge} from './badges';
 import {initDetailedPlanView} from './init-view';
 import {appendAddSectionControl} from './section-row';
-import {ensureSubsectionRendered} from './subsection-row';
+import {ensureSubsectionRendered, refreshSubsectionMeta} from './subsection-row';
 import {ensureSectionRendered, ensureActivityRendered} from './sync-helpers';
 import {reconcilePlan as reconcilePlanImpl} from './reconcile';
 
@@ -182,6 +182,7 @@ export const syncDetailedStructureFromSections = (ctx, sections) => {
             (subsection.activities || []).forEach((activity, activityIdx) => {
                 ensureActivityRendered(ctx, activity, section.id, activityIdx, submeta.listEl, subsection.id);
             });
+            refreshSubsectionMeta(ctx, subsection.id);
         });
     });
     // Keep the add-section control anchored at the bottom of prvSections.
