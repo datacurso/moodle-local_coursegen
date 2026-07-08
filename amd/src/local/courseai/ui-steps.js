@@ -36,6 +36,7 @@ export const createStepsUi = (deps) => {
         elements,
         generateButtonHtml,
         texts,
+        clearLog,
     } = deps;
 
     const {
@@ -156,6 +157,12 @@ export const createStepsUi = (deps) => {
         if (elements.adjustmentHistory) {
             elements.adjustmentHistory.classList.add('hidden');
             elements.adjustmentHistory.innerHTML = '';
+        }
+        // Wipe the thread feed too: leaving a session back to the form must
+        // not leak its turns into the next session's transcript (the abandoned
+        // session keeps its full history server-side and replays on resume).
+        if (typeof clearLog === 'function') {
+            clearLog();
         }
     };
 

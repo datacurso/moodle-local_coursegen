@@ -55,7 +55,22 @@ export const makeEmitLog = (state) => {
         courseaiLog.add(logParams);
     };
 
-    return {emitLog};
+    /**
+     * Wipe the thread feed (both containers). Called when the user leaves a
+     * session back to the context form, so the next session starts with a
+     * clean transcript instead of appending after the abandoned one.
+     *
+     * @returns {void}
+     */
+    const clearLog = () => {
+        courseaiLog.clear();
+        if (state) {
+            // Reset the course-title dedupe so a new session logs its title.
+            state.courseTitleLogged = null;
+        }
+    };
+
+    return {emitLog, clearLog};
 };
 
 /**

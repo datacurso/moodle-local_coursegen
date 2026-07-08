@@ -58,6 +58,27 @@ import {
     handleFailed,
 } from './handlers-lifecycle';
 
+import {hideWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
+import {renderSubsectionsDecision} from 'local_coursegen/local/courseai/ui/subsections-decision';
+
+/**
+ * Handle the pre-planning 'subsections_decision' interrupt: pause the stream
+ * and render the decision card (enable subsections / continue flat / leave).
+ *
+ * @param {Object} data
+ * @param {Object} ctx
+ */
+const handleSubsectionsDecision = async(data, ctx) => {
+    ctx.state.isStreaming = false;
+    hideWorkingIndicator();
+    await renderSubsectionsDecision({data, ctx});
+    // Like review_needed, the interrupt is a terminal pause for this stream:
+    // close it so EventSource does not auto-reconnect and re-ask.
+    if (typeof ctx.closeStream === 'function') {
+        ctx.closeStream();
+    }
+};
+
 const HANDLERS = {
     activity: handleActivity,
     section: handleSection,
@@ -77,6 +98,7 @@ const HANDLERS = {
     image_progress_tick: handleImageProgressTick,
     image_progress_done: handleImageProgressDone,
     review_needed: handleReviewNeeded,
+    subsections_decision: handleSubsectionsDecision,
     completed: handleCompleted,
     failed: handleFailed,
 };

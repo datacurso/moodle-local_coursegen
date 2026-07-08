@@ -80,6 +80,10 @@ class course_planning_service {
             'lang' => $lang,
             'with_images' => $withimages,
             'with_subsections' => $withsubsections,
+            // Site capability (setting + mod_subsection), distinct from the
+            // user's per-course choice: lets the service offer enabling
+            // subsections when the prompt asks for them.
+            'subsections_available' => self::subsections_available(),
         ];
 
         if ($withimages) {

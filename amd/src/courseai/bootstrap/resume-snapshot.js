@@ -21,6 +21,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {renderSubsectionsDecision} from 'local_coursegen/local/courseai/ui/subsections-decision';
+
 /**
  * Build the resumeFromSnapshot async function.
  *
@@ -330,6 +332,27 @@ export const makeResumeFromSnapshot = ({
             state.currentStage = 'generating';
             state.phase4TotalActivities = state.totalActivities;
             streamManager.openSSEStream(state.streamingurl, 0, 'generating', true);
+            return true;
+        }
+
+        if (status === 'WAITING_SUBSECTIONS_DECISION' && snapshot.subsections_decision) {
+            // Paused BEFORE planning at the subsections decision: replay the
+            // transcript (initial prompt + the question) and re-render the
+            // decision card instead of re-opening the planning stream.
+            stepsUi.transitionToPlanning();
+            setPlanningStreamVisible();
+            applyCourseTitleToHeader();
+            await rebuildThread(detailedSections, snapshot, initialPrompt, status);
+            await renderSubsectionsDecision({
+                data: snapshot.subsections_decision,
+                ctx: {
+                    state,
+                    texts,
+                    emitLog,
+                    stepsUi,
+                    openSSEStream: streamManager.openSSEStream,
+                },
+            });
             return true;
         }
 

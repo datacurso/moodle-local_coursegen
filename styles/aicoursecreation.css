@@ -4300,3 +4300,16 @@ body.cg-generating #prvSections .cg-insert-zone {
 .pop-item--lang.selected .pop-lang-check {
   visibility: visible;
 }
+
+/* ── Pre-planning subsections decision card ────────────────────────────── */
+.cg-subsections-decision .plan-proposals-group {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.cg-subsections-option {
+  width: 100%;
+  text-align: left;
+  cursor: pointer;
+}

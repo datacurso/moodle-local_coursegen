@@ -71,7 +71,7 @@ export const init = async(params) => {
         const state = createInitialState({defaultLang, guidelines, languages});
 
         // Decision log (§4) — instantiate before any module that needs it.
-        const {emitLog} = makeEmitLog(state);
+        const {emitLog, clearLog} = makeEmitLog(state);
 
         const markedParser = markedModule.parse ? markedModule : markedModule.marked;
         const activityLabels = getActivityLabels(texts);
@@ -93,6 +93,7 @@ export const init = async(params) => {
             elements,
             generateButtonHtml,
             texts,
+            clearLog,
         });
 
         const runPlanAction = createRunPlanAction({
