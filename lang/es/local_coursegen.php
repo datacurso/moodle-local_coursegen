@@ -73,6 +73,7 @@ $string['activity_workshop'] = 'Taller';
 $string['activity_workshop_part_intro'] = 'Generar imágenes para la introducción del taller.';
 $string['activityai_error_create_activity'] = 'Error al crear la actividad.';
 $string['activityai_error_disconnected'] = 'Desconectado del servidor.';
+$string['activityai_error_generation_failed'] = 'No pudimos generar la actividad.';
 $string['activityai_error_high_demand'] = 'El servicio AI está experimentando actualmente una gran demanda. Inténtelo de nuevo más tarde.';
 $string['activityai_error_unknown'] = 'Error desconocido';
 $string['activityai_prompt_prefix'] = 'Tu preguntaste:';

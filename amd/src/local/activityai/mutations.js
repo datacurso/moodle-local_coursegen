@@ -408,7 +408,7 @@ class Mutations {
                     return;
                 } else if (data && data.type === 'failed') {
                     currentRun.error = String(
-                        data.message || uiTexts.activityai_error_high_demand
+                        data.message || uiTexts.activityai_error_unknown
                     );
                     currentRun.errorCode = String(data.code || 'stream_error');
                     currentRun.retriable = Boolean(data.retriable);

@@ -47,6 +47,7 @@ $string['adjust_course_planning'] = 'Adjust course planning';
 $string['adjust_planning_title'] = 'Adjust course planning';
 $string['activityai_error_create_activity'] = 'Error creating activity.';
 $string['activityai_error_disconnected'] = 'Disconnected from server.';
+$string['activityai_error_generation_failed'] = 'We could not generate the activity.';
 $string['activityai_error_high_demand'] = 'The AI service is currently experiencing high demand. Please try again later.';
 $string['activityai_error_unknown'] = 'Unknown error';
 $string['activityai_prompt_prefix'] = 'You asked:';
