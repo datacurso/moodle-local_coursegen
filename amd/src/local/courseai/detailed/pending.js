@@ -55,7 +55,11 @@ const reopenSectionActivities = (ctx, sectionId) => {
     const {state} = ctx;
     Object.keys(state.detailedActivityEls).forEach((activityId) => {
         const entry = state.detailedActivityEls[activityId];
-        if (entry && entry.sectionId === sectionId) {
+        // The target container may be a SUBSECTION (the backend addresses
+        // sections and subsections through the same id field): activities
+        // nested in one carry the parent in sectionId and the subsection in
+        // subsectionId, so match either.
+        if (entry && (entry.sectionId === sectionId || entry.subsectionId === sectionId)) {
             reopenActivityEntry(ctx, activityId);
         }
     });
@@ -101,11 +105,14 @@ const buildTransientActivityRow = () => {
  */
 const insertTransientActivity = (ctx, parentSectionId, position) => {
     const {state} = ctx;
-    const meta = state.detailedSectionMeta[parentSectionId];
-    if (!meta || !meta.bodyEl) {
+    // The parent may be a subsection: its meta lives in detailedSubsectionMeta
+    // and names its activity list listEl (sections use bodyEl).
+    const meta = state.detailedSectionMeta[parentSectionId]
+        || (state.detailedSubsectionMeta && state.detailedSubsectionMeta[parentSectionId]);
+    const bodyEl = meta && (meta.bodyEl || meta.listEl);
+    if (!bodyEl) {
         return;
     }
-    const bodyEl = meta.bodyEl;
     const wrap = buildTransientActivityRow();
 
     // Existing real activity rows in DOM order (exclude the add-activity sentinel).

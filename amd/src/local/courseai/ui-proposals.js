@@ -66,9 +66,11 @@ export const createProposalsUi = (deps) => {
         (targetIds || []).forEach((id) => {
             // Scope to the CENTER preview only — never the left checklist
             // (.courseai-checklist-item also carries data-section-id and would
-            // otherwise get an ugly outline).
+            // otherwise get an ugly outline). Subsection rows identify with
+            // data-subsection-id (never data-section-id), so match them too.
             document.querySelectorAll(
                 '.course-section[data-section-id="' + id + '"], '
+                + '.cg-subsection[data-subsection-id="' + id + '"], '
                 + '.activity[data-activity-id="' + id + '"]'
             ).forEach((el) => {
                 el.classList.add(AFFECTED_CLASS);
@@ -126,16 +128,23 @@ export const createProposalsUi = (deps) => {
             return id ? [id] : [];
         }
         // add_activity: highlight the MOST SPECIFIC reference — the neighbour ACTIVITY
-        // it lands after/before, not the whole parent section. Fall back to the parent
-        // section only when it has no activities yet (no neighbour to anchor to).
+        // it lands after/before, not the whole parent container. Fall back to the
+        // parent only when it has no activities yet (no neighbour to anchor to).
+        // The parent may be a SUBSECTION: the backend puts its UUID in
+        // parent_section_id too, but its row identifies with data-subsection-id.
         if (intent.action === 'add_activity' && intent.parent_section_id) {
-            const section = document.querySelector(
-                '.course-section[data-section-id="' + intent.parent_section_id + '"]'
+            const container = document.querySelector(
+                '.course-section[data-section-id="' + intent.parent_section_id + '"], '
+                + '.cg-subsection[data-subsection-id="' + intent.parent_section_id + '"]'
             );
-            if (!section) {
+            if (!container) {
                 return [];
             }
-            const activities = Array.from(section.querySelectorAll('.activity[data-activity-id]'));
+            // DIRECT activities only: a parent section's DOM nests its
+            // subsections' activities too, but the server position is relative
+            // to the container's own list (same rule as dnd.js directItems).
+            const activities = Array.from(container.querySelectorAll('.activity[data-activity-id]'))
+                .filter((act) => act.closest('.cg-subsection, .course-section') === container);
             if (!activities.length) {
                 return [intent.parent_section_id];
             }
