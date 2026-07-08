@@ -49,6 +49,38 @@ const removeBlock = () => {
 };
 
 /**
+ * Show/hide the generic Accept/Adjust row + title of the decision overlay.
+ * The subsections card brings its own options, and Accept/Adjust make no
+ * sense before a plan exists (same pattern as the proposals card).
+ *
+ * @param {boolean} visible
+ */
+const toggleDecisionActions = (visible) => {
+    ['.cg-decision-actions', '.cg-decision-subtitle', '.cg-decision-title'].forEach((selector) => {
+        const el = document.querySelector('.cg-decision-overlay ' + selector);
+        if (el) {
+            el.style.display = visible ? '' : 'none';
+        }
+    });
+};
+
+/**
+ * Show/hide the right-column loading placeholders. While the decision card is
+ * up NOTHING is being generated, so the pulsing skeletons must not suggest
+ * otherwise; they come back when the user answers and planning resumes.
+ *
+ * @param {boolean} visible
+ */
+const toggleCenterLoading = (visible) => {
+    ['planningLoading', 'cgCenterSkeleton', 'cgLeftSkeleton'].forEach((id) => {
+        const el = document.getElementById(id);
+        if (el) {
+            el.style.display = visible ? '' : 'none';
+        }
+    });
+};
+
+/**
  * Build one full-width option button styled like a proposal card.
  *
  * @param {string} label
@@ -81,6 +113,12 @@ export const renderSubsectionsDecision = async({data, ctx}) => {
 
     removeBlock();
 
+    // Nothing is being generated while the user decides: stop the pulsing
+    // placeholders and the generic overlay actions (Accept/Adjust have no
+    // plan to act on yet).
+    toggleCenterLoading(false);
+    toggleDecisionActions(false);
+
     // The question as a permanent AI turn (the service also persists it as an
     // ai_notice row, so reload replays the same line).
     const question = await localizeMessage(data.message);
@@ -104,8 +142,12 @@ export const renderSubsectionsDecision = async({data, ctx}) => {
             emitLog({actor: 'user', kind: 'user', message: logMessage});
         }
         removeBlock();
+        toggleDecisionActions(true);
         getDecisionOverlay().hide();
         if (pendingAction) {
+            // Planning resumes: bring the loading placeholders back until the
+            // first section event replaces them with real content.
+            toggleCenterLoading(true);
             sendPlanningFeedback({recordid: state.sessionid, pendingAction})
                 .then(() => {
                     // Resume planning in NORMAL mode (no keepPlan: nothing is
@@ -170,6 +212,7 @@ export const renderSubsectionsDecision = async({data, ctx}) => {
                     });
                 }
                 removeBlock();
+                toggleDecisionActions(true);
                 getDecisionOverlay().hide();
                 // Purely client-side exit: back to the context form. The
                 // abandoned session stays interrupted server-side, like any
