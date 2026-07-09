@@ -376,9 +376,12 @@ export const createProposalsUi = (deps) => {
                 const summaryText = selectedLabel
                     ? (selectedLabel.querySelector('.plan-proposal-summary') || {}).textContent || ''
                     : '';
-                const truncated = summaryText.length > 80 ? summaryText.slice(0, 80) + '…' : summaryText;
+                // Full summary, never clipped: proposal texts now name the real
+                // section/anchor («…» after «…») and a hard cut broke them
+                // mid-word. Genuinely long turns are handled by the feed's own
+                // clamp + "Show more" control.
                 const appliedLabel = texts.courseai_log_proposal_applied || 'You applied';
-                log({actor: 'user', kind: 'info', message: truncated ? appliedLabel + ': ' + truncated : appliedLabel});
+                log({actor: 'user', kind: 'info', message: summaryText ? appliedLabel + ': ' + summaryText : appliedLabel});
                 // The proposal's REAL resolved intent (add_section, replan_section, …)
                 // drives both the client-side skeleton AND the left-panel routing scope,
                 // so applying a proposal behaves exactly like the inline controls.

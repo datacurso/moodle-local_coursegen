@@ -367,8 +367,9 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
                 const summaryText = (payload && payload.summary)
                     ? await resolveText(payload.summary, localizeMessage)
                     : '';
-                const clip = summaryText.length > 80 ? summaryText.slice(0, 80) + '…' : summaryText;
-                emitLog({actor: 'user', kind, message: clip ? applied + ': ' + clip : applied});
+                // Full summary, never clipped — mirrors the live turn (the feed's
+                // clamp + "Show more" handles genuinely long messages).
+                emitLog({actor: 'user', kind, message: summaryText ? applied + ': ' + summaryText : applied});
                 return;
             }
             // Subtypes whose live turn is a fixed plugin phrasing (stop/resume/
