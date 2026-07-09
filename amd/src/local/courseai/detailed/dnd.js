@@ -24,6 +24,83 @@
 import {getDecisionOverlay} from 'local_coursegen/local/courseai/ui/decision-overlay';
 
 /**
+ * The drag currently in flight, shared across ALL wirers so an activity can
+ * cross container boundaries (same section, another subsection, another
+ * section). Null when nothing is being dragged.
+ *
+ * @type {{row: HTMLElement, idDataset: string, containerId: string|null, handled: boolean}|null}
+ */
+let activeDrag = null;
+
+/** Auto-scroll loop state (one drag at a time). */
+let autoScrollTimer = null;
+let autoScrollDocListener = null;
+
+/**
+ * Nearest scrollable ancestor of a node (falls back to the page scroller).
+ *
+ * @param {HTMLElement} el
+ * @returns {HTMLElement}
+ */
+const findScrollParent = (el) => {
+    for (let node = el; node && node !== document.body; node = node.parentElement) {
+        const style = window.getComputedStyle(node);
+        if (/(auto|scroll)/.test(style.overflowY) && node.scrollHeight > node.clientHeight) {
+            return node;
+        }
+    }
+    return document.scrollingElement || document.documentElement;
+};
+
+/**
+ * Stop the drag auto-scroll loop and its listener.
+ */
+const stopAutoScroll = () => {
+    if (autoScrollTimer !== null) {
+        clearInterval(autoScrollTimer);
+        autoScrollTimer = null;
+    }
+    if (autoScrollDocListener) {
+        document.removeEventListener('dragover', autoScrollDocListener);
+        autoScrollDocListener = null;
+    }
+};
+
+/**
+ * Keep the plan scrollable while a row is being dragged: browsers do not
+ * auto-scroll inner overflow containers during HTML5 drags, so long courses
+ * were impossible to traverse. While the drag is alive, holding the pointer
+ * near the scroller's top/bottom edge scrolls it continuously (the loop runs
+ * on a timer because dragover stops firing when the pointer is stationary).
+ *
+ * @param {HTMLElement} originEl - The dragged row (locates the scroller).
+ */
+const startAutoScroll = (originEl) => {
+    stopAutoScroll();
+    const scroller = findScrollParent(originEl);
+    const isPage = scroller === document.scrollingElement || scroller === document.documentElement;
+    let pointerY = null;
+    autoScrollDocListener = (event) => {
+        pointerY = event.clientY;
+    };
+    document.addEventListener('dragover', autoScrollDocListener);
+    const EDGE = 80;
+    const STEP = 18;
+    autoScrollTimer = setInterval(() => {
+        if (pointerY === null) {
+            return;
+        }
+        const top = isPage ? 0 : scroller.getBoundingClientRect().top;
+        const bottom = isPage ? window.innerHeight : scroller.getBoundingClientRect().bottom;
+        if (pointerY < top + EDGE) {
+            scroller.scrollTop -= STEP;
+        } else if (pointerY > bottom - EDGE) {
+            scroller.scrollTop += STEP;
+        }
+    }, 30);
+};
+
+/**
  * Wire drag-and-drop for a container whose direct children are draggable rows.
  *
  * @param {HTMLElement} container       - Parent element whose children will be dragged.
@@ -33,9 +110,12 @@ import {getDecisionOverlay} from 'local_coursegen/local/courseai/ui/decision-ove
  * @param {string|null} parentSectionId - Section UUID for activity-level drops; null for sections.
  * @param {Function}    [canDrag]       - Optional predicate; when it returns false, drags are blocked
  *                                        (e.g. while the plan is still streaming).
+ * @param {Function}    [onMoveIn]      - Called as (movedId, index, fromContainerId) when an activity
+ *                                        from ANOTHER container is dropped into this one. Activity
+ *                                        wirers pass it; section/subsection wirers stay same-container.
  * @returns {{attachToRow: Function}}
  */
-export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, parentSectionId, canDrag) => {
+export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, parentSectionId, canDrag, onMoveIn) => {
     let dragSrcEl = null;
     // Order snapshot taken when the drag starts, so onDragEnd can tell a real
     // reorder from a no-op (dropping a row back onto its own slot). A no-op must
@@ -58,6 +138,29 @@ export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, p
         return ids;
     };
 
+    // A drag from ANOTHER wirer that this container can receive: activities
+    // move freely between containers (same section, another subsection,
+    // another section); sections and subsections stay within their own list.
+    const acceptsForeignDrag = () => Boolean(
+        activeDrag
+        && !dragSrcEl
+        && typeof onMoveIn === 'function'
+        && activeDrag.idDataset === 'activityId'
+        && idDataset === 'activityId'
+        && activeDrag.containerId !== parentSectionId
+    );
+
+    // Land a foreign activity row at `refIndex logic`: insert the dragged row
+    // into THIS container and dispatch the cross-container move.
+    const completeForeignDrop = (insertFn) => {
+        const moved = activeDrag.row;
+        const fromContainerId = activeDrag.containerId;
+        insertFn(moved);
+        const index = directItems().indexOf(moved);
+        activeDrag.handled = true;
+        onMoveIn(moved.dataset[idDataset], index >= 0 ? index : null, fromContainerId);
+    };
+
     const onDragStart = (event) => {
         // Reordering is disabled while the plan is streaming (it re-renders and a
         // reorder would race the in-progress stream): cancel the drag outright.
@@ -74,14 +177,23 @@ export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, p
         getDecisionOverlay().hide();
         const row = event.currentTarget;
         dragSrcEl = row;
+        activeDrag = {row, idDataset, containerId: parentSectionId, handled: false};
+        // Long courses: keep the plan scroller moving while the drag hovers
+        // near its top/bottom edge (browsers do not auto-scroll inner
+        // overflow containers during HTML5 drags).
+        startAutoScroll(row);
         orderAtStart = currentOrder();
         row.classList.add('dp-dragging');
         event.dataTransfer.effectAllowed = 'move';
-        // Store the parent section so cross-section drops can be rejected.
         event.dataTransfer.setData('text/plain', parentSectionId || '');
     };
 
     const onDragOver = (event) => {
+        // Only advertise a drop target for drags this container can take:
+        // its own rows, or a foreign ACTIVITY (cross-container move).
+        if (!dragSrcEl && !acceptsForeignDrag()) {
+            return;
+        }
         event.preventDefault();
         event.stopPropagation();
         event.dataTransfer.dropEffect = 'move';
@@ -101,12 +213,17 @@ export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, p
         event.stopPropagation();
         const row = event.currentTarget;
         row.classList.remove('dp-drag-over');
-        if (!dragSrcEl || dragSrcEl === row) {
+        // Foreign ACTIVITY dropped onto one of this container's rows: land it
+        // before/after the target by pointer position and dispatch the move.
+        if (acceptsForeignDrag()) {
+            const rect = row.getBoundingClientRect();
+            const after = event.clientY > rect.top + rect.height / 2;
+            completeForeignDrop((moved) => {
+                row.parentNode.insertBefore(moved, after ? row.nextSibling : row);
+            });
             return;
         }
-        // Reject cross-section activity drops.
-        const originSection = event.dataTransfer.getData('text/plain');
-        if (parentSectionId !== null && originSection !== (parentSectionId || '')) {
+        if (!dragSrcEl || dragSrcEl === row) {
             return;
         }
         // DOM reorder, DIRECTION-AWARE: inserting always-before the target makes
@@ -130,19 +247,30 @@ export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, p
 
     const onDragEnd = (event) => {
         event.stopPropagation();
+        stopAutoScroll();
         const row = event.currentTarget;
         row.classList.remove('dp-dragging');
         if (dragBlocked()) {
             dragSrcEl = null;
+            activeDrag = null;
             return;
         }
         directItems().forEach((el) => {
             el.classList.remove('dp-drag-over');
         });
+        // Cross-container move: the destination wirer already dispatched the
+        // move_activity action — the source list must NOT also send a reorder
+        // for the row that just left it.
+        const crossHandled = Boolean(activeDrag && activeDrag.handled);
+        activeDrag = null;
         // The dragged row (its id) is what moved — pass it so the log can name
         // the moved element and its new position, not just the parent.
         const movedId = (row && row.dataset[idDataset]) || null;
         dragSrcEl = null;
+        if (crossHandled) {
+            orderAtStart = [];
+            return;
+        }
         // Collect new order and dispatch.
         const ids = currentOrder();
         // No-op guard: if the order is unchanged (the row was dropped back onto
@@ -159,6 +287,32 @@ export const wireDragAndDrop = (container, itemSelector, idDataset, onReorder, p
             getDecisionOverlay().show();
         }
     };
+
+    // Container-level foreign drop: dropping into the container's empty space
+    // (below the last activity, on the add-activity strip…) appends at the
+    // end. Row-level drops stopPropagation, so this never double-fires.
+    container.addEventListener('dragover', (event) => {
+        if (!acceptsForeignDrag()) {
+            return;
+        }
+        event.preventDefault();
+        event.dataTransfer.dropEffect = 'move';
+    });
+    container.addEventListener('drop', (event) => {
+        if (!acceptsForeignDrag()) {
+            return;
+        }
+        event.preventDefault();
+        event.stopPropagation();
+        completeForeignDrop((moved) => {
+            const addWrap = container.querySelector(':scope > .dp-add-activity-wrap');
+            if (addWrap) {
+                container.insertBefore(moved, addWrap);
+            } else {
+                container.appendChild(moved);
+            }
+        });
+    });
 
     const attachToRow = (row) => {
         if (!row) {
@@ -234,6 +388,102 @@ export const sendReorderSections = async(ctx, targetIds, movedId) => {
         await runPlanAction(pendingAction);
     } catch (e) {
         // Non-fatal: the re-stream on next user action will correct any ordering.
+    }
+};
+
+/**
+ * Find a container (top-level section or nested subsection) in the latest
+ * plan snapshot.
+ *
+ * @param {Array} sections - state.latestInitialSections.
+ * @param {string} containerId
+ * @returns {Object|null}
+ */
+const findContainer = (sections, containerId) => {
+    let container = (sections || []).find((s) => s && s.id === containerId);
+    if (!container) {
+        for (const section of sections || []) {
+            container = ((section && section.subsections) || []).find(
+                (sub) => sub && sub.id === containerId
+            );
+            if (container) {
+                break;
+            }
+        }
+    }
+    return container || null;
+};
+
+/**
+ * Send a move_activity action (cross-container drag) and log a user turn.
+ *
+ * Also updates the moved activity's client-side entry so later actions
+ * (replan/delete/divider inserts) resolve its NEW container.
+ *
+ * @param {Object} ctx               - ui-detailed ctx.
+ * @param {string} activityId        - The dragged activity UUID.
+ * @param {string} destContainerId   - Destination section or subsection UUID.
+ * @param {number|null} position     - Zero-based slot in the destination.
+ */
+export const sendMoveActivity = async(ctx, activityId, destContainerId, position) => {
+    const {runPlanAction, log, texts, state} = ctx;
+
+    // Re-point the activity's entry at its new container so client-side
+    // lookups (insert dividers, regen routing) stay correct before the
+    // re-stream settles.
+    const entry = state.detailedActivityEls && state.detailedActivityEls[activityId];
+    const destSubMeta = state.detailedSubsectionMeta && state.detailedSubsectionMeta[destContainerId];
+    if (entry) {
+        if (destSubMeta) {
+            entry.subsectionId = destContainerId;
+            entry.sectionId = destSubMeta.sectionId;
+        } else {
+            entry.subsectionId = null;
+            entry.sectionId = destContainerId;
+        }
+    }
+
+    if (typeof log === 'function') {
+        const sections = (state && state.latestInitialSections) || [];
+        let movedTitle = '';
+        for (const section of sections) {
+            const pools = [section && section.activities || []]
+                .concat(((section && section.subsections) || []).map((sub) => sub && sub.activities || []));
+            for (const pool of pools) {
+                const hit = pool.find((a) => a && a.id === activityId);
+                if (hit) {
+                    movedTitle = String(hit.title || '').trim();
+                    break;
+                }
+            }
+            if (movedTitle) {
+                break;
+            }
+        }
+        const dest = findContainer(sections, destContainerId);
+        const destName = (dest && String(dest.name || '').trim()) || '';
+        // Same phrasing the service persists (log_move_activity_to), so the
+        // live turn and the reload replay match.
+        const message = ((texts && texts.log_move_activity_to) || 'You moved «{title}» to «{section}».')
+            .replace('{$a->title}', movedTitle || '?')
+            .replace('{$a->section}', destName || '?')
+            .replace('{title}', movedTitle || '?')
+            .replace('{section}', destName || '?');
+        log({actor: 'user', kind: 'user', message});
+    }
+
+    try {
+        const pendingAction = {
+            action: 'move_activity',
+            target_ids: [activityId],
+            parent_section_id: destContainerId,
+        };
+        if (typeof position === 'number' && position >= 0) {
+            pendingAction.position = position;
+        }
+        await runPlanAction(pendingAction);
+    } catch (e) {
+        // Non-fatal: the re-stream on the next action corrects any drift.
     }
 };
 

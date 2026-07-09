@@ -59,7 +59,21 @@ export const addedSectionTurn = (texts, plan, beforeIds) => {
  */
 export const addedActivityTurn = (texts, plan, parentSectionId, beforeIds) => {
     const ids = beforeIds || [];
-    const section = (plan || []).find((s) => s && s.id === parentSectionId);
+    // The parent container may be a SUBSECTION: look through the top-level
+    // sections first, then inside their subsections.
+    let section = (plan || []).find((s) => s && s.id === parentSectionId);
+    if (!section) {
+        (plan || []).some((s) => {
+            const sub = ((s && s.subsections) || []).find(
+                (x) => x && x.id === parentSectionId
+            );
+            if (sub) {
+                section = sub;
+                return true;
+            }
+            return false;
+        });
+    }
     const activities = (section && section.activities) || [];
     const added = activities.find((a) => a && !a.deleted && a.id && ids.indexOf(a.id) === -1);
     const title = added && String(added.title || '').trim();

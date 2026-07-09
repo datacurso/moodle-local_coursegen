@@ -240,7 +240,21 @@ export const handleReviewNeeded = async(data, ctx) => {
                 emitLog({actor: 'user', kind: 'success', message: added});
             }
             const plan = Array.isArray(data.current_plan) ? data.current_plan : [];
-            const parent = plan.find((s) => s && s.id === state.addScope.parentSectionId);
+            // The parent may be a SUBSECTION: check top-level ids first, then
+            // each section's subsections.
+            let parent = plan.find((s) => s && s.id === state.addScope.parentSectionId);
+            if (!parent) {
+                plan.some((s) => {
+                    const sub = ((s && s.subsections) || []).find(
+                        (x) => x && x.id === state.addScope.parentSectionId
+                    );
+                    if (sub) {
+                        parent = sub;
+                        return true;
+                    }
+                    return false;
+                });
+            }
             const newAct = ((parent && parent.activities) || [])
                 .find((a) => a && !a.deleted && beforeIds.indexOf(a.id) === -1);
             if (newAct) {

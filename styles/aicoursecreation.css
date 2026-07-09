@@ -3743,8 +3743,9 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
   cursor: move;
 }
 /* Hover outline on the section card — suppressed while hovering an inner activity
-   so only ONE element (the activity, not the whole section) highlights at a time. */
-#prvSections .course-section .section-item:hover:not(:has(.activity:hover)) {
+   OR a nested subsection, so only ONE element (the innermost hovered card)
+   highlights at a time. */
+#prvSections .course-section .section-item:hover:not(:has(.activity:hover)):not(:has(.cg-subsection:hover)) {
   outline: 2px solid hsl(10 81% 42% / .45);
   outline-offset: -2px;
   border-radius: 8px;
@@ -3891,7 +3892,8 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
 /* Add-section / add-activity controls are now <li> in the section lists;
    strip list styling so the dashed buttons read like Moodle's add-section. */
 #prvSections .dp-add-section-wrap,
-#prvSections .dp-add-activity-wrap {
+#prvSections .dp-add-activity-wrap,
+#prvSections .dp-add-subsection-wrap {
   list-style: none;
 }
 #prvSections .dp-add-section-wrap {
@@ -3978,6 +3980,19 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
   background: var(--primary);
   color: var(--primary-fg);
 }
+/* Hovering the divider recolors the row's OWN dashed separator (the exact
+   grey line the "+" sits on) instead of painting a second line — a separate
+   overlay could sit a few pixels off inside nested subsections and read as
+   two parallel lines. */
+#prvSections .course-section .activity {
+  transition: border-top-color .12s ease;
+}
+
+#prvSections .course-section .activity:has(> .cg-insert-zone:hover),
+#prvSections .course-section .activity:has(> .cg-insert-zone:focus-within) {
+  border-top-color: var(--primary);
+}
+
 /* The insert divider is a PLANNING-only edit affordance. Generation is read-only. */
 body.cg-generating #prvSections .cg-insert-zone {
   display: none !important;
@@ -4046,7 +4061,8 @@ body.cg-generating #prvSections .cg-insert-zone {
    Moodle centers a SOLID button on the section's closing dashed line (the line
    runs on both sides). We have a single button, so it sits in the MIDDLE of that
    last divider — not a full-width dashed box (the previous look the user rejected). */
-#prvSections .dp-add-activity-wrap {
+#prvSections .dp-add-activity-wrap,
+#prvSections .dp-add-subsection-wrap {
   position: relative;
   display: block;
   margin-top: 14px;
@@ -4054,16 +4070,24 @@ body.cg-generating #prvSections .cg-insert-zone {
 }
 /* The closing dashed line, behind the centered button. Anchored near the button's
    vertical centre (top offset), so opening the add panel below never shifts it. */
-#prvSections .dp-add-activity-wrap::before {
+#prvSections .dp-add-activity-wrap::before,
+#prvSections .dp-add-subsection-wrap::before {
   content: '';
   position: absolute;
   left: 4px;
   right: 4px;
   top: 18px;
   border-top: 2px dashed #dee2e6;
+  transition: border-top-color .12s ease;
   z-index: 0;
 }
-#prvSections .dp-add-activity-wrap .dp-add-control {
+
+#prvSections .dp-add-activity-wrap:hover::before,
+#prvSections .dp-add-activity-wrap:focus-within::before {
+  border-top-color: var(--primary);
+}
+#prvSections .dp-add-activity-wrap .dp-add-control,
+#prvSections .dp-add-subsection-wrap .dp-add-control {
   position: relative;
   z-index: 1;
   width: fit-content;
@@ -4087,17 +4111,20 @@ body.cg-generating #prvSections .cg-insert-zone {
   box-shadow: none;
   transition: background-color .12s ease, color .12s ease;
 }
-#prvSections .dp-add-activity-wrap .dp-add-control:hover {
+#prvSections .dp-add-activity-wrap .dp-add-control:hover,
+#prvSections .dp-add-subsection-wrap .dp-add-control:hover {
   background: var(--primary);
   color: var(--primary-fg);
 }
-#prvSections .dp-add-activity-wrap .dp-add-control .dp-add-control__icon {
+#prvSections .dp-add-activity-wrap .dp-add-control .dp-add-control__icon,
+#prvSections .dp-add-subsection-wrap .dp-add-control .dp-add-control__icon {
   /* Follow the button text colour: coral at rest, white on hover. */
   color: inherit;
   font-size: 14px;
 }
 /* The add panel opens full-width below the centered button (not centered/shrunk). */
-#prvSections .dp-add-activity-wrap .dp-ai-inline {
+#prvSections .dp-add-activity-wrap .dp-ai-inline,
+#prvSections .dp-add-subsection-wrap .dp-ai-inline {
   position: relative;
   z-index: 1;
   margin-top: 8px;
@@ -4114,6 +4141,126 @@ body.cg-generating #prvSections .cg-insert-zone {
 /* The nested card never shows the between-sections "+" divider gap. */
 #prvSections .cg-subsection .cg-insert-zone--section {
   display: none;
+}
+
+/* ── On-hover "add SUBSECTION" divider between subsections ──
+   Same affordance as the between-sections divider, scoped to the nested
+   subsection cards: the "+" sits in the gap above each subsection and inserts
+   a new subsection at that slot within the parent section. */
+#prvSections .cg-subsection .cg-insert-zone--subsection {
+  position: absolute;
+  top: -18px;
+  left: 0;
+  right: 0;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 4;
+}
+
+#prvSections .cg-subsection .cg-insert-zone--subsection::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 50%;
+  border-top: 2px dashed var(--primary);
+  opacity: 0;
+  transition: opacity .12s ease;
+  z-index: 0;
+}
+
+#prvSections .cg-subsection .cg-insert-zone--subsection:hover::before,
+#prvSections .cg-subsection .cg-insert-zone--subsection:focus-within::before {
+  opacity: 1;
+}
+
+#prvSections .cg-subsection .cg-insert-zone--subsection .cg-insert-btn {
+  position: relative;
+  z-index: 1;
+}
+
+/* ── Bottom "Add subsection" control ── Shares the closing add-activity button
+   look (see the shared selectors in that block), indented to the subsection
+   column. */
+#prvSections .dp-add-subsection-wrap {
+  margin-left: 28px;
+  margin-right: 8px;
+  list-style: none;
+}
+
+body.cg-generating #prvSections .dp-add-subsection-wrap {
+  display: none !important;
+}
+
+/* The standalone "+ Add activity" row collapses into the "+" menu (its wrap
+   stays in the DOM as the reconciler/append anchor). */
+#prvSections .dp-add-activity-wrap.dp-add-wrap--merged {
+  display: none !important;
+}
+
+/* Native-style "+" divider: a bare round button centered on a dashed line.
+   The line is visible at rest (grey, like every closing line) and paints in
+   the accent colour on hover, exactly like Moodle's divider. */
+#prvSections .dp-add-subsection-wrap {
+  text-align: center;
+}
+
+#prvSections .dp-add-subsection-wrap::before {
+  top: 12px;
+  transition: border-top-color .12s ease;
+}
+
+#prvSections .dp-add-subsection-wrap:hover::before,
+#prvSections .dp-add-subsection-wrap:focus-within::before {
+  border-top-color: var(--primary);
+}
+
+#prvSections .dp-add-subsection-wrap .cg-insert-btn {
+  opacity: 1;
+  position: relative;
+  z-index: 1;
+}
+
+/* ── "+ Add" dropdown (Activity or resource / Subsection), mirroring the real
+   course's "+" menu between items. ── */
+#prvSections .dp-add-menu {
+  position: absolute;
+  top: calc(100% + 4px);
+  left: 50%;
+  transform: translateX(-50%);
+  min-width: 210px;
+  padding: 4px;
+  background: #fff;
+  border: 1px solid var(--border, #dee2e6);
+  border-radius: 8px;
+  box-shadow: 0 6px 18px rgba(0, 0, 0, .12);
+  z-index: 30;
+}
+
+#prvSections .dp-add-menu__item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  width: 100%;
+  padding: 8px 12px;
+  background: none;
+  border: none;
+  border-radius: 6px;
+  cursor: pointer;
+  text-align: left;
+  font-size: 13px;
+  color: #333;
+}
+
+#prvSections .dp-add-menu__item:hover {
+  background: #f2f2f5;
+}
+
+#prvSections .dp-add-menu__icon {
+  display: inline-flex;
+  color: #555;
 }
 
 /* ── "+" options menu (ChatGPT-style toolbar) ──────────────────────────── */

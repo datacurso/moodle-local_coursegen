@@ -119,6 +119,24 @@ export const createProposalsUi = (deps) => {
             }
             return pos <= 0 ? 0 : pos - 1;
         };
+        // add_section WITH a parent adds a SUBSECTION: the position is relative
+        // to the parent's subsections, so anchor on the neighbour SUBSECTION
+        // (or the parent itself when it has none yet) — never on the top-level
+        // section list, whose indexes mean something else entirely.
+        if (intent.action === 'add_section' && intent.parent_section_id) {
+            const container = document.querySelector(
+                '.course-section[data-section-id="' + intent.parent_section_id + '"]'
+            );
+            if (!container) {
+                return [];
+            }
+            const subs = Array.from(container.querySelectorAll('.cg-subsection[data-subsection-id]'));
+            if (!subs.length) {
+                return [intent.parent_section_id];
+            }
+            const id = subs[anchorIndex(subs.length)].getAttribute('data-subsection-id');
+            return id ? [id] : [intent.parent_section_id];
+        }
         if (intent.action === 'add_section') {
             const sections = Array.from(document.querySelectorAll('.course-section[data-section-id]'));
             if (!sections.length) {

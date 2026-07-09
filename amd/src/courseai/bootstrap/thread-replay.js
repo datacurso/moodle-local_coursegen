@@ -343,7 +343,10 @@ export const makeThreadReplay = ({state, emitLog, localizeMessage, renderProposa
             // "+ add activity" button logs it (section-row.js composeAddTurn), so reload
             // === live. Adding a SECTION: echo the user's own words verbatim, like the
             // live add-section input does (no broken proposal template, no {$a->position}).
-            if (subtype === 'add_activity') {
+            if (subtype === 'add_activity' || subtype === 'add_subsection') {
+                // add_subsection composes the same "«{parent}», position {N}"
+                // target the live divider logs (payload carries section_name +
+                // position/before_ids exactly like add_activity).
                 const composed = composeAddActivityTurn(payload);
                 if (composed) {
                     emitLog({actor: 'user', kind: 'user', message: composed});

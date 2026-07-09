@@ -26,7 +26,7 @@
 
 import {createAddTriggerBtn} from './icons';
 import {openInlineAddPanel} from 'local_coursegen/local/courseai/ui/panel';
-import {wireDragAndDrop, sendReorderActivities} from './dnd';
+import {wireDragAndDrop, sendReorderActivities, sendMoveActivity} from './dnd';
 import {buildSectionRowSkeleton, buildSectionActionControls} from './section-dom';
 import {removeTransientSectionPlaceholders, markProposalTargetPending} from './pending';
 import {getSectionList} from './container';
@@ -268,7 +268,9 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
     // immediately — no append-at-the-end-then-reorder jump. Otherwise insert before the
     // "+ Add section" control (append, kept pinned to the bottom). The transient is
     // removed AFTER, so it is replaced in place, never duplicated.
-    const transientSection = sectionList.querySelector('[data-cg-transient="section"]');
+    // DIRECT child only: a transient SUBSECTION placeholder nests inside a
+    // section row and must never anchor a new top-level section row.
+    const transientSection = sectionList.querySelector(':scope > [data-cg-transient="section"]');
     const addSectionWrap = sectionList.querySelector('.dp-add-section-wrap');
     if (transientSection) {
         sectionList.insertBefore(row, transientSection);
@@ -290,7 +292,10 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
         'activityId',
         (ids, movedId) => sendReorderActivities(ctx, sectionId, ids, movedId),
         sectionId,
-        () => !ctx.state.isStreaming
+        () => !ctx.state.isStreaming,
+        // An activity dragged in from ANOTHER container (a subsection or a
+        // different section) lands here as a cross-container move.
+        (movedId, index) => sendMoveActivity(ctx, movedId, sectionId, index)
     );
 
     state.detailedSectionMeta[sectionId] = {
@@ -304,6 +309,11 @@ export const createDetailedSectionRow = (ctx, {sectionId, renderIndex, sectionNa
         chevronEl,
         row,
         addActivityBtn,
+        // The bottom add-activity wrap + its prompt panel: the combined
+        // "+ Add" menu (sections WITH subsections) adopts the panel and hides
+        // this wrap, so ONE control serves both adds like Moodle's "+".
+        addActivityWrap,
+        addActivityPanel: addActivityPanelApi.panel,
         activityDnd,
         // Called by an on-hover "+" divider to open the add panel at a given slot.
         openAddActivityAt,

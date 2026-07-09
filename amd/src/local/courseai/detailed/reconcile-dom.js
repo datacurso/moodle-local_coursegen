@@ -140,7 +140,11 @@ export const reorderAll = (ctx, activeSections) => {
             .filter(Boolean)
             .map((entry) => entry.wrap);
 
-        const addActivityWrap = meta.bodyEl.querySelector('.dp-add-activity-wrap');
+        // DIRECT child only: subsections nest their OWN add-activity wrap, and a
+        // depth-first querySelector finds that one first — reorderNodes would then
+        // appendChild() the sentinel, YANKING it out of the subsection into the
+        // parent list (duplicated "+ Add activity" at parent level).
+        const addActivityWrap = meta.bodyEl.querySelector(':scope > .dp-add-activity-wrap');
         reorderNodes(meta.bodyEl, activityNodes, addActivityWrap);
     });
 };

@@ -309,9 +309,14 @@ export const reconcilePlan = async(ctx, currentPlan) => {
             refreshSubsectionMeta(ctx, subsection.id);
         });
         // Keep subsection rows in position order, after the direct activities and
-        // before the "+ Add activity" sentinel. Only mutate when out of order.
+        // before the add-subsection / add-activity sentinels. Only mutate when out
+        // of order. The anchor is the "+ Add subsection" control when present
+        // (it sits between the last subsection and the parent's "+ Add activity"),
+        // else the add-activity sentinel.
         const addWrap = meta.bodyEl.querySelector(':scope > .dp-add-activity-wrap');
-        if (addWrap && section.subsections.length > 0) {
+        const addSubWrap = meta.bodyEl.querySelector(':scope > .dp-add-subsection-wrap');
+        const anchor = addSubWrap || addWrap;
+        if (anchor && section.subsections.length > 0) {
             const desired = section.subsections
                 .map((subsection) => state.detailedSubsectionMeta[subsection.id])
                 .filter((sub) => sub && sub.row)
@@ -321,9 +326,9 @@ export const reconcilePlan = async(ctx, currentPlan) => {
             );
             const inOrder = desired.length === current.length
                 && desired.every((node, i) => node === current[i])
-                && (desired.length === 0 || desired[desired.length - 1].nextElementSibling === addWrap);
+                && (desired.length === 0 || desired[desired.length - 1].nextElementSibling === anchor);
             if (!inOrder) {
-                desired.forEach((node) => meta.bodyEl.insertBefore(node, addWrap));
+                desired.forEach((node) => meta.bodyEl.insertBefore(node, anchor));
             }
         }
     });

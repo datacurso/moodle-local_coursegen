@@ -79,11 +79,32 @@ export const createRunPlanAction = ({state, texts, sendPlanningFeedback, openSSE
         // Adding an element: snapshot the ids that exist NOW so review_needed can
         // name the one the model just created (the id not in this set). Cleared by
         // the lifecycle handlers, like regenScope.
-        if (action === 'add_section') {
+        if (action === 'add_section' && !scope.parent_section_id) {
             const secs = (state.latestInitialSections || []).filter((s) => s && !s.deleted);
             state.addScope = {action, beforeIds: secs.map((s) => s.id)};
+        } else if (action === 'add_section') {
+            // add_section WITH a parent creates a SUBSECTION: no new top-level
+            // section will stream, so the add_section naming/regen-block flow
+            // must not arm. The click-time turn already describes the request
+            // and the reconciler nests the streamed subsection in the centre.
+            state.addScope = null;
         } else if (action === 'add_activity') {
-            const parent = (state.latestInitialSections || []).find((s) => s && s.id === scope.parent_section_id);
+            const secs = (state.latestInitialSections || []).filter((s) => s && !s.deleted);
+            // The parent may be a SUBSECTION: check top-level ids first, then
+            // each section's subsections.
+            let parent = secs.find((s) => s.id === scope.parent_section_id);
+            if (!parent) {
+                secs.some((s) => {
+                    const sub = ((s && s.subsections) || []).find(
+                        (x) => x && x.id === scope.parent_section_id
+                    );
+                    if (sub) {
+                        parent = sub;
+                        return true;
+                    }
+                    return false;
+                });
+            }
             const acts = (parent && parent.activities || []).filter((a) => a && !a.deleted);
             state.addScope = {action, parentSectionId: scope.parent_section_id, beforeIds: acts.map((a) => a.id)};
         } else {

@@ -39,10 +39,13 @@ $PAGE->set_context($systemcontext);
 $PAGE->set_pagelayout('popup');
 $PAGE->set_title(get_string('createwithai', 'local_coursegen'));
 
-// Load courseai CSS + sidebar CSS.
-$PAGE->requires->css('/local/coursegen/styles/aicoursecreation.css');
-$PAGE->requires->css('/local/coursegen/styles/chatui.css');
-$PAGE->requires->css('/local/coursegen/styles/sidebar.css');
+// Load courseai CSS + sidebar CSS. Direct plugin stylesheets get NO revision
+// from Moodle's cache pipeline, so browsers keep stale copies across plugin
+// upgrades — bust them with the plugin version.
+$cssrev = get_config('local_coursegen', 'version');
+$PAGE->requires->css(new moodle_url('/local/coursegen/styles/aicoursecreation.css', ['v' => $cssrev]));
+$PAGE->requires->css(new moodle_url('/local/coursegen/styles/chatui.css', ['v' => $cssrev]));
+$PAGE->requires->css(new moodle_url('/local/coursegen/styles/sidebar.css', ['v' => $cssrev]));
 
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\course_session_service;

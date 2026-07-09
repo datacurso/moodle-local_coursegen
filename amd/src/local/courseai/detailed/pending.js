@@ -120,13 +120,50 @@ const insertTransientActivity = (ctx, parentSectionId, position) => {
         bodyEl.children,
         (el) => el.classList.contains('activity') && !el.classList.contains('dp-add-activity-wrap')
     );
-    const addWrap = bodyEl.querySelector('.dp-add-activity-wrap');
+    // DIRECT child only: a parent section's list nests each subsection's own
+    // add-activity wrap, and inserting before a non-child anchor throws.
+    const addWrap = bodyEl.querySelector(':scope > .dp-add-activity-wrap');
     const idx = typeof position === 'number' && position >= 0 ? position : rows.length;
     const ref = idx < rows.length ? rows[idx] : addWrap;
     if (ref) {
         bodyEl.insertBefore(wrap, ref);
     } else {
         bodyEl.appendChild(wrap);
+    }
+};
+
+/**
+ * Insert a transient skeleton SUBSECTION row into a parent section's cmlist.
+ * Same skeleton as a transient section (subsection rows reuse the section
+ * markup) plus the cg-subsection class so the nesting indent applies.
+ *
+ * @param {Object}      ctx
+ * @param {string}      parentSectionId - Top-level parent section UUID.
+ * @param {number|null} position        - Zero-based slot among the parent's
+ *                                        subsections, or null/append for last.
+ */
+const insertTransientSubsection = (ctx, parentSectionId, position) => {
+    const {state} = ctx;
+    const meta = state.detailedSectionMeta[parentSectionId];
+    if (!meta || !meta.bodyEl) {
+        return;
+    }
+    const bodyEl = meta.bodyEl;
+    const row = buildTransientSectionRow(ctx);
+    row.classList.add('cg-subsection');
+
+    const subsections = Array.prototype.filter.call(
+        bodyEl.children,
+        (el) => el.classList.contains('cg-subsection') && !el.hasAttribute(TRANSIENT_ATTR)
+    );
+    const addSubWrap = bodyEl.querySelector(':scope > .dp-add-subsection-wrap');
+    const addWrap = bodyEl.querySelector(':scope > .dp-add-activity-wrap');
+    const idx = typeof position === 'number' && position >= 0 ? position : subsections.length;
+    const ref = idx < subsections.length ? subsections[idx] : (addSubWrap || addWrap);
+    if (ref) {
+        bodyEl.insertBefore(row, ref);
+    } else {
+        bodyEl.appendChild(row);
     }
 };
 
@@ -238,7 +275,14 @@ export const markProposalTargetPending = (ctx, intent) => {
             }
             break;
         case 'add_section':
-            insertTransientSection(ctx, position);
+            if (intent.parent_section_id) {
+                // add_section with a parent creates a SUBSECTION of that
+                // section: the skeleton goes into the parent's cmlist, at the
+                // subsection slot space, not into the top-level section list.
+                insertTransientSubsection(ctx, intent.parent_section_id, position);
+            } else {
+                insertTransientSection(ctx, position);
+            }
             break;
         default:
             break;
@@ -255,7 +299,10 @@ export const removeTransientActivityPlaceholders = (bodyEl) => {
     if (!bodyEl) {
         return;
     }
-    bodyEl.querySelectorAll(`[${TRANSIENT_ATTR}="activity"]`).forEach((el) => el.remove());
+    // DIRECT children only: a parent section's list nests its subsections'
+    // lists, and their pending transients must not be cleared by a sibling
+    // activity landing at the parent level (or vice versa).
+    bodyEl.querySelectorAll(`:scope > [${TRANSIENT_ATTR}="activity"]`).forEach((el) => el.remove());
 };
 
 /**

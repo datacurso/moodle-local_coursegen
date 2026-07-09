@@ -35,7 +35,28 @@
  */
 
 import {buildSectionRowSkeleton, buildSectionActionControls} from './section-dom';
-import {wireDragAndDrop, sendReorderSections, sendReorderActivities} from './dnd';
+import {wireDragAndDrop, sendReorderSections, sendReorderActivities, sendMoveActivity} from './dnd';
+import {createAddTriggerBtn} from './icons';
+import {openInlineAddPanel} from 'local_coursegen/local/courseai/ui/panel';
+import {markProposalTargetPending} from './pending';
+
+/**
+ * Build the on-hover "+" insert button used by the subsection divider.
+ *
+ * @param {string} label - Accessible label/tooltip.
+ * @returns {HTMLButtonElement}
+ */
+const buildInsertBtn = (label) => {
+    const btn = document.createElement('button');
+    btn.type = 'button';
+    btn.className = 'cg-insert-btn';
+    btn.setAttribute('aria-label', label);
+    btn.setAttribute('title', label);
+    btn.innerHTML = '<svg viewBox="0 0 24 24" width="16" height="16" fill="none" '
+        + 'stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">'
+        + '<path d="M12 5v14M5 12h14"/></svg>';
+    return btn;
+};
 
 /**
  * Toggle the collapse panel (Boost .collapse / .collapsed classes), same
@@ -52,6 +73,208 @@ const toggleCollapse = (bodyEl, chevron) => {
 };
 
 /**
+ * Count the parent's REAL rendered subsections (transient skeletons excluded).
+ *
+ * @param {HTMLElement} parentBodyEl - The parent section's cmlist.
+ * @returns {number}
+ */
+const countActiveSubsections = (parentBodyEl) => (parentBodyEl
+    ? Array.prototype.filter.call(
+        parentBodyEl.children,
+        (el) => el.classList.contains('cg-subsection') && !el.hasAttribute('data-cg-transient')
+    ).length
+    : 0);
+
+/**
+ * Compose the add-subsection user turn like the add-activity one does:
+ * "{instruction} — «{parent section}», position {N}" (1-based slot). Reload
+ * composes the same line from the persisted payload (thread-replay.js), so
+ * both sides stay identical.
+ *
+ * @param {Object} ctx
+ * @param {string} sectionId - Parent (top-level) section UUID.
+ * @param {string} instruction
+ * @param {number} slot0 - Zero-based slot the subsection lands in.
+ * @returns {string|null}
+ */
+const composeAddSubsectionTurn = (ctx, sectionId, instruction, slot0) => {
+    const {state, texts} = ctx;
+    const parentMeta = state.detailedSectionMeta[sectionId];
+    const parentName = (parentMeta && parentMeta.row
+        && parentMeta.row.getAttribute('data-sectionname')) || '';
+    const instr = String(instruction || '').trim();
+    if (!parentName) {
+        return instr || null;
+    }
+    const target = (texts.courseai_log_add_activity_target || '«{$a->section}», position {$a->position}')
+        .replace('{$a->section}', parentName)
+        .replace('{$a->position}', String(slot0 + 1));
+    return instr ? instr + ' — ' + target : target;
+};
+
+/**
+ * Log the turn, drop a placement skeleton and send the add-subsection intent
+ * (add_section WITH the parent section id — the service generates and nests
+ * a subsection there).
+ *
+ * @param {Object} ctx
+ * @param {string} sectionId - Parent (top-level) section UUID.
+ * @param {HTMLElement} parentBodyEl - The parent section's cmlist.
+ * @param {string} value - The user's instruction.
+ * @param {number|null} position - Zero-based slot, or null to append.
+ */
+const submitAddSubsection = async(ctx, sectionId, parentBodyEl, value, position) => {
+    const {runPlanAction, log} = ctx;
+    const intent = {action: 'add_section', parent_section_id: sectionId, instruction: value};
+    if (typeof position === 'number' && position >= 0) {
+        intent.position = position;
+    }
+    const slot0 = (typeof position === 'number' && position >= 0)
+        ? position
+        : countActiveSubsections(parentBodyEl);
+    const turn = composeAddSubsectionTurn(ctx, sectionId, value, slot0);
+    if (typeof log === 'function' && turn) {
+        log({actor: 'user', kind: 'user', message: turn});
+    }
+    markProposalTargetPending(ctx, intent);
+    try {
+        await runPlanAction(intent);
+    } catch (e) {
+        // Non-fatal: the next action re-streams and corrects state.
+    }
+};
+
+/**
+ * Build one row of the "+ Add" dropdown menu.
+ *
+ * @param {string} label
+ * @param {string} iconSvg - Inline SVG markup for the row icon.
+ * @param {Function} onPick
+ * @returns {HTMLButtonElement}
+ */
+const buildAddMenuItem = (label, iconSvg, onPick) => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'dp-add-menu__item';
+    item.setAttribute('role', 'menuitem');
+    item.innerHTML = '<span class="dp-add-menu__icon" aria-hidden="true">' + iconSvg + '</span>';
+    const text = document.createElement('span');
+    text.textContent = label;
+    item.appendChild(text);
+    item.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        onPick();
+    });
+    return item;
+};
+
+/**
+ * Build (once per parent section) the single Moodle-style "+ Add" control:
+ * one button on the section's closing line that opens a small menu with
+ * "Activity or resource" and "Subsection" — exactly like the real course's
+ * "+" between items. It ADOPTS the parent's add-activity prompt panel and
+ * hides the old standalone "+ Add activity" wrap, so the two stacked buttons
+ * collapse into one control.
+ *
+ * @param {Object} ctx
+ * @param {string} sectionId - Parent (top-level) section UUID.
+ * @param {HTMLElement} parentBodyEl - The parent section's cmlist.
+ */
+const ensureAddSubsectionControl = (ctx, sectionId, parentBodyEl) => {
+    const {state, texts, createTextPanel} = ctx;
+    const parentMeta = state.detailedSectionMeta[sectionId];
+    if (!parentMeta || parentMeta.addSubsectionWrap || !parentBodyEl
+            || typeof createTextPanel !== 'function') {
+        return;
+    }
+    const panelApi = createTextPanel({
+        texts,
+        onSubmit: (value) => submitAddSubsection(ctx, sectionId, parentBodyEl, value, null),
+        placeholder: texts.courseai_add_subsection_placeholder || 'Describe the subsection to add…',
+    });
+
+    const wrap = document.createElement('li');
+    wrap.className = 'dp-add-subsection-wrap';
+
+    // Bare round "+" like Moodle's native divider button — the label lives in
+    // aria/title only; the closing dashed line paints on hover (CSS).
+    const btn = buildInsertBtn(texts.courseai_btn_add || 'Add');
+
+    const menu = document.createElement('div');
+    menu.className = 'dp-add-menu';
+    menu.setAttribute('role', 'menu');
+    menu.hidden = true;
+    const closeMenu = () => {
+        menu.hidden = true;
+        btn.setAttribute('aria-expanded', 'false');
+    };
+    const activityIcon = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" '
+        + 'stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+        + '<path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+    const subsectionIcon = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" '
+        + 'stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+        + '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 14h8"/></svg>';
+    menu.appendChild(buildAddMenuItem(
+        texts.courseai_menu_activity_or_resource || 'Activity or resource',
+        activityIcon,
+        () => {
+            closeMenu();
+            if (typeof parentMeta.openAddActivityAt === 'function') {
+                parentMeta.openAddActivityAt(null, null);
+            }
+        }
+    ));
+    menu.appendChild(buildAddMenuItem(
+        texts.courseai_subsection_label || 'Subsection',
+        subsectionIcon,
+        () => {
+            closeMenu();
+            panelApi.open();
+        }
+    ));
+
+    btn.setAttribute('aria-haspopup', 'menu');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        menu.hidden = !menu.hidden;
+        btn.setAttribute('aria-expanded', menu.hidden ? 'false' : 'true');
+    });
+    document.addEventListener('click', (event) => {
+        if (!menu.hidden && !wrap.contains(event.target)) {
+            closeMenu();
+        }
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closeMenu();
+        }
+    });
+
+    wrap.appendChild(btn);
+    wrap.appendChild(menu);
+    wrap.appendChild(panelApi.panel);
+
+    // ONE control serves both adds: the "+" menu replaces the parent's
+    // standalone "+ Add activity" row. Its prompt panel is adopted into this
+    // wrap (so the menu's "Activity or resource" opens it HERE) and the old
+    // wrap is hidden — it stays in the DOM as the reconciler/append anchor.
+    const addWrap = parentBodyEl.querySelector(':scope > .dp-add-activity-wrap');
+    if (addWrap) {
+        parentBodyEl.insertBefore(wrap, addWrap);
+        if (parentMeta.addActivityPanel) {
+            wrap.appendChild(parentMeta.addActivityPanel);
+        }
+        addWrap.classList.add('dp-add-wrap--merged');
+    } else {
+        parentBodyEl.appendChild(wrap);
+    }
+    parentMeta.addSubsectionWrap = wrap;
+};
+
+/**
  * Ensure the nested row for a subsection exists inside its parent section.
  * Idempotent: returns the existing meta when already rendered.
  *
@@ -64,7 +287,7 @@ const toggleCollapse = (bodyEl, chevron) => {
  * @returns {Object|null} The meta stored in state.detailedSubsectionMeta.
  */
 export const ensureSubsectionRendered = (ctx, {subsectionId, sectionId, name, parentBodyEl}) => {
-    const {state, texts} = ctx;
+    const {state, texts, runPlanAction, createTextPanel, log} = ctx;
     if (!state.detailedSubsectionMeta) {
         state.detailedSubsectionMeta = {};
     }
@@ -127,17 +350,137 @@ export const ensureSubsectionRendered = (ctx, {subsectionId, sectionId, name, pa
     row.className = 'cg-subsection section course-section main clearfix';
     row.setAttribute('data-subsection-id', subsectionId);
     row.dataset.subsectionId = subsectionId;
+
+    // On-hover "+" divider ABOVE this subsection (add a subsection at THIS
+    // slot), mirroring the between-sections divider and Moodle's add
+    // affordance between subsections. Child of the row so it rides along on
+    // reorder; CSS hides it on the FIRST subsection.
+    const insertZone = document.createElement('div');
+    insertZone.className = 'cg-insert-zone cg-insert-zone--subsection';
+    insertZone.setAttribute('contenteditable', 'false');
+    insertZone.setAttribute('draggable', 'false');
+    const insertBtn = buildInsertBtn(texts.courseai_btn_add_subsection || 'Add subsection');
+    insertBtn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        // Insert BEFORE this subsection: its CURRENT index among the parent's
+        // rendered subsections (computed at click time, reorder-safe).
+        const subs = Array.prototype.filter.call(
+            parentBodyEl.children,
+            (el) => el.classList.contains('cg-subsection') && !el.hasAttribute('data-cg-transient')
+        );
+        const index = subs.indexOf(row);
+        openInlineAddPanel({
+            anchor: row,
+            texts,
+            placeholder: texts.courseai_add_subsection_placeholder || 'Describe the subsection to add…',
+            onSubmit: (value) => submitAddSubsection(
+                ctx, sectionId, parentBodyEl, value, index >= 0 ? index : null
+            ),
+        });
+    });
+    insertZone.addEventListener('dragstart', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+    });
+    insertZone.appendChild(insertBtn);
+    row.appendChild(insertZone);
+
     row.appendChild(sectionItem);
     rowRef.current = row;
 
-    // Subsections always land after the direct activities, before the parent's
-    // "+ Add activity" sentinel (the fixed direct-first order of the plan).
+    // Subsections always land after the direct activities, before the
+    // add-subsection / add-activity sentinels (the fixed direct-first order
+    // of the plan). A transient placeholder (an add at a specific position)
+    // marks the exact slot: insert IN ITS PLACE, never duplicated.
+    const transient = parentBodyEl.querySelector(':scope > [data-cg-transient="section"]');
+    const addSubWrap = parentBodyEl.querySelector(':scope > .dp-add-subsection-wrap');
     const addWrap = parentBodyEl.querySelector(':scope > .dp-add-activity-wrap');
-    if (addWrap) {
+    if (transient) {
+        parentBodyEl.insertBefore(row, transient);
+        transient.remove();
+    } else if (addSubWrap) {
+        parentBodyEl.insertBefore(row, addSubWrap);
+    } else if (addWrap) {
         parentBodyEl.insertBefore(row, addWrap);
     } else {
         parentBodyEl.appendChild(row);
     }
+
+    // "+ Add activity" control at the bottom of this subsection's panel —
+    // same flow as the section one, with the SUBSECTION as the parent
+    // container (add_activity already resolves subsections server-side).
+    let pendingPosition = null;
+    const countActiveActivities = () => (cmlistEl
+        ? cmlistEl.querySelectorAll('.activity[data-activity-id]:not([data-cg-transient])').length
+        : 0);
+    const composeAddTurn = (instruction, slot0) => {
+        const target = (texts.courseai_log_add_activity_target || '«{$a->section}», position {$a->position}')
+            .replace('{$a->section}', label)
+            .replace('{$a->position}', String(slot0 + 1));
+        const instr = String(instruction || '').trim();
+        return instr ? instr + ' — ' + target : target;
+    };
+    const submitAddActivity = async(value, position) => {
+        const intent = {action: 'add_activity', parent_section_id: subsectionId, instruction: value};
+        if (typeof position === 'number' && position >= 0) {
+            intent.position = position;
+        }
+        const slot0 = (typeof position === 'number' && position >= 0)
+            ? position : countActiveActivities();
+        if (typeof log === 'function') {
+            log({actor: 'user', kind: 'user', message: composeAddTurn(value, slot0)});
+        }
+        markProposalTargetPending(ctx, intent);
+        try {
+            await runPlanAction(intent);
+        } catch (e) {
+            // Non-fatal: the next action re-streams and corrects state.
+        }
+    };
+    const addActivityPanelApi = typeof createTextPanel === 'function' ? createTextPanel({
+        texts,
+        onSubmit: (value) => {
+            const position = pendingPosition;
+            pendingPosition = null;
+            return submitAddActivity(value, position);
+        },
+        placeholder: texts.courseai_add_activity_placeholder || 'Describe the activity to add…',
+    }) : null;
+    const openAddActivityAt = (position, anchorEl) => {
+        if (anchorEl) {
+            openInlineAddPanel({
+                anchor: anchorEl,
+                texts,
+                placeholder: texts.courseai_add_activity_placeholder || 'Describe the activity to add…',
+                onSubmit: (value) => submitAddActivity(value, position),
+            });
+            return;
+        }
+        if (!addActivityPanelApi) {
+            return;
+        }
+        pendingPosition = typeof position === 'number' ? position : null;
+        addActivityPanelApi.open();
+    };
+    let addActivityBtn = null;
+    if (addActivityPanelApi) {
+        addActivityBtn = createAddTriggerBtn(texts.courseai_btn_add_activity || 'Add activity');
+        addActivityBtn.addEventListener('click', (event) => {
+            event.preventDefault();
+            event.stopPropagation();
+            addActivityPanelApi.open();
+        });
+        const addActivityWrap = document.createElement('li');
+        addActivityWrap.className = 'dp-add-activity-wrap';
+        addActivityWrap.appendChild(addActivityBtn);
+        addActivityWrap.appendChild(addActivityPanelApi.panel);
+        cmlistEl.appendChild(addActivityWrap);
+    }
+
+    // The parent-level "+ Add subsection" control exists once the section has
+    // at least one subsection (this call is idempotent per parent).
+    ensureAddSubsectionControl(ctx, sectionId, parentBodyEl);
 
     // Activity drag-and-drop WITHIN this subsection: same reorder_activities
     // action, with the subsection as the parent container (the service
@@ -149,7 +492,10 @@ export const ensureSubsectionRendered = (ctx, {subsectionId, sectionId, name, pa
         'activityId',
         (ids, movedId) => sendReorderActivities(ctx, subsectionId, ids, movedId),
         subsectionId,
-        () => !ctx.state.isStreaming
+        () => !ctx.state.isStreaming,
+        // An activity dragged in from ANOTHER container (its parent section,
+        // a sibling subsection, or another section) lands here as a move.
+        (movedId, index) => sendMoveActivity(ctx, movedId, subsectionId, index)
     );
 
     // Subsection drag-and-drop within the PARENT section: reorder_sections
@@ -178,6 +524,10 @@ export const ensureSubsectionRendered = (ctx, {subsectionId, sectionId, name, pa
         sectionId,
         name: label,
         activityDnd,
+        addActivityBtn,
+        // Called by the on-hover "+" divider between this subsection's
+        // activities to open the add panel at a given slot.
+        openAddActivityAt,
     };
     return state.detailedSubsectionMeta[subsectionId];
 };

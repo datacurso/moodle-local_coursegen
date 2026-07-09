@@ -564,6 +564,7 @@ $string['courseai_review_confirm'] = 'Create course';
 
 // Interpreted-feedback proposals (single-choice summaries).
 $string['proposal_add_section'] = 'Add a section {$a->position}';
+$string['proposal_add_subsection'] = 'Add a subsection to section «{$a->section}» {$a->position}';
 $string['proposal_delete_section'] = 'Delete section(s): {$a->names}';
 $string['proposal_reorder_sections'] = 'Reorder the sections to: {$a->names}';
 $string['proposal_replan_section'] = 'Regenerate the content of section {$a->names}';
@@ -702,6 +703,12 @@ $string['courseai_btn_add_section'] = 'Add section';
 $string['courseai_btn_add_activity'] = 'Add activity';
 $string['courseai_add_section_placeholder'] = 'Describe the section to add…';
 $string['courseai_add_activity_placeholder'] = 'Describe the activity to add…';
+$string['courseai_btn_add_subsection'] = 'Add subsection';
+$string['courseai_add_subsection_placeholder'] = 'Describe the subsection to add…';
+$string['courseai_btn_add'] = 'Add';
+$string['courseai_menu_activity_or_resource'] = 'Activity or resource';
+$string['log_move_activity_to'] = 'You moved «{$a->title}» to «{$a->section}».';
+$string['proposal_move_activity'] = 'Move {$a->names} to «{$a->section}» {$a->position}';
 $string['courseai_drag_handle_label'] = 'Drag to reorder';
 $string['courseai_resize_panels'] = 'Resize panels';
 
@@ -763,6 +770,7 @@ $string['log_proposals_dismissed'] = 'You dismissed the suggestions';
 $string['log_user_stopped'] = 'You stopped the generation';
 $string['log_user_resumed'] = 'You resumed the generation';
 $string['log_add_section'] = 'You added a section';
+$string['log_add_subsection'] = 'You added a subsection';
 $string['log_delete_section'] = 'You deleted a section';
 $string['log_delete_section_named'] = 'You deleted section: {$a->name}';
 $string['log_reorder_sections'] = 'You reordered the sections';

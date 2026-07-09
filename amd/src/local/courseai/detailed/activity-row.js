@@ -76,14 +76,13 @@ export const createDetailedActivityRow = (ctx, {sectionId, activityId, activityT
 
     // On-hover insertion divider (Moodle edit-view affordance): a "+" button centered
     // on the dashed line above this activity. Hovering the top strip reveals it; a click
-    // opens the section's add-activity panel targeting THIS row's slot, so the new
+    // opens the CONTAINER's add-activity panel targeting THIS row's slot, so the new
     // activity lands BETWEEN rows (not only at the end). The button is a child of the
     // .activity wrap, so it rides along on reorder and never confuses the reconciler
     // (which reorders .activity nodes) or the DnD wirer (which keys on .activity).
-    // Rows inside a subsection have no between-rows insert affordance (the
-    // parent section's add panel targets the SECTION slot space, not the
-    // subsection's) and never join the parent's drag-and-drop.
-    if (!subsectionId) {
+    // Rows inside a subsection route to THAT subsection's own add panel (its
+    // meta exposes the same openAddActivityAt sections do).
+    {
         const insertZone = document.createElement('div');
         insertZone.className = 'cg-insert-zone';
         insertZone.setAttribute('contenteditable', 'false');
@@ -100,14 +99,21 @@ export const createDetailedActivityRow = (ctx, {sectionId, activityId, activityT
         insertBtn.addEventListener('click', (event) => {
             event.preventDefault();
             event.stopPropagation();
-            const meta = state.detailedSectionMeta[sectionId];
+            const meta = subsectionId
+                ? (state.detailedSubsectionMeta || {})[subsectionId]
+                : state.detailedSectionMeta[sectionId];
             if (!meta || typeof meta.openAddActivityAt !== 'function') {
                 return;
             }
-            // Insert BEFORE this activity: its CURRENT index among the section's rows
-            // (computed at click time, so reorders never leave a stale slot).
+            // Insert BEFORE this activity: its CURRENT index among the container's
+            // DIRECT activity rows (computed at click time, so reorders never leave
+            // a stale slot; a parent section's list also nests subsection rows, so
+            // only immediate children count).
             const list = wrap.parentElement;
-            const rows = list ? Array.prototype.slice.call(list.querySelectorAll('.activity')) : [];
+            const rows = list ? Array.prototype.filter.call(
+                list.children,
+                (el) => el.classList.contains('activity') && !el.classList.contains('dp-add-activity-wrap')
+            ) : [];
             const index = rows.indexOf(wrap);
             // Pass this activity as the anchor so the input opens INLINE right here.
             meta.openAddActivityAt(index >= 0 ? index : null, wrap);
@@ -126,8 +132,11 @@ export const createDetailedActivityRow = (ctx, {sectionId, activityId, activityT
     // immediately — no append-at-the-end-then-reorder jump. Falls back to before the
     // add-activity sentinel (append) when there is no placeholder. The transient is
     // removed AFTER, so it is replaced in place, never duplicated.
-    const transient = bodyEl.querySelector('[data-cg-transient="activity"]');
-    const addWrap = bodyEl.querySelector('.dp-add-activity-wrap');
+    // DIRECT children only: a parent section's list nests subsections that carry
+    // their OWN transients and add-activity wrap; a depth-first match on those
+    // would insertBefore() against a non-child anchor and throw.
+    const transient = bodyEl.querySelector(':scope > [data-cg-transient="activity"]');
+    const addWrap = bodyEl.querySelector(':scope > .dp-add-activity-wrap');
     if (transient) {
         bodyEl.insertBefore(wrap, transient);
     } else if (addWrap) {
