@@ -144,6 +144,14 @@ const submitAddSubsection = async(ctx, sectionId, parentBodyEl, value, position)
     }
 };
 
+/** Row icons for the "+ Add" dropdown menu. */
+const ACTIVITY_ICON = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" '
+    + 'stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+    + '<path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
+const SUBSECTION_ICON = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" '
+    + 'stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
+    + '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 14h8"/></svg>';
+
 /**
  * Build one row of the "+ Add" dropdown menu.
  *
@@ -167,6 +175,64 @@ const buildAddMenuItem = (label, iconSvg, onPick) => {
         onPick();
     });
     return item;
+};
+
+/**
+ * Attach the two-option add menu (Activity or resource / Subsection) to a
+ * trigger "+" button: the menu drops below the trigger, closes on pick,
+ * outside click or Escape, and manages the trigger's aria state.
+ *
+ * @param {Object} options
+ * @param {Object} options.texts
+ * @param {HTMLButtonElement} options.btn  - The "+" trigger.
+ * @param {HTMLElement} options.host      - Positioned wrapper the menu appends to.
+ * @param {Function} options.onActivity
+ * @param {Function} options.onSubsection
+ */
+const attachAddChoiceMenu = ({texts, btn, host, onActivity, onSubsection}) => {
+    const menu = document.createElement('div');
+    menu.className = 'dp-add-menu';
+    menu.setAttribute('role', 'menu');
+    menu.hidden = true;
+    const closeMenu = () => {
+        menu.hidden = true;
+        btn.setAttribute('aria-expanded', 'false');
+    };
+    menu.appendChild(buildAddMenuItem(
+        texts.courseai_menu_activity_or_resource || 'Activity or resource',
+        ACTIVITY_ICON,
+        () => {
+            closeMenu();
+            onActivity();
+        }
+    ));
+    menu.appendChild(buildAddMenuItem(
+        texts.courseai_subsection_label || 'Subsection',
+        SUBSECTION_ICON,
+        () => {
+            closeMenu();
+            onSubsection();
+        }
+    ));
+    btn.setAttribute('aria-haspopup', 'menu');
+    btn.setAttribute('aria-expanded', 'false');
+    btn.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        menu.hidden = !menu.hidden;
+        btn.setAttribute('aria-expanded', menu.hidden ? 'false' : 'true');
+    });
+    document.addEventListener('click', (event) => {
+        if (!menu.hidden && !host.contains(event.target)) {
+            closeMenu();
+        }
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key === 'Escape') {
+            closeMenu();
+        }
+    });
+    host.appendChild(menu);
 };
 
 /**
@@ -201,60 +267,18 @@ const ensureAddSubsectionControl = (ctx, sectionId, parentBodyEl) => {
     // aria/title only; the closing dashed line paints on hover (CSS).
     const btn = buildInsertBtn(texts.courseai_btn_add || 'Add');
 
-    const menu = document.createElement('div');
-    menu.className = 'dp-add-menu';
-    menu.setAttribute('role', 'menu');
-    menu.hidden = true;
-    const closeMenu = () => {
-        menu.hidden = true;
-        btn.setAttribute('aria-expanded', 'false');
-    };
-    const activityIcon = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" '
-        + 'stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
-        + '<path d="M12 20h9M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4Z"/></svg>';
-    const subsectionIcon = '<svg viewBox="0 0 24 24" width="15" height="15" fill="none" '
-        + 'stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">'
-        + '<rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 9h18M8 14h8"/></svg>';
-    menu.appendChild(buildAddMenuItem(
-        texts.courseai_menu_activity_or_resource || 'Activity or resource',
-        activityIcon,
-        () => {
-            closeMenu();
+    wrap.appendChild(btn);
+    attachAddChoiceMenu({
+        texts,
+        btn,
+        host: wrap,
+        onActivity: () => {
             if (typeof parentMeta.openAddActivityAt === 'function') {
                 parentMeta.openAddActivityAt(null, null);
             }
-        }
-    ));
-    menu.appendChild(buildAddMenuItem(
-        texts.courseai_subsection_label || 'Subsection',
-        subsectionIcon,
-        () => {
-            closeMenu();
-            panelApi.open();
-        }
-    ));
-
-    btn.setAttribute('aria-haspopup', 'menu');
-    btn.setAttribute('aria-expanded', 'false');
-    btn.addEventListener('click', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        menu.hidden = !menu.hidden;
-        btn.setAttribute('aria-expanded', menu.hidden ? 'false' : 'true');
+        },
+        onSubsection: () => panelApi.open(),
     });
-    document.addEventListener('click', (event) => {
-        if (!menu.hidden && !wrap.contains(event.target)) {
-            closeMenu();
-        }
-    });
-    document.addEventListener('keydown', (event) => {
-        if (event.key === 'Escape') {
-            closeMenu();
-        }
-    });
-
-    wrap.appendChild(btn);
-    wrap.appendChild(menu);
     wrap.appendChild(panelApi.panel);
 
     // ONE control serves both adds: the "+" menu replaces the parent's
@@ -359,31 +383,45 @@ export const ensureSubsectionRendered = (ctx, {subsectionId, sectionId, name, pa
     insertZone.className = 'cg-insert-zone cg-insert-zone--subsection';
     insertZone.setAttribute('contenteditable', 'false');
     insertZone.setAttribute('draggable', 'false');
-    const insertBtn = buildInsertBtn(texts.courseai_btn_add_subsection || 'Add subsection');
-    insertBtn.addEventListener('click', (event) => {
-        event.preventDefault();
-        event.stopPropagation();
-        // Insert BEFORE this subsection: its CURRENT index among the parent's
-        // rendered subsections (computed at click time, reorder-safe).
-        const subs = Array.prototype.filter.call(
-            parentBodyEl.children,
-            (el) => el.classList.contains('cg-subsection') && !el.hasAttribute('data-cg-transient')
-        );
-        const index = subs.indexOf(row);
-        openInlineAddPanel({
-            anchor: row,
-            texts,
-            placeholder: texts.courseai_add_subsection_placeholder || 'Describe the subsection to add…',
-            onSubmit: (value) => submitAddSubsection(
-                ctx, sectionId, parentBodyEl, value, index >= 0 ? index : null
-            ),
-        });
+    const insertBtn = buildInsertBtn(texts.courseai_btn_add || 'Add');
+    insertZone.appendChild(insertBtn);
+    // Same two-option menu the section-closing "+" shows (Activity or
+    // resource / Subsection), so every "+" behaves like the real course's.
+    attachAddChoiceMenu({
+        texts,
+        btn: insertBtn,
+        host: insertZone,
+        onActivity: () => {
+            // The activity belongs to the PARENT section (its direct list);
+            // the panel opens inline right here at the clicked divider.
+            const parentMeta = state.detailedSectionMeta[sectionId];
+            if (parentMeta && typeof parentMeta.openAddActivityAt === 'function') {
+                parentMeta.openAddActivityAt(null, row);
+            }
+        },
+        onSubsection: () => {
+            // Insert BEFORE this subsection: its CURRENT index among the
+            // parent's rendered subsections (computed at click time,
+            // reorder-safe).
+            const subs = Array.prototype.filter.call(
+                parentBodyEl.children,
+                (el) => el.classList.contains('cg-subsection') && !el.hasAttribute('data-cg-transient')
+            );
+            const index = subs.indexOf(row);
+            openInlineAddPanel({
+                anchor: row,
+                texts,
+                placeholder: texts.courseai_add_subsection_placeholder || 'Describe the subsection to add…',
+                onSubmit: (value) => submitAddSubsection(
+                    ctx, sectionId, parentBodyEl, value, index >= 0 ? index : null
+                ),
+            });
+        },
     });
     insertZone.addEventListener('dragstart', (event) => {
         event.preventDefault();
         event.stopPropagation();
     });
-    insertZone.appendChild(insertBtn);
     row.appendChild(insertZone);
 
     row.appendChild(sectionItem);
