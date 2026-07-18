@@ -120,8 +120,8 @@ export const wirePlusMenu = ({
         }
 
         langList.innerHTML = matches.map((lang) => (
-            `<li class="pop-item pop-item--lang${lang.code === current ? ' selected' : ''}" data-lang="${lang.code}">
-                <button class="pop-select-btn" type="button" data-lang="${lang.code}">
+            `<li class="pop-item pop-item--lang${lang.code === current ? ' selected' : ''}" data-lang="${escapeHtml(lang.code)}">
+                <button class="pop-select-btn" type="button" data-lang="${escapeHtml(lang.code)}">
                     <span class="pop-lang-check">
                         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                              stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
