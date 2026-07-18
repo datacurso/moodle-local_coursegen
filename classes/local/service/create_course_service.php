@@ -469,7 +469,7 @@ class create_course_service {
         if ($subsection['description'] !== '') {
             $DB->update_record('course_sections', (object)[
                 'id' => $delegated->id,
-                'summary' => $subsection['description'],
+                'summary' => clean_param(trim((string)($subsection['description'] ?? '')), PARAM_CLEANHTML),
                 'summaryformat' => FORMAT_HTML,
             ]);
         }

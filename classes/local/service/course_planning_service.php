@@ -68,9 +68,11 @@ class course_planning_service {
             $instructions = $content !== '' ? $content : null;
         }
 
+        $available = self::subsections_available();
+
         // Server-side gate: the flag only travels when the feature is enabled
         // and mod_subsection is available, whatever the client sent.
-        $withsubsections = $withsubsections && self::subsections_available();
+        $withsubsections = $withsubsections && $available;
 
         $apiservice = new ai_course_api_service();
 
@@ -83,7 +85,7 @@ class course_planning_service {
             // Site capability (setting + mod_subsection), distinct from the
             // user's per-course choice: lets the service offer enabling
             // subsections when the prompt asks for them.
-            'subsections_available' => self::subsections_available(),
+            'subsections_available' => $available,
         ];
 
         if ($withimages) {
