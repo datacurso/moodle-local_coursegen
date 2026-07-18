@@ -41,6 +41,7 @@
 import {sendPlanningFeedback} from 'local_coursegen/repository/course';
 import {getDecisionOverlay} from 'local_coursegen/local/courseai/ui/decision-overlay';
 import {localizeMessage} from 'local_coursegen/local/courseai/i18n';
+import Notification from 'core/notification';
 
 const BLOCK_ID = 'cgSubsectionsDecision';
 const RADIO_NAME = 'cgSubsectionsChoice';
@@ -54,6 +55,14 @@ const MAX_OPTIONS = 2;
  * LOCALLY (the server stays paused at its stage-2 interrupt meanwhile).
  */
 let lastStructureData = null;
+
+/**
+ * Reset module-level state so a new session does not see stale structure data.
+ * Call this whenever the UI resets (e.g. backToContext).
+ */
+export const resetDecisionState = () => {
+    lastStructureData = null;
+};
 
 /**
  * Remove any previously rendered decision card.
@@ -288,7 +297,7 @@ const renderStep = async({data, ctx, cameBack}) => {
 
     // Confirmed choices leave the wizard: log ONE user turn, close the card
     // and resume the planning stream with the gate action.
-    const finish = (logMessage, pendingAction) => {
+    const finish = async(logMessage, pendingAction) => {
         if (typeof emitLog === 'function' && logMessage) {
             emitLog({actor: 'user', kind: 'user', message: logMessage});
         }
@@ -299,16 +308,15 @@ const renderStep = async({data, ctx, cameBack}) => {
             // Planning resumes: bring the loading placeholders back until the
             // first section event replaces them with real content.
             toggleCenterLoading(true);
-            sendPlanningFeedback({recordid: state.sessionid, pendingAction})
-                .then(() => {
-                    // Resume planning in NORMAL mode (no keepPlan: nothing is
-                    // rendered yet — the initial plan must stream fresh).
-                    openSSEStream(state.streamingurl, 0, 'planning');
-                    return null;
-                })
-                .catch(() => {
-                    // The next reload resumes from the snapshot; nothing to undo.
-                });
+            try {
+                await sendPlanningFeedback({recordid: state.sessionid, pendingAction});
+                // Resume planning in NORMAL mode (no keepPlan: nothing is
+                // rendered yet — the initial plan must stream fresh).
+                openSSEStream(state.streamingurl, 0, 'planning');
+            } catch (error) {
+                toggleCenterLoading(false);
+                await Notification.exception(error);
+            }
         }
     };
 

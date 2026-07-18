@@ -23,6 +23,7 @@
 
 import { setCompactChatState } from './ui-planning';
 import { resetPlanningState as doReset } from './steps/reset';
+import { resetDecisionState } from './ui/subsections-decision';
 
 /**
  * Create step UI helpers.
@@ -164,6 +165,7 @@ export const createStepsUi = (deps) => {
         if (typeof clearLog === 'function') {
             clearLog();
         }
+        resetDecisionState();
     };
 
     const transitionToPlanning = () => {
