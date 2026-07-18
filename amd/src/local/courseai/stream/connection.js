@@ -178,6 +178,30 @@ export const openConnection = (streamUrl, retryAttempt, ctx, openSSEStream) => {
         if (pcSubtitle) {
             pcSubtitle.textContent = texts.courseai_error_connection;
         }
+        // Surface the connection error as a permanent danger turn in the log.
+        if (typeof ctx.emitLog === 'function') {
+            ctx.emitLog({
+                actor: 'ai',
+                kind: 'danger',
+                message: (texts && texts.courseai_error_connection) || 'Connection error. Please try again.',
+            });
+        }
+        // Offer a retry button so the user can re-open the stream without reloading.
+        if (state.streamingurl && typeof ctx.openSSEStream === 'function') {
+            const feed = document.getElementById('cgLogAfter') || document.getElementById('cgLog');
+            if (feed && !feed.querySelector('.cg-retry-btn')) {
+                const btn = document.createElement('button');
+                btn.type = 'button';
+                btn.className = 'cg-retry-btn btn btn-warning btn-sm mt-2';
+                btn.textContent = (texts && texts.courseai_retry) || 'Retry';
+                btn.addEventListener('click', () => {
+                    btn.remove();
+                    state.isStreaming = true;
+                    ctx.openSSEStream(state.streamingurl, 0, ctx.streamMode, true);
+                });
+                feed.appendChild(btn);
+            }
+        }
         // Connection error — re-enable compact chat for retry.
         setCompactChatState(deps, 'enabled');
     };

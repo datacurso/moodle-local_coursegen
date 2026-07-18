@@ -35,7 +35,7 @@ import {
     getGenerateButtonHtml,
     formatTemplate,
 } from 'local_coursegen/local/courseai/utils';
-import {loadCourseaiStrings, localizeMessage} from 'local_coursegen/local/courseai/i18n';
+import {loadCourseaiStrings} from 'local_coursegen/local/courseai/i18n';
 import {getCourseaiElements} from 'local_coursegen/local/courseai/selectors';
 import {createInitialState} from 'local_coursegen/local/courseai/state';
 import {createContextUi} from 'local_coursegen/local/courseai/ui-context';
@@ -52,7 +52,6 @@ import {createSplitter} from 'local_coursegen/local/courseai/ui/splitter';
 import {makeResumeHelpers} from 'local_coursegen/courseai/bootstrap/resume-helpers';
 import {makeChecklistHelpers, initChecklistCollapse} from 'local_coursegen/courseai/bootstrap/checklist-helpers';
 import {makeResumeFromSnapshot} from 'local_coursegen/courseai/bootstrap/resume-snapshot';
-import {makeThreadReplay} from 'local_coursegen/courseai/bootstrap/thread-replay';
 import {makeCreateCourseCallback} from 'local_coursegen/courseai/bootstrap/create-course-callback';
 import {makeEmitLog, makeRenderPlanMarkdown} from 'local_coursegen/courseai/bootstrap/ui-helpers';
 import {makeHydratePlan} from 'local_coursegen/courseai/bootstrap/hydrate-plan';
@@ -205,22 +204,10 @@ export const init = async(params) => {
 
         const {
             buildSectionsFromDetailedPlan,
-            restoreAdjustmentHistory,
         } = makeChecklistHelpers({state, elements, texts});
 
         const hydrateDetailedPlanFromSnapshot = makeHydratePlan(detailedUi);
         const resumeSessionId = getResumeSessionId();
-
-        // Server-side thread replay (single source of truth for the left feed on
-        // reload). Falls back to the legacy rebuild inside resume-snapshot when
-        // the snapshot carries no thread (pre-migration sessions).
-        const {replayThread} = makeThreadReplay({
-            state,
-            emitLog,
-            localizeMessage,
-            renderProposals: proposalsUi.renderProposals,
-            texts,
-        });
 
         const resumeFromSnapshot = makeResumeFromSnapshot({
             state,
@@ -238,11 +225,9 @@ export const init = async(params) => {
             applyCourseTitleToHeader,
             setPlanningStreamVisible,
             hydrateDetailedPlanFromSnapshot,
-            restoreAdjustmentHistory,
             resumeSessionId,
             emitLog,
             texts,
-            replayThread,
         });
 
         // On reload the page is server-rendered in planning mode (is-planning +

@@ -3988,7 +3988,7 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
   transition: border-top-color .12s ease;
 }
 
-#prvSections .course-section .activity:has(> .cg-insert-zone:hover),
+#prvSections .course-section .activity:has(> .cg-insert-zone .cg-insert-btn:hover),
 #prvSections .course-section .activity:has(> .cg-insert-zone:focus-within) {
   border-top-color: var(--primary);
 }
@@ -4076,14 +4076,17 @@ body.cg-generating #prvSections .cg-insert-zone {
   position: absolute;
   left: 4px;
   right: 4px;
-  top: 18px;
-  border-top: 2px dashed #dee2e6;
+  top: 50%;
+  border-top: 2px dashed #c8ccd1;
   transition: border-top-color .12s ease;
   z-index: 0;
 }
 
-#prvSections .dp-add-activity-wrap:hover::before,
-#prvSections .dp-add-activity-wrap:focus-within::before {
+/* Line changes colour only when the BUTTON is hovered, not the whole zone. */
+#prvSections .dp-add-activity-wrap:has(.dp-add-control:hover)::before,
+#prvSections .dp-add-activity-wrap:focus-within::before,
+#prvSections .dp-add-subsection-wrap:has(.dp-add-control:hover)::before,
+#prvSections .dp-add-subsection-wrap:focus-within::before {
   border-top-color: var(--primary);
 }
 #prvSections .dp-add-activity-wrap .dp-add-control,
@@ -4133,9 +4136,14 @@ body.cg-generating #prvSections .cg-insert-zone {
 /* ── Subsections: nested Moodle section cards inside a section's cmlist.
    The row reuses the section-item markup, so Boost styles it natively; here
    only the nesting indent and spacing are adjusted. ── */
+/* All subsections: 32px gap between them, indented 28px from parent. */
 #prvSections .cg-subsection {
   list-style: none;
-  margin: 14px 8px 14px 28px;
+  margin: 32px 8px 32px 28px;
+}
+/* Last subsection before the "+" control: tighter bottom gap. */
+#prvSections .cg-subsection:has(+ .dp-add-subsection-wrap) {
+  margin-bottom: 8px;
 }
 
 /* The nested card never shows the between-sections "+" divider gap. */
@@ -4143,42 +4151,46 @@ body.cg-generating #prvSections .cg-insert-zone {
   display: none;
 }
 
-/* ── On-hover "add SUBSECTION" divider between subsections ──
-   Same affordance as the between-sections divider, scoped to the nested
-   subsection cards: the "+" sits in the gap above each subsection and inserts
-   a new subsection at that slot within the parent section. */
+/* ── Between-subsections insert divider ──
+   Moodle behaviour: line always visible (border grey), button hidden.
+   Zone hover → button appears (grey). Button hover → line + button accent. */
 #prvSections .cg-subsection .cg-insert-zone--subsection {
   position: absolute;
-  top: -18px;
+  top: -32px;
   left: 0;
   right: 0;
-  height: 18px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
   z-index: 4;
 }
-
+/* Line: always visible, same weight and colour as Moodle's section dividers. */
 #prvSections .cg-subsection .cg-insert-zone--subsection::before {
   content: '';
   position: absolute;
-  left: 4px;
-  right: 4px;
+  left: 0;
+  right: 0;
   top: 50%;
-  border-top: 2px dashed var(--primary);
-  opacity: 0;
-  transition: opacity .12s ease;
+  border-top: 2px dashed #c8ccd1;
+  transition: border-color .15s ease;
   z-index: 0;
 }
-
-#prvSections .cg-subsection .cg-insert-zone--subsection:hover::before,
-#prvSections .cg-subsection .cg-insert-zone--subsection:focus-within::before {
-  opacity: 1;
+/* Button hover → line takes accent. */
+#prvSections .cg-subsection .cg-insert-zone--subsection:has(.cg-insert-btn:hover)::before {
+  border-top: 2px dashed var(--primary);
 }
-
+/* Button: HIDDEN by default. Zone hover → appears in standard colour.
+   Button hover → accent colour (same as line). */
 #prvSections .cg-subsection .cg-insert-zone--subsection .cg-insert-btn {
   position: relative;
   z-index: 1;
+  opacity: 0;
+  transition: opacity .12s ease, background-color .15s ease, border-color .15s ease, color .15s ease;
+}
+/* Zone hover → button appears in its normal look (primary outline). */
+#prvSections .cg-subsection .cg-insert-zone--subsection:hover .cg-insert-btn {
+  opacity: 1;
 }
 
 /* ── Bottom "Add subsection" control ── Shares the closing add-activity button
@@ -4187,6 +4199,7 @@ body.cg-generating #prvSections .cg-insert-zone {
 #prvSections .dp-add-subsection-wrap {
   margin-left: 28px;
   margin-right: 8px;
+  margin-top: 4px;
   list-style: none;
 }
 
@@ -4208,14 +4221,11 @@ body.cg-generating #prvSections .dp-add-subsection-wrap {
 }
 
 #prvSections .dp-add-subsection-wrap::before {
-  top: 12px;
+  top: 50%;
   transition: border-top-color .12s ease;
 }
 
-#prvSections .dp-add-subsection-wrap:hover::before,
-#prvSections .dp-add-subsection-wrap:focus-within::before {
-  border-top-color: var(--primary);
-}
+/* Handled by the :has(.dp-add-control:hover) rule above. */
 
 #prvSections .dp-add-subsection-wrap .cg-insert-btn {
   opacity: 1;

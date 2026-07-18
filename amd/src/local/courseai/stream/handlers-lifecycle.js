@@ -408,13 +408,17 @@ export const handleFailed = async(data, ctx) => {
         ctx.onStreamEnd();
     }
     // Localize once and reuse for both the chat turn and the subtitle.
-    const failedText = data.message
+    let failedText = data.message
         ? await localizeMessage(data.message)
         : (texts && texts.courseai_error_generic) || 'Generation failed';
+    if (data.detail) {
+        failedText += '\n' + String(data.detail);
+    }
     // Meaningful (fatal) milestone: surface failure as a permanent error turn.
     if (typeof emitLog === 'function') {
         emitLog({actor: 'ai', kind: 'danger', message: failedText});
     }
+    state.currentStage = 'failed';
     // Retryable failure (the model gave up after exhausting its automatic
     // retries): offer a manual "Retry" button that re-opens the stream so the
     // graph re-runs the failed step — a fresh run restarts the retry counter.
@@ -423,8 +427,8 @@ export const handleFailed = async(data, ctx) => {
         if (feed && !feed.querySelector('.cg-retry-btn')) {
             const btn = document.createElement('button');
             btn.type = 'button';
-            btn.className = 'cg-retry-btn';
-            btn.textContent = (texts && texts.courseai_btn_retry) || 'Retry';
+            btn.className = 'cg-retry-btn btn btn-warning btn-sm mt-2';
+            btn.textContent = texts.courseai_retry || 'Retry';
             btn.addEventListener('click', () => {
                 btn.remove();
                 state.isStreaming = true;

@@ -22,6 +22,7 @@
  */
 
 import {renderSubsectionsDecision} from 'local_coursegen/local/courseai/ui/subsections-decision';
+import {rebuildTranscriptFromPlan} from 'local_coursegen/local/courseai/ui/plan-transcript';
 
 /**
  * Build the resumeFromSnapshot async function.
@@ -42,11 +43,9 @@ import {renderSubsectionsDecision} from 'local_coursegen/local/courseai/ui/subse
  * @param {Function} params.applyCourseTitleToHeader
  * @param {Function} params.setPlanningStreamVisible
  * @param {Function} params.hydrateDetailedPlanFromSnapshot
- * @param {Function} params.restoreAdjustmentHistory
  * @param {number} params.resumeSessionId
  * @param {Function} params.emitLog
  * @param {Object} params.texts - localized strings (for reconstructed AI milestones)
- * @param {Function} params.replayThread - replay the server-side thread array (preferred path)
  * @returns {Function} async resumeFromSnapshot function
  */
 export const makeResumeFromSnapshot = ({
@@ -65,11 +64,9 @@ export const makeResumeFromSnapshot = ({
     applyCourseTitleToHeader,
     setPlanningStreamVisible,
     hydrateDetailedPlanFromSnapshot,
-    restoreAdjustmentHistory,
     resumeSessionId,
     emitLog,
     texts,
-    replayThread,
 }) => {
     /**
      * Rebuild the conversation thread from the snapshot so reload doesn't lose
@@ -85,7 +82,7 @@ export const makeResumeFromSnapshot = ({
      * @param {string} status - the normalized snapshot status (drives the AI milestone)
      * @returns {void}
      */
-    const rebuildDecisionLog = (sections, snapshot, initialPrompt, status) => {
+    const rebuildChatFromState = (sections, snapshot, initialPrompt, status) => {
         if (typeof emitLog !== 'function') {
             return;
         }
@@ -93,13 +90,10 @@ export const makeResumeFromSnapshot = ({
         if (firstPrompt) {
             emitLog({actor: 'user', kind: 'user', message: firstPrompt});
         }
-        // Un-hide the grouped checklist card when sections exist so it serves as
-        // the single "AI planned the structure" turn without emitting N flat rows.
+        // Rebuild the plan card from the sections: rebuildTranscriptFromPlan
+        // fills the checklist items AND un-hides the card — one call, no empty card.
         if ((sections || []).length > 0) {
-            const checklistEl = document.getElementById('courseaiChecklist');
-            if (checklistEl) {
-                checklistEl.classList.remove('hidden');
-            }
+            rebuildTranscriptFromPlan(sections);
         }
         // Emit remaining DISTINCT human messages (skip messages that duplicate the
         // initial prompt or consecutive duplicates).
@@ -139,42 +133,7 @@ export const makeResumeFromSnapshot = ({
             });
         }
     };
-    /**
-     * Read the server-side thread array from the snapshot.
-     *
-     * @param {Object} snapshot - the resume snapshot.
-     * @returns {Array} the thread array (empty when absent).
-     */
-    const getThread = (snapshot) => (Array.isArray(snapshot?.thread) ? snapshot.thread : []);
 
-    /**
-     * Rebuild the left decision-log feed for a resumed session.
-     *
-     * Prefers the SERVICE thread (single source of truth): when `snapshot.thread`
-     * is a non-empty array it is replayed verbatim in seq order — the FULL
-     * transcript (every user action + each AI output block with its full
-     * plain-text content). Old thread-less sessions FALL BACK to the legacy
-     * heuristic `rebuildDecisionLog`. The center plan hydration is unaffected.
-     *
-     * @param {Array} sections - raw plan sections (with names).
-     * @param {Object} snapshot - the resume snapshot.
-     * @param {string} initialPrompt - the first user prompt.
-     * @param {string} status - the normalized snapshot status.
-     * @returns {Promise<void>}
-     */
-    const rebuildThread = async(sections, snapshot, initialPrompt, status) => {
-        const thread = getThread(snapshot);
-        if (thread.length > 0 && typeof replayThread === 'function') {
-            // The full plain-text AI-output blocks in the thread REPLACE the
-            // names-only checklist card for history, so it stays hidden here —
-            // the center preview still renders the live plan separately.
-            const atReview = status === 'WAITING_APPROVAL' || status === 'PLANNING_ADJUST';
-            await replayThread(thread, {atReview});
-            return;
-        }
-        // Back-compat: pre-migration sessions carry no thread → legacy rebuild.
-        rebuildDecisionLog(sections, snapshot, initialPrompt, status);
-    };
     /**
      * Attempt to resume the page from a persisted session snapshot.
      *
@@ -251,13 +210,6 @@ export const makeResumeFromSnapshot = ({
             : [];
         const sectionsForUi = buildSectionsFromDetailedPlan(detailedSections);
 
-        // The server thread is the single source of truth for the left feed; the
-        // legacy round/human-message history rebuild only runs for thread-less
-        // (pre-migration) sessions to avoid duplicating the transcript.
-        if (getThread(snapshot).length === 0) {
-            restoreAdjustmentHistory(snapshot?.messages || [], snapshot?.planning_rounds || [], sectionsForUi);
-        }
-
         if (sectionsForUi.length > 0) {
             state.latestInitialSections = sectionsForUi;
             state.totalSections = sectionsForUi.length;
@@ -278,7 +230,7 @@ export const makeResumeFromSnapshot = ({
             applyCourseTitleToHeader();
             if (sectionsForUi.length > 0) {
                 await hydrateDetailedPlanFromSnapshot(detailedSections);
-                await rebuildThread(detailedSections, snapshot, initialPrompt, status);
+                rebuildChatFromState(detailedSections, snapshot, initialPrompt, status);
             }
             if (typeof detailedUi.enableAllActionControls === 'function') {
                 detailedUi.enableAllActionControls();
@@ -297,7 +249,7 @@ export const makeResumeFromSnapshot = ({
             setPlanningStreamVisible();
             applyCourseTitleToHeader();
             await hydrateDetailedPlanFromSnapshot(detailedSections);
-            await rebuildThread(detailedSections, snapshot, initialPrompt, status);
+            rebuildChatFromState(detailedSections, snapshot, initialPrompt, status);
             // The plan is at review: future log entries (e.g. the user's next
             // feedback) must flow at the END of the feed. Set this AFTER the
             // historical rebuild so the rebuilt planning entries stay on top.
@@ -325,7 +277,7 @@ export const makeResumeFromSnapshot = ({
             // plan instead of clearing it (resetPlanningState early-returns).
             if (sectionsForUi.length > 0) {
                 await hydrateDetailedPlanFromSnapshot(detailedSections);
-                await rebuildThread(detailedSections, snapshot, initialPrompt, status);
+                rebuildChatFromState(detailedSections, snapshot, initialPrompt, status);
             }
             stepsUi.setStepState('planning', 'done');
             stepsUi.setStepState('generating', 'active');
@@ -342,7 +294,7 @@ export const makeResumeFromSnapshot = ({
             stepsUi.transitionToPlanning();
             setPlanningStreamVisible();
             applyCourseTitleToHeader();
-            await rebuildThread(detailedSections, snapshot, initialPrompt, status);
+            rebuildChatFromState(detailedSections, snapshot, initialPrompt, status);
             await renderSubsectionsDecision({
                 data: snapshot.subsections_decision,
                 ctx: {
@@ -366,7 +318,7 @@ export const makeResumeFromSnapshot = ({
             // section names), which is the reload-broken case from the field.
             if (sectionsForUi.length > 0) {
                 await hydrateDetailedPlanFromSnapshot(detailedSections);
-                await rebuildThread(detailedSections, snapshot, initialPrompt, status);
+                rebuildChatFromState(detailedSections, snapshot, initialPrompt, status);
             }
             streamManager.openSSEStream(state.streamingurl, 0, 'planning', true);
             return true;
@@ -383,7 +335,7 @@ export const makeResumeFromSnapshot = ({
             applyCourseTitleToHeader();
             if (sectionsForUi.length > 0) {
                 await hydrateDetailedPlanFromSnapshot(detailedSections);
-                await rebuildThread(detailedSections, snapshot, initialPrompt, status);
+                rebuildChatFromState(detailedSections, snapshot, initialPrompt, status);
             }
             if (typeof detailedUi.enableAllActionControls === 'function') {
                 detailedUi.enableAllActionControls();

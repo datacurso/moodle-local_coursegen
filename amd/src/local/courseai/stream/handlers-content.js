@@ -193,8 +193,10 @@ export const handleSection = (data, ctx) => {
         return;
     }
 
+    // The first plan always fills the static checklist; adjustment rounds
+    // (after the user reviewed at least once) create a dynamic one.
     const round = state.generationRound || 0;
-    const targetList = (round <= 1)
+    const targetList = (!state.planEverReviewed)
         ? elements.checklistList
         : getOrCreateRoundChecklist(elements, round, texts);
 
@@ -221,9 +223,6 @@ export const handleSection = (data, ctx) => {
         const listParent = targetList.closest('.courseai-checklist');
         if (listParent) {
             listParent.classList.remove('hidden');
-        }
-        if (elements.checklist) {
-            elements.checklist.classList.remove('hidden');
         }
     }
 
@@ -281,12 +280,10 @@ export const handleSubsection = (data, ctx) => {
 };
 
 /**
- * Handle 'plan_notice' event: an informative note from the planner (e.g. the
- * user asked for subsections but the feature is disabled, so the plan was
- * organized flat). The text arrives already localized (the LLM writes it in
- * the user's language) and is logged as a permanent AI turn; the service
- * persists the same text as an ai_notice thread row, so reload re-renders it
- * identically via thread-replay.
+ * Handle 'subsections_notice' event: an informative note when the user
+ * requested subsections but the feature is disabled — the plan was organized
+ * flat. The text arrives already localized (the LLM writes it in the user's
+ * language) and is logged as a permanent AI turn.
  *
  * @param {Object} data
  * @param {Object} ctx

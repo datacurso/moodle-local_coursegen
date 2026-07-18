@@ -83,7 +83,7 @@ const HANDLERS = {
     activity: handleActivity,
     section: handleSection,
     subsection: handleSubsection,
-    plan_notice: handlePlanNotice,
+    subsections_notice: handlePlanNotice,
     course_configuration: handleCourseConfiguration,
     detailed_plan_field: handleDetailedPlanField,
     detailed_plan_activity: handleDetailedPlanActivity,
