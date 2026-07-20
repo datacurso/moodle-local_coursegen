@@ -1,0 +1,135 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/template_wizard
+
+    Template wizard with category tree course selector.
+
+    Context variables required for this template:
+    * cattree - JSON-encoded category tree
+
+    Example context (json):
+    { "sesskey": "abc", "templateid": 0, "cattree": "[]" }
+}}
+<div id="local-coursegen-template-wizard" data-region="template-wizard"
+     data-cattree="{{cattree}}">
+
+    {{! Stepper — rendered server-side, JS only toggles classes }}
+    <div data-region="stepper" class="mb-3">
+        <span data-step-label="1" class="font-weight-bold">1. {{#str}}template_step_course, local_coursegen{{/str}}</span>
+        &#x25BA;
+        <span data-step-label="2" class="text-muted">2. {{#str}}template_step_preview, local_coursegen{{/str}}</span>
+        &#x25BA;
+        <span data-step-label="3" class="text-muted">3. {{#str}}template_step_sections, local_coursegen{{/str}}</span>
+        &#x25BA;
+        <span data-step-label="4" class="text-muted">4. {{#str}}template_step_limits, local_coursegen{{/str}}</span>
+        &#x25BA;
+        <span data-step-label="5" class="text-muted">5. {{#str}}template_step_save, local_coursegen{{/str}}</span>
+    </div>
+
+    {{! Step 1: Course selection with category tree }}
+    <div data-region="step-panel" data-step="1">
+        <h4>{{#str}}template_select_course, local_coursegen{{/str}}</h4>
+        <p class="text-muted">{{#str}}template_select_course_desc, local_coursegen{{/str}}</p>
+
+        {{! Global search }}
+        <div class="input-group mb-3" style="max-width:350px">
+            <input type="text" class="form-control" data-action="global-search"
+                   placeholder="{{#str}}template_search_placeholder_full, local_coursegen{{/str}}">
+            <div class="input-group-append">
+                <button class="btn btn-primary" data-action="search-btn" type="button">
+                    {{#pix}}i/search, core{{/pix}}
+                </button>
+            </div>
+        </div>
+
+        {{! Selected course banner }}
+        <div class="alert alert-success d-none mb-3" data-region="selected-banner">
+            <div class="d-flex align-items-center">
+                {{#pix}}i/valid, core{{/pix}}
+                <span class="ml-2">
+                    {{#str}}template_selected_course, local_coursegen{{/str}}
+                    <strong data-region="selected-name"></strong>
+                    (<span data-region="selected-short"></span>)
+                </span>
+                <a href="#" target="_blank" class="btn btn-sm btn-link" data-region="selected-link">
+                    {{#pix}}i/externallink, core{{/pix}}
+                    {{#str}}template_view_course, local_coursegen{{/str}}
+                </a>
+                <button class="btn btn-sm btn-link ml-auto" data-action="deselect">
+                    {{#str}}template_change_course, local_coursegen{{/str}}
+                </button>
+            </div>
+        </div>
+
+        {{! Two-panel layout }}
+        <div class="row">
+            <div class="col-md-5 col-lg-4">
+                <div class="card">
+                    <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                        <strong>{{#str}}categories{{/str}}</strong>
+                        <button class="btn btn-sm btn-link p-0" data-action="toggle-all"
+                                title="Expand / Collapse all">
+                            {{#pix}}i/switch, core{{/pix}}
+                        </button>
+                    </div>
+                    <div class="card-body p-0" style="max-height:450px;overflow-y:auto"
+                         data-region="category-tree"></div>
+                </div>
+            </div>
+            <div class="col-md-7 col-lg-8">
+                <div class="card">
+                    <div class="card-header py-2 d-flex justify-content-between align-items-center">
+                        <strong data-region="course-panel-title">{{#str}}courses{{/str}}</strong>
+                        <span class="text-muted small" data-region="course-count"></span>
+                    </div>
+                    <div class="card-body p-0" data-region="course-list"
+                         style="min-height:450px;max-height:450px;overflow-y:auto">
+                        <div class="text-center text-muted py-4">
+                            {{#str}}template_select_category_hint, local_coursegen{{/str}}
+                        </div>
+                    </div>
+                    <div class="card-footer py-2 d-none" data-region="course-pagination"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    {{! Steps 2-5: rendered by JS }}
+    <div data-region="step-panel" data-step="2" class="d-none"></div>
+    <div data-region="step-panel" data-step="3" class="d-none"></div>
+    <div data-region="step-panel" data-step="4" class="d-none"></div>
+    <div data-region="step-panel" data-step="5" class="d-none"></div>
+
+    {{! Footer navigation }}
+    <div class="d-flex align-items-center justify-content-between mt-4">
+        <button class="btn btn-secondary d-none" data-action="prev">
+            {{#pix}}i/previous, core{{/pix}}
+            {{#str}}template_back, local_coursegen{{/str}}
+        </button>
+        <div class="d-flex align-items-center ml-auto">
+            <button class="btn btn-primary" data-action="next">
+                {{#str}}template_next, local_coursegen{{/str}}
+                {{#pix}}i/next, core{{/pix}}
+            </button>
+            <button class="btn btn-primary d-none" data-action="save">
+                {{#pix}}e/save, core{{/pix}}
+                {{#str}}template_save, local_coursegen{{/str}}
+            </button>
+        </div>
+    </div>
+</div>
