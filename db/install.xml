@@ -81,5 +81,62 @@
                 <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id" />
             </KEYS>
         </TABLE>
+
+        <TABLE NAME="local_coursegen_template" COMMENT="Course templates for AI generation">
+            <FIELDS>
+                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
+                <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="description" TYPE="text" NOTNULL="false" SEQUENCE="false" />
+                <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="maxsections" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" />
+                <FIELD NAME="nolimit" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="0" SEQUENCE="false" />
+                <FIELD NAME="allowedtypes" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="JSON array of allowed activity type names" />
+                <FIELD NAME="namingpattern" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" />
+                <FIELD NAME="namingstart" TYPE="int" LENGTH="2" NOTNULL="true" DEFAULT="1" SEQUENCE="false" />
+                <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="usermodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+            </FIELDS>
+            <KEYS>
+                <KEY NAME="primary" TYPE="primary" FIELDS="id" />
+                <KEY NAME="courseid" TYPE="foreign" FIELDS="courseid" REFTABLE="course" REFFIELDS="id" />
+                <KEY NAME="usermodified" TYPE="foreign" FIELDS="usermodified" REFTABLE="user" REFFIELDS="id" />
+            </KEYS>
+        </TABLE>
+
+        <TABLE NAME="local_coursegen_tpl_section" COMMENT="Template section configuration">
+            <FIELDS>
+                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
+                <FIELD NAME="templateid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="sectionid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="sectionnum" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="behavior" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="custom" SEQUENCE="false" COMMENT="custom, keep, or exclude" />
+                <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+            </FIELDS>
+            <KEYS>
+                <KEY NAME="primary" TYPE="primary" FIELDS="id" />
+                <KEY NAME="templateid" TYPE="foreign" FIELDS="templateid" REFTABLE="local_coursegen_template" REFFIELDS="id" />
+            </KEYS>
+        </TABLE>
+
+        <TABLE NAME="local_coursegen_tpl_activity" COMMENT="Template activity configuration">
+            <FIELDS>
+                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
+                <FIELD NAME="templateid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="sectionid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="cmid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="action" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="modify" SEQUENCE="false" COMMENT="modify, keep, reference, or exclude" />
+                <FIELD NAME="useasreference" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1" SEQUENCE="false" />
+                <FIELD NAME="prompt" TYPE="text" NOTNULL="false" SEQUENCE="false" />
+                <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+            </FIELDS>
+            <KEYS>
+                <KEY NAME="primary" TYPE="primary" FIELDS="id" />
+                <KEY NAME="templateid" TYPE="foreign" FIELDS="templateid" REFTABLE="local_coursegen_template" REFFIELDS="id" />
+                <KEY NAME="cmid" TYPE="foreign" FIELDS="cmid" REFTABLE="course_modules" REFFIELDS="id" />
+            </KEYS>
+        </TABLE>
     </TABLES>
 </XMLDB>
