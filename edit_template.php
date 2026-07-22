@@ -31,6 +31,41 @@ $courseid = optional_param('courseid', 0, PARAM_INT);
 $search = optional_param('search', '', PARAM_TEXT);
 $categoryid = optional_param('categoryid', 0, PARAM_INT);
 
+// Pre-render course preview BEFORE admin setup (set_course cannot be called after theme init).
+$coursename = '';
+$courseshortname = '';
+$previewhtml = '';
+$numsections = 0;
+$numactivities = 0;
+if ($courseid > 0) {
+    require_login();
+    $course = get_course($courseid);
+    $coursename = format_string($course->fullname);
+    $courseshortname = $course->shortname;
+
+    if ($step >= 2) {
+        // Use a temporary page object to render the course format without polluting $PAGE.
+        $temppage = new moodle_page();
+        $temppage->set_context(context_course::instance($course->id));
+        $temppage->set_course($course);
+
+        $format = course_get_format($course);
+        $renderer = $format->get_renderer($temppage);
+        $outputclass = $format->get_output_classname('content');
+        $widget = new $outputclass($format);
+        $previewhtml = $renderer->render($widget);
+
+        $modinfo = get_fast_modinfo($course);
+        $sections = $modinfo->get_section_info_all();
+        $numsections = count($sections) - 1;
+        foreach ($sections as $sec) {
+            if (!empty($modinfo->sections[$sec->section])) {
+                $numactivities += count($modinfo->sections[$sec->section]);
+            }
+        }
+    }
+}
+
 admin_externalpage_setup('local_coursegen_manage_templates');
 
 $context = context_system::instance();
@@ -45,28 +80,42 @@ $PAGE->set_title($pagetitle);
 $PAGE->set_heading($pagetitle);
 $PAGE->navbar->add($pagetitle);
 
-// Resolve selected course name if courseid is in URL.
-$coursename = '';
-if ($courseid > 0) {
-    $course = $DB->get_record('course', ['id' => $courseid], 'id, fullname', IGNORE_MISSING);
-    if ($course) {
-        $coursename = format_string($course->fullname);
-    }
-}
-
 // Build category tree for JS.
 $cattree = local_coursegen_build_category_tree();
 
-$templatecontext = [
+// Render template name form (native moodleform for step 5).
+$nameform = new \local_coursegen\form\template_name_form(null, null, 'post', '', ['id' => 'tpl-name-form']);
+ob_start();
+$nameform->display();
+$nameformhtml = ob_get_clean();
+
+// Build step visibility flags for server-side rendering.
+$stepflags = [];
+for ($i = 1; $i <= 5; $i++) {
+    $stepflags["step{$i}active"] = ($step === $i);
+    $stepflags["step{$i}done"] = ($step > $i);
+    $stepflags["step{$i}visible"] = ($step === $i);
+}
+$stepflags['showprev'] = ($step > 1);
+$stepflags['showsave'] = ($step === 5);
+$stepflags['shownext'] = ($step < 5);
+
+$templatecontext = array_merge($stepflags, [
     'templateid' => $id,
     'sesskey' => sesskey(),
     'cattree' => json_encode($cattree),
+    'nameformhtml' => $nameformhtml,
     'initialstep' => $step,
     'initialcourseid' => $courseid,
     'initialcoursename' => $coursename,
+    'initialcourseshortname' => $courseshortname,
     'initialsearch' => $search,
     'initialcategoryid' => $categoryid,
-];
+    'previewhtml' => $previewhtml,
+    'haspreview' => !empty($previewhtml),
+    'numsections' => $numsections,
+    'numactivities' => $numactivities,
+]);
 
 echo $OUTPUT->header();
 echo $OUTPUT->render_from_template('local_coursegen/template_wizard', $templatecontext);

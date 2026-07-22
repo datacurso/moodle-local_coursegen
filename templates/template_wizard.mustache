@@ -17,36 +17,39 @@
 {{!
     @template local_coursegen/template_wizard
 
-    Template wizard with category tree course selector.
-
-    Context variables required for this template:
-    * cattree - JSON-encoded category tree
+    Template wizard — all initial state rendered server-side, no JS flash.
 
     Example context (json):
-    { "sesskey": "abc", "templateid": 0, "cattree": "[]" }
+    {
+        "sesskey": "abc",
+        "step1active": true, "step2active": false, "step3active": false,
+        "step4active": false, "step5active": false,
+        "step1done": false, "step2done": false,
+        "step1visible": true,
+        "showprev": false, "shownext": true, "showsave": false
+    }
 }}
 <div id="local-coursegen-template-wizard" data-region="template-wizard"
      data-cattree="{{cattree}}">
 
-    {{! Stepper — rendered server-side, JS only toggles classes }}
+    {{! Stepper — correct step bolded server-side }}
     <div data-region="stepper" class="mb-3">
-        <span data-step-label="1" class="font-weight-bold">1. {{#str}}template_step_course, local_coursegen{{/str}}</span>
+        <span data-step-label="1" class="{{#step1active}}font-weight-bold{{/step1active}}{{^step1active}}{{#step1done}}{{/step1done}}{{^step1done}}text-muted{{/step1done}}{{/step1active}}">1. {{#str}}template_step_course, local_coursegen{{/str}}</span>
         &#x25BA;
-        <span data-step-label="2" class="text-muted">2. {{#str}}template_step_preview, local_coursegen{{/str}}</span>
+        <span data-step-label="2" class="{{#step2active}}font-weight-bold{{/step2active}}{{^step2active}}{{#step2done}}{{/step2done}}{{^step2done}}text-muted{{/step2done}}{{/step2active}}">2. {{#str}}template_step_preview, local_coursegen{{/str}}</span>
         &#x25BA;
-        <span data-step-label="3" class="text-muted">3. {{#str}}template_step_sections, local_coursegen{{/str}}</span>
+        <span data-step-label="3" class="{{#step3active}}font-weight-bold{{/step3active}}{{^step3active}}{{#step3done}}{{/step3done}}{{^step3done}}text-muted{{/step3done}}{{/step3active}}">3. {{#str}}template_step_sections, local_coursegen{{/str}}</span>
         &#x25BA;
-        <span data-step-label="4" class="text-muted">4. {{#str}}template_step_limits, local_coursegen{{/str}}</span>
+        <span data-step-label="4" class="{{#step4active}}font-weight-bold{{/step4active}}{{^step4active}}{{#step4done}}{{/step4done}}{{^step4done}}text-muted{{/step4done}}{{/step4active}}">4. {{#str}}template_step_limits, local_coursegen{{/str}}</span>
         &#x25BA;
-        <span data-step-label="5" class="text-muted">5. {{#str}}template_step_save, local_coursegen{{/str}}</span>
+        <span data-step-label="5" class="{{#step5active}}font-weight-bold{{/step5active}}{{^step5active}}text-muted{{/step5active}}">5. {{#str}}template_step_save, local_coursegen{{/str}}</span>
     </div>
 
-    {{! Step 1: Course selection with category tree }}
-    <div data-region="step-panel" data-step="1">
+    {{! Step 1: Course selection }}
+    <div data-region="step-panel" data-step="1" class="{{^step1visible}}d-none{{/step1visible}}">
         <h4>{{#str}}template_select_course, local_coursegen{{/str}}</h4>
         <p class="text-muted">{{#str}}template_select_course_desc, local_coursegen{{/str}}</p>
 
-        {{! Global search }}
         <div class="input-group mb-3" style="max-width:350px">
             <input type="text" class="form-control" data-action="global-search"
                    placeholder="{{#str}}template_search_placeholder_full, local_coursegen{{/str}}">
@@ -57,7 +60,6 @@
             </div>
         </div>
 
-        {{! Selected course banner }}
         <div class="alert alert-success d-none mb-3" data-region="selected-banner">
             <div class="d-flex align-items-center">
                 {{#pix}}i/valid, core{{/pix}}
@@ -76,7 +78,6 @@
             </div>
         </div>
 
-        {{! Two-panel layout }}
         <div class="row">
             <div class="col-md-5 col-lg-4">
                 <div class="card">
@@ -109,24 +110,40 @@
         </div>
     </div>
 
-    {{! Steps 2-5: rendered by JS }}
-    <div data-region="step-panel" data-step="2" class="d-none"></div>
-    <div data-region="step-panel" data-step="3" class="d-none"></div>
-    <div data-region="step-panel" data-step="4" class="d-none"></div>
-    <div data-region="step-panel" data-step="5" class="d-none"></div>
+    {{! Step 2: Preview }}
+    <div data-region="step-panel" data-step="2" class="{{^step2visible}}d-none{{/step2visible}}">
+        {{#haspreview}}
+            <h4>{{#str}}template_course_preview, local_coursegen{{/str}}</h4>
+            <p class="text-muted">
+                {{initialcoursename}} ({{initialcourseshortname}})
+                &mdash; {{numsections}} {{#str}}sections{{/str}}, {{numactivities}} {{#str}}activities{{/str}}
+            </p>
+        {{/haspreview}}
+        <div data-region="course-preview">{{{previewhtml}}}</div>
+    </div>
+    <div data-region="step-panel" data-step="3" class="{{^step3visible}}d-none{{/step3visible}}"></div>
+    <div data-region="step-panel" data-step="4" class="{{^step4visible}}d-none{{/step4visible}}"></div>
 
-    {{! Footer navigation }}
-    <div class="d-flex align-items-center justify-content-between mt-4">
-        <button class="btn btn-secondary d-none" data-action="prev">
+    {{! Step 5: Save }}
+    <div data-region="step-panel" data-step="5" class="{{^step5visible}}d-none{{/step5visible}}">
+        <h4>{{#str}}template_summary_title, local_coursegen{{/str}}</h4>
+        <p class="text-muted">{{#str}}template_summary_subtitle, local_coursegen{{/str}}</p>
+        {{{nameformhtml}}}
+        <div data-region="save-summary" class="mt-3"></div>
+    </div>
+
+    {{! Footer navigation — visible immediately with correct button state }}
+    <div class="d-flex align-items-center justify-content-between mt-4" data-region="wizard-footer">
+        <button class="btn btn-secondary {{^showprev}}d-none{{/showprev}}" data-action="prev">
             {{#pix}}i/previous, core{{/pix}}
             {{#str}}template_back, local_coursegen{{/str}}
         </button>
         <div class="d-flex align-items-center ml-auto">
-            <button class="btn btn-primary" data-action="next">
+            <button class="btn btn-primary {{^shownext}}d-none{{/shownext}}" data-action="next">
                 {{#str}}template_next, local_coursegen{{/str}}
                 {{#pix}}i/next, core{{/pix}}
             </button>
-            <button class="btn btn-primary d-none" data-action="save">
+            <button class="btn btn-primary {{^showsave}}d-none{{/showsave}}" data-action="save">
                 {{#pix}}e/save, core{{/pix}}
                 {{#str}}template_save, local_coursegen{{/str}}
             </button>

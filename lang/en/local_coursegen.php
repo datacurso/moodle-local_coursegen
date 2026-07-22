@@ -809,6 +809,7 @@ $string['template_search_placeholder_full'] = 'Search courses';
 $string['template_course_preview'] = 'Course preview';
 $string['template_course_base'] = 'Base course: {$a->fullname} ({$a->shortname}) — {$a->sections} sections, {$a->activities} activities';
 $string['template_name'] = 'Template name';
+$string['template_name_help'] = 'Enter a descriptive name for this template. Users will see this name when selecting a template to generate a new course.';
 $string['template_name_placeholder'] = 'E.g.: Basic Sales Course';
 $string['template_name_required'] = 'Please enter a template name';
 $string['template_description'] = 'Description (optional)';

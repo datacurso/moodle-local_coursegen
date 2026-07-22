@@ -71,6 +71,17 @@ export const getCourseStructure = (courseid) => Ajax.call([{
  * @param {Array} data.sections Section configuration array.
  * @returns {Promise<Object>} Resolves with the saved template object.
  */
+/**
+ * Get course preview rendered with native format renderer.
+ *
+ * @param {number} courseid Course ID.
+ * @returns {Promise<Object>} Resolves with {html, fullname, shortname, format, numsections, numactivities}.
+ */
+export const getCoursePreview = (courseid) => Ajax.call([{
+    methodname: 'local_coursegen_get_course_preview',
+    args: {courseid},
+}])[0];
+
 export const saveTemplate = (data) => Ajax.call([{
     methodname: 'local_coursegen_save_template',
     args: data,

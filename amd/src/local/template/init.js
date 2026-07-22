@@ -128,11 +128,6 @@ const nextStep = async() => {
             return;
         }
     }
-    if (state.currentStep === 2 && !state.templateName.trim()) {
-        const msg = await getString('template_name_required', 'local_coursegen');
-        Notification.addNotification({message: msg, type: 'warning'});
-        return;
-    }
     if (state.currentStep >= 5) {
         return;
     }
@@ -183,9 +178,14 @@ const buildSections = () => state.courseStructure.map(s => ({
  */
 const saveTemplate = async() => {
     try {
+        // Read name/desc from moodleform inputs.
+        const nameVal = root.querySelector('#id_templatename')?.value || state.templateName;
+        const descVal = root.querySelector('#id_templatedesc')?.value || state.templateDesc;
+        state.templateName = nameVal;
+        state.templateDesc = descVal;
         const result = await Repository.saveTemplate({
-            id: state.templateId, name: state.templateName,
-            description: state.templateDesc, courseid: state.selectedCourseId,
+            id: state.templateId, name: nameVal,
+            description: descVal, courseid: state.selectedCourseId,
             maxsections: state.maxSections, nolimit: state.noLimit,
             allowedtypes: JSON.stringify(state.allowedTypes),
             namingpattern: state.namingPattern, namingstart: state.namingStart,

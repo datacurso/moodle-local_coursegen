@@ -14,120 +14,117 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Step 3: Course preview and template naming.
+ * Step 2: Course preview using native format renderer + template naming.
  *
  * @module     local_coursegen/local/template/step_preview
  * @copyright  2025 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {setState} from './init';
+import {getCoursePreview} from './repository';
 import {get_string as getString} from 'core/str';
+import Notification from 'core/notification';
+
+let lastRenderedCourseId = null;
 
 /**
- * Build HTML for a single activity row within a section.
- *
- * @param {Object} activity
- * @returns {string} HTML string.
- */
-const buildActivityHtml = (activity) => {
-    return `<div class="d-flex align-items-center py-1 small">
-        <i class="icon fa fa-puzzle-piece fa-fw mr-1 text-muted"></i>
-        <span class="tpl-badge mr-1">${activity.modname}</span>
-        <span class="text-truncate">${activity.name}</span>
-    </div>`;
-};
-
-/**
- * Build HTML for a single section card including its activities.
- *
- * @param {Object} section
- * @returns {string} HTML string.
- */
-const buildSectionHtml = (section) => {
-    const activitiesHtml = section.activities.map(buildActivityHtml).join('');
-
-    return `<div class="tpl-section-card mb-2">
-        <div class="tpl-section-header d-flex align-items-center">
-            <i class="icon fa fa-folder-o fa-fw mr-1"></i>
-            <span class="small font-weight-bold">${section.name}</span>
-            <span class="small text-muted ml-2">${section.activities.length} activities</span>
-        </div>
-        <div class="px-3 py-1">
-            ${activitiesHtml}
-        </div>
-    </div>`;
-};
-
-/**
- * Build the name and description form HTML.
- *
- * @param {string} nameLbl
- * @param {string} namePh
- * @param {string} descLbl
- * @param {string} descPh
- * @param {string} templateName
- * @param {string} templateDesc
- * @returns {string} HTML string.
- */
-const buildFormHtml = (nameLbl, namePh, descLbl, descPh, templateName, templateDesc) => {
-    return `<div class="card p-3 mt-3">
-        <div class="form-group">
-            <label class="small font-weight-bold">
-                ${nameLbl} <span class="text-danger">*</span>
-            </label>
-            <input type="text" class="form-control form-control-sm" data-field="template-name"
-                   placeholder="${namePh}" value="${templateName}">
-        </div>
-        <div class="form-group mb-0">
-            <label class="small font-weight-bold">${descLbl}</label>
-            <textarea class="form-control form-control-sm" rows="2" data-field="template-desc"
-                      placeholder="${descPh}">${templateDesc}</textarea>
-        </div>
-    </div>`;
-};
-
-/**
- * Render step 3 panel.
+ * Render step 2 panel — native course preview (read-only).
  *
  * @param {HTMLElement} panel
  * @param {Object} state
  */
 export const renderStepPreview = async(panel, state) => {
-    const [heading, nameLbl, namePh, descLbl, descPh] = await Promise.all([
-        getString('template_course_preview', 'local_coursegen'),
-        getString('template_name', 'local_coursegen'),
-        getString('template_name_placeholder', 'local_coursegen'),
-        getString('template_description', 'local_coursegen'),
-        getString('template_description_placeholder', 'local_coursegen'),
-    ]);
+    const slot = panel.querySelector('[data-region="course-preview"]');
 
-    const course = state.selectedCourse;
-    const structure = state.courseStructure || [];
-    const totalActs = structure.reduce((sum, s) => sum + s.activities.length, 0);
+    // Already has content (server-rendered or previous visit).
+    if (slot && slot.hasChildNodes()) {
+        if (lastRenderedCourseId && lastRenderedCourseId !== state.selectedCourseId) {
+            // Course changed since last render — clear and re-fetch below.
+            slot.innerHTML = '';
+        } else {
+            // Same course or first load with server HTML — just bind events.
+            lastRenderedCourseId = state.selectedCourseId;
+            bindCollapseEvents(panel);
+            return;
+        }
+    }
 
-    const courseInfo = course
-        ? `${course.fullname} (${course.shortname}) — ${structure.length} sections, ${totalActs} activities`
-        : '';
+    const heading = await getString('template_course_preview', 'local_coursegen');
 
-    const sectionsHtml = structure.map(buildSectionHtml).join('');
-    const formHtml = buildFormHtml(
-        nameLbl, namePh, descLbl, descPh,
-        state.templateName, state.templateDesc
-    );
+    panel.innerHTML = `<h4>${heading}</h4>
+        <div class="d-flex align-items-center py-5 justify-content-center">
+            <div class="spinner-border text-primary mr-2" role="status"></div>
+            <span class="text-muted">Loading course preview...</span>
+        </div>`;
 
-    panel.innerHTML = `
-        <h3 class="h5 mb-1">${heading}</h3>
-        <p class="small text-muted mb-3">${courseInfo}</p>
-        ${sectionsHtml}
-        ${formHtml}`;
+    try {
+        const preview = await getCoursePreview(state.selectedCourseId);
+        lastRenderedCourseId = state.selectedCourseId;
 
-    // Bind input events.
-    panel.querySelector('[data-field="template-name"]').addEventListener('input', (e) => {
-        setState({templateName: e.target.value});
+        const courseInfo = `${preview.fullname} (${preview.shortname})`;
+        const stats = `${preview.numsections} sections, ${preview.numactivities} activities`;
+        const viewUrl = M.cfg.wwwroot + '/course/view.php?id=' + preview.courseid;
+
+        panel.innerHTML = `
+            <h4>${heading}</h4>
+            <p class="text-muted">
+                ${courseInfo} &mdash; ${stats}
+                <a href="${viewUrl}" target="_blank" class="ml-2">
+                    <i class="fa fa-external-link"></i>
+                </a>
+            </p>
+            <div data-region="course-preview">
+                ${preview.html}
+            </div>`;
+
+        bindCollapseEvents(panel);
+    } catch (e) {
+        Notification.exception(e);
+        panel.innerHTML = `<h4>${heading}</h4>
+            <div class="alert alert-danger">Failed to load course preview.</div>`;
+    }
+};
+
+/**
+ * Strip reactive data attributes so Bootstrap collapse works natively.
+ *
+ * @param {HTMLElement} panel
+ */
+const bindCollapseEvents = (panel) => {
+    const preview = panel.querySelector('[data-region="course-preview"]');
+    if (!preview) {
+        return;
+    }
+
+    // Remove data-for attributes that the reactive component would intercept.
+    // This lets Bootstrap's native data-toggle="collapse" handle everything.
+    preview.querySelectorAll('[data-for="sectiontoggler"]').forEach(el => {
+        el.removeAttribute('data-for');
     });
 
-    panel.querySelector('[data-field="template-desc"]').addEventListener('input', (e) => {
-        setState({templateDesc: e.target.value});
+    // "Collapse all" / "Expand all" — handle manually since it uses data-toggle="toggleall".
+    preview.querySelectorAll('[data-toggle="toggleall"]').forEach(link => {
+        link.removeAttribute('data-toggle');
+        link.addEventListener('click', (e) => {
+            e.preventDefault();
+            const togglers = preview.querySelectorAll('[data-toggle="collapse"]');
+            const allExpanded = [...togglers].every(t => !t.classList.contains('collapsed'));
+            togglers.forEach(tog => {
+                const targetId = tog.getAttribute('href');
+                const target = preview.querySelector(targetId);
+                if (!target) {
+                    return;
+                }
+                if (allExpanded) {
+                    target.classList.remove('show');
+                    tog.classList.add('collapsed');
+                    tog.setAttribute('aria-expanded', 'false');
+                } else {
+                    target.classList.add('show');
+                    tog.classList.remove('collapsed');
+                    tog.setAttribute('aria-expanded', 'true');
+                }
+            });
+        });
     });
 };

@@ -175,6 +175,15 @@ $functions = [
         'capabilities' => 'local/coursegen:managetemplates',
         'loginrequired' => true,
     ],
+    'local_coursegen_get_course_preview' => [
+        'classname' => 'local_coursegen\\external\\get_course_preview',
+        'methodname' => 'execute',
+        'description' => 'Render course preview using native format renderer',
+        'type' => 'read',
+        'ajax' => true,
+        'capabilities' => 'local/coursegen:managetemplates',
+        'loginrequired' => true,
+    ],
     'local_coursegen_save_template' => [
         'classname' => 'local_coursegen\\external\\save_template',
         'methodname' => 'execute',
