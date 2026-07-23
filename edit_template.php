@@ -75,7 +75,7 @@ if ($courseid > 0 && $step >= 2) {
     $courseshortname = $course->shortname;
 }
 
-admin_externalpage_setup('local_coursegen_edit_template');
+admin_externalpage_setup('local_coursegen_manage_templates');
 
 $context = context_system::instance();
 require_capability('local/coursegen:managetemplates', $context);
