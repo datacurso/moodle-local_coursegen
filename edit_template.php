@@ -80,7 +80,6 @@ $pagetitle = $id > 0
     ? get_string('template_edit', 'local_coursegen')
     : get_string('template_create', 'local_coursegen');
 
-$PAGE->set_url('/local/coursegen/edit_template.php', ['id' => $id]);
 $PAGE->set_title($pagetitle);
 $PAGE->set_heading($pagetitle);
 $PAGE->navbar->add($pagetitle);
