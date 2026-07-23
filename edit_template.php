@@ -107,7 +107,7 @@ $buildflat = function($parentid, $depth) use (&$buildflat, &$flatcats, $allcats)
             'name' => format_string($cat->name),
             'coursecount' => (int) $cat->coursecount,
             'depth' => $depth,
-            'ischild' => ($depth > 0),
+            'hiddenclass' => ($depth > 0) ? 'd-none' : '',
             'haschildren' => $haschildren,
         ];
         $buildflat((int)$cat->id, $depth + 1);
