@@ -35,6 +35,17 @@ export const wireTemplateMode = (state) => {
     const freeView = document.getElementById('contextView');
     const tplView = document.getElementById('templateModeView');
     const tplSelect = document.getElementById('tplModeSelect');
+    const sidebar = document.getElementById('courseaiSidebar');
+    const collapseBtn = document.getElementById('courseaiSidebarCollapse');
+    const expandBtn = document.getElementById('courseaiSidebarExpand');
+
+    // Sidebar collapse/expand.
+    if (collapseBtn && sidebar) {
+        collapseBtn.addEventListener('click', () => { sidebar.classList.add('collapsed'); });
+    }
+    if (expandBtn && sidebar) {
+        expandBtn.addEventListener('click', () => { sidebar.classList.remove('collapsed'); });
+    }
 
     if (!freeBtn || !tplBtn || !freeView || !tplView) {
         return;

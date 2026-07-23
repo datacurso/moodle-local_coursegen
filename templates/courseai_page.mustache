@@ -37,7 +37,13 @@
 {{> local_coursegen/sidebar }}
 
 <!-- ══════════════════════ MAIN ════════════════════════════════════════ -->
-<main class="app-main aicoursecreation-main">
+<button class="courseai-sidebar-expand-btn" id="courseaiSidebarExpand" type="button"
+        title="{{#str}}courseai_sidebar_toggle, local_coursegen{{/str}}">
+  <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+    <polyline points="9 18 15 12 9 6"/>
+  </svg>
+</button>
+<main class="app-main aicoursecreation-main" style="position:relative">
   <div class="container">
     <div class="courseai-workspace{{#isresuming}} is-planning{{/isresuming}}" id="courseaiWorkspace">
 
@@ -626,7 +632,7 @@
               <div class="col-md-4">
                 <label class="font-weight-bold small">{{#str}}category{{/str}}</label>
                 <select class="custom-select" id="tplModeCategory">
-                  <option value="">{{#str}}defaultcategoryhere{{/str}}</option>
+                  <option value="">{{#str}}courseai_category_general, local_coursegen{{/str}}</option>
                 </select>
               </div>
             </div>

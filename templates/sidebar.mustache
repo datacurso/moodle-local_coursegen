@@ -17,12 +17,18 @@
 }}
 <aside class="courseai-sidebar" id="courseaiSidebar">
   <div class="courseai-sidebar-body">
-    <!-- Brand -->
+    <!-- Brand + collapse toggle -->
     <div class="courseai-sidebar-brand">
       {{#logourl}}
       <img src="{{logourl}}" alt="" class="courseai-sidebar-logo">
       {{/logourl}}
       <span class="courseai-sidebar-brand-text">{{#str}}pluginname, local_coursegen{{/str}}</span>
+      <button class="courseai-sidebar-collapse-btn" id="courseaiSidebarCollapse" type="button"
+              title="{{#str}}courseai_sidebar_toggle, local_coursegen{{/str}}">
+        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <polyline points="15 18 9 12 15 6"/>
+        </svg>
+      </button>
     </div>
 
     <!-- New course button -->

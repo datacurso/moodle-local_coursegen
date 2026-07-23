@@ -60,6 +60,7 @@
 .courseai-sidebar.collapsed {
   width: 0;
   border-right: none;
+  overflow: hidden;
 }
 
 /* Main content fills remaining space */
@@ -415,6 +416,40 @@
   min-width: 60px;
   text-align: center;
 }
+
+/* ─── COLLAPSE / EXPAND ────────────────────────────────────── */
+.courseai-sidebar-collapse-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--muted-fg);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.courseai-sidebar-collapse-btn:hover { background: var(--muted); color: var(--fg); }
+
+.courseai-sidebar-expand-btn {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 5;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--muted-fg);
+  box-shadow: 0 1px 4px hsl(0,0%,0%,.08);
+}
+.courseai-sidebar-expand-btn:hover { background: var(--muted); color: var(--fg); }
+.courseai-sidebar.collapsed ~ .courseai-sidebar-expand-btn,
+.courseai-sidebar.collapsed ~ * .courseai-sidebar-expand-btn { display: flex; }
 
 /* ─── MODE ITEMS ───────────────────────────────────────────── */
 .courseai-sidebar-modes {
