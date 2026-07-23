@@ -22,6 +22,7 @@
  */
 
 import {createGuidelineHandlers} from 'local_coursegen/local/courseai/context/guideline';
+import {wireTemplatePopover} from 'local_coursegen/local/courseai/context/template';
 import {wireCompactControls} from 'local_coursegen/local/courseai/context/compact';
 import {bindToggleWrap, showFilePicker as openFilePicker} from 'local_coursegen/local/courseai/context/filepicker';
 import {wirePlusMenu} from 'local_coursegen/local/courseai/context/plus-menu';
@@ -243,6 +244,9 @@ export const setupContextSection = (deps) => {
             closeGuidelinePopover();
         });
     }
+
+    // ─── Template popover wiring ────────────────────────────────────────────
+    wireTemplatePopover(document, state);
 
     if (btnWithSubsections && subToggleWrap) {
         bindToggleWrap(subToggleWrap, btnWithSubsections);

@@ -101,6 +101,19 @@
             </button>
           </span>
 
+          <!-- Template chip (shown after selecting a template) -->
+          <span class="chip chip-template hidden" id="chipTemplate">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+            <span class="chip-name" id="chipTemplateName"></span>
+            <button class="chip-btn" id="chipTemplateRemoveBtn" aria-label="{{#str}}courseai_chip_remove_template, local_coursegen{{/str}}">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </span>
+
         </div>
 
         <!-- Bottom toolbar -->
@@ -119,6 +132,15 @@
               </button>
 
               <div class="plus-menu-panel" id="plusMenuPanel" role="menu" aria-label="{{#str}}courseai_options_menu, local_coursegen{{/str}}">
+
+                <!-- Template: opens a searchable popover (same pattern as guidelines) -->
+                <button class="plus-menu-item" id="btnTemplates" title="{{#str}}courseai_btn_templates_title, local_coursegen{{/str}}" type="button" role="menuitem" aria-haspopup="dialog" aria-expanded="false" aria-controls="templatesPopover">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+                  </svg>
+                  <span class="plus-menu-item__label">{{#str}}courseai_btn_templates, local_coursegen{{/str}}</span>
+                  <span class="template-badge hidden" id="templateBadge"></span>
+                </button>
 
                 <!-- Sílabo (original button, restyled as menu item) -->
                 <button class="plus-menu-item" id="btnSyllabus" title="{{#str}}courseai_btn_syllabus_title, local_coursegen{{/str}}" type="button" role="menuitem">
@@ -221,6 +243,25 @@
                   <p class="pop-note">{{#str}}courseai_guidelines_note_one, local_coursegen{{/str}}</p>
                 </div>
                 <ul class="pop-list" id="guidelineList" role="listbox" aria-label="{{#str}}courseai_guidelines_list_label, local_coursegen{{/str}}"></ul>
+              </div>
+
+              <!-- Templates popover: searchable list -->
+              <div class="popover-panel popover-panel--down" id="templatesPopover" role="dialog" aria-label="{{#str}}courseai_templates_dialog_label, local_coursegen{{/str}}">
+                <button class="pop-close-btn" id="templatesPopoverClose" type="button" aria-label="{{#str}}closebuttontitle, core{{/str}}">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+                <div class="pop-search-row">
+                  <div class="pop-search-inner">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="11" cy="11" r="8"/>
+                      <path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <input type="text" id="templateSearch" placeholder="{{#str}}courseai_templates_search_placeholder, local_coursegen{{/str}}" autocomplete="off" />
+                  </div>
+                </div>
+                <ul class="pop-list" id="templateList" role="listbox" aria-label="{{#str}}courseai_templates_list_label, local_coursegen{{/str}}"></ul>
               </div>
             </div>
 
@@ -371,6 +412,19 @@
                 </svg>
               </button>
             </span>
+
+            <!-- Template chip (compact, shown after selecting a template) -->
+            <span class="chip chip-template hidden" id="compactChipTemplate">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+              </svg>
+              <span class="chip-name" id="compactChipTemplateName"></span>
+              <button class="chip-btn" id="compactChipTemplateRemoveBtn" aria-label="{{#str}}courseai_chip_remove_template, local_coursegen{{/str}}">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </span>
           </div>
 
           <!-- Compact toolbar: same "+" options menu as the main card -->
@@ -388,6 +442,15 @@
                 </button>
 
                 <div class="plus-menu-panel plus-menu-panel--up" id="compactPlusMenuPanel" role="menu" aria-label="{{#str}}courseai_options_menu, local_coursegen{{/str}}">
+
+                  <!-- Template: opens a searchable popover (same pattern as guidelines) -->
+                  <button class="plus-menu-item" id="btnTemplatesCompact" title="{{#str}}courseai_btn_templates_title, local_coursegen{{/str}}" type="button" role="menuitem" aria-haspopup="dialog" aria-expanded="false" aria-controls="templatesPopoverCompact">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+                    </svg>
+                    <span class="plus-menu-item__label">{{#str}}courseai_btn_templates, local_coursegen{{/str}}</span>
+                    <span class="template-badge hidden" id="templateBadgeCompact"></span>
+                  </button>
 
                   <button class="plus-menu-item" id="btnCompactSyllabus" title="{{#str}}courseai_btn_syllabus_title, local_coursegen{{/str}}" type="button" role="menuitem">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -483,6 +546,25 @@
                     <p class="pop-note">{{#str}}courseai_guidelines_note_one, local_coursegen{{/str}}</p>
                   </div>
                   <ul class="pop-list" id="guidelineListCompact" role="listbox" aria-label="{{#str}}courseai_guidelines_list_label, local_coursegen{{/str}}"></ul>
+                </div>
+
+                <!-- Templates popover (compact): searchable list -->
+                <div class="popover-panel" id="templatesPopoverCompact" role="dialog" aria-label="{{#str}}courseai_templates_dialog_label, local_coursegen{{/str}}">
+                  <button class="pop-close-btn" id="templatesPopoverCompactClose" type="button" aria-label="{{#str}}closebuttontitle, core{{/str}}">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </button>
+                  <div class="pop-search-row">
+                    <div class="pop-search-inner">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.35-4.35"/>
+                      </svg>
+                      <input type="text" id="templateSearchCompact" placeholder="{{#str}}courseai_templates_search_placeholder, local_coursegen{{/str}}" autocomplete="off" />
+                    </div>
+                  </div>
+                  <ul class="pop-list" id="templateListCompact" role="listbox" aria-label="{{#str}}courseai_templates_list_label, local_coursegen{{/str}}"></ul>
                 </div>
               </div>
 
@@ -785,8 +867,9 @@
 </div>
 
 {{! Data passed to JavaScript }}
-<div id="courseai-data" style="display:none" 
-     data-guidelines="{{guidelines}}" 
-     data-languages="{{languages}}" 
-     data-defaultlang="{{defaultlang}}">
+<div id="courseai-data" style="display:none"
+     data-guidelines="{{guidelines}}"
+     data-languages="{{languages}}"
+     data-defaultlang="{{defaultlang}}"
+     data-templates="{{templates}}">
 </div>

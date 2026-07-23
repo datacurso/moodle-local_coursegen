@@ -64,10 +64,12 @@ import {createExecutionControls} from 'local_coursegen/local/courseai/actions/ex
  */
 export const init = async(params) => {
     try {
-        const {guidelines, languages, defaultLang} = parseCourseaiData(params);
+        const {guidelines, languages, defaultLang, coursetemplates} = parseCourseaiData(params);
         const texts = await loadCourseaiStrings();
         const elements = getCourseaiElements();
         const state = createInitialState({defaultLang, guidelines, languages});
+        state.templates = coursetemplates || [];
+        state.selectedTemplateId = null;
 
         // Decision log (§4) — instantiate before any module that needs it.
         const {emitLog, clearLog} = makeEmitLog(state);
