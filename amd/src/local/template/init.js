@@ -220,7 +220,6 @@ export const init = (config) => {
 
     state.templateId = config.templateid || 0;
     state.categories = config.categories || [];
-    state.cattreejson = config.cattreejson || '[]';
 
     // Restore state from URL parameters.
     const initialCourseId = config.initialcourseid || 0;

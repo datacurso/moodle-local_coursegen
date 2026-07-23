@@ -87,9 +87,6 @@ $PAGE->set_title($pagetitle);
 $PAGE->set_heading($pagetitle);
 $PAGE->navbar->add($pagetitle);
 
-// Build category tree for JS.
-$cattree = local_coursegen_build_category_tree();
-
 // Get installed activity module types for the limits step.
 $modtypes = [];
 $mods = get_module_types_names();
@@ -117,7 +114,6 @@ $stepflags['shownext'] = ($step < 5);
 $templatecontext = array_merge($stepflags, [
     'templateid' => $id,
     'sesskey' => sesskey(),
-    'cattreejson' => json_encode($cattree),
     'modtypes' => $modtypes,
     'nameformhtml' => $nameformhtml,
     'initialstep' => $step,
@@ -140,34 +136,3 @@ echo $OUTPUT->render_from_template('local_coursegen/template_wizard', $templatec
 $PAGE->requires->js_call_amd('local_coursegen/local/template/init', 'init', [$templatecontext]);
 
 echo $OUTPUT->footer();
-
-/**
- * Build a nested category tree with course counts.
- *
- * @return array
- */
-function local_coursegen_build_category_tree(): array {
-    $categories = core_course_category::get_all();
-    $tree = [];
-    $map = [];
-
-    foreach ($categories as $cat) {
-        $map[$cat->id] = [
-            'id' => (int) $cat->id,
-            'name' => format_string($cat->name),
-            'parent' => (int) $cat->parent,
-            'coursecount' => (int) $cat->coursecount,
-            'children' => [],
-        ];
-    }
-
-    foreach ($map as $id => $catdata) {
-        if ($catdata['parent'] == 0) {
-            $tree[] = &$map[$id];
-        } else if (isset($map[$catdata['parent']])) {
-            $map[$catdata['parent']]['children'][] = &$map[$id];
-        }
-    }
-
-    return array_values($tree);
-}

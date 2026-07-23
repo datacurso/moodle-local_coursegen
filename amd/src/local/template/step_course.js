@@ -32,16 +32,48 @@ let selectedCatId = null;
 let bound = false;
 
 /**
+ * Build a nested tree from a flat list of categories.
+ *
+ * @param {Array} flat
+ * @returns {Array}
+ */
+const buildTree = (flat) => {
+    const map = {};
+    flat.forEach(c => { map[c.id] = {...c, children: []}; });
+    const tree = [];
+    Object.values(map).forEach(c => {
+        if (c.parent === 0 || !map[c.parent]) {
+            tree.push(c);
+        } else {
+            map[c.parent].children.push(c);
+        }
+    });
+    return tree;
+};
+
+/**
  * Render step 1: bind events on server-rendered layout.
  *
  * @param {HTMLElement} panel The step panel element.
  */
-export const renderStepCourse = (panel) => {
+export const renderStepCourse = async(panel) => {
     if (bound) {
         return;
     }
     bound = true;
-    cattree = JSON.parse(getState().cattreejson || '[]');
+
+    // Load categories via AJAX.
+    try {
+        const flat = await Ajax.call([{
+            methodname: 'local_coursegen_get_category_tree',
+            args: {},
+        }])[0];
+        cattree = buildTree(flat);
+    } catch (e) {
+        Notification.exception(e);
+        return;
+    }
+
     renderTree(panel, '');
     bindGlobalEvents(panel);
 

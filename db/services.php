@@ -166,6 +166,15 @@ $functions = [
         'capabilities' => 'local/coursegen:managetemplates',
         'loginrequired' => true,
     ],
+    'local_coursegen_get_category_tree' => [
+        'classname' => 'local_coursegen\\external\\get_category_tree',
+        'methodname' => 'execute',
+        'description' => 'Get category tree for template wizard',
+        'type' => 'read',
+        'ajax' => true,
+        'capabilities' => 'local/coursegen:managetemplates',
+        'loginrequired' => true,
+    ],
     'local_coursegen_get_courses_by_category' => [
         'classname' => 'local_coursegen\\external\\get_courses_by_category',
         'methodname' => 'execute',
