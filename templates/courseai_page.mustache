@@ -30,9 +30,11 @@
 
 {{! Wizard CSS will be loaded via PHP $PAGE->requires->css() }}
 
+<!-- ══════════════════════ APP LAYOUT ══════════════════════════════════ -->
+<div class="courseai-app-layout" id="courseaiAppLayout">
+
 <!-- ══════════════════════ SIDEBAR ════════════════════════════════════ -->
 {{> local_coursegen/sidebar }}
-<div class="courseai-sidebar-backdrop" id="courseaiSidebarBackdrop"></div>
 
 <!-- ══════════════════════ MAIN ════════════════════════════════════════ -->
 <main class="app-main aicoursecreation-main">
@@ -915,6 +917,7 @@
   </div>
 
 </main>
+</div><!-- .courseai-app-layout -->
 
 <!-- Guideline preview modal (Bootstrap 4) -->
 <div class="modal fade" id="guidelinePreviewModal" tabindex="-1" role="dialog" aria-labelledby="previewModalLabel" aria-hidden="true">
