@@ -24,6 +24,7 @@
 import {setState} from './init';
 import {getCoursePreview} from './repository';
 import {appendPrompt} from './prompt_editor';
+import {bindServerRenderedControls} from './sections_events';
 import Notification from 'core/notification';
 
 const SEC_TIPS = {
@@ -53,7 +54,14 @@ export const renderStepSections = async(panel, state) => {
 
     let container = panel.querySelector('[data-region="sections-config"]');
 
-    // If server already rendered the content, just inject controls.
+    // If server already rendered with controls (step=3 on page load), just bind events.
+    if (container && container.querySelector('[data-sec-action]')) {
+        bindServerRenderedControls(container, state);
+        rendered = true;
+        return;
+    }
+
+    // If server rendered without controls (navigating from step 2), inject them.
     if (container && container.hasChildNodes() && container.querySelector('[data-for="section"]')) {
         prepareContainer(container);
         injectSectionControls(container, state);
@@ -84,14 +92,10 @@ export const renderStepSections = async(panel, state) => {
     }
 };
 
-/**
- * Prepare the rendered container: remove reactive attrs and hide collapse-all.
- *
- * @param {HTMLElement} container
- */
-const prepareContainer = (container) => {
-    container.querySelectorAll('[data-for="sectiontoggler"]').forEach(el => el.removeAttribute('data-for'));
-    container.querySelectorAll('[data-toggle="toggleall"]').forEach(el => { el.style.display = 'none'; });
+/** @param {HTMLElement} c */
+const prepareContainer = (c) => {
+    c.querySelectorAll('[data-for="sectiontoggler"]').forEach(el => el.removeAttribute('data-for'));
+    c.querySelectorAll('[data-toggle="toggleall"]').forEach(el => { el.style.display = 'none'; });
 };
 
 /**

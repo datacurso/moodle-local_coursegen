@@ -35,6 +35,7 @@ $categoryid = optional_param('categoryid', 0, PARAM_INT);
 $coursename = '';
 $courseshortname = '';
 $previewhtml = '';
+$sectionsconfightml = '';
 $numsections = 0;
 $numactivities = 0;
 if ($courseid > 0) {
@@ -62,6 +63,13 @@ if ($courseid > 0) {
             if (!empty($modinfo->sections[$sec->section])) {
                 $numactivities += count($modinfo->sections[$sec->section]);
             }
+        }
+
+        // Build sections config HTML with controls injected server-side.
+        if ($step >= 3) {
+            $sectionsconfightml = \local_coursegen\output\sections_config::render(
+                $previewhtml, $modinfo
+            );
         }
     }
 }
@@ -112,6 +120,8 @@ $templatecontext = array_merge($stepflags, [
     'initialsearch' => $search,
     'initialcategoryid' => $categoryid,
     'previewhtml' => $previewhtml,
+    'sectionsconfightml' => $sectionsconfightml,
+    'hassectionsconfig' => !empty($sectionsconfightml),
     'haspreview' => !empty($previewhtml),
     'numsections' => $numsections,
     'numactivities' => $numactivities,

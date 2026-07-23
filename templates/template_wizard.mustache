@@ -122,11 +122,11 @@
         <div data-region="course-preview">{{{previewhtml}}}</div>
     </div>
     <div data-region="step-panel" data-step="3" class="{{^step3visible}}d-none{{/step3visible}}">
-        {{#haspreview}}
+        {{#hassectionsconfig}}
             <h4>{{#str}}template_configure_sections, local_coursegen{{/str}}</h4>
             <p class="text-muted">{{#str}}template_configure_sections_desc, local_coursegen{{/str}}</p>
-            <div data-region="sections-config">{{{previewhtml}}}</div>
-        {{/haspreview}}
+            <div data-region="sections-config">{{{sectionsconfightml}}}</div>
+        {{/hassectionsconfig}}
     </div>
     <div data-region="step-panel" data-step="4" class="{{^step4visible}}d-none{{/step4visible}}"></div>
 
