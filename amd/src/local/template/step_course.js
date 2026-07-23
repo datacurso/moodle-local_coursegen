@@ -39,14 +39,7 @@ export const renderStepCourse = (panel) => {
     }
     bound = true;
 
-    // Hide child categories initially (depth > 0).
-    panel.querySelectorAll('[data-catid]').forEach(el => {
-        const depth = parseFloat(el.style.paddingLeft) || 0;
-        if (depth > 12) {
-            el.classList.add('d-none');
-            el.setAttribute('data-cat-hidden', '1');
-        }
-    });
+    // Children are already hidden via mustache (d-none on depth > 0).
 
     bindCategoryEvents(panel);
     bindGlobalEvents(panel);
@@ -138,20 +131,12 @@ const toggleChildren = (container, parentId, parentEl) => {
 };
 
 /**
- * Get depth level from the padding-left style.
+ * Get depth level from data attribute.
  *
  * @param {HTMLElement} el
  * @returns {number}
  */
-const getDepth = (el) => {
-    const match = el.style.paddingLeft.match(/([\d.]+)\s*\*\s*([\d.]+)/);
-    if (match) {
-        return parseFloat(match[2]);
-    }
-    // Fallback: parse the calc expression.
-    const calcMatch = el.style.paddingLeft.match(/(\d+)\s*\*/);
-    return calcMatch ? parseInt(calcMatch[1]) : 0;
-};
+const getDepth = (el) => parseInt(el.dataset.depth || '0');
 
 /**
  * Load courses for the selected category via AJAX.
