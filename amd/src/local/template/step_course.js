@@ -21,7 +21,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {getState, setState, getRoot} from './init';
+import {getState, setState} from './init';
 import {setCourses, renderCourses} from './course_table';
 import Ajax from 'core/ajax';
 import Notification from 'core/notification';
@@ -41,7 +41,7 @@ export const renderStepCourse = (panel) => {
         return;
     }
     bound = true;
-    cattree = JSON.parse(getRoot().dataset.cattree || '[]');
+    cattree = JSON.parse(getState().cattreejson || '[]');
     renderTree(panel, '');
     bindGlobalEvents(panel);
 
