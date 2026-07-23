@@ -111,6 +111,7 @@ const toggleChildren = (container, parentId, parentEl) => {
         if (isExpanded) {
             // Collapse: hide all descendants.
             sibling.classList.add('d-none');
+            sibling.style.display = '';
             const subChevron = sibling.querySelector('.fa-chevron-down');
             if (subChevron) {
                 subChevron.classList.remove('fa-chevron-down');
@@ -119,6 +120,7 @@ const toggleChildren = (container, parentId, parentEl) => {
         } else if (sibDepth === parentDepth + 1) {
             // Expand: show only direct children.
             sibling.classList.remove('d-none');
+            sibling.style.display = 'flex';
         }
         sibling = sibling.nextElementSibling;
     }
@@ -168,13 +170,16 @@ const bindGlobalEvents = (panel) => {
         const q = search.value.trim().toLowerCase();
         panel.querySelectorAll('[data-catid]').forEach(el => {
             if (q.length < 2) {
-                // Reset: show only root level.
                 const depth = getDepth(el);
-                el.classList.toggle('d-none', depth > 0);
+                const hide = depth > 0;
+                el.classList.toggle('d-none', hide);
+                el.style.display = hide ? '' : 'flex';
                 return;
             }
             const name = el.querySelector('.flex-grow-1')?.textContent.toLowerCase() || '';
-            el.classList.toggle('d-none', !name.includes(q));
+            const hide = !name.includes(q);
+            el.classList.toggle('d-none', hide);
+            el.style.display = hide ? '' : 'flex';
         });
     });
 
@@ -191,7 +196,9 @@ const bindGlobalEvents = (panel) => {
     panel.querySelector('[data-action="toggle-all"]')?.addEventListener('click', () => {
         const allHidden = panel.querySelectorAll('[data-catid].d-none').length > 0;
         panel.querySelectorAll('[data-catid]').forEach(el => {
-            el.classList.toggle('d-none', !allHidden);
+            const hide = !allHidden;
+            el.classList.toggle('d-none', hide);
+            el.style.display = hide ? '' : 'flex';
         });
         panel.querySelectorAll('.fa-chevron-right, .fa-chevron-down').forEach(ch => {
             ch.classList.toggle('fa-chevron-right', !allHidden);
