@@ -183,7 +183,7 @@ const saveTemplate = async() => {
         const descVal = root.querySelector('#id_templatedesc')?.value || state.templateDesc;
         state.templateName = nameVal;
         state.templateDesc = descVal;
-        const result = await Repository.saveTemplate({
+        await Repository.saveTemplate({
             id: state.templateId, name: nameVal,
             description: descVal, courseid: state.selectedCourseId,
             maxsections: state.maxSections, nolimit: state.noLimit,
@@ -191,9 +191,8 @@ const saveTemplate = async() => {
             namingpattern: state.namingPattern, namingstart: state.namingStart,
             sections: buildSections(),
         });
-        const msg = await getString('template_saved', 'local_coursegen', result.name);
-        Notification.addNotification({message: msg, type: 'success'});
-        state.templateId = result.id;
+        // Redirect to manage page with success notification.
+        window.location.href = M.cfg.wwwroot + '/local/coursegen/manage_templates.php';
     } catch (e) {
         Notification.exception(e);
     }
