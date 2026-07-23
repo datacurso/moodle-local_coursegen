@@ -87,6 +87,34 @@ $PAGE->set_title($pagetitle);
 $PAGE->set_heading($pagetitle);
 $PAGE->navbar->add($pagetitle);
 
+// Build flat category list with depth for mustache rendering.
+$flatcats = [];
+$allcats = core_course_category::get_all();
+$buildflat = function($parentid, $depth) use (&$buildflat, &$flatcats, $allcats) {
+    foreach ($allcats as $cat) {
+        if ((int)$cat->parent !== $parentid) {
+            continue;
+        }
+        $haschildren = false;
+        foreach ($allcats as $child) {
+            if ((int)$child->parent === (int)$cat->id) {
+                $haschildren = true;
+                break;
+            }
+        }
+        $flatcats[] = [
+            'id' => (int) $cat->id,
+            'name' => format_string($cat->name),
+            'coursecount' => (int) $cat->coursecount,
+            'depth' => $depth,
+            'indent' => str_repeat('&nbsp;&nbsp;&nbsp;', $depth),
+            'haschildren' => $haschildren,
+        ];
+        $buildflat((int)$cat->id, $depth + 1);
+    }
+};
+$buildflat(0, 0);
+
 // Get installed activity module types for the limits step.
 $modtypes = [];
 $mods = get_module_types_names();
@@ -114,6 +142,7 @@ $stepflags['shownext'] = ($step < 5);
 $templatecontext = array_merge($stepflags, [
     'templateid' => $id,
     'sesskey' => sesskey(),
+    'flatcats' => $flatcats,
     'modtypes' => $modtypes,
     'nameformhtml' => $nameformhtml,
     'initialstep' => $step,
