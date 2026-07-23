@@ -24,6 +24,7 @@
 import {setState} from './init';
 import {getCoursePreview} from './repository';
 import {appendPrompt} from './prompt_editor';
+import {injectQuickActions} from './quick_actions';
 import Notification from 'core/notification';
 
 const SEC_TIPS = {
@@ -67,6 +68,13 @@ export const renderStepSections = async(panel, state) => {
         container.querySelectorAll('[data-toggle="toggleall"]').forEach(el => { el.style.display = 'none'; });
         injectSectionControls(container, state);
         injectActivityControls(container, state);
+        // Quick actions per section (after activity controls are in place).
+        container.querySelectorAll('[data-for="section"]').forEach(sec => {
+            const sid = parseInt(sec.dataset.id);
+            if (sid && (state.sectionBehavior[sid] || 'custom') === 'custom') {
+                injectQuickActions(sec, sid, state, container);
+            }
+        });
         rendered = true;
     } catch (e) {
         Notification.exception(e);
