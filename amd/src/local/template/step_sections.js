@@ -101,12 +101,13 @@ const injectSectionControls = (container, state) => {
  * @param {HTMLElement} c
  */
 const bindSectionButtons = (wrap, sid, sec, st, c) => {
-    wrap.querySelectorAll('[data-sec-action]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            st.sectionBehavior[sid] = btn.dataset.secAction;
+    wrap.querySelectorAll('[data-sec-action]').forEach(item => {
+        item.addEventListener('click', (e) => {
+            e.preventDefault();
+            st.sectionBehavior[sid] = item.dataset.secAction;
             setState(st);
-            wrap.innerHTML = buildSectionBtnGroup(sid, btn.dataset.secAction);
-            applySectionState(sec, btn.dataset.secAction);
+            wrap.innerHTML = buildSectionBtnGroup(sid, item.dataset.secAction);
+            applySectionState(sec, item.dataset.secAction);
             bindSectionButtons(wrap, sid, sec, st, c);
         });
     });
@@ -118,16 +119,19 @@ const bindSectionButtons = (wrap, sid, sec, st, c) => {
  * @returns {string}
  */
 const buildSectionBtnGroup = (sid, active) => {
-    const items = ['custom', 'keep', 'exclude'];
-    const labels = {custom: 'Customise', keep: 'Keep', exclude: 'Exclude'};
-    const cls = {custom: 'btn-primary', keep: 'btn-success', exclude: 'btn-secondary'};
-    let html = '<div class="btn-group btn-group-sm" role="group">';
-    items.forEach(key => {
-        const btnCls = active === key ? cls[key] : 'btn-outline-secondary';
-        html += `<button class="btn ${btnCls}" data-sec-action="${key}" data-sid="${sid}"
-                         title="${SEC_TIPS[key]}">${labels[key]}</button>`;
+    const labels = {custom: 'Customise', keep: 'Keep intact', exclude: 'Exclude'};
+    const colors = {custom: '#0f6cbf', keep: '#28a745', exclude: '#6c757d'};
+    const color = colors[active];
+    let html = `<div class="dropdown">
+        <button class="btn btn-sm btn-link dropdown-toggle p-0" style="color:${color};text-decoration:none;font-weight:600"
+                data-toggle="dropdown" title="${SEC_TIPS[active]}">${labels[active]}</button>
+        <div class="dropdown-menu dropdown-menu-right">`;
+    Object.keys(labels).forEach(key => {
+        const act = key === active ? 'active' : '';
+        html += `<a class="dropdown-item ${act}" href="#" data-sec-action="${key}" data-sid="${sid}"
+                    title="${SEC_TIPS[key]}">${labels[key]}</a>`;
     });
-    return html + '</div>';
+    return html + '</div></div>';
 };
 
 /**
@@ -135,7 +139,11 @@ const buildSectionBtnGroup = (sid, active) => {
  * @param {string} behavior
  */
 const applySectionState = (section, behavior) => {
-    section.style.opacity = behavior === 'keep' ? '0.6' : behavior === 'exclude' ? '0.35' : '1';
+    // Only dim the content area, not the header/dropdown.
+    const content = section.querySelector('.content') || section.querySelector('.course-content-item-content');
+    if (content) {
+        content.style.opacity = behavior === 'keep' ? '0.5' : behavior === 'exclude' ? '0.3' : '1';
+    }
     section.querySelectorAll('[data-tpl-control]').forEach(c => {
         c.style.display = behavior === 'custom' ? '' : 'none';
     });

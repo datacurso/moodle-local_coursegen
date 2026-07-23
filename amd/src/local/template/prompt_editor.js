@@ -35,20 +35,7 @@ export const appendPrompt = (cmitem, cmid, val, st) => {
     const pw = document.createElement('div');
     pw.setAttribute('data-tpl-prompt-wrap', cmid);
     pw.style.cssText = 'padding:0 1rem .5rem 3.5rem';
-    if (val) {
-        pw.innerHTML = `<small class="text-muted d-block" data-tpl-prompt-text="${cmid}"
-            style="cursor:text" title="Click to edit prompt">${val}</small>`;
-        pw.querySelector('[data-tpl-prompt-text]')?.addEventListener('click', () => {
-            showEditor(pw, cmid, val, st);
-        });
-    } else {
-        pw.innerHTML = `<a href="#" class="small text-muted" data-tpl-add-prompt="${cmid}">
-            <i class="fa fa-plus fa-fw"></i>Add prompt for AI</a>`;
-        pw.querySelector('[data-tpl-add-prompt]')?.addEventListener('click', (e) => {
-            e.preventDefault();
-            showEditor(pw, cmid, '', st);
-        });
-    }
+    showEditor(pw, cmid, val, st);
     cmitem.appendChild(pw);
 };
 
@@ -64,23 +51,8 @@ const showEditor = (pw, cmid, val, st) => {
     pw.innerHTML = `<textarea class="form-control" data-tpl-prompt="${cmid}" rows="2"
         placeholder="Describe how AI should modify this activity...">${val}</textarea>`;
     const ta = pw.querySelector('textarea');
-    ta?.focus();
-    ta?.addEventListener('blur', () => {
+    ta?.addEventListener('input', () => {
         st.activityPrompt[cmid] = ta.value;
         setState(st);
-        if (ta.value) {
-            pw.innerHTML = `<small class="text-muted d-block" style="cursor:text"
-                title="Click to edit prompt" data-tpl-prompt-text="${cmid}">${ta.value}</small>`;
-            pw.querySelector('[data-tpl-prompt-text]')?.addEventListener('click', () => {
-                showEditor(pw, cmid, ta.value, st);
-            });
-        } else {
-            pw.innerHTML = `<a href="#" class="small text-muted" data-tpl-add-prompt="${cmid}">
-                <i class="fa fa-plus fa-fw"></i>Add prompt for AI</a>`;
-            pw.querySelector('[data-tpl-add-prompt]')?.addEventListener('click', (e) => {
-                e.preventDefault();
-                showEditor(pw, cmid, '', st);
-            });
-        }
     });
 };
