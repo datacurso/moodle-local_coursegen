@@ -47,9 +47,22 @@ let rendered = false;
  * @param {Object} state
  */
 export const renderStepSections = async(panel, state) => {
-    if (rendered && panel.querySelector('[data-region="sections-config"]')) {
+    if (rendered) {
         return;
     }
+
+    let container = panel.querySelector('[data-region="sections-config"]');
+
+    // If server already rendered the content, just inject controls.
+    if (container && container.hasChildNodes() && container.querySelector('[data-for="section"]')) {
+        prepareContainer(container);
+        injectSectionControls(container, state);
+        injectActivityControls(container, state);
+        rendered = true;
+        return;
+    }
+
+    // Otherwise fetch via AJAX.
     panel.innerHTML = `<h4>Configure sections</h4>
         <p class="text-muted">Choose what AI should do with each part of the course</p>
         <div data-region="sections-config">
@@ -60,17 +73,25 @@ export const renderStepSections = async(panel, state) => {
         </div>`;
     try {
         const preview = await getCoursePreview(state.selectedCourseId);
-        const container = panel.querySelector('[data-region="sections-config"]');
+        container = panel.querySelector('[data-region="sections-config"]');
         container.innerHTML = preview.html;
-        container.querySelectorAll('[data-for="sectiontoggler"]').forEach(el => el.removeAttribute('data-for'));
-        // Hide "Collapse all" links.
-        container.querySelectorAll('[data-toggle="toggleall"]').forEach(el => { el.style.display = 'none'; });
+        prepareContainer(container);
         injectSectionControls(container, state);
         injectActivityControls(container, state);
         rendered = true;
     } catch (e) {
         Notification.exception(e);
     }
+};
+
+/**
+ * Prepare the rendered container: remove reactive attrs and hide collapse-all.
+ *
+ * @param {HTMLElement} container
+ */
+const prepareContainer = (container) => {
+    container.querySelectorAll('[data-for="sectiontoggler"]').forEach(el => el.removeAttribute('data-for'));
+    container.querySelectorAll('[data-toggle="toggleall"]').forEach(el => { el.style.display = 'none'; });
 };
 
 /**
