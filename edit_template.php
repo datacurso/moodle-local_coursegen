@@ -90,6 +90,13 @@ $PAGE->navbar->add($pagetitle);
 // Build category tree for JS.
 $cattree = local_coursegen_build_category_tree();
 
+// Get installed activity module types for the limits step.
+$modtypes = [];
+$mods = get_module_types_names();
+foreach ($mods as $modname => $displayname) {
+    $modtypes[] = ['id' => $modname, 'label' => $displayname];
+}
+
 // Render template name form (native moodleform for step 5).
 $nameform = new \local_coursegen\form\template_name_form(null, null, 'post', '', ['id' => 'tpl-name-form']);
 ob_start();
@@ -111,6 +118,7 @@ $templatecontext = array_merge($stepflags, [
     'templateid' => $id,
     'sesskey' => sesskey(),
     'cattree' => json_encode($cattree),
+    'modtypes' => $modtypes,
     'nameformhtml' => $nameformhtml,
     'initialstep' => $step,
     'initialcourseid' => $courseid,

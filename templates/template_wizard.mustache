@@ -30,7 +30,8 @@
     }
 }}
 <div id="local-coursegen-template-wizard" data-region="template-wizard"
-     data-cattree="{{cattree}}">
+     data-cattree="{{cattree}}"
+     data-modtypes="{{modtypes}}">
 
     {{! Stepper — correct step bolded server-side }}
     <div data-region="stepper" class="mb-3">
@@ -128,7 +129,102 @@
             <div data-region="sections-config">{{{sectionsconfightml}}}</div>
         {{/hassectionsconfig}}
     </div>
-    <div data-region="step-panel" data-step="4" class="{{^step4visible}}d-none{{/step4visible}}"></div>
+    <div data-region="step-panel" data-step="4" class="{{^step4visible}}d-none{{/step4visible}}">
+        <h4>{{#str}}template_limits_title, local_coursegen{{/str}}</h4>
+        <p class="text-muted mb-4">{{#str}}template_limits_desc, local_coursegen{{/str}}</p>
+
+        {{! Maximum sections }}
+        <div class="form-group row">
+            <label class="col-md-3 col-form-label font-weight-bold">
+                {{#str}}template_max_sections, local_coursegen{{/str}}
+            </label>
+            <div class="col-md-9">
+                <div class="d-flex align-items-center mb-1">
+                    <input type="number" class="form-control" style="width:80px"
+                           data-field="max-sections" value="0" min="1" max="50">
+                    <div class="custom-control custom-checkbox ml-3">
+                        <input type="checkbox" class="custom-control-input"
+                               id="tpl-no-limit" data-field="no-limit">
+                        <label class="custom-control-label" for="tpl-no-limit">
+                            {{#str}}template_no_limit, local_coursegen{{/str}}
+                        </label>
+                    </div>
+                </div>
+                <small class="form-text text-muted" data-region="sections-hint"></small>
+            </div>
+        </div>
+        <hr>
+
+        {{! Allowed activity types }}
+        <div class="form-group row">
+            <label class="col-md-3 col-form-label font-weight-bold">
+                {{#str}}template_allowed_types, local_coursegen{{/str}}
+            </label>
+            <div class="col-md-9">
+                <p class="text-muted small mb-2">
+                    {{#str}}template_allowed_types_desc, local_coursegen{{/str}}
+                </p>
+                <div class="border rounded p-3" style="max-height:250px;overflow-y:auto">
+                    <div class="row">
+                        {{#modtypes}}
+                        <div class="col-6 col-md-4 mb-1">
+                            <div class="custom-control custom-checkbox">
+                                <input type="checkbox" class="custom-control-input"
+                                       id="tpl-t-{{id}}" data-action="toggle-type" data-type="{{id}}">
+                                <label class="custom-control-label" for="tpl-t-{{id}}">
+                                    {{label}}
+                                </label>
+                            </div>
+                        </div>
+                        {{/modtypes}}
+                    </div>
+                </div>
+                <div class="mt-2">
+                    <a href="#" class="small mr-3" data-action="select-all-types">
+                        {{#str}}template_select_all, local_coursegen{{/str}}
+                    </a>
+                    <a href="#" class="small" data-action="deselect-all-types">
+                        {{#str}}template_deselect_all, local_coursegen{{/str}}
+                    </a>
+                </div>
+            </div>
+        </div>
+        <hr>
+
+        {{! Section naming }}
+        <div class="form-group row">
+            <label class="col-md-3 col-form-label font-weight-bold">
+                {{#str}}template_naming_pattern, local_coursegen{{/str}}
+            </label>
+            <div class="col-md-9">
+                <select class="custom-select mb-2" data-field="naming-pattern">
+                    <option value="Unidad {N} — {nombre}">Unidad {N} — {nombre}</option>
+                    <option value="Módulo {N}: {nombre}">Módulo {N}: {nombre}</option>
+                    <option value="Tema {N}: {nombre}">Tema {N}: {nombre}</option>
+                    <option value="Semana {N}: {nombre}">Semana {N}: {nombre}</option>
+                    <option value="{nombre}">{nombre} (name only)</option>
+                    <option value="__custom__">Custom...</option>
+                </select>
+                <div class="d-none mb-2" data-region="custom-pattern">
+                    <input type="text" class="form-control" data-field="custom-pattern"
+                           placeholder="E.g.: Chapter {N} - {nombre}">
+                    <small class="form-text text-muted">
+                        {{#str}}template_naming_custom_help, local_coursegen{{/str}}
+                    </small>
+                </div>
+                <div class="d-flex align-items-center mb-2">
+                    <span class="text-muted small mr-2">
+                        {{#str}}template_naming_start, local_coursegen{{/str}}
+                    </span>
+                    <select class="custom-select" style="width:70px" data-field="naming-start">
+                        <option value="1">1</option>
+                        <option value="0">0</option>
+                    </select>
+                </div>
+                <div class="bg-light rounded p-2" data-region="naming-preview"></div>
+            </div>
+        </div>
+    </div>
 
     {{! Step 5: Save }}
     <div data-region="step-panel" data-step="5" class="{{^step5visible}}d-none{{/step5visible}}">

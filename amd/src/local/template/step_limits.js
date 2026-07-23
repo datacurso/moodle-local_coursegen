@@ -14,7 +14,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Step 4: Generated course limits.
+ * Step 4: Limits — binds events on server-rendered controls.
  *
  * @module     local_coursegen/local/template/step_limits
  * @copyright  2025 Wilber Narvaez <https://datacurso.com>
@@ -23,172 +23,169 @@
 
 import {setState} from './init';
 
-const TYPES = [
-    'forum', 'assign', 'quiz', 'resource', 'lesson', 'book', 'glossary', 'workshop',
-    'url', 'wiki', 'page', 'label', 'feedback', 'choice', 'data', 'folder', 'h5pactivity', 'scorm', 'imscp',
-];
-
-const PRESETS = [
-    {value: 'Unidad {N} \u2014 {nombre}', label: 'Unidad {N} \u2014 {nombre}'},
-    {value: 'M\u00f3dulo {N}: {nombre}', label: 'M\u00f3dulo {N}: {nombre}'},
-    {value: 'Tema {N}: {nombre}', label: 'Tema {N}: {nombre}'},
-    {value: 'Semana {N}: {nombre}', label: 'Semana {N}: {nombre}'},
-    {value: '{nombre}', label: '{nombre} (name only)'},
-    {value: '__custom__', label: 'Custom...'},
-];
+let bound = false;
 
 /**
+ * Bind events on the server-rendered limits step.
+ *
  * @param {HTMLElement} panel
  * @param {Object} state
  */
 export const renderStepLimits = (panel, state) => {
+    if (bound) {
+        return;
+    }
+    bound = true;
+
     const structure = state.courseStructure || [];
     const present = new Set();
     structure.forEach(s => s.activities.forEach(a => present.add(a.modname)));
-    const custom = !PRESETS.find(p => p.value !== '__custom__' && p.value === state.namingPattern);
 
-    let html = '<h4>Course generation limits</h4>';
-    html += '<p class="text-muted mb-4">Configure constraints for the AI-generated course</p>';
+    // Set initial values on server-rendered inputs.
+    const maxInput = panel.querySelector('[data-field="max-sections"]');
+    const noLimitCb = panel.querySelector('[data-field="no-limit"]');
+    if (maxInput) {
+        maxInput.value = state.maxSections || structure.length;
+    }
+    if (noLimitCb) {
+        noLimitCb.checked = state.noLimit;
+        if (maxInput) {
+            maxInput.disabled = state.noLimit;
+        }
+    }
 
-    // Maximum sections — simple row like a moodleform fitem.
-    html += '<fieldset class="border rounded p-3 mb-3"><legend class="w-auto px-2 h6">Maximum sections</legend>';
-    html += `<p class="text-muted small">The original course has <strong>${structure.length}</strong> sections</p>`;
-    html += '<div class="form-group row">';
-    html += '<div class="col-md-4"><label class="col-form-label">Sections limit</label></div>';
-    html += `<div class="col-md-8 d-flex align-items-center">
-        <input type="number" class="form-control" style="width:100px" data-field="max-sections"
-               value="${state.maxSections}" min="1" max="50" ${state.noLimit ? 'disabled' : ''}>
-        <div class="custom-control custom-checkbox ml-3">
-            <input type="checkbox" class="custom-control-input" id="tpl-no-limit" data-field="no-limit"
-                   ${state.noLimit ? 'checked' : ''}>
-            <label class="custom-control-label" for="tpl-no-limit">No limit</label>
-        </div>
-    </div></div>`;
-    html += '<p class="text-muted small mb-0" data-region="sections-hint"></p>';
-    html += '</fieldset>';
-
-    // Allowed activity types.
-    html += '<fieldset class="border rounded p-3 mb-3"><legend class="w-auto px-2 h6">Allowed activity types</legend>';
-    html += '<p class="text-muted small mb-3">Select which activity types AI can use in the generated course</p>';
-    html += '<div class="row">';
-    TYPES.forEach(t => {
-        const label = t.charAt(0).toUpperCase() + t.slice(1);
-        const checked = state.allowedTypes.includes(t);
-        const inCourse = present.has(t);
-        html += `<div class="col-6 col-md-3 mb-2">
-            <div class="custom-control custom-checkbox">
-                <input type="checkbox" class="custom-control-input" id="tpl-type-${t}"
-                       data-action="toggle-type" data-type="${t}" ${checked ? 'checked' : ''}>
-                <label class="custom-control-label" for="tpl-type-${t}">
-                    ${label}${inCourse
-                        ? ' <span class="badge badge-info badge-pill ml-1" title="In course">&#10003;</span>'
-                        : ''}
-                </label>
-            </div>
-        </div>`;
+    // Pre-check types that are in the course and set allowedTypes.
+    panel.querySelectorAll('[data-action="toggle-type"]').forEach(cb => {
+        const inCourse = present.has(cb.dataset.type);
+        if (inCourse) {
+            cb.checked = true;
+            if (!state.allowedTypes.includes(cb.dataset.type)) {
+                state.allowedTypes.push(cb.dataset.type);
+            }
+            // Add badge for types present in course.
+            const label = cb.nextElementSibling;
+            if (label && !label.querySelector('.badge')) {
+                label.insertAdjacentHTML('beforeend',
+                    ' <span class="badge badge-info badge-pill" title="Present in course">&#10003;</span>');
+            }
+        } else {
+            cb.checked = state.allowedTypes.includes(cb.dataset.type);
+        }
     });
-    html += '</div>';
-    html += `<div class="mt-2">
-        <button class="btn btn-outline-secondary btn-sm mr-1" data-action="select-all-types">Select all</button>
-        <button class="btn btn-outline-secondary btn-sm" data-action="deselect-all-types">Deselect all</button>
-    </div></fieldset>`;
 
-    // Section naming pattern.
-    html += '<fieldset class="border rounded p-3"><legend class="w-auto px-2 h6">Section naming</legend>';
-    html += '<div class="form-group row"><div class="col-md-4"><label class="col-form-label">Pattern</label></div>';
-    html += '<div class="col-md-8"><select class="custom-select" data-field="naming-pattern">';
-    PRESETS.forEach(p => {
-        const sel = (!custom && p.value === state.namingPattern) || (custom && p.value === '__custom__');
-        html += `<option value="${p.value}" ${sel ? 'selected' : ''}>${p.label}</option>`;
-    });
-    html += '</select></div></div>';
-    html += `<div class="form-group row ${custom ? '' : 'd-none'}" data-region="custom-pattern">
-        <div class="col-md-4"><label class="col-form-label">Custom pattern</label></div>
-        <div class="col-md-8">
-            <input type="text" class="form-control" data-field="custom-pattern"
-                   value="${custom ? state.namingPattern : ''}" placeholder="E.g.: Chapter {N} - {nombre}">
-            <small class="form-text text-muted">Use {N} for number and {nombre} for original name</small>
-        </div></div>`;
-    html += '<div class="form-group row"><div class="col-md-4"><label class="col-form-label">Start from</label></div>';
-    html += `<div class="col-md-8"><select class="custom-select" style="width:80px" data-field="naming-start">
-        <option value="1" ${state.namingStart === 1 ? 'selected' : ''}>1</option>
-        <option value="0" ${state.namingStart === 0 ? 'selected' : ''}>0</option>
-    </select></div></div>`;
-    html += '<div data-region="naming-preview"></div></fieldset>';
-
-    panel.innerHTML = html;
-    updatePreview(panel, state, structure);
     updateHint(panel, state, structure);
-    bind(panel, state, structure);
-};
+    updatePreview(panel, state, structure);
 
-/**
- * @param {HTMLElement} p
- * @param {Object} s
- * @param {Array} st
- */
-const updatePreview = (p, s, st) => {
-    const c = p.querySelector('[data-region="naming-preview"]');
-    let h = '<p class="small font-weight-bold text-muted mb-1">Preview:</p>';
-    st.forEach((sec, i) => {
-        const n = s.namingStart + i;
-        h += `<div class="small py-1">${s.namingPattern.replace(/\{N\}/g, n).replace(/\{nombre\}/g, sec.name)}</div>`;
-    });
-    c.innerHTML = h;
-};
-
-/**
- * @param {HTMLElement} p
- * @param {Object} s
- * @param {Array} st
- */
-const updateHint = (p, s, st) => {
-    const h = p.querySelector('[data-region="sections-hint"]');
-    if (s.noLimit) { h.textContent = 'AI can create any number of sections.'; }
-    else if (s.maxSections < st.length) { h.textContent = 'AI will merge extra sections to fit the limit.'; }
-    else if (s.maxSections > st.length) { h.textContent = 'AI may add additional sections if needed.'; }
-    else { h.textContent = 'Same number of sections as the original course.'; }
-};
-
-/**
- * @param {HTMLElement} panel
- * @param {Object} state
- * @param {Array} structure
- */
-const bind = (panel, state, structure) => {
-    panel.querySelector('[data-field="max-sections"]').addEventListener('change', (e) => {
+    // Bind events.
+    maxInput?.addEventListener('change', (e) => {
         state.maxSections = parseInt(e.target.value) || structure.length;
-        setState(state); updateHint(panel, state, structure);
+        setState(state);
+        updateHint(panel, state, structure);
     });
-    panel.querySelector('[data-field="no-limit"]').addEventListener('change', (e) => {
+
+    noLimitCb?.addEventListener('change', (e) => {
         state.noLimit = e.target.checked;
-        panel.querySelector('[data-field="max-sections"]').disabled = e.target.checked;
-        setState(state); updateHint(panel, state, structure);
+        if (maxInput) {
+            maxInput.disabled = e.target.checked;
+        }
+        setState(state);
+        updateHint(panel, state, structure);
     });
+
     panel.querySelectorAll('[data-action="toggle-type"]').forEach(cb => {
         cb.addEventListener('change', () => {
             if (cb.checked && !state.allowedTypes.includes(cb.dataset.type)) {
                 state.allowedTypes.push(cb.dataset.type);
-            } else { state.allowedTypes = state.allowedTypes.filter(t => t !== cb.dataset.type); }
+            } else {
+                state.allowedTypes = state.allowedTypes.filter(t => t !== cb.dataset.type);
+            }
             setState(state);
         });
     });
-    panel.querySelector('[data-action="select-all-types"]').addEventListener('click', () => {
-        state.allowedTypes = [...TYPES]; setState(state); renderStepLimits(panel, state);
+
+    panel.querySelector('[data-action="select-all-types"]')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        panel.querySelectorAll('[data-action="toggle-type"]').forEach(cb => { cb.checked = true; });
+        state.allowedTypes = [...new Set([...state.allowedTypes,
+            ...Array.from(panel.querySelectorAll('[data-action="toggle-type"]')).map(cb => cb.dataset.type)
+        ])];
+        setState(state);
     });
-    panel.querySelector('[data-action="deselect-all-types"]').addEventListener('click', () => {
-        state.allowedTypes = []; setState(state); renderStepLimits(panel, state);
+
+    panel.querySelector('[data-action="deselect-all-types"]')?.addEventListener('click', (e) => {
+        e.preventDefault();
+        panel.querySelectorAll('[data-action="toggle-type"]').forEach(cb => { cb.checked = false; });
+        state.allowedTypes = [];
+        setState(state);
     });
-    panel.querySelector('[data-field="naming-pattern"]').addEventListener('change', (e) => {
-        const cb = panel.querySelector('[data-region="custom-pattern"]');
-        if (e.target.value === '__custom__') { cb.classList.remove('d-none'); state.namingPattern = '{nombre}'; }
-        else { cb.classList.add('d-none'); state.namingPattern = e.target.value; }
-        setState(state); updatePreview(panel, state, structure);
+
+    panel.querySelector('[data-field="naming-pattern"]')?.addEventListener('change', (e) => {
+        const customBlock = panel.querySelector('[data-region="custom-pattern"]');
+        if (e.target.value === '__custom__') {
+            customBlock.classList.remove('d-none');
+            state.namingPattern = panel.querySelector('[data-field="custom-pattern"]')?.value || '{nombre}';
+        } else {
+            customBlock.classList.add('d-none');
+            state.namingPattern = e.target.value;
+        }
+        setState(state);
+        updatePreview(panel, state, structure);
     });
+
     panel.querySelector('[data-field="custom-pattern"]')?.addEventListener('input', (e) => {
-        state.namingPattern = e.target.value || '{nombre}'; setState(state); updatePreview(panel, state, structure);
+        state.namingPattern = e.target.value || '{nombre}';
+        setState(state);
+        updatePreview(panel, state, structure);
     });
-    panel.querySelector('[data-field="naming-start"]').addEventListener('change', (e) => {
-        state.namingStart = parseInt(e.target.value); setState(state); updatePreview(panel, state, structure);
+
+    panel.querySelector('[data-field="naming-start"]')?.addEventListener('change', (e) => {
+        state.namingStart = parseInt(e.target.value);
+        setState(state);
+        updatePreview(panel, state, structure);
     });
+};
+
+/**
+ * Update the sections hint text.
+ *
+ * @param {HTMLElement} panel
+ * @param {Object} state
+ * @param {Array} structure
+ */
+const updateHint = (panel, state, structure) => {
+    const h = panel.querySelector('[data-region="sections-hint"]');
+    if (!h) {
+        return;
+    }
+    const orig = 'Original course has <strong>' + structure.length + '</strong> sections. ';
+    if (state.noLimit) {
+        h.innerHTML = orig + 'AI can create any number of sections.';
+    } else if (state.maxSections < structure.length) {
+        h.innerHTML = orig + 'AI will merge extra sections.';
+    } else if (state.maxSections > structure.length) {
+        h.innerHTML = orig + 'AI may add additional sections.';
+    } else {
+        h.innerHTML = orig + 'Same number as the original.';
+    }
+};
+
+/**
+ * Update the naming preview.
+ *
+ * @param {HTMLElement} panel
+ * @param {Object} state
+ * @param {Array} structure
+ */
+const updatePreview = (panel, state, structure) => {
+    const c = panel.querySelector('[data-region="naming-preview"]');
+    if (!c) {
+        return;
+    }
+    let html = '<small class="text-muted d-block mb-1">Preview:</small>';
+    structure.forEach((sec, i) => {
+        const n = state.namingStart + i;
+        const rendered = state.namingPattern.replace(/\{N\}/g, n).replace(/\{nombre\}/g, sec.name);
+        html += '<small class="d-block">' + rendered + '</small>';
+    });
+    c.innerHTML = html;
 };

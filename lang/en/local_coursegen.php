@@ -842,6 +842,7 @@ $string['template_bulk_keep'] = 'Keep all intact';
 $string['template_bulk_modify'] = 'Modify all';
 $string['template_bulk_reference'] = 'Reference only';
 $string['template_limits_title'] = 'Generated course limits';
+$string['template_limits_desc'] = 'Configure constraints for the AI-generated course';
 $string['template_max_sections'] = 'Maximum sections';
 $string['template_max_sections_info'] = 'The original course has {$a} sections';
 $string['template_sections_count'] = 'sections';
