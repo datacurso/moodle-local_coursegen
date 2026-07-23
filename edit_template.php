@@ -31,7 +31,9 @@ $courseid = optional_param('courseid', 0, PARAM_INT);
 $search = optional_param('search', '', PARAM_TEXT);
 $categoryid = optional_param('categoryid', 0, PARAM_INT);
 
-// Pre-render course preview BEFORE admin setup (set_course cannot be called after theme init).
+admin_externalpage_setup('local_coursegen_edit_template');
+
+// Render course preview AFTER admin setup using a temporary page object.
 $coursename = '';
 $courseshortname = '';
 $previewhtml = '';
@@ -39,16 +41,15 @@ $sectionsconfightml = '';
 $numsections = 0;
 $numactivities = 0;
 if ($courseid > 0) {
-    require_login();
     $course = get_course($courseid);
     $coursename = format_string($course->fullname);
     $courseshortname = $course->shortname;
 
     if ($step >= 2) {
-        // Use a temporary page object to render the course format without polluting $PAGE.
         $temppage = new moodle_page();
         $temppage->set_context(context_course::instance($course->id));
         $temppage->set_course($course);
+        $temppage->set_url('/local/coursegen/edit_template.php');
 
         $format = course_get_format($course);
         $renderer = $format->get_renderer($temppage);
@@ -65,7 +66,6 @@ if ($courseid > 0) {
             }
         }
 
-        // Build sections config HTML with controls injected server-side.
         if ($step >= 3) {
             $sectionsconfightml = \local_coursegen\output\sections_config::render(
                 $previewhtml, $modinfo
@@ -73,8 +73,6 @@ if ($courseid > 0) {
         }
     }
 }
-
-admin_externalpage_setup('local_coursegen_edit_template');
 
 $context = context_system::instance();
 require_capability('local/coursegen:managetemplates', $context);
