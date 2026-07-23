@@ -74,7 +74,7 @@ if ($courseid > 0) {
     }
 }
 
-admin_externalpage_setup('local_coursegen_manage_templates');
+admin_externalpage_setup('local_coursegen_edit_template');
 
 $context = context_system::instance();
 require_capability('local/coursegen:managetemplates', $context);
