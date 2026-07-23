@@ -22,7 +22,7 @@
  */
 
 import {createGuidelineHandlers} from 'local_coursegen/local/courseai/context/guideline';
-import {wireTemplatePopover} from 'local_coursegen/local/courseai/context/template';
+import {createTemplateHandlers} from 'local_coursegen/local/courseai/context/template';
 import {wireCompactControls} from 'local_coursegen/local/courseai/context/compact';
 import {bindToggleWrap, showFilePicker as openFilePicker} from 'local_coursegen/local/courseai/context/filepicker';
 import {wirePlusMenu} from 'local_coursegen/local/courseai/context/plus-menu';
@@ -246,7 +246,53 @@ export const setupContextSection = (deps) => {
     }
 
     // ─── Template popover wiring ────────────────────────────────────────────
-    wireTemplatePopover(document, state);
+    const btnTemplates = document.getElementById('btnTemplates');
+    const templatesPopover = document.getElementById('templatesPopover');
+    const templateSearch = document.getElementById('templateSearch');
+
+    const {renderTemplateList, selectTemplate} = createTemplateHandlers({
+        state, texts,
+        refreshTemplateChip: () => {},
+        refreshChipsRow,
+        refreshCompactChipsRow,
+    });
+
+    if (btnTemplates && templatesPopover) {
+        btnTemplates.addEventListener('click', (e) => {
+            e.stopPropagation();
+            const willOpen = !templatesPopover.classList.contains('open');
+            templatesPopover.classList.toggle('open', willOpen);
+            btnTemplates.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+            if (willOpen && templateSearch) {
+                templateSearch.value = '';
+                state.templateSearchQuery = '';
+                renderTemplateList();
+                templateSearch.focus();
+            }
+        });
+    }
+
+    if (templateSearch) {
+        templateSearch.addEventListener('input', () => {
+            state.templateSearchQuery = templateSearch.value;
+            renderTemplateList();
+        });
+    }
+
+    const templatesPopoverClose = document.getElementById('templatesPopoverClose');
+    if (templatesPopoverClose) {
+        templatesPopoverClose.addEventListener('click', (e) => {
+            e.stopPropagation();
+            if (templatesPopover) {
+                templatesPopover.classList.remove('open');
+            }
+            if (btnTemplates) {
+                btnTemplates.setAttribute('aria-expanded', 'false');
+            }
+        });
+    }
+
+    void selectTemplate;
 
     if (btnWithSubsections && subToggleWrap) {
         bindToggleWrap(subToggleWrap, btnWithSubsections);
