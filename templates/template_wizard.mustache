@@ -92,7 +92,7 @@
                          data-region="category-tree">
                         <div class="list-group list-group-flush">
                             {{#flatcats}}
-                            <div class="list-group-item list-group-item-action d-flex align-items-start py-2 {{#depth}}d-none{{/depth}}"
+                            <div class="list-group-item list-group-item-action d-flex align-items-start py-2 {{#ischild}}d-none{{/ischild}}"
                                  data-catid="{{id}}" data-depth="{{depth}}"
                                  data-haschildren="{{#haschildren}}1{{/haschildren}}{{^haschildren}}0{{/haschildren}}"
                                  style="padding-left:calc(0.75rem + {{depth}} * 0.75rem);cursor:pointer">
