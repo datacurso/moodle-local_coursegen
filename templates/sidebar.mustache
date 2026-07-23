@@ -33,6 +33,29 @@
       <span class="courseai-sidebar-btn-text">{{#str}}courseai_sidebar_newcourse, local_coursegen{{/str}}</span>
     </button>
 
+    <!-- Creation mode section -->
+    <div class="courseai-sidebar-section">
+      <div class="courseai-sidebar-section-header">
+        <span class="courseai-sidebar-section-title">{{#str}}courseai_sidebar_mode, local_coursegen{{/str}}</span>
+      </div>
+      <button class="courseai-sidebar-mode-item active" id="courseaiModeFree" data-mode="free" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M15 4V2"/><path d="M15 16v-2"/><path d="M8 9h2"/><path d="M20 9h2"/>
+          <path d="M17.8 11.8L19 13"/><path d="M15 9h0"/><path d="M17.8 6.2L19 5"/>
+          <path d="m3 21 9-9"/><path d="M12.2 6.2L11 5"/>
+        </svg>
+        <span>{{#str}}courseai_mode_free, local_coursegen{{/str}}</span>
+      </button>
+      <button class="courseai-sidebar-mode-item" id="courseaiModeTemplate" data-mode="template" type="button">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/>
+          <line x1="8" y1="21" x2="16" y2="21"/>
+          <line x1="12" y1="17" x2="12" y2="21"/>
+        </svg>
+        <span>{{#str}}courseai_mode_template, local_coursegen{{/str}}</span>
+      </button>
+    </div>
+
     <!-- Recent section -->
     <div class="courseai-sidebar-section">
       <div class="courseai-sidebar-section-header" id="courseaiCoursesHeader">

@@ -78,6 +78,13 @@ export const init = async(params) => {
         const activityLabels = getActivityLabels(texts);
         const generateButtonHtml = getGenerateButtonHtml(texts);
 
+        // Wire template mode switching.
+        import('local_coursegen/local/courseai/template_mode').then(({wireTemplateMode}) => {
+            wireTemplateMode(state);
+        }).catch(() => {
+            // Template mode not available — skip silently.
+        });
+
         const contextUi = createContextUi({
             state,
             languages,

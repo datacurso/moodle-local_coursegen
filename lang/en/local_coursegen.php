@@ -783,6 +783,14 @@ $string['wiki_ready'] = 'Wiki ready: \'{$a->name}\' with {$a->count} pages.';
 $string['writing_workshop_instructions'] = 'Writing the Workshop instructions and context...';
 $string['yesimages'] = 'Generate images';
 
+$string['courseai_mode_free'] = 'Free creation';
+$string['courseai_mode_template'] = 'From template';
+$string['courseai_sidebar_mode'] = 'Mode';
+$string['courseai_template_title'] = 'Create course from template';
+$string['courseai_template_subtitle'] = 'Select a template, customize the structure, and generate.';
+$string['courseai_template_instructions'] = 'Additional instructions';
+$string['courseai_template_instructions_placeholder'] = 'General context or requirements for the whole course...';
+$string['courseai_template_instructions_help'] = 'Applied to all modifiable activities along with their individual instructions.';
 $string['courseai_btn_templates'] = 'Templates';
 $string['courseai_btn_templates_title'] = 'Select a course template';
 $string['courseai_chip_remove_template'] = 'Remove template';

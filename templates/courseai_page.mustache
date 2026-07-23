@@ -600,6 +600,94 @@
 
     </div><!-- .context-wrap -->
 
+    <!-- ══════════ TEMPLATE MODE VIEW ════════════════════════════════════ -->
+    <div class="context-wrap" id="templateModeView" style="display:none">
+      <div class="courseai-context-editor">
+        <div class="context-head">
+          <h2>{{#str}}courseai_template_title, local_coursegen{{/str}}</h2>
+          <p>{{#str}}courseai_template_subtitle, local_coursegen{{/str}}</p>
+        </div>
+
+        <div class="card" id="templateModeCard">
+          <div class="p-3">
+            {{! Template selector }}
+            <div class="form-row mb-3">
+              <div class="col-md-8">
+                <label class="font-weight-bold small">{{#str}}managetemplates, local_coursegen{{/str}}</label>
+                <select class="custom-select" id="tplModeSelect">
+                  <option value="">— {{#str}}template_select_course, local_coursegen{{/str}} —</option>
+                  {{#coursetemplates}}
+                  <option value="{{id}}">{{name}}</option>
+                  {{/coursetemplates}}
+                </select>
+              </div>
+              <div class="col-md-4">
+                <label class="font-weight-bold small">{{#str}}category{{/str}}</label>
+                <select class="custom-select" id="tplModeCategory">
+                  <option value="">{{#str}}defaultcategoryhere{{/str}}</option>
+                </select>
+              </div>
+            </div>
+
+            {{! Course names }}
+            <div class="form-row mb-3">
+              <div class="col-md-8">
+                <label class="font-weight-bold small">
+                  {{#str}}fullnamecourse{{/str}} <span class="text-danger">*</span>
+                </label>
+                <input type="text" class="form-control" id="tplModeFullname"
+                       placeholder="{{#str}}courseai_review_fullname_placeholder, local_coursegen{{/str}}">
+              </div>
+              <div class="col-md-4">
+                <label class="font-weight-bold small">{{#str}}shortnamecourse{{/str}}</label>
+                <input type="text" class="form-control" id="tplModeShortname"
+                       placeholder="{{#str}}courseai_review_shortname_placeholder, local_coursegen{{/str}}">
+                <small class="form-text text-muted">
+                  {{#str}}courseai_review_shortname_note, local_coursegen{{/str}}
+                </small>
+              </div>
+            </div>
+
+            {{! Language }}
+            <div class="form-row mb-3">
+              <div class="col-md-4">
+                <label class="font-weight-bold small">{{#str}}course_ai_language, local_coursegen{{/str}}</label>
+                <select class="custom-select" id="tplModeLang">
+                </select>
+              </div>
+            </div>
+
+            {{! Global instructions }}
+            <div class="mb-3">
+              <label class="font-weight-bold small">
+                {{#str}}courseai_template_instructions, local_coursegen{{/str}}
+              </label>
+              <textarea class="form-control" rows="2" id="tplModeInstructions"
+                        placeholder="{{#str}}courseai_template_instructions_placeholder, local_coursegen{{/str}}"></textarea>
+              <small class="form-text text-muted">
+                {{#str}}courseai_template_instructions_help, local_coursegen{{/str}}
+              </small>
+            </div>
+
+            {{! Dynamic structure — populated by JS when template is selected }}
+            <div id="tplModeStructure"></div>
+          </div>
+
+          {{! Toolbar }}
+          <div class="prompt-bar" style="border-top:1px solid var(--border);padding:.5rem 1rem;display:flex;align-items:center">
+            <span class="text-muted small" id="tplModeStats"></span>
+            <button class="btn-generate ml-auto" id="tplModeGenerate" type="button" disabled>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"/>
+              </svg>
+              {{#str}}courseai_btn_generate, local_coursegen{{/str}}
+            </button>
+          </div>
+        </div>
+      </div>
+    </div><!-- #templateModeView -->
+
     <!-- Resizable divider (§2.1) — visible only in .is-planning (3-column grid) -->
     {{! aria-valuemin/max/now are set by the splitter AMD at init: the HTML
         validator rejects them as static attributes on role="separator". }}

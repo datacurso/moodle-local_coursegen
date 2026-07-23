@@ -70,8 +70,9 @@ $tplrecords = \local_coursegen\local\models\template::get_records([], 'name', 'A
 foreach ($tplrecords as $tpl) {
     $tplcourse = $DB->get_record('course', ['id' => $tpl->get('courseid')], 'id, fullname', IGNORE_MISSING);
     $coursetemplates[] = [
-        'id' => $tpl->get('id'),
+        'id' => (int) $tpl->get('id'),
         'name' => $tpl->get('name'),
+        'courseid' => (int) $tpl->get('courseid'),
         'coursefullname' => $tplcourse ? format_string($tplcourse->fullname) : '',
         'description' => $tpl->get('description') ?? '',
     ];
@@ -132,7 +133,8 @@ $subsectionsenabled = \local_coursegen\local\service\course_planning_service::su
 // Prepare template context.
 $templatecontext = [
     'guidelines' => json_encode($systeminstructions),
-    'coursetemplates' => json_encode($coursetemplates),
+    'coursetemplates' => $coursetemplates,
+    'hascoursetemplates' => !empty($coursetemplates),
     'languages' => json_encode($languageoptions),
     'defaultlang' => current_language(),
     'logourl' => $logourl->out(),
