@@ -22,6 +22,7 @@
  */
 
 import {setState} from './init';
+import {watchForm, markFormChangedFromNode} from 'core_form/changechecker';
 
 /**
  * Bind events on server-rendered controls (no DOM injection needed).
@@ -30,6 +31,11 @@ import {setState} from './init';
  * @param {Object} state
  */
 export const bindServerRenderedControls = (container, state) => {
+    // Watch the wizard container for unsaved changes.
+    const wizard = document.getElementById('local-coursegen-template-wizard');
+    if (wizard) {
+        watchForm(wizard);
+    }
     // Section dropdowns.
     container.querySelectorAll('[data-sec-action]').forEach(item => {
         item.addEventListener('click', (e) => {
@@ -37,6 +43,7 @@ export const bindServerRenderedControls = (container, state) => {
             const sid = parseInt(item.dataset.sid);
             state.sectionBehavior[sid] = item.dataset.secAction;
             setState(state);
+            markFormChangedFromNode(item);
             const section = container.querySelector(`[data-for="section"][data-id="${sid}"]`);
             if (section) {
                 applySectionVisual(section, item.dataset.secAction, container);
@@ -61,6 +68,7 @@ export const bindServerRenderedControls = (container, state) => {
             }
             state.activityAction[cmid] = item.dataset.actVal;
             setState(state);
+            markFormChangedFromNode(item);
             cmitem.style.opacity = item.dataset.actVal === 'exclude' ? '0.35' : '1';
             const btn = item.closest('.dropdown')?.querySelector('.dropdown-toggle');
             if (btn) {
@@ -81,6 +89,7 @@ export const bindServerRenderedControls = (container, state) => {
             const cmid = parseInt(ta.dataset.tplPrompt);
             state.activityPrompt[cmid] = ta.value;
             setState(state);
+            markFormChangedFromNode(ta);
         });
     });
 };
