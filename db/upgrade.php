@@ -222,5 +222,25 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2025121601, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026072402) {
+        // Persist default values for new settings added in this version.
+        // Moodle does not auto-persist settings.php defaults on upgrade,
+        // so get_config() returns false until the admin saves the page.
+        $defaults = [
+            'enable_course_ai' => 1,
+            'enable_activity_ai' => 1,
+            'enable_course_image_generation' => 1,
+            'enable_activity_image_generation' => 1,
+            'enable_empty_course_ai' => 0,
+        ];
+        foreach ($defaults as $name => $default) {
+            if (get_config('local_coursegen', $name) === false) {
+                set_config($name, $default, 'local_coursegen');
+            }
+        }
+
+        upgrade_plugin_savepoint(true, 2026072402, 'local', 'coursegen');
+    }
+
     return true;
 }

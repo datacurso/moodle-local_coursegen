@@ -34,18 +34,15 @@ export const init = () => {
  * Add the AI button before the submit button
  */
 const addAIButton = async () => {
-  // Find the submit form element
-  const submitElement = document.querySelector(".mb-3.fitem.form-submit");
+  // Find the submit button group — Moodle renders it as #fgroup_id_buttonar
+  // on course edit forms, or .mb-3.fitem.form-submit on some themes.
+  const submitElement = document.getElementById("fgroup_id_buttonar")
+    || document.querySelector(".mb-3.fitem.form-submit")
+    || document.querySelector('div[data-fieldtype="submit"]')
+    || document.querySelector('input[name="saveanddisplay"]')?.closest(".fitem")
+    || document.querySelector('input[name="saveandreturn"]')?.closest(".fitem");
 
   if (!submitElement) {
-    // If not found, try alternative selectors
-    const alternativeSubmit =
-      document.querySelector('div[data-fieldtype="submit"]') ||
-      document.querySelector('input[name="saveandreturn"]')?.closest(".fitem");
-
-    if (alternativeSubmit) {
-      await insertAIButton(alternativeSubmit);
-    }
     return;
   }
 
@@ -53,7 +50,9 @@ const addAIButton = async () => {
   const button = document.querySelector(
     '[data-action="local_coursegen/add_ai_course"]'
   );
-  button.addEventListener("click", handleAIButtonClick);
+  if (button) {
+    button.addEventListener("click", handleAIButtonClick);
+  }
 };
 
 /**

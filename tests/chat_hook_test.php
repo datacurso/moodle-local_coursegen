@@ -392,4 +392,5 @@ final class chat_hook_test extends \advanced_testcase {
             'can_generate_activity_images must return true when setting is on and user is admin.'
         );
     }
+
 }

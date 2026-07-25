@@ -56,8 +56,7 @@ Feature: Capabilities control AI feature access per role
       | capability           | permission | role           | contextlevel | reference |
       | moodle/course:create | Allow      | editingteacher | System       |           |
     When I log in as "teacher1"
-    And I navigate to "Courses > Manage courses and categories" in site administration
-    And I click on "Create new course" "link"
+    And I visit "/course/edit.php?category=1"
     Then "button[data-action='local_coursegen/add_ai_course']" "css_element" should not exist
 
   @javascript

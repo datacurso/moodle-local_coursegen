@@ -103,7 +103,7 @@ class chat_hook {
      * @return bool
      */
     private static function can_generate_activity_images(\context $context): bool {
-        return get_config('local_coursegen', 'enable_activity_image_generation')
+        return (bool) get_config('local_coursegen', 'enable_activity_image_generation')
             && has_capability('local/coursegen:generateactivityimages', $context);
     }
 
@@ -225,8 +225,7 @@ class chat_hook {
      * @return bool True if the course has no real content.
      */
     private static function is_course_empty(int $courseid): bool {
-        global $CFG;
-        require_once($CFG->dirroot . '/mod/forum/lib.php');
+        global $DB;
 
         $modinfo = get_fast_modinfo($courseid);
         $cms = $modinfo->get_cms();
@@ -241,18 +240,14 @@ class chat_hook {
 
         // Exactly one module — verify it is the default Announcements news forum.
         $cm = reset($cms);
-        if ($cm->modname !== 'forum' || $cm->sectionnum !== 0) {
+        if ($cm->modname !== 'forum' || (int) $cm->sectionnum !== 0) {
             return false;
         }
 
-        // forum_get_course_forum returns the one-per-course "news" forum record
-        // by querying: course = $courseid AND type = 'news', ordered by id ASC.
-        $newsforum = forum_get_course_forum($courseid, 'news');
-        if (!$newsforum) {
-            return false;
-        }
+        // Check directly in DB that this forum instance is the news type.
+        $forumtype = $DB->get_field('forum', 'type', ['id' => $cm->instance]);
 
-        return (int) $cm->instance === (int) $newsforum->id;
+        return $forumtype === 'news';
     }
 
     /**
@@ -271,7 +266,6 @@ class chat_hook {
         $courseid = $PAGE->url->get_param('id');
 
         if ($courseid) {
-            // Allow on existing courses only if the admin setting and content check pass.
             if (!get_config('local_coursegen', 'enable_empty_course_ai')) {
                 return false;
             }
