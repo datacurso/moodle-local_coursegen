@@ -78,7 +78,7 @@ class plan_course_execute extends external_api {
             require_capability('local/coursegen:createcoursewithai', $context);
 
             if (!get_config('local_coursegen', 'enable_course_ai')) {
-                throw new \moodle_exception('nopermissions', 'error', '', 'AI course creation is disabled');
+                throw new \moodle_exception('error_course_ai_disabled', 'local_coursegen');
             }
 
             // Validate that a session exists for this course and user.

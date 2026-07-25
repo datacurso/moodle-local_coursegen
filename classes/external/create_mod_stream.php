@@ -94,7 +94,7 @@ class create_mod_stream extends external_api {
 
             // Server-side enforcement: admin settings and capabilities.
             if (!get_config('local_coursegen', 'enable_activity_ai')) {
-                throw new \moodle_exception('nopermissions', 'error', '', 'AI activity creation is disabled');
+                throw new \moodle_exception('error_activity_ai_disabled', 'local_coursegen');
             }
             require_capability('local/coursegen:createactivitywithai', $context);
 
