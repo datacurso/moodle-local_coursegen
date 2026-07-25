@@ -1,3 +1,25 @@
+## [1.4.1] - 2025-07-25
+
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
+
+### Changed
+- **Settings page reorganized into Course AI and Activity AI sections**
+  Replaced the single "Feature toggles" heading with two separate sections. Image generation and empty course settings are now hidden when their parent feature is disabled via `hide_if`
+
+### Fixed
+- **Server-side enforcement for all admin settings and capabilities**
+  All 5 admin settings and 2 capabilities are now validated server-side in web services (`create_mod_stream`, `create_mod`, `create_course`, `plan_course_execute`, `plan_course_message`) and form submission (`after_form_submission`). Previously they were only enforced at the UI level and could be bypassed via direct AJAX calls or DOM manipulation
+- **Image generation request without permission now throws an error**
+  When a user bypasses the UI and requests image generation without the setting or capability, the server throws a clear error (`error_activity_image_generation_denied` / `error_course_image_generation_denied`) instead of silently downgrading
+- **Activity creation crashed when image generation was disabled**
+  When `enable_activity_image_generation` was off, the JS crashed trying to read `.value` on a null element because the radio buttons were removed from the DOM. Now defaults to `"0"` when the element is absent
+- **Replaced hardcoded error strings with lang strings**
+  All server-side error messages now use `get_string()` from the plugin's language packs instead of hardcoded English text
+- **Plugin capabilities declared in `db/services.php`**
+  Added `local/coursegen:createcoursewithai` and `local/coursegen:createactivitywithai` to the web service declarations alongside the core Moodle capabilities
+- **Version bump**
+  Internal version bumped to **2026072500** and release version bumped to **1.4.1**
+
 ## [1.4.0] - 2025-07-25
 
 **Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
