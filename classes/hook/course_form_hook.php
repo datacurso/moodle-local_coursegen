@@ -307,9 +307,9 @@ class course_form_hook {
                 $context = \context_course::instance($courseid);
                 require_capability('local/coursegen:createcoursewithai', $context);
 
-                // Force images off if the setting or capability disallows it.
-                if (!self::can_generate_images_in_form()) {
-                    $generateimages = 0;
+                // Reject image generation if the setting or capability disallows it.
+                if ($generateimages && !self::can_generate_images_in_form()) {
+                    throw new \moodle_exception('error_course_image_generation_denied', 'local_coursegen');
                 }
 
                 ai_course::start_course_planning(
