@@ -73,23 +73,29 @@ class course_form_hook {
         $defaultcode = current_language();
         $mform->setDefault('local_coursegen_lang', $defaultcode);
 
-        // Add option to generate images for the course.
-        $mform->addElement(
-            'select',
-            'local_coursegen_generate_images',
-            get_string('course_generate_images_field', 'local_coursegen'),
-            [
-                0 => get_string('noimages', 'local_coursegen'),
-                1 => get_string('yesimages', 'local_coursegen'),
-            ]
-        );
-        $mform->setType('local_coursegen_generate_images', PARAM_INT);
-        $mform->setDefault('local_coursegen_generate_images', 0);
-        $mform->addHelpButton(
-            'local_coursegen_generate_images',
-            'course_generate_images_field',
-            'local_coursegen'
-        );
+        // Add option to generate images for the course (gated by admin setting + capability).
+        $cangenerateimages = self::can_generate_images_in_form();
+        if ($cangenerateimages) {
+            $mform->addElement(
+                'select',
+                'local_coursegen_generate_images',
+                get_string('course_generate_images_field', 'local_coursegen'),
+                [
+                    0 => get_string('noimages', 'local_coursegen'),
+                    1 => get_string('yesimages', 'local_coursegen'),
+                ]
+            );
+            $mform->setType('local_coursegen_generate_images', PARAM_INT);
+            $mform->setDefault('local_coursegen_generate_images', 0);
+            $mform->addHelpButton(
+                'local_coursegen_generate_images',
+                'course_generate_images_field',
+                'local_coursegen'
+            );
+        } else {
+            $mform->addElement('hidden', 'local_coursegen_generate_images', 0);
+            $mform->setType('local_coursegen_generate_images', PARAM_INT);
+        }
 
         // Add context type selector.
         $contexttypes = [
@@ -360,5 +366,37 @@ class course_form_hook {
         if (!empty($errors)) {
             $hook->add_errors($errors);
         }
+    }
+
+    /**
+     * Check if image generation is allowed in the current course form context.
+     *
+     * Requires the admin master switch and the per-user capability.
+     * Uses course context when editing an existing course, or category context
+     * when creating a new one.
+     *
+     * @return bool
+     */
+    private static function can_generate_images_in_form(): bool {
+        global $DB;
+
+        if (!get_config('local_coursegen', 'enable_course_image_generation')) {
+            return false;
+        }
+
+        $courseid = optional_param('id', 0, PARAM_INT);
+        if ($courseid) {
+            $context = \context_course::instance($courseid);
+        } else {
+            $categoryid = optional_param('category', 0, PARAM_INT);
+            if ($categoryid) {
+                $context = \context_coursecat::instance($categoryid);
+            } else {
+                $category = \core_course_category::get_default();
+                $context = \context_coursecat::instance($category->id);
+            }
+        }
+
+        return has_capability('local/coursegen:generatecourseimages', $context);
     }
 }

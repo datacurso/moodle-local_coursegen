@@ -24,15 +24,18 @@ import {openChatModal} from 'local_coursegen/add_activity_ai';
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 let IS_MOODLE_45 = false;
+let CAN_GENERATE_IMAGES = false;
 
 /**
  * Initialize the add activity AI button.
  *
  * @param {number} courseid - The course ID to add activity AI button for
  * @param {boolean} ismoodle45 - Whether the Moodle version is 4.5
+ * @param {boolean} cangenerateimages - Whether the user can generate images with AI
  */
-export function init(courseid, ismoodle45) {
+export function init(courseid, ismoodle45, cangenerateimages) {
     IS_MOODLE_45 = Boolean(ismoodle45);
+    CAN_GENERATE_IMAGES = Boolean(cangenerateimages);
 
     const containers = document.querySelectorAll('.divider-content:has([data-action="open-chooser"])');
     containers.forEach(container => {
@@ -74,6 +77,7 @@ export async function injectButton(container, courseid) {
             sectionnum,
             beforemod,
             courseid,
+            cangenerateimages: CAN_GENERATE_IMAGES,
         });
     });
 }
