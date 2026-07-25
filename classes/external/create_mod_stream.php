@@ -99,11 +99,14 @@ class create_mod_stream extends external_api {
             require_capability('local/coursegen:createactivitywithai', $context);
 
             // Reject image generation if the setting or capability disallows it.
-            if ($generateimages == 1) {
-                if (!get_config('local_coursegen', 'enable_activity_image_generation')
-                        || !has_capability('local/coursegen:generateactivityimages', $context)) {
-                    throw new \moodle_exception('error_activity_image_generation_denied', 'local_coursegen');
-                }
+            if (
+                $generateimages == 1
+                && (
+                    !get_config('local_coursegen', 'enable_activity_image_generation')
+                    || !has_capability('local/coursegen:generateactivityimages', $context)
+                )
+            ) {
+                throw new \moodle_exception('error_activity_image_generation_denied', 'local_coursegen');
             }
 
             $aicontext = ai_context::get_course_context_info($courseid);
