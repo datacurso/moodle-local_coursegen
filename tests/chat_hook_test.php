@@ -26,7 +26,6 @@ namespace local_coursegen;
  * @covers     \local_coursegen\hook\chat_hook
  */
 final class chat_hook_test extends \advanced_testcase {
-
     /**
      * Helper: invoke a private static method on chat_hook via Reflection.
      *
@@ -74,9 +73,7 @@ final class chat_hook_test extends \advanced_testcase {
         return $user;
     }
 
-    // -----------------------------------------------------------------------
-    // is_course_empty() tests.
-    // -----------------------------------------------------------------------
+    // Is_course_empty() tests.
 
     /**
      * A brand new course with only the default Announcements forum is empty.
@@ -151,9 +148,7 @@ final class chat_hook_test extends \advanced_testcase {
         );
     }
 
-    // -----------------------------------------------------------------------
-    // can_create_activity() — admin setting gate.
-    // -----------------------------------------------------------------------
+    // Can_create_activity() — admin setting gate.
 
     /**
      * Activity AI button is blocked when admin setting is off.
@@ -203,9 +198,7 @@ final class chat_hook_test extends \advanced_testcase {
         );
     }
 
-    // -----------------------------------------------------------------------
-    // can_create_course() — admin setting gates + empty course logic.
-    // -----------------------------------------------------------------------
+    // Can_create_course() — admin setting gates + empty course logic.
 
     /**
      * Course AI button is blocked when admin setting is off (new course).
@@ -332,9 +325,7 @@ final class chat_hook_test extends \advanced_testcase {
         );
     }
 
-    // -----------------------------------------------------------------------
-    // can_generate_activity_images() — admin setting + capability.
-    // -----------------------------------------------------------------------
+    // Can_generate_activity_images() — admin setting + capability.
 
     /**
      * Activity image generation is blocked when admin setting is off.
@@ -392,5 +383,4 @@ final class chat_hook_test extends \advanced_testcase {
             'can_generate_activity_images must return true when setting is on and user is admin.'
         );
     }
-
 }

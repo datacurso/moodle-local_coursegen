@@ -33,7 +33,6 @@ require_once($CFG->dirroot . '/course/tests/fixtures/testable_course_edit_form.p
  * @runTestsInSeparateProcesses
  */
 final class course_form_hook_test extends \advanced_testcase {
-
     /**
      * Helper: build a course edit form and fire the after_form_definition hook.
      *

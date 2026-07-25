@@ -34,19 +34,15 @@ export const init = () => {
  * Add the AI button before the submit button
  */
 const addAIButton = async () => {
-  // Find the submit button group — Moodle renders it as #fgroup_id_buttonar
-  // on course edit forms, or .mb-3.fitem.form-submit on some themes.
-  const submitElement = document.getElementById("fgroup_id_buttonar")
-    || document.querySelector(".mb-3.fitem.form-submit")
-    || document.querySelector('div[data-fieldtype="submit"]')
-    || document.querySelector('input[name="saveanddisplay"]')?.closest(".fitem")
-    || document.querySelector('input[name="saveandreturn"]')?.closest(".fitem");
+  // Find the first submit input inside the button group so we insert beside it.
+  const submitInput = document.querySelector('#fgroup_id_buttonar .form-submit')
+    || document.querySelector(".mb-3.fitem.form-submit");
 
-  if (!submitElement) {
+  if (!submitInput) {
     return;
   }
 
-  await insertAIButton(submitElement);
+  await insertAIButton(submitInput);
   const button = document.querySelector(
     '[data-action="local_coursegen/add_ai_course"]'
   );
