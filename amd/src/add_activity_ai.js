@@ -215,9 +215,10 @@ define([
         userMessagesSection.style.display = "block";
       }
 
-      const generateImages = document.querySelector(
+      const generateImagesEl = document.querySelector(
         'input[name="generate_images"]:checked'
-      ).value;
+      );
+      const generateImages = generateImagesEl ? generateImagesEl.value : "0";
 
       textarea.value = "";
 
