@@ -1,3 +1,43 @@
+## [1.4.0] - 2025-07-25
+
+**Compatibility note:** This version is compatible from **Moodle 4.5** to **Moodle 5.1**.
+
+### Added
+- **Admin feature toggles for all AI features**
+  Five new master switches in General settings: Enable AI course creation, Enable AI activity creation, Enable image generation for courses, Enable image generation for activities, and Enable AI generation for empty courses
+- **Per-role image generation capabilities**
+  Two new capabilities `local/coursegen:generatecourseimages` and `local/coursegen:generateactivityimages` (manager archetype only by default) to control who sees image generation options independently from admin settings
+- **AI course creation for empty existing courses**
+  The "Create with AI" button now appears on the edit form of existing courses that have no content (only the default Announcements forum), gated by the `enable_empty_course_ai` setting
+- **Development settings page**
+  Service URL overrides moved to a separate Development settings page, keeping General settings focused on feature toggles
+- **Behat test suite**
+  Added 23 Behat scenarios across two feature files: `admin_settings.feature` (13 scenarios for master switch toggles) and `capability_access_control.feature` (10 scenarios for per-role access)
+- **PHPUnit test suite for hooks**
+  Added 15 PHPUnit tests covering `is_course_empty`, `can_create_course`, `can_create_activity`, and image generation capability gating
+- **Behat CI step in plugin-ci workflow**
+  Added Behat execution with Chrome profile and faildump artifact upload on failure
+
+### Changed
+- **Settings page reorganized**
+  General settings now contains only feature toggles; service URL fields moved to Development settings
+- **Image generation UI gated by dual check**
+  Image generation select (course form) and radio buttons (activity modal) are now hidden unless both the admin setting is enabled AND the user has the corresponding capability
+- **Version bump**
+  Internal version bumped to **2026072404** and release version bumped to **1.4.0**
+
+### Fixed
+- **Strict type comparison in empty course detection**
+  Fixed `sectionnum` comparison that failed because Moodle returns it as string `"0"` — strict `!== 0` was always true
+- **Config defaults not persisted on plugin upgrade**
+  Added `db/upgrade.php` step to persist default values for new settings, preventing `get_config()` from returning `false` before admin saves the settings page
+- **Forum lib dependency crash during footer hook**
+  Replaced `require_once(mod/forum/lib.php)` + `forum_get_course_forum()` with a direct DB query to avoid exceptions when loading forum library during the before_footer hook
+- **AI button not found on course edit form**
+  Fixed JS submit button selector to find `#fgroup_id_buttonar .form-submit` used by course edit forms, and ensured the click handler is always registered
+- **AI button misaligned on course edit form**
+  Changed button insertion to place it inside the button group instead of before it, so it aligns with Save and Cancel
+
 ## 1.3.3
 
 **Released on:** 2026-04-10
