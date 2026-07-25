@@ -295,6 +295,23 @@ class course_form_hook {
             ai_context::save_course_context($courseid, $contexttype, $selectedinstruction, $selectedlang, $promptmessage);
 
             if (!empty($createaicourse)) {
+                // Server-side enforcement: verify admin settings and capabilities.
+                $isnewcourse = empty(optional_param('id', 0, PARAM_INT));
+                if ($isnewcourse && !get_config('local_coursegen', 'enable_course_ai')) {
+                    return;
+                }
+                if (!$isnewcourse && !get_config('local_coursegen', 'enable_empty_course_ai')) {
+                    return;
+                }
+
+                $context = \context_course::instance($courseid);
+                require_capability('local/coursegen:createcoursewithai', $context);
+
+                // Force images off if the setting or capability disallows it.
+                if (!self::can_generate_images_in_form()) {
+                    $generateimages = 0;
+                }
+
                 ai_course::start_course_planning(
                     $courseid,
                     $contexttype,

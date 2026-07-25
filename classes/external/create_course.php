@@ -77,6 +77,11 @@ class create_course extends external_api {
             $coursecontext = \context_course::instance($course->id);
             self::validate_context($coursecontext);
             require_capability('moodle/course:manageactivities', $coursecontext);
+            require_capability('local/coursegen:createcoursewithai', $coursecontext);
+
+            if (!get_config('local_coursegen', 'enable_course_ai')) {
+                throw new \moodle_exception('nopermissions', 'error', '', 'AI course creation is disabled');
+            }
 
             // Validate that a session exists for this course and user.
             $session = $DB->get_record('local_coursegen_course_sessions', [

@@ -75,6 +75,11 @@ class plan_course_execute extends external_api {
             self::validate_context($context);
             // Check if user has permission to edit the course.
             require_capability('moodle/course:update', $context);
+            require_capability('local/coursegen:createcoursewithai', $context);
+
+            if (!get_config('local_coursegen', 'enable_course_ai')) {
+                throw new \moodle_exception('nopermissions', 'error', '', 'AI course creation is disabled');
+            }
 
             // Validate that a session exists for this course and user.
             $session = $DB->get_record('local_coursegen_course_sessions', [

@@ -92,6 +92,20 @@ class create_mod_stream extends external_api {
             $context = context_course::instance($course->id);
             self::validate_context($context);
 
+            // Server-side enforcement: admin settings and capabilities.
+            if (!get_config('local_coursegen', 'enable_activity_ai')) {
+                throw new \moodle_exception('nopermissions', 'error', '', 'AI activity creation is disabled');
+            }
+            require_capability('local/coursegen:createactivitywithai', $context);
+
+            // Force images off if the setting or capability disallows it.
+            if ($generateimages == 1) {
+                if (!get_config('local_coursegen', 'enable_activity_image_generation')
+                        || !has_capability('local/coursegen:generateactivityimages', $context)) {
+                    $generateimages = 0;
+                }
+            }
+
             $aicontext = ai_context::get_course_context_info($courseid);
 
             // This request may take a long time depending on the complexity of the prompt that the AI has to resolve.
