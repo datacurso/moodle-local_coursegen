@@ -33,10 +33,11 @@ if ($hassiteconfig) {
     // General settings page: feature toggles.
     $settings = new admin_settingpage('local_coursegen_settings', get_string('generalsettings', 'local_coursegen'));
 
+    // Course AI settings.
     $settings->add(new admin_setting_heading(
-        'local_coursegen/feature_toggles_heading',
-        get_string('setting_feature_toggles_heading', 'local_coursegen'),
-        get_string('setting_feature_toggles_heading_desc', 'local_coursegen')
+        'local_coursegen/course_ai_heading',
+        get_string('setting_course_ai_heading', 'local_coursegen'),
+        get_string('setting_course_ai_heading_desc', 'local_coursegen')
     ));
 
     $settings->add(new admin_setting_configcheckbox(
@@ -61,6 +62,13 @@ if ($hassiteconfig) {
         0
     ));
     $settings->hide_if('local_coursegen/enable_empty_course_ai', 'local_coursegen/enable_course_ai', 'eq', 0);
+
+    // Activity AI settings.
+    $settings->add(new admin_setting_heading(
+        'local_coursegen/activity_ai_heading',
+        get_string('setting_activity_ai_heading', 'local_coursegen'),
+        get_string('setting_activity_ai_heading_desc', 'local_coursegen')
+    ));
 
     $settings->add(new admin_setting_configcheckbox(
         'local_coursegen/enable_activity_ai',
