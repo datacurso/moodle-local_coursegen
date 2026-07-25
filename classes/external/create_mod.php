@@ -80,6 +80,12 @@ class create_mod extends external_api {
             $context = context_course::instance($course->id);
             self::validate_context($context);
 
+            // Server-side enforcement: admin settings and capabilities.
+            if (!get_config('local_coursegen', 'enable_activity_ai')) {
+                throw new \moodle_exception('error_activity_ai_disabled', 'local_coursegen');
+            }
+            require_capability('local/coursegen:createactivitywithai', $context);
+
             // This request may take a long time depending on the complexity of the prompt that the AI ​​has to resolve.
             \core_php_time_limit::raise();
             raise_memory_limit(MEMORY_EXTRA);
