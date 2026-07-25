@@ -24,15 +24,14 @@
 
     Example context (json):
     {
-        "activityname": "Discussion Forum",
-        "sectionname": "Week 1"
+        "cangenerateimages": true
     }
 }}
 <div class="col-lg-10">
     <div id="activity-chat-interface" class="py-3 w-100">
     <form class="local_coursegen_ai_input" novalidate>
-        
-        <!-- Radios arriba -->
+
+        {{#cangenerateimages}}
         <div style="gap: .8rem;" class="mb-2 d-flex align-items-center">
             <label style="gap: .3rem;" class="mb-0 d-flex align-items-center">
                 <input type="radio" name="generate_images" value="0" checked>
@@ -43,6 +42,7 @@
                 {{#str}} yesimages, local_coursegen {{/str}}
             </label>
         </div>
+        {{/cangenerateimages}}
 
         <!-- Input de texto y botón igual que antes -->
         <label class="sr-only" for="bdaiPrompt">{{#str}} addactivityai_label, local_coursegen {{/str}}</label>

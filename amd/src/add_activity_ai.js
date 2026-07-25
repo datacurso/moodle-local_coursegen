@@ -135,7 +135,9 @@ define([
 
       const [bodyHTML, footerHTML] = await Promise.all([
         Templates.render("local_coursegen/add_activity_ai_modal", {}),
-        Templates.render("local_coursegen/activity_chat_footer", {}),
+        Templates.render("local_coursegen/activity_chat_footer", {
+          cangenerateimages: Boolean(payload.cangenerateimages),
+        }),
       ]);
 
       const title = await Str.get_string(

@@ -87,14 +87,37 @@ class chat_hook {
     }
 
     /**
+     * Check if the current user can generate images with AI in the given context.
+     *
+     * Requires both the admin master switch and the per-user capability.
+     *
+     * @param \context $context The context to check the capability in.
+     * @return bool
+     */
+    /**
+     * Check if the current user can generate images with AI for activities.
+     *
+     * Requires both the admin master switch for activity images and the per-user capability.
+     *
+     * @param \context $context The context to check the capability in.
+     * @return bool
+     */
+    private static function can_generate_activity_images(\context $context): bool {
+        return get_config('local_coursegen', 'enable_activity_image_generation')
+            && has_capability('local/coursegen:generateactivityimages', $context);
+    }
+
+    /**
      * Add activity AI button
      */
     private static function add_activity_ai_button(): void {
         global $PAGE, $COURSE;
         if (self::can_create_activity()) {
+            $coursecontext = \context_course::instance($COURSE->id);
             $PAGE->requires->js_call_amd('local_coursegen/add_activity_ai_button', 'init', [
                 $COURSE->id,
                 self::is_moodle_45(),
+                self::can_generate_activity_images($coursecontext),
             ]);
         }
     }
@@ -171,6 +194,10 @@ class chat_hook {
     private static function can_create_activity(): bool {
         global $COURSE;
 
+        if (!get_config('local_coursegen', 'enable_activity_ai')) {
+            return false;
+        }
+
         if (!self::is_course_context()) {
             return false;
         }
@@ -182,6 +209,50 @@ class chat_hook {
             'moodle/course:manageactivities',
             'local/coursegen:createactivitywithai',
         ], $context);
+    }
+
+    /**
+     * Check if a course is empty (only has the default Announcements forum or no modules at all).
+     *
+     * A course is considered empty when it has no user-created content — only the
+     * Announcements forum (type "news") that Moodle automatically adds to section 0
+     * on course creation, and no content in any numbered section.
+     *
+     * Uses forum_get_course_forum() to obtain the exact instance ID of the
+     * one-per-course "news" forum and compares it against the only module present.
+     *
+     * @param int $courseid The course ID to check.
+     * @return bool True if the course has no real content.
+     */
+    private static function is_course_empty(int $courseid): bool {
+        global $CFG;
+        require_once($CFG->dirroot . '/mod/forum/lib.php');
+
+        $modinfo = get_fast_modinfo($courseid);
+        $cms = $modinfo->get_cms();
+
+        if (empty($cms)) {
+            return true;
+        }
+
+        if (count($cms) > 1) {
+            return false;
+        }
+
+        // Exactly one module — verify it is the default Announcements news forum.
+        $cm = reset($cms);
+        if ($cm->modname !== 'forum' || $cm->sectionnum !== 0) {
+            return false;
+        }
+
+        // forum_get_course_forum returns the one-per-course "news" forum record
+        // by querying: course = $courseid AND type = 'news', ordered by id ASC.
+        $newsforum = forum_get_course_forum($courseid, 'news');
+        if (!$newsforum) {
+            return false;
+        }
+
+        return (int) $cm->instance === (int) $newsforum->id;
     }
 
     /**
@@ -197,9 +268,26 @@ class chat_hook {
             return false;
         }
 
-        // Not allowed when editing a course.
         $courseid = $PAGE->url->get_param('id');
+
         if ($courseid) {
+            // Allow on existing courses only if the admin setting and content check pass.
+            if (!get_config('local_coursegen', 'enable_empty_course_ai')) {
+                return false;
+            }
+            if (!self::is_course_empty((int) $courseid)) {
+                return false;
+            }
+
+            $coursecontext = \context_course::instance($courseid);
+            return has_all_capabilities([
+                'moodle/course:update',
+                'local/coursegen:createcoursewithai',
+            ], $coursecontext);
+        }
+
+        // New course creation.
+        if (!get_config('local_coursegen', 'enable_course_ai')) {
             return false;
         }
 

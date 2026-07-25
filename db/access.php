@@ -66,4 +66,22 @@ $capabilities = [
         ],
         'clonepermissionsfrom' => 'moodle/course:manageactivities',
     ],
+
+    'local/coursegen:generatecourseimages' => [
+        'riskbitmask' => RISK_XSS,
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_COURSE,
+        'archetypes' => [
+            'manager' => CAP_ALLOW,
+        ],
+    ],
+
+    'local/coursegen:generateactivityimages' => [
+        'riskbitmask' => RISK_XSS,
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_COURSE,
+        'archetypes' => [
+            'manager' => CAP_ALLOW,
+        ],
+    ],
 ];
