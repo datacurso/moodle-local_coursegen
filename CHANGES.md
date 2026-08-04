@@ -13,7 +13,12 @@
 - **Create course accepts overrides**  
   The `local_coursegen_create_course` webservice now accepts optional `fullname`, `shortname`, and `category` parameters. When provided, they override the AI-generated values.
 - **Version bump**  
-  Internal version bumped to **2026060201** and release bumped to **1.6.0**.
+  Internal version bumped to **2026073100** and release bumped to **1.6.0**.
+
+## Fixed
+
+- **AI course creation menu entry no longer shown to users who cannot use it**  
+  **Site administration > Courses > Create a new course with AI** declared only `local/coursegen:createcoursewithai`, while the page itself requires that capability *and* `moodle/course:create`. Because `admin_externalpage` treats its capability list as OR, a user holding only the plugin capability was shown the entry and then denied access on click. The entry is now registered only when both capabilities are held in the system context.
 
 ## 1.5.0
 
