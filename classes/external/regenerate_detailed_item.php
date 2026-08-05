@@ -15,12 +15,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * External API to send human feedback for AI course planning sessions.
+ * External API to regenerate a single section, activity, or image in the detailed plan.
  *
  * @package    local_coursegen
  * @category   external
- * @copyright  2025 Wilber Narvaez <https://datacurso.com>
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @copyright  2026 Josue Condori <https://datacurso.com>
+ * @license    https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
 namespace local_coursegen\external;
@@ -30,7 +30,6 @@ use external_api;
 use external_function_parameters;
 use external_single_structure;
 use external_value;
-use external_multiple_structure;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
 
@@ -39,9 +38,9 @@ defined('MOODLE_INTERNAL') || die();
 require_once($CFG->libdir . '/externallib.php');
 
 /**
- * External API to send human feedback for AI course planning sessions.
+ * External API to regenerate a single section, activity, or image in the detailed plan.
  */
-class course_planning_feedback extends external_api {
+class regenerate_detailed_item extends external_api {
     /**
      * Parameters definition.
      *
@@ -50,48 +49,48 @@ class course_planning_feedback extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'recordid' => new external_value(PARAM_INT, 'ID from local_coursegen_course_sessions'),
-            'pending_action' => new external_single_structure([
-                'action' => new external_value(PARAM_ALPHANUMEXT, 'Action to run, e.g. accept, feedback, delete_section, discard_image'),
-                'target_ids' => new external_multiple_structure(
-                    new external_value(PARAM_RAW, 'Target UUID (section, activity, or image suggestion)'),
-                    'UUIDs the action targets',
-                    VALUE_DEFAULT,
-                    []
-                ),
-                'parent_section_id' => new external_value(PARAM_RAW, 'Parent section UUID', VALUE_DEFAULT, null, NULL_ALLOWED),
-                'position' => new external_value(PARAM_INT, 'Insertion position', VALUE_DEFAULT, null, NULL_ALLOWED),
-                'moved_id' => new external_value(PARAM_RAW, 'UUID of the item dragged in a reorder', VALUE_DEFAULT, null, NULL_ALLOWED),
-                'proposal_custom' => new external_value(PARAM_BOOL, 'Feedback typed into the proposals card "other" option', VALUE_DEFAULT, false),
-                'instruction' => new external_value(PARAM_TEXT, "User's free-text instruction", VALUE_DEFAULT, ''),
-            ]),
+            'target_type' => new external_value(PARAM_ALPHA, 'Target type: section, activity, or image'),
+            'section_index' => new external_value(PARAM_INT, '0-based section index'),
+            'activity_index' => new external_value(PARAM_INT, '0-based activity index (for activity/image)', VALUE_DEFAULT, -1),
+            'instruction' => new external_value(PARAM_TEXT, 'Adjustment text for the regenerated item', VALUE_DEFAULT, ''),
+            'deleted' => new external_value(PARAM_BOOL, 'Mark target as deleted in plan', VALUE_DEFAULT, false),
         ]);
     }
 
     /**
-     * Send feedback for the given planning session.
+     * Regenerate a single item in the detailed plan.
      *
-     * @param int $recordid Session record id in local_coursegen_course_sessions
-     * @param array $pendingaction The ActionIntent to run
+     * @param int $recordid Session record id
+     * @param string $targettype Target type (section|activity|image)
+     * @param int $sectionindex Section index
+     * @param int $activityindex Activity index (-1 if not applicable)
+     * @param string $instruction Adjustment text
+     * @param bool $deleted Mark target as deleted
      * @return array
      */
     public static function execute(
         int $recordid,
-        array $pendingaction
+        string $targettype,
+        int $sectionindex,
+        int $activityindex = -1,
+        string $instruction = '',
+        bool $deleted = false
     ): array {
         global $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'recordid' => $recordid,
-            'pending_action' => $pendingaction,
+            'target_type' => $targettype,
+            'section_index' => $sectionindex,
+            'activity_index' => $activityindex,
+            'instruction' => $instruction,
+            'deleted' => $deleted,
         ]);
-
-        $recordid = $params['recordid'];
-        $pendingaction = $params['pending_action'];
 
         $context = context_system::instance();
         self::validate_context($context);
 
-        $session = course_session_service::get_user_session($recordid, $USER->id);
+        $session = course_session_service::get_user_session($params['recordid'], $USER->id);
         $sessionid = $session->get('session_id');
 
         if (!$sessionid) {
@@ -101,14 +100,21 @@ class course_planning_feedback extends external_api {
         $apiservice = new ai_course_api_service();
 
         try {
-            $apiservice->send_planning_feedback($sessionid, $pendingaction);
+            $result = $apiservice->regenerate_detailed_item(
+                $sessionid,
+                $params['target_type'],
+                $params['section_index'],
+                $params['activity_index'] >= 0 ? $params['activity_index'] : null,
+                $params['instruction'],
+                (bool)$params['deleted']
+            );
         } catch (\moodle_exception $e) {
             throw new \moodle_exception('error_sending_feedback', 'local_coursegen', '', $e->getMessage());
         }
 
         return [
-            'success' => true,
-            'message' => get_string('message_sent_successfully', 'local_coursegen'),
+            'success' => !empty($result['success']),
+            'result' => json_encode($result),
         ];
     }
 
@@ -120,7 +126,7 @@ class course_planning_feedback extends external_api {
     public static function execute_returns(): external_single_structure {
         return new external_single_structure([
             'success' => new external_value(PARAM_BOOL, 'Success status'),
-            'message' => new external_value(PARAM_TEXT, 'Status message'),
+            'result' => new external_value(PARAM_RAW, 'JSON result from the AI backend'),
         ]);
     }
 }

@@ -126,6 +126,23 @@ class Mutations {
     }
 
     /**
+     * Update selected language option.
+     *
+     * @param {StateManager} stateManager
+     * @param {string} value
+     */
+    setLang(stateManager, value) {
+        const lang = String(value || '').trim().toLowerCase();
+        if (!lang) {
+            return;
+        }
+
+        stateManager.setReadOnly(false);
+        stateManager.state.session.lang = lang;
+        stateManager.setReadOnly(true);
+    }
+
+    /**
      * Store selected upload info.
      *
      * @param {StateManager} stateManager
@@ -184,6 +201,7 @@ class Mutations {
                     beforemod,
                     prompt,
                     generateimages: state.session.generateimages,
+                    lang: String(state.session.lang || state.page.defaultlang || 'en'),
                 });
 
                 const jobid = response && response.job_id ? String(response.job_id) : '';
@@ -366,6 +384,29 @@ class Mutations {
                     resolve();
                     return;
                 } else if (data && data.type === 'completed') {
+                    const result = data.result || {};
+                    const hasResult = Boolean(result && (result.resource_type || Object.keys(result).length));
+
+                    // A "completed" without content means the generation did not actually
+                    // produce anything (stale terminal state): surface it as a failure
+                    // instead of trying to create an empty activity (404 on /result).
+                    if (currentRun.phase === 'generation' && !hasResult) {
+                        currentRun.error = String(uiTexts.activityai_error_unknown);
+                        currentRun.errorCode = 'generation_failed';
+                        currentRun.retriable = true;
+                        currentRun.status = '';
+                        currentRun.reviewneeded = false;
+                        currentRun.completed = false;
+
+                        state.session.locked = false;
+                        state.session.phase = 'idle';
+
+                        stateManager.setReadOnly(true);
+                        closeStream();
+                        resolve();
+                        return;
+                    }
+
                     currentRun.completed = true;
                     currentRun.status = uiTexts.activityai_status_completed;
 
@@ -390,7 +431,7 @@ class Mutations {
                     return;
                 } else if (data && data.type === 'failed') {
                     currentRun.error = String(
-                        data.message || uiTexts.activityai_error_high_demand
+                        data.message || uiTexts.activityai_error_unknown
                     );
                     currentRun.errorCode = String(data.code || 'stream_error');
                     currentRun.retriable = Boolean(data.retriable);
@@ -480,7 +521,28 @@ class Mutations {
         }
 
         if (run.phase === 'generation') {
-            await this.acceptAndGenerate(stateManager);
+            // The plan is already approved: reconnecting to the stream makes the backend
+            // retry the generation on the failed thread. Re-sending an "accept" feedback
+            // here would be a no-op (the approval interrupt was already consumed).
+            const retryRunId = Date.now();
+            stateManager.setReadOnly(false);
+            state.session.locked = true;
+            state.session.phase = 'generation';
+            state.runs.set(retryRunId, {
+                id: retryRunId,
+                phase: 'generation',
+                prompt: run.prompt || '',
+                markdown: '',
+                status: uiTexts.activityai_status_retrying,
+                reviewneeded: false,
+                completed: false,
+                error: '',
+                errorCode: '',
+                retriable: false,
+            });
+            stateManager.setReadOnly(true);
+
+            await this.connectStream(stateManager, {runid: retryRunId});
             return;
         }
 

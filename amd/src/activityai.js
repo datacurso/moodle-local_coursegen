@@ -38,19 +38,30 @@ let modalControllerRegistered = false;
  *
  * @param {number} courseid The current course id.
  * @param {boolean} isMoodle45 Whether the Moodle version is 4.5.
+ * @param {Array} languages Available languages.
+ * @param {string} defaultlang Default language code.
  */
-export const init = async(courseid, isMoodle45 = false) => {
+export const init = async(courseid, isMoodle45 = false, languages = [], defaultlang = 'en') => {
     ismoodle45 = Boolean(isMoodle45);
+
+    const languageList = Array.isArray(languages) ? languages : [];
+    const normalisedDefaultLang = String(defaultlang || 'en').toLowerCase();
+    const resolvedDefaultLang = languageList.some((lang) => String(lang.code || '') === normalisedDefaultLang)
+        ? normalisedDefaultLang
+        : String((languageList[0] && languageList[0].code) || 'en').toLowerCase();
 
     ensureInitialState({
         page: {
             courseid: Number(courseid) || 0,
             ismoodle45,
+            languages: languageList,
+            defaultlang: resolvedDefaultLang,
         },
         session: {
             sectionnum: null,
             beforemod: null,
             generateimages: 0,
+            lang: resolvedDefaultLang,
             jobid: '',
             streamingurl: '',
             phase: 'idle',

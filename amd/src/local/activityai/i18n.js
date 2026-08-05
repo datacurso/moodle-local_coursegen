@@ -36,6 +36,7 @@ const STRING_KEYS = [
     'activityai_error_high_demand',
     'activityai_error_disconnected',
     'activityai_error_create_activity',
+    'activityai_error_generation_failed',
     'activityai_prompt_prefix',
     'activityai_retry_slow_warning',
     'activityai_retry_action',

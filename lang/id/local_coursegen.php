@@ -195,6 +195,7 @@ $string['courseai_image_count_many'] = 'gambar {count}';
 $string['courseai_image_count_one'] = 'gambar {count}';
 $string['courseai_images_arialabel'] = 'Sertakan gambar';
 $string['courseai_images_label'] = 'Gambar';
+$string['courseai_images_select_all'] = 'Pilih semua gambar';
 $string['courseai_images_suggested_label'] = 'gambar yang disarankan';
 $string['courseai_images_title'] = 'Sertakan saran gambar dalam kursus';
 $string['courseai_initial_prompt_label'] = 'Pesan awal';

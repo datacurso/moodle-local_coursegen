@@ -16,6 +16,8 @@
 
 namespace local_coursegen\mod_parameters;
 
+use aiprovider_datacurso\httpclient\ai_course_api;
+
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir . '/filelib.php');
@@ -34,25 +36,14 @@ class imscp_parameters extends base_parameters {
      * @return object Adjusted parameters for the module imscp.
      */
     public function get_parameters() {
-        global $USER, $CFG;
-        $userid = $USER->id;
-        $draftid = file_get_unused_draft_itemid();
+        $modsettings = $this->parameters->mod_settings;
 
-        $filepath = $CFG->dirroot . '/local/coursegen/classes/mod_parameters/imscp/imscp-test.zip';
-        $filename = basename($filepath);
+        $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
+        $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
 
-        // Store image in moodledata.
-        $fs = get_file_storage();
-        $context = \context_user::instance($userid);
-        $fileinfo = [
-            'contextid' => $context->id,
-            'component' => 'user',
-            'filearea' => 'draft',
-            'itemid' => $draftid,
-            'filepath' => '/',
-            'filename' => $filename,
-        ];
-        $file = $fs->create_file_from_pathname($fileinfo, $filepath);
+        $client = new ai_course_api(null, $baseurl, $baseurleu);
+        $endpoint = '/files/download?path=' . $modsettings['file_path'];
+        $file = $client->download_file($endpoint, $modsettings['file_name']);
         $this->parameters->package = $file->get_itemid();
         return $this->parameters;
     }

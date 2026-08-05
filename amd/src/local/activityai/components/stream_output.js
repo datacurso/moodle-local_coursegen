@@ -142,7 +142,14 @@ export default class extends BaseComponent {
             const isLast = index === previousHistory.length - 1;
             let icon;
 
-            if (isLast && element.reviewneeded) {
+            if (isLast && element.error) {
+                // El último estado de un run fallido es el paso que falló: la caja de
+                // error ya muestra ese texto, así que no lo repetimos como línea.
+                if (text === String(element.error)) {
+                    return;
+                }
+                icon = '<i class="fa fa-times-circle text-danger mr-2"></i>';
+            } else if (isLast && element.reviewneeded) {
                 // Estado final de espera de revisión: icono de info, como setStatus(..., isWorking=false).
                 icon = '<i class="fa fa-info-circle mr-2 text-info"></i>';
             } else if (isLast && isWorking) {
@@ -186,21 +193,36 @@ export default class extends BaseComponent {
         let errorHtml = '';
         if (element.error) {
             const retriable = Boolean(element.retriable);
-            if (retriable) {
-                errorHtml = '' +
-                    '<div class="activityai-retry-alert my-2" data-region="local_coursegen/activity/retry-alert">' +
-                        '<div class="activityai-retry-alert-text">' +
-                            '<i class="fa fa-exclamation-triangle mr-2" aria-hidden="true"></i>' +
-                            '<span>' + safeText(this.texts.activityai_retry_slow_warning) + '</span>' +
+            // Localized headline by error code; the backend message is shown as detail.
+            const headlineByCode = {
+                'high_demand': this.texts.activityai_error_high_demand,
+                'stream_error': this.texts.activityai_error_disconnected,
+            };
+            const headline = headlineByCode[element.errorCode] || this.texts.activityai_error_generation_failed;
+            const detail = String(element.error || '');
+            const showDetail = detail && detail !== headline;
+            const alertClass = retriable ? 'alert-warning' : 'alert-danger';
+            const retryButtonHtml = retriable
+                ? '<button type="button" class="btn btn-primary btn-sm mt-2" ' +
+                    'data-action="local_coursegen/activity/retry-run" data-run-id="' + safeText(runId) + '">' +
+                    '<i class="fa fa-refresh mr-1" aria-hidden="true"></i>' +
+                    safeText(this.texts.activityai_retry_action) +
+                  '</button>'
+                : '';
+            errorHtml = '' +
+                '<div class="alert ' + alertClass + ' my-3" role="alert" ' +
+                    'data-region="local_coursegen/activity/retry-alert">' +
+                    '<div class="d-flex align-items-start">' +
+                        '<i class="fa fa-exclamation-triangle mr-2 mt-1" aria-hidden="true"></i>' +
+                        '<div>' +
+                            '<div class="font-weight-bold">' + safeText(headline) + '</div>' +
+                            (showDetail
+                                ? '<div class="small mt-1">' + safeText(detail) + '</div>'
+                                : '') +
+                            retryButtonHtml +
                         '</div>' +
-                        '<button type="button" class="btn btn-outline-secondary btn-sm mt-2" ' +
-                            'data-action="local_coursegen/activity/retry-run" data-run-id="' + safeText(runId) + '">' +
-                            safeText(this.texts.activityai_retry_action) +
-                        '</button>' +
-                    '</div>';
-            } else {
-                errorHtml = '<div class="alert alert-danger my-2">' + safeText(element.error) + '</div>';
-            }
+                    '</div>' +
+                '</div>';
         }
 
         const markdownHtml = this.markedParser.parse(element.markdown || '');

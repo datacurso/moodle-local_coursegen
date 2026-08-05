@@ -26,11 +26,18 @@ use mod_wiki_external;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class wiki_settings extends base_settings {
+    /** @var string Effective wiki page format ('html'|'creole'|'nwiki'). */
+    protected string $wikiformat = 'html';
+
     /**
      * Add settings to wiki module.
      */
     public function add_settings() {
         $wiki = wiki_get_wiki($this->cm->instance);
+
+        // Moodle forces every page to the wiki's defaultformat; seed content/links
+        // must use that same markup or they render as literal text.
+        $this->wikiformat = $wiki->defaultformat ?: 'html';
 
         // Remove duplicate pages by title, excluding the first page title on wiki.
         $pages = $this->unique_pages_by_title($this->modsettings['pages'], $wiki->firstpagetitle);
@@ -63,13 +70,18 @@ class wiki_settings extends base_settings {
         $firstpagecontent = '';
         foreach ($pages as $page) {
             $title = $page['title'];
-            $firstpagecontent .= "<p>[[{$title}]]</p>\n";
+            // [[Title]] is the wiki-link syntax in all formats; only wrap in <p> for HTML.
+            if ($this->wikiformat === 'html') {
+                $firstpagecontent .= "<p>[[{$title}]]</p>\n";
+            } else {
+                $firstpagecontent .= "[[{$title}]]\n\n";
+            }
         }
         return [
             'title' => $firstpagetitle,
             'newcontent_editor' => [
                 'text' => $firstpagecontent,
-                'format' => FORMAT_HTML,
+                'format' => $this->wikiformat,
             ],
         ];
     }
@@ -81,7 +93,7 @@ class wiki_settings extends base_settings {
      */
     protected function add_page($page) {
         $content = $page['newcontent_editor']['text'];
-        mod_wiki_external::new_page($page['title'], $content, FORMAT_HTML, null, $this->cm->instance);
+        mod_wiki_external::new_page($page['title'], $content, $this->wikiformat, null, $this->cm->instance);
     }
 
     /**

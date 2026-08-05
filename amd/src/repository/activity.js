@@ -26,10 +26,11 @@ import ajax from 'core/ajax';
 /**
  * Start streaming job to create a module with AI.
  *
- * @param {{courseid: number, sectionnum: (number|null), beforemod: (number|null), prompt: string, generateimages: number}} payload
+ * @param {{courseid: number, sectionnum: (number|null), beforemod: (number|null),
+ *     prompt: string, generateimages: number, lang: string}} payload
  * @return {Promise<Object>} response
  */
-export async function createModStream({courseid, sectionnum, beforemod, prompt, generateimages}) {
+export async function createModStream({courseid, sectionnum, beforemod, prompt, generateimages, lang}) {
     const args = {
         courseid: Number(courseid) || 0,
         sectionnum: typeof sectionnum === 'number' ? sectionnum : null,
@@ -37,6 +38,11 @@ export async function createModStream({courseid, sectionnum, beforemod, prompt, 
         generateimages: Number(generateimages) || 0,
         beforemod: typeof beforemod === 'number' ? beforemod : null,
     };
+
+    const language = String(lang || '').toLowerCase();
+    if (language) {
+        args.lang = language;
+    }
 
     return ajax.call([
         {

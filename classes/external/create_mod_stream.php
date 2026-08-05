@@ -53,6 +53,7 @@ class create_mod_stream extends external_api {
                 VALUE_OPTIONAL
             ),
             'beforemod' => new external_value(PARAM_INT, 'Before module id', VALUE_OPTIONAL),
+            'lang' => new external_value(PARAM_ALPHANUMEXT, 'Requested language code', VALUE_OPTIONAL),
         ]);
     }
 
@@ -64,6 +65,7 @@ class create_mod_stream extends external_api {
      * @param string $prompt Prompt to create module.
      * @param int $generateimages 1 indicates AI could generate images, 0 indicates AI could not generate images.
      * @param int|null $beforemod Before module id where the module will be created.
+     * @param string|null $lang Requested language code.
      * @return array
      */
     public static function execute(
@@ -71,7 +73,8 @@ class create_mod_stream extends external_api {
         ?int $sectionnum,
         string $prompt,
         int $generateimages = 0,
-        ?int $beforemod = null
+        ?int $beforemod = null,
+        ?string $lang = null
     ) {
         global $CFG, $DB, $USER;
 
@@ -82,6 +85,7 @@ class create_mod_stream extends external_api {
                 'prompt' => $prompt,
                 'generateimages' => $generateimages,
                 'beforemod' => $beforemod,
+                'lang' => $lang,
             ]);
 
             $courseid = $params['courseid'];
@@ -89,6 +93,7 @@ class create_mod_stream extends external_api {
             $prompt = $params['prompt'];
             $generateimages = $params['generateimages'] ?? 0;
             $beforemod = $params['beforemod'] ?? null;
+            $lang = $params['lang'] ?? null;
 
             $course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
             $context = context_course::instance($course->id);
@@ -102,7 +107,7 @@ class create_mod_stream extends external_api {
             // Release the session so other tabs in the same session are not blocked.
             \core\session\manager::write_close();
 
-            $lang = $coursecontext->lang ?? 'en';
+            $lang = self::resolve_request_language($lang, $coursecontext);
 
             $payload = [
                 'instructions' => $prompt,
@@ -112,6 +117,19 @@ class create_mod_stream extends external_api {
 
             if (!empty($coursecontext) && !empty($coursecontext->context_type)) {
                 $payload['context_type'] = $coursecontext->context_type;
+            }
+
+            // Tell the service which H5P framework (core API) this Moodle runs, so it packages the
+            // generated .h5p with libraries compatible with that version (v127 vs v128 library set).
+            try {
+                (new \core_h5p\factory())->get_core(); // ensures the active H5P handler is autoloaded.
+                $coreapi = \core_h5p\core::$coreApi;
+                if (!empty($coreapi['majorVersion'])) {
+                    $payload['h5p_core_api'] = $coreapi['majorVersion'] . '.' . $coreapi['minorVersion'];
+                }
+            } catch (\Throwable $e) {
+                // Leave unset; the service falls back to its most-compatible library set.
+                debugging('local_coursegen: could not resolve H5P core API: ' . $e->getMessage(), DEBUG_DEVELOPER);
             }
 
             $apiservice = new ai_course_api_service();
@@ -160,6 +178,33 @@ class create_mod_stream extends external_api {
                 'message' => $e->getMessage(),
             ];
         }
+    }
+
+    /**
+     * Resolve language to send to the AI service.
+     *
+     * Priority order:
+     * 1) Explicit request language from modal.
+     * 2) Stored course context language.
+     * 3) Current Moodle language.
+     * 4) English fallback.
+     *
+     * @param string|null $requestlang
+     * @param \stdClass|null $coursecontext
+     * @return string
+     */
+    private static function resolve_request_language(?string $requestlang, ?\stdClass $coursecontext): string {
+        $candidates = [$requestlang, $coursecontext->lang ?? '', \current_language()];
+
+        foreach ($candidates as $candidate) {
+            $candidate = str_replace('-', '_', \core_text::strtolower(trim((string)$candidate)));
+            $lang = explode('_', $candidate)[0];
+            if ($lang !== '') {
+                return $lang;
+            }
+        }
+
+        return 'en';
     }
 
     /**

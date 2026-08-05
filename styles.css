@@ -141,20 +141,3 @@ span.local_coursegen-sparkles-icon.white {
 }
 
 /* Activity AI Modal Styles - Consistent with Course AI Modal */
-
-/* Ensure streaming sections have consistent appearance */
-
-.activityai-retry-alert {
-    background: #1d1f23;
-    color: #f5f6f7;
-    border: 1px solid #3a3d42;
-    border-radius: .5rem;
-    padding: .75rem .9rem;
-}
-
-.activityai-retry-alert-text {
-    display: flex;
-    align-items: center;
-    font-size: .95rem;
-    font-weight: 500;
-}

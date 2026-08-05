@@ -38,6 +38,7 @@ export default class extends BaseComponent {
             UPLOAD: "[data-region='local_coursegen/activity/upload']",
             REMOVE_SELECTED: "[data-region='local_coursegen/activity/selectedfile_remove']",
             RADIO: "input[name='generate_images']",
+            LANG: "[data-region='local_coursegen/activity/lang']",
         };
     }
 
@@ -58,6 +59,11 @@ export default class extends BaseComponent {
             radios.forEach((rb) => {
                 this.addEventListener(rb, 'change', this._handleRadioChange);
             });
+        }
+
+        const langSelect = this.getElement(this.selectors.LANG);
+        if (langSelect) {
+            this.addEventListener(langSelect, 'change', this._handleLangChange);
         }
 
         const uploadBtn = this.getElement(this.selectors.UPLOAD);
@@ -85,6 +91,7 @@ export default class extends BaseComponent {
         const send = this.getElement(this.selectors.SEND);
         const radios = this.getElements(this.selectors.RADIO);
         const uploadBtn = this.getElement(this.selectors.UPLOAD);
+        const langSelect = this.getElement(this.selectors.LANG);
 
         if (textarea) {
             textarea.disabled = locked;
@@ -99,6 +106,9 @@ export default class extends BaseComponent {
             radios.forEach((rb) => {
                 rb.disabled = locked;
             });
+        }
+        if (langSelect) {
+            langSelect.disabled = locked;
         }
     }
 
@@ -138,6 +148,11 @@ export default class extends BaseComponent {
     _handleRadioChange(event) {
         const value = Number(event.target.value || 0) || 0;
         this.reactive.dispatch('setGenerateImages', value);
+    }
+
+    _handleLangChange(event) {
+        const value = String(event.target.value || '').toLowerCase();
+        this.reactive.dispatch('setLang', value);
     }
 
     async _handleSubmit(event) {
