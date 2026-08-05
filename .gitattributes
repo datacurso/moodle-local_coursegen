@@ -1,0 +1,10 @@
+# Normalise line endings: all text files use LF in the repo and on checkout.
+* text eol=lf
+
+# Binary files: never normalise or diff as text.
+*.png binary
+*.jpg binary
+*.gif binary
+*.svg text eol=lf
+*.pdf binary
+*.zip binary
