@@ -175,12 +175,27 @@ class quiz_settings extends base_settings {
                 foreach (($datasetdata['datasetitem'] ?? []) as $itemdata) {
                     $items[] = (object) $itemdata;
                 }
+                if (count($items) === 0) {
+                    // Without items the question always fails at attempt time
+                    // ('cannotgetdsfordependent'); better to skip it whole.
+                    throw new \coding_exception('Dataset "' . ($datasetdata['name'] ?? '?')
+                        . '" has no items; the calculated question cannot work.');
+                }
+                // import_datasets() only inserts items when status is exactly
+                // 'private' or 'shared', and the attempt runtime picks the variant
+                // range from MIN(itemcount): neither can be trusted to the service.
+                $dataset->status = 'private';
+                $dataset->itemcount = count($items);
                 $dataset->datasetitem = $items;
                 $datasets[] = $dataset;
             }
             $data->dataset = $datasets;
 
             \question_bank::get_qtype($question->qtype)->save_question_options($data);
+
+            // Keep parity with importprocess(): observers and logs must see
+            // these questions like any imported one.
+            \core\event\question_created::create_from_question_instance($question, $context)->trigger();
 
             $transaction->allow_commit();
         } catch (\Throwable $exception) {
