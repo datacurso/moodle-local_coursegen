@@ -64,7 +64,7 @@ class ai_course_api_service {
      * @return string Streaming URL.
      */
     public function get_mod_streaming_url_for_job(string $jobid): string {
-        return $this->client->get_mod_streaming_url_for_job($jobid);
+        return streaming_url_builder::mod_stream($this->client->get_base_url(), $jobid);
     }
 
     /**
@@ -74,7 +74,7 @@ class ai_course_api_service {
      * @return string Streaming URL.
      */
     public function get_course_streaming_url(string $sessionid): string {
-        return $this->client->get_streaming_url_for_session($sessionid);
+        return streaming_url_builder::course_stream($this->client->get_base_url(), $sessionid);
     }
 
     /**
