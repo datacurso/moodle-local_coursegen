@@ -13,10 +13,14 @@
 - **Create course accepts overrides**  
   The `local_coursegen_create_course` webservice now accepts optional `fullname`, `shortname`, and `category` parameters. When provided, they override the AI-generated values.
 - **Version bump**  
-  Internal version bumped to **2026073100** and release bumped to **1.6.0**.
+  Internal version bumped to **2026081000** and release bumped to **1.6.0**.
 
 ## Fixed
 
+- **Chat transcript rebuilt out of order after a page reload**  
+  On reload the conversation was rebuilt by replaying only the user's messages and appending a single closing assistant line. Every instruction the user sent after the plan was therefore printed above the planned-structure card instead of below it, and the assistant's intermediate turns were missing entirely. The transcript is now rebuilt round by round in checkpoint order, closing each answered round with the same message the live stream used, and the feed switches to the post-plan container as soon as the plan card is rebuilt so later turns keep their place.
+- **Pending proposals lost on reload**  
+  A session paused on a set of proposals (for example a reordering the assistant offered) came back from a reload with the options gone, because the snapshot never carried them. The pending review payload is now read from the session state and the proposals card is re-rendered, so the choice the user was asked to make is still there. Requires the matching AI service change.
 - **AI course creation menu entry no longer shown to users who cannot use it**  
   **Site administration > Courses > Create a new course with AI** declared only `local/coursegen:createcoursewithai`, while the page itself requires that capability *and* `moodle/course:create`. Because `admin_externalpage` treats its capability list as OR, a user holding only the plugin capability was shown the entry and then denied access on click. The entry is now registered only when both capabilities are held in the system context.
 

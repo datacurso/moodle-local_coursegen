@@ -216,6 +216,7 @@ export const init = async(params) => {
             stepsUi,
             planningUi,
             detailedUi,
+            proposalsUi,
             streamManager,
             actions,
             parseJsonField,
