@@ -19,6 +19,8 @@
 
 - **Chat transcript rebuilt out of order after a page reload**  
   On reload the conversation was rebuilt by replaying only the user's messages and appending a single closing assistant line. Every instruction the user sent after the plan was therefore printed above the planned-structure card instead of below it, and the assistant's intermediate turns were missing entirely. The transcript is now rebuilt round by round in checkpoint order, closing each answered round with the same message the live stream used, and the feed switches to the post-plan container as soon as the plan card is rebuilt so later turns keep their place.
+- **Conversation transcript lost on reload**  
+  Reloading rebuilt the conversation from the free text of the user's messages alone, so every turn that depended on what an action actually did came back wrong or not at all: "You applied: move «Basics» after «Advanced»", "You added activity: …", the regenerated subtree of a replan, and the assistant's own turns. The service now records the transcript turn by turn and the plugin replays it, so a reload shows what was on screen. Sessions started before the service records it fall back to the previous rebuild. Requires the matching AI service change.
 - **Pending proposals lost on reload**  
   A session paused on a set of proposals (for example a reordering the assistant offered) came back from a reload with the options gone, because the snapshot never carried them. The pending review payload is now read from the session state and the proposals card is re-rendered, so the choice the user was asked to make is still there. Requires the matching AI service change.
 - **AI course creation menu entry no longer shown to users who cannot use it**  
