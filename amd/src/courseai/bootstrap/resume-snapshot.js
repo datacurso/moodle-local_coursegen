@@ -146,9 +146,12 @@ export const makeResumeFromSnapshot = ({
      * saw: prompt, plan, milestone, prompt, milestone…
      *
      * Ordering matters as much as content. The feed has two containers and
-     * makeEmitLog routes between them on state.planEverReviewed, so the flag is
-     * flipped as soon as the plan card is rebuilt — otherwise every later turn
-     * lands in #cgLog, ABOVE the plan, and the transcript reads out of order.
+     * makeEmitLog routes between them, so state.threadBelowPlan is raised as soon
+     * as the plan card is rebuilt — otherwise every later turn lands in #cgLog,
+     * ABOVE the plan, and the transcript reads out of order. That flag exists
+     * precisely so this rebuild does NOT touch planEverReviewed, which also
+     * decides which checklist streamed sections fill: raising it here would send
+     * the re-opened stream into a fresh round checklist and duplicate the plan.
      *
      * @param {Array} sections - raw plan sections (with names)
      * @param {Object} snapshot - the resume snapshot
@@ -176,7 +179,7 @@ export const makeResumeFromSnapshot = ({
                 // rebuildTranscriptFromPlan fills the checklist items AND un-hides
                 // the card — one call, no empty card.
                 rebuildTranscriptFromPlan(sections);
-                state.planEverReviewed = true;
+                state.threadBelowPlan = true;
             }
             if (index < answered) {
                 emitLog(milestoneForRound(index, answered - 1, status, hasProposals));

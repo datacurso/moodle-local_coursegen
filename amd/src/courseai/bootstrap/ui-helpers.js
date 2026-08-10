@@ -39,7 +39,11 @@ export const makeEmitLog = (state) => {
     const courseaiLog = createLog({
         container: logContainer,
         actionContainer,
-        isActionPhase: () => Boolean(state && state.planEverReviewed),
+        // Either flag means the same thing for the feed: entries belong below the
+        // plan card. They are kept separate because planEverReviewed carries other
+        // meaning (which checklist streamed sections fill, and how the review
+        // milestone is worded) that the reload rebuild must not touch.
+        isActionPhase: () => Boolean(state && (state.planEverReviewed || state.threadBelowPlan)),
     });
 
     /**

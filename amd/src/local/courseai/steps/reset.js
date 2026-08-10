@@ -247,6 +247,7 @@ export const resetPlanningState = (options = {}, ctx) => {
     // Fresh planning round: action log entries return above the checklist, and the
     // checklist shows live loading again, until the new plan settles at review_needed.
     state.planEverReviewed = false;
+    state.threadBelowPlan = false;
     document.body.classList.remove('cg-plan-reviewed');
 
     // NOTE: compact chat lifecycle is NOT reset here intentionally.
