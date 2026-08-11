@@ -13,4 +13,16 @@
       <copyright>2011-2018 Christopher Jeffrey</copyright>
     </copyrights>
   </library>
+  <library>
+    <location>amd/src/purify.js</location>
+    <name>DOMPurify</name>
+    <description>XSS sanitizer for HTML, MathML and SVG. Cleans the HTML rendered from the
+      AI-generated Markdown before it is inserted into the page.</description>
+    <version>3.4.13</version>
+    <license>Apache-2.0 OR MPL-2.0</license>
+    <repository>https://github.com/cure53/DOMPurify</repository>
+    <copyrights>
+      <copyright>2015-2026 Cure53 and other contributors</copyright>
+    </copyrights>
+  </library>
 </libraries>

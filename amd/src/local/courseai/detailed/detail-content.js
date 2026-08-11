@@ -21,6 +21,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {renderMarkdownInline} from 'local_coursegen/local/courseai/ui/markdown';
 import {createImagesDetail} from './images';
 
 /**
@@ -110,13 +111,13 @@ const buildItemList = (items, cfg) => {
         const body = document.createElement('div');
         const title = document.createElement('p');
         title.className = 'dp-item-title';
-        title.textContent = primary;
+        title.innerHTML = renderMarkdownInline(primary);
         body.appendChild(title);
 
         if (secondary && cfg.secondaryAs === 'sub') {
             const sub = document.createElement('p');
             sub.className = 'dp-item-sub';
-            sub.textContent = secondary;
+            sub.innerHTML = renderMarkdownInline(secondary);
             body.appendChild(sub);
         }
 

@@ -16,10 +16,14 @@
 /**
  * Markdown helpers for the LEFT planning transcript.
  *
- * One place that turns Markdown into HTML (reusing the bundled ``marked``
- * module) and one place that turns a structured plan section into the Markdown
- * the transcript shows. Both the live incremental renderer and the reload
- * replay use these, so generation and reload produce identical output.
+ * The one place that turns the model's Markdown into HTML — ``marked`` renders
+ * it, ``DOMPurify`` sanitizes it — and the one place that turns a structured
+ * plan section into the Markdown shown. Both the live incremental renderer and
+ * the reload replay use these, so generation and reload produce identical
+ * output.
+ *
+ * Used by the left transcript AND by the plan cards in the centre, so every
+ * slot showing model text renders and is sanitized the same way.
  *
  * @module     local_coursegen/local/courseai/ui/markdown
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -27,13 +31,52 @@
  */
 
 import * as markedModule from 'local_coursegen/marked';
+import DOMPurify from 'local_coursegen/purify';
+
+/**
+ * What the plan text is allowed to contain once rendered.
+ *
+ * Descriptions, chapter titles and the transcript are prose: emphasis, code,
+ * lists, links and headings. Nothing here needs an attribute other than a link
+ * target, so the list stays this short and anything else is dropped.
+ */
+const ALLOWED_TAGS = [
+    'p', 'br', 'strong', 'em', 'del', 'code', 'pre', 'blockquote',
+    'ul', 'ol', 'li', 'a', 'h1', 'h2', 'h3', 'h4', 'h5', 'h6', 'hr',
+];
+const ALLOWED_ATTR = ['href', 'title'];
+
+/**
+ * Run a marked parser and sanitize what it produced.
+ *
+ * DOMPurify does the sanitizing: it parses the HTML and walks it, which is the
+ * only way to catch what a regular expression over the markup misses — a
+ * `javascript:` URL inside an otherwise ordinary link, for one. The plan text
+ * comes from our own service, so this is defence in depth, but a syllabus the
+ * teacher uploaded reaches the model and the model writes this text.
+ *
+ * @param {Function|undefined} parse - The marked entry point to use.
+ * @param {string} md - Markdown source.
+ * @returns {string} Sanitized HTML, or '' when the parser is unavailable.
+ */
+const sanitize = (parse, md) => {
+    if (typeof parse !== 'function') {
+        return '';
+    }
+    const html = parse(String(md || ''));
+    const purify = DOMPurify.sanitize ? DOMPurify : (DOMPurify.default || null);
+    if (!purify || typeof purify.sanitize !== 'function') {
+        // Sanitizing is not optional: show the text rather than raw HTML.
+        return String(md || '');
+    }
+    return purify.sanitize(html, {ALLOWED_TAGS, ALLOWED_ATTR});
+};
 
 /**
  * Render a Markdown string to HTML, reusing the bundled ``marked`` module.
  *
- * No DOMPurify is bundled, so as a defensive measure (the content is
- * server-generated plan text) script/style/embed blocks and inline
- * event-handler attributes are stripped from the output.
+ * Block-level: the result carries its own <p>, lists and headings, so use it
+ * for a slot that is a container. Sanitized on the way out.
  *
  * @param {string} md - Markdown source.
  * @returns {string} Sanitized HTML, or '' when no parser is available.
@@ -42,13 +85,26 @@ export const renderMarkdown = (md) => {
     const parse = markedModule.parse
         || (markedModule.marked && markedModule.marked.parse)
         || (markedModule.default && markedModule.default.parse);
-    if (typeof parse !== 'function') {
-        return '';
-    }
-    return parse(String(md || ''))
-        .replace(/<\/?(?:script|style|iframe|object|embed|link|meta)[^>]*>/gi, '')
-        .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+    return sanitize(parse, md);
 };
+
+/**
+ * Render Markdown WITHOUT wrapping it in a block element.
+ *
+ * For slots that are already a paragraph, a heading or a cell: the block
+ * renderer would nest a <p> inside them, which is invalid HTML and collapses
+ * the spacing. Emphasis, code spans and links still render.
+ *
+ * @param {string} md - Markdown source.
+ * @returns {string} Sanitized inline HTML, or '' when no parser is available.
+ */
+export const renderMarkdownInline = (md) => {
+    const parseInline = markedModule.parseInline
+        || (markedModule.marked && markedModule.marked.parseInline)
+        || (markedModule.default && markedModule.default.parseInline);
+    return sanitize(parseInline, md);
+};
+
 
 /**
  * Render one structured plan section to light Markdown for the transcript.

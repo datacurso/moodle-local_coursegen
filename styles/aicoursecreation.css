@@ -3873,6 +3873,32 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
   line-height: 1.5;
 }
 
+/* The description is Markdown, so it can carry emphasis, code and links. Give
+   them weight against the muted body colour, and keep a link recognisable. */
+#prvSections .cg-activity-desc strong,
+.dp-item-sub strong {
+  font-weight: 600;
+  color: var(--fg);
+}
+#prvSections .cg-activity-desc em,
+.dp-item-sub em {
+  font-style: italic;
+}
+#prvSections .cg-activity-desc code,
+.dp-item-title code,
+.dp-item-sub code {
+  font-family: var(--font-mono, ui-monospace, SFMono-Regular, Menlo, monospace);
+  font-size: 0.92em;
+  background: var(--surface-2, rgba(0, 0, 0, 0.05));
+  border-radius: 3px;
+  padding: 0 3px;
+}
+#prvSections .cg-activity-desc a,
+.dp-item-sub a {
+  color: inherit;
+  text-decoration: underline;
+}
+
 /* Collapsible detail slot (chapters / questions / images). */
 #prvSections .cg-activity-detail {
   grid-area: afterlink;
