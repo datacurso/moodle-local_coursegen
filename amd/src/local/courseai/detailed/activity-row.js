@@ -24,6 +24,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {renderMarkdownInline} from 'local_coursegen/local/courseai/ui/markdown';
 import {buildActivityDetailContent} from './detail-content';
 import {recalculateEntryImageCount, setImageBadge, updateDetailedHeaderStats} from './badges';
 import {buildActivityItem, buildActivityActionControls, attachSkeletonProgress} from './activity-dom';
@@ -355,7 +356,9 @@ export const markActivityPlanned = (ctx, data) => {
     if (descriptionText) {
         const desc = document.createElement('p');
         desc.className = 'cg-activity-desc';
-        desc.textContent = descriptionText;
+        // The model writes Markdown, so **bold** must render as bold instead of
+        // showing its asterisks. Inline, because this slot IS the paragraph.
+        desc.innerHTML = renderMarkdownInline(descriptionText);
         entry.textDiv.style.display = '';
         entry.textDiv.appendChild(desc);
     }

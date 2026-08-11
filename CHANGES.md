@@ -13,10 +13,12 @@
 - **Create course accepts overrides**  
   The `local_coursegen_create_course` webservice now accepts optional `fullname`, `shortname`, and `category` parameters. When provided, they override the AI-generated values.
 - **Version bump**  
-  Internal version bumped to **2026081000** and release bumped to **1.6.0**.
+  Internal version bumped to **2026081100** and release bumped to **1.6.0**.
 
 ## Fixed
 
+- **Markdown shown raw in the plan cards**  
+  Activity descriptions, and the chapter and question lines inside an expanded activity, were written into the page as plain text. Anything the model emphasised therefore arrived with its asterisks visible, for example `**[assign] Digital Culture Case Study Analysis**: Students will research…`. All three now render through the bundled `marked`, inline so the markup nests correctly inside the paragraph it already sits in, and with the same sanitising the planning transcript already applied.
 - **Chat transcript rebuilt out of order after a page reload**  
   On reload the conversation was rebuilt by replaying only the user's messages and appending a single closing assistant line. Every instruction the user sent after the plan was therefore printed above the planned-structure card instead of below it, and the assistant's intermediate turns were missing entirely. The transcript is now rebuilt round by round in checkpoint order, closing each answered round with the same message the live stream used, and the feed switches to the post-plan container as soon as the plan card is rebuilt so later turns keep their place.
 - **Conversation transcript lost on reload**  

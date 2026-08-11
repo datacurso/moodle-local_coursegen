@@ -29,6 +29,26 @@
 import * as markedModule from 'local_coursegen/marked';
 
 /**
+ * Run a marked parser and strip what a bundled DOMPurify would have removed.
+ *
+ * No DOMPurify ships with this plugin, so script/style/embed blocks and inline
+ * event-handler attributes are removed here. The content is server-generated
+ * plan text, so this is defence in depth rather than the only barrier.
+ *
+ * @param {Function|undefined} parse - The marked entry point to use.
+ * @param {string} md - Markdown source.
+ * @returns {string} Sanitized HTML, or '' when the parser is unavailable.
+ */
+const sanitize = (parse, md) => {
+    if (typeof parse !== 'function') {
+        return '';
+    }
+    return parse(String(md || ''))
+        .replace(/<\/?(?:script|style|iframe|object|embed|link|meta)[^>]*>/gi, '')
+        .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+};
+
+/**
  * Render a Markdown string to HTML, reusing the bundled ``marked`` module.
  *
  * No DOMPurify is bundled, so as a defensive measure (the content is
@@ -42,13 +62,26 @@ export const renderMarkdown = (md) => {
     const parse = markedModule.parse
         || (markedModule.marked && markedModule.marked.parse)
         || (markedModule.default && markedModule.default.parse);
-    if (typeof parse !== 'function') {
-        return '';
-    }
-    return parse(String(md || ''))
-        .replace(/<\/?(?:script|style|iframe|object|embed|link|meta)[^>]*>/gi, '')
-        .replace(/\son\w+\s*=\s*("[^"]*"|'[^']*'|[^\s>]+)/gi, '');
+    return sanitize(parse, md);
 };
+
+/**
+ * Render Markdown WITHOUT wrapping it in a block element.
+ *
+ * For slots that are already a paragraph, a heading or a cell: the block
+ * renderer would nest a <p> inside them, which is invalid HTML and collapses
+ * the spacing. Emphasis, code spans and links still render.
+ *
+ * @param {string} md - Markdown source.
+ * @returns {string} Sanitized inline HTML, or '' when no parser is available.
+ */
+export const renderMarkdownInline = (md) => {
+    const parseInline = markedModule.parseInline
+        || (markedModule.marked && markedModule.marked.parseInline)
+        || (markedModule.default && markedModule.default.parseInline);
+    return sanitize(parseInline, md);
+};
+
 
 /**
  * Render one structured plan section to light Markdown for the transcript.
