@@ -174,12 +174,29 @@ const detailListsMd = (detail) => {
     return lines;
 };
 
+/**
+ * The description to show for one activity.
+ *
+ * The detailed plan's own description is the full one — what the student
+ * submits, the instructions, the criteria — while the plan's is the one-line
+ * summary written before the activity was detailed. The centre cards show the
+ * full one, so the transcript shows the same: two panels describing the same
+ * activity differently is the bug this replaced.
+ *
+ * @param {Object} activity - { description, detailedPlan }
+ * @returns {string} The fullest description available, or ''.
+ */
+const activityDescription = (activity) => {
+    const detailed = String((activity.detailedPlan || {}).activity_description || '').trim();
+    return detailed || String(activity.description || '').trim();
+};
+
 export const formatActivityDetailMd = (activity) => {
     if (!activity) {
         return '';
     }
     const lines = [];
-    const activityDesc = String(activity.description || '').trim();
+    const activityDesc = activityDescription(activity);
     if (activityDesc) {
         lines.push(activityDesc);
     }
@@ -206,7 +223,7 @@ export const formatSectionMd = (section) => {
         const type = String(activity.activity_type || '').trim();
         lines.push('');
         lines.push(type ? '**' + title + '** _(' + type + ')_' : '**' + title + '**');
-        const activityDesc = String(activity.description || '').trim();
+        const activityDesc = activityDescription(activity);
         if (activityDesc) {
             lines.push('');
             lines.push(activityDesc);
