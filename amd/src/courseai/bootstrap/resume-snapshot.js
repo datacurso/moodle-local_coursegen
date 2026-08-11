@@ -34,6 +34,7 @@ import {rebuildTranscriptFromPlan} from 'local_coursegen/local/courseai/ui/plan-
  * @param {Object} params.stepsUi
  * @param {Object} params.planningUi
  * @param {Object} params.detailedUi
+ * @param {Object} params.proposalsUi
  * @param {Object} params.streamManager
  * @param {Object} params.actions
  * @param {Function} params.parseJsonField
@@ -44,6 +45,7 @@ import {rebuildTranscriptFromPlan} from 'local_coursegen/local/courseai/ui/plan-
  * @param {Function} params.setPlanningStreamVisible
  * @param {Function} params.hydrateDetailedPlanFromSnapshot
  * @param {number} params.resumeSessionId
+ * @param {Function} params.replayThread - replay the service thread (preferred path)
  * @param {Function} params.emitLog
  * @param {Object} params.texts - localized strings (for reconstructed AI milestones)
  * @returns {Function} async resumeFromSnapshot function
@@ -55,6 +57,7 @@ export const makeResumeFromSnapshot = ({
     stepsUi,
     planningUi,
     detailedUi,
+    proposalsUi,
     streamManager,
     actions,
     parseJsonField,
@@ -65,73 +68,156 @@ export const makeResumeFromSnapshot = ({
     setPlanningStreamVisible,
     hydrateDetailedPlanFromSnapshot,
     resumeSessionId,
+    replayThread,
     emitLog,
     texts,
 }) => {
     /**
+     * Read the distinct user turns out of a snapshot, in checkpoint order.
+     *
+     * Consecutive duplicates are dropped: a resumed stream can re-store the same
+     * instruction, and the live feed never showed it twice.
+     *
+     * @param {Object} snapshot - the resume snapshot
+     * @param {string} initialPrompt - fallback when the checkpoint has no messages yet
+     * @returns {Array<string>} the user turns, oldest first
+     */
+    const readUserTurns = (snapshot, initialPrompt) => {
+        const messages = Array.isArray(snapshot?.messages) ? snapshot.messages : [];
+        const turns = [];
+        messages.forEach((message) => {
+            if (!message || message.type !== 'human') {
+                return;
+            }
+            const content = String(message.content || '').trim();
+            if (content && content !== turns[turns.length - 1]) {
+                turns.push(content);
+            }
+        });
+        const firstPrompt = String(initialPrompt || '').trim();
+        if (!turns.length && firstPrompt) {
+            turns.push(firstPrompt);
+        }
+        return turns;
+    };
+
+    /**
+     * The assistant milestone that closed a given round, worded as the live
+     * stream worded it (handlers-lifecycle.js): the first round announces the
+     * plan, later rounds announce the applied changes, and the round the session
+     * is currently paused on announces the proposals when there are any.
+     *
+     * @param {number} index - zero-based round
+     * @param {number} lastIndex - index of the most recent answered round
+     * @param {string} status - the normalized snapshot status
+     * @param {boolean} hasProposals - the paused round carries pending proposals
+     * @returns {Object} emitLog parameters
+     */
+    const milestoneForRound = (index, lastIndex, status, hasProposals) => {
+        if (index === lastIndex && status === 'COMPLETED') {
+            return {
+                actor: 'ai',
+                kind: 'success',
+                message: (texts && texts.courseai_log_ai_completed) || 'Your course is ready. I created it in Moodle.',
+            };
+        }
+        let message;
+        if (index === lastIndex && hasProposals) {
+            message = (texts && texts.courseai_log_ai_proposals_ready)
+                || 'I prepared a few suggestions for you. Review them and choose how you want to continue.';
+        } else if (index === 0) {
+            message = (texts && texts.courseai_log_ai_review_ready)
+                || 'I finished planning your course. Take a look at the plan and tell me if you want any changes.';
+        } else {
+            message = (texts && texts.courseai_log_ai_review_updated)
+                || 'I applied your changes. Take a look and tell me if you want anything else.';
+        }
+        return {actor: 'ai', kind: 'ai', message};
+    };
+
+    /**
      * Rebuild the conversation thread from the snapshot so reload doesn't lose
      * history (§7.1). localStorage does not survive reload in this (Moodle popup)
-     * context, so the snapshot is the source of truth. The thread is rearmed in
-     * chronological order: the initial prompt as the FIRST user turn, then any
-     * later distinct human instructions. The section checklist card (#courseaiChecklist)
-     * is un-hidden when sections exist — it acts as the grouped AI planning turn.
+     * context, so the snapshot is the source of truth.
+     *
+     * The checkpoint carries BOTH sides of the conversation, but the assistant
+     * entries in it are internal notes written for the resolver ("I proposed
+     * these options: …"), not user-facing copy. So the user turns are replayed
+     * verbatim and each answered round is closed with the same localized
+     * milestone the live stream emitted, alternating in the same order the user
+     * saw: prompt, plan, milestone, prompt, milestone…
+     *
+     * Ordering matters as much as content. The feed has two containers and
+     * makeEmitLog routes between them, so state.threadBelowPlan is raised as soon
+     * as the plan card is rebuilt — otherwise every later turn lands in #cgLog,
+     * ABOVE the plan, and the transcript reads out of order. That flag exists
+     * precisely so this rebuild does NOT touch planEverReviewed, which also
+     * decides which checklist streamed sections fill: raising it here would send
+     * the re-opened stream into a fresh round checklist and duplicate the plan.
      *
      * @param {Array} sections - raw plan sections (with names)
      * @param {Object} snapshot - the resume snapshot
      * @param {string} initialPrompt - the first user prompt (becomes turn 1)
-     * @param {string} status - the normalized snapshot status (drives the AI milestone)
+     * @param {string} status - the normalized snapshot status
      * @returns {void}
      */
     const rebuildChatFromState = (sections, snapshot, initialPrompt, status) => {
         if (typeof emitLog !== 'function') {
             return;
         }
-        const firstPrompt = String(initialPrompt || '').trim();
-        if (firstPrompt) {
-            emitLog({actor: 'user', kind: 'user', message: firstPrompt});
+        const turns = readUserTurns(snapshot, initialPrompt);
+        const hasPlan = (sections || []).length > 0;
+        const hasProposals = Array.isArray(snapshot?.proposals) && snapshot.proposals.length > 0;
+        // At a settled status the graph is paused waiting for the user, so every
+        // turn already has its reply. While planning or generating the stream is
+        // re-opened and emits the pending reply itself, so the newest turn is
+        // left open here instead of being answered twice.
+        const settled = status === 'WAITING_APPROVAL' || status === 'PLANNING_ADJUST' || status === 'COMPLETED';
+        const answered = settled ? turns.length : Math.max(0, turns.length - 1);
+
+        turns.forEach((turn, index) => {
+            emitLog({actor: 'user', kind: 'user', message: turn});
+            if (index === 0 && hasPlan) {
+                // rebuildTranscriptFromPlan fills the checklist items AND un-hides
+                // the card — one call, no empty card.
+                rebuildTranscriptFromPlan(sections);
+                state.threadBelowPlan = true;
+            }
+            if (index < answered) {
+                emitLog(milestoneForRound(index, answered - 1, status, hasProposals));
+            }
+        });
+    };
+
+    /**
+     * Rebuild the transcript for a resumed session.
+     *
+     * The service thread is the source of truth: it carries every turn as it
+     * happened, including the action payloads ("You applied: move «Basics»
+     * after «Advanced»") that exist nowhere else once the plan has moved on.
+     * Replaying it is the only way a reload matches what was on screen.
+     *
+     * Sessions started before the thread was recorded carry none, so they fall
+     * back to the round-by-round rebuild, which reads the checkpoint messages
+     * and can only approximate: user turns verbatim, one milestone per round.
+     *
+     * @param {Array} sections - raw plan sections (with names)
+     * @param {Object} snapshot - the resume snapshot
+     * @param {string} initialPrompt - the first user prompt
+     * @param {string} status - the normalized snapshot status
+     * @returns {Promise<void>}
+     */
+    const rebuildThread = async(sections, snapshot, initialPrompt, status) => {
+        const thread = Array.isArray(snapshot?.thread) ? snapshot.thread : [];
+        if (thread.length > 0 && typeof replayThread === 'function') {
+            // The thread carries each AI output block in full, which replaces the
+            // names-only checklist card as the history of the plan; the centre
+            // panel still renders the live plan separately.
+            const atReview = status === 'WAITING_APPROVAL' || status === 'PLANNING_ADJUST';
+            await replayThread(thread, {atReview});
+            return;
         }
-        // Rebuild the plan card from the sections: rebuildTranscriptFromPlan
-        // fills the checklist items AND un-hides the card — one call, no empty card.
-        if ((sections || []).length > 0) {
-            rebuildTranscriptFromPlan(sections);
-        }
-        // Emit remaining DISTINCT human messages (skip messages that duplicate the
-        // initial prompt or consecutive duplicates).
-        const messages = Array.isArray(snapshot?.messages) ? snapshot.messages : [];
-        let lastEmitted = firstPrompt;
-        messages
-            .filter((message) => message && message.type === 'human')
-            .slice(1)
-            .forEach((message) => {
-                const content = String(message.content || '').trim();
-                if (content && content !== lastEmitted) {
-                    emitLog({actor: 'user', kind: 'user', message: content});
-                    lastEmitted = content;
-                }
-            });
-        // The snapshot stores ONLY human messages, so the assistant's own turns
-        // (e.g. "I finished planning your course…") would vanish on reload. Rebuild
-        // the AI's closing milestone for the CURRENT state deterministically, placed
-        // below the planned-structure group (flag the plan reviewed first so it lands
-        // in #cgLogAfter). Generating/planning states reopen the stream, which emits
-        // its own fresh milestones, so they are skipped here.
-        if (status === 'WAITING_APPROVAL' || status === 'PLANNING_ADJUST') {
-            state.planEverReviewed = true;
-            const hasProposals = Array.isArray(snapshot?.proposals) && snapshot.proposals.length > 0;
-            const aiMessage = hasProposals
-                ? ((texts && texts.courseai_log_ai_proposals_ready)
-                    || 'I prepared a few suggestions for you. Review them and choose how you want to continue.')
-                : ((texts && texts.courseai_log_ai_review_ready)
-                    || 'I finished planning your course. Take a look at the plan and tell me if you want any changes.');
-            emitLog({actor: 'ai', kind: 'ai', message: aiMessage});
-        } else if (status === 'COMPLETED') {
-            state.planEverReviewed = true;
-            emitLog({
-                actor: 'ai',
-                kind: 'success',
-                message: (texts && texts.courseai_log_ai_completed) || 'Your course is ready. I created it in Moodle.',
-            });
-        }
+        rebuildChatFromState(sections, snapshot, initialPrompt, status);
     };
 
     /**
@@ -230,7 +316,7 @@ export const makeResumeFromSnapshot = ({
             applyCourseTitleToHeader();
             if (sectionsForUi.length > 0) {
                 await hydrateDetailedPlanFromSnapshot(detailedSections);
-                rebuildChatFromState(detailedSections, snapshot, initialPrompt, status);
+                await rebuildThread(detailedSections, snapshot, initialPrompt, status);
             }
             if (typeof detailedUi.enableAllActionControls === 'function') {
                 detailedUi.enableAllActionControls();
@@ -249,13 +335,24 @@ export const makeResumeFromSnapshot = ({
             setPlanningStreamVisible();
             applyCourseTitleToHeader();
             await hydrateDetailedPlanFromSnapshot(detailedSections);
-            rebuildChatFromState(detailedSections, snapshot, initialPrompt, status);
+            await rebuildThread(detailedSections, snapshot, initialPrompt, status);
             // The plan is at review: future log entries (e.g. the user's next
-            // feedback) must flow at the END of the feed. Set this AFTER the
-            // historical rebuild so the rebuilt planning entries stay on top.
+            // feedback) must flow at the END of the feed. rebuildChatFromState
+            // already flips this when it rebuilds the plan card; set it here too
+            // for the case where the snapshot arrived without sections.
             state.planEverReviewed = true;
             if (typeof detailedUi.enableAllActionControls === 'function') {
                 detailedUi.enableAllActionControls();
+            }
+            // The session is paused ON the proposals: re-render the same card the
+            // live interrupt rendered, or the options the user was asked to pick
+            // from are simply gone after a reload.
+            if (proposalsUi && typeof proposalsUi.renderProposals === 'function') {
+                proposalsUi.renderProposals({
+                    proposals: snapshot.proposals,
+                    fallen_proposals: snapshot.fallen_proposals,
+                    clarification: snapshot.clarification,
+                });
             }
             planningUi.showReviewActions('detailed');
             return true;
@@ -277,7 +374,7 @@ export const makeResumeFromSnapshot = ({
             // plan instead of clearing it (resetPlanningState early-returns).
             if (sectionsForUi.length > 0) {
                 await hydrateDetailedPlanFromSnapshot(detailedSections);
-                rebuildChatFromState(detailedSections, snapshot, initialPrompt, status);
+                await rebuildThread(detailedSections, snapshot, initialPrompt, status);
             }
             stepsUi.setStepState('planning', 'done');
             stepsUi.setStepState('generating', 'active');
@@ -294,7 +391,7 @@ export const makeResumeFromSnapshot = ({
             stepsUi.transitionToPlanning();
             setPlanningStreamVisible();
             applyCourseTitleToHeader();
-            rebuildChatFromState(detailedSections, snapshot, initialPrompt, status);
+            await rebuildThread(detailedSections, snapshot, initialPrompt, status);
             await renderSubsectionsDecision({
                 data: snapshot.subsections_decision,
                 ctx: {
@@ -318,7 +415,7 @@ export const makeResumeFromSnapshot = ({
             // section names), which is the reload-broken case from the field.
             if (sectionsForUi.length > 0) {
                 await hydrateDetailedPlanFromSnapshot(detailedSections);
-                rebuildChatFromState(detailedSections, snapshot, initialPrompt, status);
+                await rebuildThread(detailedSections, snapshot, initialPrompt, status);
             }
             streamManager.openSSEStream(state.streamingurl, 0, 'planning', true);
             return true;
@@ -335,7 +432,7 @@ export const makeResumeFromSnapshot = ({
             applyCourseTitleToHeader();
             if (sectionsForUi.length > 0) {
                 await hydrateDetailedPlanFromSnapshot(detailedSections);
-                rebuildChatFromState(detailedSections, snapshot, initialPrompt, status);
+                await rebuildThread(detailedSections, snapshot, initialPrompt, status);
             }
             if (typeof detailedUi.enableAllActionControls === 'function') {
                 detailedUi.enableAllActionControls();

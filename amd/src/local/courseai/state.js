@@ -74,6 +74,11 @@ export const createInitialState = ({defaultLang, guidelines, languages}) => {
         courseTitle: '',
         isStreaming: false,
         planEverReviewed: false,
+        // Where new feed entries belong, and nothing else. planEverReviewed also
+        // decides which checklist streamed sections fill (handlers-content.js), so
+        // the reload rebuild cannot borrow it just to move the feed down without
+        // reintroducing the duplicate checklist 7a09c7c fixed.
+        threadBelowPlan: false,
         currentStage: 'planning',
         stopped: false,
     };
