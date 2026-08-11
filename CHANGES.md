@@ -13,10 +13,12 @@
 - **Create course accepts overrides**  
   The `local_coursegen_create_course` webservice now accepts optional `fullname`, `shortname`, and `category` parameters. When provided, they override the AI-generated values.
 - **Version bump**  
-  Internal version bumped to **2026081100** and release bumped to **1.6.0**.
+  Internal version bumped to **2026081101** and release bumped to **1.6.0**.
 
 ## Fixed
 
+- **Transcript and plan card described the same activity differently**  
+  The plan card showed the detailed description an activity was planned with — what the student submits, the instructions, the criteria — while the transcript beside it showed only the one-line summary written before the activity was detailed. Both now show the detailed one, falling back to the summary for an activity that has not been detailed yet.
 - **Markdown shown raw in the plan cards**  
   Activity descriptions, and the chapter and question lines inside an expanded activity, were written into the page as plain text. Anything the model emphasised therefore arrived with its asterisks visible, for example `**[assign] Digital Culture Case Study Analysis**: Students will research…`. All three now render through the bundled `marked`, inline so the markup nests correctly inside the paragraph it already sits in.
 - **Rendered plan text is sanitised with DOMPurify**  
