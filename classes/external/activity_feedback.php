@@ -51,7 +51,7 @@ class activity_feedback extends external_api {
             'courseid' => new external_value(PARAM_INT, 'Course id where the activity is being generated'),
             'jobid' => new external_value(PARAM_TEXT, 'Activity generation job/thread id'),
             'approvalstatus' => new external_value(PARAM_ALPHANUMEXT, 'Feedback action, e.g. accept or adjust'),
-            'instruction' => new external_value(PARAM_TEXT, 'Feedback text for adjusting the activity', VALUE_DEFAULT, ''),
+            'instruction' => new external_value(PARAM_RAW, 'Feedback text for adjusting the activity', VALUE_DEFAULT, ''),
         ]);
     }
 

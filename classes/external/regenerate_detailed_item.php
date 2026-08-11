@@ -52,7 +52,7 @@ class regenerate_detailed_item extends external_api {
             'target_type' => new external_value(PARAM_ALPHA, 'Target type: section, activity, or image'),
             'section_index' => new external_value(PARAM_INT, '0-based section index'),
             'activity_index' => new external_value(PARAM_INT, '0-based activity index (for activity/image)', VALUE_DEFAULT, -1),
-            'instruction' => new external_value(PARAM_TEXT, 'Adjustment text for the regenerated item', VALUE_DEFAULT, ''),
+            'instruction' => new external_value(PARAM_RAW, 'Adjustment text for the regenerated item', VALUE_DEFAULT, ''),
             'deleted' => new external_value(PARAM_BOOL, 'Mark target as deleted in plan', VALUE_DEFAULT, false),
         ]);
     }

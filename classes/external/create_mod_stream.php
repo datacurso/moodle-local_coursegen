@@ -46,7 +46,7 @@ class create_mod_stream extends external_api {
         return new external_function_parameters([
             'courseid' => new external_value(PARAM_INT, 'Course id'),
             'sectionnum' => new external_value(PARAM_INT, 'Section number', VALUE_OPTIONAL),
-            'prompt' => new external_value(PARAM_TEXT, 'Prompt to create module'),
+            'prompt' => new external_value(PARAM_RAW, 'Prompt to create module'),
             'generateimages' => new external_value(
                 PARAM_INT,
                 '1 to generate images, 0 to not generate images',

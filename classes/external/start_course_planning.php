@@ -42,7 +42,7 @@ class start_course_planning extends external_api {
      */
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'prompt' => new external_value(PARAM_TEXT, 'Course description prompt'),
+            'prompt' => new external_value(PARAM_RAW, 'Course description prompt'),
             'lang' => new external_value(PARAM_TEXT, 'Language code (es, en, etc.)', VALUE_DEFAULT, 'es'),
             'withimages' => new external_value(PARAM_BOOL, 'Include image suggestions', VALUE_DEFAULT, false),
             'systeminstructionid' => new external_value(
