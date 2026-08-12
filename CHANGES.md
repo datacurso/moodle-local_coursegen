@@ -1,3 +1,16 @@
+## 1.7.0
+
+**Released on:** 2026-08-12
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Changed
+
+- **Site file-type catalog sent to the AI service**  
+  The activity generation payload (`/activity/init`) now includes `filetype_groups`: the site's real file-type group catalog (group key and its extensions) built from `\core_form\filetypes_util::get_groups_info()`, custom file types included. This lets the AI service infer the accepted file types for an assignment from the described deliverable (e.g. "upload a short video" restricts submissions to the `video` group) and validate the generated value against groups that actually exist on the site, instead of assuming the stock Moodle catalog. If the catalog cannot be resolved, the field is omitted and the service falls back to the standard Moodle groups. Requires the matching AI service change to take effect; older services ignore the field.
+- **Version bump**  
+  Internal version bumped to **2026081200** and release bumped to **1.7.0**.
+
 ## 1.6.0
 
 **Released on:** 2026-06-02
