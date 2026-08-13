@@ -27,7 +27,6 @@ defined('MOODLE_INTERNAL') || die();
  * @covers \local_coursegen\mod_settings\data_settings
  */
 final class data_settings_test extends \advanced_testcase {
-
     /**
      * Create a database activity and return a cm-like object shaped as create_mod_service passes it.
      *
@@ -127,8 +126,8 @@ final class data_settings_test extends \advanced_testcase {
         $cm = $this->make_data_cm();
         $modsettings = ['fields' => [
             ['type' => 'text', 'name' => 'Campo'],
-            ['type' => 'textarea', 'name' => 'campo'],   // duplicate (case-insensitive) -> skipped
-            ['type' => 'bogustype', 'name' => 'Raro'],    // unknown type -> skipped, no crash
+            ['type' => 'textarea', 'name' => 'campo'], // duplicate (case-insensitive) -> skipped
+            ['type' => 'bogustype', 'name' => 'Raro'], // unknown type -> skipped, no crash
             ['type' => 'number', 'name' => 'Cantidad'],
         ]];
 
@@ -166,8 +165,8 @@ final class data_settings_test extends \advanced_testcase {
 
         $cm = $this->make_data_cm();
         $modsettings = ['fields' => [
-            ['type' => 'textarea', 'name' => 'Resena'],   // non-sortable, first -> skipped as primary
-            ['type' => 'text', 'name' => 'Titulo'],        // first sortable -> primary
+            ['type' => 'textarea', 'name' => 'Resena'], // non-sortable, first -> skipped as primary
+            ['type' => 'text', 'name' => 'Titulo'], // first sortable -> primary
             ['type' => 'number', 'name' => 'Anio'],
         ]];
 
@@ -256,8 +255,11 @@ final class data_settings_test extends \advanced_testcase {
             $byfield[$f->name] = $f->id;
         }
         $content = static function (int $fieldid) use ($DB, $record) {
-            return $DB->get_field('data_content', 'content',
-                ['recordid' => $record->id, 'fieldid' => $fieldid]);
+            return $DB->get_field(
+                'data_content',
+                'content',
+                ['recordid' => $record->id, 'fieldid' => $fieldid]
+            );
         };
 
         $this->assertSame('Cien años de soledad', $content($byfield['Titulo']));

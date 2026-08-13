@@ -35,7 +35,6 @@ use stdClass;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class data_settings extends base_settings {
-
     /** @var string[] Field types that store their choices, one per line, in param1. */
     private const CHOICE_TYPES = ['menu', 'multimenu', 'radiobutton', 'checkbox'];
 
