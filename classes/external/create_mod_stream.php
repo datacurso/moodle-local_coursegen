@@ -132,6 +132,23 @@ class create_mod_stream extends external_api {
                 debugging('local_coursegen: could not resolve H5P core API: ' . $e->getMessage(), DEBUG_DEVELOPER);
             }
 
+            // Send this instance's file-type group catalog (group key => extensions) so the service
+            // can infer and validate accepted file types against the site's real groups, custom
+            // types included, instead of assuming the stock Moodle catalog.
+            try {
+                $filetypegroups = [];
+                foreach ((new \core_form\filetypes_util())->get_groups_info() as $groupkey => $groupinfo) {
+                    // Already a flat list of dot-prefixed extensions (see filetypes_util::get_groups_info()).
+                    $filetypegroups[$groupkey] = $groupinfo->extensions;
+                }
+                if (!empty($filetypegroups)) {
+                    $payload['filetype_groups'] = $filetypegroups;
+                }
+            } catch (\Throwable $e) {
+                // Leave unset; the service falls back to the stock Moodle group catalog.
+                debugging('local_coursegen: could not resolve file-type groups: ' . $e->getMessage(), DEBUG_DEVELOPER);
+            }
+
             $apiservice = new ai_course_api_service();
             $result = $apiservice->start_activity($payload);
 
