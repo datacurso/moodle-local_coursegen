@@ -197,3 +197,43 @@ Feature: AI activity generation end to end from the modal
     # scripts the target behaviour for the manual/with-service run; the
     # current error surface is asserted (runnable, without service) in
     # activity_ai_modal.feature.
+
+  @SYS-E2E-009
+  Scenario Outline: Execution matrix pass combining language and image conditions
+    # SYS-E2E-009 full sweep: every content type must be exercised under the
+    # QA test matrix, using the h5p_ai prompt bank (one file per type) as
+    # input and the QA spreadsheet as the execution tracker
+    # (rows = 42 types, columns = conditions):
+    #   sin imagen | con imagen | sin archivo | con archivo |
+    #   idioma (es, en, de, ru, pt, fr, id) | sitio v1.27 | sitio v1.28
+    # Rules for the sweep:
+    #   - The v1.27/v1.28 columns require repeating the run on a site of each
+    #     H5P framework version (see SYS-E2E-007).
+    #   - The "con archivo" column requires attaching a source PDF through the
+    #     modal upload before sending the prompt (manual step; the grounded
+    #     content must stick to the document).
+    #   - Contrast image and version outcomes with the standing pending cases
+    #     (SYS-E2E-005 image toggle, API-CTR-001 course-flow library set)
+    #     BEFORE logging new findings.
+    # This outline scripts the combinations drivable from the modal in one
+    # pass, with one representative type; repeat per type from the bank.
+    Given I am on the "Course 1" course page logged in as teacher1
+    And I turn editing mode on
+    And I click on "Add activity or resource with AI" "button"
+    When I set the field with xpath "//select[@data-region='local_coursegen/activity/lang']" to "<lang>"
+    And I click on "input[name='generate_images'][value='<images>']" "css_element" in the "Create resource/activity with AI" "dialogue"
+    And I set the field "Describe what you need" to "Create an accordion about the layers of the atmosphere"
+    And I click on "button[title='Send']" "css_element" in the "Create resource/activity with AI" "dialogue"
+    Then I should see "Waiting for your review." in the "Create resource/activity with AI" "dialogue"
+    When I click on "Accept and create activity" "button" in the "Create resource/activity with AI" "dialogue"
+    Then "#page-mod-h5pactivity-view" "css_element" should exist
+    # Record in the spreadsheet: package generated, plays in the viewer, and
+    # the applied condition is respected (language of content and labels;
+    # images present only when the condition and the type allow them).
+
+    Examples:
+      | lang | images |
+      | es   | 0      |
+      | es   | 1      |
+      | en   | 0      |
+      | en   | 1      |
