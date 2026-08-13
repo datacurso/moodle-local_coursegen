@@ -147,7 +147,7 @@ class course_planning_service {
      *
      * @return array
      */
-    private static function build_image_policy(): array {
+    public static function build_image_policy(): array {
         $mode = get_config('local_coursegen', 'generationmode') ?: activities::MODE_DISABLED;
         $overridecourse = (bool) ((int) get_config('local_coursegen', 'overridecourse') === 1);
         $overrideactivity = (bool) ((int) get_config('local_coursegen', 'overrideactivity') === 1);
