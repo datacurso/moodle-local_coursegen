@@ -375,6 +375,13 @@ class Mutations {
                 } else if (data && data.type === 'done') {
                     // Ignore.
                 } else if (data && data.type === 'review_needed') {
+                    // The backend caps image-suggestion lines after the raw stream
+                    // already finished, so `currentRun.markdown` (built from 'token'
+                    // events) is still the uncapped draft. `current_plan` carries the
+                    // capped version and is the one the user should review.
+                    if (typeof data.current_plan === 'string') {
+                        currentRun.markdown = data.current_plan;
+                    }
                     currentRun.reviewneeded = true;
                     currentRun.status = uiTexts.activityai_status_waiting_review;
                     state.session.locked = false;
