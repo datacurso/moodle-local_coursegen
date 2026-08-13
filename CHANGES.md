@@ -1,3 +1,16 @@
+## 1.7.2
+
+**Released on:** 2026-08-12
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Fixed
+
+- **AI-generated rubric was silently discarded**  
+  When the user asked for an assignment graded with a rubric, the AI service generated the full rubric and sent it in `mod_settings.rubric`, but the plugin had no `assign_settings` class, so the rubric was never created and the assignment was left on the rubric grading method with no definition ("rubric not defined"). A new `assign_settings` mod settings class now creates the rubric definition through Moodle's advanced grading API (`gradingform_rubric`), marks it ready, and activates the rubric method only after the definition exists — if creation fails, the assignment degrades to simple direct grading instead of becoming ungradeable.
+- **Version bump**  
+  Internal version bumped to **2026081202** and release bumped to **1.7.2**.
+
 ## 1.7.1
 
 **Released on:** 2026-08-12
