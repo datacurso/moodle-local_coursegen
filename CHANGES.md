@@ -1,3 +1,16 @@
+## 1.7.3
+
+**Released on:** 2026-08-13
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Added
+
+- **Database activities now materialize fields, templates and example entries**  
+  When the AI service generates a database (`data`) activity, it sends the field definitions, display templates and example entries in `mod_settings`, but the plugin had no `data_settings` class, so those were silently discarded and the activity was created empty (no columns, unusable). A new `data_settings` mod settings class now creates the fields through mod_data's native field API (`data_get_field_new` -> `define_field` -> `insert_field`), applies the AI-designed list/single templates, seeds the approved example entries (`data_add_record` + `data_content`) and sorts the activity by its primary identifying field. Per-field failures are skipped so a single bad field never breaks the activity, and when the service sends no fields the class does nothing.
+- **Version bump**  
+  Internal version bumped to **2026081300** and release bumped to **1.7.3**.
+
 ## 1.7.2
 
 **Released on:** 2026-08-12
