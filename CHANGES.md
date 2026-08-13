@@ -1,3 +1,16 @@
+## 1.7.3
+
+**Released on:** 2026-08-13
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Fixed
+
+- **Global image settings were ignored in the single-activity flow**  
+  When creating a single activity with "Create with AI" and the image generation option enabled, the payload sent to the AI service included only the image toggle (`with_images`) and never the site-wide image generation policy, so the global settings (generation mode, per-activity enables, and per-part image caps) had no effect on standalone activities. The activity payload now includes the same `image_policy` object the full-course flow already sends, built by the shared `image_policy_builder::build()`. Requires the matching AI service change; older services ignore the field.
+- **Version bump**  
+  Internal version bumped to **2026081300** and release bumped to **1.7.3**.
+
 ## 1.7.2
 
 **Released on:** 2026-08-12
