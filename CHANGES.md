@@ -1,3 +1,16 @@
+## 1.7.1
+
+**Released on:** 2026-08-12
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Fixed
+
+- **File-type catalog was missing from the full-course flow**  
+  The site file-type group catalog (`filetype_groups`) introduced in 1.7.0 was only attached to the standalone activity payload (`/activity/init`), so assignments generated inside a full course could not restrict accepted file types against the site's real groups. The catalog builder now lives in a shared `filetype_catalog_service` and is attached to the course planning payload as well. Requires the matching AI service change; older services ignore the field.
+- **Version bump**  
+  Internal version bumped to **2026081201** and release bumped to **1.7.1**.
+
 ## 1.7.0
 
 **Released on:** 2026-08-12

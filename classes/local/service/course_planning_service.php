@@ -92,6 +92,13 @@ class course_planning_service {
             $payload['image_policy'] = self::build_image_policy();
         }
 
+        // Site file-type group catalog, so activities generated in the course flow
+        // (e.g. assignments) can restrict accepted file types against real groups.
+        $filetypegroups = filetype_catalog_service::get_groups();
+        if ($filetypegroups !== null) {
+            $payload['filetype_groups'] = $filetypegroups;
+        }
+
         $response = $apiservice->start_course_planning($payload);
 
         if (empty($response['thread_id'])) {
