@@ -92,7 +92,7 @@ class create_mod extends external_api {
             $sectionnum = $job->get('sectionnum') ?? $sectionnum;
             $beforemod = $job->get('beforemod') ?? $beforemod;
 
-            $apiservice = new ai_course_api_service();
+            $apiservice = static::get_api_service();
             $result = $apiservice->get_activity_result($jobid);
 
             $newcm = create_mod_service::create_from_ai_result($result, $course, $sectionnum, $beforemod);
@@ -117,6 +117,18 @@ class create_mod extends external_api {
         }
     }
 
+
+    /**
+     * Build the AI course API service used by this endpoint.
+     *
+     * Extracted as a protected factory so PHPUnit tests can override it
+     * through a testable subclass (late static binding).
+     *
+     * @return ai_course_api_service
+     */
+    protected static function get_api_service(): ai_course_api_service {
+        return new ai_course_api_service();
+    }
 
     /**
      * Returns description of method result values.

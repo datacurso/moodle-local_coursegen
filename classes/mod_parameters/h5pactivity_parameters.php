@@ -16,7 +16,7 @@
 
 namespace local_coursegen\mod_parameters;
 
-use aiprovider_datacurso\httpclient\ai_course_api;
+use local_coursegen\local\api_client_factory;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -40,7 +40,7 @@ class h5pactivity_parameters extends base_parameters {
         $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
         $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
 
-        $client = new ai_course_api(null, $baseurl, $baseurleu);
+        $client = api_client_factory::ai_course_api($baseurl, $baseurleu);
         $endpoint = '/files/download?path=' . $modsettings['file_path'];
         $file = $client->download_file($endpoint, $modsettings['file_name']);
         $this->parameters->packagefile = $file->get_itemid();
