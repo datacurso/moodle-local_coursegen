@@ -1,3 +1,14 @@
+## 1.7.4
+
+**Released on:** 2026-08-13
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Fixed
+
+- **Single-activity review plan still showed uncapped image suggestions**  
+  Even after the AI service started capping image-suggestion lines to the configured policy, the "Create with AI" review screen for a single activity (e.g. a Book) kept showing every suggestion the model streamed, uncapped. The service caps the plan only after the raw token stream finishes, and sends the corrected plan in the `current_plan` field of the `review_needed` event; the plugin was accumulating the review text purely from the raw streamed tokens and never read `current_plan`, so the correction never reached the screen. The stream handler now replaces the displayed plan with `current_plan` when present.
+
 ## 1.7.3
 
 **Released on:** 2026-08-13
