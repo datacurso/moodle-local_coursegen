@@ -21,9 +21,9 @@ use external_api;
 use external_function_parameters;
 use external_single_structure;
 use external_value;
+use local_coursegen\local\image_generation\image_policy_builder;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_context_service;
-use local_coursegen\local\service\course_planning_service;
 use local_coursegen\local\service\filetype_catalog_service;
 use local_coursegen\local\service\module_job_service;
 
@@ -118,7 +118,7 @@ class create_mod_stream extends external_api {
             ];
 
             if ($generateimages == 1) {
-                $payload['image_policy'] = course_planning_service::build_image_policy();
+                $payload['image_policy'] = image_policy_builder::build();
             }
 
             if (!empty($coursecontext) && !empty($coursecontext->context_type)) {

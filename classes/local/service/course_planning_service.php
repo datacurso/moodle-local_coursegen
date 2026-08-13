@@ -16,7 +16,7 @@
 
 namespace local_coursegen\local\service;
 
-use local_coursegen\local\image_generation\activities;
+use local_coursegen\local\image_generation\image_policy_builder;
 use local_coursegen\local\models\course_session;
 
 /**
@@ -89,7 +89,7 @@ class course_planning_service {
         ];
 
         if ($withimages) {
-            $payload['image_policy'] = self::build_image_policy();
+            $payload['image_policy'] = image_policy_builder::build();
         }
 
         // Site file-type group catalog, so activities generated in the course flow
@@ -135,79 +135,6 @@ class course_planning_service {
             'threadid' => $threadid,
             'streamingurl' => $streamingurl,
             'message' => get_string('courseai_init_success', 'local_coursegen'),
-        ];
-    }
-
-    /**
-     * Build the image generation policy from plugin settings.
-     *
-     * Reads the current image generation configuration stored in
-     * local_coursegen plugin settings and returns a structured array
-     * with the global mode, override flags, and per-activity policies.
-     *
-     * @return array
-     */
-    public static function build_image_policy(): array {
-        $mode = get_config('local_coursegen', 'generationmode') ?: activities::MODE_DISABLED;
-        $overridecourse = (bool) ((int) get_config('local_coursegen', 'overridecourse') === 1);
-        $overrideactivity = (bool) ((int) get_config('local_coursegen', 'overrideactivity') === 1);
-
-        $activitiesconfig = array_map(
-            fn(array $definition): array => self::build_activity_policy($definition),
-            activities::get_definitions()
-        );
-
-        return [
-            'mode' => $mode,
-            'overridecourse' => $overridecourse,
-            'overrideactivity' => $overrideactivity,
-            'activities' => $activitiesconfig,
-        ];
-    }
-
-    /**
-     * Build the image policy for a single activity type from its definition.
-     *
-     * @param array $definition Activity definition from activities::get_definitions()
-     * @return array
-     */
-    private static function build_activity_policy(array $definition): array {
-        $enabled = (int) get_config('local_coursegen', $definition['configenable']) === 1;
-
-        $partsconfig = array_map(
-            fn(array $part): array => self::build_part_policy($part),
-            $definition['parts'] ?? []
-        );
-
-        return [
-            'id' => $definition['id'],
-            'enabled' => $enabled,
-            'parts' => $partsconfig,
-        ];
-    }
-
-    /**
-     * Build the image policy for a single part from its definition.
-     *
-     * @param array $part Part definition from activities::get_definitions()
-     * @return array
-     */
-    private static function build_part_policy(array $part): array {
-        $enabled = (int) get_config('local_coursegen', $part['configenable']) === 1;
-
-        $maximages = 0;
-        $configmaximages = $part['configmaximages'] ?? null;
-        if ($configmaximages !== null) {
-            $savedmax = (int) get_config('local_coursegen', $configmaximages);
-            if ($savedmax > 0) {
-                $maximages = $savedmax;
-            }
-        }
-
-        return [
-            'id' => $part['id'],
-            'enabled' => $enabled,
-            'maximages' => $maximages,
         ];
     }
 
