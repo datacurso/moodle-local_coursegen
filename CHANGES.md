@@ -1,3 +1,14 @@
+## 2.0.0
+
+**Released on:** 2026-08-14
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Changed
+
+- **Version bump**  
+  Internal version bumped to **2026081400** and release bumped to **2.0.0**. Minimum required version of `aiprovider_datacurso` raised to **2026081000**.
+
 ## 1.7.3
 
 **Released on:** 2026-08-13
