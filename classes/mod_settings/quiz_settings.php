@@ -122,6 +122,33 @@ class quiz_settings extends base_settings {
     protected function add_calculated_question($aiquestiondata, $categoryinfo, $context) {
         global $DB, $USER;
 
+        // Validate and shape the datasets BEFORE any write: an empty dataset is a payload
+        // defect and rejecting it here leaves nothing to roll back. A delegated rollback
+        // cannot be relied on for this, because when this method runs inside an outer
+        // transaction (PHPUnit wraps every test in one on postgres) only the top-most
+        // level performs a real rollback and the inserted question would survive.
+        $datasets = [];
+        foreach (($aiquestiondata['dataset'] ?? []) as $datasetdata) {
+            $dataset = (object) $datasetdata;
+            $items = [];
+            foreach (($datasetdata['datasetitem'] ?? []) as $itemdata) {
+                $items[] = (object) $itemdata;
+            }
+            if (count($items) === 0) {
+                // Without items the question always fails at attempt time
+                // ('cannotgetdsfordependent'); better to skip it whole.
+                throw new \coding_exception('Dataset "' . ($datasetdata['name'] ?? '?')
+                    . '" has no items; the calculated question cannot work.');
+            }
+            // Function import_datasets() only inserts items when status is exactly
+            // 'private' or 'shared', and the attempt runtime picks the variant
+            // range from MIN(itemcount): neither can be trusted to the service.
+            $dataset->status = 'private';
+            $dataset->itemcount = count($items);
+            $dataset->datasetitem = $items;
+            $datasets[] = $dataset;
+        }
+
         $transaction = $DB->start_delegated_transaction();
         try {
             $question = new \stdClass();
@@ -168,27 +195,6 @@ class quiz_settings extends base_settings {
             $data->generalfeedback = $question->generalfeedback;
             $data->generalfeedbackformat = $question->generalfeedbackformat;
 
-            $datasets = [];
-            foreach (($aiquestiondata['dataset'] ?? []) as $datasetdata) {
-                $dataset = (object) $datasetdata;
-                $items = [];
-                foreach (($datasetdata['datasetitem'] ?? []) as $itemdata) {
-                    $items[] = (object) $itemdata;
-                }
-                if (count($items) === 0) {
-                    // Without items the question always fails at attempt time
-                    // ('cannotgetdsfordependent'); better to skip it whole.
-                    throw new \coding_exception('Dataset "' . ($datasetdata['name'] ?? '?')
-                        . '" has no items; the calculated question cannot work.');
-                }
-                // import_datasets() only inserts items when status is exactly
-                // 'private' or 'shared', and the attempt runtime picks the variant
-                // range from MIN(itemcount): neither can be trusted to the service.
-                $dataset->status = 'private';
-                $dataset->itemcount = count($items);
-                $dataset->datasetitem = $items;
-                $datasets[] = $dataset;
-            }
             $data->dataset = $datasets;
 
             \question_bank::get_qtype($question->qtype)->save_question_options($data);
