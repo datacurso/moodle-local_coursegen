@@ -35,7 +35,6 @@ require_once($CFG->dirroot . '/question/type/numerical/questiontype.php');
  * @covers     \local_coursegen\mod_settings\quiz_settings
  */
 final class quiz_calculated_question_test extends \advanced_testcase {
-
     /**
      * Create a course + quiz and return the cm object quiz_settings expects.
      *
@@ -131,8 +130,10 @@ final class quiz_calculated_question_test extends \advanced_testcase {
         foreach ($definitions as $definition) {
             $this->assertEquals(0, $definition->category, 'Dataset must be private (category 0).');
             $this->assertEquals(2, $definition->itemcount, 'Item count must match the real items.');
-            $this->assertEquals(2, $DB->count_records('question_dataset_items',
-                ['definition' => $definition->id]));
+            $this->assertEquals(2, $DB->count_records(
+                'question_dataset_items',
+                ['definition' => $definition->id]
+            ));
         }
 
         // The question_created event was triggered, as importprocess() does.

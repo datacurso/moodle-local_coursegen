@@ -128,7 +128,8 @@ class create_mod_stream extends external_api {
             // Tell the service which H5P framework (core API) this Moodle runs, so it packages the
             // generated .h5p with libraries compatible with that version (v127 vs v128 library set).
             try {
-                (new \core_h5p\factory())->get_core(); // ensures the active H5P handler is autoloaded.
+                (new \core_h5p\factory())->get_core(); // Ensures the active H5P handler is autoloaded.
+                // phpcs:ignore moodle.NamingConventions.ValidVariableName.VariableNameLowerCase
                 $coreapi = \core_h5p\core::$coreApi;
                 if (!empty($coreapi['majorVersion'])) {
                     $payload['h5p_core_api'] = $coreapi['majorVersion'] . '.' . $coreapi['minorVersion'];

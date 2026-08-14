@@ -29,10 +29,8 @@ if ($hassiteconfig) {
     // The target page requires BOTH capabilities, so the menu entry must check
     // both too: admin_externalpage ORs the capabilities it is given and cannot
     // express that, which showed the entry to users the page then rejected.
-    if (has_all_capabilities([
-        'moodle/course:create',
-        'local/coursegen:createcoursewithai',
-    ], context_system::instance())) {
+    $coursegencapabilities = ['moodle/course:create', 'local/coursegen:createcoursewithai'];
+    if (has_all_capabilities($coursegencapabilities, context_system::instance())) {
         $ADMIN->add('courses', new admin_externalpage(
             'local_coursegen_addnewcourseai',
             get_string('courseai_admin_addnewcourse', 'local_coursegen'),
