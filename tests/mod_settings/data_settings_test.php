@@ -16,8 +16,6 @@
 
 namespace local_coursegen\mod_settings;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Unit tests for data_settings — creation of the AI-generated database fields.
  *
@@ -27,7 +25,6 @@ defined('MOODLE_INTERNAL') || die();
  * @covers \local_coursegen\mod_settings\data_settings
  */
 final class data_settings_test extends \advanced_testcase {
-
     /**
      * Create a database activity and return a cm-like object shaped as create_mod_service passes it.
      *
@@ -92,7 +89,7 @@ final class data_settings_test extends \advanced_testcase {
         $this->assertSame('1', $textarea->param4);
 
         $url = $DB->get_record('data_fields', ['dataid' => $cm->instance, 'name' => 'Enlace']);
-        // param1 = autolink -> the URL becomes a clickable link.
+        // The param1 = autolink -> the URL becomes a clickable link.
         $this->assertSame('1', $url->param1);
     }
 
@@ -127,8 +124,8 @@ final class data_settings_test extends \advanced_testcase {
         $cm = $this->make_data_cm();
         $modsettings = ['fields' => [
             ['type' => 'text', 'name' => 'Campo'],
-            ['type' => 'textarea', 'name' => 'campo'],   // duplicate (case-insensitive) -> skipped
-            ['type' => 'bogustype', 'name' => 'Raro'],    // unknown type -> skipped, no crash
+            ['type' => 'textarea', 'name' => 'campo'], // Duplicate (case-insensitive) -> skipped.
+            ['type' => 'bogustype', 'name' => 'Raro'], // Unknown type -> skipped, no crash.
             ['type' => 'number', 'name' => 'Cantidad'],
         ]];
 
@@ -166,8 +163,8 @@ final class data_settings_test extends \advanced_testcase {
 
         $cm = $this->make_data_cm();
         $modsettings = ['fields' => [
-            ['type' => 'textarea', 'name' => 'Resena'],   // non-sortable, first -> skipped as primary
-            ['type' => 'text', 'name' => 'Titulo'],        // first sortable -> primary
+            ['type' => 'textarea', 'name' => 'Resena'], // Non-sortable, first -> skipped as primary.
+            ['type' => 'text', 'name' => 'Titulo'], // First sortable -> primary.
             ['type' => 'number', 'name' => 'Anio'],
         ]];
 
@@ -223,7 +220,7 @@ final class data_settings_test extends \advanced_testcase {
      */
     public function test_seeds_example_entries(): void {
         $this->resetAfterTest();
-        $this->setAdminUser();   // data_add_record approves only with mod/data:approve.
+        $this->setAdminUser(); // Function data_add_record approves only with mod/data:approve.
         global $DB;
 
         $cm = $this->make_data_cm();
@@ -256,14 +253,17 @@ final class data_settings_test extends \advanced_testcase {
             $byfield[$f->name] = $f->id;
         }
         $content = static function (int $fieldid) use ($DB, $record) {
-            return $DB->get_field('data_content', 'content',
-                ['recordid' => $record->id, 'fieldid' => $fieldid]);
+            return $DB->get_field(
+                'data_content',
+                'content',
+                ['recordid' => $record->id, 'fieldid' => $fieldid]
+            );
         };
 
         $this->assertSame('Cien años de soledad', $content($byfield['Titulo']));
         $this->assertSame('Novela', $content($byfield['Genero']));
-        $this->assertSame('A##C', $content($byfield['Tags']));        // multi -> ## delimited
-        $this->assertSame((string) strtotime('1967-05-30'), $content($byfield['Anio']));  // date -> timestamp
+        $this->assertSame('A##C', $content($byfield['Tags'])); // Multi -> ## delimited.
+        $this->assertSame((string) strtotime('1967-05-30'), $content($byfield['Anio'])); // Date -> timestamp.
     }
 
     /**
@@ -302,7 +302,7 @@ final class data_settings_test extends \advanced_testcase {
 
         $precio = $DB->get_record('data_fields', ['dataid' => $cm->instance, 'name' => 'Precio']);
         $contents = $DB->get_records('data_content', ['fieldid' => $precio->id]);
-        $this->assertCount(1, $contents);   // the non-numeric one was skipped
+        $this->assertCount(1, $contents); // The non-numeric one was skipped.
         $this->assertEquals(42.5, (float) reset($contents)->content);
     }
 

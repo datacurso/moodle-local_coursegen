@@ -35,7 +35,6 @@ use stdClass;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class data_settings extends base_settings {
-
     /** @var string[] Field types that store their choices, one per line, in param1. */
     private const CHOICE_TYPES = ['menu', 'multimenu', 'radiobutton', 'checkbox'];
 
@@ -53,11 +52,11 @@ class data_settings extends base_settings {
      * @var array<string, array<string, string>>
      */
     private const TYPE_DEFAULTS = [
-        // param2 = columns, param3 = rows, param4 = use HTML editor, param5 = max size (0 = none).
+        // The param2 = columns, param3 = rows, param4 = use HTML editor, param5 = max size (0 = none).
         'textarea' => ['param2' => '60', 'param3' => '35', 'param4' => '1', 'param5' => '0'],
-        // param1/param2 = list thumbnail width/height, param4/param5 = single-view width/height.
+        // The param1/param2 = list thumbnail width/height, param4/param5 = single-view width/height.
         'picture'  => ['param1' => '100', 'param2' => '200', 'param4' => '300', 'param5' => '400'],
-        // param1 = autolink (make the URL a clickable link).
+        // The param1 = autolink (make the URL a clickable link).
         'url'      => ['param1' => '1'],
     ];
 
@@ -316,7 +315,7 @@ class data_settings extends base_settings {
         }
 
         if (in_array($type, self::CHOICE_TYPES, true)) {
-            // menu/multimenu/radiobutton/checkbox read their options from param1, one per line.
+            // Types menu/multimenu/radiobutton/checkbox read their options from param1, one per line.
             $formdata->param1 = implode("\n", $this->clean_options($spec['options'] ?? []));
         }
 
