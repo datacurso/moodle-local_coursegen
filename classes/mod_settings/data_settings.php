@@ -175,9 +175,20 @@ class data_settings extends base_settings {
                 }
                 $content->content = (string) $timestamp;
                 break;
+            case 'menu':
+            case 'radiobutton':
+                // Mod_data renders a stored choice only when it exactly matches a defined option,
+                // so a mismatched value would show as blank: skip it instead of storing it.
+                if (!in_array($value, $field->options ?? [], true)) {
+                    return;
+                }
+                break;
             case 'multimenu':
             case 'checkbox':
                 $parts = array_filter(array_map('trim', explode(',', $value)), static fn($p) => $p !== '');
+                // Same exact-match rule as menu: mod_data silently drops non-matching tokens at
+                // render time, so only tokens that are defined options are worth storing.
+                $parts = array_values(array_intersect($parts, $field->options ?? []));
                 if (empty($parts)) {
                     return;
                 }
@@ -286,7 +297,15 @@ class data_settings extends base_settings {
             $field = data_get_field_new($type, $datainstance);
             $field->define_field($formdata);
             $field->insert_field();
-            return (object) ['id' => (int) $field->field->id, 'type' => $type, 'name' => $name];
+            $options = in_array($type, self::CHOICE_TYPES, true)
+                ? explode("\n", (string) $formdata->param1)
+                : [];
+            return (object) [
+                'id' => (int) $field->field->id,
+                'type' => $type,
+                'name' => $name,
+                'options' => $options,
+            ];
         } catch (\Throwable $e) {
             debugging(
                 'local_coursegen: skipped data field "' . $name . '": ' . $e->getMessage(),

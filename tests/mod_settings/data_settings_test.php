@@ -267,6 +267,48 @@ final class data_settings_test extends \advanced_testcase {
     }
 
     /**
+     * Choice values that do not exactly match a defined option are dropped, because mod_data
+     * renders stored choice content only on an exact option match (a mismatch shows blank).
+     */
+    public function test_seed_choice_values_must_match_options(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        global $DB;
+
+        $cm = $this->make_data_cm();
+        $modsettings = [
+            'fields' => [
+                ['type' => 'menu', 'name' => 'Genero', 'options' => ['Novela', 'Ensayo']],
+                ['type' => 'checkbox', 'name' => 'Tags', 'options' => ['A', 'B', 'Si, claro']],
+            ],
+            'example_entries' => [
+                ['values' => [
+                    ['field_name' => 'Genero', 'value' => 'novela'], // Case mismatch -> dropped.
+                    ['field_name' => 'Tags', 'value' => 'A, bogus, B'], // Unknown token -> filtered.
+                ]],
+                ['values' => [
+                    ['field_name' => 'Tags', 'value' => 'Si, claro'], // Comma inside option -> no match.
+                ]],
+            ],
+        ];
+
+        (new data_settings($cm, $modsettings))->add_settings();
+
+        $byfield = [];
+        foreach ($DB->get_records('data_fields', ['dataid' => $cm->instance]) as $f) {
+            $byfield[$f->name] = $f->id;
+        }
+
+        // The mismatched menu value was not stored at all.
+        $this->assertSame(0, $DB->count_records('data_content', ['fieldid' => $byfield['Genero']]));
+
+        // Only the exact-match checkbox tokens survived; the comma-in-option value produced nothing.
+        $contents = $DB->get_records('data_content', ['fieldid' => $byfield['Tags']]);
+        $this->assertCount(1, $contents);
+        $this->assertSame('A##B', reset($contents)->content);
+    }
+
+    /**
      * No example entries in the payload -> no records created.
      */
     public function test_no_example_entries_creates_no_records(): void {
