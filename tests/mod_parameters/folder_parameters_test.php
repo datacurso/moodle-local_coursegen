@@ -41,7 +41,7 @@ final class folder_parameters_test extends \advanced_testcase {
     }
 
     /**
-     * Provides test cases for filepath normalization.
+     * Provides test cases for filepath normalisation.
      *
      * @return array<string, array{0:string,1:string}>
      */
