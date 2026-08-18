@@ -16,6 +16,7 @@
 
 namespace local_coursegen\local\service;
 
+use local_coursegen\local\h5p_core_api;
 use local_coursegen\local\image_generation\activities;
 use local_coursegen\local\models\course_session;
 
@@ -92,6 +93,14 @@ class course_planning_service {
             $payload['image_policy'] = self::build_image_policy();
         }
 
+        // Tell the service which H5P framework (core API) this Moodle runs, so
+        // generated .h5p packages use a compatible library set. Omitted when
+        // unresolvable; the service then falls back to its most-compatible set.
+        $h5pcoreapi = h5p_core_api::resolve();
+        if ($h5pcoreapi !== null) {
+            $payload['h5p_core_api'] = $h5pcoreapi;
+        }
+
         $response = $apiservice->start_course_planning($payload);
 
         if (empty($response['thread_id'])) {
@@ -137,10 +146,12 @@ class course_planning_service {
      * Reads the current image generation configuration stored in
      * local_coursegen plugin settings and returns a structured array
      * with the global mode, override flags, and per-activity policies.
+     * Public because the individual activity flow (create_mod_stream)
+     * sends the same policy as the course planning flow.
      *
      * @return array
      */
-    private static function build_image_policy(): array {
+    public static function build_image_policy(): array {
         $mode = get_config('local_coursegen', 'generationmode') ?: activities::MODE_DISABLED;
         $overridecourse = (bool) ((int) get_config('local_coursegen', 'overridecourse') === 1);
         $overrideactivity = (bool) ((int) get_config('local_coursegen', 'overrideactivity') === 1);

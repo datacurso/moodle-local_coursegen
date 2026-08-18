@@ -21,8 +21,10 @@ use external_api;
 use external_function_parameters;
 use external_single_structure;
 use external_value;
+use local_coursegen\local\h5p_core_api;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_context_service;
+use local_coursegen\local\service\course_planning_service;
 use local_coursegen\local\service\module_job_service;
 
 defined('MOODLE_INTERNAL') || die();
@@ -99,6 +101,12 @@ class create_mod_stream extends external_api {
             $context = context_course::instance($course->id);
             self::validate_context($context);
 
+            // Gate the paid AI generation behind the same capabilities as the UI
+            // entry point (see \local_coursegen\hook\chat_hook): being enrolled
+            // must not be enough to launch jobs that consume service credits.
+            require_capability('moodle/course:manageactivities', $context);
+            require_capability('local/coursegen:createactivitywithai', $context);
+
             $coursecontext = course_context_service::get_course_context($courseid);
 
             // This request may take a long time depending on the complexity of the prompt that the AI has to resolve.
@@ -119,17 +127,24 @@ class create_mod_stream extends external_api {
                 $payload['context_type'] = $coursecontext->context_type;
             }
 
+            // Send the same image generation policy as the course flow, so the
+            // service applies identical image rules in both flows. A disabled
+            // (or never configured) policy is omitted: it must not override the
+            // teacher's explicit image toggle by suppressing description images.
+            if ($generateimages == 1) {
+                $imagepolicy = course_planning_service::build_image_policy();
+                if (($imagepolicy['mode'] ?? '') !== \local_coursegen\local\image_generation\activities::MODE_DISABLED) {
+                    $payload['image_policy'] = $imagepolicy;
+                }
+            }
+
             // Tell the service which H5P framework (core API) this Moodle runs, so it packages the
             // generated .h5p with libraries compatible with that version (v127 vs v128 library set).
-            try {
-                (new \core_h5p\factory())->get_core(); // ensures the active H5P handler is autoloaded.
-                $coreapi = \core_h5p\core::$coreApi;
-                if (!empty($coreapi['majorVersion'])) {
-                    $payload['h5p_core_api'] = $coreapi['majorVersion'] . '.' . $coreapi['minorVersion'];
-                }
-            } catch (\Throwable $e) {
-                // Leave unset; the service falls back to its most-compatible library set.
-                debugging('local_coursegen: could not resolve H5P core API: ' . $e->getMessage(), DEBUG_DEVELOPER);
+            // When unresolvable the field is omitted and the service falls back
+            // to its most-compatible library set.
+            $h5pcoreapi = h5p_core_api::resolve();
+            if ($h5pcoreapi !== null) {
+                $payload['h5p_core_api'] = $h5pcoreapi;
             }
 
             $apiservice = static::get_api_service();

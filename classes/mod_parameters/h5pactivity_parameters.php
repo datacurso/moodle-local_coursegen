@@ -31,19 +31,59 @@ require_once($CFG->libdir . '/filelib.php');
  */
 class h5pactivity_parameters extends base_parameters {
     /**
-     * Returns the adjusted parameters for the module scorm.
+     * Returns the adjusted parameters for the module h5pactivity.
      *
-     * @return object Adjusted parameters for the module scorm.
+     * @return object Adjusted parameters for the module h5pactivity.
      */
     public function get_parameters() {
-        $modsettings = $this->parameters->mod_settings;
+        $downloadinfo = $this->get_package_download_info();
         $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
         $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
 
         $client = api_client_factory::ai_course_api($baseurl, $baseurleu);
-        $endpoint = '/files/download?path=' . $modsettings['file_path'];
-        $file = $client->download_file($endpoint, $modsettings['file_name']);
+        $file = $client->download_file($downloadinfo['endpoint'], $downloadinfo['filename']);
+        $this->validate_package($file, $downloadinfo['filename']);
         $this->parameters->packagefile = $file->get_itemid();
         return $this->parameters;
+    }
+
+    /**
+     * Validate the downloaded package before it is attached to the activity.
+     *
+     * The module form validation is bypassed in this flow, so an invalid
+     * package would otherwise only fail when a student opens the activity.
+     * The check is deliberately cheap: extension, non-empty content and a
+     * readable zip containing the h5p.json manifest. No core_h5p deployment
+     * is attempted here.
+     *
+     * @param \stored_file $file Downloaded package file.
+     * @param string $filename Clean package file name.
+     * @return void
+     * @throws \moodle_exception When the package is not a valid .h5p file.
+     */
+    private function validate_package(\stored_file $file, string $filename): void {
+        if (\core_text::strtolower(pathinfo($filename, PATHINFO_EXTENSION)) !== 'h5p') {
+            throw new \moodle_exception('error_invalid_package', 'local_coursegen', '', $filename);
+        }
+
+        if ((int) $file->get_filesize() === 0) {
+            throw new \moodle_exception('error_invalid_package', 'local_coursegen', '', $filename);
+        }
+
+        $temppath = $file->copy_content_to_temp();
+        try {
+            $zip = new \ZipArchive();
+            $opened = $zip->open($temppath);
+            $hasmanifest = false;
+            if ($opened === true) {
+                $hasmanifest = $zip->locateName('h5p.json') !== false;
+                $zip->close();
+            }
+            if ($opened !== true || !$hasmanifest) {
+                throw new \moodle_exception('error_invalid_package', 'local_coursegen', '', $filename);
+            }
+        } finally {
+            @unlink($temppath);
+        }
     }
 }

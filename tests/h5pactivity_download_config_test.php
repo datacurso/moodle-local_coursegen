@@ -22,6 +22,8 @@ use local_coursegen\local\service\create_mod_service;
 
 defined('MOODLE_INTERNAL') || die();
 
+require_once(__DIR__ . '/fixtures/h5p_package_fixture.php');
+
 /**
  * Tests for the download service configuration of the H5P package.
  *
@@ -88,7 +90,7 @@ final class h5pactivity_download_config_test extends \advanced_testcase {
                     'filename' => $filename,
                 ];
 
-                return $fs->create_file_from_string($record, 'PK fake-h5p-package-bytes');
+                return $fs->create_file_from_string($record, h5p_package_fixture::bytes());
             }
         );
 

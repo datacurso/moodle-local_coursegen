@@ -44,4 +44,36 @@ abstract class base_parameters {
      * @return object Adjusted parameters for the module.
      */
     abstract public function get_parameters();
+
+    /**
+     * Validate and normalize the package download info from mod_settings.
+     *
+     * Package-type results must carry the remote file_path and file_name in
+     * mod_settings. The remote path is URL-encoded as a single query value
+     * (mirroring the image download endpoints) and the file name is reduced
+     * to a valid Moodle file name.
+     *
+     * @return array Array with 'endpoint' and 'filename' keys.
+     * @throws \moodle_exception When file_path or file_name is missing, or the
+     *                           file name cleans down to an empty string.
+     */
+    protected function get_package_download_info(): array {
+        $modsettings = (array) ($this->parameters->mod_settings ?? []);
+
+        $filepath = $modsettings['file_path'] ?? '';
+        $filename = $modsettings['file_name'] ?? '';
+        if (!is_string($filepath) || trim($filepath) === '' || !is_string($filename) || trim($filename) === '') {
+            throw new \moodle_exception('error_missing_package_info', 'local_coursegen');
+        }
+
+        $cleanname = clean_param(basename($filename), PARAM_FILE);
+        if ($cleanname === '') {
+            throw new \moodle_exception('error_invalid_package', 'local_coursegen', '', $filename);
+        }
+
+        return [
+            'endpoint' => '/files/download?path=' . rawurlencode($filepath),
+            'filename' => $cleanname,
+        ];
+    }
 }

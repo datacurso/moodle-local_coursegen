@@ -146,6 +146,7 @@ const STRING_KEYS = [
     'courseai_activity_page',
     'courseai_activity_data',
     'courseai_activity_glossary',
+    'courseai_activity_h5pactivity',
     'courseai_plan_default_unnamed',
     'courseai_status_approving',
     'courseai_status_adjusting',

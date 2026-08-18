@@ -26,6 +26,7 @@ defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
 require_once($CFG->libdir . '/gradelib.php');
+require_once(__DIR__ . '/fixtures/h5p_package_fixture.php');
 
 /**
  * Tests for H5P activity creation from an AI service result.
@@ -41,9 +42,6 @@ require_once($CFG->libdir . '/gradelib.php');
  * @covers     \local_coursegen\local\service\create_mod_service
  */
 final class h5p_create_from_ai_result_test extends \advanced_testcase {
-
-    /** @var string Fake package content used for the simulated download. */
-    private const PACKAGE_BYTES = 'PK fake-h5p-package-bytes for unit tests';
 
     /**
      * Always remove the injected factory test double between tests.
@@ -74,9 +72,10 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
      * ai_course_api::download_file() does.
      *
      * @param string $filename Package file name.
+     * @param string|null $content Package bytes; a structurally valid .h5p by default.
      * @return \stored_file
      */
-    private function create_draft_package_file(string $filename): \stored_file {
+    private function create_draft_package_file(string $filename, ?string $content = null): \stored_file {
         global $USER;
 
         $fs = get_file_storage();
@@ -89,25 +88,32 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
             'filename' => $filename,
         ];
 
-        return $fs->create_file_from_string($record, self::PACKAGE_BYTES);
+        return $fs->create_file_from_string($record, $content ?? h5p_package_fixture::bytes());
     }
 
     /**
      * Inject an ai_course_api mock whose download_file() returns a real draft file.
      *
      * @param string|null $capturedendpoint Reference that receives the endpoint passed to download_file().
+     * @param string|null $capturedfilename Reference that receives the file name passed to download_file().
+     * @param string|null $content Package bytes; a structurally valid .h5p by default.
      * @return \PHPUnit\Framework\MockObject\MockObject
      */
-    private function inject_download_client(?string &$capturedendpoint = null): \PHPUnit\Framework\MockObject\MockObject {
+    private function inject_download_client(
+        ?string &$capturedendpoint = null,
+        ?string &$capturedfilename = null,
+        ?string $content = null
+    ): \PHPUnit\Framework\MockObject\MockObject {
         $mock = $this->getMockBuilder(ai_course_api::class)
             ->disableOriginalConstructor()
             ->onlyMethods(['download_file'])
             ->getMock();
 
         $mock->method('download_file')->willReturnCallback(
-            function (string $endpoint, string $filename) use (&$capturedendpoint): \stored_file {
+            function (string $endpoint, string $filename) use (&$capturedendpoint, &$capturedfilename, $content): \stored_file {
                 $capturedendpoint = $endpoint;
-                return $this->create_draft_package_file($filename);
+                $capturedfilename = $filename;
+                return $this->create_draft_package_file($filename, $content);
             }
         );
 
@@ -209,16 +215,34 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
      * diagnostic error instead of silently producing an H5P activity without
      * content.
      *
-     * [Pendiente:skip] Today process_mod_parameters() silently returns the raw
-     * parameters when the class does not resolve, so a contentless activity is
-     * created without any diagnostic error.
+     * The scenario is reproduced with a module that has no parameters handler
+     * while the result carries a package-type contract (mod_settings with
+     * file_path/file_name): exactly what a stale class map looks like at run
+     * time for h5pactivity.
      */
     public function test_unresolved_parameter_class_produces_diagnostic_error(): void {
-        $this->markTestSkipped(
-            'Pending: when the H5P parameters class does not resolve (stale class map), '
-            . 'creation continues silently and produces an H5P activity without package. '
-            . 'A diagnostic error must be raised at creation time.'
-        );
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $this->set_current_course($course);
+        $this->inject_download_client();
+
+        $resultinfo = $this->h5p_resultinfo(['modulename' => 'page']);
+        $resultinfo['resource_type'] = 'page';
+
+        try {
+            create_mod_service::create_from_ai_result($resultinfo, $course, 1);
+            $this->fail('A diagnostic exception was expected when the parameters handler does not resolve.');
+        } catch (\coding_exception $e) {
+            $this->assertStringContainsString('page_parameters', $e->getMessage());
+        }
+
+        // No contentless activity was created.
+        $this->assertSame(0, $DB->count_records('course_modules', ['course' => $course->id]));
+        $this->assertSame(0, $DB->count_records('page'));
     }
 
     /**
@@ -249,8 +273,12 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
         $section = $DB->get_record('course_sections', ['id' => $sectionid], '*', MUST_EXIST);
         $this->assertEquals(2, (int) $section->section);
 
-        // The download used the remote path sent by the service.
-        $this->assertSame('/files/download?path=generated/packages/sample-activity.h5p', $capturedendpoint);
+        // The download used the remote path sent by the service, URL-encoded
+        // as a single query value (see MDL-INT-002).
+        $this->assertSame(
+            '/files/download?path=' . rawurlencode('generated/packages/sample-activity.h5p'),
+            $capturedendpoint
+        );
 
         // The file is stored by the Moodle File API in the module package area.
         $context = \context_module::instance($newcm->coursemodule);
@@ -258,7 +286,7 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
         $this->assertCount(1, $files);
         $file = reset($files);
         $this->assertSame('sample-activity.h5p', $file->get_filename());
-        $this->assertSame(self::PACKAGE_BYTES, $file->get_content());
+        $this->assertSame(h5p_package_fixture::bytes(), $file->get_content());
     }
 
     /**
@@ -289,30 +317,134 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
     /**
      * MDL-INT-002: Remote path encoding, file name cleaning and missing-field
      * validation for the package download.
-     *
-     * [Pendiente:skip] Today the remote path is concatenated without encoding,
-     * the file name is not cleaned as a valid Moodle file name and missing
-     * file_path/file_name fields are not validated.
      */
     public function test_package_path_and_filename_are_sanitized(): void {
-        $this->markTestSkipped(
-            'Pending: path encoding, file name cleaning and missing-field validation '
-            . 'for the H5P package download are not implemented yet.'
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $this->set_current_course($course);
+        $capturedendpoint = null;
+        $capturedfilename = null;
+        $this->inject_download_client($capturedendpoint, $capturedfilename);
+
+        $resultinfo = $this->h5p_resultinfo([], [
+            'file_path' => 'generated/packages/mi actividad (v2).h5p',
+            'file_name' => '../sub/mi actividad: "final".h5p',
+        ]);
+
+        create_mod_service::create_from_ai_result($resultinfo, $course, 1);
+
+        // The remote path travels URL-encoded as a single query value.
+        $this->assertSame(
+            '/files/download?path=' . rawurlencode('generated/packages/mi actividad (v2).h5p'),
+            $capturedendpoint
         );
+
+        // The file name is reduced to a valid Moodle file name: no directory
+        // components and no characters invalid in a Moodle file name.
+        $this->assertSame('mi actividad final.h5p', $capturedfilename);
+    }
+
+    /**
+     * MDL-INT-002: A result whose mod_settings misses file_path or file_name is
+     * rejected with a clear error before any download or creation is attempted.
+     */
+    public function test_missing_package_fields_are_validated(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $this->set_current_course($course);
+        $capturedendpoint = null;
+        $this->inject_download_client($capturedendpoint);
+
+        $missingcases = [
+            'file_path' => $this->h5p_resultinfo(),
+            'file_name' => $this->h5p_resultinfo(),
+        ];
+        unset($missingcases['file_path']['parameters']['mod_settings']['file_path']);
+        unset($missingcases['file_name']['parameters']['mod_settings']['file_name']);
+
+        foreach ($missingcases as $missingfield => $resultinfo) {
+            try {
+                create_mod_service::create_from_ai_result($resultinfo, $course, 1);
+                $this->fail('An exception was expected for a result without ' . $missingfield . '.');
+            } catch (\moodle_exception $e) {
+                $this->assertStringContainsString(
+                    get_string('error_missing_package_info', 'local_coursegen'),
+                    $e->getMessage(),
+                    'Missing ' . $missingfield . ' must surface the package info error.'
+                );
+            }
+        }
+
+        // No download was attempted and nothing was created.
+        $this->assertNull($capturedendpoint);
+        $this->assertSame(0, $DB->count_records('course_modules', ['course' => $course->id]));
+        $this->assertSame(0, $DB->count_records('h5pactivity'));
     }
 
     /**
      * MDL-INT-003: The downloaded package must be validated (extension and H5P
      * content check) at creation time instead of failing when a student opens it.
-     *
-     * [Pendiente:skip] Today the module form validation is bypassed, so an
-     * invalid or corrupted package is attached without any validation.
      */
     public function test_downloaded_package_is_validated_before_creation(): void {
-        $this->markTestSkipped(
-            'Pending: package validation (extension and H5P content check) at creation time '
-            . 'is not implemented yet; invalid packages are attached and only fail on view.'
-        );
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $this->set_current_course($course);
+
+        // Corrupt content: not a readable zip archive.
+        $endpoint = null;
+        $filename = null;
+        $this->inject_download_client($endpoint, $filename, 'corrupt bytes, not a zip archive');
+        try {
+            create_mod_service::create_from_ai_result($this->h5p_resultinfo(), $course, 1);
+            $this->fail('An exception was expected for a corrupt package.');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString(
+                get_string('error_invalid_package', 'local_coursegen', 'sample-activity.h5p'),
+                $e->getMessage()
+            );
+        }
+
+        // Readable zip, but without the h5p.json manifest of an H5P package.
+        $this->inject_download_client($endpoint, $filename, h5p_package_fixture::bytes_without_manifest());
+        try {
+            create_mod_service::create_from_ai_result($this->h5p_resultinfo(), $course, 1);
+            $this->fail('An exception was expected for a zip without h5p.json.');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString(
+                get_string('error_invalid_package', 'local_coursegen', 'sample-activity.h5p'),
+                $e->getMessage()
+            );
+        }
+
+        // Wrong extension: the package must be a .h5p file.
+        $this->inject_download_client();
+        $resultinfo = $this->h5p_resultinfo([], [
+            'file_path' => 'generated/packages/sample-activity.zip',
+            'file_name' => 'sample-activity.zip',
+        ]);
+        try {
+            create_mod_service::create_from_ai_result($resultinfo, $course, 1);
+            $this->fail('An exception was expected for a package without the .h5p extension.');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString(
+                get_string('error_invalid_package', 'local_coursegen', 'sample-activity.zip'),
+                $e->getMessage()
+            );
+        }
+
+        // No half-created activity remains in the course.
+        $this->assertSame(0, $DB->count_records('course_modules', ['course' => $course->id]));
+        $this->assertSame(0, $DB->count_records('h5pactivity'));
     }
 
     /**
@@ -449,15 +581,30 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
     /**
      * MDL-INT-005: A module that exists on disk but is disabled by the
      * administrator must also be rejected with a clear error.
-     *
-     * [Pendiente:skip] Today only the existence of the module form file on disk
-     * is checked; a disabled module passes validation.
      */
     public function test_disabled_module_is_rejected(): void {
-        $this->markTestSkipped(
-            'Pending: only module existence on disk is validated today; a module disabled '
-            . 'by the administrator passes the check. Enablement must be validated too.'
-        );
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $this->inject_download_client();
+
+        $DB->set_field('modules', 'visible', 0, ['name' => 'h5pactivity']);
+
+        try {
+            create_mod_service::create_from_ai_result($this->h5p_resultinfo(), $course, 1);
+            $this->fail('An exception was expected for a disabled module type.');
+        } catch (\moodle_exception $e) {
+            $this->assertStringContainsString(
+                get_string('error_module_disabled', 'local_coursegen', 'h5pactivity'),
+                $e->getMessage()
+            );
+        }
+
+        $this->assertSame(0, $DB->count_records('course_modules', ['course' => $course->id]));
+        $this->assertSame(0, $DB->count_records('h5pactivity'));
     }
 
     /**

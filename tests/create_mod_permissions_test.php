@@ -47,6 +47,7 @@ final class create_mod_permissions_test extends \advanced_testcase {
     protected function setUp(): void {
         parent::setUp();
         require_once(__DIR__ . '/fixtures/testable_create_mod.php');
+        require_once(__DIR__ . '/fixtures/h5p_package_fixture.php');
 
         // external_api::validate_context() resets the page to the site course,
         // so the module edit form resolves section info against the front page.
@@ -90,7 +91,7 @@ final class create_mod_permissions_test extends \advanced_testcase {
                     'filename' => $filename,
                 ];
 
-                return $fs->create_file_from_string($record, 'PK fake-h5p-package-bytes');
+                return $fs->create_file_from_string($record, h5p_package_fixture::bytes());
             }
         );
 

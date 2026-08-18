@@ -36,14 +36,13 @@ class imscp_parameters extends base_parameters {
      * @return object Adjusted parameters for the module imscp.
      */
     public function get_parameters() {
-        $modsettings = $this->parameters->mod_settings;
+        $downloadinfo = $this->get_package_download_info();
 
         $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
         $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
 
         $client = new ai_course_api(null, $baseurl, $baseurleu);
-        $endpoint = '/files/download?path=' . $modsettings['file_path'];
-        $file = $client->download_file($endpoint, $modsettings['file_name']);
+        $file = $client->download_file($downloadinfo['endpoint'], $downloadinfo['filename']);
         $this->parameters->package = $file->get_itemid();
         return $this->parameters;
     }
