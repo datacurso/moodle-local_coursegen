@@ -214,6 +214,10 @@ class create_mod_service {
 
         $classpath = self::get_settings_class($modname);
         if (!self::is_valid_settings_class($classpath)) {
+            debugging(
+                "local_coursegen: mod_settings received for '{$modname}' but no {$classpath} handler exists; settings discarded.",
+                DEBUG_DEVELOPER
+            );
             return;
         }
 

@@ -28,7 +28,6 @@ use local_coursegen\local\service\streaming_url_builder;
  * @covers     \local_coursegen\local\service\streaming_url_builder
  */
 final class streaming_url_builder_test extends \basic_testcase {
-
     /**
      * Course planning stream URL is built from the base URL and session id.
      */

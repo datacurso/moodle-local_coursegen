@@ -28,7 +28,6 @@ namespace local_coursegen\local\service;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class streaming_url_builder {
-
     /**
      * Build the course planning streaming URL for a session.
      *

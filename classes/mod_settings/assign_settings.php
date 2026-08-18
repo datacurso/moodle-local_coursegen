@@ -54,8 +54,10 @@ class assign_settings extends base_settings {
         // be graded.
         $criteria = $this->build_criteria((array) ($rubric['criteria'] ?? []));
         if (empty($criteria)) {
-            debugging('coursegen: AI rubric had no usable criteria; falling back to simple grading.',
-                DEBUG_DEVELOPER);
+            debugging(
+                'coursegen: AI rubric had no usable criteria; falling back to simple grading.',
+                DEBUG_DEVELOPER
+            );
             $this->reset_grading_method($manager);
             return;
         }
