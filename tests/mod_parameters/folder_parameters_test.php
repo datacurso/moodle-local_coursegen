@@ -29,7 +29,6 @@ defined('MOODLE_INTERNAL') || die();
  * @covers \local_coursegen\mod_parameters\folder_parameters
  */
 final class folder_parameters_test extends \advanced_testcase {
-
     /**
      * An AI folder_path is normalised to a Moodle filearea filepath.
      *
@@ -42,6 +41,8 @@ final class folder_parameters_test extends \advanced_testcase {
     }
 
     /**
+     * Provides test cases for filepath normalization.
+     *
      * @return array<string, array{0:string,1:string}>
      */
     public static function filepath_provider(): array {
