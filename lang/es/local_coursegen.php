@@ -341,6 +341,7 @@ $string['error_generating_resource'] = 'Hubo un problema al generar el recurso s
 $string['error_invalid_coursedata'] = 'Los datos del curso almacenados para esta sesión de planificación no son válidos.';
 $string['error_invalid_resource_type'] = 'No se pudo encontrar un tipo de recurso válido en la respuesta de AI: {$a}. Por favor inténtalo de nuevo.';
 $string['error_invalid_session'] = 'Sesión inválida';
+$string['error_invalid_url_content'] = 'La URL generada "{$a}" no es válida o su contenido ya no está vigente, por lo que la actividad no se creó.';
 $string['error_label'] = 'error';
 $string['error_missing_category'] = 'La categoría del curso falta en los datos del curso almacenados.';
 $string['error_missing_parameters'] = 'No se pudieron obtener parámetros para crear el módulo a partir de la respuesta AI. Por favor inténtalo de nuevo.';
@@ -556,6 +557,12 @@ $string['tooltip_enable_workshop'] = 'Habilite imágenes para la introducción y
 $string['tooltip_override_activity'] = 'Habilite las anulaciones de niveles de actividad.';
 $string['tooltip_override_course'] = 'Habilite las anulaciones a nivel de curso.';
 $string['unauthorized'] = 'Acceso no autorizado';
+$string['urlvalidation_bad_content_type'] = 'La dirección no apunta a una página web (tipo detectado: {$a}).';
+$string['urlvalidation_empty_content'] = 'La página no tiene contenido legible.';
+$string['urlvalidation_http_error'] = 'No se pudo acceder a la página o devolvió HTTP {$a}.';
+$string['urlvalidation_invalid_url'] = 'La dirección no es una URL http(s) válida.';
+$string['urlvalidation_stale_content'] = 'La página no se actualizó recientemente y su contenido ya no se relaciona con el tema.';
+$string['urlvalidation_topic_mismatch'] = 'El contenido de la página ya no se relaciona con el tema de la actividad.';
 $string['yesimages'] = 'Generar imágenes';
 
 // Review modal strings.
