@@ -249,7 +249,7 @@ class Mutations {
             if (run) {
                 run.error = error && error.message ? String(error.message) : uiTexts.activityai_error_unknown;
                 run.errorCode = 'stream_error';
-                run.retriable = false;
+                run.retriable = true;
             }
             state.session.locked = false;
             state.session.phase = 'idle';
@@ -498,6 +498,13 @@ class Mutations {
         stateManager.setReadOnly(true);
 
         if (run.phase === 'planning') {
+            // Init failures happen before a session exists (startSession threw, so there is
+            // no jobid/stream to reconnect to): replay the original prompt from scratch.
+            if (!state.session.jobid) {
+                await this.submitPrompt(stateManager, {prompt: run.prompt || ''});
+                return;
+            }
+
             const retryRunId = Date.now();
             stateManager.setReadOnly(false);
             state.session.locked = true;

@@ -33,8 +33,16 @@ class ai_course_api_service {
 
     /**
      * Constructor.
+     *
+     * @param ai_course_api|null $client Optional pre-built API client. When null (production
+     *     default) the client is created from the plugin configuration. Tests can pass a mock.
      */
-    public function __construct() {
+    public function __construct(?ai_course_api $client = null) {
+        if ($client !== null) {
+            $this->client = $client;
+            return;
+        }
+
         $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
         $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
 

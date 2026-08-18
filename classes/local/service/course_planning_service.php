@@ -17,6 +17,8 @@
 namespace local_coursegen\local\service;
 
 use local_coursegen\local\image_generation\image_policy_builder;
+use local_coursegen\local\h5p_core_api;
+use local_coursegen\local\image_generation\activities;
 use local_coursegen\local\models\course_session;
 
 /**
@@ -97,6 +99,14 @@ class course_planning_service {
         $filetypegroups = filetype_catalog_service::get_groups();
         if ($filetypegroups !== null) {
             $payload['filetype_groups'] = $filetypegroups;
+        }
+
+        // Tell the service which H5P framework (core API) this Moodle runs, so
+        // generated .h5p packages use a compatible library set. Omitted when
+        // unresolvable; the service then falls back to its most-compatible set.
+        $h5pcoreapi = h5p_core_api::resolve();
+        if ($h5pcoreapi !== null) {
+            $payload['h5p_core_api'] = $h5pcoreapi;
         }
 
         $response = $apiservice->start_course_planning($payload);
