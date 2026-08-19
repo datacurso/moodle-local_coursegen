@@ -71,6 +71,12 @@ jobs:
           sudo locale-gen en_AU.UTF-8
           echo "NVM_DIR=$HOME/.nvm" >> $GITHUB_ENV
 
+      # Declared hard dependency (see version.php): the PHPUnit suite mocks
+      # aiprovider_datacurso\httpclient\ai_course_api, so the provider plugin
+      # must be present in the CI site.
+      - name: Add dependent plugins
+        run: moodle-plugin-ci add-plugin datacurso/moodle-aiprovider_datacurso
+
       - name: Install moodle-plugin-ci
         run: moodle-plugin-ci install --plugin ./plugin --db-host=127.0.0.1
         env:
