@@ -68,14 +68,16 @@ Feature: Add activity or resource with AI modal
     And "input[name='generate_images'][value='0'][checked]" "css_element" should exist in the "Create resource/activity with AI" "dialogue"
     And "input[name='generate_images'][value='1']" "css_element" should exist in the "Create resource/activity with AI" "dialogue"
     And "input[name='generate_images'][value='1'][checked]" "css_element" should not exist in the "Create resource/activity with AI" "dialogue"
-    # NOTA [Pendiente:skip] (SYS-E2E-005): whether each H5P type honours this
-    # toggle is decided by the AI service, not by this UI. Today only eight
-    # documented types honour it; the other visual types generate images even
-    # when the toggle is off, and the personality quiz always generates its
-    # cover image. The admin per-activity-type image configuration only travels
-    # in the full-course flow; the individual generation sends only this modal
-    # option. Covered as service-dependent scenarios in
-    # activity_ai_generation.feature.
+    # NOTA (SYS-E2E-005): whether each H5P type honours this toggle is decided
+    # by the AI service, not by this UI. By design, image-indispensable types
+    # (memory game, flashcards, hotspots, etc.) always generate images; the
+    # optional-image types (timeline, presentation, personality quiz incl. its
+    # cover, drag&drop categorization, fill in the blanks image mode) honour
+    # the toggle (fixed 14-18/08/2026). The admin per-activity-type image
+    # configuration now travels in BOTH flows (fixed 14/08/2026).
+    # NOTA [Pendiente:skip]: the modal should warn or disable this option when
+    # the requested type requires images by design (roadmap). Covered as
+    # service-dependent scenarios in activity_ai_generation.feature.
 
   @SYS-E2E-004
   Scenario: Language selector is present with the current Moodle language preselected

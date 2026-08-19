@@ -175,9 +175,10 @@ final class h5pactivity_download_config_test extends \advanced_testcase {
      * MDL-INT-009: After deploying a plugin version with new classes, H5P
      * activity creation works once the site caches are purged.
      *
-     * [Pendiente:skip] Partially automatable: purging caches is a manual
-     * deployment procedure; with a stale class map the symptom is the one
-     * described in MDL-UNIT-001 (activity created without package).
+     * Manual deployment procedure (not a pending feature): purging caches
+     * cannot be automated from PHPUnit. With a stale class map the symptom is
+     * now a clear diagnostic error that blocks the package-less creation
+     * (see MDL-UNIT-001, fixed 14/08/2026).
      */
     public function test_class_map_purge_after_deployment(): void {
         $this->markTestSkipped('Procedimiento manual de despliegue: purga de caches');

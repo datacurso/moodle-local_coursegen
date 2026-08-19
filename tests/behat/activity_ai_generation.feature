@@ -149,14 +149,12 @@ Feature: AI activity generation end to end from the modal
     Then I should see "Waiting for your review." in the "Create resource/activity with AI" "dialogue"
     When I click on "Accept and create activity" "button" in the "Create resource/activity with AI" "dialogue"
     Then "#page-mod-h5pactivity-view" "css_element" should exist
-    # NOTA [Pendiente:skip] (SYS-E2E-005): with the toggle off, the memory game
-    # still generates images today, and the personality quiz always generates
-    # its cover image even when the rest honours the toggle — current behaviour
-    # documented in the scope. When the fix lands, this manual check must flip
-    # to: the memory game creates NO images with the toggle off.
-    # NOTA [Pendiente:skip] (SYS-E2E-005): the admin per-activity-type image
-    # configuration only travels in the full-course flow; the individual
-    # generation sends only the modal option.
+    # NOTA (SYS-E2E-005): with the toggle off, the memory game still generates
+    # its images BY DESIGN (the images ARE the content; design decision
+    # confirmed 15/08/2026 — this will never flip). The personality quiz cover
+    # and drag&drop categorization now honour the toggle (fixed 14/08/2026).
+    # NOTA corregido (14/08/2026): the admin per-activity-type image
+    # configuration now travels in the individual flow too.
 
   @SYS-E2E-007
   Scenario: The generated package uses the library set matching the site H5P framework

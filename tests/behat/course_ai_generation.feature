@@ -37,9 +37,9 @@ Feature: AI course generation including H5P activities
     #      force one of the H5P activities to fail during generation and verify
     #      that the failure is reported as a per-activity error while the rest
     #      of the course is still created.
-    # NOTA [Pendiente:skip] (API-CTR-001, related): the course-start request
-    # does not include the site H5P framework version, so course-flow packages
-    # are built with the most-compatible library set instead of the site's.
+    # NOTA corregido (14/08/2026) (API-CTR-001, related): the course-start
+    # request now includes the site H5P framework version on both sides of the
+    # contract, so course-flow packages use the site's library set.
 
   @SYS-E2E-007
   Scenario: Course-flow H5P packages play on sites with different H5P framework versions
