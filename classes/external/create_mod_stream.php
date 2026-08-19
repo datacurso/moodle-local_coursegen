@@ -125,8 +125,15 @@ class create_mod_stream extends external_api {
                 'with_images' => $generateimages == 1,
             ];
 
+            // A disabled (or never configured) policy is omitted: it must not
+            // override the teacher's explicit image toggle by suppressing the
+            // activity description image (regression guard: see
+            // test_disabled_image_mode_is_not_sent_with_images_enabled).
             if ($generateimages == 1) {
-                $payload['image_policy'] = image_policy_builder::build();
+                $imagepolicy = image_policy_builder::build();
+                if (($imagepolicy['mode'] ?? '') !== \local_coursegen\local\image_generation\activities::MODE_DISABLED) {
+                    $payload['image_policy'] = $imagepolicy;
+                }
             }
 
             if (!empty($coursecontext) && !empty($coursecontext->context_type)) {
@@ -141,7 +148,6 @@ class create_mod_stream extends external_api {
                 $payload['filetype_groups'] = $filetypegroups;
             }
 
-            $apiservice = new ai_course_api_service();
             // Tell the service which H5P framework (core API) this Moodle runs, so it packages the
             // generated .h5p with libraries compatible with that version (v127 vs v128 library set).
             // When unresolvable the field is omitted and the service falls back
