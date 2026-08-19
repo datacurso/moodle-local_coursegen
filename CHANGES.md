@@ -1,13 +1,70 @@
+## 2.0.1
+
+**Released on:** 2026-08-19
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Added
+
+- **Site H5P framework version sent to the AI service**  
+  New `h5p_core_api` helper resolves the site's H5P core API version and attaches it as `h5p_core_api` to both the single-activity and full-course payloads, so the service packages generated `.h5p` files with a library set compatible with the site's H5P framework. When unresolvable the field is omitted and the service falls back to its most-compatible set.
+- **H5P activity settings applied from the AI result**  
+  New `h5pactivity_settings` class maps the AI's `passing_score` to the activity's pass grade (`gradepass`) idempotently and emits debugging for unconsumed settings keys.
+- **H5P activities properly labeled in the course plan UI**  
+  Plan cards now show "H5P interactive content" with its own icon instead of a raw "H5pactivity" label with no icon.
+- **Automated test coverage for the H5P generation flow**  
+  New PHPUnit suites covering the creation contract, permissions, download configuration and H5P settings, plus testable fixtures and three Behat features for the activity AI modal, activity generation and course generation flows.
+
+## Changed
+
+- **API client construction centralized**  
+  New `api_client_factory` builds the provider HTTP client honoring the configured service URL overrides, with a PHPUnit-only injection seam, replacing scattered direct instantiations.
+
+## Fixed
+
+- **Enrolled users could launch paid AI generation jobs**  
+  `create_mod_stream`, `create_mod` and the activity feedback, file upload and filepicker endpoints now require `moodle/course:manageactivities` and `local/coursegen:createactivitywithai` on the course, matching the UI entry point. Previously being enrolled was enough to start jobs that consume service credits via direct AJAX calls.
+- **Disabled image policy no longer overrides the teacher's image toggle**  
+  A disabled (or never configured) site image policy is now omitted from the activity payload instead of being sent, where it suppressed the activity description image even when the teacher enabled images. Guarded by a dedicated regression test.
+- **Generated package download hardened**  
+  `file_path`/`file_name` from the AI response are sanitized before download (also for SCORM, IMS CP and resource packages), missing package fields are validated with a clear error, the downloaded `.h5p` package is validated before the activity is created, and a failed download produces a clear error without leaving residue — the full-course flow continues with the remaining activities.
+- **Unknown or disabled module types rejected with clear errors**  
+  An AI result naming a module type that is not installed or is disabled on the site is now rejected with a translated error message instead of failing silently, and the parameter-class resolver emits a diagnostic when no handler matches. New lang strings: `error_invalid_package`, `error_missing_package_info`, `error_module_disabled`.
+- **Failed generation can be retried**  
+  Initialization failures are now retriable from the chat UI: when no session exists yet, the retry replays the original prompt from scratch.
+- **Plugin CI runs the PHPUnit suite against its provider dependency**  
+  The CI workflow now installs `aiprovider_datacurso` (the declared hard dependency) before running the test suite, and the codebase was cleaned to pass Moodle CodeSniffer with zero errors.
+- **Version bump**  
+  Internal version bumped to **2026081801** and release bumped to **2.0.1**.
+
 ## 2.0.0
 
 **Released on:** 2026-08-14
 
 **Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
 
+## Added
+
+- **Database activities are now fully built by the AI**  
+  New `data_settings` mod settings class creates the AI-generated database fields through mod_data's native field API, seeds the AI example entries, applies the AI-designed display templates, and sorts the activity by its primary field. Field creation is hardened against per-field failures, only choice values matching the defined options are stored, and non-numeric example values for number fields are skipped.
+- **Folder activities ingest AI-generated documents**  
+  New `folder_parameters` class downloads every AI-generated document into a single draft area — each at its planned subfolder path — and points the folder's `files` parameter at it, so the standard module creation places every file and its nested folders into the folder's content. When no files were produced the folder is simply created empty.
+
 ## Changed
 
+- **Image policy builder extracted into its own domain class**  
+  The site-wide image policy assembly moved from `course_planning_service` into the new shared `image_policy_builder` class under `classes/local/image_generation/`, so the full-course flow and the single-activity flow build the exact same `image_policy` payload from a single place.
+- **Minimum required version of `aiprovider_datacurso` raised to 2026081000**  
+  The image policy payload sent by this release requires the matching provider support. This breaking dependency requirement is the reason for the major version bump.
 - **Version bump**  
-  Internal version bumped to **2026081400** and release bumped to **2.0.0**. Minimum required version of `aiprovider_datacurso` raised to **2026081000**.
+  Internal version bumped to **2026081800** and release bumped to **2.0.0**.
+
+## Fixed
+
+- **Calculated question datasets validated before any write**  
+  Calculated question datasets are now validated before anything is written, so a question with invalid datasets is skipped cleanly even inside an outer transaction instead of leaving partial data behind.
+- **Silent discard of unhandled module settings**  
+  A `mod_settings` payload arriving for a module type with no handler class now emits a debugging warning instead of being silently ignored.
 
 ## 1.7.3
 
