@@ -173,7 +173,7 @@ export const getActivityLabel = (type, texts) => {
         feedback: null,
         choice: null,
         survey: null,
-        h5pactivity: null,
+        h5pactivity: 'courseai_activity_h5pactivity',
         customcert: null,
         chat: null,
         lti: null,

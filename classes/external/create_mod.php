@@ -81,6 +81,12 @@ class create_mod extends external_api {
             $context = context_course::instance($course->id);
             self::validate_context($context);
 
+            // Gate module creation behind the same capabilities as the UI entry
+            // point (see \local_coursegen\hook\chat_hook), mirroring the gate in
+            // create_mod_stream so both endpoints enforce the same permissions.
+            require_capability('moodle/course:manageactivities', $context);
+            require_capability('local/coursegen:createactivitywithai', $context);
+
             // This request may take a long time depending on the complexity of the prompt that the AI ​​has to resolve.
             \core_php_time_limit::raise();
             raise_memory_limit(MEMORY_EXTRA);
@@ -92,7 +98,7 @@ class create_mod extends external_api {
             $sectionnum = $job->get('sectionnum') ?? $sectionnum;
             $beforemod = $job->get('beforemod') ?? $beforemod;
 
-            $apiservice = new ai_course_api_service();
+            $apiservice = static::get_api_service();
             $result = $apiservice->get_activity_result($jobid);
 
             $newcm = create_mod_service::create_from_ai_result($result, $course, $sectionnum, $beforemod);
@@ -117,6 +123,18 @@ class create_mod extends external_api {
         }
     }
 
+
+    /**
+     * Build the AI course API service used by this endpoint.
+     *
+     * Extracted as a protected factory so PHPUnit tests can override it
+     * through a testable subclass (late static binding).
+     *
+     * @return ai_course_api_service
+     */
+    protected static function get_api_service(): ai_course_api_service {
+        return new ai_course_api_service();
+    }
 
     /**
      * Returns description of method result values.

@@ -62,7 +62,7 @@ export const gripSvg = [
 export const activityPurpose = {
     page: 'content', book: 'content', resource: 'content',
     label: 'content', url: 'content', lesson: 'content',
-    glossary: 'content', data: 'content',
+    glossary: 'content', data: 'content', h5pactivity: 'content',
     quiz: 'assessment', assign: 'assessment',
     forum: 'collaboration', chat: 'collaboration', workshop: 'collaboration',
     choice: 'communication', feedback: 'communication', survey: 'communication',

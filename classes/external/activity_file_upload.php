@@ -79,6 +79,11 @@ class activity_file_upload extends external_api {
         $context = context_course::instance($courseid);
         self::validate_context($context);
 
+        // Same flow, same credits: gate this step of the AI generation behind
+        // the same capabilities as create_mod_stream/create_mod.
+        require_capability('moodle/course:manageactivities', $context);
+        require_capability('local/coursegen:createactivitywithai', $context);
+
         $job = module_job_service::get_user_job($jobid, $courseid, $USER->id);
         $threadid = $job->get('job_id');
 

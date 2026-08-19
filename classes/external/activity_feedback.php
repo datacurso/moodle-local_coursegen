@@ -82,6 +82,13 @@ class activity_feedback extends external_api {
         $context = context_system::instance();
         self::validate_context($context);
 
+        // Same flow, same credits: gate this step of the AI generation behind
+        // the same capabilities as create_mod_stream/create_mod, checked on
+        // the course the activity is being generated in.
+        $coursecontext = \context_course::instance($courseid);
+        require_capability('moodle/course:manageactivities', $coursecontext);
+        require_capability('local/coursegen:createactivitywithai', $coursecontext);
+
         $job = module_job_service::get_user_job($jobid, $courseid, $USER->id);
         $threadid = $job->get('job_id');
 

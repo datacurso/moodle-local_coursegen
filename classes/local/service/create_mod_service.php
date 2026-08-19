@@ -104,16 +104,30 @@ class create_mod_service {
     }
 
     /**
-     * Ensure the plugin's mod_form exists.
+     * Ensure the module is installed, enabled and its mod_form exists.
      *
      * @param string $modname Module plugin name.
      * @return void
-     * @throws \Exception If the mod_form file is not found.
+     * @throws \Exception If the mod_form file is not found or the module is not installed.
+     * @throws \moodle_exception If the module is disabled by the administrator.
      */
     private static function validate_mod_existence($modname) {
+        global $DB;
+
         $modmoodleform = self::get_mod_form_file_path($modname);
         if (!file_exists($modmoodleform)) {
             throw new \Exception(\get_string('error_invalid_resource_type', 'local_coursegen', $modname));
+        }
+
+        // Existing on disk is not enough: the module must be installed on the
+        // site and enabled by the administrator, otherwise the creation would
+        // fail halfway (or succeed into an unusable, hidden activity type).
+        $module = $DB->get_record('modules', ['name' => $modname]);
+        if (!$module) {
+            throw new \Exception(\get_string('error_invalid_resource_type', 'local_coursegen', $modname));
+        }
+        if ((int) $module->visible !== 1) {
+            throw new \moodle_exception('error_module_disabled', 'local_coursegen', '', $modname);
         }
     }
 
@@ -166,6 +180,18 @@ class create_mod_service {
         $paramclass = self::get_parameter_class($modname);
 
         if (!self::is_valid_parameter_class($paramclass)) {
+            // A package-type contract (mod_settings carrying file_path/file_name)
+            // requires a parameters handler to download and attach the package.
+            // Falling through silently would create a contentless activity, so
+            // fail with an internal diagnostic instead (typical cause: stale
+            // class map after deployment; purge the site caches).
+            if (self::has_package_contract($parameters)) {
+                throw new \coding_exception(
+                    'Parameters handler ' . $paramclass . ' does not resolve for a package-type '
+                    . 'result (mod_settings contains file_path/file_name). Refusing to create a '
+                    . 'contentless activity; purge the site caches after deployment.'
+                );
+            }
             return $parameters;
         }
 
@@ -174,6 +200,29 @@ class create_mod_service {
         $parameters = $paraminstance->get_parameters();
 
         return $parameters;
+    }
+
+    /**
+     * Check whether the parameters carry a package-type contract.
+     *
+     * A package-type result includes mod_settings with the remote file_path
+     * or file_name of the generated package; those fields can only be
+     * consumed by a module parameters handler.
+     *
+     * @param object $parameters Parameters object from the AI result.
+     * @return bool True when mod_settings carries package file fields.
+     */
+    private static function has_package_contract($parameters): bool {
+        $modsettings = $parameters->mod_settings ?? null;
+        if (is_object($modsettings)) {
+            $modsettings = (array) $modsettings;
+        }
+
+        if (!is_array($modsettings)) {
+            return false;
+        }
+
+        return isset($modsettings['file_path']) || isset($modsettings['file_name']);
     }
 
     /**

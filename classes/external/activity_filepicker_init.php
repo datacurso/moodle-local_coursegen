@@ -69,6 +69,11 @@ class activity_filepicker_init extends external_api {
         $context = context_course::instance($courseid);
         self::validate_context($context);
 
+        // Same flow, same credits: gate this step of the AI generation behind
+        // the same capabilities as create_mod_stream/create_mod.
+        require_capability('moodle/course:manageactivities', $context);
+        require_capability('local/coursegen:createactivitywithai', $context);
+
         $draftitemid = file_get_unused_draft_itemid();
         $clientid = uniqid('local_coursegen_activity_upload_');
 
