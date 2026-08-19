@@ -22,8 +22,6 @@ use local_coursegen\local\models\module_job;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\create_mod_service;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Contract tests for the individual activity generation request and result.
  *
@@ -48,7 +46,6 @@ defined('MOODLE_INTERNAL') || die();
  * @runTestsInSeparateProcesses
  */
 final class create_mod_stream_contract_test extends \advanced_testcase {
-
     /**
      * Load the testable subclass in the isolated process.
      */
@@ -172,15 +169,18 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
         $captured = null;
         $this->inject_api_service($captured);
 
-        // generationmode deliberately NOT configured: defaults to disabled.
+        // The generationmode setting is deliberately NOT configured: defaults to disabled.
         $result = testable_create_mod_stream::execute($course->id, 1, 'Create an H5P accordion about rocks', 1, null, 'en');
         $this->assertDebuggingCalledCount(1);
 
         $this->assertTrue($result['ok'], 'Start must succeed: ' . ($result['message'] ?? ''));
         $this->assertIsArray($captured);
         $this->assertTrue($captured['with_images']);
-        $this->assertArrayNotHasKey('image_policy', $captured,
-            'A disabled-by-default policy must not override the teacher image toggle.');
+        $this->assertArrayNotHasKey(
+            'image_policy',
+            $captured,
+            'A disabled-by-default policy must not override the teacher image toggle.'
+        );
     }
 
     /**
@@ -216,7 +216,7 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
 
         // Resolve the expected version the same way production code does.
         (new \core_h5p\factory())->get_core();
-        $coreapi = \core_h5p\core::$coreApi;
+        $coreapi = \core_h5p\core::$coreApi; // phpcs:ignore moodle.NamingConventions.ValidVariableName
         $expected = $coreapi['majorVersion'] . '.' . $coreapi['minorVersion'];
 
         $result = testable_create_mod_stream::execute($course->id, 1, 'Create an H5P activity', 0, null, 'en');
@@ -250,13 +250,13 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
         // Simulate an unresolvable framework version. The property is public
         // static on the H5P library class, so no reflection is needed.
         (new \core_h5p\factory())->get_core();
-        $original = \core_h5p\core::$coreApi;
+        $original = \core_h5p\core::$coreApi; // phpcs:ignore moodle.NamingConventions.ValidVariableName
 
         try {
-            \core_h5p\core::$coreApi = [];
+            \core_h5p\core::$coreApi = []; // phpcs:ignore moodle.NamingConventions.ValidVariableName
             $result = testable_create_mod_stream::execute($course->id, 1, 'Create an H5P activity', 0, null, 'en');
         } finally {
-            \core_h5p\core::$coreApi = $original;
+            \core_h5p\core::$coreApi = $original; // phpcs:ignore moodle.NamingConventions.ValidVariableName
         }
 
         // Pre-existing developer notice from execute_parameters().
@@ -268,10 +268,10 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
 
         // The shared helper reports the unresolvable version as null.
         try {
-            \core_h5p\core::$coreApi = [];
+            \core_h5p\core::$coreApi = []; // phpcs:ignore moodle.NamingConventions.ValidVariableName
             $this->assertNull(\local_coursegen\local\h5p_core_api::resolve());
         } finally {
-            \core_h5p\core::$coreApi = $original;
+            \core_h5p\core::$coreApi = $original; // phpcs:ignore moodle.NamingConventions.ValidVariableName
         }
     }
 

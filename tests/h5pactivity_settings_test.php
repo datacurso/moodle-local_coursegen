@@ -38,7 +38,6 @@ require_once($CFG->libdir . '/gradelib.php');
  * @covers     \local_coursegen\mod_settings\h5pactivity_settings
  */
 final class h5pactivity_settings_test extends \advanced_testcase {
-
     /**
      * Create an H5P activity and return the course module object the settings
      * handler receives from add_moduleinfo().

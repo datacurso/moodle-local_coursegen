@@ -40,7 +40,6 @@ require_once(__DIR__ . '/fixtures/h5p_package_fixture.php');
  * @covers     \local_coursegen\local\api_client_factory
  */
 final class h5pactivity_download_config_test extends \advanced_testcase {
-
     /**
      * Always remove the injected factory test double between tests.
      */

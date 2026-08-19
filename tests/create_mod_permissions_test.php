@@ -21,8 +21,6 @@ use local_coursegen\local\api_client_factory;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\module_job_service;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Permission tests for creating the H5P activity through the generator.
  *
@@ -40,7 +38,6 @@ defined('MOODLE_INTERNAL') || die();
  * @runTestsInSeparateProcesses
  */
 final class create_mod_permissions_test extends \advanced_testcase {
-
     /**
      * Load the testable subclass in the isolated process.
      */
@@ -49,7 +46,7 @@ final class create_mod_permissions_test extends \advanced_testcase {
         require_once(__DIR__ . '/fixtures/testable_create_mod.php');
         require_once(__DIR__ . '/fixtures/h5p_package_fixture.php');
 
-        // external_api::validate_context() resets the page to the site course,
+        // Note: external_api::validate_context() resets the page to the site course,
         // so the module edit form resolves section info against the front page.
         // Give the front page the section rows a real site has.
         global $CFG;

@@ -34,7 +34,6 @@ require_once($CFG->libdir . '/gradelib.php');
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class h5pactivity_settings extends base_settings {
-
     /** @var string[] Keys consumed by this handler or upstream by the parameters handler. */
     private const CONSUMED_KEYS = ['file_path', 'file_name', 'passing_score'];
 

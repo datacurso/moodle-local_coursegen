@@ -18,8 +18,6 @@ namespace local_coursegen;
 
 use local_coursegen\local\service\ai_course_api_service;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Testable create_mod that lets tests inject a mock API service through the
  * protected factory seam (late static binding).

@@ -29,7 +29,6 @@ namespace local_coursegen\local;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class h5p_core_api {
-
     /**
      * Resolve the site H5P core API version as "major.minor".
      *
@@ -42,7 +41,7 @@ class h5p_core_api {
     public static function resolve(): ?string {
         try {
             (new \core_h5p\factory())->get_core(); // Ensures the active H5P handler is autoloaded.
-            $coreapi = \core_h5p\core::$coreApi;
+            $coreapi = \core_h5p\core::$coreApi; // phpcs:ignore moodle.NamingConventions.ValidVariableName
             if (!empty($coreapi['majorVersion'])) {
                 return $coreapi['majorVersion'] . '.' . $coreapi['minorVersion'];
             }

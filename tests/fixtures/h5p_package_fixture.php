@@ -16,8 +16,6 @@
 
 namespace local_coursegen;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * Builds minimal H5P package fixtures for the coursegen tests.
  *
@@ -32,7 +30,6 @@ defined('MOODLE_INTERNAL') || die();
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class h5p_package_fixture {
-
     /** @var string|null Cached bytes of the valid fixture package. */
     private static ?string $bytes = null;
 
