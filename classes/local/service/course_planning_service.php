@@ -76,7 +76,7 @@ class course_planning_service {
         // and mod_subsection is available, whatever the client sent.
         $withsubsections = $withsubsections && $available;
 
-        $apiservice = new ai_course_api_service();
+        $apiservice = static::get_api_service();
 
         $payload = [
             'prompt' => $prompt,
@@ -146,6 +146,18 @@ class course_planning_service {
             'streamingurl' => $streamingurl,
             'message' => get_string('courseai_init_success', 'local_coursegen'),
         ];
+    }
+
+    /**
+     * Build the AI course API service used by this service.
+     *
+     * Extracted as a protected factory so PHPUnit tests can override it
+     * through a testable subclass (late static binding).
+     *
+     * @return ai_course_api_service
+     */
+    protected static function get_api_service(): ai_course_api_service {
+        return new ai_course_api_service();
     }
 
     /**

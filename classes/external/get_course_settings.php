@@ -75,7 +75,7 @@ class get_course_settings extends external_api {
         $session = course_session_service::get_user_session($recordid, $USER->id);
 
         // Fetch the AI-generated result data from the Datacurso API.
-        $apiservice = new ai_course_api_service();
+        $apiservice = static::get_api_service();
         $result = $apiservice->get_course_result((string)$session->get('session_id'));
         $resultdata = $result['result'] ?? [];
 
@@ -92,6 +92,18 @@ class get_course_settings extends external_api {
         }
 
         return $settings + ['categories' => $categories];
+    }
+
+    /**
+     * Build the AI course API service used by this endpoint.
+     *
+     * Extracted as a protected factory so PHPUnit tests can override it
+     * through a testable subclass (late static binding).
+     *
+     * @return ai_course_api_service
+     */
+    protected static function get_api_service(): ai_course_api_service {
+        return new ai_course_api_service();
     }
 
     /**
