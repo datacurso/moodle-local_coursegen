@@ -1,3 +1,14 @@
+## 2.0.3
+
+**Released on:** 2026-08-24
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Fixed
+
+- **Spanish translation corrected across the language file**  
+  Several activity names and UI strings used incorrect literal translations, inconsistent terminology for the same activity type across different strings, and grammar issues. Activity names are now aligned with the site's installed Spanish language pack.
+
 ## 2.0.1
 
 **Released on:** 2026-08-19
