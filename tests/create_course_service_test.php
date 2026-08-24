@@ -702,4 +702,195 @@ final class create_course_service_test extends \advanced_testcase {
         }
     }
 
+    /**
+     * MDL-INT-024: Behavior when the final consistency verification fails after
+     * the course and part of the activities were created.
+     */
+    public function test_behavior_when_final_consistency_check_fails(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $session = $this->make_session(get_admin()->id);
+        $resultdata = [
+            'course_configuration' => ['fullname' => 'Curso con avisos', 'shortname' => 'avisos-1'],
+            'sections_info' => [['section' => 1, 'name' => 'Unica']],
+            'generated_activities' => [$this->label_activity(1, 'Plana')],
+        ];
+
+        // Force the final consistency verification to keep failing after retries.
+        testable_create_course_service::$forcedunresolvedcount = 1;
+        $result = testable_create_course_service::create_course($session, $resultdata);
+        $this->resetDebugging();
+
+        // The course already exists, so the result reports success with a
+        // structural warning instead of failing the whole session.
+        $this->assertTrue($result['success'], 'Creation must succeed: ' . ($result['message'] ?? ''));
+        $this->assertGreaterThan(0, (int)$result['courseid']);
+        $this->assertTrue($result['partial']);
+        $this->assertTrue($result['haswarnings']);
+        $this->assertStringContainsString(
+            get_string('create_course_structure_warning', 'local_coursegen'),
+            $result['message']
+        );
+
+        // The session ends as created, not failed: the course really exists.
+        $reloaded = new course_session((int)$session->get('id'));
+        $this->assertEquals(course_session::STATUS_CREATED, (int)$reloaded->get('status'));
+    }
+
+    /**
+     * MDL-INT-025: The created course adopts the language chosen in the wizard.
+     */
+    public function test_created_course_adopts_wizard_language(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        // A wizard language whose pack is installed ('en' always is) becomes
+        // the course language.
+        $session = $this->make_session(get_admin()->id, ['local_coursegen_lang' => 'en']);
+        $result = create_course_service::create_course($session, [
+            'course_configuration' => ['fullname' => 'Course in English', 'shortname' => 'lang-en-1'],
+        ]);
+        $this->assertTrue($result['success'], 'Creation must succeed: ' . ($result['message'] ?? ''));
+        $this->assertSame('en', $DB->get_field('course', 'lang', ['id' => $result['courseid']]));
+
+        // A wizard language without an installed pack leaves the site default.
+        $session = $this->make_session(get_admin()->id, ['local_coursegen_lang' => 'xx']);
+        $result = create_course_service::create_course($session, [
+            'course_configuration' => ['fullname' => 'Curso sin paquete', 'shortname' => 'lang-xx-1'],
+        ]);
+        $this->assertTrue($result['success'], 'Creation must succeed: ' . ($result['message'] ?? ''));
+        $this->assertSame('', $DB->get_field('course', 'lang', ['id' => $result['courseid']]));
+    }
+
+    /**
+     * MDL-INT-026: The created course receives a descriptive summary and a
+     * cover image when images are enabled.
+     */
+    public function test_created_course_receives_summary_and_cover_image(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        // The download client returns a real draft image, as the provider does.
+        $capturedendpoint = null;
+        $mock = $this->getMockBuilder(ai_course_api::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['download_file'])
+            ->getMock();
+        $mock->method('download_file')->willReturnCallback(
+            function (string $endpoint, string $filename) use (&$capturedendpoint): \stored_file {
+                global $USER;
+
+                $capturedendpoint = $endpoint;
+                return get_file_storage()->create_file_from_string((object)[
+                    'contextid' => \context_user::instance($USER->id)->id,
+                    'component' => 'user',
+                    'filearea' => 'draft',
+                    'itemid' => file_get_unused_draft_itemid(),
+                    'filepath' => '/',
+                    'filename' => $filename,
+                ], 'fake-image-bytes');
+            }
+        );
+        api_client_factory::set_test_client($mock);
+
+        $session = $this->make_session(get_admin()->id, ['local_coursegen_generate_images' => 1]);
+        $resultdata = [
+            'course_configuration' => [
+                'fullname' => 'Curso con portada',
+                'shortname' => 'portada-1',
+                'description' => '<p>Resumen del curso.</p>',
+            ],
+            'course_image' => ['file_path' => '/generated/cover.png', 'file_name' => 'cover.png'],
+        ];
+
+        $result = create_course_service::create_course($session, $resultdata);
+        $this->assertTrue($result['success'], 'Creation must succeed: ' . ($result['message'] ?? ''));
+
+        // The AI description becomes the course summary.
+        $course = $DB->get_record('course', ['id' => $result['courseid']], '*', MUST_EXIST);
+        $this->assertSame('<p>Resumen del curso.</p>', $course->summary);
+        $this->assertSame((int)FORMAT_HTML, (int)$course->summaryformat);
+
+        // The downloaded image is attached as the course overview (cover) file.
+        $files = get_file_storage()->get_area_files(
+            \context_course::instance((int)$course->id)->id,
+            'course',
+            'overviewfiles',
+            0,
+            'id',
+            false
+        );
+        $this->assertCount(1, $files);
+        $this->assertSame('cover.png', reset($files)->get_filename());
+        $this->assertSame('/files/download?path=' . rawurlencode('/generated/cover.png'), $capturedendpoint);
+    }
+
+    /**
+     * MDL-CTR-003: The final result is consumed tolerantly: unknown additional
+     * fields at every level do not break the course creation.
+     */
+    public function test_unknown_extra_fields_in_result_are_tolerated(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $session = $this->make_session(get_admin()->id);
+        $activity = $this->label_activity(1, 'Tolerante');
+        $activity['unknown_activity_field'] = 'ignored';
+
+        $resultdata = [
+            'course_configuration' => [
+                'fullname' => 'Curso tolerante',
+                'shortname' => 'tolerante-1',
+                'unknown_config_field' => 'ignored',
+            ],
+            'sections_info' => [
+                ['section' => 1, 'name' => 'Unica', 'unknown_section_field' => 'ignored'],
+            ],
+            'generated_activities' => [$activity],
+            'unknown_top_level_field' => ['nested' => 'ignored'],
+        ];
+
+        $result = create_course_service::create_course($session, $resultdata);
+
+        $this->assertTrue($result['success'], 'Creation must succeed: ' . ($result['message'] ?? ''));
+        $this->assertSame(0, $result['warningscount']);
+        $this->assertSame('Curso tolerante', $DB->get_field('course', 'fullname', ['id' => $result['courseid']]));
+        $this->assertSame(
+            [['label', 'Tolerante']],
+            $this->get_section_activities((int)$result['courseid'], 1)
+        );
+    }
+
+    /**
+     * MDL-CTR-003: The subsections information is processed only when present
+     * in the result; without it the creation works and produces no delegated
+     * sections.
+     */
+    public function test_subsections_processed_only_when_present(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $session = $this->make_session(get_admin()->id);
+        $resultdata = [
+            'course_configuration' => ['fullname' => 'Curso sin subsecciones', 'shortname' => 'sin-sub-1'],
+            'sections_info' => [['section' => 1, 'name' => 'Unica']],
+            'generated_activities' => [$this->label_activity(1, 'Plana')],
+        ];
+
+        $result = create_course_service::create_course($session, $resultdata);
+
+        $this->assertTrue($result['success'], 'Creation must succeed: ' . ($result['message'] ?? ''));
+        $this->assertCount(0, $this->get_delegated_sections((int)$result['courseid']));
+        $this->assertSame(
+            [['label', 'Plana']],
+            $this->get_section_activities((int)$result['courseid'], 1)
+        );
+    }
 }
