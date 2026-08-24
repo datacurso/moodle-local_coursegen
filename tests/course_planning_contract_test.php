@@ -281,10 +281,27 @@ final class course_planning_contract_test extends \advanced_testcase {
      * activity flow.
      */
     public function test_disabled_image_policy_should_be_omitted(): void {
-        $this->markTestSkipped(
-            'La politica de imagenes se envia incluso en modo Deshabilitado (valor por defecto de un '
-            . 'sitio sin configurar), anulando el interruptor del docente; en el flujo de actividad '
-            . 'individual la politica deshabilitada ya se omite. Pendiente hasta que se corrija.'
+        global $USER;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        // A site never configured defaults to the disabled mode.
+        unset_config('generationmode', 'local_coursegen');
+
+        $captured = null;
+        $this->inject_api_service($captured);
+
+        testable_course_planning_service::start_course_planning(
+            'Curso con imagenes',
+            'es',
+            true,
+            0,
+            (int)$USER->id
         );
+
+        $this->assertIsArray($captured);
+        $this->assertTrue($captured['with_images']);
+        $this->assertArrayNotHasKey('image_policy', $captured);
     }
 }

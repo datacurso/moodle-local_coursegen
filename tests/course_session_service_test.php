@@ -176,9 +176,9 @@ final class course_session_service_test extends \advanced_testcase {
      * state label.
      */
     public function test_created_session_shows_visible_state_label(): void {
-        $this->markTestSkipped(
-            'Las sesiones con curso creado muestran la etiqueta de estado vacia; falta un estado '
-            . 'visible de Creado. Pendiente hasta implementarse.'
-        );
+        // The Created state has its own visible label, following the same
+        // naming pattern as the other status strings rendered by the sidebar.
+        $this->assertTrue(get_string_manager()->string_exists('status_created', 'local_coursegen'));
+        $this->assertNotSame('', trim(get_string('status_created', 'local_coursegen')));
     }
 }

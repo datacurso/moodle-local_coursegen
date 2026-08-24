@@ -90,8 +90,15 @@ class course_planning_service {
             'subsections_available' => $available,
         ];
 
+        // A disabled (or never configured) policy is omitted: it must not
+        // override the teacher's explicit image toggle by suppressing the
+        // course image suggestions (regression guard: see
+        // test_disabled_image_policy_should_be_omitted).
         if ($withimages) {
-            $payload['image_policy'] = image_policy_builder::build();
+            $imagepolicy = image_policy_builder::build();
+            if (($imagepolicy['mode'] ?? '') !== activities::MODE_DISABLED) {
+                $payload['image_policy'] = $imagepolicy;
+            }
         }
 
         // Site file-type group catalog, so activities generated in the course flow

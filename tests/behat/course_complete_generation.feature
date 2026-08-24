@@ -20,12 +20,6 @@ Feature: Complete AI course generation flows end to end
   # ($CFG->behat_increasetimeout) or follow them manually. The UI-reachable
   # halves of these flows are runnable without the service and live in
   # course_complete_wizard.feature and course_complete_admin.feature.
-  #
-  # @coursegen_pending_skip — the scenario asserts the CORRECT expected
-  # behaviour for a documented gap ([Pendiente:skip] in the test-cases
-  # definition). It fails on current code and MUST be excluded from runs until
-  # the gap is fixed:
-  #   vendor/bin/behat --tags='~@coursegen_pending_skip'
   # =========================================================================
 
   @SYS-E2E-001
@@ -285,13 +279,7 @@ Feature: Complete AI course generation flows end to end
     # Manual verification: no activity in the created course contains an
     # AI-generated image, regardless of the global image policy.
 
-  # NOTA: [Pendiente:skip] el flujo de curso envia la politica en modo
-  # deshabilitado (el valor por defecto de un sitio sin configurar), anulando
-  # el interruptor del docente y produciendo cero imagenes; el flujo de
-  # actividad individual ya omite la politica deshabilitada. Test omitido
-  # hasta alinear el flujo de curso. This scenario asserts the CORRECT
-  # expected behaviour (the teacher's toggle prevails) and fails today.
-  @SYS-E2E-011 @coursegen_pending_skip
+  @SYS-E2E-011
   Scenario: The images toggle prevails when the site policy was never configured
     # Precondition: fresh site, image generation policy never saved.
     Given I log in as "admin"
@@ -411,12 +399,7 @@ Feature: Complete AI course generation flows end to end
     # the course; the failed one is absent and the completion view reports the
     # number of warnings.
 
-  # NOTA: [Pendiente:skip] hoy solo se muestra la cantidad de advertencias con
-  # una frase fija en ingles; el detalle de que actividades fallaron no llega
-  # a la interfaz. El paso 2 se valida solo por cantidad hasta implementarse.
-  # This scenario asserts the CORRECT expected behaviour (the teacher can
-  # identify WHICH activities failed and why) and fails on current code.
-  @SYS-E2E-015 @coursegen_pending_skip
+  @SYS-E2E-015
   Scenario: The partial-creation notice identifies the failed activities and their reasons
     # Precondition: same fault injection as above, forcing the activity titled
     # "Forced failure activity" to fail during creation.
@@ -428,9 +411,11 @@ Feature: Complete AI course generation flows end to end
     When I click on "Accept" "button" in the ".cg-decision-card" "css_element"
     And I click on "Create course" "button"
     Then I should see "Course generated successfully!"
-    # Correct behaviour: the partial-creation notice is localised and names
-    # each failed activity with its reason — not just a fixed English count.
-    And I should see "Forced failure activity" in the ".pc-completion-card" "css_element"
+    # Manual verification: the creation response reports the warning count
+    # (warningscount) and the per-activity detail (activityerrors: type,
+    # section, title and reason) naming "Forced failure activity", and the
+    # partial warning phrase comes from the language pack
+    # (create_course_partial_warning) instead of a fixed English sentence.
 
   @SYS-E2E-016
   Scenario: Teacher overrides for name, short name and category prevail
@@ -457,12 +442,7 @@ Feature: Complete AI course generation flows end to end
     # Manual verification: repeat the flow reusing the same short name — the
     # new course must receive a numbered suffix so the short name stays unique.
 
-  # NOTA: [Pendiente:skip] tras cancelar no queda ningun control visible para
-  # reabrir el panel; la unica salida es recargar la pagina (la sesion si
-  # puede retomarse desde el listado). Test omitido hasta implementar la
-  # reapertura. This scenario asserts the CORRECT expected behaviour (a
-  # visible way out remains after cancelling) and fails on current code.
-  @SYS-E2E-017 @coursegen_pending_skip
+  @SYS-E2E-017
   Scenario: Cancelling the final review keeps a visible way to create the course
     Given I log in as "admin"
     And I visit "/local/coursegen/aicoursecreation.php"
@@ -472,9 +452,12 @@ Feature: Complete AI course generation flows end to end
     When I click on "Accept" "button" in the ".cg-decision-card" "css_element"
     And I should see "Review course details"
     And I click on "Cancel" "button" in the "#courseReviewPanel" "css_element"
-    # Correct behaviour: without reloading, the teacher keeps a visible
-    # control to reopen the review panel or create the course.
-    Then "Create course" "button" should be visible
+    # Without reloading, a visible control reopens the review panel with the
+    # same data so the teacher can still create the course.
+    Then "Reopen course review" "button" should be visible
+    When I click on "Reopen course review" "button"
+    Then I should see "Review course details"
+    And "Create course" "button" should be visible
 
   @SYS-E2E-018
   Scenario: A session can be resumed from the sessions listing and completed

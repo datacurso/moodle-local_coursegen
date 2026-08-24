@@ -50,7 +50,7 @@ $functions = [
         'description' => 'Create course with AI assistance',
         'type' => 'write',
         'ajax' => true,
-        'capabilities' => 'moodle/course:create',
+        'capabilities' => 'moodle/course:create,local/coursegen:createcoursewithai',
     ],
     'local_coursegen_get_course_settings' => [
         'classname' => 'local_coursegen\external\get_course_settings',
@@ -66,6 +66,7 @@ $functions = [
         'description' => 'Send human feedback for AI course planning session',
         'type' => 'write',
         'ajax' => true,
+        'capabilities' => 'moodle/course:create,local/coursegen:createcoursewithai',
         'loginrequired' => true,
     ],
     'local_coursegen_activity_feedback' => [
@@ -100,7 +101,7 @@ $functions = [
         'description' => 'Save image generation settings for course and activity creation',
         'type' => 'write',
         'ajax' => true,
-        'capabilities' => 'moodle/site:config',
+        'capabilities' => 'local/coursegen:manageimagegeneration',
         'loginrequired' => true,
     ],
     'local_coursegen_start_course_planning' => [

@@ -155,14 +155,19 @@ final class course_planning_permissions_test extends \advanced_testcase {
     }
 
     /**
-     * MDL-INT-005: Granting the create courses with AI permission only in a
-     * course category enables the flow as documented.
+     * MDL-INT-005: The create courses with AI capability is declared at the
+     * same context level where the flow enforces it (the system context), so
+     * category-level grants are no longer offered as a false promise.
      */
-    public function test_category_level_grant_enables_the_flow(): void {
-        $this->markTestSkipped(
-            'El permiso local/coursegen:createcoursewithai esta declarado a nivel de categoria pero '
-            . 'solo se verifica a nivel de sitio, por lo que un otorgamiento por categoria no tiene '
-            . 'efecto. Pendiente hasta que se defina el contexto correcto.'
+    public function test_capability_declared_at_the_context_where_it_is_enforced(): void {
+        $capabilities = [];
+        require(__DIR__ . '/../db/access.php');
+
+        $this->assertArrayHasKey('local/coursegen:createcoursewithai', $capabilities);
+        $this->assertSame(
+            CONTEXT_SYSTEM,
+            $capabilities['local/coursegen:createcoursewithai']['contextlevel'],
+            'The capability must be declared at the system context, where start_course_planning checks it.'
         );
     }
 }

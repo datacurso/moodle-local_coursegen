@@ -49,7 +49,7 @@ $capabilities = [
     'local/coursegen:createcoursewithai' => [
         'riskbitmask' => RISK_XSS,
         'captype' => 'write',
-        'contextlevel' => CONTEXT_COURSECAT,
+        'contextlevel' => CONTEXT_SYSTEM,
         'archetypes' => [
             'manager' => CAP_ALLOW,
         ],

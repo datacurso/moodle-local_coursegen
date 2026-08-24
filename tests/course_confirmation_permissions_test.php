@@ -22,12 +22,11 @@ use local_coursegen\local\service\ai_course_api_service;
 /**
  * Capability tests for the plan adjustment and final confirmation endpoints.
  *
- * SECURITY ISSUES (expected failures): these tests implement the CORRECT
- * behavior documented in the test-case definitions. Today the endpoints only
- * verify session ownership, so a user who loses the course creation
- * permissions after starting a session can still adjust the plan, read the
- * generated settings and create the course. The tests MUST fail until the
- * capability checks are added; do not soften them.
+ * SECURITY REGRESSION GUARDS: these tests implement the CORRECT behavior
+ * documented in the test-case definitions. The endpoints must verify the
+ * course creation permissions besides session ownership, so a user who loses
+ * them after starting a session can no longer adjust the plan, read the
+ * generated settings or create the course. Do not soften them.
  *
  * @package    local_coursegen
  * @category   test

@@ -191,9 +191,7 @@ final class course_session_ownership_test extends \advanced_testcase {
         } catch (\moodle_exception $e) {
             $this->assertSame('error_no_session_found', $e->errorcode);
         }
-        // One pre-existing developer notice: execute_parameters() declares
-        // top-level VALUE_OPTIONAL values instead of VALUE_DEFAULT.
-        $this->assertDebuggingCalledCount(1);
+        $this->assertDebuggingNotCalled();
 
         $this->assertSame($coursesbefore, $DB->count_records('course'));
     }
@@ -236,9 +234,6 @@ final class course_session_ownership_test extends \advanced_testcase {
         ], '%PDF-1.4 fake syllabus');
 
         $result = testable_courseai_syllabus_upload::execute($recordid, $draftitemid);
-        // The rejection message string does not exist yet in the language pack
-        // (see MDL-INT-029), which raises a developer debugging notice.
-        $this->resetDebugging();
 
         $this->assertFalse($result['success']);
 

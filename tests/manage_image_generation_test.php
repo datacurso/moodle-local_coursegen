@@ -35,10 +35,10 @@ use local_coursegen\local\image_generation\activities;
  */
 final class manage_image_generation_test extends \advanced_testcase {
     /**
-     * MDL-INT-012: Saving the policy requires the site configuration
+     * MDL-INT-012: Saving the policy requires the image generation management
      * permission and rejects other users without touching the settings.
      */
-    public function test_saving_requires_site_configuration_capability(): void {
+    public function test_saving_requires_management_capability(): void {
         $this->resetAfterTest();
 
         $user = $this->getDataGenerator()->create_user();
@@ -46,7 +46,7 @@ final class manage_image_generation_test extends \advanced_testcase {
 
         try {
             manage_image_generation::execute(1, 1, activities::MODE_AUTO, []);
-            $this->fail('A permission error was expected for a user without moodle/site:config.');
+            $this->fail('A permission error was expected for a user without the management capability.');
         } catch (\required_capability_exception $e) {
             $this->assertSame('nopermissions', $e->errorcode);
         }
@@ -120,10 +120,43 @@ final class manage_image_generation_test extends \advanced_testcase {
      * visually before submitting.
      */
     public function test_screen_max_field_validates_limit_visually(): void {
-        $this->markTestSkipped(
-            'El campo numerico de la pagina no limita el maximo a 5 y el recorte del servidor '
-            . 'ocurre sin aviso al administrador. Pendiente hasta agregar la validacion visual.'
-        );
+        global $OUTPUT;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $html = $OUTPUT->render_from_template('local_coursegen/manage_image_generation', [
+            'currentmode' => activities::MODE_MANUAL,
+            'overridecourse' => true,
+            'overrideactivity' => false,
+            'ismoddisabled' => false,
+            'ismodeauto' => false,
+            'ismodemanual' => true,
+            'partmaximageshelp' => '',
+            'activities' => [
+                [
+                    'id' => 'assign',
+                    'name' => 'Assignment',
+                    'iconurl' => '',
+                    'tooltip' => '',
+                    'enabled' => true,
+                    'show' => true,
+                    'parts' => [
+                        [
+                            'id' => 'intro',
+                            'partuniqueid' => 'assign-intro',
+                            'label' => 'Intro',
+                            'enabled' => true,
+                            'maximages' => 3,
+                        ],
+                    ],
+                ],
+            ],
+        ]);
+
+        // The numeric field visually enforces the same 0..5 range the server
+        // clamps to, so the admin sees the limit before submitting.
+        $this->assertMatchesRegularExpression('/<input type="number"[^>]*min="0"[^>]*max="5"/', $html);
     }
 
     /**
@@ -131,10 +164,21 @@ final class manage_image_generation_test extends \advanced_testcase {
      * can also save it.
      */
     public function test_page_open_and_save_require_same_permission(): void {
-        $this->markTestSkipped(
-            'La pagina se abre con local/coursegen:manageimagegeneration pero el guardado exige '
-            . 'moodle/site:config; un gestor sin ese permiso edita sin poder guardar. Pendiente '
-            . 'hasta unificar el permiso.'
-        );
+        $this->resetAfterTest();
+
+        // The capability that opens the administration page (see settings.php)
+        // must be enough to save the policy from it.
+        $generator = $this->getDataGenerator();
+        $systemcontext = \context_system::instance();
+        $user = $generator->create_user();
+        $roleid = $generator->create_role();
+        assign_capability('local/coursegen:manageimagegeneration', CAP_ALLOW, $roleid, $systemcontext->id);
+        role_assign($roleid, $user->id, $systemcontext->id);
+        $this->setUser($user);
+
+        $result = manage_image_generation::execute(0, 0, activities::MODE_MANUAL, []);
+
+        $this->assertTrue($result['success']);
+        $this->assertSame(activities::MODE_MANUAL, get_config('local_coursegen', 'generationmode'));
     }
 }

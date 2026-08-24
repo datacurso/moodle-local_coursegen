@@ -132,6 +132,45 @@ export const showCourseReviewPanel = async(state, elements, texts, getCourseSett
 };
 
 /**
+ * Leave a visible control that reopens the review panel after a cancel.
+ *
+ * Cancelling the final review must not dead-end the flow: the control re-runs
+ * the same review-panel flow with the same session data, so the teacher can
+ * still create the course without reloading the page.
+ *
+ * @param {Object}   texts
+ * @param {Function} onReopen - Re-invokes the review-panel flow.
+ */
+export const showReviewReopenControl = (texts, onReopen) => {
+    const panel = document.getElementById('courseReviewPanel');
+    if (!panel || !panel.parentNode) {
+        return;
+    }
+
+    const existing = document.getElementById('reviewReopenControl');
+    if (existing) {
+        existing.remove();
+    }
+
+    const control = document.createElement('div');
+    control.id = 'reviewReopenControl';
+    control.className = 'd-flex justify-content-end my-3';
+
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.id = 'reviewReopenBtn';
+    button.className = 'btn btn-primary';
+    button.textContent = texts.courseai_review_reopen;
+    button.addEventListener('click', () => {
+        control.remove();
+        onReopen();
+    });
+
+    control.appendChild(button);
+    panel.parentNode.insertBefore(control, panel.nextSibling);
+};
+
+/**
  * Call the createCourse WS, animate progress, then invoke showCompletionView on success.
  *
  * @param {Object}   state

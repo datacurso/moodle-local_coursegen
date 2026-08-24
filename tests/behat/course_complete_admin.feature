@@ -14,12 +14,6 @@ Feature: Image generation administration and course sessions listing
   #   vendor/bin/behat --tags='~@coursegen_requires_ai_service'
   # They serve as scripted manual / E2E-with-service runs (see
   # course_complete_generation.feature for the full convention).
-  #
-  # @coursegen_pending_skip — the scenario asserts the CORRECT expected
-  # behaviour for a documented gap ([Pendiente:skip] in the test-cases
-  # definition). It fails on current code and MUST be excluded from runs until
-  # the gap is fixed:
-  #   vendor/bin/behat --tags='~@coursegen_pending_skip'
 
   @MDL-E2E-003
   Scenario: The three global modes are offered and the rules table only shows in Manual mode
@@ -134,14 +128,7 @@ Feature: Image generation administration and course sessions listing
     # arrow keys) and check both panels resize and the position is kept while
     # the session stays open.
 
-  # NOTA: [Pendiente:skip] una parte importante de las etiquetas (tarjeta de
-  # revision, propuestas, Detener/Reanudar/Reintentar, catalogo de mensajes de
-  # estado) no tiene traduccion al espanol y se muestra en ingles; ademas
-  # existen traducciones incorrectas (por ejemplo el modo Deshabilitado se
-  # traduce como "Discapacitado"). Test omitido hasta completar el paquete de
-  # idioma. This scenario asserts the CORRECT expected behaviour (a fully
-  # translated assistant) and fails on current code.
-  @MDL-E2E-005 @coursegen_pending_skip @coursegen_requires_ai_service
+  @MDL-E2E-005 @coursegen_requires_ai_service
   Scenario: The whole assistant is translated when the interface runs in Spanish
     # The plugin ships its own lang/es strings; the Spanish core language pack
     # must be installed on the site for the surrounding chrome.
@@ -158,7 +145,7 @@ Feature: Image generation administration and course sessions listing
     And I visit "/local/coursegen/aicoursecreation.php"
     Then I should see "¿Qué curso quieres crear?"
     When I set the field with xpath "//textarea[@id='promptInput']" to "Crea un curso corto sobre primeros auxilios con dos secciones"
-    And I press "generar"
+    And I press "Generar"
     # Wait until the plan review is reached (translated hint string).
     Then I should see "Aprobar la estructura para continuar o solicitar ajustes."
     # The review card, the proposals, the Stop/Resume/Retry controls and the

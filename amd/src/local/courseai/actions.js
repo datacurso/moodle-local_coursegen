@@ -26,7 +26,7 @@
 import { setCompactChatState } from './ui-planning';
 import FormAutocomplete from 'core/form-autocomplete';
 import { buildCompletionSummary } from './actions/summary';
-import { showCourseReviewPanel, createCourseFromSession } from './actions/course-create';
+import { showCourseReviewPanel, createCourseFromSession, showReviewReopenControl } from './actions/course-create';
 import { sendFeedbackAction } from './actions/feedback';
 import { handleGenerate } from './actions/generate';
 
@@ -308,6 +308,7 @@ export const createCourseaiActions = (deps) => {
         showCourseReviewPanel: () => showCourseReviewPanel(
             state, elements, texts, getCourseSettings, FormAutocomplete
         ),
+        showReviewReopenControl: (onReopen) => showReviewReopenControl(texts, onReopen),
         createCourseFromSession: (overrides = null) => createCourseFromSession(
             state, elements, texts, stepsUi, Notification, createCourse, showCompletionView, overrides
         ),

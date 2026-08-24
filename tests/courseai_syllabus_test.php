@@ -211,9 +211,6 @@ final class courseai_syllabus_test extends \advanced_testcase {
 
         // An unused draft item id: the area contains no file.
         $result = testable_courseai_syllabus_upload::execute($recordid, file_get_unused_draft_itemid());
-        // The error message string does not exist yet in the language pack
-        // (see MDL-INT-029), which raises a developer debugging notice.
-        $this->resetDebugging();
 
         $this->assertFalse($result['success']);
         $this->assertSame('', $result['filename']);
@@ -242,11 +239,20 @@ final class courseai_syllabus_test extends \advanced_testcase {
      * pack.
      */
     public function test_syllabus_flow_language_strings_exist(): void {
-        $this->markTestSkipped(
-            'Cinco cadenas usadas por la carga de syllabus (courseai_syllabus_upload_success, '
-            . 'error_invalid_session, error_not_your_session, error_no_file_uploaded, '
-            . 'error_file_save_failed) no existen en el paquete de idioma en ingles y se '
-            . 'mostrarian como claves entre corchetes. Pendiente hasta agregarlas.'
-        );
+        $stringmanager = get_string_manager();
+
+        $identifiers = [
+            'courseai_syllabus_upload_success',
+            'error_file_save_failed',
+            'error_invalid_session',
+            'error_no_file_uploaded',
+            'error_not_your_session',
+        ];
+        foreach ($identifiers as $identifier) {
+            $this->assertTrue(
+                $stringmanager->string_exists($identifier, 'local_coursegen'),
+                'Missing language string: ' . $identifier
+            );
+        }
     }
 }
