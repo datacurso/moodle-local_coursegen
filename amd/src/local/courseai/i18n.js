@@ -176,6 +176,7 @@ const STRING_KEYS = [
     'courseai_review_category_loading',
     'courseai_review_cancel',
     'courseai_review_confirm',
+    'courseai_review_reopen',
     'courseai_proposals_title',
     'courseai_proposals_clarification_label',
     'courseai_proposals_other_label',

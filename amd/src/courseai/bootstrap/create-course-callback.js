@@ -86,12 +86,18 @@ export const makeCreateCourseCallback = ({elements, stepsUi, texts, getActions})
                     existingEdit.style.display = '';
                 }
             }
-            // Show the course review panel before creating.
-            const overrides = await actions.showCourseReviewPanel();
-            if (overrides === null) {
-                return;
-            }
-            await actions.createCourseFromSession(overrides);
+            // Show the course review panel before creating. Cancelling leaves
+            // a visible control that reopens the same review with the same
+            // data, so the flow never dead-ends without a page reload.
+            const runReviewFlow = async() => {
+                const overrides = await actions.showCourseReviewPanel();
+                if (overrides === null) {
+                    actions.showReviewReopenControl(runReviewFlow);
+                    return;
+                }
+                await actions.createCourseFromSession(overrides);
+            };
+            await runReviewFlow();
         }
     };
 };
