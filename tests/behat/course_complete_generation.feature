@@ -298,3 +298,205 @@ Feature: Complete AI course generation flows end to end
     # Manual verification: the created course includes images following the
     # default automatic behaviour.
 
+  @SYS-E2E-012
+  Scenario: Stopping and resuming the generation neither loses nor duplicates content
+    Given I log in as "admin"
+    And I visit "/local/coursegen/aicoursecreation.php"
+    And I set the field with xpath "//textarea[@id='promptInput']" to "Create a course about first aid with four sections and three activities per section"
+    When I press "Generate"
+    # While the stream is transmitting, stop it.
+    And I click on "#btnStopExec" "css_element"
+    # The received content stays frozen on screen.
+    Then "#btnResumeExec" "css_element" should be visible
+    # Manual step: note the sections/activities already received.
+    When I click on "#btnResumeExec" "css_element"
+    # The stream continues from the checkpoint.
+    Then I should see "Review your course plan"
+    # Manual verification: after resuming, the previously received content is
+    # intact and nothing is duplicated (each section/activity appears once).
+
+  @SYS-E2E-013
+  Scenario: Reloading the page restores each state exactly where it was
+    Given I log in as "admin"
+    And I visit "/local/coursegen/aicoursecreation.php"
+    And I set the field with xpath "//textarea[@id='promptInput']" to "Create a short course about first aid with two sections"
+    And I press "Generate"
+    And I should see "Review your course plan"
+    # 1. Reload during plan review: conversation, plan and pending proposals
+    # are restored (the session id is persisted in the URL).
+    When I reload the page
+    Then I should see "Create a short course about first aid with two sections"
+    And I should see "Here is the structure I planned for your course"
+    And I should see "Review your course plan"
+    # 2. Reload during generation: the stream is reopened without restarting
+    # the planning.
+    When I click on "Accept" "button" in the ".cg-decision-card" "css_element"
+    And I reload the page
+    Then "#planningProgressCard" "css_element" should be visible
+    # Manual verification: the progress continues from where it was (the plan
+    # is NOT regenerated from scratch).
+    # 3. Reload with the course completed: the final screen is restored.
+    And I should see "Review course details"
+    When I click on "Create course" "button"
+    And I should see "Course generated successfully!"
+    And I reload the page
+    Then I should see "Course generated successfully!"
+    And "Open course" "button" should exist
+    # Manual verification: language, toggles and the original request are kept
+    # after every reload.
+
+  @SYS-E2E-013
+  Scenario: Reloading during the subsections decision restores the decision card
+    Given I enable "subsection" "mod" plugin
+    And the following config values are set as admin:
+      | config            | value | plugin          |
+      | enablesubsections | 1     | local_coursegen |
+    And I log in as "admin"
+    And I visit "/local/coursegen/aicoursecreation.php"
+    And I set the field with xpath "//textarea[@id='promptInput']" to "Create a course about first aid where each section is organised into subsections by topic"
+    And I press "Generate"
+    And I should see "How do you want to organise the course?"
+    When I reload the page
+    Then I should see "How do you want to organise the course?"
+    And I should see "Enable subsections and plan"
+    And I should see "Continue with regular sections"
+
+  @SYS-E2E-014
+  Scenario: A dropped connection offers an in-place retry that reopens the stream
+    Given I log in as "admin"
+    And I visit "/local/coursegen/aicoursecreation.php"
+    And I set the field with xpath "//textarea[@id='promptInput']" to "Create a short course about first aid with two sections"
+    When I press "Generate"
+    # Manual step: while the planning stream is transmitting, cut the
+    # connection to the AI service (disconnect the network or block the
+    # service URL) until the stream fails fatally.
+    Then I should see "Connection error. Please try again."
+    And ".cg-retry-btn" "css_element" should exist
+    And I should see "Retry" in the ".cg-retry-btn" "css_element"
+    # Manual step: restore the connection.
+    When I click on ".cg-retry-btn" "css_element"
+    # The stream reopens in place, without reloading the page.
+    Then I should see "Review your course plan"
+    # Manual verification: momentary drops are ignored without flicker; only
+    # fatal drops surface the permanent error turn with Retry.
+
+  @SYS-E2E-015
+  Scenario: A failing activity does not stop the creation of the rest
+    # Precondition: an approved plan where at least one activity will fail on
+    # creation (service-side fault injection, e.g. force one activity type to
+    # return invalid parameters).
+    Given I log in as "admin"
+    And I visit "/local/coursegen/aicoursecreation.php"
+    And I set the field with xpath "//textarea[@id='promptInput']" to "Create a short course about first aid with two sections"
+    And I press "Generate"
+    And I should see "Review your course plan"
+    When I click on "Accept" "button" in the ".cg-decision-card" "css_element"
+    And I click on "Create course" "button"
+    # The course is still created with the remaining activities.
+    Then I should see "Course generated successfully!"
+    When I click on "Open course" "button"
+    # Manual verification: every non-failing activity of the plan exists in
+    # the course; the failed one is absent and the completion view reports the
+    # number of warnings.
+
+  @SYS-E2E-015
+  Scenario: The partial-creation notice identifies the failed activities and their reasons
+    # Precondition: same fault injection as above, forcing the activity titled
+    # "Forced failure activity" to fail during creation.
+    Given I log in as "admin"
+    And I visit "/local/coursegen/aicoursecreation.php"
+    And I set the field with xpath "//textarea[@id='promptInput']" to "Create a short course about first aid with two sections"
+    And I press "Generate"
+    And I should see "Review your course plan"
+    When I click on "Accept" "button" in the ".cg-decision-card" "css_element"
+    And I click on "Create course" "button"
+    Then I should see "Course generated successfully!"
+    # Manual verification: the creation response reports the warning count
+    # (warningscount) and the per-activity detail (activityerrors: type,
+    # section, title and reason) naming "Forced failure activity", and the
+    # partial warning phrase comes from the language pack
+    # (create_course_partial_warning) instead of a fixed English sentence.
+
+  @SYS-E2E-016
+  Scenario: Teacher overrides for name, short name and category prevail
+    Given I log in as "admin"
+    And I visit "/local/coursegen/aicoursecreation.php"
+    And I set the field with xpath "//textarea[@id='promptInput']" to "Create a short course about first aid with two sections"
+    And I press "Generate"
+    And I should see "Review your course plan"
+    When I click on "Accept" "button" in the ".cg-decision-card" "css_element"
+    # The panel comes prefilled by the AI and offers the category selector.
+    Then I should see "Review course details"
+    And "Course name" "field" should exist
+    And "Short name" "field" should exist
+    And "Category" "field" should exist
+    # Manual verification: the name and short name fields arrive prefilled
+    # with the values inferred by the AI, and the category selector offers a
+    # search box.
+    When I set the field "Course name" to "Behat overridden course"
+    And I set the field "Short name" to "behatoverride"
+    And I click on "Create course" "button"
+    Then I should see "Course generated successfully!"
+    When I click on "Open course" "button"
+    Then I should see "Behat overridden course"
+    # Manual verification: repeat the flow reusing the same short name — the
+    # new course must receive a numbered suffix so the short name stays unique.
+
+  @SYS-E2E-017
+  Scenario: Cancelling the final review keeps a visible way to create the course
+    Given I log in as "admin"
+    And I visit "/local/coursegen/aicoursecreation.php"
+    And I set the field with xpath "//textarea[@id='promptInput']" to "Create a short course about first aid with two sections"
+    And I press "Generate"
+    And I should see "Review your course plan"
+    When I click on "Accept" "button" in the ".cg-decision-card" "css_element"
+    And I should see "Review course details"
+    And I click on "Cancel" "button" in the "#courseReviewPanel" "css_element"
+    # Without reloading, a visible control reopens the review panel with the
+    # same data so the teacher can still create the course.
+    Then "Reopen course review" "button" should be visible
+    When I click on "Reopen course review" "button"
+    Then I should see "Review course details"
+    And "Create course" "button" should be visible
+
+  @SYS-E2E-018
+  Scenario: A session can be resumed from the sessions listing and completed
+    Given I log in as "admin"
+    And I visit "/local/coursegen/aicoursecreation.php"
+    And I set the field with xpath "//textarea[@id='promptInput']" to "Create a short course about first aid with two sections"
+    And I press "Generate"
+    And I should see "Review your course plan"
+    # Leave the session in review and reopen it from the listing.
+    When I visit "/local/coursegen/aicoursecreation.php"
+    And I click on "#courseaiMenuTrigger" "css_element"
+    And I click on "View all sessions" "button"
+    Then I should see "My AI Courses"
+    And I should see "Planning" in the ".courseai-session-card-status" "css_element"
+    When I click on "Continue" "link" in the ".courseai-session-card" "css_element"
+    # The session restores in its exact state and can be completed.
+    Then I should see "Review your course plan"
+    When I click on "Accept" "button" in the ".cg-decision-card" "css_element"
+    And I click on "Create course" "button"
+    Then I should see "Course generated successfully!"
+
+  @SYS-E2E-019
+  Scenario: Service status messages are localised through their string identifier
+    # The service streams { string_id, string, string_args }; Moodle localises
+    # by string_id and falls back to the sent text for unknown identifiers.
+    Given I log in as "admin"
+    And I visit "/local/coursegen/aicoursecreation.php"
+    And I set the field with xpath "//textarea[@id='promptInput']" to "Create a short course about first aid with two sections"
+    When I press "Generate"
+    And I should see "Review your course plan"
+    # Stable thread turns rendered from the local string catalog by string_id.
+    Then I should see "Here is the structure I planned for your course"
+    And I should see "I finished planning your course. Take a look at the plan and tell me if you want any changes."
+    When I click on "Accept" "button" in the ".cg-decision-card" "css_element"
+    Then I should see "You approved the plan"
+    # Manual verification:
+    #   1. Repeat with the interface in a language with a complete plugin pack
+    #      (e.g. de/fr/pt/ru/id): the same status and progress messages must
+    #      show translated, proving they resolve via string_id.
+    #   2. Fallback: with a service build emitting an unknown string_id, the
+    #      raw text sent by the service must be shown instead of a
+    #      placeholder, so there is always readable feedback.
