@@ -194,6 +194,7 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
      * ok=false + message, so the detail reaches the teacher.
      */
     public function test_service_validation_error_reaches_teacher_clearly(): void {
+        $this->resetAfterTest();
         $this->markTestSkipped(
             'Requires HTTP-layer integration: the 4xx branch depends on the real HTTP status '
             . 'code, which the PHPUnit curl mock cannot simulate (it always reports 200). The '
