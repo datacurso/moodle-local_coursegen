@@ -489,6 +489,7 @@ $string['error_processing_activity'] = 'Major error processing activity \'{$a->t
 $string['error_processing_request'] = 'Error processing your request';
 $string['error_prompt_required'] = 'You must provide a prompt when the context type is "Custom prompt".';
 $string['error_saving_session'] = 'Failed to save the planning session. Please try again.';
+$string['error_section_not_found'] = 'The target section {$a} does not exist in the course. The activity cannot be created there.';
 $string['error_sending_activity_file'] = 'Error uploading file to AI activity session';
 $string['error_sending_feedback'] = 'Error sending feedback to AI planning session';
 $string['error_sending_message'] = 'Error sending message';

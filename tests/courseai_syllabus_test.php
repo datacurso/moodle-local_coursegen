@@ -226,6 +226,7 @@ final class courseai_syllabus_test extends \advanced_testcase {
      * through the plugin file serving path with the view syllabus permission.
      */
     public function test_stored_syllabus_recoverable_by_authorized_users(): void {
+        $this->resetAfterTest();
         $this->markTestSkipped(
             'El asistente guarda el syllabus en contexto de sitio pero la via de archivos del '
             . 'plugin (local_coursegen_pluginfile) solo sirve archivos en contexto de curso, por '

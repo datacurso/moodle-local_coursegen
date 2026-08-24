@@ -134,6 +134,7 @@ final class system_instruction_service_test extends \advanced_testcase {
      * MDL-INT-014: Directives are grouped under manageable categories.
      */
     public function test_directive_categories_are_manageable(): void {
+        $this->resetAfterTest();
         $this->markTestSkipped(
             'La etiqueta de categoria mostrada junto a cada directriz es fija (General); no existe '
             . 'gestion real de categorias. Pendiente hasta implementarla.'

@@ -462,6 +462,7 @@ $string['error_processing_activity'] = 'Error grave al procesar la actividad \'{
 $string['error_processing_request'] = 'Error al procesar su solicitud';
 $string['error_prompt_required'] = 'Debe proporcionar un mensaje cuando el tipo de contexto sea "Mensaje personalizado".';
 $string['error_saving_session'] = 'No se pudo guardar la sesión de planificación. Por favor inténtalo de nuevo.';
+$string['error_section_not_found'] = 'La sección destino {$a} no existe en el curso. La actividad no puede crearse allí.';
 $string['error_sending_activity_file'] = 'Error al subir el archivo a la sesión de actividad de IA';
 $string['error_sending_feedback'] = 'Error al enviar comentarios a la sesión de planificación de IA';
 $string['error_sending_message'] = 'Error al enviar mensaje';

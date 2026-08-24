@@ -346,6 +346,7 @@ $string['error_not_your_session'] = 'Этот сеанс планировани�
 $string['error_processing_request'] = 'Ошибка при обработке вашего запроса';
 $string['error_prompt_required'] = 'Вы должны предоставить подсказку, если тип контекста — «Пользовательская подсказка».';
 $string['error_saving_session'] = 'Не удалось сохранить сеанс планирования. Пожалуйста, попробуйте еще раз.';
+$string['error_section_not_found'] = 'Целевой раздел {$a} не существует в курсе. Активность не может быть создана в нём.';
 $string['error_sending_activity_file'] = 'Ошибка при загрузке файла в сеанс активности AI: {$a}.';
 $string['error_sending_feedback'] = 'Ошибка отправки отзыва на сеанс планирования AI: {$a}.';
 $string['error_sending_message'] = 'Ошибка отправки сообщения';

@@ -180,6 +180,7 @@ final class h5pactivity_download_config_test extends \advanced_testcase {
      * (see MDL-UNIT-001, fixed 14/08/2026).
      */
     public function test_class_map_purge_after_deployment(): void {
+        $this->resetAfterTest();
         $this->markTestSkipped('Procedimiento manual de despliegue: purga de caches');
     }
 }

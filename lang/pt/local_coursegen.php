@@ -346,6 +346,7 @@ $string['error_not_your_session'] = 'Esta sessão de planejamento pertence a out
 $string['error_processing_request'] = 'Erro ao processar sua solicitação';
 $string['error_prompt_required'] = 'Você deve fornecer um prompt quando o tipo de contexto for "Prompt personalizado".';
 $string['error_saving_session'] = 'Falha ao salvar a sessão de planejamento. Por favor, tente novamente.';
+$string['error_section_not_found'] = 'A seção de destino {$a} não existe no curso. A atividade não pode ser criada nela.';
 $string['error_sending_activity_file'] = 'Erro ao fazer upload do arquivo para a sessão de atividade AI: {$a}';
 $string['error_sending_feedback'] = 'Erro ao enviar feedback para a sessão de planejamento AI: {$a}';
 $string['error_sending_message'] = 'Erro ao enviar mensagem';

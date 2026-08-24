@@ -346,6 +346,7 @@ $string['error_not_your_session'] = 'Cette session de planification appartient �
 $string['error_processing_request'] = 'Erreur lors du traitement de votre demande';
 $string['error_prompt_required'] = 'Vous devez fournir une invite lorsque le type de contexte est « Invite personnalisée ».';
 $string['error_saving_session'] = 'Échec de l\'enregistrement de la session de planification. Veuillez réessayer.';
+$string['error_section_not_found'] = 'La section cible {$a} n\'existe pas dans le cours. L\'activité ne peut pas y être créée.';
 $string['error_sending_activity_file'] = 'Erreur lors du téléchargement du fichier vers la session d\'activité AI : {$a}';
 $string['error_sending_feedback'] = 'Erreur lors de l\'envoi des commentaires à la session de planification AI : {$a}';
 $string['error_sending_message'] = 'Erreur lors de l\'envoi du message';

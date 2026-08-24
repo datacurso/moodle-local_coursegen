@@ -346,6 +346,7 @@ $string['error_not_your_session'] = 'Diese Planungssitzung gehört einem anderen
 $string['error_processing_request'] = 'Fehler bei der Bearbeitung Ihrer Anfrage';
 $string['error_prompt_required'] = 'Sie müssen eine Eingabeaufforderung bereitstellen, wenn der Kontexttyp „Benutzerdefinierte Eingabeaufforderung“ ist.';
 $string['error_saving_session'] = 'Die Planungssitzung konnte nicht gespeichert werden. Bitte versuchen Sie es erneut.';
+$string['error_section_not_found'] = 'Der Zielabschnitt {$a} existiert nicht im Kurs. Die Aktivität kann dort nicht erstellt werden.';
 $string['error_sending_activity_file'] = 'Fehler beim Hochladen der Datei in die Aktivitätssitzung AI: {$a}';
 $string['error_sending_feedback'] = 'Fehler beim Senden des Feedbacks an die Planungssitzung AI: {$a}';
 $string['error_sending_message'] = 'Fehler beim Senden der Nachricht';

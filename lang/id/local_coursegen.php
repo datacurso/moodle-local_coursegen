@@ -346,6 +346,7 @@ $string['error_not_your_session'] = 'Sesi perencanaan ini milik pengguna lain.';
 $string['error_processing_request'] = 'Terjadi kesalahan saat memproses permintaan Anda';
 $string['error_prompt_required'] = 'Anda harus memberikan prompt ketika jenis konteksnya adalah "Prompt khusus".';
 $string['error_saving_session'] = 'Gagal menyimpan sesi perencanaan. Silakan coba lagi.';
+$string['error_section_not_found'] = 'Bagian tujuan {$a} tidak ada di kursus. Aktivitas tidak dapat dibuat di sana.';
 $string['error_sending_activity_file'] = 'Kesalahan saat mengunggah file ke sesi aktivitas AI: {$a}';
 $string['error_sending_feedback'] = 'Terjadi kesalahan saat mengirim masukan ke sesi perencanaan AI: {$a}';
 $string['error_sending_message'] = 'Kesalahan saat mengirim pesan';

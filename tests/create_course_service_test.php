@@ -487,10 +487,39 @@ final class create_course_service_test extends \advanced_testcase {
     }
 
     /**
+     * MDL-INT-022: Creating a module in a section that does not exist must be
+     * rejected with a clear error before touching core, on every Moodle
+     * version — Moodle 5.x half-tolerates the missing section with PHP
+     * warnings and creates the module anyway, which broke the individual
+     * subsection degradation.
+     */
+    public function test_nonexistent_target_section_is_rejected_with_clear_error(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course(['numsections' => 2]);
+        $resultinfo = [
+            'resource_type' => 'label',
+            'parameters' => [
+                'modulename' => 'label',
+                'name' => 'Etiqueta perdida',
+                'introeditor' => ['text' => '<p>Contenido</p>', 'format' => FORMAT_HTML, 'itemid' => 0],
+                'visible' => 1,
+                'mod_settings' => [],
+            ],
+        ];
+
+        $this->expectException(\Exception::class);
+        $this->expectExceptionMessage(get_string('error_section_not_found', 'local_coursegen', 99));
+        \local_coursegen\local\service\create_mod_service::create_from_ai_result($resultinfo, $course, 99);
+    }
+
+    /**
      * MDL-INT-022: An incompatible course format degrades subsections the same
      * way, flattening nested activities into the parent section.
      */
     public function test_incompatible_course_format_flattens_nested_activities(): void {
+        $this->resetAfterTest();
         $this->markTestSkipped(
             'El flujo publico crea los cursos siempre con el formato por defecto (topics, que '
             . 'soporta subsecciones); el gate de formato incompatible no puede ejercitarse a '
