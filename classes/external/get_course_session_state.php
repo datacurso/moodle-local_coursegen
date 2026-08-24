@@ -75,7 +75,7 @@ class get_course_session_state extends external_api {
             throw new \moodle_exception('error_no_session_found', 'local_coursegen');
         }
 
-        $apiservice = new ai_course_api_service();
+        $apiservice = static::get_api_service();
         $snapshot = $apiservice->get_course_state($sessionid);
         $streamingurl = $apiservice->get_course_streaming_url($sessionid);
 
@@ -95,6 +95,18 @@ class get_course_session_state extends external_api {
             'coursedatajson' => json_encode($coursedata, JSON_UNESCAPED_UNICODE),
             'snapshotjson' => json_encode($snapshot, JSON_UNESCAPED_UNICODE),
         ];
+    }
+
+    /**
+     * Build the AI course API service used by this endpoint.
+     *
+     * Extracted as a protected factory so PHPUnit tests can override it
+     * through a testable subclass (late static binding).
+     *
+     * @return ai_course_api_service
+     */
+    protected static function get_api_service(): ai_course_api_service {
+        return new ai_course_api_service();
     }
 
     /**

@@ -17,6 +17,7 @@
 namespace local_coursegen\local\service;
 
 use core_course_category;
+use local_coursegen\local\api_client_factory;
 use local_coursegen\local\models\course_session;
 
 /**
@@ -46,6 +47,12 @@ class create_course_service {
     public static function create_course(course_session $session, array $resultdata, array $overrides = []): array {
         global $CFG;
 
+        // The effective category (override or AI/default) must be one where
+        // the user can create courses; a category the user cannot create in
+        // is rejected before any creation work happens.
+        $effectivecategoryid = self::resolve_effective_category($resultdata, $overrides);
+        require_capability('moodle/course:create', \context_coursecat::instance($effectivecategoryid));
+
         try {
             // This request may take a long time depending on the complexity of the prompt that the AI has to resolve.
             \core_php_time_limit::raise();
@@ -70,6 +77,13 @@ class create_course_service {
                 $coursedata->category = (int)$overrides['category'];
             }
 
+            // The wizard language becomes the course language when its pack is
+            // installed on the site; otherwise the site default applies.
+            $courselang = self::resolve_course_lang($session);
+            if ($courselang !== '') {
+                $coursedata->lang = $courselang;
+            }
+
             $coursedata = self::ensure_unique_course_fields($coursedata);
 
             // Create the Moodle course from stored form data.
@@ -82,6 +96,9 @@ class create_course_service {
             $sessionpersistent->set('timemodified', time());
             $sessionpersistent->update();
             course_session_service::update_status($sessionid, course_session::STATUS_CREATING);
+
+            // Attach the AI-generated cover image when the result carries one.
+            self::apply_course_image($course->id, $resultdata['course_image'] ?? null);
 
             // Process sections if provided in the response.
             if (!empty($resultdata['sections_info'])) {
@@ -117,15 +134,23 @@ class create_course_service {
                 $remainingorphans = self::count_orphaned_course_module_references($course->id);
             }
 
-            $missingmodinfocms = self::count_unresolved_modinfo_sequence_references($course->id);
+            $missingmodinfocms = static::count_unresolved_modinfo_sequence_references($course->id);
             if ($missingmodinfocms > 0) {
                 $removedreferences += self::repair_course_section_sequences($course->id);
                 self::stabilize_course_structure_cache($course->id);
-                $missingmodinfocms = self::count_unresolved_modinfo_sequence_references($course->id);
+                $missingmodinfocms = static::count_unresolved_modinfo_sequence_references($course->id);
             }
 
+            $structuralwarning = false;
             if ($remainingorphans > 0 || $missingmodinfocms > 0) {
-                throw new \Exception('Course structure is inconsistent after module creation.');
+                // The course already exists: failing the session here would
+                // hide a half-built course behind a failed status, so it is
+                // reported as created with a structural warning instead.
+                $structuralwarning = true;
+                debugging(
+                    'local_coursegen: course structure is inconsistent after module creation. Course '
+                    . $course->id . ', orphans: ' . $remainingorphans . ', unresolved: ' . $missingmodinfocms
+                );
             }
 
             // Update session status to created.
@@ -148,7 +173,10 @@ class create_course_service {
             // Return success response.
             $message = get_string('coursecreated', 'local_coursegen');
             if (!empty($activityerrors)) {
-                $message .= ' Some activities were skipped due to creation errors.';
+                $message .= ' ' . get_string('create_course_partial_warning', 'local_coursegen');
+            }
+            if ($structuralwarning) {
+                $message .= ' ' . get_string('create_course_structure_warning', 'local_coursegen');
             }
 
             return [
@@ -158,8 +186,8 @@ class create_course_service {
                 'fullname' => $course->fullname,
                 'message' => $message,
                 'courseurl' => course_get_url($course->id)->out(),
-                'partial' => !empty($activityerrors),
-                'haswarnings' => !empty($activityerrors),
+                'partial' => !empty($activityerrors) || $structuralwarning,
+                'haswarnings' => !empty($activityerrors) || $structuralwarning,
                 'warningscount' => count($activityerrors),
                 'activityerrors' => $activityerrors,
             ];
@@ -216,7 +244,105 @@ class create_course_service {
 
         $coursedata->category = (int)($config['category'] ?? $defaultcategoryid);
 
+        // The AI course description becomes the course summary when present.
+        $description = trim((string)($config['description'] ?? ''));
+        if ($description !== '') {
+            $coursedata->summary = clean_param($description, PARAM_CLEANHTML);
+            $coursedata->summaryformat = FORMAT_HTML;
+        }
+
         return $coursedata;
+    }
+
+    /**
+     * Resolve the effective category id the course will be created in.
+     *
+     * The user override wins over the AI-provided category; without either the
+     * site default category applies (which keeps working for admins).
+     *
+     * @param array $resultdata Result data from the Datacurso API.
+     * @param array $overrides Optional user overrides for course fields.
+     * @return int Category id.
+     */
+    private static function resolve_effective_category(array $resultdata, array $overrides): int {
+        if (!empty($overrides['category'])) {
+            return (int)$overrides['category'];
+        }
+
+        $config = $resultdata['course_configuration'] ?? null;
+        $categoryid = is_array($config) ? (int)($config['category'] ?? 0) : 0;
+        if ($categoryid > 0) {
+            return $categoryid;
+        }
+
+        $defaultcategory = core_course_category::get_default();
+        return $defaultcategory ? (int)$defaultcategory->id : 0;
+    }
+
+    /**
+     * Resolve the course language from the wizard session data.
+     *
+     * The stored language is used only when its language pack is installed on
+     * the site; otherwise an empty string keeps the site default.
+     *
+     * @param course_session $session Planning session persistent.
+     * @return string Language code or empty string for the site default.
+     */
+    private static function resolve_course_lang(course_session $session): string {
+        $sessiondata = json_decode((string)$session->get('coursedata'), true);
+        $lang = is_array($sessiondata) ? trim((string)($sessiondata['local_coursegen_lang'] ?? '')) : '';
+        if ($lang === '') {
+            return '';
+        }
+
+        $translations = get_string_manager()->get_list_of_translations();
+        return isset($translations[$lang]) ? $lang : '';
+    }
+
+    /**
+     * Download and attach the AI-generated cover image as the course overview file.
+     *
+     * The image is decorative, so any missing data or download failure is
+     * logged and skipped without failing the course creation.
+     *
+     * @param int $courseid Course ID.
+     * @param array|null $courseimage course_image payload ({file_path, file_name}) or null.
+     * @return void
+     */
+    private static function apply_course_image(int $courseid, ?array $courseimage): void {
+        global $CFG;
+
+        if (empty($courseimage) || !is_array($courseimage)) {
+            return;
+        }
+
+        $filepath = trim((string)($courseimage['file_path'] ?? ''));
+        $filename = clean_param(basename((string)($courseimage['file_name'] ?? '')), PARAM_FILE);
+        if ($filepath === '' || $filename === '') {
+            return;
+        }
+
+        try {
+            require_once($CFG->libdir . '/filelib.php');
+
+            $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
+            $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
+
+            $client = api_client_factory::ai_course_api($baseurl, $baseurleu);
+            $file = $client->download_file('/files/download?path=' . rawurlencode($filepath), $filename);
+
+            file_save_draft_area_files(
+                $file->get_itemid(),
+                \context_course::instance($courseid)->id,
+                'course',
+                'overviewfiles',
+                0,
+                ['subdirs' => 0, 'maxfiles' => 1]
+            );
+        } catch (\Throwable $e) {
+            // Never fail the course over its cover image.
+            debugging('local_coursegen: course cover image could not be applied. ' . $e->getMessage());
+        }
     }
 
     /**
@@ -342,14 +468,21 @@ class create_course_service {
         foreach ($sectionsinfo as $sectioninfo) {
             $sectionnumber = (int)$sectioninfo['section'];
             $sectionname = $sectioninfo['name'] ?? '';
+            // Older service results carry no description: tolerate its absence.
+            $sectionsummary = clean_param(trim((string)($sectioninfo['description'] ?? '')), PARAM_CLEANHTML);
 
             if (isset($existingsections[$sectionnumber])) {
-                // Update existing section name.
+                // Update existing section name and summary.
+                $update = ['id' => $existingsections[$sectionnumber]->id];
                 if (!empty($sectionname) && $existingsections[$sectionnumber]->name !== $sectionname) {
-                    $DB->update_record('course_sections', [
-                        'id' => $existingsections[$sectionnumber]->id,
-                        'name' => $sectionname,
-                    ]);
+                    $update['name'] = $sectionname;
+                }
+                if ($sectionsummary !== '' && $existingsections[$sectionnumber]->summary !== $sectionsummary) {
+                    $update['summary'] = $sectionsummary;
+                    $update['summaryformat'] = FORMAT_HTML;
+                }
+                if (count($update) > 1) {
+                    $DB->update_record('course_sections', $update);
                 }
             } else {
                 // Create new section.
@@ -357,7 +490,7 @@ class create_course_service {
                 $sectiondata->course = $courseid;
                 $sectiondata->section = $sectionnumber;
                 $sectiondata->name = $sectionname;
-                $sectiondata->summary = '';
+                $sectiondata->summary = $sectionsummary;
                 $sectiondata->summaryformat = FORMAT_HTML;
                 $sectiondata->sequence = '';
                 $sectiondata->visible = 1;
@@ -732,10 +865,13 @@ class create_course_service {
     /**
      * Count section sequence module ids that cannot be resolved by modinfo.
      *
+     * Protected so PHPUnit can force the final consistency verification result
+     * through a testable subclass (late static binding).
+     *
      * @param int $courseid Course ID.
      * @return int Number of unresolved references.
      */
-    private static function count_unresolved_modinfo_sequence_references(int $courseid): int {
+    protected static function count_unresolved_modinfo_sequence_references(int $courseid): int {
         global $DB;
 
         $course = get_course($courseid);

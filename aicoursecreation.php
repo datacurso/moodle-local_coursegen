@@ -83,6 +83,7 @@ $buildsessiondata = function ($session, $maxtitle = 50) {
     $statuslabels = [
         course_session::STATUS_PENDING => get_string('status_pending', 'local_coursegen'),
         course_session::STATUS_CREATING => get_string('status_creating', 'local_coursegen'),
+        course_session::STATUS_CREATED => get_string('status_created', 'local_coursegen'),
         course_session::STATUS_FAILED => get_string('status_failed', 'local_coursegen'),
     ];
     $coursedata = json_decode($session->get('coursedata') ?? '{}', true);

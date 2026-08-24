@@ -147,7 +147,7 @@ class courseai_syllabus_upload extends external_api {
             $filename = $file->get_filename();
 
             // Upload to Datacurso API.
-            $apiservice = new ai_course_api_service();
+            $apiservice = static::get_api_service();
             $response = $apiservice->upload_syllabus($threadid, $file);
 
             // Update session coursedata to include syllabus context type.
@@ -168,6 +168,18 @@ class courseai_syllabus_upload extends external_api {
                 'message' => $e->getMessage(),
             ];
         }
+    }
+
+    /**
+     * Build the AI course API service used by this endpoint.
+     *
+     * Extracted as a protected factory so PHPUnit tests can override it
+     * through a testable subclass (late static binding).
+     *
+     * @return ai_course_api_service
+     */
+    protected static function get_api_service(): ai_course_api_service {
+        return new ai_course_api_service();
     }
 
     /**

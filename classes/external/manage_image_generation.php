@@ -86,7 +86,9 @@ class manage_image_generation extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
-        require_capability('moodle/site:config', $context);
+        // Saving requires the same permission that opens the administration
+        // page (see settings.php), so whoever can edit it can also save it.
+        require_capability('local/coursegen:manageimagegeneration', $context);
 
         set_config('overridecourse', $overridecourse, 'local_coursegen');
         set_config('overrideactivity', $overrideactivity, 'local_coursegen');

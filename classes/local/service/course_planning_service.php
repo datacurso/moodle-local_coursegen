@@ -76,7 +76,7 @@ class course_planning_service {
         // and mod_subsection is available, whatever the client sent.
         $withsubsections = $withsubsections && $available;
 
-        $apiservice = new ai_course_api_service();
+        $apiservice = static::get_api_service();
 
         $payload = [
             'prompt' => $prompt,
@@ -90,8 +90,15 @@ class course_planning_service {
             'subsections_available' => $available,
         ];
 
+        // A disabled (or never configured) policy is omitted: it must not
+        // override the teacher's explicit image toggle by suppressing the
+        // course image suggestions (regression guard: see
+        // test_disabled_image_policy_should_be_omitted).
         if ($withimages) {
-            $payload['image_policy'] = image_policy_builder::build();
+            $imagepolicy = image_policy_builder::build();
+            if (($imagepolicy['mode'] ?? '') !== activities::MODE_DISABLED) {
+                $payload['image_policy'] = $imagepolicy;
+            }
         }
 
         // Site file-type group catalog, so activities generated in the course flow
@@ -146,6 +153,18 @@ class course_planning_service {
             'streamingurl' => $streamingurl,
             'message' => get_string('courseai_init_success', 'local_coursegen'),
         ];
+    }
+
+    /**
+     * Build the AI course API service used by this service.
+     *
+     * Extracted as a protected factory so PHPUnit tests can override it
+     * through a testable subclass (late static binding).
+     *
+     * @return ai_course_api_service
+     */
+    protected static function get_api_service(): ai_course_api_service {
+        return new ai_course_api_service();
     }
 
     /**
