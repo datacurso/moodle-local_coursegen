@@ -48,6 +48,7 @@ import {rebuildTranscriptFromPlan} from 'local_coursegen/local/courseai/ui/plan-
  * @param {Function} params.replayThread - replay the service thread (preferred path)
  * @param {Function} params.emitLog
  * @param {Object} params.texts - localized strings (for reconstructed AI milestones)
+ * @param {Function} params.createCourseFromSession - opens the final review panel to create the course
  * @returns {Function} async resumeFromSnapshot function
  */
 export const makeResumeFromSnapshot = ({
@@ -71,6 +72,7 @@ export const makeResumeFromSnapshot = ({
     replayThread,
     emitLog,
     texts,
+    createCourseFromSession,
 }) => {
     /**
      * Read the distinct user turns out of a snapshot, in checkpoint order.
@@ -422,9 +424,11 @@ export const makeResumeFromSnapshot = ({
         }
 
         if (status === 'COMPLETED') {
-            // Course already created → no composer (it cannot be edited from here).
-            // The body class hides it via CSS regardless of the showReviewActions
-            // call below (which would otherwise re-enable the composer).
+            // Service COMPLETED means the content was GENERATED — not that the
+            // Moodle course exists (the created case returned earlier via
+            // isCreated). A reload that missed the live 'completed' event must
+            // land on the final review panel ("Create course"), never on a
+            // done-looking screen with no way to create the course.
             state.planApproved = true;
             document.body.classList.add('cg-plan-approved');
             stepsUi.transitionToPlanning();
@@ -432,17 +436,24 @@ export const makeResumeFromSnapshot = ({
             applyCourseTitleToHeader();
             if (sectionsForUi.length > 0) {
                 await hydrateDetailedPlanFromSnapshot(detailedSections);
-                await rebuildThread(detailedSections, snapshot, initialPrompt, status);
+                // WAITING_APPROVAL wording: the truthful transcript here is
+                // "plan ready", not the created-in-Moodle success line.
+                await rebuildThread(detailedSections, snapshot, initialPrompt, 'WAITING_APPROVAL');
             }
             if (typeof detailedUi.enableAllActionControls === 'function') {
                 detailedUi.enableAllActionControls();
             }
-            planningUi.showReviewActions('detailed');
             stepsUi.setStepState('planning', 'done');
+            stepsUi.updateFlowNav();
+            if (typeof createCourseFromSession === 'function') {
+                await createCourseFromSession();
+                return true;
+            }
+            // Defensive fallback (callback not wired): keep the old done view.
+            planningUi.showReviewActions('detailed');
             stepsUi.setStepState('generating', 'done');
             state.currentStage = 'completed';
             stepsUi.setProgress(100);
-            stepsUi.updateFlowNav();
             return true;
         }
 

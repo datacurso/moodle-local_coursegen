@@ -242,6 +242,7 @@ export const init = async(params) => {
             replayThread,
             emitLog,
             texts,
+            createCourseFromSession,
         });
 
         // On reload the page is server-rendered in planning mode (is-planning +
