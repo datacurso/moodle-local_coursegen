@@ -2,6 +2,15 @@
 body { background: var(--bg); color: var(--fg); }
 .container { max-width: 1040px; }
 
+/* Boost's theme/boost/scss/moodle/navbar.scss sets `#page { margin-top:
+   $navbar-height }` unconditionally, to make room for Moodle's own
+   fixed site navbar. This page uses nonavbar (popup layout) and renders its
+   own fixed navbar instead, so that reserved space is just a stray gap
+   above the sidebar/main content — drop it for this page only. */
+body.local-coursegen-aicoursecreation #page {
+  margin-top: 0;
+}
+
 /* ─── Design tokens (matches index.css HSL palette) ──────────────────── */
 :root {
   --bg:           hsl(210, 40%, 98%);
@@ -69,74 +78,10 @@ svg { display: block; flex-shrink: 0; }
   padding-right: 0;
 }
 
-/* ─── NAVBAR (fixed-top, like reportbuilder/edit.php) ────────────────── */
-.aicoursecreation-navbar {
-  border-bottom: 1px solid var(--border);
-  box-shadow: 0 1px 3px hsl(215, 28%, 17%, 0.08);
-  height: 56px;
-}
-
-.aicoursecreation-navbar-logo {
-  width: 32px;
-  height: 32px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-.aicoursecreation-navbar h1 {
-  font-weight: 600;
-  color: var(--fg);
-}
-
-/* Navbar menu trigger: logo → hamburger on hover */
-.aicoursecreation-navbar-trigger {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  background: none;
-  border: none;
-  padding: 4px;
-  cursor: pointer;
-  border-radius: 6px;
-  position: relative;
-  width: 36px;
-  height: 36px;
-  transition: background .15s;
-}
-
-.aicoursecreation-navbar-trigger:hover {
-  background: var(--muted);
-}
-
-.aicoursecreation-navbar-trigger .courseai-nav-logo,
-.aicoursecreation-navbar-trigger .courseai-nav-menuicon {
-  position: absolute;
-  transition: opacity .2s ease;
-}
-
-.aicoursecreation-navbar-trigger .courseai-nav-logo {
-  opacity: 1;
-}
-
-.aicoursecreation-navbar-trigger .courseai-nav-menuicon {
-  opacity: 0;
-}
-
-.aicoursecreation-navbar-trigger:hover .courseai-nav-logo {
-  opacity: 0;
-}
-
-.aicoursecreation-navbar-trigger:hover .courseai-nav-menuicon {
-  opacity: 1;
-}
-
 /* ─── MAIN ────────────────────────────────────────────────────────────── */
-.app-main { padding: 56px 0 80px; }
-.aicoursecreation-main { padding: 56px 0 80px; }
-
 .app-main,
 .aicoursecreation-main {
-  padding-top: 24px;
+  padding: 24px 0 80px;
 }
 
 /* Workspace layout: chat/form left, progress right */

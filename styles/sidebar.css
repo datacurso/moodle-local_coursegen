@@ -80,29 +80,15 @@
   overflow-y: auto;
 }
 
-/* Brand */
-.courseai-sidebar-brand {
+/* Top icon row — collapse trigger only, no brand repeat (page header already
+   shows the plugin name once). */
+.courseai-sidebar-topbar {
   display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 10px 16px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 12px;
-  color: var(--fg);
-  font-weight: 600;
-  font-size: 15px;
-  white-space: nowrap;
-}
-
-.courseai-sidebar-logo {
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
+  justify-content: flex-end;
+  padding: 0 4px 4px;
 }
 
 /* Collapsed: hide text */
-.courseai-sidebar.collapsed .courseai-sidebar-brand-text,
 .courseai-sidebar.collapsed .courseai-sidebar-btn-text,
 .courseai-sidebar.collapsed .courseai-sidebar-section-title,
 .courseai-sidebar.collapsed .courseai-sidebar-chevron,

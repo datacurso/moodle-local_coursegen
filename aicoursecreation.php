@@ -38,6 +38,10 @@ $PAGE->set_url($url);
 $PAGE->set_context($systemcontext);
 $PAGE->set_pagelayout('popup');
 $PAGE->set_title(get_string('createwithai', 'local_coursegen'));
+// Boost's popup layout still reserves margin-top on #page for a site navbar
+// that this page never renders (nonavbar) — drop it so the app layout can
+// reach the true top of the viewport (see aicoursecreation.css).
+$PAGE->add_body_class('local-coursegen-aicoursecreation');
 
 // Load courseai CSS + sidebar CSS. Direct plugin stylesheets get NO revision
 // from Moodle's cache pipeline, so browsers keep stale copies across plugin
@@ -124,9 +128,6 @@ foreach ($allrecords as $session) {
     $allsessionsdata[] = $buildsessiondata($session, 80);
 }
 
-// Get logo URL.
-$logourl = new moodle_url('/local/coursegen/pix/logo.png');
-
 // Subsections toggle only renders when the feature is enabled and mod_subsection is available.
 $subsectionsenabled = \local_coursegen\local\service\course_planning_service::subsections_available();
 
@@ -137,7 +138,6 @@ $templatecontext = [
     'hascoursetemplates' => !empty($coursetemplates),
     'languages' => json_encode($languageoptions),
     'defaultlang' => current_language(),
-    'logourl' => $logourl->out(),
     'hassessions' => !empty($recent5),
     'sessions' => $recent5,
     'allsessions' => $allsessionsdata,
@@ -146,14 +146,6 @@ $templatecontext = [
 ];
 
 echo $OUTPUT->header();
-
-// Navbar (floating top bar like reportbuilder/edit.php).
-$navbarcontext = [
-    'title' => get_string('createwithai', 'local_coursegen'),
-    'logourl' => $logourl->out(),
-    'closeurl' => (new moodle_url('/my/courses.php'))->out(false),
-];
-echo $OUTPUT->render_from_template('local_coursegen/editor_navbar', $navbarcontext);
 
 echo $OUTPUT->render_from_template('local_coursegen/courseai_page', $templatecontext);
 

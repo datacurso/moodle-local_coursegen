@@ -34,7 +34,6 @@ export const initSidebar = () => {
     const btnViewAll = document.getElementById('courseaiViewAll');
     const sessionsView = document.getElementById('courseaiSessionsView');
     const sessionsBackBtn = document.getElementById('courseaiSessionsBackBtn');
-    const navbarTrigger = document.getElementById('courseaiMenuTrigger');
     const backdrop = document.getElementById('courseaiSidebarBackdrop');
     const mainContainer = document.getElementById('courseaiWorkspace');
 
@@ -158,11 +157,6 @@ export const initSidebar = () => {
 
     if (toggleBtn) {
         toggleBtn.addEventListener('click', toggleSidebar);
-    }
-
-    // ─── Navbar menu trigger ─────────────────────────────────────────
-    if (navbarTrigger) {
-        navbarTrigger.addEventListener('click', toggleSidebar);
     }
 
     // ─── Backdrop click closes sidebar ───────────────────────────────
