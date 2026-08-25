@@ -30,10 +30,10 @@ import Notification from 'core/notification';
  * @param {Object} state
  */
 export const wireTemplateMode = (state) => {
-    const freeBtn = document.getElementById('courseaiModeFree');
-    const tplBtn = document.getElementById('courseaiModeTemplate');
-    const freeView = document.getElementById('contextView');
-    const tplView = document.getElementById('templateModeView');
+    // Free/Template mode switching is now plain <a href> navigation
+    // (aicoursecreation.php / ?mode=template), server-rendered from the
+    // mode param — no JS involved, so there's nothing to wire and nothing
+    // that can lag behind while the rest of the page's JS loads.
     const tplSelect = document.getElementById('tplModeSelect');
     const sidebar = document.getElementById('courseaiSidebar');
     const collapseBtn = document.getElementById('courseaiSidebarCollapse');
@@ -46,25 +46,6 @@ export const wireTemplateMode = (state) => {
     if (expandBtn && sidebar) {
         expandBtn.addEventListener('click', () => { sidebar.classList.remove('collapsed'); });
     }
-
-    if (!freeBtn || !tplBtn || !freeView || !tplView) {
-        return;
-    }
-
-    /**
-     * Switch between free and template mode.
-     *
-     * @param {string} mode
-     */
-    const switchMode = (mode) => {
-        freeView.style.display = mode === 'free' ? '' : 'none';
-        tplView.style.display = mode === 'template' ? '' : 'none';
-        freeBtn.classList.toggle('active', mode === 'free');
-        tplBtn.classList.toggle('active', mode === 'template');
-    };
-
-    freeBtn.addEventListener('click', () => switchMode('free'));
-    tplBtn.addEventListener('click', () => switchMode('template'));
 
     // Template selection — load structure.
     if (tplSelect) {

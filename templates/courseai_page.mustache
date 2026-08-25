@@ -43,13 +43,13 @@
   </svg>
 </button>
 <main class="app-main aicoursecreation-main" style="position:relative">
-  <div class="container">
+  <div class="container"{{#showsessionsview}} style="display:none"{{/showsessionsview}}>
     <div class="courseai-workspace{{#isresuming}} is-planning{{/isresuming}}" id="courseaiWorkspace">
 
     <!-- Context step form (in planning mode the editor is hidden by CSS and the
          left chat column shows instead — so on reload the real chrome renders and
          only the service-driven content areas show skeletons). -->
-    <div class="context-wrap" id="contextView">
+    <div class="context-wrap" id="contextView"{{#templatemodeactive}} style="display:none"{{/templatemodeactive}}>
 
       <div class="courseai-context-editor" id="courseaiContextEditor">
 
@@ -608,7 +608,7 @@
     </div><!-- .context-wrap -->
 
     <!-- ══════════ TEMPLATE MODE VIEW ════════════════════════════════════ -->
-    <div class="context-wrap" id="templateModeView" style="display:none">
+    <div class="context-wrap" id="templateModeView"{{^templatemodeactive}} style="display:none"{{/templatemodeactive}}>
       <div class="courseai-context-editor">
         <div class="context-head">
           <h2>{{#str}}courseai_template_title, local_coursegen{{/str}}</h2>
@@ -868,7 +868,7 @@
   <!-- Sessions list view (hidden by default). Header + toolbar + column
        labels are one sticky block inside the SAME scroller as the rest of
        the page (.aicoursecreation-main) — no separate inner scrollbox. -->
-  <div class="courseai-sessions-view" id="courseaiSessionsView" style="display:none">
+  <div class="courseai-sessions-view" id="courseaiSessionsView"{{^showsessionsview}} style="display:none"{{/showsessionsview}}>
     <div class="courseai-sessions-sticky">
       <div class="courseai-sessions-header">
         <h2>{{#str}}courseai_sessions_title, local_coursegen{{/str}}</h2>

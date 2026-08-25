@@ -57,6 +57,7 @@ import {makeCreateCourseCallback} from 'local_coursegen/courseai/bootstrap/creat
 import {makeEmitLog, makeRenderPlanMarkdown} from 'local_coursegen/courseai/bootstrap/ui-helpers';
 import {makeHydratePlan} from 'local_coursegen/courseai/bootstrap/hydrate-plan';
 import {createExecutionControls} from 'local_coursegen/local/courseai/actions/execution-control';
+import {wireTemplateMode} from 'local_coursegen/local/courseai/template_mode';
 
 /**
  * Initialize the courseai page.
@@ -66,11 +67,20 @@ import {createExecutionControls} from 'local_coursegen/local/courseai/actions/ex
 export const init = async(params) => {
     try {
         const {guidelines, languages, defaultLang, coursetemplates} = parseCourseaiData(params);
-        const texts = await loadCourseaiStrings();
-        const elements = getCourseaiElements();
         const state = createInitialState({defaultLang, guidelines, languages});
         state.templates = coursetemplates || [];
         state.selectedTemplateId = null;
+
+        // Wire template mode switching before awaiting anything below: it
+        // only needs `state`, not translated strings, and the Free/Template
+        // buttons are clickable the instant the page renders — the
+        // `await loadCourseaiStrings()` network round-trip used to leave
+        // them dead until it resolved (a dynamic import() here made it
+        // worse still, adding a second network wait on top).
+        wireTemplateMode(state);
+
+        const texts = await loadCourseaiStrings();
+        const elements = getCourseaiElements();
 
         // Decision log (§4) — instantiate before any module that needs it.
         const {emitLog, clearLog} = makeEmitLog(state);
@@ -78,13 +88,6 @@ export const init = async(params) => {
         const markedParser = markedModule.parse ? markedModule : markedModule.marked;
         const activityLabels = getActivityLabels(texts);
         const generateButtonHtml = getGenerateButtonHtml(texts);
-
-        // Wire template mode switching.
-        import('local_coursegen/local/courseai/template_mode').then(({wireTemplateMode}) => {
-            wireTemplateMode(state);
-        }).catch(() => {
-            // Template mode not available — skip silently.
-        });
 
         const contextUi = createContextUi({
             state,

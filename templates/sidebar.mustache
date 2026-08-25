@@ -31,19 +31,19 @@
 
     <!-- Creation mode -->
     <div class="courseai-sidebar-modes">
-      <div class="courseai-sidebar-mode-item active" id="courseaiModeFree" data-mode="free" role="button" tabindex="0">
+      <a class="courseai-sidebar-mode-item{{^templatemodeactive}} active{{/templatemodeactive}}" id="courseaiModeFree" href="aicoursecreation.php">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="m12 3-1.9 5.8a2 2 0 0 1-1.287 1.288L3 12l5.8 1.9a2 2 0 0 1 1.288 1.287L12 21l1.9-5.8a2 2 0 0 1 1.287-1.288L21 12l-5.8-1.9a2 2 0 0 1-1.288-1.287Z"/>
         </svg>
         <span>{{#str}}courseai_mode_free, local_coursegen{{/str}}</span>
-      </div>
-      <div class="courseai-sidebar-mode-item" id="courseaiModeTemplate" data-mode="template" role="button" tabindex="0">
+      </a>
+      <a class="courseai-sidebar-mode-item{{#templatemodeactive}} active{{/templatemodeactive}}" id="courseaiModeTemplate" href="aicoursecreation.php?mode=template">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
           <path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/>
           <path d="M15 3v4a2 2 0 0 0 2 2h4"/>
         </svg>
         <span>{{#str}}courseai_mode_template, local_coursegen{{/str}}</span>
-      </div>
+      </a>
     </div>
 
     <!-- New course button -->
@@ -81,9 +81,9 @@
       </div>
 
       <!-- View all -->
-      <button class="courseai-sidebar-viewall" id="courseaiViewAll" type="button">
+      <a class="courseai-sidebar-viewall" href="aicoursecreation.php?view=courses">
         {{#str}}courseai_sidebar_viewall, local_coursegen{{/str}}
-      </button>
+      </a>
     </div>
   </div>
 </aside>

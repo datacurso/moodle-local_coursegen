@@ -55,6 +55,8 @@ use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\course_session_service;
 
 $resumesessionid = optional_param('sessionid', 0, PARAM_INT);
+$showsessionsview = optional_param('view', '', PARAM_ALPHA) === 'courses';
+$templatemodeactive = optional_param('mode', 'free', PARAM_ALPHA) === 'template';
 
 // Load system instructions (directrices institucionales).
 $systeminstructions = [];
@@ -146,6 +148,8 @@ $templatecontext = [
     'sessions' => $recent5,
     'allsessions' => $allsessionsdata,
     'isresuming' => $resumesessionid > 0,
+    'showsessionsview' => $showsessionsview,
+    'templatemodeactive' => $templatemodeactive,
     'subsectionsenabled' => $subsectionsenabled,
 ];
 

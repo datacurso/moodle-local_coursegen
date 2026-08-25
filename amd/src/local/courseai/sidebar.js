@@ -31,16 +31,8 @@ export const initSidebar = () => {
     const coursesHeader = document.getElementById('courseaiCoursesHeader');
     const coursesList = document.getElementById('courseaiCoursesList');
     const coursesChevron = document.getElementById('courseaiCoursesChevron');
-    const btnViewAll = document.getElementById('courseaiViewAll');
     const sessionsView = document.getElementById('courseaiSessionsView');
-    const sessionsBackBtn = document.getElementById('courseaiSessionsBackBtn');
     const backdrop = document.getElementById('courseaiSidebarBackdrop');
-    const mainContainer = document.getElementById('courseaiWorkspace');
-    // .courseai-workspace's own parent (.container) has a definite height for
-    // the idle-form centering to work against (see aicoursecreation.css), so
-    // hiding only the workspace leaves that full-height wrapper behind,
-    // pushing the sessions view below the fold. Hide the wrapper instead.
-    const mainContainerWrap = mainContainer ? mainContainer.parentElement : null;
 
     if (!sidebar) {
         return;
@@ -119,34 +111,11 @@ export const initSidebar = () => {
         statusFilter.addEventListener('change', () => renderPage(1));
     }
 
-    // ─── View switching ──────────────────────────────────────────────
-    const showSessionsView = () => {
-        closeSidebar();   // close sidebar when switching to sessions view
-        if (mainContainerWrap) {
-            mainContainerWrap.style.display = 'none';
-        }
-        if (sessionsView) {
-            sessionsView.style.display = '';
-        }
-        currentPage = 1;
+    // The sessions view (aicoursecreation.php?view=sessions) and the idle
+    // form are two server-rendered states now, not a client-side toggle —
+    // whichever one isn't hidden inline is the one showing. Just paginate it.
+    if (sessionsView && sessionsView.style.display !== 'none') {
         renderPage(1);
-    };
-
-    const showMainView = () => {
-        if (sessionsView) {
-            sessionsView.style.display = 'none';
-        }
-        if (mainContainerWrap) {
-            mainContainerWrap.style.display = '';
-        }
-    };
-
-    if (btnViewAll) {
-        btnViewAll.addEventListener('click', showSessionsView);
-    }
-
-    if (sessionsBackBtn) {
-        sessionsBackBtn.addEventListener('click', showMainView);
     }
 
     let coursesOpen = true;
@@ -199,10 +168,18 @@ export const initSidebar = () => {
     }
 
     // ─── New course button ───────────────────────────────────────────
+    // No closeSidebar() here: the page navigates away immediately after, so
+    // collapsing it first only shows a jarring flash of the close animation.
+    // Keeps the current ?mode= (free/template) — "new course" should reset
+    // the session, not the mode you'd chosen to work in.
     if (btnNew) {
         btnNew.addEventListener('click', () => {
-            closeSidebar();
-            window.location.href = 'aicoursecreation.php';
+            const currentMode = new URLSearchParams(window.location.search).get('mode');
+            const url = new URL('aicoursecreation.php', window.location.href);
+            if (currentMode) {
+                url.searchParams.set('mode', currentMode);
+            }
+            window.location.href = url.toString();
         });
     }
 
@@ -237,7 +214,6 @@ export const initSidebar = () => {
         item.addEventListener('click', () => {
             const sessionid = item.dataset.sessionid;
             if (sessionid) {
-                closeSidebar();
                 window.location.href = `aicoursecreation.php?sessionid=${sessionid}`;
             }
         });
