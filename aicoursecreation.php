@@ -131,6 +131,9 @@ foreach ($allrecords as $session) {
 // Subsections toggle only renders when the feature is enabled and mod_subsection is available.
 $subsectionsenabled = \local_coursegen\local\service\course_planning_service::subsections_available();
 
+// Get logo URL (sidebar top bar, left of the collapse toggle).
+$logourl = new moodle_url('/local/coursegen/pix/logo.png');
+
 // Prepare template context.
 $templatecontext = [
     'guidelines' => json_encode($systeminstructions),
@@ -138,6 +141,7 @@ $templatecontext = [
     'hascoursetemplates' => !empty($coursetemplates),
     'languages' => json_encode($languageoptions),
     'defaultlang' => current_language(),
+    'logourl' => $logourl->out(),
     'hassessions' => !empty($recent5),
     'sessions' => $recent5,
     'allsessions' => $allsessionsdata,

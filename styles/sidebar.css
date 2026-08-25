@@ -74,18 +74,29 @@
 .courseai-sidebar-body {
   display: flex;
   flex-direction: column;
-  padding: 20px 14px;
+  padding: 8px 14px 20px 2px;
   gap: 8px;
   flex: 1;
   overflow-y: auto;
 }
 
-/* Top icon row — collapse trigger only, no brand repeat (page header already
-   shows the plugin name once). */
+/* Top icon row — logo left, collapse trigger right. */
 .courseai-sidebar-topbar {
   display: flex;
-  justify-content: flex-end;
-  padding: 0 4px 4px;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 0 4px;
+}
+
+.courseai-sidebar-logo {
+  width: 28px;
+  height: 28px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+
+.courseai-sidebar.collapsed .courseai-sidebar-logo {
+  display: none;
 }
 
 /* Collapsed: hide text */
@@ -422,7 +433,7 @@
   left: 12px;
   z-index: 5;
   background: var(--card);
-  border: 1px solid var(--border);
+  border: none;
   border-radius: 6px;
   width: 32px;
   height: 32px;
