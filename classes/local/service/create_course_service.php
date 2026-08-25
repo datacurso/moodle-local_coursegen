@@ -75,6 +75,12 @@ class create_course_service {
             // Create the Moodle course from stored form data.
             $course = create_course($coursedata);
 
+            // Enrol the user who requested the course, exactly as /course/edit.php
+            // does after its own create_course(): the core function creates the
+            // course but never enrols anybody, so without this the creator has no
+            // enrolment and the course never reaches their "My courses".
+            self::enrol_course_creator($course->id, (int)$session->get('userid'));
+
             // Persist course id in the session record and mark as creating (2).
             $sessionid = (int)$session->get('id');
             $sessionpersistent = new course_session($sessionid);
@@ -94,11 +100,13 @@ class create_course_service {
 
             // Process generated activities if provided in the response.
             $activityerrors = [];
+            $duplicatesskipped = [];
             if (!empty($resultdata['generated_activities'])) {
                 $activityerrors = self::process_generated_activities(
                     $course->id,
                     $resultdata['generated_activities'],
-                    $subsections
+                    $subsections,
+                    $duplicatesskipped
                 );
             }
 
@@ -145,6 +153,13 @@ class create_course_service {
                 );
             }
 
+            if (!empty($duplicatesskipped)) {
+                debugging(
+                    'local_coursegen: skipped ' . count($duplicatesskipped) . ' duplicated activities while creating course '
+                    . $course->id . '. Duplicates: ' . json_encode($duplicatesskipped, JSON_UNESCAPED_UNICODE)
+                );
+            }
+
             // Return success response.
             $message = get_string('coursecreated', 'local_coursegen');
             if (!empty($activityerrors)) {
@@ -162,6 +177,9 @@ class create_course_service {
                 'haswarnings' => !empty($activityerrors),
                 'warningscount' => count($activityerrors),
                 'activityerrors' => $activityerrors,
+                // Deliberately outside partial/haswarnings: skipping a duplicate
+                // is a clean creation, not a partially applied course.
+                'duplicatesskipped' => count($duplicatesskipped),
             ];
         } catch (\Throwable $e) {
             // Update session status to failed if session exists.
@@ -177,6 +195,61 @@ class create_course_service {
                 'haswarnings' => false,
                 'warningscount' => 0,
             ];
+        }
+    }
+
+    /**
+     * Enrol the user who requested the course, with the course creator role.
+     *
+     * Mirrors the block /course/edit.php runs right after create_course(): the
+     * creator is enrolled internally (manual plugin) with $CFG->creatornewroleid,
+     * never with a role derived from their capabilities. Site admins are governed
+     * by $CFG->enroladminnewcourse, because is_viewing() is always true for them
+     * and would otherwise skip the enrolment entirely.
+     *
+     * Failures are logged and swallowed: the course and its activities are
+     * already created at this point, so a missing enrolment must not turn a
+     * finished course into a failed request.
+     *
+     * @param int $courseid Freshly created course id.
+     * @param int $userid User who requested the generation.
+     * @return void
+     */
+    private static function enrol_course_creator(int $courseid, int $userid): void {
+        global $CFG;
+
+        if ($userid <= 0 || empty($CFG->creatornewroleid)) {
+            return;
+        }
+
+        try {
+            $context = \context_course::instance($courseid, MUST_EXIST);
+
+            // Admins have every capability, so is_viewing() is always true for
+            // them; the site setting is what decides whether they get enrolled.
+            if (is_siteadmin($userid)) {
+                $enroluser = !empty($CFG->enroladminnewcourse);
+            } else {
+                $enroluser = !is_viewing($context, $userid, 'moodle/role:assign');
+            }
+
+            if (!$enroluser || is_enrolled($context, $userid, 'moodle/role:assign')) {
+                return;
+            }
+
+            if (!enrol_try_internal_enrol($courseid, $userid, (int)$CFG->creatornewroleid)) {
+                debugging(
+                    'local_coursegen: could not enrol the course creator in course ' . $courseid
+                    . '; the manual enrolment plugin is disabled or has no enabled instance.',
+                    DEBUG_DEVELOPER
+                );
+            }
+        } catch (\Throwable $e) {
+            debugging(
+                'local_coursegen: could not enrol the course creator in course ' . $courseid
+                . '. ' . $e->getMessage(),
+                DEBUG_DEVELOPER
+            );
         }
     }
 
@@ -526,12 +599,25 @@ class create_course_service {
      * without component support) nested activities flatten into their parent
      * section, in the same order.
      *
+     * Each activity is created at most once: repeated entries in the result are
+     * detected by {@see build_activity_signature()} and grouped by
+     * {@see group_activities_by_signature()}, so a service answer that carries
+     * the same activity twice cannot land twice in the course. Of the copies,
+     * the one carrying the most imagery wins, so enabling images produces an
+     * illustrated course and never its image-less twin.
+     *
      * @param int $courseid Course ID.
      * @param array $activities Generated activities from API.
      * @param array $subsections Declared subsections index, mutated as they materialize.
+     * @param array $duplicatesskipped Accumulator for the duplicated entries that were skipped.
      * @return array Activity creation errors.
      */
-    private static function process_generated_activities(int $courseid, array $activities, array &$subsections = []): array {
+    private static function process_generated_activities(
+        int $courseid,
+        array $activities,
+        array &$subsections = [],
+        array &$duplicatesskipped = []
+    ): array {
         global $CFG;
 
         require_once($CFG->dirroot . '/course/modlib.php');
@@ -543,13 +629,18 @@ class create_course_service {
             debugging('local_coursegen: subsections in result but mod_subsection unavailable; flattening into parent sections.');
         }
 
-        foreach ($activities as $activity) {
+        // One group per distinct activity, in the order the result presents
+        // them; inside a group the copies are ordered richest-first, so the
+        // illustrated copy is the one that reaches the course.
+        $groups = self::group_activities_by_signature($activities);
+
+        foreach ($groups as $group) {
             $sectionnum = 0;
-            if (isset($activity['parameters']) && isset($activity['parameters']['section'])) {
-                $sectionnum = $activity['parameters']['section'];
+            if (isset($group[0]['parameters']) && isset($group[0]['parameters']['section'])) {
+                $sectionnum = $group[0]['parameters']['section'];
             }
 
-            $subsectionid = (string)($activity['subsection_id'] ?? '');
+            $subsectionid = (string)($group[0]['subsection_id'] ?? '');
             if ($subsectionid !== '' && $subsectionsavailable && isset($subsections[$subsectionid])) {
                 try {
                     if ($subsections[$subsectionid]['delegatedsectionnum'] === null) {
@@ -572,26 +663,43 @@ class create_course_service {
                 }
             }
 
-            try {
-                create_mod_service::create_from_ai_result($activity, $course, $sectionnum);
-            } catch (\Throwable $e) {
-                $resource = (string)($activity['resource_type'] ?? 'unknown');
-                $title = (string)($activity['parameters']['name'] ?? $activity['parameters']['title'] ?? '');
-                $errors[] = [
-                    'resource_type' => $resource,
+            // Copies are tried in order until one is created, so a poorer copy
+            // can still stand in for a richer one whose creation failed.
+            $attempted = 0;
+            foreach ($group as $activity) {
+                $attempted++;
+                try {
+                    create_mod_service::create_from_ai_result($activity, $course, $sectionnum);
+                    break;
+                } catch (\Throwable $e) {
+                    $resource = (string)($activity['resource_type'] ?? 'unknown');
+                    $title = (string)($activity['parameters']['name'] ?? $activity['parameters']['title'] ?? '');
+                    $errors[] = [
+                        'resource_type' => $resource,
+                        'section' => (int)$sectionnum,
+                        'message' => $e->getMessage(),
+                        'title' => $title,
+                    ];
+                    $context = [
+                        'resource_type' => $resource,
+                        'section' => (int)$sectionnum,
+                        'title' => $title,
+                        'error' => $e->getMessage(),
+                    ];
+                    debugging('local_coursegen: module creation skipped due to error. ' . json_encode($context));
+                }
+            }
+
+            // Whatever was left untried in the group is a duplicate of what the
+            // course already has.
+            foreach (array_slice($group, $attempted) as $activity) {
+                $duplicate = [
+                    'resource_type' => (string)($activity['resource_type'] ?? 'unknown'),
                     'section' => (int)$sectionnum,
-                    'message' => $e->getMessage(),
-                    'title' => $title,
+                    'title' => (string)($activity['parameters']['name'] ?? $activity['parameters']['title'] ?? ''),
                 ];
-                $context = [
-                    'resource_type' => $resource,
-                    'section' => (int)$sectionnum,
-                    'title' => $title,
-                    'error' => $e->getMessage(),
-                ];
-                debugging('local_coursegen: module creation skipped due to error. ' . json_encode($context));
-                // Continue with next activity.
-                continue;
+                $duplicatesskipped[] = $duplicate;
+                debugging('local_coursegen: duplicated activity skipped. ' . json_encode($duplicate, JSON_UNESCAPED_UNICODE));
             }
         }
 
@@ -599,6 +707,183 @@ class create_course_service {
         rebuild_course_cache($courseid, true);
 
         return $errors;
+    }
+
+    /**
+     * Group the generated activities by identity, richest copy first.
+     *
+     * Groups keep the order in which the result first presents each activity,
+     * so the course layout is the one the AI planned. Inside a group the copies
+     * are ordered by how much imagery they carry: when the service answers with
+     * both an image-less and an illustrated copy of the same activity, the
+     * illustrated one is the copy that reaches the course, whichever of the two
+     * came first in the result.
+     *
+     * @param array $activities generated_activities from the API result.
+     * @return array[] List of groups, each a non-empty list of activity payloads.
+     */
+    private static function group_activities_by_signature(array $activities): array {
+        $groups = [];
+
+        foreach (array_values($activities) as $order => $activity) {
+            if (!is_array($activity)) {
+                continue;
+            }
+
+            $sectionnum = (int)($activity['parameters']['section'] ?? 0);
+            $signature = self::build_activity_signature($activity, $sectionnum);
+
+            $groups[$signature][] = [
+                'order' => $order,
+                'score' => self::score_activity_images($activity),
+                'activity' => $activity,
+            ];
+        }
+
+        $ordered = [];
+        foreach ($groups as $entries) {
+            usort($entries, static function (array $a, array $b): int {
+                return [$b['score'], $a['order']] <=> [$a['score'], $b['order']];
+            });
+            $ordered[] = array_column($entries, 'activity');
+        }
+
+        return $ordered;
+    }
+
+    /**
+     * Score how much imagery an activity payload carries.
+     *
+     * Resolved image references weigh far more than unresolved `{{image:}}`
+     * placeholders, so a copy with real images always outranks a copy that only
+     * carries the template markers the cleaner would strip anyway.
+     *
+     * @param array $activity One entry of generated_activities.
+     * @return int
+     */
+    private static function score_activity_images(array $activity): int {
+        $strings = [];
+        self::collect_signature_strings($activity['parameters'] ?? [], $strings);
+        $text = implode("\n", $strings);
+
+        if (trim($text) === '') {
+            return 0;
+        }
+
+        $sources = [];
+
+        $patterns = [
+            '/<img\b[^>]*\bsrc\s*=\s*("|\')(.*?)\1/i' => 2,
+            '/!\[[^\]]*\]\(([^)\s]+)/u' => 1,
+            '#/tmp/resource_files/generated_images/[a-z0-9._-]+#i' => 0,
+        ];
+        foreach ($patterns as $pattern => $group) {
+            if (preg_match_all($pattern, $text, $matches)) {
+                foreach ($matches[$group] as $source) {
+                    $source = trim($source);
+                    if ($source !== '') {
+                        $sources[$source] = true;
+                    }
+                }
+            }
+        }
+
+        $placeholders = (int)preg_match_all('/\{\{image:\s*.*?\s*\}\}/iu', $text);
+
+        return (count($sources) * 10) + $placeholders;
+    }
+    /**
+     * Build the identity signature of a generated activity.
+     *
+     * Image markup is stripped before hashing, so the illustrated copy and the
+     * image-less copy of the same activity collapse into one signature. That is
+     * the exact shape a service answer takes when it returns both variants of a
+     * unit, and it is what makes this guard catch the duplication the plain
+     * payload comparison would miss (the two copies differ only by the image).
+     *
+     * The section is part of the key: the same welcome text repeated once per
+     * unit is legitimate content, not a duplicate.
+     *
+     * @param array $activity One entry of generated_activities.
+     * @param int $sectionnum Section number declared for the activity.
+     * @return string
+     */
+    private static function build_activity_signature(array $activity, int $sectionnum): string {
+        $parameters = is_array($activity['parameters'] ?? null) ? $activity['parameters'] : [];
+
+        $name = (string)($parameters['name'] ?? $parameters['title'] ?? '');
+
+        $texts = [];
+        self::collect_signature_strings($parameters, $texts);
+
+        $content = self::normalize_signature_text($name) . "\n" . self::normalize_signature_text(implode("\n", $texts));
+
+        return implode('|', [
+            (string)($activity['resource_type'] ?? 'unknown'),
+            (string)($activity['subsection_id'] ?? ''),
+            (string)$sectionnum,
+            md5($content),
+        ]);
+    }
+
+    /**
+     * Recursively collect the string values that identify an activity payload.
+     *
+     * Volatile keys (draft item ids, formats, service-side identifiers) are
+     * skipped: they differ between two copies of the same activity and would
+     * defeat the comparison.
+     *
+     * @param mixed $value Payload node.
+     * @param array $output Accumulator, by reference.
+     * @return void
+     */
+    private static function collect_signature_strings($value, array &$output): void {
+        if (is_string($value)) {
+            $output[] = $value;
+            return;
+        }
+
+        if (is_int($value) || is_float($value) || is_bool($value)) {
+            $output[] = (string)(int)$value;
+            return;
+        }
+
+        if (!is_array($value)) {
+            return;
+        }
+
+        $volatilekeys = ['itemid', 'format', 'id', 'uuid', 'draftitemid'];
+        foreach ($value as $key => $item) {
+            if (is_string($key) && in_array(\core_text::strtolower($key), $volatilekeys, true)) {
+                continue;
+            }
+            self::collect_signature_strings($item, $output);
+        }
+    }
+
+    /**
+     * Normalize a text fragment for signature comparison.
+     *
+     * Strips image markup (HTML tags, markdown, unresolved placeholders and raw
+     * generated-image paths), then all remaining HTML, and collapses whitespace.
+     *
+     * @param string $text Raw text.
+     * @return string
+     */
+    private static function normalize_signature_text(string $text): string {
+        if (trim($text) === '') {
+            return '';
+        }
+
+        $text = preg_replace('/<img\b[^>]*>/i', ' ', $text) ?? $text;
+        $text = preg_replace('/!\[[^\]]*\]\([^)]*\)/u', ' ', $text) ?? $text;
+        $text = preg_replace('/\{\{image:\s*.*?\s*\}\}/iu', ' ', $text) ?? $text;
+        $text = preg_replace('#/tmp/resource_files/generated_images/[a-z0-9._-]+#i', ' ', $text) ?? $text;
+
+        $text = html_entity_decode(strip_tags($text), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
+        $text = preg_replace('/\s+/u', ' ', $text) ?? $text;
+
+        return \core_text::strtolower(trim($text));
     }
 
     /**

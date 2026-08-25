@@ -1,3 +1,17 @@
+## 2.0.4
+
+**Released on:** 2026-08-25
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Fixed
+
+- **Activities are no longer created twice when images are enabled**  
+  When the AI service answered with both an image-less and an illustrated copy of the same unit, every activity landed twice in the generated course. Repeated entries are now detected and only one module is created per activity, keeping the copy that carries the images. The plugin also stops sending a disabled image policy together with the images toggle, which is the contradictory instruction that provoked the duplicated answer.
+
+- **The user who generates a course is now enrolled in it**  
+  Generated courses were created without a single enrolment or role assignment, so they never appeared in the creator's course list. The creator is now enrolled with the site's course creator role, following the same rules Moodle applies when a course is created through the standard form, including the site setting that governs administrators.
+
 ## 2.0.3
 
 **Released on:** 2026-08-24
