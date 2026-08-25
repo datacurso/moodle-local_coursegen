@@ -65,10 +65,12 @@ import {createExecutionControls} from 'local_coursegen/local/courseai/actions/ex
  */
 export const init = async(params) => {
     try {
-        const {guidelines, languages, defaultLang} = parseCourseaiData(params);
+        const {guidelines, languages, defaultLang, coursetemplates} = parseCourseaiData(params);
         const texts = await loadCourseaiStrings();
         const elements = getCourseaiElements();
         const state = createInitialState({defaultLang, guidelines, languages});
+        state.templates = coursetemplates || [];
+        state.selectedTemplateId = null;
 
         // Decision log (§4) — instantiate before any module that needs it.
         const {emitLog, clearLog} = makeEmitLog(state);
@@ -76,6 +78,13 @@ export const init = async(params) => {
         const markedParser = markedModule.parse ? markedModule : markedModule.marked;
         const activityLabels = getActivityLabels(texts);
         const generateButtonHtml = getGenerateButtonHtml(texts);
+
+        // Wire template mode switching.
+        import('local_coursegen/local/courseai/template_mode').then(({wireTemplateMode}) => {
+            wireTemplateMode(state);
+        }).catch(() => {
+            // Template mode not available — skip silently.
+        });
 
         const contextUi = createContextUi({
             state,

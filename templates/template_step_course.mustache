@@ -1,0 +1,116 @@
+{{!
+    @template local_coursegen/template_step_course
+
+    Course selector step with filters and table.
+
+    Example context (json):
+    {
+        "heading": "Select base course",
+        "description": "Choose the course to use as template",
+        "categories": [{"id": 1, "name": "Cat 1"}],
+        "courses": [{"id": 1, "fullname": "Test", "shortname": "T1", "categoryname": "Cat 1", "selected": false}],
+        "totalcourses": 1,
+        "page": 0,
+        "totalpages": 1,
+        "hascourses": true,
+        "haspagination": false,
+        "pages": [],
+        "lbl_fullname": "Full name",
+        "lbl_shortname": "Short name",
+        "lbl_category": "Category",
+        "lbl_allcategories": "All categories",
+        "lbl_nocourses": "No courses found",
+        "lbl_totalcourses": "1 courses"
+    }
+}}
+<h4>{{heading}}</h4>
+<p class="text-muted">{{description}}</p>
+
+{{! Filters }}
+<div class="card mb-3">
+    <div class="card-body py-2">
+        <div class="form-row align-items-end">
+            <div class="col-md-4 form-group mb-2">
+                <label for="tpl-filter-fullname" class="small font-weight-bold">{{lbl_fullname}}</label>
+                <input type="text" id="tpl-filter-fullname" class="form-control form-control-sm"
+                       data-action="filter" data-field="fullname" placeholder="{{lbl_fullname}}...">
+            </div>
+            <div class="col-md-3 form-group mb-2">
+                <label for="tpl-filter-shortname" class="small font-weight-bold">{{lbl_shortname}}</label>
+                <input type="text" id="tpl-filter-shortname" class="form-control form-control-sm"
+                       data-action="filter" data-field="shortname" placeholder="{{lbl_shortname}}...">
+            </div>
+            <div class="col-md-3 form-group mb-2">
+                <label for="tpl-filter-category" class="small font-weight-bold">{{lbl_category}}</label>
+                <select id="tpl-filter-category" class="custom-select custom-select-sm"
+                        data-action="filter" data-field="category">
+                    <option value="">{{lbl_allcategories}}</option>
+                    {{#categories}}
+                    <option value="{{id}}">{{name}}</option>
+                    {{/categories}}
+                </select>
+            </div>
+            <div class="col-md-2 form-group mb-2">
+                <button class="btn btn-secondary btn-sm btn-block" data-action="apply-filters">
+                    {{#pix}}i/search, core{{/pix}} {{#str}}search{{/str}}
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
+
+{{! Course table }}
+<div class="card">
+    <div class="card-body p-0">
+        {{#hascourses}}
+        <table class="table table-striped table-hover mb-0" data-region="course-table">
+            <thead>
+                <tr>
+                    <th class="border-top-0" style="width:40px"></th>
+                    <th class="border-top-0">{{lbl_fullname}}</th>
+                    <th class="border-top-0">{{lbl_shortname}}</th>
+                    <th class="border-top-0">{{lbl_category}}</th>
+                </tr>
+            </thead>
+            <tbody>
+                {{#courses}}
+                <tr data-action="select-course" data-courseid="{{id}}" style="cursor:pointer"
+                    class="{{#selected}}table-primary{{/selected}}">
+                    <td>
+                        <div class="custom-control custom-radio">
+                            <input type="radio" class="custom-control-input" name="tpl-course"
+                                   id="tpl-course-{{id}}" value="{{id}}" {{#selected}}checked{{/selected}}>
+                            <label class="custom-control-label" for="tpl-course-{{id}}">
+                                <span class="sr-only">{{fullname}}</span>
+                            </label>
+                        </div>
+                    </td>
+                    <td>{{fullname}}</td>
+                    <td class="text-muted">{{shortname}}</td>
+                    <td class="text-muted">{{categoryname}}</td>
+                </tr>
+                {{/courses}}
+            </tbody>
+        </table>
+        {{/hascourses}}
+        {{^hascourses}}
+        <div class="p-4 text-center text-muted">
+            {{lbl_nocourses}}
+        </div>
+        {{/hascourses}}
+    </div>
+    {{#haspagination}}
+    <div class="card-footer d-flex align-items-center justify-content-between py-2">
+        <span class="text-muted small">{{lbl_totalcourses}}</span>
+        <nav>
+            <ul class="pagination pagination-sm mb-0">
+                {{#pages}}
+                <li class="page-item {{#active}}active{{/active}}">
+                    <a class="page-link" href="#" data-action="page" data-page="{{num}}">{{label}}</a>
+                </li>
+                {{/pages}}
+            </ul>
+        </nav>
+    </div>
+    {{/haspagination}}
+</div>

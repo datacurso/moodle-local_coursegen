@@ -64,6 +64,20 @@ foreach ($records as $record) {
     ];
 }
 
+// Load available course templates.
+$coursetemplates = [];
+$tplrecords = \local_coursegen\local\models\template::get_records([], 'name', 'ASC');
+foreach ($tplrecords as $tpl) {
+    $tplcourse = $DB->get_record('course', ['id' => $tpl->get('courseid')], 'id, fullname', IGNORE_MISSING);
+    $coursetemplates[] = [
+        'id' => (int) $tpl->get('id'),
+        'name' => $tpl->get('name'),
+        'courseid' => (int) $tpl->get('courseid'),
+        'coursefullname' => $tplcourse ? format_string($tplcourse->fullname) : '',
+        'description' => $tpl->get('description') ?? '',
+    ];
+}
+
 // Get available languages (only those supported by the plugin).
 $supportedlangs = ['es', 'en', 'de', 'ru', 'pt', 'fr', 'id'];
 $alllanguages = get_string_manager()->get_list_of_languages(null, 'iso6391');
@@ -119,6 +133,8 @@ $subsectionsenabled = \local_coursegen\local\service\course_planning_service::su
 // Prepare template context.
 $templatecontext = [
     'guidelines' => json_encode($systeminstructions),
+    'coursetemplates' => $coursetemplates,
+    'hascoursetemplates' => !empty($coursetemplates),
     'languages' => json_encode($languageoptions),
     'defaultlang' => current_language(),
     'logourl' => $logourl->out(),
@@ -145,6 +161,7 @@ echo $OUTPUT->render_from_template('local_coursegen/courseai_page', $templatecon
 $PAGE->requires->js_call_amd('local_coursegen/courseai', 'init', [
     [
         'guidelines' => $systeminstructions,
+        'coursetemplates' => $coursetemplates,
         'languages' => $languageoptions,
         'defaultlang' => current_language(),
         'sessions' => $allsessionsdata,

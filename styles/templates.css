@@ -1,0 +1,172 @@
+/* Template wizard styles */
+#local-coursegen-template-wizard {
+    max-width: 900px;
+    margin: 0 auto;
+}
+
+/* Stepper */
+.tpl-step-circle {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600; transition: all 0.2s; flex-shrink: 0;
+}
+.tpl-step-circle.active { background-color: #b5351a; color: #fff; }
+.tpl-step-circle.done { background-color: #28a745; color: #fff; }
+.tpl-step-circle.pending { background-color: #f0f0f0; color: #6c757d; }
+.tpl-step-line { height: 2px; flex: 1; background: #dee2e6; margin: 0 6px; }
+.tpl-step-line.done { background: #28a745; }
+.tpl-step-line.active { background: #b5351a; }
+
+/* Section cards */
+.tpl-section-card {
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    overflow: hidden;
+    margin-bottom: 1rem;
+    transition: all 0.2s;
+}
+
+.tpl-section-card:hover {
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.08);
+}
+
+.tpl-section-card.kept {
+    box-shadow: 0 0 0 2px #28a745;
+}
+
+.tpl-section-card.excluded {
+    opacity: 0.6;
+}
+
+.tpl-section-header {
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+    padding: 0.75rem 1rem;
+}
+
+.tpl-section-body {
+    max-height: 0;
+    overflow: hidden;
+    transition: max-height 0.3s ease;
+}
+
+.tpl-section-body.open {
+    max-height: 2000px;
+}
+
+/* Activity rows */
+.tpl-activity-row {
+    padding: 0.625rem 0.5rem;
+    border-top: 1px solid #f0f0f0;
+    transition: all 0.2s;
+}
+
+.tpl-activity-row:hover {
+    background: #f8f9fa;
+}
+
+/* Prompt field */
+.tpl-prompt-field {
+    border: 1px dashed #dee2e6;
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    background: #fff5f5;
+    margin-top: 0.5rem;
+}
+
+.tpl-prompt-field textarea {
+    border: none;
+    background: transparent;
+    resize: none;
+    width: 100%;
+    outline: none;
+    font-size: 0.8rem;
+}
+
+/* Badges */
+.tpl-badge {
+    display: inline-flex; align-items: center; gap: 4px;
+    padding: 2px 8px; border-radius: 100px; font-size: 0.7rem; font-weight: 500; background: #f0f0f0;
+}
+.tpl-badge-present { background: #fff5f5; color: #b5351a; }
+.tpl-badge-keep { background: #e8f5e9; color: #2e7d32; }
+.tpl-badge-exclude { background: #f0f0f0; color: #6c757d; }
+.tpl-badge-reference { background: #ede7f6; color: #5e35b1; }
+.tpl-badge-modify { background: #fff5f5; color: #b5351a; }
+
+/* Course selection cards */
+.tpl-course-card {
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    padding: 0.75rem;
+    cursor: pointer;
+    transition: all 0.15s;
+    margin-bottom: 0.5rem;
+}
+
+.tpl-course-card:hover {
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+}
+
+.tpl-course-card.selected {
+    box-shadow: 0 0 0 2px #b5351a;
+}
+
+/* Radio circle */
+.tpl-radio {
+    width: 20px;
+    height: 20px;
+    border-radius: 50%;
+    border: 2px solid #dee2e6;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    flex-shrink: 0;
+}
+
+.tpl-radio.checked {
+    background: #b5351a;
+    border-color: #b5351a;
+    color: #fff;
+}
+
+/* Quick actions dropdown */
+.tpl-quick-menu {
+    position: absolute;
+    right: 0;
+    margin-top: 0.25rem;
+    width: 14rem;
+    background: #fff;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    padding: 0.25rem;
+    box-shadow: 0 4px 16px rgba(0, 0, 0, 0.12);
+    z-index: 10;
+}
+
+.tpl-quick-menu button {
+    display: block;
+    width: 100%;
+    text-align: left;
+    padding: 0.375rem 0.75rem;
+    border: none;
+    background: transparent;
+    border-radius: 0.25rem;
+    font-size: 0.8rem;
+    cursor: pointer;
+}
+
+.tpl-quick-menu button:hover {
+    background: #f8f9fa;
+}
+
+/* Misc */
+.tpl-naming-preview { background: #f8f9fa; border-radius: 0.5rem; padding: 0.75rem; }
+.tpl-summary-preview { background: #fff5f5; border: 1px solid #fecdd3; border-radius: 0.5rem; padding: 1rem; }
+.tpl-list-card { border: 1px solid #dee2e6; border-radius: 0.5rem; overflow: hidden; }
+.tpl-warn { color: #e67e22; font-size: 0.75rem; }
+.tpl-fade-in { animation: tplFadeIn 0.25s ease; }
+@keyframes tplFadeIn {
+    from { opacity: 0; transform: translateY(6px); }
+    to { opacity: 1; transform: translateY(0); }
+}

@@ -1,29 +1,16 @@
-/* ─── SIDEBAR BACKDROP ───────────────────────────────────────────── */
-.courseai-sidebar-backdrop {
-  position: fixed;
-  inset: 0;
-  background: hsl(0, 0%, 0%, 0.3);
-  z-index: 1039;            /* below sidebar (1040), above Bootstrap navbar (1030) */
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .28s ease;
-}
-
-.courseai-sidebar-backdrop.open {
-  opacity: 1;
-  pointer-events: auto;
-}
+/* ─── SIDEBAR BACKDROP (legacy, kept for JS compat) ──────────────── */
+.courseai-sidebar-backdrop { display: none; }
 
 /* ─── SIDEBAR — LIGHT MINIMALIST ───────────────────────────────────── */
 :root {
   --courseai-sidebar-w: 240px;
 }
 
-/* Toggle button – inside sidebar, only visible when open */
+/* Toggle button */
 .courseai-sidebar-toggle {
-  position: absolute;
-  top: 14px;
-  right: -14px;
+  position: relative;
+  align-self: flex-end;
+  margin: 8px 8px 0;
   width: 28px;
   height: 28px;
   background: var(--card);
@@ -51,28 +38,36 @@
   pointer-events: none;
 }
 
-/* Sidebar panel – covers everything including navbar */
+/* App layout — sidebar + main side by side */
+.courseai-app-layout {
+  display: flex;
+  min-height: 100vh;
+}
+
+/* Sidebar panel — static flex item, always visible */
 .courseai-sidebar {
-  position: fixed;
-  top: 0;                   /* overlay navbar too */
-  left: 0;
-  bottom: 0;
   width: var(--courseai-sidebar-w);
   background: var(--card);
   border-right: 1px solid var(--border);
   color: var(--fg);
   display: flex;
   flex-direction: column;
-  z-index: 1040;            /* above Bootstrap navbar (1030) */
-  transform: translateX(0);
-  transition: transform .28s cubic-bezier(.4, 0, .2, 1);
+  flex-shrink: 0;
   overflow: hidden;
-  box-shadow: 4px 0 24px hsl(0, 0%, 0%, 0.15);
+  transition: width .25s ease;
 }
 
 .courseai-sidebar.collapsed {
-  transform: translateX(-100%);  /* completely off-screen – no visible strip */
-  box-shadow: none;
+  width: 0;
+  border-right: none;
+  overflow: hidden;
+}
+
+/* Main content fills remaining space */
+.courseai-app-layout > .app-main,
+.courseai-app-layout > .aicoursecreation-main {
+  flex: 1;
+  min-width: 0;
 }
 
 /* Body */
@@ -421,3 +416,68 @@
   min-width: 60px;
   text-align: center;
 }
+
+/* ─── COLLAPSE / EXPAND ────────────────────────────────────── */
+.courseai-sidebar-collapse-btn {
+  margin-left: auto;
+  background: none;
+  border: none;
+  color: var(--muted-fg);
+  cursor: pointer;
+  padding: 4px;
+  border-radius: 4px;
+  line-height: 1;
+}
+.courseai-sidebar-collapse-btn:hover { background: var(--muted); color: var(--fg); }
+
+.courseai-sidebar-expand-btn {
+  position: absolute;
+  top: 12px;
+  left: 12px;
+  z-index: 5;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  width: 32px;
+  height: 32px;
+  display: none;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  color: var(--muted-fg);
+  box-shadow: 0 1px 4px hsl(0,0%,0%,.08);
+}
+.courseai-sidebar-expand-btn:hover { background: var(--muted); color: var(--fg); }
+.courseai-sidebar.collapsed ~ .courseai-sidebar-expand-btn,
+.courseai-sidebar.collapsed ~ * .courseai-sidebar-expand-btn { display: flex; }
+
+/* ─── MODE ITEMS ───────────────────────────────────────────── */
+.courseai-sidebar-modes {
+  display: flex;
+  gap: 4px;
+  padding: 0 6px;
+  margin-bottom: 8px;
+}
+.courseai-sidebar-mode-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  flex: 1;
+  padding: 6px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--muted-fg);
+  cursor: pointer;
+  transition: all .15s;
+  white-space: nowrap;
+  justify-content: center;
+  background: transparent;
+}
+.courseai-sidebar-mode-item:hover { background: var(--muted); }
+.courseai-sidebar-mode-item.active {
+  background: var(--card);
+  color: var(--fg);
+  font-weight: 500;
+  box-shadow: 0 1px 3px hsl(0,0%,0%,.08);
+}
+.courseai-sidebar-mode-item svg { flex-shrink: 0; width: 13px; height: 13px; }

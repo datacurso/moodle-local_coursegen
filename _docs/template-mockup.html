@@ -1,0 +1,827 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — Plantillas de curso</title>
+<script src="https://cdn.tailwindcss.com"></script>
+<style>
+  :root {
+    --primary: hsl(8, 72%, 42%);
+    --primary-fg: hsl(0, 0%, 100%);
+    --primary-soft: hsl(9, 100%, 96%);
+    --primary-hover: hsl(8, 65%, 36%);
+    --brand: hsl(252, 55%, 42%);
+    --bg: hsl(210, 40%, 98%);
+    --card: hsl(0, 0%, 100%);
+    --fg: hsl(215, 28%, 17%);
+    --muted: hsl(215, 25%, 96%);
+    --muted-fg: hsl(215, 16%, 47%);
+    --border: hsl(215, 20%, 88%);
+    --radius: 0.75rem;
+    --success: hsl(142, 70%, 40%);
+    --warn: hsl(38, 92%, 50%);
+    --danger: hsl(8, 72%, 48%);
+  }
+  body {
+    font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+    background: var(--bg);
+    color: var(--fg);
+    -webkit-font-smoothing: antialiased;
+    min-height: 100vh;
+  }
+  .step-circle {
+    width: 28px; height: 28px; border-radius: 50%;
+    display: flex; align-items: center; justify-content: center;
+    font-size: 12px; font-weight: 600; transition: all .2s;
+  }
+  .step-circle.active { background: var(--primary); color: white; }
+  .step-circle.done { background: var(--success); color: white; }
+  .step-circle.pending { background: var(--muted); color: var(--muted-fg); }
+  .step-line { height: 2px; flex: 1; background: var(--border); margin: 0 6px; align-self: center; }
+  .step-line.active { background: var(--primary); }
+  .step-line.done { background: var(--success); }
+  .card { background: var(--card); border-radius: var(--radius); box-shadow: 0 1px 2px hsl(215 28% 17% / .05); }
+  .btn-primary {
+    background: var(--primary); color: white; border: none; border-radius: 8px;
+    padding: 10px 24px; font-weight: 500; font-size: 14px; cursor: pointer;
+    transition: background .15s, transform .1s;
+  }
+  .btn-primary:hover { background: var(--primary-hover); }
+  .btn-primary:active { transform: scale(.97); }
+  .btn-primary:disabled { opacity: .5; cursor: not-allowed; }
+  .btn-outline {
+    background: transparent; color: var(--fg); border: 1px solid var(--border); border-radius: 8px;
+    padding: 10px 24px; font-weight: 500; font-size: 14px; cursor: pointer; transition: all .15s;
+  }
+  .btn-outline:hover { border-color: var(--primary); color: var(--primary); }
+  .section-card { border: 1px solid var(--border); border-radius: 10px; overflow: hidden; transition: all .2s; }
+  .section-card:hover { box-shadow: 0 2px 8px hsl(215 28% 17% / .08); }
+  .activity-row { transition: all .2s; border-radius: 8px; }
+  .activity-row:hover { background: hsl(215, 25%, 97%); }
+  .fade-in { animation: fadeIn .25s ease; }
+  @keyframes fadeIn { from { opacity: 0; transform: translateY(6px); } to { opacity: 1; transform: translateY(0); } }
+  .slide-down { animation: slideDown .2s ease; }
+  @keyframes slideDown { from { opacity: 0; max-height: 0; } to { opacity: 1; max-height: 200px; } }
+  select, input[type="text"], input[type="number"], textarea {
+    border: 1px solid var(--border); border-radius: 8px; padding: 8px 12px;
+    font-size: 14px; outline: none; transition: border-color .15s; width: 100%;
+  }
+  select:focus, input:focus, textarea:focus { border-color: var(--primary); box-shadow: 0 0 0 3px hsl(9, 100%, 94%); }
+  .prompt-field { border: 1px dashed var(--border); border-radius: 8px; padding: 12px; background: hsl(9, 100%, 98%); }
+  .toast {
+    position: fixed; bottom: 24px; right: 24px; background: var(--card); border-radius: 12px;
+    box-shadow: 0 8px 30px hsl(215 28% 17% / .15); padding: 16px 20px; z-index: 100;
+    animation: slideUp .3s ease; max-width: 380px;
+  }
+  @keyframes slideUp { from { transform: translateY(20px); opacity: 0; } to { transform: translateY(0); opacity: 1; } }
+  .step-panel { display: none; }
+  .step-panel.active { display: block; }
+  .badge-type {
+    display: inline-flex; align-items: center; gap: 4px; padding: 2px 8px;
+    border-radius: 100px; font-size: 11px; font-weight: 500; background: var(--muted);
+  }
+  .badge-presente { background: var(--primary-soft); color: var(--primary); }
+  .section-collapsible { max-height: 0; overflow: hidden; transition: max-height .3s ease; }
+  .section-collapsible.open { max-height: 2000px; }
+</style>
+</head>
+<body>
+
+<div class="max-w-4xl mx-auto px-4 py-6" id="app">
+  <!-- HEADER -->
+  <div class="flex items-center justify-between mb-6">
+    <div>
+      <h1 class="text-xl font-bold" style="color: var(--fg)">Plantillas de curso</h1>
+      <p class="text-sm" style="color: var(--muted-fg)">Configura cómo la IA debe generar cursos basados en uno existente</p>
+    </div>
+    <button class="btn-outline text-sm flex items-center gap-1.5" onclick="alert('Volver al listado')">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><polyline points="15 18 9 12 15 6"/></svg>
+      Salir
+    </button>
+  </div>
+
+  <!-- STEPPER -->
+  <div class="flex items-center mb-8" id="stepper">
+    <div class="flex items-center gap-1 flex-1" id="stepIndicators"></div>
+  </div>
+
+  <!-- PANELS -->
+  <div id="panel1" class="step-panel active"></div>
+  <div id="panel2" class="step-panel"></div>
+  <div id="panel3" class="step-panel"></div>
+  <div id="panel4" class="step-panel"></div>
+  <div id="panel5" class="step-panel"></div>
+  <div id="panel6" class="step-panel"></div>
+
+  <!-- FOOTER NAV -->
+  <div class="flex items-center justify-between mt-8 pt-4" style="border-top:1px solid var(--border)">
+    <button class="btn-outline text-sm" id="btnBack" onclick="prevStep()" style="visibility:hidden">
+      ← Atrás
+    </button>
+    <div class="flex items-center gap-2">
+      <button class="btn-primary text-sm" id="btnNext" onclick="nextStep()">Siguiente →</button>
+      <button class="btn-primary text-sm" id="btnSave" style="display:none" onclick="saveTemplate()">💾 Guardar plantilla</button>
+    </div>
+  </div>
+</div>
+
+<!-- TOAST CONTAINER -->
+<div id="toastContainer"></div>
+
+<script>
+// ─── DATA ─────────────────────────────────────────────────────
+const STEPS = [
+  { id: 1, label: 'Lista' },
+  { id: 2, label: 'Curso' },
+  { id: 3, label: 'Vista' },
+  { id: 4, label: 'Secciones' },
+  { id: 5, label: 'Límites' },
+  { id: 6, label: 'Guardar' },
+];
+
+const MOCK_COURSES = [
+  { id: 1, fullname: 'Ventas 101', shortname: 'VEN-101', category: 'Ventas', format: 'Temas', numsections: 4 },
+  { id: 2, fullname: 'Ventas Avanzadas', shortname: 'VEN-201', category: 'Ventas', format: 'Temas', numsections: 6 },
+  { id: 3, fullname: 'CRM Básico', shortname: 'CRM-100', category: 'Ventas', format: 'Semanal', numsections: 3 },
+  { id: 4, fullname: 'Inducción Personal', shortname: 'IND-001', category: 'RRHH', format: 'Temas', numsections: 5 },
+  { id: 5, fullname: 'Compliance 2026', shortname: 'COMP-001', category: 'RRHH', format: 'Temas', numsections: 4 },
+  { id: 6, fullname: 'Ofimática Básica', shortname: 'OFI-100', category: 'TI', format: 'Temas', numsections: 3 },
+];
+
+const MOCK_SECTIONS = [
+  { id: 0, name: 'General', activities: [
+    { id: 'a0', type: 'forum', typeLabel: 'Foro', name: 'Novedades', icon: '📄' },
+    { id: 'a1', type: 'label', typeLabel: 'Etiqueta', name: 'Bienvenida', icon: '📋' },
+  ]},
+  { id: 1, name: 'Introducción a Ventas', activities: [
+    { id: 'a2', type: 'forum', typeLabel: 'Foro', name: 'Presentaciones', icon: '📄' },
+    { id: 'a3', type: 'assign', typeLabel: 'Tarea', name: 'Mapa de ventas', icon: '📝' },
+    { id: 'a4', type: 'resource', typeLabel: 'Recurso', name: 'Video introducción', icon: '📹' },
+    { id: 'a5', type: 'quiz', typeLabel: 'Cuestionario', name: 'Conceptos básicos', icon: '❓' },
+  ]},
+  { id: 2, name: 'Técnicas de venta', activities: [
+    { id: 'a6', type: 'forum', typeLabel: 'Foro', name: 'Casos de estudio', icon: '📄' },
+    { id: 'a7', type: 'assign', typeLabel: 'Tarea', name: 'Análisis FODA', icon: '📝' },
+    { id: 'a8', type: 'quiz', typeLabel: 'Cuestionario', name: 'Evaluación módulo', icon: '❓' },
+  ]},
+  { id: 3, name: 'Cierre y evaluación', activities: [
+    { id: 'a9', type: 'forum', typeLabel: 'Foro', name: 'Debate final', icon: '📄' },
+    { id: 'a10', type: 'assign', typeLabel: 'Tarea', name: 'Plan de ventas', icon: '📝' },
+    { id: 'a11', type: 'resource', typeLabel: 'Recurso', name: 'Guía de cierre', icon: '📹' },
+  ]},
+];
+
+const ACTIVITY_TYPES = [
+  { id: 'forum', label: 'Foro', checked: true },
+  { id: 'assign', label: 'Tarea', checked: true },
+  { id: 'quiz', label: 'Cuestionario', checked: true },
+  { id: 'resource', label: 'Recurso', checked: true },
+  { id: 'lesson', label: 'Lección', checked: false },
+  { id: 'book', label: 'Libro', checked: false },
+  { id: 'glossary', label: 'Glosario', checked: false },
+  { id: 'workshop', label: 'Taller', checked: false },
+  { id: 'url', label: 'URL', checked: false },
+  { id: 'wiki', label: 'Wiki', checked: false },
+];
+
+// ─── STATE ────────────────────────────────────────────────────
+let currentStep = 1;
+const state = {
+  selectedCourseId: null,
+  templateName: '',
+  templateDesc: '',
+  sectionBehavior: {},     // sectionId -> 'custom' | 'keep' | 'exclude'
+  activityAction: {},      // activityId -> 'modify' | 'keep' | 'reference' | 'exclude'
+  activityRef: {},         // activityId -> bool (checkbox "usar como referencia")
+  activityPrompt: {},      // activityId -> string
+  maxSections: 4,
+  noLimit: false,
+  allowedTypes: ACTIVITY_TYPES.map(t => t.id),
+  namingPattern: 'Unidad {N} — {nombre}',
+  namingStart: 1,
+};
+
+// ─── INIT ─────────────────────────────────────────────────────
+function init() {
+  state.selectedCourseId = 1;
+  state.maxSections = MOCK_SECTIONS.length;
+  MOCK_SECTIONS.forEach(s => { state.sectionBehavior[s.id] = 'custom'; });
+  MOCK_SECTIONS.forEach(s => s.activities.forEach(a => {
+    state.activityAction[a.id] = 'modify';
+    state.activityRef[a.id] = true;
+  }));
+  renderStepper();
+  renderPanel1();
+}
+
+// ─── STEPPER ──────────────────────────────────────────────────
+function renderStepper() {
+  const el = document.getElementById('stepIndicators');
+  el.innerHTML = '';
+  STEPS.forEach((s, i) => {
+    const circle = document.createElement('div');
+    circle.className = 'step-circle ' + (s.id < currentStep ? 'done' : s.id === currentStep ? 'active' : 'pending');
+    circle.textContent = s.id < currentStep ? '✓' : s.id;
+    circle.style.cursor = 'pointer';
+    el.appendChild(circle);
+    if (i < STEPS.length - 1) {
+      const line = document.createElement('div');
+      line.className = 'step-line' + (s.id <= currentStep ? ' done' : '');
+      line.id = 'stepLine' + i;
+      el.appendChild(line);
+    }
+    const label = document.createElement('span');
+    label.className = 'text-xs' + (s.id === currentStep ? ' font-medium' : '') + ' ml-1';
+    label.style.color = s.id === currentStep ? 'var(--primary)' : s.id < currentStep ? 'var(--success)' : 'var(--muted-fg)';
+    label.textContent = s.label;
+    el.appendChild(label);
+    if (i < STEPS.length - 1) {
+      const spacer = document.createElement('div');
+      spacer.style.width = '6px';
+      el.appendChild(spacer);
+    }
+  });
+}
+
+// ─── NAV ──────────────────────────────────────────────────────
+function nextStep() {
+  if (currentStep === 2 && !state.selectedCourseId) { showToast('⚠️ Seleccioná un curso primero', 'warn'); return; }
+  if (currentStep === 3 && !state.templateName.trim()) { showToast('⚠️ Poné un nombre a la plantilla', 'warn'); return; }
+  if (currentStep >= STEPS.length) return;
+  currentStep++;
+  showStep(currentStep);
+}
+
+function prevStep() {
+  if (currentStep <= 1) return;
+  currentStep--;
+  showStep(currentStep);
+}
+
+function showStep(step) {
+  document.querySelectorAll('.step-panel').forEach(p => p.classList.remove('active'));
+  const panel = document.getElementById('panel' + step);
+  if (panel) panel.classList.add('active');
+  document.getElementById('btnBack').style.visibility = step > 1 ? 'visible' : 'hidden';
+  document.getElementById('btnNext').style.display = step === 6 ? 'none' : '';
+  document.getElementById('btnSave').style.display = step === 6 ? '' : 'none';
+  renderStepper();
+  switch(step) {
+    case 1: renderPanel1(); break;
+    case 2: renderPanel2(); break;
+    case 3: renderPanel3(); break;
+    case 4: renderPanel4(); break;
+    case 5: renderPanel5(); break;
+    case 6: renderPanel6(); break;
+  }
+}
+
+// ─── PANEL 1: Lista ───────────────────────────────────────────
+function renderPanel1() {
+  const el = document.getElementById('panel1');
+  el.innerHTML = `
+    <div class="flex items-center justify-between mb-4">
+      <p class="text-sm" style="color:var(--muted-fg)">Tus plantillas guardadas</p>
+      <button class="btn-primary text-sm flex items-center gap-1.5" onclick="currentStep=1;showStep(2)">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+        Crear plantilla
+      </button>
+    </div>
+    <div class="card overflow-hidden">
+      <div class="p-3" style="background:var(--muted);border-bottom:1px solid var(--border)">
+        <div class="flex items-center gap-2">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--muted-fg)"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+          <input type="text" placeholder="Buscar plantillas..." class="text-sm" style="border:none;background:transparent;padding:4px 0;outline:none;width:100%">
+        </div>
+      </div>
+      <div class="p-5 text-center" style="color:var(--muted-fg)">
+        <p class="text-lg mb-2">📋</p>
+        <p class="font-medium mb-1">Aún no hay plantillas</p>
+        <p class="text-sm">Creá tu primera plantilla para empezar</p>
+      </div>
+    </div>
+  `;
+}
+
+// ─── PANEL 2: Seleccionar curso ───────────────────────────────
+function renderPanel2() {
+  const el = document.getElementById('panel2');
+  const cats = [...new Set(MOCK_COURSES.map(c => c.category))];
+  el.innerHTML = `
+    <h2 class="text-lg font-semibold mb-1">Seleccionar curso base</h2>
+    <p class="text-sm mb-4" style="color:var(--muted-fg)">Elegí el curso que querés usar como plantilla</p>
+    <div class="flex items-center gap-2 mb-4 p-3 card">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" style="color:var(--muted-fg)"><circle cx="11" cy="11" r="8"/><path d="m21 21-4.35-4.35"/></svg>
+      <input type="text" placeholder="Buscá por nombre o código..." class="text-sm" style="border:none;background:transparent;padding:4px 0;outline:none;width:100%" oninput="filterCourses(this.value)">
+    </div>
+    <div id="courseList" class="space-y-3"></div>
+  `;
+  renderCourseList('');
+}
+
+function renderCourseList(filter) {
+  const container = document.getElementById('courseList');
+  if (!container) return;
+  const cats = [...new Set(MOCK_COURSES.map(c => c.category))];
+  let html = '';
+  cats.forEach(cat => {
+    const courses = MOCK_COURSES.filter(c => c.category === cat && (!filter || c.fullname.toLowerCase().includes(filter.toLowerCase()) || c.shortname.toLowerCase().includes(filter.toLowerCase())));
+    if (!courses.length) return;
+    html += `<p class="text-xs font-semibold uppercase tracking-wider mb-2 mt-3" style="color:var(--muted-fg)">${cat}</p>`;
+    courses.forEach(c => {
+      const sel = state.selectedCourseId === c.id;
+      html += `
+        <div class="card p-3 flex items-center gap-3 cursor-pointer transition-all duration-150 ${sel ? 'ring-2' : 'hover:shadow-sm'}" style="${sel ? 'box-shadow:0 0 0 2px var(--primary)' : ''}" onclick="selectCourse(${c.id})">
+          <div class="w-5 h-5 rounded-full border-2 flex items-center justify-center flex-shrink-0" style="${sel ? 'background:var(--primary);border-color:var(--primary)' : 'border-color:var(--border)'}">
+            ${sel ? '<span class="text-white text-xs">✓</span>' : ''}
+          </div>
+          <div class="flex-1 min-w-0">
+            <p class="font-medium text-sm truncate">${c.fullname}</p>
+            <p class="text-xs" style="color:var(--muted-fg)">${c.shortname}</p>
+          </div>
+          <span class="badge-type text-xs">${c.format}</span>
+          <span class="badge-type text-xs">${c.numsections} secciones</span>
+        </div>
+      `;
+    });
+  });
+  container.innerHTML = html || '<p class="text-sm py-4 text-center" style="color:var(--muted-fg)">No se encontraron cursos</p>';
+}
+
+function filterCourses(val) { renderCourseList(val); }
+
+function selectCourse(id) {
+  state.selectedCourseId = id;
+  state.maxSections = MOCK_SECTIONS.length;
+  renderCourseList('');
+}
+
+// ─── PANEL 3: Vista previa ────────────────────────────────────
+function renderPanel3() {
+  const course = MOCK_COURSES.find(c => c.id === state.selectedCourseId);
+  const totalActs = MOCK_SECTIONS.reduce((a, s) => a + s.activities.length, 0);
+  const el = document.getElementById('panel3');
+  let secHtml = '';
+  MOCK_SECTIONS.forEach(s => {
+    secHtml += `
+      <div class="section-card mb-3">
+        <div class="px-4 py-3 flex items-center gap-2" style="background:var(--muted);border-bottom:1px solid var(--border)">
+          <span>📖</span>
+          <span class="font-medium text-sm">${s.name}</span>
+          <span class="text-xs" style="color:var(--muted-fg)">${s.activities.length} actividades</span>
+        </div>
+        <div class="px-4 py-2 space-y-1">
+          ${s.activities.map(a => `
+            <div class="activity-row flex items-center gap-2 px-2 py-1.5 text-sm">
+              <span>${a.icon}</span>
+              <span class="badge-type">${a.typeLabel}</span>
+              <span class="truncate">${a.name}</span>
+            </div>
+          `).join('')}
+        </div>
+      </div>
+    `;
+  });
+  el.innerHTML = `
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h2 class="text-lg font-semibold mb-1">Vista previa del curso</h2>
+        <p class="text-sm" style="color:var(--muted-fg)">Curso base: <strong>${course.fullname}</strong> (${course.shortname}) — ${MOCK_SECTIONS.length} secciones, ${totalActs} actividades</p>
+      </div>
+    </div>
+    ${secHtml}
+    <div class="card p-4 mt-4 space-y-3">
+      <div>
+        <label class="text-sm font-medium mb-1 block">Nombre de la plantilla <span style="color:var(--danger)">*</span></label>
+        <input type="text" placeholder="Ej: Curso Ventas Básico" value="${state.templateName}" oninput="state.templateName=this.value" class="text-sm">
+      </div>
+      <div>
+        <label class="text-sm font-medium mb-1 block">Descripción (opcional)</label>
+        <textarea rows="2" placeholder="Describí para qué sirve esta plantilla..." class="text-sm" oninput="state.templateDesc=this.value">${state.templateDesc}</textarea>
+      </div>
+    </div>
+  `;
+}
+
+// ─── PANEL 4: Secciones ───────────────────────────────────────
+function renderPanel4() {
+  const el = document.getElementById('panel4');
+  el.innerHTML = `
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h2 class="text-lg font-semibold mb-1">Configurar secciones</h2>
+        <p class="text-sm" style="color:var(--muted-fg)">Decidí qué hace la IA con cada parte del curso</p>
+      </div>
+    </div>
+    <div id="sectionsConfig"></div>
+  `;
+  renderSectionsConfig();
+}
+
+function renderSectionsConfig() {
+  const container = document.getElementById('sectionsConfig');
+  if (!container) return;
+  let html = '';
+  MOCK_SECTIONS.forEach(s => {
+    const behavior = state.sectionBehavior[s.id] || 'custom';
+    const isCollapsed = behavior !== 'custom';
+    html += `
+      <div class="section-card mb-4 ${behavior === 'keep' ? 'ring-2' : ''}" style="${behavior === 'keep' ? 'box-shadow:0 0 0 2px hsl(142,70%,40%)' : ''}${behavior === 'exclude' ? 'opacity:.6' : ''}">
+        <div class="px-4 py-3 flex items-center justify-between" style="background:var(--muted);border-bottom:1px solid var(--border)">
+          <div class="flex items-center gap-2">
+            <span>📖</span>
+            <span class="font-medium text-sm">${s.name}</span>
+            <span class="text-xs" style="color:var(--muted-fg)">${s.activities.length} activ.</span>
+            ${behavior === 'keep' ? '<span class="text-xs px-2 py-0.5 rounded-full" style="background:hsl(142,70%,92%);color:hsl(142,70%,30%)">🔒 Intacta</span>' : ''}
+            ${behavior === 'exclude' ? '<span class="text-xs px-2 py-0.5 rounded-full" style="background:hsl(0,0%,92%);color:var(--muted-fg)">🚫 Excluida</span>' : ''}
+          </div>
+          <div class="flex items-center gap-2">
+            <select class="text-xs" style="width:auto;padding:4px 8px" onchange="changeSectionBehavior(${s.id}, this.value)">
+              <option value="custom" ${behavior === 'custom' ? 'selected' : ''}>🎯 Personalizada</option>
+              <option value="keep" ${behavior === 'keep' ? 'selected' : ''}>🔒 Mantener intacta</option>
+              <option value="exclude" ${behavior === 'exclude' ? 'selected' : ''}>🚫 No incluir</option>
+            </select>
+          </div>
+        </div>
+        <div class="section-collapsible ${behavior === 'custom' ? 'open' : ''}" id="sectionBody${s.id}">
+          <div class="px-4 py-2">
+            ${behavior === 'custom' ? `
+              <div class="flex items-center justify-end mb-2">
+                <div class="relative inline-block text-xs" x-data="{ open: false }">
+                  <button class="btn-outline text-xs px-3 py-1" onclick="toggleQuickMenu(${s.id})">⚡ Acciones rápidas</button>
+                  <div class="hidden absolute right-0 mt-1 w-56 card p-1 z-10 shadow-lg" id="quickMenu${s.id}">
+                    <button class="block w-full text-left px-3 py-1.5 text-xs rounded hover:bg-gray-100" onclick="bulkAction(${s.id},'keep')">🔒 Mantener intactas</button>
+                    <button class="block w-full text-left px-3 py-1.5 text-xs rounded hover:bg-gray-100" onclick="bulkAction(${s.id},'modify')">✨ Modificar todas</button>
+                    <button class="block w-full text-left px-3 py-1.5 text-xs rounded hover:bg-gray-100" onclick="bulkAction(${s.id},'reference')">📖 Solo referencia</button>
+                    <hr class="my-1" style="border-color:var(--border)">
+                    <button class="block w-full text-left px-3 py-1.5 text-xs rounded hover:bg-gray-100" onclick="bulkActionByType(${s.id},'forum')">📄 Foros → Modificar</button>
+                    <button class="block w-full text-left px-3 py-1.5 text-xs rounded hover:bg-gray-100" onclick="bulkActionByType(${s.id},'assign')">📝 Tareas → Intacta</button>
+                    <button class="block w-full text-left px-3 py-1.5 text-xs rounded hover:bg-gray-100" onclick="bulkActionByType(${s.id},'resource')">📹 Recursos → Solo ref</button>
+                  </div>
+                </div>
+              </div>
+              ${s.activities.map(a => renderActivityRow(s.id, a)).join('')}
+            ` : behavior === 'keep' ? `
+              <div class="py-3 text-center text-sm" style="color:var(--muted-fg)">
+                🔒 Esta sección se copiará <strong>exactamente igual</strong> al nuevo curso. No necesita configuración.
+              </div>
+            ` : `
+              <div class="py-3 text-center text-sm" style="color:var(--muted-fg)">
+                🚫 Esta sección <strong>no aparecerá</strong> en los cursos generados con esta plantilla.
+              </div>
+            `}
+          </div>
+        </div>
+      </div>
+    `;
+  });
+  container.innerHTML = html;
+}
+
+function renderActivityRow(sectionId, a) {
+  const action = state.activityAction[a.id] || 'modify';
+  const ref = state.activityRef[a.id] !== false;
+  const prompt = state.activityPrompt[a.id] || '';
+  const showRef = action === 'keep' || action === 'modify' || action === 'reference';
+  const refDisabled = action === 'modify' || action === 'reference';
+  return `
+    <div class="activity-row flex items-start gap-3 px-2 py-2.5 text-sm border-t" style="border-color:var(--border)">
+      <span class="mt-0.5">${a.icon}</span>
+      <div class="flex-1 min-w-0">
+        <div class="flex items-center gap-2 mb-1">
+          <span class="badge-type">${a.typeLabel}</span>
+          <span class="truncate font-medium">${a.name}</span>
+          ${action === 'reference' ? '<span class="text-xs px-2 py-0.5 rounded-full" style="background:hsl(252,55%,92%);color:hsl(252,55%,42%)">📖 Solo referencia</span>' : ''}
+          ${action === 'exclude' ? '<span class="text-xs px-2 py-0.5 rounded-full" style="background:hsl(0,0%,92%);color:var(--muted-fg)">🚫 Excluida</span>' : ''}
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <select class="text-xs" style="width:auto;padding:4px 8px" onchange="changeActivityAction('${a.id}', this.value)">
+            <option value="modify" ${action === 'modify' ? 'selected' : ''}>✨ Modificar con IA</option>
+            <option value="keep" ${action === 'keep' ? 'selected' : ''}>🔒 Mantener intacta</option>
+            <option value="reference" ${action === 'reference' ? 'selected' : ''}>📖 Solo referencia</option>
+            <option value="exclude" ${action === 'exclude' ? 'selected' : ''}>🚫 No incluir</option>
+          </select>
+
+          ${showRef ? `
+            <label class="flex items-center gap-1.5 text-xs cursor-pointer ${refDisabled ? 'opacity-60' : ''}" onchange="toggleActivityRef('${a.id}')">
+              <input type="checkbox" ${ref ? 'checked' : ''} ${refDisabled ? 'disabled' : ''}>
+              <span>${action === 'modify' ? '🔍 Usar original como referencia' : action === 'reference' ? '📖 Pasar como referencia' : '📖 Pasar como referencia a la IA'}</span>
+            </label>
+          ` : ''}
+        </div>
+
+        ${action === 'modify' ? `
+          <div class="prompt-field fade-in mt-2" style="width:100%">
+            <textarea rows="1" placeholder="Ej: Cambiar el contenido para que sea sobre ventas consultivas" class="text-xs" style="border:none;background:transparent;padding:4px 0;resize:none;width:100%;outline:none" oninput="state.activityPrompt['${a.id}']=this.value">${prompt}</textarea>
+            ${!prompt ? '<p class="text-xs mt-1" style="color:var(--warn)">🟡 Sin prompt — la IA usará la estructura como referencia</p>' : ''}
+          </div>
+        ` : action === 'reference' ? `
+          <div class="text-xs px-3 py-2 rounded fade-in mt-2" style="background:hsl(252,55%,96%);color:var(--muted-fg)">
+            📖 La IA usará esta actividad como <strong>referencia</strong> para entender el tono y profundidad del contenido. No se copiará al nuevo curso.
+          </div>
+        ` : ''}
+      </div>
+    </div>
+  `;
+}
+
+function changeSectionBehavior(sectionId, val) {
+  state.sectionBehavior[sectionId] = val;
+  renderSectionsConfig();
+}
+
+function changeActivityAction(activityId, val) {
+  state.activityAction[activityId] = val;
+  if (val === 'modify' || val === 'reference') state.activityRef[activityId] = true;
+  if (val === 'exclude') state.activityRef[activityId] = false;
+  renderSectionsConfig();
+}
+
+function toggleActivityRef(activityId) {
+  state.activityRef[activityId] = !state.activityRef[activityId];
+  renderSectionsConfig();
+}
+
+function toggleQuickMenu(sectionId) {
+  const menu = document.getElementById('quickMenu' + sectionId);
+  if (menu) menu.classList.toggle('hidden');
+}
+
+function bulkAction(sectionId, action) {
+  const sec = MOCK_SECTIONS.find(s => s.id === sectionId);
+  if (sec) sec.activities.forEach(a => {
+    state.activityAction[a.id] = action;
+    state.activityRef[a.id] = action === 'modify' || action === 'reference' || action === 'keep';
+    if (action !== 'modify') delete state.activityPrompt[a.id];
+  });
+  renderSectionsConfig();
+}
+
+function bulkActionByType(sectionId, type) {
+  const sec = MOCK_SECTIONS.find(s => s.id === sectionId);
+  if (sec) sec.activities.forEach(a => {
+    if (a.type === type) state.activityAction[a.id] = 'modify';
+  });
+  renderSectionsConfig();
+}
+
+// ─── PANEL 5: Límites ─────────────────────────────────────────
+function renderPanel5() {
+  const el = document.getElementById('panel5');
+  const presentTypes = [...new Set(MOCK_SECTIONS.flatMap(s => s.activities.map(a => a.type)))];
+  el.innerHTML = `
+    <h2 class="text-lg font-semibold mb-4">Límites del curso generado</h2>
+
+    <div class="card p-4 mb-4">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-lg">📐</span>
+        <div>
+          <p class="font-medium text-sm">Máximo de secciones</p>
+          <p class="text-xs" style="color:var(--muted-fg)">El curso original tiene <strong>${MOCK_SECTIONS.length} secciones</strong></p>
+        </div>
+      </div>
+      <div class="flex items-center gap-3">
+        <input type="number" value="${state.maxSections}" min="1" max="20" class="text-sm" style="width:80px" onchange="state.maxSections=parseInt(this.value)||${MOCK_SECTIONS.length}">
+        <span class="text-sm">secciones</span>
+        <label class="flex items-center gap-1.5 text-sm cursor-pointer ml-4">
+          <input type="checkbox" ${state.noLimit ? 'checked' : ''} onchange="state.noLimit=this.checked;document.querySelector('#panel5 input[type=number]').disabled=this.checked">
+          Sin límite
+        </label>
+      </div>
+      <p class="text-xs mt-2" style="color:var(--muted-fg)">
+        ${state.maxSections < MOCK_SECTIONS.length ? '💡 La IA fusionará las secciones sobrantes para ajustarse al límite.' : state.maxSections > MOCK_SECTIONS.length ? '💡 La IA puede agregar secciones adicionales si es necesario.' : '💡 Mismo número de secciones que el curso original.'}
+      </p>
+    </div>
+
+    <div class="card p-4">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-lg">🎯</span>
+        <div>
+          <p class="font-medium text-sm">Tipos de actividad permitidos</p>
+          <p class="text-xs" style="color:var(--muted-fg)">¿Qué tipos de actividad puede usar la IA en el nuevo curso?</p>
+        </div>
+      </div>
+      <div class="grid grid-cols-2 md:grid-cols-3 gap-2">
+        ${ACTIVITY_TYPES.map(t => {
+          const isPresent = presentTypes.includes(t.id);
+          const checked = state.allowedTypes.includes(t.id);
+          return `
+            <label class="flex items-center gap-2 p-2 rounded cursor-pointer ${isPresent ? 'badge-presente' : ''}" style="border:1px solid var(--border)">
+              <input type="checkbox" ${checked ? 'checked' : ''} onchange="toggleType('${t.id}')">
+              <span class="text-sm">${t.label}</span>
+              ${isPresent ? '<span class="text-xs ml-auto" style="color:var(--muted-fg)">📌</span>' : ''}
+            </label>
+          `;
+        }).join('')}
+      </div>
+      <div class="flex gap-2 mt-3">
+        <button class="btn-outline text-xs px-3 py-1" onclick="selectAllTypes(true)">Seleccionar todos</button>
+        <button class="btn-outline text-xs px-3 py-1" onclick="selectAllTypes(false)">Deseleccionar todos</button>
+      </div>
+    </div>
+
+    <div class="card p-4 mt-4">
+      <div class="flex items-center gap-2 mb-3">
+        <span class="text-lg">✏️</span>
+        <div>
+          <p class="font-medium text-sm">Patrón de nombres de secciones</p>
+          <p class="text-xs" style="color:var(--muted-fg)">¿Cómo querés que se llamen las secciones en el nuevo curso?</p>
+        </div>
+      </div>
+      <select class="text-sm mb-3" id="namingPattern" onchange="updateNamingPreview()">
+        <option value="Unidad {N} — {nombre}">Unidad {N} — {nombre}</option>
+        <option value="Módulo {N}: {nombre}">Módulo {N}: {nombre}</option>
+        <option value="Tema {N}: {nombre}">Tema {N}: {nombre}</option>
+        <option value="Semana {N}: {nombre}">Semana {N}: {nombre}</option>
+        <option value="{nombre}">{nombre} (solo nombre original)</option>
+        <option value="__custom__">✏️ Personalizado...</option>
+      </select>
+      <div id="customPatternWrap" style="display:none" class="mb-3">
+        <input type="text" placeholder="Ej: Capítulo {N} — {nombre}" class="text-sm" id="customPattern" oninput="updateNamingPreview()">
+        <p class="text-xs mt-1" style="color:var(--muted-fg)">Usá <code>{N}</code> para el número y <code>{nombre}</code> para el nombre original</p>
+      </div>
+      <div class="flex items-center gap-3 mb-3">
+        <span class="text-xs" style="color:var(--muted-fg)">Numerar desde:</span>
+        <select class="text-xs" style="width:auto;padding:4px 8px" id="namingStart" onchange="updateNamingPreview()">
+          <option value="1">1</option>
+          <option value="0">0</option>
+        </select>
+      </div>
+      <div class="p-3 rounded-lg" style="background:var(--muted)">
+        <p class="text-xs font-medium mb-2" style="color:var(--muted-fg)">Vista previa:</p>
+        <div id="namingPreview" class="space-y-1"></div>
+      </div>
+    </div>
+  `;
+  updateNamingPreview();
+}
+
+function updateNamingPreview() {
+  const sel = document.getElementById('namingPattern');
+  const customWrap = document.getElementById('customPatternWrap');
+  const customInput = document.getElementById('customPattern');
+  const start = parseInt(document.getElementById('namingStart').value);
+  const preview = document.getElementById('namingPreview');
+
+  if (sel.value === '__custom__') {
+    customWrap.style.display = 'block';
+  } else {
+    customWrap.style.display = 'none';
+    customInput.value = sel.value;
+  }
+
+  state.namingPattern = customInput.value || '{nombre}';
+  state.namingStart = start;
+
+  const pattern = state.namingPattern;
+  let html = '';
+  MOCK_SECTIONS.forEach((s, i) => {
+    const n = start + i;
+    const rendered = pattern.replace(/{N}/g, n).replace(/{nombre}/g, s.name);
+    html += '<div class="flex items-center gap-2 text-sm py-0.5"><span>📖</span><span>' + rendered + '</span></div>';
+  });
+  preview.innerHTML = html;
+}
+
+function toggleType(typeId) {
+  const idx = state.allowedTypes.indexOf(typeId);
+  if (idx > -1) state.allowedTypes.splice(idx, 1);
+  else state.allowedTypes.push(typeId);
+}
+
+function selectAllTypes(sel) {
+  state.allowedTypes = sel ? ACTIVITY_TYPES.map(t => t.id) : [];
+  renderPanel5();
+}
+
+// ─── PANEL 6: Resumen y guardar ───────────────────────────────
+function renderPanel6() {
+  const el = document.getElementById('panel6');
+  const course = MOCK_COURSES.find(c => c.id === state.selectedCourseId);
+  const totalModify = Object.entries(state.activityAction).filter(([,v]) => v === 'modify').length;
+  const totalKeep = Object.entries(state.activityAction).filter(([,v]) => v === 'keep').length;
+  const totalRefOnly = Object.entries(state.activityAction).filter(([,v]) => v === 'reference').length;
+  const totalExcludeAct = Object.entries(state.activityAction).filter(([,v]) => v === 'exclude').length;
+  const totalWithRef = Object.entries(state.activityRef).filter(([,v]) => v === true).length;
+  const keptSections = Object.entries(state.sectionBehavior).filter(([,v]) => v === 'keep').length;
+  const excludedSections = Object.entries(state.sectionBehavior).filter(([,v]) => v === 'exclude').length;
+  const noPromptModify = Object.entries(state.activityPrompt).filter(([,v]) => !v).length;
+
+  let secHtml = '';
+  MOCK_SECTIONS.forEach(s => {
+    const behavior = state.sectionBehavior[s.id] || 'custom';
+    const icon = behavior === 'keep' ? '🔒' : behavior === 'exclude' ? '🚫' : '🎯';
+    const label = behavior === 'keep' ? 'Intacta' : behavior === 'exclude' ? 'No incluir' : 'Personalizada';
+    secHtml += `<div class="flex items-center gap-2 py-1.5 text-sm">
+      <span>📖</span>
+      <span class="flex-1 truncate">${s.name}</span>
+      <span class="text-xs px-2 py-0.5 rounded-full" style="background:var(--muted)">${icon} ${label}</span>
+    </div>`;
+    if (behavior === 'custom') {
+      s.activities.forEach(a => {
+        const action = state.activityAction[a.id] || 'modify';
+        const ref = state.activityRef[a.id] !== false;
+        const aicon = action === 'modify' ? '✨' : action === 'keep' ? '🔒' : action === 'reference' ? '📖' : '🚫';
+        const alabel = action === 'modify' ? 'Modificar' : action === 'keep' ? 'Intacta' : action === 'reference' ? 'Solo ref' : 'Excluir';
+        const hasPrompt = state.activityPrompt[a.id];
+        const refBadge = action !== 'exclude' ? (ref ? '🔍 ref' : '') : '';
+        secHtml += `<div class="flex items-center gap-2 pl-8 py-1 text-sm" style="color:var(--muted-fg)">
+          <span>${a.icon}</span>
+          <span class="flex-1 truncate">${a.name}</span>
+          <span class="text-xs px-2 py-0.5 rounded-full" style="background:${action === 'modify' ? 'var(--primary-soft)' : action === 'reference' ? 'hsl(252,55%,92%)' : 'var(--muted)'}">${aicon} ${alabel}</span>
+          ${refBadge ? `<span class="text-xs px-1.5 py-0.5 rounded" style="background:hsl(215,25%,94%);font-size:10px">${refBadge}</span>` : ''}
+          ${action === 'modify' && !hasPrompt ? '<span class="text-xs" style="color:var(--warn)">🟡 Sin prompt</span>' : ''}
+        </div>`;
+      });
+    }
+  });
+
+  el.innerHTML = `
+    <div class="flex items-center justify-between mb-4">
+      <div>
+        <h2 class="text-lg font-semibold mb-1">Resumen de la plantilla</h2>
+        <p class="text-sm" style="color:var(--muted-fg)">Revisá todo antes de guardar</p>
+      </div>
+    </div>
+
+    <div class="card p-4 mb-4">
+      <div class="grid grid-cols-2 gap-4 mb-4 pb-4" style="border-bottom:1px solid var(--border)">
+        <div>
+          <p class="text-xs" style="color:var(--muted-fg)">Nombre</p>
+          <p class="font-medium text-sm">${state.templateName || '(sin nombre)'}</p>
+        </div>
+        <div>
+          <p class="text-xs" style="color:var(--muted-fg)">Curso base</p>
+          <p class="font-medium text-sm">${course?.fullname || '-'}</p>
+        </div>
+        <div>
+          <p class="text-xs" style="color:var(--muted-fg)">Máximo secciones</p>
+          <p class="font-medium text-sm">${state.noLimit ? 'Sin límite' : state.maxSections}</p>
+        </div>
+        <div>
+          <p class="text-xs" style="color:var(--muted-fg)">Tipos permitidos</p>
+          <p class="font-medium text-sm">${state.allowedTypes.length} de ${ACTIVITY_TYPES.length}</p>
+        </div>
+        <div>
+          <p class="text-xs" style="color:var(--muted-fg)">Patrón secciones</p>
+          <p class="font-medium text-sm">${state.namingPattern.replace(/{/g,'{').replace(/}/g,'}')}</p>
+        </div>
+      </div>
+      <p class="text-xs font-medium mb-2" style="color:var(--muted-fg)">Resumen de configuración</p>
+      <div class="flex gap-3 mb-4 text-sm flex-wrap">
+        <span>✨ ${totalModify} modificables</span>
+        <span>🔒 ${totalKeep + keptSections * 10} intactas</span>
+        <span>📖 ${totalRefOnly} solo referencia</span>
+        <span>🚫 ${totalExcludeAct + excludedSections * 10} excluidas</span>
+        <span class="text-xs px-2 py-0.5 rounded-full" style="background:hsl(215,25%,94%)">🔍 ${totalWithRef + keptSections * 10} pasadas como ref</span>
+      </div>
+      ${noPromptModify > 0 ? `<div class="mb-3 p-3 rounded-lg" style="background:hsl(38,92%,96%);border:1px solid hsl(38,92%,80%)">
+        <p class="text-xs">🟡 ${noPromptModify} actividad(es) marcadas como "Modificar" sin prompt. La IA usará la estructura como referencia.</p>
+      </div>` : ''}
+      ${secHtml}
+    </div>
+
+    <div class="card p-4" style="background:var(--primary-soft);border:1px solid hsl(9,100%,90%)">
+      <p class="text-sm font-medium mb-1">📋 Vista previa para el usuario</p>
+      <p class="text-xs" style="color:var(--muted-fg)">Cuando alguien use esta plantilla, verá:</p>
+      <div class="flex items-center gap-2 mt-2 text-sm" style="background:white;padding:8px 12px;border-radius:8px;border:1px solid var(--border)">
+        <span>📋 Plantilla: <strong>${state.templateName || '(sin nombre)'}</strong></span>
+        <span class="text-xs px-2 py-0.5 rounded-full" style="background:var(--muted)">${MOCK_SECTIONS.length} secciones</span>
+        <span class="text-xs px-2 py-0.5 rounded-full" style="background:var(--muted)">${totalModify} modificables</span>
+      </div>
+    </div>
+  `;
+}
+
+// ─── SAVE ─────────────────────────────────────────────────────
+function saveTemplate() {
+  showToast('✅ Plantilla "' + (state.templateName || 'Sin nombre') + '" guardada correctamente', 'success');
+}
+
+// ─── TOAST ─────────────────────────────────────────────────────
+function showToast(msg, type) {
+  const container = document.getElementById('toastContainer');
+  const colors = { success: 'hsl(142,70%,40%)', warn: 'hsl(38,92%,50%)', error: 'var(--danger)' };
+  const bgColors = { success: 'hsl(142,70%,96%)', warn: 'hsl(38,92%,96%)', error: 'hsl(8,72%,96%)' };
+  const toast = document.createElement('div');
+  toast.className = 'toast flex items-center gap-3';
+  toast.style.background = bgColors[type] || 'white';
+  toast.style.borderLeft = '4px solid ' + (colors[type] || 'var(--primary)');
+  toast.innerHTML = `
+    <span class="text-sm">${msg}</span>
+    <button class="text-xs ml-2 font-medium" style="color:var(--muted-fg)" onclick="this.parentElement.remove()">✕</button>
+    <div class="flex gap-2 mt-2">
+      <button class="btn-primary text-xs px-3 py-1.5" onclick="document.getElementById('toastContainer').innerHTML='';showStep(1)">📋 Volver al listado</button>
+      <button class="btn-outline text-xs px-3 py-1.5" onclick="this.closest('.toast').remove()">✏️ Seguir editando</button>
+    </div>
+  `;
+  container.innerHTML = '';
+  container.appendChild(toast);
+}
+
+// ─── START ────────────────────────────────────────────────────
+init();
+</script>
+</body>
+</html>
