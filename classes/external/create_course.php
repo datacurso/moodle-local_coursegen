@@ -131,6 +131,12 @@ class create_course extends external_api {
                 false
             ),
             'warningscount' => new external_value(PARAM_INT, 'Count of skipped activity creations', VALUE_DEFAULT, 0),
+            'duplicatesskipped' => new external_value(
+                PARAM_INT,
+                'Count of duplicated activities the result carried and that were not created twice',
+                VALUE_DEFAULT,
+                0
+            ),
         ]);
     }
 }

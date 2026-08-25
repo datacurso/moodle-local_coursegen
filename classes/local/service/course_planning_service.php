@@ -90,8 +90,17 @@ class course_planning_service {
             'subsections_available' => $available,
         ];
 
+        // A disabled (or never configured) policy is omitted: it must not
+        // override the teacher's explicit image toggle. Sending `with_images`
+        // together with a `mode: disabled` policy is a contradictory
+        // instruction, and the service may answer it with both an image-less
+        // and an illustrated copy of the same plan. Mirrors the guard in
+        // \local_coursegen\external\create_mod_stream for single activities.
         if ($withimages) {
-            $payload['image_policy'] = image_policy_builder::build();
+            $imagepolicy = image_policy_builder::build();
+            if (($imagepolicy['mode'] ?? '') !== activities::MODE_DISABLED) {
+                $payload['image_policy'] = $imagepolicy;
+            }
         }
 
         // Site file-type group catalog, so activities generated in the course flow
