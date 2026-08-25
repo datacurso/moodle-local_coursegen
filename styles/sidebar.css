@@ -41,7 +41,8 @@
 /* App layout — sidebar + main side by side */
 .courseai-app-layout {
   display: flex;
-  min-height: 100vh;
+  height: 100vh;
+  overflow: hidden;
 }
 
 /* Sidebar panel — static flex item, always visible */

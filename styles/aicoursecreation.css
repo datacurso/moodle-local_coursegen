@@ -2,12 +2,35 @@
 body { background: var(--bg); color: var(--fg); }
 .container { max-width: 1040px; }
 
-/* Boost's theme/boost/scss/moodle/navbar.scss sets `#page { margin-top:
-   $navbar-height }` unconditionally, to make room for Moodle's own
-   fixed site navbar. This page uses nonavbar (popup layout) and renders its
-   own fixed navbar instead, so that reserved space is just a stray gap
-   above the sidebar/main content — drop it for this page only. */
-body.local-coursegen-aicoursecreation #page {
+/* ─── APP SHELL: fixed viewport, only the main content scrolls ───────────
+   Boost's theme/boost/scss/moodle/navbar.scss also sets `#page { margin-top:
+   $navbar-height }` unconditionally, to make room for Moodle's own fixed
+   site navbar — this page uses nonavbar (popup layout) so that's dropped
+   too, or the sidebar/main would start below a stray gap.
+   Every wrapper down to #region-main gets a definite height (not just
+   min-height), so percentage heights below it (.courseai-app-layout,
+   .courseai-workspace) resolve against a real, capped box instead of
+   growing the whole document past 100vh. */
+/* html, not body, is the element browsers actually scroll for the document
+   in most engines. This stylesheet is only ever loaded on this one page
+   (see aicoursecreation.php), so a plain, unscoped html selector is safe —
+   no :has() support gamble. */
+html {
+  height: 100vh;
+  overflow: hidden;
+}
+
+body.local-coursegen-aicoursecreation {
+  height: 100vh;
+  overflow: hidden;
+}
+
+body.local-coursegen-aicoursecreation #page-wrapper,
+body.local-coursegen-aicoursecreation #page,
+body.local-coursegen-aicoursecreation #page-content,
+body.local-coursegen-aicoursecreation #region-main-box,
+body.local-coursegen-aicoursecreation #region-main {
+  height: 100%;
   margin-top: 0;
 }
 
@@ -70,6 +93,12 @@ svg { display: block; flex-shrink: 0; }
 
 .aicoursecreation-main .container {
   max-width: 1680px;
+  /* height, not min-height: a percentage min-height only resolves against a
+     parent with a DEFINITE height — min-height alone doesn't count as one,
+     so .courseai-workspace's own min-height:100% below had nothing to
+     resolve against and just shrank to content, top-aligned instead of
+     centered. */
+  height: 100%;
 }
 
 /* Remove left container padding in planning mode for edge-to-edge chat */
@@ -82,11 +111,22 @@ svg { display: block; flex-shrink: 0; }
 .app-main,
 .aicoursecreation-main {
   padding: 24px 0 80px;
+  height: 100%;
+  overflow-y: auto;
 }
 
 /* Workspace layout: chat/form left, progress right */
 .courseai-workspace {
-  display: block;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  /* Vertically centers the idle "what course do you want to create?" form.
+     100% resolves against .container/.aicoursecreation-main, both given a
+     definite height above, instead of raw viewport units — those would
+     stack on top of an already-scrollable ancestor and overflow the page.
+     .is-planning overrides display/min-height below once the chat/plan
+     view takes over. */
+  min-height: 100%;
 }
 
 .courseai-workspace.is-planning {
