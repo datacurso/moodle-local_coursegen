@@ -32,6 +32,14 @@ body.local-coursegen-aicoursecreation #region-main-box,
 body.local-coursegen-aicoursecreation #region-main {
   height: 100%;
   margin-top: 0;
+  /* Bootstrap's .container-fluid/.row/.col-12 gutters (#page, #page-content,
+     #region-main-box) leave a dead strip on the right, between our own
+     main-content scrollbar and the true browser edge — kill them so the
+     app layout is genuinely edge-to-edge. */
+  margin-left: 0;
+  margin-right: 0;
+  padding-left: 0;
+  padding-right: 0;
 }
 
 /* ─── Design tokens (matches index.css HSL palette) ──────────────────── */
@@ -113,6 +121,23 @@ svg { display: block; flex-shrink: 0; }
   padding: 24px 0 80px;
   height: 100%;
   overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.app-main::-webkit-scrollbar,
+.aicoursecreation-main::-webkit-scrollbar {
+  width: 8px;
+}
+
+.app-main::-webkit-scrollbar-track,
+.aicoursecreation-main::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.app-main::-webkit-scrollbar-thumb,
+.aicoursecreation-main::-webkit-scrollbar-thumb {
+  background: var(--border);
+  border-radius: 4px;
 }
 
 /* Workspace layout: chat/form left, progress right */

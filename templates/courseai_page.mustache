@@ -865,34 +865,61 @@
 
   </div><!-- .container -->
 
-  <!-- Sessions list view (hidden by default) -->
+  <!-- Sessions list view (hidden by default). Header + toolbar + column
+       labels are one sticky block inside the SAME scroller as the rest of
+       the page (.aicoursecreation-main) — no separate inner scrollbox. -->
   <div class="courseai-sessions-view" id="courseaiSessionsView" style="display:none">
-    <div class="courseai-sessions-header">
-      <button class="courseai-sessions-back-btn" id="courseaiSessionsBackBtn" type="button">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <polyline points="15 18 9 12 15 6"/>
-        </svg>
-      </button>
-      <h2>{{#str}}courseai_sessions_title, local_coursegen{{/str}}</h2>
+    <div class="courseai-sessions-sticky">
+      <div class="courseai-sessions-header">
+        <h2>{{#str}}courseai_sessions_title, local_coursegen{{/str}}</h2>
+        <a class="courseai-sessions-create-btn" href="aicoursecreation.php">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          {{#str}}courseai_sessions_newbtn, local_coursegen{{/str}}
+        </a>
+      </div>
+
+      {{#hassessions}}
+      <div class="courseai-sessions-toolbar">
+        <div class="courseai-sessions-search">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="search" id="courseaiSessionsSearch"
+                 placeholder="{{#str}}courseai_sessions_search, local_coursegen{{/str}}">
+        </div>
+        <select id="courseaiSessionsStatusFilter" class="courseai-sessions-filter">
+          <option value="">{{#str}}courseai_sessions_filter_all, local_coursegen{{/str}}</option>
+          <option value="1">{{#str}}status_pending, local_coursegen{{/str}}</option>
+          <option value="2">{{#str}}status_creating, local_coursegen{{/str}}</option>
+          <option value="4">{{#str}}status_failed, local_coursegen{{/str}}</option>
+        </select>
+      </div>
+
+      <div class="courseai-sessions-columns" role="row">
+        <span role="columnheader">{{#str}}courseai_sessions_col_name, local_coursegen{{/str}}</span>
+        <span role="columnheader">{{#str}}courseai_sessions_col_status, local_coursegen{{/str}}</span>
+        <span role="columnheader">{{#str}}courseai_sessions_col_created, local_coursegen{{/str}}</span>
+      </div>
+      {{/hassessions}}
     </div>
 
     {{#hassessions}}
-    <div class="courseai-sessions-grid" id="courseaiSessionsGrid">
+    <div class="courseai-sessions-table" role="table" id="courseaiSessionsGrid">
       {{#allsessions}}
-      <div class="courseai-session-card" data-sessionid="{{id}}">
-        <div class="courseai-session-card-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
-          </svg>
-        </div>
-        <div class="courseai-session-card-body">
-          <h3 class="courseai-session-card-title">{{title}}</h3>
-          <span class="courseai-session-card-status">{{statuslabel}}</span>
-          <span class="courseai-session-card-date">{{timecreated}}</span>
-        </div>
-        <a class="courseai-session-card-btn" href="aicoursecreation.php?sessionid={{id}}">{{#str}}courseai_sessions_continuebtn, local_coursegen{{/str}} &rarr;</a>
+      <div class="courseai-session-row" role="row" data-sessionid="{{id}}" data-status="{{status}}" data-title="{{title}}">
+        <span class="courseai-session-row-name" role="cell">
+          <a href="aicoursecreation.php?sessionid={{id}}">{{title}}</a>
+        </span>
+        <span role="cell"><span class="courseai-session-row-status">{{statuslabel}}</span></span>
+        <span class="courseai-session-row-date" role="cell">{{timecreated}}</span>
       </div>
       {{/allsessions}}
+    </div>
+
+    <div class="courseai-sessions-noresults" id="courseaiSessionsNoResults" style="display:none">
+      {{#str}}courseai_sessions_noresults, local_coursegen{{/str}}
     </div>
 
     <div class="courseai-sessions-pagination" id="courseaiSessionsPagination" style="display:none">

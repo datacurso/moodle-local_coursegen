@@ -117,21 +117,21 @@
 .courseai-sidebar-btn-new {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
-  padding: 10px 12px;
-  background: var(--primary);
-  color: var(--primary-fg);
+  padding: 7px 10px;
+  background: transparent;
+  color: var(--fg);
   border: none;
   border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
-  transition: opacity .15s;
+  transition: background .15s;
 }
 
-.courseai-sidebar-btn-new:hover { opacity: .9; }
+.courseai-sidebar-btn-new:hover { background: var(--muted); }
 .courseai-sidebar-btn-new svg { flex-shrink: 0; }
 
 /* Recent section */
@@ -146,8 +146,6 @@
   border-radius: 6px;
   white-space: nowrap;
   transition: background .15s;
-  text-transform: uppercase;
-  letter-spacing: .4px;
   font-weight: 500;
   font-size: 12px;
   color: var(--muted-fg);
@@ -218,25 +216,23 @@
   font-style: italic;
 }
 
-/* View all — same style as section header */
+/* View all — flat gray pill, like Claude's "View all conversations". */
 .courseai-sidebar-viewall {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: flex-start;
   padding: 8px 10px;
   border-radius: 6px;
   cursor: pointer;
   white-space: nowrap;
   transition: background .15s;
-  background: none;
+  background: transparent;
   border: none;
   color: var(--muted-fg);
   font-size: 12px;
   font-family: inherit;
   width: 100%;
   margin-top: 4px;
-  text-transform: uppercase;
-  letter-spacing: .4px;
   font-weight: 500;
 }
 
@@ -244,111 +240,155 @@
 .courseai-sidebar-viewall svg { flex-shrink: 0; }
 
 /* ─── SESSIONS VIEW (inside wizard) ───────────────────────────────── */
+/* Uses the full width available (grows further once the sidebar collapses)
+   and scrolls as part of .aicoursecreation-main itself — no separate inner
+   scrollbox. Only the header/toolbar/column-labels block is sticky. */
 .courseai-sessions-view {
-  max-width: 1040px;
-  margin: 0 auto;
   padding: 32px 24px;
+}
+
+.courseai-sessions-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--card);
+  margin: -32px -24px 0;
+  padding: 32px 24px 0;
 }
 
 .courseai-sessions-header {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 28px;
+  margin-bottom: 20px;
 }
 
 .courseai-sessions-header h2 {
   font-size: 22px;
   font-weight: 700;
   margin: 0;
+  flex: 1;
 }
 
-.courseai-sessions-back-btn {
+.courseai-sessions-create-btn {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: var(--muted);
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  cursor: pointer;
-  color: var(--fg);
-  transition: background .15s;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--primary);
+  color: var(--primary-fg);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
   flex-shrink: 0;
-  padding: 0;
+  transition: opacity .15s;
 }
 
-.courseai-sessions-back-btn:hover { background: var(--border); }
+.courseai-sessions-create-btn:hover { opacity: .9; }
 
-/* Card grid */
-.courseai-sessions-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
-}
-
-.courseai-session-card {
+/* Toolbar: search + status filter */
+.courseai-sessions-toolbar {
   display: flex;
-  flex-direction: column;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 20px;
-  transition: box-shadow .2s;
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
-.courseai-session-card:hover {
-  box-shadow: 0 4px 20px hsl(215, 28%, 17%, 0.1);
+/* Column labels — same grid template as .courseai-session-row below, so
+   labels and cells line up exactly. */
+.courseai-sessions-columns {
+  display: grid;
+  grid-template-columns: 1fr 140px 160px;
+  gap: 12px;
+  padding: 0 16px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted-fg);
 }
 
-.courseai-session-card-icon {
-  width: 48px;
-  height: 48px;
+.courseai-sessions-search {
   display: flex;
   align-items: center;
-  justify-content: center;
-  background: hsl(215, 40%, 96%);
-  border-radius: 10px;
-  margin-bottom: 12px;
-  color: var(--primary);
+  gap: 8px;
+  flex: 1;
+  max-width: 320px;
+  padding: 7px 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted-fg);
 }
 
-.courseai-session-card-body { flex: 1; margin-bottom: 16px; }
+.courseai-sessions-search svg { flex-shrink: 0; }
 
-.courseai-session-card-title {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0 0 6px;
+.courseai-sessions-search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: none;
+  font-size: 13px;
   color: var(--fg);
+  min-width: 0;
 }
 
-.courseai-session-card-status {
+.courseai-sessions-search input::placeholder { color: var(--muted-fg); }
+
+.courseai-sessions-filter {
+  padding: 7px 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.courseai-sessions-noresults {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--muted-fg);
+  font-size: 14px;
+}
+
+/* Table (Name / Status / Created at) */
+.courseai-session-row {
+  display: grid;
+  grid-template-columns: 1fr 140px 160px;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  transition: background .15s;
+}
+
+.courseai-session-row:hover { background: var(--muted); }
+
+.courseai-session-row-name a {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.courseai-session-row-name a:hover { text-decoration: underline; }
+
+.courseai-session-row-status {
   display: inline-block;
   font-size: 12px;
   padding: 3px 10px;
   border-radius: 20px;
   background: var(--muted);
   color: var(--muted-fg);
-  margin-right: 8px;
+  white-space: nowrap;
 }
 
-.courseai-session-card-date {
-  font-size: 11px;
+.courseai-session-row-date {
+  font-size: 13px;
   color: var(--muted-fg);
+  white-space: nowrap;
 }
-
-.courseai-session-card-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--primary);
-  text-decoration: none;
-}
-
-.courseai-session-card-btn:hover { text-decoration: underline; }
 
 /* Empty state */
 .courseai-sessions-empty {
@@ -449,12 +489,14 @@
 .courseai-sidebar.collapsed ~ .courseai-sidebar-expand-btn,
 .courseai-sidebar.collapsed ~ * .courseai-sidebar-expand-btn { display: flex; }
 
-/* ─── MODE ITEMS ───────────────────────────────────────────── */
+/* ─── MODE ITEMS (Claude-style Chat/Code segmented control) ─────────── */
 .courseai-sidebar-modes {
   display: flex;
-  gap: 4px;
-  padding: 0 6px;
-  margin-bottom: 8px;
+  gap: 2px;
+  padding: 3px;
+  margin-bottom: 10px;
+  background: var(--muted);
+  border-radius: 8px;
 }
 .courseai-sidebar-mode-item {
   display: flex;
@@ -463,6 +505,7 @@
   flex: 1;
   padding: 6px 8px;
   border-radius: 6px;
+  border: 1px solid transparent;
   font-size: 12px;
   color: var(--muted-fg);
   cursor: pointer;
@@ -471,11 +514,11 @@
   justify-content: center;
   background: transparent;
 }
-.courseai-sidebar-mode-item:hover { background: var(--muted); }
+.courseai-sidebar-mode-item:hover { color: var(--fg); }
 .courseai-sidebar-mode-item.active {
   background: var(--card);
+  border-color: var(--border);
   color: var(--fg);
   font-weight: 500;
-  box-shadow: 0 1px 3px hsl(0,0%,0%,.08);
 }
 .courseai-sidebar-mode-item svg { flex-shrink: 0; width: 13px; height: 13px; }

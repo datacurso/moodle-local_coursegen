@@ -36,6 +36,11 @@ export const initSidebar = () => {
     const sessionsBackBtn = document.getElementById('courseaiSessionsBackBtn');
     const backdrop = document.getElementById('courseaiSidebarBackdrop');
     const mainContainer = document.getElementById('courseaiWorkspace');
+    // .courseai-workspace's own parent (.container) has a definite height for
+    // the idle-form centering to work against (see aicoursecreation.css), so
+    // hiding only the workspace leaves that full-height wrapper behind,
+    // pushing the sessions view below the fold. Hide the wrapper instead.
+    const mainContainerWrap = mainContainer ? mainContainer.parentElement : null;
 
     if (!sidebar) {
         return;
@@ -43,7 +48,24 @@ export const initSidebar = () => {
 
     // Sidebar starts collapsed (class already in HTML template).
 
-    // ─── Pagination (10 per page) ────────────────────────────────────
+    // ─── Search + status filter ───────────────────────────────────────
+    const searchInput = document.getElementById('courseaiSessionsSearch');
+    const statusFilter = document.getElementById('courseaiSessionsStatusFilter');
+    const noResultsEl = document.getElementById('courseaiSessionsNoResults');
+
+    const matchesFilters = (card) => {
+        const query = (searchInput?.value || '').trim().toLowerCase();
+        const status = statusFilter?.value || '';
+        if (status && card.dataset.status !== status) {
+            return false;
+        }
+        if (query && !(card.dataset.title || '').toLowerCase().includes(query)) {
+            return false;
+        }
+        return true;
+    };
+
+    // ─── Pagination (10 per page, over the filtered set only) ─────────
     const PER_PAGE = 10;
     let currentPage = 1;
     let totalPages = 1;
@@ -53,17 +75,23 @@ export const initSidebar = () => {
     const paginationInfo = document.getElementById('courseaiPaginationInfo');
 
     const renderPage = (page) => {
-        const cards = document.querySelectorAll('#courseaiSessionsGrid .courseai-session-card');
+        const cards = Array.from(document.querySelectorAll('#courseaiSessionsGrid .courseai-session-row'));
         if (!cards.length) {
             return;
         }
-        totalPages = Math.ceil(cards.length / PER_PAGE);
+
+        const matching = cards.filter(matchesFilters);
+        totalPages = Math.max(1, Math.ceil(matching.length / PER_PAGE));
         currentPage = Math.max(1, Math.min(page, totalPages));
 
-        cards.forEach((card, i) => {
+        cards.forEach((card) => { card.style.display = 'none'; });
+        matching.forEach((card, i) => {
             card.style.display = Math.floor(i / PER_PAGE) + 1 === currentPage ? '' : 'none';
         });
 
+        if (noResultsEl) {
+            noResultsEl.style.display = matching.length ? 'none' : '';
+        }
         if (paginationEl) {
             paginationEl.style.display = totalPages > 1 ? 'flex' : 'none';
         }
@@ -84,12 +112,18 @@ export const initSidebar = () => {
     if (paginationNext) {
         paginationNext.addEventListener('click', () => renderPage(currentPage + 1));
     }
+    if (searchInput) {
+        searchInput.addEventListener('input', () => renderPage(1));
+    }
+    if (statusFilter) {
+        statusFilter.addEventListener('change', () => renderPage(1));
+    }
 
     // ─── View switching ──────────────────────────────────────────────
     const showSessionsView = () => {
         closeSidebar();   // close sidebar when switching to sessions view
-        if (mainContainer) {
-            mainContainer.style.display = 'none';
+        if (mainContainerWrap) {
+            mainContainerWrap.style.display = 'none';
         }
         if (sessionsView) {
             sessionsView.style.display = '';
@@ -102,8 +136,8 @@ export const initSidebar = () => {
         if (sessionsView) {
             sessionsView.style.display = 'none';
         }
-        if (mainContainer) {
-            mainContainer.style.display = '';
+        if (mainContainerWrap) {
+            mainContainerWrap.style.display = '';
         }
     };
 
