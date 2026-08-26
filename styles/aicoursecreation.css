@@ -237,6 +237,63 @@ svg { display: block; flex-shrink: 0; }
   text-align: left;
 }
 
+#templateModeView .context-head {
+  text-align: left;
+}
+
+/* .courseai-workspace's default justify-content:center (above) vertically
+   floats the idle free-mode form mid-viewport. In template mode that means
+   the card visibly jumps to the top the moment the structure loads and the
+   page grows taller than the viewport. Anchor template mode to the top from
+   the very first paint instead, so picking a template never shifts it. */
+.courseai-workspace:has(#templateModeView) {
+  justify-content: flex-start;
+}
+
+/* .context-wrap's default max-width:768px + margin:0 auto (below) centers it
+   as a narrow island inside the much wider .aicoursecreation-main .container
+   (1680px), leaving huge dead space on both sides — planning mode already
+   drops this same cap (.courseai-workspace.is-planning .context-wrap above)
+   to use the full available width; do the same here. */
+#templateModeView.context-wrap {
+  max-width: none;
+  margin: 0;
+}
+
+/* #templateModeCard never shows a border/shadow — flat at every state, no
+   dependence on selection. The footer/Generate button still only appears
+   once #templateModeCard.tpl-active is set (template_mode.js, on the
+   autocomplete's 'change' event) — but nothing about the selector itself
+   (border, size, position) ever changes, so picking a template can't shift
+   it or make it read as "locked". */
+#templateModeCard {
+  border-color: transparent;
+  box-shadow: none;
+}
+#templateModeCard #tplModeFooter {
+  display: none;
+}
+#templateModeCard.tpl-active #tplModeFooter {
+  /* Beats the mustache-side inline style="display:none" default. */
+  display: flex !important;
+}
+
+/* Before a template is picked, core/form-autocomplete renders its
+   noselectionstring as a floating hint span sitting above the search box —
+   two stacked rows for one single field. The search input's own "Search"
+   placeholder already says the same thing, so drop the redundant hint and
+   let this read as one plain field, not a two-part composer. */
+#fitem_id_templateid .form-autocomplete-selection:not(:has([role="option"])) {
+  display: none;
+}
+
+/* Empty-state notification (#tplModeEmpty, real core/notification "info"
+   markup): marks where the template's structure will render, shown until a
+   template is picked. */
+#templateModeCard.tpl-active #tplModeEmpty {
+  display: none;
+}
+
 /* ─── CONTEXT FORM ────────────────────────────────────────────────────── */
 .context-wrap {
   max-width: 768px;
@@ -2272,6 +2329,208 @@ svg { display: block; flex-shrink: 0; }
   border-radius: 8px;
   margin-top: 4px;
 }
+
+/* ============================================================
+   §7.1 Guided template form — Image 1/2 card view (sections/activities).
+   Scoped to #tplModeStructure so it never touches the free-mode
+   detailed/planning view (#prvSections), which uses the same
+   core_courseformat class names in a different context.
+
+   The base card chrome (.section-item border/radius/padding),
+   .activity-grid layout and purpose-tinted icons all come from the
+   loaded Boost theme for free — real course-format markup, real Boost
+   CSS. This block only adds what Boost only gives inside `body.editing`
+   (which this popup never has): edit-view dashed activity separators,
+   the locked/reference dimmed state, the hover-reveal insert-between-
+   rows "+" (mirrors detailed/'s .cg-insert-zone pattern verbatim), and
+   the add-section/add-activity pill controls.
+   ============================================================ */
+#tplModeStructure .course-section { margin-top: 20px; position: relative; }
+#tplModeStructure .course-content > .course-section:first-child { margin-top: 0; }
+
+/* Locked (kept-as-is) section — dimmed, non-interactive reference state,
+   same convention already used by .dp-item-regenerating/.cg-activity--pending
+   (opacity, not grayscale). */
+#tplModeStructure .course-section.is-locked .section-item {
+  background: var(--muted);
+  opacity: .9;
+}
+#tplModeStructure .cg-tpl-locked-badge { font-weight: 500; }
+#tplModeStructure .cg-tpl-locked-note { font-size: 11px; }
+
+/* Locked activity — dimmed reference row, no pointer affordances (it has
+   no action controls anyway, but the whole row reads as non-interactive). */
+#tplModeStructure .activity.is-locked .activity-item { opacity: .55; pointer-events: none; }
+
+/* Chevron sizing + meta badge (Boost only sizes these inside .editing). */
+#tplModeStructure .icons-collapse-expand .icon { width: 14px; height: 14px; margin: 0; }
+#tplModeStructure .icons-collapse-expand { flex-shrink: 0; }
+#tplModeStructure .cg-section-meta { font-weight: 500; font-size: 11px; }
+
+/* Non-locked activity hover (Boost has no hover feedback outside .editing). */
+#tplModeStructure .activity:not(.is-locked) .activity-item:hover {
+  background: var(--muted);
+  border-radius: 8px;
+}
+
+/* Edit-view dashed separators between activities (Boost only gives these
+   inside `body.editing`; this popup never has that class). */
+#tplModeStructure .course-section .activity {
+  border-top: 2px dashed #dee2e6;
+  margin-top: 10px;
+  padding-top: 10px;
+  position: relative;
+  transition: border-top-color .12s ease;
+}
+#tplModeStructure .course-section .section .activity:first-child {
+  border-top: 2px dashed #dee2e6;
+  margin-top: 12px;
+  padding-top: 12px;
+}
+
+/* Activity "description" (module type name) — grey subtitle under the title. */
+#tplModeStructure .cg-activity-desc {
+  font-size: 12px;
+  color: var(--muted-fg);
+  margin: 2px 0 0;
+  line-height: 1.4;
+}
+
+/* Delete action control — same look/hover as detailed/'s .dp-action-btn. */
+#tplModeStructure .cg-item-actions { display: inline-flex; align-items: center; gap: 6px; }
+#tplModeStructure .cg-item-actions .dp-action-btn { box-shadow: none; }
+#tplModeStructure .cg-item-actions .dp-action-btn:hover {
+  background: hsl(215 26% 90%);
+  color: hsl(215 28% 28%);
+}
+
+/* ── On-hover "add activity" divider — mirrors detailed/'s .cg-insert-zone
+   pattern verbatim (see #prvSections .cg-insert-zone in §8). A "+" centered
+   on the dashed line above EVERY activity, including a locked one, so the
+   professor can insert a new activity next to a reference row. The
+   mustache template omits this zone entirely inside a locked section
+   (showinsertzone), so there is nothing to hide here via CSS. ── */
+#tplModeStructure .cg-insert-zone {
+  position: absolute;
+  top: -13px;
+  left: 0;
+  right: 0;
+  height: 26px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  z-index: 3;
+}
+#tplModeStructure .cg-insert-btn {
+  opacity: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 30px;
+  height: 20px;
+  padding: 0;
+  border: none;
+  border-radius: 5px;
+  background: hsl(10 85% 91%);
+  color: hsl(10 62% 42%);
+  cursor: pointer;
+  box-shadow: none;
+  transition: opacity .12s ease, background-color .12s ease, color .12s ease;
+}
+#tplModeStructure .cg-insert-zone:hover .cg-insert-btn,
+#tplModeStructure .cg-insert-btn:focus-visible { opacity: 1; }
+#tplModeStructure .cg-insert-btn:hover { background: var(--primary); color: var(--primary-fg); }
+#tplModeStructure .course-section .activity:has(> .cg-insert-zone .cg-insert-btn:hover) {
+  border-top-color: var(--primary);
+}
+
+/* ── "+ Add activity" pill, centered on a closing dashed line — same look
+   as detailed/'s bottom add control (§8). "+ Add section" reuses the
+   unscoped .dp-add-section-wrap .dp-add-control rule above as-is. ── */
+#tplModeStructure .dp-add-activity-wrap {
+  position: relative;
+  display: block;
+  margin-top: 14px;
+  padding-top: 2px;
+  list-style: none;
+}
+#tplModeStructure .dp-add-activity-wrap::before {
+  content: '';
+  position: absolute;
+  left: 4px;
+  right: 4px;
+  top: 50%;
+  border-top: 2px dashed #c8ccd1;
+  transition: border-top-color .12s ease;
+  z-index: 0;
+}
+#tplModeStructure .dp-add-activity-wrap:has(.dp-add-control:hover)::before {
+  border-top-color: var(--primary);
+}
+#tplModeStructure .dp-add-activity-wrap .dp-add-control {
+  position: relative;
+  z-index: 1;
+  width: fit-content;
+  margin: 0 auto;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+  border: none;
+  border-radius: 6px;
+  background: hsl(10 85% 91%);
+  color: hsl(10 62% 42%);
+  padding: 4px 14px;
+  font-size: 13px;
+  line-height: 1.35;
+  box-shadow: none;
+  transition: background-color .12s ease, color .12s ease;
+}
+#tplModeStructure .dp-add-activity-wrap .dp-add-control:hover {
+  background: var(--primary);
+  color: var(--primary-fg);
+}
+#tplModeStructure .dp-add-activity-wrap .dp-add-control .dp-add-control__icon { color: inherit; font-size: 14px; }
+
+/* ============================================================
+   §7.2 Template mode — activity chooser modal restyle.
+   Functionally unchanged (search input + click-to-add card, limited to
+   the template's allowedactivities): only visual polish so it reads as
+   part of the same modern card language as #tplModeStructure above
+   (rounded corners, calmer note banner, hover-lift cards). The grid/icon
+   layout itself (.modchoosercontainer/.optionscontainer/.option/
+   .activityiconcontainer) is real core_course activity-chooser markup,
+   styled natively by the loaded Boost theme.
+   ============================================================ */
+#tplActivityChooserModal .modal-content {
+  border-radius: var(--radius);
+  border: none;
+  overflow: hidden;
+}
+#tplActivityChooserModal .modal-header {
+  border-bottom: 1px solid var(--border);
+  padding: 1rem 1.25rem;
+}
+#tplActivityChooserModal .modal-title { font-weight: 700; font-size: 1rem; }
+#tplActivityChooserModal .alert-info {
+  background: hsl(210 60% 96%);
+  border: none;
+  color: hsl(210 40% 35%);
+  border-radius: 8px;
+}
+#tplActivityChooserModal .searchcontainer .form-control {
+  border-radius: 8px;
+  border-color: var(--border);
+}
+#tplActivityChooserModal .option {
+  border-radius: 10px;
+  transition: box-shadow .12s ease, transform .12s ease;
+}
+#tplActivityChooserModal .option:hover {
+  box-shadow: 0 4px 14px rgba(0, 0, 0, .08);
+  transform: translateY(-1px);
+}
+#tplActivityChooserModal .optioninfo a { text-decoration: none; color: inherit; }
+#tplActivityChooserModal .optionname { font-size: 12px; font-weight: 600; color: var(--fg); }
 
 /* Section row is a positioning context for the simple plan renderer. */
 .prv-section-row {

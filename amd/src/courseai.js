@@ -258,7 +258,10 @@ export const init = async(params) => {
 
         // On reload the page is server-rendered in planning mode (is-planning +
         // in-place skeletons) so the static chrome shows immediately. If there is
-        // nothing to resume, fall back to the context form.
+        // nothing to resume, fall back to the context form. Only relevant when
+        // resumeSessionId is actually set — an ordinary load (free or template
+        // mode, no ?sessionid=) never runs any of this, so it can't clobber
+        // whatever #contextView/#templateModeView the server already rendered.
         const revertToContextView = () => {
             const workspace = document.getElementById('courseaiWorkspace');
             if (workspace) {
@@ -278,9 +281,11 @@ export const init = async(params) => {
         };
 
         try {
-            const resumed = await resumeFromSnapshot();
-            if (!resumed) {
-                revertToContextView();
+            if (resumeSessionId) {
+                const resumed = await resumeFromSnapshot();
+                if (!resumed) {
+                    revertToContextView();
+                }
             }
         } catch (resumeError) {
             revertToContextView();

@@ -136,10 +136,24 @@ $subsectionsenabled = \local_coursegen\local\service\course_planning_service::su
 // Get logo URL (sidebar top bar, left of the collapse toggle).
 $logourl = new moodle_url('/local/coursegen/pix/logo.png');
 
+// Native Moodle form (single autocomplete field) for the template-mode picker.
+$templatepickerform = new \local_coursegen\form\course_template_picker_form(
+    null, ['templates' => $coursetemplates], 'post', '', ['id' => 'tpl-select-form']);
+ob_start();
+$templatepickerform->display();
+$templatepickerformhtml = ob_get_clean();
+
+// Native Moodle "info" notification (same alert-info markup report builder
+// uses for "Nothing to display") shown until a template is picked.
+$templateemptystatehtml = $OUTPUT->notification(
+    get_string('courseai_template_empty_state', 'local_coursegen'), 'info', false);
+
 // Prepare template context.
 $templatecontext = [
     'guidelines' => json_encode($systeminstructions),
     'coursetemplates' => $coursetemplates,
+    'templatepickerformhtml' => $templatepickerformhtml,
+    'templateemptystatehtml' => $templateemptystatehtml,
     'hascoursetemplates' => !empty($coursetemplates),
     'languages' => json_encode($languageoptions),
     'defaultlang' => current_language(),

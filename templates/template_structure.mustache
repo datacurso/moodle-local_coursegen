@@ -1,0 +1,172 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/template_structure
+
+    Professor-facing "guided form" view of a course template: sections and
+    activities rendered with the same markup/classes core_courseformat uses
+    (course-section / section-item / activity-item / activity-grid), so the
+    theme's own Boost CSS provides card chrome, icon tints and grid layout.
+    Locked sections/activities (kept as-is from the template) are visually
+    dimmed and expose no destructive controls. JS (template_mode.js and its
+    local/template submodules) only supplies data and wires behaviour via
+    data-action attributes — this template owns 100% of the markup.
+
+    Classes required for JS:
+    * none — all JS hooks are data-action attributes.
+
+    Data attributes required for JS:
+    * data-action="local_coursegen/template/toggle-section" on the section chevron
+    * data-action="local_coursegen/template/open-chooser" on "+ Add activity" triggers
+      and on the between-activities insert dividers (data-section-id, optional data-position)
+    * data-action="local_coursegen/template/remove-activity" on the per-activity delete
+      control (data-section-id, data-activity-index)
+    * data-action="local_coursegen/template/add-section" on the bottom "+ Add section" button
+
+    Context variables required for this template:
+    * sections array - id int, name string, locked bool, activitiescount int,
+      showaddactivity bool, activities array
+        * activities[].id int, name string, modname string, purpose string,
+          iconhtml string (raw), locked bool, sectionid int, index int,
+          typelabel string (optional), showinsertzone bool
+    * showaddsection bool
+    * addsectiondisabled bool
+    * addsectionlabel string
+
+    Example context (json):
+    {
+        "sections": [
+            {
+                "id": 5, "name": "Introduction", "locked": true, "collapsed": false,
+                "activitiescount": 1, "showaddactivity": false,
+                "activities": [
+                    {
+                        "id": 12, "name": "Welcome page", "modname": "page", "purpose": "content",
+                        "iconhtml": "<img class=\"icon activityicon\" src=\"#\" alt=\"\">",
+                        "locked": true, "sectionid": 5, "index": 0, "typelabel": "Page",
+                        "showinsertzone": false
+                    }
+                ]
+            }
+        ],
+        "showaddsection": true,
+        "addsectiondisabled": false,
+        "addsectionlabel": "Add section (3)"
+    }
+}}
+<ul class="course-content course-section-list list-unstyled m-0" data-region="template-section-list">
+{{#sections}}
+  <li class="section course-section main clearfix{{#locked}} is-locked{{/locked}}" data-section-id="{{id}}">
+    <div class="section-item">
+      <div class="course-section-header d-flex align-items-center position-relative">
+        <a role="button" href="#tplSectionCollapse{{id}}" aria-expanded="{{#collapsed}}false{{/collapsed}}{{^collapsed}}true{{/collapsed}}"
+           aria-controls="tplSectionCollapse{{id}}"
+           class="btn btn-icon me-3 icons-collapse-expand justify-content-center{{#collapsed}} collapsed{{/collapsed}}"
+           data-action="local_coursegen/template/toggle-section" data-section-id="{{id}}">
+          <span class="expanded-icon icon-no-margin p-2">{{#pix}} t/expandedchevron, core {{/pix}}</span>
+          <span class="collapsed-icon icon-no-margin p-2">{{#pix}} t/collapsedchevron, core {{/pix}}</span>
+        </a>
+        <h3 class="h4 sectionname course-content-item d-flex align-self-stretch align-items-center mb-0">
+          <span class="mr-2">{{name}}</span>
+          {{#locked}}
+          <span class="badge badge-light border cg-tpl-locked-badge">
+            {{#pix}} t/locked, core {{/pix}} {{#str}}courseai_template_locked_badge, local_coursegen{{/str}}
+          </span>
+          {{/locked}}
+        </h3>
+        <div class="cg-item-actions cg-item-actions--section ms-auto d-flex align-items-center">
+          <span class="cg-section-meta badge bg-light text-muted">
+            {{activitiescount}} {{#str}}courseai_activities_count, local_coursegen{{/str}}
+          </span>
+        </div>
+      </div>
+      {{#locked}}
+      <p class="cg-tpl-locked-note small text-muted px-3 mb-0 pt-1">
+        {{#str}}courseai_template_locked_note, local_coursegen{{/str}}
+      </p>
+      {{/locked}}
+      <div id="tplSectionCollapse{{id}}" class="content course-content-item-content collapse{{^collapsed}} show{{/collapsed}}">
+        <ul class="section m-0 p-0 img-text d-block">
+          {{#activities}}
+          <li class="activity activity-wrapper {{modname}} modtype_{{modname}}{{#locked}} is-locked{{/locked}}"
+              data-section-id="{{sectionid}}" data-activity-index="{{index}}">
+            {{#showinsertzone}}
+            <div class="cg-insert-zone" role="presentation">
+              <button type="button" class="cg-insert-btn"
+                      data-action="local_coursegen/template/open-chooser"
+                      data-section-id="{{sectionid}}" data-position="{{index}}"
+                      aria-label="{{#str}}courseai_template_add_activity, local_coursegen{{/str}}"
+                      title="{{#str}}courseai_template_add_activity, local_coursegen{{/str}}">
+                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
+                     stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+                  <path d="M12 5v14M5 12h14"/>
+                </svg>
+              </button>
+            </div>
+            {{/showinsertzone}}
+            <div class="activity-item focus-control" data-region="activity-card">
+              <div class="activity-grid">
+                <div class="activity-icon activityiconcontainer smaller {{purpose}} courseicon align-self-start me-2">
+                  {{{iconhtml}}}
+                </div>
+                <div class="activity-name-area activity-instance d-flex flex-column me-2">
+                  <div class="activitytitle modtype_{{modname}} position-relative align-self-start">
+                    <div class="activityname"><span class="instancename">{{name}}</span></div>
+                  </div>
+                  {{#typelabel}}
+                  <p class="cg-activity-desc mb-0">{{typelabel}}</p>
+                  {{/typelabel}}
+                </div>
+                <div class="activity-actions cg-item-actions align-self-start ms-sm-2">
+                  {{^locked}}
+                  <span class="dp-action-btn dp-action-btn--delete" role="button" tabindex="0"
+                        data-action="local_coursegen/template/remove-activity"
+                        data-section-id="{{sectionid}}" data-activity-index="{{index}}"
+                        aria-label="{{#str}}courseai_btn_cancel, local_coursegen{{/str}}"
+                        title="{{#str}}courseai_btn_cancel, local_coursegen{{/str}}">
+                    <span class="dp-action-icon dp-action-icon--delete">{{#pix}} t/delete, core {{/pix}}</span>
+                  </span>
+                  {{/locked}}
+                </div>
+              </div>
+            </div>
+          </li>
+          {{/activities}}
+          {{#showaddactivity}}
+          <li class="dp-add-activity-wrap">
+            <button type="button" class="dp-add-control"
+                    data-action="local_coursegen/template/open-chooser" data-section-id="{{id}}">
+              <span class="dp-add-control__icon">+</span>
+              <span>{{#str}}courseai_template_add_activity, local_coursegen{{/str}}</span>
+            </button>
+          </li>
+          {{/showaddactivity}}
+        </ul>
+      </div>
+    </div>
+  </li>
+{{/sections}}
+</ul>
+{{#showaddsection}}
+<div class="dp-add-section-wrap mt-2">
+  <button type="button" class="dp-add-control{{#addsectiondisabled}} dp-add-control--disabled{{/addsectiondisabled}}"
+          data-action="local_coursegen/template/add-section"{{#addsectiondisabled}} disabled{{/addsectiondisabled}}>
+    <span class="dp-add-control__icon">+</span>
+    <span>{{addsectionlabel}}</span>
+  </button>
+</div>
+{{/showaddsection}}

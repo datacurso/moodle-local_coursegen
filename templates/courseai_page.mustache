@@ -48,8 +48,10 @@
 
     <!-- Context step form (in planning mode the editor is hidden by CSS and the
          left chat column shows instead — so on reload the real chrome renders and
-         only the service-driven content areas show skeletons). -->
-    <div class="context-wrap" id="contextView"{{#templatemodeactive}} style="display:none"{{/templatemodeactive}}>
+         only the service-driven content areas show skeletons). Server-rendered
+         only in free mode: template mode never receives this markup at all. -->
+    {{^templatemodeactive}}
+    <div class="context-wrap" id="contextView">
 
       <div class="courseai-context-editor" id="courseaiContextEditor">
 
@@ -606,9 +608,13 @@
       </div>
 
     </div><!-- .context-wrap -->
+    {{/templatemodeactive}}
 
     <!-- ══════════ TEMPLATE MODE VIEW ════════════════════════════════════ -->
-    <div class="context-wrap" id="templateModeView"{{^templatemodeactive}} style="display:none"{{/templatemodeactive}}>
+    <!-- Server-rendered only in template mode: free mode never receives this
+         markup at all. -->
+    {{#templatemodeactive}}
+    <div class="context-wrap" id="templateModeView">
       <div class="courseai-context-editor">
         <div class="context-head">
           <h2>{{#str}}courseai_template_title, local_coursegen{{/str}}</h2>
@@ -617,71 +623,36 @@
 
         <div class="card" id="templateModeCard">
           <div class="p-3">
-            {{! Template selector }}
-            <div class="form-row mb-3">
-              <div class="col-md-8">
-                <label class="font-weight-bold small">{{#str}}managetemplates, local_coursegen{{/str}}</label>
-                <select class="custom-select" id="tplModeSelect">
-                  <option value="">— {{#str}}template_select_course, local_coursegen{{/str}} —</option>
-                  {{#coursetemplates}}
-                  <option value="{{id}}">{{name}}</option>
-                  {{/coursetemplates}}
-                </select>
-              </div>
-              <div class="col-md-4">
-                <label class="font-weight-bold small">{{#str}}category{{/str}}</label>
-                <select class="custom-select" id="tplModeCategory">
-                  <option value="">{{#str}}courseai_category_general, local_coursegen{{/str}}</option>
-                </select>
-              </div>
+            {{! Template selector — native Moodle form (single autocomplete field with
+                help text), the only field visible before a template is picked }}
+            <div class="text-left">
+              {{{templatepickerformhtml}}}
             </div>
 
-            {{! Course names }}
-            <div class="form-row mb-3">
-              <div class="col-md-8">
-                <label class="font-weight-bold small">
-                  {{#str}}fullnamecourse{{/str}} <span class="text-danger">*</span>
-                </label>
-                <input type="text" class="form-control" id="tplModeFullname"
-                       placeholder="{{#str}}courseai_review_fullname_placeholder, local_coursegen{{/str}}">
-              </div>
-              <div class="col-md-4">
-                <label class="font-weight-bold small">{{#str}}shortnamecourse{{/str}}</label>
-                <input type="text" class="form-control" id="tplModeShortname"
-                       placeholder="{{#str}}courseai_review_shortname_placeholder, local_coursegen{{/str}}">
-                <small class="form-text text-muted">
-                  {{#str}}courseai_review_shortname_note, local_coursegen{{/str}}
-                </small>
-              </div>
+            {{! Empty state: shown until a template is picked, marking where its
+                structure will render — hidden once #templateModeCard.tpl-active
+                is set (template_mode.js). Real core/notification "info" markup
+                (same alert-info the report builder uses for "Nothing to display"). }}
+            <div id="tplModeEmpty" class="mt-3">
+              {{{templateemptystatehtml}}}
             </div>
 
-            {{! Language }}
-            <div class="form-row mb-3">
-              <div class="col-md-4">
-                <label class="font-weight-bold small">{{#str}}course_ai_language, local_coursegen{{/str}}</label>
-                <select class="custom-select" id="tplModeLang">
-                </select>
+            {{! Everything below only appears once a template has been selected — see tplModeDetails in template_mode.js.
+                Only the structure itself: no course name/shortname/category/language/instructions fields. }}
+            <div id="tplModeDetails" style="display:none">
+              {{! Section limits banner — text populated by JS when template is selected }}
+              <div id="tplModeLimits" class="mb-3" style="display:none">
+                <span class="badge badge-light border" id="tplModeLimitsBadge"></span>
               </div>
-            </div>
 
-            {{! Global instructions }}
-            <div class="mb-3">
-              <label class="font-weight-bold small">
-                {{#str}}courseai_template_instructions, local_coursegen{{/str}}
-              </label>
-              <textarea class="form-control" rows="2" id="tplModeInstructions"
-                        placeholder="{{#str}}courseai_template_instructions_placeholder, local_coursegen{{/str}}"></textarea>
-              <small class="form-text text-muted">
-                {{#str}}courseai_template_instructions_help, local_coursegen{{/str}}
-              </small>
+              {{! Dynamic structure — populated by JS when template is selected }}
+              <div id="tplModeStructure"></div>
             </div>
-
-            {{! Dynamic structure — populated by JS when template is selected }}
-            <div id="tplModeStructure"></div>
           </div>
 
-          {{! Toolbar }}
-          <div class="prompt-bar" style="border-top:1px solid var(--border);padding:.5rem 1rem;display:flex;align-items:center">
+          {{! Toolbar — hidden until a template is picked, see #templateModeCard.tpl-active in aicoursecreation.css }}
+          <div class="prompt-bar" id="tplModeFooter"
+               style="border-top:1px solid var(--border);padding:.5rem 1rem;display:none;align-items:center">
             <span class="text-muted small" id="tplModeStats"></span>
             <button class="btn-generate ml-auto" id="tplModeGenerate" type="button" disabled>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
@@ -694,6 +665,7 @@
         </div>
       </div>
     </div><!-- #templateModeView -->
+    {{/templatemodeactive}}
 
     <!-- Resizable divider (§2.1) — visible only in .is-planning (3-column grid) -->
     {{! aria-valuemin/max/now are set by the splitter AMD at init: the HTML
@@ -950,6 +922,39 @@
 
 </main>
 </div><!-- .courseai-app-layout -->
+
+<!-- Template mode: activity picker (Bootstrap 4), filtered to the template's
+     allowedtypes. Structure mirrors core_course's real activity chooser
+     (course/templates/activitychooser.mustache + local/activitychooser/item.mustache)
+     so the already-loaded Boost theme CSS styles the grid/icons natively —
+     see .modchoosercontainer / .optionscontainer / .activityiconcontainer in
+     theme/boost/scss/moodle/{core,icons}.scss. -->
+<div class="modal fade" id="tplActivityChooserModal" tabindex="-1" role="dialog" aria-labelledby="tplActivityChooserLabel" aria-hidden="true">
+  <div class="modal-dialog modal-lg modal-dialog-centered" role="document" style="max-width:900px">
+    <div class="modal-content modchooser">
+      <div class="modal-header">
+        <h5 class="modal-title" id="tplActivityChooserLabel">{{#str}}courseai_template_modal_title, local_coursegen{{/str}}</h5>
+        <button type="button" class="close" data-dismiss="modal" aria-label="{{#str}}courseai_modal_close, local_coursegen{{/str}}">
+          <span aria-hidden="true">&times;</span>
+        </button>
+      </div>
+      <div class="modal-body p-0">
+        <div class="modchoosercontainer d-flex flex-column">
+          <div class="alert alert-info m-3 mb-0 py-2 small">
+            {{#str}}courseai_template_modal_note, local_coursegen{{/str}}
+          </div>
+          <div class="searchcontainer p-3">
+            <input type="search" class="form-control" id="tplChooserSearch"
+                   placeholder="{{#str}}courseai_template_modal_search, local_coursegen{{/str}}">
+          </div>
+          <div class="chooser-container">
+            <div class="optionscontainer d-flex flex-wrap p-2" id="tplChooserGrid" role="menubar"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </div>
+</div>
 
 <!-- Guideline preview modal (Bootstrap 4) -->
 <div class="modal fade" id="guidelinePreviewModal" tabindex="-1" role="dialog" aria-labelledby="previewModalLabel" aria-hidden="true">

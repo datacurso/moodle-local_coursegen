@@ -184,6 +184,15 @@ $functions = [
         'capabilities' => 'local/coursegen:managetemplates',
         'loginrequired' => true,
     ],
+    'local_coursegen_get_template_structure' => [
+        'classname' => 'local_coursegen\\external\\get_template_structure',
+        'methodname' => 'execute',
+        'description' => 'Get a template\'s guided-form structure (locked sections/activities, limits, allowed activity catalog)',
+        'type' => 'read',
+        'ajax' => true,
+        'capabilities' => 'local/coursegen:createcoursewithai',
+        'loginrequired' => true,
+    ],
     'local_coursegen_get_course_preview' => [
         'classname' => 'local_coursegen\\external\\get_course_preview',
         'methodname' => 'execute',
