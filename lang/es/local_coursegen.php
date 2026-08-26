@@ -567,5 +567,21 @@ $string['tooltip_override_activity'] = 'Habilite las anulaciones de niveles de a
 $string['tooltip_override_course'] = 'Habilite las anulaciones a nivel de curso.';
 $string['unauthorized'] = 'Acceso no autorizado';
 $string['yesimages'] = 'Generar imágenes';
+$string['courseai_template_locked_badge'] = 'De la plantilla';
+$string['courseai_template_locked_note'] = 'Definido por la plantilla — se muestra como referencia y no se puede editar.';
+$string['courseai_template_limits_used'] = '{$a->used} de {$a->max} secciones usadas';
+$string['courseai_template_limits_remaining'] = 'Quedan {$a} secciones';
+$string['courseai_template_limits_nolimit'] = 'Sin límite de secciones';
+$string['courseai_template_add_section'] = 'Añadir sección';
+$string['courseai_template_add_activity'] = 'Añadir actividad';
+$string['courseai_template_modal_title'] = 'Añadir una actividad o recurso';
+$string['courseai_template_modal_note'] = 'Esta plantilla limita qué actividades se pueden añadir.';
+$string['courseai_template_modal_search'] = 'Buscar';
+$string['courseai_template_modal_empty'] = 'Esta plantilla todavía no permite ningún tipo de actividad.';
+$string['invalidtemplate'] = 'Plantilla inválida.';
+$string['courseai_template_picker'] = 'Plantilla de curso';
+$string['courseai_template_picker_help'] = 'Seleccione una de las plantillas de curso creadas por un administrador. Su estructura, incluyendo secciones o actividades bloqueadas y los tipos de actividad permitidos, se utilizará para crear el nuevo curso.';
+$string['courseai_template_picker_placeholder'] = 'Buscar plantillas de curso...';
+$string['courseai_template_empty_state'] = 'Seleccione una plantilla arriba para comenzar a crear el curso.';
 
 // Review modal strings.

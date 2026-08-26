@@ -1,0 +1,66 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/template_activity_chooser
+
+    The activity-type picker grid shown inside #tplActivityChooserModal, limited
+    to the template's admin-allowed activity types (get_template_structure's
+    allowedactivities). Mirrors core_course's real activity chooser cards
+    (course/templates/local/activitychooser/item.mustache) so the loaded Boost
+    theme styles the icon tint and card chrome natively.
+
+    Classes required for JS: none — data-action drives behaviour.
+
+    Data attributes required for JS:
+    * data-action="local_coursegen/template/add-chooser-option" on the card link
+      (data-modname identifies which allowed activity was picked)
+
+    Context variables required for this template:
+    * hasactivities bool
+    * activities array - modname string, displayname string, purpose string,
+      iconhtml string (raw), searchkey string (lowercase displayname, for JS filtering)
+
+    Example context (json):
+    {
+        "hasactivities": true,
+        "activities": [
+            {
+                "modname": "quiz", "displayname": "Quiz", "purpose": "assessment",
+                "iconhtml": "<img class=\"icon activityicon\" src=\"#\" alt=\"\">",
+                "searchkey": "quiz"
+            }
+        ]
+    }
+}}
+{{#hasactivities}}
+{{#activities}}
+<div class="option border-0 card m-1 bg-white" role="menuitem" data-search="{{searchkey}}">
+  <div class="optioninfo card-body d-flex flex-column text-center p-1">
+    <a href="#" class="d-flex flex-column justify-content-between flex-fill"
+       data-action="local_coursegen/template/add-chooser-option" data-modname="{{modname}}">
+      <div class="optionicon mt-2 mb-1 mx-auto icon-no-margin activityiconcontainer smaller {{purpose}}">
+        {{{iconhtml}}}
+      </div>
+      <div class="optionname clamp-2">{{displayname}}</div>
+    </a>
+  </div>
+</div>
+{{/activities}}
+{{/hasactivities}}
+{{^hasactivities}}
+<p class="text-muted small p-3 m-0">{{#str}}courseai_template_modal_empty, local_coursegen{{/str}}</p>
+{{/hasactivities}}

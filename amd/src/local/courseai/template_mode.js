@@ -16,13 +16,66 @@
 /**
  * Template mode — handles mode switching and template form interactions.
  *
+ * This entrypoint only wires DOM events; the guided-form structure (sections
+ * and activities, replicating core_courseformat's card/row look) is rendered
+ * server-side by local/template/render.js from local_coursegen/template_structure,
+ * and the activity-type picker grid by local/template/chooser.js from
+ * local_coursegen/template_activity_chooser. Nothing here builds HTML by hand.
+ *
  * @module     local_coursegen/local/courseai/template_mode
  * @copyright  2025 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import Ajax from 'core/ajax';
 import Notification from 'core/notification';
+import {getStrings} from 'core/str';
+import {getTemplateStructure} from './template/repository';
+import {
+    createTemplateState,
+    applyStructureResponse,
+    addSection,
+    insertActivity,
+    removeActivity,
+    toggleSectionCollapsed,
+} from './template/state';
+import {renderStructure, wireStructureEvents} from './template/render';
+import {renderChooserGrid, openActivityChooser, wireChooserModal} from './template/chooser';
+import {formatTemplate} from './utils';
+
+// Localised labels used while mutating the structure (add-section button text,
+// generic "Section" word for naming new sections, and the "N sections · M
+// activities" stats template). Fetched once and cached — wireTemplateMode runs
+// before the page's own translated strings are loaded (see courseai.js), so
+// this module fetches only the couple of strings it needs.
+let labelsPromise = null;
+const getLabels = () => {
+    if (!labelsPromise) {
+        labelsPromise = getStrings([
+            {key: 'courseai_template_add_section', component: 'local_coursegen'},
+            {key: 'section', component: 'moodle'},
+            {key: 'courseai_plan_sections_counter', component: 'local_coursegen'},
+        ]).then(([addSectionLabel, sectionWord, statsTemplate]) => ({addSectionLabel, sectionWord, statsTemplate}));
+    }
+    return labelsPromise;
+};
+
+/**
+ * Update the "N sections · M activities" summary line in the toolbar.
+ *
+ * @param {Object} tplState
+ * @param {string} statsTemplate
+ */
+const updateStats = (tplState, statsTemplate) => {
+    const statsEl = document.getElementById('tplModeStats');
+    if (!statsEl) {
+        return;
+    }
+    const totalActivities = tplState.sections.reduce((sum, section) => sum + section.activities.length, 0);
+    statsEl.textContent = formatTemplate(statsTemplate, {
+        sections: tplState.sections.length,
+        activities: totalActivities,
+    });
+};
 
 /**
  * Wire mode switching and template form.
@@ -30,204 +83,269 @@ import Notification from 'core/notification';
  * @param {Object} state
  */
 export const wireTemplateMode = (state) => {
-    // Free/Template mode switching is now plain <a href> navigation
+    // Free/Template mode switching is plain <a href> navigation
     // (aicoursecreation.php / ?mode=template), server-rendered from the
-    // mode param — no JS involved, so there's nothing to wire and nothing
-    // that can lag behind while the rest of the page's JS loads.
-    const tplSelect = document.getElementById('tplModeSelect');
+    // mode param — no JS involved.
+    //
+    // The template picker itself is a native Moodle form (single autocomplete
+    // element, see classes/form/course_template_picker_form.php), rendered
+    // server-side and embedded as-is — Moodle's own form renderer already
+    // enhances the underlying <select> into the autocomplete widget, so no
+    // JS wiring is needed here beyond listening for its 'change' event.
+    // Moodleform's default id for an unnamed-id element is "id_<fieldname>".
+    const tplSelect = document.getElementById('id_templateid');
     const sidebar = document.getElementById('courseaiSidebar');
     const collapseBtn = document.getElementById('courseaiSidebarCollapse');
     const expandBtn = document.getElementById('courseaiSidebarExpand');
+    const container = document.getElementById('tplModeStructure');
 
     // Sidebar collapse/expand.
     if (collapseBtn && sidebar) {
-        collapseBtn.addEventListener('click', () => { sidebar.classList.add('collapsed'); });
+        collapseBtn.addEventListener('click', () => {
+            sidebar.classList.add('collapsed');
+        });
     }
     if (expandBtn && sidebar) {
-        expandBtn.addEventListener('click', () => { sidebar.classList.remove('collapsed'); });
+        expandBtn.addEventListener('click', () => {
+            sidebar.classList.remove('collapsed');
+        });
     }
+
+    const tplState = createTemplateState();
+
+    // Sequence guard: reselecting the template autocomplete before a previous
+    // getTemplateStructure() fetch resolves must not let the slower, stale
+    // response overwrite the structure of the template picked afterwards.
+    // Incremented on every 'change'; loadTemplateStructure captures the id it
+    // was launched with and discards its response if it no longer matches.
+    const requestTracker = {id: 0};
+
+    // Single source of truth for re-rendering: always resolves the localised
+    // label first so the "+ Add section" button never flashes untranslated text.
+    const rerenderStructure = async() => {
+        const {addSectionLabel, statsTemplate} = await getLabels();
+        await renderStructure(container, tplState, {addSection: addSectionLabel});
+        updateStats(tplState, statsTemplate);
+    };
+
+    wireStructureEvents(container, {
+        onToggleSection: async(sectionId) => {
+            toggleSectionCollapsed(tplState, sectionId);
+            try {
+                await rerenderStructure();
+            } catch (e) {
+                // Revert so the in-memory model matches what is still on screen.
+                toggleSectionCollapsed(tplState, sectionId);
+                Notification.exception(e);
+            }
+        },
+        onOpenChooser: (sectionId, position) => {
+            openActivityChooser(sectionId, position);
+        },
+        onRemoveActivity: async(sectionId, activityIndex) => {
+            const section = tplState.sections.find((s) => s.id === sectionId);
+            const removedActivity = section ? section.activities[activityIndex] : null;
+            if (removeActivity(tplState, sectionId, activityIndex)) {
+                try {
+                    await rerenderStructure();
+                } catch (e) {
+                    // Put the removed row back so state matches the still-rendered DOM.
+                    if (section && removedActivity) {
+                        section.activities.splice(activityIndex, 0, removedActivity);
+                    }
+                    Notification.exception(e);
+                }
+            }
+        },
+        onAddSection: async() => {
+            const {sectionWord} = await getLabels();
+            const section = addSection(tplState, sectionWord);
+            if (section) {
+                try {
+                    await rerenderStructure();
+                } catch (e) {
+                    // Undo the append so state matches the still-rendered DOM.
+                    const idx = tplState.sections.indexOf(section);
+                    if (idx !== -1) {
+                        tplState.sections.splice(idx, 1);
+                        if (!tplState.nolimit) {
+                            tplState.remainingSections += 1;
+                        }
+                    }
+                    Notification.exception(e);
+                }
+            }
+        },
+    });
+
+    wireChooserModal(async(sectionId, position, modname) => {
+        const activity = tplState.allowedActivities.find((a) => a.modname === modname);
+        if (!activity) {
+            return;
+        }
+        // InsertActivity assigns this id (via the pre-decrement of nextActivityId)
+        // to the new row — captured so the catch below can find and undo it.
+        const pendingActivityId = tplState.nextActivityId;
+        if (insertActivity(tplState, sectionId, position, activity)) {
+            try {
+                await rerenderStructure();
+            } catch (e) {
+                const section = tplState.sections.find((s) => s.id === sectionId);
+                const idx = section ? section.activities.findIndex((a) => a.id === pendingActivityId) : -1;
+                if (idx !== -1) {
+                    section.activities.splice(idx, 1);
+                }
+                Notification.exception(e);
+            }
+        }
+    });
 
     // Template selection — load structure.
     if (tplSelect) {
         tplSelect.addEventListener('change', () => {
-            const tplId = parseInt(tplSelect.value);
+            const tplId = parseInt(tplSelect.value, 10);
+            // Before a pick, #templateModeCard is just the bare label+field (no
+            // border, no footer/Generate) — and core/form-autocomplete's own
+            // "search to change selection" row stays collapsed once picked, so
+            // only the chip shows. All driven by one class on the card (see
+            // #templateModeCard.tpl-active in aicoursecreation.css — Bootstrap's
+            // .d-md-inline-block on .form-autocomplete-input carries !important,
+            // so a plain inline style can't win, this needs id+class specificity).
+            // Queried here (not once up-front) because core/form-autocomplete's
+            // own enhance() call — a separate js_call_amd — may not have finished
+            // inserting its markup yet at the point wireTemplateMode runs.
+            const card = document.getElementById('templateModeCard');
+            if (card) {
+                card.classList.toggle('tpl-active', tplId > 0);
+            }
+            requestTracker.id += 1;
+            const requestId = requestTracker.id;
             if (tplId > 0) {
-                loadTemplateStructure(tplId, state);
+                loadTemplateStructure(tplId, tplState, container, state, requestTracker, requestId);
             } else {
-                clearStructure();
+                clearStructure(tplState, container, state);
             }
         });
     }
 };
 
 /**
- * Load template structure and render the dynamic form.
+ * Load a template's guided-form structure (locked sections/activities, section
+ * limits, and the admin-allowed activity catalog) and render it.
  *
  * @param {number} templateId
+ * @param {Object} tplState
+ * @param {HTMLElement} container
  * @param {Object} state
+ * @param {Object} requestTracker - {id} mutable holder of the latest request id.
+ * @param {number} requestId - The id this call was launched with.
  */
-const loadTemplateStructure = async(templateId, state) => {
-    const container = document.getElementById('tplModeStructure');
+const loadTemplateStructure = async(templateId, tplState, container, state, requestTracker, requestId) => {
+    const detailsEl = document.getElementById('tplModeDetails');
+    const limitsEl = document.getElementById('tplModeLimits');
+    const limitsBadge = document.getElementById('tplModeLimitsBadge');
     const genBtn = document.getElementById('tplModeGenerate');
     if (!container) {
         return;
     }
 
-    // Find template data from state.
-    const templates = state.templates || [];
-    const tpl = templates.find(t => t.id === templateId);
-    if (!tpl) {
-        return;
-    }
-
-    // Load the course structure from the template's base course.
     try {
-        const structure = await Ajax.call([{
-            methodname: 'local_coursegen_get_course_structure',
-            args: {courseid: tpl.courseid || 0},
-        }])[0];
+        const data = await getTemplateStructure(templateId);
+        if (requestTracker.id !== requestId) {
+            // A newer template was selected while this fetch was in flight — discard.
+            return;
+        }
+        applyStructureResponse(tplState, data);
 
-        renderStructure(container, structure);
+        if (detailsEl) {
+            detailsEl.style.display = '';
+        }
+
+        const {addSectionLabel, statsTemplate} = await getLabels();
+        await renderStructure(container, tplState, {addSection: addSectionLabel});
+        updateStats(tplState, statsTemplate);
+        await renderChooserGrid(tplState.allowedActivities);
+        await renderLimitsBanner(limitsEl, limitsBadge, tplState);
+
         if (genBtn) {
             genBtn.disabled = false;
         }
-        updateStats(container);
+        state.templateStructureLoaded = true;
     } catch (e) {
+        if (requestTracker.id !== requestId) {
+            // A newer template selection superseded this failed fetch — its own
+            // handler already owns the UI, so this stale failure stays silent.
+            return;
+        }
+        // Reset the structure panel, limits badge and Generate button so the
+        // professor doesn't see a mix of the failed template's name with the
+        // previous template's structure still on screen.
+        clearStructure(tplState, container, state);
         Notification.exception(e);
     }
 };
 
 /**
- * Render the dynamic structure form.
+ * Render the section limits banner text (the badge markup itself is static,
+ * see courseai_page.mustache#tplModeLimits — this only toggles it and sets text).
  *
- * @param {HTMLElement} container
- * @param {Array} sections
+ * @param {HTMLElement} limitsEl
+ * @param {HTMLElement} limitsBadge
+ * @param {Object} tplState
  */
-const renderStructure = (container, sections) => {
-    let html = '<div class="d-flex align-items-center mb-2">';
-    html += '<label class="font-weight-bold small mb-0">Course structure</label>';
-    html += '<span class="text-muted small ml-auto" id="tplModeSectionCount"></span>';
-    html += '</div>';
-
-    sections.forEach((section, i) => {
-        const isOpen = i === 0;
-        html += `<div class="border rounded mb-2" data-tpl-section="${section.id}">`;
-        html += `<div class="d-flex align-items-center p-2" style="background:#f8f9fa;cursor:pointer"
-                      data-action="toggle-tpl-section">`;
-        html += `<i class="fa fa-chevron-${isOpen ? 'down' : 'right'} mr-2 text-muted" style="font-size:.7rem"></i>`;
-        html += `<strong style="font-size:.9rem" class="flex-grow-1">${section.name}</strong>`;
-        html += `<span class="text-muted small">${section.activities.length} activities</span>`;
-        html += '</div>';
-        html += `<div class="p-2" style="${isOpen ? '' : 'display:none'}">`;
-
-        section.activities.forEach(act => {
-            html += `<div class="d-flex align-items-start py-1 border-bottom" style="border-color:#f5f5f5!important"
-                          data-tpl-activity="${act.id}">`;
-            html += `<div class="mr-2 mt-1 d-flex align-items-center justify-content-center rounded`
-                + `" style="width:24px;height:24px;background:#e3f2fd;color:#1565c0;font-size:.6rem;flex-shrink:0">`;
-            html += '<i class="fa fa-edit"></i></div>';
-            html += '<div class="flex-grow-1">';
-            html += `<div class="d-flex align-items-center">`;
-            html += `<span class="small font-weight-bold">${act.name}</span>`;
-            html += `<span class="text-muted small ml-2">${act.modname}</span>`;
-            html += '</div>';
-            html += `<input type="text" class="form-control form-control-sm mt-1"
-                            data-tpl-act-prompt="${act.id}"
-                            placeholder="Instructions for AI...">`;
-            html += '</div></div>';
-        });
-
-        // Add activity button.
-        html += '<div class="pt-2">';
-        html += `<button class="btn btn-sm btn-link text-primary p-0" data-action="add-tpl-activity"
-                         data-section="${section.id}" type="button">`;
-        html += '<i class="fa fa-plus mr-1"></i>Add activity</button>';
-        html += '</div></div></div>';
-    });
-
-    container.innerHTML = html;
-    bindStructureEvents(container);
-};
-
-/**
- * Bind events on the rendered structure.
- *
- * @param {HTMLElement} container
- */
-const bindStructureEvents = (container) => {
-    // Section collapse/expand.
-    container.querySelectorAll('[data-action="toggle-tpl-section"]').forEach(header => {
-        header.addEventListener('click', () => {
-            const body = header.nextElementSibling;
-            const chevron = header.querySelector('.fa');
-            const visible = body.style.display !== 'none';
-            body.style.display = visible ? 'none' : '';
-            chevron.classList.toggle('fa-chevron-down', !visible);
-            chevron.classList.toggle('fa-chevron-right', visible);
-        });
-    });
-
-    // Add activity.
-    container.querySelectorAll('[data-action="add-tpl-activity"]').forEach(btn => {
-        btn.addEventListener('click', () => {
-            const row = document.createElement('div');
-            row.className = 'd-flex align-items-start py-1 border-bottom';
-            row.style.borderColor = '#f5f5f5';
-            row.innerHTML = `
-                <div class="mr-2 mt-1 d-flex align-items-center justify-content-center rounded"
-                     style="width:24px;height:24px;background:#e3f2fd;color:#1565c0;font-size:.6rem;flex-shrink:0">
-                    <i class="fa fa-plus"></i>
-                </div>
-                <div class="flex-grow-1">
-                    <div class="d-flex align-items-center mb-1">
-                        <select class="custom-select custom-select-sm" style="width:auto;font-size:.75rem">
-                            <option>book</option><option>quiz</option><option>assign</option>
-                            <option>forum</option><option>page</option><option>lesson</option>
-                        </select>
-                        <input type="text" class="form-control form-control-sm ml-2"
-                               placeholder="Activity name" style="flex:1">
-                        <button class="btn btn-sm btn-link text-danger p-0 ml-2" type="button"
-                                onclick="this.closest('.d-flex').remove()">
-                            <i class="fa fa-times"></i>
-                        </button>
-                    </div>
-                    <input type="text" class="form-control form-control-sm" placeholder="Instructions for AI...">
-                </div>`;
-            btn.parentElement.before(row);
-            updateStats(container);
-        });
-    });
-};
-
-/**
- * Update the stats display.
- *
- * @param {HTMLElement} container
- */
-const updateStats = (container) => {
-    const sections = container.querySelectorAll('[data-tpl-section]').length;
-    const activities = container.querySelectorAll('[data-tpl-activity]').length
-        + container.querySelectorAll('[data-action="add-tpl-activity"]').length - sections;
-    const stats = document.getElementById('tplModeStats');
-    if (stats) {
-        stats.textContent = sections + ' sections · ' + activities + ' activities';
+const renderLimitsBanner = async(limitsEl, limitsBadge, tplState) => {
+    if (!limitsEl || !limitsBadge) {
+        return;
     }
+    if (tplState.nolimit) {
+        const [nolimitStr] = await getStrings([
+            {key: 'courseai_template_limits_nolimit', component: 'local_coursegen'},
+        ]);
+        limitsBadge.textContent = nolimitStr;
+    } else {
+        const [remainingStr] = await getStrings([
+            {key: 'courseai_template_limits_remaining', component: 'local_coursegen'},
+        ]);
+        limitsBadge.textContent = remainingStr.replace('{$a}', tplState.remainingSections);
+    }
+    limitsEl.style.display = '';
 };
 
 /**
  * Clear the structure display.
+ *
+ * @param {Object} tplState
+ * @param {HTMLElement} container
+ * @param {Object} state
  */
-const clearStructure = () => {
-    const container = document.getElementById('tplModeStructure');
+const clearStructure = (tplState, container, state) => {
     if (container) {
         container.innerHTML = '';
+    }
+    const detailsEl = document.getElementById('tplModeDetails');
+    if (detailsEl) {
+        detailsEl.style.display = 'none';
+    }
+    const card = document.getElementById('templateModeCard');
+    if (card) {
+        card.classList.remove('tpl-active');
+    }
+    const limitsEl = document.getElementById('tplModeLimits');
+    const limitsBadge = document.getElementById('tplModeLimitsBadge');
+    if (limitsEl) {
+        limitsEl.style.display = 'none';
+    }
+    if (limitsBadge) {
+        limitsBadge.textContent = '';
     }
     const genBtn = document.getElementById('tplModeGenerate');
     if (genBtn) {
         genBtn.disabled = true;
     }
-    const stats = document.getElementById('tplModeStats');
-    if (stats) {
-        stats.textContent = '';
+    const statsEl = document.getElementById('tplModeStats');
+    if (statsEl) {
+        statsEl.textContent = '';
     }
+    Object.assign(tplState, createTemplateState());
+    state.templateStructureLoaded = false;
 };
