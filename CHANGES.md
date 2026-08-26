@@ -1,3 +1,14 @@
+## 2.0.4
+
+**Released on:** 2026-08-26
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Added
+
+- **Course template picker on the AI course creation page**  
+  Selecting "Create course from template" now starts with a single native, searchable field to pick the template — no other fields are shown until a template is chosen. Once selected, the template's sections and activities render inline, with locked items clearly marked and support for adding new activities at any point in the list, even next to locked ones.
+
 ## 2.0.3
 
 **Released on:** 2026-08-24
