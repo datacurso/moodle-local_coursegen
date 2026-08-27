@@ -1,3 +1,14 @@
+## 2.0.4
+
+**Released on:** 2026-08-27
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Fixed
+
+- **Missing Spanish translations added to the course creation assistant**  
+  The plan review screen, activity generation progress messages, stop/resume/retry controls, and the activity log were showing in English regardless of the site's language, because their strings had no Spanish translation. All of them are now translated.
+
 ## 2.0.3
 
 **Released on:** 2026-08-24
