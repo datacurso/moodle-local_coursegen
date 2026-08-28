@@ -49,6 +49,15 @@ class create_mod_service {
 
         self::validate_mod_existence($modname);
 
+        // A nonexistent target section must fail before touching core with a
+        // clear error: core tolerates it differently per version (4.5 crashes
+        // inside prepare_new_moduleinfo_data, 5.x half-creates the module with
+        // PHP warnings), so this guard keeps the per-activity and
+        // per-subsection fallbacks deterministic on every Moodle version.
+        if (!get_fast_modinfo($course)->get_section_info($sectionnum)) {
+            throw new \Exception(get_string('error_section_not_found', 'local_coursegen', $sectionnum));
+        }
+
         [ $module, $context, $cw, $cm, $data ] = prepare_new_moduleinfo_data($course, $modname, $sectionnum);
 
         $mform = self::create_mod_form_instance($modname, $data, $cw, $cm, $course);

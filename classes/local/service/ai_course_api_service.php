@@ -17,6 +17,7 @@
 namespace local_coursegen\local\service;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
+use local_coursegen\local\api_client_factory;
 use stored_file;
 use stdClass;
 
@@ -46,7 +47,9 @@ class ai_course_api_service {
         $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
         $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
 
-        $this->client = new ai_course_api(null, $baseurl, $baseurleu);
+        // Built through the factory so PHPUnit tests can inject a test double
+        // (see api_client_factory); production behavior is unchanged.
+        $this->client = api_client_factory::ai_course_api($baseurl, $baseurleu);
     }
 
     /**

@@ -26,6 +26,7 @@ namespace local_coursegen\external;
 
 use external_api;
 use external_function_parameters;
+use external_multiple_structure;
 use external_value;
 use external_single_structure;
 use local_coursegen\local\service\ai_course_api_service;
@@ -50,9 +51,9 @@ class create_course extends external_api {
     public static function execute_parameters() {
         return new external_function_parameters([
             'recordid' => new external_value(PARAM_INT, 'Course planning session record ID'),
-            'fullname' => new external_value(PARAM_TEXT, 'Override course fullname', VALUE_OPTIONAL, ''),
-            'shortname' => new external_value(PARAM_TEXT, 'Override course shortname', VALUE_OPTIONAL, ''),
-            'category' => new external_value(PARAM_INT, 'Override course category ID', VALUE_OPTIONAL, 0),
+            'fullname' => new external_value(PARAM_TEXT, 'Override course fullname', VALUE_DEFAULT, ''),
+            'shortname' => new external_value(PARAM_TEXT, 'Override course shortname', VALUE_DEFAULT, ''),
+            'category' => new external_value(PARAM_INT, 'Override course category ID', VALUE_DEFAULT, 0),
         ]);
     }
 
@@ -87,8 +88,14 @@ class create_course extends external_api {
         // Load session (validates ownership).
         $session = course_session_service::get_user_session($recordid, $USER->id);
 
+        // Gate the paid AI generation behind the same capabilities as the flow
+        // entry point (see start_course_planning): owning the planning session
+        // is not enough once the course creation permissions are revoked.
+        require_capability('moodle/course:create', $context);
+        require_capability('local/coursegen:createcoursewithai', $context);
+
         // Fetch the AI-generated result data from the Datacurso API.
-        $apiservice = new ai_course_api_service();
+        $apiservice = static::get_api_service();
         $result = $apiservice->get_course_result((string)$session->get('session_id'));
         $resultdata = $result['result'] ?? [];
 
@@ -108,6 +115,18 @@ class create_course extends external_api {
         }
 
         return create_course_service::create_course($session, $resultdata, $overrides);
+    }
+
+    /**
+     * Build the AI course API service used by this endpoint.
+     *
+     * Extracted as a protected factory so PHPUnit tests can override it
+     * through a testable subclass (late static binding).
+     *
+     * @return ai_course_api_service
+     */
+    protected static function get_api_service(): ai_course_api_service {
+        return new ai_course_api_service();
     }
 
     /**
@@ -131,6 +150,16 @@ class create_course extends external_api {
                 false
             ),
             'warningscount' => new external_value(PARAM_INT, 'Count of skipped activity creations', VALUE_DEFAULT, 0),
+            'activityerrors' => new external_multiple_structure(
+                new external_single_structure([
+                    'resource_type' => new external_value(PARAM_TEXT, 'Resource type of the skipped activity'),
+                    'section' => new external_value(PARAM_INT, 'Section number where the activity was planned'),
+                    'message' => new external_value(PARAM_RAW, 'Reason why the activity creation was skipped'),
+                    'title' => new external_value(PARAM_TEXT, 'Title of the skipped activity'),
+                ]),
+                'Details of the skipped activity creations',
+                VALUE_OPTIONAL
+            ),
         ]);
     }
 }
