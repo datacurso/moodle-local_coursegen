@@ -211,4 +211,13 @@ $functions = [
         'capabilities' => 'local/coursegen:managetemplates',
         'loginrequired' => true,
     ],
+    'local_coursegen_create_course_from_template' => [
+        'classname' => 'local_coursegen\\external\\create_course_from_template',
+        'methodname' => 'execute',
+        'description' => 'Create a course from a template, keeping/regenerating/excluding its activities',
+        'type' => 'write',
+        'ajax' => true,
+        'capabilities' => 'moodle/course:create,local/coursegen:createcoursewithai',
+        'loginrequired' => true,
+    ],
 ];
