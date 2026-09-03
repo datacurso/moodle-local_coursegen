@@ -1,3 +1,14 @@
+## 2.0.5
+
+**Released on:** 2026-08-26
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Added
+
+- **Course generation from a template**  
+  Choosing "Generate" in template mode now creates a real course: sections and activities marked to keep are copied from the base course as-is, activities marked to regenerate are rebuilt with AI-generated content using the template's per-activity instructions and any designated reference material, excluded items are left out, and activities the professor added manually are created alongside them. Activity types and section counts are enforced against what the template allows.
+
 ## 2.0.4
 
 **Released on:** 2026-08-26

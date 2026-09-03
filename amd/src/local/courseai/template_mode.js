@@ -29,7 +29,7 @@
 
 import Notification from 'core/notification';
 import {getStrings} from 'core/str';
-import {getTemplateStructure} from './template/repository';
+import {getTemplateStructure, createCourseFromTemplate} from './template/repository';
 import {
     createTemplateState,
     applyStructureResponse,
@@ -75,6 +75,54 @@ const updateStats = (tplState, statsTemplate) => {
         sections: tplState.sections.length,
         activities: totalActivities,
     });
+};
+
+/**
+ * Build the "what the professor added" payload from the in-memory template
+ * state and create the course. The server re-reads keep/modify/exclude/
+ * reference straight from the database by itself — only newly added
+ * sections/activities (negative client-side placeholder ids) are sent. On
+ * success, navigates to the newly created course.
+ *
+ * @param {HTMLElement} genBtn
+ * @param {HTMLElement} tplSelect
+ * @param {Object} tplState
+ */
+const handleGenerateClick = async(genBtn, tplSelect, tplState) => {
+    if (!genBtn || genBtn.disabled) {
+        return;
+    }
+    const templateId = tplSelect ? parseInt(tplSelect.value, 10) : 0;
+    if (!templateId) {
+        return;
+    }
+
+    genBtn.disabled = true;
+    try {
+        const newsections = tplState.sections
+            .filter((section) => !section.locked && section.id < 0)
+            .map((section) => ({clientid: section.id, name: section.name}));
+
+        const newactivities = [];
+        tplState.sections.forEach((section) => {
+            section.activities.forEach((activity) => {
+                if (!activity.locked) {
+                    newactivities.push({sectionid: section.id, modname: activity.modname});
+                }
+            });
+        });
+
+        const result = await createCourseFromTemplate({templateid: templateId, newsections, newactivities});
+        if (result && result.success && result.courseurl) {
+            window.location.href = result.courseurl;
+            return;
+        }
+        genBtn.disabled = false;
+        Notification.exception(new Error((result && result.message) || 'Course creation failed.'));
+    } catch (e) {
+        genBtn.disabled = false;
+        Notification.exception(e);
+    }
 };
 
 /**
@@ -199,6 +247,11 @@ export const wireTemplateMode = (state) => {
             }
         }
     });
+
+    const genBtn = document.getElementById('tplModeGenerate');
+    if (genBtn) {
+        genBtn.addEventListener('click', () => handleGenerateClick(genBtn, tplSelect, tplState));
+    }
 
     // Template selection — load structure.
     if (tplSelect) {

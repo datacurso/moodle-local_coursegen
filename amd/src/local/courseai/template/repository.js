@@ -34,3 +34,24 @@ export const getTemplateStructure = (templateId) => fetchMany([{
     methodname: 'local_coursegen_get_template_structure',
     args: {templateid: templateId},
 }])[0];
+
+/**
+ * Create a course from a template: the server re-reads the template's
+ * keep/modify/exclude/reference configuration from the database by itself —
+ * this only sends what it cannot infer (new sections/activities the
+ * professor added on top of the template).
+ *
+ * @param {Object} payload
+ * @param {number} payload.templateid
+ * @param {Array<{clientid: number, name: string}>} payload.newsections
+ * @param {Array<{sectionid: number, modname: string}>} payload.newactivities
+ * @returns {Promise<Object>}
+ */
+export const createCourseFromTemplate = ({templateid, newsections, newactivities}) => fetchMany([{
+    methodname: 'local_coursegen_create_course_from_template',
+    args: {
+        templateid,
+        newsections: newsections || [],
+        newactivities: newactivities || [],
+    },
+}])[0];
