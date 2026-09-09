@@ -47,6 +47,19 @@ class course_picker_form extends \moodleform {
         // like the "Category" field on course/edit_form.php: no AJAX needed,
         // the category list is small enough to send whole.
         $displaylist = \core_course_category::make_categories_list();
+
+        // Append each category's own course count, e.g. "Category 1 (courses: 108)",
+        // so the admin can tell at a glance which categories are actually worth
+        // searching before opening the course field below.
+        $coursecounts = [];
+        foreach (\core_course_category::get_all() as $category) {
+            $coursecounts[$category->id] = $category->coursecount;
+        }
+        foreach ($displaylist as $categoryid => $name) {
+            $count = $coursecounts[$categoryid] ?? 0;
+            $displaylist[$categoryid] = $name . ' (courses: ' . $count . ')';
+        }
+
         $mform->addElement('autocomplete', 'category', get_string('category'), $displaylist, [
             'noselectionstring' => get_string('template_select_category_hint', 'local_coursegen'),
         ]);
