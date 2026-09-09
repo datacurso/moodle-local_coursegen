@@ -21,12 +21,15 @@ use external_api;
 use external_function_parameters;
 use external_single_structure;
 use external_value;
+use local_coursegen\event\generation_denied;
+use local_coursegen\event\generation_failed;
+use local_coursegen\event\generation_job_started;
+use local_coursegen\local\h5p_core_api;
 use local_coursegen\local\image_generation\image_policy_builder;
 use local_coursegen\local\service\ai_course_api_service;
-use local_coursegen\local\service\filetype_catalog_service;
-use local_coursegen\local\h5p_core_api;
 use local_coursegen\local\service\course_context_service;
 use local_coursegen\local\service\course_planning_service;
+use local_coursegen\local\service\filetype_catalog_service;
 use local_coursegen\local\service\module_job_service;
 
 defined('MOODLE_INTERNAL') || die();
@@ -161,18 +164,23 @@ class create_mod_stream extends external_api {
             $result = $apiservice->start_activity($payload);
 
             if (!isset($result['thread_id'])) {
-                debugging('Invalid response from AI service (activity init). Response: ' . json_encode($result));
+                // Log only the shape of the response (key names + status), never
+                // its content: the body may embed prompts or generated material.
+                debugging(
+                    'Invalid response from AI service (activity init). Keys: '
+                    . implode(',', array_keys($result))
+                    . '; status: ' . (string)($result['status'] ?? '')
+                );
                 return [
                     'ok' => false,
                     'message' => get_string('error_generating_resource', 'local_coursegen'),
-                    'log' => 'Invalid response from AI service (activity init). Response: ' . json_encode($result),
                 ];
             }
 
             $jobid = $result['thread_id'];
             $status = $result['status'] ?? null;
             $contexttype = $coursecontext ? $coursecontext->context_type : null;
-            $systeminstructionname = $coursecontext->name ?? null;
+            $systeminstructionname = $coursecontext->system_instruction_name ?? null;
 
             // Store job info in module jobs table using persistent model.
             module_job_service::create_job(
@@ -187,6 +195,14 @@ class create_mod_stream extends external_api {
                 $status
             );
 
+            generation_job_started::create([
+                'context' => $context,
+                'other' => [
+                    'job_id' => $jobid,
+                    'generate_images' => (int)$generateimages,
+                ],
+            ])->trigger();
+
             $streamingurl = $apiservice->get_mod_streaming_url_for_job($jobid);
 
             return [
@@ -196,11 +212,30 @@ class create_mod_stream extends external_api {
                 'message' => $result['message'] ?? get_string('course_planning_started', 'local_coursegen'),
                 'streamingurl' => $streamingurl,
             ];
-        } catch (\Exception $e) {
-            debugging('Unexpected error while starting resource generation (stream): ' . $e->getMessage());
+        } catch (\required_capability_exception $e) {
+            // Permission errors are already localized and safe to show verbatim.
+            debugging('Permission error while starting resource generation (stream): ' . $e->getMessage());
+            // The exception carries the localized capability name in ->a; the
+            // raw capability string is not stored on it.
+            generation_denied::create([
+                'context' => isset($context) ? $context : \context_system::instance(),
+                'other' => ['capability' => is_string($e->a ?? null) ? $e->a : ''],
+            ])->trigger();
             return [
                 'ok' => false,
                 'message' => $e->getMessage(),
+            ];
+        } catch (\Exception $e) {
+            // Keep the technical detail in developer debugging only: the client
+            // receives a localized message without internal information.
+            debugging('Unexpected error while starting resource generation (stream): ' . $e->getMessage());
+            generation_failed::create([
+                'context' => isset($context) ? $context : \context_system::instance(),
+                'other' => ['reason' => get_class($e)],
+            ])->trigger();
+            return [
+                'ok' => false,
+                'message' => get_string('error_generating_resource', 'local_coursegen'),
             ];
         }
     }

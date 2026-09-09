@@ -68,7 +68,9 @@ if ($hassiteconfig) {
         get_string('devsettings_desc', 'local_coursegen')
     ));
 
-    $devsettings->add(new admin_setting_configtext(
+    // HTTPS is enforced: the overrides carry prompts and syllabus files, so
+    // plain HTTP is only accepted for localhost under developer debugging.
+    $devsettings->add(new \local_coursegen\admin\setting_https_url(
         'local_coursegen/datacurso_service_url',
         get_string('datacurso_service_url', 'local_coursegen'),
         get_string('datacurso_service_url_desc', 'local_coursegen'),
@@ -76,7 +78,7 @@ if ($hassiteconfig) {
         PARAM_URL
     ));
 
-    $devsettings->add(new admin_setting_configtext(
+    $devsettings->add(new \local_coursegen\admin\setting_https_url(
         'local_coursegen/datacurso_service_url_eu',
         get_string('datacurso_service_url_eu', 'local_coursegen'),
         get_string('datacurso_service_url_eu_desc', 'local_coursegen'),

@@ -68,6 +68,14 @@ class get_course_settings extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
+        require_capability('local/coursegen:createcoursewithai', $context);
+
+        // Category-level course creators are accepted: the user must hold
+        // moodle/course:create at system level or in at least one category.
+        $catlist = \core_course_category::make_categories_list('moodle/course:create');
+        if (empty($catlist) && !has_capability('moodle/course:create', $context)) {
+            throw new \required_capability_exception($context, 'moodle/course:create', 'nopermissions', '');
+        }
 
         $recordid = (int)$params['recordid'];
 
@@ -75,15 +83,14 @@ class get_course_settings extends external_api {
         $session = course_session_service::get_user_session($recordid, $USER->id);
 
         // Fetch the AI-generated result data from the Datacurso API.
-        $apiservice = new ai_course_api_service();
+        $apiservice = static::get_api_service();
         $result = $apiservice->get_course_result((string)$session->get('session_id'));
         $resultdata = $result['result'] ?? [];
 
         $settings = create_course_service::get_course_settings($session, $resultdata);
 
-        // Load categories with full paths using Moodle's built-in function.
+        // Offer only the categories where the user can actually create courses.
         $categories = [];
-        $catlist = \core_course_category::make_categories_list('moodle/category:manage');
         foreach ($catlist as $id => $pathname) {
             $categories[] = [
                 'id' => (int)$id,
@@ -92,6 +99,18 @@ class get_course_settings extends external_api {
         }
 
         return $settings + ['categories' => $categories];
+    }
+
+    /**
+     * Build the AI course API service used by this endpoint.
+     *
+     * Extracted as a protected factory so PHPUnit tests can override it
+     * through a testable subclass (late static binding).
+     *
+     * @return ai_course_api_service
+     */
+    protected static function get_api_service(): ai_course_api_service {
+        return new ai_course_api_service();
     }
 
     /**

@@ -70,6 +70,12 @@ class get_course_session_state extends external_api {
         self::validate_context($context);
 
         $session = course_session_service::get_user_session((int)$params['recordid'], (int)$USER->id);
+
+        // Owning the session is not enough: resuming exposes planning data and
+        // backend state, so require the same capabilities as start_course_planning.
+        require_capability('moodle/course:create', $context);
+        require_capability('local/coursegen:createcoursewithai', $context);
+
         $sessionid = (string)$session->get('session_id');
         if ($sessionid === '') {
             throw new \moodle_exception('error_no_session_found', 'local_coursegen');

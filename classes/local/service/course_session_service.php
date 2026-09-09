@@ -86,6 +86,29 @@ class course_session_service {
     }
 
     /**
+     * Whether a user may view the stored syllabus file of a planning session.
+     *
+     * Allowed for the session owner, or for holders of the
+     * local/coursegen:view_syllabus capability in the system context.
+     *
+     * @param int $sessionid Session record ID (syllabus file item id).
+     * @param int $userid User ID requesting access.
+     * @return bool
+     */
+    public static function can_view_syllabus(int $sessionid, int $userid): bool {
+        $session = course_session::get_record(['id' => $sessionid]);
+        if (!$session) {
+            return false;
+        }
+
+        if ((int)$session->get('userid') === $userid) {
+            return true;
+        }
+
+        return has_capability('local/coursegen:view_syllabus', \context_system::instance(), $userid);
+    }
+
+    /**
      * Get in-progress course sessions for a user.
      *
      * @param int $userid User ID.

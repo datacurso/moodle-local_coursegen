@@ -100,8 +100,8 @@ export const createGuidelineHandlers = (
         guidelineList.innerHTML = filtered.map((g) => {
             const isSelected = state.selectedGuidelineId === g.id;
             return `
-                <li class="pop-item${isSelected ? ' selected' : ''}" data-id="${g.id}">
-                    <button class="pop-select-btn" data-select="${g.id}" type="button">
+                <li class="pop-item${isSelected ? ' selected' : ''}" data-id="${escapeHtml(g.id)}">
+                    <button class="pop-select-btn" data-select="${escapeHtml(g.id)}" type="button">
                         <div class="pop-radio"><div class="pop-dot"></div></div>
                         <div class="pop-item-text">
                             <span class="pop-item-name">${escapeHtml(g.name)}</span>
@@ -110,7 +110,7 @@ export const createGuidelineHandlers = (
                     </button>
                     <button
                     class="pop-eye-btn"
-                    data-preview="${g.id}" type="button" title="${escapeHtml(texts.courseai_chip_view_guideline)}">
+                    data-preview="${escapeHtml(g.id)}" type="button" title="${escapeHtml(texts.courseai_chip_view_guideline)}">
                         <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
                             stroke="currentColor" stroke-width="2" stroke-linecap="round"
                             stroke-linejoin="round">
@@ -169,13 +169,13 @@ export const createGuidelineHandlers = (
         );
         compactGuidelineList.innerHTML = filtered.map((g) =>
             `<li class="pop-item${g.id === state.selectedGuidelineId ? ' active' : ''}"
-                 role="option" data-id="${g.id}" tabindex="-1">
+                 role="option" data-id="${escapeHtml(g.id)}" tabindex="-1">
                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
                     stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                  <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
                  <polyline points="9 12 11 14 15 10"/>
                </svg>
-               <span class="pop-item-name">${g.name}</span>
+               <span class="pop-item-name">${escapeHtml(g.name)}</span>
                ${g.id === state.selectedGuidelineId ? '<span class="pop-item-check">✓</span>' : ''}
              </li>`
         ).join('');

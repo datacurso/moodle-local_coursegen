@@ -21,6 +21,7 @@ use external_api;
 use external_function_parameters;
 use external_single_structure;
 use external_value;
+use local_coursegen\event\generation_failed;
 use local_coursegen\local\service\course_planning_service;
 
 defined('MOODLE_INTERNAL') || die();
@@ -97,12 +98,19 @@ class start_course_planning extends external_api {
                 (bool)$params['withsubsections']
             );
         } catch (\Exception $e) {
+            // Keep the technical detail in developer debugging only: the client
+            // receives a localized message without internal information.
+            debugging('Unexpected error while starting course planning: ' . $e->getMessage());
+            generation_failed::create([
+                'context' => $context,
+                'other' => ['reason' => get_class($e)],
+            ])->trigger();
             return [
                 'success' => false,
                 'sessionid' => 0,
                 'threadid' => '',
                 'streamingurl' => '',
-                'message' => $e->getMessage(),
+                'message' => get_string('error_starting_course_planning', 'local_coursegen'),
             ];
         }
     }

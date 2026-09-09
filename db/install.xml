@@ -80,6 +80,9 @@
                 <KEY NAME="courseid" TYPE="foreign" FIELDS="courseid" REFTABLE="course" REFFIELDS="id" />
                 <KEY NAME="userid" TYPE="foreign" FIELDS="userid" REFTABLE="user" REFFIELDS="id" />
             </KEYS>
+            <INDEXES>
+                <INDEX NAME="job_id" UNIQUE="true" FIELDS="job_id" />
+            </INDEXES>
         </TABLE>
     </TABLES>
 </XMLDB>
