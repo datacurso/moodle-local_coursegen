@@ -29,7 +29,7 @@
 
 import {renderStepSections, resetSectionsRender} from './step_sections';
 import {renderStepLimits} from './step_limits';
-import {renderKindDefaults, defaultActionForModname} from './kind_defaults';
+import {bindKindDefaults, defaultActionForModname} from './kind_defaults';
 import * as Repository from './repository';
 import Notification from 'core/notification';
 import {get_string as getString} from 'core/str';
@@ -158,13 +158,14 @@ const renderConfigRegion = async() => {
         return;
     }
 
-    const limitsPanel = region.querySelector('[data-region="limits"]');
+    // Kind-defaults, limits and allowed-types all live in ONE rendered form
+    // now (see classes/form/template_config_form.php).
+    const configFormPanel = region.querySelector('[data-region="config-form"]');
     const structurePanel = region.querySelector('[data-region="structure"]');
-    const kindDefaultsPanel = region.querySelector('[data-region="kind-defaults"]');
 
-    renderStepLimits(limitsPanel, state);
-    await renderStepSections(structurePanel, state);
-    renderKindDefaults(kindDefaultsPanel, structurePanel, state);
+    await renderStepSections(structurePanel, configFormPanel, state);
+    renderStepLimits(configFormPanel, state);
+    bindKindDefaults(configFormPanel, structurePanel, state);
 };
 
 /**

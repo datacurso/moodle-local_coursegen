@@ -36,10 +36,13 @@ let rendered = false;
 export const resetSectionsRender = () => { rendered = false; };
 
 /**
- * @param {HTMLElement} panel
+ * @param {HTMLElement} panel The structure panel (holds [data-region="sections-config"]).
+ * @param {HTMLElement} configFormContainer The kind-defaults/limits form's container —
+ *     only used to inject its HTML when fetched via AJAX; on the initial
+ *     page load it is already server-rendered and left untouched.
  * @param {Object} state
  */
-export const renderStepSections = async(panel, state) => {
+export const renderStepSections = async(panel, configFormContainer, state) => {
     if (rendered) {
         return;
     }
@@ -63,6 +66,9 @@ export const renderStepSections = async(panel, state) => {
     try {
         const preview = await getCoursePreview(state.selectedCourseId);
         container.innerHTML = preview.html;
+        if (configFormContainer) {
+            configFormContainer.innerHTML = preview.configformhtml;
+        }
         applyKindDefaultsToState(container, state);
         bindServerRenderedControls(container, state);
         rendered = true;

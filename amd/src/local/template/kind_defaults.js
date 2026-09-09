@@ -21,10 +21,17 @@
  * file attachment, a graded activity, a closing survey, a multi-page
  * lesson) — dozens of times across a real course. Reviewing every single
  * activity one by one does not scale (a real template reviewed this session
- * has ~28 activities). This module lets the admin set ONE behavior per kind,
- * applied to every activity of that kind at once, and only touch the rare
+ * has ~28 activities). The admin sets ONE behavior per kind (a real
+ * mform 'select' element, see classes/form/template_config_form.php), and
+ * this module bulk-applies that choice to every activity of the kind and
+ * syncs their individual dropdowns, so the admin only has to touch the rare
  * exception via the per-activity dropdown that already exists in the
  * section/activity review below.
+ *
+ * This module used to also BUILD the <select> markup itself; that moved
+ * into template_config_form.php (real mform elements, server-rendered) —
+ * this module now only binds behavior on top of what the form already
+ * rendered.
  *
  * @module     local_coursegen/local/template/kind_defaults
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -37,41 +44,32 @@ import {setState} from './init';
  * Module names the AI generator can actually produce content for today.
  *
  * Mirrors mock_template_ai_service::SUPPORTED (PHP) — kept in sync manually
- * since a JS module cannot read a PHP class constant directly; the PHP side
- * is still the single source of truth enforced server-side (see
- * classes/output/sections_config.php), this list only drives which default
- * this client-side panel is allowed to offer/pre-select.
+ * since a JS module cannot read a PHP class constant directly. The PHP side
+ * (template_config_form) is the single source of truth for which options
+ * the kind-default <select> itself offers; this copy only still matters for
+ * seeding each activity's initial per-activity action as soon as a course's
+ * structure loads, before the config form has necessarily rendered yet
+ * (see applyKindDefaultsToState, called from init.js::initSectionState).
  *
  * @type {string[]}
  */
 const AI_SUPPORTED = ['page', 'label', 'forum', 'assign'];
 
 /**
- * Friendly label and sensible default action per recognised component kind.
+ * Sensible default action per recognised component kind — mirrors
+ * template_config_form::KIND_META (PHP).
  *
- * The default reflects how each kind is actually used in real templates
- * reviewed for this feature: banners and informational pages are almost
- * always regenerated per course; forums, file attachments and the closing
- * survey rarely change and are kept as-is by default; graded activities are
- * regenerated but keep their grading setup; lesson content defaults to
- * "keep" only because the generator cannot produce it yet (see the
- * "Support every activity type real templates actually use" phase) — once
- * it can, this default should become "modify" like the other content kinds.
- *
- * @type {Object<string, {label: string, defaultAction: string}>}
+ * @type {Object<string, string>}
  */
-const KIND_META = {
-    label: {label: 'Banners', defaultAction: 'modify'},
-    page: {label: 'Informational pages', defaultAction: 'modify'},
-    forum: {label: 'Discussion forums', defaultAction: 'keep'},
-    resource: {label: 'File attachments', defaultAction: 'keep'},
-    assign: {label: 'Graded activities', defaultAction: 'modify'},
-    feedback: {label: 'Closing survey', defaultAction: 'keep'},
-    lesson: {label: 'Lesson content', defaultAction: 'keep'},
+const DEFAULT_ACTION = {
+    label: 'modify',
+    page: 'modify',
+    forum: 'keep',
+    resource: 'keep',
+    assign: 'modify',
+    feedback: 'keep',
+    lesson: 'keep',
 };
-
-/** Fallback for a module type not in KIND_META (unusual, but must not break). */
-const FALLBACK_META = {label: null, defaultAction: 'keep'};
 
 /**
  * @param {string} modname
@@ -84,10 +82,10 @@ export const kindSupportsModify = (modname) => AI_SUPPORTED.includes(modname);
  * @returns {string} The sensible default action for this module type.
  */
 export const defaultActionForModname = (modname) => {
-    const meta = KIND_META[modname] || FALLBACK_META;
+    const wanted = DEFAULT_ACTION[modname] || 'keep';
     // Never default a kind the generator can't handle to "modify" — even if
-    // KIND_META said so, an unsupported kind must default to "keep".
-    return (meta.defaultAction === 'modify' && !kindSupportsModify(modname)) ? 'keep' : meta.defaultAction;
+    // DEFAULT_ACTION said so, an unsupported kind must default to "keep".
+    return (wanted === 'modify' && !kindSupportsModify(modname)) ? 'keep' : wanted;
 };
 
 /**
@@ -111,16 +109,17 @@ export const applyKindDefaultsToState = (container, state) => {
 };
 
 /**
- * Render the "defaults by kind" panel: one row per kind actually present in
- * this course, with one select each. Changing a row bulk-applies that
+ * Bind the kind-default <select> elements the form already rendered
+ * (name="kinddefault_<modname>", one per kind present in the course — see
+ * classes/form/template_config_form.php). Changing one bulk-applies that
  * action to every activity of that kind and refreshes their individual
  * dropdowns/prompts so the two controls never disagree.
  *
- * @param {HTMLElement} panel Target element for the panel's markup.
+ * @param {HTMLElement} formContainer Element containing the rendered config form.
  * @param {HTMLElement} structureContainer The rendered course structure (holds the per-activity controls to sync).
  * @param {Object} state
  */
-export const renderKindDefaults = (panel, structureContainer, state) => {
+export const bindKindDefaults = (formContainer, structureContainer, state) => {
     const present = new Map(); // modname -> [cmid, ...]
     structureContainer.querySelectorAll('[data-for="cmitem"][data-modname]').forEach(cmitem => {
         const cmid = parseInt(cmitem.dataset.id);
@@ -134,40 +133,13 @@ export const renderKindDefaults = (panel, structureContainer, state) => {
         present.get(modname).push(cmid);
     });
 
-    if (present.size === 0) {
-        panel.innerHTML = '';
-        return;
-    }
+    formContainer.querySelectorAll('select[name^="kinddefault_"]').forEach(select => {
+        const modname = select.name.replace('kinddefault_', '');
+        const cmids = present.get(modname) || [];
 
-    const rows = [...present.keys()].sort().map(modname => {
-        const meta = KIND_META[modname] || FALLBACK_META;
-        const label = meta.label || modname;
-        const cmids = present.get(modname);
-        const current = state.activityAction[cmids[0]] || defaultActionForModname(modname);
-        const canModify = kindSupportsModify(modname);
-        const options = ['keep', 'reference', 'exclude'];
-        if (canModify) {
-            options.unshift('modify');
-        }
-        const optionLabels = {modify: 'Modify', keep: 'Keep', reference: 'Reference', exclude: 'Exclude'};
-        const opts = options.map(opt =>
-            `<option value="${opt}" ${opt === current ? 'selected' : ''}>${optionLabels[opt]}</option>`
-        ).join('');
-        return `<div class="col-md-4 col-lg-3 mb-2">
-            <label class="d-block small font-weight-bold mb-1">${label}
-                <span class="text-muted font-weight-normal">(${cmids.length})</span>
-            </label>
-            <select class="custom-select custom-select-sm" data-kind-default="${modname}">${opts}</select>
-        </div>`;
-    }).join('');
-
-    panel.innerHTML = `<div class="row">${rows}</div>`;
-
-    panel.querySelectorAll('[data-kind-default]').forEach(select => {
         select.addEventListener('change', () => {
-            const modname = select.dataset.kindDefault;
             const value = select.value;
-            present.get(modname).forEach(cmid => {
+            cmids.forEach(cmid => {
                 state.activityAction[cmid] = value;
                 if (value === 'modify') {
                     state.activityRef[cmid] = true;

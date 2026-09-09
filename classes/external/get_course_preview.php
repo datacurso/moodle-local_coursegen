@@ -32,6 +32,7 @@ use external_api;
 use external_function_parameters;
 use external_single_structure;
 use external_value;
+use local_coursegen\form\template_config_form;
 use local_coursegen\output\sections_config;
 
 /**
@@ -97,8 +98,14 @@ class get_course_preview extends external_api {
         // set of controls purely in JS for this AJAX path.
         $html = sections_config::render($rawhtml, $modinfo);
 
+        // Same for the kind-default/limits/allowed-types form — real mform
+        // elements, built the same way regardless of whether the course was
+        // selected via a full page load or this AJAX path.
+        $configformhtml = template_config_form::render($modinfo);
+
         return [
             'html' => $html,
+            'configformhtml' => $configformhtml,
             'courseid' => $course->id,
             'fullname' => format_string($course->fullname),
             'shortname' => $course->shortname,
@@ -116,6 +123,7 @@ class get_course_preview extends external_api {
     public static function execute_returns(): external_single_structure {
         return new external_single_structure([
             'html' => new external_value(PARAM_RAW, 'Rendered course HTML'),
+            'configformhtml' => new external_value(PARAM_RAW, 'Rendered kind-defaults/limits/allowed-types form'),
             'courseid' => new external_value(PARAM_INT, 'Course ID'),
             'fullname' => new external_value(PARAM_TEXT, 'Course full name'),
             'shortname' => new external_value(PARAM_TEXT, 'Course short name'),
