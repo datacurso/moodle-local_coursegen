@@ -31,7 +31,9 @@
 }}
 <div id="local-coursegen-template-wizard" data-region="template-wizard">
 
-    {{! Course selection }}
+    {{! Course selection — standard category/course autocomplete pair, the
+        same pattern as the "Category" field on Moodle's own course settings
+        form (course/edit_form.php), not a custom-built browsing screen. }}
     <div data-region="step-panel" data-step="1">
         <h4>{{#str}}template_select_course, local_coursegen{{/str}}</h4>
         <p class="text-muted">{{#str}}template_select_course_desc, local_coursegen{{/str}}</p>
@@ -49,69 +51,10 @@
                     {{#pix}}i/externallink, core{{/pix}}
                     {{#str}}template_view_course, local_coursegen{{/str}}
                 </a>
-                <button class="btn btn-sm btn-link ml-auto" data-action="deselect">
-                    {{#str}}template_change_course, local_coursegen{{/str}}
-                </button>
             </div>
         </div>
 
-        <div data-region="course-browser" class="{{#haspreview}}d-none{{/haspreview}}">
-            <div class="input-group mb-3" style="max-width:350px">
-                <input type="text" class="form-control" data-action="global-search"
-                       placeholder="{{#str}}template_search_placeholder_full, local_coursegen{{/str}}">
-                <div class="input-group-append">
-                    <button class="btn btn-primary" data-action="search-btn" type="button">
-                        {{#pix}}i/search, core{{/pix}}
-                    </button>
-                </div>
-            </div>
-
-            <div class="row">
-                <div class="col-md-5 col-lg-4">
-                    <div class="card">
-                        <div class="card-header py-2 d-flex justify-content-between align-items-center">
-                            <strong>{{#str}}categories{{/str}}</strong>
-                            <button class="btn btn-sm btn-link p-0" data-action="toggle-all"
-                                    title="Expand / Collapse all">
-                                {{#pix}}i/switch, core{{/pix}}
-                            </button>
-                        </div>
-                        <div class="card-body p-0" style="max-height:450px;overflow-y:auto"
-                             data-region="category-tree">
-                            <div class="list-group list-group-flush">
-                                {{#flatcats}}
-                                <div class="list-group-item list-group-item-action align-items-start py-2 {{hiddenclass}}"
-                                     data-catid="{{id}}" data-depth="{{depth}}"
-                                     data-haschildren="{{#haschildren}}1{{/haschildren}}{{^haschildren}}0{{/haschildren}}"
-                                     style="padding-left:calc(0.75rem + {{depth}} * 0.75rem);cursor:pointer;{{^hiddenclass}}display:flex{{/hiddenclass}}">
-                                    <span class="mr-1 mt-1 small flex-shrink-0" style="width:16px">
-                                        {{#haschildren}}<i class="fa fa-chevron-right fa-fw"></i>{{/haschildren}}
-                                    </span>
-                                    <span class="flex-grow-1" style="word-break:break-word">{{name}}</span>
-                                    <span class="badge badge-pill badge-secondary ml-1">{{coursecount}}</span>
-                                </div>
-                                {{/flatcats}}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-                <div class="col-md-7 col-lg-8">
-                    <div class="card">
-                        <div class="card-header py-2 d-flex justify-content-between align-items-center">
-                            <strong data-region="course-panel-title">{{#str}}courses{{/str}}</strong>
-                            <span class="text-muted small" data-region="course-count"></span>
-                        </div>
-                        <div class="card-body p-0" data-region="course-list"
-                             style="min-height:450px;max-height:450px;overflow-y:auto">
-                            <div class="text-center text-muted py-4">
-                                {{#str}}template_select_category_hint, local_coursegen{{/str}}
-                            </div>
-                        </div>
-                        <div class="card-footer py-2 d-none" data-region="course-pagination"></div>
-                    </div>
-                </div>
-            </div>
-        </div>
+        <div data-region="course-picker-form">{{{courseformhtml}}}</div>
     </div>
 
     {{! Configuration — only meaningful once a course is selected }}

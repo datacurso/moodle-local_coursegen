@@ -48,22 +48,30 @@ class get_courses_by_category extends external_api {
         return new external_function_parameters([
             'categoryid' => new external_value(PARAM_INT, 'Category ID'),
             'recursive' => new external_value(PARAM_BOOL, 'Include subcategories', VALUE_DEFAULT, true),
+            'query' => new external_value(PARAM_RAW, 'Free-text filter on fullname/shortname', VALUE_DEFAULT, ''),
         ]);
     }
 
     /**
      * Execute.
      *
+     * Backs both the (legacy) category-browsing list and the "course" half
+     * of the category/course autocomplete pair used to pick a base course
+     * (see amd/src/local/template/form_course_selector.js) — the latter is
+     * the only caller that passes $query.
+     *
      * @param int $categoryid
      * @param bool $recursive
+     * @param string $query
      * @return array
      */
-    public static function execute(int $categoryid, bool $recursive = true): array {
+    public static function execute(int $categoryid, bool $recursive = true, string $query = ''): array {
         global $DB;
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'categoryid' => $categoryid,
             'recursive' => $recursive,
+            'query' => $query,
         ]);
 
         $context = \context_system::instance();
@@ -81,13 +89,22 @@ class get_courses_by_category extends external_api {
         }
 
         list($insql, $inparams) = $DB->get_in_or_equal($catids, SQL_PARAMS_NAMED);
-        $courses = $DB->get_records_sql(
-            "SELECT c.id, c.fullname, c.shortname, c.category
-               FROM {course} c
-              WHERE c.category {$insql} AND c.id != :siteid
-              ORDER BY c.fullname ASC",
-            $inparams + ['siteid' => SITEID]
-        );
+        $sql = "SELECT c.id, c.fullname, c.shortname, c.category
+                  FROM {course} c
+                 WHERE c.category {$insql} AND c.id != :siteid";
+        $sqlparams = $inparams + ['siteid' => SITEID];
+
+        $query = trim($params['query']);
+        if ($query !== '') {
+            $like1 = $DB->sql_like('c.fullname', ':query1', false);
+            $like2 = $DB->sql_like('c.shortname', ':query2', false);
+            $sql .= " AND ({$like1} OR {$like2})";
+            $sqlparams['query1'] = '%' . $DB->sql_like_escape($query) . '%';
+            $sqlparams['query2'] = '%' . $DB->sql_like_escape($query) . '%';
+        }
+        $sql .= ' ORDER BY c.fullname ASC';
+
+        $courses = $DB->get_records_sql($sql, $sqlparams, 0, 100);
 
         $result = [];
         foreach ($courses as $c) {
