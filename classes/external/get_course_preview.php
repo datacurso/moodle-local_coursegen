@@ -97,7 +97,7 @@ class get_course_preview extends external_api {
         // set of controls purely in JS for this AJAX path.
         $html = sections_config::render($rawhtml, $modinfo);
 
-        // The kind-default/limits/allowed-types form is NOT rendered here
+        // The type-default/limits/allowed-types form is NOT rendered here
         // any more: it is a \core_form\dynamic_form now (see
         // classes/form/template_config_form.php), reloaded directly via the
         // core_form_dynamic_form web service (core_form/dynamicform on the

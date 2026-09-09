@@ -18,7 +18,7 @@
  *
  * Replaces the previous 5-step wizard (course / preview / sections / limits
  * / save, each its own screen with Next/Prev navigation): the admin picks a
- * base course, then everything else — overall limits, per-kind defaults,
+ * base course, then everything else — overall limits, per-type defaults,
  * and the course structure review — renders on the SAME page immediately,
  * no further navigation required before Save.
  *
@@ -29,7 +29,7 @@
 
 import {renderStepSections, resetSectionsRender} from './step_sections';
 import {renderStepLimits} from './step_limits';
-import {bindKindDefaults, defaultActionForModname} from './kind_defaults';
+import {bindTypeDefaults, defaultActionForModname} from './type_action_sync';
 import * as Repository from './repository';
 import DynamicForm from 'core_form/dynamicform';
 import Notification from 'core/notification';
@@ -45,7 +45,7 @@ const state = {
 };
 /** @type {HTMLElement} Root element. */
 let root = null;
-/** @type {DynamicForm} The kind-defaults/limits/allowed-types dynamic form (see init()). */
+/** @type {DynamicForm} The type-defaults/limits/allowed-types dynamic form (see init()). */
 let configForm = null;
 /**
  * Whether configForm's container already holds a real, server-rendered form
@@ -169,7 +169,7 @@ const renderConfigRegion = async() => {
         return;
     }
 
-    // Kind-defaults, limits and allowed-types all live in ONE dynamic form
+    // Type-defaults, limits and allowed-types all live in ONE dynamic form
     // now (see classes/form/template_config_form.php) — reloaded via
     // core_form/dynamicform whenever the selected course changes, instead
     // of a custom external function shuttling its HTML around. The very
@@ -189,17 +189,17 @@ const renderConfigRegion = async() => {
     // `region` (not yet converted — see step_limits.js), so pass the whole
     // region and let each selector find what it needs.
     renderStepLimits(region, state);
-    bindKindDefaults(configForm.container, structurePanel, state);
+    bindTypeDefaults(configForm.container, structurePanel, state);
 };
 
 /**
  * Seed section/activity state from a freshly loaded course structure.
  *
- * Each activity's initial action comes from its kind's sensible default
- * (see kind_defaults.js) instead of hardcoding "modify" for everything —
+ * Each activity's initial action comes from its type's sensible default
+ * (see type_action_sync.js) instead of hardcoding "modify" for everything —
  * an admin reviewing a real ~28-activity course should see mostly-correct
  * defaults already applied, not "modify" everywhere regardless of whether
- * the generator can even produce that kind of content.
+ * the generator can even produce that type of content.
  */
 const initSectionState = () => {
     state.sectionBehavior = {};

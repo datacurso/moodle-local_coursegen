@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Per-kind default behavior + generated-course limits — a real
+ * Per-type default behavior + generated-course limits — a real
  * \core_form\dynamic_form, loaded inline via core_form/dynamicform whenever
  * the selected base course changes.
  *
@@ -44,22 +44,22 @@ use local_coursegen\local\service\mock_template_ai_service;
 use moodle_url;
 
 /**
- * Dynamic form for the kind-default / limits / allowed-types part of the config screen.
+ * Dynamic form for the type-default / limits / allowed-types part of the config screen.
  */
 class template_config_form extends dynamic_form {
 
     /**
-     * Friendly label + sensible default action per recognised component kind.
+     * Friendly label + sensible default action per recognised activity type.
      *
-     * Mirrors amd/src/local/template/kind_defaults.js's KIND_META — kept in
+     * Mirrors amd/src/local/template/type_action_sync.js's TYPE_META — kept in
      * sync manually (JS cannot read a PHP class constant); this PHP copy is
      * the one that actually decides each field's default, the JS copy only
      * still matters for seeding individual per-activity actions after a
-     * course is (re)selected (see kind_defaults.js::applyKindDefaultsToState).
+     * course is (re)selected (see type_action_sync.js::applyTypeDefaultsToState).
      *
      * @var array<string, array{label:string, default:string}>
      */
-    private const KIND_META = [
+    private const TYPE_META = [
         'label' => ['label' => 'Banners', 'default' => 'modify'],
         'page' => ['label' => 'Informational pages', 'default' => 'modify'],
         'forum' => ['label' => 'Discussion forums', 'default' => 'keep'],
@@ -105,14 +105,14 @@ class template_config_form extends dynamic_form {
         ];
 
         if (!empty($presentmodnames)) {
-            $mform->addElement('header', 'kinddefaultshdr', get_string('template_kind_defaults_title', 'local_coursegen'));
-            $mform->setExpanded('kinddefaultshdr');
-            $mform->addElement('static', 'kinddefaultsdesc', '',
-                get_string('template_kind_defaults_desc', 'local_coursegen'));
+            $mform->addElement('header', 'typedefaultshdr', get_string('template_type_defaults_title', 'local_coursegen'));
+            $mform->setExpanded('typedefaultshdr');
+            $mform->addElement('static', 'typedefaultsdesc', '',
+                get_string('template_type_defaults_desc', 'local_coursegen'));
 
             foreach ($presentmodnames as $modname) {
-                $meta = self::KIND_META[$modname] ?? ['label' => $modname, 'default' => 'keep'];
-                // Never offer "Modify" for a kind the AI generator cannot
+                $meta = self::TYPE_META[$modname] ?? ['label' => $modname, 'default' => 'keep'];
+                // Never offer "Modify" for a type the AI generator cannot
                 // produce today — the same constraint already enforced
                 // server-side for the per-activity dropdown (see
                 // classes/output/sections_config.php), applied here too so
@@ -130,7 +130,7 @@ class template_config_form extends dynamic_form {
                     $options = ['modify' => $actionlabels['modify']] + $options;
                 }
 
-                $fieldname = "kinddefault_{$modname}";
+                $fieldname = "typedefault_{$modname}";
                 $mform->addElement('select', $fieldname, $meta['label'], $options);
                 $mform->setType($fieldname, PARAM_ALPHA);
                 $mform->setDefault($fieldname, $default);

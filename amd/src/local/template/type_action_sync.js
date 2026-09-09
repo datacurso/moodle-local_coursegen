@@ -14,16 +14,16 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Default behavior per KIND of component, instead of per individual activity.
+ * Default behavior per TYPE of component, instead of per individual activity.
  *
- * A real template repeats the same handful of component kinds over and over
+ * A real template repeats the same handful of component types over and over
  * (a welcome/section banner, an informational page, a discussion forum, a
  * file attachment, a graded activity, a closing survey, a multi-page
  * lesson) — dozens of times across a real course. Reviewing every single
  * activity one by one does not scale (a real template reviewed this session
- * has ~28 activities). The admin sets ONE behavior per kind (a real
+ * has ~28 activities). The admin sets ONE behavior per type (a real
  * mform 'select' element, see classes/form/template_config_form.php), and
- * this module bulk-applies that choice to every activity of the kind and
+ * this module bulk-applies that choice to every activity of the type and
  * syncs their individual dropdowns, so the admin only has to touch the rare
  * exception via the per-activity dropdown that already exists in the
  * section/activity review below.
@@ -33,7 +33,7 @@
  * this module now only binds behavior on top of what the form already
  * rendered.
  *
- * @module     local_coursegen/local/template/kind_defaults
+ * @module     local_coursegen/local/template/type_action_sync
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
@@ -46,18 +46,18 @@ import {setState} from './init';
  * Mirrors mock_template_ai_service::SUPPORTED (PHP) — kept in sync manually
  * since a JS module cannot read a PHP class constant directly. The PHP side
  * (template_config_form) is the single source of truth for which options
- * the kind-default <select> itself offers; this copy only still matters for
+ * the type-default <select> itself offers; this copy only still matters for
  * seeding each activity's initial per-activity action as soon as a course's
  * structure loads, before the config form has necessarily rendered yet
- * (see applyKindDefaultsToState, called from init.js::initSectionState).
+ * (see applyTypeDefaultsToState, called from init.js::initSectionState).
  *
  * @type {string[]}
  */
 const AI_SUPPORTED = ['page', 'label', 'forum', 'assign'];
 
 /**
- * Sensible default action per recognised component kind — mirrors
- * template_config_form::KIND_META (PHP).
+ * Sensible default action per recognised component type — mirrors
+ * template_config_form::TYPE_META (PHP).
  *
  * @type {Object<string, string>}
  */
@@ -75,7 +75,7 @@ const DEFAULT_ACTION = {
  * @param {string} modname
  * @returns {boolean} Whether "Modify" is a safe option for this module type today.
  */
-export const kindSupportsModify = (modname) => AI_SUPPORTED.includes(modname);
+export const typeSupportsModify = (modname) => AI_SUPPORTED.includes(modname);
 
 /**
  * @param {string} modname
@@ -83,20 +83,20 @@ export const kindSupportsModify = (modname) => AI_SUPPORTED.includes(modname);
  */
 export const defaultActionForModname = (modname) => {
     const wanted = DEFAULT_ACTION[modname] || 'keep';
-    // Never default a kind the generator can't handle to "modify" — even if
-    // DEFAULT_ACTION said so, an unsupported kind must default to "keep".
-    return (wanted === 'modify' && !kindSupportsModify(modname)) ? 'keep' : wanted;
+    // Never default a type the generator can't handle to "modify" — even if
+    // DEFAULT_ACTION said so, an unsupported type must default to "keep".
+    return (wanted === 'modify' && !typeSupportsModify(modname)) ? 'keep' : wanted;
 };
 
 /**
- * Seed state.activityAction with the per-kind default for every activity
+ * Seed state.activityAction with the per-type default for every activity
  * that doesn't already have an explicit value — never overwrites a value
  * the admin (or a previous render) already set.
  *
  * @param {HTMLElement} container The rendered course structure, to read real modnames from.
  * @param {Object} state
  */
-export const applyKindDefaultsToState = (container, state) => {
+export const applyTypeDefaultsToState = (container, state) => {
     container.querySelectorAll('[data-for="cmitem"][data-modname]').forEach(cmitem => {
         const cmid = parseInt(cmitem.dataset.id);
         const modname = cmitem.dataset.modname;
@@ -109,17 +109,17 @@ export const applyKindDefaultsToState = (container, state) => {
 };
 
 /**
- * Bind the kind-default <select> elements the form already rendered
- * (name="kinddefault_<modname>", one per kind present in the course — see
+ * Bind the type-default <select> elements the form already rendered
+ * (name="typedefault_<modname>", one per type present in the course — see
  * classes/form/template_config_form.php). Changing one bulk-applies that
- * action to every activity of that kind and refreshes their individual
+ * action to every activity of that type and refreshes their individual
  * dropdowns/prompts so the two controls never disagree.
  *
  * @param {HTMLElement} formContainer Element containing the rendered config form.
  * @param {HTMLElement} structureContainer The rendered course structure (holds the per-activity controls to sync).
  * @param {Object} state
  */
-export const bindKindDefaults = (formContainer, structureContainer, state) => {
+export const bindTypeDefaults = (formContainer, structureContainer, state) => {
     const present = new Map(); // modname -> [cmid, ...]
     structureContainer.querySelectorAll('[data-for="cmitem"][data-modname]').forEach(cmitem => {
         const cmid = parseInt(cmitem.dataset.id);
@@ -133,8 +133,8 @@ export const bindKindDefaults = (formContainer, structureContainer, state) => {
         present.get(modname).push(cmid);
     });
 
-    formContainer.querySelectorAll('select[name^="kinddefault_"]').forEach(select => {
-        const modname = select.name.replace('kinddefault_', '');
+    formContainer.querySelectorAll('select[name^="typedefault_"]').forEach(select => {
+        const modname = select.name.replace('typedefault_', '');
         const cmids = present.get(modname) || [];
 
         select.addEventListener('change', () => {
@@ -152,7 +152,7 @@ export const bindKindDefaults = (formContainer, structureContainer, state) => {
 };
 
 /**
- * Keep one activity's own dropdown/prompt in sync after a bulk kind-default change.
+ * Keep one activity's own dropdown/prompt in sync after a bulk type-default change.
  *
  * @param {HTMLElement} structureContainer
  * @param {number} cmid
