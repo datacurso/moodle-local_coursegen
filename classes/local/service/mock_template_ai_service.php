@@ -49,7 +49,7 @@ class mock_template_ai_service {
      * Module names the mock currently knows how to fabricate content for.
      *
      * Public on purpose: this is the single source of truth for which
-     * activity kinds may offer "Modify" in the template configuration screen
+     * activity types may offer "Modify" in the template configuration screen
      * (see sections_config::build_activity_dropdown()) — the config UI must
      * never let an admin pick an option that generation will silently fail
      * on, so it reads this list directly instead of duplicating it.

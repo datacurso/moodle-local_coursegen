@@ -168,7 +168,7 @@ class sections_config {
      * Only ever offers "Modify" for a module type the AI generator can
      * actually produce today (mock_template_ai_service::SUPPORTED) — an
      * admin must never be able to pick an option that generation will
-     * silently fail on later. Every other kind (e.g. resource/file modules,
+     * silently fail on later. Every other type (e.g. resource/file modules,
      * or a lesson/feedback activity until Phase 2 adds support) only offers
      * Keep / Reference / Exclude, and defaults to Keep instead of Modify.
      *

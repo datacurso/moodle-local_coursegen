@@ -18,7 +18,7 @@
     @template local_coursegen/template_wizard
 
     Template configuration — one screen, no step navigation. Pick a base
-    course, then review the overall limits, the default behavior per kind
+    course, then review the overall limits, the default behavior per activity type
     of component, and the course structure — all on this same page — and
     Save. All initial state rendered server-side, no JS flash.
 
@@ -61,7 +61,7 @@
     <div data-region="config" class="{{^haspreview}}d-none{{/haspreview}}">
         <hr class="my-4">
 
-        {{! Default behavior per kind of component + generated-course limits +
+        {{! Default behavior per activity type + generated-course limits +
             allowed activity types — real mform elements, see
             classes/form/template_config_form.php }}
         <div data-region="config-form">{{{configformhtml}}}</div>
@@ -102,7 +102,7 @@
 
         <hr class="my-4">
 
-        {{! Course structure — review only the rare exception to the kind defaults above }}
+        {{! Course structure — review only the rare exception to the activity-type defaults above }}
         <h4>{{#str}}template_configure_sections, local_coursegen{{/str}}</h4>
         <p class="text-muted">{{#str}}template_configure_sections_desc, local_coursegen{{/str}}</p>
         <div data-region="structure">

@@ -28,7 +28,7 @@
 
 import {getCoursePreview} from './repository';
 import {bindServerRenderedControls} from './sections_events';
-import {applyKindDefaultsToState} from './kind_defaults';
+import {applyTypeDefaultsToState} from './type_action_sync';
 import Notification from 'core/notification';
 
 let rendered = false;
@@ -48,7 +48,7 @@ export const renderStepSections = async(panel, state) => {
 
     // Server already rendered the controls on initial page load — just bind.
     if (container && container.querySelector('[data-sec-action], [data-act-val]')) {
-        applyKindDefaultsToState(container, state);
+        applyTypeDefaultsToState(container, state);
         bindServerRenderedControls(container, state);
         rendered = true;
         return;
@@ -63,7 +63,7 @@ export const renderStepSections = async(panel, state) => {
     try {
         const preview = await getCoursePreview(state.selectedCourseId);
         container.innerHTML = preview.html;
-        applyKindDefaultsToState(container, state);
+        applyTypeDefaultsToState(container, state);
         bindServerRenderedControls(container, state);
         rendered = true;
     } catch (e) {
