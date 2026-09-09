@@ -134,6 +134,14 @@ class template_config_form extends dynamic_form {
                 $mform->addElement('select', $fieldname, $meta['label'], $options);
                 $mform->setType($fieldname, PARAM_ALPHA);
                 $mform->setDefault($fieldname, $default);
+                // Only the 7 recognised types get bespoke guidance (real
+                // reasoning about why THAT type defaults where it does);
+                // anything else present in a real course falls back to one
+                // generic explanation of what the four actions mean.
+                $helpid = array_key_exists($modname, self::TYPE_META)
+                    ? "template_type_default_{$modname}"
+                    : 'template_type_default_generic';
+                $mform->addHelpButton($fieldname, $helpid, 'local_coursegen');
             }
         }
 
@@ -144,9 +152,11 @@ class template_config_form extends dynamic_form {
         $mform->addElement('text', 'maxsections', get_string('template_max_sections', 'local_coursegen'), ['size' => 5]);
         $mform->setType('maxsections', PARAM_INT);
         $mform->setDefault('maxsections', max(1, $numsections));
+        $mform->addHelpButton('maxsections', 'template_max_sections', 'local_coursegen', '', false, max(1, $numsections));
 
         $mform->addElement('advcheckbox', 'nolimit', '', get_string('template_no_limit', 'local_coursegen'));
         $mform->setType('nolimit', PARAM_BOOL);
+        $mform->addHelpButton('nolimit', 'template_no_limit', 'local_coursegen');
         // Replaces the previous hand-wired "disable the number field in JS
         // when the checkbox is ticked" — this is exactly what disabledIf is for.
         $mform->disabledIf('maxsections', 'nolimit', 'checked');
@@ -166,8 +176,64 @@ class template_config_form extends dynamic_form {
                 $mform->addElement('advcheckbox', $fieldname, '', $displayname);
                 $mform->setType($fieldname, PARAM_BOOL);
                 $mform->setDefault($fieldname, in_array($modname, $presentmodnames, true) ? 1 : 0);
+                // One shared help identifier for every installed activity
+                // type (dozens on a real site) — a bespoke string per type
+                // isn't practical, so the single generic explanation is
+                // parameterised with the type's own real display name
+                // ({$a}) instead of reading as one identical block repeated
+                // on every checkbox.
+                $mform->addHelpButton($fieldname, 'template_allowed_type', 'local_coursegen', '', false, $displayname);
             }
         }
+
+        $this->definition_naming_pattern();
+    }
+
+    /**
+     * Section-naming-pattern fields: how each generated section's name is
+     * derived from its position, independent of any one course's structure
+     * (unlike the type-defaults/limits above, these options don't depend on
+     * $courseid at all) — kept in this same dynamic_form rather than a
+     * separate one so the whole config screen stays one coherent unit, and
+     * because its live preview (rendered client-side, see
+     * amd/src/local/template/step_limits.js::updatePreview) needs the same
+     * already-loaded course structure the type-defaults section does.
+     */
+    private function definition_naming_pattern(): void {
+        $mform = $this->_form;
+
+        $mform->addElement('header', 'namingpatternhdr', get_string('template_naming_pattern', 'local_coursegen'));
+        $mform->setExpanded('namingpatternhdr');
+
+        $patterns = [
+            'Unidad {N} — {nombre}' => 'Unidad {N} — {nombre}',
+            'Módulo {N}: {nombre}' => 'Módulo {N}: {nombre}',
+            'Tema {N}: {nombre}' => 'Tema {N}: {nombre}',
+            'Semana {N}: {nombre}' => 'Semana {N}: {nombre}',
+            '{nombre}' => get_string('template_naming_name_only', 'local_coursegen'),
+            '__custom__' => get_string('template_naming_custom', 'local_coursegen'),
+        ];
+        $mform->addElement('select', 'namingpattern', get_string('template_naming_pattern', 'local_coursegen'), $patterns);
+        $mform->setType('namingpattern', PARAM_RAW);
+        $mform->setDefault('namingpattern', 'Unidad {N} — {nombre}');
+        $mform->addHelpButton('namingpattern', 'template_naming_pattern', 'local_coursegen');
+
+        $mform->addElement('text', 'custompattern', get_string('template_naming_custom', 'local_coursegen'),
+            ['placeholder' => 'E.g.: Chapter {N} - {nombre}']);
+        $mform->setType('custompattern', PARAM_TEXT);
+        $mform->hideIf('custompattern', 'namingpattern', 'neq', '__custom__');
+        $mform->addHelpButton('custompattern', 'template_naming_custom', 'local_coursegen');
+
+        $mform->addElement('select', 'namingstart', get_string('template_naming_start', 'local_coursegen'), [
+            1 => '1',
+            0 => '0',
+        ]);
+        $mform->setType('namingstart', PARAM_INT);
+        $mform->setDefault('namingstart', 1);
+        $mform->addHelpButton('namingstart', 'template_naming_start', 'local_coursegen');
+
+        $mform->addElement('static', 'namingpreviewwrap', '',
+            \html_writer::div('', 'bg-light rounded p-2', ['data-region' => 'naming-preview']));
     }
 
     /**

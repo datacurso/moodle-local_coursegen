@@ -62,43 +62,9 @@
         <hr class="my-4">
 
         {{! Default behavior per activity type + generated-course limits +
-            allowed activity types — real mform elements, see
-            classes/form/template_config_form.php }}
+            allowed activity types + section naming pattern — real mform
+            elements, see classes/form/template_config_form.php }}
         <div data-region="config-form">{{{configformhtml}}}</div>
-
-        {{! Section naming — kept as-is for now, not part of this conversion }}
-        <div class="form-group row">
-            <label class="col-md-3 col-form-label font-weight-bold">
-                {{#str}}template_naming_pattern, local_coursegen{{/str}}
-            </label>
-            <div class="col-md-9">
-                <select class="custom-select mb-2" data-field="naming-pattern">
-                    <option value="Unidad {N} — {nombre}">Unidad {N} — {nombre}</option>
-                    <option value="Módulo {N}: {nombre}">Módulo {N}: {nombre}</option>
-                    <option value="Tema {N}: {nombre}">Tema {N}: {nombre}</option>
-                    <option value="Semana {N}: {nombre}">Semana {N}: {nombre}</option>
-                    <option value="{nombre}">{nombre} (name only)</option>
-                    <option value="__custom__">Custom...</option>
-                </select>
-                <div class="d-none mb-2" data-region="custom-pattern">
-                    <input type="text" class="form-control" data-field="custom-pattern"
-                           placeholder="E.g.: Chapter {N} - {nombre}">
-                    <small class="form-text text-muted">
-                        {{#str}}template_naming_custom_help, local_coursegen{{/str}}
-                    </small>
-                </div>
-                <div class="d-flex align-items-center mb-2">
-                    <span class="text-muted small mr-2">
-                        {{#str}}template_naming_start, local_coursegen{{/str}}
-                    </span>
-                    <select class="custom-select" style="width:70px" data-field="naming-start">
-                        <option value="1">1</option>
-                        <option value="0">0</option>
-                    </select>
-                </div>
-                <div class="bg-light rounded p-2" data-region="naming-preview"></div>
-            </div>
-        </div>
 
         <hr class="my-4">
 
