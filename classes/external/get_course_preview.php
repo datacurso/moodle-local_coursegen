@@ -32,6 +32,7 @@ use external_api;
 use external_function_parameters;
 use external_single_structure;
 use external_value;
+use local_coursegen\output\sections_config;
 
 /**
  * External function to render a course preview with its native format.
@@ -78,7 +79,7 @@ class get_course_preview extends external_api {
         $outputclass = $format->get_output_classname('content');
         $widget = new $outputclass($format);
 
-        $html = $renderer->render($widget);
+        $rawhtml = $renderer->render($widget);
 
         $modinfo = get_fast_modinfo($course);
         $sections = $modinfo->get_section_info_all();
@@ -89,6 +90,12 @@ class get_course_preview extends external_api {
                 $numactivities += count($modinfo->sections[$section->section]);
             }
         }
+
+        // Inject the section/activity configuration controls server-side, the
+        // same as the initial page load does — one rendering path instead of
+        // two, since the client used to rebuild an equivalent (and drifting)
+        // set of controls purely in JS for this AJAX path.
+        $html = sections_config::render($rawhtml, $modinfo);
 
         return [
             'html' => $html,

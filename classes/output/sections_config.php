@@ -24,6 +24,8 @@
 
 namespace local_coursegen\output;
 
+use local_coursegen\local\service\mock_template_ai_service;
+
 /**
  * Build the sections config HTML server-side with dropdowns and prompts already injected.
  */
@@ -86,6 +88,9 @@ class sections_config {
             if (!$cmid) {
                 continue;
             }
+            $cm = $modinfo->get_cm((int) $cmid);
+            $cmitem->setAttribute('data-modname', $cm->modname);
+
             // Find the activity-grid to append dropdown inline.
             $grids = $xpath->query('.//*[contains(@class,"activity-grid")]', $cmitem);
             $grid = $grids->length > 0 ? $grids->item(0) : $cmitem;
@@ -93,16 +98,21 @@ class sections_config {
             $dropwrap = $doc->createElement('div');
             $dropwrap->setAttribute('class', 'ml-auto dropdown');
             $dropwrap->setAttribute('data-tpl-control', (string)$cmid);
-            $drophtml = self::build_activity_dropdown((int)$cmid);
+            $drophtml = self::build_activity_dropdown((int)$cmid, $cm->modname);
             $frag = $doc->createDocumentFragment();
             $frag->appendXML($drophtml);
             $dropwrap->appendChild($frag);
             $grid->appendChild($dropwrap);
 
-            // Prompt textarea.
+            // Prompt textarea — only visible when the default action is "Modify".
+            $cansupportmodify = in_array($cm->modname, mock_template_ai_service::SUPPORTED, true);
             $promptwrap = $doc->createElement('div');
             $promptwrap->setAttribute('data-tpl-prompt-wrap', (string)$cmid);
-            $promptwrap->setAttribute('style', 'padding:0 1rem .5rem 3.5rem');
+            $promptstyle = 'padding:0 1rem .5rem 3.5rem';
+            if (!$cansupportmodify) {
+                $promptstyle .= ';display:none';
+            }
+            $promptwrap->setAttribute('style', $promptstyle);
             $textarea = $doc->createElement('textarea', '');
             $textarea->setAttribute('class', 'form-control');
             $textarea->setAttribute('rows', '2');
@@ -155,10 +165,18 @@ class sections_config {
     /**
      * Build activity action dropdown HTML.
      *
+     * Only ever offers "Modify" for a module type the AI generator can
+     * actually produce today (mock_template_ai_service::SUPPORTED) — an
+     * admin must never be able to pick an option that generation will
+     * silently fail on later. Every other kind (e.g. resource/file modules,
+     * or a lesson/feedback activity until Phase 2 adds support) only offers
+     * Keep / Reference / Exclude, and defaults to Keep instead of Modify.
+     *
      * @param int $cmid
+     * @param string $modname
      * @return string
      */
-    private static function build_activity_dropdown(int $cmid): string {
+    private static function build_activity_dropdown(int $cmid, string $modname): string {
         $tips = [
             'modify' => get_string('template_activity_modify_tip', 'local_coursegen'),
             'keep' => get_string('template_activity_keep_tip', 'local_coursegen'),
@@ -171,13 +189,19 @@ class sections_config {
             'reference' => get_string('template_activity_reference', 'local_coursegen'),
             'exclude' => get_string('template_activity_exclude', 'local_coursegen'),
         ];
+        $cansupportmodify = in_array($modname, mock_template_ai_service::SUPPORTED, true);
+        if (!$cansupportmodify) {
+            unset($labels['modify']);
+        }
+        $default = $cansupportmodify ? 'modify' : 'keep';
+
         $html = '<button class="btn btn-sm btn-link dropdown-toggle p-0" '
             . 'style="color:#0f6cbf;text-decoration:none" '
-            . 'data-toggle="dropdown" title="' . s($tips['modify']) . '">'
-            . $labels['modify'] . '</button>';
+            . 'data-toggle="dropdown" title="' . s($tips[$default]) . '">'
+            . $labels[$default] . '</button>';
         $html .= '<div class="dropdown-menu dropdown-menu-right">';
         foreach ($labels as $key => $label) {
-            $active = $key === 'modify' ? 'active' : '';
+            $active = $key === $default ? 'active' : '';
             $html .= '<a class="dropdown-item ' . $active . '" href="#" '
                 . 'data-act-val="' . $key . '" '
                 . 'title="' . s($tips[$key]) . '">' . $label . '</a>';

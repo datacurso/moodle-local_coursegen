@@ -14,26 +14,30 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Template wizard initialisation and state management.
+ * Template configuration — state management for the single-screen flow.
+ *
+ * Replaces the previous 5-step wizard (course / preview / sections / limits
+ * / save, each its own screen with Next/Prev navigation): the admin picks a
+ * base course, then everything else — overall limits, per-kind defaults,
+ * and the course structure review — renders on the SAME page immediately,
+ * no further navigation required before Save.
  *
  * @module     local_coursegen/local/template/init
  * @copyright  2025 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {renderStepper} from './stepper';
 import {renderStepCourse} from './step_course';
-import {renderStepPreview} from './step_preview';
-import {renderStepSections} from './step_sections';
+import {renderStepSections, resetSectionsRender} from './step_sections';
 import {renderStepLimits} from './step_limits';
-import {renderStepSummary} from './step_summary';
+import {renderKindDefaults, defaultActionForModname} from './kind_defaults';
 import * as Repository from './repository';
 import Notification from 'core/notification';
 import {get_string as getString} from 'core/str';
 
 /** @type {Object} Wizard state. */
 const state = {
-    currentStep: 1, selectedCourseId: null, selectedCourse: null,
+    selectedCourseId: null, selectedCourse: null,
     courseStructure: null, templateName: '', templateDesc: '', templateId: 0,
     sectionBehavior: {}, activityAction: {}, activityRef: {}, activityPrompt: {},
     maxSections: 0, noLimit: false, allowedTypes: [],
@@ -47,98 +51,65 @@ export const getState = () => state;
 
 /**
  * @param {Object} updates Properties to merge into state.
- * @param {boolean} render Whether to re-render the current step.
+ * @param {boolean} render Whether to re-render the course picker (rarely needed —
+ *     picking/deselecting a course already re-renders the config region below).
  */
 export const setState = (updates, render = false) => {
+    const coursechanged = Object.prototype.hasOwnProperty.call(updates, 'selectedCourseId');
     Object.assign(state, updates);
-    if (render) { showStep(state.currentStep); }
+    if (coursechanged) {
+        root.querySelector('[data-region="course-browser"]')?.classList.toggle('d-none', !!state.selectedCourseId);
+        renderConfigRegion();
+    }
+    if (render) {
+        renderStepCourse(root.querySelector('[data-region="step-panel"][data-step="1"]'));
+    }
 };
 
 /** @returns {HTMLElement} Root wizard element. */
 export const getRoot = () => root;
 
-const STEPS = [
-    {id: 1, label: 'template_step_course'},
-    {id: 2, label: 'template_step_preview'},
-    {id: 3, label: 'template_step_sections'},
-    {id: 4, label: 'template_step_limits'},
-    {id: 5, label: 'template_step_save'},
-];
-
 /**
- * Show a specific step.
- * @param {number} step
+ * Show/hide and populate the configuration region below the course picker,
+ * based on whether a course is currently selected. This is the ONLY thing
+ * that changes what's on screen — there is no step/page navigation.
  */
-const showStep = (step) => {
-    state.currentStep = step;
-    root.querySelectorAll('[data-region="step-panel"]').forEach(p => {
-        p.classList.toggle('d-none', parseInt(p.dataset.step) !== step);
-    });
-
-    const prevBtn = root.querySelector('[data-action="prev"]');
-    const nextBtn = root.querySelector('[data-action="next"]');
-    const saveBtn = root.querySelector('[data-action="save"]');
-
-    prevBtn.classList.toggle('d-none', step <= 1);
-    nextBtn.classList.toggle('d-none', step === 5);
-    saveBtn.classList.toggle('d-none', step !== 5);
-
-    renderStepper(root.querySelector('[data-region="stepper"]'), STEPS, step);
-
-    const panel = root.querySelector(`[data-region="step-panel"][data-step="${step}"]`);
-    const renderers = {
-        1: renderStepCourse,
-        2: renderStepPreview,
-        3: renderStepSections,
-        4: renderStepLimits,
-        5: renderStepSummary,
-    };
-    if (renderers[step]) {
-        renderers[step](panel, state);
-    }
-
-    updateUrl();
-};
-
-/** Update the browser URL to reflect current wizard state without reloading. */
-const updateUrl = () => {
-    const params = new URLSearchParams(window.location.search);
-    params.set('step', state.currentStep);
-    if (state.templateId) { params.set('id', state.templateId); }
-    if (state.selectedCourseId) { params.set('courseid', state.selectedCourseId); }
-    else { params.delete('courseid'); }
-    window.history.replaceState(null, '', window.location.pathname + '?' + params.toString());
-};
-
-/**
- * Go to next step with validation.
- */
-const nextStep = async() => {
-    if (state.currentStep === 1 && !state.selectedCourseId) {
-        const msg = await getString('template_select_course_first', 'local_coursegen');
-        Notification.addNotification({message: msg, type: 'warning'});
+const renderConfigRegion = async() => {
+    const region = root.querySelector('[data-region="config"]');
+    if (!state.selectedCourseId) {
+        region.classList.add('d-none');
         return;
     }
-    if (state.currentStep === 1 && !state.courseStructure) {
-        try {
+    region.classList.remove('d-none');
+
+    try {
+        if (!state.courseStructure) {
+            resetSectionsRender();
             state.courseStructure = await Repository.getCourseStructure(state.selectedCourseId);
             initSectionState();
-        } catch (e) {
-            Notification.exception(e);
-            return;
         }
-    }
-    if (state.currentStep >= 5) {
+    } catch (e) {
+        Notification.exception(e);
         return;
     }
-    showStep(state.currentStep + 1);
+
+    const limitsPanel = region.querySelector('[data-region="limits"]');
+    const structurePanel = region.querySelector('[data-region="structure"]');
+    const kindDefaultsPanel = region.querySelector('[data-region="kind-defaults"]');
+
+    renderStepLimits(limitsPanel, state);
+    await renderStepSections(structurePanel, state);
+    renderKindDefaults(kindDefaultsPanel, structurePanel, state);
 };
 
-/** Go to previous step. */
-const prevStep = () => { if (state.currentStep > 1) { showStep(state.currentStep - 1); } };
-
 /**
- * Initialise section/activity state from course structure.
+ * Seed section/activity state from a freshly loaded course structure.
+ *
+ * Each activity's initial action comes from its kind's sensible default
+ * (see kind_defaults.js) instead of hardcoding "modify" for everything —
+ * an admin reviewing a real ~28-activity course should see mostly-correct
+ * defaults already applied, not "modify" everywhere regardless of whether
+ * the generator can even produce that kind of content.
  */
 const initSectionState = () => {
     state.sectionBehavior = {};
@@ -150,7 +121,7 @@ const initSectionState = () => {
     state.courseStructure.forEach(s => {
         state.sectionBehavior[s.id] = 'custom';
         s.activities.forEach(a => {
-            state.activityAction[a.id] = 'modify';
+            state.activityAction[a.id] = defaultActionForModname(a.modname);
             state.activityRef[a.id] = true;
             actTypes.add(a.modname);
         });
@@ -167,7 +138,7 @@ const buildSections = () => state.courseStructure.map(s => ({
     sectionid: s.id, sectionnum: s.num,
     behavior: state.sectionBehavior[s.id] || 'custom',
     activities: s.activities.map(a => ({
-        cmid: a.id, action: state.activityAction[a.id] || 'modify',
+        cmid: a.id, action: state.activityAction[a.id] || 'keep',
         useasreference: state.activityRef[a.id] !== false,
         prompt: state.activityPrompt[a.id] || '',
     })),
@@ -177,8 +148,12 @@ const buildSections = () => state.courseStructure.map(s => ({
  * Save template via repository and notify user.
  */
 const saveTemplate = async() => {
+    if (!state.selectedCourseId || !state.courseStructure) {
+        const msg = await getString('template_select_course_first', 'local_coursegen');
+        Notification.addNotification({message: msg, type: 'warning'});
+        return;
+    }
     try {
-        // Read name/desc from moodleform inputs.
         const nameVal = root.querySelector('#id_templatename')?.value || state.templateName;
         const descVal = root.querySelector('#id_templatedesc')?.value || state.templateDesc;
         state.templateName = nameVal;
@@ -191,7 +166,6 @@ const saveTemplate = async() => {
             namingpattern: state.namingPattern, namingstart: state.namingStart,
             sections: buildSections(),
         });
-        // Redirect to manage page with success notification.
         window.location.href = M.cfg.wwwroot + '/local/coursegen/manage_templates.php';
     } catch (e) {
         Notification.exception(e);
@@ -199,15 +173,7 @@ const saveTemplate = async() => {
 };
 
 /**
- * Navigate directly to a specific step.
- * @param {number} step
- */
-export const goToStep = (step) => {
-    showStep(step);
-};
-
-/**
- * Initialise the template wizard.
+ * Initialise the template configuration screen.
  * @param {Object} config
  * @param {Array} config.courses List of available courses.
  */
@@ -220,7 +186,6 @@ export const init = (config) => {
     state.templateId = config.templateid || 0;
     state.categories = config.categories || [];
 
-    // Restore state from URL parameters.
     const initialCourseId = config.initialcourseid || 0;
     const initialCourseName = config.initialcoursename || '';
     if (initialCourseId > 0) {
@@ -228,22 +193,8 @@ export const init = (config) => {
         state.selectedCourse = {id: initialCourseId, fullname: initialCourseName};
     }
 
-    root.querySelector('[data-action="next"]').addEventListener('click', nextStep);
-    root.querySelector('[data-action="prev"]').addEventListener('click', prevStep);
     root.querySelector('[data-action="save"]').addEventListener('click', saveTemplate);
 
-    // Start at the step from URL or default to 1.
-    const initialStep = config.initialstep || 1;
-    // If restoring to step > 1, we need course structure loaded first.
-    if (initialStep > 1 && state.selectedCourseId && !state.courseStructure) {
-        Repository.getCourseStructure(state.selectedCourseId).then(structure => {
-            state.courseStructure = structure;
-            initSectionState();
-            showStep(initialStep);
-        }).catch(() => {
-            showStep(1);
-        });
-    } else {
-        showStep(initialStep);
-    }
+    renderStepCourse(root.querySelector('[data-region="step-panel"][data-step="1"]'));
+    renderConfigRegion();
 };
