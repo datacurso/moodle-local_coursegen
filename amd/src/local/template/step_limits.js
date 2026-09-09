@@ -14,21 +14,25 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Step 4: Limits — binds events on server-rendered controls.
+ * Generated-course limits (max sections / no limit / allowed activity
+ * types) — binds state-tracking events on the real mform elements rendered
+ * by classes/form/template_config_form.php.
+ *
+ * The "disable the max-sections field while no-limit is checked" behavior
+ * used to be hand-wired here; it is now the form's own disabledIf() rule
+ * (see template_config_form::definition()) and needs no JS at all.
  *
  * @module     local_coursegen/local/template/step_limits
  * @copyright  2025 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {setState} from './init';
-
 let bound = false;
 
 /**
- * Bind events on the server-rendered limits step.
+ * Bind events on the server-rendered limits form.
  *
- * @param {HTMLElement} panel
+ * @param {HTMLElement} panel Element containing the rendered config form.
  * @param {Object} state
  */
 export const renderStepLimits = (panel, state) => {
@@ -38,87 +42,44 @@ export const renderStepLimits = (panel, state) => {
     bound = true;
 
     const structure = state.courseStructure || [];
-    const present = new Set();
-    structure.forEach(s => s.activities.forEach(a => present.add(a.modname)));
 
-    // Set initial values on server-rendered inputs.
-    const maxInput = panel.querySelector('[data-field="max-sections"]');
-    const noLimitCb = panel.querySelector('[data-field="no-limit"]');
+    const maxInput = panel.querySelector('#id_maxsections');
+    const noLimitCb = panel.querySelector('#id_nolimit');
     if (maxInput) {
-        maxInput.value = state.maxSections || structure.length;
+        state.maxSections = parseInt(maxInput.value, 10) || structure.length;
     }
     if (noLimitCb) {
-        noLimitCb.checked = state.noLimit;
-        if (maxInput) {
-            maxInput.disabled = state.noLimit;
-        }
+        state.noLimit = noLimitCb.checked;
     }
 
-    // Pre-check types that are in the course and set allowedTypes.
-    panel.querySelectorAll('[data-action="toggle-type"]').forEach(cb => {
-        const inCourse = present.has(cb.dataset.type);
-        if (inCourse) {
-            cb.checked = true;
-            if (!state.allowedTypes.includes(cb.dataset.type)) {
-                state.allowedTypes.push(cb.dataset.type);
-            }
-            // Add badge for types present in course.
-            const label = cb.nextElementSibling;
-            if (label && !label.querySelector('.badge')) {
-                label.insertAdjacentHTML('beforeend',
-                    ' <span class="badge badge-info badge-pill" title="Present in course">&#10003;</span>');
-            }
-        } else {
-            cb.checked = state.allowedTypes.includes(cb.dataset.type);
+    // Allowed types: one real advcheckbox per installed activity type
+    // (name="allowedtype_<modname>"), already pre-checked server-side for
+    // whichever types the selected course actually uses.
+    state.allowedTypes = [];
+    panel.querySelectorAll('input[name^="allowedtype_"]').forEach(cb => {
+        const modname = cb.name.replace('allowedtype_', '');
+        if (cb.checked) {
+            state.allowedTypes.push(modname);
         }
-    });
-
-    updateHint(panel, state, structure);
-    updatePreview(panel, state, structure);
-
-    // Bind events.
-    maxInput?.addEventListener('change', (e) => {
-        state.maxSections = parseInt(e.target.value) || structure.length;
-        setState(state);
-        updateHint(panel, state, structure);
-    });
-
-    noLimitCb?.addEventListener('change', (e) => {
-        state.noLimit = e.target.checked;
-        if (maxInput) {
-            maxInput.disabled = e.target.checked;
-        }
-        setState(state);
-        updateHint(panel, state, structure);
-    });
-
-    panel.querySelectorAll('[data-action="toggle-type"]').forEach(cb => {
         cb.addEventListener('change', () => {
-            if (cb.checked && !state.allowedTypes.includes(cb.dataset.type)) {
-                state.allowedTypes.push(cb.dataset.type);
-            } else {
-                state.allowedTypes = state.allowedTypes.filter(t => t !== cb.dataset.type);
+            if (cb.checked && !state.allowedTypes.includes(modname)) {
+                state.allowedTypes.push(modname);
+            } else if (!cb.checked) {
+                state.allowedTypes = state.allowedTypes.filter(t => t !== modname);
             }
-            setState(state);
         });
     });
 
-    panel.querySelector('[data-action="select-all-types"]')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        panel.querySelectorAll('[data-action="toggle-type"]').forEach(cb => { cb.checked = true; });
-        state.allowedTypes = [...new Set([...state.allowedTypes,
-            ...Array.from(panel.querySelectorAll('[data-action="toggle-type"]')).map(cb => cb.dataset.type)
-        ])];
-        setState(state);
+    maxInput?.addEventListener('change', () => {
+        state.maxSections = parseInt(maxInput.value, 10) || structure.length;
     });
 
-    panel.querySelector('[data-action="deselect-all-types"]')?.addEventListener('click', (e) => {
-        e.preventDefault();
-        panel.querySelectorAll('[data-action="toggle-type"]').forEach(cb => { cb.checked = false; });
-        state.allowedTypes = [];
-        setState(state);
+    noLimitCb?.addEventListener('change', () => {
+        state.noLimit = noLimitCb.checked;
     });
 
+    // Section naming — not yet converted to the form API (out of scope for
+    // this pass), still driven by plain data-field markup.
     panel.querySelector('[data-field="naming-pattern"]')?.addEventListener('change', (e) => {
         const customBlock = panel.querySelector('[data-region="custom-pattern"]');
         if (e.target.value === '__custom__') {
@@ -128,45 +89,20 @@ export const renderStepLimits = (panel, state) => {
             customBlock.classList.add('d-none');
             state.namingPattern = e.target.value;
         }
-        setState(state);
         updatePreview(panel, state, structure);
     });
 
     panel.querySelector('[data-field="custom-pattern"]')?.addEventListener('input', (e) => {
         state.namingPattern = e.target.value || '{nombre}';
-        setState(state);
         updatePreview(panel, state, structure);
     });
 
     panel.querySelector('[data-field="naming-start"]')?.addEventListener('change', (e) => {
-        state.namingStart = parseInt(e.target.value);
-        setState(state);
+        state.namingStart = parseInt(e.target.value, 10);
         updatePreview(panel, state, structure);
     });
-};
 
-/**
- * Update the sections hint text.
- *
- * @param {HTMLElement} panel
- * @param {Object} state
- * @param {Array} structure
- */
-const updateHint = (panel, state, structure) => {
-    const h = panel.querySelector('[data-region="sections-hint"]');
-    if (!h) {
-        return;
-    }
-    const orig = 'Original course has <strong>' + structure.length + '</strong> sections. ';
-    if (state.noLimit) {
-        h.innerHTML = orig + 'AI can create any number of sections.';
-    } else if (state.maxSections < structure.length) {
-        h.innerHTML = orig + 'AI will merge extra sections.';
-    } else if (state.maxSections > structure.length) {
-        h.innerHTML = orig + 'AI may add additional sections.';
-    } else {
-        h.innerHTML = orig + 'Same number as the original.';
-    }
+    updatePreview(panel, state, structure);
 };
 
 /**

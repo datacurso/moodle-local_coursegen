@@ -36,6 +36,7 @@ $coursename = '';
 $courseshortname = '';
 $coursecategoryid = 0;
 $sectionsconfightml = '';
+$configformhtml = '';
 if ($courseid > 0) {
     $course = get_course($courseid);
     $coursename = format_string($course->fullname);
@@ -56,6 +57,7 @@ if ($courseid > 0) {
 
     $modinfo = get_fast_modinfo($course);
     $sectionsconfightml = \local_coursegen\output\sections_config::render($previewhtml, $modinfo);
+    $configformhtml = \local_coursegen\form\template_config_form::render($modinfo);
 }
 
 $context = context_system::instance();
@@ -71,13 +73,6 @@ $PAGE->navigation->override_active_url(new moodle_url('/local/coursegen/manage_t
 $PAGE->set_title($pagetitle);
 $PAGE->set_heading($pagetitle);
 $PAGE->navbar->add($pagetitle);
-
-// Get installed activity module types for the "allowed types" control.
-$modtypes = [];
-$mods = get_module_types_names();
-foreach ($mods as $modname => $displayname) {
-    $modtypes[] = ['id' => $modname, 'label' => $displayname];
-}
 
 // Base-course picker: two standard autocompletes (category, then course
 // scoped to it) — see classes/form/course_picker_form.php. Rendered as a
@@ -102,8 +97,8 @@ $templatecontext = [
     'templateid' => $id,
     'sesskey' => sesskey(),
     'wwwroot' => $CFG->wwwroot,
-    'modtypes' => $modtypes,
     'courseformhtml' => $courseformhtml,
+    'configformhtml' => $configformhtml,
     'nameformhtml' => $nameformhtml,
     'initialcourseid' => $courseid,
     'initialcoursename' => $coursename,
