@@ -16,35 +16,41 @@
 /**
  * Generated-course limits (max sections / no limit / allowed activity
  * types) — binds state-tracking events on the real mform elements rendered
- * by classes/form/template_config_form.php.
+ * by classes/form/template_config_form.php (a \core_form\dynamic_form,
+ * reloaded via core_form/dynamicform every time the selected course
+ * changes — see init.js).
  *
  * The "disable the max-sections field while no-limit is checked" behavior
  * used to be hand-wired here; it is now the form's own disabledIf() rule
  * (see template_config_form::definition()) and needs no JS at all.
+ *
+ * Selectors here are all by NAME, never by id: dynamic_form forces
+ * data-random-ids on its rendered elements (so several dynamic forms can
+ * coexist on one page without id collisions), so #id_maxsections/#id_nolimit
+ * do not reliably exist — the field's `name` attribute is the only stable
+ * handle. Binds fresh on every call (no "already bound" guard): the config
+ * form's markup is fully replaced on every reload, so there is never a
+ * stale listener to avoid re-adding.
  *
  * @module     local_coursegen/local/template/step_limits
  * @copyright  2025 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-let bound = false;
-
 /**
- * Bind events on the server-rendered limits form.
+ * Bind events on the rendered limits form.
  *
- * @param {HTMLElement} panel Element containing the rendered config form.
+ * @param {HTMLElement} panel The config region (config-form + naming-pattern sibling markup).
  * @param {Object} state
  */
 export const renderStepLimits = (panel, state) => {
-    if (bound) {
-        return;
-    }
-    bound = true;
-
     const structure = state.courseStructure || [];
 
-    const maxInput = panel.querySelector('#id_maxsections');
-    const noLimitCb = panel.querySelector('#id_nolimit');
+    const maxInput = panel.querySelector('[name="maxsections"]');
+    // advcheckbox renders a hidden "unchecked" companion input sharing the
+    // same name before the real checkbox — [type="checkbox"] is required to
+    // land on the actual toggle, not its always-present hidden sibling.
+    const noLimitCb = panel.querySelector('input[type="checkbox"][name="nolimit"]');
     if (maxInput) {
         state.maxSections = parseInt(maxInput.value, 10) || structure.length;
     }
@@ -54,9 +60,10 @@ export const renderStepLimits = (panel, state) => {
 
     // Allowed types: one real advcheckbox per installed activity type
     // (name="allowedtype_<modname>"), already pre-checked server-side for
-    // whichever types the selected course actually uses.
+    // whichever types the selected course actually uses. Same hidden-
+    // companion caveat as nolimit above.
     state.allowedTypes = [];
-    panel.querySelectorAll('input[name^="allowedtype_"]').forEach(cb => {
+    panel.querySelectorAll('input[type="checkbox"][name^="allowedtype_"]').forEach(cb => {
         const modname = cb.name.replace('allowedtype_', '');
         if (cb.checked) {
             state.allowedTypes.push(modname);

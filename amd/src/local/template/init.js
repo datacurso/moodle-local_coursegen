@@ -31,6 +31,7 @@ import {renderStepSections, resetSectionsRender} from './step_sections';
 import {renderStepLimits} from './step_limits';
 import {bindKindDefaults, defaultActionForModname} from './kind_defaults';
 import * as Repository from './repository';
+import DynamicForm from 'core_form/dynamicform';
 import Notification from 'core/notification';
 import {get_string as getString} from 'core/str';
 
@@ -44,6 +45,16 @@ const state = {
 };
 /** @type {HTMLElement} Root element. */
 let root = null;
+/** @type {DynamicForm} The kind-defaults/limits/allowed-types dynamic form (see init()). */
+let configForm = null;
+/**
+ * Whether configForm's container already holds a real, server-rendered form
+ * for the CURRENT course (true right after init(), from the initial page
+ * load) — set false as soon as any course change requires an actual
+ * DynamicForm.load() instead of just binding to what's already there.
+ * @type {boolean}
+ */
+let configFormIsFreshFromPageLoad = false;
 
 /** @returns {Object} Current state. */
 export const getState = () => state;
@@ -158,14 +169,27 @@ const renderConfigRegion = async() => {
         return;
     }
 
-    // Kind-defaults, limits and allowed-types all live in ONE rendered form
-    // now (see classes/form/template_config_form.php).
-    const configFormPanel = region.querySelector('[data-region="config-form"]');
-    const structurePanel = region.querySelector('[data-region="structure"]');
+    // Kind-defaults, limits and allowed-types all live in ONE dynamic form
+    // now (see classes/form/template_config_form.php) — reloaded via
+    // core_form/dynamicform whenever the selected course changes, instead
+    // of a custom external function shuttling its HTML around. The very
+    // first call after page load can skip reloading: edit_template.php
+    // already server-rendered this exact form for this exact course, so
+    // reloading it again would just be a redundant round-trip.
+    if (!configFormIsFreshFromPageLoad) {
+        await configForm.load({courseid: state.selectedCourseId});
+    }
+    configFormIsFreshFromPageLoad = false;
 
-    await renderStepSections(structurePanel, configFormPanel, state);
-    renderStepLimits(configFormPanel, state);
-    bindKindDefaults(configFormPanel, structurePanel, state);
+    const structurePanel = region.querySelector('[data-region="structure"]');
+    await renderStepSections(structurePanel, state);
+
+    // The config form's own container is the right scope for its fields;
+    // the naming-pattern controls are a sibling still living directly in
+    // `region` (not yet converted — see step_limits.js), so pass the whole
+    // region and let each selector find what it needs.
+    renderStepLimits(region, state);
+    bindKindDefaults(configForm.container, structurePanel, state);
 };
 
 /**
@@ -258,7 +282,23 @@ export const init = (config) => {
     if (initialCourseId > 0) {
         state.selectedCourseId = initialCourseId;
         state.selectedCourse = {id: initialCourseId, fullname: initialCourseName, shortname: initialCourseShort};
+        // edit_template.php already server-rendered template_config_form for
+        // this exact course — the first renderConfigRegion() call should
+        // bind to it, not reload it.
+        configFormIsFreshFromPageLoad = true;
     }
+
+    configForm = new DynamicForm(
+        root.querySelector('[data-region="config-form"]'),
+        'local_coursegen\\form\\template_config_form'
+    );
+    // This form has no submit button — its fields feed the template-wide
+    // Save action instead (see saveTemplate()) — but DynamicForm still
+    // intercepts a native form submit (e.g. pressing Enter in a text field)
+    // and, by default, empties the container once process_dynamic_submission()
+    // returns. Prevent that: an accidental Enter keypress must not wipe the
+    // rendered fields out from under the admin.
+    configForm.addEventListener(configForm.events.FORM_SUBMITTED, e => e.preventDefault());
 
     root.querySelector('[data-action="save"]').addEventListener('click', saveTemplate);
     bindCoursePicker(root.querySelector('[data-region="step-panel"][data-step="1"]'));

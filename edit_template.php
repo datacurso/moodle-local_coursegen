@@ -36,7 +36,6 @@ $coursename = '';
 $courseshortname = '';
 $coursecategoryid = 0;
 $sectionsconfightml = '';
-$configformhtml = '';
 if ($courseid > 0) {
     $course = get_course($courseid);
     $coursename = format_string($course->fullname);
@@ -57,7 +56,6 @@ if ($courseid > 0) {
 
     $modinfo = get_fast_modinfo($course);
     $sectionsconfightml = \local_coursegen\output\sections_config::render($previewhtml, $modinfo);
-    $configformhtml = \local_coursegen\form\template_config_form::render($modinfo);
 }
 
 $context = context_system::instance();
@@ -86,6 +84,17 @@ $courseform = new \local_coursegen\form\course_picker_form(null, [
 ob_start();
 $courseform->display();
 $courseformhtml = ob_get_clean();
+
+// Kind-defaults/limits/allowed-types: a real \core_form\dynamic_form (see
+// classes/form/template_config_form.php). Reads "courseid" from the
+// request itself via optional_param(), the same as it does when reloaded
+// via AJAX (core_form/dynamicform) whenever the selected course changes —
+// this initial instantiation is only to avoid a visible round-trip when
+// the page already loads with a course preset.
+$configform = new \local_coursegen\form\template_config_form(null, null, 'post', '', ['id' => 'tpl-config-form']);
+ob_start();
+$configform->display();
+$configformhtml = ob_get_clean();
 
 // Render template name form (native moodleform).
 $nameform = new \local_coursegen\form\template_name_form(null, null, 'post', '', ['id' => 'tpl-name-form']);
