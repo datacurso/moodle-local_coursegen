@@ -65,6 +65,7 @@ class course_picker_form extends \moodleform {
         ]);
         $mform->setType('category', PARAM_INT);
         $mform->setDefault('category', $this->_customdata['categoryid'] ?? '');
+        $mform->addHelpButton('category', 'template_picker_category', 'local_coursegen');
 
         // Course — AJAX autocomplete, scoped server-side to whichever
         // category is currently selected (see
@@ -79,5 +80,6 @@ class course_picker_form extends \moodleform {
         ]);
         $mform->setType('courseid', PARAM_INT);
         $mform->setDefault('courseid', $this->_customdata['courseid'] ?? '');
+        $mform->addHelpButton('courseid', 'template_picker_course', 'local_coursegen');
     }
 }

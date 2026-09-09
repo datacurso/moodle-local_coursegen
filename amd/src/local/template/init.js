@@ -184,11 +184,10 @@ const renderConfigRegion = async() => {
     const structurePanel = region.querySelector('[data-region="structure"]');
     await renderStepSections(structurePanel, state);
 
-    // The config form's own container is the right scope for its fields;
-    // the naming-pattern controls are a sibling still living directly in
-    // `region` (not yet converted — see step_limits.js), so pass the whole
-    // region and let each selector find what it needs.
-    renderStepLimits(region, state);
+    // Limits, allowed-types and the naming pattern all live inside the
+    // config form's own container now (see template_config_form.php) —
+    // scope directly to it instead of the whole region.
+    renderStepLimits(configForm.container, state);
     bindTypeDefaults(configForm.container, structurePanel, state);
 };
 

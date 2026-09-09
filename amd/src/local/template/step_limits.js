@@ -15,14 +15,20 @@
 
 /**
  * Generated-course limits (max sections / no limit / allowed activity
- * types) — binds state-tracking events on the real mform elements rendered
- * by classes/form/template_config_form.php (a \core_form\dynamic_form,
- * reloaded via core_form/dynamicform every time the selected course
- * changes — see init.js).
+ * types / section naming pattern) — binds state-tracking events on the real
+ * mform elements rendered by classes/form/template_config_form.php (a
+ * \core_form\dynamic_form, reloaded via core_form/dynamicform every time the
+ * selected course changes — see init.js).
  *
- * The "disable the max-sections field while no-limit is checked" behavior
- * used to be hand-wired here; it is now the form's own disabledIf() rule
- * (see template_config_form::definition()) and needs no JS at all.
+ * The "disable the max-sections field while no-limit is checked" behavior,
+ * and the "show the custom-pattern field only when the pattern select is set
+ * to Custom" behavior, both used to be hand-wired here; they are now the
+ * form's own disabledIf()/hideIf() rules (see
+ * template_config_form::definition()) and need no JS at all. This module
+ * only tracks state and re-renders the live naming preview, which stays
+ * client-side JS on purpose — it reads state.courseStructure (already
+ * loaded separately) rather than round-tripping to the server on every
+ * keystroke.
  *
  * Selectors here are all by NAME, never by id: dynamic_form forces
  * data-random-ids on its rendered elements (so several dynamic forms can
@@ -40,7 +46,7 @@
 /**
  * Bind events on the rendered limits form.
  *
- * @param {HTMLElement} panel The config region (config-form + naming-pattern sibling markup).
+ * @param {HTMLElement} panel The config region (config-form markup).
  * @param {Object} state
  */
 export const renderStepLimits = (panel, state) => {
@@ -85,26 +91,40 @@ export const renderStepLimits = (panel, state) => {
         state.noLimit = noLimitCb.checked;
     });
 
-    // Section naming — not yet converted to the form API (out of scope for
-    // this pass), still driven by plain data-field markup.
-    panel.querySelector('[data-field="naming-pattern"]')?.addEventListener('change', (e) => {
-        const customBlock = panel.querySelector('[data-region="custom-pattern"]');
-        if (e.target.value === '__custom__') {
-            customBlock.classList.remove('d-none');
-            state.namingPattern = panel.querySelector('[data-field="custom-pattern"]')?.value || '{nombre}';
-        } else {
-            customBlock.classList.add('d-none');
-            state.namingPattern = e.target.value;
+    // Section naming — real mform elements now (select[name="namingpattern"],
+    // text[name="custompattern"], select[name="namingstart"], see
+    // classes/form/template_config_form.php::definition_naming_pattern()).
+    // The custom-pattern field's own show/hide is the form's native hideIf()
+    // rule — nothing to do here for that — this only tracks state.
+    const patternSelect = panel.querySelector('select[name="namingpattern"]');
+    const customInput = panel.querySelector('input[name="custompattern"]');
+
+    const readNamingPattern = () => {
+        if (patternSelect?.value === '__custom__') {
+            return customInput?.value || '{nombre}';
         }
+        return patternSelect?.value || state.namingPattern;
+    };
+
+    if (patternSelect) {
+        state.namingPattern = readNamingPattern();
+    }
+
+    patternSelect?.addEventListener('change', () => {
+        state.namingPattern = readNamingPattern();
         updatePreview(panel, state, structure);
     });
 
-    panel.querySelector('[data-field="custom-pattern"]')?.addEventListener('input', (e) => {
-        state.namingPattern = e.target.value || '{nombre}';
+    customInput?.addEventListener('input', () => {
+        state.namingPattern = readNamingPattern();
         updatePreview(panel, state, structure);
     });
 
-    panel.querySelector('[data-field="naming-start"]')?.addEventListener('change', (e) => {
+    const startSelect = panel.querySelector('select[name="namingstart"]');
+    if (startSelect) {
+        state.namingStart = parseInt(startSelect.value, 10);
+    }
+    startSelect?.addEventListener('change', (e) => {
         state.namingStart = parseInt(e.target.value, 10);
         updatePreview(panel, state, structure);
     });
