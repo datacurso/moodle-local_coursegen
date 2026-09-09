@@ -287,22 +287,24 @@ class mock_template_ai_service {
      * with the section's own name rendered as real text, so the label can
      * never be wrong (unlike copying another section's picture, which is
      * exactly what was rejected — see template_course_builder_service's own
-     * docblock for that). It deliberately does NOT attempt to analyze
-     * `referencesections`' actual pictures to match their visual style
-     * (colors, layout, imagery): that requires real image/vision input,
-     * which is real-AI-backend territory this mock does not have and must
-     * not pretend to have. The real implementation is expected to use
-     * `referencesections` for exactly that — deriving a shared style from
-     * the course's existing section pictures (the same "generate once,
-     * follow everywhere" principle already used for section banners), or
-     * from an admin-supplied reference image when one is given.
+     * docblock for that). Producing an SVG is plain TEXT generation (SVG is
+     * markup, not a raster image), the same kind of call this feature's real
+     * AI backend already makes for section banners — no image/vision model
+     * is needed to produce the output. What this mock does NOT do is follow
+     * `stylereference`: the real gap isn't image analysis of any existing
+     * section picture, it's that nothing here carries the course's actual
+     * brand/style reference through yet. The real implementation is expected
+     * to take that SAME lightweight reference already derived for banner
+     * consistency elsewhere in this product and have a text-generation call
+     * produce SVG that follows it, labeled with this section's own name.
      *
      * @param array $payload {
-     *     sectionname: string           The new section's own, correct name/title.
-     *     sectionnum: int               The new section's own section number (context only).
-     *     referencesections: string[]   Names of sections in this course that already have a
-     *                                    picture — context for a real implementation to derive a
-     *                                    shared visual style from; unused by this mock.
+     *     sectionname: string      The new section's own, correct name/title.
+     *     sectionnum: int          The new section's own section number (context only).
+     *     stylereference: string   The course's brand/style reference (colors, tone, etc.), the
+     *                               same one banners already follow elsewhere in this product —
+     *                               empty until this feature threads one through; unused by this
+     *                               mock either way.
      * }
      * @return array{filename:string,mimetype:string,content:string}
      */

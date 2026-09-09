@@ -614,10 +614,15 @@ class template_course_builder_service {
      * AI_SERVICE_CLASS::generate() a few methods up) — a small stable
      * payload in, a ready-to-store result out — so the label is always
      * correct because it is produced for this exact section, never copied
-     * from another one. `referencesections` is passed through only as
-     * context for whichever service implements this; the mock does not (and
-     * is not expected to) perform real image analysis on it — see
-     * mock_template_ai_service::generate_section_picture()'s own docblock.
+     * from another one. Producing an SVG is plain TEXT generation (SVG is
+     * markup, not a raster image), the same kind of call already used for
+     * section banners in this feature's real AI backend — no image/vision
+     * model involved. `stylereference` carries the course's own brand/style
+     * reference through, so that text-generation call can follow it (the
+     * SAME lightweight reference already derived for banner consistency,
+     * not image analysis of any existing section picture); the mock does
+     * not consume it yet — see mock_template_ai_service::generate_section_picture()'s
+     * own docblock for what a real implementation is expected to do with it.
      *
      * Deliberately fail-soft like every other step of this builder: a
      * problem generating a picture must never abort the course build, only
@@ -641,27 +646,16 @@ class template_course_builder_service {
                 $sectionname = get_string('sectionname', 'format_grid') . ' ' . $newsectionnum;
             }
 
-            $existingsections = $DB->get_records_sql(
-                'SELECT cs.name
-                   FROM {course_sections} cs
-                   JOIN {format_grid_image} fgi ON fgi.sectionid = cs.id
-                  WHERE cs.course = :courseid
-               ORDER BY cs.section',
-                ['courseid' => $course->id]
-            );
-
             $aiserviceclass = self::AI_SERVICE_CLASS;
             $generated = $aiserviceclass::generate_section_picture([
                 'sectionname' => $sectionname,
                 'sectionnum' => $newsectionnum,
-                // Context only: which sections already have a picture and what
-                // they're called. Real style-reference analysis of the pictures
-                // themselves is real-AI-backend territory, not something the
-                // mock does — see its own docblock.
-                'referencesections' => array_values(array_map(
-                    static fn($section) => $section->name,
-                    $existingsections
-                )),
+                // REPLACE-WITH-REAL-AI: empty until this feature has a real
+                // per-template/per-course brand/style reference to thread
+                // through (the same one banners already derive elsewhere in
+                // this product) — a later phase, not built here. Passed
+                // through now so the contract shape is already correct.
+                'stylereference' => '',
             ]);
 
             $filename = trim((string) ($generated['filename'] ?? ''));
