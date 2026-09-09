@@ -842,6 +842,7 @@ $string['template_change_course'] = 'Change selection';
 $string['template_selected_course'] = 'Selected course:';
 $string['template_view_course'] = 'View course';
 $string['template_select_category_hint'] = 'Select a category to browse its courses';
+$string['template_select_course_hint'] = 'Type to search for a course in the selected category';
 $string['template_search_placeholder'] = 'Search templates...';
 $string['template_empty_title'] = 'No templates yet';
 $string['template_empty_subtitle'] = 'Create your first template to get started';

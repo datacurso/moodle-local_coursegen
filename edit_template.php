@@ -27,8 +27,6 @@ require_once($CFG->libdir . '/adminlib.php');
 
 $id = optional_param('id', 0, PARAM_INT);
 $courseid = optional_param('courseid', 0, PARAM_INT);
-$search = optional_param('search', '', PARAM_TEXT);
-$categoryid = optional_param('categoryid', 0, PARAM_INT);
 
 admin_externalpage_setup('local_coursegen_manage_templates');
 
@@ -36,11 +34,13 @@ admin_externalpage_setup('local_coursegen_manage_templates');
 // separate page object to avoid "theme already set" on the real $PAGE.
 $coursename = '';
 $courseshortname = '';
+$coursecategoryid = 0;
 $sectionsconfightml = '';
 if ($courseid > 0) {
     $course = get_course($courseid);
     $coursename = format_string($course->fullname);
     $courseshortname = $course->shortname;
+    $coursecategoryid = (int) $course->category;
 
     $renderpage = new moodle_page();
     $renderpage->set_context(context_course::instance($course->id));
@@ -72,40 +72,25 @@ $PAGE->set_title($pagetitle);
 $PAGE->set_heading($pagetitle);
 $PAGE->navbar->add($pagetitle);
 
-// Build flat category list with depth for mustache rendering.
-$flatcats = [];
-$allcats = core_course_category::get_all();
-$buildflat = function($parentid, $depth) use (&$buildflat, &$flatcats, $allcats) {
-    foreach ($allcats as $cat) {
-        if ((int)$cat->parent !== $parentid) {
-            continue;
-        }
-        $haschildren = false;
-        foreach ($allcats as $child) {
-            if ((int)$child->parent === (int)$cat->id) {
-                $haschildren = true;
-                break;
-            }
-        }
-        $flatcats[] = [
-            'id' => (int) $cat->id,
-            'name' => format_string($cat->name),
-            'coursecount' => (int) $cat->coursecount,
-            'depth' => $depth,
-            'hiddenclass' => ($depth > 0) ? 'd-none' : '',
-            'haschildren' => $haschildren,
-        ];
-        $buildflat((int)$cat->id, $depth + 1);
-    }
-};
-$buildflat(0, 0);
-
 // Get installed activity module types for the "allowed types" control.
 $modtypes = [];
 $mods = get_module_types_names();
 foreach ($mods as $modname => $displayname) {
     $modtypes[] = ['id' => $modname, 'label' => $displayname];
 }
+
+// Base-course picker: two standard autocompletes (category, then course
+// scoped to it) — see classes/form/course_picker_form.php. Rendered as a
+// plain widget generator, the same way template_name_form below is: its
+// fields are read directly by JS (see init.js), the form itself is never
+// submitted.
+$courseform = new \local_coursegen\form\course_picker_form(null, [
+    'categoryid' => $coursecategoryid ?: null,
+    'courseid' => $courseid ?: null,
+], 'post', '', ['id' => 'tpl-course-form']);
+ob_start();
+$courseform->display();
+$courseformhtml = ob_get_clean();
 
 // Render template name form (native moodleform).
 $nameform = new \local_coursegen\form\template_name_form(null, null, 'post', '', ['id' => 'tpl-name-form']);
@@ -117,14 +102,12 @@ $templatecontext = [
     'templateid' => $id,
     'sesskey' => sesskey(),
     'wwwroot' => $CFG->wwwroot,
-    'flatcats' => $flatcats,
     'modtypes' => $modtypes,
+    'courseformhtml' => $courseformhtml,
     'nameformhtml' => $nameformhtml,
     'initialcourseid' => $courseid,
     'initialcoursename' => $coursename,
     'initialcourseshortname' => $courseshortname,
-    'initialsearch' => $search,
-    'initialcategoryid' => $categoryid,
     'sectionsconfightml' => $sectionsconfightml,
     'haspreview' => !empty($sectionsconfightml),
 ];

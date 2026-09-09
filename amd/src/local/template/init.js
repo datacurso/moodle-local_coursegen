@@ -27,7 +27,6 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {renderStepCourse} from './step_course';
 import {renderStepSections, resetSectionsRender} from './step_sections';
 import {renderStepLimits} from './step_limits';
 import {renderKindDefaults, defaultActionForModname} from './kind_defaults';
@@ -51,23 +50,89 @@ export const getState = () => state;
 
 /**
  * @param {Object} updates Properties to merge into state.
- * @param {boolean} render Whether to re-render the course picker (rarely needed —
- *     picking/deselecting a course already re-renders the config region below).
  */
-export const setState = (updates, render = false) => {
+export const setState = (updates) => {
     const coursechanged = Object.prototype.hasOwnProperty.call(updates, 'selectedCourseId');
     Object.assign(state, updates);
     if (coursechanged) {
-        root.querySelector('[data-region="course-browser"]')?.classList.toggle('d-none', !!state.selectedCourseId);
+        updateSelectedBanner();
         renderConfigRegion();
-    }
-    if (render) {
-        renderStepCourse(root.querySelector('[data-region="step-panel"][data-step="1"]'));
     }
 };
 
 /** @returns {HTMLElement} Root wizard element. */
 export const getRoot = () => root;
+
+/**
+ * Reflect the currently selected course in the "selected course" banner.
+ */
+const updateSelectedBanner = () => {
+    const banner = root.querySelector('[data-region="selected-banner"]');
+    if (!banner) {
+        return;
+    }
+    banner.classList.toggle('d-none', !state.selectedCourseId);
+    if (!state.selectedCourseId) {
+        return;
+    }
+    const nameEl = banner.querySelector('[data-region="selected-name"]');
+    const shortEl = banner.querySelector('[data-region="selected-short"]');
+    const linkEl = banner.querySelector('[data-region="selected-link"]');
+    if (nameEl) {
+        nameEl.textContent = state.selectedCourse?.fullname || '';
+    }
+    if (shortEl) {
+        shortEl.textContent = state.selectedCourse?.shortname || '';
+    }
+    if (linkEl) {
+        linkEl.href = M.cfg.wwwroot + '/course/view.php?id=' + state.selectedCourseId;
+    }
+};
+
+/**
+ * Bind the category/course autocomplete pair rendered by
+ * classes/form/course_picker_form.php. Neither field is ever submitted —
+ * their standard Moodle IDs (id_category, id_courseid) are just read
+ * directly, the same way template name/description are read elsewhere in
+ * this module.
+ *
+ * @param {HTMLElement} panel The step-1 panel containing the rendered form.
+ */
+const bindCoursePicker = (panel) => {
+    const categoryField = panel.querySelector('#id_category');
+    const courseField = panel.querySelector('#id_courseid');
+    if (!categoryField || !courseField) {
+        return;
+    }
+
+    // Picking a different category invalidates whatever course was chosen
+    // for the previous one — the course autocomplete's own AJAX transport
+    // re-scopes to the new category on the next keystroke, but a
+    // previously chosen course from the old category must not linger.
+    categoryField.addEventListener('change', () => {
+        if (state.selectedCourseId) {
+            setState({selectedCourseId: null, selectedCourse: null, courseStructure: null});
+        }
+    });
+
+    courseField.addEventListener('change', () => {
+        const id = parseInt(courseField.value, 10);
+        if (!id) {
+            return;
+        }
+        const label = courseField.options[courseField.selectedIndex]?.text || '';
+        // Label is "Fullname (Shortname)" (see form_course_selector.js);
+        // split it back out so the banner can show/link them separately.
+        const match = label.match(/^(.*)\s\(([^)]*)\)$/);
+        const fullname = match ? match[1] : label;
+        const shortname = match ? match[2] : '';
+        setState({
+            selectedCourseId: id,
+            selectedCourse: {id, fullname, shortname},
+            courseStructure: null,
+        });
+    });
+};
 
 /**
  * Show/hide and populate the configuration region below the course picker,
@@ -188,13 +253,14 @@ export const init = (config) => {
 
     const initialCourseId = config.initialcourseid || 0;
     const initialCourseName = config.initialcoursename || '';
+    const initialCourseShort = config.initialcourseshortname || '';
     if (initialCourseId > 0) {
         state.selectedCourseId = initialCourseId;
-        state.selectedCourse = {id: initialCourseId, fullname: initialCourseName};
+        state.selectedCourse = {id: initialCourseId, fullname: initialCourseName, shortname: initialCourseShort};
     }
 
     root.querySelector('[data-action="save"]').addEventListener('click', saveTemplate);
+    bindCoursePicker(root.querySelector('[data-region="step-panel"][data-step="1"]'));
 
-    renderStepCourse(root.querySelector('[data-region="step-panel"][data-step="1"]'));
     renderConfigRegion();
 };
