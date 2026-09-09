@@ -281,4 +281,77 @@ class mock_template_ai_service {
 
         return ['resource_type' => 'assign', 'parameters' => $parameters];
     }
+
+    /**
+     * Generate a grid-format course section's tile picture.
+     *
+     * A sibling entry point to generate(), not a case inside it: this isn't a
+     * course-module the AI service produces (no modname, no
+     * generated_activities shape) — it's a course-format asset, so it gets
+     * its own small stable contract, returned ready to store as-is
+     * (['filename' => ..., 'mimetype' => ..., 'content' => ...]) rather than
+     * something create_mod_service knows how to place.
+     *
+     * REPLACE-WITH-REAL-AI: this mock only guarantees the new section's
+     * picture is correctly LABELED — it draws a plain, neutral placeholder
+     * with the section's own name rendered as real text, so the label can
+     * never be wrong (unlike copying another section's picture, which is
+     * exactly what was rejected — see template_course_builder_service's own
+     * docblock for that). Producing an SVG is plain TEXT generation (SVG is
+     * markup, not a raster image), the same kind of call this feature's real
+     * AI backend already makes for section banners — no image/vision model
+     * is needed to produce the output. What this mock does NOT do is follow
+     * `stylereference`: the real gap isn't image analysis of any existing
+     * section picture, it's that nothing here carries the course's actual
+     * brand/style reference through yet. The real implementation is expected
+     * to take that SAME lightweight reference already derived for banner
+     * consistency elsewhere in this product and have a text-generation call
+     * produce SVG that follows it, labeled with this section's own name.
+     *
+     * @param array $payload {
+     *     sectionname: string      The new section's own, correct name/title.
+     *     sectionnum: int          The new section's own section number (context only).
+     *     stylereference: string   The course's brand/style reference (colors, tone, etc.), the
+     *                               same one banners already follow elsewhere in this product —
+     *                               empty until this feature threads one through; unused by this
+     *                               mock either way.
+     * }
+     * @return array{filename:string,mimetype:string,content:string}
+     */
+    public static function generate_section_picture(array $payload): array {
+        $sectionname = trim((string) ($payload['sectionname'] ?? ''));
+        if ($sectionname === '') {
+            $sectionname = (string) ($payload['sectionnum'] ?? '');
+        }
+
+        return [
+            'filename' => 'section.svg',
+            'mimetype' => 'image/svg+xml',
+            'content' => self::build_section_picture_svg($sectionname),
+        ];
+    }
+
+    /**
+     * Fabricate the placeholder SVG used by generate_section_picture().
+     *
+     * A plain, neutral solid-color tile with the section's name as real SVG
+     * text — never a large photo-like file, and never anything invented as
+     * if it were real client-provided visual design. See
+     * generate_section_picture()'s own docblock for what a real
+     * implementation is expected to add on top of this.
+     *
+     * @param string $sectionname Section name to render, verbatim.
+     * @return string SVG markup.
+     */
+    private static function build_section_picture_svg(string $sectionname): string {
+        $label = htmlspecialchars($sectionname, ENT_QUOTES | ENT_XML1, 'UTF-8');
+
+        return <<<SVG
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450" role="img">
+  <rect width="800" height="450" fill="#5b6b7a"/>
+  <text x="400" y="225" font-family="sans-serif" font-size="40" fill="#ffffff"
+        text-anchor="middle" dominant-baseline="middle">{$label}</text>
+</svg>
+SVG;
+    }
 }

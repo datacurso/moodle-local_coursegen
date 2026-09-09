@@ -537,6 +537,8 @@ class template_course_builder_service {
             [$destcourseid]
         );
 
+        $course = get_course($destcourseid);
+
         $map = [];
         $next = $maxsection + 1;
         $created = 0;
@@ -567,7 +569,9 @@ class template_course_builder_service {
             $sectiondata->visible = 1;
             $sectiondata->availability = null;
             $sectiondata->timemodified = time();
-            $DB->insert_record('course_sections', $sectiondata);
+            $newsectionid = $DB->insert_record('course_sections', $sectiondata);
+
+            self::generate_grid_section_image($course, $newsectionid, $next);
 
             $map[$clientid] = $next;
             $next++;
@@ -575,7 +579,6 @@ class template_course_builder_service {
         }
 
         if (!empty($map)) {
-            $course = get_course($destcourseid);
             $courseformat = course_get_format($course);
             $formatoptions = $courseformat->get_format_options();
             if (isset($formatoptions['numsections']) && ($next - 1) > (int) $formatoptions['numsections']) {
@@ -585,6 +588,114 @@ class template_course_builder_service {
         }
 
         return $map;
+    }
+
+    /**
+     * Generate a grid-format tile picture for a brand-new section, when the
+     * destination course uses the "grid" course format.
+     *
+     * The grid format shows each section as a picture tile on the course's
+     * main page, completely separate from the in-content Label banner this
+     * feature already handles. A section imported via "keep" already carries
+     * its picture across correctly (format_grid ships its own backup/restore
+     * plugin for it) — but a section built fresh here has no picture at all
+     * to import.
+     *
+     * REJECTED APPROACH, do not reintroduce: an earlier version of this
+     * method duplicated the nearest earlier section's picture file/row
+     * verbatim. These pictures have the module's own name/number baked into
+     * the image itself, so a duplicated picture showed the WRONG module's
+     * name on the new one (a new "Módulo 6" visibly reading "Módulo 5") —
+     * shown a real screenshot of this, the client correctly rejected it as
+     * worse than showing nothing.
+     *
+     * The picture is now GENERATED through the same AI-content contract this
+     * class already uses for every other kind of content (see
+     * AI_SERVICE_CLASS::generate() a few methods up) — a small stable
+     * payload in, a ready-to-store result out — so the label is always
+     * correct because it is produced for this exact section, never copied
+     * from another one. Producing an SVG is plain TEXT generation (SVG is
+     * markup, not a raster image), the same kind of call already used for
+     * section banners in this feature's real AI backend — no image/vision
+     * model involved. `stylereference` carries the course's own brand/style
+     * reference through, so that text-generation call can follow it (the
+     * SAME lightweight reference already derived for banner consistency,
+     * not image analysis of any existing section picture); the mock does
+     * not consume it yet — see mock_template_ai_service::generate_section_picture()'s
+     * own docblock for what a real implementation is expected to do with it.
+     *
+     * Deliberately fail-soft like every other step of this builder: a
+     * problem generating a picture must never abort the course build, only
+     * leave that one section without its tile.
+     *
+     * @param \stdClass $course Destination course record (already loaded).
+     * @param int $newsectionid course_sections.id of the section just created.
+     * @param int $newsectionnum Section number of the section just created.
+     * @return void
+     */
+    private static function generate_grid_section_image(\stdClass $course, int $newsectionid, int $newsectionnum): void {
+        if (($course->format ?? '') !== 'grid') {
+            return;
+        }
+
+        global $DB;
+
+        try {
+            $sectionname = (string) $DB->get_field('course_sections', 'name', ['id' => $newsectionid]);
+            if ($sectionname === '') {
+                $sectionname = get_string('sectionname', 'format_grid') . ' ' . $newsectionnum;
+            }
+
+            $aiserviceclass = self::AI_SERVICE_CLASS;
+            $generated = $aiserviceclass::generate_section_picture([
+                'sectionname' => $sectionname,
+                'sectionnum' => $newsectionnum,
+                // REPLACE-WITH-REAL-AI: empty until this feature has a real
+                // per-template/per-course brand/style reference to thread
+                // through (the same one banners already derive elsewhere in
+                // this product) — a later phase, not built here. Passed
+                // through now so the contract shape is already correct.
+                'stylereference' => '',
+            ]);
+
+            $filename = trim((string) ($generated['filename'] ?? ''));
+            $mimetype = trim((string) ($generated['mimetype'] ?? ''));
+            $content = (string) ($generated['content'] ?? '');
+            if ($filename === '' || $mimetype === '' || $content === '') {
+                return;
+            }
+
+            $fs = get_file_storage();
+            $context = \context_course::instance($course->id);
+            $filerecord = [
+                'contextid' => $context->id,
+                'component' => 'format_grid',
+                'itemid' => $newsectionid,
+                'filepath' => '/',
+                'filename' => $filename,
+                'mimetype' => $mimetype,
+            ];
+
+            // 'sectionimage' is the original picture; 'displayedsectionimage' is
+            // format_grid's own displayed copy. Both are written directly with
+            // the already-final generated picture, so the section is correct
+            // immediately without depending on format_grid's own lazy
+            // resize/crop pipeline (built for photo uploads, not needed for a
+            // simple generated SVG already at the right shape) ever running.
+            foreach (['sectionimage', 'displayedsectionimage'] as $filearea) {
+                $fs->create_file_from_string(['filearea' => $filearea] + $filerecord, $content);
+            }
+
+            $DB->insert_record('format_grid_image', (object) [
+                'image' => $filename,
+                'contenthash' => sha1($content),
+                'displayedimagestate' => 1, // Already generated/ready — see note above.
+                'sectionid' => $newsectionid,
+                'courseid' => $course->id,
+            ]);
+        } catch (\Throwable $e) {
+            debugging('local_coursegen: could not generate grid section image. ' . $e->getMessage(), DEBUG_DEVELOPER);
+        }
     }
 
     /**
