@@ -537,6 +537,8 @@ class template_course_builder_service {
             [$destcourseid]
         );
 
+        $course = get_course($destcourseid);
+
         $map = [];
         $next = $maxsection + 1;
         $created = 0;
@@ -567,7 +569,9 @@ class template_course_builder_service {
             $sectiondata->visible = 1;
             $sectiondata->availability = null;
             $sectiondata->timemodified = time();
-            $DB->insert_record('course_sections', $sectiondata);
+            $newsectionid = $DB->insert_record('course_sections', $sectiondata);
+
+            self::copy_grid_section_image($course, $newsectionid, $next);
 
             $map[$clientid] = $next;
             $next++;
@@ -575,7 +579,6 @@ class template_course_builder_service {
         }
 
         if (!empty($map)) {
-            $course = get_course($destcourseid);
             $courseformat = course_get_format($course);
             $formatoptions = $courseformat->get_format_options();
             if (isset($formatoptions['numsections']) && ($next - 1) > (int) $formatoptions['numsections']) {
@@ -585,6 +588,88 @@ class template_course_builder_service {
         }
 
         return $map;
+    }
+
+    /**
+     * Give a brand-new section the same grid-format tile picture as the
+     * nearest earlier section that already has one, when the destination
+     * course uses the "grid" course format.
+     *
+     * The grid format shows each section as a picture tile on the course's
+     * main page, completely separate from the in-content Label banner this
+     * feature already handles. That picture is NOT part of a section's
+     * regular content, so nothing else in this builder ever touches it: a
+     * section built fresh here (never imported via backup/restore, which is
+     * the only path that already carries a grid picture across correctly,
+     * via format_grid's own backup/restore plugin) would otherwise end up
+     * with no picture at all — visibly inconsistent next to every other
+     * section that has one.
+     *
+     * Reuses the NEAREST earlier section's picture (by section number in the
+     * destination course), not only the immediately preceding one, so the
+     * picture still propagates correctly even across a run of several new
+     * sections in a row. Never invents a picture: a template that itself
+     * never set one for any of its sections leaves every new section
+     * without one too.
+     *
+     * Deliberately fail-soft like every other step of this builder: a
+     * problem duplicating a picture must never abort the course build, only
+     * leave that one section without its tile.
+     *
+     * @param \stdClass $course Destination course record (already loaded).
+     * @param int $newsectionid course_sections.id of the section just created.
+     * @param int $newsectionnum Section number of the section just created.
+     * @return void
+     */
+    private static function copy_grid_section_image(\stdClass $course, int $newsectionid, int $newsectionnum): void {
+        if (($course->format ?? '') !== 'grid') {
+            return;
+        }
+
+        global $DB;
+
+        try {
+            $source = $DB->get_record_sql(
+                'SELECT fgi.sectionid, fgi.image, fgi.contenthash, fgi.displayedimagestate
+                   FROM {format_grid_image} fgi
+                   JOIN {course_sections} cs ON cs.id = fgi.sectionid
+                  WHERE cs.course = :courseid AND cs.section < :sectionnum
+               ORDER BY cs.section DESC',
+                ['courseid' => $course->id, 'sectionnum' => $newsectionnum],
+                IGNORE_MULTIPLE
+            );
+            if (!$source) {
+                // No earlier section has a picture to reuse — nothing to copy.
+                return;
+            }
+
+            $fs = get_file_storage();
+            $context = \context_course::instance($course->id);
+
+            // 'sectionimage' is the original uploaded picture; 'displayedsectionimage'
+            // is format_grid's own resized/cropped copy actually shown on the grid.
+            // Both are duplicated so the new section is correct immediately, without
+            // depending on format_grid's own lazy regeneration ever running for it.
+            foreach (['sectionimage', 'displayedsectionimage'] as $filearea) {
+                $files = $fs->get_area_files($context->id, 'format_grid', $filearea, $source->sectionid);
+                foreach ($files as $file) {
+                    if ($file->is_directory()) {
+                        continue;
+                    }
+                    $fs->create_file_from_storedfile(['itemid' => $newsectionid], $file);
+                }
+            }
+
+            $DB->insert_record('format_grid_image', (object) [
+                'image' => $source->image,
+                'contenthash' => $source->contenthash,
+                'displayedimagestate' => $source->displayedimagestate,
+                'sectionid' => $newsectionid,
+                'courseid' => $course->id,
+            ]);
+        } catch (\Throwable $e) {
+            debugging('local_coursegen: could not copy grid section image. ' . $e->getMessage(), DEBUG_DEVELOPER);
+        }
     }
 
     /**
