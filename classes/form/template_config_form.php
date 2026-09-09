@@ -15,11 +15,18 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Per-kind default behavior + generated-course limits — real mform elements
- * instead of hand-built markup (the "Default behavior per kind of
- * component" selects and the "Generated course limits" fields used to be
- * raw HTML strung together in amd/src/local/template/kind_defaults.js and
- * template_wizard.mustache, with JS binding events on top of them).
+ * Per-kind default behavior + generated-course limits — a real
+ * \core_form\dynamic_form, loaded inline via core_form/dynamicform whenever
+ * the selected base course changes.
+ *
+ * This used to be a plain moodleform whose HTML a custom external function
+ * (classes/external/get_course_preview.php) shuttled around as a raw string,
+ * re-injected via innerHTML and manually re-bound in JS. dynamic_form is
+ * Moodle's own generic answer to exactly this — "a form whose content
+ * depends on runtime context, loaded/reloaded via AJAX without a page
+ * reload" — via the core-provided core_form_dynamic_form web service, so
+ * none of that custom plumbing is needed: see
+ * amd/src/local/template/init.js for the client side.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -30,23 +37,25 @@ namespace local_coursegen\form;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir . '/formslib.php');
-
+use context;
+use context_system;
+use core_form\dynamic_form;
 use local_coursegen\local\service\mock_template_ai_service;
+use moodle_url;
 
 /**
- * Form for the kind-default / limits / allowed-types part of the config screen.
+ * Dynamic form for the kind-default / limits / allowed-types part of the config screen.
  */
-class template_config_form extends \moodleform {
+class template_config_form extends dynamic_form {
 
     /**
      * Friendly label + sensible default action per recognised component kind.
      *
      * Mirrors amd/src/local/template/kind_defaults.js's KIND_META — kept in
      * sync manually (JS cannot read a PHP class constant); this PHP copy is
-     * now the one that actually decides each field's default, the JS copy
-     * only still matters for seeding individual per-activity actions after
-     * a course is (re)selected (see kind_defaults.js::applyKindDefaultsToState).
+     * the one that actually decides each field's default, the JS copy only
+     * still matters for seeding individual per-activity actions after a
+     * course is (re)selected (see kind_defaults.js::applyKindDefaultsToState).
      *
      * @var array<string, array{label:string, default:string}>
      */
@@ -61,15 +70,24 @@ class template_config_form extends \moodleform {
     ];
 
     /**
-     * Render this form for a course, as HTML — the single entry point both
-     * the initial page load (edit_template.php) and the AJAX course-change
-     * path (classes/external/get_course_preview.php) call, so both paths
-     * build the exact same fields the same way.
+     * Form definition.
      *
-     * @param \course_modinfo $modinfo
-     * @return string
+     * The selected course is passed as the "courseid" arg to
+     * DynamicForm.load({courseid}) on the JS side, and read back here via
+     * optional_param — the same pattern core's own
+     * local_test\form\example_dynamic_form uses for its "coursemodule" arg.
+     * No course selected yet (initial page load): render nothing.
      */
-    public static function render(\course_modinfo $modinfo): string {
+    public function definition() {
+        $mform = $this->_form;
+        $mform->disable_form_change_checker();
+
+        $courseid = $this->optional_param('courseid', 0, PARAM_INT);
+        if ($courseid <= 0) {
+            return;
+        }
+        $modinfo = get_fast_modinfo($courseid);
+
         $presentmodnames = [];
         foreach ($modinfo->get_cms() as $cm) {
             $presentmodnames[$cm->modname] = true;
@@ -79,30 +97,6 @@ class template_config_form extends \moodleform {
 
         $numsections = count($modinfo->get_section_info_all()) - 1;
 
-        $modtypes = [];
-        foreach (get_module_types_names() as $modname => $displayname) {
-            $modtypes[$modname] = $displayname;
-        }
-
-        $form = new self(null, [
-            'presentmodnames' => $presentmodnames,
-            'defaultmaxsections' => max(1, $numsections),
-            'defaultallowedtypes' => $presentmodnames,
-            'modtypes' => $modtypes,
-        ], 'post', '', ['id' => 'tpl-config-form']);
-
-        ob_start();
-        $form->display();
-        return ob_get_clean();
-    }
-
-    /**
-     * Form definition.
-     */
-    public function definition() {
-        $mform = $this->_form;
-        $mform->disable_form_change_checker();
-
         $actionlabels = [
             'modify' => get_string('template_activity_modify', 'local_coursegen'),
             'keep' => get_string('template_activity_keep', 'local_coursegen'),
@@ -110,7 +104,6 @@ class template_config_form extends \moodleform {
             'exclude' => get_string('template_activity_exclude', 'local_coursegen'),
         ];
 
-        $presentmodnames = $this->_customdata['presentmodnames'] ?? [];
         if (!empty($presentmodnames)) {
             $mform->addElement('header', 'kinddefaultshdr', get_string('template_kind_defaults_title', 'local_coursegen'));
             $mform->setExpanded('kinddefaultshdr');
@@ -120,8 +113,8 @@ class template_config_form extends \moodleform {
             foreach ($presentmodnames as $modname) {
                 $meta = self::KIND_META[$modname] ?? ['label' => $modname, 'default' => 'keep'];
                 // Never offer "Modify" for a kind the AI generator cannot
-                // produce today — this is the same constraint already
-                // enforced server-side for the per-activity dropdown (see
+                // produce today — the same constraint already enforced
+                // server-side for the per-activity dropdown (see
                 // classes/output/sections_config.php), applied here too so
                 // an admin can never pick an option that will silently fail
                 // later, at either level.
@@ -150,7 +143,7 @@ class template_config_form extends \moodleform {
 
         $mform->addElement('text', 'maxsections', get_string('template_max_sections', 'local_coursegen'), ['size' => 5]);
         $mform->setType('maxsections', PARAM_INT);
-        $mform->setDefault('maxsections', $this->_customdata['defaultmaxsections'] ?? 1);
+        $mform->setDefault('maxsections', max(1, $numsections));
 
         $mform->addElement('advcheckbox', 'nolimit', '', get_string('template_no_limit', 'local_coursegen'));
         $mform->setType('nolimit', PARAM_BOOL);
@@ -158,20 +151,72 @@ class template_config_form extends \moodleform {
         // when the checkbox is ticked" — this is exactly what disabledIf is for.
         $mform->disabledIf('maxsections', 'nolimit', 'checked');
 
-        $modtypes = $this->_customdata['modtypes'] ?? [];
+        $modtypes = [];
+        foreach (get_module_types_names() as $modname => $displayname) {
+            $modtypes[$modname] = $displayname;
+        }
         if (!empty($modtypes)) {
             $mform->addElement('header', 'allowedtypeshdr', get_string('template_allowed_types', 'local_coursegen'));
             $mform->setExpanded('allowedtypeshdr');
             $mform->addElement('static', 'allowedtypesdesc', '',
                 get_string('template_allowed_types_desc', 'local_coursegen'));
 
-            $defaultallowed = $this->_customdata['defaultallowedtypes'] ?? [];
             foreach ($modtypes as $modname => $displayname) {
                 $fieldname = "allowedtype_{$modname}";
                 $mform->addElement('advcheckbox', $fieldname, '', $displayname);
                 $mform->setType($fieldname, PARAM_BOOL);
-                $mform->setDefault($fieldname, in_array($modname, $defaultallowed, true) ? 1 : 0);
+                $mform->setDefault($fieldname, in_array($modname, $presentmodnames, true) ? 1 : 0);
             }
         }
+    }
+
+    /**
+     * Returns context where this form is used.
+     *
+     * @return context
+     */
+    protected function get_context_for_dynamic_submission(): context {
+        return context_system::instance();
+    }
+
+    /**
+     * Checks if current user has access to this form, otherwise throws exception.
+     */
+    protected function check_access_for_dynamic_submission(): void {
+        require_capability('local/coursegen:managetemplates', $this->get_context_for_dynamic_submission());
+    }
+
+    /**
+     * Process the form submission, used if form was submitted via AJAX.
+     *
+     * Never actually reached in normal use: this form renders no submit
+     * button (its fields are read directly by JS and folded into the
+     * template-wide "Save" action — see amd/src/local/template/init.js),
+     * so the client never calls DynamicForm's submitFormAjax() on it. Still
+     * required by the abstract base class.
+     *
+     * @return array
+     */
+    public function process_dynamic_submission() {
+        return ['ok' => true];
+    }
+
+    /**
+     * Load in existing data as form defaults.
+     *
+     * No-op: every default is already set directly in definition() above,
+     * the same way local_test\form\example_dynamic_form (the core reference
+     * example this was modelled on) leaves this empty too.
+     */
+    public function set_data_for_dynamic_submission(): void {
+    }
+
+    /**
+     * Returns url to set in $PAGE->set_url() when form is being rendered or submitted via AJAX.
+     *
+     * @return moodle_url
+     */
+    protected function get_page_url_for_dynamic_submission(): moodle_url {
+        return new moodle_url('/local/coursegen/edit_template.php');
     }
 }
