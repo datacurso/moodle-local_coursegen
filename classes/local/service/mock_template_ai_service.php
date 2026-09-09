@@ -271,4 +271,75 @@ class mock_template_ai_service {
 
         return ['resource_type' => 'assign', 'parameters' => $parameters];
     }
+
+    /**
+     * Generate a grid-format course section's tile picture.
+     *
+     * A sibling entry point to generate(), not a case inside it: this isn't a
+     * course-module the AI service produces (no modname, no
+     * generated_activities shape) — it's a course-format asset, so it gets
+     * its own small stable contract, returned ready to store as-is
+     * (['filename' => ..., 'mimetype' => ..., 'content' => ...]) rather than
+     * something create_mod_service knows how to place.
+     *
+     * REPLACE-WITH-REAL-AI: this mock only guarantees the new section's
+     * picture is correctly LABELED — it draws a plain, neutral placeholder
+     * with the section's own name rendered as real text, so the label can
+     * never be wrong (unlike copying another section's picture, which is
+     * exactly what was rejected — see template_course_builder_service's own
+     * docblock for that). It deliberately does NOT attempt to analyze
+     * `referencesections`' actual pictures to match their visual style
+     * (colors, layout, imagery): that requires real image/vision input,
+     * which is real-AI-backend territory this mock does not have and must
+     * not pretend to have. The real implementation is expected to use
+     * `referencesections` for exactly that — deriving a shared style from
+     * the course's existing section pictures (the same "generate once,
+     * follow everywhere" principle already used for section banners), or
+     * from an admin-supplied reference image when one is given.
+     *
+     * @param array $payload {
+     *     sectionname: string           The new section's own, correct name/title.
+     *     sectionnum: int               The new section's own section number (context only).
+     *     referencesections: string[]   Names of sections in this course that already have a
+     *                                    picture — context for a real implementation to derive a
+     *                                    shared visual style from; unused by this mock.
+     * }
+     * @return array{filename:string,mimetype:string,content:string}
+     */
+    public static function generate_section_picture(array $payload): array {
+        $sectionname = trim((string) ($payload['sectionname'] ?? ''));
+        if ($sectionname === '') {
+            $sectionname = (string) ($payload['sectionnum'] ?? '');
+        }
+
+        return [
+            'filename' => 'section.svg',
+            'mimetype' => 'image/svg+xml',
+            'content' => self::build_section_picture_svg($sectionname),
+        ];
+    }
+
+    /**
+     * Fabricate the placeholder SVG used by generate_section_picture().
+     *
+     * A plain, neutral solid-color tile with the section's name as real SVG
+     * text — never a large photo-like file, and never anything invented as
+     * if it were real client-provided visual design. See
+     * generate_section_picture()'s own docblock for what a real
+     * implementation is expected to add on top of this.
+     *
+     * @param string $sectionname Section name to render, verbatim.
+     * @return string SVG markup.
+     */
+    private static function build_section_picture_svg(string $sectionname): string {
+        $label = htmlspecialchars($sectionname, ENT_QUOTES | ENT_XML1, 'UTF-8');
+
+        return <<<SVG
+<svg xmlns="http://www.w3.org/2000/svg" width="800" height="450" viewBox="0 0 800 450" role="img">
+  <rect width="800" height="450" fill="#5b6b7a"/>
+  <text x="400" y="225" font-family="sans-serif" font-size="40" fill="#ffffff"
+        text-anchor="middle" dominant-baseline="middle">{$label}</text>
+</svg>
+SVG;
+    }
 }
