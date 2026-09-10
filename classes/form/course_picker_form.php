@@ -41,7 +41,15 @@ class course_picker_form extends \moodleform {
      */
     public function definition() {
         $mform = $this->_form;
-        $mform->disable_form_change_checker();
+
+        // Change tracking stays ENABLED (Moodle's default) even though this
+        // form is never actually submitted — its fields are read directly
+        // by JS (see amd/src/local/template/init.js) and folded into the
+        // real Save action on template_config_form/template_name_form. An
+        // admin who picks a category/course and then reloads or navigates
+        // away should still get the native "changes you made may not be
+        // saved" warning; init.js resets it (resetAllFormDirtyStates())
+        // right after a real, successful Save so it never misfires then.
 
         // Category — plain autocomplete over the full category list, exactly
         // like the "Category" field on course/edit_form.php: no AJAX needed,

@@ -59,7 +59,13 @@ class template_config_form extends dynamic_form {
      */
     public function definition() {
         $mform = $this->_form;
-        $mform->disable_form_change_checker();
+
+        // Change tracking stays ENABLED (Moodle's default). This form is
+        // reloaded wholesale via DynamicForm.load() whenever the selected
+        // course changes, and is never itself submitted (its fields feed
+        // the real Save action in init.js) — see the matching note on
+        // course_picker_form::definition() for why the warning is still
+        // wanted, and how it gets reset after a real save.
 
         $courseid = $this->optional_param('courseid', 0, PARAM_INT);
         if ($courseid <= 0) {
