@@ -165,6 +165,7 @@ $templatecontext = [
     'showsessionsview' => $showsessionsview,
     'templatemodeactive' => $templatemodeactive,
     'subsectionsenabled' => $subsectionsenabled,
+    'closeurl' => (new moodle_url('/my/courses.php'))->out(false),
 ];
 
 echo $OUTPUT->header();

@@ -157,6 +157,7 @@ $string['courseai_checklist_label'] = 'Bagian kursus';
 $string['courseai_chip_remove_guideline'] = 'Hapus pedoman';
 $string['courseai_chip_remove_syllabus'] = 'Hapus silabus';
 $string['courseai_chip_view_guideline'] = 'Lihat pedoman';
+$string['courseai_close_view'] = 'Tutup dan kembali ke Kursus saya';
 $string['courseai_compact_prompt_placeholder'] = 'Contoh: Regenerasi kursus hanya dalam 3 bagian';
 $string['courseai_completion_btn_create_another'] = 'Buat kursus lain';
 $string['courseai_completion_btn_open_course'] = 'Buka kursus di Moodle';

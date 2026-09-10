@@ -185,6 +185,7 @@ $string['courseai_checklist_section_count'] = '{$a} secciones';
 $string['courseai_chip_remove_guideline'] = 'Eliminar directriz';
 $string['courseai_chip_remove_syllabus'] = 'Eliminar programa de estudios';
 $string['courseai_chip_view_guideline'] = 'Ver directriz';
+$string['courseai_close_view'] = 'Cerrar y volver a Mis cursos';
 $string['courseai_compact_prompt_placeholder'] = 'Ejemplo: Regenerar el curso en solo 3 secciones';
 $string['courseai_completion_btn_create_another'] = 'Crear otro curso';
 $string['courseai_completion_btn_open_course'] = 'Abrir curso en Moodle';

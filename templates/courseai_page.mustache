@@ -43,6 +43,15 @@
   </svg>
 </button>
 <main class="app-main aicoursecreation-main" style="position:relative">
+  {{! Close — the popup layout has no Moodle navbar, so this is the only exit back to My courses }}
+  <a class="courseai-close-btn" id="courseaiCloseBtn" href="{{closeurl}}"
+     title="{{#str}}courseai_close_view, local_coursegen{{/str}}"
+     aria-label="{{#str}}courseai_close_view, local_coursegen{{/str}}">
+    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+         stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+    </svg>
+  </a>
   <div class="container"{{#showsessionsview}} style="display:none"{{/showsessionsview}}>
     <div class="courseai-workspace{{#isresuming}} is-planning{{/isresuming}}" id="courseaiWorkspace">
 
