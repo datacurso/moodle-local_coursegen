@@ -271,6 +271,7 @@ $string['courseai_subsections_label'] = 'Subbagian';
 $string['courseai_subsections_structure_other'] = 'Struktur lain: jelaskan…';
 $string['courseai_subsections_structure_send'] = 'Gunakan struktur ini';
 $string['courseai_subsections_title'] = 'Atur bagian ke dalam subbagian';
+$string['courseai_template_selected_activity'] = 'Aktivitas terpilih';
 $string['courseai_toggle_details'] = 'Tampilkan detail kemajuan';
 $string['courseai_untitled'] = 'Kursus tanpa judul';
 $string['coursecreated'] = 'Kursus berhasil dibuat';

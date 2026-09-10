@@ -959,6 +959,72 @@
           <div class="chooser-container">
             <div class="optionscontainer d-flex flex-wrap p-2" id="tplChooserGrid" role="menubar"></div>
           </div>
+          <!-- Prompt panel: picking a type above only reveals/updates this panel
+               (see local/courseai/template/chooser.js); the confirm button is what
+               inserts the activity. Same UX as the "add activity with AI" chat
+               footer (activity_chat_footer.mustache): generate-images radios,
+               selected-file chip + upload button, rounded prompt textarea. -->
+          <div class="chooser-prompt-panel" id="tplChooserPromptPanel" hidden
+               data-region="local_coursegen/template/chooser-panel">
+            <div class="mb-2 d-flex align-items-center flex-wrap" style="gap: .5rem;">
+              <span class="small text-muted">{{#str}}courseai_template_selected_activity, local_coursegen{{/str}}</span>
+              <span class="chooser-selected-chip">
+                <span class="chooser-selected-chip-icon" data-region="local_coursegen/template/chooser-selected-icon"></span>
+                <span data-region="local_coursegen/template/chooser-selected-name"></span>
+              </span>
+            </div>
+
+            <div style="gap: .8rem;" class="mb-2 d-flex align-items-center flex-wrap">
+              <label style="gap: .3rem;" class="mb-0 d-flex align-items-center">
+                <input type="radio" name="tpl_generate_images" value="0" checked
+                       data-region="local_coursegen/template/chooser-generateimages">
+                {{#str}} noimages, local_coursegen {{/str}}
+              </label>
+              <label style="gap: .3rem;" class="mb-0 d-flex align-items-center">
+                <input type="radio" name="tpl_generate_images" value="1"
+                       data-region="local_coursegen/template/chooser-generateimages">
+                {{#str}} yesimages, local_coursegen {{/str}}
+              </label>
+            </div>
+
+            <div class="mb-2" data-region="local_coursegen/template/chooser-selectedfile" style="display: none;">
+              <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-light" style="gap: .5rem;">
+                <div class="text-truncate" style="min-width: 0;">
+                  <i class="fa fa-paperclip mr-1" aria-hidden="true"></i>
+                  <span data-region="local_coursegen/template/chooser-selectedfile_name"></span>
+                </div>
+                <button type="button" class="btn btn-link p-0" data-region="local_coursegen/template/chooser-selectedfile_remove">
+                  <i class="fa fa-times" aria-hidden="true"></i>
+                </button>
+              </div>
+            </div>
+
+            <label class="sr-only" for="tplChooserPrompt">{{#str}} addactivityai_label, local_coursegen {{/str}}</label>
+            <div class="ai-prompt-container shadow-sm d-flex flex-column"
+                 style="background-color: var(--body-bg); border: 1px solid var(--border-color, #d1d5db); border-radius: 24px; padding: 10px; max-width: 100%;">
+
+              <textarea
+                  id="tplChooserPrompt"
+                  class="form-control ai-prompt-textarea"
+                  data-region="local_coursegen/template/chooser-prompt"
+                  placeholder="{{#str}} courseai_add_activity_placeholder, local_coursegen {{/str}}"
+                  rows="1"
+                  style="resize: none; border: none; box-shadow: none; padding: 0 10px; margin: 0; background: transparent; min-height: 24px; max-height: 6em; overflow-y: auto; line-height: 1.5; color: inherit; width: 100%;"></textarea>
+
+              <div class="d-flex justify-content-between align-items-center">
+                <button type="button" class="btn btn-light p-0 d-flex align-items-center justify-content-center rounded-circle"
+                    data-region="local_coursegen/template/chooser-upload"
+                    style="width: 34px; height: 34px; flex-shrink: 0;">
+                  <i class="fa fa-file text-primary" aria-hidden="true" style="font-size: 1.1rem;"></i>
+                </button>
+
+                <button type="button" class="btn btn-primary btn-sm chooser-confirm-btn"
+                    data-region="local_coursegen/template/chooser-confirm">
+                  {{#str}} courseai_template_add_activity, local_coursegen {{/str}}
+                </button>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
     </div>

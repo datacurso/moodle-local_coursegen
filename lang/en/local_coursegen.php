@@ -819,6 +819,7 @@ $string['courseai_template_modal_empty'] = 'No activity types are allowed for th
 $string['courseai_template_mock_prompt'] = 'Generated from the prompt';
 $string['courseai_template_mock_generic'] = 'Placeholder content generated for section: {$a}';
 $string['courseai_template_mock_reference'] = 'Reference content used for this activity';
+$string['courseai_template_selected_activity'] = 'Selected activity';
 $string['invalidtemplate'] = 'Invalid template.';
 $string['courseai_btn_templates'] = 'Templates';
 $string['courseai_btn_templates_title'] = 'Select a course template';

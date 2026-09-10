@@ -44,7 +44,10 @@ export const getTemplateStructure = (templateId) => fetchMany([{
  * @param {Object} payload
  * @param {number} payload.templateid
  * @param {Array<{clientid: number, name: string}>} payload.newsections
- * @param {Array<{sectionid: number, modname: string}>} payload.newactivities
+ * @param {Array<{sectionid: number, modname: string, prompt: string,
+ *     generateimages: number, draftitemid: number}>} payload.newactivities -
+ *     prompt/generateimages/draftitemid come from the chooser prompt panel
+ *     and are optional server-side (default ''/0/0).
  * @returns {Promise<Object>}
  */
 export const createCourseFromTemplate = ({templateid, newsections, newactivities}) => fetchMany([{

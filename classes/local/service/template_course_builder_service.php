@@ -92,8 +92,10 @@ class template_course_builder_service {
      * @param template $template Template persistent (already loaded).
      * @param array $newsections New sections added by the professor: [['clientid' => int, 'name' => string], ...].
      * @param array $newactivities New activities added by the professor:
-     *     [['sectionid' => int, 'modname' => string], ...]. sectionid > 0 is a real base-course section id
-     *     (must be behavior=custom); sectionid < 0 references a newsections clientid.
+     *     [['sectionid' => int, 'modname' => string, 'prompt' => string, 'generateimages' => int,
+     *     'draftitemid' => int], ...]. sectionid > 0 is a real base-course section id (must be
+     *     behavior=custom); sectionid < 0 references a newsections clientid. prompt/generateimages/
+     *     draftitemid come from the chooser prompt panel and are optional (default ''/0/0).
      * @param int $userid User performing the creation (used for the backup/restore operations).
      * @return array Result: success, courseid, courseurl, fullname, shortname, message,
      *     partial, haswarnings, warningscount, activityerrors.
@@ -927,7 +929,9 @@ class template_course_builder_service {
      * targeting either an existing behavior=custom base section, or a
      * brand-new section created by create_new_sections().
      *
-     * @param array $newactivities [['sectionid' => int, 'modname' => string], ...].
+     * @param array $newactivities [['sectionid' => int, 'modname' => string, 'prompt' => string,
+     *     'generateimages' => int, 'draftitemid' => int], ...] — prompt (trimmed), generateimages
+     *     (0/1) and draftitemid are threaded into the per-activity AI payload, defaulting to ''/0/0.
      * @param \stdClass $newcourse Destination course record.
      * @param \stdClass $sourcecourse Base course record.
      * @param array $sectionbehaviors sectionid (base) => behavior.
@@ -957,6 +961,10 @@ class template_course_builder_service {
             if ($modname === '' || $rawsectionid === 0) {
                 continue;
             }
+
+            $prompt = trim(clean_param((string) ($newactivity['prompt'] ?? ''), PARAM_RAW));
+            $generateimages = empty($newactivity['generateimages']) ? 0 : 1;
+            $draftitemid = (int) ($newactivity['draftitemid'] ?? 0);
 
             if (!in_array($modname, $allowedtypes, true)) {
                 $activityerrors[] = [
@@ -995,10 +1003,12 @@ class template_course_builder_service {
                 $payload = [
                     'modname' => $modname,
                     'sectionname' => $sectionname,
-                    'prompt' => '',
+                    'prompt' => $prompt,
                     'referencecontent' => '',
                     'lang' => current_language(),
                     'title' => '',
+                    'generateimages' => $generateimages,
+                    'draftitemid' => $draftitemid,
                 ];
                 $aiservice = self::get_ai_service();
                 $generated = $aiservice->generate($payload);
