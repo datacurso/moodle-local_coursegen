@@ -140,7 +140,10 @@ class sections_config {
             $textarea->setAttribute('rows', '2');
             $textarea->setAttribute('data-tpl-prompt', (string)$cmid);
             $textarea->setAttribute('placeholder',
-                get_string('template_activity_prompt_placeholder', 'local_coursegen', $cm->get_formatted_name()));
+                get_string('template_activity_prompt_placeholder', 'local_coursegen', (object) [
+                    'modtype' => $cm->get_module_type_name(),
+                    'activityname' => $cm->get_formatted_name(),
+                ]));
             $promptwrap->appendChild($textarea);
             $cmitem->appendChild($promptwrap);
         }
