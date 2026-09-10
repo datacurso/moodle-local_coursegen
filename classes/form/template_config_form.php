@@ -124,11 +124,17 @@ class template_config_form extends dynamic_form {
                     'type' => 'button',
                     'class' => 'btn btn-link p-0 mr-3',
                     'data-action' => 'select-all-allowedtypes',
+                    'data-toggle' => 'tooltip',
+                    'data-html' => 'true',
+                    'title' => \html_writer::tag('strong', get_string('template_select_all_tooltip', 'local_coursegen')),
                 ]) .
                 \html_writer::tag('button', get_string('template_select_none', 'local_coursegen'), [
                     'type' => 'button',
                     'class' => 'btn btn-link p-0',
                     'data-action' => 'select-none-allowedtypes',
+                    'data-toggle' => 'tooltip',
+                    'data-html' => 'true',
+                    'title' => \html_writer::tag('strong', get_string('template_select_none_tooltip', 'local_coursegen')),
                 ])
             );
 
