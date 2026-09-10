@@ -1,3 +1,14 @@
+## 2.1.0
+
+**Released on:** 2026-09-10
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Added
+
+- **Export a real course to the template generation service**  
+  A new command-line tool builds a full description of an existing course directly from its course id: every section and activity, their real content, and the course format's own visual settings (such as per-section tile images), then sends it to the template generation service so it can be used as a genuine reference for building new courses. Every image involved is uploaded as a real file rather than embedded in the data.
+
 ## 2.0.5
 
 **Released on:** 2026-08-26
