@@ -49,6 +49,24 @@ defined('MOODLE_INTERNAL') || die();
  */
 class mock_template_ai_service implements template_content_generator {
     /**
+     * Module names THIS MOCK has an actual generate() branch for today.
+     *
+     * Purely an internal safety guard against generate() silently
+     * mislabeling a type it has no real branch for as 'assign' (the
+     * switch's own default case) — never used to decide what the UI
+     * offers. Every type in template_content_generator::AI_SUPPORTED_TYPES
+     * must be offered as "Modify" regardless of whether this mock has
+     * caught up yet (see that constant's own docblock); a gap here just
+     * means generate() throws its documented, per-activity, non-fatal
+     * warning instead of fabricating the wrong module type. Scoped to this
+     * class on purpose — it describes only this implementation's current
+     * completeness, so it does not need to survive the mock's deletion.
+     *
+     * @var string[]
+     */
+    private const IMPLEMENTED_TYPES = ['page', 'label', 'forum', 'assign'];
+
+    /**
      * Generate a generated_activities-shape entry for one activity.
      *
      * @param array $payload {
@@ -65,7 +83,7 @@ class mock_template_ai_service implements template_content_generator {
     public function generate(array $payload): array {
         $modname = (string) ($payload['modname'] ?? '');
 
-        if (!in_array($modname, self::MODIFY_SUPPORTED_TYPES, true)) {
+        if (!in_array($modname, self::IMPLEMENTED_TYPES, true)) {
             // REPLACE-WITH-REAL-AI: every module type allowed by a template must
             // eventually be handled by the real AI backend. Until then this is a
             // per-activity warning (caught by the caller), never a fatal error.

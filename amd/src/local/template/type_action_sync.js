@@ -40,21 +40,25 @@
  */
 
 /**
- * Module names the AI generator can actually produce content for today.
+ * Every module type the real AI service has a content contract for — every
+ * one of these must offer "Modify", regardless of whether the
+ * implementation currently answering generate() has caught up to all of
+ * them yet.
  *
- * Mirrors template_content_generator::MODIFY_SUPPORTED_TYPES (PHP) — the
- * permanent contract, not any one implementation's own constant — kept in
+ * Mirrors template_content_generator::AI_SUPPORTED_TYPES (PHP) — kept in
  * sync manually since a JS module cannot read a PHP class constant
- * directly. The PHP side
- * (template_config_form) is the single source of truth for which options
- * the type-default <select> itself offers; this copy only still matters for
- * seeding each activity's initial per-activity action as soon as a course's
- * structure loads, before the config form has necessarily rendered yet
- * (see applyTypeDefaultsToState, called from init.js::initSectionState).
+ * directly. This copy matters for seeding each activity's initial
+ * per-activity action as soon as a course's structure loads, before the
+ * config form has necessarily rendered yet (see applyTypeDefaultsToState,
+ * called from init.js::initSectionState).
  *
  * @type {string[]}
  */
-const AI_SUPPORTED = ['page', 'label', 'forum', 'assign'];
+const AI_SUPPORTED = [
+    'assign', 'book', 'choice', 'data', 'feedback', 'folder', 'forum',
+    'glossary', 'h5pactivity', 'imscp', 'label', 'lesson', 'page', 'quiz',
+    'resource', 'scorm', 'url', 'wiki', 'workshop',
+];
 
 /**
  * Sensible default action per recognised component type — mirrors

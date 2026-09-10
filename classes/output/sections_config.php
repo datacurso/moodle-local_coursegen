@@ -127,7 +127,7 @@ class sections_config {
             $slot->appendChild($dropwrap);
 
             // Prompt textarea — only visible when the default action is "Modify".
-            $cansupportmodify = in_array($cm->modname, template_content_generator::MODIFY_SUPPORTED_TYPES, true);
+            $cansupportmodify = in_array($cm->modname, template_content_generator::AI_SUPPORTED_TYPES, true);
             $promptwrap = $doc->createElement('div');
             $promptwrap->setAttribute('data-tpl-prompt-wrap', (string)$cmid);
             $promptstyle = 'padding:0 1rem .5rem 3.5rem';
@@ -267,14 +267,17 @@ class sections_config {
     /**
      * Build activity action dropdown HTML.
      *
-     * Only ever offers "Modify" for a module type the AI generator can
-     * actually produce today (template_content_generator::MODIFY_SUPPORTED_TYPES,
-     * the permanent contract — never a constant scoped to whichever
-     * implementation currently satisfies it) — an admin must never be able
-     * to pick an option that generation will silently fail on later. Every
-     * other type (e.g. resource/file modules,
-     * or a lesson/feedback activity until Phase 2 adds support) only offers
-     * Keep / Reference / Exclude, and defaults to Keep instead of Modify.
+     * Only ever offers "Modify" for a module type in
+     * template_content_generator::AI_SUPPORTED_TYPES — the real AI service's
+     * full content contract, never a constant scoped to whichever
+     * implementation currently satisfies it. Every type in that contract
+     * must be offered here, even if the implementation currently answering
+     * generate() hasn't caught up to every one of them yet (see
+     * mock_template_ai_service::generate()'s own per-activity, non-fatal
+     * fallback for that gap). Anything NOT in that contract (i.e. an
+     * activity type the AI service has no content contract for at all)
+     * only offers Keep / Reference / Exclude, and defaults to Keep instead
+     * of Modify.
      *
      * @param int $cmid
      * @param string $modname
@@ -293,7 +296,7 @@ class sections_config {
             'reference' => get_string('template_activity_reference', 'local_coursegen'),
             'exclude' => get_string('template_activity_exclude', 'local_coursegen'),
         ];
-        $cansupportmodify = in_array($modname, template_content_generator::MODIFY_SUPPORTED_TYPES, true);
+        $cansupportmodify = in_array($modname, template_content_generator::AI_SUPPORTED_TYPES, true);
         if (!$cansupportmodify) {
             unset($labels['modify']);
         }
