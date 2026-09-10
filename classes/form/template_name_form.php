@@ -38,7 +38,9 @@ class template_name_form extends \moodleform {
      */
     public function definition() {
         $mform = $this->_form;
-        $mform->disable_form_change_checker();
+
+        // Change tracking stays ENABLED (Moodle's default) — see the
+        // matching note on course_picker_form::definition() for why.
 
         $mform->addElement('text', 'templatename',
             get_string('template_name', 'local_coursegen'), ['size' => 60]);
