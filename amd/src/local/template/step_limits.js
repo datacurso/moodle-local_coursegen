@@ -43,6 +43,25 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {get_string as getString} from 'core/str';
+import Templates from 'core/templates';
+
+/**
+ * The "no activity types selected" string core/form-autocomplete shows
+ * inside the chip area when nothing is selected — fetched once and reused,
+ * since the select-all/none buttons need to reproduce that exact placeholder
+ * themselves (see renderAllowedTypesChips below).
+ *
+ * @type {Promise<string>|null}
+ */
+let noSelectionStringPromise = null;
+const getNoSelectionString = () => {
+    if (!noSelectionStringPromise) {
+        noSelectionStringPromise = getString('template_allowed_types_none', 'local_coursegen');
+    }
+    return noSelectionStringPromise;
+};
+
 /**
  * Bind events on the rendered limits form.
  *
@@ -83,6 +102,60 @@ export const renderStepLimits = (panel, state) => {
     state.allowedTypes = readAllowedTypes();
     allowedSelect?.addEventListener('change', () => {
         state.allowedTypes = readAllowedTypes();
+    });
+
+    // "Select all" / "Select none" (see template_config_form.php) act on
+    // the same underlying <select> a normal search-and-click would, so the
+    // change listener above still picks up the result the same way. The
+    // widget core/form-autocomplete builds only re-renders the visible chip
+    // area through its OWN click handlers, though — it never watches the
+    // <select> for changes made any other way — so these buttons also have
+    // to redraw the chip area themselves, reproducing the exact markup
+    // core/form_autocomplete_selection_items.mustache renders (a chip per
+    // selected option, or the "nothing selected" placeholder) so it stays
+    // indistinguishable from what a normal click would have produced.
+    const allowedChips = allowedSelect?.parentElement?.querySelector('.form-autocomplete-selection');
+
+    const renderAllowedTypesChips = async() => {
+        if (!allowedSelect || !allowedChips) {
+            return;
+        }
+
+        const items = [];
+        for (const option of allowedSelect.options) {
+            if (option.selected) {
+                items.push({label: option.textContent, value: option.value});
+            }
+        }
+
+        // Rendered through Moodle's own template, not hand-built markup:
+        // core/form-autocomplete's own click handlers (e.g. removing a chip)
+        // read specific child nodes of each chip by position, which only
+        // matches if the chip's HTML is exactly what this template produces.
+        const noneText = await getNoSelectionString();
+        const {html, js} = await Templates.renderForPromise('core/form_autocomplete_selection_items', {
+            items,
+            noSelectionString: noneText,
+        });
+        Templates.replaceNodeContents(allowedChips, html, js);
+    };
+
+    const setAllAllowedTypes = async(selected) => {
+        if (!allowedSelect) {
+            return;
+        }
+        for (const option of allowedSelect.options) {
+            option.selected = selected;
+        }
+        await renderAllowedTypesChips();
+        allowedSelect.dispatchEvent(new Event('change', {bubbles: true}));
+    };
+
+    panel.querySelector('[data-action="select-all-allowedtypes"]')?.addEventListener('click', () => {
+        setAllAllowedTypes(true);
+    });
+    panel.querySelector('[data-action="select-none-allowedtypes"]')?.addEventListener('click', () => {
+        setAllAllowedTypes(false);
     });
 
     maxInput?.addEventListener('change', () => {
