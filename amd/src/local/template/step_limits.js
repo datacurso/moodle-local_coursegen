@@ -70,7 +70,16 @@ export const renderStepLimits = (panel, state) => {
     // course actually uses — replaces what used to be one advcheckbox per
     // installed activity type.
     const allowedSelect = panel.querySelector('select[name="allowedtypes[]"]');
-    const readAllowedTypes = () => Array.from(allowedSelect?.selectedOptions ?? []).map(opt => opt.value);
+    const readAllowedTypes = () => {
+        if (!allowedSelect) {
+            return [];
+        }
+        const selected = [];
+        for (const option of allowedSelect.selectedOptions) {
+            selected.push(option.value);
+        }
+        return selected;
+    };
     state.allowedTypes = readAllowedTypes();
     allowedSelect?.addEventListener('change', () => {
         state.allowedTypes = readAllowedTypes();
