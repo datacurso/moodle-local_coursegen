@@ -157,6 +157,7 @@ $string['courseai_checklist_label'] = 'Разделы курса';
 $string['courseai_chip_remove_guideline'] = 'Удалить направляющую';
 $string['courseai_chip_remove_syllabus'] = 'Удалить учебную программу';
 $string['courseai_chip_view_guideline'] = 'Посмотреть руководство';
+$string['courseai_close_view'] = 'Закрыть и вернуться к Моим курсам';
 $string['courseai_compact_prompt_placeholder'] = 'Пример: восстановить курс всего за 3 раздела.';
 $string['courseai_completion_btn_create_another'] = 'Создать еще один курс';
 $string['courseai_completion_btn_open_course'] = 'Открытый курс по Moodle';

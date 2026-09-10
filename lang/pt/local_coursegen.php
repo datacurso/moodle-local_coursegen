@@ -157,6 +157,7 @@ $string['courseai_checklist_label'] = 'Seções do curso';
 $string['courseai_chip_remove_guideline'] = 'Remover diretriz';
 $string['courseai_chip_remove_syllabus'] = 'Remover plano de estudos';
 $string['courseai_chip_view_guideline'] = 'Ver diretriz';
+$string['courseai_close_view'] = 'Fechar e voltar para Meus cursos';
 $string['courseai_compact_prompt_placeholder'] = 'Exemplo: Regenerar o curso em apenas 3 seções';
 $string['courseai_completion_btn_create_another'] = 'Crie outro curso';
 $string['courseai_completion_btn_open_course'] = 'Curso aberto em Moodle';

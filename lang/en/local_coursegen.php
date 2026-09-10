@@ -192,6 +192,7 @@ $string['courseai_checklist_section_count'] = '{$a} sections';
 $string['courseai_chip_remove_guideline'] = 'Remove guideline';
 $string['courseai_chip_remove_syllabus'] = 'Remove syllabus';
 $string['courseai_chip_view_guideline'] = 'View guideline';
+$string['courseai_close_view'] = 'Close and return to My courses';
 $string['courseai_compact_prompt_placeholder'] = 'Example: Regenerate the course in just 3 sections';
 $string['courseai_completion_btn_create_another'] = 'Create another course';
 $string['courseai_completion_btn_open_course'] = 'Open course';
