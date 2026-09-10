@@ -42,15 +42,49 @@ defined('MOODLE_INTERNAL') || die();
  */
 class template_course_builder_service {
     /**
-     * Fully-qualified class name of the AI service used to generate template
-     * activity content. Centralised here (instead of repeating the literal
-     * class name at every call site) so swapping the mock for the real AI
-     * backend is a single-line change, regardless of what the replacement
-     * class is named.
+     * Injected AI content generator, or null before first use (in which case
+     * get_ai_service() lazily defaults it to the mock). Holding an instance
+     * here — instead of a class-name constant resolved at each call site —
+     * means the mock can be deleted outright once a real implementation
+     * exists, with nothing left behind to clean up: every call site already
+     * goes through get_ai_service(), never mock_template_ai_service by name.
      *
-     * @var string
+     * @var template_content_generator|null
      */
-    private const AI_SERVICE_CLASS = mock_template_ai_service::class;
+    private static ?template_content_generator $aiservice = null;
+
+    /**
+     * Return the AI content generator used to fabricate template activity
+     * content and grid section pictures.
+     *
+     * Defaults to the mock while the real backend isn't wired in. Swapping
+     * to the real implementation (once one exists, implementing
+     * template_content_generator the same way the mock does today) is a
+     * single call to set_ai_service() — production code at every call site
+     * below never needs to change.
+     *
+     * @return template_content_generator
+     */
+    private static function get_ai_service(): template_content_generator {
+        if (self::$aiservice === null) {
+            self::$aiservice = new mock_template_ai_service();
+        }
+        return self::$aiservice;
+    }
+
+    /**
+     * Inject the AI content generator used by this service.
+     *
+     * The real production wiring point once a real implementation of
+     * template_content_generator exists; also used by PHPUnit to inject a
+     * test double instead of the mock.
+     *
+     * @param template_content_generator|null $service Null resets to the default mock.
+     * @return void
+     */
+    public static function set_ai_service(?template_content_generator $service): void {
+        self::$aiservice = $service;
+    }
 
     /**
      * Create a course from a template.
@@ -611,7 +645,7 @@ class template_course_builder_service {
      *
      * The picture is now GENERATED through the same AI-content contract this
      * class already uses for every other kind of content (see
-     * AI_SERVICE_CLASS::generate() a few methods up) — a small stable
+     * get_ai_service()->generate() a few methods up) — a small stable
      * payload in, a ready-to-store result out — so the label is always
      * correct because it is produced for this exact section, never copied
      * from another one. Producing an SVG is plain TEXT generation (SVG is
@@ -646,8 +680,8 @@ class template_course_builder_service {
                 $sectionname = get_string('sectionname', 'format_grid') . ' ' . $newsectionnum;
             }
 
-            $aiserviceclass = self::AI_SERVICE_CLASS;
-            $generated = $aiserviceclass::generate_section_picture([
+            $aiservice = self::get_ai_service();
+            $generated = $aiservice->generate_section_picture([
                 'sectionname' => $sectionname,
                 'sectionnum' => $newsectionnum,
                 // REPLACE-WITH-REAL-AI: empty until this feature has a real
@@ -769,8 +803,8 @@ class template_course_builder_service {
                         'lang' => current_language(),
                         'title' => (string) format_string($cm->name),
                     ];
-                    $aiserviceclass = self::AI_SERVICE_CLASS;
-                    $generated = $aiserviceclass::generate($payload);
+                    $aiservice = self::get_ai_service();
+                    $generated = $aiservice->generate($payload);
                     create_mod_service::create_from_ai_result($generated, $newcourse, $destsectionnum);
                 } catch (\Throwable $e) {
                     $activityerrors[] = [
@@ -966,8 +1000,8 @@ class template_course_builder_service {
                     'lang' => current_language(),
                     'title' => '',
                 ];
-                $aiserviceclass = self::AI_SERVICE_CLASS;
-                $generated = $aiserviceclass::generate($payload);
+                $aiservice = self::get_ai_service();
+                $generated = $aiservice->generate($payload);
                 create_mod_service::create_from_ai_result($generated, $newcourse, $destsectionnum);
             } catch (\Throwable $e) {
                 $activityerrors[] = [

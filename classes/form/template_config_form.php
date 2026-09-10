@@ -40,7 +40,7 @@ defined('MOODLE_INTERNAL') || die();
 use context;
 use context_system;
 use core_form\dynamic_form;
-use local_coursegen\local\service\mock_template_ai_service;
+use local_coursegen\local\service\template_content_generator;
 use moodle_url;
 
 /**
@@ -93,7 +93,7 @@ class template_config_form extends dynamic_form {
         $mform->disabledIf('maxsections', 'nolimit', 'checked');
 
         // Only ever offer types the AI service actually has a content
-        // contract for (see mock_template_ai_service::AI_SUPPORTED_TYPES'
+        // contract for (see template_content_generator::AI_SUPPORTED_TYPES'
         // own docblock) — never everything installed on the site. On a real
         // site that can mean dozens of installed module types; restricting
         // to the AI-supported set both keeps this list scannable and
@@ -102,7 +102,7 @@ class template_config_form extends dynamic_form {
         // generated.
         $modtypes = [];
         foreach (get_module_types_names() as $modname => $displayname) {
-            if (in_array($modname, mock_template_ai_service::AI_SUPPORTED_TYPES, true)) {
+            if (in_array($modname, template_content_generator::AI_SUPPORTED_TYPES, true)) {
                 $modtypes[$modname] = $displayname;
             }
         }
