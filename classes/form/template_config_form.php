@@ -112,6 +112,25 @@ class template_config_form extends dynamic_form {
             $mform->addElement('static', 'allowedtypesdesc', '',
                 get_string('template_allowed_types_desc', 'local_coursegen'));
 
+            // Picking every AI-supported type one at a time through the
+            // search-and-click multi-select below is tedious once there are
+            // more than a handful — these two buttons are a JS-only
+            // convenience (see amd/src/local/template/step_limits.js) that
+            // select or clear all of them in one click; they carry no name
+            // and are never submitted themselves, only the allowedtypes
+            // field they act on is. Rendered from templates/allowed_types_
+            // actions.mustache — each button's hover explanation is a plain
+            // native title attribute, the everyday browser tooltip.
+            global $OUTPUT;
+            $mform->addElement('static', 'allowedtypesactions', '',
+                $OUTPUT->render_from_template('local_coursegen/allowed_types_actions', [
+                    'selectalllabel' => get_string('template_select_all', 'local_coursegen'),
+                    'selectalltooltip' => get_string('template_select_all_tooltip', 'local_coursegen'),
+                    'selectnonelabel' => get_string('template_select_none', 'local_coursegen'),
+                    'selectnonetooltip' => get_string('template_select_none_tooltip', 'local_coursegen'),
+                ])
+            );
+
             // A single searchable multi-select (Moodle's own standard
             // building block for "pick several from a moderate list", the
             // same autocomplete element already used for the base-course
