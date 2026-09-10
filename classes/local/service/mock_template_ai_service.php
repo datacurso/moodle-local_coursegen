@@ -59,6 +59,34 @@ class mock_template_ai_service {
     public const SUPPORTED = ['page', 'label', 'forum', 'assign'];
 
     /**
+     * Every activity type the real AI content service has a registered
+     * content contract for — mirrors the activity-type registry in the
+     * sibling `course_ai` Python service
+     * (`app/agents/activity_prompts/*.py`, discovered by
+     * `ActivityPromptRegistry`, one file per Moodle modname). This is the
+     * single source of truth for which activity types a professor may add
+     * as brand-new activities in a course generated from a template (see
+     * template_config_form::definition()) — never everything installed on
+     * the site, since the AI service (real or mocked) can only ever be
+     * asked to generate content for a type it actually has a contract for.
+     *
+     * Deliberately NOT the same list as self::SUPPORTED above: SUPPORTED is
+     * scoped to what THIS MOCK can fabricate output for today (used to gate
+     * "Modify" of activities the template already contains); this constant
+     * reflects the real service's full content contract, most of which the
+     * mock does not implement yet (see generate()'s own REPLACE-WITH-REAL-AI
+     * note) — extending generate() to cover more of these types is tracked
+     * as Phase 2 work in docs/course_template/tasks.md.
+     *
+     * @var string[]
+     */
+    public const AI_SUPPORTED_TYPES = [
+        'assign', 'book', 'choice', 'data', 'feedback', 'folder', 'forum',
+        'glossary', 'h5pactivity', 'imscp', 'label', 'lesson', 'page', 'quiz',
+        'resource', 'scorm', 'url', 'wiki', 'workshop',
+    ];
+
+    /**
      * Generate a generated_activities-shape entry for one activity.
      *
      * @param array $payload {
