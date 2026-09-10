@@ -32,6 +32,23 @@ import {applyTypeDefaultsToState} from './type_action_sync';
 import Notification from 'core/notification';
 
 let rendered = false;
+/**
+ * Whether the container might still be holding server-prerendered content
+ * from the very first page load (never yet replaced by an AJAX fetch).
+ * Starts true and is permanently set to false the first time
+ * renderStepSections() runs to completion, however it gets its content —
+ * so the "server already rendered this" fast path below can only ever be
+ * taken once, on that first render. Without this, switching from one
+ * selected course to another left the FIRST course's markup sitting in the
+ * container; it still matched the same [data-sec-action]/[data-act-val]
+ * selector used to detect "already rendered", so the fast path fired again
+ * and skipped fetching the newly selected course's real structure — the
+ * screen kept showing the first course's content no matter which course
+ * was picked afterwards.
+ * @type {boolean}
+ */
+let maybeStillServerPrerendered = true;
+
 /** Reset so a newly selected course's structure gets rendered again. */
 export const resetSectionsRender = () => { rendered = false; };
 
@@ -47,12 +64,17 @@ export const renderStepSections = async(panel, state) => {
     let container = panel.querySelector('[data-region="sections-config"]');
 
     // Server already rendered the controls on initial page load — just bind.
-    if (container && container.querySelector('[data-sec-action], [data-act-val]')) {
+    // Only ever true on the very first call (see maybeStillServerPrerendered's
+    // own docblock) — every later call always re-fetches, even if leftover
+    // markup from a previously selected course still happens to match.
+    if (maybeStillServerPrerendered && container && container.querySelector('[data-sec-action], [data-act-val]')) {
         applyTypeDefaultsToState(container, state);
         bindServerRenderedControls(container, state);
         rendered = true;
+        maybeStillServerPrerendered = false;
         return;
     }
+    maybeStillServerPrerendered = false;
 
     // Otherwise fetch via AJAX (course picked without a full page reload).
     container = panel.querySelector('[data-region="sections-config"]') || panel;
