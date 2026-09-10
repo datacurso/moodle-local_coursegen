@@ -50,14 +50,14 @@ interface template_content_generator {
      * the site, since the AI service (real or mocked) can only ever be
      * asked to generate content for a type it actually has a contract for.
      *
-     * Deliberately NOT the same list as mock_template_ai_service::SUPPORTED:
-     * that one is scoped to what THE MOCK can fabricate output for today
-     * (used to gate "Modify" of activities the template already contains);
-     * this constant reflects the real service's full content contract, most
-     * of which the mock does not implement yet (see
-     * mock_template_ai_service::generate()'s own REPLACE-WITH-REAL-AI note)
-     * — extending the mock to cover more of these types is tracked as Phase
-     * 2 work in docs/course_template/tasks.md.
+     * This is also the single source of truth for which types offer
+     * "Modify with AI" on an activity the template already contains (see
+     * sections_config::build_activity_dropdown()) — every type the real
+     * service can generate content for must be offered, full stop; no
+     * narrower subset of "currently implemented" types gates the UI. A
+     * given implementation (the mock included) may still not have every
+     * type built out yet — see generate()'s own REPLACE-WITH-REAL-AI note
+     * for how that gap is handled without lying to the UI about it.
      *
      * @var string[]
      */

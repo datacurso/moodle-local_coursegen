@@ -49,23 +49,22 @@ defined('MOODLE_INTERNAL') || die();
  */
 class mock_template_ai_service implements template_content_generator {
     /**
-     * Module names the mock currently knows how to fabricate content for.
+     * Module names THIS MOCK has an actual generate() branch for today.
      *
-     * Public on purpose: this is the single source of truth for which
-     * activity types may offer "Modify" in the template configuration screen
-     * (see sections_config::build_activity_dropdown()) — the config UI must
-     * never let an admin pick an option that generation will silently fail
-     * on, so it reads this list directly instead of duplicating it.
-     *
-     * Deliberately NOT the same list as template_content_generator::
-     * AI_SUPPORTED_TYPES: that one reflects the real service's full content
-     * contract; this one is scoped to what THIS MOCK can fabricate output
-     * for today (used to gate "Modify" of activities the template already
-     * contains) — see that interface's own docblock for the distinction.
+     * Purely an internal safety guard against generate() silently
+     * mislabeling a type it has no real branch for as 'assign' (the
+     * switch's own default case) — never used to decide what the UI
+     * offers. Every type in template_content_generator::AI_SUPPORTED_TYPES
+     * must be offered as "Modify" regardless of whether this mock has
+     * caught up yet (see that constant's own docblock); a gap here just
+     * means generate() throws its documented, per-activity, non-fatal
+     * warning instead of fabricating the wrong module type. Scoped to this
+     * class on purpose — it describes only this implementation's current
+     * completeness, so it does not need to survive the mock's deletion.
      *
      * @var string[]
      */
-    public const SUPPORTED = ['page', 'label', 'forum', 'assign'];
+    private const IMPLEMENTED_TYPES = ['page', 'label', 'forum', 'assign'];
 
     /**
      * Generate a generated_activities-shape entry for one activity.
@@ -84,7 +83,7 @@ class mock_template_ai_service implements template_content_generator {
     public function generate(array $payload): array {
         $modname = (string) ($payload['modname'] ?? '');
 
-        if (!in_array($modname, self::SUPPORTED, true)) {
+        if (!in_array($modname, self::IMPLEMENTED_TYPES, true)) {
             // REPLACE-WITH-REAL-AI: every module type allowed by a template must
             // eventually be handled by the real AI backend. Until then this is a
             // per-activity warning (caught by the caller), never a fatal error.
