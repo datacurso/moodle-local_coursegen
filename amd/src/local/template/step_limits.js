@@ -64,23 +64,25 @@ export const renderStepLimits = (panel, state) => {
         state.noLimit = noLimitCb.checked;
     }
 
-    // Allowed types: one real advcheckbox per installed activity type
-    // (name="allowedtype_<modname>"), already pre-checked server-side for
-    // whichever types the selected course actually uses. Same hidden-
-    // companion caveat as nolimit above.
-    state.allowedTypes = [];
-    panel.querySelectorAll('input[type="checkbox"][name^="allowedtype_"]').forEach(cb => {
-        const modname = cb.name.replace('allowedtype_', '');
-        if (cb.checked) {
-            state.allowedTypes.push(modname);
+    // Allowed types: a single mform autocomplete multi-select
+    // (name="allowedtypes[]", real <select multiple> under the hood),
+    // already pre-selected server-side for whichever types the selected
+    // course actually uses — replaces what used to be one advcheckbox per
+    // installed activity type.
+    const allowedSelect = panel.querySelector('select[name="allowedtypes[]"]');
+    const readAllowedTypes = () => {
+        if (!allowedSelect) {
+            return [];
         }
-        cb.addEventListener('change', () => {
-            if (cb.checked && !state.allowedTypes.includes(modname)) {
-                state.allowedTypes.push(modname);
-            } else if (!cb.checked) {
-                state.allowedTypes = state.allowedTypes.filter(t => t !== modname);
-            }
-        });
+        const selected = [];
+        for (const option of allowedSelect.selectedOptions) {
+            selected.push(option.value);
+        }
+        return selected;
+    };
+    state.allowedTypes = readAllowedTypes();
+    allowedSelect?.addEventListener('change', () => {
+        state.allowedTypes = readAllowedTypes();
     });
 
     maxInput?.addEventListener('change', () => {

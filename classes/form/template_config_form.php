@@ -40,6 +40,7 @@ defined('MOODLE_INTERNAL') || die();
 use context;
 use context_system;
 use core_form\dynamic_form;
+use local_coursegen\local\service\template_content_generator;
 use moodle_url;
 
 /**
@@ -91,9 +92,19 @@ class template_config_form extends dynamic_form {
         // when the checkbox is ticked" — this is exactly what disabledIf is for.
         $mform->disabledIf('maxsections', 'nolimit', 'checked');
 
+        // Only ever offer types the AI service actually has a content
+        // contract for (see template_content_generator::AI_SUPPORTED_TYPES'
+        // own docblock) — never everything installed on the site. On a real
+        // site that can mean dozens of installed module types; restricting
+        // to the AI-supported set both keeps this list scannable and
+        // guarantees an admin can never allow a type here that would just
+        // silently fail (or need manual authoring) when a course is
+        // generated.
         $modtypes = [];
         foreach (get_module_types_names() as $modname => $displayname) {
-            $modtypes[$modname] = $displayname;
+            if (in_array($modname, template_content_generator::AI_SUPPORTED_TYPES, true)) {
+                $modtypes[$modname] = $displayname;
+            }
         }
         if (!empty($modtypes)) {
             $mform->addElement('header', 'allowedtypeshdr', get_string('template_allowed_types', 'local_coursegen'));
@@ -101,19 +112,23 @@ class template_config_form extends dynamic_form {
             $mform->addElement('static', 'allowedtypesdesc', '',
                 get_string('template_allowed_types_desc', 'local_coursegen'));
 
-            foreach ($modtypes as $modname => $displayname) {
-                $fieldname = "allowedtype_{$modname}";
-                $mform->addElement('advcheckbox', $fieldname, '', $displayname);
-                $mform->setType($fieldname, PARAM_BOOL);
-                $mform->setDefault($fieldname, in_array($modname, $presentmodnames, true) ? 1 : 0);
-                // One shared help identifier for every installed activity
-                // type (dozens on a real site) — a bespoke string per type
-                // isn't practical, so the single generic explanation is
-                // parameterised with the type's own real display name
-                // ({$a}) instead of reading as one identical block repeated
-                // on every checkbox.
-                $mform->addHelpButton($fieldname, 'template_allowed_type', 'local_coursegen', '', false, $displayname);
-            }
+            // A single searchable multi-select (Moodle's own standard
+            // building block for "pick several from a moderate list", the
+            // same autocomplete element already used for the base-course
+            // picker in course_picker_form.php) replaces what used to be one
+            // checkbox row per installed type — with dozens of installed
+            // types that list became a long wall to scan; typing to filter
+            // and seeing selections as chips is far more scannable, and no
+            // AJAX transport is needed since the AI-supported list is short
+            // enough to send whole, exactly like the category field.
+            $mform->addElement('autocomplete', 'allowedtypes', '', $modtypes, [
+                'multiple' => true,
+                'noselectionstring' => get_string('template_allowed_types_none', 'local_coursegen'),
+            ]);
+            $mform->setType('allowedtypes', PARAM_ALPHANUMEXT);
+            $preselected = array_values(array_intersect($presentmodnames, array_keys($modtypes)));
+            $mform->setDefault('allowedtypes', $preselected);
+            $mform->addHelpButton('allowedtypes', 'template_allowed_types', 'local_coursegen');
         }
 
         $this->definition_naming_pattern();

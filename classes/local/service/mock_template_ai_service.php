@@ -31,20 +31,23 @@ defined('MOODLE_INTERNAL') || die();
  * same shape create_mod_service::create_from_ai_result() already consumes
  * for the free-creation flow.
  *
- * REPLACE-WITH-REAL-AI: swapping this mock for the real AI means replacing
- * the body of generate() (and, in particular, build_body_html()) with a call
- * to the real course/activity generation endpoint and mapping its response
- * into the same return shape. Callers never reference this class by its
- * literal name — they resolve it through
- * template_course_builder_service::AI_SERVICE_CLASS — so a real
- * implementation under a different class name only needs that one constant
- * updated, not every call site.
+ * REPLACE-WITH-REAL-AI: swapping this mock for the real AI means writing a
+ * new class implementing template_content_generator (see that interface for
+ * the permanent contract, including AI_SUPPORTED_TYPES) — replacing the body
+ * of generate() (and, in particular, build_body_html()) with a call to the
+ * real course/activity generation endpoint, mapping its response into the
+ * same return shape. Callers never reference this class by its literal name
+ * — they resolve the current implementation through
+ * template_course_builder_service::get_ai_service(), so wiring in the real
+ * implementation is a single call to
+ * template_course_builder_service::set_ai_service(new real_implementation()),
+ * never a search for scattered references to this mock class.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class mock_template_ai_service {
+class mock_template_ai_service implements template_content_generator {
     /**
      * Module names the mock currently knows how to fabricate content for.
      *
@@ -53,6 +56,12 @@ class mock_template_ai_service {
      * (see sections_config::build_activity_dropdown()) — the config UI must
      * never let an admin pick an option that generation will silently fail
      * on, so it reads this list directly instead of duplicating it.
+     *
+     * Deliberately NOT the same list as template_content_generator::
+     * AI_SUPPORTED_TYPES: that one reflects the real service's full content
+     * contract; this one is scoped to what THIS MOCK can fabricate output
+     * for today (used to gate "Modify" of activities the template already
+     * contains) — see that interface's own docblock for the distinction.
      *
      * @var string[]
      */
@@ -72,7 +81,7 @@ class mock_template_ai_service {
      * @return array{resource_type:string,parameters:array}
      * @throws \moodle_exception If the module type is not supported by the mock yet.
      */
-    public static function generate(array $payload): array {
+    public function generate(array $payload): array {
         $modname = (string) ($payload['modname'] ?? '');
 
         if (!in_array($modname, self::SUPPORTED, true)) {
@@ -318,7 +327,7 @@ class mock_template_ai_service {
      * }
      * @return array{filename:string,mimetype:string,content:string}
      */
-    public static function generate_section_picture(array $payload): array {
+    public function generate_section_picture(array $payload): array {
         $sectionname = trim((string) ($payload['sectionname'] ?? ''));
         if ($sectionname === '') {
             $sectionname = (string) ($payload['sectionnum'] ?? '');
