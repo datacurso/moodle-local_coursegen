@@ -518,14 +518,14 @@ $string['forum_ready_with_discussions'] = 'Forum ready: \'{$a->name}\' with {$a-
 $string['generalsettings'] = 'General settings';
 $string['generating_assignment'] = 'Generating Assignment content for: {$a->title}...';
 $string['generating_chapter'] = 'Generating Chapter {$a->step}/{$a->total}: \'{$a->title}\'...';
-$string['generating_choice'] = 'Generating Choice (Consulta) content for: {$a->title}...';
+$string['generating_choice'] = 'Generating Choice content for: {$a->title}...';
 $string['generating_detailed_plans'] = 'Generating detailed activity plans…';
 $string['generating_feedback'] = 'Generating Feedback content for: {$a->title}...';
 $string['generating_feedback_question'] = 'Generating question {$a->step}/{$a->total} ({$a->type})...';
 $string['generating_images'] = 'Generating images...';
 $string['generating_initial_structure'] = 'Generating initial course structure…';
 $string['generating_quiz_question'] = 'Generating Q{$a->step}/{$a->total} ({$a->type}): \'{$a->question}\'...';
-$string['generating_workshop'] = 'Generating Workshop (Taller) content for: {$a->title}...';
+$string['generating_workshop'] = 'Generating Workshop content for: {$a->title}...';
 
 // Content generators — progress / ready.
 $string['generation_rules'] = 'Generation rules';
