@@ -71,6 +71,24 @@ class create_course_from_template extends external_api {
                         . 'negative = a newsections clientid'
                     ),
                     'modname' => new external_value(PARAM_PLUGIN, 'Activity module name'),
+                    'prompt' => new external_value(
+                        PARAM_RAW,
+                        'Prompt describing the content the AI should generate for this activity',
+                        VALUE_DEFAULT,
+                        ''
+                    ),
+                    'generateimages' => new external_value(
+                        PARAM_INT,
+                        'Whether the AI should generate images for this activity (0/1)',
+                        VALUE_DEFAULT,
+                        0
+                    ),
+                    'draftitemid' => new external_value(
+                        PARAM_INT,
+                        'Draft area id of an uploaded reference file (0 if none)',
+                        VALUE_DEFAULT,
+                        0
+                    ),
                 ]),
                 'Activities added by the professor via the chooser, not present in the template base course',
                 VALUE_DEFAULT,

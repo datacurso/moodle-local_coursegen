@@ -77,6 +77,10 @@ interface template_content_generator {
      *     referencecontent: string  Optional context gathered from reference/useasreference activities.
      *     lang: string              Language code (context only, unused by the mock).
      *     title: string             Optional explicit activity title; derived otherwise.
+     *     generateimages: int       Whether images should be generated for the activity (0/1);
+     *                               set for professor-added new activities, unused by the mock.
+     *     draftitemid: int          Draft area id of a professor-uploaded reference file (0 if
+     *                               none); set for new activities, unused by the mock.
      * }
      * @return array{resource_type:string,parameters:array}
      * @throws \moodle_exception If the module type is not supported yet.

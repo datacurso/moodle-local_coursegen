@@ -113,7 +113,9 @@ export const addSection = (state, sectionLabel) => {
  * @param {Object} state
  * @param {number} sectionId
  * @param {number|null} position - 0-based index to insert BEFORE, or null/undefined to append.
- * @param {Object} activity - {modname, displayname, purpose, iconhtml}
+ * @param {Object} activity - {modname, displayname, purpose, iconhtml} plus the
+ *     optional chooser prompt-panel extras {prompt, generateimages, draftitemid,
+ *     filename}, defaulted to ''/0/0/'' when absent.
  * @returns {boolean} Whether the insertion happened.
  */
 export const insertActivity = (state, sectionId, position, activity) => {
@@ -128,6 +130,10 @@ export const insertActivity = (state, sectionId, position, activity) => {
         purpose: activity.purpose,
         iconhtml: activity.iconhtml,
         locked: false,
+        prompt: activity.prompt || '',
+        generateimages: activity.generateimages ? 1 : 0,
+        draftitemid: activity.draftitemid || 0,
+        filename: activity.filename || '',
     };
     const hasPosition = typeof position === 'number' && position >= 0 && position <= section.activities.length;
     if (hasPosition) {

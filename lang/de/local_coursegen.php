@@ -271,6 +271,7 @@ $string['courseai_subsections_label'] = 'Unterabschnitte';
 $string['courseai_subsections_structure_other'] = 'Andere Struktur: beschreiben Sie sie…';
 $string['courseai_subsections_structure_send'] = 'Diese Struktur verwenden';
 $string['courseai_subsections_title'] = 'Abschnitte in Unterabschnitte gliedern';
+$string['courseai_template_selected_activity'] = 'Ausgewählte Aktivität';
 $string['courseai_toggle_details'] = 'Fortschrittsdetails anzeigen';
 $string['courseai_untitled'] = 'Kurs ohne Titel';
 $string['coursecreated'] = 'Kurs erfolgreich erstellt';

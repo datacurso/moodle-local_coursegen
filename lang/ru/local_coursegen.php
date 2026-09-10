@@ -271,6 +271,7 @@ $string['courseai_subsections_label'] = 'Подразделы';
 $string['courseai_subsections_structure_other'] = 'Другая структура: опишите её…';
 $string['courseai_subsections_structure_send'] = 'Использовать эту структуру';
 $string['courseai_subsections_title'] = 'Организовать разделы в подразделы';
+$string['courseai_template_selected_activity'] = 'Выбранный элемент';
 $string['courseai_toggle_details'] = 'Показать детали прогресса';
 $string['courseai_untitled'] = 'Курс без названия';
 $string['coursecreated'] = 'Курс успешно создан';

@@ -779,6 +779,7 @@ $string['courseai_template_modal_empty'] = 'Esta plantilla todavía no permite n
 $string['courseai_template_mock_prompt'] = 'Generado a partir del mensaje';
 $string['courseai_template_mock_generic'] = 'Contenido de marcador de posición generado para la sección: {$a}';
 $string['courseai_template_mock_reference'] = 'Contenido de referencia usado para esta actividad';
+$string['courseai_template_selected_activity'] = 'Actividad seleccionada';
 $string['invalidtemplate'] = 'Plantilla inválida.';
 $string['courseai_template_picker'] = 'Plantilla de curso';
 $string['courseai_template_picker_help'] = 'Seleccione una de las plantillas de curso creadas por un administrador. Su estructura, incluyendo secciones o actividades bloqueadas y los tipos de actividad permitidos, se utilizará para crear el nuevo curso.';

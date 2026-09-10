@@ -107,7 +107,13 @@ const handleGenerateClick = async(genBtn, tplSelect, tplState) => {
         tplState.sections.forEach((section) => {
             section.activities.forEach((activity) => {
                 if (!activity.locked) {
-                    newactivities.push({sectionid: section.id, modname: activity.modname});
+                    newactivities.push({
+                        sectionid: section.id,
+                        modname: activity.modname,
+                        prompt: activity.prompt || '',
+                        generateimages: activity.generateimages ? 1 : 0,
+                        draftitemid: activity.draftitemid || 0,
+                    });
                 }
             });
         });
@@ -226,7 +232,7 @@ export const wireTemplateMode = (state) => {
         },
     });
 
-    wireChooserModal(async(sectionId, position, modname) => {
+    wireChooserModal(async(sectionId, position, modname, extras) => {
         const activity = tplState.allowedActivities.find((a) => a.modname === modname);
         if (!activity) {
             return;
@@ -234,7 +240,7 @@ export const wireTemplateMode = (state) => {
         // InsertActivity assigns this id (via the pre-decrement of nextActivityId)
         // to the new row — captured so the catch below can find and undo it.
         const pendingActivityId = tplState.nextActivityId;
-        if (insertActivity(tplState, sectionId, position, activity)) {
+        if (insertActivity(tplState, sectionId, position, {...activity, ...(extras || {})})) {
             try {
                 await rerenderStructure();
             } catch (e) {

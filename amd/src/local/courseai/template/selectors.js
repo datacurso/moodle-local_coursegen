@@ -17,9 +17,11 @@
  * Selectors for the template-mode guided form (structure view + activity chooser).
  *
  * All JS hooks in the server-rendered structure/chooser markup are data-action
- * attributes — never IDs or CSS classes — so re-renders never desync from the
- * JS that wires them (see local_coursegen/template_structure.mustache and
- * local_coursegen/template_activity_chooser.mustache).
+ * (behaviour) or data-region (static panel elements) attributes — never CSS
+ * classes — so re-renders never desync from the JS that wires them (see
+ * local_coursegen/template_structure.mustache,
+ * local_coursegen/template_activity_chooser.mustache and the chooser prompt
+ * panel in local_coursegen/courseai_page.mustache).
  *
  * @module     local_coursegen/local/courseai/template/selectors
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -33,5 +35,17 @@ export default {
         removeActivity: '[data-action="local_coursegen/template/remove-activity"]',
         addSection: '[data-action="local_coursegen/template/add-section"]',
         chooserOption: '[data-action="local_coursegen/template/add-chooser-option"]',
+    },
+    regions: {
+        chooserPanel: '[data-region="local_coursegen/template/chooser-panel"]',
+        chooserSelectedIcon: '[data-region="local_coursegen/template/chooser-selected-icon"]',
+        chooserSelectedName: '[data-region="local_coursegen/template/chooser-selected-name"]',
+        chooserGenerateImages: '[data-region="local_coursegen/template/chooser-generateimages"]',
+        chooserSelectedFile: '[data-region="local_coursegen/template/chooser-selectedfile"]',
+        chooserSelectedFileName: '[data-region="local_coursegen/template/chooser-selectedfile_name"]',
+        chooserSelectedFileRemove: '[data-region="local_coursegen/template/chooser-selectedfile_remove"]',
+        chooserPrompt: '[data-region="local_coursegen/template/chooser-prompt"]',
+        chooserUpload: '[data-region="local_coursegen/template/chooser-upload"]',
+        chooserConfirm: '[data-region="local_coursegen/template/chooser-confirm"]',
     },
 };
