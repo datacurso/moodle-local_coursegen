@@ -1,0 +1,86 @@
+{
+    "id": 0,
+    "name": "CLI E2E test — course 397 base",
+    "description": "Hand-authored config for end-to-end CLI testing of the coursegen_template HTTP service. Not derived from any saved template row.",
+    "courseid": 397,
+    "maxsections": 6,
+    "nolimit": false,
+    "allowedtypes": "[\"label\",\"page\",\"resource\",\"forum\",\"lesson\",\"feedback\"]",
+    "namingpattern": "Unidad {N} — {nombre}",
+    "namingstart": 1,
+    "sections": [
+        {
+            "sectionid": 1715,
+            "sectionnum": 0,
+            "behavior": "custom",
+            "activities": [
+                {"cmid": 2471, "action": "modify",    "useasreference": true,  "prompt": "CLI E2E test: regenerate this label."},
+                {"cmid": 2472, "action": "modify",    "useasreference": true,  "prompt": "CLI E2E test: regenerate this page."},
+                {"cmid": 2473, "action": "reference", "useasreference": true,  "prompt": ""},
+                {"cmid": 2474, "action": "keep",       "useasreference": true,  "prompt": ""},
+                {"cmid": 2475, "action": "modify",    "useasreference": true,  "prompt": "CLI E2E test: regenerate this resource/file."},
+                {"cmid": 2476, "action": "modify",    "useasreference": true,  "prompt": "CLI E2E test: regenerate this forum."},
+                {"cmid": 2477, "action": "keep",       "useasreference": true,  "prompt": ""},
+                {"cmid": 2478, "action": "keep",       "useasreference": true,  "prompt": ""}
+            ]
+        },
+        {
+            "sectionid": 1716,
+            "sectionnum": 1,
+            "behavior": "custom",
+            "activities": [
+                {"cmid": 2479, "action": "modify",    "useasreference": true,  "prompt": "CLI E2E test: regenerate this lesson."},
+                {"cmid": 2480, "action": "keep",       "useasreference": true,  "prompt": ""},
+                {"cmid": 2481, "action": "keep",       "useasreference": true,  "prompt": ""},
+                {"cmid": 2482, "action": "modify",    "useasreference": true,  "prompt": "CLI E2E test: regenerate this feedback."}
+            ]
+        },
+        {
+            "sectionid": 1717,
+            "sectionnum": 2,
+            "behavior": "custom",
+            "activities": [
+                {"cmid": 2483, "action": "keep",       "useasreference": true,  "prompt": ""},
+                {"cmid": 2484, "action": "keep",       "useasreference": true,  "prompt": ""},
+                {"cmid": 2485, "action": "keep",       "useasreference": true,  "prompt": ""},
+                {"cmid": 2486, "action": "keep",       "useasreference": true,  "prompt": ""}
+            ]
+        },
+        {
+            "sectionid": 1718,
+            "sectionnum": 3,
+            "behavior": "custom",
+            "activities": [
+                {"cmid": 2487, "action": "keep",       "useasreference": true,  "prompt": ""},
+                {"cmid": 2488, "action": "keep",       "useasreference": true,  "prompt": ""},
+                {"cmid": 2489, "action": "keep",       "useasreference": true,  "prompt": ""},
+                {"cmid": 2490, "action": "keep",       "useasreference": true,  "prompt": ""},
+                {"cmid": 2491, "action": "keep",       "useasreference": true,  "prompt": ""}
+            ]
+        },
+        {
+            "sectionid": 1719,
+            "sectionnum": 4,
+            "behavior": "custom",
+            "activities": [
+                {"cmid": 2492, "action": "keep",       "useasreference": true,  "prompt": ""},
+                {"cmid": 2493, "action": "keep",       "useasreference": true,  "prompt": ""},
+                {"cmid": 2494, "action": "keep",       "useasreference": true,  "prompt": ""},
+                {"cmid": 2495, "action": "keep",       "useasreference": true,  "prompt": ""}
+            ]
+        },
+        {
+            "sectionid": 1720,
+            "sectionnum": 5,
+            "behavior": "custom",
+            "activities": [
+                {"cmid": 2496, "action": "keep",       "useasreference": true,  "prompt": ""},
+                {"cmid": 2497, "action": "keep",       "useasreference": true,  "prompt": ""},
+                {"cmid": 2498, "action": "keep",       "useasreference": true,  "prompt": ""},
+                {"cmid": 2499, "action": "keep",       "useasreference": true,  "prompt": ""},
+                {"cmid": 2500, "action": "keep",       "useasreference": true,  "prompt": ""},
+                {"cmid": 2501, "action": "exclude",    "useasreference": true,  "prompt": ""}
+            ]
+        }
+    ]
+}
