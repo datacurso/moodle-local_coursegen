@@ -49,25 +49,6 @@ defined('MOODLE_INTERNAL') || die();
  */
 class mock_template_ai_service implements template_content_generator {
     /**
-     * Module names the mock currently knows how to fabricate content for.
-     *
-     * Public on purpose: this is the single source of truth for which
-     * activity types may offer "Modify" in the template configuration screen
-     * (see sections_config::build_activity_dropdown()) — the config UI must
-     * never let an admin pick an option that generation will silently fail
-     * on, so it reads this list directly instead of duplicating it.
-     *
-     * Deliberately NOT the same list as template_content_generator::
-     * AI_SUPPORTED_TYPES: that one reflects the real service's full content
-     * contract; this one is scoped to what THIS MOCK can fabricate output
-     * for today (used to gate "Modify" of activities the template already
-     * contains) — see that interface's own docblock for the distinction.
-     *
-     * @var string[]
-     */
-    public const SUPPORTED = ['page', 'label', 'forum', 'assign'];
-
-    /**
      * Generate a generated_activities-shape entry for one activity.
      *
      * @param array $payload {
@@ -84,7 +65,7 @@ class mock_template_ai_service implements template_content_generator {
     public function generate(array $payload): array {
         $modname = (string) ($payload['modname'] ?? '');
 
-        if (!in_array($modname, self::SUPPORTED, true)) {
+        if (!in_array($modname, self::MODIFY_SUPPORTED_TYPES, true)) {
             // REPLACE-WITH-REAL-AI: every module type allowed by a template must
             // eventually be handled by the real AI backend. Until then this is a
             // per-activity warning (caught by the caller), never a fatal error.

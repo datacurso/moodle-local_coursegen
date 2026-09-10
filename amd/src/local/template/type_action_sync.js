@@ -42,8 +42,10 @@
 /**
  * Module names the AI generator can actually produce content for today.
  *
- * Mirrors mock_template_ai_service::SUPPORTED (PHP) — kept in sync manually
- * since a JS module cannot read a PHP class constant directly. The PHP side
+ * Mirrors template_content_generator::MODIFY_SUPPORTED_TYPES (PHP) — the
+ * permanent contract, not any one implementation's own constant — kept in
+ * sync manually since a JS module cannot read a PHP class constant
+ * directly. The PHP side
  * (template_config_form) is the single source of truth for which options
  * the type-default <select> itself offers; this copy only still matters for
  * seeding each activity's initial per-activity action as soon as a course's

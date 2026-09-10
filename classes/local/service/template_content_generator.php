@@ -50,14 +50,12 @@ interface template_content_generator {
      * the site, since the AI service (real or mocked) can only ever be
      * asked to generate content for a type it actually has a contract for.
      *
-     * Deliberately NOT the same list as mock_template_ai_service::SUPPORTED:
-     * that one is scoped to what THE MOCK can fabricate output for today
-     * (used to gate "Modify" of activities the template already contains);
-     * this constant reflects the real service's full content contract, most
-     * of which the mock does not implement yet (see
-     * mock_template_ai_service::generate()'s own REPLACE-WITH-REAL-AI note)
-     * — extending the mock to cover more of these types is tracked as Phase
-     * 2 work in docs/course_template/tasks.md.
+     * Deliberately NOT the same list as MODIFY_SUPPORTED_TYPES: this constant
+     * reflects the real service's full content contract; that one is the
+     * narrower, currently-implemented subset eligible for "Modify" of an
+     * activity the template already contains. Extending real generation to
+     * cover more of these types is tracked as Phase 2 work in
+     * docs/course_template/tasks.md.
      *
      * @var string[]
      */
@@ -66,6 +64,27 @@ interface template_content_generator {
         'glossary', 'h5pactivity', 'imscp', 'label', 'lesson', 'page', 'quiz',
         'resource', 'scorm', 'url', 'wiki', 'workshop',
     ];
+
+    /**
+     * Module names for which "Modify with AI" is actually implemented today,
+     * for an activity that already exists in the base course being turned
+     * into a template — a narrower, permanent subset of AI_SUPPORTED_TYPES
+     * (that one gates which brand-new activity types a template may add at
+     * all).
+     *
+     * Lives on this interface, not on any one implementation: this is what
+     * sections_config::build_activity_dropdown() reads to decide whether
+     * "Modify" is even offered for an activity, and that decision must
+     * survive deleting the mock — it can never depend on a constant scoped
+     * to a class meant to be thrown away wholesale. Grows one type at a time
+     * as Phase 2 (docs/course_template/tasks.md) lands real support for each
+     * (lesson is next); whether file resources ever belong here at all is
+     * also a Phase 2 decision — today's answer is no, they're kept/reference
+     * only.
+     *
+     * @var string[]
+     */
+    public const MODIFY_SUPPORTED_TYPES = ['page', 'label', 'forum', 'assign'];
 
     /**
      * Generate a generated_activities-shape entry for one activity.
