@@ -36,6 +36,15 @@ class resource_parameters extends base_parameters {
      * @return object Adjusted parameters for the module resource.
      */
     public function get_parameters() {
+        // Already resolved: an AI implementation that downloads its own
+        // package file (e.g. http_template_ai_service, talking to a test/dev
+        // service with no /files/download proxy of its own) sets 'files' to
+        // an already-created draft itemid before this ever runs. Only the
+        // production Datacurso flow below needs the download performed here.
+        if (!empty($this->parameters->files) && is_int($this->parameters->files)) {
+            return $this->parameters;
+        }
+
         $downloadinfo = $this->get_package_download_info();
         $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
         $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
