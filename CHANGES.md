@@ -1,3 +1,17 @@
+## 2.0.5
+
+**Released on:** 2026-09-10
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Fixed
+
+- **German, French, Indonesian, Portuguese, and Russian translations completed**  
+  These languages were only partially translated, so most of the course creation assistant fell back to English regardless of the site's language. All activity names, prompts, progress messages, and settings are now fully translated, using the same terminology as each language's official Moodle language pack.
+
+- **Spanish translation quality pass**  
+  Corrected a handful of remaining literal translations, informal wording, and inconsistent terminology left over from the previous translation pass, including a few messages that were showing a broken placeholder instead of the intended text.
+
 ## 2.0.4
 
 **Released on:** 2026-08-27
