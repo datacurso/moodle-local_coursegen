@@ -32,22 +32,6 @@ import {applyTypeDefaultsToState} from './type_action_sync';
 import Notification from 'core/notification';
 
 let rendered = false;
-/**
- * Whether the container might still be holding server-prerendered content
- * from the very first page load (never yet replaced by an AJAX fetch).
- * Starts true and is permanently set to false the first time
- * renderStepSections() runs to completion, however it gets its content —
- * so the "server already rendered this" fast path below can only ever be
- * taken once, on that first render. Without this, switching from one
- * selected course to another left the FIRST course's markup sitting in the
- * container; it still matched the same [data-sec-action]/[data-act-val]
- * selector used to detect "already rendered", so the fast path fired again
- * and skipped fetching the newly selected course's real structure — the
- * screen kept showing the first course's content no matter which course
- * was picked afterwards.
- * @type {boolean}
- */
-let maybeStillServerPrerendered = true;
 
 /** Reset so a newly selected course's structure gets rendered again. */
 export const resetSectionsRender = () => { rendered = false; };
@@ -55,8 +39,19 @@ export const resetSectionsRender = () => { rendered = false; };
 /**
  * @param {HTMLElement} panel The structure panel (holds [data-region="sections-config"]).
  * @param {Object} state
+ * @param {boolean} isFreshFromPageLoad Whether edit_template.php just server-rendered
+ *     this exact panel for the currently selected course (init.js's own
+ *     configFormIsFreshFromPageLoad, read before it resets that flag back to
+ *     false) — the ONLY case where reusing whatever markup already sits in
+ *     the container is actually correct. Every other call is either a course
+ *     switch (the container still holds the PREVIOUSLY selected course's
+ *     markup, which happens to match the exact same selector this used to
+ *     rely on to guess "already rendered") or a course picked without a
+ *     preset, so this must come from the caller — inferring it from the
+ *     container's own content, however plausible-looking, can't tell "fresh
+ *     for THIS course" apart from "stale from a DIFFERENT one".
  */
-export const renderStepSections = async(panel, state) => {
+export const renderStepSections = async(panel, state, isFreshFromPageLoad) => {
     if (rendered) {
         return;
     }
@@ -64,19 +59,15 @@ export const renderStepSections = async(panel, state) => {
     let container = panel.querySelector('[data-region="sections-config"]');
 
     // Server already rendered the controls on initial page load — just bind.
-    // Only ever true on the very first call (see maybeStillServerPrerendered's
-    // own docblock) — every later call always re-fetches, even if leftover
-    // markup from a previously selected course still happens to match.
-    if (maybeStillServerPrerendered && container && container.querySelector('[data-sec-action], [data-act-val]')) {
+    if (isFreshFromPageLoad && container && container.querySelector('[data-sec-action], [data-act-val]')) {
         applyTypeDefaultsToState(container, state);
         bindServerRenderedControls(container, state);
         rendered = true;
-        maybeStillServerPrerendered = false;
         return;
     }
-    maybeStillServerPrerendered = false;
 
-    // Otherwise fetch via AJAX (course picked without a full page reload).
+    // Otherwise fetch via AJAX (course picked without a full page reload,
+    // or a DIFFERENT course selected after the initial one).
     container = panel.querySelector('[data-region="sections-config"]') || panel;
     container.innerHTML = `<div class="d-flex align-items-center py-5 justify-content-center">
             <div class="spinner-border text-primary mr-2" role="status"></div>
