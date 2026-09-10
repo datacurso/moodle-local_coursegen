@@ -483,6 +483,8 @@ $string['error_no_module_job_found'] = 'No module generation job was found for t
 $string['error_no_session_found'] = 'No planning session found for this course and user.';
 $string['error_no_system_instructions_configured'] = 'There are no system instructions configured. Please create system instructions first in the Manage system instructions page.';
 $string['error_planning_activity'] = 'Error planning {$a->type} \'{$a->title}\': {$a->error}';
+$string['error_template_service_response'] = 'The coursegen-template service returned an unexpected response: {$a}';
+$string['error_template_service_unreachable'] = 'Could not reach the coursegen-template service: {$a}';
 
 // Review interrupts and clarification.
 $string['error_processing_activity'] = 'Major error processing activity \'{$a->title}\': {$a->error}';
