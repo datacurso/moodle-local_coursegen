@@ -119,14 +119,8 @@ class template_config_form extends dynamic_form {
             // select or clear all of them in one click; they carry no name
             // and are never submitted themselves, only the allowedtypes
             // field they act on is. Rendered from templates/allowed_types_
-            // actions.mustache — each button's hover explanation uses
-            // Moodle's own native hover-tooltip markup (see
-            // lib/templates/hover_tooltip.mustache and the
-            // .hover-tooltip-container/.hover-tooltip rules in theme_boost),
-            // a small white bubble shown via pure CSS :hover, no JavaScript
-            // involved — instead of Bootstrap's heavier, dark
-            // data-toggle="tooltip" component used nowhere else in Moodle's
-            // own admin screens.
+            // actions.mustache — each button's hover explanation is a plain
+            // native title attribute, the everyday browser tooltip.
             global $OUTPUT;
             $mform->addElement('static', 'allowedtypesactions', '',
                 $OUTPUT->render_from_template('local_coursegen/allowed_types_actions', [

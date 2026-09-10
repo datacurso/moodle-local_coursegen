@@ -19,9 +19,9 @@
 
     "Select all" / "Select none" convenience buttons for the allowed
     activity types field (see amd/src/local/template/step_limits.js), each
-    with Moodle's own native hover-tooltip explanation — pure CSS
-    (.hover-tooltip-container/.hover-tooltip, the same classes
-    lib/templates/hover_tooltip.mustache uses), no JavaScript.
+    with a plain native title attribute for its hover explanation — the
+    same everyday browser tooltip Moodle uses for this kind of short hint
+    elsewhere, no custom markup or CSS.
 
     Example context (json):
     {
@@ -31,11 +31,7 @@
         "selectnonetooltip": "Clears every currently selected activity type."
     }
 }}
-<div class="hover-tooltip-container d-inline-block mr-3">
-    <button type="button" class="btn btn-link p-0" data-action="select-all-allowedtypes">{{selectalllabel}}</button>
-    <div class="hover-tooltip"><strong>{{selectalltooltip}}</strong></div>
-</div>
-<div class="hover-tooltip-container d-inline-block">
-    <button type="button" class="btn btn-link p-0" data-action="select-none-allowedtypes">{{selectnonelabel}}</button>
-    <div class="hover-tooltip"><strong>{{selectnonetooltip}}</strong></div>
-</div>
+<button type="button" class="btn btn-link p-0 mr-3" data-action="select-all-allowedtypes"
+    title="{{selectalltooltip}}">{{selectalllabel}}</button>
+<button type="button" class="btn btn-link p-0" data-action="select-none-allowedtypes"
+    title="{{selectnonetooltip}}">{{selectnonelabel}}</button>
