@@ -216,6 +216,17 @@ class sections_config {
                 $span->appendChild($doc->createTextNode($span->getAttribute('data-value')));
             }
         }
+
+        // Activity completion info/edit widget — a dropdown showing the
+        // real completion requirements ("Students must: View...") plus an
+        // "Edit conditions" link straight to that activity's real settings
+        // page (course/modedit.php). Neither belongs here: it's real-course
+        // completion status/editing, unrelated to how the template's AI
+        // behavior is configured.
+        $completionwidgets = $xpath->query('//*[@data-region="activity-information"]');
+        foreach ($completionwidgets as $el) {
+            $el->parentNode->removeChild($el);
+        }
     }
 
     /**
