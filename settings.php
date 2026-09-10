@@ -84,6 +84,14 @@ if ($hassiteconfig) {
         PARAM_URL
     ));
 
+    $devsettings->add(new admin_setting_configtext(
+        'local_coursegen/coursegen_template_service_url',
+        get_string('coursegen_template_service_url', 'local_coursegen'),
+        get_string('coursegen_template_service_url_desc', 'local_coursegen'),
+        '',
+        PARAM_URL
+    ));
+
     $ADMIN->add($pluginname, $devsettings);
     // Add Manage system instructions page.
     $ADMIN->add($pluginname, new admin_externalpage(
