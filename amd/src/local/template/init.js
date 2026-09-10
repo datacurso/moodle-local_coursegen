@@ -177,13 +177,20 @@ const renderConfigRegion = async() => {
     // first call after page load can skip reloading: edit_template.php
     // already server-rendered this exact form for this exact course, so
     // reloading it again would just be a redundant round-trip.
-    if (!configFormIsFreshFromPageLoad) {
+    const isFreshFromPageLoad = configFormIsFreshFromPageLoad;
+    if (!isFreshFromPageLoad) {
         await configForm.load({courseid: state.selectedCourseId});
     }
     configFormIsFreshFromPageLoad = false;
 
+    // renderStepSections needs the SAME "is this genuinely the initial
+    // server-render for this exact course" fact — captured above before the
+    // flag resets, since it answers the same question configForm.load()
+    // just did for its own container, for the structure panel's own
+    // container instead of inferring it from whatever markup happens to
+    // already be sitting there (which a course switch would get wrong).
     const structurePanel = region.querySelector('[data-region="structure"]');
-    await renderStepSections(structurePanel, state);
+    await renderStepSections(structurePanel, state, isFreshFromPageLoad);
 
     // Limits, allowed-types and the naming pattern all live inside the
     // config form's own container now (see template_config_form.php) —
