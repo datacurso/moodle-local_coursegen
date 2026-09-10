@@ -4,6 +4,11 @@
 
 **Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
 
+## Added
+
+- **Brazilian Portuguese translation**  
+  The plugin previously only shipped European Portuguese, so Brazilian Portuguese sites saw the course creation assistant in English. Added a full Brazilian Portuguese translation using Brazilian Moodle terminology and spelling conventions.
+
 ## Fixed
 
 - **German, French, Indonesian, Portuguese, and Russian translations completed**  
