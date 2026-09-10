@@ -119,23 +119,39 @@ class template_config_form extends dynamic_form {
             // select or clear all of them in one click; they carry no name
             // and are never submitted themselves, only the allowedtypes
             // field they act on is.
+            //
+            // Each button's hover explanation uses Moodle's own native
+            // hover-tooltip markup (see lib/templates/hover_tooltip.mustache
+            // and the .hover-tooltip-container/.hover-tooltip rules in
+            // theme_boost) — a small white bubble shown via pure CSS
+            // :hover, no JavaScript involved — instead of Bootstrap's
+            // heavier, dark data-toggle="tooltip" component used nowhere
+            // else in Moodle's own admin screens.
             $mform->addElement('static', 'allowedtypesactions', '',
-                \html_writer::tag('button', get_string('template_select_all', 'local_coursegen'), [
-                    'type' => 'button',
-                    'class' => 'btn btn-link p-0 mr-3',
-                    'data-action' => 'select-all-allowedtypes',
-                    'data-toggle' => 'tooltip',
-                    'data-html' => 'true',
-                    'title' => \html_writer::tag('strong', get_string('template_select_all_tooltip', 'local_coursegen')),
-                ]) .
-                \html_writer::tag('button', get_string('template_select_none', 'local_coursegen'), [
-                    'type' => 'button',
-                    'class' => 'btn btn-link p-0',
-                    'data-action' => 'select-none-allowedtypes',
-                    'data-toggle' => 'tooltip',
-                    'data-html' => 'true',
-                    'title' => \html_writer::tag('strong', get_string('template_select_none_tooltip', 'local_coursegen')),
-                ])
+                \html_writer::div(
+                    \html_writer::tag('button', get_string('template_select_all', 'local_coursegen'), [
+                        'type' => 'button',
+                        'class' => 'btn btn-link p-0',
+                        'data-action' => 'select-all-allowedtypes',
+                    ]) .
+                    \html_writer::div(
+                        \html_writer::tag('strong', get_string('template_select_all_tooltip', 'local_coursegen')),
+                        'hover-tooltip'
+                    ),
+                    'hover-tooltip-container d-inline-block mr-3'
+                ) .
+                \html_writer::div(
+                    \html_writer::tag('button', get_string('template_select_none', 'local_coursegen'), [
+                        'type' => 'button',
+                        'class' => 'btn btn-link p-0',
+                        'data-action' => 'select-none-allowedtypes',
+                    ]) .
+                    \html_writer::div(
+                        \html_writer::tag('strong', get_string('template_select_none_tooltip', 'local_coursegen')),
+                        'hover-tooltip'
+                    ),
+                    'hover-tooltip-container d-inline-block'
+                )
             );
 
             // A single searchable multi-select (Moodle's own standard
