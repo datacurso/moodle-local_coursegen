@@ -24,7 +24,7 @@
 
 namespace local_coursegen\output;
 
-use local_coursegen\local\service\mock_template_ai_service;
+use local_coursegen\local\service\template_content_generator;
 
 /**
  * Build the sections config HTML server-side with dropdowns and prompts already injected.
@@ -109,12 +109,30 @@ class sections_config {
             // end of .activity-grid, so it consistently lands in the same
             // corner the section-level dropdown already occupies, rather
             // than wherever normal document flow happens to leave room.
+            //
+            // That container is only rendered by core when the CURRENT
+            // user's course-editing mode happens to be on for this course —
+            // something this read-only template preview has no control
+            // over. When it's missing, create it ourselves instead of
+            // appending straight into .activity-grid: an appended element
+            // with no grid-area gets placed by plain CSS grid
+            // auto-placement, which lands it below the activity's content
+            // (e.g. below a label's banner) instead of top-right. A div
+            // with the same "activity-actions" class picks up core's own
+            // `grid-area: actions` rule (theme/boost course.scss) and is
+            // positioned identically to the native container.
             $actionslots = $xpath->query('.//*[contains(concat(" ", normalize-space(@class), " "), " activity-actions ")]', $cmitem);
             if ($actionslots->length > 0) {
                 $slot = $actionslots->item(0);
             } else {
                 $grids = $xpath->query('.//*[contains(@class,"activity-grid")]', $cmitem);
-                $slot = $grids->length > 0 ? $grids->item(0) : $cmitem;
+                if ($grids->length > 0) {
+                    $slot = $doc->createElement('div');
+                    $slot->setAttribute('class', 'activity-actions');
+                    $grids->item(0)->appendChild($slot);
+                } else {
+                    $slot = $cmitem;
+                }
             }
 
             $dropwrap = $doc->createElement('div');
@@ -127,7 +145,7 @@ class sections_config {
             $slot->appendChild($dropwrap);
 
             // Prompt textarea — only visible when the default action is "Modify".
-            $cansupportmodify = in_array($cm->modname, mock_template_ai_service::SUPPORTED, true);
+            $cansupportmodify = in_array($cm->modname, template_content_generator::AI_SUPPORTED_TYPES, true);
             $promptwrap = $doc->createElement('div');
             $promptwrap->setAttribute('data-tpl-prompt-wrap', (string)$cmid);
             $promptstyle = 'padding:0 1rem .5rem 3.5rem';
@@ -267,12 +285,17 @@ class sections_config {
     /**
      * Build activity action dropdown HTML.
      *
-     * Only ever offers "Modify" for a module type the AI generator can
-     * actually produce today (mock_template_ai_service::SUPPORTED) — an
-     * admin must never be able to pick an option that generation will
-     * silently fail on later. Every other type (e.g. resource/file modules,
-     * or a lesson/feedback activity until Phase 2 adds support) only offers
-     * Keep / Reference / Exclude, and defaults to Keep instead of Modify.
+     * Only ever offers "Modify" for a module type in
+     * template_content_generator::AI_SUPPORTED_TYPES — the real AI service's
+     * full content contract, never a constant scoped to whichever
+     * implementation currently satisfies it. Every type in that contract
+     * must be offered here, even if the implementation currently answering
+     * generate() hasn't caught up to every one of them yet (see
+     * mock_template_ai_service::generate()'s own per-activity, non-fatal
+     * fallback for that gap). Anything NOT in that contract (i.e. an
+     * activity type the AI service has no content contract for at all)
+     * only offers Keep / Reference / Exclude, and defaults to Keep instead
+     * of Modify.
      *
      * @param int $cmid
      * @param string $modname
@@ -291,7 +314,7 @@ class sections_config {
             'reference' => get_string('template_activity_reference', 'local_coursegen'),
             'exclude' => get_string('template_activity_exclude', 'local_coursegen'),
         ];
-        $cansupportmodify = in_array($modname, mock_template_ai_service::SUPPORTED, true);
+        $cansupportmodify = in_array($modname, template_content_generator::AI_SUPPORTED_TYPES, true);
         if (!$cansupportmodify) {
             unset($labels['modify']);
         }
