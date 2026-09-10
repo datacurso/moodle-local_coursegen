@@ -109,12 +109,30 @@ class sections_config {
             // end of .activity-grid, so it consistently lands in the same
             // corner the section-level dropdown already occupies, rather
             // than wherever normal document flow happens to leave room.
+            //
+            // That container is only rendered by core when the CURRENT
+            // user's course-editing mode happens to be on for this course —
+            // something this read-only template preview has no control
+            // over. When it's missing, create it ourselves instead of
+            // appending straight into .activity-grid: an appended element
+            // with no grid-area gets placed by plain CSS grid
+            // auto-placement, which lands it below the activity's content
+            // (e.g. below a label's banner) instead of top-right. A div
+            // with the same "activity-actions" class picks up core's own
+            // `grid-area: actions` rule (theme/boost course.scss) and is
+            // positioned identically to the native container.
             $actionslots = $xpath->query('.//*[contains(concat(" ", normalize-space(@class), " "), " activity-actions ")]', $cmitem);
             if ($actionslots->length > 0) {
                 $slot = $actionslots->item(0);
             } else {
                 $grids = $xpath->query('.//*[contains(@class,"activity-grid")]', $cmitem);
-                $slot = $grids->length > 0 ? $grids->item(0) : $cmitem;
+                if ($grids->length > 0) {
+                    $slot = $doc->createElement('div');
+                    $slot->setAttribute('class', 'activity-actions');
+                    $grids->item(0)->appendChild($slot);
+                } else {
+                    $slot = $cmitem;
+                }
             }
 
             $dropwrap = $doc->createElement('div');
