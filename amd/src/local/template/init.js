@@ -34,6 +34,7 @@ import * as Repository from './repository';
 import DynamicForm from 'core_form/dynamicform';
 import Notification from 'core/notification';
 import {get_string as getString} from 'core/str';
+import {resetAllFormDirtyStates} from 'core_form/changechecker';
 
 /** @type {Object} Wizard state. */
 const state = {
@@ -254,6 +255,11 @@ const saveTemplate = async() => {
             namingpattern: state.namingPattern, namingstart: state.namingStart,
             sections: buildSections(),
         });
+        // A real, successful save — the course picker, config form and name
+        // form all stay watched for changes (see their own definition()),
+        // so without this the native "changes you made may not be saved"
+        // warning would misfire on this very redirect.
+        resetAllFormDirtyStates();
         window.location.href = M.cfg.wwwroot + '/local/coursegen/manage_templates.php';
     } catch (e) {
         Notification.exception(e);
