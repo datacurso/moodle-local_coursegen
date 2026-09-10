@@ -29,7 +29,7 @@
 
 import {renderStepSections, resetSectionsRender} from './step_sections';
 import {renderStepLimits} from './step_limits';
-import {bindTypeDefaults, defaultActionForModname} from './type_action_sync';
+import {defaultActionForModname} from './type_action_sync';
 import * as Repository from './repository';
 import DynamicForm from 'core_form/dynamicform';
 import Notification from 'core/notification';
@@ -188,7 +188,6 @@ const renderConfigRegion = async() => {
     // config form's own container now (see template_config_form.php) —
     // scope directly to it instead of the whole region.
     renderStepLimits(configForm.container, state);
-    bindTypeDefaults(configForm.container, structurePanel, state);
 };
 
 /**

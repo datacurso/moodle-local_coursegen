@@ -14,31 +14,30 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Default behavior per TYPE of component, instead of per individual activity.
+ * Sensible default action per activity TYPE, applied automatically when a
+ * course's structure loads.
  *
  * A real template repeats the same handful of component types over and over
  * (a welcome/section banner, an informational page, a discussion forum, a
  * file attachment, a graded activity, a closing survey, a multi-page
  * lesson) — dozens of times across a real course. Reviewing every single
- * activity one by one does not scale (a real template reviewed this session
- * has ~28 activities). The admin sets ONE behavior per type (a real
- * mform 'select' element, see classes/form/template_config_form.php), and
- * this module bulk-applies that choice to every activity of the type and
- * syncs their individual dropdowns, so the admin only has to touch the rare
- * exception via the per-activity dropdown that already exists in the
- * section/activity review below.
+ * activity one by one from a neutral starting point does not scale (a real
+ * template reviewed this session has ~28 activities), so each activity is
+ * seeded with the sensible default for its own type the moment the course
+ * structure loads; the admin only has to touch the rare exception via the
+ * per-activity dropdown in the section/activity review below.
  *
- * This module used to also BUILD the <select> markup itself; that moved
- * into template_config_form.php (real mform elements, server-rendered) —
- * this module now only binds behavior on top of what the form already
- * rendered.
+ * This module previously also rendered a bulk "change every activity of
+ * this type at once" panel (a real mform in
+ * classes/form/template_config_form.php, bound here) — removed per explicit
+ * client feedback: they didn't want it as a visible, separate control. Only
+ * the automatic per-activity seeding stays; the per-activity dropdown below
+ * remains the only place to change anything.
  *
  * @module     local_coursegen/local/template/type_action_sync
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
-import {setState} from './init';
 
 /**
  * Module names the AI generator can actually produce content for today.
@@ -106,76 +105,4 @@ export const applyTypeDefaultsToState = (container, state) => {
         state.activityAction[cmid] = defaultActionForModname(modname);
         state.activityRef[cmid] = true;
     });
-};
-
-/**
- * Bind the type-default <select> elements the form already rendered
- * (name="typedefault_<modname>", one per type present in the course — see
- * classes/form/template_config_form.php). Changing one bulk-applies that
- * action to every activity of that type and refreshes their individual
- * dropdowns/prompts so the two controls never disagree.
- *
- * @param {HTMLElement} formContainer Element containing the rendered config form.
- * @param {HTMLElement} structureContainer The rendered course structure (holds the per-activity controls to sync).
- * @param {Object} state
- */
-export const bindTypeDefaults = (formContainer, structureContainer, state) => {
-    const present = new Map(); // modname -> [cmid, ...]
-    structureContainer.querySelectorAll('[data-for="cmitem"][data-modname]').forEach(cmitem => {
-        const cmid = parseInt(cmitem.dataset.id);
-        const modname = cmitem.dataset.modname;
-        if (!cmid) {
-            return;
-        }
-        if (!present.has(modname)) {
-            present.set(modname, []);
-        }
-        present.get(modname).push(cmid);
-    });
-
-    formContainer.querySelectorAll('select[name^="typedefault_"]').forEach(select => {
-        const modname = select.name.replace('typedefault_', '');
-        const cmids = present.get(modname) || [];
-
-        select.addEventListener('change', () => {
-            const value = select.value;
-            cmids.forEach(cmid => {
-                state.activityAction[cmid] = value;
-                if (value === 'modify') {
-                    state.activityRef[cmid] = true;
-                }
-                syncActivityControl(structureContainer, cmid, value);
-            });
-            setState(state);
-        });
-    });
-};
-
-/**
- * Keep one activity's own dropdown/prompt in sync after a bulk type-default change.
- *
- * @param {HTMLElement} structureContainer
- * @param {number} cmid
- * @param {string} value
- */
-const syncActivityControl = (structureContainer, cmid, value) => {
-    const cmitem = structureContainer.querySelector(`[data-for="cmitem"][data-id="${cmid}"]`);
-    if (!cmitem) {
-        return;
-    }
-    const labels = {modify: 'Modify', keep: 'Keep', reference: 'Reference', exclude: 'Exclude'};
-    const colors = {modify: '#0f6cbf', keep: '#28a745', reference: '#6f42c1', exclude: '#6c757d'};
-    const btn = cmitem.querySelector('[data-tpl-control] .dropdown-toggle');
-    if (btn) {
-        btn.textContent = labels[value];
-        btn.style.color = colors[value];
-    }
-    cmitem.querySelectorAll('[data-act-val]').forEach(item => {
-        item.classList.toggle('active', item.dataset.actVal === value);
-    });
-    cmitem.style.opacity = value === 'exclude' ? '0.35' : '1';
-    const promptwrap = cmitem.querySelector(`[data-tpl-prompt-wrap="${cmid}"]`);
-    if (promptwrap) {
-        promptwrap.style.display = value === 'modify' ? '' : 'none';
-    }
 };

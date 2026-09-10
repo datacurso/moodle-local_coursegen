@@ -40,34 +40,12 @@ defined('MOODLE_INTERNAL') || die();
 use context;
 use context_system;
 use core_form\dynamic_form;
-use local_coursegen\local\service\mock_template_ai_service;
 use moodle_url;
 
 /**
- * Dynamic form for the type-default / limits / allowed-types part of the config screen.
+ * Dynamic form for the limits / allowed-types part of the config screen.
  */
 class template_config_form extends dynamic_form {
-
-    /**
-     * Friendly label + sensible default action per recognised activity type.
-     *
-     * Mirrors amd/src/local/template/type_action_sync.js's TYPE_META — kept in
-     * sync manually (JS cannot read a PHP class constant); this PHP copy is
-     * the one that actually decides each field's default, the JS copy only
-     * still matters for seeding individual per-activity actions after a
-     * course is (re)selected (see type_action_sync.js::applyTypeDefaultsToState).
-     *
-     * @var array<string, array{label:string, default:string}>
-     */
-    private const TYPE_META = [
-        'label' => ['label' => 'Banners', 'default' => 'modify'],
-        'page' => ['label' => 'Informational pages', 'default' => 'modify'],
-        'forum' => ['label' => 'Discussion forums', 'default' => 'keep'],
-        'resource' => ['label' => 'File attachments', 'default' => 'keep'],
-        'assign' => ['label' => 'Graded activities', 'default' => 'modify'],
-        'feedback' => ['label' => 'Closing survey', 'default' => 'keep'],
-        'lesson' => ['label' => 'Lesson content', 'default' => 'keep'],
-    ];
 
     /**
      * Form definition.
@@ -96,54 +74,6 @@ class template_config_form extends dynamic_form {
         sort($presentmodnames);
 
         $numsections = count($modinfo->get_section_info_all()) - 1;
-
-        $actionlabels = [
-            'modify' => get_string('template_activity_modify', 'local_coursegen'),
-            'keep' => get_string('template_activity_keep', 'local_coursegen'),
-            'reference' => get_string('template_activity_reference', 'local_coursegen'),
-            'exclude' => get_string('template_activity_exclude', 'local_coursegen'),
-        ];
-
-        if (!empty($presentmodnames)) {
-            $mform->addElement('header', 'typedefaultshdr', get_string('template_type_defaults_title', 'local_coursegen'));
-            $mform->setExpanded('typedefaultshdr');
-            $mform->addElement('static', 'typedefaultsdesc', '',
-                get_string('template_type_defaults_desc', 'local_coursegen'));
-
-            foreach ($presentmodnames as $modname) {
-                $meta = self::TYPE_META[$modname] ?? ['label' => $modname, 'default' => 'keep'];
-                // Never offer "Modify" for a type the AI generator cannot
-                // produce today — the same constraint already enforced
-                // server-side for the per-activity dropdown (see
-                // classes/output/sections_config.php), applied here too so
-                // an admin can never pick an option that will silently fail
-                // later, at either level.
-                $cansupportmodify = in_array($modname, mock_template_ai_service::SUPPORTED, true);
-                $default = ($meta['default'] === 'modify' && !$cansupportmodify) ? 'keep' : $meta['default'];
-
-                $options = [
-                    'keep' => $actionlabels['keep'],
-                    'reference' => $actionlabels['reference'],
-                    'exclude' => $actionlabels['exclude'],
-                ];
-                if ($cansupportmodify) {
-                    $options = ['modify' => $actionlabels['modify']] + $options;
-                }
-
-                $fieldname = "typedefault_{$modname}";
-                $mform->addElement('select', $fieldname, $meta['label'], $options);
-                $mform->setType($fieldname, PARAM_ALPHA);
-                $mform->setDefault($fieldname, $default);
-                // Only the 7 recognised types get bespoke guidance (real
-                // reasoning about why THAT type defaults where it does);
-                // anything else present in a real course falls back to one
-                // generic explanation of what the four actions mean.
-                $helpid = array_key_exists($modname, self::TYPE_META)
-                    ? "template_type_default_{$modname}"
-                    : 'template_type_default_generic';
-                $mform->addHelpButton($fieldname, $helpid, 'local_coursegen');
-            }
-        }
 
         $mform->addElement('header', 'limitshdr', get_string('template_limits_title', 'local_coursegen'));
         $mform->setExpanded('limitshdr');
