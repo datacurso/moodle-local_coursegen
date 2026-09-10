@@ -48,6 +48,17 @@ class sections_config {
 
         $xpath = new \DOMXPath($doc);
 
+        // This preview reuses the REAL course-format renderer's own HTML
+        // against the REAL base course — meaning every native course-EDITING
+        // affordance that renderer normally produces (inline rename, "add
+        // activity" choosers, section/activity action menus) is still
+        // present and fully live. An admin here only intends to configure a
+        // *template*; they must never be one misclick away from actually
+        // renaming a section, adding a module, or opening "Edit section" /
+        // "Delete" against the real course everyone else uses as the
+        // template. Strip all of that out before anything else runs.
+        self::strip_native_editing_controls($doc, $xpath);
+
         // Inject section controls.
         $sections = $xpath->query('//*[@data-for="section"]');
         foreach ($sections as $section) {
@@ -91,9 +102,20 @@ class sections_config {
             $cm = $modinfo->get_cm((int) $cmid);
             $cmitem->setAttribute('data-modname', $cm->modname);
 
-            // Find the activity-grid to append dropdown inline.
-            $grids = $xpath->query('.//*[contains(@class,"activity-grid")]', $cmitem);
-            $grid = $grids->length > 0 ? $grids->item(0) : $cmitem;
+            // The renderer's own .activity-actions container (already
+            // aligned top-right via its own align-self-start class) held
+            // the native "⋮" actions menu we just stripped out — reuse
+            // that same slot for our dropdown instead of appending at the
+            // end of .activity-grid, so it consistently lands in the same
+            // corner the section-level dropdown already occupies, rather
+            // than wherever normal document flow happens to leave room.
+            $actionslots = $xpath->query('.//*[contains(concat(" ", normalize-space(@class), " "), " activity-actions ")]', $cmitem);
+            if ($actionslots->length > 0) {
+                $slot = $actionslots->item(0);
+            } else {
+                $grids = $xpath->query('.//*[contains(@class,"activity-grid")]', $cmitem);
+                $slot = $grids->length > 0 ? $grids->item(0) : $cmitem;
+            }
 
             $dropwrap = $doc->createElement('div');
             $dropwrap->setAttribute('class', 'ml-auto dropdown');
@@ -102,7 +124,7 @@ class sections_config {
             $frag = $doc->createDocumentFragment();
             $frag->appendXML($drophtml);
             $dropwrap->appendChild($frag);
-            $grid->appendChild($dropwrap);
+            $slot->appendChild($dropwrap);
 
             // Prompt textarea — only visible when the default action is "Modify".
             $cansupportmodify = in_array($cm->modname, mock_template_ai_service::SUPPORTED, true);
@@ -128,6 +150,72 @@ class sections_config {
         $html = preg_replace('/^.*?<div>/s', '', $html);
         $html = preg_replace('/<\/div>\s*$/s', '', $html);
         return $html;
+    }
+
+    /**
+     * Remove every native course-EDITING affordance the real course-format
+     * renderer produces (as opposed to purely read-only view/navigation
+     * links, which are left alone) — none of these apply to configuring a
+     * template, and some are wired to real actions against the real base
+     * course. Matched by the same semantic data-region/class markers core's
+     * own course-format renderer uses everywhere, not anything specific to
+     * one particular course format, so this holds for formats other than
+     * format_grid too.
+     *
+     * @param \DOMDocument $doc
+     * @param \DOMXPath $xpath
+     * @return void
+     */
+    private static function strip_native_editing_controls(\DOMDocument $doc, \DOMXPath $xpath): void {
+        // Section "⋮" actions menu (View / Edit section / Permalink, etc).
+        $sectionmenus = $xpath->query('//*[@data-region="sectionactionsmmenu"]');
+        foreach ($sectionmenus as $el) {
+            $el->parentNode->removeChild($el);
+        }
+
+        // Activity "⋮" actions menu (Edit settings / Duplicate / Delete, etc).
+        $activitymenus = $xpath->query('//*[@data-region="actionmenu"]');
+        foreach ($activitymenus as $el) {
+            $el->parentNode->removeChild($el);
+        }
+
+        // The "+" divider between activities that opens the real "add an
+        // activity or resource"/"add subsection" chooser, PLUS the
+        // section-level "add a new section" control at the end of the
+        // section list — two visually similar but structurally distinct
+        // controls (the activity one is a <button>, the section one an
+        // <a> to changenumsections.php), both real, both matched here by
+        // class/data-region rather than tag name so neither slips through.
+        $dividers = $xpath->query(
+            '//*[@data-region="section-addsection"]' .
+            ' | //*[contains(concat(" ", normalize-space(@class), " "), " divider ")]' .
+            '[.//*[contains(concat(" ", normalize-space(@class), " "), " add-content ")]' .
+            ' or .//*[contains(@data-action,"open-chooser")]]'
+        );
+        foreach ($dividers as $el) {
+            $el->parentNode->removeChild($el);
+        }
+
+        // Section/activity name inline-rename widgets (the pencil icon,
+        // wired to core_update_inplace_editable). Only the rename TRIGGER
+        // is removed — any separate plain view link inside the same
+        // wrapper (e.g. an activity's own "view this activity" link) is
+        // left untouched since it's read-only navigation, not an edit
+        // affordance. If removing the trigger would leave the wrapper with
+        // no visible text at all (true for section names, which have no
+        // separate view link), its own data-value attribute — the plain
+        // name Moodle itself already computed — becomes a plain text node
+        // so the name keeps showing.
+        $inplace = $xpath->query('//*[@data-inplaceeditable]');
+        foreach ($inplace as $span) {
+            $renamelinks = $xpath->query('.//a[@data-inplaceeditablelink]', $span);
+            foreach ($renamelinks as $link) {
+                $link->parentNode->removeChild($link);
+            }
+            if (trim($span->textContent) === '') {
+                $span->appendChild($doc->createTextNode($span->getAttribute('data-value')));
+            }
+        }
     }
 
     /**
