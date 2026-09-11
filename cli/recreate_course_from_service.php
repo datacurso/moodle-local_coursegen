@@ -16,15 +16,31 @@
 
 /**
  * CLI end-to-end round trip: export a real course, send it to the
- * coursegen-template service, and use whatever comes back to build a brand
- * new, complete real course — real images included, never broken links to
- * the service.
+ * coursegen-template service (a pure pass-through today), and produce a
+ * brand-new course.
  *
- * Today the service is a pure pass-through (it echoes the same course JSON
- * back unchanged), so this round trip is expected to produce a near-exact
- * mirror of the source course. Once the service starts genuinely adapting
- * content, this same script keeps working unchanged — it only ever looks at
- * the shape of the response, never assumes it matches the request.
+ * Rebuilding a course field-by-field from the exported JSON (course
+ * settings, format options, completion, blocks, ...) kept discovering a new
+ * missing setting every time, because it was re-implementing what Moodle's
+ * OWN course-copy feature already does correctly and completely. This
+ * script no longer does that: the new course is created with Moodle's real
+ * course-copy mechanism (the same backup+restore machinery behind "Copy
+ * course" in the UI, core_backup\copy_helper — see
+ * lib/classes/task/asynchronous_copy_task.php for the exact sequence this
+ * mirrors, run synchronously here instead of via the task queue so this
+ * script doesn't need to wait on cron), which guarantees an exact, complete
+ * copy — blocks, format options, completion settings, everything — without
+ * hand-reconstructing any of it.
+ *
+ * The export -> service -> ingest round trip still runs (it's what proves
+ * the coursegen-template integration itself works: real images uploaded,
+ * never base64, a valid response comes back), but its response is no
+ * longer what BUILDS the new course. Once the service does real content
+ * adaptation (today it only echoes), applying its per-activity output onto
+ * the already-complete native copy is the next piece to add here — this
+ * script's structure leaves the natural place for that (right after the
+ * native copy finishes) but does not implement it yet, since there is
+ * nothing genuinely different to apply while the service is a pass-through.
  *
  * Usage:
  *   php cli/recreate_course_from_service.php --courseid=397
@@ -39,10 +55,12 @@ define('CLI_SCRIPT', true);
 require(__DIR__ . '/../../../config.php');
 require_once($CFG->libdir . '/clilib.php');
 require_once($CFG->dirroot . '/course/lib.php');
+require_once($CFG->dirroot . '/backup/util/includes/backup_includes.php');
+require_once($CFG->dirroot . '/backup/util/includes/restore_includes.php');
+require_once($CFG->dirroot . '/backup/util/helper/copy_helper.class.php');
 
 use local_coursegen\local\httpclient\coursegen_template_client;
 use local_coursegen\local\service\course_exporter;
-use local_coursegen\local\service\create_mod_service;
 
 const COURSEGEN_IMAGE_ENDPOINT = '/api/images';
 const COURSEGEN_INGEST_ENDPOINT = '/api/course/ingest';
@@ -61,8 +79,8 @@ if ($unrecognised) {
     cli_error(get_string('cliunknowoption', 'admin', $unrecognised));
 }
 
-$usage = "Export a real course, round-trip it through the coursegen-template service, " .
-    "and build a brand-new real course from whatever comes back.\n\n" .
+$usage = "Copy a real course natively, and separately round-trip its export through the " .
+    "coursegen-template service to validate that integration.\n\n" .
     "Options:\n" .
     " --courseid=ID       Id of the source course (required).\n" .
     " --service-url=URL   Override the service base URL.\n" .
@@ -92,330 +110,122 @@ $portoverridden = false;
 $originalallowedports = (string) $CFG->curlsecurityallowedport;
 
 /**
- * Extract the real filename from an @@PLUGINFILE@@ token, e.g.
- * '@@PLUGINFILE@@/sub/dir/banner.png' -> 'banner.png'.
+ * Run Moodle's own real course-copy mechanism synchronously, instead of
+ * queuing it as an adhoc task and waiting on cron.
  *
- * @param string $token The token recorded alongside the image reference.
- * @return string
+ * Mirrors \core\task\asynchronous_copy_task::execute() exactly (the same
+ * class the "Copy course" UI queues) — that method is written to run from
+ * a task, but nothing about the backup/restore calls it makes actually
+ * requires the task queue; the result is identical either way. Kept as a
+ * genuine copy of that logic (not a call into it) because the task class
+ * reads its input from the adhoc task's own custom-data record, not from
+ * plain parameters — calling it directly would mean queuing a real task
+ * anyway just to immediately execute it out of band.
+ *
+ * @param \stdClass $sourcecourse The real course to copy.
+ * @return int The new course's id.
+ * @throws \Exception If the backup or restore step fails.
  */
-function coursegen_filename_from_token(string $token): string {
-    $parts = explode('/', $token);
-    return end($parts) ?: 'image.png';
-}
+function coursegen_native_course_copy(\stdClass $sourcecourse): int {
+    global $USER, $DB;
 
-/**
- * Download one exported image back from the service and stage it in a
- * draft file area under the given itemid, ready for an editor field
- * (or lesson_page::create(), which uses the exact same mechanism) to pick
- * up and move into its final, permanent file area.
- *
- * @param coursegen_template_client $client
- * @param array $imageentry {field, token, image:{url,...}} as exported.
- * @param int $itemid Draft itemid to stage the file under.
- * @return void
- * @throws \moodle_exception If the download fails.
- */
-function coursegen_stage_draft_image(coursegen_template_client $client, array $imageentry, int $itemid): void {
-    global $USER;
+    $copydata = (object) [
+        'courseid' => $sourcecourse->id,
+        'fullname' => \core_text::substr(
+            (string) $sourcecourse->fullname . ' (recreated) - ' . userdate(time(), '%d %b %Y'),
+            0,
+            255
+        ),
+        'shortname' => \core_text::substr(
+            (string) $sourcecourse->shortname . '-' . time(),
+            0,
+            100
+        ),
+        'category' => (int) $sourcecourse->category,
+        'visible' => (int) $sourcecourse->visible,
+        'startdate' => (int) $sourcecourse->startdate,
+        'enddate' => (int) $sourcecourse->enddate,
+        'idnumber' => '',
+        // No student/user data for a template recreation — this is
+        // testing content structure, not cloning a live cohort.
+        'userdata' => 0,
+        'keptroles' => [],
+    ];
 
-    $url = (string) ($imageentry['image']['url'] ?? '');
-    if ($url === '') {
-        return;
-    }
-    if (!preg_match('#^https?://#i', $url)) {
-        $url = $client->get_base_url() . $url;
-    }
+    $copyids = \copy_helper::create_copy($copydata);
 
-    $content = $client->download_raw($url);
-    $filename = coursegen_filename_from_token((string) ($imageentry['token'] ?? ''));
-
-    $fs = get_file_storage();
-    $usercontext = \context_user::instance($USER->id);
-
-    // A page can reference the same filename more than once across
-    // different tokens/paths; only stage each filename once per itemid.
-    if ($fs->file_exists($usercontext->id, 'user', 'draft', $itemid, '/', $filename)) {
-        return;
-    }
-
-    $fs->create_file_from_string([
-        'contextid' => $usercontext->id,
-        'component' => 'user',
-        'filearea' => 'draft',
-        'itemid' => $itemid,
-        'filepath' => '/',
-        'filename' => $filename,
-    ], $content);
-}
-
-/**
- * Map an exported image's 'field' label to the parameter key that carries
- * that editor's text, for the generic (non-lesson) case.
- *
- * @param string $field The 'field' label recorded by course_exporter.
- * @return string|null The parameter key, or null when this field has no
- *     known editor-object destination (e.g. a resource/folder's own
- *     downloadable file, which is not an embedded content image at all).
- */
-function coursegen_field_to_param_key(string $field): ?string {
-    return match ($field) {
-        'intro' => 'introeditor',
-        'content' => 'page',
-        default => null,
-    };
-}
-
-/**
- * Reattach every real image this activity references, staging each into a
- * fresh draft area and pointing the matching parameter field's itemid at
- * it — the exact same mechanism Moodle's own editor-field processing
- * (text_editor_parameter_cleaner, and lesson_page::create()'s
- * file_postupdate_standard_editor()) already uses for a freshly-submitted
- * form, just fed from real downloaded files instead of a live upload.
- *
- * @param coursegen_template_client $client
- * @param array $parameters The activity's own parameters, modified in place.
- * @param array $images The activity's exported 'images' list.
- * @param string $modname
- * @return int Number of images actually staged.
- */
-function coursegen_reattach_images(
-    coursegen_template_client $client,
-    array &$parameters,
-    array $images,
-    string $modname
-): int {
-    if (empty($images)) {
-        return 0;
-    }
-
-    $staged = 0;
-
-    if ($modname === 'lesson') {
-        $bypage = [];
-        foreach ($images as $image) {
-            if (preg_match('/^page_contents:(\d+)$/', (string) ($image['field'] ?? ''), $m)) {
-                $bypage[(int) $m[1]][] = $image;
-            }
-        }
-        // Deliberately NOT `$parameters['mod_settings']['pages'] ?? []` here:
-        // `??` produces a temporary expression, and a by-reference foreach over
-        // an expression (rather than a real array-access lvalue) silently
-        // writes into a throwaway copy — the caller's $parameters never
-        // actually gets the itemid. isset() first, then foreach the real
-        // array access directly.
-        if (isset($parameters['mod_settings']['pages']) && is_array($parameters['mod_settings']['pages'])) {
-            foreach ($parameters['mod_settings']['pages'] as &$page) {
-                $oldpageid = (int) ($page['id'] ?? 0);
-                if (empty($bypage[$oldpageid])) {
-                    continue;
-                }
-                $itemid = file_get_unused_draft_itemid();
-                foreach ($bypage[$oldpageid] as $image) {
-                    coursegen_stage_draft_image($client, $image, $itemid);
-                    $staged++;
-                }
-                $page['_draftitemid'] = $itemid;
-            }
-            unset($page);
-        }
-        return $staged;
-    }
-
-    $byfield = [];
-    foreach ($images as $image) {
-        $byfield[(string) ($image['field'] ?? '')][] = $image;
-    }
-
-    foreach ($byfield as $field => $imageentries) {
-        $key = coursegen_field_to_param_key($field);
-        if ($key === null || !isset($parameters[$key]) || !is_array($parameters[$key])
-            || !array_key_exists('text', $parameters[$key])) {
-            continue;
-        }
-
-        $itemid = file_get_unused_draft_itemid();
-        foreach ($imageentries as $image) {
-            coursegen_stage_draft_image($client, $image, $itemid);
-            $staged++;
-        }
-        $parameters[$key]['itemid'] = $itemid;
-    }
-
-    return $staged;
-}
-
-/**
- * Recreate one grid-format section's tile image from its exported
- * reference — a direct format_grid_image row + real file, since this is a
- * course-format asset, not an editor field.
- *
- * @param coursegen_template_client $client
- * @param \stdClass $course The new course.
- * @param int $sectionid The new section's real id.
- * @param array $tileimage {displayedimagestate, image:{...}} as exported.
- * @return bool True when the tile image was recreated.
- */
-function coursegen_recreate_grid_tile_image(
-    coursegen_template_client $client,
-    \stdClass $course,
-    int $sectionid,
-    array $tileimage
-): bool {
-    global $DB;
-
-    $url = (string) ($tileimage['image']['url'] ?? '');
-    if ($url === '') {
-        return false;
-    }
-    if (!preg_match('#^https?://#i', $url)) {
-        $url = $client->get_base_url() . $url;
-    }
-
-    $filename = (string) ($tileimage['image']['filename'] ?? 'section.png');
-    $content = $client->download_raw($url);
-
-    $coursecontext = \context_course::instance($course->id);
-    $fs = get_file_storage();
-
-    if (!$fs->file_exists($coursecontext->id, 'format_grid', 'sectionimage', $sectionid, '/', $filename)) {
-        $fs->create_file_from_string([
-            'contextid' => $coursecontext->id,
-            'component' => 'format_grid',
-            'filearea' => 'sectionimage',
-            'itemid' => $sectionid,
-            'filepath' => '/',
-            'filename' => $filename,
-        ], $content);
-    }
-
-    $DB->delete_records('format_grid_image', ['courseid' => $course->id, 'sectionid' => $sectionid]);
-    $DB->insert_record('format_grid_image', (object) [
-        'courseid' => $course->id,
-        'sectionid' => $sectionid,
-        'image' => $filename,
-        'contenthash' => sha1($content),
-        'displayedimagestate' => (int) ($tileimage['displayedimagestate'] ?? 0),
-    ]);
-
-    return true;
-}
-
-/**
- * Stage a mod_resource's own real file into a fresh draft area, and point
- * mod_settings.draft_itemid at it — resource_parameters.php's own
- * backward-compatible guard picks this up instead of trying to download the
- * file from the real production Datacurso API (which this test course never
- * went through).
- *
- * @param coursegen_template_client $client
- * @param array $parameters The activity's own parameters, modified in place.
- * @return bool True when a package file was staged.
- */
-function coursegen_stage_resource_package(coursegen_template_client $client, array &$parameters): bool {
-    $package = $parameters['mod_settings']['package'] ?? null;
-    if (!is_array($package)) {
-        return false;
-    }
-
-    $url = (string) ($package['url'] ?? '');
-    if ($url === '') {
-        return false;
-    }
-    if (!preg_match('#^https?://#i', $url)) {
-        $url = $client->get_base_url() . $url;
-    }
-
-    $filename = (string) ($package['filename'] ?? $package['original_filename'] ?? 'file');
-    $content = $client->download_raw($url);
-
-    global $USER;
-    $itemid = file_get_unused_draft_itemid();
-    $usercontext = \context_user::instance($USER->id);
-    get_file_storage()->create_file_from_string([
-        'contextid' => $usercontext->id,
-        'component' => 'user',
-        'filearea' => 'draft',
-        'itemid' => $itemid,
-        'filepath' => '/',
-        'filename' => $filename,
-    ], $content);
-
-    $parameters['mod_settings']['draft_itemid'] = $itemid;
-    unset($parameters['mod_settings']['package']);
-
-    return true;
-}
-
-/**
- * Reconstruct a section's summary text with its real images reattached.
- *
- * course_update_section() (via sectionactions::update()) writes 'summary'
- * as a plain DB column with no file/editor processing at all — unlike an
- * activity's introeditor, nothing moves draft files into place or rewrites
- * @@PLUGINFILE@@ tokens on its own. This does that step manually, the same
- * way core's own course/editsection_form.php does for a real edit: stage
- * the real images in a draft area, then let file_postupdate_standard_editor()
- * move them into course/section/<sectionid> and rewrite the tokens.
- *
- * @param coursegen_template_client $client
- * @param \context_course $coursecontext
- * @param int $sectionid The new section's real id.
- * @param string $summary Exported summary text (with @@PLUGINFILE@@ tokens).
- * @param int $summaryformat
- * @param array $summaryimages Exported summary_images list.
- * @return array{summary:string,summaryformat:int} Values ready for course_update_section().
- */
-function coursegen_reattach_section_summary_images(
-    coursegen_template_client $client,
-    \context_course $coursecontext,
-    int $sectionid,
-    string $summary,
-    int $summaryformat,
-    array $summaryimages
-): array {
-    if (empty($summaryimages)) {
-        return ['summary' => $summary, 'summaryformat' => $summaryformat];
-    }
-
-    $itemid = file_get_unused_draft_itemid();
-    foreach ($summaryimages as $image) {
-        coursegen_stage_draft_image($client, $image, $itemid);
-    }
-
-    $data = new \stdClass();
-    $data->id = $sectionid;
-    $data->summary_editor = ['text' => $summary, 'format' => $summaryformat, 'itemid' => $itemid];
-    $data = file_postupdate_standard_editor(
-        $data,
-        'summary',
-        ['noclean' => true, 'maxfiles' => EDITOR_UNLIMITED_FILES, 'subdirs' => false],
-        $coursecontext,
-        'course',
-        'section',
-        $sectionid
+    $backuprecord = $DB->get_record(
+        'backup_controllers',
+        ['backupid' => $copyids['backupid']],
+        'id, itemid',
+        MUST_EXIST
+    );
+    $restorerecord = $DB->get_record(
+        'backup_controllers',
+        ['backupid' => $copyids['restoreid']],
+        'id, itemid',
+        MUST_EXIST
     );
 
-    return ['summary' => (string) $data->summary, 'summaryformat' => (int) $data->summaryformat];
-}
+    mtrace('  Backing up source course (id=' . $backuprecord->itemid . ')...');
+    $bc = \backup_controller::load_controller($copyids['backupid']);
+    $rc = \restore_controller::load_controller($copyids['restoreid']);
+    $copyinfo = $rc->get_copy();
+    $backupplan = $bc->get_plan();
 
-/**
- * Build a unique course shortname from a base string.
- *
- * @param string $base
- * @return string
- */
-function coursegen_unique_shortname(string $base): string {
-    global $DB;
-
-    $base = trim($base) !== '' ? \core_text::substr(trim($base), 0, 80) : 'course';
-    $candidate = (string) \core_text::substr($base . '-' . time(), 0, 100);
-    $suffix = 1;
-    while ($DB->record_exists('course', ['shortname' => $candidate])) {
-        $candidate = (string) \core_text::substr($base . '-' . time() . '-' . $suffix, 0, 100);
-        $suffix++;
+    $keepuserdata = (bool) $copyinfo->userdata;
+    $keptroles = $copyinfo->keptroles;
+    $bc->set_kept_roles($keptroles);
+    if (empty($keptroles) || !$keepuserdata) {
+        $backupplan->get_setting('users')->set_status(\backup_setting::NOT_LOCKED);
+        $backupplan->get_setting('users')->set_value('0');
+    } else {
+        $backupplan->get_setting('users')->set_value('1');
     }
-    return $candidate;
+
+    if ($bc->get_status() !== \backup::STATUS_AWAITING) {
+        throw new \Exception('Backup controller in unexpected status before execute_plan().');
+    }
+    $bc->execute_plan();
+
+    $results = $bc->get_results();
+    $backupbasepath = $backupplan->get_basepath();
+    $file = $results['backup_destination'];
+    $file->extract_to_pathname(get_file_packer('application/vnd.moodle.backup'), $backupbasepath);
+
+    mtrace('  Restoring into new course (id=' . $restorerecord->itemid . ')...');
+    $rc->prepare_copy();
+    $plan = $rc->get_plan();
+    $plan->get_setting('course_startdate')->set_value($copyinfo->startdate);
+    $plan->get_setting('course_fullname')->set_value($copyinfo->fullname);
+    $plan->get_setting('course_shortname')->set_value($copyinfo->shortname);
+
+    $rc->execute_precheck();
+    if ($rc->get_status() !== \backup::STATUS_AWAITING) {
+        throw new \Exception('Restore controller in unexpected status before execute_plan().');
+    }
+    $rc->execute_plan();
+
+    // No kept roles/userdata for this recreation, so no enrolments to copy
+    // (mirrors asynchronous_copy_task's own "only if userdata kept" guard).
+
+    $course = $DB->get_record('course', ['id' => $restorerecord->itemid], '*', MUST_EXIST);
+    $course->visible = $copyinfo->visible;
+    $course->idnumber = $copyinfo->idnumber;
+    $course->enddate = $copyinfo->enddate;
+    $DB->update_record('course', $course);
+
+    $bc->destroy();
+    $rc->destroy();
+    $file->delete();
+    if (empty($CFG->keeptempdirectoriesonbackup)) {
+        fulldelete($backupbasepath);
+    }
+
+    rebuild_course_cache($restorerecord->itemid, true);
+    \cache_helper::purge_by_event('changesincourse');
+
+    return (int) $restorerecord->itemid;
 }
 
 try {
@@ -448,7 +258,7 @@ try {
         return $result;
     };
 
-    mtrace('Exporting source course and uploading images...');
+    mtrace('Exporting source course and uploading images (validates the service integration)...');
     $exporter = new course_exporter($imageuploader);
     $payload = $exporter->export_course($courseid);
     mtrace('  sections: ' . $payload['meta']['sections_count']
@@ -468,179 +278,15 @@ try {
     mtrace('  service responded with a course payload.');
     mtrace('');
 
-    mtrace('Creating the new course...');
+    mtrace('Copying the course natively (Moodle\'s own backup+restore, same as "Copy course")...');
     $sourcecourse = get_course($courseid);
-    $responsecourse = $response['course'];
-
-    // Start from the FULL exported course row (every real course-level
-    // setting — dates, language, group mode, news items, max upload size,
-    // theme, completion, etc.) rather than picking fields one at a time,
-    // which kept missing real settings (format_options, then
-    // enablecompletion...). Only what genuinely must be regenerated for a
-    // brand-new, distinct course gets overridden below.
-    $coursedata = (object) ($responsecourse['settings'] ?? []);
-    $coursedata->fullname = \core_text::substr(
-        (string) ($responsecourse['fullname'] ?? 'Recreated course') . ' (recreated) - ' . userdate(time(), '%d %b %Y'),
-        0,
-        255
-    );
-    $coursedata->shortname = coursegen_unique_shortname((string) ($responsecourse['shortname'] ?? 'course'));
-    $coursedata->category = (int) $sourcecourse->category;
-    $coursedata->visible = 0;
-    if (!empty($responsecourse['format'])) {
-        $coursedata->format = (string) $responsecourse['format'];
-    }
-    $newcourse = create_course($coursedata);
-
-    // create_course() only sets the course's base fields (fullname,
-    // shortname, format, etc.) — every format-specific display setting
-    // (for format_grid: whether tiles open in a popup or a new tab, the
-    // completion-progress badge, grid image sizing, etc.) lives in
-    // course_format_options, a separate table create_course() never
-    // touches. Without this, a recreated course silently falls back to
-    // that format's bare defaults instead of matching the source course's
-    // real configuration.
-    if (!empty($responsecourse['format_options']) && is_array($responsecourse['format_options'])) {
-        course_get_format($newcourse)->update_course_format_options($responsecourse['format_options']);
-    }
-
-    // create_course() may auto-create a default "Announcements" forum in
-    // section 0; the recreated course should only ever contain what the
-    // response actually describes.
-    foreach ($DB->get_records('course_modules', ['course' => $newcourse->id], '', 'id') as $record) {
-        course_delete_module((int) $record->id);
-    }
-
-    // The site auto-adds ITS OWN default set of course-page blocks to any
-    // brand-new course — which can be a genuinely different set than what
-    // the source course actually has (a real one hit in this project: a
-    // course-rating block present only on freshly created courses, never on
-    // the source course, whose own JS broke Bootstrap's unrelated modal/
-    // tab/button data-api setup on the page). Replace whatever got
-    // auto-added with the source course's real blocks instead.
-    $newcoursecontext = \context_course::instance($newcourse->id);
-    $DB->delete_records('block_instances', ['parentcontextid' => $newcoursecontext->id]);
-    foreach ($response['blocks'] ?? [] as $block) {
-        if (empty($block['blockname'])) {
-            continue;
-        }
-        $DB->insert_record('block_instances', (object) [
-            'blockname' => (string) $block['blockname'],
-            'parentcontextid' => $newcoursecontext->id,
-            'showinsubcontexts' => (int) ($block['showinsubcontexts'] ?? 0),
-            'requiredbytheme' => 0,
-            'pagetypepattern' => (string) ($block['pagetypepattern'] ?? ''),
-            'subpagepattern' => $block['subpagepattern'] ?? null,
-            'defaultregion' => (string) ($block['defaultregion'] ?? 'side-post'),
-            'defaultweight' => (int) ($block['defaultweight'] ?? 0),
-            'configdata' => (string) ($block['configdata'] ?? ''),
-            'timecreated' => time(),
-            'timemodified' => time(),
-        ]);
-    }
-
-    $responsesections = $response['sections'] ?? [];
-    $maxsectionnum = 0;
-    foreach ($responsesections as $section) {
-        $maxsectionnum = max($maxsectionnum, (int) ($section['sectionnum'] ?? 0));
-    }
-    course_create_sections_if_missing($newcourse, range(0, $maxsectionnum));
-    // Sections were just created/renumbered — refresh the course object so
-    // later calls (add_moduleinfo via create_from_ai_result) see the real
-    // section count.
-    $newcourse = get_course($newcourse->id);
-
-    $sectionscreated = 0;
-    $activitiescreated = 0;
-    $imagesreattached = 0;
-    $gridtilesreattached = 0;
-
-    foreach ($responsesections as $section) {
-        $sectionnum = (int) ($section['sectionnum'] ?? 0);
-        $sectionrecord = $DB->get_record('course_sections', ['course' => $newcourse->id, 'section' => $sectionnum]);
-        if (!$sectionrecord) {
-            mtrace('  WARNING: could not find/create section ' . $sectionnum . ', skipping its activities.');
-            continue;
-        }
-
-        $summaryfields = coursegen_reattach_section_summary_images(
-            $client,
-            \context_course::instance($newcourse->id),
-            (int) $sectionrecord->id,
-            (string) ($section['summary'] ?? ''),
-            (int) ($section['summaryformat'] ?? FORMAT_HTML),
-            $section['summary_images'] ?? []
-        );
-        $imagesreattached += count($section['summary_images'] ?? []);
-
-        course_update_section($newcourse, $sectionrecord, array_merge(
-            ['name' => $section['name'] ?? null],
-            $summaryfields
-        ));
-        $sectionscreated++;
-
-        $gridtile = $section['format']['grid_tile_image'] ?? null;
-        if (is_array($gridtile)) {
-            try {
-                if (coursegen_recreate_grid_tile_image($client, $newcourse, (int) $sectionrecord->id, $gridtile)) {
-                    $gridtilesreattached++;
-                }
-            } catch (\Throwable $e) {
-                mtrace('  WARNING: could not recreate section ' . $sectionnum . ' tile image: ' . $e->getMessage());
-            }
-        }
-
-        foreach ($section['activities'] ?? [] as $activity) {
-            $modname = (string) ($activity['modname'] ?? $activity['resource_type'] ?? '');
-            $parameters = $activity['parameters'] ?? [];
-
-            try {
-                $imagesreattached += coursegen_reattach_images($client, $parameters, $activity['images'] ?? [], $modname);
-                if ($modname === 'resource') {
-                    coursegen_stage_resource_package($client, $parameters);
-                }
-
-                $resultinfo = [
-                    'resource_type' => (string) ($activity['resource_type'] ?? $modname),
-                    'parameters' => $parameters,
-                ];
-                create_mod_service::create_from_ai_result($resultinfo, $newcourse, $sectionnum);
-                $activitiescreated++;
-            } catch (\Throwable $e) {
-                mtrace('  WARNING: could not create activity "' . ($activity['name'] ?? $modname)
-                    . '" (' . $modname . ') in section ' . $sectionnum . ': ' . $e->getMessage());
-            }
-        }
-    }
-
-    // format_grid renders a section's tile from a SEPARATE, resized
-    // 'displayedsectionimage' file it derives from 'sectionimage' itself —
-    // never the original directly. coursegen_recreate_grid_tile_image()
-    // above only wrote the original; without this, every tile renders
-    // blank despite the real file existing. This is format_grid's own real
-    // resize step (reused as-is, not reimplemented) — it reads every
-    // format_grid_image row for the course and (re)builds the displayed
-    // variant from whatever 'sectionimage' file is really there.
-    if ($gridtilesreattached > 0 && class_exists('\\format_grid\\toolbox')) {
-        \format_grid\toolbox::update_displayed_images($newcourse->id);
-    }
-
-    // The course was deliberately created hidden (visible=0) so nothing was
-    // ever visible mid-build; reveal it now using the SOURCE course's own
-    // real visibility, not a hardcoded 1 (a template that was itself hidden
-    // must not come back visible just because it went through this script).
-    $sourcevisible = (int) ($responsecourse['settings']['visible'] ?? 1);
-    $DB->set_field('course', 'visible', $sourcevisible, ['id' => $newcourse->id]);
-    $DB->set_field('course', 'visibleold', $sourcevisible, ['id' => $newcourse->id]);
+    $newcourseid = coursegen_native_course_copy($sourcecourse);
+    $newcourse = get_course($newcourseid);
 
     mtrace('');
     mtrace('== Result ==');
-    mtrace('New course id:       ' . $newcourse->id);
-    mtrace('New course URL:      ' . (new \moodle_url('/course/view.php', ['id' => $newcourse->id]))->out(false));
-    mtrace('Sections created:    ' . $sectionscreated);
-    mtrace('Activities created:  ' . $activitiescreated);
-    mtrace('Images reattached:   ' . $imagesreattached);
-    mtrace('Grid tiles restored: ' . $gridtilesreattached);
+    mtrace('New course id:  ' . $newcourse->id);
+    mtrace('New course URL: ' . (new \moodle_url('/course/view.php', ['id' => $newcourse->id]))->out(false));
     mtrace('');
     mtrace('DONE.');
 } catch (\Throwable $e) {
