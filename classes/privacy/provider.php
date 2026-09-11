@@ -35,12 +35,7 @@ use core_privacy\local\request\writer;
 use stdClass;
 
 /**
- * Local userlist provider for local_coursegen.
- *
- */
-
-/**
- * Class provider
+ * Privacy provider for local_coursegen.
  */
 class provider implements
     \core_privacy\local\metadata\provider,
@@ -62,7 +57,7 @@ class provider implements
                 'prompt_text', 'timecreated', 'timemodified', 'usermodified',
             ],
             'local_coursegen_course_sessions' => [
-                'courseid', 'userid', 'session_id', 'status', 'timecreated', 'timemodified',
+                'courseid', 'userid', 'session_id', 'status', 'coursedata', 'timecreated', 'timemodified',
             ],
             'local_coursegen_module_jobs' => [
                 'courseid', 'userid', 'job_id', 'status', 'generate_images',
@@ -74,14 +69,29 @@ class provider implements
         foreach ($tables as $table => $fields) {
             $fielddata = [];
             foreach ($fields as $field) {
-                $fielddata[$field] = get_string('privacy:metadata:' . $table . ':' . $field, 'local_coursegen');
+                $fielddata[$field] = 'privacy:metadata:' . $table . ':' . $field;
             }
             $collection->add_database_table(
                 $table,
                 $fielddata,
-                get_string('privacy:metadata:' . $table, 'local_coursegen')
+                'privacy:metadata:' . $table
             );
         }
+
+        // Data sent to the external Datacurso course generation service
+        // (planning prompts, activity instructions, syllabus files and the
+        // request context composed by the provider layer).
+        $collection->add_external_location_link('datacurso_course_service', [
+            'prompt' => 'privacy:metadata:datacurso_course_service:prompt',
+            'instructions' => 'privacy:metadata:datacurso_course_service:instructions',
+            'syllabus_file' => 'privacy:metadata:datacurso_course_service:syllabus_file',
+            'lang' => 'privacy:metadata:datacurso_course_service:lang',
+            'with_images' => 'privacy:metadata:datacurso_course_service:with_images',
+            'userid' => 'privacy:metadata:datacurso_course_service:userid',
+            'site_id' => 'privacy:metadata:datacurso_course_service:site_id',
+            'site_url' => 'privacy:metadata:datacurso_course_service:site_url',
+            'timezone' => 'privacy:metadata:datacurso_course_service:timezone',
+        ], 'privacy:metadata:datacurso_course_service');
 
         return $collection;
     }
@@ -97,6 +107,26 @@ class provider implements
         if (self::user_has_coursegen_data($userid)) {
             $contextlist->add_user_context($userid);
         }
+
+        // Course contexts where the user has course-scoped personal data.
+        $params = ['contextlevel' => CONTEXT_COURSE, 'userid' => $userid];
+        $contextlist->add_from_sql(
+            "SELECT ctx.id
+               FROM {context} ctx
+               JOIN {local_coursegen_course_sessions} s
+                    ON s.courseid = ctx.instanceid AND ctx.contextlevel = :contextlevel
+              WHERE s.userid = :userid",
+            $params
+        );
+        $contextlist->add_from_sql(
+            "SELECT ctx.id
+               FROM {context} ctx
+               JOIN {local_coursegen_module_jobs} j
+                    ON j.courseid = ctx.instanceid AND ctx.contextlevel = :contextlevel
+              WHERE j.userid = :userid",
+            $params
+        );
+
         return $contextlist;
     }
 
@@ -107,12 +137,26 @@ class provider implements
      */
     public static function get_users_in_context(userlist $userlist) {
         $context = $userlist->get_context();
-        if (!$context instanceof \context_user) {
+
+        if ($context instanceof \context_user) {
+            if (self::user_has_coursegen_data($context->instanceid)) {
+                $userlist->add_user($context->instanceid);
+            }
             return;
         }
 
-        if (self::user_has_coursegen_data($context->instanceid)) {
-            $userlist->add_user($context->instanceid);
+        if ($context instanceof \context_course) {
+            $params = ['courseid' => $context->instanceid];
+            $userlist->add_from_sql(
+                'userid',
+                'SELECT userid FROM {local_coursegen_course_sessions} WHERE courseid = :courseid',
+                $params
+            );
+            $userlist->add_from_sql(
+                'userid',
+                'SELECT userid FROM {local_coursegen_module_jobs} WHERE courseid = :courseid',
+                $params
+            );
         }
     }
 
@@ -122,20 +166,14 @@ class provider implements
      * @param approved_contextlist $contextlist The approved contexts to export information for.
      */
     public static function export_user_data(approved_contextlist $contextlist) {
-        global $DB;
         $user = $contextlist->get_user();
-        $context = \context_user::instance($user->id);
-        $tables = static::get_table_user_map($user);
 
-        foreach ($tables as $table => $filterparams) {
-            $records = $DB->get_recordset($table, $filterparams);
-            foreach ($records as $record) {
-                writer::with_context($context)->export_data([
-                    get_string('privacy:metadata:local_coursegen', 'local_coursegen'),
-                    get_string('privacy:metadata:' . $table, 'local_coursegen'),
-                ], $record);
+        foreach ($contextlist->get_contexts() as $context) {
+            if ($context instanceof \context_user && (int)$context->instanceid === (int)$user->id) {
+                self::export_user_context_data($user);
+            } else if ($context instanceof \context_course) {
+                self::export_course_context_data($context, $user);
             }
-            $records->close();
         }
     }
 
@@ -147,6 +185,8 @@ class provider implements
     public static function delete_data_for_all_users_in_context(context $context) {
         if ($context->contextlevel == CONTEXT_USER) {
             self::delete_user_data($context->instanceid);
+        } else if ($context->contextlevel == CONTEXT_COURSE) {
+            self::delete_course_data((int)$context->instanceid);
         }
     }
 
@@ -159,9 +199,12 @@ class provider implements
         if (empty($contextlist->count())) {
             return;
         }
+        $userid = (int)$contextlist->get_user()->id;
         foreach ($contextlist->get_contexts() as $context) {
             if ($context->contextlevel == CONTEXT_USER) {
                 self::delete_user_data($context->instanceid);
+            } else if ($context->contextlevel == CONTEXT_COURSE) {
+                self::delete_course_data((int)$context->instanceid, $userid);
             }
         }
     }
@@ -175,6 +218,73 @@ class provider implements
         $context = $userlist->get_context();
         if ($context instanceof \context_user) {
             self::delete_user_data($context->instanceid);
+        } else if ($context instanceof \context_course) {
+            foreach ($userlist->get_userids() as $userid) {
+                self::delete_course_data((int)$context->instanceid, (int)$userid);
+            }
+        }
+    }
+
+    /**
+     * Export all plugin data of a user under their user context.
+     *
+     * @param stdClass $user The user being exported.
+     */
+    protected static function export_user_context_data(stdClass $user) {
+        global $DB;
+
+        $context = \context_user::instance($user->id);
+        $tables = static::get_table_user_map($user);
+
+        foreach ($tables as $table => $filterparams) {
+            $records = $DB->get_recordset($table, $filterparams);
+            foreach ($records as $record) {
+                writer::with_context($context)->export_data([
+                    get_string('privacy:metadata:local_coursegen', 'local_coursegen'),
+                    get_string('privacy:metadata:' . $table, 'local_coursegen'),
+                ], $record);
+            }
+            $records->close();
+        }
+
+        // Export the syllabus files stored for the user's planning sessions.
+        $fs = get_file_storage();
+        $syscontextid = \context_system::instance()->id;
+        $sessionids = $DB->get_fieldset_select('local_coursegen_course_sessions', 'id', 'userid = ?', [$user->id]);
+        foreach ($sessionids as $sessionid) {
+            $files = $fs->get_area_files($syscontextid, 'local_coursegen', 'syllabus', (int)$sessionid, 'id', false);
+            foreach ($files as $file) {
+                writer::with_context($context)->export_file([
+                    get_string('privacy:metadata:local_coursegen', 'local_coursegen'),
+                    get_string('privacy:metadata:local_coursegen_course_sessions', 'local_coursegen'),
+                ], $file);
+            }
+        }
+    }
+
+    /**
+     * Export the course-scoped rows of a user under the course context.
+     *
+     * @param \context_course $context Course context.
+     * @param stdClass $user The user being exported.
+     */
+    protected static function export_course_context_data(\context_course $context, stdClass $user) {
+        global $DB;
+
+        $tables = [
+            'local_coursegen_course_sessions',
+            'local_coursegen_module_jobs',
+        ];
+
+        foreach ($tables as $table) {
+            $records = $DB->get_recordset($table, ['courseid' => $context->instanceid, 'userid' => $user->id]);
+            foreach ($records as $record) {
+                writer::with_context($context)->export_data([
+                    get_string('privacy:metadata:local_coursegen', 'local_coursegen'),
+                    get_string('privacy:metadata:' . $table, 'local_coursegen'),
+                ], $record);
+            }
+            $records->close();
         }
     }
 
@@ -203,17 +313,62 @@ class provider implements
     /**
      * Perform deletion of user data given a userid.
      *
+     * Personal rows (sessions and their syllabus files, jobs) are deleted;
+     * shared configuration rows (system instructions and course context) are
+     * kept and anonymized instead, so other users keep working setups.
+     *
      * @param int $userid The user ID
      */
     private static function delete_user_data(int $userid) {
         global $DB;
 
-        $userdata = new stdClass();
-        $userdata->id = $userid;
+        $sessionids = $DB->get_fieldset_select('local_coursegen_course_sessions', 'id', 'userid = ?', [$userid]);
+        self::delete_syllabus_files($sessionids);
+        $DB->delete_records('local_coursegen_course_sessions', ['userid' => $userid]);
+        $DB->delete_records('local_coursegen_module_jobs', ['userid' => $userid]);
 
-        $tables = self::get_table_user_map($userdata);
-        foreach ($tables as $table => $filterparams) {
-            $DB->delete_records($table, $filterparams);
+        // Anonymize the shared configuration instead of destroying it.
+        $DB->set_field('local_coursegen_system_instruction', 'usermodified', 0, ['usermodified' => $userid]);
+        $DB->set_field('local_coursegen_course_context', 'usermodified', 0, ['usermodified' => $userid]);
+    }
+
+    /**
+     * Delete the course-scoped plugin data of a course, optionally for one user only.
+     *
+     * @param int $courseid Course id of the course context.
+     * @param int|null $userid Restrict the deletion to this user, or null for every user.
+     */
+    private static function delete_course_data(int $courseid, ?int $userid = null) {
+        global $DB;
+
+        $sessionfilter = ['courseid' => $courseid];
+        $jobfilter = ['courseid' => $courseid];
+        $contextfilter = ['courseid' => $courseid];
+        if ($userid !== null) {
+            $sessionfilter['userid'] = $userid;
+            $jobfilter['userid'] = $userid;
+            $contextfilter['usermodified'] = $userid;
+        }
+
+        $sessionids = array_keys($DB->get_records('local_coursegen_course_sessions', $sessionfilter, '', 'id'));
+        self::delete_syllabus_files($sessionids);
+        $DB->delete_records('local_coursegen_course_sessions', $sessionfilter);
+        $DB->delete_records('local_coursegen_module_jobs', $jobfilter);
+
+        // The course context configuration is shared: anonymize it.
+        $DB->set_field('local_coursegen_course_context', 'usermodified', 0, $contextfilter);
+    }
+
+    /**
+     * Delete the stored syllabus files of the given planning sessions.
+     *
+     * @param array $sessionids Session record ids (file item ids).
+     */
+    private static function delete_syllabus_files(array $sessionids) {
+        $fs = get_file_storage();
+        $syscontextid = \context_system::instance()->id;
+        foreach ($sessionids as $sessionid) {
+            $fs->delete_area_files($syscontextid, 'local_coursegen', 'syllabus', (int)$sessionid);
         }
     }
 

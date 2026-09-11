@@ -1,2 +1,2 @@
 @Library('moodle-ci') _
-moodlePluginCI(moodleBranch: 'MOODLE_405_STABLE')
+moodlePluginCI(moodleBranch: 'MOODLE_405_STABLE_V2')

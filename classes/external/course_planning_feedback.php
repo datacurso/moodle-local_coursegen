@@ -92,6 +92,12 @@ class course_planning_feedback extends external_api {
         self::validate_context($context);
 
         $session = course_session_service::get_user_session($recordid, $USER->id);
+
+        // Owning the session is not enough: adjusting a plan consumes paid AI
+        // credits, so require the same capabilities as start_course_planning.
+        require_capability('moodle/course:create', $context);
+        require_capability('local/coursegen:createcoursewithai', $context);
+
         $sessionid = $session->get('session_id');
 
         if (!$sessionid) {

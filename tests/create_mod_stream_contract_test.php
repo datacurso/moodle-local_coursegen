@@ -22,6 +22,10 @@ use local_coursegen\local\models\module_job;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\create_mod_service;
 
+defined('MOODLE_INTERNAL') || die();
+
+require_once(__DIR__ . '/fixtures/aiprovider_datacurso_stub.php');
+
 /**
  * Contract tests for the individual activity generation request and result.
  *
@@ -102,6 +106,55 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
             ->willReturn('https://ai.example.com/api/v1/activity/stream/job-1');
 
         testable_create_mod_stream::$mockservice = $service;
+    }
+
+    /**
+     * When a course context row exists, its type and system instruction name
+     * must reach the persisted module job (the name normalisation was lost in
+     * the migration from the legacy ai_context class: the service aliases the
+     * column as system_instruction_name, not name).
+     */
+    public function test_course_context_reaches_the_stored_job(): void {
+        global $DB, $USER;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $captured = null;
+        $this->inject_api_service($captured);
+
+        $now = time();
+        $instructionid = $DB->insert_record('local_coursegen_system_instruction', (object)[
+            'name' => 'Institutional guideline',
+            'content' => 'Follow the style guide.',
+            'deleted' => 0,
+            'timecreated' => $now,
+            'timemodified' => $now,
+            'usermodified' => $USER->id,
+        ]);
+        $DB->insert_record('local_coursegen_course_context', (object)[
+            'courseid' => $course->id,
+            'context_type' => 'system_instruction',
+            'system_instruction_id' => $instructionid,
+            'lang' => 'en',
+            'prompt_text' => '',
+            'timecreated' => $now,
+            'timemodified' => $now,
+            'usermodified' => $USER->id,
+        ]);
+
+        $result = testable_create_mod_stream::execute($course->id, 1, 'Create a page about photosynthesis', 0, null, 'en');
+        $this->resetDebugging();
+        $this->assertTrue($result['ok'], 'Start must succeed: ' . ($result['message'] ?? ''));
+
+        $job = $DB->get_record('local_coursegen_module_jobs', ['job_id' => 'job-1'], '*', MUST_EXIST);
+        $this->assertSame('system_instruction', $job->context_type);
+        $this->assertSame(
+            'Institutional guideline',
+            $job->system_instruction_name,
+            'The stored job must carry the system instruction name resolved from the course context.'
+        );
     }
 
     /**
@@ -200,6 +253,37 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
             . 'detail extraction is unit tested at the provider level in '
             . 'aiprovider_datacurso\httpclient\datacurso_api_error_detail_test.'
         );
+    }
+
+    /**
+     * An invalid init response is logged as key names plus status only: the
+     * full service response body (which may embed generated content) must not
+     * reach the developer log nor the client.
+     */
+    public function test_invalid_init_response_logs_keys_only(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+
+        $service = $this->getMockBuilder(ai_course_api_service::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['start_activity', 'get_mod_streaming_url_for_job'])
+            ->getMock();
+        // No thread_id: the response is invalid. It carries a marker that must never be logged.
+        $service->method('start_activity')
+            ->willReturn(['status' => 'error', 'detail' => 'SENSITIVE-RESPONSE-BODY']);
+        testable_create_mod_stream::$mockservice = $service;
+
+        $result = testable_create_mod_stream::execute($course->id, 1, 'Create a page', 0, null, 'en');
+
+        $this->assertFalse($result['ok']);
+        $debuggings = $this->getDebuggingMessages();
+        $this->resetDebugging();
+        $alldebugging = json_encode($debuggings);
+        $this->assertStringNotContainsString('SENSITIVE-RESPONSE-BODY', $alldebugging);
+        $this->assertStringContainsString('detail', $alldebugging, 'The key names present must be logged.');
+        $this->assertStringNotContainsString('SENSITIVE-RESPONSE-BODY', json_encode($result));
     }
 
     /**

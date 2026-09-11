@@ -16,9 +16,10 @@
 
 namespace local_coursegen\local\service;
 
-use local_coursegen\local\image_generation\image_policy_builder;
+use local_coursegen\event\generation_job_started;
 use local_coursegen\local\h5p_core_api;
 use local_coursegen\local\image_generation\activities;
+use local_coursegen\local\image_generation\image_policy_builder;
 use local_coursegen\local\models\course_session;
 
 /**
@@ -138,6 +139,14 @@ class course_planning_service {
             'local_coursegen_select_system_instruction' => $systeminstructionid,
         ]));
         $session->create();
+
+        generation_job_started::create([
+            'context' => \context_system::instance(),
+            'other' => [
+                'session_id' => (int)$session->get('id'),
+                'generate_images' => $withimages ? 1 : 0,
+            ],
+        ])->trigger();
 
         return [
             'success' => true,

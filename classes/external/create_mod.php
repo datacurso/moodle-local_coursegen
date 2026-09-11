@@ -21,6 +21,9 @@ use external_api;
 use external_function_parameters;
 use external_single_structure;
 use external_value;
+use local_coursegen\event\generation_denied;
+use local_coursegen\event\generation_failed;
+use local_coursegen\event\generation_result_applied;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\create_mod_service;
 use local_coursegen\local\service\module_job_service;
@@ -95,6 +98,12 @@ class create_mod extends external_api {
 
             $job = module_job_service::get_user_job($jobid, $courseid, $USER->id);
 
+            // A job is single-use: once its result has been applied it can
+            // never create another module (replay protection).
+            if ($job->get('status') === module_job_service::STATUS_CONSUMED) {
+                throw new \moodle_exception('error_job_already_used', 'local_coursegen');
+            }
+
             $sectionnum = $job->get('sectionnum') ?? $sectionnum;
             $beforemod = $job->get('beforemod') ?? $beforemod;
 
@@ -102,6 +111,17 @@ class create_mod extends external_api {
             $result = $apiservice->get_activity_result($jobid);
 
             $newcm = create_mod_service::create_from_ai_result($result, $course, $sectionnum, $beforemod);
+
+            // Mark the job consumed so its result cannot be applied twice.
+            module_job_service::update_status((int)$job->get('id'), module_job_service::STATUS_CONSUMED);
+
+            generation_result_applied::create([
+                'context' => $context,
+                'other' => [
+                    'jobid' => $jobid,
+                    'cmid' => (int)$newcm->coursemodule,
+                ],
+            ])->trigger();
 
             $url = new \moodle_url("/mod/$newcm->modulename/view.php", ["id" => $newcm->coursemodule]);
 
@@ -114,11 +134,34 @@ class create_mod extends external_api {
                     'modname' => $newcm->modulename,
                 ],
             ];
-        } catch (\Exception $e) {
-            debugging("Unexpected error while creating resource: " . $e->getMessage());
+        } catch (\required_capability_exception $e) {
+            // Permission errors are already localized and safe to show verbatim.
+            debugging("Permission error while creating resource: " . $e->getMessage());
+            // The exception carries the localized capability name in ->a; the
+            // raw capability string is not stored on it.
+            generation_denied::create([
+                'context' => isset($context) ? $context : \context_system::instance(),
+                'other' => ['capability' => is_string($e->a ?? null) ? $e->a : ''],
+            ])->trigger();
             return [
                 'ok' => false,
                 'message' => $e->getMessage(),
+            ];
+        } catch (\Exception $e) {
+            // A replayed job surfaces its own localized error to the caller.
+            if ($e instanceof \moodle_exception && $e->errorcode === 'error_job_already_used') {
+                throw $e;
+            }
+            // Keep the technical detail in developer debugging only: the client
+            // receives a localized message without internal information.
+            debugging("Unexpected error while creating resource: " . $e->getMessage());
+            generation_failed::create([
+                'context' => isset($context) ? $context : \context_system::instance(),
+                'other' => ['reason' => get_class($e)],
+            ])->trigger();
+            return [
+                'ok' => false,
+                'message' => get_string('error_generating_resource', 'local_coursegen'),
             ];
         }
     }

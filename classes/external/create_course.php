@@ -81,6 +81,8 @@ class create_course extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
+        require_capability('moodle/course:create', $context);
+        require_capability('local/coursegen:createcoursewithai', $context);
 
         $recordid = (int)$params['recordid'];
 

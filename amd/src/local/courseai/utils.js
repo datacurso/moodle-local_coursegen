@@ -98,6 +98,12 @@ export const getActivityIconUrl = (modname) => {
     if (!modname || typeof modname !== 'string') {
         return '';
     }
+    // Allow-list the module name: it comes from AI-generated data, so anything
+    // outside a plausible Moodle module name falls back to the generic core icon.
+    if (!/^[a-z0-9_]+$/.test(modname)) {
+        // eslint-disable-next-line no-undef
+        return M.cfg.wwwroot + '/pix/i/activities.svg';
+    }
     // Use Moodle's global config to construct the URL
     // eslint-disable-next-line no-undef
     return M.cfg.wwwroot + '/mod/' + modname + '/pix/monologo.svg';

@@ -257,5 +257,20 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026021803, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026090900) {
+        // Define unique index job_id to be added to local_coursegen_module_jobs:
+        // an external job id maps to at most one local job record (replay protection).
+        $table = new xmldb_table('local_coursegen_module_jobs');
+        $index = new xmldb_index('job_id', XMLDB_INDEX_UNIQUE, ['job_id']);
+
+        // Conditionally launch add index job_id.
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
+        }
+
+        // Coursegen savepoint reached.
+        upgrade_plugin_savepoint(true, 2026090900, 'local', 'coursegen');
+    }
+
     return true;
 }
