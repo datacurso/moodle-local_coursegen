@@ -38,7 +38,8 @@ class create_course_service {
      * (fullname, shortname, category) before creation, as set via the review modal.
      *
      * @param course_session $session Planning session persistent.
-     * @param array $resultdata Result data from the Datacurso API (course_configuration, sections, activities).
+     * @param array $resultdata Result data from the Datacurso API (course_configuration, sections,
+     *     activities, blocks_info).
      * @param array $overrides Optional user overrides for course fields.
      *     Supported keys: fullname (string), shortname (string), category (int).
      * @return array Result of the course content application.
@@ -82,6 +83,10 @@ class create_course_service {
             $sessionpersistent->set('timemodified', time());
             $sessionpersistent->update();
             course_session_service::update_status($sessionid, course_session::STATUS_CREATING);
+
+            // Replace the theme/format default blocks create_course() just added with the
+            // source course's real ones (or none, if the source course had none).
+            create_blocks_service::create_blocks($course->id, $resultdata['blocks_info'] ?? []);
 
             // Process sections if provided in the response.
             if (!empty($resultdata['sections_info'])) {
@@ -216,7 +221,57 @@ class create_course_service {
 
         $coursedata->category = (int)($config['category'] ?? $defaultcategoryid);
 
+        $format = trim((string)($config['format'] ?? ''));
+        if ($format !== '') {
+            $coursedata->format = $format;
+        }
+
+        self::apply_course_configuration_fields($coursedata, $config);
+
         return $coursedata;
+    }
+
+    /**
+     * Apply the course_configuration fields beyond identity (fullname,
+     * shortname, category, format) onto the course data object.
+     *
+     * create_course() (course/lib.php) inserts these directly into 'course'
+     * and, for 'format_options', forwards the same object to
+     * course_get_format($id)->update_course_format_options($data) - so
+     * format-specific options (e.g. format_grid's gridjustification,
+     * hiddensections, popup, ...) just need to be set as matching
+     * properties here. 'numsections' is deliberately excluded from
+     * format_options: process_course_sections() derives and applies it from
+     * sections_info once sections are known.
+     *
+     * @param \stdClass $coursedata Course data object to mutate in place.
+     * @param array $config course_configuration from the API/export result.
+     * @return void
+     */
+    private static function apply_course_configuration_fields(\stdClass $coursedata, array $config): void {
+        $coursedata->summary = (string)($config['summary'] ?? '');
+        $coursedata->summaryformat = (int)($config['summaryformat'] ?? FORMAT_HTML);
+        $coursedata->startdate = (int)($config['startdate'] ?? 0);
+        $coursedata->enddate = (int)($config['enddate'] ?? 0);
+        $coursedata->visible = (int)($config['visible'] ?? 1);
+        $lang = trim((string)($config['lang'] ?? ''));
+        if ($lang !== '') {
+            $coursedata->lang = $lang;
+        }
+        $coursedata->newsitems = (int)($config['newsitems'] ?? 0);
+        $coursedata->showgrades = (int)($config['showgrades'] ?? 1);
+        $coursedata->showreports = (int)($config['showreports'] ?? 1);
+        $coursedata->maxbytes = (int)($config['maxbytes'] ?? 0);
+        $coursedata->enablecompletion = (int)($config['enablecompletion'] ?? 0);
+        $coursedata->groupmode = (int)($config['groupmode'] ?? 0);
+        $coursedata->groupmodeforce = (int)($config['groupmodeforce'] ?? 0);
+
+        $formatoptions = $config['format_options'] ?? [];
+        if (is_array($formatoptions)) {
+            foreach ($formatoptions as $name => $value) {
+                $coursedata->{$name} = $value;
+            }
+        }
     }
 
     /**
@@ -342,25 +397,30 @@ class create_course_service {
         foreach ($sectionsinfo as $sectioninfo) {
             $sectionnumber = (int)$sectioninfo['section'];
             $sectionname = $sectioninfo['name'] ?? '';
+            $sectionsummary = (string)($sectioninfo['description'] ?? '');
+            $sectionsummaryformat = (int)($sectioninfo['descriptionformat'] ?? FORMAT_HTML);
+            $sectionvisible = (int)($sectioninfo['visible'] ?? 1);
 
             if (isset($existingsections[$sectionnumber])) {
-                // Update existing section name.
+                // Update existing section name/summary/visibility.
+                $updatedata = ['id' => $existingsections[$sectionnumber]->id];
                 if (!empty($sectionname) && $existingsections[$sectionnumber]->name !== $sectionname) {
-                    $DB->update_record('course_sections', [
-                        'id' => $existingsections[$sectionnumber]->id,
-                        'name' => $sectionname,
-                    ]);
+                    $updatedata['name'] = $sectionname;
                 }
+                $updatedata['summary'] = $sectionsummary;
+                $updatedata['summaryformat'] = $sectionsummaryformat;
+                $updatedata['visible'] = $sectionvisible;
+                $DB->update_record('course_sections', $updatedata);
             } else {
                 // Create new section.
                 $sectiondata = new \stdClass();
                 $sectiondata->course = $courseid;
                 $sectiondata->section = $sectionnumber;
                 $sectiondata->name = $sectionname;
-                $sectiondata->summary = '';
-                $sectiondata->summaryformat = FORMAT_HTML;
+                $sectiondata->summary = $sectionsummary;
+                $sectiondata->summaryformat = $sectionsummaryformat;
                 $sectiondata->sequence = '';
-                $sectiondata->visible = 1;
+                $sectiondata->visible = $sectionvisible;
                 $sectiondata->availability = null;
                 $sectiondata->timemodified = time();
 
@@ -569,6 +629,7 @@ class create_course_service {
                     ];
                     unset($subsections[$subsectionid]);
                     debugging('local_coursegen: subsection creation failed, flattening its activities. ' . $e->getMessage());
+                    self::recover_leaked_transaction();
                 }
             }
 
@@ -590,6 +651,7 @@ class create_course_service {
                     'error' => $e->getMessage(),
                 ];
                 debugging('local_coursegen: module creation skipped due to error. ' . json_encode($context));
+                self::recover_leaked_transaction();
                 // Continue with next activity.
                 continue;
             }
@@ -599,6 +661,32 @@ class create_course_service {
         rebuild_course_cache($courseid, true);
 
         return $errors;
+    }
+
+    /**
+     * Recover from a delegated transaction left open by a failed module creation.
+     *
+     * add_moduleinfo() (course/modlib.php) starts its own delegated transaction
+     * and, when the module's *_add_instance() throws a moodle_exception (a
+     * dml_write_exception included), it manually deletes the course_module and
+     * context rows it created but never disposes that transaction (no
+     * allow_commit() nor rollback()). Because the exception is caught here
+     * instead of reaching Moodle's default handler, $DB is left thinking a
+     * transaction is still active: every following activity's own delegated
+     * transaction then nests inside that leaked one, so its "commit" never
+     * reaches the real database and its rows (and burned course_modules ids)
+     * are silently lost when the request ends. Forcing the rollback here,
+     * right after the failure is caught, resets $DB to a clean state so the
+     * next activity gets its own real, independently committed transaction.
+     *
+     * @return void
+     */
+    private static function recover_leaked_transaction(): void {
+        global $DB;
+
+        if ($DB->is_transaction_started()) {
+            $DB->force_transaction_rollback();
+        }
     }
 
     /**

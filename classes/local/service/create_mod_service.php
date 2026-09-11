@@ -161,9 +161,37 @@ class create_mod_service {
         $parameters->beforemod = $beforemod;
         $parameters->module = $moduleid;
 
+        self::map_feedback_editor_fields($modname, $parameters);
+
         $parameters = self::process_mod_parameters($modname, $parameters);
 
         return $parameters;
+    }
+
+    /**
+     * Flatten mod_feedback's page_after_submit_editor into plain DB fields.
+     *
+     * add_moduleinfo() only flattens introeditor generically; every other
+     * module-specific editor is expected to arrive already resolved by the
+     * moodleform's data_postprocessing(), which never runs in this pipeline
+     * (add_moduleinfo() is called with a plain parameters object, not via
+     * $mform->get_data()). feedback_add_instance() reads page_after_submit_editor
+     * only AFTER its own initial insert_record(), so page_after_submit
+     * (NOTNULL, no default) must already carry a value or that first insert
+     * fails with a dml_write_exception.
+     *
+     * @param string $modname Module plugin name.
+     * @param object $parameters Parameters object to mutate in place.
+     * @return void
+     */
+    private static function map_feedback_editor_fields(string $modname, object $parameters): void {
+        if ($modname !== 'feedback' || !isset($parameters->page_after_submit_editor)) {
+            return;
+        }
+
+        $editor = (array) $parameters->page_after_submit_editor;
+        $parameters->page_after_submit = (string) ($editor['text'] ?? '');
+        $parameters->page_after_submitformat = (int) ($editor['format'] ?? FORMAT_HTML);
     }
 
     /**

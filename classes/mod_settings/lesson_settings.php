@@ -17,6 +17,7 @@
 namespace local_coursegen\mod_settings;
 
 use context_module;
+use context_user;
 use lesson;
 use lesson_page;
 use stdClass;
@@ -41,6 +42,7 @@ class lesson_settings extends base_settings {
         global $CFG;
 
         require_once($CFG->dirroot . '/mod/lesson/locallib.php');
+        require_once($CFG->libdir . '/filelib.php');
         // The LESSON_PAGE_* constants live in each page type file and are not
         // loaded by locallib until the page type manager runs.
         require_once($CFG->dirroot . '/mod/lesson/pagetypes/branchtable.php');
@@ -52,6 +54,8 @@ class lesson_settings extends base_settings {
             return;
         }
 
+        $images = $this->modsettings['images'] ?? [];
+
         $lesson = lesson::load($this->cm->instance);
         $context = context_module::instance($this->cm->coursemodule);
 
@@ -62,9 +66,86 @@ class lesson_settings extends base_settings {
                 continue;
             }
 
+            if (!empty($images)) {
+                self::attach_generated_images($properties, $images);
+            }
+
             $created = lesson_page::create($properties, $lesson, $context, $CFG->maxbytes);
             $previouspageid = $created->id;
         }
+    }
+
+    /**
+     * Download every real image referenced by an @@PLUGINFILE@@ token in the
+     * page contents into a real draft area, so lesson_page::create()'s own
+     * call to file_postupdate_standard_editor() moves them into the page's
+     * real mod_lesson/page_contents/<pageid> file area and rewrites the
+     * token - the same mechanism Moodle's own lesson edit form relies on.
+     *
+     * @param stdClass $properties Page properties to mutate in place (contents_editor.itemid).
+     * @param array $images Real images extracted from the source .mbz for this activity.
+     * @return void
+     */
+    protected static function attach_generated_images(stdClass $properties, array $images): void {
+        global $USER;
+
+        $contenthtml = $properties->contents_editor['text'] ?? '';
+        if (!preg_match_all('/@@PLUGINFILE@@\/([^"\'\s]+)/', $contenthtml, $matches)) {
+            return;
+        }
+
+        $fs = get_file_storage();
+        $usercontext = context_user::instance($USER->id);
+        $draftid = 0;
+
+        foreach (array_unique($matches[1]) as $rawfilename) {
+            $filename = rawurldecode($rawfilename);
+            $image = self::find_image_by_filename($images, $filename);
+            if ($image === null) {
+                continue;
+            }
+
+            if ($draftid === 0) {
+                $draftid = file_get_unused_draft_itemid();
+            }
+
+            try {
+                $fs->create_file_from_url([
+                    'contextid' => $usercontext->id,
+                    'component' => 'user',
+                    'filearea' => 'draft',
+                    'itemid' => $draftid,
+                    'filepath' => '/',
+                    'filename' => $filename,
+                ], $image['url'], null, true);
+            } catch (\Throwable $exception) {
+                debugging(
+                    'local_coursegen: could not download lesson page image "' . $filename . '": '
+                    . $exception->getMessage(),
+                    DEBUG_DEVELOPER
+                );
+            }
+        }
+
+        if ($draftid !== 0) {
+            $properties->contents_editor['itemid'] = $draftid;
+        }
+    }
+
+    /**
+     * Find the real image entry matching a page's @@PLUGINFILE@@ filename.
+     *
+     * @param array $images Real images extracted from the source .mbz for this activity.
+     * @param string $filename Filename referenced by the page's @@PLUGINFILE@@ token.
+     * @return array|null
+     */
+    protected static function find_image_by_filename(array $images, string $filename): ?array {
+        foreach ($images as $image) {
+            if (($image['original_filename'] ?? null) === $filename) {
+                return $image;
+            }
+        }
+        return null;
     }
 
     /**
@@ -91,16 +172,34 @@ class lesson_settings extends base_settings {
             'itemid' => 0,
         ];
         $properties->pageid = $previouspageid;
+        // Same default as the lesson edit form's "display in left menu" checkbox
+        // (mod/lesson/pagetypes/branchtable.php), which lesson_page::create()
+        // does not apply on its own for programmatically built properties.
+        $properties->display = 1;
 
         if ($pagetype === 'content') {
-            $buttontext = trim((string) ($page['button_text'] ?? ''));
-            if ($buttontext === '') {
+            $buttons = $page['buttons'] ?? [];
+            if (empty($buttons)) {
                 return null;
             }
+
             $properties->qtype = LESSON_PAGE_BRANCHTABLE;
-            // Branch table answers are plain strings (button labels).
-            $properties->answer_editor = [$buttontext];
-            $properties->jumpto = [LESSON_NEXTPAGE];
+            $properties->answer_editor = [];
+            $properties->jumpto = [];
+
+            foreach ($buttons as $button) {
+                $buttontext = trim((string) ($button['text'] ?? ''));
+                if ($buttontext === '') {
+                    continue;
+                }
+                // Branch table answers are plain strings (button labels).
+                $properties->answer_editor[] = $buttontext;
+                $properties->jumpto[] = self::normalize_jumpto((int) ($button['jumpto'] ?? LESSON_NEXTPAGE));
+            }
+
+            if (empty($properties->answer_editor)) {
+                return null;
+            }
             return $properties;
         }
 
@@ -146,5 +245,29 @@ class lesson_settings extends base_settings {
         }
 
         return $properties;
+    }
+
+    /**
+     * Validate a real backup jumpto value against Moodle's own known
+     * negative "special" constants (mod/lesson/locallib.php). A positive
+     * value would reference a specific backup page id, which this
+     * linear-only creation flow has no mapping for, so it falls back to
+     * LESSON_NEXTPAGE instead of pointing at an unrelated real page.
+     *
+     * @param int $jumpto Real jumpto value from the AI/mbz-derived page data.
+     * @return int
+     */
+    protected static function normalize_jumpto(int $jumpto): int {
+        $known = [
+            LESSON_THISPAGE,
+            LESSON_NEXTPAGE,
+            LESSON_EOL,
+            LESSON_PREVIOUSPAGE,
+            LESSON_UNSEENBRANCHPAGE,
+            LESSON_RANDOMPAGE,
+            LESSON_RANDOMBRANCH,
+            LESSON_CLUSTERJUMP,
+        ];
+        return in_array($jumpto, $known, true) ? $jumpto : LESSON_NEXTPAGE;
     }
 }
