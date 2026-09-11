@@ -166,6 +166,30 @@ export const removeActivity = (state, sectionId, activityIndex) => {
 };
 
 /**
+ * Merge new field values into one (unlocked) activity, addressed by its current
+ * render index — same addressing convention as removeActivity above.
+ *
+ * @param {Object} state
+ * @param {number} sectionId
+ * @param {number} activityIndex
+ * @param {Object} fields - Subset of activity fields to overwrite (e.g. modname,
+ *     name, purpose, iconhtml, prompt, generateimages, draftitemid, filename).
+ * @returns {boolean} Whether a row was updated.
+ */
+export const updateActivity = (state, sectionId, activityIndex, fields) => {
+    const section = state.sections.find((s) => s.id === sectionId);
+    if (!section) {
+        return false;
+    }
+    const activity = section.activities[activityIndex];
+    if (!activity || activity.locked) {
+        return false;
+    }
+    Object.assign(activity, fields);
+    return true;
+};
+
+/**
  * Toggle a section's collapsed state.
  *
  * @param {Object} state

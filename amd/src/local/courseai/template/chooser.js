@@ -24,6 +24,12 @@
  * wireChooserModal's onPick, now carrying {prompt, generateimages,
  * draftitemid, filename} extras.
  *
+ * The same modal doubles as the editor for an already-added activity:
+ * openActivityEditor seeds the panel from the activity's stored state, flips
+ * the confirm label to "Save changes" and routes the confirm through
+ * wireChooserModal's onEditConfirm instead of onPick. Closing the modal always
+ * drops back to plain add mode.
+ *
  * @module     local_coursegen/local/courseai/template/chooser
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -50,6 +56,14 @@ let pendingSelection = null;
 
 // The file uploaded through the panel's filepicker button, if any.
 let upload = {draftitemid: 0, filename: ''};
+
+// Whether the confirm button inserts a new activity ('add') or saves changes
+// back into an existing one ('edit'). Always 'add' outside an open editor.
+let mode = 'add';
+
+// The structure row being edited ({sectionId, activityIndex}) while
+// mode === 'edit', or null in plain add mode.
+let editTarget = null;
 
 // modname => {displayname, purpose, iconhtml} for the currently rendered
 // catalog — the selected-activity chip is built from here.
@@ -91,18 +105,74 @@ export const renderChooserGrid = async(allowedActivities) => {
 };
 
 /**
+ * Flip the confirm button between its two server-rendered labels:
+ * "Add activity" (add mode) and "Save changes" (edit mode).
+ *
+ * @param {boolean} isEdit
+ */
+const setConfirmLabel = (isEdit) => {
+    const addLabel = document.querySelector(Selectors.regions.chooserConfirmAddLabel);
+    if (addLabel) {
+        addLabel.hidden = isEdit;
+    }
+    const saveLabel = document.querySelector(Selectors.regions.chooserConfirmSaveLabel);
+    if (saveLabel) {
+        saveLabel.hidden = !isEdit;
+    }
+};
+
+/**
+ * Reset the grid search box so every activity type is visible again.
+ */
+const resetChooserSearch = () => {
+    const search = document.getElementById(SEARCH_ID);
+    if (search) {
+        search.value = '';
+        filterChooserGrid('');
+    }
+};
+
+/**
  * Open the chooser modal targeting a given section/position.
  *
  * @param {number} sectionId
  * @param {number|null} position - 0-based insert index, or null to append.
  */
 export const openActivityChooser = (sectionId, position) => {
+    // A previous editor session always resets on hidden.bs.modal, but a plain
+    // add must never inherit edit mode — enforce it here too.
+    mode = 'add';
+    editTarget = null;
+    setConfirmLabel(false);
     pendingTarget = {sectionId, position};
-    const search = document.getElementById(SEARCH_ID);
-    if (search) {
-        search.value = '';
-        filterChooserGrid('');
-    }
+    resetChooserSearch();
+    jQuery(MODAL_SELECTOR).modal('show');
+};
+
+/**
+ * Open the chooser modal in EDIT mode for an existing (unlocked) activity row:
+ * the prompt panel starts visible, seeded from the activity's stored state, and
+ * the confirm button saves changes back instead of inserting a new row. The
+ * grid stays usable — picking a different type just updates the selection.
+ *
+ * @param {number} sectionId
+ * @param {number} activityIndex - Current render index inside the section.
+ * @param {Object} activity - {modname, prompt, generateimages, draftitemid, filename}.
+ */
+export const openActivityEditor = (sectionId, activityIndex, activity) => {
+    mode = 'edit';
+    editTarget = {sectionId, activityIndex};
+    setConfirmLabel(true);
+    // Grid picks and the confirm guard both key off pendingTarget; position is
+    // meaningless in edit mode (nothing is inserted).
+    pendingTarget = {sectionId, position: null};
+    resetChooserSearch();
+    seedPanel(activity.modname, {
+        prompt: activity.prompt || '',
+        generateimages: activity.generateimages ? 1 : 0,
+        draftitemid: activity.draftitemid || 0,
+        filename: activity.filename || '',
+    });
     jQuery(MODAL_SELECTOR).modal('show');
 };
 
@@ -168,12 +238,38 @@ const refreshSelectedFileChip = () => {
 };
 
 /**
+ * Populate the whole prompt panel in one go: selected-type chip (revealing the
+ * panel), prompt text, generate-images radio and upload state. selectActivity
+ * covers the add path's grid picks by itself; the edit path seeds everything.
+ *
+ * @param {string} modname - The activity type to select in the chip.
+ * @param {Object} extras - {prompt, generateimages, draftitemid, filename}.
+ */
+const seedPanel = (modname, extras) => {
+    selectActivity(modname);
+
+    const promptEl = document.querySelector(Selectors.regions.chooserPrompt);
+    if (promptEl) {
+        promptEl.value = extras.prompt || '';
+        promptEl.style.height = 'auto';
+    }
+    document.querySelectorAll(Selectors.regions.chooserGenerateImages).forEach((radio) => {
+        radio.checked = Number(radio.value) === (extras.generateimages ? 1 : 0);
+    });
+    upload = {draftitemid: extras.draftitemid || 0, filename: extras.filename || ''};
+    refreshSelectedFileChip();
+};
+
+/**
  * Reset the prompt panel back to its pristine hidden state: no selection, no
- * file, empty prompt, "no images" radio. Runs on every modal close so a
- * reopen always starts clean.
+ * file, empty prompt, "no images" radio — and plain add mode. Runs on every
+ * modal close so a reopen always starts clean.
  */
 const resetChooserPanel = () => {
     pendingSelection = null;
+    mode = 'add';
+    editTarget = null;
+    setConfirmLabel(false);
     upload = {draftitemid: 0, filename: ''};
 
     const panel = document.querySelector(Selectors.regions.chooserPanel);
@@ -247,11 +343,13 @@ const openUploadPicker = async() => {
 
 /**
  * Wire the prompt panel below the grid: textarea autoresize, file upload and
- * remove, and the confirm button that performs the actual insertion.
+ * remove, and the confirm button that performs the actual insertion (add mode)
+ * or hands the changes back to the edited row (edit mode).
  *
  * @param {Function} onPick - (sectionId, position, modname, extras) => void
+ * @param {Function} onEditConfirm - (sectionId, activityIndex, modname, extras) => void
  */
-const wireChooserPanel = (onPick) => {
+const wireChooserPanel = (onPick, onEditConfirm) => {
     const promptEl = document.querySelector(Selectors.regions.chooserPrompt);
     if (promptEl) {
         promptEl.addEventListener('input', () => {
@@ -291,7 +389,11 @@ const wireChooserPanel = (onPick) => {
                 draftitemid: upload.draftitemid || 0,
                 filename: upload.filename || '',
             };
-            onPick(pendingTarget.sectionId, pendingTarget.position, pendingSelection, extras);
+            if (mode === 'edit' && editTarget) {
+                onEditConfirm(editTarget.sectionId, editTarget.activityIndex, pendingSelection, extras);
+            } else {
+                onPick(pendingTarget.sectionId, pendingTarget.position, pendingSelection, extras);
+            }
             pendingTarget = null;
             jQuery(MODAL_SELECTOR).modal('hide');
         });
@@ -307,12 +409,15 @@ const wireChooserPanel = (onPick) => {
  * Called once — the grid's contents are replaced (never the grid element
  * itself), so delegation on the grid keeps working after renderChooserGrid
  * re-renders it. Clicking a grid card only selects it (revealing the prompt
- * panel); onPick fires when the panel's confirm button is pressed.
+ * panel); onPick (add mode) or onEditConfirm (edit mode, see openActivityEditor)
+ * fires when the panel's confirm button is pressed.
  *
  * @param {Function} onPick - (sectionId, position, modname, extras) => void where
  *     extras = {prompt: string, generateimages: 0|1, draftitemid: number, filename: string}
+ * @param {Function} onEditConfirm - (sectionId, activityIndex, modname, extras) => void,
+ *     same extras shape.
  */
-export const wireChooserModal = (onPick) => {
+export const wireChooserModal = (onPick, onEditConfirm) => {
     const search = document.getElementById(SEARCH_ID);
     if (search) {
         search.addEventListener('input', () => filterChooserGrid(search.value));
@@ -331,5 +436,5 @@ export const wireChooserModal = (onPick) => {
         selectActivity(optionEl.dataset.modname);
     });
 
-    wireChooserPanel(onPick);
+    wireChooserPanel(onPick, onEditConfirm);
 };

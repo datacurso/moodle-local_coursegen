@@ -32,6 +32,23 @@ Feature: Prompt panel in the template-mode activity chooser
     Then "#tplActivityChooserModal" "css_element" should not be visible
     And I should see "Page" in the "#tplModeStructure" "css_element"
 
+  Scenario: Editing an added activity reopens the chooser prefilled and saves the changes
+    Given I click on "[data-action='local_coursegen/template/open-chooser']" "css_element"
+    And I click on "[data-action='local_coursegen/template/add-chooser-option'][data-modname='page']" "css_element"
+    And I set the field with xpath "//textarea[@data-region='local_coursegen/template/chooser-prompt']" to "Explain photosynthesis"
+    And I click on "[data-region='local_coursegen/template/chooser-generateimages'][value='1']" "css_element"
+    And I click on "[data-region='local_coursegen/template/chooser-confirm']" "css_element"
+    When I click on "[data-action='local_coursegen/template/edit-activity']" "css_element"
+    Then "#tplChooserPromptPanel" "css_element" should be visible
+    And I should see "Page" in the "[data-region='local_coursegen/template/chooser-selected-name']" "css_element"
+    And the field with xpath "//textarea[@data-region='local_coursegen/template/chooser-prompt']" matches value "Explain photosynthesis"
+    And "[data-region='local_coursegen/template/chooser-generateimages'][value='1']:checked" "css_element" should exist
+    And I should see "Save changes" in the "[data-region='local_coursegen/template/chooser-confirm']" "css_element"
+    When I set the field with xpath "//textarea[@data-region='local_coursegen/template/chooser-prompt']" to "Explain cellular respiration"
+    And I click on "[data-region='local_coursegen/template/chooser-confirm']" "css_element"
+    Then "#tplActivityChooserModal" "css_element" should not be visible
+    And I should see "Page" in the "#tplModeStructure" "css_element"
+
   Scenario: Closing and reopening the chooser resets and hides the prompt panel
     Given I click on "[data-action='local_coursegen/template/open-chooser']" "css_element"
     And I click on "[data-action='local_coursegen/template/add-chooser-option'][data-modname='page']" "css_element"

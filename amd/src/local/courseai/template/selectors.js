@@ -32,6 +32,7 @@ export default {
     actions: {
         toggleSection: '[data-action="local_coursegen/template/toggle-section"]',
         openChooser: '[data-action="local_coursegen/template/open-chooser"]',
+        editActivity: '[data-action="local_coursegen/template/edit-activity"]',
         removeActivity: '[data-action="local_coursegen/template/remove-activity"]',
         addSection: '[data-action="local_coursegen/template/add-section"]',
         chooserOption: '[data-action="local_coursegen/template/add-chooser-option"]',
@@ -47,5 +48,7 @@ export default {
         chooserPrompt: '[data-region="local_coursegen/template/chooser-prompt"]',
         chooserUpload: '[data-region="local_coursegen/template/chooser-upload"]',
         chooserConfirm: '[data-region="local_coursegen/template/chooser-confirm"]',
+        chooserConfirmAddLabel: '[data-region="local_coursegen/template/chooser-confirm-add"]',
+        chooserConfirmSaveLabel: '[data-region="local_coursegen/template/chooser-confirm-save"]',
     },
 };

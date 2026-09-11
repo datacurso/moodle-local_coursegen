@@ -120,4 +120,20 @@ final class courseai_template_chooser_panel_test extends \advanced_testcase {
         );
         $this->assertStringContainsString(get_string('courseai_template_add_activity', 'local_coursegen'), $html);
     }
+
+    /**
+     * The confirm button renders BOTH its labels ("Add activity" for add mode,
+     * core "Save changes" for edit mode) as spans toggled client-side by
+     * chooser.js — no runtime get_string fetch.
+     */
+    public function test_chooser_confirm_renders_add_and_save_labels(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $html = $this->render_page(true);
+
+        $this->assertStringContainsString('data-region="local_coursegen/template/chooser-confirm-add"', $html);
+        $this->assertStringContainsString('data-region="local_coursegen/template/chooser-confirm-save"', $html);
+        $this->assertStringContainsString(get_string('savechanges'), $html);
+    }
 }

@@ -125,6 +125,7 @@ export const renderStructure = async(container, state, labels) => {
  * @param {Object} handlers
  * @param {Function} handlers.onToggleSection - (sectionId) => void
  * @param {Function} handlers.onOpenChooser - (sectionId, position|null) => void
+ * @param {Function} handlers.onEditActivity - (sectionId, activityIndex) => void
  * @param {Function} handlers.onRemoveActivity - (sectionId, activityIndex) => void
  * @param {Function} handlers.onAddSection - () => void
  */
@@ -152,6 +153,13 @@ export const wireStructureEvents = (container, handlers) => {
         }
     };
 
+    const handleEditActivity = (editEl) => {
+        handlers.onEditActivity(
+            parseInt(editEl.dataset.sectionId, 10),
+            parseInt(editEl.dataset.activityIndex, 10)
+        );
+    };
+
     container.addEventListener('click', (event) => {
         const toggleEl = event.target.closest(Selectors.actions.toggleSection);
         if (toggleEl) {
@@ -169,6 +177,13 @@ export const wireStructureEvents = (container, handlers) => {
             return;
         }
 
+        const editEl = event.target.closest(Selectors.actions.editActivity);
+        if (editEl) {
+            event.preventDefault();
+            handleEditActivity(editEl);
+            return;
+        }
+
         const removeEl = event.target.closest(Selectors.actions.removeActivity);
         if (removeEl) {
             event.preventDefault();
@@ -183,11 +198,17 @@ export const wireStructureEvents = (container, handlers) => {
         }
     });
 
-    // The delete control is a span[role="button"] (matches the detailed-plan
-    // action controls' markup) so it needs an explicit Enter/Space activation —
-    // unlike the <a>/<button> triggers above, it is not natively keyboard-activatable.
+    // The edit/delete controls are span[role="button"] (matches the detailed-plan
+    // action controls' markup) so they need an explicit Enter/Space activation —
+    // unlike the <a>/<button> triggers above, they are not natively keyboard-activatable.
     container.addEventListener('keydown', (event) => {
         if (event.key !== 'Enter' && event.key !== ' ') {
+            return;
+        }
+        const editEl = event.target.closest(Selectors.actions.editActivity);
+        if (editEl) {
+            event.preventDefault();
+            handleEditActivity(editEl);
             return;
         }
         const removeEl = event.target.closest(Selectors.actions.removeActivity);

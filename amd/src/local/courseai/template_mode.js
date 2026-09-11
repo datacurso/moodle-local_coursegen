@@ -36,10 +36,11 @@ import {
     addSection,
     insertActivity,
     removeActivity,
+    updateActivity,
     toggleSectionCollapsed,
 } from './template/state';
 import {renderStructure, wireStructureEvents} from './template/render';
-import {renderChooserGrid, openActivityChooser, wireChooserModal} from './template/chooser';
+import {renderChooserGrid, openActivityChooser, openActivityEditor, wireChooserModal} from './template/chooser';
 import {formatTemplate} from './utils';
 
 // Localised labels used while mutating the structure (add-section button text,
@@ -196,6 +197,14 @@ export const wireTemplateMode = (state) => {
         onOpenChooser: (sectionId, position) => {
             openActivityChooser(sectionId, position);
         },
+        onEditActivity: (sectionId, activityIndex) => {
+            const section = tplState.sections.find((s) => s.id === sectionId);
+            const activity = section ? section.activities[activityIndex] : null;
+            if (!activity || activity.locked) {
+                return;
+            }
+            openActivityEditor(sectionId, activityIndex, activity);
+        },
         onRemoveActivity: async(sectionId, activityIndex) => {
             const section = tplState.sections.find((s) => s.id === sectionId);
             const removedActivity = section ? section.activities[activityIndex] : null;
@@ -248,6 +257,33 @@ export const wireTemplateMode = (state) => {
                 const idx = section ? section.activities.findIndex((a) => a.id === pendingActivityId) : -1;
                 if (idx !== -1) {
                     section.activities.splice(idx, 1);
+                }
+                Notification.exception(e);
+            }
+        }
+    }, async(sectionId, activityIndex, modname, extras) => {
+        const catalogEntry = tplState.allowedActivities.find((a) => a.modname === modname);
+        if (!catalogEntry) {
+            return;
+        }
+        const section = tplState.sections.find((s) => s.id === sectionId);
+        const edited = section ? section.activities[activityIndex] : null;
+        // Snapshot for rollback — same "state must match the still-rendered
+        // DOM" discipline as the insert path above.
+        const previous = edited ? {...edited} : null;
+        const fields = {
+            name: catalogEntry.displayname,
+            modname: catalogEntry.modname,
+            purpose: catalogEntry.purpose,
+            iconhtml: catalogEntry.iconhtml,
+            ...(extras || {}),
+        };
+        if (updateActivity(tplState, sectionId, activityIndex, fields)) {
+            try {
+                await rerenderStructure();
+            } catch (e) {
+                if (edited && previous) {
+                    Object.assign(edited, previous);
                 }
                 Notification.exception(e);
             }

@@ -33,6 +33,8 @@
     * data-action="local_coursegen/template/toggle-section" on the section chevron
     * data-action="local_coursegen/template/open-chooser" on "+ Add activity" triggers
       and on the between-activities insert dividers (data-section-id, optional data-position)
+    * data-action="local_coursegen/template/edit-activity" on the per-activity edit
+      control (data-section-id, data-activity-index)
     * data-action="local_coursegen/template/remove-activity" on the per-activity delete
       control (data-section-id, data-activity-index)
     * data-action="local_coursegen/template/add-section" on the bottom "+ Add section" button
@@ -133,11 +135,18 @@
                 </div>
                 <div class="activity-actions cg-item-actions align-self-start ms-sm-2">
                   {{^locked}}
+                  <span class="dp-action-btn dp-action-btn--edit" role="button" tabindex="0"
+                        data-action="local_coursegen/template/edit-activity"
+                        data-section-id="{{sectionid}}" data-activity-index="{{index}}"
+                        aria-label="{{#str}}edit, core{{/str}}"
+                        title="{{#str}}edit, core{{/str}}">
+                    <span class="dp-action-icon dp-action-icon--edit">{{#pix}} t/edit, core {{/pix}}</span>
+                  </span>
                   <span class="dp-action-btn dp-action-btn--delete" role="button" tabindex="0"
                         data-action="local_coursegen/template/remove-activity"
                         data-section-id="{{sectionid}}" data-activity-index="{{index}}"
-                        aria-label="{{#str}}courseai_btn_cancel, local_coursegen{{/str}}"
-                        title="{{#str}}courseai_btn_cancel, local_coursegen{{/str}}">
+                        aria-label="{{#str}}delete, core{{/str}}"
+                        title="{{#str}}delete, core{{/str}}">
                     <span class="dp-action-icon dp-action-icon--delete">{{#pix}} t/delete, core {{/pix}}</span>
                   </span>
                   {{/locked}}

@@ -1020,7 +1020,14 @@
 
                 <button type="button" class="btn btn-primary btn-sm chooser-confirm-btn"
                     data-region="local_coursegen/template/chooser-confirm">
-                  {{#str}} courseai_template_add_activity, local_coursegen {{/str}}
+                  {{! Both labels are server-rendered; chooser.js toggles their
+                      [hidden] flags per mode (add vs edit) — no runtime get_string. }}
+                  <span data-region="local_coursegen/template/chooser-confirm-add">
+                    {{#str}} courseai_template_add_activity, local_coursegen {{/str}}
+                  </span>
+                  <span data-region="local_coursegen/template/chooser-confirm-save" hidden>
+                    {{#str}} savechanges, core {{/str}}
+                  </span>
                 </button>
               </div>
             </div>
