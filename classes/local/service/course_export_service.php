@@ -19,10 +19,16 @@ namespace local_coursegen\local\service;
 defined('MOODLE_INTERNAL') || die();
 
 /**
- * Export a real, already-existing Moodle course into the same resultdata
- * shape create_course_service::create_course() consumes from the Datacurso
- * API (course_configuration, sections_info, generated_activities,
- * subsections_info, blocks_info).
+ * Export a real, already-existing Moodle course into the wire format the
+ * coursegen_template test service expects on its /api/course-result
+ * endpoint: {course_configuration, sections_info, activities,
+ * subsections_info, blocks_info, image_assets}.
+ *
+ * Deliberately named 'activities', not 'generated_activities' like the
+ * Datacurso API's real resultdata: nothing here is AI-generated, this is a
+ * plain export of an already-existing course. The test service renames it
+ * back to 'generated_activities' in its response, since that field name is
+ * create_course_service::create_course()'s real, unchanged contract.
  *
  * Used by the mbz+course round-trip test page: this is the "course 422"
  * side of that unification, read live via Moodle's own APIs (get_fast_modinfo(),
@@ -67,7 +73,7 @@ class course_export_service {
      * shared catalog.
      *
      * @param int $courseid Course ID to export.
-     * @return array {course_configuration, sections_info, generated_activities,
+     * @return array {course_configuration, sections_info, activities,
      *     subsections_info, blocks_info, image_assets}
      */
     public static function export_course(int $courseid): array {
@@ -140,7 +146,7 @@ class course_export_service {
             'uid' => bin2hex(random_bytes(16)),
             'course_configuration' => self::course_configuration($course),
             'sections_info' => $sectionsinfo,
-            'generated_activities' => $generatedactivities,
+            'activities' => $generatedactivities,
             'subsections_info' => [],
             'blocks_info' => self::export_blocks($course),
             'image_assets' => $imageassets,
