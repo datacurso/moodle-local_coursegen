@@ -25,6 +25,10 @@ use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\module_job_service;
 
+defined('MOODLE_INTERNAL') || die();
+
+require_once(__DIR__ . '/fixtures/aiprovider_datacurso_stub.php');
+
 /**
  * Audit event tests for the AI generation lifecycle.
  *

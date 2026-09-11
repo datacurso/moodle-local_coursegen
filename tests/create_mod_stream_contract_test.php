@@ -22,6 +22,10 @@ use local_coursegen\local\models\module_job;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\create_mod_service;
 
+defined('MOODLE_INTERNAL') || die();
+
+require_once(__DIR__ . '/fixtures/aiprovider_datacurso_stub.php');
+
 /**
  * Contract tests for the individual activity generation request and result.
  *

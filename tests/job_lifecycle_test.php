@@ -21,6 +21,10 @@ use local_coursegen\local\api_client_factory;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\module_job_service;
 
+defined('MOODLE_INTERNAL') || die();
+
+require_once(__DIR__ . '/fixtures/aiprovider_datacurso_stub.php');
+
 /**
  * Job lifecycle tests: a generation job is single-use.
  *
