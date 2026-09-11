@@ -486,6 +486,18 @@ try {
     }
     $newcourse = create_course($coursedata);
 
+    // create_course() only sets the course's base fields (fullname,
+    // shortname, format, etc.) — every format-specific display setting
+    // (for format_grid: whether tiles open in a popup or a new tab, the
+    // completion-progress badge, grid image sizing, etc.) lives in
+    // course_format_options, a separate table create_course() never
+    // touches. Without this, a recreated course silently falls back to
+    // that format's bare defaults instead of matching the source course's
+    // real configuration.
+    if (!empty($responsecourse['format_options']) && is_array($responsecourse['format_options'])) {
+        course_get_format($newcourse)->update_course_format_options($responsecourse['format_options']);
+    }
+
     // create_course() may auto-create a default "Announcements" forum in
     // section 0; the recreated course should only ever contain what the
     // response actually describes.
