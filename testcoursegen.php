@@ -19,10 +19,12 @@
  * course's structure and a real .mbz backup's content, without going through
  * the real Datacurso AI backend.
  *
- * Renders raw, without the Moodle theme: creating the activities pollutes the
- * global $PAGE state (each mod_form construction calls $PAGE->set_cm()), so
- * $OUTPUT->header()/footer() would render the last created activity's own
- * page furniture instead of this page's.
+ * Uses the standard post/redirect/get pattern. The result cannot travel as a
+ * session-flash notification: create_course_service::create_course() calls
+ * \core\session\manager::write_close() internally (so other tabs are not
+ * blocked during a potentially long operation), and anything written to the
+ * session after that point is silently never persisted. The outcome travels
+ * as redirect URL parameters instead.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -37,7 +39,8 @@ use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
 
 require_login();
-require_capability('moodle/site:config', context_system::instance());
+$systemcontext = context_system::instance();
+require_capability('moodle/site:config', $systemcontext);
 
 // Test service started via coursegen_template/compose.yml, on the same
 // external 'moodle' docker network as this Moodle site.
@@ -45,11 +48,17 @@ $nodeserviceurl = 'http://coursegen-template:3000';
 
 $sourcecourseid = optional_param('sourcecourseid', 422, PARAM_INT);
 $action = optional_param('action', '', PARAM_ALPHA);
-$pageurl = new moodle_url('/local/coursegen/testcoursegen.php');
 
-$resultline = '';
+$pageurl = new moodle_url('/local/coursegen/testcoursegen.php');
+$PAGE->set_url($pageurl);
+$PAGE->set_context($systemcontext);
+$PAGE->set_pagelayout('admin');
+$PAGE->set_title(get_string('testcoursegen_title', 'local_coursegen'));
+$PAGE->set_heading(get_string('testcoursegen_title', 'local_coursegen'));
 
 if ($action === 'create' && confirm_sesskey()) {
+    $redirectparams = ['sourcecourseid' => $sourcecourseid];
+
     try {
         $courseexport = course_export_service::export_course($sourcecourseid);
 
@@ -76,29 +85,56 @@ if ($action === 'create' && confirm_sesskey()) {
         $creationresult = create_course_service::create_course($session, $resultdata, []);
 
         if (!empty($creationresult['success'])) {
-            $courseurl = new moodle_url('/course/view.php', ['id' => $creationresult['courseid']]);
-            $resultline = $courseurl->out(false);
+            $redirectparams['courseid'] = $creationresult['courseid'];
+            $redirectparams['warnings'] = count($creationresult['activityerrors'] ?? []);
         } else {
-            $resultline = 'Error: ' . $creationresult['message'];
+            $redirectparams['error'] = $creationresult['message'];
         }
     } catch (\Throwable $e) {
-        $resultline = 'Error: ' . $e->getMessage();
+        $redirectparams['error'] = $e->getMessage();
     }
+
+    redirect(new moodle_url('/local/coursegen/testcoursegen.php', $redirectparams));
 }
 
-header('Content-Type: text/html; charset=utf-8');
-?>
-<!doctype html>
-<html>
-<body>
-<form method="post" action="<?php echo s($pageurl->out(false)); ?>">
-    <input type="hidden" name="sesskey" value="<?php echo s(sesskey()); ?>">
-    <input type="hidden" name="action" value="create">
-    <input type="number" name="sourcecourseid" value="<?php echo s($sourcecourseid); ?>">
-    <input type="submit" value="Create test course">
-</form>
-<?php if ($resultline !== ''): ?>
-<p><?php echo s($resultline); ?></p>
-<?php endif; ?>
-</body>
-</html>
+$courseid = optional_param('courseid', 0, PARAM_INT);
+$warnings = optional_param('warnings', 0, PARAM_INT);
+$error = optional_param('error', '', PARAM_TEXT);
+
+echo $OUTPUT->header();
+
+if ($courseid > 0) {
+    $courseurl = new moodle_url('/course/view.php', ['id' => $courseid]);
+    $message = get_string('testcoursegen_success', 'local_coursegen', $courseid) . ' ' . $courseurl->out(false);
+    if ($warnings > 0) {
+        $message .= ' (' . $warnings . ' activity warning(s), see the debug log)';
+    }
+    echo $OUTPUT->notification($message, \core\output\notification::NOTIFY_SUCCESS);
+} else if ($error !== '') {
+    echo $OUTPUT->notification($error, \core\output\notification::NOTIFY_ERROR);
+}
+
+echo html_writer::tag('p', get_string('testcoursegen_desc', 'local_coursegen', $sourcecourseid));
+
+echo html_writer::start_tag('form', ['method' => 'post', 'action' => $pageurl->out(false)]);
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action', 'value' => 'create']);
+echo html_writer::div(
+    html_writer::label(get_string('testcoursegen_sourcecourse', 'local_coursegen'), 'id_sourcecourseid') .
+    html_writer::empty_tag('input', [
+        'type' => 'number',
+        'id' => 'id_sourcecourseid',
+        'name' => 'sourcecourseid',
+        'value' => $sourcecourseid,
+        'class' => 'form-control w-auto d-inline-block ml-2',
+    ]),
+    'mb-3'
+);
+echo html_writer::empty_tag('input', [
+    'type' => 'submit',
+    'class' => 'btn btn-primary',
+    'value' => get_string('testcoursegen_button', 'local_coursegen'),
+]);
+echo html_writer::end_tag('form');
+
+echo $OUTPUT->footer();
