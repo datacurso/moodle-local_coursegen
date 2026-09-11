@@ -54,8 +54,6 @@ class lesson_settings extends base_settings {
             return;
         }
 
-        $images = $this->modsettings['images'] ?? [];
-
         $lesson = lesson::load($this->cm->instance);
         $context = context_module::instance($this->cm->coursemodule);
 
@@ -66,8 +64,11 @@ class lesson_settings extends base_settings {
                 continue;
             }
 
-            if (!empty($images)) {
-                self::attach_generated_images($properties, $images);
+            // Each page's own images (its own real Moodle itemid on the export
+            // side), never the whole-activity list - see generated_image_attacher.
+            $pageimages = $page['images'] ?? [];
+            if (!empty($pageimages)) {
+                self::attach_generated_images($properties, $pageimages);
             }
 
             $created = lesson_page::create($properties, $lesson, $context, $CFG->maxbytes);

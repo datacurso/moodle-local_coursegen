@@ -35,9 +35,11 @@ class forum_settings extends base_settings {
      * Add specific settings for forum module.
      */
     public function add_settings() {
-        $images = $this->modsettings['images'] ?? [];
         foreach ($this->modsettings['discussions'] as $discussion) {
-            $this->add_discussion((object)$discussion, $images);
+            // Each discussion's own images (its own real Moodle itemid on the
+            // export side), never the whole-activity list - see generated_image_attacher.
+            $discussionimages = $discussion['images'] ?? [];
+            $this->add_discussion((object)$discussion, $discussionimages);
         }
     }
 

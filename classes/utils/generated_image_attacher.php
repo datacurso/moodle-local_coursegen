@@ -44,6 +44,13 @@ class generated_image_attacher {
      * forum_add_discussion()'s inlineattachmentsid) resolves the token for
      * real.
      *
+     * The caller MUST pass an already itemid-scoped image list (only images
+     * belonging to the exact field/page/post being processed here), never a
+     * whole-activity merged list: this method (and find_image_by_filename())
+     * matches by filename only and has no itemid disambiguation of its own,
+     * so a merged list risks resolving the wrong real file when two
+     * itemid-scoped fields happen to share a filename.
+     *
      * @param string $text Rich text field value to scan for @@PLUGINFILE@@ tokens.
      * @param array $images Real images available for this activity, each
      *     entry shaped {original_filename, url, ...} (mimetype/filename/id
@@ -98,6 +105,11 @@ class generated_image_attacher {
 
     /**
      * Find the real image entry matching an @@PLUGINFILE@@ filename.
+     *
+     * The caller MUST pass an already itemid-scoped image list (only images
+     * belonging to the exact field/page/post being processed), never a
+     * whole-activity merged list, because this lookup is filename-only and
+     * has no itemid disambiguation of its own.
      *
      * @param array $images Real images available for this activity.
      * @param string $filename Filename referenced by the @@PLUGINFILE@@ token.

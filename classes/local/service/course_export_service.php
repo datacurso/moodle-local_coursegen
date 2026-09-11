@@ -359,6 +359,8 @@ class course_export_service {
         $parameters['popupheight'] = (int)($displayoptions['popupheight'] ?? 0);
 
         $contextid = \context_module::instance($cm->id)->id;
+        // Safe to merge: mod_page hardcodes itemid 0 for both intro and content (mod/page/lib.php),
+        // so these two lists always come from the same real itemid.
         $images = self::merge_images(
             self::extract_pluginfile_images($contextid, 'mod_page', 'intro', 0, (string)$record->intro),
             self::extract_pluginfile_images($contextid, 'mod_page', 'content', 0, (string)$record->content)
@@ -408,33 +410,33 @@ class course_export_service {
         $parameters['completionposts'] = (int)$record->completionposts;
 
         $contextid = \context_module::instance($cm->id)->id;
-        $imagelists = [
-            self::extract_pluginfile_images($contextid, 'mod_forum', 'intro', 0, (string)$record->intro),
-        ];
+        $introimages = self::extract_pluginfile_images($contextid, 'mod_forum', 'intro', 0, (string)$record->intro);
 
         $discussions = [];
         $discussionrecords = $DB->get_records('forum_discussions', ['forum' => $record->id], 'id ASC');
         foreach ($discussionrecords as $discussion) {
             $post = $DB->get_record('forum_posts', ['id' => $discussion->firstpost]);
             $message = $post ? (string)$post->message : '';
+            // Each post has its own real itemid (its own post id, see mod/forum/lib.php
+            // forum_pluginfile()), so its images stay scoped to this discussion only.
+            $postimages = $post
+                ? self::extract_pluginfile_images($contextid, 'mod_forum', 'post', (int)$post->id, $message)
+                : [];
             $discussions[] = [
                 'subject' => (string)$discussion->name,
                 'message' => $message,
+                'images' => $postimages,
             ];
-            if ($post) {
-                $imagelists[] = self::extract_pluginfile_images($contextid, 'mod_forum', 'post', (int)$post->id, $message);
-            }
         }
         if (empty($discussions)) {
             // Seed one discussion from the forum's own real name/intro so the
             // activity isn't silently empty, mirroring the mbz side's fallback.
-            $discussions[] = ['subject' => (string)$cm->name, 'message' => (string)$record->intro];
+            $discussions[] = ['subject' => (string)$cm->name, 'message' => (string)$record->intro, 'images' => []];
         }
         $parameters['mod_settings'] = ['discussions' => $discussions];
 
-        $images = self::merge_images(...$imagelists);
-        if (!empty($images)) {
-            $parameters['images'] = $images;
+        if (!empty($introimages)) {
+            $parameters['images'] = $introimages;
         }
 
         return ['resource_type' => 'forum', 'parameters' => $parameters];
@@ -492,9 +494,7 @@ class course_export_service {
         $parameters['allowofflineattempts'] = (int)$record->allowofflineattempts;
 
         $contextid = \context_module::instance($cm->id)->id;
-        $imagelists = [
-            self::extract_pluginfile_images($contextid, 'mod_lesson', 'intro', 0, (string)$record->intro),
-        ];
+        $introimages = self::extract_pluginfile_images($contextid, 'mod_lesson', 'intro', 0, (string)$record->intro);
 
         $pages = [];
         $pagerecords = $DB->get_records('lesson_pages', ['lessonid' => $record->id], 'id ASC');
@@ -504,7 +504,9 @@ class course_export_service {
             if ($title === '' || $contenthtml === '') {
                 continue;
             }
-            $imagelists[] = self::extract_pluginfile_images(
+            // Each page has its own real itemid (its own lesson_pages.id, see
+            // mod/lesson/lib.php lesson_pluginfile()), so its images stay scoped to this page only.
+            $pageimages = self::extract_pluginfile_images(
                 $contextid,
                 'mod_lesson',
                 'page_contents',
@@ -536,6 +538,7 @@ class course_export_service {
                     'title' => $title,
                     'content_html' => $contenthtml,
                     'options' => $options,
+                    'images' => $pageimages,
                 ];
             } else {
                 $buttons = [];
@@ -554,15 +557,15 @@ class course_export_service {
                     'title' => $title,
                     'content_html' => $contenthtml,
                     'buttons' => $buttons,
+                    'images' => $pageimages,
                 ];
             }
         }
 
         $parameters['mod_settings'] = ['pages' => $pages];
 
-        $images = self::merge_images(...$imagelists);
-        if (!empty($images)) {
-            $parameters['images'] = $images;
+        if (!empty($introimages)) {
+            $parameters['images'] = $introimages;
         }
 
         return ['resource_type' => 'lesson', 'parameters' => $parameters];
@@ -618,6 +621,8 @@ class course_export_service {
         $parameters['mod_settings'] = ['questions' => $questions];
 
         $contextid = \context_module::instance($cm->id)->id;
+        // Safe to merge: mod_feedback uses itemid 0 for both intro and page_after_submit,
+        // so these two lists always come from the same real itemid.
         $images = self::merge_images(
             self::extract_pluginfile_images($contextid, 'mod_feedback', 'intro', 0, (string)$record->intro),
             self::extract_pluginfile_images(
@@ -697,7 +702,15 @@ class course_export_service {
      * Merge several image lists built by extract_pluginfile_images(),
      * de-duplicated by original_filename (first occurrence wins).
      *
-     * @param array ...$imagelists One or more lists of image entries.
+     * Only safe to combine image lists that come from the SAME real Moodle
+     * itemid (e.g. mod_page's intro+content, or mod_feedback's
+     * intro+page_after_submit, which both always use itemid 0). Must never
+     * be used to combine lists from different itemids (e.g. different
+     * lesson pages, different forum posts), because its dedup key is
+     * original_filename only - two distinct real files that happen to share
+     * a filename across itemids would silently collapse into one.
+     *
+     * @param array ...$imagelists One or more lists of image entries, all from the same real itemid.
      * @return array Merged, de-duplicated list.
      */
     private static function merge_images(array ...$imagelists): array {
