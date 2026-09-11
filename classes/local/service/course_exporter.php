@@ -202,7 +202,7 @@ class course_exporter {
             // A lesson's real content is per-page, and so are its files: filearea
             // 'page_contents' is keyed by lesson page id, never by 0. The field name
             // carries the page id so the payload can tell which page an image belongs to.
-            foreach ($parameters['pages'] ?? [] as $page) {
+            foreach ($parameters['mod_settings']['pages'] ?? [] as $page) {
                 $pageid = (int) $page['id'];
                 $this->collect_area_files(
                     $modcontext,
@@ -216,6 +216,18 @@ class course_exporter {
             }
         }
 
+        if ($modname === 'resource') {
+            // mod_resource's deliverable is the file itself, not an embedded content
+            // image — upload it too (whatever its mimetype) so a caller rebuilding
+            // this activity for real (course_recreator) has a real file to attach,
+            // not just size/mimetype metadata. Recorded on its own key, never mixed
+            // into `images` (which is specifically embedded content images).
+            $package = $this->export_resource_package($modcontext, $component);
+            if ($package !== null) {
+                $parameters['mod_settings']['package'] = $package;
+            }
+        }
+
         return [
             'cmid' => (int) $cm->id,
             'modname' => $modname,
@@ -225,6 +237,27 @@ class course_exporter {
             'images' => $images,
             'non_image_files' => $nonimagefiles,
         ];
+    }
+
+    /**
+     * Upload a mod_resource's own real deliverable file.
+     *
+     * @param \context_module $modcontext The activity's module context.
+     * @param string $component File component, e.g. 'mod_resource'.
+     * @return array|null The uploaded reference object, or null when the
+     *     resource has no real file behind it.
+     * @throws \moodle_exception If the upload fails.
+     */
+    private function export_resource_package(\context_module $modcontext, string $component): ?array {
+        $fs = get_file_storage();
+        $files = $fs->get_area_files($modcontext->id, $component, 'content', 0, 'sortorder', false);
+        foreach ($files as $file) {
+            if ($file->is_directory()) {
+                continue;
+            }
+            return $this->upload_image($file);
+        }
+        return null;
     }
 
     /**
@@ -398,22 +431,62 @@ class course_exporter {
         $pages = [];
         $rows = $DB->get_records('lesson_pages', ['lessonid' => (int) $cm->instance], 'id ASC');
         foreach ($rows as $row) {
-            $pages[] = [
+            $answers = array_values($DB->get_records(
+                'lesson_answers',
+                ['lessonid' => (int) $cm->instance, 'pageid' => (int) $row->id],
+                'id ASC'
+            ));
+
+            $page = [
                 'id' => (int) $row->id,
                 'title' => (string) $row->title,
-                'qtype' => (int) $row->qtype,
-                'qoption' => (int) $row->qoption,
-                'contents' => (string) $row->contents,
-                'contentsformat' => (int) $row->contentsformat,
+                'content_html' => (string) $row->contents,
             ];
+
+            // Mirrors lesson_settings::build_page_properties()'s own qtype
+            // handling — only these three shapes are ever reconstructed;
+            // anything else is recorded as raw metadata only (informational,
+            // matches this same class's own "lossless without inventing a
+            // contract" philosophy elsewhere).
+            if ((int) $row->qtype === 20) { // LESSON_PAGE_BRANCHTABLE.
+                // A real content page can carry more than one navigation
+                // button (e.g. "Siguiente"/"Anterior") — lesson_settings only
+                // reconstructs a single forward button, so the first answer
+                // whose jumpto is not "go back" wins; falls back to the
+                // first answer of any kind rather than dropping the page.
+                $forward = null;
+                foreach ($answers as $answer) {
+                    if ((int) $answer->jumpto !== -40) { // LESSON_PREVIOUSPAGE.
+                        $forward = $answer;
+                        break;
+                    }
+                }
+                $forward ??= ($answers[0] ?? null);
+                $page['page_type'] = 'content';
+                $page['button_text'] = $forward !== null ? (string) $forward->answer : '';
+            } else if ((int) $row->qtype === 3 || (int) $row->qtype === 2) { // MULTICHOICE / TRUEFALSE.
+                $page['page_type'] = (int) $row->qtype === 3 ? 'multi_choice' : 'true_false';
+                $page['options'] = array_map(static fn ($answer) => [
+                    'text' => (string) $answer->answer,
+                    'correct' => (int) $answer->score > 0,
+                    'feedback' => (string) ($answer->response ?? ''),
+                ], $answers);
+            } else {
+                // Unsupported page type today (mirrors lesson_settings.php's
+                // own behavior of skipping it) — kept for completeness/
+                // inspection, never fed back into a recreation attempt.
+                $page['page_type'] = 'unsupported';
+                $page['raw_qtype'] = (int) $row->qtype;
+            }
+
+            $pages[] = $page;
         }
 
-        return [
-            'modulename' => (string) $cm->modname,
-            'name' => (string) $cm->name,
-            'introeditor' => self::intro_editor($record),
-            'pages' => $pages,
-        ];
+        $parameters = self::base_parameters($cm);
+        $parameters['introeditor'] = self::intro_editor($record);
+        $parameters['mod_settings'] = ['pages' => $pages];
+
+        return $parameters;
     }
 
     /**
@@ -432,15 +505,18 @@ class course_exporter {
         $rawfields = [];
         if ($record !== null) {
             $rawfields = (array) $record;
-            unset($rawfields['id'], $rawfields['course']);
+            unset($rawfields['id'], $rawfields['course'], $rawfields['intro'], $rawfields['introformat']);
         }
 
-        $parameters = [
-            'modulename' => (string) $cm->modname,
-            'name' => (string) $cm->name,
-            'visible' => (int) $cm->visible,
-            'raw_fields' => self::as_json_object($rawfields),
-        ];
+        // The module's own NOT-NULL columns (e.g. mod_feedback's page_after_submit)
+        // must reach add_moduleinfo() as real top-level parameters, not just as the
+        // 'raw_fields' JSON summary below (which exists for the AI service's own
+        // reference and is never itself consumed by activity creation) — otherwise
+        // recreating this module fails on a missing required field. base_parameters()'
+        // own keys take priority over a same-named raw column.
+        $parameters = array_merge($rawfields, self::base_parameters($cm), [
+            'raw_fields' => self::as_json_object((array) $record),
+        ]);
 
         // The intro/introformat pair is a near-universal Moodle module convention, but
         // not a guaranteed one, so it is only emitted when the row actually has it.

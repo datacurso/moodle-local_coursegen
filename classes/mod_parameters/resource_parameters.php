@@ -36,6 +36,18 @@ class resource_parameters extends base_parameters {
      * @return object Adjusted parameters for the module resource.
      */
     public function get_parameters() {
+        // A caller that already resolved this resource's real file into a draft
+        // itemid itself (e.g. local_coursegen's course-recreation CLI, working
+        // from a real exported course rather than a live Datacurso response)
+        // sets this directly — skip the production-only Datacurso download in
+        // that case. Default (mock/production) behavior is unchanged: this key
+        // is never set by anything else today.
+        $modsettings = (array) ($this->parameters->mod_settings ?? []);
+        if (!empty($modsettings['draft_itemid'])) {
+            $this->parameters->files = (int) $modsettings['draft_itemid'];
+            return $this->parameters;
+        }
+
         $downloadinfo = $this->get_package_download_info();
         $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
         $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
