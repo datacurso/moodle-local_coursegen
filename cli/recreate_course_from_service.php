@@ -567,6 +567,18 @@ try {
         }
     }
 
+    // format_grid renders a section's tile from a SEPARATE, resized
+    // 'displayedsectionimage' file it derives from 'sectionimage' itself —
+    // never the original directly. coursegen_recreate_grid_tile_image()
+    // above only wrote the original; without this, every tile renders
+    // blank despite the real file existing. This is format_grid's own real
+    // resize step (reused as-is, not reimplemented) — it reads every
+    // format_grid_image row for the course and (re)builds the displayed
+    // variant from whatever 'sectionimage' file is really there.
+    if ($gridtilesreattached > 0 && class_exists('\\format_grid\\toolbox')) {
+        \format_grid\toolbox::update_displayed_images($newcourse->id);
+    }
+
     $DB->set_field('course', 'visible', 1, ['id' => $newcourse->id]);
 
     mtrace('');
