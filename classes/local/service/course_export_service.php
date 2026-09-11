@@ -538,22 +538,22 @@ class course_export_service {
                     'options' => $options,
                 ];
             } else {
-                $buttontext = '';
+                $buttons = [];
                 foreach ($answers as $answer) {
-                    $candidate = trim((string)$answer->answer);
-                    if ($candidate !== '') {
-                        $buttontext = $candidate;
-                        break;
+                    $text = trim((string)$answer->answer);
+                    if ($text === '') {
+                        continue;
                     }
+                    $buttons[] = ['text' => $text, 'jumpto' => (int)$answer->jumpto];
                 }
-                if ($buttontext === '') {
+                if (empty($buttons)) {
                     continue;
                 }
                 $pages[] = [
                     'page_type' => 'content',
                     'title' => $title,
                     'content_html' => $contenthtml,
-                    'button_text' => $buttontext,
+                    'buttons' => $buttons,
                 ];
             }
         }
