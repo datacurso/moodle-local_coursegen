@@ -159,4 +159,40 @@ class coursegen_template_client {
 
         return is_array($decoded) ? $decoded : null;
     }
+
+    /**
+     * Download the raw bytes of an asset served by the coursegen-template
+     * service (e.g. a real image or file referenced in its response JSON).
+     *
+     * @param string $url Absolute or relative (resolved against get_base_url()) URL.
+     * @return string Raw file content.
+     * @throws \moodle_exception On connection failure or non-2xx HTTP status.
+     */
+    public function download_raw(string $url): string {
+        if (!preg_match('#^https?://#i', $url)) {
+            $url = $this->baseurl . $url;
+        }
+
+        $curl = new \curl();
+        $options = [
+            'CURLOPT_RETURNTRANSFER' => true,
+            'CURLOPT_CONNECTTIMEOUT' => self::CONNECT_TIMEOUT,
+            'CURLOPT_TIMEOUT' => self::REQUEST_TIMEOUT,
+        ];
+
+        $content = $curl->get($url, [], $options);
+
+        if ($curl->error) {
+            debugging('coursegen-template client: cURL error (' . $curl->error . ') downloading ' . $url, DEBUG_DEVELOPER);
+            throw new \moodle_exception('error_template_service_unreachable', 'local_coursegen', '', $curl->error);
+        }
+
+        $httpcode = (int) ($curl->get_info()['http_code'] ?? 0);
+        if ($httpcode >= 400 || $httpcode === 0) {
+            debugging("coursegen-template client: HTTP {$httpcode} downloading {$url}", DEBUG_DEVELOPER);
+            throw new \moodle_exception('error_template_service_unreachable', 'local_coursegen', '', "HTTP {$httpcode}");
+        }
+
+        return (string) $content;
+    }
 }
