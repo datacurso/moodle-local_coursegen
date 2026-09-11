@@ -173,6 +173,16 @@ class course_exporter {
                 // enablecompletion) kept missing real settings one at a time.
                 'settings' => self::as_json_object(self::course_settings_for_copy($course)),
             ],
+            // The course's own real side blocks (e.g. calendar, recent
+            // activity, or a third-party block an admin actually added) —
+            // without this, a recreated course falls back to whatever the
+            // SITE's default new-course blocks are, which can be a
+            // completely different set (a real one observed in this
+            // project: a course-rating block present only on freshly
+            // created courses, never on the real source course, whose own
+            // JS broke Bootstrap's unrelated modal/tab/button setup on the
+            // page it was dropped onto).
+            'blocks' => $this->export_blocks($coursecontext),
             'sections' => $sections,
             'meta' => [
                 'images_uploaded' => $this->imagesuploaded,
@@ -180,6 +190,33 @@ class course_exporter {
                 'sections_count' => count($sections),
             ],
         ];
+    }
+
+    /**
+     * Export the course's own real block instances (course-context only —
+     * not activity/module-context blocks, which belong to their own
+     * activity, not the course page itself).
+     *
+     * @param \context_course $coursecontext The course context.
+     * @return array
+     */
+    private function export_blocks(\context_course $coursecontext): array {
+        global $DB;
+
+        $rows = $DB->get_records('block_instances', ['parentcontextid' => $coursecontext->id]);
+        $blocks = [];
+        foreach ($rows as $row) {
+            $blocks[] = [
+                'blockname' => (string) $row->blockname,
+                'showinsubcontexts' => (int) $row->showinsubcontexts,
+                'pagetypepattern' => (string) $row->pagetypepattern,
+                'subpagepattern' => $row->subpagepattern === null ? null : (string) $row->subpagepattern,
+                'defaultregion' => (string) $row->defaultregion,
+                'defaultweight' => (int) $row->defaultweight,
+                'configdata' => (string) ($row->configdata ?? ''),
+            ];
+        }
+        return $blocks;
     }
 
     /**

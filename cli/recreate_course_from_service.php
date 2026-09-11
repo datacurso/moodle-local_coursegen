@@ -511,6 +511,34 @@ try {
         course_delete_module((int) $record->id);
     }
 
+    // The site auto-adds ITS OWN default set of course-page blocks to any
+    // brand-new course — which can be a genuinely different set than what
+    // the source course actually has (a real one hit in this project: a
+    // course-rating block present only on freshly created courses, never on
+    // the source course, whose own JS broke Bootstrap's unrelated modal/
+    // tab/button data-api setup on the page). Replace whatever got
+    // auto-added with the source course's real blocks instead.
+    $newcoursecontext = \context_course::instance($newcourse->id);
+    $DB->delete_records('block_instances', ['parentcontextid' => $newcoursecontext->id]);
+    foreach ($response['blocks'] ?? [] as $block) {
+        if (empty($block['blockname'])) {
+            continue;
+        }
+        $DB->insert_record('block_instances', (object) [
+            'blockname' => (string) $block['blockname'],
+            'parentcontextid' => $newcoursecontext->id,
+            'showinsubcontexts' => (int) ($block['showinsubcontexts'] ?? 0),
+            'requiredbytheme' => 0,
+            'pagetypepattern' => (string) ($block['pagetypepattern'] ?? ''),
+            'subpagepattern' => $block['subpagepattern'] ?? null,
+            'defaultregion' => (string) ($block['defaultregion'] ?? 'side-post'),
+            'defaultweight' => (int) ($block['defaultweight'] ?? 0),
+            'configdata' => (string) ($block['configdata'] ?? ''),
+            'timecreated' => time(),
+            'timemodified' => time(),
+        ]);
+    }
+
     $responsesections = $response['sections'] ?? [];
     $maxsectionnum = 0;
     foreach ($responsesections as $section) {
