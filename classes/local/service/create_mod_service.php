@@ -17,6 +17,7 @@
 namespace local_coursegen\local\service;
 
 use local_coursegen\mod_settings\base_settings;
+use local_coursegen\utils\generated_image_attacher;
 use local_coursegen\utils\text_editor_parameter_cleaner;
 
 defined('MOODLE_INTERNAL') || die();
@@ -57,7 +58,14 @@ class create_mod_service {
 
         $newcm = add_moduleinfo($parameters, $course, $mform);
 
-        $modsettings = $parameters->mod_settings;
+        $modsettings = (array)($parameters->mod_settings ?? []);
+        if (!empty($parameters->images)) {
+            // Every mod_settings-based post-creation step (lesson pages,
+            // forum discussions, ...) reads real images from this same key,
+            // regardless of whether they came from the .mbz test content or
+            // from this activity's own base64 export.
+            $modsettings['images'] = array_merge($modsettings['images'] ?? [], (array)$parameters->images);
+        }
 
         self::apply_mod_settings($modname, $newcm, $modsettings);
 
@@ -161,11 +169,68 @@ class create_mod_service {
         $parameters->beforemod = $beforemod;
         $parameters->module = $moduleid;
 
+        self::attach_pluginfile_images($modname, $parameters);
         self::map_feedback_editor_fields($modname, $parameters);
 
         $parameters = self::process_mod_parameters($modname, $parameters);
 
         return $parameters;
+    }
+
+    /**
+     * Resolve @@PLUGINFILE@@ tokens against this activity's real images
+     * (from the plugin's own base64 export, resolved by the node service
+     * into real download URLs) for every rich text editor field that gets
+     * flattened directly by add_moduleinfo()/the module's own *_add_instance()
+     * BEFORE creation - intro (every type), mod_page's own page content, and
+     * mod_feedback's page_after_submit.
+     *
+     * Fields created AFTER add_moduleinfo() (lesson pages, forum discussion
+     * messages) are handled by their own mod_settings\*_settings class
+     * instead, via the same images merged into modsettings['images'] in
+     * create_from_ai_result().
+     *
+     * @param string $modname Module plugin name.
+     * @param object $parameters Parameters object to mutate in place.
+     * @return void
+     */
+    private static function attach_pluginfile_images(string $modname, object $parameters): void {
+        $images = (array)($parameters->images ?? []);
+        if (empty($images)) {
+            return;
+        }
+
+        self::attach_editor_images($parameters, 'introeditor', $images);
+
+        if ($modname === 'page') {
+            self::attach_editor_images($parameters, 'page', $images);
+        } else if ($modname === 'feedback') {
+            self::attach_editor_images($parameters, 'page_after_submit_editor', $images);
+        }
+    }
+
+    /**
+     * Resolve @@PLUGINFILE@@ tokens in one editor-object-shaped field
+     * ({text, format, itemid}) against $images, giving it a fresh draft
+     * itemid pre-loaded with the real matched files.
+     *
+     * @param object $parameters Parameters object to mutate in place.
+     * @param string $field Editor field name (e.g. 'introeditor').
+     * @param array $images Real images available for this activity.
+     * @return void
+     */
+    private static function attach_editor_images(object $parameters, string $field, array $images): void {
+        if (!isset($parameters->$field) || !is_array($parameters->$field)) {
+            return;
+        }
+
+        $editor = $parameters->$field;
+        $text = (string)($editor['text'] ?? '');
+        $draftid = generated_image_attacher::resolve_draft_itemid($text, $images);
+        if ($draftid !== 0) {
+            $editor['itemid'] = $draftid;
+            $parameters->$field = $editor;
+        }
     }
 
     /**

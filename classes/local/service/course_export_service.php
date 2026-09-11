@@ -44,15 +44,38 @@ class course_export_service {
     private const SUPPORTED_TYPES = ['label', 'page', 'forum', 'lesson', 'feedback'];
 
     /**
+     * @var array<string,array{mimetype:string,content_base64:string}> Real file
+     * content, keyed by Moodle's own contenthash, collected once per
+     * export_course() call and shipped as a single course-level catalog
+     * (see class docblock note on transport below) instead of embedded
+     * per-activity: the same real image is very often reused verbatim
+     * across many activities/pages (e.g. a shared banner reused in every
+     * lesson page), and embedding its base64 bytes again for every one of
+     * those references would multiply an otherwise ~10MB real payload into
+     * several hundred MB for a single course export.
+     */
+    private static array $imageassets = [];
+
+    /**
      * Export a course into resultdata shape.
      *
+     * Transport for embedded images: real file bytes travel as base64 in
+     * this same JSON (no new endpoint), but de-duplicated at the course
+     * level under 'image_assets' (keyed by contenthash) rather than
+     * repeated inside every activity's own 'images' entry - each activity's
+     * 'images' entries only carry a 'content_hash' reference into that
+     * shared catalog.
+     *
      * @param int $courseid Course ID to export.
-     * @return array {course_configuration, sections_info, generated_activities, subsections_info}
+     * @return array {course_configuration, sections_info, generated_activities,
+     *     subsections_info, blocks_info, image_assets}
      */
     public static function export_course(int $courseid): array {
         global $CFG;
 
         require_once($CFG->dirroot . '/course/lib.php');
+
+        self::$imageassets = [];
 
         $course = get_course($courseid);
         $modinfo = get_fast_modinfo($course);
@@ -93,6 +116,9 @@ class course_export_service {
             }
         }
 
+        $imageassets = self::$imageassets;
+        self::$imageassets = [];
+
         return [
             'uid' => bin2hex(random_bytes(16)),
             'course_configuration' => self::course_configuration($course),
@@ -100,6 +126,7 @@ class course_export_service {
             'generated_activities' => $generatedactivities,
             'subsections_info' => [],
             'blocks_info' => self::export_blocks($course),
+            'image_assets' => $imageassets,
         ];
     }
 
@@ -300,6 +327,12 @@ class course_export_service {
         $parameters = self::base_parameters($cm, $sectionnum);
         $parameters['introeditor'] = ['text' => (string)$record->intro, 'format' => (int)$record->introformat];
 
+        $contextid = \context_module::instance($cm->id)->id;
+        $images = self::extract_pluginfile_images($contextid, 'mod_label', 'intro', 0, (string)$record->intro);
+        if (!empty($images)) {
+            $parameters['images'] = $images;
+        }
+
         return ['resource_type' => 'label', 'parameters' => $parameters];
     }
 
@@ -324,6 +357,15 @@ class course_export_service {
         $parameters['printlastmodified'] = (int)($displayoptions['printlastmodified'] ?? 0);
         $parameters['popupwidth'] = (int)($displayoptions['popupwidth'] ?? 0);
         $parameters['popupheight'] = (int)($displayoptions['popupheight'] ?? 0);
+
+        $contextid = \context_module::instance($cm->id)->id;
+        $images = self::merge_images(
+            self::extract_pluginfile_images($contextid, 'mod_page', 'intro', 0, (string)$record->intro),
+            self::extract_pluginfile_images($contextid, 'mod_page', 'content', 0, (string)$record->content)
+        );
+        if (!empty($images)) {
+            $parameters['images'] = $images;
+        }
 
         return ['resource_type' => 'page', 'parameters' => $parameters];
     }
@@ -365,14 +407,23 @@ class course_export_service {
         $parameters['completionreplies'] = (int)$record->completionreplies;
         $parameters['completionposts'] = (int)$record->completionposts;
 
+        $contextid = \context_module::instance($cm->id)->id;
+        $imagelists = [
+            self::extract_pluginfile_images($contextid, 'mod_forum', 'intro', 0, (string)$record->intro),
+        ];
+
         $discussions = [];
         $discussionrecords = $DB->get_records('forum_discussions', ['forum' => $record->id], 'id ASC');
         foreach ($discussionrecords as $discussion) {
             $post = $DB->get_record('forum_posts', ['id' => $discussion->firstpost]);
+            $message = $post ? (string)$post->message : '';
             $discussions[] = [
                 'subject' => (string)$discussion->name,
-                'message' => $post ? (string)$post->message : '',
+                'message' => $message,
             ];
+            if ($post) {
+                $imagelists[] = self::extract_pluginfile_images($contextid, 'mod_forum', 'post', (int)$post->id, $message);
+            }
         }
         if (empty($discussions)) {
             // Seed one discussion from the forum's own real name/intro so the
@@ -380,6 +431,11 @@ class course_export_service {
             $discussions[] = ['subject' => (string)$cm->name, 'message' => (string)$record->intro];
         }
         $parameters['mod_settings'] = ['discussions' => $discussions];
+
+        $images = self::merge_images(...$imagelists);
+        if (!empty($images)) {
+            $parameters['images'] = $images;
+        }
 
         return ['resource_type' => 'forum', 'parameters' => $parameters];
     }
@@ -435,6 +491,11 @@ class course_export_service {
         $parameters['completiontimespent'] = (int)$record->completiontimespent;
         $parameters['allowofflineattempts'] = (int)$record->allowofflineattempts;
 
+        $contextid = \context_module::instance($cm->id)->id;
+        $imagelists = [
+            self::extract_pluginfile_images($contextid, 'mod_lesson', 'intro', 0, (string)$record->intro),
+        ];
+
         $pages = [];
         $pagerecords = $DB->get_records('lesson_pages', ['lessonid' => $record->id], 'id ASC');
         foreach ($pagerecords as $pagerecord) {
@@ -443,6 +504,13 @@ class course_export_service {
             if ($title === '' || $contenthtml === '') {
                 continue;
             }
+            $imagelists[] = self::extract_pluginfile_images(
+                $contextid,
+                'mod_lesson',
+                'page_contents',
+                (int)$pagerecord->id,
+                $contenthtml
+            );
 
             $qtype = (int)$pagerecord->qtype;
             $answers = array_values($DB->get_records('lesson_answers', ['pageid' => $pagerecord->id], 'id ASC'));
@@ -491,6 +559,11 @@ class course_export_service {
         }
 
         $parameters['mod_settings'] = ['pages' => $pages];
+
+        $images = self::merge_images(...$imagelists);
+        if (!empty($images)) {
+            $parameters['images'] = $images;
+        }
 
         return ['resource_type' => 'lesson', 'parameters' => $parameters];
     }
@@ -544,7 +617,103 @@ class course_export_service {
         }
         $parameters['mod_settings'] = ['questions' => $questions];
 
+        $contextid = \context_module::instance($cm->id)->id;
+        $images = self::merge_images(
+            self::extract_pluginfile_images($contextid, 'mod_feedback', 'intro', 0, (string)$record->intro),
+            self::extract_pluginfile_images(
+                $contextid,
+                'mod_feedback',
+                'page_after_submit',
+                0,
+                (string)$record->page_after_submit
+            )
+        );
+        if (!empty($images)) {
+            $parameters['images'] = $images;
+        }
+
         return ['resource_type' => 'feedback', 'parameters' => $parameters];
+    }
+
+    /**
+     * Find every real @@PLUGINFILE@@ reference in a rich text field and
+     * return one lightweight reference per resolved file - real content
+     * itself is registered once (by contenthash) in self::$imageassets
+     * (see that property's docblock for why) instead of being embedded
+     * here, so callers only get {filename, original_filename, mimetype,
+     * content_hash}.
+     *
+     * @param int $contextid Real context id owning the file area.
+     * @param string $component Real component of the file area (e.g. mod_page).
+     * @param string $filearea Real filearea of the file area (e.g. content).
+     * @param int $itemid Real itemid of the file area (0 unless the field is
+     *     itemid-scoped, e.g. a lesson page or a forum post).
+     * @param string $text Rich text field value to scan for @@PLUGINFILE@@ tokens.
+     * @return array List of {filename, original_filename, mimetype, content_hash}.
+     */
+    private static function extract_pluginfile_images(
+        int $contextid,
+        string $component,
+        string $filearea,
+        int $itemid,
+        string $text
+    ): array {
+        if ($text === '' || strpos($text, '@@PLUGINFILE@@/') === false) {
+            return [];
+        }
+        if (!preg_match_all('/@@PLUGINFILE@@\/([^"\'\s]+)/', $text, $matches)) {
+            return [];
+        }
+
+        $fs = get_file_storage();
+        $images = [];
+        foreach (array_unique($matches[1]) as $rawfilename) {
+            $filename = rawurldecode($rawfilename);
+            $file = $fs->get_file($contextid, $component, $filearea, $itemid, '/', $filename);
+            if (!$file || $file->is_directory()) {
+                continue;
+            }
+
+            $contenthash = $file->get_contenthash();
+            if (!isset(self::$imageassets[$contenthash])) {
+                self::$imageassets[$contenthash] = [
+                    'mimetype' => (string)$file->get_mimetype(),
+                    'content_base64' => base64_encode($file->get_content()),
+                ];
+            }
+
+            $images[] = [
+                'filename' => $filename,
+                'original_filename' => $filename,
+                'mimetype' => (string)$file->get_mimetype(),
+                'content_hash' => $contenthash,
+            ];
+        }
+
+        return $images;
+    }
+
+    /**
+     * Merge several image lists built by extract_pluginfile_images(),
+     * de-duplicated by original_filename (first occurrence wins).
+     *
+     * @param array ...$imagelists One or more lists of image entries.
+     * @return array Merged, de-duplicated list.
+     */
+    private static function merge_images(array ...$imagelists): array {
+        $merged = [];
+        $seen = [];
+        foreach ($imagelists as $imagelist) {
+            foreach ($imagelist as $image) {
+                $key = $image['original_filename'];
+                if (isset($seen[$key])) {
+                    continue;
+                }
+                $seen[$key] = true;
+                $merged[] = $image;
+            }
+        }
+        return $merged;
     }
 
     /**

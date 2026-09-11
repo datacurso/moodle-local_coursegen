@@ -17,9 +17,9 @@
 namespace local_coursegen\mod_settings;
 
 use context_module;
-use context_user;
 use lesson;
 use lesson_page;
+use local_coursegen\utils\generated_image_attacher;
 use stdClass;
 
 /**
@@ -82,70 +82,22 @@ class lesson_settings extends base_settings {
      * real mod_lesson/page_contents/<pageid> file area and rewrites the
      * token - the same mechanism Moodle's own lesson edit form relies on.
      *
+     * Delegates the actual token-matching/download to the shared
+     * generated_image_attacher, used the same way by every other activity
+     * type this plugin can now attach real images for.
+     *
      * @param stdClass $properties Page properties to mutate in place (contents_editor.itemid).
-     * @param array $images Real images extracted from the source .mbz for this activity.
+     * @param array $images Real images available for this activity (from the
+     *     source .mbz for the test lesson, or from the plugin's own base64
+     *     export for any other pass-through lesson).
      * @return void
      */
     protected static function attach_generated_images(stdClass $properties, array $images): void {
-        global $USER;
-
         $contenthtml = $properties->contents_editor['text'] ?? '';
-        if (!preg_match_all('/@@PLUGINFILE@@\/([^"\'\s]+)/', $contenthtml, $matches)) {
-            return;
-        }
-
-        $fs = get_file_storage();
-        $usercontext = context_user::instance($USER->id);
-        $draftid = 0;
-
-        foreach (array_unique($matches[1]) as $rawfilename) {
-            $filename = rawurldecode($rawfilename);
-            $image = self::find_image_by_filename($images, $filename);
-            if ($image === null) {
-                continue;
-            }
-
-            if ($draftid === 0) {
-                $draftid = file_get_unused_draft_itemid();
-            }
-
-            try {
-                $fs->create_file_from_url([
-                    'contextid' => $usercontext->id,
-                    'component' => 'user',
-                    'filearea' => 'draft',
-                    'itemid' => $draftid,
-                    'filepath' => '/',
-                    'filename' => $filename,
-                ], $image['url'], null, true);
-            } catch (\Throwable $exception) {
-                debugging(
-                    'local_coursegen: could not download lesson page image "' . $filename . '": '
-                    . $exception->getMessage(),
-                    DEBUG_DEVELOPER
-                );
-            }
-        }
-
+        $draftid = generated_image_attacher::resolve_draft_itemid($contenthtml, $images);
         if ($draftid !== 0) {
             $properties->contents_editor['itemid'] = $draftid;
         }
-    }
-
-    /**
-     * Find the real image entry matching a page's @@PLUGINFILE@@ filename.
-     *
-     * @param array $images Real images extracted from the source .mbz for this activity.
-     * @param string $filename Filename referenced by the page's @@PLUGINFILE@@ token.
-     * @return array|null
-     */
-    protected static function find_image_by_filename(array $images, string $filename): ?array {
-        foreach ($images as $image) {
-            if (($image['original_filename'] ?? null) === $filename) {
-                return $image;
-            }
-        }
-        return null;
     }
 
     /**
