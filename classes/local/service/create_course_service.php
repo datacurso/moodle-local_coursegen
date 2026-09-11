@@ -18,6 +18,7 @@ namespace local_coursegen\local\service;
 
 use core_course_category;
 use local_coursegen\local\models\course_session;
+use local_coursegen\utils\generated_image_attacher;
 
 /**
  * Service responsible for creating a course from an AI planning session.
@@ -386,6 +387,7 @@ class create_course_service {
         // Get course format to handle sections properly.
         $course = get_course($courseid);
         $courseformat = course_get_format($course);
+        $coursecontextid = \context_course::instance($courseid)->id;
 
         // Delete all existing sections except section 0 (general section).
         self::delete_course_sections($courseid);
@@ -403,7 +405,8 @@ class create_course_service {
 
             if (isset($existingsections[$sectionnumber])) {
                 // Update existing section name/summary/visibility.
-                $updatedata = ['id' => $existingsections[$sectionnumber]->id];
+                $sectionid = (int)$existingsections[$sectionnumber]->id;
+                $updatedata = ['id' => $sectionid];
                 if (!empty($sectionname) && $existingsections[$sectionnumber]->name !== $sectionname) {
                     $updatedata['name'] = $sectionname;
                 }
@@ -424,7 +427,21 @@ class create_course_service {
                 $sectiondata->availability = null;
                 $sectiondata->timemodified = time();
 
-                $DB->insert_record('course_sections', $sectiondata);
+                $sectionid = (int)$DB->insert_record('course_sections', $sectiondata);
+            }
+
+            // Section summary images: scoped to this section's own real id
+            // (component 'course', filearea 'section'), never combined with
+            // any other section - raw $DB writes bypass the normal
+            // moodleform save flow, so the draft-to-final move has to be
+            // done here explicitly instead of relying on it happening
+            // automatically (unlike lesson_page::create(), which does).
+            $sectionimages = $sectioninfo['images'] ?? [];
+            if (!empty($sectionimages)) {
+                $draftid = generated_image_attacher::resolve_draft_itemid($sectionsummary, $sectionimages);
+                if ($draftid !== 0) {
+                    file_save_draft_area_files($draftid, $coursecontextid, 'course', 'section', $sectionid);
+                }
             }
         }
 

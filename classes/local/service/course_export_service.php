@@ -80,20 +80,37 @@ class course_export_service {
         $course = get_course($courseid);
         $modinfo = get_fast_modinfo($course);
 
+        $coursecontextid = \context_course::instance($course->id)->id;
+
         $sectionsinfo = [];
         foreach ($modinfo->get_section_info_all() as $sectioninfo) {
             // Delegated (mod_subsection) sections are out of scope for this export.
             if (!empty($sectioninfo->component)) {
                 continue;
             }
-            $sectionsinfo[] = [
+            $summary = (string)($sectioninfo->summary ?? '');
+            $entry = [
                 'uid' => bin2hex(random_bytes(16)),
                 'section' => (int)$sectioninfo->section,
                 'name' => get_section_name($course, $sectioninfo),
-                'description' => (string)($sectioninfo->summary ?? ''),
+                'description' => $summary,
                 'descriptionformat' => (int)($sectioninfo->summaryformat ?? FORMAT_HTML),
                 'visible' => (int)$sectioninfo->visible,
             ];
+            // Section summary images live under the section's own real id
+            // (component 'course', filearea 'section' - course/editsection_form.php),
+            // never combined with any other itemid.
+            $images = self::extract_pluginfile_images(
+                $coursecontextid,
+                'course',
+                'section',
+                (int)$sectioninfo->id,
+                $summary
+            );
+            if (!empty($images)) {
+                $entry['images'] = $images;
+            }
+            $sectionsinfo[] = $entry;
         }
 
         $generatedactivities = [];
