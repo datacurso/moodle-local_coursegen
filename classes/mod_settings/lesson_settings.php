@@ -88,14 +88,7 @@ class lesson_settings extends base_settings {
         $properties->contents_editor = [
             'text' => $contenthtml,
             'format' => FORMAT_HTML,
-            // A caller that has already staged this page's real images in a
-            // draft area (see course_recreator) passes that draft itemid here
-            // so lesson_page::create()'s own file_postupdate_standard_editor()
-            // call moves them into mod_lesson/page_contents for real and
-            // rewrites the @@PLUGINFILE@@ tokens accordingly. 0 (the previous
-            // hardcoded value) means "no files to move," which is still
-            // correct whenever a page has none.
-            'itemid' => (int) ($page['_draftitemid'] ?? 0),
+            'itemid' => 0,
         ];
         $properties->pageid = $previouspageid;
 
