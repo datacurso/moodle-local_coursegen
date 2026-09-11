@@ -1,3 +1,38 @@
+## 2.0.5
+
+**Released on:** 2026-09-11
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Security
+
+- **DOM XSS closed in the AI streaming render pipelines**  
+  The course planning buffer and the single-activity stream were inserted as HTML after Markdown parsing without sanitization. Both flows are now routed through the plugin's central sanitizer (DOMPurify with a strict tag/attribute allow-list, failing closed to plain text), section names and activity types are escaped or validated against a module allow-list, and the local escaper covers attribute contexts.
+- **Whole-course creation flow now enforces capabilities**  
+  Course confirmation, plan feedback, session state, settings and item regeneration endpoints previously relied on session ownership alone. All of them now require `moodle/course:create` and `local/coursegen:createcoursewithai` inside the method, and the effective target category is validated with `moodle/course:create` at category context before any course is created.
+- **Generation jobs anchored to their owner and consumed once**  
+  Module materialization loads the job by job id, course and user before contacting the provider, takes section and position from the persisted job instead of client parameters, rejects already-consumed jobs (no duplicate activities on replay), adds a unique database index on the job id, and removes a dead legacy class that kept the vulnerable lookup pattern.
+- **Technical exception messages no longer reach the browser**  
+  Five endpoints returned raw exception text. Clients now receive localized generic messages while the technical detail stays in the server debug log; per-activity error messages accumulated during course creation are sanitized as well.
+- **Service URLs require HTTPS**  
+  Both configurable service URLs must use HTTPS to be saved; plain-HTTP local addresses are accepted only while the site runs in developer debugging mode.
+
+## Added
+
+- **Auditable events for AI generation**  
+  Five plugin events — generation job started, external file transfer, generation result applied, generation failure and authorization denial — now leave an audit trail with course, user and job identifiers, never including prompts or personal content.
+- **Complete Privacy API coverage**  
+  The privacy provider declares the external Datacurso AI service location with every transferred field, declares the planning prompt field, exports and deletes syllabus files in all GDPR deletion variants (including plugin uninstall), models course-bound data in course context with a course-deletion cleanup observer, and anonymizes shared site configuration rows instead of destroying them when a user is deleted.
+
+## Fixed
+
+- **Image generation management usable by delegated managers**  
+  The save endpoint of the image generation admin page required `moodle/site:config` while the page itself was gated by `local/coursegen:manageimagegeneration`, leaving non-admin managers with a visible but unusable page. Both now check the same capability.
+- **Institutional guideline name reaches the generation job**  
+  The single-activity stream stored the guideline name from a property the context service never returned, so the stored job always lost it. The correct field is now read.
+- **Missing English strings for the syllabus and planning UI**  
+  Six strings existed only in translations and rendered as `[[key]]` placeholders for English users; they are now defined in the English pack and translated across all supported languages.
+
 ## 2.0.4
 
 **Released on:** 2026-08-27
