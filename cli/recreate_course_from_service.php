@@ -472,7 +472,13 @@ try {
     $sourcecourse = get_course($courseid);
     $responsecourse = $response['course'];
 
-    $coursedata = new \stdClass();
+    // Start from the FULL exported course row (every real course-level
+    // setting — dates, language, group mode, news items, max upload size,
+    // theme, completion, etc.) rather than picking fields one at a time,
+    // which kept missing real settings (format_options, then
+    // enablecompletion...). Only what genuinely must be regenerated for a
+    // brand-new, distinct course gets overridden below.
+    $coursedata = (object) ($responsecourse['settings'] ?? []);
     $coursedata->fullname = \core_text::substr(
         (string) ($responsecourse['fullname'] ?? 'Recreated course') . ' (recreated) - ' . userdate(time(), '%d %b %Y'),
         0,
@@ -591,7 +597,13 @@ try {
         \format_grid\toolbox::update_displayed_images($newcourse->id);
     }
 
-    $DB->set_field('course', 'visible', 1, ['id' => $newcourse->id]);
+    // The course was deliberately created hidden (visible=0) so nothing was
+    // ever visible mid-build; reveal it now using the SOURCE course's own
+    // real visibility, not a hardcoded 1 (a template that was itself hidden
+    // must not come back visible just because it went through this script).
+    $sourcevisible = (int) ($responsecourse['settings']['visible'] ?? 1);
+    $DB->set_field('course', 'visible', $sourcevisible, ['id' => $newcourse->id]);
+    $DB->set_field('course', 'visibleold', $sourcevisible, ['id' => $newcourse->id]);
 
     mtrace('');
     mtrace('== Result ==');
