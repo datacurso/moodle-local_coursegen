@@ -80,6 +80,16 @@ class template_course_builder_service {
             // own general instruction/reference files.
             $export = course_export_service::export_course_for_template($template);
 
+            // 1b. Pin the real request language to the course being regenerated,
+            // not to whoever happens to be logged in: the shared HTTP client
+            // (aiprovider_datacurso\httpclient\datacurso_api_base::send_request())
+            // auto-fills a missing 'lang' with current_language() - the admin's
+            // own active UI language - which is wrong here, unlike the
+            // "course from scratch" flow (course_planning_service.php), where
+            // the requester explicitly picks a language in the real form because
+            // there is no existing course to derive one from. Here there IS one.
+            $export['lang'] = $export['course_configuration']['lang'] ?? current_language();
+
             // 2. Professor-added new sections/activities are not created
             // locally - they are folded into the same payload the AI service
             // plans from, as distinct top-level keys (never silently dropped).
