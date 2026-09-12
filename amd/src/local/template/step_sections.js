@@ -14,12 +14,23 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Section/activity structure review — renders the native course-format view
- * with the configuration controls Moodle already injected server-side
- * (see classes/output/sections_config.php), for both the initial page load
- * and the AJAX course-selection path (get_course_preview always runs
- * through the same server-side renderer, so there is only ONE place that
- * builds these controls, not a client-side copy that can drift from it).
+ * Section/activity structure review — renders the "Course sections" view
+ * already built server-side (see classes/output/sections_config.php), for
+ * both the initial page load and the AJAX course-selection path
+ * (get_course_preview always runs through the same server-side renderer, so
+ * there is only ONE place that builds this markup, not a client-side copy
+ * that can drift from it).
+ *
+ * After each render (either path) sections_events.js binds the review's
+ * controls — row action selects, selection checkboxes, bulk action bars and
+ * section behavior selects — so their changes flow into the shared state that
+ * buildSections() turns into the save payload. The defaults flow the same
+ * way as before: init.js::initSectionState() seeds
+ * state.sectionBehavior/activityAction/activityRef/activityPrompt from the
+ * course structure, applyTypeDefaultsToState() below re-seeds from the
+ * rendered rows' data-modname as a safety net, and binding then re-seeds
+ * activityAction from the rendered selects themselves (the server-side
+ * render is the single source of truth for per-row defaults).
  *
  * @module     local_coursegen/local/template/step_sections
  * @copyright  2025 Wilber Narvaez <https://datacurso.com>
@@ -27,8 +38,8 @@
  */
 
 import {getCoursePreview} from './repository';
-import {bindServerRenderedControls} from './sections_events';
 import {applyTypeDefaultsToState} from './type_action_sync';
+import {bindServerRenderedControls} from './sections_events';
 import Notification from 'core/notification';
 
 let rendered = false;
@@ -58,8 +69,10 @@ export const renderStepSections = async(panel, state, isFreshFromPageLoad) => {
 
     let container = panel.querySelector('[data-region="sections-config"]');
 
-    // Server already rendered the controls on initial page load — just bind.
-    if (isFreshFromPageLoad && container && container.querySelector('[data-sec-action], [data-act-val]')) {
+    // Server already rendered the review on initial page load — seed the
+    // per-activity defaults and bind the review controls to it.
+    if (isFreshFromPageLoad && container
+            && container.querySelector('[data-region="section-behavior"], [data-region="activity-action"]')) {
         applyTypeDefaultsToState(container, state);
         bindServerRenderedControls(container, state);
         rendered = true;
@@ -74,7 +87,7 @@ export const renderStepSections = async(panel, state, isFreshFromPageLoad) => {
             <span class="text-muted">Loading course structure...</span>
         </div>`;
     try {
-        const preview = await getCoursePreview(state.selectedCourseId);
+        const preview = await getCoursePreview(state.selectedCourseId, state.templateId || 0);
         container.innerHTML = preview.html;
         applyTypeDefaultsToState(container, state);
         bindServerRenderedControls(container, state);

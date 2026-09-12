@@ -29,6 +29,7 @@
 
 import {renderStepSections, resetSectionsRender} from './step_sections';
 import {renderStepLimits} from './step_limits';
+import {resetSectionsDirtyState} from './sections_events';
 import {defaultActionForModname} from './type_action_sync';
 import * as Repository from './repository';
 import DynamicForm from 'core_form/dynamicform';
@@ -41,6 +42,12 @@ const state = {
     selectedCourseId: null, selectedCourse: null,
     courseStructure: null, templateName: '', templateDesc: '', templateId: 0,
     sectionBehavior: {}, activityAction: {}, activityRef: {}, activityPrompt: {},
+    // Saved per-section/per-activity configuration when editing an existing
+    // template (see edit_template.php) — seeds the maps above so a re-save
+    // round-trips values that have no visible controls (useasreference,
+    // prompt). The rendered selects already preselect the saved actions
+    // server-side.
+    savedSections: {}, savedActivities: {},
     maxSections: 0, noLimit: false, allowedTypes: [],
     namingPattern: 'Unidad {N} — {nombre}', namingStart: 1, categories: [],
 };
@@ -179,7 +186,7 @@ const renderConfigRegion = async() => {
     // reloading it again would just be a redundant round-trip.
     const isFreshFromPageLoad = configFormIsFreshFromPageLoad;
     if (!isFreshFromPageLoad) {
-        await configForm.load({courseid: state.selectedCourseId});
+        await configForm.load({courseid: state.selectedCourseId, templateid: state.templateId});
     }
     configFormIsFreshFromPageLoad = false;
 
@@ -206,6 +213,12 @@ const renderConfigRegion = async() => {
  * an admin reviewing a real ~28-activity course should see mostly-correct
  * defaults already applied, not "modify" everywhere regardless of whether
  * the generator can even produce that type of content.
+ *
+ * When editing an existing template, its saved configuration wins over the
+ * type defaults for every section/activity it still has a row for —
+ * activities added to the base course since the template was saved keep
+ * their type default, and saved rows for since-deleted cmids simply never
+ * match anything.
  */
 const initSectionState = () => {
     state.sectionBehavior = {};
@@ -215,14 +228,19 @@ const initSectionState = () => {
 
     const actTypes = new Set();
     state.courseStructure.forEach(s => {
-        state.sectionBehavior[s.id] = 'custom';
+        state.sectionBehavior[s.id] = state.savedSections[s.id] || 'custom';
         s.activities.forEach(a => {
-            state.activityAction[a.id] = defaultActionForModname(a.modname);
-            state.activityRef[a.id] = true;
+            const saved = state.savedActivities[a.id];
+            state.activityAction[a.id] = saved?.action || defaultActionForModname(a.modname);
+            state.activityRef[a.id] = saved ? saved.useasreference !== false : true;
+            state.activityPrompt[a.id] = saved?.prompt || '';
             actTypes.add(a.modname);
         });
     });
-    state.maxSections = state.courseStructure.length;
+    // maxSections counts EXTRA sections the teacher may add on top of the
+    // template's own — 0 until the allow-add-sections checkbox is ticked
+    // (see step_limits.js), never the base course's own section count.
+    state.maxSections = 0;
     state.allowedTypes = [...actTypes];
 };
 
@@ -267,6 +285,12 @@ const saveTemplate = async() => {
         // so without this the native "changes you made may not be saved"
         // warning would misfire on this very redirect.
         resetAllFormDirtyStates();
+        // The sections controls live OUTSIDE any watched form: their dirty
+        // protection is sections_events' own raw beforeunload listener,
+        // which resetAllFormDirtyStates() above cannot see — it must be
+        // dropped explicitly or the browser dialog fires on this redirect.
+        // A failed save throws before reaching here, keeping the protection.
+        resetSectionsDirtyState();
         window.location.href = M.cfg.wwwroot + '/local/coursegen/manage_templates.php';
     } catch (e) {
         Notification.exception(e);
@@ -286,6 +310,8 @@ export const init = (config) => {
 
     state.templateId = config.templateid || 0;
     state.categories = config.categories || [];
+    state.savedSections = config.savedsections || {};
+    state.savedActivities = config.savedactivities || {};
 
     const initialCourseId = config.initialcourseid || 0;
     const initialCourseName = config.initialcoursename || '';

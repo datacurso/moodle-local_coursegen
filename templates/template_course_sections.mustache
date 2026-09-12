@@ -1,0 +1,186 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/template_course_sections
+
+    "Course sections" review on the create-template screen: one collapsible
+    card per section (expanded by default) holding a report-style table of
+    its activities. Each row carries a selection checkbox and a compact
+    action select preselected with its type's default action; each section
+    table a select-all checkbox in its header, and ONE global bulk action
+    bar sits below all the cards ("With selected activities…", born
+    disabled). local/template/sections_events.js binds all of them after
+    every render (initial page load and AJAX course switch).
+
+    The collapse ids are deterministic (course id + section id) instead of
+    the uniqid helper: its output can start with a digit, which is not a
+    valid CSS identifier, so Bootstrap 4 silently drops the data-target
+    selector and the toggle does nothing. (No literal double closing braces
+    may appear anywhere in this comment either — they would end it early
+    and dump the rest of the docblock as page content.)
+
+    Classes required for JS:
+    * none
+
+    Data attributes required for JS:
+    * data-for="section" data-id on each section card
+    * data-for="cmitem" data-id + data-modname on each activity row
+    * data-region="section-behavior" data-sid on each header's behavior select
+    * data-region="activity-action" data-id on each row's action select
+    * data-region="activity-select" data-id on each row's checkbox
+    * data-region="select-all" on each section table's header checkbox
+    * data-region="section-select-all" data-sid on each section card
+      header's checkbox (usable while the section is collapsed)
+    * data-region="bulk-action" on the single global bulk select
+
+    Context variables required for this template:
+    * courseid int     - Base course id (keeps collapse ids unique per course)
+    * hassections bool - True when the course has any section
+    * sections array   - Sections, each with: id int, num int, name string,
+                         activitycount int, hasactivities bool,
+                         actions array (value, sectionid, label, tip, active),
+                         activities array (cmid, name, modname, typelabel,
+                         iconurl, actions array (value, cmid, label, tip, active))
+
+    Example context (json):
+    {
+        "courseid": 3,
+        "hassections": true,
+        "sections": [
+            {
+                "id": 11,
+                "num": 1,
+                "name": "Topic 1",
+                "activitycount": 1,
+                "hasactivities": true,
+                "actions": [
+                    {"value": "custom", "sectionid": 11, "label": "Customised", "tip": "Configure each activity", "active": true}
+                ],
+                "activities": [
+                    {
+                        "cmid": 42,
+                        "name": "Welcome page",
+                        "modname": "page",
+                        "typelabel": "Page",
+                        "iconurl": "https://example.com/theme/image.php/boost/page/1/monologo",
+                        "actions": [
+                            {"value": "modify", "cmid": 42, "label": "Modify with AI", "tip": "AI will generate new content", "active": true}
+                        ]
+                    }
+                ]
+            }
+        ]
+    }
+}}
+<div class="local_coursegen-template_course_sections" data-region="course-sections">
+{{#sections}}
+    <div class="tpl-section-card" data-for="section" data-id="{{id}}" data-number="{{num}}">
+        <div class="tpl-section-header d-flex align-items-center">
+            {{#hasactivities}}
+            {{! A sibling of the collapse toggle, never inside it: checking
+                it must not collapse/expand the section. }}
+            <input type="checkbox" class="mr-2" data-region="section-select-all" data-sid="{{id}}"
+                   aria-label="{{name}}">
+            {{/hasactivities}}
+            <button type="button"
+                    class="btn btn-link text-reset text-decoration-none d-flex align-items-center text-left p-0 flex-grow-1 tpl-section-toggle"
+                    data-toggle="collapse"
+                    data-target="#local-coursegen-tpl-section-{{courseid}}-{{id}}"
+                    aria-expanded="true"
+                    aria-controls="local-coursegen-tpl-section-{{courseid}}-{{id}}">
+                <i class="icon fa fa-chevron-down fa-fw tpl-section-chevron" aria-hidden="true"></i>
+                <span class="font-weight-bold">{{name}}</span>
+                <span class="badge badge-pill badge-secondary ml-2">
+                    {{#str}} template_activities_count, local_coursegen, {{activitycount}} {{/str}}
+                </span>
+            </button>
+            {{! A sibling of the collapse toggle, never inside it: opening
+                the select must not collapse/expand the section. }}
+            <select class="custom-select custom-select-sm tpl-section-behavior ml-auto"
+                    data-region="section-behavior" data-sid="{{id}}"
+                    aria-label="{{#str}} actions, core {{/str}}">
+                {{#actions}}
+                <option value="{{value}}" title="{{tip}}"{{#active}} selected{{/active}}>{{label}}</option>
+                {{/actions}}
+            </select>
+        </div>
+        <div class="collapse show" id="local-coursegen-tpl-section-{{courseid}}-{{id}}">
+            {{#hasactivities}}
+            <div class="table-responsive">
+                <table class="table generaltable table-hover mb-0 tpl-activity-table">
+                    <thead>
+                        <tr>
+                            <th scope="col" class="tpl-select-col">
+                                <input type="checkbox" data-region="select-all"
+                                       aria-label="{{#str}} selectall, core {{/str}}">
+                            </th>
+                            <th scope="col">{{#str}} name, core {{/str}}</th>
+                            <th scope="col" class="tpl-col-type">{{#str}} template_table_type, local_coursegen {{/str}}</th>
+                            <th scope="col" class="text-right tpl-col-actions">{{#str}} actions, core {{/str}}</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{#activities}}
+                        <tr data-for="cmitem" data-id="{{cmid}}" data-modname="{{modname}}">
+                            <td class="align-middle tpl-select-col">
+                                <input type="checkbox" data-region="activity-select" data-id="{{cmid}}"
+                                       aria-label="{{name}}">
+                            </td>
+                            <td class="align-middle">
+                                <img src="{{iconurl}}" class="icon activityicon mr-2" alt="">{{!
+                                }}{{#viewurl}}<a href="{{viewurl}}" target="_blank" rel="noopener">{{name}}</a>{{/viewurl}}{{!
+                                }}{{^viewurl}}<span>{{name}}</span>{{/viewurl}}
+                            </td>
+                            <td class="align-middle text-muted">{{typelabel}}</td>
+                            <td class="align-middle text-right">
+                                <select class="custom-select custom-select-sm tpl-activity-action"
+                                        data-region="activity-action" data-id="{{cmid}}"
+                                        aria-label="{{#str}} actions, core {{/str}}">
+                                    {{#actions}}
+                                    <option value="{{value}}" title="{{tip}}"{{#active}} selected{{/active}}>{{label}}</option>
+                                    {{/actions}}
+                                </select>
+                            </td>
+                        </tr>
+                        {{/activities}}
+                    </tbody>
+                </table>
+            </div>
+            {{/hasactivities}}
+            {{^hasactivities}}
+            <p class="text-muted p-3 mb-0">{{#str}} template_section_no_activities, local_coursegen {{/str}}</p>
+            {{/hasactivities}}
+        </div>
+    </div>
+{{/sections}}
+{{#hassections}}
+    <div class="tpl-bulk-bar d-flex align-items-center flex-wrap" data-region="bulk-bar">
+        <label class="mb-0 mr-2" for="local-coursegen-bulk-action-{{courseid}}">
+            {{#str}} template_with_selected_activities, local_coursegen {{/str}}
+        </label>
+        <select class="custom-select custom-select-sm tpl-bulk-select"
+                id="local-coursegen-bulk-action-{{courseid}}"
+                data-region="bulk-action" disabled>
+            <option value="" selected>{{#str}} choosedots, core {{/str}}</option>
+            <option value="modify">{{#str}} template_activity_modify, local_coursegen {{/str}}</option>
+            <option value="keep">{{#str}} template_activity_keep, local_coursegen {{/str}}</option>
+            <option value="reference">{{#str}} template_activity_reference, local_coursegen {{/str}}</option>
+            <option value="exclude">{{#str}} template_activity_exclude, local_coursegen {{/str}}</option>
+        </select>
+    </div>
+{{/hassections}}
+</div>
