@@ -61,10 +61,21 @@ if ($action === 'create' && confirm_sesskey()) {
 
     try {
         $courseexport = course_export_service::export_course($sourcecourseid);
+        $imagefiles = course_export_service::get_exported_image_files();
+
+        // Real multipart/form-data request: one 'payload' text part carrying
+        // the lightweight JSON (image references only, never bytes), plus one
+        // real file part per unique image, fieldname = its own contenthash.
+        // Passing a stored_file as an array value makes Moodle's curl class
+        // upload it as a real CURLFile part (see stored_file::add_to_curl_request());
+        // it never touches base64 or needs a manual temp copy.
+        $postparams = ['payload' => json_encode($courseexport)];
+        foreach ($imagefiles as $contenthash => $file) {
+            $postparams[$contenthash] = $file;
+        }
 
         $curl = new \curl();
-        $curl->setHeader('Content-Type: application/json');
-        $response = $curl->post($nodeserviceurl . '/api/course-result', json_encode($courseexport));
+        $response = $curl->post($nodeserviceurl . '/api/course-result', $postparams);
 
         if ($curl->get_errno()) {
             throw new \Exception('Could not reach the coursegen_template test service: ' . $curl->error);

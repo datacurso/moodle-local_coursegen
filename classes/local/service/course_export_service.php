@@ -22,7 +22,8 @@ defined('MOODLE_INTERNAL') || die();
  * Export a real, already-existing Moodle course into the wire format the
  * coursegen_template test service expects on its /api/course-result
  * endpoint: {course_configuration, sections_info, activities,
- * subsections_info, blocks_info, image_assets}.
+ * subsections_info, blocks_info}, plus the real image files exported
+ * alongside it (see get_exported_image_files()).
  *
  * Deliberately named 'activities', not 'generated_activities' like the
  * Datacurso API's real resultdata: nothing here is AI-generated, this is a
@@ -50,31 +51,31 @@ class course_export_service {
     private const SUPPORTED_TYPES = ['label', 'page', 'forum', 'lesson', 'feedback'];
 
     /**
-     * @var array<string,array{mimetype:string,content_base64:string}> Real file
-     * content, keyed by Moodle's own contenthash, collected once per
-     * export_course() call and shipped as a single course-level catalog
-     * (see class docblock note on transport below) instead of embedded
-     * per-activity: the same real image is very often reused verbatim
-     * across many activities/pages (e.g. a shared banner reused in every
-     * lesson page), and embedding its base64 bytes again for every one of
-     * those references would multiply an otherwise ~10MB real payload into
-     * several hundred MB for a single course export.
+     * @var array<string,\stored_file> Real Moodle stored_file objects, keyed
+     * by their own contenthash, collected once per export_course() call: the
+     * same real image is very often reused verbatim across many
+     * activities/pages (e.g. a shared banner reused in every lesson page),
+     * so each unique file is kept exactly once here instead of once per
+     * reference. Transport is multipart/form-data (see
+     * get_exported_image_files()): each entry becomes one real file part,
+     * uploaded straight from Moodle's own file storage via
+     * stored_file::add_to_curl_request() - no base64, no extra copy.
      */
     private static array $imageassets = [];
 
     /**
      * Export a course into resultdata shape.
      *
-     * Transport for embedded images: real file bytes travel as base64 in
-     * this same JSON (no new endpoint), but de-duplicated at the course
-     * level under 'image_assets' (keyed by contenthash) rather than
-     * repeated inside every activity's own 'images' entry - each activity's
-     * 'images' entries only carry a 'content_hash' reference into that
-     * shared catalog.
+     * Every activity/section 'images' entry only carries a 'content_hash'
+     * reference (never the file bytes themselves); the real bytes for each
+     * unique contenthash referenced during this export are collected
+     * separately and retrievable via get_exported_image_files(), for the
+     * caller to attach as real multipart file parts (fieldname = contenthash)
+     * alongside this JSON.
      *
      * @param int $courseid Course ID to export.
      * @return array {course_configuration, sections_info, activities,
-     *     subsections_info, blocks_info, image_assets}
+     *     subsections_info, blocks_info}
      */
     public static function export_course(int $courseid): array {
         global $CFG;
@@ -147,9 +148,6 @@ class course_export_service {
             }
         }
 
-        $imageassets = self::$imageassets;
-        self::$imageassets = [];
-
         return [
             'uid' => bin2hex(random_bytes(16)),
             'course_configuration' => self::course_configuration($course),
@@ -157,8 +155,24 @@ class course_export_service {
             'activities' => $generatedactivities,
             'subsections_info' => [],
             'blocks_info' => self::export_blocks($course),
-            'image_assets' => $imageassets,
         ];
+    }
+
+    /**
+     * Real stored_file objects for every unique image referenced by the
+     * course built in the most recent export_course() call, keyed by
+     * contenthash.
+     *
+     * Callers attach each entry as a real multipart file part (fieldname =
+     * its contenthash) alongside the JSON returned by export_course(): the
+     * node service re-associates each uploaded part with its place in the
+     * JSON tree via the 'content_hash' reference already present on every
+     * image entry there.
+     *
+     * @return array<string,\stored_file>
+     */
+    public static function get_exported_image_files(): array {
+        return self::$imageassets;
     }
 
     /**
@@ -714,10 +728,7 @@ class course_export_service {
 
             $contenthash = $file->get_contenthash();
             if (!isset(self::$imageassets[$contenthash])) {
-                self::$imageassets[$contenthash] = [
-                    'mimetype' => (string)$file->get_mimetype(),
-                    'content_base64' => base64_encode($file->get_content()),
-                ];
+                self::$imageassets[$contenthash] = $file;
             }
 
             $images[] = [
@@ -751,10 +762,7 @@ class course_export_service {
         foreach ($files as $file) {
             $contenthash = $file->get_contenthash();
             if (!isset(self::$imageassets[$contenthash])) {
-                self::$imageassets[$contenthash] = [
-                    'mimetype' => (string)$file->get_mimetype(),
-                    'content_base64' => base64_encode($file->get_content()),
-                ];
+                self::$imageassets[$contenthash] = $file;
             }
 
             return [
