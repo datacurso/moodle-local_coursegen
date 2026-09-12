@@ -93,6 +93,7 @@
                 <FIELD NAME="allowedtypes" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="JSON array of allowed activity type names" />
                 <FIELD NAME="namingpattern" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" />
                 <FIELD NAME="namingstart" TYPE="int" LENGTH="2" NOTNULL="true" DEFAULT="1" SEQUENCE="false" />
+                <FIELD NAME="general_instruction" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="General course-level instruction sent to the AI alongside the template export" />
                 <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="usermodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />

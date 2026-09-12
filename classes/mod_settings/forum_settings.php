@@ -16,6 +16,7 @@
 
 namespace local_coursegen\mod_settings;
 
+use local_coursegen\utils\generated_image_attacher;
 use mod_forum_external;
 
 defined('MOODLE_INTERNAL') || die();
@@ -35,16 +36,38 @@ class forum_settings extends base_settings {
      */
     public function add_settings() {
         foreach ($this->modsettings['discussions'] as $discussion) {
-            $this->add_discussion((object)$discussion);
+            // Each discussion's own images (its own real Moodle itemid on the
+            // export side), never the whole-activity list - see generated_image_attacher.
+            $discussionimages = $discussion['images'] ?? [];
+            $this->add_discussion((object)$discussion, $discussionimages);
         }
     }
 
     /**
      * Add discussion to forum.
      *
+     * Real images referenced by @@PLUGINFILE@@ tokens in the discussion
+     * message are pre-loaded into a draft file area and passed as the
+     * "inlineattachmentsid" option, so forum_add_discussion() moves them
+     * into the real mod_forum/post/<postid> file area and rewrites the
+     * token itself - same pattern as intro/page/lesson page attachment.
+     *
      * @param object $discussion Discussion data.
+     * @param array $images Real images available for this activity.
      */
-    protected function add_discussion(object $discussion) {
-        mod_forum_external::add_discussion($this->cm->instance, $discussion->subject, $discussion->message, -1);
+    protected function add_discussion(object $discussion, array $images = []) {
+        $options = [];
+        $draftid = generated_image_attacher::resolve_draft_itemid((string)($discussion->message ?? ''), $images);
+        if ($draftid !== 0) {
+            $options[] = ['name' => 'inlineattachmentsid', 'value' => $draftid];
+        }
+
+        mod_forum_external::add_discussion(
+            $this->cm->instance,
+            $discussion->subject,
+            $discussion->message,
+            -1,
+            $options
+        );
     }
 }

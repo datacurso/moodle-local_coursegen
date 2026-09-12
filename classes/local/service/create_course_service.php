@@ -18,6 +18,7 @@ namespace local_coursegen\local\service;
 
 use core_course_category;
 use local_coursegen\local\models\course_session;
+use local_coursegen\utils\generated_image_attacher;
 
 /**
  * Service responsible for creating a course from an AI planning session.
@@ -38,7 +39,8 @@ class create_course_service {
      * (fullname, shortname, category) before creation, as set via the review modal.
      *
      * @param course_session $session Planning session persistent.
-     * @param array $resultdata Result data from the Datacurso API (course_configuration, sections, activities).
+     * @param array $resultdata Result data from the Datacurso API (course_configuration, sections,
+     *     activities, blocks_info).
      * @param array $overrides Optional user overrides for course fields.
      *     Supported keys: fullname (string), shortname (string), category (int).
      * @return array Result of the course content application.
@@ -82,6 +84,10 @@ class create_course_service {
             $sessionpersistent->set('timemodified', time());
             $sessionpersistent->update();
             course_session_service::update_status($sessionid, course_session::STATUS_CREATING);
+
+            // Replace the theme/format default blocks create_course() just added with the
+            // source course's real ones (or none, if the source course had none).
+            create_blocks_service::create_blocks($course->id, $resultdata['blocks_info'] ?? []);
 
             // Process sections if provided in the response.
             if (!empty($resultdata['sections_info'])) {
@@ -216,7 +222,57 @@ class create_course_service {
 
         $coursedata->category = (int)($config['category'] ?? $defaultcategoryid);
 
+        $format = trim((string)($config['format'] ?? ''));
+        if ($format !== '') {
+            $coursedata->format = $format;
+        }
+
+        self::apply_course_configuration_fields($coursedata, $config);
+
         return $coursedata;
+    }
+
+    /**
+     * Apply the course_configuration fields beyond identity (fullname,
+     * shortname, category, format) onto the course data object.
+     *
+     * create_course() (course/lib.php) inserts these directly into 'course'
+     * and, for 'format_options', forwards the same object to
+     * course_get_format($id)->update_course_format_options($data) - so
+     * format-specific options (e.g. format_grid's gridjustification,
+     * hiddensections, popup, ...) just need to be set as matching
+     * properties here. 'numsections' is deliberately excluded from
+     * format_options: process_course_sections() derives and applies it from
+     * sections_info once sections are known.
+     *
+     * @param \stdClass $coursedata Course data object to mutate in place.
+     * @param array $config course_configuration from the API/export result.
+     * @return void
+     */
+    private static function apply_course_configuration_fields(\stdClass $coursedata, array $config): void {
+        $coursedata->summary = (string)($config['summary'] ?? '');
+        $coursedata->summaryformat = (int)($config['summaryformat'] ?? FORMAT_HTML);
+        $coursedata->startdate = (int)($config['startdate'] ?? 0);
+        $coursedata->enddate = (int)($config['enddate'] ?? 0);
+        $coursedata->visible = (int)($config['visible'] ?? 1);
+        $lang = trim((string)($config['lang'] ?? ''));
+        if ($lang !== '') {
+            $coursedata->lang = $lang;
+        }
+        $coursedata->newsitems = (int)($config['newsitems'] ?? 0);
+        $coursedata->showgrades = (int)($config['showgrades'] ?? 1);
+        $coursedata->showreports = (int)($config['showreports'] ?? 1);
+        $coursedata->maxbytes = (int)($config['maxbytes'] ?? 0);
+        $coursedata->enablecompletion = (int)($config['enablecompletion'] ?? 0);
+        $coursedata->groupmode = (int)($config['groupmode'] ?? 0);
+        $coursedata->groupmodeforce = (int)($config['groupmodeforce'] ?? 0);
+
+        $formatoptions = $config['format_options'] ?? [];
+        if (is_array($formatoptions)) {
+            foreach ($formatoptions as $name => $value) {
+                $coursedata->{$name} = $value;
+            }
+        }
     }
 
     /**
@@ -331,6 +387,7 @@ class create_course_service {
         // Get course format to handle sections properly.
         $course = get_course($courseid);
         $courseformat = course_get_format($course);
+        $coursecontextid = \context_course::instance($courseid)->id;
 
         // Delete all existing sections except section 0 (general section).
         self::delete_course_sections($courseid);
@@ -342,29 +399,58 @@ class create_course_service {
         foreach ($sectionsinfo as $sectioninfo) {
             $sectionnumber = (int)$sectioninfo['section'];
             $sectionname = $sectioninfo['name'] ?? '';
+            $sectionsummary = (string)($sectioninfo['description'] ?? '');
+            $sectionsummaryformat = (int)($sectioninfo['descriptionformat'] ?? FORMAT_HTML);
+            $sectionvisible = (int)($sectioninfo['visible'] ?? 1);
 
             if (isset($existingsections[$sectionnumber])) {
-                // Update existing section name.
+                // Update existing section name/summary/visibility.
+                $sectionid = (int)$existingsections[$sectionnumber]->id;
+                $updatedata = ['id' => $sectionid];
                 if (!empty($sectionname) && $existingsections[$sectionnumber]->name !== $sectionname) {
-                    $DB->update_record('course_sections', [
-                        'id' => $existingsections[$sectionnumber]->id,
-                        'name' => $sectionname,
-                    ]);
+                    $updatedata['name'] = $sectionname;
                 }
+                $updatedata['summary'] = $sectionsummary;
+                $updatedata['summaryformat'] = $sectionsummaryformat;
+                $updatedata['visible'] = $sectionvisible;
+                $DB->update_record('course_sections', $updatedata);
             } else {
                 // Create new section.
                 $sectiondata = new \stdClass();
                 $sectiondata->course = $courseid;
                 $sectiondata->section = $sectionnumber;
                 $sectiondata->name = $sectionname;
-                $sectiondata->summary = '';
-                $sectiondata->summaryformat = FORMAT_HTML;
+                $sectiondata->summary = $sectionsummary;
+                $sectiondata->summaryformat = $sectionsummaryformat;
                 $sectiondata->sequence = '';
-                $sectiondata->visible = 1;
+                $sectiondata->visible = $sectionvisible;
                 $sectiondata->availability = null;
                 $sectiondata->timemodified = time();
 
-                $DB->insert_record('course_sections', $sectiondata);
+                $sectionid = (int)$DB->insert_record('course_sections', $sectiondata);
+            }
+
+            // Section summary images: scoped to this section's own real id
+            // (component 'course', filearea 'section'), never combined with
+            // any other section - raw $DB writes bypass the normal
+            // moodleform save flow, so the draft-to-final move has to be
+            // done here explicitly instead of relying on it happening
+            // automatically (unlike lesson_page::create(), which does).
+            $sectionimages = $sectioninfo['images'] ?? [];
+            if (!empty($sectionimages)) {
+                $draftid = generated_image_attacher::resolve_draft_itemid($sectionsummary, $sectionimages);
+                if ($draftid !== 0) {
+                    file_save_draft_area_files($draftid, $coursecontextid, 'course', 'section', $sectionid);
+                }
+            }
+
+            // format_grid's own per-section card image: a single directly-attached
+            // file (component 'format_grid', filearea 'sectionimage'), never a
+            // @@PLUGINFILE@@ reference, so it goes through its own draft/attach
+            // helper instead of resolve_draft_itemid().
+            $gridimage = $sectioninfo['gridimage'] ?? null;
+            if (!empty($gridimage) && is_array($gridimage)) {
+                self::attach_grid_section_image($gridimage, $coursecontextid, $sectionid, $courseid);
             }
         }
 
@@ -380,6 +466,67 @@ class create_course_service {
 
         // Rebuild course cache.
         rebuild_course_cache($courseid, true);
+    }
+
+    /**
+     * Attach a section's own format_grid card image (course422/.mbz origin,
+     * already resolved to a real downloadable url by templateImages.js) into
+     * its 'sectionimage' file area, and (re)write the matching
+     * mdl_format_grid_image row so format_grid picks it up as this section's
+     * own image.
+     *
+     * Mirrors the section-summary-image block just above, but this image is a
+     * single direct file reference (no @@PLUGINFILE@@ token to resolve inside
+     * a text field), so it goes through
+     * generated_image_attacher::attach_single_image_to_draft() instead of
+     * resolve_draft_itemid(). 'displayedimagestate' is left at 0 (not
+     * generated) on purpose: format_grid's own toolbox::check_displayed_image()
+     * lazily regenerates the resized 'displayedsectionimage' derivative on
+     * first render, and this class does not need to pre-generate it.
+     *
+     * @param array $gridimage {filename, original_filename, mimetype, url}.
+     * @param int $coursecontextid Course context id.
+     * @param int $sectionid Real course_sections.id of the section just created/updated.
+     * @param int $courseid Course id.
+     * @return void
+     */
+    private static function attach_grid_section_image(
+        array $gridimage,
+        int $coursecontextid,
+        int $sectionid,
+        int $courseid
+    ): void {
+        global $DB;
+
+        $draftid = generated_image_attacher::attach_single_image_to_draft($gridimage);
+        if ($draftid === 0) {
+            return;
+        }
+
+        file_save_draft_area_files($draftid, $coursecontextid, 'format_grid', 'sectionimage', $sectionid);
+
+        $fs = get_file_storage();
+        $files = $fs->get_area_files($coursecontextid, 'format_grid', 'sectionimage', $sectionid, 'itemid', false);
+        $file = reset($files);
+        if (!$file) {
+            return;
+        }
+
+        $record = (object)[
+            'image' => $file->get_filename(),
+            'contenthash' => $file->get_contenthash(),
+            'displayedimagestate' => 0,
+            'sectionid' => $sectionid,
+            'courseid' => $courseid,
+        ];
+
+        $existing = $DB->get_record('format_grid_image', ['sectionid' => $sectionid]);
+        if ($existing) {
+            $record->id = $existing->id;
+            $DB->update_record('format_grid_image', $record);
+        } else {
+            $DB->insert_record('format_grid_image', $record);
+        }
     }
 
     /**
@@ -569,6 +716,7 @@ class create_course_service {
                     ];
                     unset($subsections[$subsectionid]);
                     debugging('local_coursegen: subsection creation failed, flattening its activities. ' . $e->getMessage());
+                    self::recover_leaked_transaction();
                 }
             }
 
@@ -590,6 +738,7 @@ class create_course_service {
                     'error' => $e->getMessage(),
                 ];
                 debugging('local_coursegen: module creation skipped due to error. ' . json_encode($context));
+                self::recover_leaked_transaction();
                 // Continue with next activity.
                 continue;
             }
@@ -599,6 +748,32 @@ class create_course_service {
         rebuild_course_cache($courseid, true);
 
         return $errors;
+    }
+
+    /**
+     * Recover from a delegated transaction left open by a failed module creation.
+     *
+     * add_moduleinfo() (course/modlib.php) starts its own delegated transaction
+     * and, when the module's *_add_instance() throws a moodle_exception (a
+     * dml_write_exception included), it manually deletes the course_module and
+     * context rows it created but never disposes that transaction (no
+     * allow_commit() nor rollback()). Because the exception is caught here
+     * instead of reaching Moodle's default handler, $DB is left thinking a
+     * transaction is still active: every following activity's own delegated
+     * transaction then nests inside that leaked one, so its "commit" never
+     * reaches the real database and its rows (and burned course_modules ids)
+     * are silently lost when the request ends. Forcing the rollback here,
+     * right after the failure is caught, resets $DB to a clean state so the
+     * next activity gets its own real, independently committed transaction.
+     *
+     * @return void
+     */
+    private static function recover_leaked_transaction(): void {
+        global $DB;
+
+        if ($DB->is_transaction_started()) {
+            $DB->force_transaction_rollback();
+        }
     }
 
     /**
