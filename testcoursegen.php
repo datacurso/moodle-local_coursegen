@@ -114,6 +114,13 @@ if ($courseid > 0) {
     echo $OUTPUT->notification($error, \core\output\notification::NOTIFY_ERROR);
 }
 
+if ($courseid > 0 || $error !== '') {
+    // Scrub courseid/warnings/error from the visible URL once shown, so a
+    // plain reload lands back on the clean form instead of re-showing (or
+    // re-submitting) this same result.
+    echo html_writer::script('history.replaceState(null, "", ' . json_encode($pageurl->out(false)) . ');');
+}
+
 echo html_writer::tag('p', get_string('testcoursegen_desc', 'local_coursegen', $sourcecourseid));
 
 echo html_writer::start_tag('form', ['method' => 'post', 'action' => $pageurl->out(false)]);
