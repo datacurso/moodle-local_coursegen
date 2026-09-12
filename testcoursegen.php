@@ -42,9 +42,12 @@
 require('../../config.php');
 require_once($CFG->libdir . '/filelib.php');
 
+use local_coursegen\local\models\template;
+use local_coursegen\local\models\template_activity;
 use local_coursegen\local\service\course_export_service;
 use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
+use local_coursegen\local\service\template_course_builder_service;
 
 require_login();
 $systemcontext = context_system::instance();
@@ -141,6 +144,64 @@ if ($action === 'create' && confirm_sesskey()) {
     redirect(new moodle_url('/local/coursegen/testcoursegen.php', $redirectparams));
 }
 
+// Separate manual test path: the real course-template AI backend (not the
+// coursegen_template mock above), targeting exactly one real activity in
+// $sourcecourseid. Builds a throwaway template with every activity set to
+// 'keep' except the chosen one, set to 'modify' with the given prompt, then
+// reuses template_course_builder_service::create_course_from_template()
+// verbatim - the same single-request flow the real "create course from
+// template" UI already runs in production.
+if ($action === 'create_template_test' && confirm_sesskey()) {
+    $redirectparams = ['sourcecourseid' => $sourcecourseid];
+    $targetcmid = required_param('targetcmid', PARAM_INT);
+    $targetprompt = optional_param('targetprompt', '', PARAM_RAW);
+
+    try {
+        $course = get_course($sourcecourseid);
+        $modinfo = get_fast_modinfo($course);
+
+        $tpl = new template(0);
+        $tpl->set('name', 'testcoursegen-template-' . bin2hex(random_bytes(4)));
+        $tpl->set('courseid', $sourcecourseid);
+        $tpl->create();
+        $templateid = (int) $tpl->get('id');
+
+        // One row per real activity, covering every cmid in the course: a
+        // missing row defaults to action=modify (export_course_for_template()'s
+        // own contract), so every activity needs an explicit 'keep' row here
+        // except the single target one.
+        foreach ($modinfo->get_cms() as $cm) {
+            $sectioninfo = $modinfo->get_section_info($cm->sectionnum);
+
+            $act = new template_activity(0);
+            $act->set('templateid', $templateid);
+            $act->set('sectionid', (int) $sectioninfo->id);
+            $act->set('cmid', (int) $cm->id);
+
+            if ((int) $cm->id === $targetcmid) {
+                $act->set('action', 'modify');
+                $act->set('prompt', $targetprompt !== '' ? $targetprompt : null);
+            } else {
+                $act->set('action', 'keep');
+            }
+            $act->create();
+        }
+
+        $creationresult = template_course_builder_service::create_course_from_template($tpl, [], [], $USER->id);
+
+        if (!empty($creationresult['success'])) {
+            $redirectparams['courseid'] = $creationresult['courseid'];
+            $redirectparams['warnings'] = (int) ($creationresult['warningscount'] ?? 0);
+        } else {
+            $redirectparams['error'] = $creationresult['message'];
+        }
+    } catch (\Throwable $e) {
+        $redirectparams['error'] = $e->getMessage();
+    }
+
+    redirect(new moodle_url('/local/coursegen/testcoursegen.php', $redirectparams));
+}
+
 $courseid = optional_param('courseid', 0, PARAM_INT);
 $warnings = optional_param('warnings', 0, PARAM_INT);
 $error = optional_param('error', '', PARAM_TEXT);
@@ -189,6 +250,43 @@ echo html_writer::empty_tag('input', [
     'type' => 'submit',
     'class' => 'btn btn-primary',
     'value' => get_string('testcoursegen_button', 'local_coursegen'),
+]);
+echo html_writer::end_tag('form');
+
+echo html_writer::tag('hr', '');
+echo html_writer::tag('h4', get_string('testcoursegen_template_title', 'local_coursegen'));
+echo html_writer::tag('p', get_string('testcoursegen_template_desc', 'local_coursegen', $sourcecourseid));
+
+echo html_writer::start_tag('form', ['method' => 'post', 'action' => $pageurl->out(false)]);
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action', 'value' => 'create_template_test']);
+echo html_writer::div(
+    html_writer::label(get_string('testcoursegen_template_targetcmid', 'local_coursegen'), 'id_targetcmid') .
+    html_writer::empty_tag('input', [
+        'type' => 'number',
+        'id' => 'id_targetcmid',
+        'name' => 'targetcmid',
+        // Real cmid of "Lección 1" inside "Módulo #1" in course 422, looked
+        // up directly from this site's own modinfo - override freely.
+        'value' => 3125,
+        'class' => 'form-control w-auto d-inline-block ml-2',
+    ]),
+    'mb-3'
+);
+echo html_writer::div(
+    html_writer::label(get_string('testcoursegen_template_targetprompt', 'local_coursegen'), 'id_targetprompt') .
+    html_writer::tag('textarea', '', [
+        'id' => 'id_targetprompt',
+        'name' => 'targetprompt',
+        'rows' => 3,
+        'class' => 'form-control',
+    ]),
+    'mb-3'
+);
+echo html_writer::empty_tag('input', [
+    'type' => 'submit',
+    'class' => 'btn btn-primary',
+    'value' => get_string('testcoursegen_template_button', 'local_coursegen'),
 ]);
 echo html_writer::end_tag('form');
 
