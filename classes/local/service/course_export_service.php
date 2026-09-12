@@ -116,6 +116,14 @@ class course_export_service {
             if (!empty($images)) {
                 $entry['images'] = $images;
             }
+            // format_grid's own per-section card image ('format_grid'/'sectionimage',
+            // itemid = the section's own real id) - a directly-attached file, not a
+            // @@PLUGINFILE@@ reference inside a text field, so it needs its own read
+            // path instead of extract_pluginfile_images().
+            $gridimage = self::extract_grid_section_image($coursecontextid, (int)$sectioninfo->id);
+            if ($gridimage !== null) {
+                $entry['gridimage'] = $gridimage;
+            }
             $sectionsinfo[] = $entry;
         }
 
@@ -232,9 +240,11 @@ class course_export_service {
      * e.g. format_grid's gridjustification/hiddensections/popup/... or any
      * other format's course-level scalar settings) are included verbatim
      * under 'format_options', except 'numsections', which create_course_service
-     * already derives from sections_info. Per-section format options (e.g.
-     * format_grid's sectionimage, which needs its own file transport, like
-     * mod_resource) are intentionally left out - see class docblock.
+     * already derives from sections_info. format_grid's own per-section card
+     * image is NOT a course_format_options row at all (it lives as a real file
+     * + a mdl_format_grid_image row, keyed by section, not by this course-level
+     * map) - it is exported separately, per section, as sections_info[].gridimage;
+     * see extract_grid_section_image().
      *
      * @param \stdClass $course Real course record.
      * @return array
@@ -719,6 +729,43 @@ class course_export_service {
         }
 
         return $images;
+    }
+
+    /**
+     * Read the section's own format_grid/sectionimage file directly - not a
+     * @@PLUGINFILE@@ reference inside a text field (extract_pluginfile_images()
+     * doesn't apply here), but a single file attached straight to the section
+     * by itemid (component 'format_grid', filearea 'sectionimage', itemid =
+     * the section's own real course_sections.id). Only the original upload is
+     * read; 'displayedsectionimage' is format_grid's own resized derivative,
+     * regenerated lazily on render, and is never carried through.
+     *
+     * @param int $coursecontextid Course context id.
+     * @param int $sectionid Real course_sections.id owning the file area.
+     * @return array{filename:string,original_filename:string,mimetype:string,content_hash:string}|null
+     *     Null when the section has no such file.
+     */
+    private static function extract_grid_section_image(int $coursecontextid, int $sectionid): ?array {
+        $fs = get_file_storage();
+        $files = $fs->get_area_files($coursecontextid, 'format_grid', 'sectionimage', $sectionid, 'itemid', false);
+        foreach ($files as $file) {
+            $contenthash = $file->get_contenthash();
+            if (!isset(self::$imageassets[$contenthash])) {
+                self::$imageassets[$contenthash] = [
+                    'mimetype' => (string)$file->get_mimetype(),
+                    'content_base64' => base64_encode($file->get_content()),
+                ];
+            }
+
+            return [
+                'filename' => $file->get_filename(),
+                'original_filename' => $file->get_filename(),
+                'mimetype' => (string)$file->get_mimetype(),
+                'content_hash' => $contenthash,
+            ];
+        }
+
+        return null;
     }
 
     /**

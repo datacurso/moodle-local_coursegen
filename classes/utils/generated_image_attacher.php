@@ -104,6 +104,48 @@ class generated_image_attacher {
     }
 
     /**
+     * Download one real, directly-attached image (not a @@PLUGINFILE@@
+     * reference inside a text field - e.g. format_grid's own per-section card
+     * image) into a fresh draft file area, so file_save_draft_area_files()
+     * can move it into its real component/filearea/itemid.
+     *
+     * @param array $image Real image reference, shaped {url, filename|original_filename, ...}.
+     * @return int Draft itemid with the downloaded file, or 0 when $image has no usable url/filename.
+     */
+    public static function attach_single_image_to_draft(array $image): int {
+        $url = trim((string)($image['url'] ?? ''));
+        $filename = trim((string)($image['filename'] ?? $image['original_filename'] ?? ''));
+        if ($url === '' || $filename === '') {
+            return 0;
+        }
+
+        global $USER;
+        $fs = get_file_storage();
+        $usercontext = \context_user::instance($USER->id);
+        $draftid = file_get_unused_draft_itemid();
+
+        try {
+            $fs->create_file_from_url([
+                'contextid' => $usercontext->id,
+                'component' => 'user',
+                'filearea' => 'draft',
+                'itemid' => $draftid,
+                'filepath' => '/',
+                'filename' => $filename,
+            ], $url, null, true);
+        } catch (\Throwable $exception) {
+            debugging(
+                'local_coursegen: could not download generated image "' . $filename . '": '
+                . $exception->getMessage(),
+                DEBUG_DEVELOPER
+            );
+            return 0;
+        }
+
+        return $draftid;
+    }
+
+    /**
      * Find the real image entry matching an @@PLUGINFILE@@ filename.
      *
      * The caller MUST pass an already itemid-scoped image list (only images

@@ -443,6 +443,15 @@ class create_course_service {
                     file_save_draft_area_files($draftid, $coursecontextid, 'course', 'section', $sectionid);
                 }
             }
+
+            // format_grid's own per-section card image: a single directly-attached
+            // file (component 'format_grid', filearea 'sectionimage'), never a
+            // @@PLUGINFILE@@ reference, so it goes through its own draft/attach
+            // helper instead of resolve_draft_itemid().
+            $gridimage = $sectioninfo['gridimage'] ?? null;
+            if (!empty($gridimage) && is_array($gridimage)) {
+                self::attach_grid_section_image($gridimage, $coursecontextid, $sectionid, $courseid);
+            }
         }
 
         // Update course format options if needed.
@@ -457,6 +466,67 @@ class create_course_service {
 
         // Rebuild course cache.
         rebuild_course_cache($courseid, true);
+    }
+
+    /**
+     * Attach a section's own format_grid card image (course422/.mbz origin,
+     * already resolved to a real downloadable url by templateImages.js) into
+     * its 'sectionimage' file area, and (re)write the matching
+     * mdl_format_grid_image row so format_grid picks it up as this section's
+     * own image.
+     *
+     * Mirrors the section-summary-image block just above, but this image is a
+     * single direct file reference (no @@PLUGINFILE@@ token to resolve inside
+     * a text field), so it goes through
+     * generated_image_attacher::attach_single_image_to_draft() instead of
+     * resolve_draft_itemid(). 'displayedimagestate' is left at 0 (not
+     * generated) on purpose: format_grid's own toolbox::check_displayed_image()
+     * lazily regenerates the resized 'displayedsectionimage' derivative on
+     * first render, and this class does not need to pre-generate it.
+     *
+     * @param array $gridimage {filename, original_filename, mimetype, url}.
+     * @param int $coursecontextid Course context id.
+     * @param int $sectionid Real course_sections.id of the section just created/updated.
+     * @param int $courseid Course id.
+     * @return void
+     */
+    private static function attach_grid_section_image(
+        array $gridimage,
+        int $coursecontextid,
+        int $sectionid,
+        int $courseid
+    ): void {
+        global $DB;
+
+        $draftid = generated_image_attacher::attach_single_image_to_draft($gridimage);
+        if ($draftid === 0) {
+            return;
+        }
+
+        file_save_draft_area_files($draftid, $coursecontextid, 'format_grid', 'sectionimage', $sectionid);
+
+        $fs = get_file_storage();
+        $files = $fs->get_area_files($coursecontextid, 'format_grid', 'sectionimage', $sectionid, 'itemid', false);
+        $file = reset($files);
+        if (!$file) {
+            return;
+        }
+
+        $record = (object)[
+            'image' => $file->get_filename(),
+            'contenthash' => $file->get_contenthash(),
+            'displayedimagestate' => 0,
+            'sectionid' => $sectionid,
+            'courseid' => $courseid,
+        ];
+
+        $existing = $DB->get_record('format_grid_image', ['sectionid' => $sectionid]);
+        if ($existing) {
+            $record->id = $existing->id;
+            $DB->update_record('format_grid_image', $record);
+        } else {
+            $DB->insert_record('format_grid_image', $record);
+        }
     }
 
     /**
