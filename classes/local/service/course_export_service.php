@@ -16,6 +16,10 @@
 
 namespace local_coursegen\local\service;
 
+use local_coursegen\local\models\template;
+use local_coursegen\local\models\template_section;
+use local_coursegen\local\models\template_activity;
+
 defined('MOODLE_INTERNAL') || die();
 
 /**
@@ -74,15 +78,23 @@ class course_export_service {
      * alongside this JSON.
      *
      * @param int $courseid Course ID to export.
+     * @param int[] $excludedsectionnums Section numbers to leave out of sections_info entirely
+     *     (and, transitively, every activity they contain). Defaults to none, so existing
+     *     callers/behavior are unaffected.
+     * @param int[] $excludedcmids Course module ids to leave out of activities. Defaults to
+     *     none, so existing callers/behavior are unaffected.
      * @return array {course_configuration, sections_info, activities,
      *     subsections_info, blocks_info}
      */
-    public static function export_course(int $courseid): array {
+    public static function export_course(int $courseid, array $excludedsectionnums = [], array $excludedcmids = []): array {
         global $CFG;
 
         require_once($CFG->dirroot . '/course/lib.php');
 
         self::$imageassets = [];
+
+        $excludedsectionnums = array_flip(array_map('intval', $excludedsectionnums));
+        $excludedcmids = array_flip(array_map('intval', $excludedcmids));
 
         $course = get_course($courseid);
         $modinfo = get_fast_modinfo($course);
@@ -93,6 +105,9 @@ class course_export_service {
         foreach ($modinfo->get_section_info_all() as $sectioninfo) {
             // Delegated (mod_subsection) sections are out of scope for this export.
             if (!empty($sectioninfo->component)) {
+                continue;
+            }
+            if (isset($excludedsectionnums[(int)$sectioninfo->section])) {
                 continue;
             }
             $summary = (string)($sectioninfo->summary ?? '');
@@ -136,14 +151,26 @@ class course_export_service {
             if (!in_array($cm->modname, self::SUPPORTED_TYPES, true)) {
                 continue;
             }
+            if (isset($excludedcmids[(int)$cm->id])) {
+                continue;
+            }
             $cmsectioninfo = $cm->get_section_info();
             if (!empty($cmsectioninfo->component)) {
                 // Activity lives inside a delegated subsection; out of scope (see class docblock).
                 continue;
             }
+            if (isset($excludedsectionnums[(int)$cmsectioninfo->section])) {
+                continue;
+            }
             $envelope = self::build_activity_envelope($cm, (int)$cmsectioninfo->section);
             if ($envelope !== null) {
                 $envelope['uid'] = bin2hex(random_bytes(16));
+                // Real course_modules.id of the source activity - purely a bookkeeping
+                // field for callers that need to re-associate this exported entry with
+                // its own template configuration row (see
+                // export_course_for_template()); not part of the generated_activities
+                // shape create_course_service::create_course() itself reads.
+                $envelope['cmid'] = (int)$cm->id;
                 $generatedactivities[] = $envelope;
             }
         }
@@ -173,6 +200,157 @@ class course_export_service {
      */
     public static function get_exported_image_files(): array {
         return self::$imageassets;
+    }
+
+    /**
+     * @var \stored_file[] Real general reference file objects collected by the
+     * most recent export_course_for_template() call (see that method and
+     * get_general_reference_files()).
+     */
+    private static array $generalfileassets = [];
+
+    /**
+     * Export a template's base course into resultdata shape, merging in the
+     * template's own section/activity behavior configuration plus its
+     * general (course-wide) instruction and reference files.
+     *
+     * Sections marked behavior=exclude, and every activity that belongs to
+     * them, are left out of the export entirely - never partially built then
+     * discarded. An activity individually marked action=exclude is left out
+     * even inside an otherwise-included section. A section/activity with no
+     * template_section/template_activity row at all is never treated as
+     * excluded - only an explicit 'exclude' row/action does that; absence
+     * always falls back to that persistent's own default (behavior=custom,
+     * action=modify).
+     *
+     * @param template $template Template persistent (already loaded).
+     * @return array export_course()'s shape, plus a 'template_behavior' key merged into
+     *     every remaining sections_info/activities entry, and top-level 'general_instruction'
+     *     and 'general_reference_files' keys.
+     */
+    public static function export_course_for_template(template $template): array {
+        $templateid = (int)$template->get('id');
+        $courseid = (int)$template->get('courseid');
+
+        $sectionbehaviors = [];
+        $sectionrows = [];
+        foreach (template_section::get_records(['templateid' => $templateid]) as $record) {
+            $sectionnum = (int)$record->get('sectionnum');
+            $behavior = (string)$record->get('behavior');
+            $sectionbehaviors[$sectionnum] = $behavior;
+            $sectionrows[$sectionnum] = $record;
+        }
+
+        $activityactions = [];
+        foreach (template_activity::get_records(['templateid' => $templateid]) as $record) {
+            $activityactions[(int)$record->get('cmid')] = $record;
+        }
+
+        // Excluded sections, plus every activity belonging to them (excluding
+        // a section must exclude its activities too, even if a given activity
+        // has no template_activity row of its own or an action other than exclude).
+        $excludedsectionnums = [];
+        foreach ($sectionbehaviors as $sectionnum => $behavior) {
+            if ($behavior === 'exclude') {
+                $excludedsectionnums[] = $sectionnum;
+            }
+        }
+
+        $excludedcmids = [];
+        foreach ($activityactions as $cmid => $record) {
+            if ((string)$record->get('action') === 'exclude') {
+                $excludedcmids[] = $cmid;
+            }
+        }
+
+        $export = self::export_course($courseid, $excludedsectionnums, $excludedcmids);
+
+        foreach ($export['sections_info'] as &$sectionentry) {
+            $sectionnum = (int)$sectionentry['section'];
+            $behavior = $sectionbehaviors[$sectionnum] ?? 'custom';
+            $sectionentry['template_behavior'] = ['behavior' => $behavior];
+        }
+        unset($sectionentry);
+
+        foreach ($export['activities'] as &$activityentry) {
+            $cmid = (int)($activityentry['cmid'] ?? 0);
+            $record = $activityactions[$cmid] ?? null;
+            if ($record !== null) {
+                $activityentry['template_behavior'] = [
+                    'action' => (string)$record->get('action'),
+                    'useasreference' => (bool)$record->get('useasreference'),
+                    'prompt' => $record->get('prompt'),
+                ];
+            } else {
+                // No row at all: the persistent's own field defaults, never 'exclude'.
+                $activityentry['template_behavior'] = [
+                    'action' => 'modify',
+                    'useasreference' => true,
+                    'prompt' => null,
+                ];
+            }
+        }
+        unset($activityentry);
+
+        $export['general_instruction'] = $template->get('general_instruction');
+        $export['general_reference_files'] = self::export_general_reference_files($templateid);
+
+        return $export;
+    }
+
+    /**
+     * Build the general_reference_files metadata list for a template, and
+     * collect the matching real stored_file objects (retrievable via
+     * get_general_reference_files()) the same way get_exported_image_files()
+     * already does for images - metadata only here, never raw bytes.
+     *
+     * Files live under component 'local_coursegen', filearea
+     * 'template_general_files', itemid = the template's own id, context_system
+     * (see classes/external/save_template.php, which saves them there -
+     * matching this plugin's existing draft-to-permanent file convention of
+     * context_system rather than context_course; see ai_context::save_syllabus_from_draft()
+     * and courseai_syllabus_upload::execute() for the same pattern).
+     *
+     * @param int $templateid Template ID.
+     * @return array<int,array{filename:string,mimetype:string,contenthash:string}>
+     */
+    private static function export_general_reference_files(int $templateid): array {
+        self::$generalfileassets = [];
+
+        $fs = get_file_storage();
+        $files = $fs->get_area_files(
+            \context_system::instance()->id,
+            'local_coursegen',
+            'template_general_files',
+            $templateid,
+            'itemid',
+            false // Excludes the directory placeholder entries Moodle's file API always returns.
+        );
+
+        $filesinfo = [];
+        foreach ($files as $file) {
+            self::$generalfileassets[] = $file;
+            $filesinfo[] = [
+                'filename' => $file->get_filename(),
+                'mimetype' => (string)$file->get_mimetype(),
+                'contenthash' => $file->get_contenthash(),
+            ];
+        }
+
+        return $filesinfo;
+    }
+
+    /**
+     * Real stored_file objects for every general reference file included in
+     * the most recent export_course_for_template() call, for the caller to
+     * upload for real (e.g. one at a time via
+     * template_ai_api_service::upload_template_file()) once an AI thread_id
+     * exists to attach them to.
+     *
+     * @return \stored_file[]
+     */
+    public static function get_general_reference_files(): array {
+        return self::$generalfileassets;
     }
 
     /**

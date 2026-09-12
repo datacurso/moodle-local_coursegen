@@ -19,19 +19,19 @@ namespace local_coursegen\local\service;
 defined('MOODLE_INTERNAL') || die();
 
 /**
- * Contract for the AI content generator used by template-mode course
- * creation (see template_course_builder_service).
+ * Former per-activity AI content contract for template-mode course creation.
  *
- * This is the permanent contract of the real AI backend — independent of
- * whichever implementation currently satisfies it. mock_template_ai_service
- * implements it today as a stand-in; a real implementation will implement it
- * later by wrapping the real Datacurso AI course API (see
- * ai_course_api_service/api_client_factory for the equivalent pattern
- * already used by the free-course-creation flow). Swapping mock for real is
- * then a single call to template_course_builder_service::set_ai_service(),
- * never a search for scattered references to the mock class name — and
- * AI_SUPPORTED_TYPES survives deleting the mock entirely, since it belongs
- * to this interface, not to the mock's own class body.
+ * template_course_builder_service no longer calls generate()/
+ * generate_section_picture() at all: template-mode course creation is now a
+ * single-request design (see that class's own docblock and
+ * template_ai_api_service), where the whole template export is sent once to
+ * the real Datacurso "course template" AI backend, which returns the entire
+ * finished course in one result. This interface is kept only because
+ * AI_SUPPORTED_TYPES — the single source of truth for which activity types
+ * the AI content service has a registered content contract for — is still
+ * read directly by template_config_form::definition() and
+ * sections_config::build_activity_dropdown(); it is not implemented by any
+ * class in this codebase anymore.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>

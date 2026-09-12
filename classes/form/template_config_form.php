@@ -157,6 +157,41 @@ class template_config_form extends dynamic_form {
         }
 
         $this->definition_naming_pattern();
+        $this->definition_general_section();
+    }
+
+    /**
+     * General, course-independent context sent to the AI once per generated
+     * course: a free-text instruction plus optional reference files, both
+     * layered on top of (never replacing) each section/activity's own
+     * configuration. Kept in this same dynamic_form for the same reason
+     * definition_naming_pattern() is: one coherent config screen, saved
+     * together by the same real handler (see classes/external/save_template.php).
+     */
+    private function definition_general_section(): void {
+        $mform = $this->_form;
+
+        $mform->addElement('header', 'templategeneralhdr', get_string('template_general_hdr', 'local_coursegen'));
+        $mform->setExpanded('templategeneralhdr');
+        $mform->addElement('static', 'templategeneraldesc', '', get_string('template_general_desc', 'local_coursegen'));
+
+        $mform->addElement(
+            'textarea',
+            'generalinstruction',
+            get_string('template_general_instruction', 'local_coursegen'),
+            ['rows' => 4, 'cols' => 60]
+        );
+        $mform->setType('generalinstruction', PARAM_RAW);
+        $mform->addHelpButton('generalinstruction', 'template_general_instruction', 'local_coursegen');
+
+        $mform->addElement(
+            'filemanager',
+            'generalfiles',
+            get_string('template_general_files', 'local_coursegen'),
+            null,
+            ['subdirs' => 0, 'maxfiles' => -1]
+        );
+        $mform->addHelpButton('generalfiles', 'template_general_files', 'local_coursegen');
     }
 
     /**
