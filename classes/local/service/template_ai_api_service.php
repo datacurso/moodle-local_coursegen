@@ -98,17 +98,28 @@ class template_ai_api_service {
     /**
      * Retrieve the current result for a template planning thread.
      *
-     * While the AI is still working, the endpoint is expected to return
-     * either nothing/null or a {"status": "pending"}-shaped body; once ready,
-     * it returns the final course JSON (see wait_for_template_result()'s own
-     * docblock for the exact completion signal used).
+     * While the AI is still working, the real endpoint responds with a plain
+     * HTTP 404 (not a 200 with a {"status": "pending"} body, as first
+     * assumed) - the shared aiprovider_datacurso HTTP client turns any HTTP
+     * >= 400 into a thrown moodle_exception, so that 404 is caught here and
+     * treated as "not ready yet" (null) instead of being allowed to abort the
+     * whole polling loop on its very first attempt. Once ready, the endpoint
+     * returns 200 with the final course JSON (see wait_for_template_result()'s
+     * own docblock for the exact completion signal used).
      *
      * @param string $threadid External planning thread identifier.
-     * @return array|null Decoded response from the API.
+     * @return array|null Decoded response from the API, or null while pending.
      */
     public function get_template_result(string $threadid): ?array {
         $endpoint = '/course-template/result/' . urlencode($threadid);
-        return $this->client->request('GET', $endpoint);
+        try {
+            return $this->client->request('GET', $endpoint);
+        } catch (\moodle_exception $e) {
+            if ($e->errorcode === 'httperror' && (int) $e->a === 404) {
+                return null;
+            }
+            throw $e;
+        }
     }
 
     /**
