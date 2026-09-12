@@ -1,8 +1,6 @@
-/* Template wizard styles */
-#local-coursegen-template-wizard {
-    max-width: 900px;
-    margin: 0 auto;
-}
+/* Template wizard styles. No max-width constraint: the form occupies the
+   normal admin-page width (the old 900px cap belonged to the dead 5-step
+   wizard and only ever applied once this stylesheet started loading). */
 
 /* Stepper */
 .tpl-step-circle {
@@ -52,6 +50,61 @@
 
 .tpl-section-body.open {
     max-height: 2000px;
+}
+
+/* "Course sections" collapsible header chevron (Bootstrap collapse adds
+   .collapsed on the toggle while its target is closed). */
+.tpl-section-toggle:focus {
+    box-shadow: none;
+}
+
+.tpl-section-toggle .tpl-section-chevron {
+    transition: transform 0.2s ease;
+}
+
+.tpl-section-toggle.collapsed .tpl-section-chevron {
+    transform: rotate(-90deg);
+}
+
+/* "Course sections" activity table: identical fixed column geometry on
+   every section's table, so Name/Type/Actions line up across sections
+   (each section renders its own table). Long activity names wrap cleanly
+   inside the flexible Name column. */
+.tpl-activity-table {
+    table-layout: fixed;
+    width: 100%;
+}
+
+.tpl-activity-table th,
+.tpl-activity-table td {
+    overflow-wrap: break-word;
+}
+
+.tpl-activity-table .tpl-select-col {
+    width: 3rem;
+}
+
+.tpl-activity-table .tpl-col-type {
+    /* Fixed, width-agnostic: a percentage grows absurdly wide on the now
+       full-width admin page. */
+    width: 11rem;
+}
+
+.tpl-activity-table .tpl-col-actions {
+    width: 13rem;
+}
+
+.tpl-activity-action,
+.tpl-bulk-select,
+.tpl-section-behavior {
+    width: auto;
+}
+
+/* Global bulk action bar: clearly separated from the last section card. */
+.tpl-bulk-bar {
+    margin-top: 2.5rem;
+    padding-top: 1rem;
+    border-top: 1px solid #dee2e6;
 }
 
 /* Activity rows */
