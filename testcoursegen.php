@@ -58,7 +58,10 @@ require_capability('moodle/site:config', $systemcontext);
 $nodeserviceurl = 'http://coursegen-template:3000';
 
 $sourcecourseid = optional_param('sourcecourseid', 422, PARAM_INT);
-$action = optional_param('action', '', PARAM_ALPHA);
+// PARAM_ALPHA strips underscores - 'create_template_test' would silently
+// clean to 'createtemplatetest' and never match, making that whole action
+// branch permanently unreachable (confirmed with a real form submission).
+$action = optional_param('action', '', PARAM_ALPHAEXT);
 
 $pageurl = new moodle_url('/local/coursegen/testcoursegen.php');
 $PAGE->set_url($pageurl);
