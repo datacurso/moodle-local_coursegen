@@ -19,6 +19,14 @@
  * course's structure and a real .mbz backup's content, without going through
  * the real Datacurso AI backend.
  *
+ * The coursegen_template test service is called in two separate steps,
+ * correlated by one request-scoped id ($requestid): first the real image
+ * files are posted to /api/course-images, then the lightweight JSON payload
+ * is posted to /api/course-generation, referencing those same images only by
+ * content_hash. Splitting them keeps each endpoint doing one thing (binary
+ * upload vs. JSON reconciliation) instead of mixing both in one multipart
+ * request.
+ *
  * Uses the standard post/redirect/get pattern. The result cannot travel as a
  * session-flash notification: create_course_service::create_course() calls
  * \core\session\manager::write_close() internally (so other tabs are not
@@ -59,23 +67,48 @@ $PAGE->set_heading(get_string('testcoursegen_title', 'local_coursegen'));
 if ($action === 'create' && confirm_sesskey()) {
     $redirectparams = ['sourcecourseid' => $sourcecourseid];
 
+    // One request-scoped id, generated up front and reused everywhere in this
+    // request: it correlates the image upload below with the JSON generation
+    // call that references those same images, and is also the course session's
+    // own external reference - one id, one meaning, instead of a throwaway
+    // batch id invented just for the node service.
+    $requestid = 'testcoursegen-' . bin2hex(random_bytes(8));
+
     try {
         $courseexport = course_export_service::export_course($sourcecourseid);
         $imagefiles = course_export_service::get_exported_image_files();
 
-        // Real multipart/form-data request: one 'payload' text part carrying
-        // the lightweight JSON (image references only, never bytes), plus one
-        // real file part per unique image, fieldname = its own contenthash.
-        // Passing a stored_file as an array value makes Moodle's curl class
-        // upload it as a real CURLFile part (see stored_file::add_to_curl_request());
+        // First call: real image file parts only, no JSON. Passing a
+        // stored_file as an array value makes Moodle's curl class upload it
+        // as a real CURLFile part (see stored_file::add_to_curl_request());
         // it never touches base64 or needs a manual temp copy.
-        $postparams = ['payload' => json_encode($courseexport)];
-        foreach ($imagefiles as $contenthash => $file) {
-            $postparams[$contenthash] = $file;
+        if (!empty($imagefiles)) {
+            $imagepostparams = [];
+            foreach ($imagefiles as $contenthash => $file) {
+                $imagepostparams[$contenthash] = $file;
+            }
+
+            $imagescurl = new \curl();
+            $imagescurl->post(
+                $nodeserviceurl . '/api/course-images?session_id=' . urlencode($requestid),
+                $imagepostparams
+            );
+
+            if ($imagescurl->get_errno()) {
+                throw new \Exception(
+                    'Could not upload images to the coursegen_template test service: ' . $imagescurl->error
+                );
+            }
         }
 
+        // Second call: the lightweight JSON payload, referencing those same
+        // images only by content_hash - it never carries image bytes.
         $curl = new \curl();
-        $response = $curl->post($nodeserviceurl . '/api/course-result', $postparams);
+        $curl->setHeader('Content-Type: application/json');
+        $response = $curl->post($nodeserviceurl . '/api/course-generation', json_encode([
+            'session_id' => $requestid,
+            'course_content' => $courseexport,
+        ]));
 
         if ($curl->get_errno()) {
             throw new \Exception('Could not reach the coursegen_template test service: ' . $curl->error);
@@ -90,7 +123,7 @@ if ($action === 'create' && confirm_sesskey()) {
         $session = course_session_service::create_from_form_data(
             new stdClass(),
             $USER->id,
-            'testcoursegen-' . bin2hex(random_bytes(8))
+            $requestid
         );
 
         $creationresult = create_course_service::create_course($session, $resultdata, []);
@@ -116,7 +149,11 @@ echo $OUTPUT->header();
 
 if ($courseid > 0) {
     $courseurl = new moodle_url('/course/view.php', ['id' => $courseid]);
-    $message = get_string('testcoursegen_success', 'local_coursegen', $courseid) . ' ' . $courseurl->out(false);
+    $courselink = html_writer::link($courseurl, $courseurl->out(false), [
+        'target' => '_blank',
+        'rel' => 'noopener noreferrer',
+    ]);
+    $message = get_string('testcoursegen_success', 'local_coursegen', $courseid) . ' ' . $courselink;
     if ($warnings > 0) {
         $message .= ' (' . $warnings . ' activity warning(s), see the debug log)';
     }
