@@ -26,9 +26,9 @@ defined('MOODLE_INTERNAL') || die();
  * Orchestrates "create course from template": builds a new course out of a
  * template's base course, importing sections/activities marked "keep" as-is
  * (via the core backup/restore import mechanism), regenerating "modify"
- * activities and professor-added new activities through the AI (currently
- * mocked, see mock_template_ai_service), and skipping "exclude"/"reference"
- * activities entirely from the final course.
+ * activities and professor-added new activities through the AI (see
+ * template_content_generator, injected via set_ai_service()), and skipping
+ * "exclude"/"reference" activities entirely from the final course.
  *
  * The client is never trusted for behavior/action: this service re-reads
  * template_section/template_activity from the database as the single source
@@ -42,12 +42,10 @@ defined('MOODLE_INTERNAL') || die();
  */
 class template_course_builder_service {
     /**
-     * Injected AI content generator, or null before first use (in which case
-     * get_ai_service() lazily defaults it to the mock). Holding an instance
-     * here — instead of a class-name constant resolved at each call site —
-     * means the mock can be deleted outright once a real implementation
-     * exists, with nothing left behind to clean up: every call site already
-     * goes through get_ai_service(), never mock_template_ai_service by name.
+     * Injected AI content generator. Every call site goes through
+     * get_ai_service(), never a concrete implementation's class name
+     * directly, so swapping implementations is a single call to
+     * set_ai_service().
      *
      * @var template_content_generator|null
      */
@@ -57,17 +55,15 @@ class template_course_builder_service {
      * Return the AI content generator used to fabricate template activity
      * content and grid section pictures.
      *
-     * Defaults to the mock while the real backend isn't wired in. Swapping
-     * to the real implementation (once one exists, implementing
-     * template_content_generator the same way the mock does today) is a
-     * single call to set_ai_service() — production code at every call site
-     * below never needs to change.
-     *
      * @return template_content_generator
+     * @throws \coding_exception If no implementation has been injected yet
+     *     (see set_ai_service()).
      */
     private static function get_ai_service(): template_content_generator {
         if (self::$aiservice === null) {
-            self::$aiservice = new mock_template_ai_service();
+            throw new \coding_exception(
+                'template_course_builder_service: no AI content generator injected. Call set_ai_service() first.'
+            );
         }
         return self::$aiservice;
     }
@@ -75,11 +71,7 @@ class template_course_builder_service {
     /**
      * Inject the AI content generator used by this service.
      *
-     * The real production wiring point once a real implementation of
-     * template_content_generator exists; also used by PHPUnit to inject a
-     * test double instead of the mock.
-     *
-     * @param template_content_generator|null $service Null resets to the default mock.
+     * @param template_content_generator|null $service Null clears the current implementation.
      * @return void
      */
     public static function set_ai_service(?template_content_generator $service): void {
@@ -519,7 +511,7 @@ class template_course_builder_service {
     /**
      * Index the professor-added new sections' names by their client id, used
      * only to give new activities placed into a brand-new section a
-     * sensible default title (see mock_template_ai_service::default_title()).
+     * sensible default title.
      *
      * @param array $newsections [['clientid' => int, 'name' => string], ...].
      * @return array<int,string> clientid => name.
@@ -653,9 +645,9 @@ class template_course_builder_service {
      * model involved. `stylereference` carries the course's own brand/style
      * reference through, so that text-generation call can follow it (the
      * SAME lightweight reference already derived for banner consistency,
-     * not image analysis of any existing section picture); the mock does
-     * not consume it yet — see mock_template_ai_service::generate_section_picture()'s
-     * own docblock for what a real implementation is expected to do with it.
+     * not image analysis of any existing section picture) - see
+     * template_content_generator::generate_section_picture() for the full
+     * contract.
      *
      * Deliberately fail-soft like every other step of this builder: a
      * problem generating a picture must never abort the course build, only
