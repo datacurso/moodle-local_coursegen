@@ -59,8 +59,10 @@
     * data-region="row-gap" on the thin hover-reveal strip rendered after
       EVERY row (real or instance, including the section's last one), and
       data-region="add-instance" on the section's persistent trailing
-      "Add activity from a template" row — each trigger sits inside its own
-      ".dropdown" wrapper next to an empty ".dropdown-menu" sibling
+      "Add activity from a template" row — each trigger carries
+      data-toggle="dropdown" (so Bootstrap's own outside-click/Escape
+      handling can close it) and sits inside its own ".dropdown" wrapper
+      next to an empty ".dropdown-menu" sibling
       (local/template/template_instance_menu.js renders the picker body into
       that sibling and opens it as a native Bootstrap dropdown); picking an
       item inserts that template's instance immediately before the element
@@ -158,38 +160,37 @@
             </select>
         </div>
         <div class="collapse show" id="local-coursegen-tpl-section-{{courseid}}-{{id}}">
-            <div class="table-responsive">
-                <table class="table generaltable table-hover mb-0 tpl-activity-table">
-                    <thead>
-                        <tr>
-                            <th scope="col" class="tpl-select-col">
-                                <input type="checkbox" data-region="select-all"
-                                       aria-label="{{#str}} selectall, core {{/str}}">
-                            </th>
-                            <th scope="col">{{#str}} name, core {{/str}}</th>
-                            <th scope="col" class="tpl-col-type">{{#str}} template_table_type, local_coursegen {{/str}}</th>
-                            <th scope="col" class="text-right tpl-col-actions">{{#str}} actions, core {{/str}}</th>
-                        </tr>
-                    </thead>
-                    <tbody>
-                        {{#rows}}
-                        {{> local_coursegen/template_course_sections_row}}
-                        {{/rows}}
-                        <tr class="tpl-row-add" data-region="add-instance">
-                            <td colspan="4">
-                                <div class="dropdown tpl-instance-dropdown">
-                                    <button type="button" class="tpl-add-instance-btn" data-instance-menu-trigger
-                                            aria-haspopup="true" aria-expanded="false">
-                                        <span>&#65291;</span>
-                                        <span>{{#str}} template_add_instance, local_coursegen {{/str}}</span>
-                                    </button>
-                                    <div class="dropdown-menu tpl-instance-menu" role="menu"></div>
-                                </div>
-                            </td>
-                        </tr>
-                    </tbody>
-                </table>
-            </div>
+            <table class="table generaltable table-hover mb-0 tpl-activity-table">
+                <thead>
+                    <tr>
+                        <th scope="col" class="tpl-select-col">
+                            <input type="checkbox" data-region="select-all"
+                                   aria-label="{{#str}} selectall, core {{/str}}">
+                        </th>
+                        <th scope="col">{{#str}} name, core {{/str}}</th>
+                        <th scope="col" class="tpl-col-type">{{#str}} template_table_type, local_coursegen {{/str}}</th>
+                        <th scope="col" class="text-right tpl-col-actions">{{#str}} actions, core {{/str}}</th>
+                    </tr>
+                </thead>
+                <tbody>
+                    {{#rows}}
+                    {{> local_coursegen/template_course_sections_row}}
+                    {{/rows}}
+                    <tr class="tpl-row-add" data-region="add-instance">
+                        <td colspan="4">
+                            <div class="dropdown tpl-instance-dropdown">
+                                <button type="button" class="tpl-add-instance-btn" data-instance-menu-trigger
+                                        data-toggle="dropdown"
+                                        aria-haspopup="true" aria-expanded="false">
+                                    <span>&#65291;</span>
+                                    <span>{{#str}} template_add_instance, local_coursegen {{/str}}</span>
+                                </button>
+                                <div class="dropdown-menu tpl-instance-menu" role="menu"></div>
+                            </div>
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
         </div>
     </div>
 {{/sections}}

@@ -14,18 +14,21 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Opens a "+" trigger's own template picker as a native Bootstrap dropdown.
+ * Opens/closes a "+" trigger's own template picker as a native Bootstrap
+ * dropdown, positioned by Bootstrap's own bundled Popper.
  *
  * Every trigger (see template_course_sections.mustache and
- * template_course_sections_row.mustache) is a ".dropdown" wrapper holding
- * the trigger button next to an empty ".dropdown-menu" sibling. This module
- * only ever fills that sibling with fresh content and then asks Bootstrap's
- * own dropdown plugin to show it — positioning, collision handling,
- * outside-click/Escape-to-close, and aria-expanded bookkeeping are all
- * Bootstrap's, not this plugin's, because the available templates change
- * per click (an unsaved "Use as template" row picked earlier in the same
- * editing session must be immediately offerable) and Bootstrap only knows
- * how to measure/position a menu it can already see the contents of.
+ * template_course_sections_row.mustache) carries data-toggle="dropdown" and
+ * is a ".dropdown" wrapper holding the trigger button next to an empty
+ * ".dropdown-menu" sibling. This module only ever fills that sibling with
+ * fresh content and then asks Bootstrap's own dropdown plugin to show or
+ * hide it — positioning, collision handling, outside-click/Escape-to-close,
+ * and aria-expanded bookkeeping are all Bootstrap's, not this plugin's.
+ * template_instance_events.js opens via toggle() (not the bare show()
+ * method, which defaults to skipping Popper entirely) once each click's own
+ * async fetch-then-render finishes, and stops that same click from also
+ * reaching Bootstrap's global data-toggle click handler — see the comment
+ * there for why.
  *
  * @module     local_coursegen/local/template/template_instance_menu
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -48,10 +51,21 @@ import jQuery from 'jquery';
  */
 export const openInstanceMenu = async({triggerEl, options}) => {
     const menuEl = triggerEl.closest('.dropdown').querySelector('.dropdown-menu');
-    const body = await Templates.render('local_coursegen/template_instance_menu', {
+    const rendered = await Templates.render('local_coursegen/template_instance_menu', {
         hasoptions: options.length > 0,
         options,
     });
-    Templates.replaceNodeContents(menuEl, body, '');
+    Templates.replaceNodeContents(menuEl, rendered, '');
     jQuery(triggerEl).dropdown('toggle');
+};
+
+/**
+ * Close a trigger's own dropdown, if it is open — called once its pick has
+ * been handled, so the menu never lingers over the row it just helped
+ * insert.
+ *
+ * @param {HTMLElement} triggerEl The "+" button whose dropdown should close.
+ */
+export const closeInstanceMenu = (triggerEl) => {
+    jQuery(triggerEl).dropdown('hide');
 };

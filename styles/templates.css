@@ -15,11 +15,11 @@
 .tpl-step-line.done { background: #28a745; }
 .tpl-step-line.active { background: #b5351a; }
 
-/* Section cards */
+/* Section cards. No overflow:hidden here: it would clip the
+   instance-picker's dropdown-menu, which is a descendant of this card. */
 .tpl-section-card {
     border: 1px solid #dee2e6;
     border-radius: 0.5rem;
-    overflow: hidden;
     margin-bottom: 1rem;
     transition: all 0.2s;
 }
@@ -40,6 +40,7 @@
     background: #f8f9fa;
     border-bottom: 1px solid #dee2e6;
     padding: 0.75rem 1rem;
+    border-radius: 0.5rem 0.5rem 0 0;
 }
 
 .tpl-section-body {

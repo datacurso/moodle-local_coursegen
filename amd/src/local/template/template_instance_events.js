@@ -30,7 +30,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {openInstanceMenu} from './template_instance_menu';
+import {openInstanceMenu, closeInstanceMenu} from './template_instance_menu';
 import {insertInstanceRow, removeInstanceRow} from './template_instance_rows';
 import {get_string as getString} from 'core/str';
 
@@ -108,9 +108,9 @@ const openMenuForTrigger = async(container, trigger, state) => {
 
 /**
  * Handle a click on one enabled picker item: insert its instance row
- * immediately before the row-gap/add-instance row the picker opened from.
- * Bootstrap closes the dropdown on its own once this click finishes
- * bubbling to the document.
+ * immediately before the row-gap/add-instance row the picker opened from,
+ * then close that dropdown explicitly rather than trust the click to keep
+ * bubbling into Bootstrap's own outside-click handler.
  *
  * @param {HTMLElement} item The clicked picker item (data-source-cmid).
  * @param {Function} markDirty Marks the wizard as having unsaved changes.
@@ -118,11 +118,13 @@ const openMenuForTrigger = async(container, trigger, state) => {
 const pickTemplate = (item, markDirty) => {
     const beforeEl = item.closest('[data-region="row-gap"], [data-region="add-instance"]');
     const tbody = beforeEl.closest('table').querySelector('tbody');
+    const triggerEl = beforeEl.querySelector('[data-instance-menu-trigger]');
     const picked = {
         sourcecmid: parseInt(item.dataset.sourceCmid, 10),
         sourcename: item.dataset.sourceName,
         typelabel: item.dataset.typeLabel,
     };
+    closeInstanceMenu(triggerEl);
     insertInstanceRow(tbody, beforeEl, picked).then(markDirty);
 };
 
@@ -139,6 +141,14 @@ export const bindInstanceInserts = (container, state, markDirty) => {
     container.addEventListener('click', (e) => {
         const trigger = e.target.closest('[data-instance-menu-trigger]');
         if (trigger) {
+            // The trigger also carries data-toggle="dropdown" so Bootstrap's
+            // own outside-click/Escape handling can find and close it later.
+            // That same attribute makes Bootstrap's global click-data-api
+            // listener try to toggle it open too, racing this handler's own
+            // fetch-then-open flow. Stop the click here so only
+            // openMenuForTrigger's own explicit dropdown('toggle') call
+            // (once the menu's real content is ready) opens it.
+            e.stopPropagation();
             openMenuForTrigger(container, trigger, state);
             return;
         }

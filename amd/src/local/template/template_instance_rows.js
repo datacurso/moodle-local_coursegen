@@ -47,7 +47,7 @@ const buildGapRow = (title) => {
     tr.innerHTML = '<td colspan="4"><div class="tpl-row-gap-line">'
         + '<div class="dropdown tpl-instance-dropdown">'
         + '<button type="button" class="tpl-row-gap-plus" data-instance-menu-trigger'
-        + ' aria-haspopup="true" aria-expanded="false" title="' + title + '">+</button>'
+        + ' data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="' + title + '">+</button>'
         + '<div class="dropdown-menu tpl-instance-menu" role="menu"></div>'
         + '</div></div></td>';
     return tr;
