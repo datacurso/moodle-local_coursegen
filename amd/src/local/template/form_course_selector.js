@@ -25,6 +25,11 @@
  * (category-scoped course listing) and only needed a $query parameter
  * added to also filter by free text.
  *
+ * Scoped to the SELECTED category only (recursive: false): the sibling
+ * category field already lists every category in the full hierarchy, so a
+ * course living in a subcategory is reached by picking that subcategory
+ * directly, not by picking its parent.
+ *
  * @module     local_coursegen/local/template/form_course_selector
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -61,7 +66,7 @@ define(['core/ajax'], function(Ajax) {
 
             Ajax.call([{
                 methodname: 'local_coursegen_get_courses_by_category',
-                args: {categoryid: categoryid, recursive: true, query: query || ''},
+                args: {categoryid: categoryid, recursive: false, query: query || ''},
             }])[0].then(success).catch(failure);
         }
     };
