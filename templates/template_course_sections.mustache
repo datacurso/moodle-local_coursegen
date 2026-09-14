@@ -46,8 +46,9 @@
     * data-region="section-select-all" data-sid on each section card
       header's checkbox (usable while the section is collapsed)
     * data-region="bulk-action" on the single global bulk select
-    * data-region="template-badge" data-id on each row's "Template" badge
-      (hidden unless the row's action is "template")
+    * data-region="template-badge" data-id on each row's "Template" badge,
+      inside a .tpl-template-scope-row alongside its scope select (hidden
+      unless the row's action is "template")
     * data-region="template-scope" data-id on each row's scope select
       (hidden unless the row's action is "template")
 
@@ -152,25 +153,29 @@
                                 }}{{^viewurl}}<span>{{name}}</span>{{/viewurl}}
                             </td>
                             <td class="align-middle text-muted">{{typelabel}}</td>
-                            <td class="align-middle text-right">
-                                <select class="custom-select custom-select-sm tpl-activity-action"
-                                        data-region="activity-action" data-id="{{cmid}}"
-                                        aria-label="{{#str}} actions, core {{/str}}">
-                                    {{#actions}}
-                                    <option value="{{value}}" title="{{tip}}"{{#active}} selected{{/active}}>{{label}}</option>
-                                    {{/actions}}
-                                </select>
-                                <span class="tpl-badge tpl-badge-template ml-1{{^istemplate}} d-none{{/istemplate}}"
-                                      data-region="template-badge" data-id="{{cmid}}">
-                                    {{#str}} template_activity_template_badge, local_coursegen {{/str}}
-                                </span>
-                                <select class="custom-select custom-select-sm tpl-template-scope{{^istemplate}} d-none{{/istemplate}}"
-                                        data-region="template-scope" data-id="{{cmid}}"
-                                        aria-label="{{#str}} template_activity_scope, local_coursegen {{/str}}">
-                                    {{#scopeoptions}}
-                                    <option value="{{value}}" title="{{tip}}"{{#active}} selected{{/active}}>{{label}}</option>
-                                    {{/scopeoptions}}
-                                </select>
+                            <td class="align-middle tpl-actions-cell">
+                                <div class="tpl-actions-cell-inner">
+                                    <select class="custom-select custom-select-sm tpl-activity-action"
+                                            data-region="activity-action" data-id="{{cmid}}"
+                                            aria-label="{{#str}} actions, core {{/str}}">
+                                        {{#actions}}
+                                        <option value="{{value}}" title="{{tip}}"{{#active}} selected{{/active}}>{{label}}</option>
+                                        {{/actions}}
+                                    </select>
+                                    <div class="tpl-template-scope-row">
+                                        <span class="tpl-badge tpl-badge-template{{^istemplate}} d-none{{/istemplate}}"
+                                              data-region="template-badge" data-id="{{cmid}}">
+                                            {{#str}} template_activity_template_badge, local_coursegen {{/str}}
+                                        </span>
+                                        <select class="custom-select custom-select-sm tpl-template-scope{{^istemplate}} d-none{{/istemplate}}"
+                                                data-region="template-scope" data-id="{{cmid}}"
+                                                aria-label="{{#str}} template_activity_scope, local_coursegen {{/str}}">
+                                            {{#scopeoptions}}
+                                            <option value="{{value}}" title="{{tip}}"{{#active}} selected{{/active}}>{{label}}</option>
+                                            {{/scopeoptions}}
+                                        </select>
+                                    </div>
+                                </div>
                             </td>
                         </tr>
                         {{/activities}}
