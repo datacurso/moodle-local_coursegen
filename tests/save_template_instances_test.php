@@ -75,7 +75,16 @@ final class save_template_instances_test extends \advanced_testcase {
         $this->assertStringContainsString('data-instance-id="' . $instanceid . '"', $html);
         $this->assertStringContainsString('value="Discussion 1"', $html);
         $badge = get_string('template_instance_badge', 'local_coursegen', 'Forum template');
-        $this->assertStringContainsString($badge, $this->extract_instance_area($html, $instanceid));
+        $instancearea = $this->extract_instance_area($html, $instanceid);
+        $this->assertStringContainsString($badge, $instancearea);
+
+        // The row's own source cmid/name must reach the DOM: unmarking the
+        // molded activity later (confirmUnmarkTemplate in
+        // template_row_scope.js) finds every dependent instance by
+        // data-source-cmid, and the save payload (collectInstancesForSection
+        // in template_instance_rows.js) reads data-source-name back from it.
+        $this->assertStringContainsString('data-source-cmid="' . $forum->cmid . '"', $instancearea);
+        $this->assertStringContainsString('data-source-name="Forum template"', $instancearea);
 
         // The instance renders AFTER the forum row it is anchored to.
         $forumpos = strpos($html, 'data-id="' . $forum->cmid . '"');

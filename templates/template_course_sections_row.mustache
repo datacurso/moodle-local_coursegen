@@ -57,46 +57,8 @@
 </tr>
 {{/isreal}}
 {{#isinstance}}
-<tr class="tpl-row-instance" data-for="instancerow" data-instance-id="{{instanceid}}">
-    <td class="align-middle tpl-select-col"></td>
-    <td class="align-middle">
-        <span class="icon activityicon tpl-instance-icon mr-2"></span>
-        <input type="text" class="tpl-instance-name-input" value="{{name}}"
-               data-region="instance-name" data-id="{{instanceid}}"
-               aria-label="{{#str}} template_instance_name, local_coursegen {{/str}}">
-        <span class="tpl-badge tpl-badge-instance ml-2">{{badge}}</span>
-    </td>
-    <td class="align-middle text-muted">{{typelabel}}</td>
-    <td class="align-middle text-right">
-        <div class="tpl-instance-actions">
-            <button type="button" class="tpl-instance-icon-btn" data-region="instance-prompt-toggle" data-id="{{instanceid}}"
-                    title="{{#str}} template_instance_prompt_edit, local_coursegen {{/str}}">&#9998;</button>
-            <button type="button" class="tpl-instance-icon-btn tpl-instance-icon-danger" data-region="instance-remove" data-id="{{instanceid}}"
-                    title="{{#str}} template_instance_remove, local_coursegen {{/str}}">&times;</button>
-        </div>
-    </td>
-</tr>
-<tr class="tpl-instance-prompt-row d-none" data-for="instanceprompt" data-instance-id="{{instanceid}}">
-    <td colspan="4">
-        <div class="tpl-prompt-field">
-            <textarea data-region="instance-prompt" data-id="{{instanceid}}" rows="2"
-                      placeholder="{{#str}} template_instance_prompt_placeholder, local_coursegen {{/str}}">{{prompt}}</textarea>
-        </div>
-    </td>
-</tr>
+{{> local_coursegen/template_instance_row}}
 {{/isinstance}}
 {{^islast}}
-<tr class="tpl-row-gap" data-region="row-gap">
-    <td colspan="4">
-        <div class="tpl-row-gap-line">
-            <div class="dropdown tpl-instance-dropdown">
-                <button type="button" class="tpl-row-gap-plus" data-instance-menu-trigger
-                        data-toggle="dropdown"
-                        aria-haspopup="true" aria-expanded="false"
-                        title="{{#str}} template_add_instance, local_coursegen {{/str}}">+</button>
-                <div class="dropdown-menu tpl-instance-menu" role="menu"></div>
-            </div>
-        </div>
-    </td>
-</tr>
+{{> local_coursegen/template_row_gap}}
 {{/islast}}

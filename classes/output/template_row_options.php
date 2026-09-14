@@ -196,7 +196,6 @@ class template_row_options {
             'prompt' => (string) $instance->get('prompt'),
             'sourcecmid' => (int) $instance->get('sourcecmid'),
             'sourcename' => $instance->get('sourcename'),
-            'badge' => get_string('template_instance_badge', 'local_coursegen', $instance->get('sourcename')),
         ];
     }
 }

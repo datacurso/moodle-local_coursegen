@@ -34,75 +34,52 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {getStrings} from 'core/str';
+import Templates from 'core/templates';
 
 /** @type {number} Client-only counter for unique data-instance-id values on unsaved rows. */
 let nextTempId = 1;
 
 /**
- * @param {string} title
- * @returns {HTMLTableRowElement}
+ * Render a template into a detached fragment of real DOM elements, so a
+ * caller can insertBefore() it at a specific position — the same markup
+ * template_course_sections_row.mustache renders server-side for a saved
+ * instance, never a hand-built duplicate of it.
+ *
+ * @param {string} templatename Full component/name, e.g. "local_coursegen/template_row_gap".
+ * @param {Object} context Template context.
+ * @returns {Promise<DocumentFragment>}
  */
-const buildGapRow = (title) => {
-    const tr = document.createElement('tr');
-    tr.className = 'tpl-row-gap';
-    tr.setAttribute('data-region', 'row-gap');
-    tr.innerHTML = '<td colspan="4"><div class="tpl-row-gap-line">'
-        + '<div class="dropdown tpl-instance-dropdown">'
-        + '<button type="button" class="tpl-row-gap-plus" data-instance-menu-trigger'
-        + ' data-toggle="dropdown" aria-haspopup="true" aria-expanded="false" title="' + title + '">+</button>'
-        + '<div class="dropdown-menu tpl-instance-menu" role="menu"></div>'
-        + '</div></div></td>';
-    return tr;
+const renderRowFragment = async(templatename, context) => {
+    const rendered = await Templates.render(templatename, context);
+    const holder = document.createElement('tbody');
+    Templates.replaceNodeContents(holder, rendered, '');
+    const fragment = document.createDocumentFragment();
+    while (holder.firstChild) {
+        fragment.appendChild(holder.firstChild);
+    }
+    return fragment;
 };
+
+/**
+ * @returns {Promise<DocumentFragment>} One <tr data-region="row-gap"> element
+ *     — the trigger's own tooltip renders straight from a language string,
+ *     the same as every other gap row.
+ */
+const buildGapRow = () => renderRowFragment('local_coursegen/template_row_gap', {});
 
 /**
  * @param {Object} data {sourcecmid, sourcename, typelabel}
- * @param {number} instanceid Client-side identifier (unique within the page).
- * @param {Object} strings Pre-fetched strings (see insertInstanceRow).
- * @returns {HTMLTableRowElement}
+ * @param {string} instanceid Client-side identifier (unique within the page).
+ * @returns {Promise<DocumentFragment>} The instance row plus its own (hidden) prompt row.
  */
-const buildInstanceRow = (data, instanceid, strings) => {
-    const tr = document.createElement('tr');
-    tr.className = 'tpl-row-instance';
-    tr.setAttribute('data-for', 'instancerow');
-    tr.setAttribute('data-instance-id', instanceid);
-    tr.setAttribute('data-source-cmid', data.sourcecmid);
-    tr.setAttribute('data-source-name', data.sourcename);
-    const badge = strings.badge.replace('{$a}', data.sourcename);
-    tr.innerHTML =
-        '<td class="align-middle tpl-select-col"></td>'
-        + '<td class="align-middle">'
-        + '<span class="icon activityicon tpl-instance-icon mr-2"></span>'
-        + '<input type="text" class="tpl-instance-name-input" value="' + data.sourcename + '"'
-        + ' data-region="instance-name" data-id="' + instanceid + '" aria-label="' + strings.namelabel + '">'
-        + '<span class="tpl-badge tpl-badge-instance ml-2">' + badge + '</span>'
-        + '</td>'
-        + '<td class="align-middle text-muted">' + data.typelabel + '</td>'
-        + '<td class="align-middle text-right"><div class="tpl-instance-actions">'
-        + '<button type="button" class="tpl-instance-icon-btn" data-region="instance-prompt-toggle"'
-        + ' data-id="' + instanceid + '" title="' + strings.prompttitle + '">&#9998;</button>'
-        + '<button type="button" class="tpl-instance-icon-btn tpl-instance-icon-danger" data-region="instance-remove"'
-        + ' data-id="' + instanceid + '" title="' + strings.removetitle + '">&times;</button>'
-        + '</div></td>';
-    return tr;
-};
-
-/**
- * @param {number} instanceid
- * @param {string} placeholder
- * @returns {HTMLTableRowElement}
- */
-const buildPromptRow = (instanceid, placeholder) => {
-    const tr = document.createElement('tr');
-    tr.className = 'tpl-instance-prompt-row d-none';
-    tr.setAttribute('data-for', 'instanceprompt');
-    tr.setAttribute('data-instance-id', instanceid);
-    tr.innerHTML = '<td colspan="4"><div class="tpl-prompt-field">'
-        + '<textarea data-region="instance-prompt" data-id="' + instanceid + '" rows="2"'
-        + ' placeholder="' + placeholder + '"></textarea></div></td>';
-    return tr;
-};
+const buildInstanceRowFragment = (data, instanceid) => renderRowFragment('local_coursegen/template_instance_row', {
+    instanceid,
+    name: data.sourcename,
+    sourcename: data.sourcename,
+    sourcecmid: data.sourcecmid,
+    typelabel: data.typelabel,
+    prompt: '',
+});
 
 /**
  * Remove the gap directly in front of the section's persistent add-row, if
@@ -132,27 +109,17 @@ const dropGapBeforeAddRow = (tbody) => {
  * @returns {Promise<HTMLElement>} The new instance row, once inserted and focused.
  */
 export const insertInstanceRow = async(tbody, beforeEl, picked) => {
-    const [addtitle, badge, namelabel, prompttitle, removetitle, placeholder] = await getStrings([
-        {key: 'template_add_instance', component: 'local_coursegen'},
-        {key: 'template_instance_badge', component: 'local_coursegen', param: '{$a}'},
-        {key: 'template_instance_name', component: 'local_coursegen'},
-        {key: 'template_instance_prompt_edit', component: 'local_coursegen'},
-        {key: 'template_instance_remove', component: 'local_coursegen'},
-        {key: 'template_instance_prompt_placeholder', component: 'local_coursegen'},
-    ]);
-
     const needsLeadingGap = !(beforeEl.previousElementSibling
         && beforeEl.previousElementSibling.classList.contains('tpl-row-gap'));
     if (needsLeadingGap) {
-        tbody.insertBefore(buildGapRow(addtitle), beforeEl);
+        tbody.insertBefore(await buildGapRow(), beforeEl);
     }
 
     const instanceid = 'new-' + (nextTempId++);
-    const instanceRow = buildInstanceRow(picked, instanceid, {badge, namelabel, prompttitle, removetitle});
-    const promptRow = buildPromptRow(instanceid, placeholder);
-    tbody.insertBefore(instanceRow, beforeEl);
-    tbody.insertBefore(promptRow, beforeEl);
-    tbody.insertBefore(buildGapRow(addtitle), beforeEl);
+    const instanceFragment = await buildInstanceRowFragment(picked, instanceid);
+    const instanceRow = instanceFragment.querySelector('[data-for="instancerow"]');
+    tbody.insertBefore(instanceFragment, beforeEl);
+    tbody.insertBefore(await buildGapRow(), beforeEl);
     dropGapBeforeAddRow(tbody);
 
     instanceRow.querySelector('.tpl-instance-name-input').focus();
