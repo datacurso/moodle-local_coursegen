@@ -18,10 +18,16 @@
  * server-rendered "Course sections" review. Split out of sections_events.js
  * so that module stays focused on seeding/tracking each control's own state.
  *
+ * Bulk-applying "template" opens ONE scope modal for the whole batch instead
+ * of one per row — every checked, applicable row gets the same chosen scope.
+ *
  * @module     local_coursegen/local/template/selection_bulk
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
+import {openTemplateScopeModal} from './template_scope_modal';
+import {get_string as getString} from 'core/str';
 
 /**
  * Bind the three selection tiers per section (card-header select-all,
@@ -65,6 +71,79 @@ const bindSelectionTiers = (container) => {
 };
 
 /**
+ * Read every currently-checked row across all sections.
+ *
+ * @param {HTMLElement} container The rendered course sections review.
+ * @returns {HTMLElement[]} The checked rows (data-for="cmitem").
+ */
+const collectCheckedRows = (container) => [...container.querySelectorAll('[data-region="activity-select"]:checked')]
+    .map(box => box.closest('[data-for="cmitem"]'))
+    .filter(row => row !== null);
+
+/**
+ * Apply one action to one row: updates its select, state, and template
+ * visual in one place, so every bulk path (template or otherwise) stays
+ * consistent with a single row change.
+ *
+ * @param {HTMLElement} row The activity row (data-for="cmitem").
+ * @param {string} action The requested action.
+ * @param {Object} state The live wizard state from init.js.
+ * @param {Function} applicableAction (action, modname) => string.
+ * @param {Function} applyTemplateVisual (row, istemplate, cmid, state) => void.
+ */
+const applyActionToRow = (row, action, state, applicableAction, applyTemplateVisual) => {
+    const cmid = parseInt(row.dataset.id);
+    if (!cmid) {
+        return;
+    }
+    const applied = applicableAction(action, row.dataset.modname);
+    const select = row.querySelector('select[data-region="activity-action"]');
+    if (select) {
+        select.value = applied;
+    }
+    state.activityAction[cmid] = applied;
+    applyTemplateVisual(row, applied === 'template', cmid, state);
+};
+
+/**
+ * Bulk-apply "template": rows whose type cannot support it degrade to
+ * "keep" immediately; the rest share ONE scope modal instead of one per
+ * row, and all take the single scope the admin picks there.
+ *
+ * @param {HTMLElement[]} rows The checked rows.
+ * @param {Object} state The live wizard state from init.js.
+ * @param {Function} applicableAction (action, modname) => string.
+ * @param {Function} applyTemplateVisual (row, istemplate, cmid, state) => void.
+ * @param {Function} markDirty Marks the wizard as having unsaved changes.
+ */
+const applyBulkTemplate = async(rows, state, applicableAction, applyTemplateVisual, markDirty) => {
+    const templaterows = [];
+    rows.forEach(row => {
+        if (applicableAction('template', row.dataset.modname) === 'template') {
+            templaterows.push(row);
+        } else {
+            applyActionToRow(row, 'template', state, applicableAction, applyTemplateVisual);
+        }
+    });
+    markDirty();
+    if (!templaterows.length) {
+        return;
+    }
+    const subject = await getString('template_activities_count', 'local_coursegen', templaterows.length);
+    openTemplateScopeModal({
+        subject,
+        scope: 'course',
+        onSave: (scope) => {
+            templaterows.forEach(row => {
+                state.activityScope[parseInt(row.dataset.id)] = scope;
+                applyActionToRow(row, 'template', state, applicableAction, applyTemplateVisual);
+            });
+            markDirty();
+        },
+    });
+};
+
+/**
  * Bind the single global bulk action bar: disabled while nothing is checked
  * anywhere, applies the chosen action to every checked row across all
  * sections (degrading modify/template to keep for unsupported types), then
@@ -73,10 +152,10 @@ const bindSelectionTiers = (container) => {
  * @param {HTMLElement} container The rendered course sections review.
  * @param {Object} state The live wizard state from init.js.
  * @param {Function} applicableAction (action, modname) => string.
- * @param {Function} syncTemplateRowUi (row, action, cmid, state) => void.
+ * @param {Function} applyTemplateVisual (row, istemplate, cmid, state) => void.
  * @param {Function} markDirty Marks the wizard as having unsaved changes.
  */
-const bindBulkBar = (container, state, applicableAction, syncTemplateRowUi, markDirty) => {
+const bindBulkBar = (container, state, applicableAction, applyTemplateVisual, markDirty) => {
     const bulk = container.querySelector('select[data-region="bulk-action"]');
     if (!bulk) {
         return;
@@ -104,21 +183,18 @@ const bindBulkBar = (container, state, applicableAction, syncTemplateRowUi, mark
         if (!action) {
             return;
         }
-        container.querySelectorAll('[data-region="activity-select"]:checked').forEach(box => {
-            const row = box.closest('[data-for="cmitem"]');
-            const cmid = row ? parseInt(row.dataset.id) : 0;
-            if (!cmid) {
-                return;
-            }
-            const applied = applicableAction(action, row.dataset.modname);
-            const select = row.querySelector('select[data-region="activity-action"]');
-            if (select) {
-                select.value = applied;
-            }
-            state.activityAction[cmid] = applied;
-            syncTemplateRowUi(row, applied, cmid, state);
+        const rows = collectCheckedRows(container);
+        if (action === 'template') {
+            applyBulkTemplate(rows, state, applicableAction, applyTemplateVisual, markDirty);
+        } else {
+            rows.forEach(row => applyActionToRow(row, action, state, applicableAction, applyTemplateVisual));
             markDirty();
-            box.checked = false;
+        }
+        rows.forEach(row => {
+            const box = row.querySelector('[data-region="activity-select"]');
+            if (box) {
+                box.checked = false;
+            }
         });
         // The batch is done: clear both aggregate tiers (table select-all and
         // section-header checkbox, including any indeterminate state) and let
@@ -138,10 +214,10 @@ const bindBulkBar = (container, state, applicableAction, syncTemplateRowUi, mark
  * @param {Object} state The live wizard state from init.js.
  * @param {Object} helpers
  * @param {Function} helpers.applicableAction (action, modname) => string.
- * @param {Function} helpers.syncTemplateRowUi (row, action, cmid, state) => void.
+ * @param {Function} helpers.applyTemplateVisual (row, istemplate, cmid, state) => void.
  * @param {Function} helpers.markDirty Marks the wizard as having unsaved changes.
  */
-export const bindSelectionAndBulk = (container, state, {applicableAction, syncTemplateRowUi, markDirty}) => {
+export const bindSelectionAndBulk = (container, state, {applicableAction, applyTemplateVisual, markDirty}) => {
     bindSelectionTiers(container);
-    bindBulkBar(container, state, applicableAction, syncTemplateRowUi, markDirty);
+    bindBulkBar(container, state, applicableAction, applyTemplateVisual, markDirty);
 };

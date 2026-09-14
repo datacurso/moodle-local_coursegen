@@ -23,10 +23,13 @@
  * - Per-row action select (data-region="activity-action"): its rendered
  *   value is the server-side default, so binding first SEEDS
  *   state.activityAction from it (the server render is the single source of
- *   truth for defaults), then keeps state in sync on change.
- * - Per-row template-scope select (data-region="template-scope"), and its
- *   "Template" badge (data-region="template-badge"): visible only while the
- *   row's action is "template", kept in sync on every action/scope change.
+ *   truth for defaults), then keeps state in sync on change. Changing it TO
+ *   "template" opens the shared scope modal (template_scope_modal.js)
+ *   instead of applying the action immediately; changing it away from
+ *   "template" clears the row's visual signal with no modal involved.
+ * - Per-row clickable "Template" tag (data-region="template-tag"): visible
+ *   only while the row's action is "template", reopens the same modal to
+ *   change an already-set scope.
  * - Per-row selection checkboxes (data-region="activity-select") plus the
  *   single global bulk select (data-region="bulk-action") — see
  *   selection_bulk.js, bound from here.
@@ -46,6 +49,7 @@
 
 import {typeSupportsModify} from './type_action_sync';
 import {bindSelectionAndBulk} from './selection_bulk';
+import {applyTemplateVisual, openScopeModalForNewSelection, bindTemplateTagClicks} from './template_row_scope';
 
 /** @type {boolean} Whether any config has been modified. */
 let dirty = false;
@@ -100,30 +104,6 @@ const applicableAction = (action, modname) =>
     ((action === 'modify' || action === 'template') && !typeSupportsModify(modname)) ? 'keep' : action;
 
 /**
- * Show/hide a row's "Template" badge and scope select based on its action,
- * and keep state.activityScope seeded for rows currently marked "template".
- *
- * @param {HTMLElement} row The activity row (data-for="cmitem").
- * @param {string} action The row's current action value.
- * @param {number} cmid The row's course module id.
- * @param {Object} state The live wizard state from init.js.
- */
-const syncTemplateRowUi = (row, action, cmid, state) => {
-    const istemplate = action === 'template';
-    const badge = row.querySelector('[data-region="template-badge"]');
-    const scopeselect = row.querySelector('[data-region="template-scope"]');
-    if (badge) {
-        badge.classList.toggle('d-none', !istemplate);
-    }
-    if (scopeselect) {
-        scopeselect.classList.toggle('d-none', !istemplate);
-    }
-    if (istemplate) {
-        state.activityScope[cmid] = scopeselect ? scopeselect.value : (state.activityScope[cmid] || 'course');
-    }
-};
-
-/**
  * Bind events on the server-rendered review controls (no DOM injection).
  *
  * @param {HTMLElement} container The rendered course sections review.
@@ -131,45 +111,45 @@ const syncTemplateRowUi = (row, action, cmid, state) => {
  */
 export const bindServerRenderedControls = (container, state) => {
     // Row action selects: seed state from the server-rendered default, then
-    // track every change. Each row's "Template" badge and scope select
-    // (visible only while its action is "template") are kept in sync here.
+    // track every change. Changing TO "template" opens the scope modal
+    // instead of applying the action inline; the row's tag and highlight
+    // only ever reflect an already-resolved decision.
     container.querySelectorAll('select[data-region="activity-action"]').forEach(select => {
         const cmid = parseInt(select.dataset.id);
         if (!cmid) {
             return;
         }
         const row = select.closest('[data-for="cmitem"]');
+        let prioraction = select.value;
         state.activityAction[cmid] = select.value;
         if (row) {
-            syncTemplateRowUi(row, select.value, cmid, state);
+            applyTemplateVisual(row, select.value === 'template', cmid, state);
         }
         select.addEventListener('change', () => {
-            state.activityAction[cmid] = select.value;
-            if (row) {
-                syncTemplateRowUi(row, select.value, cmid, state);
+            const action = select.value;
+            state.activityAction[cmid] = action;
+            if (!row) {
+                prioraction = action;
+                markDirty();
+                return;
+            }
+            if (action === 'template') {
+                openScopeModalForNewSelection(row, select, cmid, prioraction, state, (finalaction) => {
+                    prioraction = finalaction;
+                });
+            } else {
+                prioraction = action;
+                applyTemplateVisual(row, false, cmid, state);
             }
             markDirty();
         });
     });
 
-    // Per-row template-scope selects: seed state from the server-rendered
-    // value, then track every change. Hidden rows still get seeded so a
-    // scope chosen, then the action changed away and back, is not lost.
-    container.querySelectorAll('select[data-region="template-scope"]').forEach(select => {
-        const cmid = parseInt(select.dataset.id);
-        if (!cmid) {
-            return;
-        }
-        state.activityScope[cmid] = select.value;
-        select.addEventListener('change', () => {
-            state.activityScope[cmid] = select.value;
-            markDirty();
-        });
-    });
+    bindTemplateTagClicks(container, state, markDirty);
 
     // Row selection checkboxes (three synced tiers) and the single global
     // bulk action bar — see selection_bulk.js.
-    bindSelectionAndBulk(container, state, {applicableAction, syncTemplateRowUi, markDirty});
+    bindSelectionAndBulk(container, state, {applicableAction, applyTemplateVisual, markDirty});
 
     // Section behavior selects (custom/keep/exclude): seed state from the
     // server-rendered value — the saved behavior in edit mode — then keep
