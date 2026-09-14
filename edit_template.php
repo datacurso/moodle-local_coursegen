@@ -38,6 +38,7 @@ admin_externalpage_setup('local_coursegen_manage_templates');
 // direct plugin stylesheets get no revision from Moodle's cache pipeline.
 $cssrev = get_config('local_coursegen', 'version');
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/templates.css', ['v' => $cssrev]));
+$PAGE->requires->css(new moodle_url('/local/coursegen/styles/templates-widgets.css', ['v' => $cssrev]));
 
 // Edit mode: the whole saved configuration hydrates the page — the base
 // course comes from the template itself (no courseid param needed), the
@@ -60,6 +61,7 @@ if ($id > 0) {
             'action' => $record->get('action'),
             'useasreference' => (bool) $record->get('useasreference'),
             'prompt' => (string) $record->get('prompt'),
+            'templatescope' => (string) $record->get('templatescope'),
         ];
     }
 }

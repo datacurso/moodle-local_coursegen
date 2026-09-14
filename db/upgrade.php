@@ -315,5 +315,16 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026072002, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026091400) {
+        // Define field templatescope to be added to local_coursegen_tpl_activity.
+        $table = new xmldb_table('local_coursegen_tpl_activity');
+        $field = new xmldb_field('templatescope', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, 'course', 'useasreference');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_plugin_savepoint(true, 2026091400, 'local', 'coursegen');
+    }
+
     return true;
 }

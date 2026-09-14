@@ -57,6 +57,14 @@ class template_activity extends persistent {
                 'type' => PARAM_INT,
                 'default' => 1,
             ],
+            // Only meaningful when action=template: whether this molde may be
+            // used by "modify" activities anywhere in the course, or only by
+            // ones in this same section. Ignored for every other action.
+            'templatescope' => [
+                'type' => PARAM_ALPHA,
+                'null' => NULL_NOT_ALLOWED,
+                'default' => 'course',
+            ],
             'prompt' => [
                 'type' => PARAM_RAW,
                 'null' => NULL_ALLOWED,

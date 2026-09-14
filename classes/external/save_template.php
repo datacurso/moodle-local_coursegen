@@ -70,6 +70,12 @@ class save_template extends external_api {
                             'action'         => new external_value(PARAM_ALPHA, 'Activity action'),
                             'useasreference' => new external_value(PARAM_BOOL, 'Use as reference'),
                             'prompt'         => new external_value(PARAM_RAW,  'Activity prompt', VALUE_DEFAULT, ''),
+                            'templatescope'  => new external_value(
+                                PARAM_ALPHA,
+                                'Template scope (course or section); only meaningful when action=template',
+                                VALUE_DEFAULT,
+                                'course'
+                            ),
                         ])
                     ),
                 ])
@@ -169,6 +175,7 @@ class save_template extends external_api {
                 $act->set('cmid',            $actdata['cmid']);
                 $act->set('action',          $actdata['action']);
                 $act->set('useasreference',  (int) $actdata['useasreference']);
+                $act->set('templatescope',   self::normalise_scope($actdata['templatescope'] ?? 'course'));
                 $act->set('prompt',          $actdata['prompt']);
                 $act->create();
             }
@@ -178,6 +185,21 @@ class save_template extends external_api {
             'id'   => $templateid,
             'name' => $tpl->get('name'),
         ];
+    }
+
+    /**
+     * Fall back an unrecognised template scope to "course" instead of
+     * persisting whatever a client sent — mirrors
+     * template_row_options::template_scope_options()'s own fallback so a row
+     * can never be saved with a scope value it would not even render.
+     *
+     * @param string $scope
+     * @return string
+     */
+    private static function normalise_scope(string $scope): string {
+        return in_array($scope, \local_coursegen\output\template_row_options::SCOPE_VALUES, true)
+            ? $scope
+            : 'course';
     }
 
     /**
