@@ -93,6 +93,19 @@ final class save_template_instances_test extends \advanced_testcase {
         $this->assertStringContainsString('<img src="', $instancearea);
         $this->assertStringContainsString('/forum/', $instancearea);
 
+        // The name renders as the same inline-editable pattern
+        // core/inplace_editable uses elsewhere in Moodle (a display span
+        // plus a "quickeditlink" pencil trigger), not a permanently visible
+        // input — see template_instance_name_edit.js.
+        $this->assertStringContainsString('inplaceeditable', $instancearea);
+        $this->assertStringContainsString('quickeditlink', $instancearea);
+        $this->assertStringContainsString('>Discussion 1<', $instancearea);
+
+        // The prompt-edit/remove actions render as real icons, not glyph
+        // characters.
+        $this->assertStringContainsString('fa-pencil', $instancearea);
+        $this->assertStringContainsString('fa-times', $instancearea);
+
         // The instance renders AFTER the forum row it is anchored to.
         $forumpos = strpos($html, 'data-id="' . $forum->cmid . '"');
         $instancepos = strpos($html, 'data-instance-id="' . $instanceid . '"');

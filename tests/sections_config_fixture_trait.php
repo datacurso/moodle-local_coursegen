@@ -184,6 +184,8 @@ trait sections_config_fixture_trait {
     private function extract_instance_area(string $html, int $instanceid): string {
         $start = strpos($html, 'data-instance-id="' . $instanceid . '"');
         $this->assertNotFalse($start, 'Instance row not found');
-        return substr($html, $start, 400);
+        $end = strpos($html, '</tr>', $start);
+        $this->assertNotFalse($end, 'Unterminated instance row');
+        return substr($html, $start, $end - $start);
     }
 }

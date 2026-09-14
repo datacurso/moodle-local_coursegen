@@ -218,7 +218,12 @@ export const bindInstanceInserts = (container, state, markDirty) => {
             return;
         }
 
-        const pickedItem = e.target.closest('[data-source-cmid]');
+        // Scoped to the menu item's own class, not just [data-source-cmid]:
+        // every instance row's own <tr> also carries that same attribute
+        // (read back by confirmUnmarkTemplate/collectInstancesForSection),
+        // so the bare attribute selector matched a click ANYWHERE inside an
+        // already-inserted row too, mistaking it for a fresh pick.
+        const pickedItem = e.target.closest('.tpl-instance-menu-item[data-source-cmid]');
         if (pickedItem) {
             pickTemplate(pickedItem, markDirty);
             return;
@@ -238,11 +243,8 @@ export const bindInstanceInserts = (container, state, markDirty) => {
     }, true);
 
     container.addEventListener('input', (e) => {
-        if (e.target.matches('[data-region="instance-name"], [data-region="instance-prompt"]')) {
+        if (e.target.matches('[data-region="instance-prompt"]')) {
             markDirty();
-        }
-        if (e.target.matches('[data-region="instance-name"]')) {
-            e.target.closest('[data-region="instance-name-wrap"]').dataset.value = e.target.value;
         }
     });
 };

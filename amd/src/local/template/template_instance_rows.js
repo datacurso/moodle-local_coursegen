@@ -35,6 +35,7 @@
  */
 
 import Templates from 'core/templates';
+import {startNameEdit, currentName} from './template_instance_name_edit';
 
 /** @type {number} Client-only counter for unique data-instance-id values on unsaved rows. */
 let nextTempId = 1;
@@ -124,7 +125,7 @@ export const insertInstanceRow = async(tbody, beforeEl, picked) => {
     tbody.insertBefore(await buildGapRow(), beforeEl);
     dropGapBeforeAddRow(tbody);
 
-    instanceRow.querySelector('.tpl-instance-name-input').focus();
+    startNameEdit(instanceRow.querySelector('[data-region="instance-name-editable"]'));
     return instanceRow;
 };
 
@@ -180,7 +181,7 @@ export const collectInstancesForSection = (sectionEl) => {
             sourcecmid: parseInt(row.dataset.sourceCmid, 10),
             sourcename: row.dataset.sourceName,
             modname: row.dataset.modname || '',
-            name: row.querySelector('[data-region="instance-name"]').value,
+            name: currentName(row.querySelector('[data-region="instance-name-editable"]')),
             typelabel: row.querySelector('td.text-muted').textContent.trim(),
             prompt: promptValue,
             anchorcmid,

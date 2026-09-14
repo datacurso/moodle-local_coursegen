@@ -56,6 +56,7 @@ import {
     bindTemplateTagClicks,
 } from './template_row_scope';
 import {bindInstanceInserts} from './template_instance_events';
+import {bindNameEditing} from './template_instance_name_edit';
 
 /** @type {boolean} Whether any config has been modified. */
 let dirty = false;
@@ -159,6 +160,7 @@ export const bindServerRenderedControls = (container, state) => {
 
     bindTemplateTagClicks(container, state, markDirty);
     bindInstanceInserts(container, state, markDirty);
+    bindNameEditing(container, markDirty);
 
     // Row selection checkboxes (three synced tiers) and the single global
     // bulk action bar — see selection_bulk.js.

@@ -70,9 +70,19 @@
     </td>
     <td class="align-middle">
         <img src="{{iconurl}}" class="icon activityicon mr-2" alt="">
-        <span class="tpl-instance-name-wrap" data-region="instance-name-wrap" data-value="{{name}}">
-            <input type="text" class="tpl-instance-name-input" value="{{name}}"
-                   data-region="instance-name" data-id="{{instanceid}}"
+        <span class="inplaceeditable tpl-instance-name-editable" data-region="instance-name-editable"
+              data-value="{{name}}">
+            <span class="tpl-instance-name-display" data-region="instance-name-display">{{name}}</span>
+            <a href="#" class="quickeditlink aalink" data-region="instance-name-edit-trigger"
+               title="{{#str}} template_instance_rename, local_coursegen {{/str}}">
+                <span class="quickediticon visibleifjs icon-size-3">
+                    <i class="icon fa fa-pencil" aria-hidden="true"></i>
+                </span>
+            </a>
+            <span class="editinstructions" data-region="instance-name-instructions">
+                {{#str}} edittitleinstructions, core {{/str}}
+            </span>
+            <input type="text" class="ignoredirty form-control" data-region="instance-name-input"
                    aria-label="{{#str}} template_instance_name, local_coursegen {{/str}}">
         </span>
         <span class="tpl-badge tpl-badge-instance ml-2">{{#str}} template_instance_badge, local_coursegen, {{sourcename}} {{/str}}</span>
@@ -81,9 +91,13 @@
     <td class="align-middle text-right">
         <div class="tpl-instance-actions">
             <button type="button" class="tpl-instance-icon-btn" data-region="instance-prompt-toggle" data-id="{{instanceid}}"
-                    title="{{#str}} template_instance_prompt_edit, local_coursegen {{/str}}">&#9998;</button>
+                    title="{{#str}} template_instance_prompt_edit, local_coursegen {{/str}}">
+                <i class="icon fa fa-pencil" aria-hidden="true"></i>
+            </button>
             <button type="button" class="tpl-instance-icon-btn tpl-instance-icon-danger" data-region="instance-remove" data-id="{{instanceid}}"
-                    title="{{#str}} template_instance_remove, local_coursegen {{/str}}">&times;</button>
+                    title="{{#str}} template_instance_remove, local_coursegen {{/str}}">
+                <i class="icon fa fa-times" aria-hidden="true"></i>
+            </button>
         </div>
     </td>
 </tr>

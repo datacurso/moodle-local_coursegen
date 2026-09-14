@@ -95,44 +95,26 @@
     animation: tplFadeIn 0.2s ease;
 }
 
-/* An <input> never sizes itself to its own value the way a <span> does —
-   without this, its default width leaves a large, fixed gap before
-   whatever follows it (the "Instance" badge), no matter how short the
-   name is. This is the standard content-sized-input technique: an
-   invisible ::after mirrors the current value through a CSS grid, so the
-   input (sharing that same grid cell) is always exactly as wide as it.
-   Kept in sync with the input's live value by bindInstanceInserts's own
-   "input" listener updating data-value (see template_instance_events.js). */
-.tpl-instance-name-wrap {
-    display: inline-grid;
-    vertical-align: middle;
+/* An instance's name: at rest, plain text plus a "quickeditlink" pencil —
+   the exact classes and hover/focus behaviour core/inplace_editable ships
+   its own CSS for already, reused here instead of hand-rolled styles.
+   Clicking the pencil swaps to the input+hint pair (this local module's
+   own — never full core/inplace_editable, which always commits over
+   AJAX; this row's name is only ever persisted later, by the wizard's own
+   "Save"). See template_instance_name_edit.js for the class toggle. */
+.tpl-instance-name-editable .editinstructions,
+.tpl-instance-name-editable input[data-region="instance-name-input"] {
+    display: none;
 }
 
-.tpl-instance-name-wrap::after {
-    content: attr(data-value) " ";
-    visibility: hidden;
-    white-space: pre;
-    grid-area: 1 / 1;
-    font: inherit;
-    padding: 0.15rem 0.3rem;
+.tpl-instance-name-editable.inplaceeditingon .tpl-instance-name-display,
+.tpl-instance-name-editable.inplaceeditingon .quickeditlink {
+    display: none;
 }
 
-.tpl-instance-name-input {
-    grid-area: 1 / 1;
-    width: 100%;
-    min-width: 2rem;
-    border: 1px solid transparent;
-    background: transparent;
-    font: inherit;
-    padding: 0.15rem 0.3rem;
-    border-radius: 0.3rem;
-}
-
-.tpl-instance-name-input:hover,
-.tpl-instance-name-input:focus {
-    border-color: #dee2e6;
-    background: #f8f9fa;
-    outline: none;
+.tpl-instance-name-editable.inplaceeditingon .editinstructions,
+.tpl-instance-name-editable.inplaceeditingon input[data-region="instance-name-input"] {
+    display: inline-block;
 }
 
 .tpl-instance-actions {

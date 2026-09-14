@@ -857,6 +857,7 @@ $string['template_instance_menu_hint'] = 'Plantillas disponibles para esta secci
 $string['template_instance_menu_empty'] = 'Todavía no hay ninguna actividad marcada como "Usar como plantilla".';
 $string['template_instance_badge'] = 'Instancia · {$a}';
 $string['template_instance_name'] = 'Nombre de la instancia';
+$string['template_instance_rename'] = 'Renombrar';
 $string['template_instance_prompt_edit'] = 'Editar instrucciones';
 $string['template_instance_prompt_placeholder'] = 'Describí de qué debe tratarse esta instancia...';
 $string['template_instance_remove'] = 'Quitar';
