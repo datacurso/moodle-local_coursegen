@@ -33,6 +33,48 @@
 import {openInstanceMenu, closeInstanceMenu, beginMenuOpen} from './template_instance_menu';
 import {insertInstanceRow, removeInstanceRow} from './template_instance_rows';
 import {get_string as getString} from 'core/str';
+import Notification from 'core/notification';
+
+/**
+ * Build one marked row's own picker option, or null if the row is missing
+ * something it needs (no cmid, or no section ancestor to check eligibility
+ * against) — a single malformed row must never take the whole list down.
+ *
+ * @param {HTMLElement} row A row carrying the "tpl-row-template" class.
+ * @param {number} targetsectionid The section the "+" was triggered from.
+ * @param {Object} state The live wizard state from init.js.
+ * @param {Object} hints {samesectionhint, coursehint, tooltip} pre-fetched strings.
+ * @returns {Object|null}
+ */
+const buildOneOption = (row, targetsectionid, state, hints) => {
+    const cmid = parseInt(row.dataset.id, 10);
+    const sectionEl = row.closest('[data-for="section"]');
+    if (!cmid || !sectionEl) {
+        return null;
+    }
+    const sectionid = parseInt(sectionEl.dataset.id, 10);
+    const scope = state.activityScope[cmid] || 'course';
+    const eligible = scope === 'course' || sectionid === targetsectionid;
+
+    let scopehint = hints.samesectionhint;
+    let itemtooltip = '';
+    if (eligible) {
+        if (scope === 'course') {
+            scopehint = hints.coursehint;
+        }
+    } else {
+        itemtooltip = hints.tooltip;
+    }
+
+    return {
+        sourcecmid: cmid,
+        name: row.querySelector('.tpl-template-tag')?.dataset.name || '',
+        typelabel: row.dataset.typelabel || '',
+        disabled: !eligible,
+        scopehint,
+        tooltip: itemtooltip,
+    };
+};
 
 /**
  * Build the picker's option list for one target section: every row
@@ -50,32 +92,11 @@ const buildAvailableTemplates = async(container, targetsectionid, state) => {
         getString('template_instance_scope_whole_course', 'local_coursegen'),
         getString('template_instance_scope_unavailable', 'local_coursegen'),
     ]);
+    const hints = {samesectionhint, coursehint, tooltip};
 
-    return [...container.querySelectorAll('.tpl-row-template[data-for="cmitem"]')].map(row => {
-        const cmid = parseInt(row.dataset.id, 10);
-        const sectionid = parseInt(row.closest('[data-for="section"]').dataset.id, 10);
-        const scope = state.activityScope[cmid] || 'course';
-        const eligible = scope === 'course' || sectionid === targetsectionid;
-
-        let scopehint = samesectionhint;
-        let itemtooltip = '';
-        if (eligible) {
-            if (scope === 'course') {
-                scopehint = coursehint;
-            }
-        } else {
-            itemtooltip = tooltip;
-        }
-
-        return {
-            sourcecmid: cmid,
-            name: row.querySelector('.tpl-template-tag')?.dataset.name || '',
-            typelabel: row.dataset.typelabel || '',
-            disabled: !eligible,
-            scopehint,
-            tooltip: itemtooltip,
-        };
-    });
+    return [...container.querySelectorAll('.tpl-row-template[data-for="cmitem"]')]
+        .map(row => buildOneOption(row, targetsectionid, state, hints))
+        .filter(option => option !== null);
 };
 
 /**
@@ -155,7 +176,7 @@ export const bindInstanceInserts = (container, state, markDirty) => {
             // openMenuForTrigger's own explicit dropdown('toggle') call
             // (once the menu's real content is ready) opens it.
             e.stopPropagation();
-            openMenuForTrigger(container, trigger, state);
+            openMenuForTrigger(container, trigger, state).catch(Notification.exception);
             return;
         }
 
