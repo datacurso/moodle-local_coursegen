@@ -49,7 +49,12 @@
 
 import {typeSupportsModify} from './type_action_sync';
 import {bindSelectionAndBulk} from './selection_bulk';
-import {applyTemplateVisual, openScopeModalForNewSelection, bindTemplateTagClicks} from './template_row_scope';
+import {
+    applyTemplateVisual,
+    openScopeModalForNewSelection,
+    confirmUnmarkTemplate,
+    bindTemplateTagClicks,
+} from './template_row_scope';
 import {bindInstanceInserts} from './template_instance_events';
 
 /** @type {boolean} Whether any config has been modified. */
@@ -144,8 +149,9 @@ export const bindServerRenderedControls = (container, state) => {
                     prioraction = finalaction;
                 });
             } else {
-                prioraction = action;
-                applyTemplateVisual(row, false, cmid, state);
+                confirmUnmarkTemplate(container, row, select, action, prioraction, cmid, state, (finalaction) => {
+                    prioraction = finalaction;
+                });
             }
             markDirty();
         });

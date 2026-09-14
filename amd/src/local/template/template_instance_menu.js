@@ -39,22 +39,58 @@ import Templates from 'core/templates';
 import jQuery from 'jquery';
 
 /**
+ * @type {WeakMap<HTMLElement, symbol>} Trigger -> the token of its most
+ * recently started open. Fetching the available templates (in
+ * template_instance_events.js) and rendering the menu body here are both
+ * async; two opens of the same trigger fired close together (e.g. the
+ * admin marking a second row as template, then clicking "+" again before
+ * the first open's own async work has settled) can resolve in either
+ * order. Only the caller holding the LATEST token — captured at CLICK
+ * time via beginMenuOpen(), before any of that async work starts — is
+ * still allowed to touch the DOM; an earlier, slower click's response
+ * that resolves after a newer one already applied its (correct) content
+ * would otherwise silently overwrite it with stale data.
+ */
+const latestOpenToken = new WeakMap();
+
+/**
+ * Claim a trigger's "latest open" token — call this synchronously, right
+ * when its click is handled, before starting any async work for that open.
+ *
+ * @param {HTMLElement} triggerEl The "+" button that was clicked.
+ * @returns {symbol} Pass this through to openInstanceMenu()'s call for the
+ *     same open.
+ */
+export const beginMenuOpen = (triggerEl) => {
+    const token = Symbol('instance-menu-open');
+    latestOpenToken.set(triggerEl, token);
+    return token;
+};
+
+/**
  * Render the picker body into the trigger's own dropdown-menu, then open it
  * as a native Bootstrap dropdown (content is filled in first, so Bootstrap
- * measures the real, final size when it positions the menu).
+ * measures the real, final size when it positions the menu). A no-op if a
+ * newer open of the same trigger (a later beginMenuOpen() call) has started
+ * since this one's own token was claimed.
  *
  * @param {Object} params
  * @param {HTMLElement} params.triggerEl The "+" button that was clicked —
  *     must sit inside a ".dropdown" wrapper next to a ".dropdown-menu".
  * @param {Array} params.options Menu items: {sourcecmid, name, typelabel,
  *     disabled, scopehint, tooltip} (see template_instance_menu.mustache).
+ * @param {symbol} params.token This open's own token, from beginMenuOpen().
  */
-export const openInstanceMenu = async({triggerEl, options}) => {
+export const openInstanceMenu = async({triggerEl, options, token}) => {
     const menuEl = triggerEl.closest('.dropdown').querySelector('.dropdown-menu');
     const rendered = await Templates.render('local_coursegen/template_instance_menu', {
         hasoptions: options.length > 0,
         options,
     });
+
+    if (latestOpenToken.get(triggerEl) !== token) {
+        return;
+    }
     Templates.replaceNodeContents(menuEl, rendered, '');
     jQuery(triggerEl).dropdown('toggle');
 };

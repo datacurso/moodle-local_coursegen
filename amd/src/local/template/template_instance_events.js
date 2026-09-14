@@ -30,7 +30,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {openInstanceMenu, closeInstanceMenu} from './template_instance_menu';
+import {openInstanceMenu, closeInstanceMenu, beginMenuOpen} from './template_instance_menu';
 import {insertInstanceRow, removeInstanceRow} from './template_instance_rows';
 import {get_string as getString} from 'core/str';
 
@@ -95,15 +95,21 @@ const togglePromptDrawer = (container, instanceid) => {
  * Resolve a trigger's target section, fetch the available templates for it,
  * and open its picker.
  *
+ * Claims this open's token synchronously, before any of the async work
+ * below starts — see template_instance_menu.js's latestOpenToken doc for
+ * why: it is what makes a later click on this same trigger win over an
+ * earlier one whose own async work happens to settle later.
+ *
  * @param {HTMLElement} container The rendered course sections review.
  * @param {HTMLElement} trigger The clicked "+" button.
  * @param {Object} state The live wizard state from init.js.
  */
 const openMenuForTrigger = async(container, trigger, state) => {
+    const token = beginMenuOpen(trigger);
     const sectionEl = trigger.closest('[data-for="section"]');
     const sectionid = parseInt(sectionEl.dataset.id, 10);
     const options = await buildAvailableTemplates(container, sectionid, state);
-    await openInstanceMenu({triggerEl: trigger, options});
+    await openInstanceMenu({triggerEl: trigger, options, token});
 };
 
 /**

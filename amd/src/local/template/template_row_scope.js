@@ -24,6 +24,9 @@
  */
 
 import {openTemplateScopeModal} from './template_scope_modal';
+import {removeInstanceRow} from './template_instance_rows';
+import Notification from 'core/notification';
+import {get_string as getString} from 'core/str';
 
 /**
  * Reflect a row's template status in the DOM: toggle the row highlight and
@@ -79,6 +82,47 @@ export const openScopeModalForNewSelection = (row, select, cmid, prioraction, st
             applyTemplateVisual(row, false, cmid, state);
             onResolved(prioraction);
         },
+    });
+};
+
+/**
+ * Handle an action select changing AWAY from "template": if the row has no
+ * instances anchored to it, unmark it immediately, same as before. If it
+ * does, confirm first — every instance still on the page loses its own
+ * source once this row stops being a template mold, so they are removed
+ * together with it rather than left pointing at nothing.
+ *
+ * @param {HTMLElement} container The rendered course sections review.
+ * @param {HTMLElement} row The activity row (data-for="cmitem").
+ * @param {HTMLSelectElement} select The row's action select.
+ * @param {string} action The action just selected (not "template").
+ * @param {string} prioraction The action selected immediately before this change.
+ * @param {number} cmid The row's course module id.
+ * @param {Object} state The live wizard state from init.js.
+ * @param {Function} onResolved (finalAction) => void, called once resolved.
+ */
+export const confirmUnmarkTemplate = async(container, row, select, action, prioraction, cmid, state, onResolved) => {
+    const instanceRows = [...container.querySelectorAll(
+        '[data-for="instancerow"][data-source-cmid="' + cmid + '"]'
+    )];
+    if (!instanceRows.length) {
+        applyTemplateVisual(row, false, cmid, state);
+        onResolved(action);
+        return;
+    }
+
+    const [title, body, removelabel] = await Promise.all([
+        getString('template_instance_unmark_confirm_title', 'local_coursegen'),
+        getString('template_instance_unmark_confirm_body', 'local_coursegen', instanceRows.length),
+        getString('template_instance_remove', 'local_coursegen'),
+    ]);
+    Notification.confirm(title, body, removelabel, null, () => {
+        instanceRows.forEach(removeInstanceRow);
+        applyTemplateVisual(row, false, cmid, state);
+        onResolved(action);
+    }, () => {
+        select.value = prioraction;
+        onResolved(prioraction);
     });
 };
 
