@@ -94,9 +94,15 @@ const buildAvailableTemplates = async(container, targetsectionid, state) => {
     ]);
     const hints = {samesectionhint, coursehint, tooltip};
 
-    return [...container.querySelectorAll('.tpl-row-template[data-for="cmitem"]')]
-        .map(row => buildOneOption(row, targetsectionid, state, hints))
-        .filter(option => option !== null);
+    const templaterows = container.querySelectorAll('.tpl-row-template[data-for="cmitem"]');
+    const options = [];
+    for (const row of templaterows) {
+        const option = buildOneOption(row, targetsectionid, state, hints);
+        if (option !== null) {
+            options.push(option);
+        }
+    }
+    return options;
 };
 
 /**
