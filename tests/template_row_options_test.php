@@ -78,20 +78,21 @@ final class template_row_options_test extends \advanced_testcase {
             'keep',
             template_row_options::active_action([
                 ['value' => 'keep', 'active' => false],
-                ['value' => 'modify', 'active' => false],
+                ['value' => 'template', 'active' => false],
             ])
         );
         $this->assertSame('keep', template_row_options::active_action([]));
     }
 
     /**
-     * activity_actions() offers "template" alongside "modify" for an
-     * AI-supported type, and omits both for an unsupported one.
+     * activity_actions() never offers "modify" any more, for either an
+     * AI-supported type or an unsupported one — "template" is the only
+     * action still gated to AI_SUPPORTED_TYPES.
      */
-    public function test_activity_actions_gates_template_the_same_as_modify(): void {
+    public function test_activity_actions_never_offers_modify(): void {
         $supported = template_row_options::activity_actions(1, 'page');
         $this->assertSame(
-            ['modify', 'template', 'keep', 'reference', 'exclude'],
+            ['template', 'keep', 'reference', 'exclude'],
             array_column($supported, 'value')
         );
 
@@ -100,12 +101,38 @@ final class template_row_options_test extends \advanced_testcase {
     }
 
     /**
-     * A saved "template" action on an unsupported type degrades to "keep",
-     * mirroring the pre-existing "modify" degradation rule.
+     * A brand-new row (no saved action) always defaults to "keep", whether
+     * or not the module type supports "template".
+     */
+    public function test_activity_actions_defaults_to_keep_regardless_of_ai_support(): void {
+        $supported = template_row_options::activity_actions(1, 'page');
+        $this->assertSame('keep', template_row_options::active_action($supported));
+
+        $unsupported = template_row_options::activity_actions(1, 'lti');
+        $this->assertSame('keep', template_row_options::active_action($unsupported));
+    }
+
+    /**
+     * A saved "template" action on an unsupported type degrades to "keep".
      */
     public function test_activity_actions_degrades_saved_template_on_unsupported_type(): void {
         $options = template_row_options::activity_actions(1, 'lti', 'template');
         $this->assertSame('keep', template_row_options::active_action($options));
+    }
+
+    /**
+     * A legacy saved action of "modify" (persisted before this action was
+     * removed from the UI) degrades to "keep" on re-render, for both an
+     * AI-supported and an unsupported module type — the hydration guard
+     * simply finds "modify" is no longer in the offered keys and falls
+     * through to the default.
+     */
+    public function test_activity_actions_degrades_legacy_saved_modify_to_keep(): void {
+        $supported = template_row_options::activity_actions(1, 'page', 'modify');
+        $this->assertSame('keep', template_row_options::active_action($supported));
+
+        $unsupported = template_row_options::activity_actions(1, 'lti', 'modify');
+        $this->assertSame('keep', template_row_options::active_action($unsupported));
     }
 
     /**

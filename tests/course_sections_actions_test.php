@@ -23,9 +23,9 @@ use local_coursegen\output\sections_config;
  * "Use as template" action and its clickable "Template" tag), and the
  * single global bulk action bar.
  *
- * "Use as template" marks an activity as a structural mold: it is gated the
- * same way "Allow AI modification" is (only offered for module types in
- * template_content_generator::AI_SUPPORTED_TYPES), and renders a visible
+ * "Use as template" marks an activity as a structural mold: it is the only
+ * action gated to module types in
+ * template_content_generator::AI_SUPPORTED_TYPES, and renders a visible
  * "Template" tag next to the activity name. Its scope (course-wide or
  * section-only) is set through local/template/template_scope_modal.js, not
  * a select rendered in the row — the tag just carries both possible labels
@@ -43,8 +43,8 @@ final class course_sections_actions_test extends \advanced_testcase {
 
     /**
      * Each activity row carries an action select preselected with the
-     * server-side default: modify for an AI-supported type, keep otherwise —
-     * an unsupported type must not offer the modify NOR the template option.
+     * server-side default, "keep" unconditionally — "modify" is never
+     * offered any more, for either an AI-supported or an unsupported type.
      */
     public function test_render_activity_select_offers_the_actions(): void {
         $this->resetAfterTest();
@@ -56,17 +56,16 @@ final class course_sections_actions_test extends \advanced_testcase {
 
         $this->assertStringNotContainsString('data-act-val=', $html);
 
-        // AI-supported type (page): all five actions, modify preselected.
+        // AI-supported type (page): template/keep/reference/exclude, keep preselected.
         $pageselect = $this->extract_action_select($html, (int) $page->cmid);
-        $this->assertSame(5, substr_count($pageselect, '<option'));
-        foreach (['modify', 'template', 'keep', 'reference', 'exclude'] as $action) {
+        $this->assertSame(4, substr_count($pageselect, '<option'));
+        foreach (['template', 'keep', 'reference', 'exclude'] as $action) {
             $this->assertStringContainsString('<option value="' . $action . '"', $pageselect);
         }
-        $this->assertMatchesRegularExpression('/<option value="modify"[^>]*\sselected/', $pageselect);
-        $this->assertStringContainsString(get_string('template_activity_modify', 'local_coursegen'), $pageselect);
+        $this->assertStringNotContainsString('<option value="modify"', $pageselect);
+        $this->assertMatchesRegularExpression('/<option value="keep"[^>]*\sselected/', $pageselect);
         $this->assertStringContainsString(get_string('template_activity_template', 'local_coursegen'), $pageselect);
         $this->assertStringContainsString(get_string('template_activity_reference', 'local_coursegen'), $pageselect);
-        $this->assertStringContainsString('Allow AI modification', $pageselect);
 
         // Unsupported type (lti): modify AND template omitted, keep preselected.
         $ltiselect = $this->extract_action_select($html, (int) $lti->cmid);
@@ -128,7 +127,7 @@ final class course_sections_actions_test extends \advanced_testcase {
     /**
      * ONE global bulk action bar renders below all the section cards, with
      * a label, a select born disabled, a choosedots placeholder plus the
-     * five per-activity actions (including "Use as template").
+     * four per-activity actions offered ("modify" is never one of them).
      */
     public function test_render_offers_a_single_global_bulk_bar(): void {
         $this->resetAfterTest();
@@ -150,10 +149,11 @@ final class course_sections_actions_test extends \advanced_testcase {
         $end = strpos($html, '</select>', $start);
         $bulkselect = substr($html, $start, $end - $start);
         $this->assertStringContainsString('disabled', $bulkselect);
-        $this->assertSame(6, substr_count($bulkselect, '<option'));
+        $this->assertSame(5, substr_count($bulkselect, '<option'));
         $this->assertMatchesRegularExpression('/<option value=""[^>]*\sselected/', $bulkselect);
         $this->assertStringContainsString(get_string('choosedots'), $bulkselect);
-        foreach (['modify', 'template', 'keep', 'reference', 'exclude'] as $action) {
+        $this->assertStringNotContainsString('<option value="modify"', $bulkselect);
+        foreach (['template', 'keep', 'reference', 'exclude'] as $action) {
             $this->assertStringContainsString('<option value="' . $action . '"', $bulkselect);
         }
     }

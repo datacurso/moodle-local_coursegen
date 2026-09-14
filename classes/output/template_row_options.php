@@ -80,17 +80,17 @@ class template_row_options {
     /**
      * Build the per-activity action select options.
      *
-     * Modify and Template are only ever offered for a module type in
+     * Template is the only action gated to a module type in
      * template_content_generator::AI_SUPPORTED_TYPES — the real AI service's
      * full content contract, never a constant scoped to whichever
      * implementation currently satisfies it. Anything NOT in that contract
-     * only offers Keep / Reference / Exclude, and defaults to Keep instead
-     * of Modify.
+     * only offers Keep / Reference / Exclude. Every row's default is Keep.
      *
      * When editing an existing template, the activity's SAVED action wins
-     * over the type default — unless it is no longer offered for this row
-     * (a saved "modify"/"template" on a type the generator cannot handle
-     * degrades to "keep", the same rule the defaults follow).
+     * over the default — unless it is no longer offered for this row (a
+     * saved "template" on a type the generator cannot handle degrades to
+     * "keep", the same rule a legacy saved "modify" from before that action
+     * existed already follows).
      *
      * @param int $cmid Course module id.
      * @param string $modname Module type name.
@@ -99,15 +99,12 @@ class template_row_options {
      * @return array Select option contexts.
      */
     public static function activity_actions(int $cmid, string $modname, ?string $savedaction = null): array {
-        $keys = ['modify', 'template', 'keep', 'reference', 'exclude'];
-        $cansupportmodify = in_array($modname, template_content_generator::AI_SUPPORTED_TYPES, true);
-        if (!$cansupportmodify) {
+        $keys = ['template', 'keep', 'reference', 'exclude'];
+        $cansupporttemplate = in_array($modname, template_content_generator::AI_SUPPORTED_TYPES, true);
+        if (!$cansupporttemplate) {
             $keys = ['keep', 'reference', 'exclude'];
         }
         $default = 'keep';
-        if ($cansupportmodify) {
-            $default = 'modify';
-        }
         if ($savedaction !== null && in_array($savedaction, $keys, true)) {
             $default = $savedaction;
         }
