@@ -351,5 +351,16 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026091402, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026091405) {
+        // Define field modname to be added to local_coursegen_tpl_instance.
+        $table = new xmldb_table('local_coursegen_tpl_instance');
+        $field = new xmldb_field('modname', XMLDB_TYPE_CHAR, '100', null, null, null, null, 'typelabel');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_plugin_savepoint(true, 2026091405, 'local', 'coursegen');
+    }
+
     return true;
 }

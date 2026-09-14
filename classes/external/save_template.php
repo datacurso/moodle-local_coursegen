@@ -83,6 +83,7 @@ class save_template extends external_api {
                             'sourcename' => new external_value(PARAM_TEXT, 'Snapshot of the source template\'s display name'),
                             'name'       => new external_value(PARAM_TEXT, 'This instance\'s own display name'),
                             'typelabel'  => new external_value(PARAM_TEXT, 'Snapshot of the source template\'s module type label'),
+                            'modname'    => new external_value(PARAM_PLUGIN, 'Snapshot of the source template\'s module type', VALUE_DEFAULT, ''),
                             'prompt'     => new external_value(PARAM_RAW, 'Instance prompt', VALUE_DEFAULT, ''),
                             'anchorcmid' => new external_value(
                                 PARAM_INT,

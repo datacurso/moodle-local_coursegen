@@ -95,15 +95,6 @@
     animation: tplFadeIn 0.2s ease;
 }
 
-.tpl-instance-icon {
-    display: inline-block;
-    width: 18px;
-    height: 18px;
-    border-radius: 3px;
-    background: #ede7f6;
-    vertical-align: middle;
-}
-
 .tpl-instance-name-input {
     border: 1px solid transparent;
     background: transparent;

@@ -68,7 +68,7 @@ const renderRowFragment = async(templatename, context) => {
 const buildGapRow = () => renderRowFragment('local_coursegen/template_row_gap', {});
 
 /**
- * @param {Object} data {sourcecmid, sourcename, typelabel}
+ * @param {Object} data {sourcecmid, sourcename, typelabel, modname, iconurl}
  * @param {string} instanceid Client-side identifier (unique within the page).
  * @returns {Promise<DocumentFragment>} The instance row plus its own (hidden) prompt row.
  */
@@ -77,6 +77,8 @@ const buildInstanceRowFragment = (data, instanceid) => renderRowFragment('local_
     name: data.sourcename,
     sourcename: data.sourcename,
     sourcecmid: data.sourcecmid,
+    modname: data.modname,
+    iconurl: data.iconurl,
     typelabel: data.typelabel,
     prompt: '',
 });
@@ -177,6 +179,7 @@ export const collectInstancesForSection = (sectionEl) => {
         instances.push({
             sourcecmid: parseInt(row.dataset.sourceCmid, 10),
             sourcename: row.dataset.sourceName,
+            modname: row.dataset.modname || '',
             name: row.querySelector('[data-region="instance-name"]').value,
             typelabel: row.querySelector('td.text-muted').textContent.trim(),
             prompt: promptValue,

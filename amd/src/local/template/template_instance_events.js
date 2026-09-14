@@ -71,6 +71,8 @@ const buildOneOption = (row, targetsectionid, state, hints) => {
         sourcecmid: cmid,
         name: row.querySelector('.tpl-template-tag')?.dataset.name || '',
         typelabel: row.dataset.typelabel || '',
+        modname: row.dataset.modname || '',
+        iconurl: row.querySelector('img.activityicon')?.src || '',
         disabled: !eligible,
         scopehint,
         tooltip: itemtooltip,
@@ -157,6 +159,8 @@ const pickTemplate = (item, markDirty) => {
         sourcecmid: parseInt(item.dataset.sourceCmid, 10),
         sourcename: item.dataset.sourceName,
         typelabel: item.dataset.typeLabel,
+        modname: item.dataset.modname,
+        iconurl: item.dataset.iconUrl,
     };
     closeInstanceMenu(triggerEl);
     insertInstanceRow(tbody, beforeEl, picked).then(markDirty);
