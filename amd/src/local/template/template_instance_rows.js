@@ -34,7 +34,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {get_string as getString} from 'core/str';
+import {getStrings} from 'core/str';
 
 /** @type {number} Client-only counter for unique data-instance-id values on unsaved rows. */
 let nextTempId = 1;
@@ -132,13 +132,13 @@ const dropGapBeforeAddRow = (tbody) => {
  * @returns {Promise<HTMLElement>} The new instance row, once inserted and focused.
  */
 export const insertInstanceRow = async(tbody, beforeEl, picked) => {
-    const [addtitle, badge, namelabel, prompttitle, removetitle, placeholder] = await Promise.all([
-        getString('template_add_instance', 'local_coursegen'),
-        getString('template_instance_badge', 'local_coursegen', '{$a}'),
-        getString('template_instance_name', 'local_coursegen'),
-        getString('template_instance_prompt_edit', 'local_coursegen'),
-        getString('template_instance_remove', 'local_coursegen'),
-        getString('template_instance_prompt_placeholder', 'local_coursegen'),
+    const [addtitle, badge, namelabel, prompttitle, removetitle, placeholder] = await getStrings([
+        {key: 'template_add_instance', component: 'local_coursegen'},
+        {key: 'template_instance_badge', component: 'local_coursegen', param: '{$a}'},
+        {key: 'template_instance_name', component: 'local_coursegen'},
+        {key: 'template_instance_prompt_edit', component: 'local_coursegen'},
+        {key: 'template_instance_remove', component: 'local_coursegen'},
+        {key: 'template_instance_prompt_placeholder', component: 'local_coursegen'},
     ]);
 
     const needsLeadingGap = !(beforeEl.previousElementSibling

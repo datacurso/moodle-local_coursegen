@@ -26,7 +26,7 @@
 import {openTemplateScopeModal} from './template_scope_modal';
 import {removeInstanceRow} from './template_instance_rows';
 import Notification from 'core/notification';
-import {get_string as getString} from 'core/str';
+import {getStrings} from 'core/str';
 
 /**
  * Reflect a row's template status in the DOM: toggle the row highlight and
@@ -111,10 +111,10 @@ export const confirmUnmarkTemplate = async(container, row, select, action, prior
         return;
     }
 
-    const [title, body, removelabel] = await Promise.all([
-        getString('template_instance_unmark_confirm_title', 'local_coursegen'),
-        getString('template_instance_unmark_confirm_body', 'local_coursegen', instanceRows.length),
-        getString('template_instance_remove', 'local_coursegen'),
+    const [title, body, removelabel] = await getStrings([
+        {key: 'template_instance_unmark_confirm_title', component: 'local_coursegen'},
+        {key: 'template_instance_unmark_confirm_body', component: 'local_coursegen', param: instanceRows.length},
+        {key: 'template_instance_remove', component: 'local_coursegen'},
     ]);
     Notification.confirm(title, body, removelabel, null, () => {
         instanceRows.forEach(removeInstanceRow);

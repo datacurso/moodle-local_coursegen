@@ -32,7 +32,7 @@
 
 import {openInstanceMenu, closeInstanceMenu, beginMenuOpen} from './template_instance_menu';
 import {insertInstanceRow, removeInstanceRow} from './template_instance_rows';
-import {get_string as getString} from 'core/str';
+import {getStrings} from 'core/str';
 import Notification from 'core/notification';
 
 /**
@@ -87,10 +87,10 @@ const buildOneOption = (row, targetsectionid, state, hints) => {
  * @returns {Promise<Array>} Menu options (see template_instance_menu.mustache).
  */
 const buildAvailableTemplates = async(container, targetsectionid, state) => {
-    const [samesectionhint, coursehint, tooltip] = await Promise.all([
-        getString('template_instance_scope_same_section', 'local_coursegen'),
-        getString('template_instance_scope_whole_course', 'local_coursegen'),
-        getString('template_instance_scope_unavailable', 'local_coursegen'),
+    const [samesectionhint, coursehint, tooltip] = await getStrings([
+        {key: 'template_instance_scope_same_section', component: 'local_coursegen'},
+        {key: 'template_instance_scope_whole_course', component: 'local_coursegen'},
+        {key: 'template_instance_scope_unavailable', component: 'local_coursegen'},
     ]);
     const hints = {samesectionhint, coursehint, tooltip};
 
