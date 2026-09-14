@@ -24,18 +24,12 @@
  *   value is the server-side default, so binding first SEEDS
  *   state.activityAction from it (the server render is the single source of
  *   truth for defaults), then keeps state in sync on change.
- * - Per-row selection checkboxes (data-region="activity-select") plus TWO
- *   per-section aggregates kept in sync with them: the table-header
- *   select-all (data-region="select-all") and the card-header select-all
- *   (data-region="section-select-all", usable while the section is
- *   collapsed). All ephemeral UI state — never persisted, reset by every
- *   re-render.
- * - The single global bulk select (data-region="bulk-action") below all the
- *   cards, mirroring the users-table "With selected users…" pattern: born
- *   disabled and kept disabled while no activity checkbox is checked
- *   anywhere; on change it applies the chosen action to every checked row
- *   across ALL sections (degrading modify to keep for types the generator
- *   does not support), then resets itself back to its placeholder.
+ * - Per-row template-scope select (data-region="template-scope"), and its
+ *   "Template" badge (data-region="template-badge"): visible only while the
+ *   row's action is "template", kept in sync on every action/scope change.
+ * - Per-row selection checkboxes (data-region="activity-select") plus the
+ *   single global bulk select (data-region="bulk-action") — see
+ *   selection_bulk.js, bound from here.
  * - Section behavior selects (data-region="section-behavior"): their
  *   rendered value is the server-side default (the saved behavior in edit
  *   mode), so binding seeds state.sectionBehavior from it and keeps it in
@@ -51,6 +45,7 @@
  */
 
 import {typeSupportsModify} from './type_action_sync';
+import {bindSelectionAndBulk} from './selection_bulk';
 
 /** @type {boolean} Whether any config has been modified. */
 let dirty = false;
@@ -94,15 +89,39 @@ export const resetSectionsDirtyState = () => {
 
 /**
  * Resolve the action a row may actually take: types the generator cannot
- * produce content for degrade modify to keep (their selects do not even
- * offer a modify option — same rule as the server-side defaults).
+ * produce content for degrade modify/template to keep (their selects do not
+ * even offer those options — same rule as the server-side defaults).
  *
  * @param {string} action Requested action.
  * @param {string} modname The row's module type.
  * @returns {string} The action to apply.
  */
 const applicableAction = (action, modname) =>
-    (action === 'modify' && !typeSupportsModify(modname)) ? 'keep' : action;
+    ((action === 'modify' || action === 'template') && !typeSupportsModify(modname)) ? 'keep' : action;
+
+/**
+ * Show/hide a row's "Template" badge and scope select based on its action,
+ * and keep state.activityScope seeded for rows currently marked "template".
+ *
+ * @param {HTMLElement} row The activity row (data-for="cmitem").
+ * @param {string} action The row's current action value.
+ * @param {number} cmid The row's course module id.
+ * @param {Object} state The live wizard state from init.js.
+ */
+const syncTemplateRowUi = (row, action, cmid, state) => {
+    const istemplate = action === 'template';
+    const badge = row.querySelector('[data-region="template-badge"]');
+    const scopeselect = row.querySelector('[data-region="template-scope"]');
+    if (badge) {
+        badge.classList.toggle('d-none', !istemplate);
+    }
+    if (scopeselect) {
+        scopeselect.classList.toggle('d-none', !istemplate);
+    }
+    if (istemplate) {
+        state.activityScope[cmid] = scopeselect ? scopeselect.value : (state.activityScope[cmid] || 'course');
+    }
+};
 
 /**
  * Bind events on the server-rendered review controls (no DOM injection).
@@ -112,107 +131,45 @@ const applicableAction = (action, modname) =>
  */
 export const bindServerRenderedControls = (container, state) => {
     // Row action selects: seed state from the server-rendered default, then
-    // track every change.
+    // track every change. Each row's "Template" badge and scope select
+    // (visible only while its action is "template") are kept in sync here.
     container.querySelectorAll('select[data-region="activity-action"]').forEach(select => {
         const cmid = parseInt(select.dataset.id);
         if (!cmid) {
             return;
         }
+        const row = select.closest('[data-for="cmitem"]');
         state.activityAction[cmid] = select.value;
+        if (row) {
+            syncTemplateRowUi(row, select.value, cmid, state);
+        }
         select.addEventListener('change', () => {
             state.activityAction[cmid] = select.value;
+            if (row) {
+                syncTemplateRowUi(row, select.value, cmid, state);
+            }
             markDirty();
         });
     });
 
-    // Three selection tiers per section, kept in sync: the card-header
-    // select-all, the table-header select-all and the row checkboxes.
-    // Toggling either aggregate sets every row of its own section; a row
-    // change recomputes both aggregates — fully checked when every row is,
-    // indeterminate (the mixed visual state) when only some are. Clicking
-    // an indeterminate aggregate checks it, i.e. selects the whole section.
-    container.querySelectorAll('[data-for="section"]').forEach(card => {
-        const aggregates = [
-            card.querySelector('[data-region="section-select-all"]'),
-            card.querySelector('[data-region="select-all"]'),
-        ].filter(box => box !== null);
-        if (!aggregates.length) {
+    // Per-row template-scope selects: seed state from the server-rendered
+    // value, then track every change. Hidden rows still get seeded so a
+    // scope chosen, then the action changed away and back, is not lost.
+    container.querySelectorAll('select[data-region="template-scope"]').forEach(select => {
+        const cmid = parseInt(select.dataset.id);
+        if (!cmid) {
             return;
         }
-        const rowboxes = () => [...card.querySelectorAll('[data-region="activity-select"]')];
-        const syncAggregates = () => {
-            const boxes = rowboxes();
-            const checked = boxes.filter(box => box.checked).length;
-            aggregates.forEach(aggregate => {
-                aggregate.checked = checked > 0 && checked === boxes.length;
-                aggregate.indeterminate = checked > 0 && checked < boxes.length;
-            });
-        };
-        aggregates.forEach(aggregate => {
-            aggregate.addEventListener('change', () => {
-                rowboxes().forEach(box => {
-                    box.checked = aggregate.checked;
-                });
-                syncAggregates();
-            });
-        });
-        card.addEventListener('change', (e) => {
-            if (e.target.matches('[data-region="activity-select"]')) {
-                syncAggregates();
-            }
+        state.activityScope[cmid] = select.value;
+        select.addEventListener('change', () => {
+            state.activityScope[cmid] = select.value;
+            markDirty();
         });
     });
 
-    // Global bulk action bar: disabled while nothing is checked anywhere;
-    // applies to every checked row across all sections, then resets back to
-    // its placeholder.
-    const bulk = container.querySelector('select[data-region="bulk-action"]');
-    if (bulk) {
-        const updateBulkAvailability = () => {
-            bulk.disabled = !container.querySelector('[data-region="activity-select"]:checked');
-        };
-        updateBulkAvailability();
-        // Row checkbox and aggregate changes all bubble up here; an
-        // aggregate's own handler (bound directly on it, above) has already
-        // toggled its rows by the time this delegated one runs.
-        const selectionregions = '[data-region="activity-select"], [data-region="select-all"],'
-            + ' [data-region="section-select-all"]';
-        container.addEventListener('change', (e) => {
-            if (e.target.matches(selectionregions)) {
-                updateBulkAvailability();
-            }
-        });
-        bulk.addEventListener('change', () => {
-            const action = bulk.value;
-            bulk.value = '';
-            if (!action) {
-                return;
-            }
-            container.querySelectorAll('[data-region="activity-select"]:checked').forEach(box => {
-                const row = box.closest('[data-for="cmitem"]');
-                const cmid = row ? parseInt(row.dataset.id) : 0;
-                if (!cmid) {
-                    return;
-                }
-                const applied = applicableAction(action, row.dataset.modname);
-                const select = row.querySelector('select[data-region="activity-action"]');
-                if (select) {
-                    select.value = applied;
-                }
-                state.activityAction[cmid] = applied;
-                markDirty();
-                box.checked = false;
-            });
-            // The batch is done: clear both aggregate tiers (table select-all
-            // and section-header checkbox, including any indeterminate state)
-            // and let the bar fall back to its disabled resting state.
-            container.querySelectorAll('[data-region="select-all"], [data-region="section-select-all"]').forEach(all => {
-                all.checked = false;
-                all.indeterminate = false;
-            });
-            updateBulkAvailability();
-        });
-    }
+    // Row selection checkboxes (three synced tiers) and the single global
+    // bulk action bar — see selection_bulk.js.
+    bindSelectionAndBulk(container, state, {applicableAction, syncTemplateRowUi, markDirty});
 
     // Section behavior selects (custom/keep/exclude): seed state from the
     // server-rendered value — the saved behavior in edit mode — then keep

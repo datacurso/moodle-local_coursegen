@@ -41,7 +41,7 @@ import {resetAllFormDirtyStates} from 'core_form/changechecker';
 const state = {
     selectedCourseId: null, selectedCourse: null,
     courseStructure: null, templateName: '', templateDesc: '', templateId: 0,
-    sectionBehavior: {}, activityAction: {}, activityRef: {}, activityPrompt: {},
+    sectionBehavior: {}, activityAction: {}, activityRef: {}, activityPrompt: {}, activityScope: {},
     // Saved per-section/per-activity configuration when editing an existing
     // template (see edit_template.php) — seeds the maps above so a re-save
     // round-trips values that have no visible controls (useasreference,
@@ -225,6 +225,7 @@ const initSectionState = () => {
     state.activityAction = {};
     state.activityRef = {};
     state.activityPrompt = {};
+    state.activityScope = {};
 
     const actTypes = new Set();
     state.courseStructure.forEach(s => {
@@ -234,6 +235,7 @@ const initSectionState = () => {
             state.activityAction[a.id] = saved?.action || defaultActionForModname(a.modname);
             state.activityRef[a.id] = saved ? saved.useasreference !== false : true;
             state.activityPrompt[a.id] = saved?.prompt || '';
+            state.activityScope[a.id] = saved?.templatescope || 'course';
             actTypes.add(a.modname);
         });
     });
@@ -255,6 +257,7 @@ const buildSections = () => state.courseStructure.map(s => ({
         cmid: a.id, action: state.activityAction[a.id] || 'keep',
         useasreference: state.activityRef[a.id] !== false,
         prompt: state.activityPrompt[a.id] || '',
+        templatescope: state.activityScope[a.id] || 'course',
     })),
 }));
 

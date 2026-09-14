@@ -60,6 +60,7 @@ if ($id > 0) {
             'action' => $record->get('action'),
             'useasreference' => (bool) $record->get('useasreference'),
             'prompt' => (string) $record->get('prompt'),
+            'templatescope' => (string) $record->get('templatescope'),
         ];
     }
 }

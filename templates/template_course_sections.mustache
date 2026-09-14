@@ -46,6 +46,10 @@
     * data-region="section-select-all" data-sid on each section card
       header's checkbox (usable while the section is collapsed)
     * data-region="bulk-action" on the single global bulk select
+    * data-region="template-badge" data-id on each row's "Template" badge
+      (hidden unless the row's action is "template")
+    * data-region="template-scope" data-id on each row's scope select
+      (hidden unless the row's action is "template")
 
     Context variables required for this template:
     * courseid int     - Base course id (keeps collapse ids unique per course)
@@ -54,7 +58,9 @@
                          activitycount int, hasactivities bool,
                          actions array (value, sectionid, label, tip, active),
                          activities array (cmid, name, modname, typelabel,
-                         iconurl, actions array (value, cmid, label, tip, active))
+                         iconurl, actions array (value, cmid, label, tip, active),
+                         istemplate bool, scopeoptions array (value, cmid,
+                         label, tip, active))
 
     Example context (json):
     {
@@ -154,6 +160,17 @@
                                     <option value="{{value}}" title="{{tip}}"{{#active}} selected{{/active}}>{{label}}</option>
                                     {{/actions}}
                                 </select>
+                                <span class="tpl-badge tpl-badge-template ml-1{{^istemplate}} d-none{{/istemplate}}"
+                                      data-region="template-badge" data-id="{{cmid}}">
+                                    {{#str}} template_activity_template_badge, local_coursegen {{/str}}
+                                </span>
+                                <select class="custom-select custom-select-sm tpl-template-scope{{^istemplate}} d-none{{/istemplate}}"
+                                        data-region="template-scope" data-id="{{cmid}}"
+                                        aria-label="{{#str}} template_activity_scope, local_coursegen {{/str}}">
+                                    {{#scopeoptions}}
+                                    <option value="{{value}}" title="{{tip}}"{{#active}} selected{{/active}}>{{label}}</option>
+                                    {{/scopeoptions}}
+                                </select>
                             </td>
                         </tr>
                         {{/activities}}
@@ -177,6 +194,7 @@
                 data-region="bulk-action" disabled>
             <option value="" selected>{{#str}} choosedots, core {{/str}}</option>
             <option value="modify">{{#str}} template_activity_modify, local_coursegen {{/str}}</option>
+            <option value="template">{{#str}} template_activity_template, local_coursegen {{/str}}</option>
             <option value="keep">{{#str}} template_activity_keep, local_coursegen {{/str}}</option>
             <option value="reference">{{#str}} template_activity_reference, local_coursegen {{/str}}</option>
             <option value="exclude">{{#str}} template_activity_exclude, local_coursegen {{/str}}</option>
