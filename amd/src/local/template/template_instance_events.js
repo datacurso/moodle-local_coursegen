@@ -193,13 +193,22 @@ export const bindInstanceInserts = (container, state, markDirty) => {
     container.addEventListener('click', (e) => {
         const trigger = e.target.closest('[data-instance-menu-trigger]');
         if (trigger) {
-            // The trigger also carries data-toggle="dropdown" so Bootstrap's
-            // own outside-click/Escape handling can find and close it later.
-            // That same attribute makes Bootstrap's global click-data-api
-            // listener try to toggle it open too, racing this handler's own
-            // fetch-then-open flow. Stop the click here so only
-            // openMenuForTrigger's own explicit dropdown('toggle') call
-            // (once the menu's real content is ready) opens it.
+            // Bound on the CAPTURE phase (see addEventListener's 3rd argument
+            // below), not bubble: openMenuForTrigger()'s own dropdown('toggle')
+            // call lazily instantiates Bootstrap's per-element Dropdown the
+            // first time it runs (theme/boost/amd/src/bootstrap/dropdown.js
+            // Dropdown#_addEventListeners, called from its constructor), which
+            // permanently attaches its own click handler directly on this same
+            // trigger — bubble phase, calling stopPropagation() and toggling
+            // the dropdown itself. Since the trigger sits below this container
+            // in the tree, that handler would fire before a bubble-phase
+            // listener here ever could, so every click after the trigger's
+            // first open would be intercepted there — reopening whatever
+            // stale content is already rendered instead of ever reaching this
+            // handler's own fetch-then-open flow. Capture runs on the way
+            // down, ahead of any of the trigger's own bubble listeners, so
+            // stopping it here always wins regardless of how many times this
+            // trigger has already been opened before.
             e.stopPropagation();
             openMenuForTrigger(container, trigger, state).catch(Notification.exception);
             return;
@@ -222,7 +231,7 @@ export const bindInstanceInserts = (container, state, markDirty) => {
         if (promptToggle) {
             togglePromptDrawer(container, promptToggle.dataset.id);
         }
-    });
+    }, true);
 
     container.addEventListener('input', (e) => {
         if (e.target.matches('[data-region="instance-name"], [data-region="instance-prompt"]')) {
