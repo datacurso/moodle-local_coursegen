@@ -14,6 +14,15 @@
     height: 9px;
 }
 
+/* Bootstrap's own ".dropdown" rule sets position:relative on this wrapper,
+   which would otherwise become the "+" button's absolute-positioning
+   context instead of .tpl-row-gap-line — filling it keeps the button
+   centered in the gap line exactly as before. */
+.tpl-row-gap-line .tpl-instance-dropdown {
+    position: absolute;
+    inset: 0;
+}
+
 .tpl-row-gap-line::before {
     content: "";
     position: absolute;
@@ -139,19 +148,11 @@
     color: #b5351a;
 }
 
-/* Floating template picker menu (local/template/template_instance_menu.js):
-   positioned via getBoundingClientRect at whichever "+" trigger opened it,
-   never table-relative — a table cell's own positioning context is not
-   reliable across browsers for an absolutely-positioned floating menu. */
+/* Template picker menu: a real Bootstrap ".dropdown-menu" (its base
+   position/visibility/z-index rules already come from Boost's bundled
+   Bootstrap CSS) — these overrides only adjust its width and typography. */
 .tpl-instance-menu {
-    position: fixed;
-    background: #fff;
-    border: 1px solid #dee2e6;
-    border-radius: 0.5rem;
-    box-shadow: 0 12px 32px rgba(0, 0, 0, 0.18);
     width: 280px;
-    padding: 0.375rem;
-    z-index: 50;
 }
 
 .tpl-instance-menu-hint {
@@ -166,18 +167,7 @@
     align-items: center;
     justify-content: space-between;
     gap: 0.5rem;
-    width: 100%;
-    text-align: left;
-    border: none;
-    background: none;
     font-size: 0.82rem;
-    padding: 0.5rem;
-    border-radius: 0.375rem;
-    cursor: pointer;
-}
-
-.tpl-instance-menu-item:hover {
-    background: #f8f9fa;
 }
 
 .tpl-instance-menu-item[disabled] {

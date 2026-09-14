@@ -17,8 +17,9 @@
 {{!
     @template local_coursegen/template_instance_menu
 
-    Body of the single shared floating template picker (see
-    local/template/template_instance_menu.js) — lists every activity
+    Body of a "+" trigger's native Bootstrap dropdown-menu (see
+    local/template/template_instance_menu.js, which renders this into the
+    trigger's own sibling .dropdown-menu element) — lists every activity
     currently marked "Use as template", enabled or disabled depending on
     whether its scope makes it eligible for the section the menu was opened
     from.
@@ -45,7 +46,7 @@
 {{#hasoptions}}
 <p class="tpl-instance-menu-hint">{{#str}} template_instance_menu_hint, local_coursegen {{/str}}</p>
 {{#options}}
-<button type="button" class="tpl-instance-menu-item"{{#disabled}} disabled title="{{tooltip}}"{{/disabled}}
+<button type="button" class="tpl-instance-menu-item dropdown-item" role="menuitem"{{#disabled}} disabled title="{{tooltip}}"{{/disabled}}
         {{^disabled}}data-source-cmid="{{sourcecmid}}" data-source-name="{{name}}" data-type-label="{{typelabel}}"{{/disabled}}>
     <span>{{name}}</span>
     <span class="tpl-instance-menu-scope-hint">{{scopehint}}</span>

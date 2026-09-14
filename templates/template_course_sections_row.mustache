@@ -88,8 +88,12 @@
 <tr class="tpl-row-gap" data-region="row-gap">
     <td colspan="4">
         <div class="tpl-row-gap-line">
-            <button type="button" class="tpl-row-gap-plus" data-instance-menu-trigger
-                    title="{{#str}} template_add_instance, local_coursegen {{/str}}">+</button>
+            <div class="dropdown tpl-instance-dropdown">
+                <button type="button" class="tpl-row-gap-plus" data-instance-menu-trigger
+                        aria-haspopup="true" aria-expanded="false"
+                        title="{{#str}} template_add_instance, local_coursegen {{/str}}">+</button>
+                <div class="dropdown-menu tpl-instance-menu" role="menu"></div>
+            </div>
         </div>
     </td>
 </tr>

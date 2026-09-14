@@ -59,10 +59,12 @@
     * data-region="row-gap" on the thin hover-reveal strip rendered after
       EVERY row (real or instance, including the section's last one), and
       data-region="add-instance" on the section's persistent trailing
-      "Add activity from a template" row — both open
-      local/template/template_instance_menu.js at the clicked trigger's
-      position and insert the picked template's instance immediately before
-      the element that follows the trigger
+      "Add activity from a template" row — each trigger sits inside its own
+      ".dropdown" wrapper next to an empty ".dropdown-menu" sibling
+      (local/template/template_instance_menu.js renders the picker body into
+      that sibling and opens it as a native Bootstrap dropdown); picking an
+      item inserts that template's instance immediately before the element
+      that follows the trigger
 
     Each "rows" entry is rendered by the local_coursegen/template_course_sections_row
     partial (its own row plus the hover-reveal gap after it) — split out to
@@ -175,10 +177,14 @@
                         {{/rows}}
                         <tr class="tpl-row-add" data-region="add-instance">
                             <td colspan="4">
-                                <button type="button" class="tpl-add-instance-btn" data-instance-menu-trigger>
-                                    <span>&#65291;</span>
-                                    <span>{{#str}} template_add_instance, local_coursegen {{/str}}</span>
-                                </button>
+                                <div class="dropdown tpl-instance-dropdown">
+                                    <button type="button" class="tpl-add-instance-btn" data-instance-menu-trigger
+                                            aria-haspopup="true" aria-expanded="false">
+                                        <span>&#65291;</span>
+                                        <span>{{#str}} template_add_instance, local_coursegen {{/str}}</span>
+                                    </button>
+                                    <div class="dropdown-menu tpl-instance-menu" role="menu"></div>
+                                </div>
                             </td>
                         </tr>
                     </tbody>
