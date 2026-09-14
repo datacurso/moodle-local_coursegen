@@ -58,7 +58,7 @@ final class save_template_instances_test extends \advanced_testcase {
             [
                 ['cmid' => (int) $forum->cmid, 'action' => 'keep', 'useasreference' => true, 'prompt' => ''],
             ],
-            [$this->instance_payload((int) $forum->cmid, 'Forum template', 'Discussion 1', (int) $forum->cmid, 0)]
+            [$this->instance_payload((int) $forum->cmid, 'Forum template', 'Discussion 1', (int) $forum->cmid, 0, 'forum')]
         );
 
         $record = template_instance::get_record(['templateid' => (int) $saved['id']]);
@@ -85,6 +85,13 @@ final class save_template_instances_test extends \advanced_testcase {
         // in template_instance_rows.js) reads data-source-name back from it.
         $this->assertStringContainsString('data-source-cmid="' . $forum->cmid . '"', $instancearea);
         $this->assertStringContainsString('data-source-name="Forum template"', $instancearea);
+
+        // The row's icon renders the same way a real forum activity's does
+        // (template_row_options::instance_icon_url()), from the snapshotted
+        // modname — never a stored URL.
+        $this->assertStringContainsString('data-modname="forum"', $instancearea);
+        $this->assertStringContainsString('<img src="', $instancearea);
+        $this->assertStringContainsString('/forum/', $instancearea);
 
         // The instance renders AFTER the forum row it is anchored to.
         $forumpos = strpos($html, 'data-id="' . $forum->cmid . '"');

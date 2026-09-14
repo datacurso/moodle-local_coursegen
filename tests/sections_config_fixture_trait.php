@@ -121,6 +121,7 @@ trait sections_config_fixture_trait {
      * @param string $name
      * @param int $anchorcmid
      * @param int $sortorder
+     * @param string $modname
      * @return array
      */
     private function instance_payload(
@@ -128,13 +129,15 @@ trait sections_config_fixture_trait {
         string $sourcename,
         string $name,
         int $anchorcmid = 0,
-        int $sortorder = 0
+        int $sortorder = 0,
+        string $modname = 'page'
     ): array {
         return [
             'sourcecmid' => $sourcecmid,
             'sourcename' => $sourcename,
             'name' => $name,
             'typelabel' => 'Page',
+            'modname' => $modname,
             'prompt' => '',
             'anchorcmid' => $anchorcmid,
             'sortorder' => $sortorder,

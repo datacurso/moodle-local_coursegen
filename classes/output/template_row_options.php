@@ -193,6 +193,7 @@ class template_row_options {
             'prompt' => (string) $instance->get('prompt'),
             'sourcecmid' => (int) $instance->get('sourcecmid'),
             'sourcename' => $instance->get('sourcename'),
+            'modname' => (string) $instance->get('modname'),
             'iconurl' => self::instance_icon_url($instance->get('modname')),
         ];
     }
@@ -213,6 +214,10 @@ class template_row_options {
         if ($modname === null || $modname === '') {
             return '';
         }
-        return $OUTPUT->image_url('monologo', $modname)->out(false);
+        $icon = $OUTPUT->image_url('monologo', $modname);
+        if (\core_component::has_monologo_icon('mod', $modname)) {
+            $icon->param('filtericon', 1);
+        }
+        return $icon->out(false);
     }
 }
