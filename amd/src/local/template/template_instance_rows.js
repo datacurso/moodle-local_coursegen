@@ -35,19 +35,6 @@
  */
 
 import {getStrings} from 'core/str';
-import prefetch from 'core/prefetch';
-
-// Warm the string cache as soon as this module loads, so the first
-// getStrings() call in insertInstanceRow() below resolves from cache
-// instead of waiting on a network round trip.
-prefetch.prefetchStrings('local_coursegen', [
-    'template_add_instance',
-    'template_instance_badge',
-    'template_instance_name',
-    'template_instance_prompt_edit',
-    'template_instance_remove',
-    'template_instance_prompt_placeholder',
-]);
 
 /** @type {number} Client-only counter for unique data-instance-id values on unsaved rows. */
 let nextTempId = 1;

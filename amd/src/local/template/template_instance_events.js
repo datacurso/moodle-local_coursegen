@@ -34,16 +34,7 @@ import {openInstanceMenu, closeInstanceMenu, beginMenuOpen} from './template_ins
 import {insertInstanceRow, removeInstanceRow} from './template_instance_rows';
 import {getStrings} from 'core/str';
 import Notification from 'core/notification';
-import prefetch from 'core/prefetch';
-
-// Warm the string cache as soon as this module loads, so the first "+"
-// click's own getStrings() call below resolves from cache instead of
-// waiting on a network round trip.
-prefetch.prefetchStrings('local_coursegen', [
-    'template_instance_scope_same_section',
-    'template_instance_scope_whole_course',
-    'template_instance_scope_unavailable',
-]);
+import {prefetchStrings} from 'core/prefetch';
 
 /**
  * Build one marked row's own picker option, or null if the row is missing
@@ -176,11 +167,29 @@ const pickTemplate = (item, markDirty) => {
  * triggers open the picker, an accepted pick inserts a new instance row,
  * and each instance row's own icons work (prompt toggle, remove).
  *
+ * Warms the string cache for every getStrings() call this feature can
+ * trigger — buildAvailableTemplates() above and insertInstanceRow() in
+ * template_instance_rows.js, which has no entry point of its own — so the
+ * admin's first "+" click resolves from cache instead of a network round
+ * trip.
+ *
  * @param {HTMLElement} container The rendered course sections review.
  * @param {Object} state The live wizard state from init.js.
  * @param {Function} markDirty Marks the wizard as having unsaved changes.
  */
 export const bindInstanceInserts = (container, state, markDirty) => {
+    prefetchStrings('local_coursegen', [
+        'template_instance_scope_same_section',
+        'template_instance_scope_whole_course',
+        'template_instance_scope_unavailable',
+        'template_add_instance',
+        'template_instance_badge',
+        'template_instance_name',
+        'template_instance_prompt_edit',
+        'template_instance_remove',
+        'template_instance_prompt_placeholder',
+    ]);
+
     container.addEventListener('click', (e) => {
         const trigger = e.target.closest('[data-instance-menu-trigger]');
         if (trigger) {

@@ -27,16 +27,7 @@ import {openTemplateScopeModal} from './template_scope_modal';
 import {removeInstanceRow} from './template_instance_rows';
 import Notification from 'core/notification';
 import {getStrings} from 'core/str';
-import prefetch from 'core/prefetch';
-
-// Warm the string cache as soon as this module loads, so the first
-// getStrings() call in confirmUnmarkTemplate() below resolves from cache
-// instead of waiting on a network round trip.
-prefetch.prefetchStrings('local_coursegen', [
-    'template_instance_unmark_confirm_title',
-    'template_instance_unmark_confirm_body',
-    'template_instance_remove',
-]);
+import {prefetchStrings} from 'core/prefetch';
 
 /**
  * Reflect a row's template status in the DOM: toggle the row highlight and
@@ -162,11 +153,20 @@ const openScopeModalToEditRow = (row, cmid, state, markDirty) => {
 /**
  * Bind the click handler that reopens the scope modal from a row's tag.
  *
+ * Warms the string cache for confirmUnmarkTemplate()'s own getStrings()
+ * call, so switching a row away from "template" resolves its confirmation
+ * dialog from cache instead of a network round trip.
+ *
  * @param {HTMLElement} container The rendered course sections review.
  * @param {Object} state The live wizard state from init.js.
  * @param {Function} markDirty Marks the wizard as having unsaved changes.
  */
 export const bindTemplateTagClicks = (container, state, markDirty) => {
+    prefetchStrings('local_coursegen', [
+        'template_instance_unmark_confirm_title',
+        'template_instance_unmark_confirm_body',
+        'template_instance_remove',
+    ]);
     container.addEventListener('click', (e) => {
         const tag = e.target.closest('[data-region="template-tag"]');
         if (!tag) {
