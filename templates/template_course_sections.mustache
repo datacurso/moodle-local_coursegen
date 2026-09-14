@@ -87,7 +87,7 @@
                         "typelabel": "Page",
                         "iconurl": "https://example.com/theme/image.php/boost/page/1/monologo",
                         "actions": [
-                            {"value": "modify", "cmid": 42, "label": "Modify with AI", "tip": "AI will generate new content", "active": true}
+                            {"value": "keep", "cmid": 42, "label": "Keep intact", "tip": "The activity is copied exactly as is", "active": true}
                         ]
                     }
                 ]
@@ -192,7 +192,6 @@
                 id="local-coursegen-bulk-action-{{courseid}}"
                 data-region="bulk-action" disabled>
             <option value="" selected>{{#str}} choosedots, core {{/str}}</option>
-            <option value="modify">{{#str}} template_activity_modify, local_coursegen {{/str}}</option>
             <option value="template">{{#str}} template_activity_template, local_coursegen {{/str}}</option>
             <option value="keep">{{#str}} template_activity_keep, local_coursegen {{/str}}</option>
             <option value="reference">{{#str}} template_activity_reference, local_coursegen {{/str}}</option>
