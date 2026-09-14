@@ -1,0 +1,57 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/template_instance_menu
+
+    Body of the single shared floating template picker (see
+    local/template/template_instance_menu.js) — lists every activity
+    currently marked "Use as template", enabled or disabled depending on
+    whether its scope makes it eligible for the section the menu was opened
+    from.
+
+    Data attributes required for JS:
+    * data-source-cmid + data-source-name + data-type-label on each enabled
+      item, read when the admin picks it.
+
+    Context variables required for this template:
+    * hasoptions bool  - True when at least one template exists at all.
+    * options array    - Each with: sourcecmid int, name string,
+                         typelabel string, disabled bool, scopehint string,
+                         tooltip string (only meaningful when disabled).
+
+    Example context (json):
+    {
+        "hasoptions": true,
+        "options": [
+            {"sourcecmid": 42, "name": "Lesson template", "typelabel": "Lesson", "disabled": false, "scopehint": "this section", "tooltip": ""},
+            {"sourcecmid": 43, "name": "Quiz template", "typelabel": "Quiz", "disabled": true, "scopehint": "another section", "tooltip": "Its scope is \"this section only\" and it lives in a different section"}
+        ]
+    }
+}}
+{{#hasoptions}}
+<p class="tpl-instance-menu-hint">{{#str}} template_instance_menu_hint, local_coursegen {{/str}}</p>
+{{#options}}
+<button type="button" class="tpl-instance-menu-item"{{#disabled}} disabled title="{{tooltip}}"{{/disabled}}
+        {{^disabled}}data-source-cmid="{{sourcecmid}}" data-source-name="{{name}}" data-type-label="{{typelabel}}"{{/disabled}}>
+    <span>{{name}}</span>
+    <span class="tpl-instance-menu-scope-hint">{{scopehint}}</span>
+</button>
+{{/options}}
+{{/hasoptions}}
+{{^hasoptions}}
+<p class="tpl-instance-menu-hint mb-0">{{#str}} template_instance_menu_empty, local_coursegen {{/str}}</p>
+{{/hasoptions}}

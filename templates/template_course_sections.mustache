@@ -38,7 +38,13 @@
 
     Data attributes required for JS:
     * data-for="section" data-id on each section card
-    * data-for="cmitem" data-id + data-modname on each activity row
+    * data-for="cmitem" data-id + data-modname + data-typelabel on each
+      real activity row (data-typelabel lets the instance-menu builder read
+      a template mold's type label without a string lookup)
+    * data-for="instancerow" data-instance-id on each virtual instance row
+      (never carries data-modname: it must stay outside every selector that
+      targets real activities, e.g. selection_bulk.js's checkbox queries or
+      type_action_sync.js's default-seeding pass)
     * data-region="section-behavior" data-sid on each header's behavior select
     * data-region="activity-action" data-id on each row's action select
     * data-region="activity-select" data-id on each row's checkbox
@@ -50,6 +56,22 @@
       data-tag-section on each row's clickable "Template" tag, next to the
       activity name (hidden unless the row's action is "template") — opens
       local/template/template_scope_modal.js to set/change the row's scope
+    * data-region="row-gap" on the thin hover-reveal strip rendered after
+      EVERY row (real or instance, including the section's last one), and
+      data-region="add-instance" on the section's persistent trailing
+      "Add activity from a template" row — both open
+      local/template/template_instance_menu.js at the clicked trigger's
+      position and insert the picked template's instance immediately before
+      the element that follows the trigger
+
+    Each "rows" entry is rendered by the local_coursegen/template_course_sections_row
+    partial (its own row plus the hover-reveal gap after it) — split out to
+    keep this file under the project's 250-line cap.
+    * data-region="instance-name" data-id on each instance row's editable
+      name input
+    * data-region="instance-prompt-toggle" data-id on each instance row's
+      edit-instructions icon; data-region="instance-remove" data-id on its
+      remove icon
 
     Context variables required for this template:
     * courseid int          - Base course id (keeps collapse ids unique per course)
@@ -59,9 +81,13 @@
     * sections array   - Sections, each with: id int, num int, name string,
                          activitycount int, hasactivities bool,
                          actions array (value, sectionid, label, tip, active),
-                         activities array (cmid, name, modname, typelabel,
-                         iconurl, actions array (value, cmid, label, tip, active),
-                         istemplate bool, scopelabel string)
+                         rows array, each either a real activity row
+                         (isreal true, isinstance false, cmid, name, modname,
+                         typelabel, iconurl, viewurl, actions array,
+                         istemplate bool, scopelabel string) or a virtual
+                         instance row (isreal false, isinstance true,
+                         instanceid, name, typelabel, prompt, sourcecmid,
+                         sourcename, badge string)
 
     Example context (json):
     {
@@ -79,8 +105,10 @@
                 "actions": [
                     {"value": "custom", "sectionid": 11, "label": "Customised", "tip": "Configure each activity", "active": true}
                 ],
-                "activities": [
+                "rows": [
                     {
+                        "isreal": true,
+                        "isinstance": false,
                         "cmid": 42,
                         "name": "Welcome page",
                         "modname": "page",
@@ -128,7 +156,6 @@
             </select>
         </div>
         <div class="collapse show" id="local-coursegen-tpl-section-{{courseid}}-{{id}}">
-            {{#hasactivities}}
             <div class="table-responsive">
                 <table class="table generaltable table-hover mb-0 tpl-activity-table">
                     <thead>
@@ -143,43 +170,20 @@
                         </tr>
                     </thead>
                     <tbody>
-                        {{#activities}}
-                        <tr class="{{#istemplate}}tpl-row-template{{/istemplate}}" data-for="cmitem" data-id="{{cmid}}" data-modname="{{modname}}">
-                            <td class="align-middle tpl-select-col">
-                                <input type="checkbox" data-region="activity-select" data-id="{{cmid}}"
-                                       aria-label="{{name}}">
-                            </td>
-                            <td class="align-middle">
-                                <img src="{{iconurl}}" class="icon activityicon mr-2" alt="">{{!
-                                }}{{#viewurl}}<a href="{{viewurl}}" target="_blank" rel="noopener">{{name}}</a>{{/viewurl}}{{!
-                                }}{{^viewurl}}<span>{{name}}</span>{{/viewurl}}{{!
-                                }}<button type="button"
-                                        class="tpl-badge tpl-badge-template tpl-template-tag ml-2{{^istemplate}} d-none{{/istemplate}}"
-                                        data-region="template-tag" data-id="{{cmid}}" data-name="{{name}}"
-                                        data-tag-course="{{#str}} template_activity_template_tag, local_coursegen, {{scopelabelcourse}} {{/str}}"
-                                        data-tag-section="{{#str}} template_activity_template_tag, local_coursegen, {{scopelabelsection}} {{/str}}">
-                                    {{#str}} template_activity_template_tag, local_coursegen, {{scopelabel}} {{/str}}
+                        {{#rows}}
+                        {{> local_coursegen/template_course_sections_row}}
+                        {{/rows}}
+                        <tr class="tpl-row-add" data-region="add-instance">
+                            <td colspan="4">
+                                <button type="button" class="tpl-add-instance-btn" data-instance-menu-trigger>
+                                    <span>&#65291;</span>
+                                    <span>{{#str}} template_add_instance, local_coursegen {{/str}}</span>
                                 </button>
                             </td>
-                            <td class="align-middle text-muted">{{typelabel}}</td>
-                            <td class="align-middle text-right">
-                                <select class="custom-select custom-select-sm tpl-activity-action"
-                                        data-region="activity-action" data-id="{{cmid}}"
-                                        aria-label="{{#str}} actions, core {{/str}}">
-                                    {{#actions}}
-                                    <option value="{{value}}" title="{{tip}}"{{#active}} selected{{/active}}>{{label}}</option>
-                                    {{/actions}}
-                                </select>
-                            </td>
                         </tr>
-                        {{/activities}}
                     </tbody>
                 </table>
             </div>
-            {{/hasactivities}}
-            {{^hasactivities}}
-            <p class="text-muted p-3 mb-0">{{#str}} template_section_no_activities, local_coursegen {{/str}}</p>
-            {{/hasactivities}}
         </div>
     </div>
 {{/sections}}
