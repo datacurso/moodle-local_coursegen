@@ -72,6 +72,11 @@ class template extends persistent {
                 'type' => PARAM_INT,
                 'default' => 1,
             ],
+            'general_instruction' => [
+                'type' => PARAM_RAW,
+                'null' => NULL_ALLOWED,
+                'default' => null,
+            ],
         ];
     }
 }

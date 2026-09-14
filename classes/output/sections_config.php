@@ -288,14 +288,10 @@ class sections_config {
      * Only ever offers "Modify" for a module type in
      * template_content_generator::AI_SUPPORTED_TYPES — the real AI service's
      * full content contract, never a constant scoped to whichever
-     * implementation currently satisfies it. Every type in that contract
-     * must be offered here, even if the implementation currently answering
-     * generate() hasn't caught up to every one of them yet (see
-     * mock_template_ai_service::generate()'s own per-activity, non-fatal
-     * fallback for that gap). Anything NOT in that contract (i.e. an
-     * activity type the AI service has no content contract for at all)
-     * only offers Keep / Reference / Exclude, and defaults to Keep instead
-     * of Modify.
+     * implementation currently satisfies it. Anything NOT in that contract
+     * (i.e. an activity type the AI service has no content contract for at
+     * all) only offers Keep / Reference / Exclude, and defaults to Keep
+     * instead of Modify.
      *
      * @param int $cmid
      * @param string $modname

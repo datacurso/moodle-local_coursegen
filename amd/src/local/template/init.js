@@ -254,12 +254,22 @@ const saveTemplate = async() => {
         const descVal = root.querySelector('#id_templatedesc')?.value || state.templateDesc;
         state.templateName = nameVal;
         state.templateDesc = descVal;
+        // General instruction + reference files live inside template_config_form
+        // (configForm's own container, reloaded whenever the course changes) —
+        // read them from there the same way nameVal/descVal are read from the
+        // separate name form above, rather than tracking them in JS state.
+        const generalInstructionVal = configForm.container.querySelector('#id_generalinstruction')?.value || '';
+        const generalFilesDraftId = parseInt(
+            configForm.container.querySelector('#id_generalfiles')?.value || '0', 10
+        ) || 0;
         await Repository.saveTemplate({
             id: state.templateId, name: nameVal,
             description: descVal, courseid: state.selectedCourseId,
             maxsections: state.maxSections, nolimit: state.noLimit,
             allowedtypes: JSON.stringify(state.allowedTypes),
             namingpattern: state.namingPattern, namingstart: state.namingStart,
+            generalinstruction: generalInstructionVal,
+            generalfilesdraftid: generalFilesDraftId,
             sections: buildSections(),
         });
         // A real, successful save — the course picker, config form and name

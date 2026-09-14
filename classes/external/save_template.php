@@ -37,6 +37,7 @@ use context_system;
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir . '/externallib.php');
+require_once($CFG->libdir . '/filelib.php');
 
 /**
  * External API for creating or updating a course template with its section/activity config.
@@ -59,6 +60,18 @@ class save_template extends external_api {
             'allowedtypes'   => new external_value(PARAM_RAW,  'JSON array of allowed types', VALUE_DEFAULT, '[]'),
             'namingpattern'  => new external_value(PARAM_RAW,  'Section naming pattern', VALUE_DEFAULT, ''),
             'namingstart'    => new external_value(PARAM_INT,  'Naming start number', VALUE_DEFAULT, 1),
+            'generalinstruction' => new external_value(
+                PARAM_RAW,
+                'General course-level instruction sent to the AI alongside the template export',
+                VALUE_DEFAULT,
+                ''
+            ),
+            'generalfilesdraftid' => new external_value(
+                PARAM_INT,
+                'Draft area id of the general reference files uploaded for this template (0 if none/unchanged)',
+                VALUE_DEFAULT,
+                0
+            ),
             'sections'       => new external_multiple_structure(
                 new external_single_structure([
                     'sectionid'  => new external_value(PARAM_INT,   'Section ID'),
@@ -89,6 +102,8 @@ class save_template extends external_api {
      * @param string $allowedtypes
      * @param string $namingpattern
      * @param int    $namingstart
+     * @param string $generalinstruction
+     * @param int    $generalfilesdraftid
      * @param array  $sections
      * @return array Saved template id and name.
      */
@@ -102,6 +117,8 @@ class save_template extends external_api {
         $allowedtypes,
         $namingpattern,
         $namingstart,
+        $generalinstruction,
+        $generalfilesdraftid,
         $sections
     ) {
         $params = self::validate_parameters(self::execute_parameters(), [
@@ -114,6 +131,8 @@ class save_template extends external_api {
             'allowedtypes'  => $allowedtypes,
             'namingpattern' => $namingpattern,
             'namingstart'   => $namingstart,
+            'generalinstruction' => $generalinstruction,
+            'generalfilesdraftid' => $generalfilesdraftid,
             'sections'      => $sections,
         ]);
 
@@ -132,6 +151,7 @@ class save_template extends external_api {
         $tpl->set('allowedtypes',  $params['allowedtypes']);
         $tpl->set('namingpattern', $params['namingpattern']);
         $tpl->set('namingstart',   $params['namingstart']);
+        $tpl->set('general_instruction', $params['generalinstruction'] !== '' ? $params['generalinstruction'] : null);
 
         if ($params['id'] > 0) {
             $tpl->update();
@@ -140,6 +160,22 @@ class save_template extends external_api {
         }
 
         $templateid = (int) $tpl->get('id');
+
+        // General course-level reference files: same context/component/filearea
+        // convention already established elsewhere in this plugin for
+        // draft-to-permanent file saves (context_system, component
+        // 'local_coursegen', see ai_context::save_syllabus_from_draft() and
+        // courseai_syllabus_upload::execute()) - itemid is this template's own id.
+        // 0 means "no change" (the professor didn't touch the file picker).
+        if ($params['generalfilesdraftid'] > 0) {
+            file_save_draft_area_files(
+                $params['generalfilesdraftid'],
+                $context->id,
+                'local_coursegen',
+                'template_general_files',
+                $templateid
+            );
+        }
 
         // Replace all child activity records.
         $oldactivities = template_activity::get_records(['templateid' => $templateid]);

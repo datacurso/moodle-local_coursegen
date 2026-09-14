@@ -315,5 +315,33 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026072002, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026091201) {
+        // Define field general_instruction to be added to local_coursegen_template.
+        $table = new xmldb_table('local_coursegen_template');
+        $field = new xmldb_field('general_instruction', XMLDB_TYPE_TEXT, null, null, null, null, null, 'namingstart');
+
+        // Conditionally launch add field general_instruction.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Coursegen savepoint reached.
+        upgrade_plugin_savepoint(true, 2026091201, 'local', 'coursegen');
+    }
+
+    if ($oldversion < 2026091302) {
+        // Define field templatesourcecmid to be added to local_coursegen_tpl_activity.
+        $table = new xmldb_table('local_coursegen_tpl_activity');
+        $field = new xmldb_field('templatesourcecmid', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'useasreference');
+
+        // Conditionally launch add field templatesourcecmid.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Coursegen savepoint reached.
+        upgrade_plugin_savepoint(true, 2026091302, 'local', 'coursegen');
+    }
+
     return true;
 }

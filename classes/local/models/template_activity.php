@@ -57,6 +57,15 @@ class template_activity extends persistent {
                 'type' => PARAM_INT,
                 'default' => 1,
             ],
+            // Only meaningful when action=modify: the cmid of an action=template
+            // activity in this same template whose structure/placeholders drive
+            // this activity's generation, instead of the free-form regeneration
+            // 'modify' does on its own (see course_export_service::export_course_for_template()).
+            'templatesourcecmid' => [
+                'type' => PARAM_INT,
+                'null' => NULL_ALLOWED,
+                'default' => null,
+            ],
             'prompt' => [
                 'type' => PARAM_RAW,
                 'null' => NULL_ALLOWED,
