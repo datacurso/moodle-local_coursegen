@@ -106,20 +106,18 @@
 }
 
 /* Actions cell: action select on its own line, then (only for template
-   rows) a badge + scope select row beneath it — stacked and left-aligned
-   instead of the previous unwrapped inline flow, which crammed all three
-   controls together inside a narrow right-aligned column. */
-.tpl-actions-cell {
-    text-align: left;
-}
-
+   rows) a badge + scope select row beneath it — stacked and right-aligned
+   (matching the "Actions" header) instead of the previous unwrapped inline
+   flow, which crammed all three controls together in a narrow column. */
 .tpl-actions-cell-inner {
     display: flex;
     flex-direction: column;
-    /* flex-start, not stretch: the action select should size to its own
-       label, not balloon out to fill the whole (necessarily wide, to fit a
-       template row's badge + scope select) Actions column on every row. */
-    align-items: flex-start;
+    /* flex-end, not stretch: the action select sizes to its own label
+       instead of ballooning out to fill the whole (necessarily wide, to fit
+       a template row's badge + scope select) Actions column, but still
+       sits flush against the column's end, matching the right-aligned
+       "Actions" header instead of floating with a gap after it. */
+    align-items: flex-end;
     gap: 0.4rem;
 }
 
