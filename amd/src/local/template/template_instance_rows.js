@@ -45,8 +45,11 @@ const buildGapRow = (title) => {
     tr.className = 'tpl-row-gap';
     tr.setAttribute('data-region', 'row-gap');
     tr.innerHTML = '<td colspan="4"><div class="tpl-row-gap-line">'
-        + '<button type="button" class="tpl-row-gap-plus" data-instance-menu-trigger title="' + title + '">+</button>'
-        + '</div></td>';
+        + '<div class="dropdown tpl-instance-dropdown">'
+        + '<button type="button" class="tpl-row-gap-plus" data-instance-menu-trigger'
+        + ' aria-haspopup="true" aria-expanded="false" title="' + title + '">+</button>'
+        + '<div class="dropdown-menu tpl-instance-menu" role="menu"></div>'
+        + '</div></div></td>';
     return tr;
 };
 
