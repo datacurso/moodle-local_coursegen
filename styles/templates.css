@@ -80,22 +80,24 @@
     overflow-wrap: break-word;
 }
 
+/* Percentages, not fixed rem: the admin page is full-width with no max-width
+   cap, so a rem-fixed Type/Actions column stays a tiny sliver next to Name
+   on a wide screen even though it looks fine at a narrow one. Percentages
+   keep the same visual ratio at any width; Name is the only column left
+   unspecified, so it absorbs whatever the other three don't need. */
 .tpl-activity-table .tpl-select-col {
-    width: 3rem;
+    width: 4%;
 }
 
 .tpl-activity-table .tpl-col-type {
-    /* Fixed, width-agnostic: a percentage grows absurdly wide on the now
-       full-width admin page. Narrower than before: the Actions column now
-       needs the room, and a module type label never runs long. */
-    width: 8rem;
+    width: 16%;
 }
 
 .tpl-activity-table .tpl-col-actions {
     /* Wide enough to hold the action select plus, when a row is marked as
        a template, its badge + scope select on a second line without
        either control feeling squeezed. */
-    width: 19rem;
+    width: 28%;
 }
 
 .tpl-bulk-select,
