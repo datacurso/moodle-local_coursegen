@@ -92,27 +92,38 @@ const togglePromptDrawer = (container, instanceid) => {
 };
 
 /**
- * Resolve a trigger's target section and insertion point, fetch the
- * available templates for it, and open the picker.
+ * Resolve a trigger's target section, fetch the available templates for it,
+ * and open its picker.
  *
  * @param {HTMLElement} container The rendered course sections review.
  * @param {HTMLElement} trigger The clicked "+" button.
  * @param {Object} state The live wizard state from init.js.
- * @param {Function} markDirty Marks the wizard as having unsaved changes.
  */
-const openMenuForTrigger = async(container, trigger, state, markDirty) => {
+const openMenuForTrigger = async(container, trigger, state) => {
     const sectionEl = trigger.closest('[data-for="section"]');
     const sectionid = parseInt(sectionEl.dataset.id, 10);
-    const tbody = trigger.closest('table').querySelector('tbody');
-    const beforeEl = trigger.closest('[data-region="row-gap"], [data-region="add-instance"]');
     const options = await buildAvailableTemplates(container, sectionid, state);
-    openInstanceMenu({
-        triggerEl: trigger,
-        options,
-        onPick: (picked) => {
-            insertInstanceRow(tbody, beforeEl, picked).then(markDirty);
-        },
-    });
+    await openInstanceMenu({triggerEl: trigger, options});
+};
+
+/**
+ * Handle a click on one enabled picker item: insert its instance row
+ * immediately before the row-gap/add-instance row the picker opened from.
+ * Bootstrap closes the dropdown on its own once this click finishes
+ * bubbling to the document.
+ *
+ * @param {HTMLElement} item The clicked picker item (data-source-cmid).
+ * @param {Function} markDirty Marks the wizard as having unsaved changes.
+ */
+const pickTemplate = (item, markDirty) => {
+    const beforeEl = item.closest('[data-region="row-gap"], [data-region="add-instance"]');
+    const tbody = beforeEl.closest('table').querySelector('tbody');
+    const picked = {
+        sourcecmid: parseInt(item.dataset.sourceCmid, 10),
+        sourcename: item.dataset.sourceName,
+        typelabel: item.dataset.typeLabel,
+    };
+    insertInstanceRow(tbody, beforeEl, picked).then(markDirty);
 };
 
 /**
@@ -128,7 +139,13 @@ export const bindInstanceInserts = (container, state, markDirty) => {
     container.addEventListener('click', (e) => {
         const trigger = e.target.closest('[data-instance-menu-trigger]');
         if (trigger) {
-            openMenuForTrigger(container, trigger, state, markDirty);
+            openMenuForTrigger(container, trigger, state);
+            return;
+        }
+
+        const pickedItem = e.target.closest('[data-source-cmid]');
+        if (pickedItem) {
+            pickTemplate(pickedItem, markDirty);
             return;
         }
 
