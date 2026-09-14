@@ -27,6 +27,16 @@ import {openTemplateScopeModal} from './template_scope_modal';
 import {removeInstanceRow} from './template_instance_rows';
 import Notification from 'core/notification';
 import {getStrings} from 'core/str';
+import prefetch from 'core/prefetch';
+
+// Warm the string cache as soon as this module loads, so the first
+// getStrings() call in confirmUnmarkTemplate() below resolves from cache
+// instead of waiting on a network round trip.
+prefetch.prefetchStrings('local_coursegen', [
+    'template_instance_unmark_confirm_title',
+    'template_instance_unmark_confirm_body',
+    'template_instance_remove',
+]);
 
 /**
  * Reflect a row's template status in the DOM: toggle the row highlight and

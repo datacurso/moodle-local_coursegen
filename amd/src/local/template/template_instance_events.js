@@ -34,6 +34,16 @@ import {openInstanceMenu, closeInstanceMenu, beginMenuOpen} from './template_ins
 import {insertInstanceRow, removeInstanceRow} from './template_instance_rows';
 import {getStrings} from 'core/str';
 import Notification from 'core/notification';
+import prefetch from 'core/prefetch';
+
+// Warm the string cache as soon as this module loads, so the first "+"
+// click's own getStrings() call below resolves from cache instead of
+// waiting on a network round trip.
+prefetch.prefetchStrings('local_coursegen', [
+    'template_instance_scope_same_section',
+    'template_instance_scope_whole_course',
+    'template_instance_scope_unavailable',
+]);
 
 /**
  * Build one marked row's own picker option, or null if the row is missing
