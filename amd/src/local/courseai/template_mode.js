@@ -29,7 +29,7 @@
 
 import Notification from 'core/notification';
 import {getStrings} from 'core/str';
-import {getTemplateStructure, createCourseFromTemplate} from './template/repository';
+import {getTemplateStructure} from './template/repository';
 import {
     createTemplateState,
     applyStructureResponse,
@@ -75,60 +75,6 @@ const updateStats = (tplState, statsTemplate) => {
         sections: tplState.sections.length,
         activities: totalActivities,
     });
-};
-
-/**
- * Build the "what the professor added" payload from the in-memory template
- * state and create the course. The server re-reads keep/modify/exclude/
- * reference straight from the database by itself — only newly added
- * sections/activities (negative client-side placeholder ids) are sent. On
- * success, navigates to the newly created course.
- *
- * @param {HTMLElement} genBtn
- * @param {HTMLElement} tplSelect
- * @param {Object} tplState
- */
-const handleGenerateClick = async(genBtn, tplSelect, tplState) => {
-    if (!genBtn || genBtn.disabled) {
-        return;
-    }
-    const templateId = tplSelect ? parseInt(tplSelect.value, 10) : 0;
-    if (!templateId) {
-        return;
-    }
-
-    genBtn.disabled = true;
-    try {
-        const newsections = tplState.sections
-            .filter((section) => !section.locked && section.id < 0)
-            .map((section) => ({clientid: section.id, name: section.name}));
-
-        const newactivities = [];
-        tplState.sections.forEach((section) => {
-            section.activities.forEach((activity) => {
-                if (!activity.locked) {
-                    newactivities.push({
-                        sectionid: section.id,
-                        modname: activity.modname,
-                        prompt: activity.prompt || '',
-                        generateimages: activity.generateimages ? 1 : 0,
-                        draftitemid: activity.draftitemid || 0,
-                    });
-                }
-            });
-        });
-
-        const result = await createCourseFromTemplate({templateid: templateId, newsections, newactivities});
-        if (result && result.success && result.courseurl) {
-            window.location.href = result.courseurl;
-            return;
-        }
-        genBtn.disabled = false;
-        Notification.exception(new Error((result && result.message) || 'Course creation failed.'));
-    } catch (e) {
-        genBtn.disabled = false;
-        Notification.exception(e);
-    }
 };
 
 /**
@@ -254,9 +200,17 @@ export const wireTemplateMode = (state) => {
         }
     });
 
+    // The real course-creation backend for this button (create_course_from_template
+    // webservice / template_course_builder_service) was removed - it shipped the
+    // old backup/restore + mock-AI design, already superseded elsewhere. Rather
+    // than leave the button silently do nothing when other code re-enables it
+    // (limits/loading logic still toggles genBtn.disabled below), tell the
+    // professor plainly instead of failing silently.
     const genBtn = document.getElementById('tplModeGenerate');
     if (genBtn) {
-        genBtn.addEventListener('click', () => handleGenerateClick(genBtn, tplSelect, tplState));
+        genBtn.addEventListener('click', () => {
+            Notification.exception(new Error('Course creation from a template is not available yet.'));
+        });
     }
 
     // Template selection — load structure.

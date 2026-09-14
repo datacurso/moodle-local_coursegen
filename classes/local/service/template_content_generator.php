@@ -20,18 +20,15 @@ defined('MOODLE_INTERNAL') || die();
 
 /**
  * Contract for the AI content generator used by template-mode course
- * creation (see template_course_builder_service).
+ * creation.
  *
- * This is the permanent contract of the real AI backend — independent of
- * whichever implementation currently satisfies it. mock_template_ai_service
- * implements it today as a stand-in; a real implementation will implement it
- * later by wrapping the real Datacurso AI course API (see
- * ai_course_api_service/api_client_factory for the equivalent pattern
- * already used by the free-course-creation flow). Swapping mock for real is
- * then a single call to template_course_builder_service::set_ai_service(),
- * never a search for scattered references to the mock class name — and
- * AI_SUPPORTED_TYPES survives deleting the mock entirely, since it belongs
- * to this interface, not to the mock's own class body.
+ * This is the permanent contract of the real AI backend, independent of
+ * whichever implementation/orchestrator ends up satisfying it. No orchestrator
+ * on this branch consumes it directly right now (the per-activity
+ * backup/restore + mock-AI approach this interface used to back was removed);
+ * AI_SUPPORTED_TYPES remains the single source of truth for which activity
+ * types the template UI offers (see sections_config/template_config_form)
+ * regardless.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -47,17 +44,14 @@ interface template_content_generator {
      * single source of truth for which activity types a professor may add
      * as brand-new activities in a course generated from a template (see
      * template_config_form::definition()) — never everything installed on
-     * the site, since the AI service (real or mocked) can only ever be
-     * asked to generate content for a type it actually has a contract for.
+     * the site, since the AI service can only ever be asked to generate
+     * content for a type it actually has a contract for.
      *
      * This is also the single source of truth for which types offer
      * "Modify with AI" on an activity the template already contains (see
      * sections_config::build_activity_dropdown()) — every type the real
      * service can generate content for must be offered, full stop; no
-     * narrower subset of "currently implemented" types gates the UI. A
-     * given implementation (the mock included) may still not have every
-     * type built out yet — see generate()'s own REPLACE-WITH-REAL-AI note
-     * for how that gap is handled without lying to the UI about it.
+     * narrower subset of "currently implemented" types gates the UI.
      *
      * @var string[]
      */
@@ -75,12 +69,12 @@ interface template_content_generator {
      *     sectionname: string       Name of the destination section (context only).
      *     prompt: string            Per-activity prompt configured on the template ('' for new activities).
      *     referencecontent: string  Optional context gathered from reference/useasreference activities.
-     *     lang: string              Language code (context only, unused by the mock).
+     *     lang: string              Language code (context only).
      *     title: string             Optional explicit activity title; derived otherwise.
      *     generateimages: int       Whether images should be generated for the activity (0/1);
-     *                               set for professor-added new activities, unused by the mock.
+     *                               set for professor-added new activities.
      *     draftitemid: int          Draft area id of a professor-uploaded reference file (0 if
-     *                               none); set for new activities, unused by the mock.
+     *                               none); set for new activities.
      * }
      * @return array{resource_type:string,parameters:array}
      * @throws \moodle_exception If the module type is not supported yet.
