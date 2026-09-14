@@ -20,15 +20,15 @@ defined('MOODLE_INTERNAL') || die();
 
 /**
  * Contract for the AI content generator used by template-mode course
- * creation (see template_course_builder_service).
+ * creation.
  *
- * This is the permanent contract of the real AI backend — independent of
- * whichever implementation currently satisfies it. A real implementation
- * wraps the real Datacurso AI course API (see ai_course_api_service/
- * api_client_factory for the equivalent pattern already used by the
- * free-course-creation flow) and is wired in via a single call to
- * template_course_builder_service::set_ai_service() — never a search for
- * scattered references to a concrete implementation's class name.
+ * This is the permanent contract of the real AI backend, independent of
+ * whichever implementation/orchestrator ends up satisfying it. No orchestrator
+ * on this branch consumes it directly right now (the per-activity
+ * backup/restore + mock-AI approach this interface used to back was removed);
+ * AI_SUPPORTED_TYPES remains the single source of truth for which activity
+ * types the template UI offers (see sections_config/template_config_form)
+ * regardless.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
