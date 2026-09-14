@@ -26,7 +26,9 @@
 namespace local_coursegen\output;
 
 use local_coursegen\local\models\template_activity;
+use local_coursegen\local\models\template_instance;
 use local_coursegen\local\models\template_section;
+use local_coursegen\local\service\template_instance_layout;
 
 /**
  * Build the sections review straight from modinfo.
@@ -81,6 +83,7 @@ class sections_config {
         $savedbehaviors = [];
         $savedactions = [];
         $savedscopes = [];
+        $savedinstances = [];
         if ($templateid > 0) {
             foreach (template_section::get_records(['templateid' => $templateid]) as $record) {
                 $savedbehaviors[(int) $record->get('sectionid')] = $record->get('behavior');
@@ -89,11 +92,16 @@ class sections_config {
                 $savedactions[(int) $record->get('cmid')] = $record->get('action');
                 $savedscopes[(int) $record->get('cmid')] = $record->get('templatescope');
             }
+            foreach (template_instance::get_records(['templateid' => $templateid]) as $record) {
+                $savedinstances[(int) $record->get('sectionid')][] = $record;
+            }
         }
 
         $sections = [];
         foreach ($modinfo->get_section_info_all() as $sectioninfo) {
-            $activities = [];
+            $sectionid = (int) $sectioninfo->id;
+            $activitiesbycmid = [];
+            $realcmids = [];
             if (!empty($modinfo->sections[$sectioninfo->section])) {
                 foreach ($modinfo->sections[$sectioninfo->section] as $cmid) {
                     $cm = $modinfo->get_cm($cmid);
@@ -101,46 +109,21 @@ class sections_config {
                         continue;
                     }
                     $cmid = (int) $cm->id;
-                    $actionoptions = template_row_options::activity_actions(
-                        $cmid,
-                        $cm->modname,
-                        $savedactions[$cmid] ?? null
-                    );
-                    $istemplate = template_row_options::active_action($actionoptions) === 'template';
-                    $scopeoptions = template_row_options::template_scope_options(
-                        $cmid,
-                        $savedscopes[$cmid] ?? 'course'
-                    );
-                    $activities[] = [
-                        'cmid' => $cmid,
-                        'name' => $cm->get_formatted_name(),
-                        // Link to the real activity in the base course; null
-                        // for modules with no view page of their own (label),
-                        // whose names stay plain text.
-                        'viewurl' => $cm->url ? $cm->url->out(false) : null,
-                        'modname' => $cm->modname,
-                        'typelabel' => $cm->get_module_type_name(),
-                        'iconurl' => $cm->get_icon_url()->out(false),
-                        'actions' => $actionoptions,
-                        // Drives the clickable "Template" tag's visibility
-                        // and initial label — kept in sync with the action
-                        // select, and with scope changes made through
-                        // local/template/template_scope_modal.js, by
-                        // sections_events.js.
-                        'istemplate' => $istemplate,
-                        'scopelabel' => template_row_options::active_scope_label($scopeoptions),
-                    ];
+                    $realcmids[] = $cmid;
+                    $activitiesbycmid[$cmid] = self::real_row_context($cm, $cmid, $savedactions, $savedscopes);
                 }
             }
 
-            $sectionid = (int) $sectioninfo->id;
+            $rows = template_instance_layout::ordered_rows($realcmids, $savedinstances[$sectionid] ?? []);
+            $rows = self::render_rows($rows, $activitiesbycmid);
+
             $sections[] = [
                 'id' => $sectionid,
                 'num' => (int) $sectioninfo->section,
                 'name' => get_section_name($course, $sectioninfo),
-                'activitycount' => count($activities),
-                'hasactivities' => !empty($activities),
-                'activities' => $activities,
+                'activitycount' => count($rows),
+                'hasactivities' => !empty($rows),
+                'rows' => $rows,
                 'actions' => template_row_options::section_actions($sectionid, $savedbehaviors[$sectionid] ?? 'custom'),
             ];
         }
@@ -162,4 +145,60 @@ class sections_config {
         ];
     }
 
+    /**
+     * Build one real activity's row context.
+     *
+     * @param \cm_info $cm
+     * @param int $cmid
+     * @param array $savedactions Saved action per cmid.
+     * @param array $savedscopes Saved templatescope per cmid.
+     * @return array
+     */
+    private static function real_row_context(\cm_info $cm, int $cmid, array $savedactions, array $savedscopes): array {
+        $actionoptions = template_row_options::activity_actions($cmid, $cm->modname, $savedactions[$cmid] ?? null);
+        $istemplate = template_row_options::active_action($actionoptions) === 'template';
+        $scopeoptions = template_row_options::template_scope_options($cmid, $savedscopes[$cmid] ?? 'course');
+
+        // Link to the real activity in the base course; null for modules
+        // with no view page of their own (label), whose names stay plain text.
+        $viewurl = null;
+        if ($cm->url) {
+            $viewurl = $cm->url->out(false);
+        }
+
+        return [
+            'isreal' => true,
+            'isinstance' => false,
+            'cmid' => $cmid,
+            'name' => $cm->get_formatted_name(),
+            'viewurl' => $viewurl,
+            'modname' => $cm->modname,
+            'typelabel' => $cm->get_module_type_name(),
+            'iconurl' => $cm->get_icon_url()->out(false),
+            'actions' => $actionoptions,
+            // Drives the clickable "Template" tag's visibility and initial
+            // label — kept in sync with the action select, and with scope
+            // changes made through local/template/template_scope_modal.js,
+            // by sections_events.js.
+            'istemplate' => $istemplate,
+            'scopelabel' => template_row_options::active_scope_label($scopeoptions),
+        ];
+    }
+
+    /**
+     * Turn template_instance_layout::ordered_rows()'s output into the final
+     * per-row render context.
+     *
+     * @param array $orderedrows Return value of template_instance_layout::ordered_rows().
+     * @param array $activitiesbycmid Real row contexts, keyed by cmid.
+     * @return array
+     */
+    private static function render_rows(array $orderedrows, array $activitiesbycmid): array {
+        return array_map(
+            fn($entry) => $entry['type'] === 'real'
+                ? $activitiesbycmid[$entry['cmid']]
+                : ['isreal' => false, 'isinstance' => true] + template_row_options::instance_row_context($entry['record']),
+            $orderedrows
+        );
+    }
 }
