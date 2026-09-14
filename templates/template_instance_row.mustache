@@ -1,0 +1,79 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/template_instance_row
+
+    One virtual template-instance row plus its own (initially hidden)
+    prompt row — the pair template_course_sections_row.mustache includes
+    for every "isinstance" entry, and the same pair
+    template_instance_rows.js (insertInstanceRow) renders client-side when
+    a new instance is picked from the menu, so a freshly inserted row is
+    never anything but this same markup either way.
+
+    Context variables:
+    * instanceid string  - Unique within the page (a saved id, or a
+                           client-only "new-N" one for an unsaved pick).
+    * name string        - The instance's own editable name.
+    * sourcename string  - The template it was created from — always the
+                           original name, even after "name" is edited.
+    * sourcecmid int     - The molded activity's cmid — read back by
+                           collectInstancesForSection() (the save payload)
+                           and confirmUnmarkTemplate() (which cascades an
+                           unmark into removing every instance sourced from
+                           that cmid), so it must reach the DOM here even
+                           though nothing displays it.
+    * typelabel string
+    * prompt string      - The saved/typed extra instruction, if any.
+
+    Example context (json):
+    {
+        "instanceid": "new-1",
+        "name": "Lesson 1",
+        "sourcename": "Template lesson",
+        "sourcecmid": 42,
+        "typelabel": "Lesson",
+        "prompt": ""
+    }
+}}
+<tr class="tpl-row-instance" data-for="instancerow" data-instance-id="{{instanceid}}"
+    data-source-cmid="{{sourcecmid}}" data-source-name="{{sourcename}}">
+    <td class="align-middle tpl-select-col"></td>
+    <td class="align-middle">
+        <span class="icon activityicon tpl-instance-icon mr-2"></span>
+        <input type="text" class="tpl-instance-name-input" value="{{name}}"
+               data-region="instance-name" data-id="{{instanceid}}"
+               aria-label="{{#str}} template_instance_name, local_coursegen {{/str}}">
+        <span class="tpl-badge tpl-badge-instance ml-2">{{#str}} template_instance_badge, local_coursegen, {{sourcename}} {{/str}}</span>
+    </td>
+    <td class="align-middle text-muted">{{typelabel}}</td>
+    <td class="align-middle text-right">
+        <div class="tpl-instance-actions">
+            <button type="button" class="tpl-instance-icon-btn" data-region="instance-prompt-toggle" data-id="{{instanceid}}"
+                    title="{{#str}} template_instance_prompt_edit, local_coursegen {{/str}}">&#9998;</button>
+            <button type="button" class="tpl-instance-icon-btn tpl-instance-icon-danger" data-region="instance-remove" data-id="{{instanceid}}"
+                    title="{{#str}} template_instance_remove, local_coursegen {{/str}}">&times;</button>
+        </div>
+    </td>
+</tr>
+<tr class="tpl-instance-prompt-row d-none" data-for="instanceprompt" data-instance-id="{{instanceid}}">
+    <td colspan="4">
+        <div class="tpl-prompt-field">
+            <textarea data-region="instance-prompt" data-id="{{instanceid}}" rows="2"
+                      placeholder="{{#str}} template_instance_prompt_placeholder, local_coursegen {{/str}}">{{prompt}}</textarea>
+        </div>
+    </td>
+</tr>

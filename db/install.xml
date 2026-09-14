@@ -139,5 +139,27 @@
                 <KEY NAME="cmid" TYPE="foreign" FIELDS="cmid" REFTABLE="course_modules" REFFIELDS="id" />
             </KEYS>
         </TABLE>
+
+        <TABLE NAME="local_coursegen_tpl_instance" COMMENT="Virtual activities generated from a template mold, saved with a template">
+            <FIELDS>
+                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
+                <FIELD NAME="templateid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="sectionid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="sourcecmid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="cmid of the action=template activity this instance was created from" />
+                <FIELD NAME="sourcename" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="typelabel" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="prompt" TYPE="text" NOTNULL="false" SEQUENCE="false" />
+                <FIELD NAME="anchorcmid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="cmid this instance renders after within its section; 0 = section start" />
+                <FIELD NAME="sortorder" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" />
+                <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+            </FIELDS>
+            <KEYS>
+                <KEY NAME="primary" TYPE="primary" FIELDS="id" />
+                <KEY NAME="templateid" TYPE="foreign" FIELDS="templateid" REFTABLE="local_coursegen_template" REFFIELDS="id" />
+                <KEY NAME="sourcecmid" TYPE="foreign" FIELDS="sourcecmid" REFTABLE="course_modules" REFFIELDS="id" />
+            </KEYS>
+        </TABLE>
     </TABLES>
 </XMLDB>

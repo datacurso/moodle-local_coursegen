@@ -29,13 +29,12 @@
 
 import {renderStepSections, resetSectionsRender} from './step_sections';
 import {renderStepLimits} from './step_limits';
-import {resetSectionsDirtyState} from './sections_events';
 import {defaultActionForModname} from './type_action_sync';
+import {saveTemplate} from './save_payload';
+import {bindCoursePicker, updateSelectedBanner} from './course_picker_binding';
 import * as Repository from './repository';
 import DynamicForm from 'core_form/dynamicform';
 import Notification from 'core/notification';
-import {get_string as getString} from 'core/str';
-import {resetAllFormDirtyStates} from 'core_form/changechecker';
 
 /** @type {Object} Wizard state. */
 const state = {
@@ -74,84 +73,13 @@ export const setState = (updates) => {
     const coursechanged = Object.prototype.hasOwnProperty.call(updates, 'selectedCourseId');
     Object.assign(state, updates);
     if (coursechanged) {
-        updateSelectedBanner();
+        updateSelectedBanner(root, state);
         renderConfigRegion();
     }
 };
 
 /** @returns {HTMLElement} Root wizard element. */
 export const getRoot = () => root;
-
-/**
- * Reflect the currently selected course in the "selected course" banner.
- */
-const updateSelectedBanner = () => {
-    const banner = root.querySelector('[data-region="selected-banner"]');
-    if (!banner) {
-        return;
-    }
-    banner.classList.toggle('d-none', !state.selectedCourseId);
-    if (!state.selectedCourseId) {
-        return;
-    }
-    const nameEl = banner.querySelector('[data-region="selected-name"]');
-    const shortEl = banner.querySelector('[data-region="selected-short"]');
-    const linkEl = banner.querySelector('[data-region="selected-link"]');
-    if (nameEl) {
-        nameEl.textContent = state.selectedCourse?.fullname || '';
-    }
-    if (shortEl) {
-        shortEl.textContent = state.selectedCourse?.shortname || '';
-    }
-    if (linkEl) {
-        linkEl.href = M.cfg.wwwroot + '/course/view.php?id=' + state.selectedCourseId;
-    }
-};
-
-/**
- * Bind the category/course autocomplete pair rendered by
- * classes/form/course_picker_form.php. Neither field is ever submitted —
- * their standard Moodle IDs (id_category, id_courseid) are just read
- * directly, the same way template name/description are read elsewhere in
- * this module.
- *
- * @param {HTMLElement} panel The step-1 panel containing the rendered form.
- */
-const bindCoursePicker = (panel) => {
-    const categoryField = panel.querySelector('#id_category');
-    const courseField = panel.querySelector('#id_courseid');
-    if (!categoryField || !courseField) {
-        return;
-    }
-
-    // Picking a different category invalidates whatever course was chosen
-    // for the previous one — the course autocomplete's own AJAX transport
-    // re-scopes to the new category on the next keystroke, but a
-    // previously chosen course from the old category must not linger.
-    categoryField.addEventListener('change', () => {
-        if (state.selectedCourseId) {
-            setState({selectedCourseId: null, selectedCourse: null, courseStructure: null});
-        }
-    });
-
-    courseField.addEventListener('change', () => {
-        const id = parseInt(courseField.value, 10);
-        if (!id) {
-            return;
-        }
-        const label = courseField.options[courseField.selectedIndex]?.text || '';
-        // Label is "Fullname (Shortname)" (see form_course_selector.js);
-        // split it back out so the banner can show/link them separately.
-        const match = label.match(/^(.*)\s\(([^)]*)\)$/);
-        const fullname = match ? match[1] : label;
-        const shortname = match ? match[2] : '';
-        setState({
-            selectedCourseId: id,
-            selectedCourse: {id, fullname, shortname},
-            courseStructure: null,
-        });
-    });
-};
 
 /**
  * Show/hide and populate the configuration region below the course picker,
@@ -233,7 +161,11 @@ const initSectionState = () => {
         s.activities.forEach(a => {
             const saved = state.savedActivities[a.id];
             state.activityAction[a.id] = saved?.action || defaultActionForModname(a.modname);
-            state.activityRef[a.id] = saved ? saved.useasreference !== false : true;
+            let useasreference = true;
+            if (saved) {
+                useasreference = saved.useasreference !== false;
+            }
+            state.activityRef[a.id] = useasreference;
             state.activityPrompt[a.id] = saved?.prompt || '';
             state.activityScope[a.id] = saved?.templatescope || 'course';
             actTypes.add(a.modname);
@@ -244,60 +176,6 @@ const initSectionState = () => {
     // (see step_limits.js), never the base course's own section count.
     state.maxSections = 0;
     state.allowedTypes = [...actTypes];
-};
-
-/**
- * Build the section payload from current state.
- * @returns {Array}
- */
-const buildSections = () => state.courseStructure.map(s => ({
-    sectionid: s.id, sectionnum: s.num,
-    behavior: state.sectionBehavior[s.id] || 'custom',
-    activities: s.activities.map(a => ({
-        cmid: a.id, action: state.activityAction[a.id] || 'keep',
-        useasreference: state.activityRef[a.id] !== false,
-        prompt: state.activityPrompt[a.id] || '',
-        templatescope: state.activityScope[a.id] || 'course',
-    })),
-}));
-
-/**
- * Save template via repository and notify user.
- */
-const saveTemplate = async() => {
-    if (!state.selectedCourseId || !state.courseStructure) {
-        const msg = await getString('template_select_course_first', 'local_coursegen');
-        Notification.addNotification({message: msg, type: 'warning'});
-        return;
-    }
-    try {
-        const nameVal = root.querySelector('#id_templatename')?.value || state.templateName;
-        const descVal = root.querySelector('#id_templatedesc')?.value || state.templateDesc;
-        state.templateName = nameVal;
-        state.templateDesc = descVal;
-        await Repository.saveTemplate({
-            id: state.templateId, name: nameVal,
-            description: descVal, courseid: state.selectedCourseId,
-            maxsections: state.maxSections, nolimit: state.noLimit,
-            allowedtypes: JSON.stringify(state.allowedTypes),
-            namingpattern: state.namingPattern, namingstart: state.namingStart,
-            sections: buildSections(),
-        });
-        // A real, successful save — the course picker, config form and name
-        // form all stay watched for changes (see their own definition()),
-        // so without this the native "changes you made may not be saved"
-        // warning would misfire on this very redirect.
-        resetAllFormDirtyStates();
-        // The sections controls live OUTSIDE any watched form: their dirty
-        // protection is sections_events' own raw beforeunload listener,
-        // which resetAllFormDirtyStates() above cannot see — it must be
-        // dropped explicitly or the browser dialog fires on this redirect.
-        // A failed save throws before reaching here, keeping the protection.
-        resetSectionsDirtyState();
-        window.location.href = M.cfg.wwwroot + '/local/coursegen/manage_templates.php';
-    } catch (e) {
-        Notification.exception(e);
-    }
 };
 
 /**
@@ -340,8 +218,8 @@ export const init = (config) => {
     // rendered fields out from under the admin.
     configForm.addEventListener(configForm.events.FORM_SUBMITTED, e => e.preventDefault());
 
-    root.querySelector('[data-action="save"]').addEventListener('click', saveTemplate);
-    bindCoursePicker(root.querySelector('[data-region="step-panel"][data-step="1"]'));
+    root.querySelector('[data-action="save"]').addEventListener('click', () => saveTemplate(state, root));
+    bindCoursePicker(root.querySelector('[data-region="step-panel"][data-step="1"]'), state, setState);
 
     renderConfigRegion();
 };

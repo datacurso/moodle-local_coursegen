@@ -24,6 +24,10 @@
  */
 
 import {openTemplateScopeModal} from './template_scope_modal';
+import {removeInstanceRow} from './template_instance_rows';
+import Notification from 'core/notification';
+import {getStrings} from 'core/str';
+import {prefetchStrings} from 'core/prefetch';
 
 /**
  * Reflect a row's template status in the DOM: toggle the row highlight and
@@ -83,6 +87,47 @@ export const openScopeModalForNewSelection = (row, select, cmid, prioraction, st
 };
 
 /**
+ * Handle an action select changing AWAY from "template": if the row has no
+ * instances anchored to it, unmark it immediately, same as before. If it
+ * does, confirm first — every instance still on the page loses its own
+ * source once this row stops being a template mold, so they are removed
+ * together with it rather than left pointing at nothing.
+ *
+ * @param {HTMLElement} container The rendered course sections review.
+ * @param {HTMLElement} row The activity row (data-for="cmitem").
+ * @param {HTMLSelectElement} select The row's action select.
+ * @param {string} action The action just selected (not "template").
+ * @param {string} prioraction The action selected immediately before this change.
+ * @param {number} cmid The row's course module id.
+ * @param {Object} state The live wizard state from init.js.
+ * @param {Function} onResolved (finalAction) => void, called once resolved.
+ */
+export const confirmUnmarkTemplate = async(container, row, select, action, prioraction, cmid, state, onResolved) => {
+    const instanceRows = [...container.querySelectorAll(
+        '[data-for="instancerow"][data-source-cmid="' + cmid + '"]'
+    )];
+    if (!instanceRows.length) {
+        applyTemplateVisual(row, false, cmid, state);
+        onResolved(action);
+        return;
+    }
+
+    const [title, body, removelabel] = await getStrings([
+        {key: 'template_instance_unmark_confirm_title', component: 'local_coursegen'},
+        {key: 'template_instance_unmark_confirm_body', component: 'local_coursegen', param: instanceRows.length},
+        {key: 'template_instance_remove', component: 'local_coursegen'},
+    ]);
+    Notification.confirm(title, body, removelabel, null, () => {
+        instanceRows.forEach(removeInstanceRow);
+        applyTemplateVisual(row, false, cmid, state);
+        onResolved(action);
+    }, () => {
+        select.value = prioraction;
+        onResolved(prioraction);
+    });
+};
+
+/**
  * Open the shared scope modal to CHANGE an already-template row's scope
  * (triggered by clicking its tag, not by touching the action select).
  * Cancelling leaves the row exactly as it was.
@@ -108,11 +153,20 @@ const openScopeModalToEditRow = (row, cmid, state, markDirty) => {
 /**
  * Bind the click handler that reopens the scope modal from a row's tag.
  *
+ * Warms the string cache for confirmUnmarkTemplate()'s own getStrings()
+ * call, so switching a row away from "template" resolves its confirmation
+ * dialog from cache instead of a network round trip.
+ *
  * @param {HTMLElement} container The rendered course sections review.
  * @param {Object} state The live wizard state from init.js.
  * @param {Function} markDirty Marks the wizard as having unsaved changes.
  */
 export const bindTemplateTagClicks = (container, state, markDirty) => {
+    prefetchStrings('local_coursegen', [
+        'template_instance_unmark_confirm_title',
+        'template_instance_unmark_confirm_body',
+        'template_instance_remove',
+    ]);
     container.addEventListener('click', (e) => {
         const tag = e.target.closest('[data-region="template-tag"]');
         if (!tag) {

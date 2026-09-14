@@ -28,6 +28,7 @@
 
 namespace local_coursegen\output;
 
+use local_coursegen\local\models\template_instance;
 use local_coursegen\local\service\template_content_generator;
 
 /**
@@ -58,7 +59,10 @@ class template_row_options {
         // preselects) when an existing template already saved it, so
         // edit-mode hydration never lies about the stored state. The backend
         // keeps accepting and processing it untouched.
-        $keys = $behavior === 'exclude' ? $valid : ['custom', 'keep'];
+        $keys = ['custom', 'keep'];
+        if ($behavior === 'exclude') {
+            $keys = $valid;
+        }
 
         $items = [];
         foreach ($keys as $key) {
@@ -100,7 +104,10 @@ class template_row_options {
         if (!$cansupportmodify) {
             $keys = ['keep', 'reference', 'exclude'];
         }
-        $default = $cansupportmodify ? 'modify' : 'keep';
+        $default = 'keep';
+        if ($cansupportmodify) {
+            $default = 'modify';
+        }
         if ($savedaction !== null && in_array($savedaction, $keys, true)) {
             $default = $savedaction;
         }
@@ -173,5 +180,22 @@ class template_row_options {
             }
         }
         return get_string('template_activity_scope_course', 'local_coursegen');
+    }
+
+    /**
+     * Build the render context for one virtual instance row.
+     *
+     * @param template_instance $instance
+     * @return array
+     */
+    public static function instance_row_context(template_instance $instance): array {
+        return [
+            'instanceid' => (int) $instance->get('id'),
+            'name' => $instance->get('name'),
+            'typelabel' => $instance->get('typelabel'),
+            'prompt' => (string) $instance->get('prompt'),
+            'sourcecmid' => (int) $instance->get('sourcecmid'),
+            'sourcename' => $instance->get('sourcename'),
+        ];
     }
 }
