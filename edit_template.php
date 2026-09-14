@@ -39,6 +39,7 @@ admin_externalpage_setup('local_coursegen_manage_templates');
 $cssrev = get_config('local_coursegen', 'version');
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/templates.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/templates-widgets.css', ['v' => $cssrev]));
+$PAGE->requires->css(new moodle_url('/local/coursegen/styles/templates-instances.css', ['v' => $cssrev]));
 
 // Edit mode: the whole saved configuration hydrates the page — the base
 // course comes from the template itself (no courseid param needed), the

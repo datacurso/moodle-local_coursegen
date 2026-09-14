@@ -1,0 +1,64 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/template_course_sections_row
+
+    One row of the "Course sections" review table — a real activity or a
+    virtual template instance — plus the hover-reveal insertion gap that
+    follows it. Included once per entry of a section's "rows" array by
+    template_course_sections.mustache (split out to keep that file under
+    the project's 250-line cap); never rendered on its own.
+
+    Context variables: see template_course_sections.mustache's own
+    docblock for the full shape of one "rows" entry.
+}}
+{{#isreal}}
+<tr class="{{#istemplate}}tpl-row-template{{/istemplate}}" data-for="cmitem" data-id="{{cmid}}" data-modname="{{modname}}" data-typelabel="{{typelabel}}">
+    <td class="align-middle tpl-select-col">
+        <input type="checkbox" data-region="activity-select" data-id="{{cmid}}"
+               aria-label="{{name}}">
+    </td>
+    <td class="align-middle">
+        <img src="{{iconurl}}" class="icon activityicon mr-2" alt="">{{!
+        }}{{#viewurl}}<a href="{{viewurl}}" target="_blank" rel="noopener">{{name}}</a>{{/viewurl}}{{!
+        }}{{^viewurl}}<span>{{name}}</span>{{/viewurl}}{{!
+        }}<button type="button"
+                class="tpl-badge tpl-badge-template tpl-template-tag ml-2{{^istemplate}} d-none{{/istemplate}}"
+                data-region="template-tag" data-id="{{cmid}}" data-name="{{name}}"
+                data-tag-course="{{#str}} template_activity_template_tag, local_coursegen, {{scopelabelcourse}} {{/str}}"
+                data-tag-section="{{#str}} template_activity_template_tag, local_coursegen, {{scopelabelsection}} {{/str}}">
+            {{#str}} template_activity_template_tag, local_coursegen, {{scopelabel}} {{/str}}
+        </button>
+    </td>
+    <td class="align-middle text-muted">{{typelabel}}</td>
+    <td class="align-middle text-right">
+        <select class="custom-select custom-select-sm tpl-activity-action"
+                data-region="activity-action" data-id="{{cmid}}"
+                aria-label="{{#str}} actions, core {{/str}}">
+            {{#actions}}
+            <option value="{{value}}" title="{{tip}}"{{#active}} selected{{/active}}>{{label}}</option>
+            {{/actions}}
+        </select>
+    </td>
+</tr>
+{{/isreal}}
+{{#isinstance}}
+{{> local_coursegen/template_instance_row}}
+{{/isinstance}}
+{{^islast}}
+{{> local_coursegen/template_row_gap}}
+{{/islast}}

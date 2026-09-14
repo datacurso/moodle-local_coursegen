@@ -30,8 +30,7 @@ use external_multiple_structure;
 use external_single_structure;
 use external_value;
 use local_coursegen\local\models\template;
-use local_coursegen\local\models\template_section;
-use local_coursegen\local\models\template_activity;
+use local_coursegen\local\service\template_persistence_service;
 use context_system;
 
 defined('MOODLE_INTERNAL') || die();
@@ -77,6 +76,25 @@ class save_template extends external_api {
                                 'course'
                             ),
                         ])
+                    ),
+                    'instances' => new external_multiple_structure(
+                        new external_single_structure([
+                            'sourcecmid' => new external_value(PARAM_INT, 'cmid of the action=template activity this instance was created from'),
+                            'sourcename' => new external_value(PARAM_TEXT, 'Snapshot of the source template\'s display name'),
+                            'name'       => new external_value(PARAM_TEXT, 'This instance\'s own display name'),
+                            'typelabel'  => new external_value(PARAM_TEXT, 'Snapshot of the source template\'s module type label'),
+                            'prompt'     => new external_value(PARAM_RAW, 'Instance prompt', VALUE_DEFAULT, ''),
+                            'anchorcmid' => new external_value(
+                                PARAM_INT,
+                                'Real cmid this instance renders after within its section; 0 = section start',
+                                VALUE_DEFAULT,
+                                0
+                            ),
+                            'sortorder'  => new external_value(PARAM_INT, 'Tiebreaker order among instances sharing an anchor', VALUE_DEFAULT, 0),
+                        ]),
+                        'Virtual template instances placed in this section',
+                        VALUE_DEFAULT,
+                        []
                     ),
                 ])
             ),
@@ -128,12 +146,21 @@ class save_template extends external_api {
         require_capability('local/coursegen:managetemplates', $context);
 
         // Create or load existing template.
-        $tpl = new template($params['id'] > 0 ? $params['id'] : 0);
+        $existingid = 0;
+        if ($params['id'] > 0) {
+            $existingid = $params['id'];
+        }
+        $tpl = new template($existingid);
+
+        $maxsections = null;
+        if ($params['maxsections']) {
+            $maxsections = $params['maxsections'];
+        }
 
         $tpl->set('name',          $params['name']);
         $tpl->set('description',   $params['description']);
         $tpl->set('courseid',      $params['courseid']);
-        $tpl->set('maxsections',   $params['maxsections'] ?: null);
+        $tpl->set('maxsections',   $maxsections);
         $tpl->set('nolimit',       (int) $params['nolimit']);
         $tpl->set('allowedtypes',  $params['allowedtypes']);
         $tpl->set('namingpattern', $params['namingpattern']);
@@ -147,59 +174,12 @@ class save_template extends external_api {
 
         $templateid = (int) $tpl->get('id');
 
-        // Replace all child activity records.
-        $oldactivities = template_activity::get_records(['templateid' => $templateid]);
-        foreach ($oldactivities as $a) {
-            $a->delete();
-        }
-
-        // Replace all child section records.
-        $oldsections = template_section::get_records(['templateid' => $templateid]);
-        foreach ($oldsections as $s) {
-            $s->delete();
-        }
-
-        // Insert new section and activity configuration.
-        foreach ($params['sections'] as $sectiondata) {
-            $sec = new template_section(0);
-            $sec->set('templateid', $templateid);
-            $sec->set('sectionid',  $sectiondata['sectionid']);
-            $sec->set('sectionnum', $sectiondata['sectionnum']);
-            $sec->set('behavior',   $sectiondata['behavior']);
-            $sec->create();
-
-            foreach ($sectiondata['activities'] as $actdata) {
-                $act = new template_activity(0);
-                $act->set('templateid',      $templateid);
-                $act->set('sectionid',       $sectiondata['sectionid']);
-                $act->set('cmid',            $actdata['cmid']);
-                $act->set('action',          $actdata['action']);
-                $act->set('useasreference',  (int) $actdata['useasreference']);
-                $act->set('templatescope',   self::normalise_scope($actdata['templatescope'] ?? 'course'));
-                $act->set('prompt',          $actdata['prompt']);
-                $act->create();
-            }
-        }
+        template_persistence_service::save_sections($templateid, $params['sections']);
 
         return [
             'id'   => $templateid,
             'name' => $tpl->get('name'),
         ];
-    }
-
-    /**
-     * Fall back an unrecognised template scope to "course" instead of
-     * persisting whatever a client sent — mirrors
-     * template_row_options::template_scope_options()'s own fallback so a row
-     * can never be saved with a scope value it would not even render.
-     *
-     * @param string $scope
-     * @return string
-     */
-    private static function normalise_scope(string $scope): string {
-        return in_array($scope, \local_coursegen\output\template_row_options::SCOPE_VALUES, true)
-            ? $scope
-            : 'course';
     }
 
     /**

@@ -111,4 +111,76 @@ trait sections_config_fixture_trait {
         $this->assertNotFalse($end, 'Unterminated select matching: ' . $marker);
         return substr($html, $start, $end - $start);
     }
+
+    /**
+     * Build a minimal virtual-instance save payload entry (see
+     * classes/external/save_template.php's "instances" structure).
+     *
+     * @param int $sourcecmid
+     * @param string $sourcename
+     * @param string $name
+     * @param int $anchorcmid
+     * @param int $sortorder
+     * @return array
+     */
+    private function instance_payload(
+        int $sourcecmid,
+        string $sourcename,
+        string $name,
+        int $anchorcmid = 0,
+        int $sortorder = 0
+    ): array {
+        return [
+            'sourcecmid' => $sourcecmid,
+            'sourcename' => $sourcename,
+            'name' => $name,
+            'typelabel' => 'Page',
+            'prompt' => '',
+            'anchorcmid' => $anchorcmid,
+            'sortorder' => $sortorder,
+        ];
+    }
+
+    /**
+     * Save a template with one section holding the given activities and instances.
+     *
+     * @param int $courseid
+     * @param int $sectionid
+     * @param int $sectionnum
+     * @param array $activities
+     * @param array $instances
+     * @return array \local_coursegen\external\save_template::execute()'s return value.
+     */
+    private function save_with_instances(
+        int $courseid,
+        int $sectionid,
+        int $sectionnum,
+        array $activities,
+        array $instances
+    ): array {
+        return \local_coursegen\external\save_template::execute(0, 'Instances test', '', $courseid, 0, false, '[]', '', 1, [
+            [
+                'sectionid' => $sectionid,
+                'sectionnum' => $sectionnum,
+                'behavior' => 'custom',
+                'activities' => $activities,
+                'instances' => $instances,
+            ],
+        ]);
+    }
+
+    /**
+     * Extract the small markup region around an instance row's badge, so an
+     * assertion on badge text cannot accidentally match an unrelated part
+     * of the page.
+     *
+     * @param string $html Full rendered review.
+     * @param int $instanceid
+     * @return string
+     */
+    private function extract_instance_area(string $html, int $instanceid): string {
+        $start = strpos($html, 'data-instance-id="' . $instanceid . '"');
+        $this->assertNotFalse($start, 'Instance row not found');
+        return substr($html, $start, 400);
+    }
 }
