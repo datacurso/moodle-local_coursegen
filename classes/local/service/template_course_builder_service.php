@@ -17,6 +17,7 @@
 namespace local_coursegen\local\service;
 
 use local_coursegen\local\models\template;
+use local_coursegen\local\models\template_activity;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -120,6 +121,15 @@ class template_course_builder_service {
             // docblock for why polling, not SSE, was chosen here).
             $resultdata = $apiservice->wait_for_template_result($threadid);
 
+            // 6b. Client-side safety net: an action=template activity ("Template
+            // lección"-style molds, see course_export_service::export_course_for_template())
+            // is only ever meant to feed the generation of OTHER activities as
+            // structure/placeholders - it must never itself be created in the new
+            // course. The AI service already drops these from its own result, but
+            // this never trusts that alone: strip them here too, from the real
+            // template_activity rows this request itself defined.
+            $resultdata = self::strip_template_mold_activities($template, $resultdata);
+
             // 7. Materialize the result exactly like the free-creation flow does.
             $result = create_course_service::create_course($session, $resultdata, []);
 
@@ -154,5 +164,34 @@ class template_course_builder_service {
                 'activityerrors' => [],
             ];
         }
+    }
+
+    /**
+     * Drop every action=template mold activity from the AI's result, by real
+     * cmid, so it is never materialized into the new course - regardless of
+     * whether the AI service's own output already omits it.
+     *
+     * @param template $template Template persistent this request was built from.
+     * @param array $resultdata Result data as returned by wait_for_template_result().
+     * @return array $resultdata with mold activities removed from generated_activities.
+     */
+    private static function strip_template_mold_activities(template $template, array $resultdata): array {
+        $moldcmids = [];
+        foreach (template_activity::get_records(['templateid' => (int)$template->get('id')]) as $record) {
+            if ((string)$record->get('action') === 'template') {
+                $moldcmids[(int)$record->get('cmid')] = true;
+            }
+        }
+
+        if (empty($moldcmids) || empty($resultdata['generated_activities'])) {
+            return $resultdata;
+        }
+
+        $resultdata['generated_activities'] = array_values(array_filter(
+            $resultdata['generated_activities'],
+            static fn($activity) => !isset($moldcmids[(int)($activity['cmid'] ?? 0)])
+        ));
+
+        return $resultdata;
     }
 }

@@ -57,7 +57,7 @@ require_capability('moodle/site:config', $systemcontext);
 // external 'moodle' docker network as this Moodle site.
 $nodeserviceurl = 'http://coursegen-template:3000';
 
-$sourcecourseid = optional_param('sourcecourseid', 422, PARAM_INT);
+$sourcecourseid = optional_param('sourcecourseid', 575, PARAM_INT);
 // PARAM_ALPHA strips underscores - 'create_template_test' would silently
 // clean to 'createtemplatetest' and never match, making that whole action
 // branch permanently unreachable (confirmed with a real form submission).
@@ -205,6 +205,70 @@ if ($action === 'create_template_test' && confirm_sesskey()) {
     redirect(new moodle_url('/local/coursegen/testcoursegen.php', $redirectparams));
 }
 
+// Third manual test path: the NEW "activity template" concept. Unlike
+// create_template_test above (one activity regenerates itself in place),
+// here $templatecmid is a MOLD - it never regenerates itself and never
+// appears in the resulting course (see
+// course_export_service::export_course_for_template()'s action=template
+// handling and template_course_builder_service::strip_template_mold_activities()).
+// $targetcmid is a real activity that gets generated FROM that mold's
+// structure/placeholders, driven by $syllabus as free-text source material.
+// Every other activity in the course is kept as-is.
+if ($action === 'create_from_activity_template' && confirm_sesskey()) {
+    $redirectparams = ['sourcecourseid' => $sourcecourseid];
+    $templatecmid = required_param('templatecmid', PARAM_INT);
+    $activitytargetcmid = required_param('activitytargetcmid', PARAM_INT);
+    $syllabus = optional_param('syllabus', '', PARAM_RAW);
+
+    try {
+        $course = get_course($sourcecourseid);
+        $modinfo = get_fast_modinfo($course);
+
+        $tpl = new template(0);
+        $tpl->set('name', 'testcoursegen-activity-template-' . bin2hex(random_bytes(4)));
+        $tpl->set('courseid', $sourcecourseid);
+        $tpl->create();
+        $templateid = (int) $tpl->get('id');
+
+        // One row per real activity, same full-coverage contract as
+        // create_template_test above: a missing row defaults to
+        // action=modify, so every activity needs an explicit 'keep' row here
+        // except the mold and its target.
+        foreach ($modinfo->get_cms() as $cm) {
+            $sectioninfo = $modinfo->get_section_info($cm->sectionnum);
+
+            $act = new template_activity(0);
+            $act->set('templateid', $templateid);
+            $act->set('sectionid', (int) $sectioninfo->id);
+            $act->set('cmid', (int) $cm->id);
+
+            if ((int) $cm->id === $templatecmid) {
+                $act->set('action', 'template');
+            } else if ((int) $cm->id === $activitytargetcmid) {
+                $act->set('action', 'modify');
+                $act->set('templatesourcecmid', $templatecmid);
+                $act->set('prompt', $syllabus !== '' ? $syllabus : null);
+            } else {
+                $act->set('action', 'keep');
+            }
+            $act->create();
+        }
+
+        $creationresult = template_course_builder_service::create_course_from_template($tpl, [], [], $USER->id);
+
+        if (!empty($creationresult['success'])) {
+            $redirectparams['courseid'] = $creationresult['courseid'];
+            $redirectparams['warnings'] = (int) ($creationresult['warningscount'] ?? 0);
+        } else {
+            $redirectparams['error'] = $creationresult['message'];
+        }
+    } catch (\Throwable $e) {
+        $redirectparams['error'] = $e->getMessage();
+    }
+
+    redirect(new moodle_url('/local/coursegen/testcoursegen.php', $redirectparams));
+}
+
 $courseid = optional_param('courseid', 0, PARAM_INT);
 $warnings = optional_param('warnings', 0, PARAM_INT);
 $error = optional_param('error', '', PARAM_TEXT);
@@ -269,9 +333,10 @@ echo html_writer::div(
         'type' => 'number',
         'id' => 'id_targetcmid',
         'name' => 'targetcmid',
-        // Real cmid of "Lección 1" inside "Módulo #1" in course 422, looked
-        // up directly from this site's own modinfo - override freely.
-        'value' => 3125,
+        // Real cmid of "Objetivos" (mod_lesson "Template lección") inside
+        // "Módulo #1" in course 575, looked up directly from this site's own
+        // modinfo - override freely.
+        'value' => 8087,
         'class' => 'form-control w-auto d-inline-block ml-2',
     ]),
     'mb-3'
@@ -290,6 +355,56 @@ echo html_writer::empty_tag('input', [
     'type' => 'submit',
     'class' => 'btn btn-primary',
     'value' => get_string('testcoursegen_template_button', 'local_coursegen'),
+]);
+echo html_writer::end_tag('form');
+
+echo html_writer::tag('hr', '');
+echo html_writer::tag('h4', get_string('testcoursegen_activitytemplate_title', 'local_coursegen'));
+echo html_writer::tag('p', get_string('testcoursegen_activitytemplate_desc', 'local_coursegen', $sourcecourseid));
+
+echo html_writer::start_tag('form', ['method' => 'post', 'action' => $pageurl->out(false)]);
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'sesskey', 'value' => sesskey()]);
+echo html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'action', 'value' => 'create_from_activity_template']);
+echo html_writer::div(
+    html_writer::label(get_string('testcoursegen_activitytemplate_templatecmid', 'local_coursegen'), 'id_templatecmid') .
+    html_writer::empty_tag('input', [
+        'type' => 'number',
+        'id' => 'id_templatecmid',
+        'name' => 'templatecmid',
+        // Real cmid of "Template lección" (the placeholder/⟦coursegen:repeat⟧
+        // mold) inside "Módulo #1" in course 575 - override freely.
+        'value' => 8087,
+        'class' => 'form-control w-auto d-inline-block ml-2',
+    ]),
+    'mb-3'
+);
+echo html_writer::div(
+    html_writer::label(get_string('testcoursegen_activitytemplate_targetcmid', 'local_coursegen'), 'id_activitytargetcmid') .
+    html_writer::empty_tag('input', [
+        'type' => 'number',
+        'id' => 'id_activitytargetcmid',
+        'name' => 'activitytargetcmid',
+        // Real cmid of "Lección 1" inside "Módulo #1" in course 575 - the
+        // real activity that gets generated FROM the mold above.
+        'value' => 8064,
+        'class' => 'form-control w-auto d-inline-block ml-2',
+    ]),
+    'mb-3'
+);
+echo html_writer::div(
+    html_writer::label(get_string('testcoursegen_activitytemplate_syllabus', 'local_coursegen'), 'id_syllabus') .
+    html_writer::tag('textarea', '', [
+        'id' => 'id_syllabus',
+        'name' => 'syllabus',
+        'rows' => 6,
+        'class' => 'form-control',
+    ]),
+    'mb-3'
+);
+echo html_writer::empty_tag('input', [
+    'type' => 'submit',
+    'class' => 'btn btn-primary',
+    'value' => get_string('testcoursegen_activitytemplate_button', 'local_coursegen'),
 ]);
 echo html_writer::end_tag('form');
 

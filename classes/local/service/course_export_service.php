@@ -281,6 +281,12 @@ class course_export_service {
                     'useasreference' => (bool)$record->get('useasreference'),
                     'prompt' => $record->get('prompt'),
                 ];
+                // Only meaningful for action=modify - null for every other action,
+                // never sent as 0 (a falsy-but-set cmid would be a real bug).
+                $templatesourcecmid = $record->get('templatesourcecmid');
+                if ($templatesourcecmid !== null) {
+                    $activityentry['template_behavior']['template_source_cmid'] = (int)$templatesourcecmid;
+                }
             } else {
                 // No row at all: the persistent's own field defaults, never 'exclude'.
                 $activityentry['template_behavior'] = [
