@@ -158,4 +158,20 @@ class template_row_options {
         }
         return $items;
     }
+
+    /**
+     * Resolve the label of the currently active scope option.
+     *
+     * @param array $scopeoptions Return value of self::template_scope_options().
+     * @return string The active option's label, or the "course" option's
+     *     label if none is flagged active.
+     */
+    public static function active_scope_label(array $scopeoptions): string {
+        foreach ($scopeoptions as $option) {
+            if (!empty($option['active'])) {
+                return $option['label'];
+            }
+        }
+        return get_string('template_activity_scope_course', 'local_coursegen');
+    }
 }

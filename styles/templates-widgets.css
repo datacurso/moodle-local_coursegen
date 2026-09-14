@@ -31,9 +31,54 @@
 .tpl-badge-modify { background: #fff5f5; color: #b5351a; }
 .tpl-badge-template { background: #e3f2fd; color: #1565c0; }
 
-.tpl-template-scope {
-    flex: 1 1 auto;
-    min-width: 0;
+.tpl-template-tag {
+    border: none;
+    font: inherit;
+    cursor: pointer;
+}
+
+.tpl-template-tag:hover {
+    filter: brightness(0.95);
+}
+
+/* Scope choices inside the shared "configure template" modal
+   (see local/template/template_scope_modal.js). */
+.tpl-scope-choices {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.tpl-scope-choice {
+    display: flex;
+    align-items: flex-start;
+    gap: 0.625rem;
+    border: 1px solid #dee2e6;
+    border-radius: 0.5rem;
+    padding: 0.625rem 0.75rem;
+    cursor: pointer;
+    margin-bottom: 0;
+}
+
+.tpl-scope-choice:hover {
+    border-color: #b5351a;
+}
+
+.tpl-scope-choice input {
+    margin-top: 0.2rem;
+}
+
+.tpl-scope-choice-label {
+    display: block;
+    font-weight: 600;
+    font-size: 0.85rem;
+}
+
+.tpl-scope-choice-desc {
+    display: block;
+    font-size: 0.76rem;
+    color: #6c757d;
+    margin-top: 0.15rem;
 }
 
 /* Course selection cards */

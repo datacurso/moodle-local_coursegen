@@ -89,34 +89,19 @@
 }
 
 .tpl-activity-table .tpl-col-actions {
-    width: 28%;
+    width: 18%;
 }
 
+.tpl-activity-action,
 .tpl-bulk-select,
 .tpl-section-behavior {
     width: auto;
 }
 
-.tpl-actions-cell-inner {
-    display: flex;
-    flex-direction: column;
-    align-items: flex-end;
-    gap: 0.4rem;
-}
-
-.tpl-activity-action {
-    max-width: 100%;
-}
-
-.tpl-template-scope-row {
-    display: flex;
-    align-items: center;
-    gap: 0.5rem;
-    flex-wrap: wrap;
-}
-
-.tpl-template-scope-row .tpl-badge {
-    flex-shrink: 0;
+/* A row marked as a template mold. */
+.tpl-row-template {
+    background: #fff5f5;
+    box-shadow: inset 3px 0 0 #b5351a;
 }
 
 /* Global bulk action bar: clearly separated from the last section card. */

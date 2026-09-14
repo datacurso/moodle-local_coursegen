@@ -107,6 +107,10 @@ class sections_config {
                         $savedactions[$cmid] ?? null
                     );
                     $istemplate = template_row_options::active_action($actionoptions) === 'template';
+                    $scopeoptions = template_row_options::template_scope_options(
+                        $cmid,
+                        $savedscopes[$cmid] ?? 'course'
+                    );
                     $activities[] = [
                         'cmid' => $cmid,
                         'name' => $cm->get_formatted_name(),
@@ -118,15 +122,13 @@ class sections_config {
                         'typelabel' => $cm->get_module_type_name(),
                         'iconurl' => $cm->get_icon_url()->out(false),
                         'actions' => $actionoptions,
-                        // Drives the "Template" badge and the scope select's
-                        // visibility — both start hidden/shown from the
-                        // server-rendered default, then sections_events.js
-                        // keeps them in sync with the action select.
+                        // Drives the clickable "Template" tag's visibility
+                        // and initial label — kept in sync with the action
+                        // select, and with scope changes made through
+                        // local/template/template_scope_modal.js, by
+                        // sections_events.js.
                         'istemplate' => $istemplate,
-                        'scopeoptions' => template_row_options::template_scope_options(
-                            $cmid,
-                            $savedscopes[$cmid] ?? 'course'
-                        ),
+                        'scopelabel' => template_row_options::active_scope_label($scopeoptions),
                     ];
                 }
             }
@@ -151,6 +153,12 @@ class sections_config {
             'courseid' => (int) $course->id,
             'sections' => $sections,
             'hassections' => !empty($sections),
+            // Both scope labels, composed once here rather than per activity:
+            // each row's "Template" tag carries both as data attributes so
+            // template_scope_modal.js can swap its text after a scope change
+            // without an extra string lookup.
+            'scopelabelcourse' => get_string('template_activity_scope_course', 'local_coursegen'),
+            'scopelabelsection' => get_string('template_activity_scope_section', 'local_coursegen'),
         ];
     }
 
