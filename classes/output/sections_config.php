@@ -15,7 +15,8 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Render the sections config view: course format HTML with action controls injected.
+ * Render the "Course sections" review: per-section collapsible cards with a
+ * report-style activity table and per-row action menus.
  *
  * @package    local_coursegen
  * @copyright  2025 Wilber Narvaez <https://datacurso.com>
@@ -24,314 +25,200 @@
 
 namespace local_coursegen\output;
 
+use local_coursegen\local\models\template_activity;
+use local_coursegen\local\models\template_section;
 use local_coursegen\local\service\template_content_generator;
 
 /**
- * Build the sections config HTML server-side with dropdowns and prompts already injected.
+ * Build the sections review straight from modinfo.
+ *
+ * This used to re-render the base course through its real course-format
+ * renderer and then DOM-surgically strip every native editing affordance
+ * while injecting custom dropdowns and prompt textareas. That whole approach
+ * is gone: the review is now a clean structured render of its own mustache
+ * template (templates/template_course_sections.mustache) — one collapsible
+ * card per section, each holding a table of its activities where every row
+ * carries a selection checkbox plus an action select preselected with its
+ * type's default, and every section table a select-all checkbox and a bulk
+ * "apply to selected" select. local/template/sections_events.js binds them
+ * all after every render.
  */
 class sections_config {
+    /**
+     * Render the course sections review for a base course.
+     *
+     * @param \course_modinfo $modinfo The base course modinfo.
+     * @param int $templateid Existing template whose saved per-section/
+     *     per-activity configuration should be preselected (0: type defaults).
+     * @return string Rendered HTML.
+     */
+    public static function render(\course_modinfo $modinfo, int $templateid = 0): string {
+        global $OUTPUT;
+
+        return $OUTPUT->render_from_template(
+            'local_coursegen/template_course_sections',
+            self::export_for_template($modinfo, $templateid)
+        );
+    }
 
     /**
-     * Render the course preview HTML with section/activity controls injected.
+     * Build the template context from modinfo.
      *
-     * @param string $previewhtml The raw format renderer HTML.
-     * @param \course_modinfo $modinfo The course modinfo.
-     * @return string Modified HTML with controls.
+     * When editing an existing template ($templateid > 0), its saved
+     * per-section behaviors and per-activity actions preselect the rendered
+     * controls — the server render stays the single source of truth for row
+     * defaults (sections_events.js seeds its state FROM the rendered
+     * selects). Saved rows whose cmid/sectionid no longer exists in the base
+     * course are simply never looked up, and activities added since the
+     * template was saved fall back to their type default.
+     *
+     * @param \course_modinfo $modinfo The base course modinfo.
+     * @param int $templateid Existing template id, 0 for a new template.
+     * @return array Template context.
      */
-    public static function render(string $previewhtml, \course_modinfo $modinfo): string {
-        $doc = new \DOMDocument();
-        // Suppress warnings for HTML5 tags.
-        $previouserrors = libxml_use_internal_errors(true);
-        $doc->loadHTML('<?xml encoding="utf-8"?><div>' . $previewhtml . '</div>',
-            LIBXML_HTML_NOIMPLIED | LIBXML_HTML_NODEFDTD);
-        libxml_use_internal_errors($previouserrors);
+    public static function export_for_template(\course_modinfo $modinfo, int $templateid = 0): array {
+        $course = $modinfo->get_course();
 
-        $xpath = new \DOMXPath($doc);
-
-        // This preview reuses the REAL course-format renderer's own HTML
-        // against the REAL base course — meaning every native course-EDITING
-        // affordance that renderer normally produces (inline rename, "add
-        // activity" choosers, section/activity action menus) is still
-        // present and fully live. An admin here only intends to configure a
-        // *template*; they must never be one misclick away from actually
-        // renaming a section, adding a module, or opening "Edit section" /
-        // "Delete" against the real course everyone else uses as the
-        // template. Strip all of that out before anything else runs.
-        self::strip_native_editing_controls($doc, $xpath);
-
-        // Inject section controls.
-        $sections = $xpath->query('//*[@data-for="section"]');
-        foreach ($sections as $section) {
-            $sectionid = $section->getAttribute('data-id');
-            if (!$sectionid) {
-                continue;
+        $savedbehaviors = [];
+        $savedactions = [];
+        if ($templateid > 0) {
+            foreach (template_section::get_records(['templateid' => $templateid]) as $record) {
+                $savedbehaviors[(int) $record->get('sectionid')] = $record->get('behavior');
             }
-            $titlebars = $xpath->query('.//*[@data-for="section_title"]', $section);
-            if ($titlebars->length === 0) {
-                continue;
+            foreach (template_activity::get_records(['templateid' => $templateid]) as $record) {
+                $savedactions[(int) $record->get('cmid')] = $record->get('action');
             }
-            $titlebar = $titlebars->item(0);
-            $control = $doc->createElement('div');
-            $control->setAttribute('class', 'ml-auto dropdown');
-            $controlhtml = self::build_section_dropdown((int)$sectionid);
-            $frag = $doc->createDocumentFragment();
-            $frag->appendXML($controlhtml);
-            $control->appendChild($frag);
-            $titlebar->appendChild($control);
         }
 
-        // Hide "Collapse all" links.
-        $collapsealls = $xpath->query('//*[@data-toggle="toggleall"]');
-        foreach ($collapsealls as $el) {
-            $el->setAttribute('style', 'display:none');
-        }
-
-        // Remove reactive toggler attribute.
-        $togglers = $xpath->query('//*[@data-for="sectiontoggler"]');
-        foreach ($togglers as $el) {
-            $el->removeAttribute('data-for');
-        }
-
-        // Inject activity controls.
-        $cmitems = $xpath->query('//*[@data-for="cmitem"]');
-        foreach ($cmitems as $cmitem) {
-            $cmid = $cmitem->getAttribute('data-id');
-            if (!$cmid) {
-                continue;
-            }
-            $cm = $modinfo->get_cm((int) $cmid);
-            $cmitem->setAttribute('data-modname', $cm->modname);
-
-            // The renderer's own .activity-actions container (already
-            // aligned top-right via its own align-self-start class) held
-            // the native "⋮" actions menu we just stripped out — reuse
-            // that same slot for our dropdown instead of appending at the
-            // end of .activity-grid, so it consistently lands in the same
-            // corner the section-level dropdown already occupies, rather
-            // than wherever normal document flow happens to leave room.
-            //
-            // That container is only rendered by core when the CURRENT
-            // user's course-editing mode happens to be on for this course —
-            // something this read-only template preview has no control
-            // over. When it's missing, create it ourselves instead of
-            // appending straight into .activity-grid: an appended element
-            // with no grid-area gets placed by plain CSS grid
-            // auto-placement, which lands it below the activity's content
-            // (e.g. below a label's banner) instead of top-right. A div
-            // with the same "activity-actions" class picks up core's own
-            // `grid-area: actions` rule (theme/boost course.scss) and is
-            // positioned identically to the native container.
-            $actionslots = $xpath->query('.//*[contains(concat(" ", normalize-space(@class), " "), " activity-actions ")]', $cmitem);
-            if ($actionslots->length > 0) {
-                $slot = $actionslots->item(0);
-            } else {
-                $grids = $xpath->query('.//*[contains(@class,"activity-grid")]', $cmitem);
-                if ($grids->length > 0) {
-                    $slot = $doc->createElement('div');
-                    $slot->setAttribute('class', 'activity-actions');
-                    $grids->item(0)->appendChild($slot);
-                } else {
-                    $slot = $cmitem;
+        $sections = [];
+        foreach ($modinfo->get_section_info_all() as $sectioninfo) {
+            $activities = [];
+            if (!empty($modinfo->sections[$sectioninfo->section])) {
+                foreach ($modinfo->sections[$sectioninfo->section] as $cmid) {
+                    $cm = $modinfo->get_cm($cmid);
+                    if ($cm->deletioninprogress) {
+                        continue;
+                    }
+                    $activities[] = [
+                        'cmid' => (int) $cm->id,
+                        'name' => $cm->get_formatted_name(),
+                        // Link to the real activity in the base course; null
+                        // for modules with no view page of their own (label),
+                        // whose names stay plain text.
+                        'viewurl' => $cm->url ? $cm->url->out(false) : null,
+                        'modname' => $cm->modname,
+                        'typelabel' => $cm->get_module_type_name(),
+                        'iconurl' => $cm->get_icon_url()->out(false),
+                        'actions' => self::build_activity_actions(
+                            (int) $cm->id,
+                            $cm->modname,
+                            $savedactions[(int) $cm->id] ?? null
+                        ),
+                    ];
                 }
             }
 
-            $dropwrap = $doc->createElement('div');
-            $dropwrap->setAttribute('class', 'ml-auto dropdown');
-            $dropwrap->setAttribute('data-tpl-control', (string)$cmid);
-            $drophtml = self::build_activity_dropdown((int)$cmid, $cm->modname);
-            $frag = $doc->createDocumentFragment();
-            $frag->appendXML($drophtml);
-            $dropwrap->appendChild($frag);
-            $slot->appendChild($dropwrap);
-
-            // Prompt textarea — only visible when the default action is "Modify".
-            $cansupportmodify = in_array($cm->modname, template_content_generator::AI_SUPPORTED_TYPES, true);
-            $promptwrap = $doc->createElement('div');
-            $promptwrap->setAttribute('data-tpl-prompt-wrap', (string)$cmid);
-            $promptstyle = 'padding:0 1rem .5rem 3.5rem';
-            if (!$cansupportmodify) {
-                $promptstyle .= ';display:none';
-            }
-            $promptwrap->setAttribute('style', $promptstyle);
-            $textarea = $doc->createElement('textarea', '');
-            $textarea->setAttribute('class', 'form-control');
-            $textarea->setAttribute('rows', '2');
-            $textarea->setAttribute('data-tpl-prompt', (string)$cmid);
-            $textarea->setAttribute('placeholder',
-                get_string('template_activity_prompt_placeholder', 'local_coursegen', (object) [
-                    'modtype' => $cm->get_module_type_name(),
-                    'activityname' => $cm->get_formatted_name(),
-                ]));
-            $promptwrap->appendChild($textarea);
-            $cmitem->appendChild($promptwrap);
+            $sectionid = (int) $sectioninfo->id;
+            $sections[] = [
+                'id' => $sectionid,
+                'num' => (int) $sectioninfo->section,
+                'name' => get_section_name($course, $sectioninfo),
+                'activitycount' => count($activities),
+                'hasactivities' => !empty($activities),
+                'activities' => $activities,
+                'actions' => self::build_section_actions($sectionid, $savedbehaviors[$sectionid] ?? 'custom'),
+            ];
         }
 
-        $html = $doc->saveHTML();
-        // Strip the wrapper we added.
-        $html = preg_replace('/^.*?<div>/s', '', $html);
-        $html = preg_replace('/<\/div>\s*$/s', '', $html);
-        return $html;
-    }
-
-    /**
-     * Remove every native course-EDITING affordance the real course-format
-     * renderer produces (as opposed to purely read-only view/navigation
-     * links, which are left alone) — none of these apply to configuring a
-     * template, and some are wired to real actions against the real base
-     * course. Matched by the same semantic data-region/class markers core's
-     * own course-format renderer uses everywhere, not anything specific to
-     * one particular course format, so this holds for formats other than
-     * format_grid too.
-     *
-     * @param \DOMDocument $doc
-     * @param \DOMXPath $xpath
-     * @return void
-     */
-    private static function strip_native_editing_controls(\DOMDocument $doc, \DOMXPath $xpath): void {
-        // Section "⋮" actions menu (View / Edit section / Permalink, etc).
-        $sectionmenus = $xpath->query('//*[@data-region="sectionactionsmmenu"]');
-        foreach ($sectionmenus as $el) {
-            $el->parentNode->removeChild($el);
-        }
-
-        // Activity "⋮" actions menu (Edit settings / Duplicate / Delete, etc).
-        $activitymenus = $xpath->query('//*[@data-region="actionmenu"]');
-        foreach ($activitymenus as $el) {
-            $el->parentNode->removeChild($el);
-        }
-
-        // The "+" divider between activities that opens the real "add an
-        // activity or resource"/"add subsection" chooser, PLUS the
-        // section-level "add a new section" control at the end of the
-        // section list — two visually similar but structurally distinct
-        // controls (the activity one is a <button>, the section one an
-        // <a> to changenumsections.php), both real, both matched here by
-        // class/data-region rather than tag name so neither slips through.
-        $dividers = $xpath->query(
-            '//*[@data-region="section-addsection"]' .
-            ' | //*[contains(concat(" ", normalize-space(@class), " "), " divider ")]' .
-            '[.//*[contains(concat(" ", normalize-space(@class), " "), " add-content ")]' .
-            ' or .//*[contains(@data-action,"open-chooser")]]'
-        );
-        foreach ($dividers as $el) {
-            $el->parentNode->removeChild($el);
-        }
-
-        // Section/activity name inline-rename widgets (the pencil icon,
-        // wired to core_update_inplace_editable). Only the rename TRIGGER
-        // is removed — any separate plain view link inside the same
-        // wrapper (e.g. an activity's own "view this activity" link) is
-        // left untouched since it's read-only navigation, not an edit
-        // affordance. If removing the trigger would leave the wrapper with
-        // no visible text at all (true for section names, which have no
-        // separate view link), its own data-value attribute — the plain
-        // name Moodle itself already computed — becomes a plain text node
-        // so the name keeps showing.
-        $inplace = $xpath->query('//*[@data-inplaceeditable]');
-        foreach ($inplace as $span) {
-            $renamelinks = $xpath->query('.//a[@data-inplaceeditablelink]', $span);
-            foreach ($renamelinks as $link) {
-                $link->parentNode->removeChild($link);
-            }
-            if (trim($span->textContent) === '') {
-                $span->appendChild($doc->createTextNode($span->getAttribute('data-value')));
-            }
-        }
-
-        // Activity completion info/edit widget — a dropdown showing the
-        // real completion requirements ("Students must: View...") plus an
-        // "Edit conditions" link straight to that activity's real settings
-        // page (course/modedit.php). Neither belongs here: it's real-course
-        // completion status/editing, unrelated to how the template's AI
-        // behavior is configured.
-        $completionwidgets = $xpath->query('//*[@data-region="activity-information"]');
-        foreach ($completionwidgets as $el) {
-            $el->parentNode->removeChild($el);
-        }
-    }
-
-    /**
-     * Build section dropdown HTML.
-     *
-     * @param int $sectionid
-     * @return string
-     */
-    private static function build_section_dropdown(int $sectionid): string {
-        $tips = [
-            'custom' => get_string('template_section_custom_tip', 'local_coursegen'),
-            'keep' => get_string('template_section_keep_tip', 'local_coursegen'),
-            'exclude' => get_string('template_section_exclude_tip', 'local_coursegen'),
+        return [
+            // The collapse ids are built from course id + section id: they
+            // must be deterministic AND valid CSS identifiers ({{uniqid}}
+            // output can start with a digit, which silently breaks the
+            // Bootstrap 4 data-target="#..." selector).
+            'courseid' => (int) $course->id,
+            'sections' => $sections,
+            'hassections' => !empty($sections),
         ];
-        $html = '<button class="btn btn-sm btn-link dropdown-toggle p-0" '
-            . 'style="color:#0f6cbf;text-decoration:none;font-weight:600" '
-            . 'data-toggle="dropdown" title="' . s($tips['custom']) . '">'
-            . get_string('template_section_custom', 'local_coursegen') . '</button>';
-        $html .= '<div class="dropdown-menu dropdown-menu-right">';
-        $items = [
-            'custom' => get_string('template_section_custom', 'local_coursegen'),
-            'keep' => get_string('template_section_keep', 'local_coursegen'),
-            'exclude' => get_string('template_section_exclude', 'local_coursegen'),
-        ];
-        foreach ($items as $key => $label) {
-            $active = $key === 'custom' ? 'active' : '';
-            $html .= '<a class="dropdown-item ' . $active . '" href="#" '
-                . 'data-sec-action="' . $key . '" data-sid="' . $sectionid . '" '
-                . 'title="' . s($tips[$key]) . '">' . $label . '</a>';
-        }
-        $html .= '</div>';
-        return $html;
     }
 
     /**
-     * Build activity action dropdown HTML.
+     * Build the per-section behavior select options (custom/keep/exclude).
+     *
+     * Same action values and lang keys as the previous 3-dot menu items;
+     * "custom" stays the default (preselected) behavior for a new template.
+     *
+     * @param int $sectionid Base course section id.
+     * @param string $behavior The behavior to preselect (a saved one when
+     *     editing an existing template, "custom" otherwise).
+     * @return array Select option contexts.
+     */
+    private static function build_section_actions(int $sectionid, string $behavior = 'custom'): array {
+        $valid = ['custom', 'keep', 'exclude'];
+        if (!in_array($behavior, $valid, true)) {
+            $behavior = 'custom';
+        }
+
+        // "exclude" is not offered in the UI any more: it only renders (and
+        // preselects) when an existing template already saved it, so
+        // edit-mode hydration never lies about the stored state. The backend
+        // keeps accepting and processing it untouched.
+        $keys = $behavior === 'exclude' ? $valid : ['custom', 'keep'];
+
+        $items = [];
+        foreach ($keys as $key) {
+            $items[] = [
+                'value' => $key,
+                'sectionid' => $sectionid,
+                'label' => get_string('template_section_' . $key, 'local_coursegen'),
+                'tip' => get_string('template_section_' . $key . '_tip', 'local_coursegen'),
+                'active' => $key === $behavior,
+            ];
+        }
+        return $items;
+    }
+
+    /**
+     * Build the per-activity action select options.
      *
      * Only ever offers "Modify" for a module type in
      * template_content_generator::AI_SUPPORTED_TYPES — the real AI service's
      * full content contract, never a constant scoped to whichever
-     * implementation currently satisfies it. Every type in that contract
-     * must be offered here, even if the implementation currently answering
-     * generate() hasn't caught up to every one of them yet (see
-     * mock_template_ai_service::generate()'s own per-activity, non-fatal
-     * fallback for that gap). Anything NOT in that contract (i.e. an
-     * activity type the AI service has no content contract for at all)
+     * implementation currently satisfies it. Anything NOT in that contract
      * only offers Keep / Reference / Exclude, and defaults to Keep instead
      * of Modify.
      *
-     * @param int $cmid
-     * @param string $modname
-     * @return string
+     * When editing an existing template, the activity's SAVED action wins
+     * over the type default — unless it is no longer offered for this row
+     * (a saved "modify" on a type the generator cannot handle degrades to
+     * "keep", the same rule the defaults follow).
+     *
+     * @param int $cmid Course module id.
+     * @param string $modname Module type name.
+     * @param string|null $savedaction The template's saved action for this
+     *     cmid, null when there is none (new template, or a new activity).
+     * @return array Select option contexts.
      */
-    private static function build_activity_dropdown(int $cmid, string $modname): string {
-        $tips = [
-            'modify' => get_string('template_activity_modify_tip', 'local_coursegen'),
-            'keep' => get_string('template_activity_keep_tip', 'local_coursegen'),
-            'reference' => get_string('template_activity_reference_tip', 'local_coursegen'),
-            'exclude' => get_string('template_activity_exclude_tip', 'local_coursegen'),
-        ];
-        $labels = [
-            'modify' => get_string('template_activity_modify', 'local_coursegen'),
-            'keep' => get_string('template_activity_keep', 'local_coursegen'),
-            'reference' => get_string('template_activity_reference', 'local_coursegen'),
-            'exclude' => get_string('template_activity_exclude', 'local_coursegen'),
-        ];
+    private static function build_activity_actions(int $cmid, string $modname, ?string $savedaction = null): array {
+        $keys = ['modify', 'keep', 'reference', 'exclude'];
         $cansupportmodify = in_array($modname, template_content_generator::AI_SUPPORTED_TYPES, true);
         if (!$cansupportmodify) {
-            unset($labels['modify']);
+            $keys = ['keep', 'reference', 'exclude'];
         }
         $default = $cansupportmodify ? 'modify' : 'keep';
-
-        $html = '<button class="btn btn-sm btn-link dropdown-toggle p-0" '
-            . 'style="color:#0f6cbf;text-decoration:none" '
-            . 'data-toggle="dropdown" title="' . s($tips[$default]) . '">'
-            . $labels[$default] . '</button>';
-        $html .= '<div class="dropdown-menu dropdown-menu-right">';
-        foreach ($labels as $key => $label) {
-            $active = $key === $default ? 'active' : '';
-            $html .= '<a class="dropdown-item ' . $active . '" href="#" '
-                . 'data-act-val="' . $key . '" '
-                . 'title="' . s($tips[$key]) . '">' . $label . '</a>';
+        if ($savedaction !== null && in_array($savedaction, $keys, true)) {
+            $default = $savedaction;
         }
-        $html .= '</div>';
-        return $html;
+
+        $items = [];
+        foreach ($keys as $key) {
+            $items[] = [
+                'value' => $key,
+                'cmid' => $cmid,
+                'label' => get_string('template_activity_' . $key, 'local_coursegen'),
+                'tip' => get_string('template_activity_' . $key . '_tip', 'local_coursegen'),
+                'active' => $key === $default,
+            ];
+        }
+        return $items;
     }
 }

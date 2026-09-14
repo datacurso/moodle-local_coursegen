@@ -75,11 +75,13 @@ export const getCourseStructure = (courseid) => Ajax.call([{
  * Get course preview rendered with native format renderer.
  *
  * @param {number} courseid Course ID.
+ * @param {number} templateid Existing template whose saved configuration
+ *     preselects the review controls (0: none).
  * @returns {Promise<Object>} Resolves with {html, fullname, shortname, format, numsections, numactivities}.
  */
-export const getCoursePreview = (courseid) => Ajax.call([{
+export const getCoursePreview = (courseid, templateid = 0) => Ajax.call([{
     methodname: 'local_coursegen_get_course_preview',
-    args: {courseid},
+    args: {courseid, templateid},
 }])[0];
 
 export const saveTemplate = (data) => Ajax.call([{

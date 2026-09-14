@@ -82,7 +82,19 @@ class course_picker_form extends \moodleform {
         // local_coursegen_get_courses_by_category). Moodle does not ship a
         // ready-made "courses within one category" autocomplete, unlike the
         // category field above.
-        $mform->addElement('autocomplete', 'courseid', get_string('course'), [], [
+        //
+        // An AJAX autocomplete starts with no options at all, so a preset
+        // default could never display: when a course is already selected
+        // (edit mode, or a courseid page param) it must be preloaded as an
+        // option — labelled exactly like form_course_selector.js labels its
+        // search results, so it is indistinguishable from a searched pick.
+        $courseoptions = [];
+        if (!empty($this->_customdata['courseid'])) {
+            $selectedcourse = get_course((int) $this->_customdata['courseid']);
+            $courseoptions[(int) $selectedcourse->id] =
+                format_string($selectedcourse->fullname) . ' (' . $selectedcourse->shortname . ')';
+        }
+        $mform->addElement('autocomplete', 'courseid', get_string('course'), $courseoptions, [
             'ajax' => 'local_coursegen/local/template/form_course_selector',
             'noselectionstring' => get_string('template_select_course_hint', 'local_coursegen'),
         ]);

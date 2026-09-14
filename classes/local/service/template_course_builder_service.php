@@ -160,7 +160,6 @@ class template_course_builder_service {
                 $newcourse->id,
                 $newsections,
                 $template,
-                $sectionnummap,
                 $activityerrors
             );
 
@@ -543,9 +542,6 @@ class template_course_builder_service {
      * @param int $destcourseid Destination course ID.
      * @param array $newsections [['clientid' => int, 'name' => string], ...].
      * @param template $template Template persistent (for maxsections/nolimit).
-     * @param array $sectionnummap sectionid (base) => sectionnum (dest)|null, used to count
-     *     how many template sections are already present in the destination course — the
-     *     same count get_template_structure.php uses to compute "remainingsections".
      * @param array $activityerrors Error accumulator (by reference); sections beyond the
      *     limit are reported here instead of aborting the rest.
      * @return array<int,int> clientid => new section number.
@@ -554,7 +550,6 @@ class template_course_builder_service {
         int $destcourseid,
         array $newsections,
         template $template,
-        array $sectionnummap,
         array &$activityerrors
     ): array {
         global $DB;
@@ -565,8 +560,10 @@ class template_course_builder_service {
 
         $nolimit = (bool) $template->get('nolimit');
         $maxsections = (int) ($template->get('maxsections') ?? 0);
-        $currentsections = count(array_filter($sectionnummap, static fn($num) => $num !== null));
-        $remaining = $nolimit ? PHP_INT_MAX : max(0, $maxsections - $currentsections);
+        // The stored value already IS the extra allowance — how many sections
+        // the professor may add ON TOP of the template's own — so the
+        // sections already imported from the template never consume it.
+        $remaining = $nolimit ? PHP_INT_MAX : max(0, $maxsections);
 
         $maxsection = (int) $DB->get_field_sql(
             'SELECT MAX(section) FROM {course_sections} WHERE course = ?',

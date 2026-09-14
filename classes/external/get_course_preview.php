@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Render a course preview using the native course format renderer.
+ * Render the "Course sections" review for the selected base course.
  *
  * @package    local_coursegen
  * @copyright  2025 Wilber Narvaez <https://datacurso.com>
@@ -35,7 +35,7 @@ use external_value;
 use local_coursegen\output\sections_config;
 
 /**
- * External function to render a course preview with its native format.
+ * External function to render the sections review for a course.
  */
 class get_course_preview extends external_api {
 
@@ -47,20 +47,28 @@ class get_course_preview extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'courseid' => new external_value(PARAM_INT, 'Course ID'),
+            'templateid' => new external_value(
+                PARAM_INT,
+                'Existing template whose saved configuration preselects the review (0: none)',
+                VALUE_DEFAULT,
+                0
+            ),
         ]);
     }
 
     /**
-     * Render the course content using the native format renderer in read-only mode.
+     * Render the course sections review from modinfo.
      *
      * @param int $courseid
+     * @param int $templateid Existing template id (0 for a new template).
      * @return array
      */
-    public static function execute(int $courseid): array {
+    public static function execute(int $courseid, int $templateid = 0): array {
         global $PAGE;
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'courseid' => $courseid,
+            'templateid' => $templateid,
         ]);
 
         $context = \context_system::instance();
@@ -73,14 +81,6 @@ class get_course_preview extends external_api {
         $PAGE->set_context($coursecontext);
         $PAGE->set_course($course);
 
-        $format = course_get_format($course);
-        $renderer = $format->get_renderer($PAGE);
-
-        $outputclass = $format->get_output_classname('content');
-        $widget = new $outputclass($format);
-
-        $rawhtml = $renderer->render($widget);
-
         $modinfo = get_fast_modinfo($course);
         $sections = $modinfo->get_section_info_all();
         $numsections = count($sections) - 1;
@@ -91,11 +91,14 @@ class get_course_preview extends external_api {
             }
         }
 
-        // Inject the section/activity configuration controls server-side, the
-        // same as the initial page load does — one rendering path instead of
-        // two, since the client used to rebuild an equivalent (and drifting)
-        // set of controls purely in JS for this AJAX path.
-        $html = sections_config::render($rawhtml, $modinfo);
+        // Render the "Course sections" review server-side, the same as the
+        // initial page load does — one rendering path instead of two, since
+        // the client used to rebuild an equivalent (and drifting) set of
+        // controls purely in JS for this AJAX path. When editing an existing
+        // template the saved configuration preselects the controls; a
+        // templateid whose saved rows belong to a different course simply
+        // never matches any rendered cmid/sectionid (type defaults apply).
+        $html = sections_config::render($modinfo, $params['templateid']);
 
         // The type-default/limits/allowed-types form is NOT rendered here
         // any more: it is a \core_form\dynamic_form now (see

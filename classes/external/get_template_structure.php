@@ -130,7 +130,10 @@ class get_template_structure extends external_api {
 
         $nolimit = (bool) $template->get('nolimit');
         $maxsections = (int) ($template->get('maxsections') ?? 0);
-        $remaining = $nolimit ? 0 : max(0, $maxsections - count($sections));
+        // The stored value already IS the extra allowance — how many sections
+        // the professor may add ON TOP of the template's own — so the
+        // template's sections never get subtracted from it.
+        $remaining = $nolimit ? 0 : max(0, $maxsections);
 
         $allowedtypes = [];
         $raw = $template->get('allowedtypes');

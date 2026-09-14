@@ -14,16 +14,16 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Generated-course limits (max sections / no limit / allowed activity
- * types / section naming pattern) — binds state-tracking events on the real
- * mform elements rendered by classes/form/template_config_form.php (a
- * \core_form\dynamic_form, reloaded via core_form/dynamicform every time the
- * selected course changes — see init.js).
+ * Generated-course limits (allow-add-sections / extra sections / allowed
+ * activity types / section naming pattern) — binds state-tracking events on
+ * the real mform elements rendered by classes/form/template_config_form.php
+ * (a \core_form\dynamic_form, reloaded via core_form/dynamicform every time
+ * the selected course changes — see init.js).
  *
- * The "disable the max-sections field while no-limit is checked" behavior,
- * and the "show the custom-pattern field only when the pattern select is set
- * to Custom" behavior, both used to be hand-wired here; they are now the
- * form's own disabledIf()/hideIf() rules (see
+ * The "show the extra-sections field only while allow-add-sections is
+ * checked" behavior, and the "show the custom-pattern field only when the
+ * pattern select is set to Custom" behavior, are the form's own
+ * disabledIf()/hideIf() rules (see
  * template_config_form::definition()) and need no JS at all. This module
  * only tracks state and re-renders the live naming preview, which stays
  * client-side JS on purpose — it reads state.courseStructure (already
@@ -75,12 +75,21 @@ export const renderStepLimits = (panel, state) => {
     // advcheckbox renders a hidden "unchecked" companion input sharing the
     // same name before the real checkbox — [type="checkbox"] is required to
     // land on the actual toggle, not its always-present hidden sibling.
-    const noLimitCb = panel.querySelector('input[type="checkbox"][name="nolimit"]');
-    if (maxInput) {
-        state.maxSections = parseInt(maxInput.value, 10) || structure.length;
-    }
-    if (noLimitCb) {
-        state.noLimit = noLimitCb.checked;
+    const allowAddCb = panel.querySelector('input[type="checkbox"][name="allowaddsections"]');
+    // maxsections is the number of EXTRA sections the teacher may add on top
+    // of the template's own — 0 (no extra sections) unless the
+    // allow-add-sections checkbox is ticked. nolimit is never set from this
+    // UI any more; it stays false in state and is only kept in the save
+    // payload for backward compatibility with existing rows.
+    const readMaxSections = () => {
+        if (!allowAddCb?.checked) {
+            return 0;
+        }
+        return parseInt(maxInput?.value, 10) || 0;
+    };
+    if (maxInput || allowAddCb) {
+        state.maxSections = readMaxSections();
+        state.noLimit = false;
     }
 
     // Allowed types: a single mform autocomplete multi-select
@@ -159,11 +168,11 @@ export const renderStepLimits = (panel, state) => {
     });
 
     maxInput?.addEventListener('change', () => {
-        state.maxSections = parseInt(maxInput.value, 10) || structure.length;
+        state.maxSections = readMaxSections();
     });
 
-    noLimitCb?.addEventListener('change', () => {
-        state.noLimit = noLimitCb.checked;
+    allowAddCb?.addEventListener('change', () => {
+        state.maxSections = readMaxSections();
     });
 
     // Section naming — real mform elements now (select[name="namingpattern"],
