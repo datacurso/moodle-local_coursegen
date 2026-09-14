@@ -1,7 +1,5 @@
-/* Template wizard widget styles: small reusable UI pieces used around the
-   wizard (course picker cards, badges, the prompt field, the quick actions
-   dropdown) — split out of templates.css to keep each stylesheet under the
-   project's 250-line cap. */
+/* Template wizard widget styles: course picker cards, badges, the prompt
+   field, the quick actions dropdown. */
 
 /* Prompt field */
 .tpl-prompt-field {

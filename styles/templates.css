@@ -80,11 +80,6 @@
     overflow-wrap: break-word;
 }
 
-/* Percentages, not fixed rem: the admin page is full-width with no max-width
-   cap, so a rem-fixed Type/Actions column stays a tiny sliver next to Name
-   on a wide screen even though it looks fine at a narrow one. Percentages
-   keep the same visual ratio at any width; Name is the only column left
-   unspecified, so it absorbs whatever the other three don't need. */
 .tpl-activity-table .tpl-select-col {
     width: 4%;
 }
@@ -94,9 +89,6 @@
 }
 
 .tpl-activity-table .tpl-col-actions {
-    /* Wide enough to hold the action select plus, when a row is marked as
-       a template, its badge + scope select on a second line without
-       either control feeling squeezed. */
     width: 28%;
 }
 
@@ -105,18 +97,9 @@
     width: auto;
 }
 
-/* Actions cell: action select on its own line, then (only for template
-   rows) a badge + scope select row beneath it — stacked and right-aligned
-   (matching the "Actions" header) instead of the previous unwrapped inline
-   flow, which crammed all three controls together in a narrow column. */
 .tpl-actions-cell-inner {
     display: flex;
     flex-direction: column;
-    /* flex-end, not stretch: the action select sizes to its own label
-       instead of ballooning out to fill the whole (necessarily wide, to fit
-       a template row's badge + scope select) Actions column, but still
-       sits flush against the column's end, matching the right-aligned
-       "Actions" header instead of floating with a gap after it. */
     align-items: flex-end;
     gap: 0.4rem;
 }
@@ -154,6 +137,3 @@
     background: #f8f9fa;
 }
 
-/* Prompt field, badges, course-picker cards, radio circles, the quick
-   actions dropdown, and misc previews/animations live in
-   templates-widgets.css (see edit_template.php for the second require). */
