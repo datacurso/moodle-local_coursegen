@@ -241,5 +241,8 @@ export const bindInstanceInserts = (container, state, markDirty) => {
         if (e.target.matches('[data-region="instance-name"], [data-region="instance-prompt"]')) {
             markDirty();
         }
+        if (e.target.matches('[data-region="instance-name"]')) {
+            e.target.closest('[data-region="instance-name-wrap"]').dataset.value = e.target.value;
+        }
     });
 };

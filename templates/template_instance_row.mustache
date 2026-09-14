@@ -70,9 +70,11 @@
     </td>
     <td class="align-middle">
         <img src="{{iconurl}}" class="icon activityicon mr-2" alt="">
-        <input type="text" class="tpl-instance-name-input" value="{{name}}"
-               data-region="instance-name" data-id="{{instanceid}}"
-               aria-label="{{#str}} template_instance_name, local_coursegen {{/str}}">
+        <span class="tpl-instance-name-wrap" data-region="instance-name-wrap" data-value="{{name}}">
+            <input type="text" class="tpl-instance-name-input" value="{{name}}"
+                   data-region="instance-name" data-id="{{instanceid}}"
+                   aria-label="{{#str}} template_instance_name, local_coursegen {{/str}}">
+        </span>
         <span class="tpl-badge tpl-badge-instance ml-2">{{#str}} template_instance_badge, local_coursegen, {{sourcename}} {{/str}}</span>
     </td>
     <td class="align-middle text-muted">{{typelabel}}</td>

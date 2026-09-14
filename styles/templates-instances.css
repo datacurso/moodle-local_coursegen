@@ -95,7 +95,32 @@
     animation: tplFadeIn 0.2s ease;
 }
 
+/* An <input> never sizes itself to its own value the way a <span> does —
+   without this, its default width leaves a large, fixed gap before
+   whatever follows it (the "Instance" badge), no matter how short the
+   name is. This is the standard content-sized-input technique: an
+   invisible ::after mirrors the current value through a CSS grid, so the
+   input (sharing that same grid cell) is always exactly as wide as it.
+   Kept in sync with the input's live value by bindInstanceInserts's own
+   "input" listener updating data-value (see template_instance_events.js). */
+.tpl-instance-name-wrap {
+    display: inline-grid;
+    vertical-align: middle;
+}
+
+.tpl-instance-name-wrap::after {
+    content: attr(data-value) " ";
+    visibility: hidden;
+    white-space: pre;
+    grid-area: 1 / 1;
+    font: inherit;
+    padding: 0.15rem 0.3rem;
+}
+
 .tpl-instance-name-input {
+    grid-area: 1 / 1;
+    width: 100%;
+    min-width: 2rem;
     border: 1px solid transparent;
     background: transparent;
     font: inherit;
