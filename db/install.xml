@@ -126,8 +126,9 @@
                 <FIELD NAME="templateid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="sectionid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="cmid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
-                <FIELD NAME="action" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="modify" SEQUENCE="false" COMMENT="modify, keep, reference, or exclude" />
+                <FIELD NAME="action" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="modify" SEQUENCE="false" COMMENT="modify, keep, reference, exclude, or template" />
                 <FIELD NAME="useasreference" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1" SEQUENCE="false" />
+                <FIELD NAME="templatescope" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="course" SEQUENCE="false" COMMENT="course or section; only meaningful when action=template" />
                 <FIELD NAME="prompt" TYPE="text" NOTNULL="false" SEQUENCE="false" />
                 <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
