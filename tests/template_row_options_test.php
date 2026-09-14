@@ -107,4 +107,28 @@ final class template_row_options_test extends \advanced_testcase {
         $options = template_row_options::activity_actions(1, 'lti', 'template');
         $this->assertSame('keep', template_row_options::active_action($options));
     }
+
+    /**
+     * active_scope_label() returns the label of whichever option is
+     * flagged active.
+     */
+    public function test_active_scope_label_returns_the_flagged_options_label(): void {
+        $options = template_row_options::template_scope_options(1, 'section');
+        $this->assertSame(
+            get_string('template_activity_scope_section', 'local_coursegen'),
+            template_row_options::active_scope_label($options)
+        );
+    }
+
+    /**
+     * With no option flagged active (an empty array, defensively), the
+     * label falls back to "Whole course" rather than throwing or returning
+     * nothing.
+     */
+    public function test_active_scope_label_falls_back_to_course_when_none_flagged(): void {
+        $this->assertSame(
+            get_string('template_activity_scope_course', 'local_coursegen'),
+            template_row_options::active_scope_label([])
+        );
+    }
 }

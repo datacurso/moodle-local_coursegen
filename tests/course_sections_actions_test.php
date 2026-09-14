@@ -20,14 +20,16 @@ use local_coursegen\output\sections_config;
 
 /**
  * "Course sections" review: the per-row action select (including the
- * "Use as template" action, its badge and its scope select), and the single
- * global bulk action bar.
+ * "Use as template" action and its clickable "Template" tag), and the
+ * single global bulk action bar.
  *
  * "Use as template" marks an activity as a structural mold: it is gated the
  * same way "Allow AI modification" is (only offered for module types in
- * template_content_generator::AI_SUPPORTED_TYPES), renders a visible
- * "Template" badge, and reveals a scope select (course-wide or
- * section-only) that only matters for that action.
+ * template_content_generator::AI_SUPPORTED_TYPES), and renders a visible
+ * "Template" tag next to the activity name. Its scope (course-wide or
+ * section-only) is set through local/template/template_scope_modal.js, not
+ * a select rendered in the row — the tag just carries both possible labels
+ * as data attributes so that modal can update it without a server round trip.
  *
  * @package    local_coursegen
  * @category   test
@@ -76,10 +78,11 @@ final class course_sections_actions_test extends \advanced_testcase {
 
     /**
      * A row whose default (or saved) action is NOT "template" renders the
-     * "Template" badge and the scope select, but both start hidden
-     * (d-none) — sections_events.js is what reveals them on selection.
+     * "Template" tag, but it starts hidden (d-none) and showing the
+     * "Whole course" label — sections_events.js is what reveals it (and
+     * opens the scope modal) on selection.
      */
-    public function test_render_hides_template_badge_and_scope_by_default(): void {
+    public function test_render_hides_template_tag_by_default(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -87,22 +90,19 @@ final class course_sections_actions_test extends \advanced_testcase {
 
         $html = sections_config::render(get_fast_modinfo($course));
 
-        $this->assertStringContainsString('data-region="template-badge" data-id="' . $page->cmid . '"', $html);
-        $badgestart = strpos($html, 'data-region="template-badge" data-id="' . $page->cmid . '"');
-        $badgetagstart = strrpos(substr($html, 0, $badgestart), '<span');
-        $badgetag = substr($html, $badgetagstart, $badgestart - $badgetagstart);
-        $this->assertStringContainsString('d-none', $badgetag);
-
-        $scopeselect = $this->extract_scope_select($html, (int) $page->cmid);
-        $selecttagend = strpos($scopeselect, '>');
-        $this->assertStringContainsString('d-none', substr($scopeselect, 0, $selecttagend));
+        $tag = $this->extract_template_tag($html, (int) $page->cmid);
+        $tagopenend = strpos($tag, '>');
+        $this->assertStringContainsString('d-none', substr($tag, 0, $tagopenend));
+        $this->assertStringContainsString(get_string('template_activity_scope_course', 'local_coursegen'), $tag);
     }
 
     /**
-     * The scope select always offers exactly "Whole course" and "This
-     * section only", defaulting to "Whole course" when nothing is saved.
+     * The tag always carries both possible scope labels as data attributes,
+     * composed with the shared "Template · {label}" string, regardless of
+     * which one is currently active — template_row_scope.js swaps between
+     * them after a scope change without any further server round trip.
      */
-    public function test_render_scope_select_offers_course_and_section(): void {
+    public function test_render_template_tag_carries_both_scope_labels(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -110,13 +110,19 @@ final class course_sections_actions_test extends \advanced_testcase {
 
         $html = sections_config::render(get_fast_modinfo($course));
 
-        $scopeselect = $this->extract_scope_select($html, (int) $page->cmid);
-        $this->assertSame(2, substr_count($scopeselect, '<option'));
-        $this->assertStringContainsString('<option value="course"', $scopeselect);
-        $this->assertStringContainsString('<option value="section"', $scopeselect);
-        $this->assertMatchesRegularExpression('/<option value="course"[^>]*\sselected/', $scopeselect);
-        $this->assertStringContainsString(get_string('template_activity_scope_course', 'local_coursegen'), $scopeselect);
-        $this->assertStringContainsString(get_string('template_activity_scope_section', 'local_coursegen'), $scopeselect);
+        $tag = $this->extract_template_tag($html, (int) $page->cmid);
+        $expectedcourse = get_string(
+            'template_activity_template_tag',
+            'local_coursegen',
+            get_string('template_activity_scope_course', 'local_coursegen')
+        );
+        $expectedsection = get_string(
+            'template_activity_template_tag',
+            'local_coursegen',
+            get_string('template_activity_scope_section', 'local_coursegen')
+        );
+        $this->assertStringContainsString('data-tag-course="' . $expectedcourse . '"', $tag);
+        $this->assertStringContainsString('data-tag-section="' . $expectedsection . '"', $tag);
     }
 
     /**

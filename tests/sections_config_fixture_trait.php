@@ -66,14 +66,23 @@ trait sections_config_fixture_trait {
     }
 
     /**
-     * Extract one activity row's template-scope <select> markup.
+     * Extract one activity row's clickable "Template" tag markup (opening
+     * tag through its closing tag), so per-row assertions on its visibility
+     * or label cannot accidentally match a different row's tag.
      *
      * @param string $html Full rendered review.
-     * @param int $cmid Course module id the select belongs to.
-     * @return string The select markup, without the closing tag.
+     * @param int $cmid Course module id the tag belongs to.
+     * @return string The tag's full markup, including its closing tag.
      */
-    private function extract_scope_select(string $html, int $cmid): string {
-        return $this->extract_select($html, 'data-region="template-scope" data-id="' . $cmid . '"');
+    private function extract_template_tag(string $html, int $cmid): string {
+        $marker = 'data-region="template-tag" data-id="' . $cmid . '"';
+        $markerpos = strpos($html, $marker);
+        $this->assertNotFalse($markerpos, 'No template tag rendered matching: ' . $marker);
+        $tagstart = strrpos(substr($html, 0, $markerpos), '<button');
+        $this->assertNotFalse($tagstart, 'Unopened template tag matching: ' . $marker);
+        $tagend = strpos($html, '</button>', $tagstart);
+        $this->assertNotFalse($tagend, 'Unterminated template tag matching: ' . $marker);
+        return substr($html, $tagstart, $tagend + strlen('</button>') - $tagstart);
     }
 
     /**

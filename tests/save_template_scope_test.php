@@ -40,8 +40,8 @@ final class save_template_scope_test extends \advanced_testcase {
     /**
      * Saving a "template" action with an explicit "section" scope round
      * trips: the saved row persists both values, and re-rendering the
-     * review preselects "template" plus reveals the scope select with
-     * "This section only" preselected (not hidden, since the row's own
+     * review preselects "template" plus reveals the "Template" tag showing
+     * the "This section only" label (not hidden, since the row's own
      * action is now "template").
      */
     public function test_persists_and_hydrates_template_scope(): void {
@@ -80,16 +80,11 @@ final class save_template_scope_test extends \advanced_testcase {
         $pageselect = $this->extract_action_select($html, (int) $page->cmid);
         $this->assertMatchesRegularExpression('/<option value="template"[^>]*\sselected/', $pageselect);
 
-        // The badge is now visible (no d-none) since this row IS a template.
-        $badgestart = strpos($html, 'data-region="template-badge" data-id="' . $page->cmid . '"');
-        $badgetagstart = strrpos(substr($html, 0, $badgestart), '<span');
-        $badgetag = substr($html, $badgetagstart, $badgestart - $badgetagstart);
-        $this->assertStringNotContainsString('d-none', $badgetag);
-
-        $scopeselect = $this->extract_scope_select($html, (int) $page->cmid);
-        $selecttagend = strpos($scopeselect, '>');
-        $this->assertStringNotContainsString('d-none', substr($scopeselect, 0, $selecttagend));
-        $this->assertMatchesRegularExpression('/<option value="section"[^>]*\sselected/', $scopeselect);
+        // The tag is now visible (no d-none) and shows the saved "section" scope.
+        $tag = $this->extract_template_tag($html, (int) $page->cmid);
+        $tagopenend = strpos($tag, '>');
+        $this->assertStringNotContainsString('d-none', substr($tag, 0, $tagopenend));
+        $this->assertStringContainsString(get_string('template_activity_scope_section', 'local_coursegen'), $tag);
     }
 
     /**
