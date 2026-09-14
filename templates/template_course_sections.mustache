@@ -46,20 +46,29 @@
     * data-region="section-select-all" data-sid on each section card
       header's checkbox (usable while the section is collapsed)
     * data-region="bulk-action" on the single global bulk select
+    * data-region="template-tag" data-id + data-name + data-tag-course +
+      data-tag-section on each row's clickable "Template" tag, next to the
+      activity name (hidden unless the row's action is "template") — opens
+      local/template/template_scope_modal.js to set/change the row's scope
 
     Context variables required for this template:
-    * courseid int     - Base course id (keeps collapse ids unique per course)
-    * hassections bool - True when the course has any section
+    * courseid int          - Base course id (keeps collapse ids unique per course)
+    * hassections bool      - True when the course has any section
+    * scopelabelcourse string  - "Whole course" scope label, for the tag's data-tag-course
+    * scopelabelsection string - "This section only" scope label, for data-tag-section
     * sections array   - Sections, each with: id int, num int, name string,
                          activitycount int, hasactivities bool,
                          actions array (value, sectionid, label, tip, active),
                          activities array (cmid, name, modname, typelabel,
-                         iconurl, actions array (value, cmid, label, tip, active))
+                         iconurl, actions array (value, cmid, label, tip, active),
+                         istemplate bool, scopelabel string)
 
     Example context (json):
     {
         "courseid": 3,
         "hassections": true,
+        "scopelabelcourse": "Whole course",
+        "scopelabelsection": "This section only",
         "sections": [
             {
                 "id": 11,
@@ -135,7 +144,7 @@
                     </thead>
                     <tbody>
                         {{#activities}}
-                        <tr data-for="cmitem" data-id="{{cmid}}" data-modname="{{modname}}">
+                        <tr class="{{#istemplate}}tpl-row-template{{/istemplate}}" data-for="cmitem" data-id="{{cmid}}" data-modname="{{modname}}">
                             <td class="align-middle tpl-select-col">
                                 <input type="checkbox" data-region="activity-select" data-id="{{cmid}}"
                                        aria-label="{{name}}">
@@ -143,7 +152,14 @@
                             <td class="align-middle">
                                 <img src="{{iconurl}}" class="icon activityicon mr-2" alt="">{{!
                                 }}{{#viewurl}}<a href="{{viewurl}}" target="_blank" rel="noopener">{{name}}</a>{{/viewurl}}{{!
-                                }}{{^viewurl}}<span>{{name}}</span>{{/viewurl}}
+                                }}{{^viewurl}}<span>{{name}}</span>{{/viewurl}}{{!
+                                }}<button type="button"
+                                        class="tpl-badge tpl-badge-template tpl-template-tag ml-2{{^istemplate}} d-none{{/istemplate}}"
+                                        data-region="template-tag" data-id="{{cmid}}" data-name="{{name}}"
+                                        data-tag-course="{{#str}} template_activity_template_tag, local_coursegen, {{scopelabelcourse}} {{/str}}"
+                                        data-tag-section="{{#str}} template_activity_template_tag, local_coursegen, {{scopelabelsection}} {{/str}}">
+                                    {{#str}} template_activity_template_tag, local_coursegen, {{scopelabel}} {{/str}}
+                                </button>
                             </td>
                             <td class="align-middle text-muted">{{typelabel}}</td>
                             <td class="align-middle text-right">
@@ -177,6 +193,7 @@
                 data-region="bulk-action" disabled>
             <option value="" selected>{{#str}} choosedots, core {{/str}}</option>
             <option value="modify">{{#str}} template_activity_modify, local_coursegen {{/str}}</option>
+            <option value="template">{{#str}} template_activity_template, local_coursegen {{/str}}</option>
             <option value="keep">{{#str}} template_activity_keep, local_coursegen {{/str}}</option>
             <option value="reference">{{#str}} template_activity_reference, local_coursegen {{/str}}</option>
             <option value="exclude">{{#str}} template_activity_exclude, local_coursegen {{/str}}</option>

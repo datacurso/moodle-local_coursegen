@@ -27,7 +27,6 @@ namespace local_coursegen\output;
 
 use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_section;
-use local_coursegen\local\service\template_content_generator;
 
 /**
  * Build the sections review straight from modinfo.
@@ -81,12 +80,14 @@ class sections_config {
 
         $savedbehaviors = [];
         $savedactions = [];
+        $savedscopes = [];
         if ($templateid > 0) {
             foreach (template_section::get_records(['templateid' => $templateid]) as $record) {
                 $savedbehaviors[(int) $record->get('sectionid')] = $record->get('behavior');
             }
             foreach (template_activity::get_records(['templateid' => $templateid]) as $record) {
                 $savedactions[(int) $record->get('cmid')] = $record->get('action');
+                $savedscopes[(int) $record->get('cmid')] = $record->get('templatescope');
             }
         }
 
@@ -99,8 +100,19 @@ class sections_config {
                     if ($cm->deletioninprogress) {
                         continue;
                     }
+                    $cmid = (int) $cm->id;
+                    $actionoptions = template_row_options::activity_actions(
+                        $cmid,
+                        $cm->modname,
+                        $savedactions[$cmid] ?? null
+                    );
+                    $istemplate = template_row_options::active_action($actionoptions) === 'template';
+                    $scopeoptions = template_row_options::template_scope_options(
+                        $cmid,
+                        $savedscopes[$cmid] ?? 'course'
+                    );
                     $activities[] = [
-                        'cmid' => (int) $cm->id,
+                        'cmid' => $cmid,
                         'name' => $cm->get_formatted_name(),
                         // Link to the real activity in the base course; null
                         // for modules with no view page of their own (label),
@@ -109,11 +121,14 @@ class sections_config {
                         'modname' => $cm->modname,
                         'typelabel' => $cm->get_module_type_name(),
                         'iconurl' => $cm->get_icon_url()->out(false),
-                        'actions' => self::build_activity_actions(
-                            (int) $cm->id,
-                            $cm->modname,
-                            $savedactions[(int) $cm->id] ?? null
-                        ),
+                        'actions' => $actionoptions,
+                        // Drives the clickable "Template" tag's visibility
+                        // and initial label — kept in sync with the action
+                        // select, and with scope changes made through
+                        // local/template/template_scope_modal.js, by
+                        // sections_events.js.
+                        'istemplate' => $istemplate,
+                        'scopelabel' => template_row_options::active_scope_label($scopeoptions),
                     ];
                 }
             }
@@ -126,7 +141,7 @@ class sections_config {
                 'activitycount' => count($activities),
                 'hasactivities' => !empty($activities),
                 'activities' => $activities,
-                'actions' => self::build_section_actions($sectionid, $savedbehaviors[$sectionid] ?? 'custom'),
+                'actions' => template_row_options::section_actions($sectionid, $savedbehaviors[$sectionid] ?? 'custom'),
             ];
         }
 
@@ -138,87 +153,13 @@ class sections_config {
             'courseid' => (int) $course->id,
             'sections' => $sections,
             'hassections' => !empty($sections),
+            // Both scope labels, composed once here rather than per activity:
+            // each row's "Template" tag carries both as data attributes so
+            // template_scope_modal.js can swap its text after a scope change
+            // without an extra string lookup.
+            'scopelabelcourse' => get_string('template_activity_scope_course', 'local_coursegen'),
+            'scopelabelsection' => get_string('template_activity_scope_section', 'local_coursegen'),
         ];
     }
 
-    /**
-     * Build the per-section behavior select options (custom/keep/exclude).
-     *
-     * Same action values and lang keys as the previous 3-dot menu items;
-     * "custom" stays the default (preselected) behavior for a new template.
-     *
-     * @param int $sectionid Base course section id.
-     * @param string $behavior The behavior to preselect (a saved one when
-     *     editing an existing template, "custom" otherwise).
-     * @return array Select option contexts.
-     */
-    private static function build_section_actions(int $sectionid, string $behavior = 'custom'): array {
-        $valid = ['custom', 'keep', 'exclude'];
-        if (!in_array($behavior, $valid, true)) {
-            $behavior = 'custom';
-        }
-
-        // "exclude" is not offered in the UI any more: it only renders (and
-        // preselects) when an existing template already saved it, so
-        // edit-mode hydration never lies about the stored state. The backend
-        // keeps accepting and processing it untouched.
-        $keys = $behavior === 'exclude' ? $valid : ['custom', 'keep'];
-
-        $items = [];
-        foreach ($keys as $key) {
-            $items[] = [
-                'value' => $key,
-                'sectionid' => $sectionid,
-                'label' => get_string('template_section_' . $key, 'local_coursegen'),
-                'tip' => get_string('template_section_' . $key . '_tip', 'local_coursegen'),
-                'active' => $key === $behavior,
-            ];
-        }
-        return $items;
-    }
-
-    /**
-     * Build the per-activity action select options.
-     *
-     * Only ever offers "Modify" for a module type in
-     * template_content_generator::AI_SUPPORTED_TYPES — the real AI service's
-     * full content contract, never a constant scoped to whichever
-     * implementation currently satisfies it. Anything NOT in that contract
-     * only offers Keep / Reference / Exclude, and defaults to Keep instead
-     * of Modify.
-     *
-     * When editing an existing template, the activity's SAVED action wins
-     * over the type default — unless it is no longer offered for this row
-     * (a saved "modify" on a type the generator cannot handle degrades to
-     * "keep", the same rule the defaults follow).
-     *
-     * @param int $cmid Course module id.
-     * @param string $modname Module type name.
-     * @param string|null $savedaction The template's saved action for this
-     *     cmid, null when there is none (new template, or a new activity).
-     * @return array Select option contexts.
-     */
-    private static function build_activity_actions(int $cmid, string $modname, ?string $savedaction = null): array {
-        $keys = ['modify', 'keep', 'reference', 'exclude'];
-        $cansupportmodify = in_array($modname, template_content_generator::AI_SUPPORTED_TYPES, true);
-        if (!$cansupportmodify) {
-            $keys = ['keep', 'reference', 'exclude'];
-        }
-        $default = $cansupportmodify ? 'modify' : 'keep';
-        if ($savedaction !== null && in_array($savedaction, $keys, true)) {
-            $default = $savedaction;
-        }
-
-        $items = [];
-        foreach ($keys as $key) {
-            $items[] = [
-                'value' => $key,
-                'cmid' => $cmid,
-                'label' => get_string('template_activity_' . $key, 'local_coursegen'),
-                'tip' => get_string('template_activity_' . $key . '_tip', 'local_coursegen'),
-                'active' => $key === $default,
-            ];
-        }
-        return $items;
-    }
 }
