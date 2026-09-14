@@ -50,6 +50,7 @@
 import {typeSupportsModify} from './type_action_sync';
 import {bindSelectionAndBulk} from './selection_bulk';
 import {applyTemplateVisual, openScopeModalForNewSelection, bindTemplateTagClicks} from './template_row_scope';
+import {bindInstanceInserts} from './template_instance_events';
 
 /** @type {boolean} Whether any config has been modified. */
 let dirty = false;
@@ -100,8 +101,13 @@ export const resetSectionsDirtyState = () => {
  * @param {string} modname The row's module type.
  * @returns {string} The action to apply.
  */
-const applicableAction = (action, modname) =>
-    ((action === 'modify' || action === 'template') && !typeSupportsModify(modname)) ? 'keep' : action;
+const applicableAction = (action, modname) => {
+    const requestsmodify = action === 'modify' || action === 'template';
+    if (requestsmodify && !typeSupportsModify(modname)) {
+        return 'keep';
+    }
+    return action;
+};
 
 /**
  * Bind events on the server-rendered review controls (no DOM injection).
@@ -146,6 +152,7 @@ export const bindServerRenderedControls = (container, state) => {
     });
 
     bindTemplateTagClicks(container, state, markDirty);
+    bindInstanceInserts(container, state, markDirty);
 
     // Row selection checkboxes (three synced tiers) and the single global
     // bulk action bar — see selection_bulk.js.
