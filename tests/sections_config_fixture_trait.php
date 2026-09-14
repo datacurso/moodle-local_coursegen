@@ -37,7 +37,7 @@ trait sections_config_fixture_trait {
      *
      * Page and forum are both in template_content_generator::AI_SUPPORTED_TYPES;
      * lti is NOT — it is the "unsupported type" fixture for the rows that
-     * must not offer (nor default to) the modify/template actions.
+     * must not offer (nor default to) the "template" action.
      *
      * @return array{0:\stdClass,1:\stdClass,2:\stdClass,3:\stdClass,4:\stdClass} Course, page, forum, lti and label records.
      */
