@@ -57,8 +57,9 @@
       activity name (hidden unless the row's action is "template") — opens
       local/template/template_scope_modal.js to set/change the row's scope
     * data-region="row-gap" on the thin hover-reveal strip rendered after
-      EVERY row (real or instance, including the section's last one), and
-      data-region="add-instance" on the section's persistent trailing
+      every row except the section's last one (that gap is skipped: the
+      persistent "Add activity" row right below already covers the same
+      insertion point), and data-region="add-instance" on that persistent trailing
       "Add activity from a template" row — each trigger carries
       data-toggle="dropdown" (so Bootstrap's own outside-click/Escape
       handling can close it) and sits inside its own ".dropdown" wrapper
@@ -91,7 +92,9 @@
                          istemplate bool, scopelabel string) or a virtual
                          instance row (isreal false, isinstance true,
                          instanceid, name, typelabel, prompt, sourcecmid,
-                         sourcename, badge string)
+                         sourcename, badge string) — every entry also
+                         carries islast bool (true only for the section's
+                         final row, which renders no trailing gap)
 
     Example context (json):
     {

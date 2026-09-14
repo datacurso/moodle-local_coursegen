@@ -86,4 +86,51 @@ final class template_instance_menu_markup_test extends \advanced_testcase {
         $this->assertStringContainsString('aria-expanded="false"', $addmarkup);
         $this->assertMatchesRegularExpression('/<div class="dropdown-menu tpl-instance-menu" role="menu">\s*<\/div>/', $addmarkup);
     }
+
+    /**
+     * The section's last row never gets its own trailing row-gap: the
+     * persistent add-instance row right after it already covers the same
+     * "insert here" position, so a hover-reveal "+" directly in front of
+     * it would be the same affordance rendered twice.
+     */
+    public function test_no_row_gap_directly_before_the_persistent_add_row(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course] = $this->create_course_fixture();
+        $modinfo = get_fast_modinfo($course);
+
+        $html = sections_config::render($modinfo);
+
+        $addstart = strpos($html, 'data-region="add-instance"');
+        $this->assertNotFalse($addstart, 'No persistent add-instance trigger rendered');
+        $precedingmarkup = substr($html, 0, $addstart);
+        $lastgap = strrpos($precedingmarkup, 'data-region="row-gap"');
+        $lastrowclose = strrpos($precedingmarkup, '</tr>');
+
+        // The nearest thing before the add-row must be a closed content
+        // row, not a row-gap: if a gap were the last thing rendered before
+        // it, its own strpos would land AFTER that last "</tr>".
+        $this->assertNotFalse($lastrowclose, 'No content row rendered before the add-row');
+        if ($lastgap !== false) {
+            $this->assertLessThan($lastrowclose, $lastgap, 'A row-gap sits directly before the persistent add-row');
+        }
+    }
+
+    /**
+     * Sections with more than one activity still get a row-gap between
+     * their non-last rows — only the trailing one is ever skipped.
+     */
+    public function test_row_gap_still_renders_between_non_last_rows(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course] = $this->create_course_fixture();
+        $modinfo = get_fast_modinfo($course);
+
+        $html = sections_config::render($modinfo);
+
+        $gapcount = substr_count($html, 'data-region="row-gap"');
+        $this->assertGreaterThan(0, $gapcount, 'No row-gap rendered at all for a multi-activity section');
+    }
 }

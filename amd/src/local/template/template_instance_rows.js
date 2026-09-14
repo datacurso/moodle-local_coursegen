@@ -22,9 +22,12 @@
  * buildSections() (init.js) folds into the save payload.
  *
  * Every row/gap pair inserted keeps this invariant: exactly one
- * data-region="row-gap" strip between any two adjacent content rows
- * (real or instance), including after the section's last row — the
- * persistent "Add activity" row simply follows that same trailing gap.
+ * data-region="row-gap" strip between any two adjacent content rows (real
+ * or instance) — except right before the section's persistent "Add
+ * activity" row, which never gets one: that row already covers the same
+ * "insert here" position, so a gap right in front of it would just be the
+ * same affordance rendered twice. dropGapBeforeAddRow() enforces this
+ * after every insert/remove instead of hand-tracking it at each call site.
  *
  * @module     local_coursegen/local/template/template_instance_rows
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -102,6 +105,22 @@ const buildPromptRow = (instanceid, placeholder) => {
 };
 
 /**
+ * Remove the gap directly in front of the section's persistent add-row, if
+ * one is currently there — see this module's own docblock for why one
+ * must never sit there. Call after any insert/remove instead of tracking
+ * this at each call site.
+ *
+ * @param {HTMLElement} tbody The section's table body.
+ */
+const dropGapBeforeAddRow = (tbody) => {
+    const addRow = tbody.querySelector('[data-region="add-instance"]');
+    const priorRow = addRow?.previousElementSibling;
+    if (priorRow && priorRow.classList.contains('tpl-row-gap')) {
+        priorRow.remove();
+    }
+};
+
+/**
  * Insert a new instance (plus its prompt row and its own trailing gap)
  * immediately before the given element, adding a leading gap first if none
  * already precedes it (only possible when the section had no rows at all
@@ -134,6 +153,7 @@ export const insertInstanceRow = async(tbody, beforeEl, picked) => {
     tbody.insertBefore(instanceRow, beforeEl);
     tbody.insertBefore(promptRow, beforeEl);
     tbody.insertBefore(buildGapRow(addtitle), beforeEl);
+    dropGapBeforeAddRow(tbody);
 
     instanceRow.querySelector('.tpl-instance-name-input').focus();
     return instanceRow;
@@ -146,6 +166,7 @@ export const insertInstanceRow = async(tbody, beforeEl, picked) => {
  * @param {HTMLElement} instanceRow The row (data-for="instancerow").
  */
 export const removeInstanceRow = (instanceRow) => {
+    const tbody = instanceRow.closest('tbody');
     const promptRow = instanceRow.nextElementSibling;
     const gapRow = promptRow && promptRow.classList.contains('tpl-instance-prompt-row')
         ? promptRow.nextElementSibling
@@ -157,6 +178,7 @@ export const removeInstanceRow = (instanceRow) => {
         gapRow.remove();
     }
     instanceRow.remove();
+    dropGapBeforeAddRow(tbody);
 };
 
 /**

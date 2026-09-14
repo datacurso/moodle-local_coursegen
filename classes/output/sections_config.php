@@ -189,16 +189,30 @@ class sections_config {
      * Turn template_instance_layout::ordered_rows()'s output into the final
      * per-row render context.
      *
+     * The last row never gets its own trailing insertion gap: the
+     * section's persistent "Add activity" row immediately follows it and
+     * already covers that exact position, so a hover-reveal "+" right in
+     * front of it would just be the same affordance rendered twice.
+     *
      * @param array $orderedrows Return value of template_instance_layout::ordered_rows().
      * @param array $activitiesbycmid Real row contexts, keyed by cmid.
      * @return array
      */
     private static function render_rows(array $orderedrows, array $activitiesbycmid): array {
-        return array_map(
-            fn($entry) => $entry['type'] === 'real'
-                ? $activitiesbycmid[$entry['cmid']]
-                : ['isreal' => false, 'isinstance' => true] + template_row_options::instance_row_context($entry['record']),
-            $orderedrows
-        );
+        $rows = [];
+        $lastindex = count($orderedrows) - 1;
+        $index = 0;
+        foreach ($orderedrows as $entry) {
+            if ($entry['type'] === 'real') {
+                $context = $activitiesbycmid[$entry['cmid']];
+            } else {
+                $context = ['isreal' => false, 'isinstance' => true]
+                    + template_row_options::instance_row_context($entry['record']);
+            }
+            $context['islast'] = ($index === $lastindex);
+            $rows[] = $context;
+            $index++;
+        }
+        return $rows;
     }
 }
