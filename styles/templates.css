@@ -116,12 +116,15 @@
 .tpl-actions-cell-inner {
     display: flex;
     flex-direction: column;
-    align-items: stretch;
+    /* flex-start, not stretch: the action select should size to its own
+       label, not balloon out to fill the whole (necessarily wide, to fit a
+       template row's badge + scope select) Actions column on every row. */
+    align-items: flex-start;
     gap: 0.4rem;
 }
 
 .tpl-activity-action {
-    width: 100%;
+    max-width: 100%;
 }
 
 .tpl-template-scope-row {
