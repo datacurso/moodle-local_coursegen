@@ -362,5 +362,43 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026091405, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026091406) {
+        // Drop orphaned fields left over on this shared test database by
+        // other, unrelated branches that ran their own upgrade steps
+        // against it and were never merged — none of these are defined by
+        // this plugin's current models or referenced anywhere in its code.
+        $table = new xmldb_table('local_coursegen_template');
+        $field = new xmldb_field('general_instruction');
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->drop_field($table, $field);
+        }
+        $field = new xmldb_field('titlepolicy');
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->drop_field($table, $field);
+        }
+
+        $table = new xmldb_table('local_coursegen_tpl_section');
+        $field = new xmldb_field('sortorder');
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->drop_field($table, $field);
+        }
+
+        $table = new xmldb_table('local_coursegen_tpl_activity');
+        $field = new xmldb_field('templatesourcecmid');
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->drop_field($table, $field);
+        }
+        $field = new xmldb_field('titlepolicy');
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->drop_field($table, $field);
+        }
+        $field = new xmldb_field('sortorder');
+        if ($dbman->field_exists($table, $field)) {
+            $dbman->drop_field($table, $field);
+        }
+
+        upgrade_plugin_savepoint(true, 2026091406, 'local', 'coursegen');
+    }
+
     return true;
 }
