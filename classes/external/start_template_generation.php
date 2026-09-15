@@ -85,8 +85,6 @@ class start_template_generation extends external_api {
             $api->upload_reference_file($threadid, $file);
         }
 
-        $api->start_generation($threadid);
-
         $session = new course_session(0, (object) [
             'userid' => (int) $USER->id,
             'session_id' => $threadid,
@@ -95,7 +93,14 @@ class start_template_generation extends external_api {
         ]);
         $session->create();
 
-        return ['threadid' => $threadid, 'sessionid' => (int) $session->get('id')];
+        // Nothing has run yet: consuming the stream is what drives the
+        // generation, so the caller opens this URL and watches it happen,
+        // rather than starting a blind run and asking whether it is done.
+        return [
+            'threadid' => $threadid,
+            'sessionid' => (int) $session->get('id'),
+            'streamurl' => $api->stream_url($threadid),
+        ];
     }
 
     /**
@@ -125,6 +130,7 @@ class start_template_generation extends external_api {
         return new external_single_structure([
             'threadid' => new external_value(PARAM_TEXT, 'Generation thread id'),
             'sessionid' => new external_value(PARAM_INT, 'Local session id'),
+            'streamurl' => new external_value(PARAM_URL, 'SSE URL whose consumption runs the generation'),
         ]);
     }
 }

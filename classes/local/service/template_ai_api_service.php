@@ -22,9 +22,10 @@ use stored_file;
 /**
  * The /course-template endpoints of the AI service.
  *
- * The run is started EXPLICITLY (start_generation), not by /init: reference
- * files can only be attached once /init has returned a thread id, so an
- * auto-started run would race the syllabus upload and generate without it.
+ * /init only seeds the session; opening its SSE stream is what actually runs
+ * the generation, exactly as free-mode course creation and single-activity
+ * generation already work. Reference files are therefore attached between the
+ * two, with no risk of the run starting without the syllabus.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -50,7 +51,7 @@ class template_ai_api_service {
     }
 
     /**
-     * Create the generation session (does not start it - see start_generation).
+     * Create the generation session. Seeds it only: the stream runs it.
      *
      * @param array $payload Built by template_export_service::build_init_payload().
      * @return string The thread id.
@@ -80,36 +81,21 @@ class template_ai_api_service {
     }
 
     /**
-     * Run a session created by init(), once its files are attached.
+     * The SSE URL whose consumption drives one session's generation.
+     *
+     * Handed to the browser, which opens it directly: the progress events the
+     * graph emits are for the professor to watch live, so proxying them
+     * through Moodle would only add a hop and buffer them.
      *
      * @param string $threadid
-     * @return array Decoded response.
+     * @return string
      */
-    public function start_generation(string $threadid): array {
-        return $this->client->request('POST', '/course-template/start/' . $threadid, []);
+    public function stream_url(string $threadid): string {
+        return streaming_url_builder::course_template_stream($this->client->get_base_url(), $threadid);
     }
 
     /**
-     * Where the run stands: running, completed or failed.
-     *
-     * Polled instead of /result because that endpoint answers 404 for three
-     * different situations at once (unknown thread, failed run, not finished
-     * yet), which the HTTP client turns into an exception - indistinguishable
-     * from a real error while the run is simply still working.
-     *
-     * @param string $threadid
-     * @return array {status, error_message}
-     */
-    public function get_status(string $threadid): array {
-        $result = $this->client->request('GET', '/course-template/status/' . $threadid);
-        return [
-            'status' => (string) ($result['status'] ?? 'running'),
-            'error_message' => (string) ($result['error_message'] ?? ''),
-        ];
-    }
-
-    /**
-     * Fetch the finished result. Only call this once get_status() reports
+     * Fetch the finished result. Only call this once the stream has reported
      * "completed" - it errors while the run is still in flight.
      *
      * @param string $threadid

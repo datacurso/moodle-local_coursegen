@@ -36,13 +36,13 @@ export const getTemplateStructure = (templateId) => fetchMany([{
 }])[0];
 
 /**
- * Start generating a course from a template: exports it, attaches the syllabus
- * and kicks off the run.
+ * Open a generation: exports the template, attaches the syllabus and returns
+ * the stream whose consumption actually runs it.
  *
  * @param {number} templateId
  * @param {string} prompt The professor's single general instruction.
  * @param {number} draftItemId Draft area holding the syllabus, 0 when none.
- * @returns {Promise<Object>} {threadid, sessionid}
+ * @returns {Promise<Object>} {threadid, sessionid, streamurl}
  */
 export const startTemplateGeneration = (templateId, prompt, draftItemId) => fetchMany([{
     methodname: 'local_coursegen_start_template_generation',
@@ -50,12 +50,12 @@ export const startTemplateGeneration = (templateId, prompt, draftItemId) => fetc
 }])[0];
 
 /**
- * One poll step; creates the course server-side once the result is ready.
+ * Build the course, once the stream has reported the generation complete.
  *
  * @param {number} sessionId
  * @returns {Promise<Object>} {status, courseid, courseurl}
  */
-export const getTemplateGenerationStatus = (sessionId) => fetchMany([{
-    methodname: 'local_coursegen_get_template_generation_status',
+export const finishTemplateGeneration = (sessionId) => fetchMany([{
+    methodname: 'local_coursegen_finish_template_generation',
     args: {sessionid: sessionId},
 }])[0];

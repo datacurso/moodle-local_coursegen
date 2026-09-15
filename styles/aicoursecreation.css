@@ -4046,6 +4046,10 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
 
 /* ── Generation phase: reuse the plan cards as a read-only LIVE progress view ──
    Scoped to body.cg-generating so the editable planning view is never touched.
+   Both hosts are named because free mode and template mode show the SAME live
+   progress over their own structure: #prvSections is free mode's plan preview,
+   #tplModeStructure the template's. One rule block, one look - duplicating it
+   per mode is what let template mode drift into a different design.
    The cg-gen-* status class lands on the activity <li> (.activity-wrapper). The
    card looks DISABLED (dimmed + desaturated) while its content is pending/being
    created, and ACTIVATES (full opacity + colour) the moment it is created — with a
@@ -4056,33 +4060,33 @@ body:has(.courseai-workspace.is-planning) { overflow: hidden; }
    add buttons. But KEEP the collapse chevron — activities with content stay
    expandable — so hide only the .dp-action-btn inside the cluster, not the whole
    cluster (which also holds the chevron). The chevron then sits alone, flush-right. */
-body.cg-generating #prvSections .cg-item-actions .dp-action-btn,
-body.cg-generating #prvSections .dp-add-activity-wrap,
-body.cg-generating #prvSections .dp-add-section-wrap { display: none !important; }
-body.cg-generating #prvSections .activity-item.cg-activity--has-detail { cursor: pointer !important; }
-body.cg-generating #prvSections .activity-icon { position: relative; }
+body.cg-generating :is(#prvSections, #tplModeStructure) .cg-item-actions .dp-action-btn,
+body.cg-generating :is(#prvSections, #tplModeStructure) .dp-add-activity-wrap,
+body.cg-generating :is(#prvSections, #tplModeStructure) .dp-add-section-wrap { display: none !important; }
+body.cg-generating :is(#prvSections, #tplModeStructure) .activity-item.cg-activity--has-detail { cursor: pointer !important; }
+body.cg-generating :is(#prvSections, #tplModeStructure) .activity-icon { position: relative; }
 
 /* Sections are NOT draggable during generation: default cursor, and no hover
    outline. Plain (non-collapsible) activities also keep the default cursor. */
-body.cg-generating #prvSections .course-section .section-item,
-body.cg-generating #prvSections .course-section-header,
-body.cg-generating #prvSections .course-section .section-item .activity-item:not(.cg-activity--has-detail) {
+body.cg-generating :is(#prvSections, #tplModeStructure) .course-section .section-item,
+body.cg-generating :is(#prvSections, #tplModeStructure) .course-section-header,
+body.cg-generating :is(#prvSections, #tplModeStructure) .course-section .section-item .activity-item:not(.cg-activity--has-detail) {
   cursor: default !important;
 }
 /* No blue/red hover or focus ring during generation — the rows are read-only
    progress, so a prominent hover affordance is misleading. */
-body.cg-generating #prvSections .course-section .section-item:hover { outline: none !important; }
-body.cg-generating #prvSections .activity-item:hover,
-body.cg-generating #prvSections .activity-item:focus,
-body.cg-generating #prvSections .activity-item:focus-visible,
-body.cg-generating #prvSections .cg-affected {
+body.cg-generating :is(#prvSections, #tplModeStructure) .course-section .section-item:hover { outline: none !important; }
+body.cg-generating :is(#prvSections, #tplModeStructure) .activity-item:hover,
+body.cg-generating :is(#prvSections, #tplModeStructure) .activity-item:focus,
+body.cg-generating :is(#prvSections, #tplModeStructure) .activity-item:focus-visible,
+body.cg-generating :is(#prvSections, #tplModeStructure) .cg-affected {
   outline: none !important;
   box-shadow: none !important;
 }
 
 /* PENDING — the whole card is "off": desaturated (grayscale) + slightly faded.
    Grayscale (not heavy opacity) keeps the collapse chevron/content readable. */
-body.cg-generating #prvSections .cg-gen-pending .activity-item {
+body.cg-generating :is(#prvSections, #tplModeStructure) .cg-gen-pending .activity-item {
   opacity: .82;
   filter: grayscale(1);
   transition: opacity .35s ease, filter .35s ease;
@@ -4091,19 +4095,19 @@ body.cg-generating #prvSections .cg-gen-pending .activity-item {
    also grey the coral spinner below (it is a descendant). Only mute the TEXT so it
    still reads as not-yet-final, while the icon + spinner keep the brand colour to
    mark "this one is being built now". A soft overall opacity keeps it gentle. */
-body.cg-generating #prvSections .cg-gen-active .activity-item {
+body.cg-generating :is(#prvSections, #tplModeStructure) .cg-gen-active .activity-item {
   opacity: .9;
   transition: opacity .35s ease, filter .35s ease;
 }
-body.cg-generating #prvSections .cg-gen-active .activity-name-area,
-body.cg-generating #prvSections .cg-gen-active .cg-activity-desc-slot,
-body.cg-generating #prvSections .cg-gen-active .cg-activity-detail {
+body.cg-generating :is(#prvSections, #tplModeStructure) .cg-gen-active .activity-name-area,
+body.cg-generating :is(#prvSections, #tplModeStructure) .cg-gen-active .cg-activity-desc-slot,
+body.cg-generating :is(#prvSections, #tplModeStructure) .cg-gen-active .cg-activity-detail {
   filter: grayscale(1);
   opacity: .85;
 }
 /* IN PROGRESS — a small spinner on the icon in the brand coral, kept SOFT (light
    coral ring + slightly dimmed by the card opacity) so it is present but not loud. */
-body.cg-generating #prvSections .cg-gen-active .activity-icon::after {
+body.cg-generating :is(#prvSections, #tplModeStructure) .cg-gen-active .activity-icon::after {
   content: '';
   position: absolute;
   right: -5px;
@@ -4120,11 +4124,11 @@ body.cg-generating #prvSections .cg-gen-active .activity-icon::after {
 }
 /* DONE — the card "turns on" (full colour) + a sober check badge on the icon
    (same muted tone as the section checklist check, NOT a loud green). */
-body.cg-generating #prvSections .cg-gen-done .activity-item {
+body.cg-generating :is(#prvSections, #tplModeStructure) .cg-gen-done .activity-item {
   opacity: 1;
   filter: none;
 }
-body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
+body.cg-generating :is(#prvSections, #tplModeStructure) .cg-gen-done .activity-icon::after {
   content: '';
   position: absolute;
   right: -6px;
@@ -4460,7 +4464,7 @@ body.cg-generating #prvSections .cg-gen-done .activity-icon::after {
 }
 
 /* The insert divider is a PLANNING-only edit affordance. Generation is read-only. */
-body.cg-generating #prvSections .cg-insert-zone {
+body.cg-generating :is(#prvSections, #tplModeStructure) .cg-insert-zone {
   display: none !important;
 }
 
@@ -4669,7 +4673,7 @@ body.cg-generating #prvSections .cg-insert-zone {
   list-style: none;
 }
 
-body.cg-generating #prvSections .dp-add-subsection-wrap {
+body.cg-generating :is(#prvSections, #tplModeStructure) .dp-add-subsection-wrap {
   display: none !important;
 }
 

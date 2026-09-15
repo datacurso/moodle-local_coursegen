@@ -35,8 +35,9 @@ import {bindToggleWrap, showFilePicker} from './context/filepicker';
 import {
     getTemplateStructure,
     startTemplateGeneration,
-    getTemplateGenerationStatus,
+    finishTemplateGeneration,
 } from './template/repository';
+import {runGenerationStream} from './template/generation_stream';
 import {
     createTemplateState,
     applyStructureResponse,
@@ -66,34 +67,14 @@ const getLabels = () => {
     return labelsPromise;
 };
 
-/** How often the generation is polled, and for how long before giving up. */
-const POLL_INTERVAL_MS = 5000;
-const POLL_TIMEOUT_MS = 20 * 60 * 1000;
-
-/**
- * Poll one generation until its course exists, then open it.
- *
- * @param {number} sessionId
- * @param {HTMLElement} genBtn
- * @returns {Promise<void>}
- */
-const pollUntilCreated = async(sessionId, genBtn) => {
-    const deadline = Date.now() + POLL_TIMEOUT_MS;
-    while (Date.now() < deadline) {
-        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
-        const status = await getTemplateGenerationStatus(sessionId);
-        if (status.status === 'completed') {
-            window.location.href = status.courseurl;
-            return;
-        }
-    }
-    genBtn.disabled = false;
-    throw new Error('The generation is taking longer than expected. Check back in a few minutes.');
-};
-
 /**
  * Generate the course from the picked template, with the input bar's own
- * values (prompt, syllabus, language, images), then wait for the course.
+ * values (prompt and syllabus), and watch it happen.
+ *
+ * Nothing runs until the stream is opened: start_template_generation only
+ * exports the template, attaches the syllabus and hands back the stream whose
+ * consumption drives the run. The professor therefore sees each activity being
+ * generated as it happens, instead of a spinner over a job nobody can see.
  *
  * @param {Object} tplState
  * @param {HTMLSelectElement|null} tplSelect
@@ -111,7 +92,12 @@ const runGeneration = async(tplState, tplSelect, genBtn) => {
             tplState.prompt || '',
             parseInt(tplState.syllabusdraftitemid || 0, 10) || 0
         );
-        await pollUntilCreated(started.sessionid, genBtn);
+        const created = await runGenerationStream(
+            started.streamurl,
+            () => finishTemplateGeneration(started.sessionid),
+            tplState.prompt || ''
+        );
+        window.location.href = created.courseurl;
     } catch (e) {
         genBtn.disabled = false;
         Notification.exception(e);

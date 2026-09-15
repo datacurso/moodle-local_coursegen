@@ -13,3 +13,9 @@
     background-color: #ede7f6;
     border-color: #ede7f6 !important;
 }
+
+/* The live generation view adds no styles of its own. The header reuses free
+   mode's own .prv-header* classes and the activity rows are driven by the
+   shared body.cg-generating block in aicoursecreation.css, which now names
+   #tplModeStructure alongside #prvSections. A second set of rules here is
+   exactly how the two modes drifted apart in the first place. */

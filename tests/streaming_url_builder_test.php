@@ -47,6 +47,15 @@ final class streaming_url_builder_test extends \basic_testcase {
     }
 
     /**
+     * Course-from-template stream URL is built from the base URL and thread id.
+     */
+    public function test_course_template_stream_url(): void {
+        $url = streaming_url_builder::course_template_stream('https://ai.example.com/api/v1/', 'thread-7');
+
+        $this->assertSame('https://ai.example.com/api/v1/course-template/stream/thread-7', $url);
+    }
+
+    /**
      * A base URL without a trailing slash produces the same result.
      */
     public function test_base_url_without_trailing_slash(): void {
