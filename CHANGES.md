@@ -1,3 +1,27 @@
+## 2.0.6
+
+**Released on:** 2026-09-15
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Added
+
+- **Activity molds inside a template**  
+  An activity in a template can now be marked as a mold: it is never copied into the generated course, but its structure is what the AI fills in. Text written between the reserved markers is replaced with real content taken from the reference document, and a marked repeating block is expanded as many times as that document calls for. The mold's own configuration, its page order and each page's navigation buttons are preserved on every activity generated from it.
+
+- **Course generation from a template for the professor**  
+  The professor picks a template, attaches a reference document such as a syllabus, writes a single general instruction and chooses Generate. The plugin then creates the course: activities the template keeps are copied from the base course with their configuration and files intact, activities based on a mold are generated once per instance the template declares, and excluded items are left out. Progress is followed until the finished course is ready to open.
+
+## Changed
+
+- **Clearer names for two template settings**  
+  The section behaviour previously stored as "custom" is now "aimodify", and an instance's anchor is now stored as "aftercmid". Existing templates are migrated automatically.
+
+## Fixed
+
+- **Separator between the last activity and the add-activity row**  
+  In the template editor the add-activity row sat flush against the activity above it, with nothing marking where one ended and the other began.
+
 ## 2.0.5
 
 **Released on:** 2026-08-26
