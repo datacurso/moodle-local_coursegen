@@ -78,8 +78,20 @@ export const saveTemplate = async(state, root) => {
         Notification.addNotification({message: msg, type: 'warning'});
         return;
     }
+    const nameInput = root.querySelector('#id_templatename');
+    const nameVal = nameInput?.value || state.templateName || '';
+    if (nameVal.trim() === '') {
+        // template_name_form.php's own "required" rule never actually runs
+        // (it is client-only, and this save never submits that mform) —
+        // this is the only thing that actually stops a blank name from
+        // reaching saveTemplate() at all (external/save_template.php
+        // rejects one too, but only after this round trip).
+        const msg = await getString('template_name_required', 'local_coursegen');
+        Notification.addNotification({message: msg, type: 'warning'});
+        nameInput?.focus();
+        return;
+    }
     try {
-        const nameVal = root.querySelector('#id_templatename')?.value || state.templateName;
         const descVal = root.querySelector('#id_templatedesc')?.value || state.templateDesc;
         state.templateName = nameVal;
         state.templateDesc = descVal;
