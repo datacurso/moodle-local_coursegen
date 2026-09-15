@@ -94,7 +94,8 @@ const runGeneration = async(tplState, tplSelect, genBtn) => {
         );
         const created = await runGenerationStream(
             started.streamurl,
-            () => finishTemplateGeneration(started.sessionid)
+            () => finishTemplateGeneration(started.sessionid),
+            tplState.prompt || ''
         );
         window.location.href = created.courseurl;
     } catch (e) {

@@ -768,6 +768,7 @@ $string['courseai_template_subtitle'] = 'Selecciona una plantilla, personaliza l
 $string['courseai_template_locked_badge'] = 'De la plantilla';
 $string['courseai_template_locked_note'] = 'Definido por la plantilla — se muestra como referencia y no se puede editar.';
 $string['courseai_template_instance_badge'] = 'La IA la generará';
+$string['courseai_template_generating_title'] = 'Creando el curso a partir de la plantilla';
 $string['courseai_template_stage_activities'] = 'Generando las actividades del curso…';
 $string['courseai_template_stage_activity_images'] = 'Preparando las imágenes de las actividades…';
 $string['courseai_template_stage_building'] = 'Creando el curso…';

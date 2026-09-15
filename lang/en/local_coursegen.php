@@ -809,6 +809,7 @@ $string['courseai_template_empty_state'] = 'Please choose a template above to st
 $string['courseai_template_locked_badge'] = 'From template';
 $string['courseai_template_locked_note'] = 'Defined by the template — shown as reference and cannot be edited.';
 $string['courseai_template_instance_badge'] = 'AI will generate it';
+$string['courseai_template_generating_title'] = 'Creating the course from the template';
 $string['courseai_template_stage_activities'] = 'Generating the course activities…';
 $string['courseai_template_stage_activity_images'] = 'Preparing the activity images…';
 $string['courseai_template_stage_building'] = 'Building the course…';
