@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Polls a template generation and creates the course once it is ready.
+ * Builds the course from a finished template generation.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -40,9 +40,14 @@ defined('MOODLE_INTERNAL') || die();
 require_once($CFG->libdir . '/externallib.php');
 
 /**
- * One poll step: still running, or finished and the course created.
+ * Turns one finished generation into a real course.
+ *
+ * Called once, by the client that watched the generation's own SSE stream
+ * report it complete: the result payload is fetched here rather than pushed
+ * back up from the browser, which only ever needs to know that the run
+ * finished, not to carry a whole course through itself.
  */
-class get_template_generation_status extends external_api {
+class finish_template_generation extends external_api {
     /**
      * Parameters.
      *
@@ -55,7 +60,7 @@ class get_template_generation_status extends external_api {
     }
 
     /**
-     * Poll, and create the course when the result is ready.
+     * Build the course from the finished result.
      *
      * @param int $sessionid
      * @return array
@@ -74,29 +79,13 @@ class get_template_generation_status extends external_api {
             throw new \moodle_exception('nopermissions', 'error', '', 'view this generation');
         }
 
-        // Already finished on a previous poll.
+        // A reconnecting client can land here twice; the course is built once.
         if ((int) $session->get('status') === course_session::STATUS_CREATED) {
             return self::created_response((int) $session->get('courseid'), $CFG->wwwroot);
         }
 
         $api = new template_ai_api_service();
-        $threadid = $session->get('session_id');
-
-        $state = $api->get_status($threadid);
-        if ($state['status'] === 'failed') {
-            throw new \moodle_exception(
-                'error_generating_resource',
-                'local_coursegen',
-                '',
-                null,
-                $state['error_message']
-            );
-        }
-        if ($state['status'] !== 'completed') {
-            return ['status' => 'running', 'courseid' => 0, 'courseurl' => ''];
-        }
-
-        $result = $api->get_result($threadid);
+        $result = $api->get_result($session->get('session_id'));
         $templateid = self::template_id_of($session);
 
         // Only the AI-generated activities are built from the payload. The
@@ -169,9 +158,9 @@ class get_template_generation_status extends external_api {
      */
     public static function execute_returns() {
         return new external_single_structure([
-            'status' => new external_value(PARAM_ALPHA, 'running or completed'),
-            'courseid' => new external_value(PARAM_INT, 'Created course id, 0 while running'),
-            'courseurl' => new external_value(PARAM_RAW, 'Created course URL, empty while running'),
+            'status' => new external_value(PARAM_ALPHA, 'Always "completed" once the course exists'),
+            'courseid' => new external_value(PARAM_INT, 'Created course id'),
+            'courseurl' => new external_value(PARAM_RAW, 'Created course URL'),
         ]);
     }
 }

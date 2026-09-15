@@ -96,6 +96,8 @@ export const applyStructureResponse = (state, data) => {
             // (-recordid on the server), locked and non-removable.
             isinstance: !!activity.isinstance,
             aigenerated: !!activity.aigenerated,
+            // The id this row answers to in the generation's progress events.
+            generationcmid: activity.generationcmid || 0,
         })),
     }));
     // Server-sent instance rows use negative ids, the same sign space as the

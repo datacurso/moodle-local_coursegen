@@ -13,3 +13,123 @@
     background-color: #ede7f6;
     border-color: #ede7f6 !important;
 }
+
+/* Live generation view: the progress strip above the structure, plus the
+   per-activity state each row takes while the stream reports on it. */
+
+.cg-tpl-gen-progress {
+    margin-bottom: 1rem;
+    padding: .75rem 1rem;
+    border: 1px solid #dee2e6;
+    border-radius: .5rem;
+    background: #f8f9fa;
+}
+
+.cg-tpl-gen-head {
+    display: flex;
+    align-items: center;
+    gap: .5rem;
+    margin-bottom: .5rem;
+    font-size: .875rem;
+}
+
+.cg-tpl-gen-stage {
+    font-weight: 600;
+    color: #1d2125;
+}
+
+.cg-tpl-gen-count {
+    margin-left: auto;
+    color: #6c757d;
+    font-variant-numeric: tabular-nums;
+}
+
+.cg-tpl-gen-spinner {
+    width: 14px;
+    height: 14px;
+    flex: none;
+    border: 2px solid #cfd4da;
+    border-top-color: #0f6cbf;
+    border-radius: 50%;
+    animation: cgTplGenSpin .8s linear infinite;
+}
+
+@keyframes cgTplGenSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+/* Honour a reduced-motion preference: the spinner is decoration, the stage
+   label and the bar already carry the information. */
+@media (prefers-reduced-motion: reduce) {
+    .cg-tpl-gen-spinner {
+        animation: none;
+    }
+}
+
+.cg-tpl-gen-track {
+    height: 6px;
+    border-radius: 3px;
+    background: #e9ecef;
+    overflow: hidden;
+}
+
+.cg-tpl-gen-fill {
+    height: 100%;
+    width: 0;
+    background: #0f6cbf;
+    transition: width .3s ease;
+}
+
+/* Row states. The marker sits on the row's left edge so a long list reads as a
+   column of states, without the activity names shifting as each one lands. */
+.activity-wrapper[data-generation-cmid] > .activity-item {
+    position: relative;
+}
+
+.cg-tpl-gen-running > .activity-item::before,
+.cg-tpl-gen-finished > .activity-item::before,
+.cg-tpl-gen-error > .activity-item::before {
+    content: "";
+    position: absolute;
+    left: -14px;
+    top: 50%;
+    width: 8px;
+    height: 8px;
+    margin-top: -4px;
+    border-radius: 50%;
+}
+
+.cg-tpl-gen-running > .activity-item::before {
+    background: #0f6cbf;
+    animation: cgTplGenPulse 1.2s ease-in-out infinite;
+}
+
+.cg-tpl-gen-finished > .activity-item::before {
+    background: #357a32;
+}
+
+.cg-tpl-gen-error > .activity-item::before {
+    background: #b5351a;
+}
+
+@keyframes cgTplGenPulse {
+    50% {
+        opacity: .25;
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cg-tpl-gen-running > .activity-item::before {
+        animation: none;
+    }
+}
+
+.cg-tpl-gen-running > .activity-item {
+    background: #f1f7fc;
+}
+
+.cg-tpl-gen-finished > .activity-item .instancename {
+    color: #357a32;
+}
