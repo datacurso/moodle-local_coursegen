@@ -132,6 +132,20 @@
     gap: 0.2rem;
 }
 
+/* The icon, name and badge are aligned relative to each other purely as
+   inline content by default — fine for a single line, but against the
+   two-line hint+input stack while editing that left the icon sitting near
+   the top instead of centered with the row the same way the checkbox in
+   the column before it is (that column centers correctly because its own
+   content, the checkbox, is only ever one line tall). Flex centering
+   handles mixed-height children directly instead of leaning on inline
+   vertical-align, which only ever aligns relative to a line's own metrics,
+   not to a taller sibling next to it. */
+.tpl-instance-name-cell {
+    display: flex;
+    align-items: center;
+}
+
 .tpl-instance-name-editable.inplaceeditingon .editinstructions {
     display: block;
     position: static;
