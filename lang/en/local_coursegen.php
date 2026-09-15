@@ -804,6 +804,7 @@ $string['courseai_template_subtitle'] = 'Select a template, customize the struct
 $string['courseai_template_picker'] = 'Course template';
 $string['courseai_template_picker_help'] = 'Choose one of the course templates created by an administrator. Its structure — including any locked sections or activities and the allowed activity types — will be used to build the new course.';
 $string['courseai_template_picker_placeholder'] = 'Search course templates...';
+$string['courseai_template_prompt_placeholder'] = 'Describe how to adapt this template to your course…';
 $string['courseai_template_empty_state'] = 'Please choose a template above to start building your course.';
 $string['courseai_template_locked_badge'] = 'From template';
 $string['courseai_template_locked_note'] = 'Defined by the template — shown as reference and cannot be edited.';

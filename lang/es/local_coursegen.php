@@ -786,6 +786,7 @@ $string['invalidtemplate'] = 'Plantilla inválida.';
 $string['courseai_template_picker'] = 'Plantilla de curso';
 $string['courseai_template_picker_help'] = 'Seleccione una de las plantillas de curso creadas por un administrador. Su estructura, incluyendo secciones o actividades bloqueadas y los tipos de actividad permitidos, se utilizará para crear el nuevo curso.';
 $string['courseai_template_picker_placeholder'] = 'Buscar plantillas de curso...';
+$string['courseai_template_prompt_placeholder'] = 'Describe cómo adaptar esta plantilla a tu curso…';
 $string['courseai_template_empty_state'] = 'Seleccione una plantilla arriba para comenzar a crear el curso.';
 
 // Review modal strings.

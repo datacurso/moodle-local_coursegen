@@ -32,9 +32,19 @@
 /**
  * Build a fresh, empty state object.
  *
+ * The input-bar fields (generateimages, lang, syllabus draft file) belong to
+ * the professor's session, not to the picked template: pass the current values
+ * as `inputbar` so clearing/re-picking a template preserves them.
+ *
+ * @param {Object} [inputbar] - Optional input-bar values to carry over.
+ * @param {string} [inputbar.prompt] - Adaptation prompt typed by the professor.
+ * @param {number} [inputbar.generateimages] - 1 to generate images, 0 otherwise.
+ * @param {string} [inputbar.lang] - Course language code.
+ * @param {number} [inputbar.syllabusdraftitemid] - Draft area of the attached syllabus.
+ * @param {string} [inputbar.syllabusfilename] - Attached syllabus filename.
  * @returns {Object}
  */
-export const createTemplateState = () => ({
+export const createTemplateState = (inputbar = {}) => ({
     loaded: false,
     nolimit: false,
     remainingSections: 0,
@@ -45,6 +55,12 @@ export const createTemplateState = () => ({
     // negative so they never collide with real Moodle section/cm ids.
     nextSectionId: -1,
     nextActivityId: -1,
+    // Input-bar values, ready for the future generation payload.
+    prompt: inputbar.prompt || '',
+    generateimages: inputbar.generateimages || 0,
+    lang: inputbar.lang || '',
+    syllabusdraftitemid: inputbar.syllabusdraftitemid || 0,
+    syllabusfilename: inputbar.syllabusfilename || '',
 });
 
 /**

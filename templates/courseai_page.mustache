@@ -53,7 +53,7 @@
     </svg>
   </a>
   <div class="container"{{#showsessionsview}} style="display:none"{{/showsessionsview}}>
-    <div class="courseai-workspace{{#isresuming}} is-planning{{/isresuming}}" id="courseaiWorkspace">
+    <div class="courseai-workspace{{#isresuming}} is-planning{{/isresuming}}{{#templatemodeactive}} is-template{{/templatemodeactive}}" id="courseaiWorkspace">
 
     <!-- Context step form (in planning mode the editor is hidden by CSS and the
          left chat column shows instead — so on reload the real chrome renders and
@@ -623,47 +623,91 @@
     <!-- Server-rendered only in template mode: free mode never receives this
          markup at all. -->
     {{#templatemodeactive}}
-    <div class="context-wrap" id="templateModeView">
-      <div class="courseai-context-editor">
+    {{! LEFT PANEL — mirrors the free-mode planning chat column (grid col 1,
+        resizable via the shared #cgSplitter). Picker on top, reduced input
+        bar pinned at the bottom. }}
+    <div class="context-wrap tpl-left-panel" id="templateModeView" data-region="tpl-left-panel">
+      <div class="tpl-left-scroll">
         <div class="context-head">
           <h2>{{#str}}courseai_template_title, local_coursegen{{/str}}</h2>
           <p>{{#str}}courseai_template_subtitle, local_coursegen{{/str}}</p>
         </div>
 
+        {{! Template selector — native Moodle form (single autocomplete field with
+            help text), the first field of the panel }}
         <div class="card" id="templateModeCard">
-          <div class="p-3">
-            {{! Template selector — native Moodle form (single autocomplete field with
-                help text), the only field visible before a template is picked }}
-            <div class="text-left">
-              {{{templatepickerformhtml}}}
-            </div>
+          <div class="p-3 text-left">
+            {{{templatepickerformhtml}}}
+          </div>
+        </div>
+      </div>
 
-            {{! Empty state: shown until a template is picked, marking where its
-                structure will render — hidden once #templateModeCard.tpl-active
-                is set (template_mode.js). Real core/notification "info" markup
-                (same alert-info the report builder uses for "Nothing to display"). }}
-            <div id="tplModeEmpty" class="mt-3">
-              {{{templateemptystatehtml}}}
-            </div>
+      {{! Reduced input bar — chat-composer style, pinned at the panel bottom.
+          Only syllabus attach, generate-images toggle, language select and the
+          Generate action (still a stub). Values live in tplState
+          (template_mode.js) for the future generation payload. }}
+      <div class="card tpl-input-bar" id="tplInputBar" data-region="tpl-input-bar">
+        {{! Prompt — how to adapt the template to this course; same composer
+            textarea as free mode's compact chat card. Value lives in
+            tplState.prompt (template_mode.js). }}
+        <textarea
+          id="tplPromptInput"
+          class="compact-prompt-textarea"
+          placeholder="{{#str}}courseai_template_prompt_placeholder, local_coursegen{{/str}}"
+          rows="3"
+          aria-label="{{#str}}courseai_prompt_arialabel, local_coursegen{{/str}}"
+        ></textarea>
 
-            {{! Everything below only appears once a template has been selected — see tplModeDetails in template_mode.js.
-                Only the structure itself: no course name/shortname/category/language/instructions fields. }}
-            <div id="tplModeDetails" style="display:none">
-              {{! Section limits banner — text populated by JS when template is selected }}
-              <div id="tplModeLimits" class="mb-3" style="display:none">
-                <span class="badge badge-light border" id="tplModeLimitsBadge"></span>
+        <div class="chips-row" id="tplChipsRow" style="display:none">
+          {{! Syllabus chip (shown after file attach) — same pattern as free mode }}
+          <span class="chip chip-syllabus hidden" id="tplChipSyllabus">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            <span class="chip-name" id="tplChipSyllabusName"></span>
+            <button class="chip-btn" id="tplChipSyllabusRemove" type="button" aria-label="{{#str}}courseai_chip_remove_syllabus, local_coursegen{{/str}}">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </span>
+        </div>
+
+        <div class="card-toolbar">
+          <div class="tbar-left">
+            {{! Syllabus / study-programme attach — same no-course filepicker
+                mechanics as free mode's btnSyllabus (context/filepicker.js) }}
+            <button class="plus-menu-btn" id="tplBtnSyllabus" type="button"
+                    title="{{#str}}courseai_btn_syllabus_title, local_coursegen{{/str}}"
+                    aria-label="{{#str}}courseai_btn_syllabus, local_coursegen{{/str}}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+              </svg>
+            </button>
+
+            {{! Generate-images toggle — same toggle-track/thumb pattern as the
+                free-mode plus-menu images row }}
+            <div class="tbar-toggle-wrap" id="tplImgToggleWrap" role="switch" aria-checked="false" tabindex="0"
+                 title="{{#str}}courseai_images_title, local_coursegen{{/str}}">
+              <span class="tbar-toggle-label">{{#str}}courseai_images_label, local_coursegen{{/str}}</span>
+              <div class="toggle-track" id="tplImgToggleTrack">
+                <div class="toggle-thumb"></div>
               </div>
-
-              {{! Dynamic structure — populated by JS when template is selected }}
-              <div id="tplModeStructure"></div>
+              <input type="checkbox" id="tplWithImages" class="hidden" aria-label="{{#str}}courseai_images_arialabel, local_coursegen{{/str}}">
             </div>
+
+            {{! Language select — options populated by JS from the same
+                languages array as free mode (page context / courseai-data) }}
+            <select class="tbar-select" id="tplLangSelect"
+                    title="{{#str}}courseai_lang_title, local_coursegen{{/str}}"
+                    aria-label="{{#str}}courseai_lang_arialabel, local_coursegen{{/str}}"></select>
           </div>
 
-          {{! Toolbar — hidden until a template is picked, see #templateModeCard.tpl-active in aicoursecreation.css }}
-          <div class="prompt-bar" id="tplModeFooter"
-               style="border-top:1px solid var(--border);padding:.5rem 1rem;display:none;align-items:center">
-            <span class="text-muted small" id="tplModeStats"></span>
-            <button class="btn-generate ml-auto" id="tplModeGenerate" type="button" disabled>
+          <div class="tbar-right">
+            <button class="btn-generate" id="tplModeGenerate" type="button" disabled>
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"/>
@@ -681,6 +725,35 @@
         validator rejects them as static attributes on role="separator". }}
     <div class="cg-splitter" id="cgSplitter" role="separator" aria-orientation="vertical" tabindex="0"
          aria-label="{{#str}}courseai_resize_panels, local_coursegen{{/str}}"></div>
+
+    {{#templatemodeactive}}
+    {{! MAIN COLUMN — grid col 3 in template mode (mirrors free mode's
+        planning-wrap slot). Holds the empty state until a template is picked,
+        then the limits badge + structure (template_mode.js). }}
+    <div class="tpl-main-wrap" id="tplModeMain" data-region="tpl-main-column">
+      {{! Empty state: shown until a template is picked, marking where its
+          structure will render — hidden once .tpl-active is set on the
+          workspace (template_mode.js). Real core/notification "info" markup
+          (same alert-info the report builder uses for "Nothing to display"). }}
+      <div id="tplModeEmpty">
+        {{{templateemptystatehtml}}}
+      </div>
+
+      {{! Everything below only appears once a template has been selected — see
+          tplModeDetails in template_mode.js. Only the structure itself. }}
+      <div id="tplModeDetails" style="display:none">
+        {{! Badge row — "N sections · M activities" stats plus the section
+            limits banner, both populated by JS when a template is selected }}
+        <div id="tplModeLimits" class="mb-3 tpl-badge-row" style="display:none">
+          <span class="badge badge-light border" id="tplModeStats"></span>
+          <span class="badge badge-light border" id="tplModeLimitsBadge"></span>
+        </div>
+
+        {{! Dynamic structure — populated by JS when template is selected }}
+        <div id="tplModeStructure"></div>
+      </div>
+    </div><!-- #tplModeMain -->
+    {{/templatemodeactive}}
 
     <!-- Step 2: Planning view -->
     <div class="planning-wrap" id="planningView" style="display:{{#isresuming}}flex{{/isresuming}}{{^isresuming}}none{{/isresuming}}">

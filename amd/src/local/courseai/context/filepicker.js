@@ -83,10 +83,13 @@ export const bindToggleWrap = (toggleWrap, checkbox) => {
  * @param {Object} params.texts
  * @param {Function} params.refreshChipsRow
  * @param {Function} params.refreshCompactChipsRow
+ * @param {Function} [params.onPicked] - Optional (filename, draftitemid) callback.
+ *     When given it replaces the default free-mode chip/state updates, so other
+ *     surfaces (template mode's input bar) can reuse the same picker mechanics.
  * @returns {Promise<void>}
  */
 export const showFilePicker = async(
-    {state, CourseaiRepository, Notification, YUI, texts, refreshChipsRow, refreshCompactChipsRow}
+    {state, CourseaiRepository, Notification, YUI, texts, refreshChipsRow, refreshCompactChipsRow, onPicked = null}
 ) => {
     try {
         const pickerdata = await CourseaiRepository.initFilepicker();
@@ -118,6 +121,10 @@ export const showFilePicker = async(
             pickerOptions.formcallback = (fileinfo) => {
                 if (fileinfo && fileinfo.file) {
                     const filename = String(fileinfo.file);
+                    if (onPicked) {
+                        onPicked(filename, pickerOptions.itemid);
+                        return;
+                    }
                     state.syllabusFilename = filename;
                     state.draftitemid = pickerOptions.itemid;
 
