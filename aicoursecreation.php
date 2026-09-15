@@ -50,6 +50,7 @@ $cssrev = get_config('local_coursegen', 'version');
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/aicoursecreation.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/chatui.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/sidebar.css', ['v' => $cssrev]));
+$PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_mode_prompt.css', ['v' => $cssrev]));
 
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\course_session_service;
