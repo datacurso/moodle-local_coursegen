@@ -120,17 +120,26 @@
     display: none;
 }
 
-.tpl-instance-name-editable.inplaceeditingon .editinstructions,
-.tpl-instance-name-editable.inplaceeditingon input[data-region="instance-name-input"] {
-    display: inline-block;
+/* Stack the hint above the input in normal flow, a real gap between them
+   instead of a guessed negative margin (core's own -30px, tuned for a
+   header-sized title's line height, landed this row's shorter input's
+   hint mounted right on its border) — self-adjusting to any font size or
+   content, no pixel value tied to anything but the gap actually wanted. */
+.tpl-instance-name-editable.inplaceeditingon {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.2rem;
 }
 
-/* Core's own -30px (theme/boost/scss/moodle/core.scss) sits this hint
-   flush against a header-sized title's own top edge — against this row's
-   own (shorter) input it landed mounted right on the border instead of
-   floating a few px above it. */
 .tpl-instance-name-editable.inplaceeditingon .editinstructions {
-    margin-top: -45px;
+    display: block;
+    position: static;
+    margin: 0;
+}
+
+.tpl-instance-name-editable.inplaceeditingon input[data-region="instance-name-input"] {
+    display: inline-block;
 }
 
 /* Hide the "Instance" badge while the name is being edited — sitting right
