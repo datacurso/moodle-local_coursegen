@@ -125,6 +125,13 @@
     display: inline-block;
 }
 
+/* Hide the "Instance" badge while the name is being edited — sitting right
+   next to the open input, it crowded the one thing actually being worked
+   on. It comes back the moment editing ends. */
+.tpl-instance-name-editable.inplaceeditingon ~ .tpl-badge-instance {
+    display: none;
+}
+
 .tpl-instance-actions {
     display: inline-flex;
     align-items: center;
