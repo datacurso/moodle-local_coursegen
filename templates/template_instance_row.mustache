@@ -36,6 +36,17 @@
                            unmark into removing every instance sourced from
                            that cmid), so it must reach the DOM here even
                            though nothing displays it.
+    * modname string     - The source template's own module type (e.g.
+                           "lesson"), read back the same way as sourcecmid —
+                           collectInstancesForSection() needs it in the save
+                           payload so a reload can resolve this row's icon
+                           (see template_row_options::instance_icon_url())
+                           without ever dereferencing sourcecmid.
+    * iconurl string     - Already-resolved icon, the same one a real
+                           activity of that type shows — computed by
+                           template_row_options::instance_icon_url() for a
+                           saved row, or copied straight off the source
+                           row's own <img> for one just picked client-side.
     * typelabel string
     * prompt string      - The saved/typed extra instruction, if any.
 
@@ -45,27 +56,48 @@
         "name": "Lesson 1",
         "sourcename": "Template lesson",
         "sourcecmid": 42,
+        "modname": "lesson",
+        "iconurl": "https://example.com/lesson.svg",
         "typelabel": "Lesson",
         "prompt": ""
     }
 }}
 <tr class="tpl-row-instance" data-for="instancerow" data-instance-id="{{instanceid}}"
-    data-source-cmid="{{sourcecmid}}" data-source-name="{{sourcename}}">
-    <td class="align-middle tpl-select-col"></td>
-    <td class="align-middle">
-        <span class="icon activityicon tpl-instance-icon mr-2"></span>
-        <input type="text" class="tpl-instance-name-input" value="{{name}}"
-               data-region="instance-name" data-id="{{instanceid}}"
-               aria-label="{{#str}} template_instance_name, local_coursegen {{/str}}">
+    data-source-cmid="{{sourcecmid}}" data-source-name="{{sourcename}}" data-modname="{{modname}}">
+    <td class="align-middle tpl-select-col">
+        <input type="checkbox" data-region="instance-select" data-id="{{instanceid}}"
+               aria-label="{{name}}">
+    </td>
+    <td class="align-middle tpl-instance-name-cell">
+        <img src="{{iconurl}}" class="icon activityicon mr-2" alt="">
+        <span class="inplaceeditable tpl-instance-name-editable" data-region="instance-name-editable"
+              data-value="{{name}}">
+            <span class="tpl-instance-name-display" data-region="instance-name-display">{{name}}</span>
+            <a href="#" class="quickeditlink aalink" data-region="instance-name-edit-trigger"
+               title="{{#str}} template_instance_rename, local_coursegen {{/str}}">
+                <span class="quickediticon visibleifjs icon-size-3">
+                    {{#pix}} t/edit, core {{/pix}}
+                </span>
+            </a>
+            <span class="editinstructions" data-region="instance-name-instructions">
+                {{#str}} edittitleinstructions, core {{/str}}
+            </span>
+            <input type="text" class="ignoredirty form-control" data-region="instance-name-input"
+                   aria-label="{{#str}} template_instance_name, local_coursegen {{/str}}">
+        </span>
         <span class="tpl-badge tpl-badge-instance ml-2">{{#str}} template_instance_badge, local_coursegen, {{sourcename}} {{/str}}</span>
     </td>
     <td class="align-middle text-muted">{{typelabel}}</td>
     <td class="align-middle text-right">
         <div class="tpl-instance-actions">
             <button type="button" class="tpl-instance-icon-btn" data-region="instance-prompt-toggle" data-id="{{instanceid}}"
-                    title="{{#str}} template_instance_prompt_edit, local_coursegen {{/str}}">&#9998;</button>
+                    title="{{#str}} template_instance_prompt_edit, local_coursegen {{/str}}">
+                {{#pix}} t/edit, core {{/pix}}
+            </button>
             <button type="button" class="tpl-instance-icon-btn tpl-instance-icon-danger" data-region="instance-remove" data-id="{{instanceid}}"
-                    title="{{#str}} template_instance_remove, local_coursegen {{/str}}">&times;</button>
+                    title="{{#str}} template_instance_remove, local_coursegen {{/str}}">
+                {{#pix}} t/delete, core {{/pix}}
+            </button>
         </div>
     </td>
 </tr>

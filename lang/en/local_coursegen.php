@@ -893,6 +893,7 @@ $string['template_instance_menu_hint'] = 'Templates available for this section';
 $string['template_instance_menu_empty'] = 'No activity has been marked "Use as template" yet.';
 $string['template_instance_badge'] = 'Instance · {$a}';
 $string['template_instance_name'] = 'Instance name';
+$string['template_instance_rename'] = 'Rename';
 $string['template_instance_prompt_edit'] = 'Edit instructions';
 $string['template_instance_prompt_placeholder'] = 'Describe what this instance should be about...';
 $string['template_instance_remove'] = 'Remove';

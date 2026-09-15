@@ -47,15 +47,16 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {typeSupportsModify} from './type_action_sync';
-import {bindSelectionAndBulk} from './selection_bulk';
+import {typeSupportsModify} from 'local_coursegen/local/template/type_action_sync';
+import {bindSelectionAndBulk} from 'local_coursegen/local/template/selection_bulk';
 import {
     applyTemplateVisual,
     openScopeModalForNewSelection,
     confirmUnmarkTemplate,
     bindTemplateTagClicks,
-} from './template_row_scope';
-import {bindInstanceInserts} from './template_instance_events';
+} from 'local_coursegen/local/template/template_row_scope';
+import {bindInstanceInserts} from 'local_coursegen/local/template/template_instance_events';
+import {bindNameEditing} from 'local_coursegen/local/template/template_instance_name_edit';
 
 /** @type {boolean} Whether any config has been modified. */
 let dirty = false;
@@ -159,6 +160,7 @@ export const bindServerRenderedControls = (container, state) => {
 
     bindTemplateTagClicks(container, state, markDirty);
     bindInstanceInserts(container, state, markDirty);
+    bindNameEditing(container, markDirty);
 
     // Row selection checkboxes (three synced tiers) and the single global
     // bulk action bar — see selection_bulk.js.

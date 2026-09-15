@@ -25,21 +25,22 @@
     from.
 
     Data attributes required for JS:
-    * data-source-cmid + data-source-name + data-type-label on each enabled
-      item, read when the admin picks it.
+    * data-source-cmid + data-source-name + data-type-label + data-modname +
+      data-icon-url on each enabled item, read when the admin picks it.
 
     Context variables required for this template:
     * hasoptions bool  - True when at least one template exists at all.
     * options array    - Each with: sourcecmid int, name string,
-                         typelabel string, disabled bool, scopehint string,
-                         tooltip string (only meaningful when disabled).
+                         typelabel string, modname string, iconurl string,
+                         disabled bool, scopehint string, tooltip string
+                         (only meaningful when disabled).
 
     Example context (json):
     {
         "hasoptions": true,
         "options": [
-            {"sourcecmid": 42, "name": "Lesson template", "typelabel": "Lesson", "disabled": false, "scopehint": "this section", "tooltip": ""},
-            {"sourcecmid": 43, "name": "Quiz template", "typelabel": "Quiz", "disabled": true, "scopehint": "another section", "tooltip": "Its scope is \"this section only\" and it lives in a different section"}
+            {"sourcecmid": 42, "name": "Lesson template", "typelabel": "Lesson", "modname": "lesson", "iconurl": "https://example.com/lesson.svg", "disabled": false, "scopehint": "this section", "tooltip": ""},
+            {"sourcecmid": 43, "name": "Quiz template", "typelabel": "Quiz", "modname": "quiz", "iconurl": "https://example.com/quiz.svg", "disabled": true, "scopehint": "another section", "tooltip": "Its scope is \"this section only\" and it lives in a different section"}
         ]
     }
 }}
@@ -47,7 +48,8 @@
 <p class="tpl-instance-menu-hint">{{#str}} template_instance_menu_hint, local_coursegen {{/str}}</p>
 {{#options}}
 <button type="button" class="tpl-instance-menu-item dropdown-item" role="menuitem"{{#disabled}} disabled title="{{tooltip}}"{{/disabled}}
-        {{^disabled}}data-source-cmid="{{sourcecmid}}" data-source-name="{{name}}" data-type-label="{{typelabel}}"{{/disabled}}>
+        {{^disabled}}data-source-cmid="{{sourcecmid}}" data-source-name="{{name}}" data-type-label="{{typelabel}}"
+        data-modname="{{modname}}" data-icon-url="{{iconurl}}"{{/disabled}}>
     <span>{{name}}</span>
     <span class="tpl-instance-menu-scope-hint">{{scopehint}}</span>
 </button>

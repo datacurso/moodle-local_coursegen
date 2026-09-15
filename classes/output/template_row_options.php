@@ -193,6 +193,31 @@ class template_row_options {
             'prompt' => (string) $instance->get('prompt'),
             'sourcecmid' => (int) $instance->get('sourcecmid'),
             'sourcename' => $instance->get('sourcename'),
+            'modname' => (string) $instance->get('modname'),
+            'iconurl' => self::instance_icon_url($instance->get('modname')),
         ];
+    }
+
+    /**
+     * Resolve a virtual instance row's icon the exact same way a real
+     * activity's is (cm_info::get_icon_url()'s own generic fallback) —
+     * from the source template's own snapshotted module type, never a
+     * stored URL that could go stale across a theme change.
+     *
+     * @param string|null $modname Null for a row saved before this field
+     *     existed.
+     * @return string Empty when $modname is unknown, so the row falls back
+     *     to a generic icon instead of a broken image.
+     */
+    private static function instance_icon_url(?string $modname): string {
+        global $OUTPUT;
+        if ($modname === null || $modname === '') {
+            return '';
+        }
+        $icon = $OUTPUT->image_url('monologo', $modname);
+        if (\core_component::has_monologo_icon('mod', $modname)) {
+            $icon->param('filtericon', 1);
+        }
+        return $icon->out(false);
     }
 }

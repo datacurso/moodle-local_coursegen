@@ -30,8 +30,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {openInstanceMenu, closeInstanceMenu, beginMenuOpen} from './template_instance_menu';
-import {insertInstanceRow, removeInstanceRow} from './template_instance_rows';
+import {openInstanceMenu, closeInstanceMenu, beginMenuOpen} from 'local_coursegen/local/template/template_instance_menu';
+import {insertInstanceRow, removeInstanceRow} from 'local_coursegen/local/template/template_instance_rows';
 import {getStrings} from 'core/str';
 import Notification from 'core/notification';
 import {prefetchStrings} from 'core/prefetch';
@@ -71,6 +71,8 @@ const buildOneOption = (row, targetsectionid, state, hints) => {
         sourcecmid: cmid,
         name: row.querySelector('.tpl-template-tag')?.dataset.name || '',
         typelabel: row.dataset.typelabel || '',
+        modname: row.dataset.modname || '',
+        iconurl: row.querySelector('img.activityicon')?.src || '',
         disabled: !eligible,
         scopehint,
         tooltip: itemtooltip,
@@ -157,6 +159,8 @@ const pickTemplate = (item, markDirty) => {
         sourcecmid: parseInt(item.dataset.sourceCmid, 10),
         sourcename: item.dataset.sourceName,
         typelabel: item.dataset.typeLabel,
+        modname: item.dataset.modname,
+        iconurl: item.dataset.iconUrl,
     };
     closeInstanceMenu(triggerEl);
     insertInstanceRow(tbody, beforeEl, picked).then(markDirty);
@@ -214,7 +218,12 @@ export const bindInstanceInserts = (container, state, markDirty) => {
             return;
         }
 
-        const pickedItem = e.target.closest('[data-source-cmid]');
+        // Scoped to the menu item's own class, not just [data-source-cmid]:
+        // every instance row's own <tr> also carries that same attribute
+        // (read back by confirmUnmarkTemplate/collectInstancesForSection),
+        // so the bare attribute selector matched a click ANYWHERE inside an
+        // already-inserted row too, mistaking it for a fresh pick.
+        const pickedItem = e.target.closest('.tpl-instance-menu-item[data-source-cmid]');
         if (pickedItem) {
             pickTemplate(pickedItem, markDirty);
             return;
@@ -234,7 +243,7 @@ export const bindInstanceInserts = (container, state, markDirty) => {
     }, true);
 
     container.addEventListener('input', (e) => {
-        if (e.target.matches('[data-region="instance-name"], [data-region="instance-prompt"]')) {
+        if (e.target.matches('[data-region="instance-prompt"]')) {
             markDirty();
         }
     });

@@ -21,8 +21,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {goToStep, getState, setState} from './init';
-import * as Repository from './repository';
+import {goToStep, getState, setState} from 'local_coursegen/local/template/init';
+import * as Repository from 'local_coursegen/local/template/repository';
 import Notification from 'core/notification';
 import {get_string as getString} from 'core/str';
 

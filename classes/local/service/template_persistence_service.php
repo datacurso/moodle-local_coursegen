@@ -113,6 +113,7 @@ class template_persistence_service {
         $instance->set('sourcename', $instdata['sourcename']);
         $instance->set('name', $instdata['name']);
         $instance->set('typelabel', $instdata['typelabel']);
+        $instance->set('modname', $instdata['modname'] ?? '' ?: null);
         $instance->set('prompt', $instdata['prompt'] ?? '');
         $instance->set('anchorcmid', $instdata['anchorcmid'] ?? 0);
         $instance->set('sortorder', $instdata['sortorder'] ?? 0);

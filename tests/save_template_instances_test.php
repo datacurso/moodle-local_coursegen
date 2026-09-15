@@ -45,6 +45,8 @@ final class save_template_instances_test extends \advanced_testcase {
      * showing the snapshotted source name.
      */
     public function test_persists_and_hydrates_instance_round_trip(): void {
+        global $OUTPUT;
+
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -58,7 +60,7 @@ final class save_template_instances_test extends \advanced_testcase {
             [
                 ['cmid' => (int) $forum->cmid, 'action' => 'keep', 'useasreference' => true, 'prompt' => ''],
             ],
-            [$this->instance_payload((int) $forum->cmid, 'Forum template', 'Discussion 1', (int) $forum->cmid, 0)]
+            [$this->instance_payload((int) $forum->cmid, 'Forum template', 'Discussion 1', (int) $forum->cmid, 0, 'forum')]
         );
 
         $record = template_instance::get_record(['templateid' => (int) $saved['id']]);
@@ -85,6 +87,29 @@ final class save_template_instances_test extends \advanced_testcase {
         // in template_instance_rows.js) reads data-source-name back from it.
         $this->assertStringContainsString('data-source-cmid="' . $forum->cmid . '"', $instancearea);
         $this->assertStringContainsString('data-source-name="Forum template"', $instancearea);
+
+        // The row's icon renders the same way a real forum activity's does
+        // (template_row_options::instance_icon_url()), from the snapshotted
+        // modname — never a stored URL.
+        $this->assertStringContainsString('data-modname="forum"', $instancearea);
+        $this->assertStringContainsString('<img src="', $instancearea);
+        $this->assertStringContainsString('/forum/', $instancearea);
+
+        // The name renders as the same inline-editable pattern
+        // core/inplace_editable uses elsewhere in Moodle (a display span
+        // plus a "quickeditlink" pencil trigger), not a permanently visible
+        // input — see template_instance_name_edit.js.
+        $this->assertStringContainsString('inplaceeditable', $instancearea);
+        $this->assertStringContainsString('quickeditlink', $instancearea);
+        $this->assertStringContainsString('>Discussion 1<', $instancearea);
+
+        // The rename/prompt-edit/remove actions render Moodle's own
+        // standard icons (whatever the current theme resolves t/edit and
+        // t/delete to), not hand-picked icon classes or glyph characters.
+        $editicon = $OUTPUT->pix_icon('t/edit', '', 'core');
+        $deleteicon = $OUTPUT->pix_icon('t/delete', '', 'core');
+        $this->assertGreaterThanOrEqual(2, substr_count($instancearea, $editicon));
+        $this->assertStringContainsString($deleteicon, $instancearea);
 
         // The instance renders AFTER the forum row it is anchored to.
         $forumpos = strpos($html, 'data-id="' . $forum->cmid . '"');

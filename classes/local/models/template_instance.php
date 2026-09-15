@@ -79,6 +79,17 @@ class template_instance extends persistent {
                 'type' => PARAM_TEXT,
                 'null' => NULL_NOT_ALLOWED,
             ],
+            // Snapshot of the source template's own module type (e.g.
+            // "lesson"), so this row's icon can be resolved the exact same
+            // way a real activity's is (image_url('icon', $modname)) —
+            // never dereferencing sourcecmid to get it, same reasoning as
+            // sourcename/typelabel above. Null on rows saved before this
+            // field existed, which fall back to a generic icon.
+            'modname' => [
+                'type' => PARAM_PLUGIN,
+                'null' => NULL_ALLOWED,
+                'default' => null,
+            ],
             'prompt' => [
                 'type' => PARAM_RAW,
                 'null' => NULL_ALLOWED,
