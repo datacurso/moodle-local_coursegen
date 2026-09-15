@@ -204,12 +204,16 @@ class template_row_options {
      * from the source template's own snapshotted module type, never a
      * stored URL that could go stale across a theme change.
      *
+     * Public because the professor-facing structure endpoint
+     * (external\get_template_structure) resolves its instance-row icons
+     * through this exact same rule.
+     *
      * @param string|null $modname Null for a row saved before this field
      *     existed.
      * @return string Empty when $modname is unknown, so the row falls back
      *     to a generic icon instead of a broken image.
      */
-    private static function instance_icon_url(?string $modname): string {
+    public static function instance_icon_url(?string $modname): string {
         global $OUTPUT;
         if ($modname === null || $modname === '') {
             return '';

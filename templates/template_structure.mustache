@@ -40,9 +40,11 @@
     Context variables required for this template:
     * sections array - id int, name string, locked bool, activitiescount int,
       showaddactivity bool, activities array
-        * activities[].id int, name string, modname string, purpose string,
-          iconhtml string (raw), locked bool, sectionid int, index int,
-          typelabel string (optional), showinsertzone bool
+        * activities[].id int, name string, modname string (may be empty),
+          purpose string, iconhtml string (raw, may be empty), locked bool,
+          isinstance bool, aigenerated bool (shows the "AI will generate it"
+          badge), sectionid int, index int, typelabel string (optional),
+          showinsertzone bool
     * showaddsection bool
     * addsectiondisabled bool
     * addsectionlabel string
@@ -57,7 +59,8 @@
                     {
                         "id": 12, "name": "Welcome page", "modname": "page", "purpose": "content",
                         "iconhtml": "<img class=\"icon activityicon\" src=\"#\" alt=\"\">",
-                        "locked": true, "sectionid": 5, "index": 0, "typelabel": "Page",
+                        "locked": true, "isinstance": false, "aigenerated": false,
+                        "sectionid": 5, "index": 0, "typelabel": "Page",
                         "showinsertzone": false
                     }
                 ]
@@ -125,7 +128,14 @@
                 </div>
                 <div class="activity-name-area activity-instance d-flex flex-column me-2">
                   <div class="activitytitle modtype_{{modname}} position-relative align-self-start">
-                    <div class="activityname"><span class="instancename">{{name}}</span></div>
+                    <div class="activityname"><span class="instancename">{{name}}</span>
+                      {{#aigenerated}}
+                      <span class="badge badge-light border cg-tpl-instance-badge"
+                            title="{{#str}}courseai_template_instance_badge_tip, local_coursegen{{/str}}">
+                        {{#str}}courseai_template_instance_badge, local_coursegen{{/str}}
+                      </span>
+                      {{/aigenerated}}
+                    </div>
                   </div>
                   {{#typelabel}}
                   <p class="cg-activity-desc mb-0">{{typelabel}}</p>

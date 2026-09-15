@@ -767,6 +767,8 @@ $string['courseai_template_title'] = 'Crear curso desde plantilla';
 $string['courseai_template_subtitle'] = 'Selecciona una plantilla, personaliza la estructura y genera el curso.';
 $string['courseai_template_locked_badge'] = 'De la plantilla';
 $string['courseai_template_locked_note'] = 'Definido por la plantilla — se muestra como referencia y no se puede editar.';
+$string['courseai_template_instance_badge'] = 'La IA la generará';
+$string['courseai_template_instance_badge_tip'] = 'Aquí se creará para su curso una actividad generada por IA, moldeada a partir de una de las actividades modelo de la plantilla.';
 $string['courseai_template_limits_used'] = '{$a->used} de {$a->max} secciones usadas';
 $string['courseai_template_limits_remaining'] = 'Quedan {$a} secciones';
 $string['courseai_template_limits_nolimit'] = 'Sin límite de secciones';
@@ -784,6 +786,7 @@ $string['invalidtemplate'] = 'Plantilla inválida.';
 $string['courseai_template_picker'] = 'Plantilla de curso';
 $string['courseai_template_picker_help'] = 'Seleccione una de las plantillas de curso creadas por un administrador. Su estructura, incluyendo secciones o actividades bloqueadas y los tipos de actividad permitidos, se utilizará para crear el nuevo curso.';
 $string['courseai_template_picker_placeholder'] = 'Buscar plantillas de curso...';
+$string['courseai_template_prompt_placeholder'] = 'Describe cómo adaptar esta plantilla a tu curso…';
 $string['courseai_template_empty_state'] = 'Seleccione una plantilla arriba para comenzar a crear el curso.';
 
 // Review modal strings.

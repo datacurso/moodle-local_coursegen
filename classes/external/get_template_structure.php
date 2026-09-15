@@ -35,6 +35,9 @@ use context_system;
 use local_coursegen\local\models\template;
 use local_coursegen\local\models\template_section;
 use local_coursegen\local\models\template_activity;
+use local_coursegen\local\models\template_instance;
+use local_coursegen\local\service\template_instance_layout;
+use local_coursegen\output\template_row_options;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -88,6 +91,10 @@ class get_template_structure extends external_api {
         foreach (template_activity::get_records(['templateid' => $template->get('id')]) as $a) {
             $activitysettings[$a->get('cmid')] = $a->get('action');
         }
+        $instancesbysection = [];
+        foreach (template_instance::get_records(['templateid' => $template->get('id')]) as $instance) {
+            $instancesbysection[$instance->get('sectionid')][] = $instance;
+        }
 
         $sections = [];
         foreach ($modinfo->get_section_info_all() as $section) {
@@ -96,33 +103,61 @@ class get_template_structure extends external_api {
                 continue;
             }
 
+            // Interleave over ALL real cmids — including rows filtered out
+            // below (hidden actions, not uservisible) — so an instance
+            // anchored to a filtered-out row keeps its anchor's slot: once
+            // the hidden anchor is dropped, the instance renders exactly
+            // where that anchor would have been (immediately after the
+            // nearest preceding visible row, or at the section start when
+            // there is none). Orphan anchors append at the section end,
+            // the same rule the admin review follows.
+            $rows = template_instance_layout::ordered_rows(
+                $modinfo->sections[$section->section] ?? [],
+                $instancesbysection[$section->id] ?? []
+            );
+
             $activities = [];
-            if (!empty($modinfo->sections[$section->section])) {
-                foreach ($modinfo->sections[$section->section] as $cmid) {
-                    $cm = $modinfo->cms[$cmid];
-                    if (!$cm->uservisible) {
-                        continue;
-                    }
-                    $action = $activitysettings[$cm->id] ?? 'modify';
-                    if ($action === 'exclude') {
-                        continue;
-                    }
-                    $activities[] = [
-                        'id'      => (int) $cm->id,
-                        'name'    => format_string($cm->name),
-                        'modname' => $cm->modname,
-                        'purpose' => self::get_purpose($cm->modname),
-                        'iconhtml' => $OUTPUT->image_icon('monologo', $cm->modname, 'mod_' . $cm->modname,
-                            ['class' => 'icon activityicon']),
-                        'locked'  => true,
-                    ];
+            foreach ($rows as $row) {
+                if ($row['type'] === 'instance') {
+                    $activities[] = self::instance_row($row['record']);
+                    continue;
                 }
+                $cm = $modinfo->cms[$row['cmid']];
+                if (!$cm->uservisible) {
+                    continue;
+                }
+                // Mirror the admin's action mapping: keep (with unset
+                // defaulting to keep, and a legacy saved "modify"
+                // normalising to keep) stays visible and locked; reference,
+                // template (mold) and exclude rows never reach the
+                // professor at all.
+                $action = $activitysettings[$cm->id] ?? 'keep';
+                if ($action === 'modify') {
+                    $action = 'keep';
+                }
+                if ($action !== 'keep') {
+                    continue;
+                }
+                $activities[] = [
+                    'id'      => (int) $cm->id,
+                    'name'    => format_string($cm->name),
+                    'modname' => $cm->modname,
+                    'purpose' => self::get_purpose($cm->modname),
+                    'typelabel' => '',
+                    'iconhtml' => $OUTPUT->image_icon('monologo', $cm->modname, 'mod_' . $cm->modname,
+                        ['class' => 'icon activityicon']),
+                    'locked'  => true,
+                    'action'  => $action,
+                    'isinstance' => false,
+                    'aigenerated' => false,
+                ];
             }
 
             $sections[] = [
                 'id'         => (int) $section->id,
                 'num'        => (int) $section->section,
                 'name'       => get_section_name($course, $section),
+                'behavior'   => $behavior,
                 'locked'     => ($behavior === 'keep'),
                 'activities' => $activities,
             ];
@@ -168,6 +203,47 @@ class get_template_structure extends external_api {
     }
 
     /**
+     * Build one virtual-instance activity row ("generate an activity here,
+     * molded on one of the template's model activities").
+     *
+     * Id scheme: the row id is the NEGATIVE of the tpl_instance record id.
+     * Every other id in this response is a cmid (always positive), so a
+     * negative id can never collide with one, stays stable across reloads,
+     * and remains a usable client-side key; the client re-seeds its own
+     * placeholder-id counter below the smallest received id so
+     * professor-added rows cannot collide either (see state.js).
+     *
+     * Everything renders from the row's own snapshots (name, typelabel,
+     * modname) — sourcecmid is never dereferenced. The icon resolves from
+     * the snapshot modname through the exact same monologo rule as the
+     * admin review (template_row_options::instance_icon_url()), and an
+     * empty snapshot yields an empty iconhtml, not a broken image.
+     *
+     * @param template_instance $instance
+     * @return array
+     */
+    private static function instance_row(template_instance $instance): array {
+        $modname = (string) $instance->get('modname');
+        $iconurl = template_row_options::instance_icon_url($instance->get('modname'));
+        $iconhtml = '';
+        if ($iconurl !== '') {
+            $iconhtml = \html_writer::empty_tag('img', ['src' => $iconurl, 'class' => 'icon activityicon', 'alt' => '']);
+        }
+        return [
+            'id'      => -((int) $instance->get('id')),
+            'name'    => format_string($instance->get('name')),
+            'modname' => $modname,
+            'purpose' => $modname === '' ? MOD_PURPOSE_OTHER : self::get_purpose($modname),
+            'typelabel' => format_string($instance->get('typelabel')),
+            'iconhtml' => $iconhtml,
+            'locked'  => true,
+            'action'  => '',
+            'isinstance' => true,
+            'aigenerated' => true,
+        ];
+    }
+
+    /**
      * Resolve a module's Moodle "purpose" (content, assessment, collaboration...).
      *
      * @param string $modname Module name.
@@ -192,15 +268,25 @@ class get_template_structure extends external_api {
                     'id'     => new external_value(PARAM_INT, 'Section ID'),
                     'num'    => new external_value(PARAM_INT, 'Section number'),
                     'name'   => new external_value(PARAM_TEXT, 'Section name'),
+                    'behavior' => new external_value(PARAM_ALPHA, 'Admin-configured section behavior (custom/keep)'),
                     'locked' => new external_value(PARAM_BOOL, 'Whether the section is kept as-is from the template'),
                     'activities' => new external_multiple_structure(
                         new external_single_structure([
-                            'id'       => new external_value(PARAM_INT, 'Course module ID'),
+                            'id'       => new external_value(PARAM_INT,
+                                'Course module ID; NEGATIVE (-recordid) for virtual instance rows'),
                             'name'     => new external_value(PARAM_TEXT, 'Activity name'),
-                            'modname'  => new external_value(PARAM_ALPHANUMEXT, 'Module type name'),
+                            'modname'  => new external_value(PARAM_ALPHANUMEXT,
+                                'Module type name; may be empty on an instance row with no snapshot'),
                             'purpose'  => new external_value(PARAM_ALPHA, 'Activity purpose category'),
-                            'iconhtml' => new external_value(PARAM_RAW, 'Rendered module icon HTML'),
+                            'typelabel' => new external_value(PARAM_TEXT,
+                                'Snapshotted type label for instance rows; empty for real activities'),
+                            'iconhtml' => new external_value(PARAM_RAW, 'Rendered module icon HTML; may be empty'),
                             'locked'   => new external_value(PARAM_BOOL, 'Always true — activities from the template are reference-only'),
+                            'action'   => new external_value(PARAM_ALPHA,
+                                'Resolved admin action ("keep"); empty for virtual instance rows'),
+                            'isinstance' => new external_value(PARAM_BOOL, 'Whether this is a virtual instance row'),
+                            'aigenerated' => new external_value(PARAM_BOOL,
+                                'Whether AI will generate this activity in the new course (drives the badge)'),
                         ])
                     ),
                 ])

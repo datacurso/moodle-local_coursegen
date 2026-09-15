@@ -28,7 +28,10 @@
  */
 
 import Notification from 'core/notification';
+import YUI from 'core/yui';
 import {getStrings} from 'core/str';
+import {initFilepicker} from '../../repository/courseai';
+import {bindToggleWrap, showFilePicker} from './context/filepicker';
 import {getTemplateStructure} from './template/repository';
 import {
     createTemplateState,
@@ -111,7 +114,10 @@ export const wireTemplateMode = (state) => {
         });
     }
 
-    const tplState = createTemplateState();
+    // Input-bar defaults: no images, page default language, no syllabus yet.
+    const tplState = createTemplateState({lang: state.defaultLang || ''});
+
+    wireInputBar(tplState, state);
 
     // Sequence guard: reselecting the template autocomplete before a previous
     // getTemplateStructure() fetch resolves must not let the slower, stale
@@ -217,19 +223,12 @@ export const wireTemplateMode = (state) => {
     if (tplSelect) {
         tplSelect.addEventListener('change', () => {
             const tplId = parseInt(tplSelect.value, 10);
-            // Before a pick, #templateModeCard is just the bare label+field (no
-            // border, no footer/Generate) — and core/form-autocomplete's own
-            // "search to change selection" row stays collapsed once picked, so
-            // only the chip shows. All driven by one class on the card (see
-            // #templateModeCard.tpl-active in aicoursecreation.css — Bootstrap's
-            // .d-md-inline-block on .form-autocomplete-input carries !important,
-            // so a plain inline style can't win, this needs id+class specificity).
-            // Queried here (not once up-front) because core/form-autocomplete's
-            // own enhance() call — a separate js_call_amd — may not have finished
-            // inserting its markup yet at the point wireTemplateMode runs.
-            const card = document.getElementById('templateModeCard');
-            if (card) {
-                card.classList.toggle('tpl-active', tplId > 0);
+            // One class on the workspace drives the picked/unpicked chrome:
+            // .courseai-workspace.tpl-active hides the main column's empty
+            // state (see aicoursecreation.css) while a template is selected.
+            const workspace = document.getElementById('courseaiWorkspace');
+            if (workspace) {
+                workspace.classList.toggle('tpl-active', tplId > 0);
             }
             requestTracker.id += 1;
             const requestId = requestTracker.id;
@@ -238,6 +237,107 @@ export const wireTemplateMode = (state) => {
             } else {
                 clearStructure(tplState, container, state);
             }
+        });
+    }
+};
+
+/**
+ * Show/refresh or hide the input bar's syllabus chip to match tplState.
+ *
+ * @param {Object} tplState
+ */
+const refreshSyllabusChip = (tplState) => {
+    const hasFile = !!tplState.syllabusdraftitemid;
+    const chipsRow = document.getElementById('tplChipsRow');
+    const chip = document.getElementById('tplChipSyllabus');
+    const chipName = document.getElementById('tplChipSyllabusName');
+    if (chipName) {
+        chipName.textContent = tplState.syllabusfilename || '';
+    }
+    if (chip) {
+        chip.classList.toggle('hidden', !hasFile);
+    }
+    if (chipsRow) {
+        chipsRow.style.display = hasFile ? '' : 'none';
+    }
+};
+
+/**
+ * Wire the reduced input bar pinned at the bottom of the left panel: syllabus
+ * attach (same no-course filepicker mechanics as free mode), generate-images
+ * toggle, and language select. Values live in tplState, ready for the future
+ * generation payload — the Generate button itself stays a stub elsewhere.
+ *
+ * @param {Object} tplState
+ * @param {Object} state - Page state (createInitialState) carrying languages/defaultLang.
+ */
+const wireInputBar = (tplState, state) => {
+    // Adaptation prompt — composer textarea, value tracked in tplState.
+    const promptInput = document.getElementById('tplPromptInput');
+    if (promptInput) {
+        promptInput.addEventListener('input', () => {
+            tplState.prompt = promptInput.value;
+        });
+    }
+
+    // Language select — same options source as free mode (the page-context
+    // languages array parsed by courseai.js into state.languages).
+    const langSelect = document.getElementById('tplLangSelect');
+    if (langSelect) {
+        (state.languages || []).forEach((language) => {
+            const option = document.createElement('option');
+            option.value = language.code;
+            option.textContent = language.name;
+            langSelect.appendChild(option);
+        });
+        if (tplState.lang) {
+            langSelect.value = tplState.lang;
+        }
+        // If the default language isn't offered, track whatever the select
+        // actually shows so state and UI never disagree.
+        tplState.lang = langSelect.value || tplState.lang;
+        langSelect.addEventListener('change', () => {
+            tplState.lang = langSelect.value;
+        });
+    }
+
+    // Generate-images toggle — same toggle-track pattern as free mode.
+    const imgToggleWrap = document.getElementById('tplImgToggleWrap');
+    const imgCheckbox = document.getElementById('tplWithImages');
+    if (imgToggleWrap && imgCheckbox) {
+        bindToggleWrap(imgToggleWrap, imgCheckbox);
+        imgCheckbox.addEventListener('change', () => {
+            tplState.generateimages = imgCheckbox.checked ? 1 : 0;
+            imgToggleWrap.classList.toggle('on', imgCheckbox.checked);
+        });
+    }
+
+    // Syllabus attach — reuses the free-mode courseai_filepicker_init flow via
+    // showFilePicker's onPicked hook; the picked draft file lives in tplState.
+    const attachBtn = document.getElementById('tplBtnSyllabus');
+    if (attachBtn) {
+        attachBtn.addEventListener('click', async() => {
+            await showFilePicker({
+                state: {},
+                CourseaiRepository: {initFilepicker},
+                Notification,
+                YUI,
+                texts: {},
+                onPicked: (filename, draftitemid) => {
+                    tplState.syllabusfilename = filename;
+                    tplState.syllabusdraftitemid = draftitemid;
+                    refreshSyllabusChip(tplState);
+                },
+            });
+        });
+    }
+
+    const removeBtn = document.getElementById('tplChipSyllabusRemove');
+    if (removeBtn) {
+        removeBtn.addEventListener('click', () => {
+            tplState.syllabusfilename = '';
+            tplState.syllabusdraftitemid = 0;
+            refreshSyllabusChip(tplState);
         });
     }
 };
@@ -339,9 +439,9 @@ const clearStructure = (tplState, container, state) => {
     if (detailsEl) {
         detailsEl.style.display = 'none';
     }
-    const card = document.getElementById('templateModeCard');
-    if (card) {
-        card.classList.remove('tpl-active');
+    const workspace = document.getElementById('courseaiWorkspace');
+    if (workspace) {
+        workspace.classList.remove('tpl-active');
     }
     const limitsEl = document.getElementById('tplModeLimits');
     const limitsBadge = document.getElementById('tplModeLimitsBadge');
@@ -359,6 +459,14 @@ const clearStructure = (tplState, container, state) => {
     if (statsEl) {
         statsEl.textContent = '';
     }
-    Object.assign(tplState, createTemplateState());
+    // Reset only the structure: the input-bar values (images/lang/syllabus)
+    // belong to the professor's session and survive clearing the template.
+    Object.assign(tplState, createTemplateState({
+        prompt: tplState.prompt,
+        generateimages: tplState.generateimages,
+        lang: tplState.lang,
+        syllabusdraftitemid: tplState.syllabusdraftitemid,
+        syllabusfilename: tplState.syllabusfilename,
+    }));
     state.templateStructureLoaded = false;
 };

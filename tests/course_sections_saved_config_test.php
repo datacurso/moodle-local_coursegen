@@ -16,6 +16,12 @@
 
 namespace local_coursegen;
 
+defined('MOODLE_INTERNAL') || die();
+
+// The shared fixture trait sits in tests/ root, outside the tests/classes
+// autoload scope, so it must be required explicitly.
+require_once(__DIR__ . '/sections_config_fixture_trait.php');
+
 use local_coursegen\external\get_course_preview;
 use local_coursegen\external\save_template;
 use local_coursegen\local\models\template_activity;

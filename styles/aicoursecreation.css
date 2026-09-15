@@ -109,8 +109,9 @@ svg { display: block; flex-shrink: 0; }
   height: 100%;
 }
 
-/* Remove left container padding in planning mode for edge-to-edge chat */
-.aicoursecreation-main:has(.courseai-workspace.is-planning) .container {
+/* Remove left container padding in planning/template mode for edge-to-edge columns */
+.aicoursecreation-main:has(.courseai-workspace.is-planning) .container,
+.aicoursecreation-main:has(.courseai-workspace.is-template) .container {
   padding-left: 0;
   padding-right: 0;
 }
@@ -176,10 +177,13 @@ svg { display: block; flex-shrink: 0; }
   min-height: 100%;
 }
 
-.courseai-workspace.is-planning {
+.courseai-workspace.is-planning,
+.courseai-workspace.is-template {
   /* Wide-ish by default — the conversation/feed is the primary surface. Kept in
      PX (not vw) so the splitter, which reads/writes this property in px, can drag
-     smoothly and reach the default. Splitter clamps to the same [320,720] range. */
+     smoothly and reach the default. Splitter clamps to the same [320,720] range.
+     Template mode reuses this exact grid: left picker/input-bar panel, shared
+     splitter, main structure column. */
   --cg-left-w: 560px;
   display: grid;
   grid-template-columns: clamp(320px, var(--cg-left-w), 720px) 10px minmax(0, 1fr);
@@ -188,7 +192,8 @@ svg { display: block; flex-shrink: 0; }
   overflow: hidden;
 }
 
-.courseai-workspace.is-planning .context-wrap {
+.courseai-workspace.is-planning .context-wrap,
+.courseai-workspace.is-template .context-wrap {
   max-width: none;
   margin: 0;
   position: sticky;
@@ -206,7 +211,8 @@ svg { display: block; flex-shrink: 0; }
   display: none;
 }
 
-.courseai-workspace.is-planning .cg-splitter {
+.courseai-workspace.is-planning .cg-splitter,
+.courseai-workspace.is-template .cg-splitter {
   display: flex;
   align-items: center;
   justify-content: center;
@@ -218,7 +224,8 @@ svg { display: block; flex-shrink: 0; }
   user-select: none;
 }
 
-.courseai-workspace.is-planning .cg-splitter::before {
+.courseai-workspace.is-planning .cg-splitter::before,
+.courseai-workspace.is-template .cg-splitter::before {
   content: '';
   display: block;
   width: 2px;
@@ -230,17 +237,22 @@ svg { display: block; flex-shrink: 0; }
 }
 
 .courseai-workspace.is-planning .cg-splitter:hover,
-.courseai-workspace.is-planning .cg-splitter:focus-visible {
+.courseai-workspace.is-planning .cg-splitter:focus-visible,
+.courseai-workspace.is-template .cg-splitter:hover,
+.courseai-workspace.is-template .cg-splitter:focus-visible {
   background: var(--brand-soft);
 }
 
 .courseai-workspace.is-planning .cg-splitter:hover::before,
-.courseai-workspace.is-planning .cg-splitter:focus-visible::before {
+.courseai-workspace.is-planning .cg-splitter:focus-visible::before,
+.courseai-workspace.is-template .cg-splitter:hover::before,
+.courseai-workspace.is-template .cg-splitter:focus-visible::before {
   background: var(--brand);
   opacity: 0.8;
 }
 
-.courseai-workspace.is-planning .cg-splitter:focus-visible {
+.courseai-workspace.is-planning .cg-splitter:focus-visible,
+.courseai-workspace.is-template .cg-splitter:focus-visible {
   outline: 2px solid var(--brand);
   outline-offset: -2px;
 }
@@ -283,21 +295,12 @@ svg { display: block; flex-shrink: 0; }
 }
 
 /* #templateModeCard never shows a border/shadow — flat at every state, no
-   dependence on selection. The footer/Generate button still only appears
-   once #templateModeCard.tpl-active is set (template_mode.js, on the
-   autocomplete's 'change' event) — but nothing about the selector itself
-   (border, size, position) ever changes, so picking a template can't shift
-   it or make it read as "locked". */
+   dependence on selection: nothing about the selector itself (border, size,
+   position) ever changes, so picking a template can't shift it or make it
+   read as "locked". */
 #templateModeCard {
   border-color: transparent;
   box-shadow: none;
-}
-#templateModeCard #tplModeFooter {
-  display: none;
-}
-#templateModeCard.tpl-active #tplModeFooter {
-  /* Beats the mustache-side inline style="display:none" default. */
-  display: flex !important;
 }
 
 /* Before a template is picked, core/form-autocomplete renders its
@@ -310,10 +313,109 @@ svg { display: block; flex-shrink: 0; }
 }
 
 /* Empty-state notification (#tplModeEmpty, real core/notification "info"
-   markup): marks where the template's structure will render, shown until a
-   template is picked. */
-#templateModeCard.tpl-active #tplModeEmpty {
+   markup): marks where the template's structure will render in the main
+   column, shown until a template is picked. template_mode.js sets .tpl-active
+   on the workspace on the autocomplete's 'change' event. */
+.courseai-workspace.tpl-active #tplModeEmpty {
   display: none;
+}
+
+/* ─── TEMPLATE MODE LAYOUT ───────────────────────────────────────────────
+   Template mode reuses the free-mode planning grid (see the shared
+   .is-planning/.is-template grid + splitter rules above): LEFT panel with the
+   picker on top and a reduced input bar pinned at the bottom, shared
+   resizable splitter, MAIN column with the structure. */
+.courseai-workspace.is-template .tpl-left-panel {
+  /* .context-wrap in-grid is display:flex — stack picker over input bar. */
+  flex-direction: column;
+  margin-bottom: 0;
+  padding: 0 12px 16px 16px;
+  gap: 12px;
+}
+
+.tpl-left-scroll {
+  flex: 1 1 auto;
+  min-height: 0;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+/* Input bar pinned at the panel bottom, chat-composer style. */
+.tpl-input-bar {
+  flex: 0 0 auto;
+}
+/* .compact-prompt-textarea (chatui.css) expects the card to supply the outer
+   padding — the compact chat card does; this bare .card does it here. */
+.tpl-input-bar .compact-prompt-textarea {
+  padding: 12px 14px 6px;
+}
+.tpl-input-bar .chips-row {
+  padding-top: 10px;
+}
+.tpl-input-bar .card-toolbar {
+  gap: 8px;
+}
+.tpl-input-bar .tbar-toggle-wrap {
+  gap: 6px;
+}
+
+/* Badge row at the top of the main column: "N sections · M activities" stats
+   next to the remaining-sections limits badge. Empty badges stay invisible so
+   the row looks clean before JS fills them. */
+.tpl-badge-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+#tplModeStats:empty,
+#tplModeLimitsBadge:empty {
+  display: none;
+}
+
+/* Main column: the template structure owns the wide side and scrolls on its
+   own, exactly like free mode's planning column. */
+.courseai-workspace.is-template .tpl-main-wrap {
+  min-width: 0;
+  min-height: 0;
+  overflow-y: auto;
+  padding: 0 24px 24px;
+  scrollbar-width: thin;
+}
+
+/* Lock page scroll behind the two-column template grid (same treatment the
+   planning grid gets below), but only where the grid actually applies. */
+@media (min-width: 901px) {
+  html:has(.courseai-workspace.is-template),
+  body:has(.courseai-workspace.is-template) { overflow: hidden; }
+  .aicoursecreation-main:has(.courseai-workspace.is-template),
+  .app-main:has(.courseai-workspace.is-template) { padding-bottom: 0; }
+}
+
+/* Narrow screens: stack the panels (free mode has no planning-grid breakpoint,
+   so template mode gets a simple stack of its own). */
+@media (max-width: 900px) {
+  .courseai-workspace.is-template {
+    display: flex;
+    flex-direction: column;
+    height: auto;
+    overflow: visible;
+  }
+  .courseai-workspace.is-template .cg-splitter {
+    display: none;
+  }
+  .courseai-workspace.is-template .tpl-left-panel {
+    position: static;
+    max-height: none;
+    padding: 0 16px;
+  }
+  .courseai-workspace.is-template .tpl-left-panel .tpl-left-scroll {
+    overflow: visible;
+  }
+  .courseai-workspace.is-template .tpl-main-wrap {
+    overflow: visible;
+    padding: 16px;
+  }
 }
 
 /* ─── CONTEXT FORM ────────────────────────────────────────────────────── */
