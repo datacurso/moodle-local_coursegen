@@ -88,6 +88,33 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
         // Order inside the panel: picker first, input bar pinned at the bottom.
         $this->assertGreaterThan($leftpanelpos, $pickerpos, 'Picker must render inside/after the left panel');
         $this->assertGreaterThan($pickerpos, $inputbarpos, 'Input bar must render below the picker');
+
+        // Template description block sits under the picker, above the input bar.
+        $descriptionpos = strpos($html, 'data-region="tpl-description"');
+        $this->assertNotFalse($descriptionpos, 'Template description region missing');
+        $this->assertGreaterThan($pickerpos, $descriptionpos, 'Description must render below the picker');
+        $this->assertGreaterThan($descriptionpos, $inputbarpos, 'Description must render above the input bar');
+    }
+
+    /**
+     * The chooser confirm button carries both mode labels (add / save changes)
+     * so JS can flip them when the modal reopens in edit mode.
+     */
+    public function test_chooser_confirm_button_carries_add_and_save_labels(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $html = $this->render_page(true);
+
+        $confirmpos = strpos($html, 'data-region="local_coursegen/template/chooser-confirm"');
+        $this->assertNotFalse($confirmpos, 'Chooser confirm button missing');
+
+        $addlabelpos = strpos($html, 'data-region="local_coursegen/template/chooser-confirm-add"');
+        $savelabelpos = strpos($html, 'data-region="local_coursegen/template/chooser-confirm-save"');
+        $this->assertNotFalse($addlabelpos, 'Add-mode label span missing');
+        $this->assertNotFalse($savelabelpos, 'Edit-mode label span missing');
+        $this->assertGreaterThan($confirmpos, $addlabelpos, 'Add label must render inside the confirm button');
+        $this->assertGreaterThan($confirmpos, $savelabelpos, 'Save label must render inside the confirm button');
     }
 
     /**

@@ -38,11 +38,17 @@ import {
     applyStructureResponse,
     addSection,
     insertActivity,
+    updateActivity,
     removeActivity,
     toggleSectionCollapsed,
 } from './template/state';
 import {renderStructure, wireStructureEvents} from './template/render';
-import {renderChooserGrid, openActivityChooser, wireChooserModal} from './template/chooser';
+import {
+    renderChooserGrid,
+    openActivityChooser,
+    openActivityChooserForEdit,
+    wireChooserModal,
+} from './template/chooser';
 import {formatTemplate} from './utils';
 
 // Localised labels used while mutating the structure (add-section button text,
@@ -128,10 +134,17 @@ export const wireTemplateMode = (state) => {
 
     // Single source of truth for re-rendering: always resolves the localised
     // label first so the "+ Add section" button never flashes untranslated text.
+    // Refreshes the limits badge too — adding a section changes the remaining
+    // count, and the badge must never contradict the Add-section counter.
     const rerenderStructure = async() => {
         const {addSectionLabel, statsTemplate} = await getLabels();
         await renderStructure(container, tplState, {addSection: addSectionLabel});
         updateStats(tplState, statsTemplate);
+        await renderLimitsBanner(
+            document.getElementById('tplModeLimits'),
+            document.getElementById('tplModeLimitsBadge'),
+            tplState
+        );
     };
 
     wireStructureEvents(container, {
@@ -147,6 +160,20 @@ export const wireTemplateMode = (state) => {
         },
         onOpenChooser: (sectionId, position) => {
             openActivityChooser(sectionId, position);
+        },
+        onEditActivity: (sectionId, activityIndex) => {
+            const section = tplState.sections.find((s) => s.id === sectionId);
+            const row = section ? section.activities[activityIndex] : null;
+            if (!row || row.locked) {
+                return;
+            }
+            openActivityChooserForEdit(sectionId, activityIndex, {
+                modname: row.modname,
+                prompt: row.prompt || '',
+                generateimages: row.generateimages || 0,
+                draftitemid: row.draftitemid || 0,
+                filename: row.filename || '',
+            });
         },
         onRemoveActivity: async(sectionId, activityIndex) => {
             const section = tplState.sections.find((s) => s.id === sectionId);
@@ -204,6 +231,26 @@ export const wireTemplateMode = (state) => {
                 Notification.exception(e);
             }
         }
+    }, async(sectionId, activityIndex, modname, extras) => {
+        // Edit mode: replace the row's type/extras in place and re-render.
+        const activity = tplState.allowedActivities.find((a) => a.modname === modname);
+        if (!activity) {
+            return;
+        }
+        const section = tplState.sections.find((s) => s.id === sectionId);
+        const row = section ? section.activities[activityIndex] : null;
+        const backup = row ? {...row} : null;
+        if (updateActivity(tplState, sectionId, activityIndex, {...activity, ...(extras || {})})) {
+            try {
+                await rerenderStructure();
+            } catch (e) {
+                // Restore the row so state matches the still-rendered DOM.
+                if (row && backup) {
+                    Object.assign(row, backup);
+                }
+                Notification.exception(e);
+            }
+        }
     });
 
     // The real course-creation backend for this button (create_course_from_template
@@ -211,11 +258,14 @@ export const wireTemplateMode = (state) => {
     // old backup/restore + mock-AI design, already superseded elsewhere. Rather
     // than leave the button silently do nothing when other code re-enables it
     // (limits/loading logic still toggles genBtn.disabled below), tell the
-    // professor plainly instead of failing silently.
+    // professor plainly — a localised informational notice, not an error dump.
     const genBtn = document.getElementById('tplModeGenerate');
     if (genBtn) {
-        genBtn.addEventListener('click', () => {
-            Notification.exception(new Error('Course creation from a template is not available yet.'));
+        genBtn.addEventListener('click', async() => {
+            const [message] = await getStrings([
+                {key: 'courseai_template_generate_unavailable', component: 'local_coursegen'},
+            ]);
+            Notification.addNotification({message, type: 'info'});
         });
     }
 
@@ -230,6 +280,7 @@ export const wireTemplateMode = (state) => {
             if (workspace) {
                 workspace.classList.toggle('tpl-active', tplId > 0);
             }
+            updateTemplateDescription(tplId, state);
             requestTracker.id += 1;
             const requestId = requestTracker.id;
             if (tplId > 0) {
@@ -239,6 +290,45 @@ export const wireTemplateMode = (state) => {
             }
         });
     }
+};
+
+/**
+ * Show the selected template's description (and the base course it was marked
+ * from) under the picker in the left panel — sourced from the coursetemplates
+ * payload already shipped to the page (state.templates). Hidden whenever
+ * nothing is selected or the selected template carries no description/course.
+ *
+ * @param {number} templateId - The selected template id, or <= 0 on clear.
+ * @param {Object} state - Page state (createInitialState) carrying templates.
+ * @returns {Promise<void>}
+ */
+const updateTemplateDescription = async(templateId, state) => {
+    const box = document.getElementById('tplModeDescription');
+    const textEl = document.getElementById('tplModeDescriptionText');
+    const baseEl = document.getElementById('tplModeDescriptionBase');
+    if (!box || !textEl || !baseEl) {
+        return;
+    }
+    const template = templateId > 0
+        ? (state.templates || []).find((t) => Number(t.id) === templateId)
+        : null;
+    const description = (template && template.description) || '';
+    const basename = (template && template.coursefullname) || '';
+
+    textEl.textContent = description;
+    textEl.style.display = description ? '' : 'none';
+
+    if (basename) {
+        const [basedon] = await getStrings([
+            {key: 'courseai_template_based_on', component: 'local_coursegen', param: basename},
+        ]);
+        baseEl.textContent = basedon;
+    } else {
+        baseEl.textContent = '';
+    }
+    baseEl.style.display = basename ? '' : 'none';
+
+    box.style.display = (description || basename) ? '' : 'none';
 };
 
 /**

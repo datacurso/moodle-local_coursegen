@@ -176,6 +176,43 @@ export const insertActivity = (state, sectionId, position, activity) => {
 };
 
 /**
+ * Update one (unlocked) activity in place with a (possibly different) type and
+ * fresh chooser extras — the edit-mode counterpart of insertActivity. Id and
+ * locked flag are preserved; everything the chooser can set is replaced.
+ *
+ * @param {Object} state
+ * @param {number} sectionId
+ * @param {number} activityIndex - Current render index of the row.
+ * @param {Object} activity - {modname, displayname, purpose, iconhtml} plus the
+ *     chooser prompt-panel extras {prompt, generateimages, draftitemid, filename}.
+ * @returns {boolean} Whether the update happened.
+ */
+export const updateActivity = (state, sectionId, activityIndex, activity) => {
+    const section = state.sections.find((s) => s.id === sectionId);
+    if (!section || section.locked) {
+        return false;
+    }
+    const row = section.activities[activityIndex];
+    if (!row || row.locked) {
+        return false;
+    }
+    Object.assign(row, {
+        name: activity.displayname,
+        modname: activity.modname,
+        purpose: activity.purpose,
+        iconhtml: activity.iconhtml,
+        // Cleared so render.js's ensureTypeLabels/typeLabels fallback resolves
+        // the (possibly new) type's label instead of showing the stale one.
+        typelabel: '',
+        prompt: activity.prompt || '',
+        generateimages: activity.generateimages ? 1 : 0,
+        draftitemid: activity.draftitemid || 0,
+        filename: activity.filename || '',
+    });
+    return true;
+};
+
+/**
  * Remove one (unlocked) activity from a section by its current render index.
  *
  * @param {Object} state

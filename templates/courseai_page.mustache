@@ -640,6 +640,15 @@
             {{{templatepickerformhtml}}}
           </div>
         </div>
+
+        {{! Selected template description — populated client-side from the
+            coursetemplates payload on selection, hidden when nothing/empty is
+            selected (template_mode.js). Second line names the base course. }}
+        <div class="tpl-description text-muted small" id="tplModeDescription"
+             data-region="tpl-description" style="display:none">
+          <p class="mb-1" id="tplModeDescriptionText"></p>
+          <p class="mb-0" id="tplModeDescriptionBase"></p>
+        </div>
       </div>
 
       {{! Reduced input bar — chat-composer style, pinned at the panel bottom.
@@ -1091,9 +1100,16 @@
                   <i class="fa fa-file text-primary" aria-hidden="true" style="font-size: 1.1rem;"></i>
                 </button>
 
+                {{! Two hidden-toggled label spans: chooser.js flips them when the
+                    modal reopens in edit mode (add → save changes). }}
                 <button type="button" class="btn btn-primary btn-sm chooser-confirm-btn"
                     data-region="local_coursegen/template/chooser-confirm">
-                  {{#str}} courseai_template_add_activity, local_coursegen {{/str}}
+                  <span data-region="local_coursegen/template/chooser-confirm-add">{{!
+                    }}{{#str}} courseai_template_add_activity, local_coursegen {{/str}}{{!
+                  }}</span>
+                  <span data-region="local_coursegen/template/chooser-confirm-save" hidden>{{!
+                    }}{{#str}} savechanges, core {{/str}}{{!
+                  }}</span>
                 </button>
               </div>
             </div>

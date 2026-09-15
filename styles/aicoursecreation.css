@@ -340,6 +340,12 @@ svg { display: block; flex-shrink: 0; }
   scrollbar-width: thin;
 }
 
+/* Selected-template description under the picker (muted, second line names
+   the base course). Hidden by JS while nothing/empty is selected. */
+.tpl-description {
+  padding: 2px 6px 0;
+}
+
 /* Input bar pinned at the panel bottom, chat-composer style. */
 .tpl-input-bar {
   flex: 0 0 auto;

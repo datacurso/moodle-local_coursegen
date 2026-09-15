@@ -42,7 +42,12 @@ const SEARCH_ID = 'tplChooserSearch';
 
 // The section/position the chooser is currently adding into. Set by
 // openActivityChooser, consumed (and cleared) by the confirm button handler.
+// In edit mode it carries {sectionId, activityIndex} of the row being edited.
 let pendingTarget = null;
+
+// 'add' (default) or 'edit' — decides which callback the confirm button fires
+// and which of the two confirm-label spans shows. Reset on every modal close.
+let mode = 'add';
 
 // The modname picked in the grid (chip shown in the prompt panel), or null
 // while nothing is selected. Clicking another grid card just replaces it.
@@ -97,12 +102,78 @@ export const renderChooserGrid = async(allowedActivities) => {
  * @param {number|null} position - 0-based insert index, or null to append.
  */
 export const openActivityChooser = (sectionId, position) => {
+    setMode('add');
     pendingTarget = {sectionId, position};
     const search = document.getElementById(SEARCH_ID);
     if (search) {
         search.value = '';
         filterChooserGrid('');
     }
+    jQuery(MODAL_SELECTOR).modal('show');
+};
+
+/**
+ * Switch the chooser between add and edit mode: remembers the mode and flips
+ * the confirm button's hidden-toggled label spans (add ↔ save changes).
+ *
+ * @param {string} newMode - 'add' | 'edit'
+ */
+const setMode = (newMode) => {
+    mode = newMode;
+    const addLabel = document.querySelector(Selectors.regions.chooserConfirmAdd);
+    const saveLabel = document.querySelector(Selectors.regions.chooserConfirmSave);
+    if (addLabel) {
+        addLabel.hidden = mode === 'edit';
+    }
+    if (saveLabel) {
+        saveLabel.hidden = mode !== 'edit';
+    }
+};
+
+/**
+ * Prefill the prompt panel from an existing row's stored chooser extras so an
+ * edit starts from what the professor originally typed: selected type chip,
+ * prompt text, generate-images radios and the uploaded-file chip.
+ *
+ * @param {Object} current - {modname, prompt, generateimages, draftitemid, filename}
+ */
+const seedPanel = (current) => {
+    selectActivity(current.modname);
+
+    const promptEl = document.querySelector(Selectors.regions.chooserPrompt);
+    if (promptEl) {
+        promptEl.value = current.prompt || '';
+        promptEl.style.height = 'auto';
+        promptEl.style.height = promptEl.scrollHeight + 'px';
+    }
+    document.querySelectorAll(Selectors.regions.chooserGenerateImages).forEach((radio) => {
+        radio.checked = Number(radio.value) === (current.generateimages ? 1 : 0);
+    });
+    upload = {
+        draftitemid: current.draftitemid || 0,
+        filename: current.filename || '',
+    };
+    refreshSelectedFileChip();
+};
+
+/**
+ * Open the chooser modal in EDIT mode over an existing professor-added row:
+ * panel prefilled from the row's stored extras, type changeable from the grid,
+ * confirm relabelled "Save changes" and routed to the onEdit callback.
+ *
+ * @param {number} sectionId
+ * @param {number} activityIndex - Current render index of the row being edited.
+ * @param {Object} current - {modname, prompt, generateimages, draftitemid, filename}
+ */
+export const openActivityChooserForEdit = (sectionId, activityIndex, current) => {
+    setMode('edit');
+    pendingTarget = {sectionId, activityIndex};
+    const search = document.getElementById(SEARCH_ID);
+    if (search) {
+        search.value = '';
+        filterChooserGrid('');
+    }
+    seedPanel(current || {});
     jQuery(MODAL_SELECTOR).modal('show');
 };
 
@@ -173,6 +244,7 @@ const refreshSelectedFileChip = () => {
  * reopen always starts clean.
  */
 const resetChooserPanel = () => {
+    setMode('add');
     pendingSelection = null;
     upload = {draftitemid: 0, filename: ''};
 
@@ -247,11 +319,13 @@ const openUploadPicker = async() => {
 
 /**
  * Wire the prompt panel below the grid: textarea autoresize, file upload and
- * remove, and the confirm button that performs the actual insertion.
+ * remove, and the confirm button that performs the actual insertion (add mode)
+ * or in-place row update (edit mode).
  *
  * @param {Function} onPick - (sectionId, position, modname, extras) => void
+ * @param {Function} onEdit - (sectionId, activityIndex, modname, extras) => void
  */
-const wireChooserPanel = (onPick) => {
+const wireChooserPanel = (onPick, onEdit) => {
     const promptEl = document.querySelector(Selectors.regions.chooserPrompt);
     if (promptEl) {
         promptEl.addEventListener('input', () => {
@@ -291,7 +365,11 @@ const wireChooserPanel = (onPick) => {
                 draftitemid: upload.draftitemid || 0,
                 filename: upload.filename || '',
             };
-            onPick(pendingTarget.sectionId, pendingTarget.position, pendingSelection, extras);
+            if (mode === 'edit') {
+                onEdit(pendingTarget.sectionId, pendingTarget.activityIndex, pendingSelection, extras);
+            } else {
+                onPick(pendingTarget.sectionId, pendingTarget.position, pendingSelection, extras);
+            }
             pendingTarget = null;
             jQuery(MODAL_SELECTOR).modal('hide');
         });
@@ -311,8 +389,10 @@ const wireChooserPanel = (onPick) => {
  *
  * @param {Function} onPick - (sectionId, position, modname, extras) => void where
  *     extras = {prompt: string, generateimages: 0|1, draftitemid: number, filename: string}
+ * @param {Function} onEdit - (sectionId, activityIndex, modname, extras) => void,
+ *     fired instead of onPick when the modal was opened by openActivityChooserForEdit
  */
-export const wireChooserModal = (onPick) => {
+export const wireChooserModal = (onPick, onEdit) => {
     const search = document.getElementById(SEARCH_ID);
     if (search) {
         search.addEventListener('input', () => filterChooserGrid(search.value));
@@ -331,5 +411,5 @@ export const wireChooserModal = (onPick) => {
         selectActivity(optionEl.dataset.modname);
     });
 
-    wireChooserPanel(onPick);
+    wireChooserPanel(onPick, onEdit);
 };
