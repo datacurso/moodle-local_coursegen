@@ -30,6 +30,39 @@ import * as Repository from 'local_coursegen/local/template/repository';
 import Notification from 'core/notification';
 import {get_string as getString} from 'core/str';
 import {resetAllFormDirtyStates} from 'core_form/changechecker';
+import {notifyFormSubmittedByJavascript, eventTypes} from 'core_form/events';
+
+/**
+ * Run the name form's own client-side validation (classes/form/
+ * template_name_form.php's "required" rule) exactly as if it had been
+ * submitted for real — the same red border and inline error text any
+ * other mform shows, not a hand-rolled substitute for it. This wizard
+ * never actually submits that mform (its "Save template" button reads
+ * field values directly and posts a webservice call instead), so nothing
+ * ever fires this on its own.
+ *
+ * @param {HTMLElement} root The wizard root element.
+ * @returns {boolean} False when the form reported at least one invalid field.
+ */
+const nameFormIsValid = (root) => {
+    const form = root.querySelector('#id_templatename')?.closest('form');
+    if (!form) {
+        return true;
+    }
+    let hasError = false;
+    const onFieldError = (e) => {
+        // qf_errorHandler (lib/formslib.php) fires this for every checked
+        // field regardless of outcome, with an empty message on success —
+        // only a non-empty one is an actual failure.
+        if (e.detail?.message) {
+            hasError = true;
+        }
+    };
+    form.addEventListener(eventTypes.formFieldValidationFailed, onFieldError);
+    notifyFormSubmittedByJavascript(form);
+    form.removeEventListener(eventTypes.formFieldValidationFailed, onFieldError);
+    return !hasError;
+};
 
 /**
  * Scrape one section's currently rendered virtual instances.
@@ -78,20 +111,11 @@ export const saveTemplate = async(state, root) => {
         Notification.addNotification({message: msg, type: 'warning'});
         return;
     }
-    const nameInput = root.querySelector('#id_templatename');
-    const nameVal = nameInput?.value || state.templateName || '';
-    if (nameVal.trim() === '') {
-        // template_name_form.php's own "required" rule never actually runs
-        // (it is client-only, and this save never submits that mform) —
-        // this is the only thing that actually stops a blank name from
-        // reaching saveTemplate() at all (external/save_template.php
-        // rejects one too, but only after this round trip).
-        const msg = await getString('template_name_required', 'local_coursegen');
-        Notification.addNotification({message: msg, type: 'warning'});
-        nameInput?.focus();
+    if (!nameFormIsValid(root)) {
         return;
     }
     try {
+        const nameVal = root.querySelector('#id_templatename')?.value || state.templateName;
         const descVal = root.querySelector('#id_templatedesc')?.value || state.templateDesc;
         state.templateName = nameVal;
         state.templateDesc = descVal;
