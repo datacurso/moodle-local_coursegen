@@ -146,6 +146,15 @@ class save_template extends external_api {
         self::validate_context($context);
         require_capability('local/coursegen:managetemplates', $context);
 
+        if (trim($params['name']) === '') {
+            // The wizard's own name field only ever gets this far via a
+            // direct save_template() call, never a real mform submission
+            // (classes/form/template_name_form.php's "required" rule is
+            // client-only and never actually runs) — this is the one place
+            // a blank name is ever really rejected.
+            throw new \moodle_exception('template_name_required', 'local_coursegen');
+        }
+
         // Create or load existing template.
         $existingid = 0;
         if ($params['id'] > 0) {
