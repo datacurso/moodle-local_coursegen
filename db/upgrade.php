@@ -302,6 +302,7 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         $table->add_field('cmid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
         $table->add_field('action', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, 'modify');
         $table->add_field('useasreference', XMLDB_TYPE_INTEGER, '1', null, XMLDB_NOTNULL, null, '1');
+        $table->add_field('templatescope', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, 'course');
         $table->add_field('prompt', XMLDB_TYPE_TEXT, null, null, null, null, null);
         $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
         $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
@@ -312,21 +313,6 @@ function xmldb_local_coursegen_upgrade($oldversion) {
             $dbman->create_table($table);
         }
 
-        upgrade_plugin_savepoint(true, 2026072002, 'local', 'coursegen');
-    }
-
-    if ($oldversion < 2026091400) {
-        // Define field templatescope to be added to local_coursegen_tpl_activity.
-        $table = new xmldb_table('local_coursegen_tpl_activity');
-        $field = new xmldb_field('templatescope', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, 'course', 'useasreference');
-        if (!$dbman->field_exists($table, $field)) {
-            $dbman->add_field($table, $field);
-        }
-
-        upgrade_plugin_savepoint(true, 2026091400, 'local', 'coursegen');
-    }
-
-    if ($oldversion < 2026091402) {
         // Define table local_coursegen_tpl_instance.
         $table = new xmldb_table('local_coursegen_tpl_instance');
         $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
@@ -336,6 +322,7 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         $table->add_field('sourcename', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
         $table->add_field('name', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
         $table->add_field('typelabel', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('modname', XMLDB_TYPE_CHAR, '100', null, null, null, null);
         $table->add_field('prompt', XMLDB_TYPE_TEXT, null, null, null, null, null);
         $table->add_field('anchorcmid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
         $table->add_field('sortorder', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
@@ -348,56 +335,7 @@ function xmldb_local_coursegen_upgrade($oldversion) {
             $dbman->create_table($table);
         }
 
-        upgrade_plugin_savepoint(true, 2026091402, 'local', 'coursegen');
-    }
-
-    if ($oldversion < 2026091405) {
-        // Define field modname to be added to local_coursegen_tpl_instance.
-        $table = new xmldb_table('local_coursegen_tpl_instance');
-        $field = new xmldb_field('modname', XMLDB_TYPE_CHAR, '100', null, null, null, null, 'typelabel');
-        if (!$dbman->field_exists($table, $field)) {
-            $dbman->add_field($table, $field);
-        }
-
-        upgrade_plugin_savepoint(true, 2026091405, 'local', 'coursegen');
-    }
-
-    if ($oldversion < 2026091406) {
-        // Drop orphaned fields left over on this shared test database by
-        // other, unrelated branches that ran their own upgrade steps
-        // against it and were never merged — none of these are defined by
-        // this plugin's current models or referenced anywhere in its code.
-        $table = new xmldb_table('local_coursegen_template');
-        $field = new xmldb_field('general_instruction');
-        if ($dbman->field_exists($table, $field)) {
-            $dbman->drop_field($table, $field);
-        }
-        $field = new xmldb_field('titlepolicy');
-        if ($dbman->field_exists($table, $field)) {
-            $dbman->drop_field($table, $field);
-        }
-
-        $table = new xmldb_table('local_coursegen_tpl_section');
-        $field = new xmldb_field('sortorder');
-        if ($dbman->field_exists($table, $field)) {
-            $dbman->drop_field($table, $field);
-        }
-
-        $table = new xmldb_table('local_coursegen_tpl_activity');
-        $field = new xmldb_field('templatesourcecmid');
-        if ($dbman->field_exists($table, $field)) {
-            $dbman->drop_field($table, $field);
-        }
-        $field = new xmldb_field('titlepolicy');
-        if ($dbman->field_exists($table, $field)) {
-            $dbman->drop_field($table, $field);
-        }
-        $field = new xmldb_field('sortorder');
-        if ($dbman->field_exists($table, $field)) {
-            $dbman->drop_field($table, $field);
-        }
-
-        upgrade_plugin_savepoint(true, 2026091406, 'local', 'coursegen');
+        upgrade_plugin_savepoint(true, 2026072002, 'local', 'coursegen');
     }
 
     return true;
