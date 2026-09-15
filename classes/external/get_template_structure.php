@@ -36,6 +36,7 @@ use local_coursegen\local\models\template;
 use local_coursegen\local\models\template_section;
 use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_instance;
+use local_coursegen\local\service\template_export_service;
 use local_coursegen\local\service\template_instance_layout;
 use local_coursegen\output\template_row_options;
 
@@ -150,6 +151,7 @@ class get_template_structure extends external_api {
                     'action'  => $action,
                     'isinstance' => false,
                     'aigenerated' => false,
+                    'generationcmid' => 0,
                 ];
             }
 
@@ -240,6 +242,10 @@ class get_template_structure extends external_api {
             'action'  => '',
             'isinstance' => true,
             'aigenerated' => true,
+            // The id this row will answer to in the generation's progress
+            // events, so the live view can mark THIS activity when its own
+            // content lands. Same value template_export_service sends.
+            'generationcmid' => template_export_service::instance_cmid((int) $instance->get('id')),
         ];
     }
 
@@ -287,6 +293,8 @@ class get_template_structure extends external_api {
                             'isinstance' => new external_value(PARAM_BOOL, 'Whether this is a virtual instance row'),
                             'aigenerated' => new external_value(PARAM_BOOL,
                                 'Whether AI will generate this activity in the new course (drives the badge)'),
+                            'generationcmid' => new external_value(PARAM_INT,
+                                'Id this row answers to in the generation progress events; 0 when it is not generated'),
                         ])
                     ),
                 ])

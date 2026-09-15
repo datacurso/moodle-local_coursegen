@@ -220,10 +220,10 @@ $functions = [
         'capabilities' => 'local/coursegen:createcoursewithai',
         'loginrequired' => true,
     ],
-    'local_coursegen_get_template_generation_status' => [
-        'classname' => 'local_coursegen\\external\\get_template_generation_status',
+    'local_coursegen_finish_template_generation' => [
+        'classname' => 'local_coursegen\\external\\finish_template_generation',
         'methodname' => 'execute',
-        'description' => 'Poll a template generation and create the course when ready',
+        'description' => 'Create the course from a finished template generation',
         'type' => 'write',
         'ajax' => true,
         'capabilities' => 'local/coursegen:createcoursewithai',

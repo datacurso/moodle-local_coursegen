@@ -106,7 +106,8 @@
         <ul class="section m-0 p-0 img-text d-block">
           {{#activities}}
           <li class="activity activity-wrapper {{modname}} modtype_{{modname}}{{#locked}} is-locked{{/locked}}"
-              data-section-id="{{sectionid}}" data-activity-index="{{index}}">
+              data-section-id="{{sectionid}}" data-activity-index="{{index}}"
+              {{#generationcmid}}data-generation-cmid="{{generationcmid}}"{{/generationcmid}}>
             {{#showinsertzone}}
             <div class="cg-insert-zone" role="presentation">
               <button type="button" class="cg-insert-btn"

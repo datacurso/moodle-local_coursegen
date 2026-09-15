@@ -49,4 +49,15 @@ class streaming_url_builder {
     public static function mod_stream(string $baseurl, string $jobid): string {
         return rtrim($baseurl, '/') . '/activity/stream/' . urlencode($jobid);
     }
+
+    /**
+     * Build the course-from-template streaming URL for a session.
+     *
+     * @param string $baseurl Region-resolved API base URL, with or without trailing slash.
+     * @param string $threadid External generation session identifier (thread_id).
+     * @return string Streaming URL.
+     */
+    public static function course_template_stream(string $baseurl, string $threadid): string {
+        return rtrim($baseurl, '/') . '/course-template/stream/' . urlencode($threadid);
+    }
 }

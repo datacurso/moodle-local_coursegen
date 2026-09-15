@@ -749,6 +749,22 @@
           <span class="badge badge-light border" id="tplModeLimitsBadge"></span>
         </div>
 
+        {{! Live generation status — hidden until Generate is pressed, then fed
+            by the generation's own SSE stream (see template/generation_stream.js).
+            The bar reflects activities finished over activities expected; the
+            label names the phase the service reports. }}
+        <div id="tplGenProgress" class="cg-tpl-gen-progress" hidden>
+          <div class="cg-tpl-gen-head">
+            <span class="cg-tpl-gen-spinner" aria-hidden="true"></span>
+            <span id="tplGenStage" class="cg-tpl-gen-stage"></span>
+            <span id="tplGenCount" class="cg-tpl-gen-count"></span>
+          </div>
+          <div class="cg-tpl-gen-track" role="progressbar" aria-valuemin="0" aria-valuemax="100"
+               aria-valuenow="0" id="tplGenTrack">
+            <div class="cg-tpl-gen-fill" id="tplGenFill"></div>
+          </div>
+        </div>
+
         {{! Dynamic structure — populated by JS when template is selected }}
         <div id="tplModeStructure"></div>
       </div>
