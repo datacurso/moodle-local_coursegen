@@ -132,6 +132,16 @@
     display: none;
 }
 
+/* Frame the whole row while its name is open for editing — the same
+   highlighted-row treatment core_courseformat gives an activity/section
+   whose own inplace_editable title is open, not just a bordered input
+   floating with nothing around it. */
+.tpl-row-instance:has(.tpl-instance-name-editable.inplaceeditingon) {
+    outline: 2px solid #0f6cbf;
+    outline-offset: -2px;
+    background-color: #f8f9fa;
+}
+
 .tpl-instance-actions {
     display: inline-flex;
     align-items: center;
