@@ -102,9 +102,17 @@
    own — never full core/inplace_editable, which always commits over
    AJAX; this row's name is only ever persisted later, by the wizard's own
    "Save"). See template_instance_name_edit.js for the class toggle. */
+.tpl-instance-name-editable {
+    margin-right: 0.5rem;
+}
+
 .tpl-instance-name-editable .editinstructions,
 .tpl-instance-name-editable input[data-region="instance-name-input"] {
     display: none;
+}
+
+.tpl-instance-name-editable input[data-region="instance-name-input"] {
+    max-width: 16rem;
 }
 
 .tpl-instance-name-editable.inplaceeditingon .tpl-instance-name-display,
