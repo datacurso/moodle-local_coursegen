@@ -61,6 +61,7 @@ export const applyStructureResponse = (state, data) => {
     state.sections = (data.sections || []).map((section) => ({
         id: section.id,
         name: section.name,
+        behavior: section.behavior || 'custom',
         locked: !!section.locked,
         collapsed: false,
         activities: (section.activities || []).map((activity) => ({
@@ -69,9 +70,23 @@ export const applyStructureResponse = (state, data) => {
             modname: activity.modname,
             purpose: activity.purpose,
             iconhtml: activity.iconhtml,
+            // Instance rows carry their snapshotted type label; real rows
+            // resolve theirs client-side (render.js ensureTypeLabels).
+            typelabel: activity.typelabel || '',
             locked: !!activity.locked,
+            action: activity.action || '',
+            // Virtual instance rows ("AI will generate an activity here,
+            // molded on a template activity") arrive with NEGATIVE ids
+            // (-recordid on the server), locked and non-removable.
+            isinstance: !!activity.isinstance,
+            aigenerated: !!activity.aigenerated,
         })),
     }));
+    // Server-sent instance rows use negative ids, the same sign space as the
+    // client-only placeholder ids — re-seed the counter below the smallest
+    // received id so professor-added rows can never collide with them.
+    const minReceivedId = Math.min(0, ...state.sections.flatMap((s) => s.activities.map((a) => a.id)));
+    state.nextActivityId = minReceivedId - 1;
 };
 
 /**

@@ -43,7 +43,12 @@ import {canAddSection} from './state';
  */
 const ensureTypeLabels = async(state) => {
     const modnames = [...new Set(
-        state.sections.flatMap((section) => section.activities.map((a) => a.modname))
+        state.sections.flatMap((section) => section.activities
+            // Instance rows carry their own snapshotted label (and their
+            // modname snapshot may even be empty — never ask core/str for
+            // "mod_"), so only real rows without a label round-trip here.
+            .filter((a) => a.modname && !a.typelabel)
+            .map((a) => a.modname))
     )].filter((modname) => !(modname in state.typeLabels));
 
     if (!modnames.length) {
@@ -78,9 +83,11 @@ const buildContext = (state, labels) => ({
             purpose: activity.purpose,
             iconhtml: activity.iconhtml,
             locked: activity.locked,
+            isinstance: !!activity.isinstance,
+            aigenerated: !!activity.aigenerated,
             sectionid: section.id,
             index,
-            typelabel: state.typeLabels[activity.modname] || '',
+            typelabel: activity.typelabel || state.typeLabels[activity.modname] || '',
             // The insert-between-rows "+" divider is a planning affordance: it never
             // shows in a locked section (nothing may be added there at all), but it
             // DOES show above a locked activity inside an unlocked section — the
