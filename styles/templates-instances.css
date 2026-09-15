@@ -125,6 +125,14 @@
     display: inline-block;
 }
 
+/* Core's own -30px (theme/boost/scss/moodle/core.scss) sits this hint
+   flush against a header-sized title's own top edge — against this row's
+   own (shorter) input it landed mounted right on the border instead of
+   floating a few px above it. */
+.tpl-instance-name-editable.inplaceeditingon .editinstructions {
+    margin-top: -45px;
+}
+
 /* Hide the "Instance" badge while the name is being edited — sitting right
    next to the open input, it crowded the one thing actually being worked
    on. It comes back the moment editing ends. */
