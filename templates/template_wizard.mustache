@@ -61,6 +61,13 @@
     <div data-region="config" class="{{^haspreview}}d-none{{/haspreview}}">
         <hr class="my-4">
 
+        {{! Name — first, so the template has one before anything else about
+            it is configured }}
+        <h4>{{#str}}template_summary_title, local_coursegen{{/str}}</h4>
+        <div data-region="template-name-form">{{{nameformhtml}}}</div>
+
+        <hr class="my-4">
+
         {{! Default behavior per activity type + generated-course limits +
             allowed activity types + section naming pattern — real mform
             elements, see classes/form/template_config_form.php }}
@@ -75,11 +82,6 @@
             <div data-region="sections-config">{{{sectionsconfightml}}}</div>
         </div>
 
-        <hr class="my-4">
-
-        {{! Name + Save }}
-        <h4>{{#str}}template_summary_title, local_coursegen{{/str}}</h4>
-        <div data-region="template-name-form">{{{nameformhtml}}}</div>
         <div class="d-flex justify-content-end mt-3">
             <button class="btn btn-primary" data-action="save">
                 {{#pix}}e/save, core{{/pix}}
