@@ -123,7 +123,7 @@ final class get_template_structure_view_test extends \advanced_testcase {
             'typelabel' => 'Forum',
             'modname' => 'forum',
             'prompt' => '',
-            'anchorcmid' => 0,
+            'aftercmid' => 0,
             'sortorder' => 0,
         ], $overrides);
         $instance = new template_instance(0, (object) $data);
@@ -236,13 +236,13 @@ final class get_template_structure_view_test extends \advanced_testcase {
         $section2 = get_fast_modinfo($course)->get_section_info(2);
 
         $templateid = $this->make_template((int) $course->id);
-        $this->add_instance($templateid, (int) $section2->id, ['name' => 'At start', 'anchorcmid' => 0]);
+        $this->add_instance($templateid, (int) $section2->id, ['name' => 'At start', 'aftercmid' => 0]);
         // Created second-after-forum FIRST to prove sortorder wins over ids.
         $this->add_instance($templateid, (int) $section2->id, [
-            'name' => 'Second after forum', 'anchorcmid' => (int) $forum->cmid, 'sortorder' => 2,
+            'name' => 'Second after forum', 'aftercmid' => (int) $forum->cmid, 'sortorder' => 2,
         ]);
         $this->add_instance($templateid, (int) $section2->id, [
-            'name' => 'First after forum', 'anchorcmid' => (int) $forum->cmid, 'sortorder' => 1,
+            'name' => 'First after forum', 'aftercmid' => (int) $forum->cmid, 'sortorder' => 1,
         ]);
 
         $result = get_template_structure::execute($templateid);
@@ -275,7 +275,7 @@ final class get_template_structure_view_test extends \advanced_testcase {
         $templateid = $this->make_template((int) $course->id);
         $this->add_activity_action($templateid, (int) $section2->id, (int) $forum->cmid, 'template');
         $this->add_instance($templateid, (int) $section2->id, [
-            'name' => 'Molded on forum', 'anchorcmid' => (int) $forum->cmid,
+            'name' => 'Molded on forum', 'aftercmid' => (int) $forum->cmid,
         ]);
 
         $result = get_template_structure::execute($templateid);
@@ -290,7 +290,7 @@ final class get_template_structure_view_test extends \advanced_testcase {
     }
 
     /**
-     * An instance whose anchorcmid matches nothing in the section (the base
+     * An instance whose aftercmid matches nothing in the section (the base
      * activity was deleted) appends at the section end instead of being
      * dropped — same rule the admin review follows.
      */
@@ -303,7 +303,7 @@ final class get_template_structure_view_test extends \advanced_testcase {
 
         $templateid = $this->make_template((int) $course->id);
         $this->add_instance($templateid, (int) $section2->id, [
-            'name' => 'Orphaned instance', 'anchorcmid' => 999999,
+            'name' => 'Orphaned instance', 'aftercmid' => 999999,
         ]);
 
         $result = get_template_structure::execute($templateid);
@@ -334,10 +334,10 @@ final class get_template_structure_view_test extends \advanced_testcase {
 
         $templateid = $this->make_template((int) $course->id);
         $instance = $this->add_instance($templateid, (int) $section1->id, [
-            'name' => 'Discussion 1', 'typelabel' => 'Forum', 'modname' => 'forum', 'anchorcmid' => 0,
+            'name' => 'Discussion 1', 'typelabel' => 'Forum', 'modname' => 'forum', 'aftercmid' => 0,
         ]);
         $this->add_instance($templateid, (int) $section1->id, [
-            'name' => 'No icon', 'typelabel' => 'Page', 'modname' => null, 'anchorcmid' => (int) $page->cmid,
+            'name' => 'No icon', 'typelabel' => 'Page', 'modname' => null, 'aftercmid' => (int) $page->cmid,
         ]);
 
         $result = get_template_structure::execute($templateid);
@@ -385,7 +385,7 @@ final class get_template_structure_view_test extends \advanced_testcase {
         $templateid = $this->make_template((int) $course->id);
         $this->add_section_behavior($templateid, (int) $section1->id, 1, 'keep');
         $this->add_instance($templateid, (int) $section1->id, [
-            'name' => 'Kept-section instance', 'anchorcmid' => (int) $page->cmid,
+            'name' => 'Kept-section instance', 'aftercmid' => (int) $page->cmid,
         ]);
 
         $result = get_template_structure::execute($templateid);
@@ -401,8 +401,8 @@ final class get_template_structure_view_test extends \advanced_testcase {
             $this->assertTrue($activity['locked']);
         }
 
-        $custom = $this->section_by_id($result, (int) $section2->id);
-        $this->assertSame('custom', $custom['behavior']);
-        $this->assertFalse($custom['locked']);
+        $aimodify = $this->section_by_id($result, (int) $section2->id);
+        $this->assertSame('aimodify', $aimodify['behavior']);
+        $this->assertFalse($aimodify['locked']);
     }
 }

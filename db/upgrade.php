@@ -338,5 +338,33 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026072002, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026091504) {
+        // The template fields were renamed to say what they do (anchorcmid ->
+        // aftercmid, behavior 'custom' -> 'aimodify'), but the rename was made
+        // inside the 2026072002 block above: any site already past that
+        // savepoint skipped it entirely and kept the old schema. Moodle's
+        // update_record() drops columns a table does not have WITHOUT error,
+        // so such a site silently discarded every instance position on save
+        // instead of failing loudly. Migrate both here, guarded so the step is
+        // a no-op on installs that already carry the final shape.
+        $table = new xmldb_table('local_coursegen_tpl_instance');
+        $oldfield = new xmldb_field('anchorcmid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'prompt');
+        $newfield = new xmldb_field('aftercmid');
+        $needsrename = $dbman->table_exists($table)
+            && $dbman->field_exists($table, $oldfield)
+            && !$dbman->field_exists($table, $newfield);
+        if ($needsrename) {
+            $dbman->rename_field($table, $oldfield, 'aftercmid');
+        }
+
+        // Section behaviour 'custom' is the former name of 'aimodify'. Stored
+        // rows still carrying it reach the AI service verbatim, where that
+        // value means nothing.
+        $DB->set_field('local_coursegen_tpl_section', 'behavior', 'aimodify', ['behavior' => 'custom']);
+
+        // Coursegen savepoint reached.
+        upgrade_plugin_savepoint(true, 2026091504, 'local', 'coursegen');
+    }
+
     return true;
 }

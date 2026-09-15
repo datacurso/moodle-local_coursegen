@@ -107,7 +107,7 @@ final class course_sections_saved_config_test extends \advanced_testcase {
 
         $section0 = $modinfo->get_section_info(0);
         $generalselect = $this->extract_behavior_select($html, (int) $section0->id);
-        $this->assertMatchesRegularExpression('/<option value="custom"[^>]*\sselected/', $generalselect);
+        $this->assertMatchesRegularExpression('/<option value="aimodify"[^>]*\sselected/', $generalselect);
 
         $result = get_course_preview::execute((int) $course->id, $templateid);
         $ajaxpageselect = $this->extract_action_select($result['html'], (int) $page->cmid);

@@ -75,7 +75,7 @@ final class save_template_instances_test extends \advanced_testcase {
         $this->assertSame('Forum template', $record->get('sourcename'));
         $this->assertSame('Discussion 1', $record->get('name'));
         $this->assertSame('Page', $record->get('typelabel'));
-        $this->assertSame((int) $forum->cmid, (int) $record->get('anchorcmid'));
+        $this->assertSame((int) $forum->cmid, (int) $record->get('aftercmid'));
 
         $html = sections_config::render(get_fast_modinfo($course), (int) $saved['id']);
 
@@ -144,12 +144,14 @@ final class save_template_instances_test extends \advanced_testcase {
         );
         $this->assertCount(1, template_instance::get_records(['templateid' => (int) $saved['id']]));
 
+        // Re-save THE SAME template (id passed through) with no instances at all.
         $this->save_with_instances(
             (int) $course->id,
             (int) $section1->id,
             1,
             [['cmid' => (int) $page->cmid, 'action' => 'template', 'useasreference' => true, 'prompt' => '']],
-            []
+            [],
+            (int) $saved['id']
         );
         $this->assertCount(0, template_instance::get_records(['templateid' => (int) $saved['id']]));
     }

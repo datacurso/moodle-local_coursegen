@@ -152,6 +152,7 @@ trait sections_config_fixture_trait {
      * @param int $sectionnum
      * @param array $activities
      * @param array $instances
+     * @param int $templateid Existing template to re-save, 0 to create a new one.
      * @return array \local_coursegen\external\save_template::execute()'s return value.
      */
     private function save_with_instances(
@@ -159,17 +160,29 @@ trait sections_config_fixture_trait {
         int $sectionid,
         int $sectionnum,
         array $activities,
-        array $instances
+        array $instances,
+        int $templateid = 0
     ): array {
-        return \local_coursegen\external\save_template::execute(0, 'Instances test', '', $courseid, 0, false, '[]', '', 1, [
+        return \local_coursegen\external\save_template::execute(
+            $templateid,
+            'Instances test',
+            '',
+            $courseid,
+            0,
+            false,
+            '[]',
+            '',
+            1,
             [
-                'sectionid' => $sectionid,
-                'sectionnum' => $sectionnum,
-                'behavior' => 'aimodify',
-                'activities' => $activities,
-                'instances' => $instances,
-            ],
-        ]);
+                [
+                    'sectionid' => $sectionid,
+                    'sectionnum' => $sectionnum,
+                    'behavior' => 'aimodify',
+                    'activities' => $activities,
+                    'instances' => $instances,
+                ],
+            ]
+        );
     }
 
     /**

@@ -62,7 +62,7 @@ final class save_template_scope_test extends \advanced_testcase {
             [
                 'sectionid' => (int) $section1->id,
                 'sectionnum' => 1,
-                'behavior' => 'custom',
+                'behavior' => 'aimodify',
                 'activities' => [
                     [
                         'cmid' => (int) $page->cmid,
@@ -109,7 +109,7 @@ final class save_template_scope_test extends \advanced_testcase {
             [
                 'sectionid' => (int) $section1->id,
                 'sectionnum' => 1,
-                'behavior' => 'custom',
+                'behavior' => 'aimodify',
                 'activities' => [
                     ['cmid' => (int) $page->cmid, 'action' => 'template', 'useasreference' => true, 'prompt' => ''],
                 ],
@@ -138,7 +138,7 @@ final class save_template_scope_test extends \advanced_testcase {
             [
                 'sectionid' => (int) $section1->id,
                 'sectionnum' => 1,
-                'behavior' => 'custom',
+                'behavior' => 'aimodify',
                 'activities' => [
                     [
                         'cmid' => (int) $page->cmid,
@@ -172,7 +172,7 @@ final class save_template_scope_test extends \advanced_testcase {
             [
                 'sectionid' => (int) $section1->id,
                 'sectionnum' => 1,
-                'behavior' => 'custom',
+                'behavior' => 'aimodify',
                 'activities' => [
                     [
                         'cmid' => (int) $page->cmid,
