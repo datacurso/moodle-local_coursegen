@@ -27,12 +27,12 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {renderStepSections, resetSectionsRender} from './step_sections';
-import {renderStepLimits} from './step_limits';
-import {defaultActionForModname} from './type_action_sync';
-import {saveTemplate} from './save_payload';
-import {bindCoursePicker, updateSelectedBanner} from './course_picker_binding';
-import * as Repository from './repository';
+import {renderStepSections, resetSectionsRender} from 'local_coursegen/local/template/step_sections';
+import {renderStepLimits} from 'local_coursegen/local/template/step_limits';
+import {defaultActionForModname} from 'local_coursegen/local/template/type_action_sync';
+import {saveTemplate} from 'local_coursegen/local/template/save_payload';
+import {bindCoursePicker, updateSelectedBanner} from 'local_coursegen/local/template/course_picker_binding';
+import * as Repository from 'local_coursegen/local/template/repository';
 import DynamicForm from 'core_form/dynamicform';
 import Notification from 'core/notification';
 

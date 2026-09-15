@@ -30,8 +30,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {openInstanceMenu, closeInstanceMenu, beginMenuOpen} from './template_instance_menu';
-import {insertInstanceRow, removeInstanceRow} from './template_instance_rows';
+import {openInstanceMenu, closeInstanceMenu, beginMenuOpen} from 'local_coursegen/local/template/template_instance_menu';
+import {insertInstanceRow, removeInstanceRow} from 'local_coursegen/local/template/template_instance_rows';
 import {getStrings} from 'core/str';
 import Notification from 'core/notification';
 import {prefetchStrings} from 'core/prefetch';

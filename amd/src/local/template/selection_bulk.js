@@ -26,7 +26,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {openTemplateScopeModal} from './template_scope_modal';
+import {openTemplateScopeModal} from 'local_coursegen/local/template/template_scope_modal';
 import {get_string as getString} from 'core/str';
 
 /**

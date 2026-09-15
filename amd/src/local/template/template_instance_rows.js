@@ -35,7 +35,7 @@
  */
 
 import Templates from 'core/templates';
-import {startNameEdit, currentName} from './template_instance_name_edit';
+import {startNameEdit, currentName} from 'local_coursegen/local/template/template_instance_name_edit';
 
 /** @type {number} Client-only counter for unique data-instance-id values on unsaved rows. */
 let nextTempId = 1;

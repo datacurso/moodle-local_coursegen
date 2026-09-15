@@ -21,7 +21,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {getCoursePreview} from './repository';
+import {getCoursePreview} from 'local_coursegen/local/template/repository';
 import {get_string as getString} from 'core/str';
 import Notification from 'core/notification';
 

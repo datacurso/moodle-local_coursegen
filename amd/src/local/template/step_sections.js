@@ -37,9 +37,9 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {getCoursePreview} from './repository';
-import {applyTypeDefaultsToState} from './type_action_sync';
-import {bindServerRenderedControls} from './sections_events';
+import {getCoursePreview} from 'local_coursegen/local/template/repository';
+import {applyTypeDefaultsToState} from 'local_coursegen/local/template/type_action_sync';
+import {bindServerRenderedControls} from 'local_coursegen/local/template/sections_events';
 import Notification from 'core/notification';
 
 let rendered = false;
