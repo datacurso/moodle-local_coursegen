@@ -76,7 +76,7 @@
             <a href="#" class="quickeditlink aalink" data-region="instance-name-edit-trigger"
                title="{{#str}} template_instance_rename, local_coursegen {{/str}}">
                 <span class="quickediticon visibleifjs icon-size-3">
-                    <i class="icon fa fa-pencil" aria-hidden="true"></i>
+                    {{#pix}} t/edit, core {{/pix}}
                 </span>
             </a>
             <span class="editinstructions" data-region="instance-name-instructions">
@@ -92,11 +92,11 @@
         <div class="tpl-instance-actions">
             <button type="button" class="tpl-instance-icon-btn" data-region="instance-prompt-toggle" data-id="{{instanceid}}"
                     title="{{#str}} template_instance_prompt_edit, local_coursegen {{/str}}">
-                <i class="icon fa fa-pencil" aria-hidden="true"></i>
+                {{#pix}} t/edit, core {{/pix}}
             </button>
             <button type="button" class="tpl-instance-icon-btn tpl-instance-icon-danger" data-region="instance-remove" data-id="{{instanceid}}"
                     title="{{#str}} template_instance_remove, local_coursegen {{/str}}">
-                <i class="icon fa fa-times" aria-hidden="true"></i>
+                {{#pix}} t/delete, core {{/pix}}
             </button>
         </div>
     </td>

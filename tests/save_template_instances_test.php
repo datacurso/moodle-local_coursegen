@@ -45,6 +45,8 @@ final class save_template_instances_test extends \advanced_testcase {
      * showing the snapshotted source name.
      */
     public function test_persists_and_hydrates_instance_round_trip(): void {
+        global $OUTPUT;
+
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -101,10 +103,13 @@ final class save_template_instances_test extends \advanced_testcase {
         $this->assertStringContainsString('quickeditlink', $instancearea);
         $this->assertStringContainsString('>Discussion 1<', $instancearea);
 
-        // The prompt-edit/remove actions render as real icons, not glyph
-        // characters.
-        $this->assertStringContainsString('fa-pencil', $instancearea);
-        $this->assertStringContainsString('fa-times', $instancearea);
+        // The rename/prompt-edit/remove actions render Moodle's own
+        // standard icons (whatever the current theme resolves t/edit and
+        // t/delete to), not hand-picked icon classes or glyph characters.
+        $editicon = $OUTPUT->pix_icon('t/edit', '', 'core');
+        $deleteicon = $OUTPUT->pix_icon('t/delete', '', 'core');
+        $this->assertGreaterThanOrEqual(2, substr_count($instancearea, $editicon));
+        $this->assertStringContainsString($deleteicon, $instancearea);
 
         // The instance renders AFTER the forum row it is anchored to.
         $forumpos = strpos($html, 'data-id="' . $forum->cmid . '"');
