@@ -135,11 +135,24 @@
 /* Frame the whole row while its name is open for editing — the same
    highlighted-row treatment core_courseformat gives an activity/section
    whose own inplace_editable title is open, not just a bordered input
-   floating with nothing around it. */
-.tpl-row-instance:has(.tpl-instance-name-editable.inplaceeditingon) {
-    outline: 2px solid #0f6cbf;
-    outline-offset: -2px;
+   floating with nothing around it.
+   A single "outline"/"border" on the <tr> itself renders unreliably across
+   browsers (table rows don't consistently paint an outline spanning every
+   cell) — bordering each cell individually, with only the first/last also
+   getting a left/right edge, is what actually draws one continuous box
+   around the row. */
+.tpl-row-instance:has(.tpl-instance-name-editable.inplaceeditingon) td {
+    border-top: 2px solid #0f6cbf;
+    border-bottom: 2px solid #0f6cbf;
     background-color: #f8f9fa;
+}
+
+.tpl-row-instance:has(.tpl-instance-name-editable.inplaceeditingon) td:first-child {
+    border-left: 2px solid #0f6cbf;
+}
+
+.tpl-row-instance:has(.tpl-instance-name-editable.inplaceeditingon) td:last-child {
+    border-right: 2px solid #0f6cbf;
 }
 
 .tpl-instance-actions {
