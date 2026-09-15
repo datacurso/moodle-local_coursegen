@@ -119,7 +119,7 @@ trait sections_config_fixture_trait {
      * @param int $sourcecmid
      * @param string $sourcename
      * @param string $name
-     * @param int $anchorcmid
+     * @param int $aftercmid
      * @param int $sortorder
      * @param string $modname
      * @return array
@@ -128,7 +128,7 @@ trait sections_config_fixture_trait {
         int $sourcecmid,
         string $sourcename,
         string $name,
-        int $anchorcmid = 0,
+        int $aftercmid = 0,
         int $sortorder = 0,
         string $modname = 'page'
     ): array {
@@ -139,7 +139,7 @@ trait sections_config_fixture_trait {
             'typelabel' => 'Page',
             'modname' => $modname,
             'prompt' => '',
-            'anchorcmid' => $anchorcmid,
+            'aftercmid' => $aftercmid,
             'sortorder' => $sortorder,
         ];
     }
@@ -165,7 +165,7 @@ trait sections_config_fixture_trait {
             [
                 'sectionid' => $sectionid,
                 'sectionnum' => $sectionnum,
-                'behavior' => 'custom',
+                'behavior' => 'aimodify',
                 'activities' => $activities,
                 'instances' => $instances,
             ],
