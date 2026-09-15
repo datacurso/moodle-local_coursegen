@@ -110,7 +110,7 @@
                 <FIELD NAME="templateid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="sectionid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="sectionnum" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
-                <FIELD NAME="behavior" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="custom" SEQUENCE="false" COMMENT="custom, keep, or exclude" />
+                <FIELD NAME="behavior" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="aimodify" SEQUENCE="false" COMMENT="aimodify, keep, or exclude" />
                 <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
             </FIELDS>
@@ -151,7 +151,7 @@
                 <FIELD NAME="typelabel" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="modname" TYPE="char" LENGTH="100" NOTNULL="false" SEQUENCE="false" COMMENT="Snapshot of the source template's module type (e.g. lesson), so the Name column's icon can be resolved the same way a real activity's is" />
                 <FIELD NAME="prompt" TYPE="text" NOTNULL="false" SEQUENCE="false" />
-                <FIELD NAME="anchorcmid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="cmid this instance renders after within its section; 0 = section start" />
+                <FIELD NAME="aftercmid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="cmid this instance renders after within its section; 0 = section start" />
                 <FIELD NAME="sortorder" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" />
                 <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />

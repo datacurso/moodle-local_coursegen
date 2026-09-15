@@ -157,7 +157,7 @@ const initSectionState = () => {
 
     const actTypes = new Set();
     state.courseStructure.forEach(s => {
-        state.sectionBehavior[s.id] = state.savedSections[s.id] || 'custom';
+        state.sectionBehavior[s.id] = state.savedSections[s.id] || 'aimodify';
         s.activities.forEach(a => {
             const saved = state.savedActivities[a.id];
             state.activityAction[a.id] = saved?.action || defaultActionForModname(a.modname);

@@ -77,7 +77,7 @@ export const applyStructureResponse = (state, data) => {
     state.sections = (data.sections || []).map((section) => ({
         id: section.id,
         name: section.name,
-        behavior: section.behavior || 'custom',
+        behavior: section.behavior || 'aimodify',
         locked: !!section.locked,
         collapsed: false,
         activities: (section.activities || []).map((activity) => ({

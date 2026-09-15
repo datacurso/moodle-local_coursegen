@@ -98,7 +98,7 @@ class get_template_structure extends external_api {
 
         $sections = [];
         foreach ($modinfo->get_section_info_all() as $section) {
-            $behavior = $sectionsettings[$section->id] ?? 'custom';
+            $behavior = $sectionsettings[$section->id] ?? 'aimodify';
             if ($behavior === 'exclude') {
                 continue;
             }

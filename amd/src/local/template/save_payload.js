@@ -88,7 +88,7 @@ const collectSectionInstances = (root, sectionid) => {
  */
 const buildSections = (state, root) => state.courseStructure.map(s => ({
     sectionid: s.id, sectionnum: s.num,
-    behavior: state.sectionBehavior[s.id] || 'custom',
+    behavior: state.sectionBehavior[s.id] || 'aimodify',
     instances: collectSectionInstances(root, s.id),
     activities: s.activities.map(a => ({
         cmid: a.id, action: state.activityAction[a.id] || 'keep',

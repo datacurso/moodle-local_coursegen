@@ -49,17 +49,17 @@ class template_row_options {
      *     editing an existing template, "custom" otherwise).
      * @return array Select option contexts.
      */
-    public static function section_actions(int $sectionid, string $behavior = 'custom'): array {
-        $valid = ['custom', 'keep', 'exclude'];
+    public static function section_actions(int $sectionid, string $behavior = 'aimodify'): array {
+        $valid = ['aimodify', 'keep', 'exclude'];
         if (!in_array($behavior, $valid, true)) {
-            $behavior = 'custom';
+            $behavior = 'aimodify';
         }
 
         // "exclude" is not offered in the UI any more: it only renders (and
         // preselects) when an existing template already saved it, so
         // edit-mode hydration never lies about the stored state. The backend
         // keeps accepting and processing it untouched.
-        $keys = ['custom', 'keep'];
+        $keys = ['aimodify', 'keep'];
         if ($behavior === 'exclude') {
             $keys = $valid;
         }

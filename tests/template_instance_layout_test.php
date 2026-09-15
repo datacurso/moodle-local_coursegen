@@ -33,14 +33,14 @@ use local_coursegen\local\service\template_instance_layout;
 final class template_instance_layout_test extends \advanced_testcase {
     /**
      * Build an in-memory template_instance persistent (never saved to the
-     * DB) with the given anchorcmid/sortorder, for pure ordering tests.
+     * DB) with the given aftercmid/sortorder, for pure ordering tests.
      *
-     * @param int $anchorcmid
+     * @param int $aftercmid
      * @param int $sortorder
      * @param string $label Identifies the instance in assertions (stored as its name).
      * @return template_instance
      */
-    private function fake_instance(int $anchorcmid, int $sortorder, string $label): template_instance {
+    private function fake_instance(int $aftercmid, int $sortorder, string $label): template_instance {
         $instance = new template_instance(0);
         $instance->set('templateid', 1);
         $instance->set('sectionid', 1);
@@ -48,7 +48,7 @@ final class template_instance_layout_test extends \advanced_testcase {
         $instance->set('sourcename', 'Source');
         $instance->set('name', $label);
         $instance->set('typelabel', 'Page');
-        $instance->set('anchorcmid', $anchorcmid);
+        $instance->set('aftercmid', $aftercmid);
         $instance->set('sortorder', $sortorder);
         return $instance;
     }
@@ -84,7 +84,7 @@ final class template_instance_layout_test extends \advanced_testcase {
     }
 
     /**
-     * anchorcmid=0 means "the start of the section", before every real row.
+     * aftercmid=0 means "the start of the section", before every real row.
      */
     public function test_anchor_zero_renders_before_the_first_real_row(): void {
         $instance = $this->fake_instance(0, 0, 'A');
@@ -112,7 +112,7 @@ final class template_instance_layout_test extends \advanced_testcase {
     }
 
     /**
-     * An instance whose anchorcmid no longer matches any real cmid in this
+     * An instance whose aftercmid no longer matches any real cmid in this
      * section (its anchor activity was removed from the base course) is
      * appended at the very end instead of being dropped or crashing.
      */

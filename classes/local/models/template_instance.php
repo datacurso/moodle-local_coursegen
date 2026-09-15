@@ -97,12 +97,12 @@ class template_instance extends persistent {
             ],
             // The real cmid this instance renders immediately after within
             // its section; 0 means "the start of the section".
-            'anchorcmid' => [
+            'aftercmid' => [
                 'type' => PARAM_INT,
                 'null' => NULL_NOT_ALLOWED,
                 'default' => 0,
             ],
-            // Tiebreaker order among instances sharing the same anchorcmid.
+            // Tiebreaker order among instances sharing the same aftercmid.
             'sortorder' => [
                 'type' => PARAM_INT,
                 'null' => NULL_NOT_ALLOWED,

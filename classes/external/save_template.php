@@ -85,7 +85,7 @@ class save_template extends external_api {
                             'typelabel'  => new external_value(PARAM_TEXT, 'Snapshot of the source template\'s module type label'),
                             'modname'    => new external_value(PARAM_PLUGIN, 'Snapshot of the source template\'s module type', VALUE_DEFAULT, ''),
                             'prompt'     => new external_value(PARAM_RAW, 'Instance prompt', VALUE_DEFAULT, ''),
-                            'anchorcmid' => new external_value(
+                            'aftercmid' => new external_value(
                                 PARAM_INT,
                                 'Real cmid this instance renders after within its section; 0 = section start',
                                 VALUE_DEFAULT,

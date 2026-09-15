@@ -211,4 +211,22 @@ $functions = [
         'capabilities' => 'local/coursegen:managetemplates',
         'loginrequired' => true,
     ],
+    'local_coursegen_start_template_generation' => [
+        'classname' => 'local_coursegen\\external\\start_template_generation',
+        'methodname' => 'execute',
+        'description' => 'Start generating a course from a saved template',
+        'type' => 'write',
+        'ajax' => true,
+        'capabilities' => 'local/coursegen:createcoursewithai',
+        'loginrequired' => true,
+    ],
+    'local_coursegen_get_template_generation_status' => [
+        'classname' => 'local_coursegen\\external\\get_template_generation_status',
+        'methodname' => 'execute',
+        'description' => 'Poll a template generation and create the course when ready',
+        'type' => 'write',
+        'ajax' => true,
+        'capabilities' => 'local/coursegen:createcoursewithai',
+        'loginrequired' => true,
+    ],
 ];

@@ -1,0 +1,15 @@
+/* Template mode's instance badge and composer spacing. The composer itself
+   reuses free mode's own .card / .prompt-textarea / .card-toolbar classes
+   verbatim, so nothing here may override its border, radius or shadow. */
+
+.cg-tpl-prompt-card {
+    margin-top: .75rem;
+}
+
+.cg-tpl-instance-badge {
+    align-self: flex-start;
+    margin-top: .25rem;
+    color: #5e35b1;
+    background-color: #ede7f6;
+    border-color: #ede7f6 !important;
+}

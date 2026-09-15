@@ -124,7 +124,7 @@ class sections_config {
                 'activitycount' => count($rows),
                 'hasactivities' => !empty($rows),
                 'rows' => $rows,
-                'actions' => template_row_options::section_actions($sectionid, $savedbehaviors[$sectionid] ?? 'custom'),
+                'actions' => template_row_options::section_actions($sectionid, $savedbehaviors[$sectionid] ?? 'aimodify'),
             ];
         }
 

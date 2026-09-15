@@ -51,7 +51,7 @@ class template_section extends persistent {
             'behavior' => [
                 'type' => PARAM_ALPHA,
                 'null' => NULL_NOT_ALLOWED,
-                'default' => 'custom',
+                'default' => 'aimodify',
             ],
         ];
     }

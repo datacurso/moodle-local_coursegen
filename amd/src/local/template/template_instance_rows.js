@@ -158,15 +158,15 @@ export const removeInstanceRow = (instanceRow) => {
  * exact shape save_template expects.
  *
  * @param {HTMLElement} sectionEl The section card (data-for="section").
- * @returns {Array} {sourcecmid, sourcename, name, typelabel, prompt, anchorcmid, sortorder}
+ * @returns {Array} {sourcecmid, sourcename, name, typelabel, prompt, aftercmid, sortorder}
  */
 export const collectInstancesForSection = (sectionEl) => {
     const instances = [];
-    let anchorcmid = 0;
+    let aftercmid = 0;
     let sortorder = 0;
     sectionEl.querySelectorAll('[data-for="cmitem"], [data-for="instancerow"]').forEach(row => {
         if (row.dataset.for === 'cmitem') {
-            anchorcmid = parseInt(row.dataset.id, 10);
+            aftercmid = parseInt(row.dataset.id, 10);
             return;
         }
         const instanceid = row.dataset.instanceId;
@@ -184,7 +184,7 @@ export const collectInstancesForSection = (sectionEl) => {
             name: currentName(row.querySelector('[data-region="instance-name-editable"]')),
             typelabel: row.querySelector('td.text-muted').textContent.trim(),
             prompt: promptValue,
-            anchorcmid,
+            aftercmid,
             sortorder: sortorder++,
         });
     });

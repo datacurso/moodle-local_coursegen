@@ -74,6 +74,39 @@ class lesson_settings extends base_settings {
      * @param int $previouspageid Page id to insert after (0 for the first page).
      * @return stdClass|null Properties object, or null when the page is invalid.
      */
+    /**
+     * A content page's navigation buttons, each with its own jump.
+     *
+     * A mold page carries its REAL set ("Anterior" → previous page,
+     * "Siguiente" → next, "Fin de la lección" → end): collapsing that to one
+     * forward button, as this used to do, is what left generated lessons
+     * impossible to navigate. Pages that carry no buttons fall back to the
+     * single labelled "next page" button.
+     *
+     * @param array $page
+     * @return array List of ['text' => string, 'jumpto' => int].
+     */
+    private static function navigation_buttons(array $page): array {
+        $buttons = [];
+        foreach ($page['buttons'] ?? [] as $button) {
+            $text = trim((string) ($button['text'] ?? ''));
+            if ($text === '') {
+                continue;
+            }
+            $jumpto = $button['jumpto'] ?? null;
+            $buttons[] = [
+                'text' => $text,
+                'jumpto' => $jumpto === null ? LESSON_NEXTPAGE : (int) $jumpto,
+            ];
+        }
+        if ($buttons) {
+            return $buttons;
+        }
+
+        $buttontext = trim((string) ($page['button_text'] ?? ''));
+        return $buttontext === '' ? [] : [['text' => $buttontext, 'jumpto' => LESSON_NEXTPAGE]];
+    }
+
     protected function build_page_properties(array $page, int $previouspageid): ?stdClass {
         $title = trim((string) ($page['title'] ?? ''));
         $contenthtml = trim((string) ($page['content_html'] ?? ''));
@@ -93,14 +126,20 @@ class lesson_settings extends base_settings {
         $properties->pageid = $previouspageid;
 
         if ($pagetype === 'content') {
-            $buttontext = trim((string) ($page['button_text'] ?? ''));
-            if ($buttontext === '') {
+            $buttons = self::navigation_buttons($page);
+            if (!$buttons) {
                 return null;
             }
             $properties->qtype = LESSON_PAGE_BRANCHTABLE;
-            // Branch table answers are plain strings (button labels).
-            $properties->answer_editor = [$buttontext];
-            $properties->jumpto = [LESSON_NEXTPAGE];
+            // Branch table answers are plain strings (button labels), each
+            // paired with its own jump by position.
+            $properties->answer_editor = array_column($buttons, 'text');
+            $properties->jumpto = array_column($buttons, 'jumpto');
+            // Feeds the lesson's left "Lesson menu" block. mod_lesson's own
+            // branch-table form defaults this to checked (branchtable.php's
+            // setDefault('display', true)); leaving it unset stored 0 and the
+            // menu rendered empty on every generated lesson.
+            $properties->display = 1;
             return $properties;
         }
 

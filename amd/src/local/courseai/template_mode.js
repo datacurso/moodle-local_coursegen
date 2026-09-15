@@ -32,7 +32,11 @@ import YUI from 'core/yui';
 import {getStrings} from 'core/str';
 import {initFilepicker} from '../../repository/courseai';
 import {bindToggleWrap, showFilePicker} from './context/filepicker';
-import {getTemplateStructure} from './template/repository';
+import {
+    getTemplateStructure,
+    startTemplateGeneration,
+    getTemplateGenerationStatus,
+} from './template/repository';
 import {
     createTemplateState,
     applyStructureResponse,
@@ -60,6 +64,58 @@ const getLabels = () => {
         ]).then(([addSectionLabel, sectionWord, statsTemplate]) => ({addSectionLabel, sectionWord, statsTemplate}));
     }
     return labelsPromise;
+};
+
+/** How often the generation is polled, and for how long before giving up. */
+const POLL_INTERVAL_MS = 5000;
+const POLL_TIMEOUT_MS = 20 * 60 * 1000;
+
+/**
+ * Poll one generation until its course exists, then open it.
+ *
+ * @param {number} sessionId
+ * @param {HTMLElement} genBtn
+ * @returns {Promise<void>}
+ */
+const pollUntilCreated = async(sessionId, genBtn) => {
+    const deadline = Date.now() + POLL_TIMEOUT_MS;
+    while (Date.now() < deadline) {
+        await new Promise((resolve) => setTimeout(resolve, POLL_INTERVAL_MS));
+        const status = await getTemplateGenerationStatus(sessionId);
+        if (status.status === 'completed') {
+            window.location.href = status.courseurl;
+            return;
+        }
+    }
+    genBtn.disabled = false;
+    throw new Error('The generation is taking longer than expected. Check back in a few minutes.');
+};
+
+/**
+ * Generate the course from the picked template, with the input bar's own
+ * values (prompt, syllabus, language, images), then wait for the course.
+ *
+ * @param {Object} tplState
+ * @param {HTMLSelectElement|null} tplSelect
+ * @param {HTMLElement} genBtn
+ */
+const runGeneration = async(tplState, tplSelect, genBtn) => {
+    const templateId = parseInt(tplSelect?.value || '0', 10);
+    if (!templateId) {
+        return;
+    }
+    genBtn.disabled = true;
+    try {
+        const started = await startTemplateGeneration(
+            templateId,
+            tplState.prompt || '',
+            parseInt(tplState.syllabusdraftitemid || 0, 10) || 0
+        );
+        await pollUntilCreated(started.sessionid, genBtn);
+    } catch (e) {
+        genBtn.disabled = false;
+        Notification.exception(e);
+    }
 };
 
 /**
@@ -215,7 +271,7 @@ export const wireTemplateMode = (state) => {
     const genBtn = document.getElementById('tplModeGenerate');
     if (genBtn) {
         genBtn.addEventListener('click', () => {
-            Notification.exception(new Error('Course creation from a template is not available yet.'));
+            runGeneration(tplState, tplSelect, genBtn);
         });
     }
 

@@ -285,7 +285,7 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         $table->add_field('templateid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
         $table->add_field('sectionid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
         $table->add_field('sectionnum', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
-        $table->add_field('behavior', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, 'custom');
+        $table->add_field('behavior', XMLDB_TYPE_CHAR, '20', null, XMLDB_NOTNULL, null, 'aimodify');
         $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
         $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
         $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
@@ -324,7 +324,7 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         $table->add_field('typelabel', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
         $table->add_field('modname', XMLDB_TYPE_CHAR, '100', null, null, null, null);
         $table->add_field('prompt', XMLDB_TYPE_TEXT, null, null, null, null, null);
-        $table->add_field('anchorcmid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('aftercmid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
         $table->add_field('sortorder', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
         $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
         $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);

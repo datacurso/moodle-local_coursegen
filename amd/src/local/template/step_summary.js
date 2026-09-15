@@ -127,14 +127,14 @@ const col = (label, value) =>
 const buildTreeHtml = (structure, state) => {
     let html = '';
     structure.forEach(s => {
-        const beh = state.sectionBehavior[s.id] || 'custom';
+        const beh = state.sectionBehavior[s.id] || 'aimodify';
         const label = {custom: 'Customised', keep: 'Intact', exclude: 'Excluded'}[beh];
         html += `<div class="d-flex align-items-center py-1 small">`;
         html += `<i class="icon fa fa-folder-o fa-fw mr-1"></i>`;
         html += `<span class="flex-grow-1">${s.name}</span>`;
         html += `<span class="badge badge-secondary badge-pill">${label}</span></div>`;
 
-        if (beh !== 'custom') { return; }
+        if (beh !== 'aimodify') { return; }
         s.activities.forEach(a => {
             const act = state.activityAction[a.id] || 'modify';
             const lbl = {modify: 'Modify', keep: 'Intact', reference: 'Ref', exclude: 'Exclude'}[act];

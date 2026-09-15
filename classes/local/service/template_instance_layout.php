@@ -23,8 +23,8 @@ use local_coursegen\local\models\template_instance;
  * template_instance rows into a single render order.
  *
  * Every instance is anchored to render immediately after a given real cmid
- * (anchorcmid=0 means "the start of the section"); sortorder breaks ties
- * among instances sharing the same anchor. An instance whose anchorcmid no
+ * (aftercmid=0 means "the start of the section"); sortorder breaks ties
+ * among instances sharing the same anchor. An instance whose aftercmid no
  * longer matches any real cmid in this section (the base course activity it
  * was placed after was removed) is appended at the very end instead of
  * being dropped, ordered after every legitimately-anchored trailing
@@ -57,19 +57,19 @@ class template_instance_layout {
     }
 
     /**
-     * Group instances by their effective anchor: their own anchorcmid when
+     * Group instances by their effective anchor: their own aftercmid when
      * it matches a real cmid in this section (or is 0, "section start"),
      * otherwise the "orphan" bucket appended at the very end.
      *
      * @param template_instance[] $instances
      * @param int[] $realcmids
-     * @return array<int|string, template_instance[]> Keyed by anchorcmid, 0, or "orphan".
+     * @return array<int|string, template_instance[]> Keyed by aftercmid, 0, or "orphan".
      */
     private static function group_by_anchor(array $instances, array $realcmids): array {
         $validanchors = array_flip($realcmids);
         $groups = [];
         foreach ($instances as $instance) {
-            $anchor = (int) $instance->get('anchorcmid');
+            $anchor = (int) $instance->get('aftercmid');
             $key = 'orphan';
             if ($anchor === 0 || isset($validanchors[$anchor])) {
                 $key = $anchor;
