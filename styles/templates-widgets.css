@@ -158,17 +158,3 @@
     from { opacity: 0; transform: translateY(6px); }
     to { opacity: 1; transform: translateY(0); }
 }
-
-/* The "Required" legend (classes/form/template_name_form.php, an ordinary
-   moodleform) always renders as the LAST element of the form — core's own
-   mform template hardcodes it there (lib/formslib.php). Flex + order moves
-   it above the fields it explains without touching that markup. */
-[data-region="template-name-form"] form {
-    display: flex;
-    flex-direction: column;
-}
-
-[data-region="template-name-form"] .fdescription.required {
-    order: -1;
-    margin-bottom: 1rem;
-}
