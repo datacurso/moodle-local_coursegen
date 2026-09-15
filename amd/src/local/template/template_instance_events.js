@@ -72,7 +72,7 @@ const buildOneOption = (row, targetsectionid, state, hints) => {
         name: row.querySelector('.tpl-template-tag')?.dataset.name || '',
         typelabel: row.dataset.typelabel || '',
         modname: row.dataset.modname || '',
-        iconurl: row.querySelector('img.activityicon')?.src || '',
+        iconurl: row.querySelector('[data-region="activity-icon"]')?.src || '',
         disabled: !eligible,
         scopehint,
         tooltip: itemtooltip,
