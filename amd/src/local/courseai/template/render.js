@@ -89,6 +89,7 @@ const buildContext = (state, labels) => ({
             // attribute is omitted entirely on the rest rather than rendered
             // as a meaningless zero.
             generationcmid: activity.generationcmid || '',
+            generationuid: activity.generationuid || '',
             sectionid: section.id,
             index,
             typelabel: activity.typelabel || state.typeLabels[activity.modname] || '',

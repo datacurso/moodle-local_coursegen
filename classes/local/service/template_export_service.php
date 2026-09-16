@@ -35,22 +35,53 @@ use local_coursegen\local\models\template_section;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class template_export_service {
-    /** First synthetic cmid for virtual instances (never a real Moodle cmid). */
-    const INSTANCE_CMID_BASE = 900000;
+    /**
+     * The name one instance travels under, everywhere it is named.
+     *
+     * An instance is the one element of a generation with no course module of
+     * its own, so it has nothing to be called by, and every id invented for it
+     * so far was really some other activity's: first a course module id offset
+     * by 900000 to be improbable, then the same id negated to be impossible.
+     * Both were a row id in a costume.
+     *
+     * It is stored rather than derived because it has to be the same string in
+     * two different requests - the page that draws the link, and the payload
+     * the answer comes back against - and those cannot agree on something
+     * generated in either of them.
+     *
+     * @param template_instance $instance
+     * @return string A UUID.
+     */
+    public static function instance_uid(template_instance $instance): string {
+        $uid = (string) $instance->get('uid');
+        if ($uid !== '') {
+            return $uid;
+        }
+
+        // A row from before the column existed and missed by the upgrade's
+        // backfill. Naming it here rather than returning an empty string keeps
+        // the two requests agreeing, which is the whole point of storing it.
+        $uid = \core\uuid::generate();
+        $instance->set('uid', $uid);
+        $instance->update();
+        return $uid;
+    }
 
     /**
-     * The synthetic cmid that stands for one virtual instance.
+     * The id one virtual instance travels under.
      *
-     * Derived from the instance's own id rather than from its position in the
-     * export, so the professor-facing structure can name the same activity the
-     * generation's progress events name, without either side having to
-     * reproduce the other's ordering.
+     * Negative, because an instance is not a course module and has no id of its
+     * own in that space: every real cmid is positive, so a negative one cannot
+     * be mistaken for one, and no constant has to be chosen high enough to stay
+     * out of their way. Which is what the previous base of 900000 was, a number
+     * picked to be improbable, leaking into URLs and quietly waiting for a site
+     * large enough to reach it.
      *
      * @param int $instanceid
      * @return int
      */
     public static function instance_cmid(int $instanceid): int {
-        return self::INSTANCE_CMID_BASE + $instanceid;
+        return -$instanceid;
     }
 
     /**
@@ -136,6 +167,9 @@ class template_export_service {
         $sections = [];
         foreach ($modinfo->get_section_info_all() as $section) {
             $sections[] = [
+                // A section is only ever named within the payload it travels
+                // in, so unlike an instance it has nothing to store.
+                'uid' => \core\uuid::generate(),
                 'section' => (int) $section->section,
                 'name' => get_section_name($course, $section),
                 'template_behavior' => ['behavior' => $behaviors[$section->id] ?? 'aimodify'],
@@ -163,6 +197,7 @@ class template_export_service {
             }
             $activities[] = [
                 'resource_type' => $cm->modname,
+                'uid' => \core\uuid::generate(),
                 'cmid' => (int) $cm->id,
                 'parameters' => template_activity_export::parameters_for($cm),
                 'template_behavior' => ['action' => $action, 'useasreference' => true],
@@ -189,6 +224,7 @@ class template_export_service {
         foreach ($instances as $instance) {
             $activities[] = [
                 'resource_type' => $instance->get('modname') ?: 'lesson',
+                'uid' => self::instance_uid($instance),
                 'cmid' => self::instance_cmid((int) $instance->get('id')),
                 'parameters' => [
                     'name' => $instance->get('name'),

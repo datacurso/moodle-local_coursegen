@@ -143,6 +143,7 @@
         <TABLE NAME="local_coursegen_tpl_instance" COMMENT="Virtual activities generated from a template mold, saved with a template">
             <FIELDS>
                 <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
+                <FIELD NAME="uid" TYPE="char" LENGTH="36" NOTNULL="true" DEFAULT="" SEQUENCE="false" COMMENT="UUID v4 naming this instance in the generation payload and in the AI answer; an instance has no course module, so this is the only id it has" />
                 <FIELD NAME="templateid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="sectionid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="sourcecmid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="cmid of the action=template activity this instance was created from" />
