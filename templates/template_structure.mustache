@@ -143,6 +143,19 @@
                   {{/typelabel}}
                 </div>
                 <div class="activity-actions cg-item-actions align-self-start ms-sm-2">
+                  {{#generationcmid}}
+                  {{! Opens what this activity is going to look like. Hidden
+                      until a run exists, because there is nothing to preview
+                      before one does; see template/preview.js. }}
+                  <a href="#" class="dp-action-btn cg-preview-btn" hidden
+                     data-action="local_coursegen/template/preview-activity"
+                     data-generation-cmid="{{generationcmid}}"
+                     data-generation-uid="{{generationuid}}"
+                     aria-label="{{#str}}courseai_preview_activity, local_coursegen{{/str}}"
+                     title="{{#str}}courseai_preview_activity, local_coursegen{{/str}}">
+                    {{#pix}} i/preview, core {{/pix}}
+                  </a>
+                  {{/generationcmid}}
                   {{^locked}}
                   <span class="dp-action-btn dp-action-btn--delete" role="button" tabindex="0"
                         data-action="local_coursegen/template/remove-activity"

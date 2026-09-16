@@ -152,6 +152,7 @@ class get_template_structure extends external_api {
                     'isinstance' => false,
                     'aigenerated' => false,
                     'generationcmid' => 0,
+                    'generationuid' => '',
                 ];
             }
 
@@ -246,6 +247,11 @@ class get_template_structure extends external_api {
             // events, so the live view can mark THIS activity when its own
             // content lands. Same value template_export_service sends.
             'generationcmid' => template_export_service::instance_cmid((int) $instance->get('id')),
+            // The name this row answers to in the generation's answer, which is
+            // what a preview of it is asked for by. Read from the instance
+            // itself, which is also where the payload reads it, so the link on
+            // this page and the answer it opens can never name it differently.
+            'generationuid' => template_export_service::instance_uid($instance),
         ];
     }
 
@@ -295,6 +301,8 @@ class get_template_structure extends external_api {
                                 'Whether AI will generate this activity in the new course (drives the badge)'),
                             'generationcmid' => new external_value(PARAM_INT,
                                 'Id this row answers to in the generation progress events; 0 when it is not generated'),
+                            'generationuid' => new external_value(PARAM_ALPHANUMEXT,
+                                'Name this row answers to in the generation answer; empty when it is not generated'),
                         ])
                     ),
                 ])

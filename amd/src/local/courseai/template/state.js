@@ -98,6 +98,9 @@ export const applyStructureResponse = (state, data) => {
             aigenerated: !!activity.aigenerated,
             // The id this row answers to in the generation's progress events.
             generationcmid: activity.generationcmid || 0,
+            // The name this row answers to in the generation's answer, which
+            // is what its preview is asked for by.
+            generationuid: activity.generationuid || '',
         })),
     }));
     // Server-sent instance rows use negative ids, the same sign space as the
