@@ -25,8 +25,8 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_coursegen';
-$plugin->release = '2.0.7';
-$plugin->version = 2026091505;
+$plugin->release = '2.0.8';
+$plugin->version = 2026091613;
 $plugin->requires = 2024100700; // Moodle 4.5.
 $plugin->maturity = MATURITY_STABLE;
 $plugin->supported = [405, 501];

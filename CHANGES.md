@@ -1,3 +1,27 @@
+## 2.0.8
+
+**Released on:** 2026-09-16
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Added
+
+- **The plan is approved before the course is written**  
+  A course generated from a template used to be read and written in one movement, so by the time the professor saw anything it had already been made. The run now stops once the plan is written and waits. The plan arrives a piece at a time, as each one is finished, and is shown as the text it will become rather than as a description of it, so what is approved is what will be received. The professor approves it or asks for an activity to be planned again. The structure itself is not offered for editing, because that is what the template fixes; what can be changed is the content that goes inside it.
+
+- **Preview of an activity and of the whole course before either exists**  
+  Every planned activity can be opened in a preview that draws it from the plan, with the same header, the same side blocks, and the same layout the real activity will have once it is created. The whole course can be opened the same way, in whichever format the template uses. Nothing in either preview can be used or changed, and nothing is created in Moodle to draw them: reviewing a plan is how the professor decides whether it is worth building, so building it first would answer the question by asking it.
+
+## Changed
+
+- **Every element of a generation is named by a uid**  
+  The activities a template generates have no course module until they are created, so until now they travelled under an identifier derived from an internal record, first offset by a constant and then negated so it would not be mistaken for a real one. Each element now carries a uid of its own instead, which is what the preview links use.
+
+## Fixed
+
+- **Only the activities marked to be rewritten are rewritten**  
+  Which activities a run created was decided from the shape of their identifier rather than from the decision saved for each one, so the result depended on how identifiers happened to be numbered.
+
 ## 2.0.7
 
 **Released on:** 2026-09-15
