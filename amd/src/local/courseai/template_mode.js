@@ -38,6 +38,7 @@ import {
     finishTemplateGeneration,
 } from './template/repository';
 import {runGenerationStream} from './template/generation_stream';
+import {refreshPreviewLinks, usePreviewSession} from './template/preview';
 import {
     createTemplateState,
     applyStructureResponse,
@@ -92,10 +93,15 @@ const runGeneration = async(tplState, tplSelect, genBtn) => {
             tplState.prompt || '',
             parseInt(tplState.syllabusdraftitemid || 0, 10) || 0
         );
+        usePreviewSession(started.sessionid);
         const created = await runGenerationStream(
             started.streamurl,
             () => finishTemplateGeneration(started.sessionid),
-            tplState.prompt || ''
+            started.sessionid,
+            {
+                prompt: tplState.prompt || '',
+                templateName: tplSelect?.options[tplSelect.selectedIndex]?.text || '',
+            }
         );
         window.location.href = created.courseurl;
     } catch (e) {
@@ -173,6 +179,7 @@ export const wireTemplateMode = (state) => {
     const rerenderStructure = async() => {
         const {addSectionLabel, statsTemplate} = await getLabels();
         await renderStructure(container, tplState, {addSection: addSectionLabel});
+        refreshPreviewLinks();
         updateStats(tplState, statsTemplate);
     };
 
@@ -418,6 +425,7 @@ const loadTemplateStructure = async(templateId, tplState, container, state, requ
 
         const {addSectionLabel, statsTemplate} = await getLabels();
         await renderStructure(container, tplState, {addSection: addSectionLabel});
+        refreshPreviewLinks();
         updateStats(tplState, statsTemplate);
         await renderChooserGrid(tplState.allowedActivities);
         await renderLimitsBanner(limitsEl, limitsBadge, tplState);

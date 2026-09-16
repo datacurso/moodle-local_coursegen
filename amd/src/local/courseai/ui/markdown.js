@@ -73,6 +73,26 @@ const sanitize = (parse, md) => {
 };
 
 /**
+ * Sanitize HTML that is already HTML.
+ *
+ * The mould's own markup, rendered with a draft in it, arrives as HTML rather
+ * than as Markdown: it is a preview of real activity content, headings, lists
+ * and styling included. It still goes through the same allow-list as anything
+ * else shown here, because part of what it carries is model text.
+ *
+ * @param {string} html - HTML source.
+ * @returns {string} Sanitized HTML, or '' when sanitizing is unavailable.
+ */
+export const renderHtml = (html) => {
+    const purify = DOMPurify.sanitize ? DOMPurify : (DOMPurify.default || null);
+    if (!purify || typeof purify.sanitize !== 'function') {
+        // Sanitizing is not optional: show nothing rather than raw HTML.
+        return '';
+    }
+    return purify.sanitize(String(html || ''), {ALLOWED_TAGS, ALLOWED_ATTR});
+};
+
+/**
  * Render a Markdown string to HTML, reusing the bundled ``marked`` module.
  *
  * Block-level: the result carries its own <p>, lists and headings, so use it

@@ -19,3 +19,24 @@
    shared body.cg-generating block in aicoursecreation.css, which now names
    #tplModeStructure alongside #prvSections. A second set of rules here is
    exactly how the two modes drifted apart in the first place. */
+
+/* The row's planned-content line. Everything else the plan says lives in the
+   thread on the left, where free mode keeps its own detail, folded behind the
+   same "Show more" control. Only the indent is set here: the text itself is
+   free mode's own .cg-activity-desc. */
+
+.cg-tpl-plan {
+    margin-left: 3.25rem;
+}
+
+/* The preview is a real course page, so it needs no styles of its own. This
+   only puts editing affordances beyond reach: the format renders what it always
+   renders, and a preview must not offer a way to change any of it. */
+body.local-coursegen-course-preview [data-action="edit"],
+body.local-coursegen-course-preview .editing_update,
+body.local-coursegen-course-preview .section_action_menu,
+body.local-coursegen-course-preview .activity-actions,
+body.local-coursegen-course-preview .bulkedit-toggler,
+body.local-coursegen-course-preview .course-content-item-content .dropdown {
+    display: none !important;
+}

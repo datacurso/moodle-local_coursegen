@@ -41,7 +41,21 @@
  */
 
 import {getStrings} from 'core/str';
-import {createLog} from 'local_coursegen/local/courseai/ui/log';
+import {askForDecision, clearPlans, renderActivityPlan} from 'local_coursegen/local/courseai/template/plan_review';
+import {
+    addPlanPart,
+    addPlanSummary,
+    announceTemplate,
+    finishChecklistRow,
+    milestone,
+    openChecklist,
+    resetThread,
+    restorePicker,
+    startPlanEntry,
+    turn,
+} from 'local_coursegen/local/courseai/template/thread';
+import {refreshPreviewLinks} from 'local_coursegen/local/courseai/template/preview';
+import {sendTemplatePlanningFeedback} from 'local_coursegen/local/courseai/template/repository';
 import {
     hideWorkingIndicator,
     showWorkingIndicator,
@@ -57,6 +71,8 @@ const ALL_STATUS_CLASSES = Object.values(STATUS_CLASS);
 
 /** Phase keys the service reports, plus the two this module owns. */
 const STAGE_STRINGS = {
+    planning: 'courseai_template_stage_planning',
+    reviewing: 'courseai_template_stage_reviewing',
     style: 'courseai_template_stage_style',
     activities: 'courseai_template_stage_activities',
     activity_images: 'courseai_template_stage_activity_images',
@@ -87,15 +103,6 @@ const getLabels = async() => {
         });
     }
     return labels;
-};
-
-/** The left panel's thread feed, built on the shared log module. */
-let log = null;
-const getLog = () => {
-    if (!log) {
-        log = createLog({container: document.getElementById('cgLog')});
-    }
-    return log;
 };
 
 /** Every activity row the AI is going to generate. */
@@ -141,9 +148,9 @@ const paintStage = async(key) => {
  * Put the page in its generating state: header visible and spinning, every
  * activity the AI will generate dimmed and waiting, edit controls gone.
  *
- * @param {string} prompt The professor's own instruction, restated as a turn.
+ * @param {Object} context {prompt, templateName} for the opening turns.
  */
-const openView = async(prompt) => {
+const openView = async(context) => {
     document.body.classList.add('cg-generating');
 
     // The composer goes away for the duration, the way free mode's does: there
@@ -154,9 +161,10 @@ const openView = async(prompt) => {
     if (composer) {
         composer.hidden = true;
     }
-    if (String(prompt || '').trim()) {
-        getLog().add({actor: 'user', kind: 'user', message: String(prompt).trim()});
-    }
+    resetThread();
+    await announceTemplate(context.templateName);
+    turn('user', 'user', String(context.prompt || '').trim());
+    milestone('courseai_template_log_planning');
     generatedRows().forEach((row) => {
         row.classList.remove(...ALL_STATUS_CLASSES);
         row.classList.add(STATUS_CLASS.pending);
@@ -179,6 +187,7 @@ const openView = async(prompt) => {
     if (title) {
         title.textContent = (await getLabels()).title;
     }
+    refreshPreviewLinks();
 };
 
 /**
@@ -198,8 +207,9 @@ const closeView = (message) => {
     if (composer) {
         composer.hidden = false;
     }
+    restorePicker();
     if (message) {
-        getLog().add({actor: 'ai', kind: 'danger', message});
+        turn('ai', 'danger', message);
     }
 };
 
@@ -237,6 +247,33 @@ const applyEvent = (data, progress) => {
         case 'template_stage':
             paintStage(data.stage);
             return '';
+        case 'plan_progress_init':
+            progress.total = Math.max(0, Number(data.total) || 0);
+            progress.done = 0;
+            paintStage('planning');
+            openChecklist(data.sections);
+            return '';
+        case 'plan_progress_start':
+            markRow(data.cmid, 'running');
+            startPlanEntry(data);
+            return '';
+        case 'plan_progress_summary':
+            addPlanSummary(data);
+            return '';
+        case 'plan_progress_part':
+            addPlanPart(data);
+            return '';
+        case 'plan_progress_done':
+            markRow(data.cmid, 'done');
+            progress.done += 1;
+            finishChecklistRow(data.plan || {});
+            // Each activity's plan appears under its own row the moment it is
+            // ready, so the review is already half read by the time the whole
+            // plan lands.
+            renderActivityPlan(data.plan || {});
+            return '';
+        case 'review_needed':
+            return 'review';
         case 'activity_progress_init':
             progress.total = Math.max(0, Number(data.total) || 0);
             progress.done = 0;
@@ -266,70 +303,124 @@ const applyEvent = (data, progress) => {
 };
 
 /**
- * Run one generation and resolve when its course has been built.
+ * Watch one pass of the stream.
+ *
+ * A pass ends in one of three ways: the graph pauses for the review, the run
+ * completes, or it fails. The first two are not the end of the work, only of
+ * this connection, which is why the caller loops.
+ *
+ * @param {string} streamUrl
+ * @param {Object} progress Mutable {total, done} counters.
+ * @returns {Promise<Object>} {outcome: 'review'|'completed', data}
+ */
+const watchOnce = (streamUrl, progress) => new Promise((resolve, reject) => {
+    const source = new EventSource(streamUrl);
+    let settled = false;
+
+    const finish = (action) => {
+        if (settled) {
+            return;
+        }
+        settled = true;
+        source.close();
+        action();
+    };
+
+    const fail = (message) => finish(() => {
+        closeView(message);
+        reject(new Error(message));
+    });
+
+    source.addEventListener('message', (event) => {
+        let data = null;
+        try {
+            data = JSON.parse(event.data);
+        } catch (e) {
+            return;
+        }
+
+        const outcome = applyEvent(data, progress);
+        if (outcome === 'review' || outcome === 'completed') {
+            // The stream is closed on both. A pause left open would be
+            // reconnected by EventSource, which resumes the graph from the
+            // same point and re-emits the same pause, forever.
+            finish(() => resolve({outcome, data}));
+        } else if (outcome === 'failed') {
+            fail(data.message || 'The generation could not be completed.');
+        }
+    });
+
+    source.addEventListener('done', () => {
+        // A 'done' with no terminal event before it means the stream ended
+        // without ever saying how: reported as a failure rather than leaving
+        // the professor watching a header that will never resolve.
+        fail('The generation ended unexpectedly.');
+    });
+
+    source.onerror = () => {
+        // EventSource reconnects by itself on a transient drop, reporting
+        // CONNECTING while it does; only a closed connection is a failure.
+        if (source.readyState === EventSource.CONNECTING) {
+            return;
+        }
+        fail('The connection to the generation was lost.');
+    };
+});
+
+/**
+ * Run one generation, pausing for the professor's review, and resolve when
+ * the course has been built.
+ *
+ * The run is planned first, stops so the plan can be read, and only generates
+ * once it is approved. Asking for changes plans again and stops again, which
+ * is why this loops instead of running once.
  *
  * @param {string} streamUrl SSE endpoint returned by start_template_generation.
  * @param {Function} buildCourse Called once the run completes; resolves to {courseurl}.
- * @param {string} prompt The professor's instruction, restated in the feed.
+ * @param {number} sessionId Session the review answers belong to.
+ * @param {Object} context {prompt, templateName}, for the opening turns.
  * @returns {Promise<Object>} The built course, as buildCourse resolved it.
  */
-export const runGenerationStream = async(streamUrl, buildCourse, prompt) => {
-    await openView(prompt);
+export const runGenerationStream = async(streamUrl, buildCourse, sessionId, context) => {
+    await openView(context);
+    clearPlans();
     await paintStage('connecting');
 
-    return new Promise((resolve, reject) => {
-        const progress = {total: 0, done: 0};
-        const source = new EventSource(streamUrl);
-        let settled = false;
+    const progress = {total: 0, done: 0};
+    for (;;) {
+        // eslint-disable-next-line no-await-in-loop
+        const {outcome, data} = await watchOnce(streamUrl, progress);
 
-        const finish = (action) => {
-            if (settled) {
-                return;
-            }
-            settled = true;
-            source.close();
-            action();
-        };
+        if (outcome === 'completed') {
+            // The result payload stays server-side: the browser only reports
+            // that the run finished, and Moodle fetches it to build the course.
+            markHeaderDone();
+            paintStage('building');
+            milestone('courseai_template_log_completed');
+            return buildCourse();
+        }
 
-        const fail = (message) => finish(() => {
-            closeView(message);
-            reject(new Error(message));
-        });
+        await paintStage('reviewing');
+        milestone('courseai_template_log_plan_ready');
+        // eslint-disable-next-line no-await-in-loop
+        const decision = await askForDecision(data.template_plan || []);
 
-        source.addEventListener('message', (event) => {
-            let data = null;
-            try {
-                data = JSON.parse(event.data);
-            } catch (e) {
-                return;
-            }
+        if (decision.action === 'accept') {
+            milestone('courseai_template_log_approved', 'user', 'success');
+            milestone('courseai_template_log_generating');
+            await paintStage('style');
+        } else {
+            turn('user', 'user', decision.instruction);
+            milestone('courseai_template_log_adjusting');
+            await paintStage('planning');
+        }
 
-            const outcome = applyEvent(data, progress);
-            if (outcome === 'completed') {
-                // The result payload stays server-side: the browser only reports
-                // that the run finished, and Moodle fetches it to build the course.
-                markHeaderDone();
-                paintStage('building');
-                finish(() => buildCourse().then(resolve).catch(reject));
-            } else if (outcome === 'failed') {
-                fail(data.message || 'The generation could not be completed.');
-            }
-        });
-
-        source.addEventListener('done', () => {
-            // A 'done' with no terminal event before it means the stream ended
-            // without ever saying how: reported as a failure rather than leaving
-            // the professor watching a header that will never resolve.
-            fail('The generation ended unexpectedly.');
-        });
-
-        source.onerror = () => {
-            // EventSource reconnects by itself on a transient drop, reporting
-            // CONNECTING while it does; only a closed connection is a failure.
-            if (source.readyState === EventSource.CONNECTING) {
-                return;
-            }
-            fail('The connection to the generation was lost.');
-        };
-    });
+        // eslint-disable-next-line no-await-in-loop
+        await sendTemplatePlanningFeedback(
+            sessionId,
+            decision.action,
+            decision.targetIds,
+            decision.instruction
+        );
+    }
 };
