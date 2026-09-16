@@ -1,0 +1,187 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+namespace local_coursegen;
+
+use local_coursegen\local\service\template_activity_export;
+
+defined('MOODLE_INTERNAL') || die();
+
+global $CFG;
+require_once($CFG->libdir . '/resourcelib.php');
+
+/**
+ * What a mold activity ships to the AI service.
+ *
+ * A mold is reproduced by the service, so its own settings and its raw
+ * marker-bearing text must travel; the columns that identify THIS activity
+ * (course, id, timestamps) must not.
+ *
+ * @package    local_coursegen
+ * @category   test
+ * @copyright  2026 Wilber Narvaez <https://datacurso.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @covers     \local_coursegen\local\service\template_activity_export
+ */
+final class template_activity_export_test extends \advanced_testcase {
+    /** @var string An intro carrying both marker kinds plus real markup. */
+    private const MARKED_INTRO = '<p>⟦coursegen:url: repositorio de la materia⟧</p><p>Ver <b>⟦tema⟧</b></p>';
+
+    /**
+     * Export the parameters of a freshly created module.
+     *
+     * @param string $modname Module type to create.
+     * @param array $options Module generator options.
+     * @return array Exported parameters.
+     */
+    private function export_module(string $modname, array $options): array {
+        $course = $this->getDataGenerator()->create_course();
+        $module = $this->getDataGenerator()->create_module($modname, $options + ['course' => $course->id]);
+        $cm = get_fast_modinfo($course)->get_cm($module->cmid);
+
+        return template_activity_export::parameters_for($cm);
+    }
+
+    /**
+     * A URL mold ships its address, its raw description and its display settings.
+     */
+    public function test_url_exports_address_intro_and_display_settings(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('url', [
+            'name' => 'Institutional repository',
+            'externalurl' => 'http://⟦coursegen:url⟧',
+            'intro' => self::MARKED_INTRO,
+            'introformat' => FORMAT_HTML,
+            'display' => \RESOURCELIB_DISPLAY_POPUP,
+            'popupwidth' => 800,
+            'popupheight' => 600,
+            'printintro' => 1,
+        ]);
+
+        $this->assertSame('Institutional repository', $params['name']);
+        $this->assertSame('http://⟦coursegen:url⟧', $params['externalurl']);
+        $this->assertSame((int) \RESOURCELIB_DISPLAY_POPUP, (int) $params['display']);
+        $this->assertSame(800, (int) $params['popupwidth']);
+        $this->assertSame(600, (int) $params['popupheight']);
+        $this->assertSame(1, (int) $params['printintro']);
+    }
+
+    /**
+     * The description travels raw: the service parses those markers, so a
+     * filtered or reformatted copy would destroy the mold.
+     */
+    public function test_url_intro_keeps_its_markers_untouched(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('url', [
+            'externalurl' => 'https://example.org',
+            'intro' => self::MARKED_INTRO,
+            'introformat' => FORMAT_HTML,
+        ]);
+
+        $this->assertSame(self::MARKED_INTRO, $params['intro']);
+    }
+
+    /**
+     * Columns describing this very activity never travel: the generated one
+     * lives in another course and owns its own identity.
+     */
+    public function test_url_export_omits_identity_columns(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('url', [
+            'externalurl' => 'https://example.org',
+            'intro' => 'Plain',
+            'introformat' => FORMAT_HTML,
+        ]);
+
+        foreach (['id', 'course', 'timemodified', 'introformat', 'displayoptions', 'parameters'] as $column) {
+            $this->assertArrayNotHasKey($column, $params);
+        }
+        // A URL has no sub-objects; an empty mod_settings would only make
+        // create_mod_service log a discarded-settings warning.
+        $this->assertArrayNotHasKey('mod_settings', $params);
+    }
+
+    /**
+     * A URL saved without display options still exports usable values rather
+     * than notices or nulls.
+     */
+    public function test_url_without_display_options_falls_back_to_defaults(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $url = $this->getDataGenerator()->create_module('url', [
+            'course' => $course->id,
+            'externalurl' => 'https://example.org',
+        ]);
+        // Some real rows predate the display options or were built by code
+        // that never set them.
+        $this->set_display_options((int) $url->id, '');
+
+        $cm = get_fast_modinfo($course)->get_cm($url->cmid);
+        $params = template_activity_export::parameters_for($cm);
+
+        $config = get_config('url');
+        $this->assertSame((int) $config->popupwidth, (int) $params['popupwidth']);
+        $this->assertSame((int) $config->popupheight, (int) $params['popupheight']);
+        $this->assertSame((int) $config->printintro, (int) $params['printintro']);
+    }
+
+    /**
+     * Blank out a url row's serialized display options.
+     *
+     * @param int $urlid The mod_url instance id.
+     * @param string $value Raw column value to store.
+     */
+    private function set_display_options(int $urlid, string $value): void {
+        global $DB;
+
+        $DB->set_field('url', 'displayoptions', $value, ['id' => $urlid]);
+    }
+
+    /**
+     * Types without their own export still ship the minimal pair, so adding
+     * the URL branch cannot have changed them.
+     */
+    public function test_other_types_still_export_only_name_and_section(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('page', ['name' => 'A page']);
+
+        $this->assertSame(['name' => 'A page', 'section' => 0], $params);
+    }
+
+    /**
+     * The lesson branch keeps shipping its settings and ordered pages.
+     */
+    public function test_lesson_still_exports_settings_and_pages(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('lesson', ['name' => 'A lesson', 'progressbar' => 1]);
+
+        $this->assertSame('A lesson', $params['name']);
+        $this->assertSame(1, (int) $params['progressbar']);
+        $this->assertArrayHasKey('pages', $params['mod_settings']);
+    }
+}
