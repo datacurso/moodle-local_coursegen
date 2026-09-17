@@ -81,4 +81,13 @@ class book_preview extends activity_preview {
         $block->content = \html_writer::tag('ul', $items, ['class' => 'book_toc_none']);
         return [$block];
     }
+
+    /**
+     * This module reads its own page at the narrower width (mod/book/view.php).
+     *
+     * @return bool
+     */
+    public function limited_width(): bool {
+        return true;
+    }
 }

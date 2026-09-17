@@ -86,4 +86,13 @@ class choice_preview extends activity_preview {
         }
         return $texts;
     }
+
+    /**
+     * This module reads its own page at the narrower width (mod/choice/view.php).
+     *
+     * @return bool
+     */
+    public function limited_width(): bool {
+        return true;
+    }
 }

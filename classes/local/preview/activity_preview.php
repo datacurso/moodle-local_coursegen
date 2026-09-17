@@ -112,6 +112,19 @@ abstract class activity_preview {
     }
 
     /**
+     * Whether this module's own page is read at the narrower width.
+     *
+     * A module decides this for itself, and about half of them choose it, so
+     * a preview that assumed either way would be wrong about half the types.
+     * Each preview answers the way its own module's view page does.
+     *
+     * @return bool
+     */
+    public function limited_width(): bool {
+        return false;
+    }
+
+    /**
      * The side blocks this activity's page carries, if any.
      *
      * A lesson's menu is the one that matters today; the rest of the types have

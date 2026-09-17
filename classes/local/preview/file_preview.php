@@ -68,4 +68,13 @@ class file_preview extends activity_preview {
         }
         return $OUTPUT->box(\html_writer::tag('ul', $items, ['class' => 'fp-content']), 'generalbox foldertree');
     }
+
+    /**
+     * This module reads its own page at the narrower width (mod/folder/view.php).
+     *
+     * @return bool
+     */
+    public function limited_width(): bool {
+        return true;
+    }
 }

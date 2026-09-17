@@ -47,4 +47,13 @@ class wiki_preview extends activity_preview {
         }
         return $out;
     }
+
+    /**
+     * This module reads its own page at the narrower width (mod/wiki/view.php).
+     *
+     * @return bool
+     */
+    public function limited_width(): bool {
+        return true;
+    }
 }

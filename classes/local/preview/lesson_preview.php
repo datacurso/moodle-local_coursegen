@@ -218,4 +218,13 @@ class lesson_preview extends activity_preview {
         }
         return null;
     }
+
+    /**
+     * This module reads its own page at the narrower width (mod/lesson/view.php).
+     *
+     * @return bool
+     */
+    public function limited_width(): bool {
+        return true;
+    }
 }

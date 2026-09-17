@@ -99,4 +99,13 @@ class quiz_preview extends activity_preview {
         }
         return $items === '' ? '' : \html_writer::div($items, 'ablock');
     }
+
+    /**
+     * This module reads its own page at the narrower width (mod/quiz/view.php).
+     *
+     * @return bool
+     */
+    public function limited_width(): bool {
+        return true;
+    }
 }
