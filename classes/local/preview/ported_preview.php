@@ -182,6 +182,23 @@ abstract class ported_preview extends activity_preview {
     }
 
     /**
+     * The description, as the activity header shows it by default.
+     *
+     * core\output\activity_header formats the activity record's intro with
+     * format_module_intro() unless the module says otherwise; a module that
+     * does say otherwise overrides this.
+     *
+     * @return string
+     */
+    public function header_description(): string {
+        $instance = $this->instance();
+        if ($instance === null || trim((string) ($instance->intro ?? '')) === '') {
+            return '';
+        }
+        return $this->module_intro($instance);
+    }
+
+    /**
      * The module's description formatted the way format_module_intro() formats it.
      *
      * Copied from lib/weblib.php format_module_intro() (Moodle 4.5), with the
