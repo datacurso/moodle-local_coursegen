@@ -148,14 +148,6 @@ $name = $preview->name();
 $PAGE->set_course(get_course(template::get_record(['id' => $templateid])->get('courseid')));
 $PAGE->set_show_course_index(false);
 $PAGE->navbar->ignore_active(true);
-// A course page marks no entry of the primary navigation as where the reader
-// is, so neither does this one. The navigation marks the site home on any page
-// it cannot place, and a page it is told about picks an entry instead; a
-// course page ends up with none, so none is what is shown here, by unmarking
-// whatever the navigation chose once it has chosen.
-foreach ($PAGE->primarynav->children as $entry) {
-    $entry->make_inactive();
-}
 $PAGE->set_url('/local/coursegen/activity_preview.php',
     ['sessionid' => $sessionid, 'uid' => $uid, 'page' => $page]);
 $PAGE->set_pagelayout('incourse');
@@ -216,6 +208,17 @@ $PAGE->activityheader->set_description($preview->header_description());
 // turned on is read with that menu beside it.
 foreach ($preview->side_blocks() as $block) {
     $PAGE->blocks->add_fake_block($block, BLOCK_POS_LEFT);
+}
+
+// A course page marks no entry of the primary navigation as where the reader
+// is, so neither does this one. The navigation marks the site home on any page
+// it cannot place, and a page it is told about picks an entry instead; a
+// course page ends up with none, so none is what is shown here, by unmarking
+// whatever the navigation chose once it has chosen. Asking for the navigation
+// settles the theme, so it comes after everything the theme is told about the
+// page: its layout, its kind, its width and its blocks.
+foreach ($PAGE->primarynav->children as $entry) {
+    $entry->make_inactive();
 }
 
 echo $OUTPUT->header();
