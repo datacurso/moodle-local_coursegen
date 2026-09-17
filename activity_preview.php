@@ -120,15 +120,14 @@ if (!$parameters) {
     throw new moodle_exception('courseai_preview_not_found', 'local_coursegen');
 }
 
-// The activity is read in its course's language, which is the language its
-// content is in and the one it will be read in once it exists.
 $coursedata = json_decode((string) $session->get('coursedata'), true);
 $templateid = (int) ($coursedata['templateid'] ?? 0);
-if ($templateid > 0) {
-    $lang = (string) ((template_export_service::build_init_payload($templateid)['lang']) ?? '');
-    if ($lang !== '') {
-        force_current_language($lang);
-    }
+$payload = $templateid > 0 ? template_export_service::build_init_payload($templateid) : [];
+
+// The activity is read in its course's language, which is the language its
+// content is in and the one it will be read in once it exists.
+if (!empty($payload['lang'])) {
+    force_current_language((string) $payload['lang']);
 }
 
 $preview = preview_factory::for_activity($modname, $parameters);
@@ -155,6 +154,37 @@ $PAGE->add_body_class('local-coursegen-activity-preview');
 $PAGE->set_secondary_navigation(false);
 $PAGE->set_title($name);
 $PAGE->set_heading($name);
+
+// Where this activity sits, which is how a reader gets back out of it. A real
+// activity page builds this from the course it belongs to; this one has no
+// course to ask, so it is read from the payload, which says the same thing.
+$coursename = (string) (($payload['course_configuration'] ?? [])['fullname'] ?? '');
+if ($coursename !== '') {
+    $PAGE->navbar->add(
+        $coursename,
+        new moodle_url('/local/coursegen/course_preview.php', ['sessionid' => $sessionid])
+    );
+}
+$sectionnumber = null;
+foreach (($payload['activities'] ?? []) as $activity) {
+    if ((string) ($activity['uid'] ?? '') === $uid) {
+        $sectionnumber = (int) (($activity['parameters'] ?? [])['section'] ?? 0);
+        break;
+    }
+}
+foreach (($payload['sections_info'] ?? []) as $info) {
+    if ($sectionnumber !== null && (int) ($info['section'] ?? -1) === $sectionnumber) {
+        $PAGE->navbar->add(
+            (string) ($info['name'] ?? ''),
+            new moodle_url('/local/coursegen/course_preview.php', [
+                'sessionid' => $sessionid,
+                'section' => $sectionnumber,
+            ])
+        );
+        break;
+    }
+}
+$PAGE->navbar->add($name);
 
 // Moodle's own activity header, the strip every module page opens with: the
 // activity's name and its description, in the theme's own markup. It is built
