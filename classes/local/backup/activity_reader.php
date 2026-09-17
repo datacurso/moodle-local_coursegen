@@ -53,6 +53,17 @@ class activity_reader {
      *               description of itself to give.
      */
     public static function read($cm): array {
+        return self::read_with_sources($cm)['tree'];
+    }
+
+    /**
+     * Everything one activity is made of, and where each part came from.
+     *
+     * @param \cm_info|\stdClass $cm
+     * @return array {tree, tables, aliases}: the tree as read() gives it,
+     *               element name => table, and element name => alias => column.
+     */
+    public static function read_with_sources($cm): array {
         global $CFG;
         require_once($CFG->dirroot . '/backup/util/includes/backup_includes.php');
         // The moodle2 layer a module's own step is built on: the activity task
@@ -66,13 +77,14 @@ class activity_reader {
         // Supporting backup is what having a declared structure means. A
         // module without one cannot be read this way and must not be guessed
         // at, so it is reported as nothing rather than as something partial.
+        $nothing = ['tree' => [], 'tables' => [], 'aliases' => []];
         if (!plugin_supports('mod', $modname, FEATURE_BACKUP_MOODLE2)) {
-            return [];
+            return $nothing;
         }
 
         $taskfile = $CFG->dirroot . '/mod/' . $modname . '/backup/moodle2/backup_' . $modname . '_activity_task.class.php';
         if (!file_exists($taskfile)) {
-            return [];
+            return $nothing;
         }
         // Loading the module's task is what loads its stepslib: the task file
         // requires it, the same way a real backup reaches it.
@@ -80,7 +92,7 @@ class activity_reader {
 
         $stepclass = 'backup_' . $modname . '_activity_structure_step';
         if (!class_exists($stepclass)) {
-            return [];
+            return $nothing;
         }
 
         $task = new reader_task('local_coursegen_read_' . $modname, $cmid, (int) $cm->course);
@@ -92,7 +104,7 @@ class activity_reader {
         $define->setAccessible(true);
         $structure = $define->invoke($step);
         if (!$structure instanceof backup_nested_element) {
-            return [];
+            return $nothing;
         }
 
         // A structure names the activity it describes through these rather
@@ -109,6 +121,10 @@ class activity_reader {
 
         $structure->process($processor);
 
-        return $processor->get_result();
+        return [
+            'tree' => $processor->get_result(),
+            'tables' => $processor->get_tables(),
+            'aliases' => $processor->get_aliases(),
+        ];
     }
 }
