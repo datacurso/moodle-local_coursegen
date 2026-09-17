@@ -81,7 +81,15 @@ try {
     $summaries = [];
 }
 
-$coursename = (string) (($payload['course_configuration'] ?? [])['fullname'] ?? '');
+$configuration = $payload['course_configuration'] ?? [];
+$coursename = (string) ($configuration['fullname'] ?? '');
+$format = (string) ($configuration['format'] ?? 'topics');
+
+// The course is read in its own language, the way it would be read once it
+// exists: it is what the payload was built in, and what its content is in.
+if (!empty($configuration['lang'])) {
+    force_current_language((string) $configuration['lang']);
+}
 
 $PAGE->set_url('/local/coursegen/course_preview.php', ['sessionid' => $sessionid]);
 $PAGE->set_context($context);
@@ -89,7 +97,13 @@ $PAGE->set_pagelayout('course');
 // The width a course page is read at. Without it the page runs the whole width
 // of the window, which no course page does.
 $PAGE->add_body_class('limitedwidth');
+// The class a page carries for the format laying it out, which is what the
+// format styles itself by: without it a grid's own dialog is sized by nothing
+// and comes out the size of any other dialog.
+$PAGE->add_body_class('format-' . $format);
 $PAGE->add_body_class('local-coursegen-course-preview');
+// What kind of page this is, which a theme and a format both read.
+$PAGE->set_pagetype('course-view-' . $format);
 $PAGE->set_secondary_navigation(false);
 $PAGE->set_title(get_string('courseai_preview_course_title', 'local_coursegen'));
 $PAGE->set_heading($coursename);
