@@ -102,14 +102,6 @@ if (!empty($configuration['lang'])) {
 $PAGE->set_course(get_course(template::get_record(['id' => $templateid])->get('courseid')));
 $PAGE->set_show_course_index(false);
 $PAGE->navbar->ignore_active(true);
-// A course page marks no entry of the primary navigation as where the reader
-// is, so neither does this one. The navigation marks the site home on any page
-// it cannot place, and a page it is told about picks an entry instead; a
-// course page ends up with none, so none is what is shown here, by unmarking
-// whatever the navigation chose once it has chosen.
-foreach ($PAGE->primarynav->children as $entry) {
-    $entry->make_inactive();
-}
 $PAGE->set_url('/local/coursegen/course_preview.php', ['sessionid' => $sessionid]);
 $PAGE->set_pagelayout('course');
 // The width a course page is read at. Without it the page runs the whole width
@@ -125,6 +117,17 @@ $PAGE->set_pagetype('course-view-' . $format);
 $PAGE->set_secondary_navigation(false);
 $PAGE->set_title(get_string('courseai_preview_course_title', 'local_coursegen'));
 $PAGE->set_heading($coursename);
+
+// A course page marks no entry of the primary navigation as where the reader
+// is, so neither does this one. The navigation marks the site home on any page
+// it cannot place, and a page it is told about picks an entry instead; a
+// course page ends up with none, so none is what is shown here, by unmarking
+// whatever the navigation chose once it has chosen. Asking for the navigation
+// settles the theme, so it comes after everything the theme is told about the
+// page: its layout, its kind, its width and its blocks.
+foreach ($PAGE->primarynav->children as $entry) {
+    $entry->make_inactive();
+}
 
 echo $OUTPUT->header();
 echo $OUTPUT->notification(
