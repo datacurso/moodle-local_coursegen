@@ -15,17 +15,19 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Read-only preview of the course one generation will produce.
+ * Read-only preview of the course a template run is going to produce.
  *
- * The course does not exist yet, so nothing that draws a course page can draw
- * this: those renderers all begin from a course id. What does exist is the
- * answer the AI returned, and the template's own structure, and between them
- * they describe the course completely.
+ * A course looks like its format makes it look. Drawing a list of sections and
+ * activities instead produces something that is not the course: a course in
+ * grid format is a grid, one in weeks is dated, and a teacher deciding whether
+ * to accept a plan is deciding about the page they will actually receive.
  *
- * So the page is assembled from those two: the template says which sections
- * there are and which activities are copied into them, the answer says what the
- * AI is writing, and every activity the AI writes links to its own preview,
- * which draws that activity from the same answer.
+ * So the page is the real one. The template's own course is rendered through
+ * its own format, by the same contract course/view.php uses to hand a course
+ * to a format, and what the run is going to add is put into the sections it
+ * will be added to. Nothing is created to draw it: the template's course
+ * already exists, and the activities that do not exist yet are drawn from the
+ * plan.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -34,15 +36,21 @@
 
 require_once(__DIR__ . '/../../config.php');
 
-use local_coursegen\external\get_template_structure;
 use local_coursegen\local\models\course_session;
+use local_coursegen\local\models\template;
+use local_coursegen\local\models\template_instance;
+use local_coursegen\local\preview\course_preview_layout;
 use local_coursegen\local\service\template_ai_api_service;
+use local_coursegen\local\service\template_export_service;
 
 $sessionid = required_param('sessionid', PARAM_INT);
 
+// Which section to show, for the formats that show one at a time. A format
+// that shows them all ignores it, the same way the real course page does.
+$section = optional_param('section', null, PARAM_INT);
+
 require_login();
-$context = context_system::instance();
-require_capability('local/coursegen:createcoursewithai', $context);
+require_capability('local/coursegen:createcoursewithai', context_system::instance());
 
 $session = new course_session($sessionid);
 if ((int) $session->get('userid') !== (int) $USER->id) {
@@ -51,63 +59,81 @@ if ((int) $session->get('userid') !== (int) $USER->id) {
 
 $coursedata = json_decode((string) $session->get('coursedata'), true);
 $templateid = (int) ($coursedata['templateid'] ?? 0);
-if ($templateid <= 0) {
+$template = $templateid > 0 ? template::get_record(['id' => $templateid]) : false;
+if (!$template) {
     throw new moodle_exception('invalidtemplate', 'local_coursegen');
 }
 
-$structure = get_template_structure::execute($templateid);
+$course = get_course($template->get('courseid'));
 
-// What the AI has said so far about each activity it is writing, keyed by the
-// name the structure knows that activity by.
-$api = new template_ai_api_service();
+// What the run is going to add, and what it has said so far about each one.
+// A run under review has no result, so the plan is what there is to show.
 $summaries = [];
-foreach (($api->get_plan((string) $session->get('session_id'))['template_plan'] ?? []) as $entry) {
-    $summaries[(string) ($entry['uid'] ?? '')] = (string) ($entry['summary'] ?? '');
+try {
+    $api = new template_ai_api_service();
+    foreach (($api->get_plan((string) $session->get('session_id'))['template_plan'] ?? []) as $entry) {
+        $summaries[(string) ($entry['uid'] ?? '')] = (string) ($entry['summary'] ?? '');
+    }
+} catch (moodle_exception $exception) {
+    $summaries = [];
 }
 
-$sections = [];
-foreach ($structure['sections'] as $section) {
-    $activities = [];
-    foreach ($section['activities'] as $activity) {
-        $generationuid = (string) ($activity['generationuid'] ?? '');
-        $activities[] = [
-            'name' => $activity['name'],
-            'modname' => $activity['modname'],
-            'purpose' => $activity['purpose'],
-            'iconhtml' => $activity['iconhtml'],
-            'typelabel' => $activity['typelabel'],
-            'aigenerated' => !empty($activity['aigenerated']),
-            'summary' => $summaries[$generationuid] ?? '',
-            // Only what the AI writes has a preview to open: everything else is
-            // copied from the base course unchanged and already exists there.
-            'previewurl' => $generationuid !== ''
-                ? (new moodle_url('/local/coursegen/activity_preview.php', [
-                    'sessionid' => $sessionid,
-                    'uid' => $generationuid,
-                ]))->out(false)
-                : '',
-        ];
-    }
-    $sections[] = [
-        'name' => $section['name'],
-        'activitycount' => count($activities),
-        'activities' => $activities,
+$planned = [];
+foreach (template_instance::get_records(['templateid' => $templateid], 'sortorder') as $instance) {
+    $uid = template_export_service::instance_uid($instance);
+    $planned[(int) $instance->get('sectionid')][] = [
+        'uid' => $uid,
+        'name' => $instance->get('name'),
+        'modname' => $instance->get('modname') ?: 'lesson',
+        'typelabel' => $instance->get('typelabel'),
+        'summary' => $summaries[$uid] ?? '',
+        'url' => (new moodle_url('/local/coursegen/activity_preview.php', [
+            'sessionid' => $sessionid,
+            'uid' => $uid,
+        ]))->out(false),
     ];
 }
 
+// The course has to be set before anything draws, because setting it settles
+// the theme, and the format about to run is the course's own.
+$PAGE->set_course($course);
 $PAGE->set_url('/local/coursegen/course_preview.php', ['sessionid' => $sessionid]);
-$PAGE->set_context($context);
-$PAGE->set_pagelayout('incourse');
-$PAGE->add_body_class('limitedwidth');
+$PAGE->set_pagelayout('course');
 $PAGE->add_body_class('local-coursegen-course-preview');
 $PAGE->set_secondary_navigation(false);
 $PAGE->set_title(get_string('courseai_preview_course_title', 'local_coursegen'));
-$PAGE->set_heading(get_string('courseai_preview_course_title', 'local_coursegen'));
+$PAGE->set_heading($course->fullname);
+
+// What course/view.php hands a format. A format reads these as globals rather
+// than as arguments, because it is included rather than called, so every one
+// of them has to be here even when it is only read to be compared against:
+// an undefined $marker compares equal to zero, and a format that marks the
+// current section then believes it was asked to move the mark.
+$modinfo = get_fast_modinfo($course);
+$modnames = get_module_types_names();
+$modnamesplural = get_module_types_names(true);
+$modnamesused = $modinfo->get_used_module_names();
+$mods = $modinfo->get_cms();
+$sections = $modinfo->get_section_info_all();
+$marker = -1;
+$hide = 0;
+$show = 0;
+$move = 0;
+$edit = -1;
+// Null, not zero: a format asked for section zero shows that one section
+// alone, and the formats that take this check whether it is null rather than
+// whether it is set.
+$displaysection = $section;
 
 echo $OUTPUT->header();
 echo $OUTPUT->notification(
     get_string('courseai_preview_course_notice', 'local_coursegen'),
     \core\output\notification::NOTIFY_INFO
 );
-echo $OUTPUT->render_from_template('local_coursegen/course_preview', ['sections' => $sections]);
+
+ob_start();
+require($CFG->dirroot . '/course/format/' . $course->format . '/format.php');
+$rendered = ob_get_clean();
+
+echo course_preview_layout::rebuild($rendered, $planned, $sections, (int) $course->id, $sessionid);
 echo $OUTPUT->footer();
