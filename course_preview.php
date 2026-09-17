@@ -40,6 +40,7 @@
 require_once(__DIR__ . '/../../config.php');
 
 use local_coursegen\local\models\course_session;
+use local_coursegen\local\models\template;
 use local_coursegen\local\preview\course_from_payload;
 use local_coursegen\local\preview\grid_from_payload;
 use local_coursegen\local\service\template_ai_api_service;
@@ -91,8 +92,17 @@ if (!empty($configuration['lang'])) {
     force_current_language((string) $configuration['lang']);
 }
 
+// The page belongs to the course the template is built on, and says so, the
+// way a real course page does. That is what keeps the site's own chrome
+// behaving like a course page's: without a course, the primary navigation
+// falls back to marking the site home as where the reader is, which on a page
+// about a course is a lie. Nothing of the course is drawn from this: the
+// course index, which would list the real course, is turned off, and the
+// trail is written here from the payload rather than taken from the course.
+$PAGE->set_course(get_course(template::get_record(['id' => $templateid])->get('courseid')));
+$PAGE->set_show_course_index(false);
+$PAGE->navbar->ignore_active(true);
 $PAGE->set_url('/local/coursegen/course_preview.php', ['sessionid' => $sessionid]);
-$PAGE->set_context($context);
 $PAGE->set_pagelayout('course');
 // The width a course page is read at. Without it the page runs the whole width
 // of the window, which no course page does.

@@ -35,6 +35,7 @@
 require_once(__DIR__ . '/../../config.php');
 
 use local_coursegen\local\models\course_session;
+use local_coursegen\local\models\template;
 use local_coursegen\local\preview\plan_activity;
 use local_coursegen\local\preview\preview_factory;
 use local_coursegen\local\preview\real_activity;
@@ -137,9 +138,18 @@ $preview->opened_at(
 );
 $name = $preview->name();
 
+// The page belongs to the course the template is built on, and says so, the
+// way a real course page does. That is what keeps the site's own chrome
+// behaving like a course page's: without a course, the primary navigation
+// falls back to marking the site home as where the reader is, which on a page
+// about a course is a lie. Nothing of the course is drawn from this: the
+// course index, which would list the real course, is turned off, and the
+// trail is written here from the payload rather than taken from the course.
+$PAGE->set_course(get_course(template::get_record(['id' => $templateid])->get('courseid')));
+$PAGE->set_show_course_index(false);
+$PAGE->navbar->ignore_active(true);
 $PAGE->set_url('/local/coursegen/activity_preview.php',
     ['sessionid' => $sessionid, 'uid' => $uid, 'page' => $page]);
-$PAGE->set_context($context);
 $PAGE->set_pagelayout('incourse');
 // The width the module reads its own page at, and the kind of page it is,
 // which is where a module's own styles are hung. Without them the activity is
