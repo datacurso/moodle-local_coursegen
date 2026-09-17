@@ -61,6 +61,10 @@ class real_activity {
             $pages = [];
             foreach (self::lesson_pages_in_order($root) as $page) {
                 $pages[] = [
+                    // The page's own id and layout, because a page's buttons
+                    // are jumps to pages and a page says how they are laid out.
+                    'id' => $page['id'] ?? null,
+                    'layout' => $page['layout'] ?? 1,
                     'page_type' => 'content',
                     'title' => (string) ($page['title'] ?? ''),
                     'content_html' => (string) ($page['contents'] ?? ''),

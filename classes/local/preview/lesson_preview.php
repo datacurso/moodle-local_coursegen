@@ -60,7 +60,7 @@ class lesson_preview extends activity_preview {
         $page = $pages[$at];
 
         $out = $OUTPUT->box($this->content((string) ($page['content_html'] ?? '')), 'contents');
-        $out .= $this->buttons($at, count($pages));
+        $out .= $this->buttons($at, $pages);
         return $out;
     }
 
@@ -133,38 +133,89 @@ class lesson_preview extends activity_preview {
     }
 
     /**
-     * The page's navigation, moving through the preview.
+     * The page's own navigation, drawn the way mod_lesson draws it.
      *
-     * A real page's buttons carry the lesson's own jumps. Those point at pages
-     * of an activity that has not been created, so here they move to the page
-     * before and the page after, which is what the lesson's own navigation
-     * does on a content page anyway.
+     * A content page's buttons are that page's answers: their labels are what
+     * the author wrote on them, and where each one goes is the jump saved with
+     * it. mod_lesson renders each as a plain button in a box
+     * (mod/lesson/pagetypes/branchtable.php), laid out across or down
+     * according to the page's own setting, so that is what is drawn here.
+     *
+     * The jumps are followed within the preview: a jump to a page of the
+     * activity is a jump to that page of this preview, and one that leaves the
+     * lesson has nowhere to go, so it is shown without going anywhere.
      *
      * @param int $at
-     * @param int $total
+     * @param array $pages Every page, in order.
      * @return string
      */
-    private function buttons(int $at, int $total): string {
+    private function buttons(int $at, array $pages): string {
         global $OUTPUT;
 
-        $buttons = '';
-        if ($at > 0) {
-            $buttons .= html_writer::link(
-                $this->page_url($at - 1),
-                get_string('previouspage', 'lesson'),
-                ['class' => 'btn btn-secondary me-2']
-            );
+        $page = $pages[$at];
+        $buttons = [];
+        foreach (($page['buttons'] ?? []) as $button) {
+            $label = trim(html_to_text((string) ($button['text'] ?? ''), 0, false));
+            if ($label === '') {
+                continue;
+            }
+            $target = $this->jump_target($at, $pages, $button['jumpto'] ?? null);
+            $buttons[] = $target === null
+                ? html_writer::tag('button', s($label), [
+                    'type' => 'button',
+                    'class' => 'btn btn-secondary',
+                    'disabled' => 'disabled',
+                ])
+                : $OUTPUT->single_button($this->page_url($target), $label, 'get');
         }
-        if ($at + 1 < $total) {
-            $buttons .= html_writer::link(
-                $this->page_url($at + 1),
-                get_string('nextpage', 'lesson'),
-                ['class' => 'btn btn-primary']
-            );
-        }
-        if ($buttons === '') {
+
+        if (!$buttons) {
             return '';
         }
-        return $OUTPUT->box($buttons, 'branchbuttoncontainer horizontal');
+
+        // A page says whether its buttons sit across or down.
+        $vertical = ((int) ($page['layout'] ?? 1)) === 0;
+        return $OUTPUT->box(
+            implode("\n", $buttons),
+            'branchbuttoncontainer ' . ($vertical ? 'vertical' : 'horizontal')
+        );
+    }
+
+    /**
+     * Which page of the preview one of a page's jumps leads to.
+     *
+     * @param int $at Where the reader is now.
+     * @param array $pages
+     * @param mixed $jumpto The jump as the activity saved it.
+     * @return int|null The page to open, or null when it leaves the lesson.
+     */
+    private function jump_target(int $at, array $pages, $jumpto): ?int {
+        global $CFG;
+        // The names mod_lesson gives the jumps it saves.
+        require_once($CFG->dirroot . '/mod/lesson/locallib.php');
+
+        $jump = (int) $jumpto;
+
+        if ($jump === LESSON_NEXTPAGE || $jump === LESSON_UNSEENPAGE || $jump === LESSON_UNANSWEREDPAGE) {
+            return $at + 1 < count($pages) ? $at + 1 : null;
+        }
+        if ($jump === LESSON_PREVIOUSPAGE) {
+            return $at > 0 ? $at - 1 : null;
+        }
+        if ($jump === LESSON_THISPAGE) {
+            return $at;
+        }
+        if ($jump < 0) {
+            // The end of the lesson, or a jump only a reader's history can
+            // settle. Neither leads anywhere in a preview.
+            return null;
+        }
+
+        foreach ($pages as $index => $page) {
+            if ((int) ($page['id'] ?? 0) === $jump) {
+                return $index;
+            }
+        }
+        return null;
     }
 }
