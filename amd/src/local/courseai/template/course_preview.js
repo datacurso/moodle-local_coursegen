@@ -46,6 +46,7 @@ import {exception as displayException} from 'core/notification';
  */
 export const init = (sessionId, courseId, planned) => {
     keepLinksInsidePreview(sessionId, courseId);
+    keepActivitiesInsidePreview(sessionId);
     planned.forEach((section) => addPlannedActivities(section));
     openSectionsThatShowOnlyTheirSummary(sessionId);
 };
@@ -88,6 +89,39 @@ const openSectionsThatShowOnlyTheirSummary = (sessionId) => {
                 return null;
             })
             .catch(displayException);
+    });
+};
+
+/**
+ * Point every activity on the page at its own preview.
+ *
+ * The activities a template keeps are real, and the page the format drew links
+ * to them the way a course page does. Following one lands on the activity
+ * itself, which is the one place a preview must not go: the whole point of
+ * reading a plan is to decide before anything exists, and an activity that
+ * opens for real answers that by the time it is asked.
+ *
+ * @param {number} sessionId
+ */
+const keepActivitiesInsidePreview = (sessionId) => {
+    document.querySelectorAll('a[href*="/mod/"]').forEach((link) => {
+        let url;
+        try {
+            url = new URL(link.getAttribute('href'), window.location.origin);
+        } catch (error) {
+            return;
+        }
+        // A module's own page: .../mod/<type>/view.php, whatever the site
+        // sits under.
+        const cmid = url.searchParams.get('id');
+        if (!url.pathname.endsWith('/view.php') || !url.pathname.includes('/mod/') || !cmid) {
+            return;
+        }
+
+        const preview = new URL(M.cfg.wwwroot + '/local/coursegen/activity_preview.php');
+        preview.searchParams.set('sessionid', sessionId);
+        preview.searchParams.set('cmid', cmid);
+        link.setAttribute('href', preview.toString());
     });
 };
 
