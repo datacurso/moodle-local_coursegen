@@ -16,37 +16,68 @@
 
 namespace local_coursegen\local\preview;
 
+use local_coursegen\local\preview\url\view;
+
 /**
- * A URL, drawn the way mod_url draws it.
- *
- * mod_url shows the description and then the address as a link. The address is
- * a value the template leaves to be filled in rather than text the AI writes,
- * so it is shown as it stands, whether that is the real destination or the
- * placeholder waiting for one.
+ * A URL, drawn by mod_url's own view code run against the payload.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class url_preview extends activity_preview {
+class url_preview extends ported_preview {
     /**
-     * The link, under the description the header already carries.
+     * The module's short name.
+     *
+     * @return string
+     */
+    protected function modname(): string {
+        return 'url';
+    }
+
+    /**
+     * A draft may give the address and the description.
+     *
+     * @param json_store $store
+     */
+    protected function overlay(json_store $store): void {
+        $rows = $store->get_records('url');
+        if (!$rows) {
+            return;
+        }
+        $row = reset($rows);
+        if (!empty($this->parameters['externalurl'])) {
+            $store->set('url', $row->id, 'externalurl', (string) $this->parameters['externalurl']);
+        }
+        $intro = $this->parameters['introeditor'] ?? null;
+        if (is_array($intro) && !empty($intro['text'])) {
+            $store->set('url', $row->id, 'intro', (string) $intro['text']);
+        }
+    }
+
+    /**
+     * The URL, as mod/url/view.php draws it for its display type.
      *
      * @return string
      */
     public function render(): string {
-        global $OUTPUT;
-
-        $url = trim((string) ($this->parameters['externalurl'] ?? ''));
-        if ($url === '') {
+        $url = $this->instance();
+        if ($url === null) {
             return $this->nothing_yet();
         }
+        return view::display($url, $this->cm(), $this->course(), $this->context());
+    }
 
-        // Not clickable: a preview opens nothing, and the address may still be
-        // the placeholder the template left to be filled in.
-        return $OUTPUT->box(
-            \html_writer::tag('span', s($url), ['class' => 'urlworkaround']),
-            'generalbox urlbox'
-        );
+    /**
+     * The description, only when the URL is set to print it.
+     *
+     * @return string
+     */
+    public function header_description(): string {
+        $url = $this->instance();
+        if ($url === null) {
+            return '';
+        }
+        return view::url_get_intro($url, $this->cm(), $this->context());
     }
 }
