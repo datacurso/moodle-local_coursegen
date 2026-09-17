@@ -99,8 +99,18 @@ try {
     $parameters = [];
 }
 
+// A run the service no longer knows, or one that never reached it, has no
+// plan to ask for; its kept activities are still in the payload and still
+// preview.
+$plan = [];
+try {
+    $plan = $api->get_plan($threadid)['template_plan'] ?? [];
+} catch (moodle_exception $exception) {
+    $plan = [];
+}
+
 if (!$parameters) {
-    foreach (($api->get_plan($threadid)['template_plan'] ?? []) as $entry) {
+    foreach ($plan as $entry) {
         if ((string) ($entry['uid'] ?? '') === $uid) {
             $modname = (string) ($entry['resource_type'] ?? '');
             $parameters = plan_activity::to_parameters((array) $entry);
