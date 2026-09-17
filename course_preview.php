@@ -65,6 +65,18 @@ if (!$template) {
 
 $course = get_course($template->get('courseid'));
 
+// A format can ask what page it is being drawn on before it decides how much
+// of a section to draw. format_grid does exactly that in its constructor: on a
+// course page it draws each section's activities, and anywhere else it draws
+// only a count of them, which is why a section opened from the grid showed how
+// many activities it had and none of them.
+//
+// This has to be said before the course is set, because setting the course is
+// what builds the format, and a format is built once. course/view.php never
+// has to think about it: the page is already a course page by the time it gets
+// here, and it says which kind of one afterwards.
+$PAGE->set_pagetype('course-view');
+
 // The course is set before anything else happens, because setting it settles
 // the theme, and the theme cannot be settled twice. Anything that draws -
 // even one activity icon - settles it, so nothing may draw until here.
