@@ -65,6 +65,25 @@ if (!$template) {
 
 $course = get_course($template->get('courseid'));
 
+// The course is set before anything else happens, because setting it settles
+// the theme, and the theme cannot be settled twice. Anything that draws -
+// even one activity icon - settles it, so nothing may draw until here.
+$PAGE->set_course($course);
+$PAGE->set_url('/local/coursegen/course_preview.php', ['sessionid' => $sessionid]);
+$PAGE->set_pagelayout('course');
+// The width a course page is read at. Without it the page runs the whole
+// width of the window, which no course page does, and a format that lays its
+// sections out in columns gets one column instead of three.
+$PAGE->add_body_class('limitedwidth');
+$PAGE->add_body_class('local-coursegen-course-preview');
+$PAGE->set_secondary_navigation(false);
+// What kind of page this is, which is where a theme and a format get the body
+// classes they style the page with. A course page that does not say it is one
+// is styled as though it were anything else.
+$PAGE->set_pagetype('course-view-' . $course->format);
+$PAGE->set_title(get_string('courseai_preview_course_title', 'local_coursegen'));
+$PAGE->set_heading($course->fullname);
+
 // What the run is going to add, and what it has said so far about each one.
 // A run under review has no result, so the plan is what there is to show.
 $summaries = [];
@@ -101,24 +120,6 @@ foreach (template_instance::get_records(['templateid' => $templateid], 'sortorde
         ]))->out(false),
     ];
 }
-
-// The course has to be set before anything draws, because setting it settles
-// the theme, and the format about to run is the course's own.
-$PAGE->set_course($course);
-$PAGE->set_url('/local/coursegen/course_preview.php', ['sessionid' => $sessionid]);
-$PAGE->set_pagelayout('course');
-// The width a course page is read at. Without it the page runs the whole
-// width of the window, which no course page does, and a format that lays its
-// sections out in columns gets one column instead of three.
-$PAGE->add_body_class('limitedwidth');
-$PAGE->add_body_class('local-coursegen-course-preview');
-$PAGE->set_secondary_navigation(false);
-// What kind of page this is, which is where a theme and a format get the body
-// classes they style the page with. A course page that does not say it is one
-// is styled as though it were anything else.
-$PAGE->set_pagetype('course-view-' . $course->format);
-$PAGE->set_title(get_string('courseai_preview_course_title', 'local_coursegen'));
-$PAGE->set_heading($course->fullname);
 
 // What course/view.php hands a format. A format reads these as globals rather
 // than as arguments, because it is included rather than called, so every one
