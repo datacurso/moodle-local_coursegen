@@ -100,4 +100,13 @@ class feedback_preview extends activity_preview {
             'disabled' => 'disabled',
         ]);
     }
+
+    /**
+     * This module reads its own page at the narrower width (mod/feedback/view.php).
+     *
+     * @return bool
+     */
+    public function limited_width(): bool {
+        return true;
+    }
 }

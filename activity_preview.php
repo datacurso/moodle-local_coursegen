@@ -119,6 +119,17 @@ if (!$parameters) {
     throw new moodle_exception('courseai_preview_not_found', 'local_coursegen');
 }
 
+// The activity is read in its course's language, which is the language its
+// content is in and the one it will be read in once it exists.
+$coursedata = json_decode((string) $session->get('coursedata'), true);
+$templateid = (int) ($coursedata['templateid'] ?? 0);
+if ($templateid > 0) {
+    $lang = (string) ((template_export_service::build_init_payload($templateid)['lang']) ?? '');
+    if ($lang !== '') {
+        force_current_language($lang);
+    }
+}
+
 $preview = preview_factory::for_activity($modname, $parameters);
 $preview->opened_at(
     new moodle_url('/local/coursegen/activity_preview.php', ['sessionid' => $sessionid, 'uid' => $uid]),
@@ -130,6 +141,15 @@ $PAGE->set_url('/local/coursegen/activity_preview.php',
     ['sessionid' => $sessionid, 'uid' => $uid, 'page' => $page]);
 $PAGE->set_context($context);
 $PAGE->set_pagelayout('incourse');
+// The width the module reads its own page at, and the kind of page it is,
+// which is where a module's own styles are hung. Without them the activity is
+// laid out by nothing that belongs to it: its content keeps the width its
+// author gave it and everything around it spreads to the window, so the two
+// stop lining up.
+if ($preview->limited_width()) {
+    $PAGE->add_body_class('limitedwidth');
+}
+$PAGE->set_pagetype('mod-' . $modname . '-view');
 $PAGE->add_body_class('local-coursegen-activity-preview');
 $PAGE->set_secondary_navigation(false);
 $PAGE->set_title($name);

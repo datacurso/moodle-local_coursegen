@@ -43,4 +43,13 @@ class page_preview extends activity_preview {
         $out .= $OUTPUT->box($this->content($this->text('page')), 'generalbox center clearfix');
         return $out;
     }
+
+    /**
+     * This module reads its own page at the narrower width (mod/page/view.php).
+     *
+     * @return bool
+     */
+    public function limited_width(): bool {
+        return true;
+    }
 }
