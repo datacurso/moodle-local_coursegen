@@ -16,21 +16,21 @@
 
 namespace local_coursegen\local\preview;
 
-use cm_info;
-use local_coursegen\local\backup\activity_reader;
 
 /**
- * An activity that already exists, read for the same preview as a planned one.
+ * An activity the run will keep, read for the same preview as one it will write.
  *
- * A template's course holds real activities: the moulds a run is written from,
- * and the ones that are kept as they are. They appear in the preview of the
- * course because they will appear in the course, and opening one has to stay
- * in the preview: a page about deciding whether to build something must not
- * send the teacher into the thing it is deciding about.
+ * A template keeps activities as they are, and they are part of the course
+ * being decided about, so they are previewed too. What is read is not the
+ * activity on the site: it is the description of it that travelled in the
+ * payload, which its own module produced and which says everything the
+ * activity is made of.
  *
- * So a real activity is read the same way a planned one is. Its own module
- * says what it is made of, and the pieces of text it holds are laid out in the
- * shape the previews already read, which is the shape a plan arrives in.
+ * That matters because a preview must not reach the real thing. Reading the
+ * payload instead means the page cannot, whatever it is asked for.
+ *
+ * The pieces of text are laid out in the shape the previews already read,
+ * which is the shape a plan arrives in.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -46,17 +46,18 @@ class real_activity {
     private const TITLE_FIELDS = ['title', 'name', 'concept', 'subject', 'heading'];
 
     /**
-     * One existing activity, in the shape its preview reads.
+     * One activity of the payload, in the shape its preview reads.
      *
-     * @param cm_info $cm
+     * @param array $activity The activity as the payload describes it.
      * @return array
      */
-    public static function to_parameters(cm_info $cm): array {
-        $tree = activity_reader::read($cm);
-        $root = ($tree[$cm->modname] ?? [])[0] ?? [];
-        $name = format_string($cm->name);
+    public static function to_parameters(array $activity): array {
+        $modname = (string) ($activity['resource_type'] ?? '');
+        $parameters = $activity['parameters'] ?? [];
+        $root = (($parameters['structure'] ?? [])[$modname] ?? [])[0] ?? [];
+        $name = format_string((string) ($parameters['name'] ?? ''));
 
-        if ($cm->modname === 'lesson') {
+        if ($modname === 'lesson') {
             $pages = [];
             foreach (self::lesson_pages_in_order($root) as $page) {
                 $pages[] = [

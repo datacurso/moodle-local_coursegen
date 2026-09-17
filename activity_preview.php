@@ -38,21 +38,15 @@ use local_coursegen\local\models\course_session;
 use local_coursegen\local\preview\plan_activity;
 use local_coursegen\local\preview\preview_factory;
 use local_coursegen\local\preview\real_activity;
-use local_coursegen\local\models\template;
+use local_coursegen\local\service\template_export_service;
 use local_coursegen\local\service\template_ai_api_service;
 
 $sessionid = required_param('sessionid', PARAM_INT);
 
-// An activity the run is going to write is named by the answer, exactly as it
-// arrives; deriving a name here instead is how the 900000-based number came
-// about, and it bought nothing. One that
-// already exists in the template's course is named by its course module,
-// because it has one and nothing has to be invented for it.
-$uid = optional_param('uid', '', PARAM_ALPHANUMEXT);
-$cmid = optional_param('cmid', 0, PARAM_INT);
-if ($uid === '' && $cmid <= 0) {
-    throw new moodle_exception('missingparam', 'error', '', 'uid');
-}
+// Every element of a run carries a uid, in what was sent and in what came
+// back, and that is the only thing this page is asked for. Deriving an id here
+// instead is how the 900000-based number came about, and it bought nothing.
+$uid = required_param('uid', PARAM_ALPHANUMEXT);
 
 // Which page of it, for an activity that is read a page at a time.
 $page = optional_param('page', 0, PARAM_INT);
@@ -66,31 +60,13 @@ if ((int) $session->get('userid') !== (int) $USER->id) {
     throw new moodle_exception('nopermissions', 'error', '', 'preview this generation');
 }
 
-// An activity that already exists is read from itself, and only from the
-// course the template is built on: a preview opens what the run is about and
-// nothing else on the site.
-if ($cmid > 0) {
-    $coursedata = json_decode((string) $session->get('coursedata'), true);
-    $templateid = (int) ($coursedata['templateid'] ?? 0);
-    $template = $templateid > 0 ? template::get_record(['id' => $templateid]) : false;
-    if (!$template) {
-        throw new moodle_exception('invalidtemplate', 'local_coursegen');
-    }
-    $cm = get_fast_modinfo($template->get('courseid'))->get_cm($cmid);
-    if (!$cm->uservisible) {
-        throw new moodle_exception('nopermissions', 'error', '', 'preview this activity');
-    }
-    $modname = $cm->modname;
-    $parameters = real_activity::to_parameters($cm);
-}
-
 $api = new template_ai_api_service();
 $threadid = (string) $session->get('session_id');
 
 // The finished activity when there is one, the draft while there is not. A run
 // under review has no result yet, and asking for one is how that is found out.
-$modname ??= '';
-$parameters ??= [];
+$modname = '';
+$parameters = [];
 try {
     foreach (($api->get_result($threadid)['generated_activities'] ?? []) as $activity) {
         if ((string) ($activity['uid'] ?? '') === $uid) {
@@ -113,20 +89,36 @@ if (!$parameters) {
     }
 }
 
+// An activity the run keeps rather than writes is not in the answer at all,
+// so it is read from what was sent: the payload describes every activity of
+// the template completely, and names each one by the same uid.
+if (!$parameters) {
+    $coursedata = json_decode((string) $session->get('coursedata'), true);
+    $templateid = (int) ($coursedata['templateid'] ?? 0);
+    if ($templateid > 0) {
+        foreach ((template_export_service::build_init_payload($templateid)['activities'] ?? []) as $activity) {
+            if ((string) ($activity['uid'] ?? '') === $uid) {
+                $modname = (string) ($activity['resource_type'] ?? '');
+                $parameters = real_activity::to_parameters($activity);
+                break;
+            }
+        }
+    }
+}
+
 if (!$parameters) {
     throw new moodle_exception('courseai_preview_not_found', 'local_coursegen');
 }
 
 $preview = preview_factory::for_activity($modname, $parameters);
 $preview->opened_at(
-    new moodle_url('/local/coursegen/activity_preview.php',
-        $uid !== '' ? ['sessionid' => $sessionid, 'uid' => $uid] : ['sessionid' => $sessionid, 'cmid' => $cmid]),
+    new moodle_url('/local/coursegen/activity_preview.php', ['sessionid' => $sessionid, 'uid' => $uid]),
     $page
 );
 $name = $preview->name();
 
 $PAGE->set_url('/local/coursegen/activity_preview.php',
-    ['sessionid' => $sessionid, 'uid' => $uid, 'cmid' => $cmid, 'page' => $page]);
+    ['sessionid' => $sessionid, 'uid' => $uid, 'page' => $page]);
 $PAGE->set_context($context);
 $PAGE->set_pagelayout('incourse');
 $PAGE->add_body_class('local-coursegen-activity-preview');

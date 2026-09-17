@@ -774,7 +774,6 @@ $string['courseai_preview_course'] = 'Previsualizar el curso';
 $string['courseai_preview_course_notice'] = 'Vista previa: este curso todavía no existe. Abra una actividad para ver qué va a contener.';
 $string['courseai_preview_course_title'] = 'Vista previa del curso';
 $string['courseai_preview_not_found'] = 'Esa actividad no forma parte de esta generación.';
-$string['courseai_preview_open_section'] = 'Abrir esta sección';
 $string['courseai_preview_notice'] = 'Vista previa: esta actividad todavía no existe. Nada de lo que se muestra aquí se puede usar ni modificar.';
 $string['courseai_template_log_selected'] = 'Seleccionó la plantilla "{$a}".';
 $string['courseai_template_log_adjusting'] = 'Planificando de nuevo con su cambio…';

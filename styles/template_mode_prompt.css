@@ -37,6 +37,7 @@ body.local-coursegen-course-preview .editing_update,
 body.local-coursegen-course-preview .section_action_menu,
 body.local-coursegen-course-preview .activity-actions,
 body.local-coursegen-course-preview .bulkedit-toggler,
+body.local-coursegen-course-preview .quickeditlink,
 body.local-coursegen-course-preview .course-content-item-content .dropdown {
     display: none !important;
 }
