@@ -93,6 +93,12 @@ class grid_from_payload {
 
         $showsinpopup = ((int) ($settings['popup'] ?? 0)) === 2;
 
+        // A section shown as a tile is not also shown in the list above it:
+        // the format draws both from what it is given, so giving it the same
+        // sections twice is how the course came out drawn twice.
+        $content['sections'] = [];
+        $content['hassections'] = false;
+
         return $content + [
             'hasgridsections' => !empty($tiles),
             'gridsections' => $tiles,

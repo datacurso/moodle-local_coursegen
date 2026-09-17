@@ -82,6 +82,9 @@ class course_from_payload {
         }
 
         return [
+            // The class the list of sections carries, which is the format's
+            // own name: a format styles its list by it.
+            'format' => (string) (($payload['course_configuration'] ?? [])['format'] ?? 'topics'),
             'initialsection' => $initial,
             'sections' => $sections,
             'hassections' => !empty($sections),
