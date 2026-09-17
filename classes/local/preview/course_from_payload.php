@@ -125,8 +125,27 @@ class course_from_payload {
             'ishidden' => false,
             'iscurrent' => false,
             'contentcollapsed' => false,
-            'summary' => ['summarytext' => (string) ($info['summary'] ?? '')],
+            'summary' => ['summarytext' => self::summary($info)],
         ];
+    }
+
+    /**
+     * A section's summary, shown the way a course page shows it.
+     *
+     * It is text a person wrote, in the format they wrote it in, and a course
+     * page runs it through the same cleaning and filtering as any other.
+     *
+     * @param array $info
+     * @return string
+     */
+    private static function summary(array $info): string {
+        global $PAGE;
+
+        $text = (string) ($info['summary'] ?? '');
+        if (trim($text) === '') {
+            return '';
+        }
+        return format_text($text, (int) ($info['summaryformat'] ?? FORMAT_HTML), ['context' => $PAGE->context]);
     }
 
     /**
