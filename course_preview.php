@@ -39,7 +39,6 @@ require_once(__DIR__ . '/../../config.php');
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\models\template;
 use local_coursegen\local\models\template_instance;
-use local_coursegen\local\preview\course_preview_layout;
 use local_coursegen\local\service\template_ai_api_service;
 use local_coursegen\local\service\template_export_service;
 
@@ -81,12 +80,21 @@ try {
 $planned = [];
 foreach (template_instance::get_records(['templateid' => $templateid], 'sortorder') as $instance) {
     $uid = template_export_service::instance_uid($instance);
-    $planned[(int) $instance->get('sectionid')][] = [
+    $sectionid = (int) $instance->get('sectionid');
+    $planned[$sectionid] ??= ['sectionid' => $sectionid, 'activities' => []];
+    $planned[$sectionid]['activities'][] = [
         'uid' => $uid,
         'name' => $instance->get('name'),
         'modname' => $instance->get('modname') ?: 'lesson',
-        'typelabel' => $instance->get('typelabel'),
         'summary' => $summaries[$uid] ?? '',
+        'badge' => get_string('courseai_template_instance_badge', 'local_coursegen'),
+        'badgetip' => get_string('courseai_template_instance_badge_tip', 'local_coursegen'),
+        'icon' => $OUTPUT->image_icon(
+            'monologo',
+            $instance->get('modname') ?: 'lesson',
+            'mod_' . ($instance->get('modname') ?: 'lesson'),
+            ['class' => 'icon activityicon']
+        ),
         'url' => (new moodle_url('/local/coursegen/activity_preview.php', [
             'sessionid' => $sessionid,
             'uid' => $uid,
@@ -144,16 +152,25 @@ echo $OUTPUT->notification(
     \core\output\notification::NOTIFY_INFO
 );
 
+// What the preview adds to the page the format draws: the activities the run
+// is going to write, and the fact that following a link must stay inside the
+// preview rather than land on the template's real course.
+//
+// Both are done to the page rather than to the markup of the page. A rendered
+// course is HTML, and editing HTML as text to add two rows to it means
+// deciding by hand where an element ends; the page itself already knows.
+$PAGE->requires->js_call_amd(
+    'local_coursegen/local/courseai/template/course_preview',
+    'init',
+    [$sessionid, (int) $course->id, array_values($planned)]
+);
+
 // The wrapper a course page puts around its format's output. A format lays
 // its sections out inside it, so without it they sit against a different edge
 // than the sections the format drew above them.
-ob_start();
 echo html_writer::start_tag('div', ['class' => 'course-content']);
 require($CFG->dirroot . '/course/format/' . $course->format . '/format.php');
 echo html_writer::end_tag('div');
-$rendered = ob_get_clean();
-
-echo course_preview_layout::rebuild($rendered, $planned, $sections, (int) $course->id, $sessionid);
 
 // What a course page runs once its sections are on screen.
 $PAGE->requires->js_call_amd('core_course/view', 'init');
