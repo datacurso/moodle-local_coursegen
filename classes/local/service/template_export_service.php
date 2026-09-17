@@ -172,6 +172,7 @@ class template_export_service {
     private static function sections_info($course, $modinfo, array $behaviors): array {
         $format = course_get_format($course);
         $images = self::section_images($course);
+        $contextid = \context_course::instance($course->id)->id;
 
         $sections = [];
         foreach ($modinfo->get_section_info_all() as $section) {
@@ -181,7 +182,18 @@ class template_export_service {
                 'uid' => \core\uuid::generate(),
                 'section' => (int) $section->section,
                 'name' => get_section_name($course, $section),
-                'summary' => (string) ($section->summary ?? ''),
+                // A summary refers to its pictures by a placeholder that only
+                // means something to the page that owns them. Whatever reads
+                // this payload owns nothing, so they travel as addresses.
+                'summary' => file_rewrite_pluginfile_urls(
+                    (string) ($section->summary ?? ''),
+                    'pluginfile.php',
+                    $contextid,
+                    'course',
+                    'section',
+                    (int) $section->id
+                ),
+                'summaryformat' => (int) ($section->summaryformat ?? FORMAT_HTML),
                 // What the format was told about this section in particular,
                 // which is where a format keeps the look of it.
                 'format_options' => $format->get_format_options($section),
