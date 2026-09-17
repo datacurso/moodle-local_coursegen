@@ -19,6 +19,7 @@ namespace local_coursegen\mod_settings;
 use context_module;
 use lesson;
 use lesson_page;
+use local_coursegen\utils\text_editor_parameter_cleaner;
 use stdClass;
 
 /**
@@ -40,6 +41,7 @@ class lesson_settings extends base_settings {
     public function add_settings() {
         global $CFG;
 
+        require_once($CFG->libdir . '/filelib.php');
         require_once($CFG->dirroot . '/mod/lesson/locallib.php');
         // The LESSON_PAGE_* constants live in each page type file and are not
         // loaded by locallib until the page type manager runs.
@@ -116,12 +118,23 @@ class lesson_settings extends base_settings {
             return null;
         }
 
+        // The mold's page images arrive as absolute pluginfile URLs of the
+        // base course; they are copied into a draft area of this page's own
+        // so lesson_page::create() moves them into mod_lesson/page_contents.
+        // With itemid 0 the draft save never ran and header images vanished.
+        $draftitemid = file_get_unused_draft_itemid();
+        $contenthtml = text_editor_parameter_cleaner::prepare_editor_text(
+            $contenthtml,
+            $draftitemid,
+            $this->sourcecourseid
+        );
+
         $properties = new stdClass();
         $properties->title = $title;
         $properties->contents_editor = [
             'text' => $contenthtml,
             'format' => FORMAT_HTML,
-            'itemid' => 0,
+            'itemid' => $draftitemid,
         ];
         $properties->pageid = $previouspageid;
 
