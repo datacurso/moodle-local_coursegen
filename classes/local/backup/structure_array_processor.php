@@ -65,6 +65,26 @@ class structure_array_processor extends base_processor {
     protected array $vars = [];
 
     /**
+     * @var array Element name => the table it was read from.
+     *
+     * A structure says where each of its elements comes from, and that is
+     * the piece the tree alone loses: a "page" under "pages" is a row of
+     * lesson_pages, and code written against lesson_pages asks for it by that
+     * name. An element read by a query rather than a table names the first
+     * table the query reads, which is where its rows come from all the same.
+     */
+    protected array $tables = [];
+
+    /**
+     * @var array Element name => [column as declared => column in the table].
+     *
+     * An element may declare a column under another name (an "alias"), and
+     * the tree carries the alias. Code written against the table wants the
+     * column, so the way back is kept.
+     */
+    protected array $aliases = [];
+
+    /**
      * Give one of the values a structure's sources are allowed to ask for.
      *
      * A source is written as "the rows of this table whose column matches the
@@ -98,16 +118,67 @@ class structure_array_processor extends base_processor {
     }
 
     /**
+     * Element name => table, for every element that was read from one.
+     *
+     * @return array
+     */
+    public function get_tables(): array {
+        return $this->tables;
+    }
+
+    /**
+     * Element name => declared column => table column, where they differ.
+     *
+     * @return array
+     */
+    public function get_aliases(): array {
+        return $this->aliases;
+    }
+
+    /**
      * An element is starting: everything reported from here belongs to it.
      *
      * @param base_nested_element $nested
      */
     public function pre_process_nested_element(base_nested_element $nested) {
+        $this->remember_source($nested);
         $node = [];
         foreach ($nested->get_attributes() as $attribute) {
             $node[$attribute->get_name()] = $attribute->get_value();
         }
         $this->stack[] = ['name' => $nested->get_name(), 'node' => $node];
+    }
+
+    /**
+     * Where this element's rows come from, the first time it is seen.
+     *
+     * @param base_nested_element $nested
+     */
+    protected function remember_source(base_nested_element $nested): void {
+        $name = $nested->get_name();
+        if (isset($this->tables[$name]) || !($nested instanceof backup_nested_element)) {
+            return;
+        }
+        $table = $nested->get_source_table();
+        if (!$table) {
+            $sql = (string) $nested->get_source_sql();
+            if ($sql !== '' && preg_match('~FROM\\s+\\{(\\w+)\\}~i', $sql, $found)) {
+                $table = $found[1];
+            }
+        }
+        if ($table) {
+            $this->tables[$name] = $table;
+        }
+        // An alias is declared as "this column travels under that name" and
+        // kept by the element as column => final element. There is no reader
+        // for it, only a writer, so it is read the one way it can be.
+        $property = new \ReflectionProperty(backup_nested_element::class, 'aliases');
+        $property->setAccessible(true);
+        foreach ((array) $property->getValue($nested) as $column => $final) {
+            if (is_object($final) && method_exists($final, 'get_name')) {
+                $this->aliases[$name][$final->get_name()] = $column;
+            }
+        }
     }
 
     /**

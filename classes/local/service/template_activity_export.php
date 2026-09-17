@@ -51,13 +51,18 @@ class template_activity_export {
      * @return array
      */
     public static function parameters_for(cm_info $cm): array {
+        $read = activity_reader::read_with_sources($cm);
         return [
             'name' => $cm->name,
             'section' => (int) $cm->sectionnum,
             // Everything the activity is made of, as its own module declares
             // it: its settings, and every list that belongs to it, each
             // element carrying the id the module gave it.
-            'structure' => activity_reader::read($cm),
+            'structure' => $read['tree'],
+            // Where each element came from, so the tree can be read back as
+            // the rows the module's own code asks for.
+            'structure_tables' => $read['tables'],
+            'structure_aliases' => $read['aliases'],
         ];
     }
 }
