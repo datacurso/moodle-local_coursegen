@@ -67,7 +67,6 @@ class course_preview_layout {
         }
 
         $out = self::rewrite_course_links($rendered, $courseid, $sessionid, $sections);
-        $out = self::open_sections_instead_of_dialogs($out, $sessionid);
         foreach ($planned as $sectionid => $activities) {
             $rows = '';
             foreach ($activities as $activity) {
@@ -286,63 +285,5 @@ class course_preview_layout {
             html_writer::div($grid, 'activity-item', ['data-region' => 'activity-card']),
             ['class' => 'activity activity-wrapper ' . $modname . ' modtype_' . $modname . ' local-coursegen-planned']
         );
-    }
-
-    /**
-     * Make a section that opens in a dialog open on its own page instead.
-     *
-     * A format whose sections are tiles can be set to show a section in a
-     * dialog rather than to navigate to it. The tile is then not a link at
-     * all, so the only way into the section is the dialog, and a dialog shows
-     * only what the format put in it.
-     *
-     * That matters here and only here: what a run is going to add goes into
-     * the list of activities the format drew, and a dialog it gave no list to
-     * has nowhere to put them. The sections holding everything the teacher
-     * came to look at would be the ones they could not open.
-     *
-     * So the tile becomes the link the same format draws when it is set to
-     * navigate instead, pointed at this preview.
-     *
-     * @param string $html
-     * @param int $sessionid
-     * @return string
-     */
-    private static function open_sections_instead_of_dialogs(string $html, int $sessionid): string {
-        $marker = '<div class="grid-modal ';
-
-        $from = 0;
-        while (($at = strpos($html, $marker, $from)) !== false) {
-            $ends = strpos($html, '>', $at);
-            if ($ends === false) {
-                break;
-            }
-            $tag = substr($html, $at, $ends - $at + 1);
-
-            if (!preg_match('~data-section="(?<number>\\d+)"~', $tag, $found)
-                || !preg_match('~class="grid-modal (?<classes>[^"]*)"~', $tag, $classes)) {
-                $from = $ends + 1;
-                continue;
-            }
-
-            $closes = self::closing_tag($html, $ends + 1, 'div');
-            if ($closes === null) {
-                break;
-            }
-
-            $url = new moodle_url('/local/coursegen/course_preview.php', [
-                'sessionid' => $sessionid,
-                'section' => (int) $found['number'],
-            ]);
-            // The classes the tile carries when the format makes it a link,
-            // which is this same markup without what opens the dialog.
-            $open = '<a class="' . s($classes['classes']) . '" href="' . s($url->out(false)) . '">';
-
-            $html = substr($html, 0, $closes) . '</a>' . substr($html, $closes + strlen('</div>'));
-            $html = substr($html, 0, $at) . $open . substr($html, $ends + 1);
-
-            $from = $at + strlen($open);
-        }
-        return $html;
     }
 }
