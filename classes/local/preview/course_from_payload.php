@@ -47,9 +47,11 @@ class course_from_payload {
      * @param array $payload What was sent to the service.
      * @param array $summaries uid => what the plan says that activity will contain.
      * @param int $sessionid The run being previewed, for the links out.
+     * @param int|null $only One section on its own, for a format that opens
+     *                       them that way; null for the whole course.
      * @return array
      */
-    public static function content(array $payload, array $summaries, int $sessionid): array {
+    public static function content(array $payload, array $summaries, int $sessionid, ?int $only = null): array {
         $bysection = [];
         foreach (($payload['activities'] ?? []) as $activity) {
             // A mould is read to write the activities built on it and is never
@@ -65,7 +67,13 @@ class course_from_payload {
         $initial = null;
         foreach (($payload['sections_info'] ?? []) as $info) {
             $number = (int) ($info['section'] ?? 0);
+            if ($only !== null && $number !== $only && $number !== 0) {
+                continue;
+            }
             $section = self::section($info, $bysection[$number] ?? [], $summaries, $sessionid);
+            if ($number === 0 && $only !== null) {
+                continue;
+            }
             if ($number === 0) {
                 $initial = $section;
                 continue;

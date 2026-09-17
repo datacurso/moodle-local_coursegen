@@ -41,10 +41,14 @@ require_once(__DIR__ . '/../../config.php');
 
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\preview\course_from_payload;
+use local_coursegen\local\preview\grid_from_payload;
 use local_coursegen\local\service\template_ai_api_service;
 use local_coursegen\local\service\template_export_service;
 
 $sessionid = required_param('sessionid', PARAM_INT);
+
+// Which section to show, for a format that shows them one at a time.
+$section = optional_param('section', null, PARAM_INT);
 
 require_login();
 $context = context_system::instance();
@@ -96,11 +100,18 @@ echo $OUTPUT->notification(
     \core\output\notification::NOTIFY_INFO
 );
 
+// The course is drawn by its own format's template when it has one, so the
+// preview is laid out the way the template's course is: the same tiles, the
+// same pictures, the same settings, all of them read from what was sent.
+$content = course_from_payload::content($payload, $summaries, $sessionid, $section);
+$template = 'core_courseformat/local/content';
+if ($section === null && grid_from_payload::applies($payload)) {
+    $content = grid_from_payload::content($content, $payload, $sessionid);
+    $template = 'format_grid/local/content';
+}
+
 echo html_writer::start_tag('div', ['class' => 'course-content']);
-echo $OUTPUT->render_from_template(
-    'core_courseformat/local/content',
-    course_from_payload::content($payload, $summaries, $sessionid)
-);
+echo $OUTPUT->render_from_template($template, $content);
 echo html_writer::end_tag('div');
 
 echo $OUTPUT->footer();
