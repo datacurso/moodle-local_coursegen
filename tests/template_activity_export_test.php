@@ -255,6 +255,112 @@ final class template_activity_export_test extends \advanced_testcase {
     }
 
     /**
+     * A Forum mold ships its raw description and every setting the scope names.
+     */
+    public function test_forum_exports_intro_and_its_settings(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('forum', [
+            'name' => 'Debate forum',
+            'intro' => self::MARKED_INTRO,
+            'introformat' => FORMAT_HTML,
+            'type' => 'qanda',
+            'forcesubscribe' => 1,
+            'trackingtype' => 2,
+            'maxattachments' => 3,
+            'displaywordcount' => 1,
+            'blockperiod' => 86400,
+            'blockafter' => 5,
+            'warnafter' => 3,
+            'completiondiscussions' => 2,
+        ]);
+
+        $this->assertSame(self::MARKED_INTRO, $params['intro']);
+        $this->assertSame('qanda', $params['type']);
+        $this->assertSame(1, (int) $params['forcesubscribe']);
+        $this->assertSame(2, (int) $params['trackingtype']);
+        $this->assertSame(3, (int) $params['maxattachments']);
+        $this->assertSame(1, (int) $params['displaywordcount']);
+        $this->assertSame(86400, (int) $params['blockperiod']);
+        $this->assertSame(5, (int) $params['blockafter']);
+        $this->assertSame(3, (int) $params['warnafter']);
+        $this->assertSame(2, (int) $params['completiondiscussions']);
+    }
+
+    /**
+     * The mold's discussions travel in authoring order, bodies raw.
+     */
+    public function test_forum_exports_its_discussions_in_order(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $forum = $this->getDataGenerator()->create_module('forum', [
+            'course' => $course->id,
+            'intro' => 'Plain',
+            'introformat' => FORMAT_HTML,
+        ]);
+        $generator = $this->getDataGenerator()->get_plugin_generator('mod_forum');
+        foreach ([['First debate', '<p>Body ⟦tema⟧</p>'], ['Second debate', '<p>Fixed body</p>']] as $entry) {
+            $generator->create_discussion([
+                'course' => $course->id,
+                'forum' => $forum->id,
+                'userid' => get_admin()->id,
+                'name' => $entry[0],
+                'message' => $entry[1],
+                'messageformat' => FORMAT_HTML,
+            ]);
+        }
+
+        $cm = get_fast_modinfo($course)->get_cm($forum->cmid);
+        $params = template_activity_export::parameters_for($cm);
+
+        $discussions = $params['mod_settings']['discussions'];
+        $this->assertCount(2, $discussions);
+        $this->assertSame('First debate', $discussions[0]['subject']);
+        // Raw: the service parses those markers.
+        $this->assertSame('<p>Body ⟦tema⟧</p>', $discussions[0]['message']);
+        $this->assertSame('Second debate', $discussions[1]['subject']);
+    }
+
+    /**
+     * Moodle drops the rating window unless ratingtime says it is in use, so
+     * the flag travels alongside the dates rather than being inferred later.
+     */
+    public function test_forum_exports_a_rating_time_flag_with_the_window(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        // Moodle itself zeroes the dates on save unless ratingtime says the
+        // window is in use, so the mold has to be built with it too.
+        $withwindow = $this->export_module('forum', [
+            'assessed' => 1,
+            'ratingtime' => 1,
+            'assesstimestart' => 1700000000,
+            'assesstimefinish' => 1700600000,
+        ]);
+        $this->assertSame(1, (int) $withwindow['ratingtime']);
+
+        $withoutwindow = $this->export_module('forum', ['assessed' => 1]);
+        $this->assertSame(0, (int) $withoutwindow['ratingtime']);
+    }
+
+    /**
+     * Identity columns never travel.
+     */
+    public function test_forum_export_omits_identity_columns(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('forum', ['intro' => 'Plain', 'introformat' => FORMAT_HTML]);
+
+        foreach (['id', 'course', 'timemodified', 'introformat'] as $column) {
+            $this->assertArrayNotHasKey($column, $params);
+        }
+    }
+
+    /**
      * Types without their own export still ship the minimal pair, so adding
      * the URL branch cannot have changed them.
      */

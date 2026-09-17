@@ -48,10 +48,112 @@ class template_activity_export {
         if ($cm->modname === 'resource') {
             return self::resource_parameters($cm);
         }
+        if ($cm->modname === 'forum') {
+            return self::forum_parameters($cm);
+        }
         return [
             'name' => $cm->name,
             'section' => (int) $cm->sectionnum,
         ];
+    }
+
+    /**
+     * A Forum's raw description, its settings and its initial discussions.
+     *
+     * Unlike url/resource, every forum setting is a plain column - there is no
+     * serialized blob to unpack. The discussions are this type's internal
+     * elements: their bodies are marker-bearing, so they travel raw and in the
+     * order they were authored.
+     *
+     * @param cm_info $cm
+     * @return array
+     */
+    private static function forum_parameters(cm_info $cm): array {
+        global $DB;
+
+        $forum = $DB->get_record('forum', ['id' => $cm->instance]);
+        if (!$forum) {
+            return ['name' => $cm->name, 'section' => (int) $cm->sectionnum];
+        }
+
+        $parameters = array_merge(
+            self::forum_settings_columns($forum),
+            [
+                'name' => $cm->name,
+                'section' => (int) $cm->sectionnum,
+                'intro' => $forum->intro ?? '',
+                // Moodle zeroes the rating window unless this flag says it is
+                // in use (see forum_add_instance), so it travels with it
+                // instead of being inferred on the way back in.
+                'ratingtime' => (!empty($forum->assesstimestart) && !empty($forum->assesstimefinish)) ? 1 : 0,
+            ]
+        );
+
+        $discussions = self::forum_discussions((int) $forum->id);
+        if ($discussions) {
+            $parameters['mod_settings'] = ['discussions' => $discussions];
+        }
+
+        return $parameters;
+    }
+
+    /**
+     * The mod_forum settings worth reproducing on the generated activity.
+     *
+     * Identity/placement columns (id, course, name, timemodified) are left out
+     * on purpose - they describe THIS forum, never the new one.
+     *
+     * @param \stdClass $forum
+     * @return array
+     */
+    private static function forum_settings_columns($forum): array {
+        $fields = [
+            'type', 'forcesubscribe', 'trackingtype',
+            'maxbytes', 'maxattachments', 'displaywordcount',
+            'lockdiscussionafter', 'blockperiod', 'blockafter', 'warnafter',
+            'grade_forum', 'grade_forum_notify',
+            'assessed', 'scale', 'assesstimestart', 'assesstimefinish',
+            'completiondiscussions', 'completionreplies', 'completionposts',
+            'duedate', 'cutoffdate', 'rsstype', 'rssarticles',
+        ];
+        $settings = [];
+        foreach ($fields as $field) {
+            if (isset($forum->$field)) {
+                $settings[$field] = $forum->$field;
+            }
+        }
+        return $settings;
+    }
+
+    /**
+     * Every initial discussion of one forum, as authored.
+     *
+     * A discussion's body lives on its first post, not on the discussion row.
+     * Moodle lists discussions by pinned/last-reply order, which is a reading
+     * order, not the authoring one - so they are ordered by id, the only
+     * stable "as written" sequence.
+     *
+     * @param int $forumid
+     * @return array
+     */
+    private static function forum_discussions(int $forumid): array {
+        global $DB;
+
+        $sql = 'SELECT d.id, d.name, p.message
+                  FROM {forum_discussions} d
+                  JOIN {forum_posts} p ON p.id = d.firstpost
+                 WHERE d.forum = :forumid
+              ORDER BY d.id ASC';
+        $records = $DB->get_records_sql($sql, ['forumid' => $forumid]);
+
+        $discussions = [];
+        foreach ($records as $record) {
+            $discussions[] = [
+                'subject' => $record->name,
+                'message' => $record->message ?? '',
+            ];
+        }
+        return $discussions;
     }
 
     /**
