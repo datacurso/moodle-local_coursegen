@@ -102,6 +102,11 @@ if (!empty($configuration['lang'])) {
 $PAGE->set_course(get_course(template::get_record(['id' => $templateid])->get('courseid')));
 $PAGE->set_show_course_index(false);
 $PAGE->navbar->ignore_active(true);
+// Which entry of the primary navigation this page sits under. A course page
+// is under the reader's courses, and saying so directly is the one way that
+// cannot fall back to marking the site home, which is what the navigation
+// does for any page it cannot place.
+$PAGE->set_primary_active_tab('courses');
 $PAGE->set_url('/local/coursegen/course_preview.php', ['sessionid' => $sessionid]);
 $PAGE->set_pagelayout('course');
 // The width a course page is read at. Without it the page runs the whole width
