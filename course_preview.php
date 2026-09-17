@@ -102,11 +102,14 @@ if (!empty($configuration['lang'])) {
 $PAGE->set_course(get_course(template::get_record(['id' => $templateid])->get('courseid')));
 $PAGE->set_show_course_index(false);
 $PAGE->navbar->ignore_active(true);
-// Which entry of the primary navigation this page sits under. A course page
-// is under the reader's courses, and saying so directly is the one way that
-// cannot fall back to marking the site home, which is what the navigation
-// does for any page it cannot place.
-$PAGE->set_primary_active_tab('courses');
+// A course page marks no entry of the primary navigation as where the reader
+// is, so neither does this one. The navigation marks the site home on any page
+// it cannot place, and a page it is told about picks an entry instead; a
+// course page ends up with none, so none is what is shown here, by unmarking
+// whatever the navigation chose once it has chosen.
+foreach ($PAGE->primarynav->children as $entry) {
+    $entry->make_inactive();
+}
 $PAGE->set_url('/local/coursegen/course_preview.php', ['sessionid' => $sessionid]);
 $PAGE->set_pagelayout('course');
 // The width a course page is read at. Without it the page runs the whole width
