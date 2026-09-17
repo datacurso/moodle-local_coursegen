@@ -146,7 +146,14 @@ class structure_array_processor extends base_processor {
         foreach ($nested->get_attributes() as $attribute) {
             $node[$attribute->get_name()] = $attribute->get_value();
         }
-        $this->stack[] = ['name' => $nested->get_name(), 'node' => $node];
+        $this->stack[] = [
+            'name' => $nested->get_name(),
+            'node' => $node,
+            // Which file areas this element's text may refer to, declared by
+            // the structure itself: this is what backup uses to know which
+            // files to carry, and here it is what says how to name them.
+            'files' => $nested instanceof backup_nested_element ? $nested->get_file_annotations() : [],
+        ];
     }
 
     /**
@@ -204,6 +211,7 @@ class structure_array_processor extends base_processor {
         if ($finished === null) {
             return;
         }
+        $finished['node'] = $this->with_file_addresses($finished['node'], $finished['files']);
 
         if (!$this->stack) {
             $this->result = $finished['node'];
@@ -217,6 +225,41 @@ class structure_array_processor extends base_processor {
         $parent = array_pop($this->stack);
         $parent['node'][$finished['name']][] = $finished['node'];
         $this->stack[] = $parent;
+    }
+
+    /**
+     * Text that names its files by a placeholder, renamed to where they are.
+     *
+     * A module keeps "@@PLUGINFILE@@/x.png" in its text and resolves it on the
+     * way out with the file area the text belongs to. Backup keeps the
+     * placeholder, because restore resolves it again; this tree is read by
+     * things that own no file area, so it is resolved here, with the same
+     * areas backup declares for the element and the same context the module
+     * would use. Text with no placeholder is left exactly as it was.
+     *
+     * @param array $node
+     * @param array $annotations component => filearea => info, as declared.
+     * @return array
+     */
+    protected function with_file_addresses(array $node, array $annotations): array {
+        if (!$annotations) {
+            return $node;
+        }
+        foreach ($node as $key => $value) {
+            if (!is_string($value) || strpos($value, '@@PLUGINFILE@@') === false) {
+                continue;
+            }
+            foreach ($annotations as $component => $areas) {
+                foreach ($areas as $filearea => $info) {
+                    $contextid = $info->contextid ?? null;
+                    $contextid = $contextid !== null ? (int) $contextid : (int) $this->get_var(\backup::VAR_CONTEXTID);
+                    $itemid = isset($info->element) && $info->element !== null ? $info->element->get_value() : null;
+                    $value = file_rewrite_pluginfile_urls($value, 'pluginfile.php', $contextid, $component, $filearea, $itemid);
+                }
+            }
+            $node[$key] = $value;
+        }
+        return $node;
     }
 
     /**

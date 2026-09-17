@@ -1,0 +1,207 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+namespace local_coursegen\local\preview;
+
+use context;
+use moodle_url;
+use stdClass;
+
+/**
+ * What every module's ported view code needs handed to it.
+ *
+ * A module's view page reads its rows from the database, knows its course
+ * module and its context, and builds links to itself. A preview runs that same
+ * code against the payload, so the same four things are handed over from what
+ * the payload carries: the rows through a json_store, a course module record
+ * with the id the payload names, the module's own context when the activity
+ * exists and the course's when it does not, and a way to build links that
+ * stay inside the preview.
+ *
+ * Previews of modules whose code has been ported extend this; the lesson came
+ * first and carries its own plumbing.
+ *
+ * @package    local_coursegen
+ * @copyright  2026 Wilber Narvaez <https://datacurso.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+abstract class ported_preview extends activity_preview {
+    /** @var array The activity as the payload describes it: the mould or the kept one. */
+    protected array $source;
+
+    /** @var json_store|null The activity's rows, once built. */
+    protected ?json_store $store = null;
+
+    /**
+     * Constructor.
+     *
+     * @param array $parameters The draft or the answer.
+     * @param array $source The activity as the payload describes it.
+     */
+    public function __construct(array $parameters, array $source = []) {
+        parent::__construct($parameters, $source);
+        $this->source = $source;
+    }
+
+    /**
+     * The module's short name, for tables and components.
+     *
+     * @return string
+     */
+    abstract protected function modname(): string;
+
+    /**
+     * The activity's rows, with whatever the plan intends laid over them.
+     *
+     * @return json_store|null Null when the payload holds no such activity.
+     */
+    protected function store(): ?json_store {
+        if ($this->store !== null) {
+            return $this->store;
+        }
+        if (!$this->source) {
+            return null;
+        }
+        $this->store = json_store::from_activity($this->source);
+        // The plan is laid over the mould only when what is shown is not the
+        // mould itself. A kept activity is shown as it is, and the parameters
+        // built for it describe it a second time, less exactly than its rows.
+        if ((string) ($this->source['uid'] ?? '') !== (string) $this->here->get_param('uid')) {
+            $this->overlay($this->store);
+        }
+        return $this->store;
+    }
+
+    /**
+     * Lay what the plan intends to write over the mould's rows.
+     *
+     * Nothing by default. A module whose pieces the plan fills one by one
+     * says how a drafted piece finds its row.
+     *
+     * @param json_store $store
+     */
+    protected function overlay(json_store $store): void {
+        return;
+    }
+
+    /**
+     * The module's own row.
+     *
+     * @return stdClass|null
+     */
+    protected function instance(): ?stdClass {
+        $store = $this->store();
+        if ($store === null) {
+            return null;
+        }
+        $rows = $store->get_records($this->modname());
+        if (!$rows) {
+            return null;
+        }
+        $row = reset($rows);
+        // A module's code reads the activity's name off its row, and a draft
+        // may have renamed it.
+        if (!empty($this->parameters['name'])) {
+            $row->name = (string) $this->parameters['name'];
+        }
+        return $row;
+    }
+
+    /**
+     * The course module, as the module's code expects to be handed it.
+     *
+     * @return stdClass
+     */
+    protected function cm(): stdClass {
+        $instance = $this->instance();
+        return (object) [
+            'id' => (int) ($this->source['cmid'] ?? 0),
+            'course' => (int) ($instance->course ?? 0),
+            'instance' => (int) ($instance->id ?? 0),
+            'name' => (string) ($instance->name ?? $this->name()),
+            'modname' => $this->modname(),
+        ];
+    }
+
+    /**
+     * The course, as far as a module's view reads it.
+     *
+     * @return stdClass
+     */
+    protected function course(): stdClass {
+        global $PAGE;
+        return $PAGE->course;
+    }
+
+    /**
+     * The context the module's code formats its text in.
+     *
+     * An activity that exists has its own, and the payload names it; one that
+     * does not is formatted in its course's, which is where its filters come
+     * from anyway.
+     *
+     * @return context
+     */
+    protected function context(): context {
+        global $PAGE;
+        $structure = ($this->source['parameters'] ?? [])['structure'] ?? [];
+        if (!empty($structure['contextid'])) {
+            $context = context::instance_by_id((int) $structure['contextid'], IGNORE_MISSING);
+            if ($context) {
+                return $context;
+            }
+        }
+        return $PAGE->context;
+    }
+
+    /**
+     * A link to this preview with extra parameters, where the module linked to itself.
+     *
+     * @param array $params
+     * @return moodle_url
+     */
+    protected function url_to(array $params = []): moodle_url {
+        $url = new moodle_url($this->here);
+        foreach ($params as $name => $value) {
+            $url->param($name, $value);
+        }
+        return $url;
+    }
+
+    /**
+     * The module's description formatted the way format_module_intro() formats it.
+     *
+     * Copied from lib/weblib.php format_module_intro() (Moodle 4.5), with the
+     * context handed in rather than looked up from a course module id.
+     *
+     * @param stdClass $activity The module's row.
+     * @param bool $filter
+     * @return string
+     */
+    protected function module_intro(stdClass $activity, bool $filter = true): string {
+        $context = $this->context();
+        $options = ['noclean' => true, 'para' => false, 'filter' => $filter, 'context' => $context, 'overflowdiv' => true];
+        $intro = file_rewrite_pluginfile_urls(
+            (string) ($activity->intro ?? ''),
+            'pluginfile.php',
+            $context->id,
+            'mod_' . $this->modname(),
+            'intro',
+            null
+        );
+        return trim(format_text($intro, (int) ($activity->introformat ?? FORMAT_HTML), $options, null));
+    }
+}

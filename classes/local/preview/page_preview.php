@@ -16,32 +16,103 @@
 
 namespace local_coursegen\local\preview;
 
+use html_writer;
+use stdClass;
+
 /**
- * A page's content, drawn the way mod_page draws it.
+ * A page, drawn by mod_page's own view code run against the payload.
  *
- * mod_page shows its description first when the activity is set to show it,
- * then the page content in a box, which is the order reproduced here.
+ * The body of render() is mod/page/view.php (Moodle 4.5) from where it formats
+ * the content to where it prints the footer, with the page row read from the
+ * payload and the context handed in. Nothing decides here what a page looks
+ * like.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class page_preview extends activity_preview {
+class page_preview extends ported_preview {
     /**
-     * The page's description and content.
+     * The module's short name.
+     *
+     * @return string
+     */
+    protected function modname(): string {
+        return 'page';
+    }
+
+    /**
+     * A draft replaces the page's body.
+     *
+     * A page is one piece, so a plan for it has one part, and the answer for
+     * it carries the body under the field its form submits.
+     *
+     * @param json_store $store
+     */
+    protected function overlay(json_store $store): void {
+        $rows = $store->get_records('page');
+        if (!$rows) {
+            return;
+        }
+        $row = reset($rows);
+        $body = $this->parameters['page'] ?? (($this->parameters['content'] ?? null));
+        if (is_array($body)) {
+            $body = $body['text'] ?? null;
+        }
+        if (is_string($body) && trim($body) !== '') {
+            $store->set('page', $row->id, 'content', $body);
+        }
+    }
+
+    /**
+     * The page, as mod/page/view.php draws it.
      *
      * @return string
      */
     public function render(): string {
         global $OUTPUT;
 
-        $out = '';
-        $intro = trim($this->text('introeditor'));
-        if ($intro !== '' && !empty($this->parameters['printintro'])) {
-            $out .= $OUTPUT->box($this->content($intro), 'mod_introbox');
+        $page = $this->instance();
+        if ($page === null) {
+            return $this->nothing_yet();
         }
-        $out .= $OUTPUT->box($this->content($this->text('page')), 'generalbox center clearfix');
+        $context = $this->context();
+        $options = empty($page->displayoptions) ? [] : (array) unserialize_array($page->displayoptions);
+
+        // From here, mod/page/view.php.
+        $content = file_rewrite_pluginfile_urls($page->content, 'pluginfile.php', $context->id, 'mod_page', 'content', $page->revision);
+        $formatoptions = new stdClass;
+        $formatoptions->noclean = true;
+        $formatoptions->overflowdiv = true;
+        $formatoptions->context = $context;
+        $content = format_text($content, $page->contentformat, $formatoptions);
+        $out = $OUTPUT->box($content, "generalbox center clearfix");
+
+        if (!isset($options['printlastmodified']) || !empty($options['printlastmodified'])) {
+            $strlastmodified = get_string("lastmodified");
+            $out .= html_writer::div("$strlastmodified: " . userdate($page->timemodified), 'modified');
+        }
         return $out;
+    }
+
+    /**
+     * The description, only when the page is set to print it.
+     *
+     * mod/page/view.php empties the header's description unless printintro is
+     * on; the header otherwise shows the activity record's intro.
+     *
+     * @return string
+     */
+    public function header_description(): string {
+        $page = $this->instance();
+        if ($page === null) {
+            return '';
+        }
+        $options = empty($page->displayoptions) ? [] : (array) unserialize_array($page->displayoptions);
+        if (empty($options['printintro'])) {
+            return '';
+        }
+        return $this->module_intro($page);
     }
 
     /**
