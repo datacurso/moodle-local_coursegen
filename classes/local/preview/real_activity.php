@@ -65,6 +65,10 @@ class real_activity {
                     // are jumps to pages and a page says how they are laid out.
                     'id' => $page['id'] ?? null,
                     'layout' => $page['layout'] ?? 1,
+                    // What kind of page it is and whether it is shown, which
+                    // is what decides if the lesson's menu lists it.
+                    'qtype' => $page['qtype'] ?? null,
+                    'display' => $page['display'] ?? 1,
                     'page_type' => 'content',
                     'title' => (string) ($page['title'] ?? ''),
                     'content_html' => (string) ($page['contents'] ?? ''),
