@@ -35,8 +35,24 @@ use local_coursegen\local\models\template_section;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class template_export_service {
-    /** First synthetic cmid for virtual instances (never a real Moodle cmid). */
+    /**
+     * Base of the synthetic cmids given to virtual instances (never a real Moodle cmid).
+     *
+     * An instance travels as INSTANCE_CMID_BASE + its template_instance id, so
+     * the generated activity that comes back under that cmid maps to exactly
+     * one saved instance - and through it to its anchor in the section.
+     */
     const INSTANCE_CMID_BASE = 900000;
+
+    /**
+     * The saved instance a synthetic cmid stands for.
+     *
+     * @param int $cmid A cmid from the payload.
+     * @return int|null The template_instance id, or null for a real cmid.
+     */
+    public static function instance_id_of(int $cmid): ?int {
+        return $cmid >= self::INSTANCE_CMID_BASE ? $cmid - self::INSTANCE_CMID_BASE : null;
+    }
 
     /**
      * Build the full init payload.
@@ -170,12 +186,11 @@ class template_export_service {
         }
 
         $activities = [];
-        $cmid = self::INSTANCE_CMID_BASE;
         $instances = template_instance::get_records(['templateid' => $templateid], 'sortorder');
         foreach ($instances as $instance) {
             $activities[] = [
                 'resource_type' => $instance->get('modname') ?: 'lesson',
-                'cmid' => $cmid++,
+                'cmid' => self::INSTANCE_CMID_BASE + (int) $instance->get('id'),
                 'parameters' => [
                     'name' => $instance->get('name'),
                     'section' => $sectionnums[(int) $instance->get('sectionid')] ?? 0,

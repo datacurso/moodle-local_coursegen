@@ -36,9 +36,13 @@ class template_keep_copier {
     /**
      * Copy every kept activity of one template into a target course.
      *
+     * Each copy lands at the current end of its section; the mold order is
+     * restored afterwards by template_layout_service.
+     *
      * @param int $templateid
      * @param int $targetcourseid
-     * @return array Names of the activities that could not be copied.
+     * @return array<int,int> Source cmid => new cmid for every activity that was copied;
+     *     the ones that could not be copied are reported through debugging().
      */
     public static function copy_into(int $templateid, int $targetcourseid): array {
         global $CFG;
@@ -60,17 +64,20 @@ class template_keep_copier {
             $targetsectionids[(int) $section->section] = (int) $section->id;
         }
 
-        $failures = [];
+        $copies = [];
         foreach ($keepcmids as $cmid) {
             $cm = $modinfo->get_cm($cmid);
             $sectionid = $targetsectionids[(int) $cm->sectionnum] ?? null;
-            if ($sectionid === null || !self::copy_one($cm, $targetcourse, $sectionid)) {
-                $failures[] = $cm->name;
+            $newcmid = $sectionid === null ? null : self::copy_one($cm, $targetcourse, $sectionid);
+            if ($newcmid === null) {
+                debugging('local_coursegen: kept activity "' . $cm->name . '" (cmid ' . $cm->id . ') was not copied.');
+                continue;
             }
+            $copies[(int) $cm->id] = $newcmid;
         }
 
         rebuild_course_cache($targetcourseid, true);
-        return $failures;
+        return $copies;
     }
 
     /**
@@ -105,9 +112,9 @@ class template_keep_copier {
      * @param \cm_info $cm Source activity, from the base course.
      * @param \stdClass $targetcourse
      * @param int $sectionid Target section id (not its number).
-     * @return bool Whether the copy succeeded.
+     * @return int|null The new cmid, or null when the copy failed.
      */
-    private static function copy_one($cm, $targetcourse, int $sectionid): bool {
+    private static function copy_one($cm, $targetcourse, int $sectionid): ?int {
         global $DB;
 
         $before = array_keys(get_fast_modinfo($targetcourse)->get_cms());
@@ -145,7 +152,7 @@ class template_keep_copier {
         }
 
         if (!$coursefailed) {
-            return $placed !== null;
+            return $placed === null ? null : (int) $placed->id;
         }
 
         rebuild_course_cache($targetcourse->id, true);
@@ -155,7 +162,7 @@ class template_keep_copier {
                 'local_coursegen: could not locate the copy of kept activity ' . $cm->id,
                 DEBUG_DEVELOPER
             );
-            return false;
+            return null;
         }
 
         $newcm = get_fast_modinfo($targetcourse)->get_cm((int) $newcmids[0]);
@@ -170,6 +177,6 @@ class template_keep_copier {
         }
 
         \core\event\course_module_created::create_from_cm($newcm)->trigger();
-        return true;
+        return (int) $newcm->id;
     }
 }
