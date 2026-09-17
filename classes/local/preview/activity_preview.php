@@ -47,8 +47,12 @@ abstract class activity_preview {
      * Constructor.
      *
      * @param array $parameters The activity's own parameters from the answer.
+     * @param array $source The activity as the payload describes it, with its
+     *                      structure, for a preview that runs the module's own
+     *                      code against it. Unused by previews that draw from
+     *                      the parameters alone.
      */
-    public function __construct(array $parameters) {
+    public function __construct(array $parameters, array $source = []) {
         $this->parameters = $parameters;
         $this->here = new \moodle_url('/local/coursegen/activity_preview.php');
     }

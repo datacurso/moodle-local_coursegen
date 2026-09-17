@@ -94,7 +94,7 @@ class json_store {
             if (is_array($value)) {
                 foreach ($value as $node) {
                     if (is_array($node)) {
-                        $this->walk($name, $node, null, null, $tables, $aliases);
+                        $this->walk($name, $node, [], $tables, $aliases);
                     }
                 }
             }
@@ -106,12 +106,12 @@ class json_store {
      *
      * @param string $name The element's name.
      * @param array $node Its attributes, values and children.
-     * @param string|null $parentname The element it sits under.
-     * @param mixed $parentid That element's id.
+     * @param array $ancestors Element name => id, for every row this one sits
+     *                         under, outermost first.
      * @param array $tables
      * @param array $aliases
      */
-    protected function walk(string $name, array $node, ?string $parentname, $parentid, array $tables, array $aliases): void {
+    protected function walk(string $name, array $node, array $ancestors, array $tables, array $aliases): void {
         $row = [];
         $children = [];
         foreach ($node as $key => $value) {
@@ -125,29 +125,56 @@ class json_store {
 
         $table = $tables[$name] ?? null;
         if ($table !== null) {
-            if ($parentname !== null && $parentid !== null) {
-                // The parent's key, under the two names Moodle tables use for
-                // it: "lessonid" for a lesson's pages, "forum" for a forum's
-                // discussions. Both are set; a column the table does not have
-                // costs nothing in a store that has no columns.
-                $row[$parentname . 'id'] ??= $parentid;
-                $row[$parentname] ??= $parentid;
+            // The keys of every row this one sits under, not only the nearest:
+            // an answer belongs to its page and to its lesson, and mod_lesson
+            // asks for it by both. Each under the two names Moodle tables use,
+            // "lessonid" for a lesson's pages and "forum" for a forum's
+            // discussions; a column the table does not have costs nothing in
+            // a store that has no columns.
+            foreach ($ancestors as $ancestorname => $ancestorid) {
+                $row[$ancestorname . 'id'] ??= $ancestorid;
+                $row[$ancestorname] ??= $ancestorid;
             }
             $this->rows[$table][] = (object) $row;
         }
 
         // A grouping element ("pages") is not a row; it holds the rows
-        // ("page"). The parent of what it holds is the row it sits under.
-        $ownid = $table !== null ? ($row['id'] ?? null) : $parentid;
-        $ownname = $table !== null ? $name : $parentname;
+        // ("page"). What it holds sits under the same rows it does.
+        $below = $ancestors;
+        if ($table !== null && isset($row['id'])) {
+            $below[$name] = $row['id'];
+        }
 
         foreach ($children as $childname => $items) {
             foreach ($items as $item) {
                 if (is_array($item)) {
-                    $this->walk($childname, $item, $ownname, $ownid, $tables, $aliases);
+                    $this->walk($childname, $item, $below, $tables, $aliases);
                 }
             }
         }
+    }
+
+    /**
+     * Change one value of one row.
+     *
+     * A plan lays what it intends to write over the mould it will be written
+     * into, page by page; this is how a drafted title or body replaces the
+     * mould's on the row the module's code will read.
+     *
+     * @param string $table
+     * @param mixed $id The row's id.
+     * @param string $column
+     * @param mixed $value
+     * @return bool Whether a row with that id was there to change.
+     */
+    public function set(string $table, $id, string $column, $value): bool {
+        foreach ($this->rows[$table] ?? [] as $row) {
+            if ((string) ($row->id ?? '') === (string) $id) {
+                $row->$column = $value;
+                return true;
+            }
+        }
+        return false;
     }
 
     /**

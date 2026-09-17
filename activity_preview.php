@@ -64,15 +64,34 @@ if ((int) $session->get('userid') !== (int) $USER->id) {
 $api = new template_ai_api_service();
 $threadid = (string) $session->get('session_id');
 
+// Exactly what was sent to the service, read again rather than remembered. It
+// describes every activity of the template, kept or written, and the mould a
+// written one is built into, and names each by the uid the answer echoes.
+$coursedata = json_decode((string) $session->get('coursedata'), true);
+$templateid = (int) ($coursedata['templateid'] ?? 0);
+$payload = $templateid > 0 ? template_export_service::build_init_payload($templateid) : [];
+$activitybycmid = static function (int $cmid) use ($payload): array {
+    foreach (($payload['activities'] ?? []) as $activity) {
+        if ((int) ($activity['cmid'] ?? 0) === $cmid) {
+            return $activity;
+        }
+    }
+    return [];
+};
+
 // The finished activity when there is one, the draft while there is not. A run
 // under review has no result yet, and asking for one is how that is found out.
+// Alongside what will be shown travels what it is shown against: the activity
+// as the payload describes it, which for one the run writes is its mould.
 $modname = '';
 $parameters = [];
+$source = [];
 try {
     foreach (($api->get_result($threadid)['generated_activities'] ?? []) as $activity) {
         if ((string) ($activity['uid'] ?? '') === $uid) {
             $modname = (string) ($activity['resource_type'] ?? '');
             $parameters = (array) ($activity['parameters'] ?? []);
+            $source = $activitybycmid((int) (($activity['template_behavior'] ?? [])['template_source_cmid'] ?? 0));
             break;
         }
     }
@@ -95,6 +114,7 @@ if (!$parameters) {
                 (int) ($entry['source_cmid'] ?? 0),
                 $session
             );
+            $source = $activitybycmid((int) ($entry['source_cmid'] ?? 0));
             break;
         }
     }
@@ -104,15 +124,12 @@ if (!$parameters) {
 // so it is read from what was sent: the payload describes every activity of
 // the template completely, and names each one by the same uid.
 if (!$parameters) {
-    $coursedata = json_decode((string) $session->get('coursedata'), true);
-    $templateid = (int) ($coursedata['templateid'] ?? 0);
-    if ($templateid > 0) {
-        foreach ((template_export_service::build_init_payload($templateid)['activities'] ?? []) as $activity) {
-            if ((string) ($activity['uid'] ?? '') === $uid) {
-                $modname = (string) ($activity['resource_type'] ?? '');
-                $parameters = real_activity::to_parameters($activity);
-                break;
-            }
+    foreach (($payload['activities'] ?? []) as $activity) {
+        if ((string) ($activity['uid'] ?? '') === $uid) {
+            $modname = (string) ($activity['resource_type'] ?? '');
+            $parameters = real_activity::to_parameters($activity);
+            $source = $activity;
+            break;
         }
     }
 }
@@ -121,17 +138,13 @@ if (!$parameters) {
     throw new moodle_exception('courseai_preview_not_found', 'local_coursegen');
 }
 
-$coursedata = json_decode((string) $session->get('coursedata'), true);
-$templateid = (int) ($coursedata['templateid'] ?? 0);
-$payload = $templateid > 0 ? template_export_service::build_init_payload($templateid) : [];
-
 // The activity is read in its course's language, which is the language its
 // content is in and the one it will be read in once it exists.
 if (!empty($payload['lang'])) {
     force_current_language((string) $payload['lang']);
 }
 
-$preview = preview_factory::for_activity($modname, $parameters);
+$preview = preview_factory::for_activity($modname, $parameters, $source);
 $preview->opened_at(
     new moodle_url('/local/coursegen/activity_preview.php', ['sessionid' => $sessionid, 'uid' => $uid]),
     $page
