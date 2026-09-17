@@ -84,10 +84,11 @@ if (!$parameters) {
         if ((string) ($entry['uid'] ?? '') === $uid) {
             $modname = (string) ($entry['resource_type'] ?? '');
             $parameters = plan_activity::to_parameters((array) $entry);
-            // A planned activity is written into a mould, so it is navigated
-            // the way the mould is. The plan says what each piece will say;
-            // the mould says how the reader moves between them.
-            $parameters = plan_activity::with_mould_navigation(
+            // A plan describes the pieces the mould offered to fill, and a
+            // mould also holds pieces it offers to nobody, which carry through
+            // to the delivered activity as they are. So the mould is what is
+            // shown, with the plan laid over it.
+            $parameters = plan_activity::over_mould(
                 $parameters,
                 $modname,
                 (int) ($entry['source_cmid'] ?? 0),

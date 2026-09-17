@@ -75,15 +75,18 @@ class plan_activity {
     }
 
     /**
-     * A draft with the navigation of the mould it will be written into.
+     * The mould, with what the run intends to write laid over it.
      *
-     * A plan says what each piece of an activity will say. How a reader moves
-     * between those pieces is not the plan's to decide: the mould settled it,
-     * and the delivered activity inherits it, so a preview that invented its
-     * own buttons would be showing navigation nobody will ever see.
+     * A plan does not describe a whole activity: it describes the pieces the
+     * mould offered to fill. A mould also holds pieces it offers to nobody,
+     * which carry through to the delivered activity exactly as they are, so an
+     * activity previewed from the plan alone is missing them and is not the
+     * activity anyone will receive.
      *
-     * The pieces line up with the mould's in order, because that is the order
-     * they were planned in, one for each piece the mould offered.
+     * So the mould is what is shown, with each planned piece laid over the one
+     * it fills, matched by the id it carries rather than by where it sits. How
+     * the reader moves between them is the mould's throughout: the plan says
+     * what a piece will say and never how it is reached.
      *
      * @param array $parameters The draft, as to_parameters() built it.
      * @param string $modname
@@ -91,13 +94,13 @@ class plan_activity {
      * @param \local_coursegen\local\models\course_session $session
      * @return array
      */
-    public static function with_mould_navigation(
+    public static function over_mould(
         array $parameters,
         string $modname,
         int $sourcecmid,
         \local_coursegen\local\models\course_session $session
     ): array {
-        if ($modname !== 'lesson' || $sourcecmid === 0 || empty($parameters['mod_settings']['pages'])) {
+        if ($modname !== 'lesson' || $sourcecmid === 0) {
             return $parameters;
         }
 
@@ -119,26 +122,22 @@ class plan_activity {
             return $parameters;
         }
 
-        // Each piece is matched to the piece of the mould it fills, by the
-        // id it carries, rather than by where it sits: a mould offers pieces
-        // to fill and pieces to leave alone, so the two lists are not the
-        // same length and counting through them lines up the wrong pages.
-        $bymouldid = [];
-        foreach ($mould as $page) {
-            $bymouldid[(string) ($page['id'] ?? '')] = $page;
+        $drafted = [];
+        foreach (($parameters['mod_settings']['pages'] ?? []) as $page) {
+            $drafted[(string) ($page['id'] ?? '')] = $page;
         }
 
-        foreach ($parameters['mod_settings']['pages'] as $index => $page) {
-            $from = $bymouldid[(string) ($page['id'] ?? '')] ?? null;
-            if ($from === null) {
-                continue;
+        $pages = [];
+        foreach ($mould as $page) {
+            $draft = $drafted[(string) ($page['id'] ?? '')] ?? null;
+            if ($draft !== null) {
+                $page['title'] = $draft['title'] ?? $page['title'];
+                $page['content_html'] = $draft['content_html'] ?? $page['content_html'];
             }
-            $page['buttons'] = $from['buttons'] ?? [];
-            $page['layout'] = $from['layout'] ?? 1;
-            $page['qtype'] = $from['qtype'] ?? null;
-            $page['display'] = $from['display'] ?? 1;
-            $parameters['mod_settings']['pages'][$index] = $page;
+            $pages[] = $page;
         }
+
+        $parameters['mod_settings']['pages'] = $pages;
         return $parameters;
     }
 
