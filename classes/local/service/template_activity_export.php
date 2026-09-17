@@ -45,9 +45,113 @@ class template_activity_export {
         if ($cm->modname === 'url') {
             return self::url_parameters($cm);
         }
+        if ($cm->modname === 'resource') {
+            return self::resource_parameters($cm);
+        }
         return [
             'name' => $cm->name,
             'section' => (int) $cm->sectionnum,
+        ];
+    }
+
+    /**
+     * A File's raw description, its appearance settings and its document's
+     * identity.
+     *
+     * The generated activity always builds a NEW document; the mold's own file
+     * never travels as bytes. Its name and extension do, because the generated
+     * document is produced in the same format the author chose here.
+     *
+     * @param cm_info $cm
+     * @return array
+     */
+    private static function resource_parameters(cm_info $cm): array {
+        global $DB;
+
+        $resource = $DB->get_record('resource', ['id' => $cm->instance]);
+        if (!$resource) {
+            return ['name' => $cm->name, 'section' => (int) $cm->sectionnum];
+        }
+
+        $parameters = array_merge(
+            self::resource_display_settings($resource),
+            [
+                'name' => $cm->name,
+                'section' => (int) $cm->sectionnum,
+                'intro' => $resource->intro ?? '',
+            ]
+        );
+
+        $moldfile = self::resource_mold_file($cm);
+        if ($moldfile !== null) {
+            $parameters['moldfile'] = $moldfile;
+        }
+
+        return $parameters;
+    }
+
+    /**
+     * The appearance settings worth reproducing on the generated activity.
+     *
+     * mod_resource stores them serialized in displayoptions and, unlike
+     * mod_url, it only writes the checkbox options when they are ON (see
+     * resource_set_display_options). An absent key therefore means OFF, not
+     * "fall back to the site default" - reading it the other way would turn
+     * on options the author deliberately left off.
+     *
+     * @param \stdClass $resource
+     * @return array
+     */
+    private static function resource_display_settings($resource): array {
+        $options = [];
+        if (!empty($resource->displayoptions)) {
+            $options = (array) unserialize_array($resource->displayoptions);
+        }
+        $config = get_config('resource');
+
+        return [
+            'display' => (int) ($resource->display ?? $config->display ?? 0),
+            // Only meaningful for AUTO/EMBED/FRAME, where mod_resource writes it.
+            'printintro' => (int) ($options['printintro'] ?? $config->printintro ?? 1),
+            'showsize' => (int) ($options['showsize'] ?? 0),
+            'showtype' => (int) ($options['showtype'] ?? 0),
+            'showdate' => (int) ($options['showdate'] ?? 0),
+            'popupwidth' => (int) ($options['popupwidth'] ?? $config->popupwidth ?? 620),
+            'popupheight' => (int) ($options['popupheight'] ?? $config->popupheight ?? 450),
+            'filterfiles' => (int) ($resource->filterfiles ?? $config->filterfiles ?? 0),
+        ];
+    }
+
+    /**
+     * The identity of the document the mold carries, or null when it has none.
+     *
+     * Only what the service needs to reproduce the format: never the bytes.
+     *
+     * @param cm_info $cm
+     * @return array|null
+     */
+    private static function resource_mold_file(cm_info $cm): ?array {
+        $fs = get_file_storage();
+        $files = $fs->get_area_files(
+            $cm->context->id,
+            'mod_resource',
+            'content',
+            0,
+            'sortorder DESC, id ASC',
+            false
+        );
+        $file = reset($files);
+        if (!$file) {
+            return null;
+        }
+
+        $filename = $file->get_filename();
+        $extension = strtolower(pathinfo($filename, PATHINFO_EXTENSION));
+
+        return [
+            'filename' => $filename,
+            'mimetype' => (string) $file->get_mimetype(),
+            'extension' => $extension,
         ];
     }
 

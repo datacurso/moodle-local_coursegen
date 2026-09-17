@@ -159,6 +159,102 @@ final class template_activity_export_test extends \advanced_testcase {
     }
 
     /**
+     * A File mold ships its raw description, its appearance settings and the
+     * identity of the document it carries.
+     */
+    public function test_resource_exports_intro_settings_and_mold_file(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $resource = $this->getDataGenerator()->create_module('resource', [
+            'course' => $course->id,
+            'name' => 'Study guide',
+            'intro' => self::MARKED_INTRO,
+            'introformat' => FORMAT_HTML,
+            'display' => \RESOURCELIB_DISPLAY_EMBED,
+            'showtype' => 1,
+            'showsize' => 1,
+            'printintro' => 1,
+            'filterfiles' => 2,
+        ]);
+        $cm = get_fast_modinfo($course)->get_cm($resource->cmid);
+        $this->attach_document($cm, 'guia-de-estudio.pdf', 'application/pdf');
+
+        $params = template_activity_export::parameters_for($cm);
+
+        $this->assertSame('Study guide', $params['name']);
+        $this->assertSame(self::MARKED_INTRO, $params['intro']);
+        $this->assertSame((int) \RESOURCELIB_DISPLAY_EMBED, (int) $params['display']);
+        $this->assertSame(1, (int) $params['showtype']);
+        $this->assertSame(1, (int) $params['showsize']);
+        $this->assertSame(1, (int) $params['printintro']);
+        $this->assertSame(2, (int) $params['filterfiles']);
+        // The attached document's identity: the service pins the generated
+        // document's format to it. Its bytes do not travel.
+        $this->assertArrayHasKey('moldfile', $params);
+        $this->assertSame('pdf', $params['moldfile']['extension']);
+    }
+
+    /**
+     * Replace a File activity's content with a named document.
+     *
+     * @param \cm_info $cm The File activity.
+     * @param string $filename Document name, extension included.
+     * @param string $mimetype Document mime type.
+     */
+    private function attach_document(\cm_info $cm, string $filename, string $mimetype): void {
+        $fs = get_file_storage();
+        $fs->delete_area_files($cm->context->id, 'mod_resource', 'content', 0);
+        $fs->create_file_from_string([
+            'contextid' => $cm->context->id,
+            'component' => 'mod_resource',
+            'filearea' => 'content',
+            'itemid' => 0,
+            'filepath' => '/',
+            'filename' => $filename,
+            'mimetype' => $mimetype,
+            'sortorder' => 1,
+        ], 'document bytes');
+    }
+
+    /**
+     * mod_resource only serializes showsize/showdate when they are ON, so an
+     * absent key means OFF - reading it as "use the site default" would turn
+     * options on that the author deliberately left off.
+     */
+    public function test_resource_absent_display_options_mean_off(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('resource', [
+            'display' => \RESOURCELIB_DISPLAY_AUTO,
+            'showsize' => 0,
+            'showdate' => 0,
+            'showtype' => 0,
+        ]);
+
+        $this->assertSame(0, (int) $params['showsize']);
+        $this->assertSame(0, (int) $params['showdate']);
+        $this->assertSame(0, (int) $params['showtype']);
+    }
+
+    /**
+     * Identity columns never travel, and a File has no sub-objects to declare.
+     */
+    public function test_resource_export_omits_identity_columns(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('resource', ['intro' => 'Plain', 'introformat' => FORMAT_HTML]);
+
+        foreach (['id', 'course', 'timemodified', 'introformat', 'displayoptions', 'revision'] as $column) {
+            $this->assertArrayNotHasKey($column, $params);
+        }
+        $this->assertArrayNotHasKey('mod_settings', $params);
+    }
+
+    /**
      * Types without their own export still ship the minimal pair, so adding
      * the URL branch cannot have changed them.
      */
