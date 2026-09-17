@@ -144,8 +144,13 @@ echo $OUTPUT->notification(
     \core\output\notification::NOTIFY_INFO
 );
 
+// The wrapper a course page puts around its format's output. A format lays
+// its sections out inside it, so without it they sit against a different edge
+// than the sections the format drew above them.
 ob_start();
+echo html_writer::start_tag('div', ['class' => 'course-content']);
 require($CFG->dirroot . '/course/format/' . $course->format . '/format.php');
+echo html_writer::end_tag('div');
 $rendered = ob_get_clean();
 
 echo course_preview_layout::rebuild($rendered, $planned, $sections, (int) $course->id, $sessionid);
