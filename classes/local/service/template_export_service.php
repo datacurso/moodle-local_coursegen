@@ -68,6 +68,42 @@ class template_export_service {
     }
 
     /**
+     * The name an element of the template's course travels under, every time.
+     *
+     * An instance stores its uid, because it is a row of ours. A real activity
+     * or section is not: it belongs to Moodle, and there is nowhere of ours to
+     * keep a name for it. So its name is derived, from what it is and which
+     * template it is being read for, and the same element is named the same
+     * way on every export. That is what lets the page that draws a link to it
+     * and the page that answers that link, two requests apart, agree.
+     *
+     * A fresh random name on every export looked the same and was not: it
+     * sent the reader to a preview that could not find what it had just been
+     * asked for.
+     *
+     * The result is a UUID (RFC 4122, version 5): a name hashed from a
+     * namespace of this plugin's own and the element's identity.
+     *
+     * @param int $templateid
+     * @param string $kind 'cm' or 'section'.
+     * @param int $id That element's own id within its kind.
+     * @return string
+     */
+    public static function stable_uid(int $templateid, string $kind, int $id): string {
+        // This plugin's own namespace for these names, fixed so the same
+        // element always hashes to the same uid.
+        $namespace = hex2bin('6f0d2a4c1b7e4a7f9c3e2d1b0a9f8e7d');
+        $hash = sha1($namespace . "local_coursegen/{$templateid}/{$kind}/{$id}", true);
+        $bytes = substr($hash, 0, 16);
+        // Version 5 in the high nibble of byte 6; RFC 4122 variant in byte 8.
+        $bytes[6] = chr((ord($bytes[6]) & 0x0f) | 0x50);
+        $bytes[8] = chr((ord($bytes[8]) & 0x3f) | 0x80);
+        $hex = bin2hex($bytes);
+        return sprintf('%s-%s-%s-%s-%s',
+            substr($hex, 0, 8), substr($hex, 8, 4), substr($hex, 12, 4), substr($hex, 16, 4), substr($hex, 20, 12));
+    }
+
+    /**
      * The id one virtual instance travels under.
      *
      * Negative, because an instance is not a course module and has no id of its
@@ -118,9 +154,9 @@ class template_export_service {
                 'format' => $course->format,
                 'format_options' => self::format_settings($course),
             ],
-            'sections_info' => self::sections_info($course, $modinfo, $behaviors),
+            'sections_info' => self::sections_info($templateid, $course, $modinfo, $behaviors),
             'activities' => array_merge(
-                self::real_activities($modinfo, $actions),
+                self::real_activities($templateid, $modinfo, $actions),
                 self::instance_activities($templateid, $modinfo)
             ),
             'general_instruction' => $generalinstruction,
@@ -169,7 +205,7 @@ class template_export_service {
      * @param array $behaviors
      * @return array
      */
-    private static function sections_info($course, $modinfo, array $behaviors): array {
+    private static function sections_info(int $templateid, $course, $modinfo, array $behaviors): array {
         $format = course_get_format($course);
         $images = self::section_images($course);
         $contextid = \context_course::instance($course->id)->id;
@@ -177,9 +213,7 @@ class template_export_service {
         $sections = [];
         foreach ($modinfo->get_section_info_all() as $section) {
             $sections[] = [
-                // A section is only ever named within the payload it travels
-                // in, so unlike an instance it has nothing to store.
-                'uid' => \core\uuid::generate(),
+                'uid' => self::stable_uid($templateid, 'section', (int) $section->id),
                 'section' => (int) $section->section,
                 'name' => get_section_name($course, $section),
                 // A summary refers to its pictures by a placeholder that only
@@ -261,7 +295,7 @@ class template_export_service {
      * @param array $actions
      * @return array
      */
-    private static function real_activities($modinfo, array $actions): array {
+    private static function real_activities(int $templateid, $modinfo, array $actions): array {
         $activities = [];
         foreach ($modinfo->get_cms() as $cm) {
             if (!$cm->uservisible) {
@@ -273,7 +307,7 @@ class template_export_service {
             }
             $activities[] = [
                 'resource_type' => $cm->modname,
-                'uid' => \core\uuid::generate(),
+                'uid' => self::stable_uid($templateid, 'cm', (int) $cm->id),
                 'cmid' => (int) $cm->id,
                 'parameters' => template_activity_export::parameters_for($cm),
                 'template_behavior' => ['action' => $action, 'useasreference' => true],
