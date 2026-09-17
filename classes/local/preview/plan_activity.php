@@ -135,6 +135,8 @@ class plan_activity {
             }
             $page['buttons'] = $from['buttons'] ?? [];
             $page['layout'] = $from['layout'] ?? 1;
+            $page['qtype'] = $from['qtype'] ?? null;
+            $page['display'] = $from['display'] ?? 1;
             $parameters['mod_settings']['pages'][$index] = $page;
         }
         return $parameters;

@@ -83,43 +83,70 @@ class lesson_preview extends activity_preview {
     }
 
     /**
-     * The lesson menu, listing every page with the one being read marked.
+     * The lesson menu, built the way mod_lesson builds it.
      *
-     * mod_lesson lists the titles of its content pages down the left, and a
-     * lesson read without that list is a different activity to look at. The
-     * block carries the same markup lesson_menu_block_contents() builds, with
-     * each title linking to that page of the preview.
+     * The page being read is not a link in it: it is its own title as plain
+     * text, marked as the selected one, and the rest are links. That is what
+     * tells a reader where they are, and a menu whose every entry is a link
+     * tells them nothing.
+     *
+     * The markup is the one lesson_menu_block_contents() produces
+     * (mod/lesson/locallib.php), down to the skip link and the two classes,
+     * and only the pages a lesson lists are listed: the branch tables that are
+     * set to show.
      *
      * @return block_contents[]
      */
     public function side_blocks(): array {
         $pages = $this->pages();
-        if (count($pages) < 2) {
+        $listed = [];
+        foreach ($pages as $index => $page) {
+            if (self::shows_in_menu($page) && trim((string) ($page['title'] ?? '')) !== '') {
+                $listed[$index] = $page;
+            }
+        }
+        if (count($listed) < 2) {
             return [];
         }
 
         $at = max(0, min($this->page, count($pages) - 1));
         $items = '';
-        foreach ($pages as $index => $page) {
-            $title = trim((string) ($page['title'] ?? ''));
-            if ($title === '') {
-                continue;
-            }
-            $items .= html_writer::tag(
-                'li',
-                html_writer::link($this->page_url($index), format_string($title)),
-                ['class' => $index === $at ? 'active' : '']
-            );
-        }
-        if ($items === '') {
-            return [];
+        foreach ($listed as $index => $page) {
+            $title = format_string((string) $page['title'], true);
+            $items .= $index === $at
+                ? '<li class="selected">' . $title . "</li>\n"
+                : '<li class="notselected">'
+                    . html_writer::link($this->page_url($index), $title) . "</li>\n";
         }
 
         $block = new block_contents();
         $block->title = get_string('lessonmenu', 'lesson');
         $block->attributes['class'] = 'menu block';
-        $block->content = html_writer::div(html_writer::tag('ul', $items), 'menuwrapper');
+        $block->content = html_writer::link('#maincontent', get_string('skip', 'lesson'), ['class' => 'accesshide'])
+            . "\n<div class=\"menuwrapper\">\n<ul>\n" . $items . "</ul>\n</div>\n";
         return [$block];
+    }
+
+    /**
+     * Whether a page is one of the ones the lesson menu lists.
+     *
+     * A lesson lists the pages a reader moves between, which are its branch
+     * tables, and only the ones set to be shown.
+     *
+     * @param array $page
+     * @return bool
+     */
+    private static function shows_in_menu(array $page): bool {
+        // What mod_lesson calls a content page, declared in
+        // mod/lesson/pagetypes/branchtable.php. Loading that file to read the
+        // name would load the page class hierarchy it belongs to, which is
+        // several files of an activity nothing here is running.
+        $branchtable = 20;
+
+        // A drafted page has no type of its own yet: it is filling a branch
+        // table of the mould, which is what a content page is.
+        $qtype = $page['qtype'] ?? $branchtable;
+        return (int) $qtype === $branchtable && (int) ($page['display'] ?? 1) === 1;
     }
 
     /**
