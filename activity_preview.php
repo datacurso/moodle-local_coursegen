@@ -46,6 +46,9 @@ $sessionid = required_param('sessionid', PARAM_INT);
 // bought nothing: the answer already names every element it describes.
 $uid = required_param('uid', PARAM_ALPHANUMEXT);
 
+// Which page of it, for an activity that is read a page at a time.
+$page = optional_param('page', 0, PARAM_INT);
+
 require_login();
 $context = context_system::instance();
 require_capability('local/coursegen:createcoursewithai', $context);
@@ -89,9 +92,14 @@ if (!$parameters) {
 }
 
 $preview = preview_factory::for_activity($modname, $parameters);
+$preview->opened_at(
+    new moodle_url('/local/coursegen/activity_preview.php', ['sessionid' => $sessionid, 'uid' => $uid]),
+    $page
+);
 $name = $preview->name();
 
-$PAGE->set_url('/local/coursegen/activity_preview.php', ['sessionid' => $sessionid, 'uid' => $uid]);
+$PAGE->set_url('/local/coursegen/activity_preview.php',
+    ['sessionid' => $sessionid, 'uid' => $uid, 'page' => $page]);
 $PAGE->set_context($context);
 $PAGE->set_pagelayout('incourse');
 $PAGE->add_body_class('local-coursegen-activity-preview');
