@@ -99,8 +99,16 @@ foreach (template_instance::get_records(['templateid' => $templateid], 'sortorde
 $PAGE->set_course($course);
 $PAGE->set_url('/local/coursegen/course_preview.php', ['sessionid' => $sessionid]);
 $PAGE->set_pagelayout('course');
+// The width a course page is read at. Without it the page runs the whole
+// width of the window, which no course page does, and a format that lays its
+// sections out in columns gets one column instead of three.
+$PAGE->add_body_class('limitedwidth');
 $PAGE->add_body_class('local-coursegen-course-preview');
 $PAGE->set_secondary_navigation(false);
+// What kind of page this is, which is where a theme and a format get the body
+// classes they style the page with. A course page that does not say it is one
+// is styled as though it were anything else.
+$PAGE->set_pagetype('course-view-' . $course->format);
 $PAGE->set_title(get_string('courseai_preview_course_title', 'local_coursegen'));
 $PAGE->set_heading($course->fullname);
 
@@ -125,6 +133,11 @@ $edit = -1;
 // whether it is set.
 $displaysection = $section;
 
+// A format's own scripts and styles are registered here, not by the format
+// itself, so a format that arranges its sections gets nothing to arrange them
+// with when this is skipped.
+include_course_ajax($course, $modnamesused);
+
 echo $OUTPUT->header();
 echo $OUTPUT->notification(
     get_string('courseai_preview_course_notice', 'local_coursegen'),
@@ -136,4 +149,8 @@ require($CFG->dirroot . '/course/format/' . $course->format . '/format.php');
 $rendered = ob_get_clean();
 
 echo course_preview_layout::rebuild($rendered, $planned, $sections, (int) $course->id, $sessionid);
+
+// What a course page runs once its sections are on screen.
+$PAGE->requires->js_call_amd('core_course/view', 'init');
+
 echo $OUTPUT->footer();
