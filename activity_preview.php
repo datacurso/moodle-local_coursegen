@@ -84,6 +84,15 @@ if (!$parameters) {
         if ((string) ($entry['uid'] ?? '') === $uid) {
             $modname = (string) ($entry['resource_type'] ?? '');
             $parameters = plan_activity::to_parameters((array) $entry);
+            // A planned activity is written into a mould, so it is navigated
+            // the way the mould is. The plan says what each piece will say;
+            // the mould says how the reader moves between them.
+            $parameters = plan_activity::with_mould_navigation(
+                $parameters,
+                $modname,
+                (int) ($entry['source_cmid'] ?? 0),
+                $session
+            );
             break;
         }
     }
