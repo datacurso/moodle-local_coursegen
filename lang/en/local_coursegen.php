@@ -815,6 +815,7 @@ $string['courseai_preview_course'] = 'Preview the course';
 $string['courseai_preview_course_notice'] = 'Preview: this course does not exist yet. Open an activity to see what it will contain.';
 $string['courseai_preview_course_title'] = 'Course preview';
 $string['courseai_preview_not_found'] = 'That activity is not part of this generation.';
+$string['courseai_preview_open_section'] = 'Open this section';
 $string['courseai_preview_notice'] = 'Preview: this activity does not exist yet. Nothing here can be used or changed.';
 $string['courseai_template_log_selected'] = 'Selected the template "{$a}".';
 $string['courseai_template_log_adjusting'] = 'Planning again with your change…';

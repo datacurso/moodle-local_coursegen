@@ -34,6 +34,7 @@
  */
 
 import Templates from 'core/templates';
+import {get_string as getString} from 'core/str';
 import {exception as displayException} from 'core/notification';
 
 /**
@@ -46,6 +47,48 @@ import {exception as displayException} from 'core/notification';
 export const init = (sessionId, courseId, planned) => {
     keepLinksInsidePreview(sessionId, courseId);
     planned.forEach((section) => addPlannedActivities(section));
+    openSectionsThatShowOnlyTheirSummary(sessionId);
+};
+
+/**
+ * Give a way into a section the course page only summarises.
+ *
+ * A course whose sections live on their own pages does not list a section's
+ * activities on the front page: it shows how many there are, and the section
+ * is opened to see them. A format whose sections are tiles can put that
+ * summary in a dialog, and the dialog is then a dead end, because the tile it
+ * came from was the way through.
+ *
+ * That is a dead end everywhere, and on a real course the teacher can turn
+ * editing on to see the lists in place. A preview is never in editing, so the
+ * sections holding what the run is going to write would be the ones that
+ * could not be opened. The summary gets a link to the section, which is where
+ * the tile would have gone had it not opened a dialog.
+ *
+ * @param {number} sessionId
+ */
+const openSectionsThatShowOnlyTheirSummary = (sessionId) => {
+    document.querySelectorAll('[data-section][data-sectiontitle]').forEach((block) => {
+        if (block.querySelector('[data-for="cmlist"]') || block.querySelector('.local-coursegen-open-section')) {
+            return;
+        }
+
+        const url = new URL(M.cfg.wwwroot + '/local/coursegen/course_preview.php');
+        url.searchParams.set('sessionid', sessionId);
+        url.searchParams.set('section', block.dataset.section);
+
+        const link = document.createElement('a');
+        link.className = 'btn btn-secondary local-coursegen-open-section';
+        link.href = url.toString();
+        block.appendChild(link);
+
+        getString('courseai_preview_open_section', 'local_coursegen')
+            .then((label) => {
+                link.textContent = label;
+                return null;
+            })
+            .catch(displayException);
+    });
 };
 
 /**
