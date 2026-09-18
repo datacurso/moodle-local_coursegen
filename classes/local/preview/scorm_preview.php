@@ -70,7 +70,7 @@ class scorm_preview extends ported_preview {
         if ($scorm === null) {
             return $this->nothing_yet();
         }
-        $view = new view($scorm, $this->cm(), $this->context(), $this->store(), $this->url_to(), $USER);
+        $view = new view($scorm, $this->cm(), $this->context(), $this->store(), $this->url_to(), $USER, $this->files());
         return $view->page();
     }
 

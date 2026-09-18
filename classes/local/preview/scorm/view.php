@@ -18,6 +18,7 @@ namespace local_coursegen\local\preview\scorm;
 
 use context;
 use html_writer;
+use local_coursegen\local\preview\json_file_storage;
 use local_coursegen\local\preview\json_store;
 use moodle_url;
 use single_select;
@@ -67,6 +68,9 @@ class view {
     /** @var stdClass Who is reading. */
     protected stdClass $user;
 
+    /** @var json_file_storage|null The package's files, as the payload carries them. */
+    protected ?json_file_storage $files;
+
     /**
      * Constructor.
      *
@@ -76,9 +80,11 @@ class view {
      * @param json_store $store
      * @param moodle_url $here The preview page, which every link stays on.
      * @param stdClass $user The reader.
+     * @param json_file_storage|null $files The package's files, for the page a preview opens.
      */
     public function __construct(stdClass $scorm, stdClass $cm, context $context, json_store $store, moodle_url $here,
-            stdClass $user) {
+            stdClass $user, ?json_file_storage $files = null) {
+        $this->files = $files;
         $this->scorm = $scorm;
         $this->cm = $cm;
         $this->context = $context;
@@ -194,10 +200,17 @@ class view {
         // Is this the first attempt ?
         $attemptcount = $this->scorm_get_attempt_count();
 
-        // The real page ends with the form that previews or enters the
-        // package. Nobody may act on an activity that does not exist: the
-        // table of contents above says what the package holds, and nothing
-        // enters it.
+        // The real page ends with a form that previews or enters the package
+        // through the player, which records an attempt. Nobody may act on an
+        // activity that does not exist, so nothing enters it. Previewing is
+        // seeing, though, and the package's own pages are in the payload: the
+        // preview button opens the page the package launches with, as a page,
+        // in its own tab.
+        if ($scorm->hidebrowse == 0) {
+            $output .= html_writer::start_div('scorm-center');
+            $output .= $this->browse_link($launchsco);
+            $output .= html_writer::end_div();
+        }
         return $output;
     }
 
@@ -676,5 +689,59 @@ class view {
             }
         }
         return $url;
+    }
+
+    /**
+     * The button that previews the package, as a link to the page it launches.
+     *
+     * The launch object names its page relative to the package, and the
+     * payload carries the package's unpacked files in mod_scorm's content
+     * area, so the page is found among them by that path. A package the answer has
+     * not produced yet has no pages to open: the button is shown, because the
+     * page has it, and disabled, because there is nothing behind it.
+     *
+     * @param mixed $launchsco The id of the object the package launches with.
+     * @return string
+     */
+    protected function browse_link($launchsco): string {
+        $label = get_string('browse', 'scorm');
+        $sco = $launchsco ? $this->scorm_get_sco($launchsco) : false;
+        $launch = $sco ? trim((string) ($sco->launch ?? '')) : '';
+
+        $url = null;
+        if ($launch !== '' && $this->files !== null) {
+            $query = '';
+            $path = $launch;
+            if (($at = strpos($launch, '?')) !== false) {
+                $query = substr($launch, $at);
+                $path = substr($launch, 0, $at);
+            }
+            $parameters = trim((string) ($sco->parameters ?? ''));
+            if ($parameters !== '') {
+                $query .= ($query === '' ? '?' : '&') . $parameters;
+            }
+            $wanted = '/' . ltrim($path, '/');
+            // mod_scorm keeps the unpacked package under one item, whatever
+            // the package's revision says, so the area is read whole.
+            foreach ($this->files->get_area_files($this->context->id, 'mod_scorm', 'content', false, 'filepath, filename', false) as $file) {
+                if ($file->get_filepath() . $file->get_filename() === $wanted && $file->get_url()) {
+                    $url = $file->get_url() . $query;
+                    break;
+                }
+            }
+        }
+
+        if ($url === null) {
+            return html_writer::tag('button', $label, [
+                'type' => 'button',
+                'class' => 'btn btn-secondary me-1',
+                'disabled' => 'disabled',
+            ]);
+        }
+        return html_writer::link($url, $label, [
+            'class' => 'btn btn-secondary me-1',
+            'target' => '_blank',
+            'rel' => 'noopener',
+        ]);
     }
 }
