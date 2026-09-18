@@ -876,7 +876,6 @@ $string['courseai_template_mock_reference'] = 'Reference content used for this a
 $string['courseai_template_selected_activity'] = 'Selected activity';
 $string['invalidtemplate'] = 'Invalid template.';
 $string['courseai_chip_remove_template'] = 'Remove template';
-$string['courseai_template_change'] = 'Change template';
 $string['courseai_templates_dialog_label'] = 'Course templates';
 $string['courseai_templates_list_label'] = 'Templates list';
 $string['courseai_templates_search_placeholder'] = 'Search templates...';

@@ -90,8 +90,14 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
         $this->assertGreaterThan($cardpos, $pickerpos, 'Picker must render after the template card');
         $this->assertGreaterThan($pickerpos, $inputbarpos, 'Input bar must render below the picker');
 
-        // The card offers to change or remove the template; the picker is hidden.
-        $this->assertStringContainsString('id="tplCardChange"', $html);
+        // The card is itself the list's toggle, with Remove beside it; the picker is hidden.
+        $this->assertMatchesRegularExpression(
+            '/<button class="tpl-pick tpl-pick--set" id="tplCardBtn" type="button"\s+'
+            . 'aria-haspopup="dialog" aria-expanded="false" aria-controls="templatesPopoverTpl">/',
+            $html,
+            'The template card must be a toggle for the templates list'
+        );
+        $this->assertStringNotContainsString('id="tplCardChange"', $html);
         $this->assertStringContainsString('id="tplCardRemove"', $html);
         $this->assertMatchesRegularExpression(
             '/<div class="hidden" id="templateModeCard">\s*' . preg_quote(self::PICKER_SENTINEL, '/') . '/',

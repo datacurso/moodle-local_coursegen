@@ -603,8 +603,9 @@
 
         {{! Where the template is chosen. Before one is: a button that opens the
             searchable list right below it. After: the card naming the template,
-            from which course and how big, with Change (the same list) and
-            Remove (back to the button, still on this path). The workspace's
+            from which course and how big; the card is the same toggle, it
+            opens the same list, and Remove beside it goes back to the button,
+            still on this path. The workspace's
             `tpl-active` class, set by template_mode.js when the picker's select
             has a value, decides which of the two shows. }}
         <div class="tpl-pick-anchor" id="tplPickAnchor">
@@ -623,18 +624,20 @@
               <path d="M6 9l6 6 6-6"/>
             </svg>
           </button>
-          <div class="tpl-card" id="tplCard">
-            <span class="tpl-card-thumb" id="tplCardThumb" aria-hidden="true"></span>
-            <span class="tpl-card-text">
-              <b id="tplCardName"></b>
-              <small><span id="tplCardCourse"></span><span id="tplCardStats"></span></small>
-            </span>
-            <span class="tpl-card-actions">
-              <button class="tpl-card-link" id="tplCardChange" type="button"
-                      aria-haspopup="dialog" aria-expanded="false" aria-controls="templatesPopoverTpl">{{#str}}courseai_template_change, local_coursegen{{/str}}</button>
-              <button class="tpl-card-link" id="tplCardRemove" type="button"
-                      aria-label="{{#str}}courseai_chip_remove_template, local_coursegen{{/str}}">{{#str}}remove, core{{/str}}</button>
-            </span>
+          <div class="tpl-card-row" id="tplCard">
+            <button class="tpl-pick tpl-pick--set" id="tplCardBtn" type="button"
+                    aria-haspopup="dialog" aria-expanded="false" aria-controls="templatesPopoverTpl">
+              <span class="tpl-card-thumb" id="tplCardThumb" aria-hidden="true"></span>
+              <span class="tpl-pick-text">
+                <b id="tplCardName"></b>
+                <small><span id="tplCardCourse"></span><span id="tplCardStats"></span></small>
+              </span>
+              <svg class="tpl-pick-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M6 9l6 6 6-6"/>
+              </svg>
+            </button>
+            <button class="tpl-card-link" id="tplCardRemove" type="button"
+                    aria-label="{{#str}}courseai_chip_remove_template, local_coursegen{{/str}}">{{#str}}remove, core{{/str}}</button>
           </div>
           <!-- Templates popover (template column): searchable list, opens below the button or the card -->
         <div class="popover-panel popover-panel--down tpl-pick-popover" id="templatesPopoverTpl" role="dialog" aria-label="{{#str}}courseai_templates_dialog_label, local_coursegen{{/str}}">
