@@ -258,6 +258,12 @@ if ($headerbutton !== '') {
 // payload. Completion is the reader's standing in the template course, not
 // part of the template, so it is not drawn.
 $PAGE->activityheader->set_attrs(['hidecompletion' => true]);
+// A module that sets the header's title does so only where the theme allows
+// one there (mod/workshop/view.php asks the same).
+$headertitle = $preview->header_title();
+if ($headertitle !== '' && $PAGE->activityheader->is_title_allowed()) {
+    $PAGE->activityheader->set_attrs(['title' => $headertitle]);
+}
 $PAGE->activityheader->set_description($preview->header_description());
 
 // A module's own side blocks are part of how it looks: a lesson with its menu

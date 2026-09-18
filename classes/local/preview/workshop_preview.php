@@ -16,69 +16,135 @@
 
 namespace local_coursegen\local\preview;
 
+use local_coursegen\local\preview\workshop\view;
+
 /**
- * A workshop, drawn the way mod_workshop draws its first phase.
- *
- * A workshop's page is whatever phase it is in, and it is delivered in its
- * first one: the submission instructions the participant reads, and the
- * criteria their work will be judged by, which is what the assessment form
- * will be built from.
+ * A workshop, drawn by mod_workshop's own view code run against the payload.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class workshop_preview extends activity_preview {
+class workshop_preview extends ported_preview {
+    /** @var int[] The phase an answer may ask the workshop to open in, by its token (workshop_settings). */
+    private const PHASE_MAP = [
+        'submission' => 20,
+        'assessment' => 30,
+        'evaluation' => 40,
+    ];
+
     /**
-     * The instructions, then the assessment criteria.
+     * The module's short name.
+     *
+     * @return string
+     */
+    protected function modname(): string {
+        return 'workshop';
+    }
+
+    /**
+     * What the answer writes replaces the mould's: the texts, the phase and the assessment form.
+     *
+     * The answer writes the description and the two sets of instructions,
+     * may name the phase the workshop opens in, and writes the criteria the
+     * plugin creates as accumulative dimensions; the criteria go into the
+     * store as the rows the plugin would insert, so the assessment form counts
+     * as defined the way it would on the created workshop.
+     *
+     * @param json_store $store
+     */
+    protected function overlay(json_store $store): void {
+        $rows = $store->get_records('workshop');
+        if (!$rows) {
+            return;
+        }
+        $workshop = reset($rows);
+        foreach (['introeditor' => 'intro', 'instructauthors' => 'instructauthors',
+                'instructreviewers' => 'instructreviewers'] as $field => $column) {
+            $value = $this->parameters[$field] ?? ($this->parameters[$field . 'editor'] ?? null);
+            $text = is_array($value) ? (string) ($value['text'] ?? '') : (string) ($value ?? '');
+            if (trim($text) !== '') {
+                $store->set('workshop', $workshop->id, $column, $text);
+                $store->set('workshop', $workshop->id, $column . 'format',
+                    is_array($value) ? (int) ($value['format'] ?? FORMAT_HTML) : FORMAT_HTML);
+            }
+        }
+
+        $settings = (array) ($this->parameters['mod_settings'] ?? []);
+        $token = $settings['initial_phase'] ?? null;
+        if (is_string($token) && isset(self::PHASE_MAP[$token])) {
+            $store->set('workshop', $workshop->id, 'phase', self::PHASE_MAP[$token]);
+        }
+
+        $criteria = $settings['criteria'] ?? [];
+        if (!is_array($criteria) || !$criteria) {
+            return;
+        }
+        $store->delete_records('workshopform_accumulative', ['workshopid' => $workshop->id]);
+        $sort = 1;
+        foreach ($criteria as $criterion) {
+            $criterion = (array) $criterion;
+            $description = trim((string) ($criterion['description'] ?? ''));
+            if ($description === '') {
+                continue;
+            }
+            $store->add('workshopform_accumulative', (object) [
+                'id' => $sort,
+                'workshopid' => $workshop->id,
+                'sort' => $sort,
+                'description' => $description,
+                'descriptionformat' => FORMAT_HTML,
+                'grade' => (int) ($criterion['max_points'] ?? 10),
+                'weight' => 1,
+            ]);
+            $sort++;
+        }
+    }
+
+    /**
+     * The workshop page, as mod/workshop/view.php draws it.
      *
      * @return string
      */
     public function render(): string {
-        global $OUTPUT;
-
-        $out = '';
-        foreach (['instructauthors' => 'submissioninstructions',
-                  'instructreviewers' => 'assessmentinstructions'] as $key => $stringid) {
-            $text = trim($this->text($key));
-            if ($text !== '') {
-                $out .= $OUTPUT->heading(get_string($stringid, 'workshop'), 4);
-                $out .= $OUTPUT->box($this->content($text), 'generalbox instructions');
-            }
+        $view = $this->view();
+        if ($view === null) {
+            return $this->nothing_yet();
         }
-
-        $criteria = $this->items('criteria');
-        if ($criteria) {
-            $out .= $OUTPUT->heading(get_string('assessmentform', 'workshop'), 4);
-            $rows = '';
-            foreach ($criteria as $index => $criterion) {
-                $rows .= \html_writer::div(
-                    \html_writer::tag(
-                        'label',
-                        get_string('dimensionnumber', 'workshopform_rubric', $index + 1),
-                        ['class' => 'fw-bold d-block']
-                    )
-                        . $this->content($this->field((array) $criterion, 'description'))
-                        . \html_writer::tag(
-                            'small',
-                            get_string('maxgrade', 'workshop') . ': ' . (int) ($criterion['max_points'] ?? 0),
-                            ['class' => 'text-muted d-block']
-                        ),
-                    'mb-3'
-                );
-            }
-            $out .= $OUTPUT->box($rows, 'generalbox assessment-form');
-        }
-
-        return $out === '' ? $this->nothing_yet() : $out;
+        return $view->page();
     }
 
     /**
-     * A workshop shows its description on its own page, not in the header.
+     * The heading with its help, as view.php puts it in the activity header.
+     *
+     * @return string
+     */
+    public function header_title(): string {
+        $view = $this->view();
+        return $view === null ? '' : $view->heading();
+    }
+
+    /**
+     * A workshop shows its description on its own page, not in the header (view.php).
      *
      * @return string
      */
     public function header_description(): string {
         return '';
+    }
+
+    /**
+     * The ported view, over the payload's rows.
+     *
+     * @return view|null Null when the payload holds no workshop.
+     */
+    protected function view(): ?view {
+        global $USER;
+        $workshop = $this->instance();
+        if ($workshop === null) {
+            return null;
+        }
+        return new view($workshop, $this->cm(), $this->course(), $this->context(), $this->store(), $this->url_to(),
+            (int) $USER->id);
     }
 }
