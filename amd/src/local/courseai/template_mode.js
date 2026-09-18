@@ -145,22 +145,7 @@ export const wireTemplateMode = (state) => {
     // JS wiring is needed here beyond listening for its 'change' event.
     // Moodleform's default id for an unnamed-id element is "id_<fieldname>".
     const tplSelect = document.getElementById('id_templateid');
-    const sidebar = document.getElementById('courseaiSidebar');
-    const collapseBtn = document.getElementById('courseaiSidebarCollapse');
-    const expandBtn = document.getElementById('courseaiSidebarExpand');
     const container = document.getElementById('tplModeStructure');
-
-    // Sidebar collapse/expand.
-    if (collapseBtn && sidebar) {
-        collapseBtn.addEventListener('click', () => {
-            sidebar.classList.add('collapsed');
-        });
-    }
-    if (expandBtn && sidebar) {
-        expandBtn.addEventListener('click', () => {
-            sidebar.classList.remove('collapsed');
-        });
-    }
 
     // Input-bar defaults: no images, page default language, no syllabus yet.
     const tplState = createTemplateState({lang: state.defaultLang || ''});

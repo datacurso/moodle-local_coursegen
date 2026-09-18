@@ -38,8 +38,6 @@ export const initSidebar = () => {
         return;
     }
 
-    // Sidebar starts collapsed (class already in HTML template).
-
     // ─── Search + status filter ───────────────────────────────────────
     const searchInput = document.getElementById('courseaiSessionsSearch');
     const statusFilter = document.getElementById('courseaiSessionsStatusFilter');
@@ -127,40 +125,138 @@ export const initSidebar = () => {
         coursesList.style.maxHeight = coursesList.scrollHeight + 'px';
     };
 
-    // ─── Open / close helpers ────────────────────────────────────────
-    const openSidebar = () => {
-        sidebar.classList.remove('collapsed');
-        if (toggleBtn) {
-            toggleBtn.classList.remove('collapsed');
+    // ─── Pin / float / close ─────────────────────────────────────────
+    // The toggle in the top bar owns the sidebar's state:
+    //  - pinned:   a column of the layout; clicking the toggle closes it.
+    //  - closed:   slid out; the toggle shows the menu glyph. Hovering it
+    //              floats the sidebar over the content without moving
+    //              anything; leaving hides it again. Clicking pins it.
+    // The pinned state is remembered per browser.
+    const layout = document.getElementById('courseaiAppLayout');
+    const toggleWrap = document.getElementById('courseaiSidebarToggleWrap');
+    const STORAGE_KEY = 'local_coursegen/sidebar-pinned';
+    const HOVER_OPEN_MS = 120;
+    const HOVER_CLOSE_MS = 220;
+    const FLOAT_OUT_MS = 240;
+    let hoverTimer = null;
+    let floatOutTimer = null;
+
+    const isClosed = () => layout?.classList.contains('sidebar-closed') ?? false;
+    const isFloating = () => layout?.classList.contains('sidebar-floating') ?? false;
+
+    // Hold the "no transitions" class for one frame so a state that leaves
+    // the normal flow (floating) can land in its rest state without the
+    // rest state's own slide replaying.
+    const snap = () => {
+        if (!layout) {
+            return;
         }
-        if (backdrop) {
-            backdrop.classList.add('open');
-        }
-        syncCoursesListHeight();
+        layout.classList.add('sidebar-snap');
+        requestAnimationFrame(() => requestAnimationFrame(() => layout.classList.remove('sidebar-snap')));
     };
 
-    const closeSidebar = () => {
-        sidebar.classList.add('collapsed');
-        if (toggleBtn) {
-            toggleBtn.classList.add('collapsed');
+    const syncToggle = () => {
+        if (!toggleBtn) {
+            return;
         }
-        if (backdrop) {
-            backdrop.classList.remove('open');
+        const closed = isClosed();
+        const label = closed ? toggleBtn.dataset.labelOpen : toggleBtn.dataset.labelClose;
+        toggleBtn.setAttribute('aria-expanded', String(!closed || isFloating()));
+        if (label) {
+            toggleBtn.setAttribute('aria-label', label);
+            toggleBtn.title = `${label} [`;
         }
     };
 
-    // ─── Toggle ──────────────────────────────────────────────────────
-    const toggleSidebar = () => {
-        if (sidebar.classList.contains('collapsed')) {
-            openSidebar();
-        } else {
-            closeSidebar();
+    const setFloating = (on) => {
+        if (!layout || !isClosed()) {
+            return;
+        }
+        clearTimeout(floatOutTimer);
+        if (on) {
+            const resuming = layout.classList.contains('sidebar-floating-out');
+            layout.classList.remove('sidebar-floating-out');
+            layout.classList.add('sidebar-floating');
+            if (resuming) {
+                snap();
+            }
+        } else if (isFloating()) {
+            layout.classList.remove('sidebar-floating');
+            layout.classList.add('sidebar-floating-out');
+            floatOutTimer = setTimeout(() => {
+                snap();
+                layout.classList.remove('sidebar-floating-out');
+            }, FLOAT_OUT_MS);
+        }
+        syncToggle();
+    };
+
+    const setPinned = (pinned) => {
+        if (!layout) {
+            return;
+        }
+        clearTimeout(floatOutTimer);
+        clearTimeout(hoverTimer);
+        layout.classList.remove('sidebar-floating', 'sidebar-floating-out');
+        layout.classList.toggle('sidebar-closed', !pinned);
+        if (backdrop) {
+            backdrop.classList.toggle('open', pinned);
+        }
+        if (pinned) {
+            syncCoursesListHeight();
+        }
+        syncToggle();
+        try {
+            localStorage.setItem(STORAGE_KEY, pinned ? '1' : '0');
+        } catch (e) {
+            // Storage may be unavailable; the state simply is not remembered.
         }
     };
+
+    const closeSidebar = () => setPinned(false);
+    const toggleSidebar = () => setPinned(isClosed());
 
     if (toggleBtn) {
         toggleBtn.addEventListener('click', toggleSidebar);
     }
+
+    const scheduleFloatClose = () => {
+        clearTimeout(hoverTimer);
+        hoverTimer = setTimeout(() => setFloating(false), HOVER_CLOSE_MS);
+    };
+    if (toggleWrap) {
+        toggleWrap.addEventListener('mouseenter', () => {
+            clearTimeout(hoverTimer);
+            if (isClosed()) {
+                hoverTimer = setTimeout(() => setFloating(true), HOVER_OPEN_MS);
+            }
+        });
+        toggleWrap.addEventListener('mouseleave', scheduleFloatClose);
+    }
+    sidebar.addEventListener('mouseenter', () => clearTimeout(hoverTimer));
+    sidebar.addEventListener('mouseleave', scheduleFloatClose);
+
+    document.addEventListener('keydown', (e) => {
+        const target = document.activeElement;
+        const typing = target && (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable);
+        if (e.key === '[' && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            toggleSidebar();
+        }
+        if (e.key === 'Escape' && isFloating()) {
+            setFloating(false);
+        }
+    });
+
+    // Restore the remembered state before the first paint settles.
+    try {
+        if (localStorage.getItem(STORAGE_KEY) === '0') {
+            layout?.classList.add('sidebar-closed');
+        }
+    } catch (e) {
+        // Storage may be unavailable; start pinned.
+    }
+    syncToggle();
 
     // ─── Backdrop click closes sidebar ───────────────────────────────
     if (backdrop) {
