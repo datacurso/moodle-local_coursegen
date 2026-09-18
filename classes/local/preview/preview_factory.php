@@ -51,7 +51,7 @@ class preview_factory {
         'lesson' => lesson_preview::class,
         'page' => page_preview::class,
         'quiz' => quiz_preview::class,
-        'resource' => file_preview::class,
+        'resource' => resource_preview::class,
         'scorm' => package_preview::class,
         'url' => url_preview::class,
         'wiki' => wiki_preview::class,
