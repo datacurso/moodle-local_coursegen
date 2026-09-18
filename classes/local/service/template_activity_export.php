@@ -66,7 +66,64 @@ class template_activity_export {
             // The files the activity keeps, which its tree only points at: a
             // folder is its files, a file resource is one of them.
             'files' => self::files_of($cm),
-        ];
+        ] + self::questions_of($cm);
+    }
+
+    /**
+     * The questions a quiz asks, which its own tree only points at.
+     *
+     * A quiz's structure names each question by a reference into the question
+     * bank: the bank entry and the version. The question itself is not in the
+     * quiz's tree, because a backup carries the bank separately. A payload has
+     * no separate bank, so the questions travel with the quiz, each in the
+     * shape the question engine builds a question from, one per slot.
+     *
+     * @param cm_info $cm
+     * @return array Empty for anything but a quiz.
+     */
+    private static function questions_of(cm_info $cm): array {
+        global $CFG, $DB;
+        if ($cm->modname !== 'quiz') {
+            return [];
+        }
+        require_once($CFG->dirroot . '/question/engine/lib.php');
+
+        $questions = [];
+        $slots = $DB->get_records('quiz_slots', ['quizid' => $cm->instance], 'slot');
+        foreach ($slots as $slot) {
+            $reference = $DB->get_record('question_references', [
+                'component' => 'mod_quiz',
+                'questionarea' => 'slot',
+                'itemid' => $slot->id,
+            ]);
+            $entry = [
+                'slot' => (int) $slot->slot,
+                'page' => (int) $slot->page,
+                'maxmark' => (float) $slot->maxmark,
+                'displaynumber' => $slot->displaynumber,
+                'requireprevious' => (int) ($slot->requireprevious ?? 0),
+            ];
+            if ($reference) {
+                $version = $reference->version
+                    ? $DB->get_record('question_versions',
+                        ['questionbankentryid' => $reference->questionbankentryid, 'version' => $reference->version])
+                    : $DB->get_record_sql(
+                        'SELECT * FROM {question_versions} WHERE questionbankentryid = :entry ORDER BY version DESC',
+                        ['entry' => $reference->questionbankentryid], IGNORE_MULTIPLE);
+                if ($version) {
+                    // Everything the engine needs to make the question: the
+                    // row, its options, its answers, its hints.
+                    $entry['question'] = json_decode(
+                        json_encode(\question_bank::load_question_data((int) $version->questionid)),
+                        true
+                    );
+                }
+            }
+            // A slot filled at random from a category is a reference to a set
+            // of questions, not to one, and no one of them can stand for it.
+            $questions[] = $entry;
+        }
+        return ['questions' => $questions];
     }
 
     /**
