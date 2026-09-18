@@ -18,6 +18,7 @@ namespace local_coursegen\local\preview\scorm;
 
 use context;
 use html_writer;
+use local_coursegen\local\preview\json_file_storage;
 use local_coursegen\local\preview\json_store;
 use moodle_url;
 use single_select;
@@ -67,6 +68,9 @@ class view {
     /** @var stdClass Who is reading. */
     protected stdClass $user;
 
+    /** @var json_file_storage|null The package's files, as the payload carries them. */
+    protected ?json_file_storage $files;
+
     /**
      * Constructor.
      *
@@ -76,9 +80,11 @@ class view {
      * @param json_store $store
      * @param moodle_url $here The preview page, which every link stays on.
      * @param stdClass $user The reader.
+     * @param json_file_storage|null $files The package's files, for the page a preview opens.
      */
     public function __construct(stdClass $scorm, stdClass $cm, context $context, json_store $store, moodle_url $here,
-            stdClass $user) {
+            stdClass $user, ?json_file_storage $files = null) {
+        $this->files = $files;
         $this->scorm = $scorm;
         $this->cm = $cm;
         $this->context = $context;
@@ -194,46 +200,15 @@ class view {
         // Is this the first attempt ?
         $attemptcount = $this->scorm_get_attempt_count();
 
-        // Do not give the player launch FORM if the SCORM object is locked after the final attempt.
-        if ($scorm->lastattemptlock == 0 || $result->attemptleft > 0) {
-                $output .= html_writer::start_div('scorm-center');
-                $output .= html_writer::start_tag('form', ['id' => 'scormviewform',
-                                                            'method' => 'post',
-                                                            'action' => $this->player_url()->out(false)]);
-            if ($scorm->hidebrowse == 0) {
-                $output .= html_writer::tag('button', get_string('browse', 'scorm'),
-                        ['class' => 'btn btn-secondary me-1', 'name' => 'mode',
-                            'type' => 'submit', 'id' => 'b', 'value' => 'browse'])
-                    . html_writer::end_tag('button');
-            } else {
-                $output .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'mode', 'value' => 'normal']);
-            }
-            $output .= html_writer::tag('button', get_string('enter', 'scorm'),
-                    ['class' => 'btn btn-primary mx-1', 'name' => 'mode',
-                        'type' => 'submit', 'id' => 'n', 'value' => 'normal'])
-                 . html_writer::end_tag('button');
-
-            if (!empty($scorm->forcenewattempt)) {
-                if ($scorm->forcenewattempt == SCORM_FORCEATTEMPT_ALWAYS ||
-                        ($scorm->forcenewattempt == SCORM_FORCEATTEMPT_ONCOMPLETE && $incomplete === false)) {
-                    $output .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'newattempt', 'value' => 'on']);
-                }
-            } else if (!empty($attemptcount) && ($incomplete === false) &&
-                    (($result->attemptleft > 0) || ($scorm->maxattempt == 0))) {
-                $output .= html_writer::start_div('pt-1');
-                $output .= html_writer::checkbox('newattempt', 'on', false, '', ['id' => 'a']);
-                $output .= html_writer::label(get_string('newattempt', 'scorm'), 'a', true, ['class' => 'ps-1']);
-                $output .= html_writer::end_div();
-            }
-            if (!empty($scorm->popup)) {
-                $output .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'display', 'value' => 'popup']);
-            }
-
-            $output .= html_writer::empty_tag('br');
-            $output .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'scoid', 'value' => $launchsco]);
-            $output .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'cm', 'value' => $this->cm->id]);
-            $output .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'currentorg', 'value' => $orgidentifier]);
-            $output .= html_writer::end_tag('form');
+        // The real page ends with a form that previews or enters the package
+        // through the player, which records an attempt. Nobody may act on an
+        // activity that does not exist, so nothing enters it. Previewing is
+        // seeing, though, and the package's own pages are in the payload: the
+        // preview button opens the page the package launches with, as a page,
+        // in its own tab.
+        if ($scorm->hidebrowse == 0) {
+            $output .= html_writer::start_div('scorm-center');
+            $output .= $this->browse_link($launchsco);
             $output .= html_writer::end_div();
         }
         return $output;
@@ -714,5 +689,59 @@ class view {
             }
         }
         return $url;
+    }
+
+    /**
+     * The button that previews the package, as a link to the page it launches.
+     *
+     * The launch object names its page relative to the package, and the
+     * payload carries the package's unpacked files in mod_scorm's content
+     * area, so the page is found among them by that path. A package the answer has
+     * not produced yet has no pages to open: the button is shown, because the
+     * page has it, and disabled, because there is nothing behind it.
+     *
+     * @param mixed $launchsco The id of the object the package launches with.
+     * @return string
+     */
+    protected function browse_link($launchsco): string {
+        $label = get_string('browse', 'scorm');
+        $sco = $launchsco ? $this->scorm_get_sco($launchsco) : false;
+        $launch = $sco ? trim((string) ($sco->launch ?? '')) : '';
+
+        $url = null;
+        if ($launch !== '' && $this->files !== null) {
+            $query = '';
+            $path = $launch;
+            if (($at = strpos($launch, '?')) !== false) {
+                $query = substr($launch, $at);
+                $path = substr($launch, 0, $at);
+            }
+            $parameters = trim((string) ($sco->parameters ?? ''));
+            if ($parameters !== '') {
+                $query .= ($query === '' ? '?' : '&') . $parameters;
+            }
+            $wanted = '/' . ltrim($path, '/');
+            // mod_scorm keeps the unpacked package under one item, whatever
+            // the package's revision says, so the area is read whole.
+            foreach ($this->files->get_area_files($this->context->id, 'mod_scorm', 'content', false, 'filepath, filename', false) as $file) {
+                if ($file->get_filepath() . $file->get_filename() === $wanted && $file->get_url()) {
+                    $url = $file->get_url() . $query;
+                    break;
+                }
+            }
+        }
+
+        if ($url === null) {
+            return html_writer::tag('button', $label, [
+                'type' => 'button',
+                'class' => 'btn btn-secondary me-1',
+                'disabled' => 'disabled',
+            ]);
+        }
+        return html_writer::link($url, $label, [
+            'class' => 'btn btn-secondary me-1',
+            'target' => '_blank',
+            'rel' => 'noopener',
+        ]);
     }
 }
