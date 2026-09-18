@@ -46,7 +46,7 @@ class preview_factory {
         'forum' => forum_preview::class,
         'glossary' => glossary_preview::class,
         'h5pactivity' => package_preview::class,
-        'imscp' => package_preview::class,
+        'imscp' => imscp_preview::class,
         'label' => label_preview::class,
         'lesson' => lesson_preview::class,
         'page' => page_preview::class,
