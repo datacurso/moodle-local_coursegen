@@ -155,8 +155,14 @@ if (!empty($payload['lang'])) {
 }
 
 $preview = preview_factory::for_activity($modname, $parameters, $source);
+// A preview told which page to open is opened at that page; one that was not
+// opens where the module would open, which is not always its first page.
+$hereparams = ['sessionid' => $sessionid, 'uid' => $uid];
+if (optional_param('page', null, PARAM_INT) !== null) {
+    $hereparams['page'] = $page;
+}
 $preview->opened_at(
-    new moodle_url('/local/coursegen/activity_preview.php', ['sessionid' => $sessionid, 'uid' => $uid]),
+    new moodle_url('/local/coursegen/activity_preview.php', $hereparams),
     $page
 );
 $name = $preview->name();
@@ -239,6 +245,12 @@ foreach (($payload['sections_info'] ?? []) as $info) {
     }
 }
 $PAGE->navbar->add($name);
+
+// What the module itself adds to the page header, beside the heading.
+$headerbutton = $preview->header_button();
+if ($headerbutton !== '') {
+    $PAGE->set_button($headerbutton);
+}
 
 // Moodle's own activity header, the strip every module page opens with, in
 // the theme's own markup: the theme decides whether the name is repeated in
