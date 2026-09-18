@@ -22,6 +22,7 @@ defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
 require_once($CFG->libdir . '/resourcelib.php');
+require_once($CFG->dirroot . '/mod/wiki/locallib.php');
 
 /**
  * What a mold activity ships to the AI service.
@@ -434,6 +435,130 @@ final class template_activity_export_test extends \advanced_testcase {
         $params = $this->export_module('book', ['intro' => 'Plain', 'introformat' => FORMAT_HTML]);
 
         foreach (['id', 'course', 'revision', 'timecreated', 'timemodified', 'introformat'] as $column) {
+            $this->assertArrayNotHasKey($column, $params);
+        }
+    }
+
+    /**
+     * A Wiki mold ships its raw description and its four type settings.
+     */
+    public function test_wiki_exports_intro_and_its_settings(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('wiki', [
+            'name' => 'Wiki plantilla',
+            'intro' => self::MARKED_INTRO,
+            'introformat' => FORMAT_HTML,
+            'wikimode' => 'collaborative',
+            'defaultformat' => 'html',
+            'forceformat' => 1,
+            'firstpagetitle' => '⟦ Nombre de la pagina en base al tema del curso ⟧',
+        ]);
+
+        $this->assertSame('Wiki plantilla', $params['name']);
+        $this->assertSame(self::MARKED_INTRO, $params['intro']);
+        $this->assertSame('collaborative', $params['wikimode']);
+        $this->assertSame('html', $params['defaultformat']);
+        $this->assertSame(1, (int) $params['forceformat']);
+        $this->assertSame('⟦ Nombre de la pagina en base al tema del curso ⟧', $params['firstpagetitle']);
+    }
+
+    /**
+     * The mold's pages travel with the first page ahead of the rest, bodies raw.
+     *
+     * wiki_pages has no ordering column and no "is first" flag: the first page
+     * is the one whose title matches wiki.firstpagetitle, and the remaining
+     * ones only have their id as a stable sequence.
+     */
+    public function test_wiki_exports_its_pages_with_the_first_page_first(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $generator = $this->getDataGenerator()->get_plugin_generator('mod_wiki');
+        $wiki = $generator->create_instance([
+            'course' => $course->id,
+            'intro' => 'Plain',
+            'introformat' => FORMAT_HTML,
+            'firstpagetitle' => 'Índice ⟦tema⟧',
+        ]);
+        // Authored out of order on purpose: the first page is not the oldest row.
+        $generator->create_page($wiki, ['title' => 'Unidad ⟦coursegen:repeat: unidad⟧',
+            'content' => '<p>⟦desarrollo del tema⟧</p>']);
+        $generator->create_first_page($wiki, ['content' => '<p>[[⟦coursegen:repeat: un enlace por unidad⟧]]</p>']);
+        $generator->create_page($wiki, ['title' => 'Cierre', 'content' => '<p>Fixed</p>']);
+
+        $cm = get_fast_modinfo($course)->get_cm($wiki->cmid);
+        $params = template_activity_export::parameters_for($cm);
+
+        $pages = $params['mod_settings']['pages'];
+        $this->assertCount(3, $pages);
+        $this->assertSame('Índice ⟦tema⟧', $pages[0]['title']);
+        $this->assertTrue($pages[0]['firstpage']);
+        // Raw, byte for byte: the service parses those markers itself, and the
+        // parsed render kept in cachedcontent would arrive already mangled.
+        $this->assertSame('<p>[[⟦coursegen:repeat: un enlace por unidad⟧]]</p>', $pages[0]['content']);
+        $this->assertSame('Unidad ⟦coursegen:repeat: unidad⟧', $pages[1]['title']);
+        $this->assertSame('<p>⟦desarrollo del tema⟧</p>', $pages[1]['content']);
+        $this->assertFalse($pages[1]['firstpage']);
+        $this->assertSame('Cierre', $pages[2]['title']);
+        $this->assertFalse($pages[2]['firstpage']);
+    }
+
+    /**
+     * An edited page travels as its latest authored version.
+     *
+     * wiki_versions keeps every revision and wiki_pages.cachedcontent holds the
+     * PARSED render, so both the older version and the cache would deliver
+     * something the author never wrote.
+     */
+    public function test_wiki_exports_the_current_version_of_an_edited_page(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $generator = $this->getDataGenerator()->get_plugin_generator('mod_wiki');
+        $wiki = $generator->create_instance([
+            'course' => $course->id,
+            'firstpagetitle' => 'Portada',
+        ]);
+        $page = $generator->create_first_page($wiki, ['content' => '<p>First draft</p>']);
+        wiki_save_page($page, '<p>Latest ⟦tema⟧</p>', get_admin()->id);
+
+        $cm = get_fast_modinfo($course)->get_cm($wiki->cmid);
+        $params = template_activity_export::parameters_for($cm);
+
+        $pages = $params['mod_settings']['pages'];
+        $this->assertCount(1, $pages);
+        $this->assertSame('<p>Latest ⟦tema⟧</p>', $pages[0]['content']);
+    }
+
+    /**
+     * wiki_add_instance creates no subwiki, no page and no version: they only
+     * appear the first time somebody opens the wiki. A mold that was never
+     * opened must still export, simply without pages.
+     */
+    public function test_wiki_without_pages_exports_no_mod_settings(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('wiki', ['name' => 'Empty wiki', 'firstpagetitle' => 'Portada']);
+
+        $this->assertSame('Empty wiki', $params['name']);
+        $this->assertArrayNotHasKey('mod_settings', $params);
+    }
+
+    /**
+     * Identity columns never travel.
+     */
+    public function test_wiki_export_omits_identity_columns(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('wiki', ['intro' => 'Plain', 'introformat' => FORMAT_HTML]);
+
+        foreach (['id', 'course', 'timecreated', 'timemodified', 'introformat'] as $column) {
             $this->assertArrayNotHasKey($column, $params);
         }
     }

@@ -54,10 +54,106 @@ class template_activity_export {
         if ($cm->modname === 'book') {
             return self::book_parameters($cm);
         }
+        if ($cm->modname === 'wiki') {
+            return self::wiki_parameters($cm);
+        }
         return [
             'name' => $cm->name,
             'section' => (int) $cm->sectionnum,
         ];
+    }
+
+    /**
+     * A Wiki's raw description, its four type settings and its pages.
+     *
+     * A wiki that nobody has opened yet owns no page at all: wiki_add_instance
+     * creates neither the subwiki nor the first page, they appear on the first
+     * view. Such a mold still travels, simply without mod_settings.
+     *
+     * @param cm_info $cm
+     * @return array
+     */
+    private static function wiki_parameters(cm_info $cm): array {
+        global $DB;
+
+        $wiki = $DB->get_record('wiki', ['id' => $cm->instance]);
+        if (!$wiki) {
+            return ['name' => $cm->name, 'section' => (int) $cm->sectionnum];
+        }
+
+        $parameters = [
+            'name' => $cm->name,
+            'section' => (int) $cm->sectionnum,
+            'intro' => $wiki->intro ?? '',
+            'wikimode' => $wiki->wikimode ?? 'collaborative',
+            'defaultformat' => $wiki->defaultformat ?? 'html',
+            'forceformat' => (int) ($wiki->forceformat ?? 0),
+            'firstpagetitle' => $wiki->firstpagetitle ?? '',
+        ];
+
+        $pages = self::wiki_pages((int) $wiki->id, (string) ($wiki->firstpagetitle ?? ''));
+        if ($pages) {
+            $parameters['mod_settings'] = ['pages' => $pages];
+        }
+
+        return $parameters;
+    }
+
+    /**
+     * Every page of one wiki, the first page ahead of the rest, as authored.
+     *
+     * Three traps of mod_wiki's schema shape this query:
+     *
+     * - Pages hang off a subwiki, never off the wiki itself. A mold is authored
+     *   as a single collaborative wiki, which owns exactly one subwiki
+     *   (groupid 0, userid 0), so the wiki's FIRST subwiki is the one carrying
+     *   the authored pages.
+     * - The authored text lives in wiki_versions.content of the CURRENT (highest)
+     *   version. wiki_pages.cachedcontent is the parsed render that
+     *   wiki_refresh_cachedcontent stores, so it would deliver markers already
+     *   chewed by the wiki parser.
+     * - There is no "is first" flag and no ordering column: the first page is
+     *   the one whose title matches wiki.firstpagetitle (as wiki_get_first_page
+     *   matches it), and id is the only stable sequence for the others.
+     *
+     * @param int $wikiid
+     * @param string $firstpagetitle
+     * @return array
+     */
+    private static function wiki_pages(int $wikiid, string $firstpagetitle): array {
+        global $DB;
+
+        $sql = 'SELECT p.id, p.title, v.content
+                  FROM {wiki_pages} p
+                  JOIN {wiki_subwikis} s ON s.id = p.subwikiid
+             LEFT JOIN {wiki_versions} v ON v.pageid = p.id
+                       AND v.version = (SELECT MAX(v2.version)
+                                          FROM {wiki_versions} v2
+                                         WHERE v2.pageid = p.id)
+                 WHERE s.wikiid = :wikiid
+                   AND s.id = (SELECT MIN(s2.id)
+                                 FROM {wiki_subwikis} s2
+                                WHERE s2.wikiid = :subwikiid)
+              ORDER BY p.id ASC';
+        $records = $DB->get_records_sql($sql, ['wikiid' => $wikiid, 'subwikiid' => $wikiid]);
+
+        $first = [];
+        $rest = [];
+        foreach ($records as $record) {
+            $isfirst = $firstpagetitle !== '' && (string) $record->title === $firstpagetitle;
+            $page = [
+                'title' => $record->title,
+                'content' => $record->content ?? '',
+                'firstpage' => $isfirst,
+            ];
+            if ($isfirst) {
+                $first[] = $page;
+            } else {
+                $rest[] = $page;
+            }
+        }
+
+        return array_merge($first, $rest);
     }
 
     /**
