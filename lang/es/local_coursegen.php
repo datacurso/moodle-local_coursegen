@@ -842,7 +842,6 @@ $string['courseai_template_prompt_placeholder'] = 'Describe cómo adaptar esta p
 
 // Review modal strings.
 $string['courseai_chip_remove_template'] = 'Quitar plantilla';
-$string['courseai_template_change'] = 'Cambiar plantilla';
 $string['courseai_templates_dialog_label'] = 'Plantillas de curso';
 $string['courseai_templates_list_label'] = 'Lista de plantillas';
 $string['courseai_templates_search_placeholder'] = 'Buscar plantillas...';

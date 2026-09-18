@@ -248,8 +248,8 @@ export const setupContextSection = (deps) => {
     // ─── Templates: the list the template column picks from ─────────────────
     // "From a template" is chosen on the page's first screen (start_path.js);
     // inside that path, the column opens with a button that offers this list
-    // right below it, and once a template is chosen the card's "Change" opens
-    // the same list in the same place (context/template.js).
+    // right below it, and once a template is chosen the card is the same
+    // toggle: it opens and closes the same list in the same place.
     const {
         renderTemplateLists, selectTemplate, detachTemplate, setTemplateLayout, closeTemplatePopovers,
     } = createTemplateHandlers({state, texts});
@@ -257,7 +257,7 @@ export const setupContextSection = (deps) => {
     const templatePopovers = [
         {
             panel: 'templatesPopoverTpl', search: 'templateSearchTpl', close: 'templatesPopoverTplClose',
-            triggers: ['tplPickBtn', 'tplCardChange'],
+            triggers: ['tplPickBtn', 'tplCardBtn'],
         },
     ];
 

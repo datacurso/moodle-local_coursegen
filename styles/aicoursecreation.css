@@ -460,17 +460,28 @@ svg { display: block; flex-shrink: 0; }
   display: none;
 }
 
-/* The attached template, at the top of the left column. */
-.tpl-card {
-  display: grid;
+/* The attached template, at the top of the left column: the same toggle as
+   the "Choose template" button, drawn with the template's own thumb, solid
+   because it holds a value, with Remove beside it. Both are locked once
+   planning or generation has started, like the path crumb. */
+.tpl-card-row { display: flex; align-items: center; gap: 10px; }
+.tpl-card-row .tpl-pick { flex: 1 1 auto; min-width: 0; }
+.tpl-pick--set {
   grid-template-columns: 40px minmax(0, 1fr) auto;
   gap: 10px;
-  align-items: center;
   padding: 8px 10px;
-  border: 1px solid var(--border);
+  border-style: solid;
   border-radius: 10px;
-  background: var(--card);
+  color: var(--muted-fg);
 }
+.tpl-pick--set .tpl-pick-text small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tpl-pick--set .tpl-pick-text b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.courseai-workspace.is-planning .tpl-card-row .tpl-pick,
+body.cg-generating .tpl-card-row .tpl-pick { pointer-events: none; }
+.courseai-workspace.is-planning .tpl-card-row .tpl-pick .tpl-pick-chevron,
+body.cg-generating .tpl-card-row .tpl-pick .tpl-pick-chevron,
+.courseai-workspace.is-planning .tpl-card-row .tpl-card-link,
+body.cg-generating .tpl-card-row .tpl-card-link { display: none; }
 .tpl-card-thumb {
   width: 40px;
   height: 40px;
@@ -483,11 +494,7 @@ svg { display: block; flex-shrink: 0; }
   font-weight: 700;
   letter-spacing: .02em;
 }
-.tpl-card-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
-.tpl-card-text b { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tpl-card-text small { color: var(--muted-fg); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 #tplCardStats:not(:empty)::before { content: " · "; }
-.tpl-card-actions { display: flex; gap: 10px; }
 .tpl-card-link {
   border: 0;
   background: none;
