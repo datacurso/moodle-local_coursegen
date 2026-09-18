@@ -300,19 +300,55 @@ export const initSidebar = () => {
         backdrop.addEventListener('click', closeSidebar);
     }
 
-    // ─── New course button ───────────────────────────────────────────
-    // No closeSidebar() here: the page navigates away immediately after, so
-    // collapsing it first only shows a jarring flash of the close animation.
-    // Keeps the current ?mode= (free/template) — "new course" should reset
-    // the session, not the mode you'd chosen to work in.
-    if (btnNew) {
+    // ─── New course button: opens the mode-picking menu ──────────────
+    // The mode used to be a persistent tab strip above this button; now it
+    // is the explicit choice made right here, so picking one always wins
+    // over whatever mode the current page happens to be in — no more
+    // "preserve the current mode" carry-over.
+    const newMenu = document.getElementById('courseaiNewMenu');
+    if (btnNew && newMenu) {
+        const closeNewMenu = () => {
+            newMenu.hidden = true;
+            btnNew.setAttribute('aria-expanded', 'false');
+        };
+        const openNewMenu = () => {
+            newMenu.hidden = false;
+            btnNew.setAttribute('aria-expanded', 'true');
+        };
+        const isNewMenuOpen = () => !newMenu.hidden;
+
         btnNew.addEventListener('click', () => {
-            const currentMode = new URLSearchParams(window.location.search).get('mode');
+            if (isNewMenuOpen()) {
+                closeNewMenu();
+            } else {
+                openNewMenu();
+            }
+        });
+
+        // Clicks inside the menu must not reach the document-level closer.
+        newMenu.addEventListener('click', (event) => {
+            event.stopPropagation();
+            const item = event.target.closest('[data-mode]');
+            if (!item) {
+                return;
+            }
             const url = new URL('aicoursecreation.php', window.location.href);
-            if (currentMode) {
-                url.searchParams.set('mode', currentMode);
+            if (item.dataset.mode === 'template') {
+                url.searchParams.set('mode', 'template');
             }
             window.location.href = url.toString();
+        });
+
+        document.addEventListener('click', (event) => {
+            if (isNewMenuOpen() && !newMenu.contains(event.target) && !btnNew.contains(event.target)) {
+                closeNewMenu();
+            }
+        });
+
+        document.addEventListener('keydown', (event) => {
+            if (event.key === 'Escape' && isNewMenuOpen()) {
+                closeNewMenu();
+            }
         });
     }
 

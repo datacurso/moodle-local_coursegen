@@ -255,7 +255,9 @@
   overflow-y: auto;
 }
 
-/* New course button */
+/* New course: trigger + the mode-picking menu it opens. */
+.courseai-newcourse-wrap { position: relative; }
+
 .courseai-sidebar-btn-new {
   display: flex;
   align-items: center;
@@ -273,8 +275,67 @@
   transition: background .15s;
 }
 
-.courseai-sidebar-btn-new:hover { background: var(--muted); }
+.courseai-sidebar-btn-new:hover,
+.courseai-sidebar-btn-new[aria-expanded="true"] { background: var(--muted); }
 .courseai-sidebar-btn-new svg { flex-shrink: 0; }
+.courseai-newcourse-chevron {
+  margin-left: auto;
+  color: var(--muted-fg);
+  transition: transform .15s;
+}
+.courseai-sidebar-btn-new[aria-expanded="true"] .courseai-newcourse-chevron {
+  transform: rotate(180deg);
+}
+
+.courseai-newcourse-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  padding: 6px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: var(--radius, .75rem);
+  box-shadow: 0 4px 24px hsl(215, 28%, 17%, 0.15);
+  z-index: 20;
+}
+
+.courseai-newcourse-item {
+  display: flex;
+  align-items: flex-start;
+  gap: 10px;
+  width: 100%;
+  padding: 8px 10px;
+  border: none;
+  border-radius: 8px;
+  background: transparent;
+  color: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+.courseai-newcourse-item:hover,
+.courseai-newcourse-item:focus-visible { background: var(--muted); }
+.courseai-newcourse-item svg {
+  flex-shrink: 0;
+  margin-top: 2px;
+  color: var(--muted-fg);
+}
+.courseai-newcourse-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+.courseai-newcourse-item-text b {
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+}
+.courseai-newcourse-item-text small {
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--muted-fg);
+}
 
 /* Recent section */
 .courseai-sidebar-section { margin-top: 4px; }
@@ -599,37 +660,3 @@
 }
 
 /* ─── COLLAPSE / EXPAND ────────────────────────────────────── */
-/* ─── MODE ITEMS (Claude-style Chat/Code segmented control) ─────────── */
-.courseai-sidebar-modes {
-  display: flex;
-  gap: 2px;
-  padding: 3px;
-  margin-bottom: 10px;
-  background: var(--muted);
-  border-radius: 8px;
-}
-.courseai-sidebar-mode-item {
-  display: flex;
-  align-items: center;
-  gap: 6px;
-  flex: 1;
-  padding: 6px 8px;
-  border-radius: 6px;
-  border: 1px solid transparent;
-  font-size: 12px;
-  color: var(--muted-fg);
-  text-decoration: none;
-  cursor: pointer;
-  transition: all .15s;
-  white-space: nowrap;
-  justify-content: center;
-  background: transparent;
-}
-.courseai-sidebar-mode-item:hover { color: var(--fg); }
-.courseai-sidebar-mode-item.active {
-  background: var(--card);
-  border-color: var(--border);
-  color: var(--fg);
-  font-weight: 500;
-}
-.courseai-sidebar-mode-item svg { flex-shrink: 0; width: 13px; height: 13px; }
