@@ -170,6 +170,27 @@ $name = $preview->name();
 // trail is written here from the payload rather than taken from the course.
 $PAGE->set_course(get_course(template::get_record(['id' => $templateid])->get('courseid')));
 $PAGE->set_show_course_index(false);
+
+// The page is told which course module it is about, because that is what the
+// theme draws a module page's own chrome from: the activity icon beside the
+// heading, the activity header with the description under it, the skip target
+// where a module page puts it. For a kept activity that is the activity
+// itself; for one the run writes it is the mould it is built into. Nothing of
+// the module's state is drawn from it: completion, which would show the
+// reader's standing in the template course, is hidden, and the activity
+// navigation at the foot, which would lead to the template's real modules, is
+// not drawn on a course whose format has a course index, which is where this
+// page's formats keep it.
+$sourcecmid = (int) ($source['cmid'] ?? 0);
+$modinfo = get_fast_modinfo($PAGE->course);
+if ($sourcecmid > 0 && isset($modinfo->cms[$sourcecmid]) && course_get_format($PAGE->course)->uses_course_index()) {
+    $PAGE->set_cm($modinfo->get_cm($sourcecmid));
+    $record = $preview->activity_record();
+    if ($record !== null && (int) ($record->id ?? 0) === (int) $PAGE->cm->instance) {
+        $record->course = $PAGE->course->id;
+        $PAGE->set_activity_record($record);
+    }
+}
 $PAGE->navbar->ignore_active(true);
 $PAGE->set_url('/local/coursegen/activity_preview.php',
     ['sessionid' => $sessionid, 'uid' => $uid, 'page' => $page]);
@@ -219,12 +240,12 @@ foreach (($payload['sections_info'] ?? []) as $info) {
 }
 $PAGE->navbar->add($name);
 
-// Moodle's own activity header, the strip every module page opens with: the
-// activity's name and its description, in the theme's own markup. It is built
-// from a page and a user rather than from a course module, so a preview can
-// carry the real one instead of drawing a heading that resembles it, and every
-// type gets it without a line of its own.
-$PAGE->activityheader->set_title($name);
+// Moodle's own activity header, the strip every module page opens with, in
+// the theme's own markup: the theme decides whether the name is repeated in
+// it, and the description is what the module puts there, read from the
+// payload. Completion is the reader's standing in the template course, not
+// part of the template, so it is not drawn.
+$PAGE->activityheader->set_attrs(['hidecompletion' => true]);
 $PAGE->activityheader->set_description($preview->header_description());
 
 // A module's own side blocks are part of how it looks: a lesson with its menu
