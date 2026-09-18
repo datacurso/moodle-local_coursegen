@@ -86,3 +86,22 @@ function local_coursegen_pluginfile(
 
     send_stored_file($file, 0, 0, $forcedownload, $options);
 }
+
+/**
+ * Preferences this plugin lets a user set through the standard user preference
+ * API, so core_user's REST route (and any other caller of
+ * set_user_preference()) accepts them.
+ *
+ * @return array
+ */
+function local_coursegen_user_preferences() {
+    return [
+        'local_coursegen_sidebar_pinned' => [
+            'type' => PARAM_BOOL,
+            'null' => NULL_NOT_ALLOWED,
+            'default' => true,
+            'choices' => [0, 1],
+            'permissioncallback' => [\core\user::class, 'is_current_user'],
+        ],
+    ];
+}
