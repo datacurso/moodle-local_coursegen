@@ -100,6 +100,18 @@ abstract class activity_preview {
     abstract public function render(): string;
 
     /**
+     * The activity's own row, for the page to be told what it is about.
+     *
+     * A preview drawn from the module's own rows has one; a preview drawn from
+     * the answer alone has none, and the page shows no activity header for it.
+     *
+     * @return \stdClass|null
+     */
+    public function activity_record(): ?\stdClass {
+        return null;
+    }
+
+    /**
      * What belongs in the activity header, under the name.
      *
      * Most modules put their description there, and a module that shows it
