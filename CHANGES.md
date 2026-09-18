@@ -20,8 +20,8 @@
 - **The sidebar folds away and comes back on hover**  
   The sidebar's toggle and the way out of the page used to float over the content, one on each side, and the toggle covered the page title once the sidebar was folded. A thin bar across the top now holds both: the toggle at its left, which never moves, and the way back to My courses at its right. Folding the sidebar slides it out and the content over; hovering the toggle while it is folded shows the sidebar on top of the content, without moving anything, and moving away hides it again; a click pins it back. The choice is remembered, and the `[` key toggles it.
 
-- **The way a course starts is chosen in the composer**  
-  Free creation or from a template used to be two tabs at the top of the sidebar, always on show, naming a mode for a course that might not be about to start. The choice now sits inside the composer, next to the "+" menu, as a small two-way switch: it is read where the writing happens, the page never presumes a mode, and once a plan exists the switch is gone because the mode is settled. "New course" simply opens a clean page.
+- **A template is attached, not a mode that is entered**  
+  Free creation or from a template used to be two tabs at the top of the sidebar, and briefly a switch inside the composer: either way a mode, chosen before anything was written, and a separate page for each. There is no mode now. The page opens on the one question it always asked, and a template is one more thing the composer's "+" menu can attach, like a syllabus. Attaching one puts its chip in the composer and opens the template layout beside it, with the template's structure on the right and a card naming the template at the top of the column, where it can be changed or removed; removing it returns to the question. The old template link still opens the page, with the list of templates open. "New course" simply opens a clean page.
 
 ## Fixed
 
