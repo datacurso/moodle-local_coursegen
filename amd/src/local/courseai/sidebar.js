@@ -16,10 +16,21 @@
 /**
  * Sidebar component for the AI course creation page.
  *
+ * Whether the sidebar is pinned open or closed is a per-user preference
+ * (local_coursegen_user_preferences() in lib.php), not browser storage: the
+ * page reads it server-side before the first render (aicoursecreation.php
+ * sets the "sidebar-closed" class from it directly), so there is nothing to
+ * restore here and no flash of the wrong state. This module only writes the
+ * preference back after the user acts.
+ *
  * @module     local_coursegen/local/courseai/sidebar
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
+import {setUserPreference} from 'core_user/repository';
+
+const SIDEBAR_PINNED_PREFERENCE = 'local_coursegen_sidebar_pinned';
 
 /**
  * Initialize the sidebar component.
@@ -131,10 +142,10 @@ export const initSidebar = () => {
     //  - closed:   slid out; the toggle shows the menu glyph. Hovering it
     //              floats the sidebar over the content without moving
     //              anything; leaving hides it again. Clicking pins it.
-    // The pinned state is remembered per browser.
+    // The pinned state is remembered per user (see the module docblock);
+    // the class on this element already reflects it on arrival.
     const layout = document.getElementById('courseaiAppLayout');
     const toggleWrap = document.getElementById('courseaiSidebarToggleWrap');
-    const STORAGE_KEY = 'local_coursegen/sidebar-pinned';
     const HOVER_OPEN_MS = 120;
     const HOVER_CLOSE_MS = 220;
     const FLOAT_OUT_MS = 240;
@@ -208,11 +219,11 @@ export const initSidebar = () => {
             syncCoursesListHeight();
         }
         syncToggle();
-        try {
-            localStorage.setItem(STORAGE_KEY, pinned ? '1' : '0');
-        } catch (e) {
-            // Storage may be unavailable; the state simply is not remembered.
-        }
+        setUserPreference(SIDEBAR_PINNED_PREFERENCE, pinned ? 1 : 0).catch(() => {
+            // The preference failed to save; the sidebar still behaves
+            // correctly for the rest of this visit, it just will not be
+            // remembered on the next one.
+        });
     };
 
     const closeSidebar = () => setPinned(false);
@@ -250,14 +261,6 @@ export const initSidebar = () => {
         }
     });
 
-    // Restore the remembered state before the first paint settles.
-    try {
-        if (localStorage.getItem(STORAGE_KEY) === '0') {
-            layout?.classList.add('sidebar-closed');
-        }
-    } catch (e) {
-        // Storage may be unavailable; start pinned.
-    }
     syncToggle();
 
     // ─── Backdrop click closes sidebar ───────────────────────────────
