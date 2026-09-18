@@ -54,12 +54,9 @@ trait data_empty_state {
      */
     protected function empty_database_action_bar(int $currentgroup, int $groupmode): array {
         global $OUTPUT;
-        $data = ['addentrybutton' => $this->add_entries_action($currentgroup, $groupmode)];
-        if (has_capability('mod/data:manageentries', $this->context)) {
-            $importentriesbutton = new \single_button(new moodle_url($this->here),
-                get_string('importentries', 'mod_data'), 'get');
-            $data['importentriesbutton'] = $importentriesbutton->export_for_template($OUTPUT);
-        }
+        // The real bar offers adding and importing entries. Nobody may act on
+        // an activity that does not exist: neither is offered.
+        $data = ['addentrybutton' => null];
         return $data;
     }
 

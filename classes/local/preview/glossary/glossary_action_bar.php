@@ -104,13 +104,9 @@ trait glossary_action_bar {
      * @return stdClass|null
      */
     protected function create_add_button(\renderer_base $output): ?stdClass {
-        if (!has_capability('mod/glossary:write', $this->context)) {
-            return null;
-        }
-        $btn = new single_button(($this->urls)([]),
-            get_string('addsingleentry', 'glossary'), 'post', single_button::BUTTON_PRIMARY);
-
-        return $btn->export_for_template($output);
+        // Nobody may act on an activity that does not exist: the button that
+        // adds an entry is not offered.
+        return null;
     }
     /**
      * mod/glossary/lib.php glossary_get_visible_tabs().

@@ -101,12 +101,11 @@ class view {
         $instance = $this->instance;
         $o = '';
 
-        // can_view_grades(): the reader may.
-        $o .= $this->submission_actionmenu();
+        // The real page offers the grading page and a button to add a
+        // submission to a reader who may. Nobody may act on an activity that does not exist: neither
+        // is offered, and the grading summary, which describes the
+        // assignment rather than anyone's work, stays.
         $o .= $this->render_assign_grading_summary($this->get_assign_grading_summary_renderable());
-
-        // can_view_submission(): the reader may see their own.
-        $o .= $this->view_submission_action_bar($instance);
         // view_student_summary() draws the reader's submission status, feedback
         // and history, none of which exist before anyone has submitted; the
         // real page for this reader draws none of them either.

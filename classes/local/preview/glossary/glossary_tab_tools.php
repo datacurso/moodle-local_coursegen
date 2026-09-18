@@ -50,65 +50,11 @@ trait glossary_tab_tools {
         int $offset,
         int $pagelimit
     ): array {
-        global $USER, $CFG;
-        $items = [];
-        $buttons = [];
-        $openinnewwindow = [];
-
-        if (has_capability('mod/glossary:import', $this->context)) {
-            $items['button'] = new single_button(
-                ($this->urls)([]),
-                get_string('importentries', 'glossary')
-            );
-        }
-
-        if (has_capability('mod/glossary:export', $this->context)) {
-            $url = ($this->urls)(['mode' => $mode, 'hook' => $hook]);
-            $buttons[get_string('export', 'glossary')] = $url->out(false);
-        }
-
-        if (has_capability('mod/glossary:manageentries', $this->context) or $this->glossary->allowprintview) {
-            $params = array(
-                'id'        => $this->cm->id,
-                'mode'      => $mode,
-                'hook'      => $hook,
-                'sortkey'   => $sortkey,
-                'sortorder' => $sortorder,
-                'offset'    => $offset,
-                'pagelimit' => $pagelimit,
-            );
-            $printurl = ($this->urls)($params);
-            $buttons[get_string('printerfriendly', 'glossary')] = $printurl->out(false);
-            // Every tool leads to the preview, so the ones that open a new
-            // window are told apart by name, not by address.
-            $openinnewwindow[] = get_string('printerfriendly', 'glossary');
-        }
-
-        if (!empty($CFG->enablerssfeeds) && !empty($CFG->glossary_enablerssfeeds)
-                && $this->glossary->rsstype && $this->glossary->rssarticles
-                && has_capability('mod/glossary:view', $this->context)) {
-            require_once("$CFG->libdir/rsslib.php");
-            $string = get_string('rssfeed', 'glossary');
-            $url = ($this->urls)([]);
-            $buttons[$string] = $url->out(false);
-            $openinnewwindow[] = $string;
-        }
-
-        foreach ($items as $key => $value) {
-            $items[$key] = $value->export_for_template($output);
-        }
-
-        if ($buttons) {
-            foreach ($buttons as $index => $value) {
-                $items['select']['options'][] = [
-                    'url' => $value,
-                    'string' => $index,
-                    'openinnewwindow' => ($openinnewwindow ? in_array($index, $openinnewwindow) : false),
-                ];
-            }
-        }
-
-        return $items;
+        // The tools import, export, print and feed the real glossary, and
+        // every one of them leaves the page. Nobody may act on an activity
+        // that does not exist: none is offered. The search box beside them
+        // stays.
+        return [];
     }
 
     /**

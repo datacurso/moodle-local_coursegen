@@ -16,10 +16,6 @@
 
 namespace local_coursegen\local\preview\workshop;
 
-use moodle_url;
-use single_button;
-use workshop;
-
 /**
  * The action buttons mod_workshop_renderer::view_page() opens with, kept
  * apart from view.php only because together they crossed the 250-line cap.
@@ -43,54 +39,8 @@ trait workshop_action_buttons {
         $output = '';
         $workshop = $this->workshop;
 
-        switch ($workshop->phase) {
-            case workshop::PHASE_SUBMISSION:
-                // Does the user have to assess examples before submitting their own work?
-                $examplesmust = ($workshop->useexamples && $workshop->examplesmode == workshop::EXAMPLES_BEFORE_SUBMISSION);
-
-                // Is the assessment of example submissions considered finished?
-                $examplesdone = has_capability('mod/workshop:manageexamples', $this->context);
-
-                if ($this->assessing_examples_allowed() && has_capability('mod/workshop:submit', $this->context) &&
-                    !has_capability('mod/workshop:manageexamples', $this->context)) {
-                    $examples = $this->get_examples();
-                    $left = 0;
-                    // Make sure the current user has all examples allocated.
-                    foreach ($examples as $exampleid => $example) {
-                        if (is_null($example->grade)) {
-                            $left++;
-                            break;
-                        }
-                    }
-                    if ($left > 0 && $workshop->examplesmode != workshop::EXAMPLES_VOLUNTARY) {
-                        $examplesdone = false;
-                    } else {
-                        $examplesdone = true;
-                    }
-                }
-
-                if (has_capability('mod/workshop:submit', $this->context) && (!$examplesmust || $examplesdone)) {
-                    if (!$this->get_submission_by_author($this->userid)) {
-                        $btnurl = new moodle_url($this->submission_url(), ['edit' => 'on']);
-                        $btntxt = get_string('createsubmission', 'workshop');
-                        $output .= $OUTPUT->single_button($btnurl, $btntxt, 'get', ['type' => single_button::BUTTON_PRIMARY]);
-                    }
-                }
-                break;
-
-            case workshop::PHASE_ASSESSMENT:
-                if (has_capability('mod/workshop:submit', $this->context)) {
-                    if (!$this->get_submission_by_author($this->userid)) {
-                        if ($this->creating_submission_allowed($this->userid)) {
-                            $btnurl = new moodle_url($this->submission_url(), ['edit' => 'on']);
-                            $btntxt = get_string('createsubmission', 'workshop');
-                            $output .= $OUTPUT->single_button($btnurl, $btntxt, 'get',
-                                ['type' => single_button::BUTTON_PRIMARY]);
-                        }
-                    }
-                }
-        }
-
+        // The one button any phase offers starts the reader's own submission.
+        // Nobody may act on an activity that does not exist: it is not offered.
         return $output;
     }
 }

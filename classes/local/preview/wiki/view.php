@@ -17,7 +17,6 @@
 namespace local_coursegen\local\preview\wiki;
 
 use context;
-use html_writer;
 use local_coursegen\local\preview\json_store;
 use moodle_url;
 use stdClass;

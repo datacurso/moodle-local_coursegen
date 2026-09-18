@@ -20,7 +20,6 @@ use context;
 use core_text;
 use html_writer;
 use local_coursegen\local\preview\json_store;
-use single_button;
 use stdClass;
 use url_select;
 

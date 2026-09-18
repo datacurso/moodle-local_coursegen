@@ -20,7 +20,6 @@ use context;
 use html_writer;
 use local_coursegen\local\preview\json_file_storage;
 use moodle_url;
-use single_button;
 use stdClass;
 
 /**
@@ -110,24 +109,9 @@ class view {
         // Display the "Edit" button if current user can edit folder contents.
         // Do not display it on the course page for the teachers because there
         // is an "Edit settings" option in the action menu with the same functionality.
-        $canmanagefolderfiles = has_capability('mod/folder:managefiles', $context);
-        $canmanagecourseactivities = has_capability('moodle/course:manageactivities', $context);
-        if ($canmanagefolderfiles && ($folder->display != self::FOLDER_DISPLAY_INLINE || !$canmanagecourseactivities)) {
-            $editbutton = new single_button(new moodle_url($this->here),
-                get_string('edit'), 'post', single_button::BUTTON_PRIMARY);
-            $editbutton->class = 'navitem';
-            $data['edit_button'] = $editbutton->export_for_template($OUTPUT);
-            $data['hasbuttons'] = true;
-        }
-
-        $downloadable = $this->folder_archive_available($folder, $cm);
-        if ($downloadable) {
-            $downloadbutton = new single_button(new moodle_url($this->here),
-                get_string('downloadfolder', 'folder'), 'get');
-            $downloadbutton->class = 'navitem ms-auto';
-            $data['download_button'] = $downloadbutton->export_for_template($OUTPUT);
-            $data['hasbuttons'] = true;
-        }
+        // The real page offers editing the files and downloading them zipped.
+        // Nobody may act on an activity that does not exist: neither is
+        // offered.
 
         // folder_tree: the area laid out as directories.
         $foldertree = new stdClass();

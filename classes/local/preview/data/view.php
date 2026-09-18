@@ -162,19 +162,9 @@ class view {
     protected function zero_state_action_bar(): array {
         global $OUTPUT;
         $data = [];
-        if (has_capability('mod/data:managetemplates', $this->context)) {
-            $usepresetbutton = new \single_button(new moodle_url($this->here),
-                get_string('usestandard', 'mod_data'), 'get', \single_button::BUTTON_PRIMARY);
-            $data['usepresetbutton'] = $usepresetbutton->export_for_template($OUTPUT);
-            $createfieldbutton = $this->get_create_fields();
-            $data['createfieldbutton'] = $createfieldbutton->export_for_template($OUTPUT);
-            $importpresetbutton = new \single_button(new moodle_url($this->here),
-                get_string('importapreset', 'mod_data'), 'get', \single_button::BUTTON_SECONDARY, [
-                    'data-action' => 'importpresets',
-                    'data-dataid' => $this->cm->id,
-                ]);
-            $data['importpresetbutton'] = $importpresetbutton->export_for_template($OUTPUT);
-        }
+        // The real bar offers presets, fields and an import to one who may
+        // manage templates. Nobody may act on an activity that does not
+        // exist: none is offered.
         return $data;
     }
 

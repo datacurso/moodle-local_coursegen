@@ -184,52 +184,10 @@ trait wiki_content {
      * @return string
      */
     protected function action_bar(stdClass $page): string {
-        global $OUTPUT;
-        $index = $this->index_of($page);
-        $urlselect = $this->get_action_selector($index);
-        $data = [
-            'urlselect' => $urlselect->export_for_template($OUTPUT),
-        ];
-        // The print view of a page is the page itself, in the preview.
-        $printlink = ($this->urls)($index, ['print' => 1]);
-        $data['printbutton'] = html_writer::link($printlink, get_string('print', 'mod_wiki'),
-            ['class' => 'btn btn-secondary', 'target' => "_blank"]);
-        return $OUTPUT->render_from_template('mod_wiki/action_bar', $data);
-    }
-
-    /**
-     * action_bar::get_action_selector(), with every entry leading back to the preview.
-     *
-     * @param int $index
-     * @return url_select
-     */
-    protected function get_action_selector(int $index): url_select {
-        $menu = [];
-        $context = $this->context;
-        $current = ($this->urls)($index, ['tab' => 'view'])->out(false);
-        if (has_capability('mod/wiki:viewpage', $context)) {
-            $menu[$current] = get_string('view', 'mod_wiki');
-        }
-        if (has_capability('mod/wiki:editpage', $context)) {
-            $menu[($this->urls)($index, ['tab' => 'edit'])->out(false)] = get_string('edit', 'mod_wiki');
-        }
-        if (has_capability('mod/wiki:viewcomment', $context)) {
-            $menu[($this->urls)($index, ['tab' => 'comments'])->out(false)] = get_string('comments', 'mod_wiki');
-        }
-        if (has_capability('mod/wiki:viewpage', $context)) {
-            $menu[($this->urls)($index, ['tab' => 'history'])->out(false)] = get_string('history', 'mod_wiki');
-        }
-        if (has_capability('mod/wiki:viewpage', $context)) {
-            $menu[($this->urls)($index, ['tab' => 'map'])->out(false)] = get_string('map', 'mod_wiki');
-        }
-        if (has_capability('mod/wiki:viewpage', $context)) {
-            $menu[($this->urls)($index, ['tab' => 'files'])->out(false)] = get_string('files', 'mod_wiki');
-        }
-        if (has_capability('mod/wiki:managewiki', $context)) {
-            $menu[($this->urls)($index, ['tab' => 'admin'])->out(false)] = get_string('admin', 'mod_wiki');
-        }
-        // The page is opened by its module's address, which is none of the
-        // entries, so none is marked as where the reader is.
-        return new url_select($menu, ($this->urls)($index, [])->out(false), null, 'wikiactionselect');
+        // The real bar is a menu to edit, comment on, map and administer the
+        // page, and a button to print it. Nobody may act on an activity that does not exist: the
+        // bar is not drawn. The page's own links stay, and move within the
+        // preview.
+        return '';
     }
 }
