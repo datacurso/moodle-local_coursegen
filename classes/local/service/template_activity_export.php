@@ -51,10 +51,77 @@ class template_activity_export {
         if ($cm->modname === 'forum') {
             return self::forum_parameters($cm);
         }
+        if ($cm->modname === 'book') {
+            return self::book_parameters($cm);
+        }
         return [
             'name' => $cm->name,
             'section' => (int) $cm->sectionnum,
         ];
+    }
+
+    /**
+     * A Book's raw introduction, its three settings and its chapters.
+     *
+     * mod_book has no parent column: a subchapter belongs to the nearest
+     * preceding chapter, so the reading order IS the hierarchy and must be
+     * preserved exactly.
+     *
+     * @param cm_info $cm
+     * @return array
+     */
+    private static function book_parameters(cm_info $cm): array {
+        global $DB;
+
+        $book = $DB->get_record('book', ['id' => $cm->instance]);
+        if (!$book) {
+            return ['name' => $cm->name, 'section' => (int) $cm->sectionnum];
+        }
+
+        $parameters = [
+            'name' => $cm->name,
+            'section' => (int) $cm->sectionnum,
+            'intro' => $book->intro ?? '',
+            'numbering' => (int) ($book->numbering ?? 0),
+            // Moodle's own form has no control for this one, but the generated
+            // book must still read the way the mold does.
+            'navstyle' => (int) ($book->navstyle ?? 1),
+            'customtitles' => (int) ($book->customtitles ?? 0),
+        ];
+
+        $chapters = self::book_chapters((int) $book->id);
+        if ($chapters) {
+            $parameters['mod_settings'] = ['chapters' => $chapters];
+        }
+
+        return $parameters;
+    }
+
+    /**
+     * Every chapter of one book, in reading order.
+     *
+     * @param int $bookid
+     * @return array
+     */
+    private static function book_chapters(int $bookid): array {
+        global $DB;
+
+        $records = $DB->get_records(
+            'book_chapters',
+            ['bookid' => $bookid],
+            'pagenum ASC',
+            'id, title, content, subchapter'
+        );
+
+        $chapters = [];
+        foreach ($records as $record) {
+            $chapters[] = [
+                'title' => $record->title,
+                'content' => $record->content ?? '',
+                'subchapter' => (int) $record->subchapter,
+            ];
+        }
+        return $chapters;
     }
 
     /**

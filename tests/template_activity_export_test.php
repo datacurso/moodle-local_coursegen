@@ -361,6 +361,84 @@ final class template_activity_export_test extends \advanced_testcase {
     }
 
     /**
+     * A Book mold ships its raw introduction and its three settings.
+     */
+    public function test_book_exports_intro_and_its_settings(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('book', [
+            'name' => 'Study book',
+            'intro' => self::MARKED_INTRO,
+            'introformat' => FORMAT_HTML,
+            'numbering' => 3,
+            'customtitles' => 1,
+        ]);
+
+        $this->assertSame('Study book', $params['name']);
+        $this->assertSame(self::MARKED_INTRO, $params['intro']);
+        $this->assertSame(3, (int) $params['numbering']);
+        $this->assertSame(1, (int) $params['customtitles']);
+        // Moodle's own form has no control for navstyle, but the generated
+        // book must still read the same as the mold.
+        $this->assertArrayHasKey('navstyle', $params);
+    }
+
+    /**
+     * Chapters travel in reading order, bodies raw, hierarchy intact.
+     *
+     * mod_book has no parent column: a subchapter belongs to the nearest
+     * preceding chapter, so the order IS the hierarchy.
+     */
+    public function test_book_exports_its_chapters_with_their_hierarchy(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $book = $this->getDataGenerator()->create_module('book', [
+            'course' => $course->id,
+            'intro' => 'Plain',
+            'introformat' => FORMAT_HTML,
+        ]);
+        $generator = $this->getDataGenerator()->get_plugin_generator('mod_book');
+        // The generator defaults every chapter to pagenum 1 and shifts the
+        // rest down, so the order has to be stated explicitly.
+        $generator->create_chapter(['bookid' => $book->id, 'pagenum' => 1,
+            'title' => 'Unit ⟦tema⟧', 'content' => '<p>Body ⟦texto⟧</p>']);
+        $generator->create_chapter(['bookid' => $book->id, 'pagenum' => 2, 'subchapter' => 1,
+            'title' => 'Objetivos', 'content' => '<p>Fixed</p>']);
+        $generator->create_chapter(['bookid' => $book->id, 'pagenum' => 3,
+            'title' => 'Closing', 'content' => '<p>End</p>']);
+
+        $cm = get_fast_modinfo($course)->get_cm($book->cmid);
+        $params = template_activity_export::parameters_for($cm);
+
+        $chapters = $params['mod_settings']['chapters'];
+        $this->assertCount(3, $chapters);
+        $this->assertSame('Unit ⟦tema⟧', $chapters[0]['title']);
+        $this->assertSame('<p>Body ⟦texto⟧</p>', $chapters[0]['content']);
+        $this->assertSame(0, (int) $chapters[0]['subchapter']);
+        $this->assertSame('Objetivos', $chapters[1]['title']);
+        $this->assertSame(1, (int) $chapters[1]['subchapter']);
+        $this->assertSame('Closing', $chapters[2]['title']);
+        $this->assertSame(0, (int) $chapters[2]['subchapter']);
+    }
+
+    /**
+     * Identity and derived columns never travel.
+     */
+    public function test_book_export_omits_identity_columns(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('book', ['intro' => 'Plain', 'introformat' => FORMAT_HTML]);
+
+        foreach (['id', 'course', 'revision', 'timecreated', 'timemodified', 'introformat'] as $column) {
+            $this->assertArrayNotHasKey($column, $params);
+        }
+    }
+
+    /**
      * Types without their own export still ship the minimal pair, so adding
      * the URL branch cannot have changed them.
      */
