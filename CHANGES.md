@@ -20,6 +20,9 @@
 - **The sidebar folds away and comes back on hover**  
   The sidebar's toggle and the way out of the page used to float over the content, one on each side, and the toggle covered the page title once the sidebar was folded. A thin bar across the top now holds both: the toggle at its left, which never moves, and the way back to My courses at its right. Folding the sidebar slides it out and the content over; hovering the toggle while it is folded shows the sidebar on top of the content, without moving anything, and moving away hides it again; a click pins it back. The choice is remembered, and the `[` key toggles it.
 
+- **The way a course starts is chosen in the composer**  
+  Free creation or from a template used to be two tabs at the top of the sidebar, always on show, naming a mode for a course that might not be about to start. The choice now sits inside the composer, next to the "+" menu, as a small two-way switch: it is read where the writing happens, the page never presumes a mode, and once a plan exists the switch is gone because the mode is settled. "New course" simply opens a clean page.
+
 ## Fixed
 
 - **Only the activities marked to be rewritten are rewritten**  
