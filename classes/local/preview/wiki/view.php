@@ -17,7 +17,6 @@
 namespace local_coursegen\local\preview\wiki;
 
 use context;
-use html_writer;
 use local_coursegen\local\preview\json_store;
 use moodle_url;
 use stdClass;
@@ -186,17 +185,11 @@ class view {
      * @return string
      */
     protected function action_bar(stdClass $page): string {
-        global $OUTPUT;
-        $index = $this->index_of($page);
-        $urlselect = $this->get_action_selector($index);
-        $data = [
-            'urlselect' => $urlselect->export_for_template($OUTPUT),
-        ];
-        // The print view of a page is the page itself, in the preview.
-        $printlink = ($this->urls)($index, ['print' => 1]);
-        $data['printbutton'] = html_writer::link($printlink, get_string('print', 'mod_wiki'),
-            ['class' => 'btn btn-secondary', 'target' => "_blank"]);
-        return $OUTPUT->render_from_template('mod_wiki/action_bar', $data);
+        // The real bar is a menu to edit, comment on, map and administer the
+        // page, and a button to print it. Nobody may act on an activity that does not exist: the
+        // bar is not drawn. The page's own links stay, and move within the
+        // preview.
+        return '';
     }
 
     /**

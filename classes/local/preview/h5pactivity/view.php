@@ -16,7 +16,6 @@
 
 namespace local_coursegen\local\preview\h5pactivity;
 
-use action_link;
 use context;
 use core_h5p\local\library\autoloader;
 use core_h5p\factory;
@@ -24,7 +23,6 @@ use core_h5p\helper;
 use local_coursegen\local\preview\json_file;
 use local_coursegen\local\preview\json_store;
 use moodle_url;
-use pix_icon;
 use stdClass;
 
 /**
@@ -102,15 +100,9 @@ class view {
         }
 
         $extraactions = [];
-        if ($this->can_view_all_attempts() && $this->is_tracking_enabled()) {
-            $extraactions[] = new action_link(
-                $this->url_to(['report' => 1]),
-                get_string('viewattempts', 'mod_h5pactivity', $this->count_attempts()),
-                null,
-                null,
-                new pix_icon('i/chartbar', '', 'core')
-            );
-        }
+        // The real page offers the attempts report and, below the player,
+        // editing the content. Nobody may act on an activity that does not
+        // exist: neither is offered.
 
         if ($this->file === null || $this->file->get_url() === null) {
             return $output . $OUTPUT->notification(get_string('courseai_preview_empty', 'local_coursegen'),
@@ -119,7 +111,7 @@ class view {
 
         $core = (new factory())->get_core();
         $config = helper::decode_display_options($core, (int) $this->instance->displayoptions);
-        $output .= $this->display($this->file->get_url(), $config, true, 'mod_h5pactivity', true, $extraactions);
+        $output .= $this->display($this->file->get_url(), $config, true, 'mod_h5pactivity', false, $extraactions);
         return $output;
     }
 

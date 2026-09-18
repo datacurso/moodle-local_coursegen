@@ -153,27 +153,13 @@ class view {
         // Determine whether a start attempt button should be displayed.
         $viewobj->quizhasquestions = !empty($this->slots);
         $viewobj->preventmessages = [];
-        if (!$viewobj->quizhasquestions) {
-            $viewobj->buttontext = '';
-        } else {
-            if ($unfinished) {
-                if ($canpreview) {
-                    $viewobj->buttontext = get_string('continuepreview', 'quiz');
-                } else if ($canattempt) {
-                    $viewobj->buttontext = get_string('continueattemptquiz', 'quiz');
-                }
-            } else {
-                if ($canpreview) {
-                    $viewobj->buttontext = get_string('previewquizstart', 'quiz');
-                } else if ($canattempt) {
-                    $viewobj->buttontext = get_string('attemptquiz', 'quiz');
-                }
-            }
-
-            // Users who can preview the quiz should be able to see all messages for not being able to access the quiz.
-            if ($canpreview) {
-                $viewobj->preventmessages = $this->prevent_access();
-            }
+        // The real page offers to attempt or to preview the quiz. Nobody may
+        // act on an activity that does not exist: no button is offered, and
+        // the questions follow below instead. What would keep a reader out is
+        // still said, because it describes the quiz.
+        $viewobj->buttontext = '';
+        if ($viewobj->quizhasquestions && $canpreview) {
+            $viewobj->preventmessages = $this->prevent_access();
         }
 
         $out = $this->view_page($viewobj);

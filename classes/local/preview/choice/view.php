@@ -337,22 +337,9 @@ class view {
         $html .= html_writer::empty_tag('input', array('type'=>'hidden', 'name'=>'action', 'value'=>'makechoice'));
         $html .= html_writer::empty_tag('input', array('type'=>'hidden', 'name'=>'id', 'value'=>$coursemoduleid));
 
-        if (empty($options['previewonly'])) {
-            if (!empty($options['hascapability']) && ($options['hascapability'])) {
-                if ($availableoption < 1) {
-                    $html .= html_writer::tag('label', get_string('choicefull', 'choice'));
-                } else {
-                    $html .= html_writer::empty_tag('input', array(
-                        'type' => 'submit',
-                        'value' => get_string('savemychoice', 'choice'),
-                        'class' => 'btn btn-primary'
-                    ));
-                }
-                // "Remove my choice" follows a response; there is none.
-            } else {
-                $html .= html_writer::tag('label', get_string('havetologin', 'choice'));
-            }
-        }
+        // The real form ends with the button that saves a choice, or with the
+        // reason it cannot be saved. Nobody may act on an activity that does not exist, so the
+        // options are shown and nothing follows them.
 
         $html .= html_writer::end_tag('form');
 

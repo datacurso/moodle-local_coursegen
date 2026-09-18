@@ -168,7 +168,8 @@ class view {
 
         $out .= $OUTPUT->box_start('generalbox feedback_description');
         $out .= ($this->intro)($feedback);
-        $out .= $this->main_action_bar($viewcompletion);
+        // The real page offers editing the questions, previewing them and
+        // answering. Nobody may act on an activity that does not exist: none is offered.
         $out .= $OUTPUT->box_end();
 
         if (has_capability('mod/feedback:edititems', $context)) {

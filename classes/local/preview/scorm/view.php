@@ -194,48 +194,10 @@ class view {
         // Is this the first attempt ?
         $attemptcount = $this->scorm_get_attempt_count();
 
-        // Do not give the player launch FORM if the SCORM object is locked after the final attempt.
-        if ($scorm->lastattemptlock == 0 || $result->attemptleft > 0) {
-                $output .= html_writer::start_div('scorm-center');
-                $output .= html_writer::start_tag('form', ['id' => 'scormviewform',
-                                                            'method' => 'post',
-                                                            'action' => $this->player_url()->out(false)]);
-            if ($scorm->hidebrowse == 0) {
-                $output .= html_writer::tag('button', get_string('browse', 'scorm'),
-                        ['class' => 'btn btn-secondary me-1', 'name' => 'mode',
-                            'type' => 'submit', 'id' => 'b', 'value' => 'browse'])
-                    . html_writer::end_tag('button');
-            } else {
-                $output .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'mode', 'value' => 'normal']);
-            }
-            $output .= html_writer::tag('button', get_string('enter', 'scorm'),
-                    ['class' => 'btn btn-primary mx-1', 'name' => 'mode',
-                        'type' => 'submit', 'id' => 'n', 'value' => 'normal'])
-                 . html_writer::end_tag('button');
-
-            if (!empty($scorm->forcenewattempt)) {
-                if ($scorm->forcenewattempt == SCORM_FORCEATTEMPT_ALWAYS ||
-                        ($scorm->forcenewattempt == SCORM_FORCEATTEMPT_ONCOMPLETE && $incomplete === false)) {
-                    $output .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'newattempt', 'value' => 'on']);
-                }
-            } else if (!empty($attemptcount) && ($incomplete === false) &&
-                    (($result->attemptleft > 0) || ($scorm->maxattempt == 0))) {
-                $output .= html_writer::start_div('pt-1');
-                $output .= html_writer::checkbox('newattempt', 'on', false, '', ['id' => 'a']);
-                $output .= html_writer::label(get_string('newattempt', 'scorm'), 'a', true, ['class' => 'ps-1']);
-                $output .= html_writer::end_div();
-            }
-            if (!empty($scorm->popup)) {
-                $output .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'display', 'value' => 'popup']);
-            }
-
-            $output .= html_writer::empty_tag('br');
-            $output .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'scoid', 'value' => $launchsco]);
-            $output .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'cm', 'value' => $this->cm->id]);
-            $output .= html_writer::empty_tag('input', ['type' => 'hidden', 'name' => 'currentorg', 'value' => $orgidentifier]);
-            $output .= html_writer::end_tag('form');
-            $output .= html_writer::end_div();
-        }
+        // The real page ends with the form that previews or enters the
+        // package. Nobody may act on an activity that does not exist: the
+        // table of contents above says what the package holds, and nothing
+        // enters it.
         return $output;
     }
 
