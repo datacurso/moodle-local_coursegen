@@ -58,6 +58,7 @@ import {makeEmitLog, makeRenderPlanMarkdown} from 'local_coursegen/courseai/boot
 import {makeHydratePlan} from 'local_coursegen/courseai/bootstrap/hydrate-plan';
 import {createExecutionControls} from 'local_coursegen/local/courseai/actions/execution-control';
 import {wireTemplateMode} from 'local_coursegen/local/courseai/template_mode';
+import {wireStartPath} from 'local_coursegen/local/courseai/start_path';
 
 /**
  * Initialize the courseai page.
@@ -99,6 +100,9 @@ export const init = async(params) => {
             YUI,
             texts,
         });
+
+        // The first screen (which starting point) and the bar that names it.
+        const startPath = wireStartPath({state, contextUi});
 
         const stepsUi = createStepsUi({
             state,
@@ -278,6 +282,8 @@ export const init = async(params) => {
             if (elements.contextView) {
                 elements.contextView.style.display = '';
             }
+            // Nothing to resume: start over, from the first screen.
+            startPath.showChooser();
         };
 
         try {
@@ -297,14 +303,16 @@ export const init = async(params) => {
         stepsUi.updateFlowNav();
         contextUi.updateGenerateButton();
 
-        // The old template page is now "this page, with a template attached":
-        // ?templateid= attaches it, ?mode=template opens the list to pick one.
+        // The old template page is now the template path of this one, entered
+        // without the first screen: ?templateid= with that template chosen,
+        // ?mode=template with the list open to choose one.
         if (!resumeSessionId) {
             const preselect = parseInt(params?.preselecttemplateid || 0, 10);
             if (preselect > 0) {
+                startPath.setStartPath('template', {openList: false});
                 contextUi.selectTemplate(preselect);
             } else if (params?.opentemplates) {
-                contextUi.openTemplatePopover('templatesPopover', document.getElementById('btnTemplates'));
+                startPath.setStartPath('template');
             }
         }
 

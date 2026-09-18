@@ -14,14 +14,16 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * The attached template: the lists that pick it and what picking it does.
+ * The chosen template: the list that picks it and what picking it does.
  *
- * There is no template "mode" the professor enters. A template is attached
- * from the composer, the way a syllabus is, and attaching one is what opens
- * the template layout: the native picker's <select> (the value
- * template_mode.js listens to) is set and told it changed, the workspace
- * gets the `is-template` class, the free hero hides and the template column
- * shows, with the professor's text carried over. Detaching reverses all of it.
+ * "From a template" is a starting point chosen on the page's first screen
+ * (start_path.js), and this module is what happens inside it. Picking a
+ * template from the list sets the native picker's <select> (the value
+ * template_mode.js listens to) and tells it it changed, so the structure
+ * loads; removing it clears the select and the column goes back to offering
+ * the list. Opening and closing the template layout itself (the `is-template`
+ * class, the shared ids, the professor's text carried between composers) is
+ * exposed here too, for start_path.js to drive.
  *
  * The two layouts share the ids of their thread and decision elements
  * (data-shared-id): only the column that is active carries them, so every
@@ -34,18 +36,9 @@
 
 import {escapeHtml} from 'local_coursegen/local/courseai/utils';
 
-/** The lists a template can be picked from: their <ul> and their search box. */
+/** The list a template is picked from: its <ul> and its search box. */
 const LISTS = [
-    {list: 'templateList', search: 'templateSearch'},
-    {list: 'templateListCompact', search: 'templateSearchCompact'},
     {list: 'templateListTpl', search: 'templateSearchTpl'},
-];
-
-/** The chips that show the attached template: chip element and its name span. */
-const CHIPS = [
-    {chip: 'chipTemplate', name: 'chipTemplateName', row: 'chipsRow'},
-    {chip: 'compactChipTemplate', name: 'compactChipTemplateName', row: 'compactChipsRow'},
-    {chip: 'tplChipTemplate', name: 'tplChipTemplateName', row: 'tplChipsRow'},
 ];
 
 /**
@@ -66,20 +59,6 @@ const claimSharedIds = (templateActive) => {
 };
 
 /**
- * Show or hide a chips row depending on whether any chip in it is visible.
- *
- * @param {string} rowId
- */
-const syncChipsRow = (rowId) => {
-    const row = document.getElementById(rowId);
-    if (!row) {
-        return;
-    }
-    const visible = row.querySelector('.chip:not(.hidden)');
-    row.style.display = visible ? 'flex' : 'none';
-};
-
-/**
  * Create template interaction handlers.
  *
  * @param {Object} params
@@ -89,7 +68,9 @@ const syncChipsRow = (rowId) => {
  *   renderTemplateLists: Function,
  *   selectTemplate: Function,
  *   detachTemplate: Function,
- *   getSelectedTemplate: Function
+ *   getSelectedTemplate: Function,
+ *   setTemplateLayout: Function,
+ *   closeTemplatePopovers: Function
  * }}
  */
 export const createTemplateHandlers = ({state, texts}) => {
@@ -141,21 +122,25 @@ export const createTemplateHandlers = ({state, texts}) => {
     };
 
     /**
-     * Show the attached template in every chip and in the template card.
+     * Show the chosen template in the card, and let the composer be used only
+     * once there is one: before that, the column's whole job is to pick it.
      */
     const refreshTemplateChrome = () => {
         const template = getSelectedTemplate();
-        CHIPS.forEach(({chip, name, row}) => {
-            const chipEl = document.getElementById(chip);
-            const nameEl = document.getElementById(name);
-            if (nameEl) {
-                nameEl.textContent = template ? template.name : '';
+        const promptInput = document.getElementById('tplPromptInput');
+        const plusBtn = document.getElementById('tplBtnPlusMenu');
+        if (promptInput) {
+            if (!promptInput.dataset.placeholderReady) {
+                promptInput.dataset.placeholderReady = promptInput.placeholder;
             }
-            if (chipEl) {
-                chipEl.classList.toggle('hidden', !template);
-            }
-            syncChipsRow(row);
-        });
+            promptInput.disabled = !template;
+            promptInput.placeholder = template
+                ? promptInput.dataset.placeholderReady
+                : (texts.courseai_template_prompt_locked || promptInput.dataset.placeholderReady);
+        }
+        if (plusBtn) {
+            plusBtn.disabled = !template;
+        }
         const thumb = document.getElementById('tplCardThumb');
         const nameEl = document.getElementById('tplCardName');
         const courseEl = document.getElementById('tplCardCourse');
@@ -211,10 +196,8 @@ export const createTemplateHandlers = ({state, texts}) => {
         workspace.classList.toggle('is-template', on);
         if (on) {
             carryPrompt('promptInput', 'tplPromptInput');
-            document.getElementById('tplPromptInput')?.focus();
         } else {
             carryPrompt('tplPromptInput', 'promptInput');
-            document.getElementById('promptInput')?.focus();
         }
     };
 
@@ -237,7 +220,7 @@ export const createTemplateHandlers = ({state, texts}) => {
     };
 
     /**
-     * Attach a template (or detach it, when it is the one already attached).
+     * Choose a template. Choosing the one already chosen just closes the list.
      *
      * @param {string|number} id
      */
@@ -246,7 +229,7 @@ export const createTemplateHandlers = ({state, texts}) => {
         const currentId = state.selectedTemplateId !== null && state.selectedTemplateId !== undefined
             ? String(state.selectedTemplateId) : null;
         if (currentId === strId) {
-            detachTemplate();
+            closeTemplatePopovers();
             return;
         }
         const template = (state.templates || []).find((t) => String(t.id) === strId);
@@ -259,17 +242,18 @@ export const createTemplateHandlers = ({state, texts}) => {
         setPickerValue(strId);
         setTemplateLayout(true);
         closeTemplatePopovers();
+        document.getElementById('tplPromptInput')?.focus();
     };
 
     /**
-     * Detach the template and return to free creation.
+     * Remove the chosen template. The path stays "from a template": the column
+     * offers the list again.
      */
     const detachTemplate = () => {
         state.selectedTemplateId = null;
         refreshTemplateChrome();
         renderTemplateLists();
         setPickerValue('');
-        setTemplateLayout(false);
         closeTemplatePopovers();
     };
 
@@ -285,5 +269,15 @@ export const createTemplateHandlers = ({state, texts}) => {
         });
     };
 
-    return {renderTemplateLists, selectTemplate, detachTemplate, getSelectedTemplate, closeTemplatePopovers};
+    // The composer starts locked: nothing to adapt until a template is chosen.
+    refreshTemplateChrome();
+
+    return {
+        renderTemplateLists,
+        selectTemplate,
+        detachTemplate,
+        getSelectedTemplate,
+        setTemplateLayout,
+        closeTemplatePopovers,
+    };
 };

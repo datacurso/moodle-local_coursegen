@@ -141,11 +141,11 @@ const updateStats = (tplState, statsTemplate) => {
  * @param {Object} state
  */
 export const wireTemplateMode = (state) => {
-    // There is no template "mode": a template is attached from the composer
-    // (context/template.js), and that sets the native picker form's <select>
+    // The template is chosen from the column's own list (context/template.js),
+    // which sets the native picker form's <select>
     // (classes/form/course_template_picker_form.php, rendered hidden) and
     // dispatches its 'change'. Everything below listens to that select, so
-    // the structure loads and clears the same way whichever list picked it.
+    // the structure loads and clears the same way however it was set.
     // Moodleform's default id for an unnamed-id element is "id_<fieldname>".
     const tplSelect = document.getElementById('id_templateid');
     const container = document.getElementById('tplModeStructure');
@@ -295,7 +295,6 @@ const refreshSyllabusChip = (tplState) => {
         chip.classList.toggle('hidden', !hasFile);
     }
     if (chipsRow) {
-        // The row also carries the attached template's chip (context/template.js).
         const anyChip = chipsRow.querySelector('.chip:not(.hidden)');
         chipsRow.style.display = anyChip ? 'flex' : 'none';
     }
