@@ -311,6 +311,7 @@
                 <ul class="pop-list" id="templateList" role="listbox" aria-label="{{#str}}courseai_templates_list_label, local_coursegen{{/str}}"></ul>
               </div>
             </div>
+            {{> local_coursegen/mode_switch }}
 
             <!-- Hidden file manager container for Moodle file picker -->
             <div class="hidden" id="syllabusFilemanager"></div>
@@ -828,6 +829,7 @@
                 <ul class="pop-list" id="langListTpl" role="listbox" aria-label="{{#str}}courseai_lang_arialabel, local_coursegen{{/str}}"></ul>
               </div>
             </div>
+            {{> local_coursegen/mode_switch }}
 
             {{! Hidden language select: source of truth, options populated by JS
                 from the same languages array as free mode }}

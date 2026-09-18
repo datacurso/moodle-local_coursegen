@@ -268,55 +268,14 @@ export const initSidebar = () => {
         backdrop.addEventListener('click', closeSidebar);
     }
 
-    // ─── New course button: opens the mode-picking menu ──────────────
-    // The mode used to be a persistent tab strip above this button; now it
-    // is the explicit choice made right here, so picking one always wins
-    // over whatever mode the current page happens to be in — no more
-    // "preserve the current mode" carry-over.
-    const newMenu = document.getElementById('courseaiNewMenu');
-    if (btnNew && newMenu) {
-        const closeNewMenu = () => {
-            newMenu.hidden = true;
-            btnNew.setAttribute('aria-expanded', 'false');
-        };
-        const openNewMenu = () => {
-            newMenu.hidden = false;
-            btnNew.setAttribute('aria-expanded', 'true');
-        };
-        const isNewMenuOpen = () => !newMenu.hidden;
-
+    // ─── New course button ───────────────────────────────────────────
+    // A clean page, no query string: the creation mode is chosen in the
+    // composer (mode_switch partial), so nothing from the current page
+    // carries over. No closeSidebar() here: the page navigates away at
+    // once, so collapsing first only flashes the close animation.
+    if (btnNew) {
         btnNew.addEventListener('click', () => {
-            if (isNewMenuOpen()) {
-                closeNewMenu();
-            } else {
-                openNewMenu();
-            }
-        });
-
-        // Clicks inside the menu must not reach the document-level closer.
-        newMenu.addEventListener('click', (event) => {
-            event.stopPropagation();
-            const item = event.target.closest('[data-mode]');
-            if (!item) {
-                return;
-            }
-            const url = new URL('aicoursecreation.php', window.location.href);
-            if (item.dataset.mode === 'template') {
-                url.searchParams.set('mode', 'template');
-            }
-            window.location.href = url.toString();
-        });
-
-        document.addEventListener('click', (event) => {
-            if (isNewMenuOpen() && !newMenu.contains(event.target) && !btnNew.contains(event.target)) {
-                closeNewMenu();
-            }
-        });
-
-        document.addEventListener('keydown', (event) => {
-            if (event.key === 'Escape' && isNewMenuOpen()) {
-                closeNewMenu();
-            }
+            window.location.href = new URL('aicoursecreation.php', window.location.href).toString();
         });
     }
 

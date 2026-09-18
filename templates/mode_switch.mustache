@@ -1,0 +1,50 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/mode_switch
+
+    Segmented switch between the two ways of starting a course, free creation
+    and from a template. It sits inside the composer toolbar, next to the "+"
+    menu, so the decision lives where the writing happens and the page never
+    presumes a mode the user did not pick. The mode is a page-level query
+    parameter, so each segment is a plain link and the current one is marked.
+
+    Context variables required for this template:
+    * templatemodeactive bool - whether the page is in template mode.
+
+    Example context (json):
+    {
+        "templatemodeactive": false
+    }
+}}
+<nav class="courseai-mode-seg" aria-label="{{#str}}courseai_mode_switch, local_coursegen{{/str}}">
+  <a class="courseai-mode-seg-item{{^templatemodeactive}} is-active{{/templatemodeactive}}"
+     href="aicoursecreation.php"{{^templatemodeactive}} aria-current="page"{{/templatemodeactive}}>
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="m12 3-1.9 5.8a2 2 0 0 1-1.287 1.288L3 12l5.8 1.9a2 2 0 0 1 1.288 1.287L12 21l1.9-5.8a2 2 0 0 1 1.287-1.288L21 12l-5.8-1.9a2 2 0 0 1-1.288-1.287Z"/>
+    </svg>
+    <span>{{#str}}courseai_mode_free, local_coursegen{{/str}}</span>
+  </a>
+  <a class="courseai-mode-seg-item{{#templatemodeactive}} is-active{{/templatemodeactive}}"
+     href="aicoursecreation.php?mode=template"{{#templatemodeactive}} aria-current="page"{{/templatemodeactive}}>
+    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/>
+      <path d="M15 3v4a2 2 0 0 0 2 2h4"/>
+    </svg>
+    <span>{{#str}}courseai_mode_template, local_coursegen{{/str}}</span>
+  </a>
+</nav>

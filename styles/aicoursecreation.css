@@ -4835,6 +4835,42 @@ body.cg-generating :is(#prvSections, #tplModeStructure) .dp-add-subsection-wrap 
   display: inline-flex;
 }
 
+/* Mode switch: the pill next to the "+" that picks free vs template.
+   See templates/mode_switch.mustache. */
+.courseai-mode-seg {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--muted);
+  flex: 0 0 auto;
+}
+.tbar-left .courseai-mode-seg { margin-left: 6px; }
+.courseai-mode-seg-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted-fg);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background .15s, color .15s;
+}
+.courseai-mode-seg-item:hover { color: var(--fg); text-decoration: none; }
+.courseai-mode-seg-item.is-active {
+  background: var(--card);
+  color: var(--fg);
+  font-weight: 600;
+  box-shadow: 0 1px 2px hsl(215 28% 17% / .12);
+}
+.courseai-mode-seg-item:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.courseai-mode-seg-item svg { flex-shrink: 0; }
+
 .plus-menu-btn {
   display: inline-flex;
   align-items: center;
