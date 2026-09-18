@@ -31,6 +31,7 @@ import Notification from 'core/notification';
 import YUI from 'core/yui';
 import {initFilepicker} from '../../../repository/courseai';
 import {bindToggleWrap, showFilePicker} from '../context/filepicker';
+import {wirePlusMenu} from '../context/plus-menu';
 
 /**
  * Show/refresh or hide the input bar's syllabus chip to match tplState.
@@ -69,9 +70,14 @@ export const refreshSyllabusChip = (tplState) => {
 export const wireInputBar = (tplState, state) => {
     // Adaptation prompt — composer textarea, value tracked in tplState.
     const promptInput = document.getElementById('tplPromptInput');
+    const genBtn = document.getElementById('tplModeGenerate');
     if (promptInput) {
         promptInput.addEventListener('input', () => {
             tplState.prompt = promptInput.value;
+            // Same cue as free mode's send button: filled once there is text.
+            if (genBtn) {
+                genBtn.classList.toggle('is-ready', promptInput.value.trim() !== '');
+            }
         });
     }
 
@@ -95,6 +101,21 @@ export const wireInputBar = (tplState, state) => {
             tplState.lang = langSelect.value;
         });
     }
+
+    // "+" options menu (Sílabo / Idioma / Imágenes) — the same module free
+    // mode's compact composer uses, over this bar's own elements.
+    wirePlusMenu({
+        button: document.getElementById('tplBtnPlusMenu'),
+        panel: document.getElementById('tplPlusMenuPanel'),
+        langItem: document.getElementById('pmTplLangItem'),
+        langValue: document.getElementById('pmTplLangValue'),
+        langPopover: document.getElementById('langPopoverTpl'),
+        langSearch: document.getElementById('langSearchTpl'),
+        langList: document.getElementById('langListTpl'),
+        langCloseBtn: document.getElementById('langPopoverTplClose'),
+        langSelect,
+        languages: state.languages || [],
+    });
 
     // Generate-images toggle — same toggle-track pattern as free mode.
     const imgToggleWrap = document.getElementById('tplImgToggleWrap');

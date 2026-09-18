@@ -371,84 +371,10 @@ svg { display: block; flex-shrink: 0; }
   scrollbar-width: thin;
 }
 
-/* Input bar pinned at the panel bottom, chat-composer style. Its toolbar is
-   one row that fits the 450px column: attach, images, language on the left,
-   Generate on the right; below ~380px of card the Generate label folds into
-   its icon rather than the row wrapping. */
+/* Input bar pinned at the panel bottom: free mode's compact-chat-card
+   (chatui.css) with nothing added, so both modes share one composer. */
 .tpl-input-bar {
   flex: 0 0 auto;
-  container-type: inline-size;
-}
-/* .compact-prompt-textarea (chatui.css) expects the card to supply the outer
-   padding — the compact chat card does; this bare .card does it here. */
-.tpl-input-bar .compact-prompt-textarea {
-  padding: 10px 12px 4px;
-  min-height: 54px;
-}
-.tpl-input-bar .chips-row {
-  padding-top: 8px;
-}
-.tpl-input-bar .card-toolbar {
-  gap: 6px;
-  padding: 6px 8px;
-  flex-wrap: nowrap;
-  min-width: 0;
-}
-.tpl-input-bar .tbar-left {
-  gap: 4px;
-  min-width: 0;
-  flex: 1 1 auto;
-}
-.tpl-input-bar .plus-menu-btn {
-  width: 32px;
-  height: 32px;
-  flex: none;
-}
-.tpl-input-bar .tbar-toggle-wrap {
-  height: 30px;
-  padding: 0 6px;
-  gap: 6px;
-  flex: none;
-}
-.tpl-input-bar .tbar-toggle-label {
-  font-size: 13px;
-}
-.tpl-input-bar .tbar-select {
-  height: 30px;
-  padding: 0 10px;
-  font-size: 13px;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: transparent;
-  flex: 0 1 130px;
-  min-width: 64px;
-  max-width: 130px;
-}
-.tpl-input-bar .tbar-right {
-  gap: 6px;
-  flex: none;
-}
-/* The send control is a round icon button, the way chat composers do it;
-   the button's name stays for assistive tech and as the tooltip. */
-.tpl-input-bar .btn-generate {
-  width: 34px;
-  height: 34px;
-  padding: 0;
-  border-radius: 50%;
-  justify-content: center;
-  flex: none;
-}
-.tpl-input-bar .btn-generate svg {
-  width: 16px;
-  height: 16px;
-}
-.tpl-input-bar .btn-generate .btn-generate__label {
-  position: absolute;
-  width: 1px;
-  height: 1px;
-  overflow: hidden;
-  clip: rect(0 0 0 0);
-  white-space: nowrap;
 }
 
 /* Badge row at the top of the main column: "N sections · M activities" stats
