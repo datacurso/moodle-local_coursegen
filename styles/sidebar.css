@@ -49,14 +49,29 @@
   min-width: 0;
   white-space: nowrap;
 }
+.courseai-topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  transition: opacity calc(var(--courseai-sidebar-t) * .6) var(--courseai-sidebar-ease);
+}
 .courseai-topbar-logo {
   width: 20px;
   height: 20px;
   object-fit: contain;
   flex-shrink: 0;
-  transition: opacity calc(var(--courseai-sidebar-t) * .6) var(--courseai-sidebar-ease);
 }
-.courseai-app-layout.sidebar-closed .courseai-topbar-logo {
+.courseai-topbar-name {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.courseai-app-layout.sidebar-closed .courseai-topbar-brand {
   opacity: 0;
   pointer-events: none;
 }
@@ -220,7 +235,7 @@
 
 @media (prefers-reduced-motion: reduce) {
   .courseai-topbar,
-  .courseai-topbar-logo,
+  .courseai-topbar-brand,
   .courseai-sidebar-toggle-icon,
   .courseai-app-body,
   .courseai-sidebar {
