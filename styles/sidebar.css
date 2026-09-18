@@ -12,7 +12,7 @@
    move together. Only grid-template-columns is animated: never width or
    padding, which relayout every frame. */
 :root {
-  --courseai-topbar-h: 36px;
+  --courseai-topbar-h: 40px;
   --courseai-sidebar-t: 320ms;
   --courseai-sidebar-ease: cubic-bezier(.22, 1, .36, 1);
   --courseai-float-t: 220ms;
@@ -39,7 +39,7 @@
 }
 /* Closed: the left cell shrinks to just the toggle, which stays put. */
 .courseai-app-layout.sidebar-closed .courseai-topbar {
-  grid-template-columns: 44px minmax(0, 1fr);
+  grid-template-columns: 48px minmax(0, 1fr);
 }
 .courseai-topbar-left {
   display: flex;
@@ -72,8 +72,8 @@
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  height: 26px;
-  padding: 0 8px;
+  height: 28px;
+  padding: 0 9px;
   border-radius: 6px;
   color: var(--danger);
   font-size: 13.5px;
@@ -97,8 +97,8 @@
   align-items: center;
 }
 .courseai-sidebar-toggle {
-  width: 28px;
-  height: 28px;
+  width: 30px;
+  height: 30px;
   border: 0;
   border-radius: 8px;
   background: transparent;
