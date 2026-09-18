@@ -16,39 +16,96 @@
 
 namespace local_coursegen\local\preview;
 
+use local_coursegen\local\preview\glossary\view;
+use moodle_url;
+
 /**
- * A glossary's entries, drawn the way mod_glossary draws them.
+ * A glossary, drawn by mod_glossary's own view code run against the payload.
  *
- * Each entry is its concept over its definition, which is the shape the
- * glossary's own listing uses whichever display format it is set to.
+ * The entries a glossary holds are written by its users, so a kept glossary
+ * arrives without them and previews as the empty glossary it will be created
+ * as. A glossary the run writes arrives with the entries the plan intends,
+ * which are put in as the rows mod_glossary reads.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class glossary_preview extends activity_preview {
+class glossary_preview extends ported_preview {
     /**
-     * Every entry, in order.
+     * The module's short name.
+     *
+     * @return string
+     */
+    protected function modname(): string {
+        return 'glossary';
+    }
+
+    /**
+     * The plan's entries become the glossary's rows.
+     *
+     * @param json_store $store
+     */
+    protected function overlay(json_store $store): void {
+        $rows = $store->get_records('glossary');
+        if (!$rows) {
+            return;
+        }
+        $glossary = reset($rows);
+        $now = time();
+        $id = 1;
+        foreach (($this->parameters['mod_settings']['entries'] ?? []) as $entry) {
+            $definition = $entry['definition_editor'] ?? ($entry['definition'] ?? '');
+            if (is_array($definition)) {
+                $definition = $definition['text'] ?? '';
+            }
+            $store->add('glossary_entries', [
+                'id' => $id++,
+                'glossaryid' => $glossary->id,
+                'userid' => 0,
+                'concept' => (string) ($entry['concept'] ?? ''),
+                'definition' => (string) $definition,
+                'definitionformat' => FORMAT_HTML,
+                'definitiontrust' => 0,
+                'attachment' => '',
+                'timecreated' => $now,
+                'timemodified' => $now,
+                'teacherentry' => 1,
+                'sourceglossaryid' => 0,
+                'usedynalink' => (int) ($glossary->usedynalink ?? 0),
+                'casesensitive' => 0,
+                'fullmatch' => 1,
+                'approved' => 1,
+            ]);
+        }
+    }
+
+    /**
+     * The glossary page, browsing by letter.
      *
      * @return string
      */
     public function render(): string {
-        global $OUTPUT;
-
-        $entries = $this->items('entries');
-        if (!$entries) {
+        $glossary = $this->instance();
+        if ($glossary === null) {
             return $this->nothing_yet();
         }
 
-        $out = '';
-        foreach ($entries as $entry) {
-            $concept = format_string((string) ($entry['concept'] ?? ''));
-            $out .= $OUTPUT->box(
-                \html_writer::tag('h4', $concept, ['class' => 'concept'])
-                    . \html_writer::div($this->content($this->field($entry, 'definition')), 'entry'),
-                'glossarypost generalbox'
-            );
+        $displayformat = $this->config_record('glossary_formats', ['name' => $glossary->displayformat]);
+        if (!$displayformat) {
+            $displayformat = (object) ['name' => $glossary->displayformat, 'showtabs' => 'standard', 'popupformatname' => $glossary->displayformat];
         }
-        return $out;
+
+        $view = new view(
+            $glossary,
+            $this->cm(),
+            $this->course(),
+            $this->context(),
+            $this->store(),
+            $displayformat,
+            fn(array $params): moodle_url => $this->url_to(array_intersect_key($params, ['hook' => 1, 'page' => 1, 'mode' => 1]))
+        );
+        $hook = optional_param('hook', 'ALL', PARAM_ALPHANUMEXT);
+        return $view->page($hook, $this->page);
     }
 }
