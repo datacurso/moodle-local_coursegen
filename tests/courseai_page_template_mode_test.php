@@ -36,23 +36,18 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
     /** @var string Sentinel markup standing in for the server-rendered picker form. */
     private const PICKER_SENTINEL = '<div class="tpl-picker-sentinel"></div>';
 
-    /** @var string Sentinel markup standing in for the server-rendered empty state. */
-    private const EMPTY_SENTINEL = '<div class="tpl-empty-sentinel"></div>';
-
     /**
      * Render the courseai_page template with a minimal context.
      *
-     * @param bool $templatemode Whether template mode is active.
      * @return string Rendered HTML.
      */
-    private function render_page(bool $templatemode): string {
+    private function render_page(): string {
         global $OUTPUT;
 
         return $OUTPUT->render_from_template('local_coursegen/courseai_page', [
             'guidelines' => '[]',
             'coursetemplates' => [],
             'templatepickerformhtml' => self::PICKER_SENTINEL,
-            'templateemptystatehtml' => self::EMPTY_SENTINEL,
             'hascoursetemplates' => false,
             'languages' => '[]',
             'defaultlang' => 'en',
@@ -62,32 +57,45 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
             'allsessions' => [],
             'isresuming' => false,
             'showsessionsview' => false,
-            'templatemodeactive' => $templatemode,
             'subsectionsenabled' => false,
             'closeurl' => (new \moodle_url('/my/courses.php'))->out(false),
         ]);
     }
 
     /**
-     * Template mode renders the left panel: picker form first, input bar below.
+     * The template column renders with the template card first, the hidden
+     * picker form (the select template_mode.js listens to) next, and the
+     * input bar below.
      */
-    public function test_template_mode_renders_left_panel_with_picker_and_input_bar(): void {
+    public function test_template_column_renders_card_picker_and_input_bar(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
 
-        $html = $this->render_page(true);
+        $html = $this->render_page();
 
         $leftpanelpos = strpos($html, 'data-region="tpl-left-panel"');
+        $cardpos = strpos($html, 'id="tplCard"');
         $pickerpos = strpos($html, self::PICKER_SENTINEL);
         $inputbarpos = strpos($html, 'data-region="tpl-input-bar"');
 
         $this->assertNotFalse($leftpanelpos, 'Left panel region missing');
+        $this->assertNotFalse($cardpos, 'Template card missing');
         $this->assertNotFalse($pickerpos, 'Picker form slot missing');
         $this->assertNotFalse($inputbarpos, 'Input bar region missing');
 
-        // Order inside the panel: picker first, input bar pinned at the bottom.
-        $this->assertGreaterThan($leftpanelpos, $pickerpos, 'Picker must render inside/after the left panel');
+        // Order inside the panel: card, hidden picker, input bar pinned at the bottom.
+        $this->assertGreaterThan($leftpanelpos, $cardpos, 'Template card must render inside the left panel');
+        $this->assertGreaterThan($cardpos, $pickerpos, 'Picker must render after the template card');
         $this->assertGreaterThan($pickerpos, $inputbarpos, 'Input bar must render below the picker');
+
+        // The card offers to change or remove the template; the picker is hidden.
+        $this->assertStringContainsString('id="tplCardChange"', $html);
+        $this->assertStringContainsString('id="tplCardRemove"', $html);
+        $this->assertMatchesRegularExpression(
+            '/<div class="hidden" id="templateModeCard">\s*' . preg_quote(self::PICKER_SENTINEL, '/') . '/',
+            $html,
+            'The native picker must render hidden'
+        );
     }
 
     /**
@@ -99,7 +107,7 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
         $this->resetAfterTest();
         $this->setAdminUser();
 
-        $html = $this->render_page(true);
+        $html = $this->render_page();
 
         $inputbarpos = strpos($html, 'data-region="tpl-input-bar"');
         $this->assertNotFalse($inputbarpos, 'Input bar region missing');
@@ -140,20 +148,20 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
     }
 
     /**
-     * Template mode renders the shared splitter and a main column holding the
-     * structure containers, with the empty state shown before a pick.
+     * The shared splitter and a main column holding the structure containers
+     * render alongside the free hero; the layout class is JS-driven, so the
+     * server never emits it.
      */
-    public function test_template_mode_renders_splitter_and_main_column(): void {
+    public function test_template_column_renders_splitter_and_main_column(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
 
-        $html = $this->render_page(true);
+        $html = $this->render_page();
 
-        // The workspace opts into the two-column template grid server-side.
-        $this->assertMatchesRegularExpression(
+        $this->assertDoesNotMatchRegularExpression(
             '/class="courseai-workspace[^"]*\bis-template\b/',
             $html,
-            'Workspace must carry the is-template layout class'
+            'The template layout class is added by JS when a template is attached'
         );
 
         // Shared resizable divider (same element/module as free mode).
@@ -162,10 +170,9 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
         $maincolpos = strpos($html, 'data-region="tpl-main-column"');
         $this->assertNotFalse($maincolpos, 'Main column region missing');
 
-        // Structure containers plus the pre-pick empty state live in the main column.
+        // Structure containers live in the main column.
         foreach (
             [
-                self::EMPTY_SENTINEL,
                 'id="tplModeLimits"',
                 'id="tplModeLimitsBadge"',
                 'id="tplModeStats"',
@@ -197,17 +204,32 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
     }
 
     /**
-     * Free mode renders none of the template-mode layout regions.
+     * Both columns render on every load, the free hero included, and the ids
+     * the two threads share belong to the free thread until a template is
+     * attached: the template column carries them only as data-shared-id.
      */
-    public function test_free_mode_renders_no_template_layout_regions(): void {
+    public function test_free_hero_and_template_column_share_thread_ids_without_duplicates(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
 
-        $html = $this->render_page(false);
+        $html = $this->render_page();
 
-        $this->assertStringNotContainsString('data-region="tpl-left-panel"', $html);
-        $this->assertStringNotContainsString('data-region="tpl-input-bar"', $html);
-        $this->assertStringNotContainsString('data-region="tpl-main-column"', $html);
-        $this->assertStringNotContainsString('is-template', $html);
+        $this->assertStringContainsString('id="contextView"', $html);
+        $this->assertStringContainsString('data-region="tpl-left-panel"', $html);
+        $this->assertStringContainsString('id="heroTemplateLink"', $html);
+        $this->assertStringNotContainsString('courseai-mode-seg', $html);
+        $this->assertStringNotContainsString('courseai-sidebar-modes', $html);
+
+        foreach (
+            [
+                'cgLog', 'cgLogAfter', 'courseaiChecklist', 'courseaiChecklistList', 'cgWorkingSlot',
+                'cgDecisionOverlay', 'cgDecisionBody', 'cgDecisionAccept', 'cgDecisionAdjust',
+            ] as $sharedid
+        ) {
+            // A leading space: the shared marker is data-shared-id="…", not an id.
+            $this->assertSame(1, substr_count($html, ' id="' . $sharedid . '"'), "id {$sharedid} must render once");
+            $this->assertSame(2, substr_count($html, 'data-shared-id="' . $sharedid . '"'),
+                "both columns must declare {$sharedid} as shared");
+        }
     }
 }
