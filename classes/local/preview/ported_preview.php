@@ -199,6 +199,24 @@ abstract class ported_preview extends activity_preview {
     }
 
     /**
+     * One row of a module's configuration, which is the site's and not the activity's.
+     *
+     * A module can keep part of how it is set up in a table of its own that
+     * describes the site's options rather than any activity: mod_glossary's
+     * display formats are one. Those rows are configuration, read the way
+     * get_config() is, and are the one thing a ported module reads from the
+     * database; nothing about the activity itself comes this way.
+     *
+     * @param string $table
+     * @param array $conditions
+     * @return stdClass|false
+     */
+    protected function config_record(string $table, array $conditions) {
+        global $DB;
+        return $DB->get_record($table, $conditions);
+    }
+
+    /**
      * The module's description formatted the way format_module_intro() formats it.
      *
      * Copied from lib/weblib.php format_module_intro() (Moodle 4.5), with the
