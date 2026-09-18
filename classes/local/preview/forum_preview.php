@@ -16,40 +16,99 @@
 
 namespace local_coursegen\local\preview;
 
+use local_coursegen\local\preview\forum\view;
+
 /**
- * A forum's opening discussions, drawn the way mod_forum lists them.
+ * A forum, drawn by mod_forum's own view code run against the payload.
  *
- * A forum's page is its list of discussions, so that is what this is: each one
- * with the subject that opens it and the message underneath, in the post layout
- * the forum uses.
+ * Discussions are the readers', so a forum previews in the state it is in
+ * before anyone posts. A single simple discussion's opening post is written
+ * with the forum, and is not in the payload, so that type previews the same
+ * way.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class forum_preview extends activity_preview {
+class forum_preview extends ported_preview {
+    /** @var view|null */
+    protected ?view $view = null;
+
     /**
-     * Every discussion the forum starts with.
+     * The module's short name.
+     *
+     * @return string
+     */
+    protected function modname(): string {
+        return 'forum';
+    }
+
+    /**
+     * A draft replaces the description and the type.
+     *
+     * @param json_store $store
+     */
+    protected function overlay(json_store $store): void {
+        $rows = $store->get_records('forum');
+        if (!$rows) {
+            return;
+        }
+        $row = reset($rows);
+        $intro = $this->parameters['introeditor'] ?? null;
+        if (is_array($intro)) {
+            $intro = $intro['text'] ?? null;
+        }
+        if (is_string($intro) && trim($intro) !== '') {
+            $store->set('forum', $row->id, 'intro', $intro);
+        }
+        if (!empty($this->parameters['type'])) {
+            $store->set('forum', $row->id, 'type', (string) $this->parameters['type']);
+        }
+    }
+
+    /**
+     * The module's view, built once.
+     *
+     * @return view|null
+     */
+    protected function view(): ?view {
+        if ($this->view !== null) {
+            return $this->view;
+        }
+        $forum = $this->instance();
+        if ($forum === null) {
+            return null;
+        }
+        $course = $this->course();
+        $cmid = (int) ($this->source['cmid'] ?? 0);
+        $modinfo = get_fast_modinfo($course);
+        if (!$cmid || !isset($modinfo->cms[$cmid])) {
+            return null;
+        }
+        $this->view = new view($forum, $modinfo->get_cm($cmid), $course, $this->context(), $this->url_to());
+        return $this->view;
+    }
+
+    /**
+     * The forum page, as mod/forum/view.php draws it.
      *
      * @return string
      */
     public function render(): string {
-        global $OUTPUT;
+        $view = $this->view();
+        return $view === null ? $this->nothing_yet() : $view->page();
+    }
 
-        $discussions = $this->items('discussions');
-        if (!$discussions) {
-            return $this->nothing_yet();
+    /**
+     * mod/forum/view.php: a single simple discussion shows its post, not its description.
+     *
+     * @return string
+     */
+    public function header_description(): string {
+        $forum = $this->instance();
+        if ($forum === null || (string) ($forum->type ?? '') === 'single') {
+            return '';
         }
-
-        $out = '';
-        foreach ($discussions as $discussion) {
-            $subject = format_string((string) ($discussion['subject'] ?? $discussion['name'] ?? ''));
-            $out .= $OUTPUT->box(
-                \html_writer::tag('h4', $subject, ['class' => 'discussionname'])
-                    . \html_writer::div($this->content($this->field($discussion, 'message')), 'post-content-container'),
-                'forumpost generalbox'
-            );
-        }
-        return $out;
+        return parent::header_description();
     }
 }
