@@ -140,10 +140,11 @@ class view {
         $hiddenfields = [
             (object) ['name' => 'id', 'value' => $course->id],
         ];
+        // view.php offers a button to start a discussion to anyone who may
+        // post. Nobody may post to an activity that does not exist, so the
+        // preview offers none; the search box stays, because it is part of
+        // what a forum page looks like and searches nothing here.
         $shownewdiscussionbtn = '';
-        if ($forum->get_type() !== 'single') {
-            $shownewdiscussionbtn = $this->render_new_discussion($USER, $groupid);
-        }
         $data = [
             'action' => $actionurl,
             'hiddenfields' => $hiddenfields,
@@ -242,9 +243,9 @@ class view {
             'enablediscussioncreation' => false,
         ];
 
-        if ($forumview['forum']['capabilities']['create']) {
-            $forumview['newdiscussionhtml'] = $this->get_discussion_form($user, $cm, $groupid);
-        }
+        // The form the button above would open. Without the button it has
+        // no way to be reached, and a preview has nowhere to post it to.
+        $forumview['newdiscussionhtml'] = '';
 
         return $OUTPUT->render_from_template($this->template($forum), $forumview);
     }
