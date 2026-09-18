@@ -6,69 +6,227 @@
   --courseai-sidebar-w: 240px;
 }
 
-/* Toggle button */
-.courseai-sidebar-toggle {
-  position: relative;
-  align-self: flex-end;
-  margin: 8px 8px 0;
-  width: 28px;
-  height: 28px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 5;
-  color: var(--fg);
-  padding: 0;
-  line-height: 1;
-  box-shadow: 0 1px 4px hsl(0, 0%, 0%, 0.08);
-  transition: opacity .2s;
+/* ─── APP SHELL ────────────────────────────────────────────────────────
+   Top bar over a two-column body. Both are grids on the same column
+   template, so the bar's left cell and the sidebar column are one shape and
+   move together. Only grid-template-columns is animated: never width or
+   padding, which relayout every frame. */
+:root {
+  --courseai-topbar-h: 48px;
+  --courseai-sidebar-t: 320ms;
+  --courseai-sidebar-ease: cubic-bezier(.22, 1, .36, 1);
+  --courseai-float-t: 220ms;
 }
 
-.courseai-sidebar-toggle:hover {
-  background: var(--muted);
-}
-
-/* When sidebar is collapsed, toggle button is hidden too */
-.courseai-sidebar.collapsed .courseai-sidebar-toggle {
-  opacity: 0;
-  pointer-events: none;
-}
-
-/* App layout — sidebar + main side by side */
 .courseai-app-layout {
   display: flex;
+  flex-direction: column;
   height: 100vh;
   overflow: hidden;
 }
 
-/* Sidebar panel — static flex item, always visible */
+/* ─── TOP BAR ──────────────────────────────────────────────────────── */
+.courseai-topbar {
+  flex: 0 0 var(--courseai-topbar-h);
+  display: grid;
+  grid-template-columns: var(--courseai-sidebar-w) minmax(0, 1fr);
+  align-items: center;
+  background: var(--card);
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  z-index: 30;
+  transition: grid-template-columns var(--courseai-sidebar-t) var(--courseai-sidebar-ease);
+}
+/* Closed: the left cell shrinks to just the toggle, which stays put. */
+.courseai-app-layout.sidebar-closed .courseai-topbar {
+  grid-template-columns: 52px minmax(0, 1fr);
+}
+.courseai-topbar-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding-left: 10px;
+  min-width: 0;
+  white-space: nowrap;
+}
+.courseai-topbar-logo {
+  width: 24px;
+  height: 24px;
+  object-fit: contain;
+  flex-shrink: 0;
+  transition: opacity calc(var(--courseai-sidebar-t) * .6) var(--courseai-sidebar-ease);
+}
+.courseai-app-layout.sidebar-closed .courseai-topbar-logo {
+  opacity: 0;
+  pointer-events: none;
+}
+.courseai-topbar-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 0 8px;
+  min-width: 0;
+}
+.courseai-topbar-spacer { flex: 1; }
+.courseai-topbar-exit {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 32px;
+  padding: 0 10px;
+  border-radius: 8px;
+  color: var(--muted-fg);
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.courseai-topbar-exit:hover,
+.courseai-topbar-exit:focus-visible {
+  background: var(--muted);
+  color: var(--fg);
+  text-decoration: none;
+}
+
+/* ─── SIDEBAR TOGGLE ───────────────────────────────────────────────────
+   One button, two icons crossfading: the panel glyph while the sidebar is
+   pinned or floating, the menu glyph while it is closed. */
+.courseai-sidebar-toggle-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.courseai-sidebar-toggle {
+  width: 32px;
+  height: 32px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted-fg);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  flex-shrink: 0;
+}
+.courseai-sidebar-toggle:hover {
+  background: var(--muted);
+  color: var(--fg);
+}
+.courseai-sidebar-toggle-icon {
+  position: absolute;
+  transition: opacity 240ms var(--courseai-sidebar-ease), transform 240ms var(--courseai-sidebar-ease);
+}
+.courseai-sidebar-toggle-icon--panel { opacity: 1; }
+.courseai-sidebar-toggle-icon--menu { opacity: 0; transform: scale(.85); }
+.courseai-app-layout.sidebar-closed:not(.sidebar-floating) .courseai-sidebar-toggle {
+  color: var(--fg);
+}
+.courseai-app-layout.sidebar-closed:not(.sidebar-floating) .courseai-sidebar-toggle-icon--panel {
+  opacity: 0;
+  transform: scale(.85);
+}
+.courseai-app-layout.sidebar-closed:not(.sidebar-floating) .courseai-sidebar-toggle-icon--menu {
+  opacity: 1;
+  transform: none;
+}
+
+/* ─── BODY: sidebar column + main ──────────────────────────────────── */
+.courseai-app-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: var(--courseai-sidebar-w) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  overflow: hidden;
+  position: relative;
+  transition: grid-template-columns var(--courseai-sidebar-t) var(--courseai-sidebar-ease);
+}
+.courseai-app-layout.sidebar-closed .courseai-app-body {
+  grid-template-columns: 0px minmax(0, 1fr);
+}
+
+/* ─── SIDEBAR PANEL ────────────────────────────────────────────────────
+   Pinned: a grid column. Closed: slid out of its column on the same curve
+   as the column shrinks, so the two read as one movement. Floating: lifted
+   out of the flow over the content while the toggle is hovered. Explicit
+   grid placement keeps the main column in place when the sidebar leaves
+   the flow. */
 .courseai-sidebar {
+  grid-column: 1;
+  grid-row: 1;
   width: var(--courseai-sidebar-w);
   background: var(--card);
   border-right: 1px solid var(--border);
   color: var(--fg);
   display: flex;
   flex-direction: column;
-  flex-shrink: 0;
-  overflow: hidden;
-  transition: width .25s ease;
-}
-
-.courseai-sidebar.collapsed {
-  width: 0;
-  border-right: none;
-  overflow: hidden;
-}
-
-/* Main content fills remaining space */
-.courseai-app-layout > .app-main,
-.courseai-app-layout > .aicoursecreation-main {
-  flex: 1;
   min-width: 0;
+  min-height: 0;
+  overflow: hidden;
+  transition: transform var(--courseai-sidebar-t) var(--courseai-sidebar-ease), visibility 0s;
+}
+.courseai-app-layout.sidebar-closed .courseai-sidebar {
+  transform: translateX(-100%);
+  visibility: hidden;
+  transition: transform var(--courseai-sidebar-t) var(--courseai-sidebar-ease),
+              visibility 0s var(--courseai-sidebar-t);
+}
+.courseai-app-layout.sidebar-floating .courseai-sidebar,
+.courseai-app-layout.sidebar-floating-out .courseai-sidebar {
+  position: fixed;
+  left: 8px;
+  top: calc(var(--courseai-topbar-h) + 8px);
+  bottom: 8px;
+  width: calc(var(--courseai-sidebar-w) + 8px);
+  z-index: 1035;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 2px 4px hsl(215 28% 17% / .08), 0 24px 48px -16px hsl(215 28% 17% / .35);
+  visibility: visible;
+  transition: transform var(--courseai-float-t) var(--courseai-sidebar-ease),
+              opacity var(--courseai-float-t) var(--courseai-sidebar-ease),
+              visibility 0s;
+}
+.courseai-app-layout.sidebar-floating .courseai-sidebar {
+  transform: none;
+  opacity: 1;
+  animation: courseai-sidebar-floatin var(--courseai-float-t) var(--courseai-sidebar-ease);
+}
+.courseai-app-layout.sidebar-floating-out .courseai-sidebar {
+  transform: translateX(-10px);
+  opacity: 0;
+}
+/* Landing from the floating exit into the closed rest state must not replay
+   the pinned→closed slide: sidebar.js holds this class for one frame. */
+.courseai-app-layout.sidebar-snap .courseai-sidebar,
+.courseai-app-layout.sidebar-snap .courseai-sidebar * {
+  transition: none !important;
+  animation: none !important;
+}
+@keyframes courseai-sidebar-floatin {
+  from { opacity: 0; transform: translateX(-10px); }
+}
+
+/* Main content fills the second column */
+.courseai-app-body > .app-main,
+.courseai-app-body > .aicoursecreation-main {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .courseai-topbar,
+  .courseai-topbar-logo,
+  .courseai-sidebar-toggle-icon,
+  .courseai-app-body,
+  .courseai-sidebar {
+    transition: none !important;
+    animation: none !important;
+  }
 }
 
 /* Body */
@@ -79,38 +237,6 @@
   gap: 8px;
   flex: 1;
   overflow-y: auto;
-}
-
-/* Top icon row — logo left, collapse trigger right. */
-.courseai-sidebar-topbar {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  padding: 0 0 4px;
-}
-
-.courseai-sidebar-logo {
-  width: 28px;
-  height: 28px;
-  object-fit: contain;
-  flex-shrink: 0;
-}
-
-.courseai-sidebar.collapsed .courseai-sidebar-logo {
-  display: none;
-}
-
-/* Collapsed: hide text */
-.courseai-sidebar.collapsed .courseai-sidebar-btn-text,
-.courseai-sidebar.collapsed .courseai-sidebar-section-title,
-.courseai-sidebar.collapsed .courseai-sidebar-chevron,
-.courseai-sidebar.collapsed .courseai-sidebar-course-info,
-.courseai-sidebar.collapsed .courseai-sidebar-viewall {
-  display: none;
-}
-
-.courseai-sidebar.collapsed .courseai-sidebar-course-item svg {
-  margin: 0 auto;
 }
 
 /* New course button */
@@ -457,39 +583,6 @@
 }
 
 /* ─── COLLAPSE / EXPAND ────────────────────────────────────── */
-.courseai-sidebar-collapse-btn {
-  margin-left: auto;
-  background: none;
-  border: none;
-  color: var(--muted-fg);
-  cursor: pointer;
-  padding: 4px;
-  border-radius: 4px;
-  line-height: 1;
-}
-.courseai-sidebar-collapse-btn:hover { background: var(--muted); color: var(--fg); }
-
-.courseai-sidebar-expand-btn {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  z-index: 5;
-  background: var(--card);
-  border: none;
-  border-radius: 6px;
-  width: 32px;
-  height: 32px;
-  display: none;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: var(--muted-fg);
-  box-shadow: 0 1px 4px hsl(0,0%,0%,.08);
-}
-.courseai-sidebar-expand-btn:hover { background: var(--muted); color: var(--fg); }
-.courseai-sidebar.collapsed ~ .courseai-sidebar-expand-btn,
-.courseai-sidebar.collapsed ~ * .courseai-sidebar-expand-btn { display: flex; }
-
 /* ─── MODE ITEMS (Claude-style Chat/Code segmented control) ─────────── */
 .courseai-sidebar-modes {
   display: flex;
