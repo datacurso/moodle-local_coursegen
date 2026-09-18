@@ -17,6 +17,9 @@
 - **Every element of a generation is named by a uid**  
   The activities a template generates have no course module until they are created, so until now they travelled under an identifier derived from an internal record, first offset by a constant and then negated so it would not be mistaken for a real one. Each element now carries a uid of its own instead, which is what the preview links use.
 
+- **The sidebar folds away and comes back on hover**  
+  The sidebar's toggle and the way out of the page used to float over the content, one on each side, and the toggle covered the page title once the sidebar was folded. A thin bar across the top now holds both: the toggle at its left, which never moves, and the way back to My courses at its right. Folding the sidebar slides it out and the content over; hovering the toggle while it is folded shows the sidebar on top of the content, without moving anything, and moving away hides it again; a click pins it back. The choice is remembered, and the `[` key toggles it.
+
 ## Fixed
 
 - **Only the activities marked to be rewritten are rewritten**  
