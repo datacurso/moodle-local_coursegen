@@ -236,10 +236,11 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
 
     /**
      * A fresh visit opens on the chooser: the workspace carries is-choosing,
-     * the two cards render, and each column has its own mode bar. The old
-     * ways of reaching a template from the free composer are gone.
+     * the two cards render, and the top bar holds the one path crumb, hidden
+     * until a card is picked. Nothing names the path inside the columns. The
+     * old ways of reaching a template from the free composer are gone.
      */
-    public function test_fresh_visit_opens_on_the_start_chooser_with_a_mode_bar_per_column(): void {
+    public function test_fresh_visit_opens_on_the_start_chooser_with_the_path_crumb_in_the_top_bar(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -249,7 +250,13 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
         $this->assertStringContainsString('id="courseaiChooser"', $html);
         $this->assertStringContainsString('data-start-path="free"', $html);
         $this->assertStringContainsString('data-start-path="template"', $html);
-        $this->assertSame(2, substr_count($html, 'data-start-modebar'), 'One mode bar per column');
+        $this->assertSame(1, substr_count($html, 'data-start-modebar'), 'One path crumb, in the top bar');
+        $this->assertMatchesRegularExpression(
+            '/<button class="courseai-topbar-path" id="courseaiPathBack" type="button" hidden/',
+            $html
+        );
+        $this->assertStringNotContainsString('courseai-modebar', $html);
+        $this->assertStringNotContainsString('id="tplPickHint"', $html);
 
         // The template is chosen from its own column, not from the free composer.
         $this->assertStringContainsString('id="tplPickBtn"', $html);
