@@ -800,7 +800,9 @@ $string['writing_workshop_instructions'] = 'Writing the Workshop instructions an
 $string['yesimages'] = 'Generate images';
 
 $string['courseai_mode_free'] = 'Free creation';
+$string['courseai_mode_free_desc'] = 'The AI proposes the whole structure from your description.';
 $string['courseai_mode_template'] = 'From template';
+$string['courseai_mode_template_desc'] = 'The structure is fixed; the AI only writes what you mark.';
 $string['courseai_sidebar_mode'] = 'Mode';
 $string['courseai_template_title'] = 'Create course from template';
 $string['courseai_template_subtitle'] = 'Select a template, customize the structure, and generate.';
