@@ -122,6 +122,20 @@ abstract class activity_preview {
     }
 
     /**
+     * What the module puts in the activity header in place of its name, if anything.
+     *
+     * Most modules leave the header to the theme, which prints the name. A
+     * module that sets the header's title itself - a workshop puts its name
+     * beside a help icon - says so here; an empty string leaves it to the
+     * theme.
+     *
+     * @return string
+     */
+    public function header_title(): string {
+        return '';
+    }
+
+    /**
      * What belongs in the activity header, under the name.
      *
      * Most modules put their description there, and a module that shows it
