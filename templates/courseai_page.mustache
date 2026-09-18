@@ -53,9 +53,12 @@
         </svg>
       </button>
     </div>
-    {{#logourl}}
-    <img src="{{logourl}}" alt="" class="courseai-topbar-logo">
-    {{/logourl}}
+    <div class="courseai-topbar-brand">
+      {{#logourl}}
+      <img src="{{logourl}}" alt="" class="courseai-topbar-logo">
+      {{/logourl}}
+      <span class="courseai-topbar-name">{{#str}}pluginname, local_coursegen{{/str}}</span>
+    </div>
   </div>
   <div class="courseai-topbar-main">
     <span class="courseai-topbar-spacer"></span>
