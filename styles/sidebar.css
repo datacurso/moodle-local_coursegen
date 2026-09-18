@@ -83,6 +83,33 @@
   min-width: 0;
 }
 .courseai-topbar-spacer { flex: 1; }
+/* The path crumb: "‹ Create with AI / From a template". A quiet button that
+   leads back to the first screen; once planning starts it is disabled, drops
+   the chevron and stays as the path's name. Both names are in the markup and
+   data-start-path (start_path.js) shows one. */
+.courseai-topbar-path {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 30px;
+  padding: 0 10px 0 6px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted-fg);
+  font: inherit;
+  font-size: 13.5px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.courseai-topbar-path:hover { background: var(--muted); color: var(--fg); }
+.courseai-topbar-path:disabled { color: var(--muted-fg); cursor: default; background: transparent; }
+.courseai-topbar-path-chevron { flex: none; }
+.courseai-topbar-path.is-locked .courseai-topbar-path-chevron { display: none; }
+.courseai-topbar-path-sep { color: var(--border); margin: 0 2px; }
+.courseai-topbar-path-name { display: none; font-weight: 600; color: var(--fg); }
+.courseai-topbar-path[data-start-path="free"] [data-start-chip="free"],
+.courseai-topbar-path[data-start-path="template"] [data-start-chip="template"] { display: inline; }
 .courseai-topbar-exit {
   display: inline-flex;
   align-items: center;

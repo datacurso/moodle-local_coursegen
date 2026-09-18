@@ -20,10 +20,11 @@
  * A fresh visit opens on two cards, free creation or from a template
  * (start_chooser.mustache). Picking one hides the cards and shows that
  * path's workspace: the free hero, or the template column with its picker.
- * A bar at the top of either (start_modebar.mustache) names the choice and
- * offers the way back to the cards, until planning starts and the choice is
- * fixed. The workspace's `is-choosing` class is what shows the cards; the
- * template layout itself belongs to context/template.js.
+ * The top bar then carries one quiet crumb (#courseaiPathBack) that names
+ * the choice and leads back to the cards, until planning starts and the
+ * choice is fixed: the crumb loses its chevron and its action and stays as
+ * the path's name. The workspace's `is-choosing` class is what shows the
+ * cards; the template layout itself belongs to context/template.js.
  *
  * @module     local_coursegen/local/courseai/start_path
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -34,7 +35,7 @@
 const OPEN_LIST_DELAY_MS = 150;
 
 /**
- * Wire the chooser cards and the mode bars.
+ * Wire the chooser cards and the top bar's path crumb.
  *
  * @param {Object} params
  * @param {Object} params.state Page state; gains `startPath` (null|'free'|'template').
@@ -43,7 +44,7 @@ const OPEN_LIST_DELAY_MS = 150;
  */
 export const wireStartPath = ({state, contextUi}) => {
     const workspace = document.getElementById('courseaiWorkspace');
-    const bars = () => document.querySelectorAll('[data-start-modebar]');
+    const crumb = document.getElementById('courseaiPathBack');
 
     // Once planning has started, in either path, the starting point is fixed:
     // free creation marks the workspace, the template generation marks the body.
@@ -51,16 +52,15 @@ export const wireStartPath = ({state, contextUi}) => {
         || document.body.classList.contains('cg-generating');
 
     const syncBars = () => {
+        if (!crumb) {
+            return;
+        }
         const locked = isLocked();
-        bars().forEach((bar) => {
-            bar.dataset.startPath = state.startPath || '';
-            bar.classList.toggle('is-locked', locked);
-            const back = bar.querySelector('[data-action="start-back"]');
-            if (back) {
-                back.disabled = locked;
-                back.title = locked ? (back.dataset.titleLocked || '') : (back.dataset.titleUnlocked || '');
-            }
-        });
+        crumb.hidden = !state.startPath;
+        crumb.dataset.startPath = state.startPath || '';
+        crumb.classList.toggle('is-locked', locked);
+        crumb.disabled = locked;
+        crumb.title = locked ? (crumb.dataset.titleLocked || '') : (crumb.dataset.titleUnlocked || '');
     };
 
     /**
@@ -103,11 +103,7 @@ export const wireStartPath = ({state, contextUi}) => {
     document.querySelectorAll('[data-start-path]').forEach((card) => {
         card.addEventListener('click', () => setStartPath(card.dataset.startPath));
     });
-    bars().forEach((bar) => {
-        bar.querySelectorAll('[data-action="start-back"], [data-action="start-change"]').forEach((btn) => {
-            btn.addEventListener('click', showChooser);
-        });
-    });
+    crumb?.addEventListener('click', showChooser);
 
     // The lock is a class other modules set; follow it rather than asking them to call back.
     if (workspace && typeof MutationObserver !== 'undefined') {
