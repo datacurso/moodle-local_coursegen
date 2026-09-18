@@ -43,6 +43,10 @@ use backup_activity_task;
  */
 class reader_task extends backup_activity_task {
     /** @var int The course the activity belongs to. */
+    /** @var string[] Modules whose content backup files as user data. */
+    private const PAGES_ARE_THE_MODULE = ['wiki'];
+
+    /** @var int */
     protected int $courseid;
 
     /**
@@ -75,8 +79,19 @@ class reader_task extends backup_activity_task {
      * @param string $name
      * @return bool
      */
+    /**
+     * Every setting is off, except that a module's own pages travel with it.
+     *
+     * Backup files people's contributions - posts, entries, answers - only
+     * when asked for user data, and a template carries none of that. A wiki's
+     * pages are filed the same way, but they are the wiki: without them a
+     * kept wiki is a title over nothing. So for a wiki alone, user data is on.
+     *
+     * @param string $name
+     * @return bool
+     */
     public function get_setting_value($name) {
-        return false;
+        return $name === 'userinfo' && in_array($this->get_modulename(), self::PAGES_ARE_THE_MODULE, true);
     }
 
     /**

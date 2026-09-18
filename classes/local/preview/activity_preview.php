@@ -100,6 +100,17 @@ abstract class activity_preview {
     abstract public function render(): string;
 
     /**
+     * What the module puts in the page header's button slot, if anything.
+     *
+     * mod_wiki puts its search box there. Rendered HTML, or an empty string.
+     *
+     * @return string
+     */
+    public function header_button(): string {
+        return '';
+    }
+
+    /**
      * The activity's own row, for the page to be told what it is about.
      *
      * A preview drawn from the module's own rows has one; a preview drawn from
