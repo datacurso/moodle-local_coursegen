@@ -145,6 +145,11 @@ $subsectionsenabled = \local_coursegen\local\service\course_planning_service::su
 // Get logo URL (sidebar top bar, left of the collapse toggle).
 $logourl = new moodle_url('/local/coursegen/pix/logo.png');
 
+// The sidebar's pinned/closed state is a per-user preference: read it here so
+// the first render already carries the right class, with no flash and no
+// dependency on browser storage (see lib.php's local_coursegen_user_preferences()).
+$sidebarpinned = (bool) get_user_preferences('local_coursegen_sidebar_pinned', true);
+
 // Native Moodle form (single autocomplete field) for the template-mode picker.
 $templatepickerform = new \local_coursegen\form\course_template_picker_form(
     null, ['templates' => $coursetemplates], 'post', '', ['id' => 'tpl-select-form']);
@@ -175,6 +180,7 @@ $templatecontext = [
     'templatemodeactive' => $templatemodeactive,
     'subsectionsenabled' => $subsectionsenabled,
     'closeurl' => (new moodle_url('/my/courses.php'))->out(false),
+    'sidebarclosed' => !$sidebarpinned,
 ];
 
 echo $OUTPUT->header();
