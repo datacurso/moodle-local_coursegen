@@ -766,7 +766,6 @@ $string['yesimages'] = 'Generar imágenes';
 $string['courseai_mode_free'] = 'Creación libre';
 $string['courseai_mode_template'] = 'Desde plantilla';
 $string['courseai_sidebar_mode'] = 'Modo';
-$string['courseai_mode_switch'] = 'Modo de creación';
 $string['courseai_template_title'] = 'Crear curso desde plantilla';
 $string['courseai_template_subtitle'] = 'Selecciona una plantilla, personaliza la estructura y genera el curso.';
 $string['courseai_template_locked_badge'] = 'De la plantilla';
@@ -823,12 +822,13 @@ $string['courseai_template_picker'] = 'Plantilla de curso';
 $string['courseai_template_picker_help'] = 'Seleccione una de las plantillas de curso creadas por un administrador. Su estructura, incluyendo secciones o actividades bloqueadas y los tipos de actividad permitidos, se utilizará para crear el nuevo curso.';
 $string['courseai_template_picker_placeholder'] = 'Buscar plantillas de curso...';
 $string['courseai_template_prompt_placeholder'] = 'Describe cómo adaptar esta plantilla a tu curso…';
-$string['courseai_template_empty_state'] = 'Seleccione una plantilla arriba para comenzar a crear el curso.';
 
 // Review modal strings.
 $string['courseai_btn_templates'] = 'Plantillas';
 $string['courseai_btn_templates_title'] = 'Seleccionar una plantilla de curso';
 $string['courseai_chip_remove_template'] = 'Quitar plantilla';
+$string['courseai_template_change'] = 'Cambiar plantilla';
+$string['courseai_template_prefer_link'] = '¿Prefieres partir de una plantilla?';
 $string['courseai_templates_dialog_label'] = 'Plantillas de curso';
 $string['courseai_templates_list_label'] = 'Lista de plantillas';
 $string['courseai_templates_search_placeholder'] = 'Buscar plantillas...';

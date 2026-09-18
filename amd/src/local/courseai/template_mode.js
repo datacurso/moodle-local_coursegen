@@ -127,6 +127,12 @@ const updateStats = (tplState, statsTemplate) => {
         sections: tplState.sections.length,
         activities: totalActivities,
     });
+    // The template card at the top of the left column says the same, so the
+    // professor reads the size of the template next to its name.
+    const cardStats = document.getElementById('tplCardStats');
+    if (cardStats) {
+        cardStats.textContent = statsEl.textContent.replace(/\.$/, '');
+    }
 };
 
 /**
@@ -135,15 +141,11 @@ const updateStats = (tplState, statsTemplate) => {
  * @param {Object} state
  */
 export const wireTemplateMode = (state) => {
-    // Free/Template mode switching is plain <a href> navigation
-    // (aicoursecreation.php / ?mode=template), server-rendered from the
-    // mode param — no JS involved.
-    //
-    // The template picker itself is a native Moodle form (single autocomplete
-    // element, see classes/form/course_template_picker_form.php), rendered
-    // server-side and embedded as-is — Moodle's own form renderer already
-    // enhances the underlying <select> into the autocomplete widget, so no
-    // JS wiring is needed here beyond listening for its 'change' event.
+    // There is no template "mode": a template is attached from the composer
+    // (context/template.js), and that sets the native picker form's <select>
+    // (classes/form/course_template_picker_form.php, rendered hidden) and
+    // dispatches its 'change'. Everything below listens to that select, so
+    // the structure loads and clears the same way whichever list picked it.
     // Moodleform's default id for an unnamed-id element is "id_<fieldname>".
     const tplSelect = document.getElementById('id_templateid');
     const container = document.getElementById('tplModeStructure');
@@ -293,7 +295,9 @@ const refreshSyllabusChip = (tplState) => {
         chip.classList.toggle('hidden', !hasFile);
     }
     if (chipsRow) {
-        chipsRow.style.display = hasFile ? '' : 'none';
+        // The row also carries the attached template's chip (context/template.js).
+        const anyChip = chipsRow.querySelector('.chip:not(.hidden)');
+        chipsRow.style.display = anyChip ? 'flex' : 'none';
     }
 };
 
@@ -514,6 +518,10 @@ const clearStructure = (tplState, container, state) => {
     const statsEl = document.getElementById('tplModeStats');
     if (statsEl) {
         statsEl.textContent = '';
+    }
+    const cardStats = document.getElementById('tplCardStats');
+    if (cardStats) {
+        cardStats.textContent = '';
     }
     // Reset only the structure: the input-bar values (images/lang/syllabus)
     // belong to the professor's session and survive clearing the template.

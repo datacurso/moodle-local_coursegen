@@ -80,9 +80,11 @@ export const setupContextSection = (deps) => {
         if (!compactChipsRow) {
             return;
         }
+        const compactChipTemplate = document.getElementById('compactChipTemplate');
         const hasSyllabus = compactChipSyllabus && !compactChipSyllabus.classList.contains('hidden');
         const hasGuideline = compactChipGuideline && !compactChipGuideline.classList.contains('hidden');
-        compactChipsRow.style.display = (hasSyllabus || hasGuideline) ? 'flex' : 'none';
+        const hasTemplate = compactChipTemplate && !compactChipTemplate.classList.contains('hidden');
+        compactChipsRow.style.display = (hasSyllabus || hasGuideline || hasTemplate) ? 'flex' : 'none';
     };
 
     const refreshChipsRow = () => {
@@ -94,9 +96,11 @@ export const setupContextSection = (deps) => {
             return;
         }
 
+        const chipTemplate = document.getElementById('chipTemplate');
         const hasSyllabus = chipSyllabus && !chipSyllabus.classList.contains('hidden');
         const hasGuideline = chipGuideline && !chipGuideline.classList.contains('hidden');
-        chipsRow.style.display = (hasSyllabus || hasGuideline) ? 'flex' : 'none';
+        const hasTemplate = chipTemplate && !chipTemplate.classList.contains('hidden');
+        chipsRow.style.display = (hasSyllabus || hasGuideline || hasTemplate) ? 'flex' : 'none';
     };
 
     const closeGuidelinePopover = ({returnFocus = false} = {}) => {
@@ -245,54 +249,97 @@ export const setupContextSection = (deps) => {
         });
     }
 
-    // ─── Template popover wiring ────────────────────────────────────────────
-    const btnTemplates = document.getElementById('btnTemplates');
-    const templatesPopover = document.getElementById('templatesPopover');
-    const templateSearch = document.getElementById('templateSearch');
-
-    const {renderTemplateList, selectTemplate} = createTemplateHandlers({
+    // ─── Templates: the lists that attach one, in every composer ────────────
+    // Free landing (#mainCard), free planning (compact card) and the template
+    // column's input bar each carry the same searchable list; picking from any
+    // of them attaches the template, which is what opens the template layout
+    // (context/template.js). "Change" on the template card and the quiet link
+    // under the free tip open the same lists.
+    const {renderTemplateLists, selectTemplate, detachTemplate, closeTemplatePopovers} = createTemplateHandlers({
         state, texts,
-        refreshTemplateChip: () => {},
-        refreshChipsRow,
-        refreshCompactChipsRow,
     });
 
-    if (btnTemplates && templatesPopover) {
-        btnTemplates.addEventListener('click', (e) => {
+    const templatePopovers = [
+        {
+            panel: 'templatesPopover', search: 'templateSearch', close: 'templatesPopoverClose',
+            triggers: ['btnTemplates', 'heroTemplateLink'],
+        },
+        {
+            panel: 'templatesPopoverCompact', search: 'templateSearchCompact', close: 'templatesPopoverCompactClose',
+            triggers: ['btnTemplatesCompact'],
+        },
+        {
+            panel: 'templatesPopoverTpl', search: 'templateSearchTpl', close: 'templatesPopoverTplClose',
+            triggers: ['tplBtnTemplates', 'tplCardChange'],
+        },
+    ];
+
+    const openTemplatePopover = (panelId, triggerEl = null) => {
+        const spec = templatePopovers.find((p) => p.panel === panelId);
+        const panel = document.getElementById(panelId);
+        if (!spec || !panel) {
+            return;
+        }
+        closeTemplatePopovers();
+        closeGuidelinePopover();
+        panel.classList.add('open');
+        spec.triggers.forEach((id) => {
+            document.getElementById(id)?.setAttribute('aria-expanded', id === triggerEl?.id ? 'true' : 'false');
+        });
+        const search = document.getElementById(spec.search);
+        if (search) {
+            search.value = '';
+            state.templateSearchQuery = '';
+        }
+        renderTemplateLists();
+        search?.focus();
+    };
+
+    templatePopovers.forEach((spec) => {
+        const panel = document.getElementById(spec.panel);
+        if (!panel) {
+            return;
+        }
+        spec.triggers.forEach((id) => {
+            const trigger = document.getElementById(id);
+            if (!trigger) {
+                return;
+            }
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (panel.classList.contains('open')) {
+                    closeTemplatePopovers();
+                } else {
+                    openTemplatePopover(spec.panel, trigger);
+                }
+            });
+        });
+        document.getElementById(spec.close)?.addEventListener('click', (e) => {
             e.stopPropagation();
-            const willOpen = !templatesPopover.classList.contains('open');
-            templatesPopover.classList.toggle('open', willOpen);
-            btnTemplates.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
-            if (willOpen && templateSearch) {
-                templateSearch.value = '';
-                state.templateSearchQuery = '';
-                renderTemplateList();
-                templateSearch.focus();
-            }
+            closeTemplatePopovers();
         });
-    }
-
-    if (templateSearch) {
-        templateSearch.addEventListener('input', () => {
-            state.templateSearchQuery = templateSearch.value;
-            renderTemplateList();
+        document.getElementById(spec.search)?.addEventListener('input', (e) => {
+            state.templateSearchQuery = e.target.value;
+            renderTemplateLists();
         });
-    }
+        // Clicks inside the panel must not count as "outside".
+        panel.addEventListener('click', (e) => e.stopPropagation());
+    });
 
-    const templatesPopoverClose = document.getElementById('templatesPopoverClose');
-    if (templatesPopoverClose) {
-        templatesPopoverClose.addEventListener('click', (e) => {
+    document.addEventListener('click', () => closeTemplatePopovers());
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeTemplatePopovers();
+        }
+    });
+
+    // Detaching: the chip's × in each composer, and Remove on the template card.
+    ['chipTemplateRemoveBtn', 'compactChipTemplateRemoveBtn', 'tplChipTemplateRemove', 'tplCardRemove'].forEach((id) => {
+        document.getElementById(id)?.addEventListener('click', (e) => {
             e.stopPropagation();
-            if (templatesPopover) {
-                templatesPopover.classList.remove('open');
-            }
-            if (btnTemplates) {
-                btnTemplates.setAttribute('aria-expanded', 'false');
-            }
+            detachTemplate();
         });
-    }
-
-    void selectTemplate;
+    });
 
     if (btnWithSubsections && subToggleWrap) {
         bindToggleWrap(subToggleWrap, btnWithSubsections);
@@ -333,5 +380,8 @@ export const setupContextSection = (deps) => {
         refreshGuidelineChip,
         refreshChipsRow,
         renderGuidelineList,
+        selectTemplate,
+        detachTemplate,
+        openTemplatePopover,
     };
 };

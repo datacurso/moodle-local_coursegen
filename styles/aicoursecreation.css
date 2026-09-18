@@ -260,8 +260,16 @@ svg { display: block; flex-shrink: 0; }
    the card visibly jumps to the top the moment the structure loads and the
    page grows taller than the viewport. Anchor template mode to the top from
    the very first paint instead, so picking a template never shifts it. */
-.courseai-workspace:has(#templateModeView) {
+.courseai-workspace.is-template {
   justify-content: flex-start;
+}
+
+/* Both columns of the template layout live in the DOM from the first paint
+   and only show while a template is attached; the free hero hides then. */
+.courseai-workspace:not(.is-template) #templateModeView,
+.courseai-workspace:not(.is-template) #tplModeMain,
+.courseai-workspace.is-template #contextView {
+  display: none;
 }
 
 /* .context-wrap's default max-width:768px + margin:0 auto (below) centers it
@@ -274,15 +282,6 @@ svg { display: block; flex-shrink: 0; }
   margin: 0;
 }
 
-/* #templateModeCard never shows a border/shadow — flat at every state, no
-   dependence on selection: nothing about the selector itself (border, size,
-   position) ever changes, so picking a template can't shift it or make it
-   read as "locked". */
-#templateModeCard {
-  border-color: transparent;
-  box-shadow: none;
-}
-
 /* Before a template is picked, core/form-autocomplete renders its
    noselectionstring as a floating hint span sitting above the search box —
    two stacked rows for one single field. The search input's own "Search"
@@ -292,12 +291,67 @@ svg { display: block; flex-shrink: 0; }
   display: none;
 }
 
-/* Empty-state notification (#tplModeEmpty, real core/notification "info"
-   markup): marks where the template's structure will render in the main
-   column, shown until a template is picked. template_mode.js sets .tpl-active
-   on the workspace on the autocomplete's 'change' event. */
-.courseai-workspace.tpl-active #tplModeEmpty {
-  display: none;
+/* The attached template, at the top of the left column. */
+.tpl-card {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+}
+.tpl-card-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: hsl(200, 30%, 40%);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+.tpl-card-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.tpl-card-text b { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tpl-card-text small { color: var(--muted-fg); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#tplCardStats:not(:empty)::before { content: " · "; }
+.tpl-card-actions { display: flex; gap: 10px; }
+.tpl-card-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--muted-fg);
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tpl-card-link:hover { color: var(--fg); }
+.tpl-card-link:disabled { text-decoration: none; opacity: .5; cursor: default; }
+
+/* The quiet way into templates from the free landing, on the tip line. */
+.form-tip-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  margin-left: 8px;
+  font: inherit;
+  color: var(--muted-fg);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+.form-tip-link:hover { color: var(--fg); }
+
+/* The template chip, in every composer that can carry it. */
+.chip-template {
+  background: var(--brand-soft);
+  color: var(--brand);
+  border: 1px solid hsl(260, 37%, 42%, 0.3);
 }
 
 /* ─── TEMPLATE MODE LAYOUT ───────────────────────────────────────────────
@@ -4834,42 +4888,6 @@ body.cg-generating :is(#prvSections, #tplModeStructure) .dp-add-subsection-wrap 
   position: relative;
   display: inline-flex;
 }
-
-/* Mode switch: the pill next to the "+" that picks free vs template.
-   See templates/mode_switch.mustache. */
-.courseai-mode-seg {
-  display: inline-flex;
-  align-items: center;
-  height: 30px;
-  padding: 2px;
-  border-radius: 999px;
-  background: var(--muted);
-  flex: 0 0 auto;
-}
-.tbar-left .courseai-mode-seg { margin-left: 6px; }
-.courseai-mode-seg-item {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  height: 26px;
-  padding: 0 10px;
-  border-radius: 999px;
-  font-size: 13px;
-  font-weight: 500;
-  color: var(--muted-fg);
-  text-decoration: none;
-  white-space: nowrap;
-  transition: background .15s, color .15s;
-}
-.courseai-mode-seg-item:hover { color: var(--fg); text-decoration: none; }
-.courseai-mode-seg-item.is-active {
-  background: var(--card);
-  color: var(--fg);
-  font-weight: 600;
-  box-shadow: 0 1px 2px hsl(215 28% 17% / .12);
-}
-.courseai-mode-seg-item:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
-.courseai-mode-seg-item svg { flex-shrink: 0; }
 
 .plus-menu-btn {
   display: inline-flex;

@@ -297,6 +297,17 @@ export const init = async(params) => {
         stepsUi.updateFlowNav();
         contextUi.updateGenerateButton();
 
+        // The old template page is now "this page, with a template attached":
+        // ?templateid= attaches it, ?mode=template opens the list to pick one.
+        if (!resumeSessionId) {
+            const preselect = parseInt(params?.preselecttemplateid || 0, 10);
+            if (preselect > 0) {
+                contextUi.selectTemplate(preselect);
+            } else if (params?.opentemplates) {
+                contextUi.openTemplatePopover('templatesPopover', document.getElementById('btnTemplates'));
+            }
+        }
+
         // Initialize sidebar.
         initSidebar(state, actions.resetForAnotherCourse);
 

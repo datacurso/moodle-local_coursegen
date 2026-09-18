@@ -57,7 +57,11 @@ use local_coursegen\local\service\course_session_service;
 
 $resumesessionid = optional_param('sessionid', 0, PARAM_INT);
 $showsessionsview = optional_param('view', '', PARAM_ALPHA) === 'courses';
-$templatemodeactive = optional_param('mode', 'free', PARAM_ALPHA) === 'template';
+// There is no separate template page any more: a template is attached from
+// the composer. The old ?mode=template link still works, as "open the
+// page with the template list open", and ?templateid= attaches one directly.
+$opentemplates = optional_param('mode', 'free', PARAM_ALPHA) === 'template';
+$preselecttemplateid = optional_param('templateid', 0, PARAM_INT);
 
 // Load system instructions (directrices institucionales).
 $systeminstructions = [];
@@ -142,24 +146,20 @@ $logourl = new moodle_url('/local/coursegen/pix/logo.png');
 // dependency on browser storage (see lib.php's local_coursegen_user_preferences()).
 $sidebarpinned = (bool) get_user_preferences('local_coursegen_sidebar_pinned', true);
 
-// Native Moodle form (single autocomplete field) for the template-mode picker.
+// Native Moodle form (single autocomplete field) whose <select> is the value
+// template_mode.js listens to. It is rendered hidden: the composer's template
+// list is what the professor sees and it drives this select.
 $templatepickerform = new \local_coursegen\form\course_template_picker_form(
     null, ['templates' => $coursetemplates], 'post', '', ['id' => 'tpl-select-form']);
 ob_start();
 $templatepickerform->display();
 $templatepickerformhtml = ob_get_clean();
 
-// Native Moodle "info" notification (same alert-info markup report builder
-// uses for "Nothing to display") shown until a template is picked.
-$templateemptystatehtml = $OUTPUT->notification(
-    get_string('courseai_template_empty_state', 'local_coursegen'), 'info', false);
-
 // Prepare template context.
 $templatecontext = [
     'guidelines' => json_encode($systeminstructions),
     'coursetemplates' => $coursetemplates,
     'templatepickerformhtml' => $templatepickerformhtml,
-    'templateemptystatehtml' => $templateemptystatehtml,
     'hascoursetemplates' => !empty($coursetemplates),
     'languages' => json_encode($languageoptions),
     'defaultlang' => current_language(),
@@ -169,7 +169,6 @@ $templatecontext = [
     'allsessions' => $allsessionsdata,
     'isresuming' => $resumesessionid > 0,
     'showsessionsview' => $showsessionsview,
-    'templatemodeactive' => $templatemodeactive,
     'subsectionsenabled' => $subsectionsenabled,
     'closeurl' => (new moodle_url('/my/courses.php'))->out(false),
     'sidebarclosed' => !$sidebarpinned,
@@ -189,6 +188,8 @@ $PAGE->requires->js_call_amd('local_coursegen/courseai', 'init', [
         'sessions' => $allsessionsdata,
         'resumesessionid' => $resumesessionid,
         'isresuming' => $resumesessionid > 0,
+        'opentemplates' => $opentemplates,
+        'preselecttemplateid' => $preselecttemplateid,
     ],
 ]);
 
