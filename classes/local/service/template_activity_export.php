@@ -63,6 +63,61 @@ class template_activity_export {
             // the rows the module's own code asks for.
             'structure_tables' => $read['tables'],
             'structure_aliases' => $read['aliases'],
+            // The files the activity keeps, which its tree only points at: a
+            // folder is its files, a file resource is one of them.
+            'files' => self::files_of($cm),
         ];
+    }
+
+    /**
+     * Every file the module holds for this activity, as the file storage lists them.
+     *
+     * The same columns a stored_file answers for, so code written against one
+     * can be run against these. The address is where the file is served from
+     * now, which is the one thing this payload cannot be told from its rows.
+     *
+     * @param cm_info $cm
+     * @return array
+     */
+    private static function files_of(cm_info $cm): array {
+        global $DB;
+        $context = \context_module::instance($cm->id);
+        $files = [];
+        // The file storage lists one area, or a named set of them, never all.
+        $areas = $DB->get_fieldset_sql(
+            'SELECT DISTINCT filearea FROM {files} WHERE contextid = :contextid AND component = :component',
+            ['contextid' => $context->id, 'component' => 'mod_' . $cm->modname]
+        );
+        if (!$areas) {
+            return [];
+        }
+        $stored = get_file_storage()->get_area_files(
+            $context->id, 'mod_' . $cm->modname, $areas, false, 'filearea, itemid, filepath, filename', true
+        );
+        foreach ($stored as $file) {
+            $isdir = $file->is_directory();
+            $files[] = [
+                'id' => (int) $file->get_id(),
+                'contextid' => (int) $file->get_contextid(),
+                'component' => $file->get_component(),
+                'filearea' => $file->get_filearea(),
+                'itemid' => (int) $file->get_itemid(),
+                'filepath' => $file->get_filepath(),
+                'filename' => $file->get_filename(),
+                'isdir' => $isdir,
+                'filesize' => (int) $file->get_filesize(),
+                'mimetype' => $isdir ? null : $file->get_mimetype(),
+                'timecreated' => (int) $file->get_timecreated(),
+                'timemodified' => (int) $file->get_timemodified(),
+                'sortorder' => (int) $file->get_sortorder(),
+                'author' => $file->get_author(),
+                'license' => $file->get_license(),
+                'url' => $isdir ? null : \moodle_url::make_pluginfile_url(
+                    $file->get_contextid(), $file->get_component(), $file->get_filearea(),
+                    $file->get_itemid(), $file->get_filepath(), $file->get_filename()
+                )->out(false),
+            ];
+        }
+        return $files;
     }
 }

@@ -121,6 +121,16 @@ abstract class ported_preview extends activity_preview {
     }
 
     /**
+     * The module's own row, as the page's activity record.
+     *
+     * @return stdClass|null
+     */
+    public function activity_record(): ?stdClass {
+        $instance = $this->instance();
+        return $instance === null ? null : clone $instance;
+    }
+
+    /**
      * The course module, as the module's code expects to be handed it.
      *
      * @return stdClass
@@ -196,6 +206,15 @@ abstract class ported_preview extends activity_preview {
             return '';
         }
         return $this->module_intro($instance);
+    }
+
+    /**
+     * The activity's files, for code that asks the file storage for them.
+     *
+     * @return json_file_storage
+     */
+    protected function files(): json_file_storage {
+        return new json_file_storage((array) (($this->source['parameters'] ?? [])['files'] ?? []));
     }
 
     /**
