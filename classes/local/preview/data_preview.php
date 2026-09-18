@@ -16,65 +16,84 @@
 
 namespace local_coursegen\local\preview;
 
+use local_coursegen\local\preview\data\view;
+
 /**
- * A database activity, drawn the way mod_data draws it.
+ * A database, drawn by mod_data's own view code run against the payload.
  *
- * What the activity is, before anyone adds anything to it, is the fields it
- * asks for and the entries it ships with. Both are shown: the fields as the
- * form a participant fills in, and the example entries as the list they will
- * see.
+ * A planned database carries the fields the plan intends, which become its
+ * rows; entries are the readers' and there are none yet.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class data_preview extends activity_preview {
+class data_preview extends ported_preview {
     /**
-     * The fields, then the entries that already exist.
+     * The module's short name.
+     *
+     * @return string
+     */
+    protected function modname(): string {
+        return 'data';
+    }
+
+    /**
+     * The plan's fields replace the mould's.
+     *
+     * @param json_store $store
+     */
+    protected function overlay(json_store $store): void {
+        $rows = $store->get_records('data');
+        if (!$rows) {
+            return;
+        }
+        $data = reset($rows);
+        $intro = $this->parameters['introeditor'] ?? null;
+        if (is_array($intro)) {
+            $intro = $intro['text'] ?? null;
+        }
+        if (is_string($intro) && trim($intro) !== '') {
+            $store->set('data', $data->id, 'intro', $intro);
+        }
+        $fields = $this->parameters['mod_settings']['fields'] ?? [];
+        if (!is_array($fields) || !$fields) {
+            return;
+        }
+        $store->delete_records('data_fields', ['dataid' => $data->id]);
+        $id = 1;
+        foreach ($fields as $field) {
+            if (!is_array($field) || trim((string) ($field['name'] ?? '')) === '') {
+                continue;
+            }
+            $store->add('data_fields', [
+                'id' => $id++,
+                'dataid' => $data->id,
+                'type' => (string) ($field['type'] ?? 'text'),
+                'name' => (string) $field['name'],
+                'description' => (string) ($field['description'] ?? ''),
+                'required' => !empty($field['required']) ? 1 : 0,
+            ]);
+        }
+    }
+
+    /**
+     * The database page, as mod/data/view.php draws it.
      *
      * @return string
      */
     public function render(): string {
-        global $OUTPUT;
-
-        $fields = $this->items('fields');
-        $entries = $this->items('example_entries');
-        if (!$fields && !$entries) {
+        $data = $this->instance();
+        if ($data === null) {
             return $this->nothing_yet();
         }
-
-        $out = '';
-        if ($fields) {
-            $rows = '';
-            foreach ($fields as $field) {
-                $label = format_string((string) ($field['name'] ?? $field['field_name'] ?? ''));
-                if (!empty($field['required'])) {
-                    $label .= ' ' . \html_writer::tag('span', '*', ['class' => 'text-danger']);
-                }
-                $rows .= \html_writer::div(
-                    \html_writer::tag('label', $label, ['class' => 'fw-bold d-block'])
-                        . \html_writer::empty_tag('input', [
-                            'type' => 'text',
-                            'class' => 'form-control',
-                            'disabled' => 'disabled',
-                        ])
-                        . \html_writer::tag('small', s((string) ($field['description'] ?? '')), ['class' => 'text-muted']),
-                    'mb-3'
-                );
-            }
-            $out .= $OUTPUT->box($rows, 'generalbox');
+        $course = $this->course();
+        $cmid = (int) ($this->source['cmid'] ?? 0);
+        $modinfo = get_fast_modinfo($course);
+        if (!$cmid || !isset($modinfo->cms[$cmid])) {
+            return $this->nothing_yet();
         }
-
-        foreach ($entries as $entry) {
-            $cells = '';
-            foreach ((array) ($entry['values'] ?? []) as $key => $value) {
-                $cells .= \html_writer::tag('dt', format_string((string) $key))
-                    . \html_writer::tag('dd', $this->content((string) $value));
-            }
-            if ($cells !== '') {
-                $out .= $OUTPUT->box(\html_writer::tag('dl', $cells), 'generalbox defaulttemplate');
-            }
-        }
-        return $out;
+        $view = new view($data, $modinfo->get_cm($cmid), $this->context(), $this->store(), $this->url_to());
+        return $view->page();
     }
 }
