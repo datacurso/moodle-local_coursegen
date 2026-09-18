@@ -39,12 +39,14 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
     /**
      * Render the courseai_page template with a minimal context.
      *
+     * @param array $overrides Context values replacing the defaults.
      * @return string Rendered HTML.
      */
-    private function render_page(): string {
+    private function render_page(array $overrides = []): string {
         global $OUTPUT;
 
-        return $OUTPUT->render_from_template('local_coursegen/courseai_page', [
+        return $OUTPUT->render_from_template('local_coursegen/courseai_page', $overrides + [
+            'startchooser' => true,
             'guidelines' => '[]',
             'coursetemplates' => [],
             'templatepickerformhtml' => self::PICKER_SENTINEL,
@@ -206,7 +208,7 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
     /**
      * Both columns render on every load, the free hero included, and the ids
      * the two threads share belong to the free thread until a template is
-     * attached: the template column carries them only as data-shared-id.
+     * chosen: the template column carries them only as data-shared-id.
      */
     public function test_free_hero_and_template_column_share_thread_ids_without_duplicates(): void {
         $this->resetAfterTest();
@@ -216,7 +218,6 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
 
         $this->assertStringContainsString('id="contextView"', $html);
         $this->assertStringContainsString('data-region="tpl-left-panel"', $html);
-        $this->assertStringContainsString('id="heroTemplateLink"', $html);
         $this->assertStringNotContainsString('courseai-mode-seg', $html);
         $this->assertStringNotContainsString('courseai-sidebar-modes', $html);
 
@@ -231,5 +232,52 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
             $this->assertSame(2, substr_count($html, 'data-shared-id="' . $sharedid . '"'),
                 "both columns must declare {$sharedid} as shared");
         }
+    }
+
+    /**
+     * A fresh visit opens on the chooser: the workspace carries is-choosing,
+     * the two cards render, and each column has its own mode bar. The old
+     * ways of reaching a template from the free composer are gone.
+     */
+    public function test_fresh_visit_opens_on_the_start_chooser_with_a_mode_bar_per_column(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $html = $this->render_page();
+
+        $this->assertMatchesRegularExpression('/class="courseai-workspace[^"]*\bis-choosing\b[^"]*" id="courseaiWorkspace"/', $html);
+        $this->assertStringContainsString('id="courseaiChooser"', $html);
+        $this->assertStringContainsString('data-start-path="free"', $html);
+        $this->assertStringContainsString('data-start-path="template"', $html);
+        $this->assertSame(2, substr_count($html, 'data-start-modebar'), 'One mode bar per column');
+
+        // The template is chosen from its own column, not from the free composer.
+        $this->assertStringContainsString('id="tplPickBtn"', $html);
+        $this->assertStringContainsString('id="templatesPopoverTpl"', $html);
+        $this->assertStringNotContainsString('id="heroTemplateLink"', $html);
+        $this->assertStringNotContainsString('id="btnTemplates"', $html);
+        $this->assertStringNotContainsString('id="btnTemplatesCompact"', $html);
+        $this->assertStringNotContainsString('id="templatesPopover"', $html);
+        $this->assertStringNotContainsString('id="templatesPopoverCompact"', $html);
+        $this->assertStringNotContainsString('id="chipTemplate"', $html);
+    }
+
+    /**
+     * When the page is opened straight onto a template (a preselected
+     * template, the template list, or a resumed session) the chooser is
+     * skipped: the workspace renders without is-choosing.
+     */
+    public function test_direct_entry_points_skip_the_chooser(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $html = $this->render_page(['startchooser' => false]);
+
+        $this->assertDoesNotMatchRegularExpression(
+            '/class="courseai-workspace[^"]*\bis-choosing\b[^"]*" id="courseaiWorkspace"/',
+            $html
+        );
+        // The chooser markup still renders; JS brings it back on "Change starting point".
+        $this->assertStringContainsString('id="courseaiChooser"', $html);
     }
 }
