@@ -16,89 +16,109 @@
 
 namespace local_coursegen\local\preview;
 
+use local_coursegen\local\preview\feedback\view;
+
 /**
- * A feedback activity's questions, drawn the way mod_feedback draws its form.
- *
- * The activity is the questionnaire, so the questionnaire is what this lays
- * out: every question in position order with the control its type uses,
- * disabled, because there is nothing to answer yet.
+ * A feedback, drawn by mod_feedback's own view code run against the payload.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class feedback_preview extends activity_preview {
+class feedback_preview extends ported_preview {
     /**
-     * Every question, in the order it is asked.
+     * The module's short name.
+     *
+     * @return string
+     */
+    protected function modname(): string {
+        return 'feedback';
+    }
+
+    /**
+     * The plan's questions replace the mould's items.
+     *
+     * @param json_store $store
+     */
+    protected function overlay(json_store $store): void {
+        $rows = $store->get_records('feedback');
+        if (!$rows) {
+            return;
+        }
+        $feedback = reset($rows);
+        $intro = $this->parameters['introeditor'] ?? null;
+        if (is_array($intro)) {
+            $intro = $intro['text'] ?? null;
+        }
+        if (is_string($intro) && trim($intro) !== '') {
+            $store->set('feedback', $feedback->id, 'intro', $intro);
+        }
+        $questions = $this->parameters['mod_settings']['questions'] ?? ($this->parameters['mod_settings']['items'] ?? []);
+        if (!is_array($questions) || !$questions) {
+            return;
+        }
+        $store->delete_records('feedback_item', ['feedback' => $feedback->id]);
+        $position = 1;
+        foreach ($questions as $question) {
+            if (!is_array($question) || empty($question['typ'])) {
+                continue;
+            }
+            $typ = (string) $question['typ'];
+            $store->add('feedback_item', [
+                'id' => $position,
+                'feedback' => $feedback->id,
+                'template' => 0,
+                'name' => (string) ($question['name'] ?? ''),
+                'label' => (string) ($question['label'] ?? ''),
+                'presentation' => '',
+                'typ' => $typ,
+                // A label and a page break ask nothing; every other item does.
+                'hasvalue' => in_array($typ, ['label', 'pagebreak'], true) ? 0 : 1,
+                'position' => $position,
+                'required' => !empty($question['required']) ? 1 : 0,
+                'dependitem' => 0,
+                'dependvalue' => '',
+                'options' => '',
+            ]);
+            $position++;
+        }
+    }
+
+    /**
+     * The feedback page, as mod/feedback/view.php draws it.
      *
      * @return string
      */
     public function render(): string {
-        global $OUTPUT;
-
-        $questions = $this->items('questions');
-        if (!$questions) {
+        $feedback = $this->instance();
+        if ($feedback === null) {
             return $this->nothing_yet();
         }
-
-        $out = '';
-        foreach ($questions as $question) {
-            $out .= \html_writer::div(
-                \html_writer::tag('label', format_string((string) ($question['name'] ?? '')), ['class' => 'fw-bold'])
-                    . $this->control((array) $question),
-                'feedback_item_box mb-3'
-            );
+        $course = $this->course();
+        $cmid = (int) ($this->source['cmid'] ?? 0);
+        $modinfo = get_fast_modinfo($course);
+        if (!$cmid || !isset($modinfo->cms[$cmid])) {
+            return $this->nothing_yet();
         }
-        return $OUTPUT->box($out, 'generalbox');
+        $view = new view(
+            $feedback,
+            $modinfo->get_cm($cmid),
+            $course,
+            $this->context(),
+            $this->store(),
+            $this->url_to(),
+            fn($activity) => $this->module_intro($activity)
+        );
+        return $view->page();
     }
 
     /**
-     * The control one question is answered with.
+     * mod/feedback/view.php shows the description in its own box, not the header.
      *
-     * @param array $question
      * @return string
      */
-    private function control(array $question): string {
-        $type = (string) ($question['typ'] ?? $question['type'] ?? 'textfield');
-        $presentation = (string) ($question['presentation'] ?? '');
-
-        if ($type === 'label') {
-            return $this->content($presentation);
-        }
-
-        if (in_array($type, ['multichoice', 'multichoicerated'], true)) {
-            // A multiple-choice question carries its options in its
-            // presentation, one per line, after the leading display-mode flag
-            // mod_feedback stores there.
-            $lines = preg_split('/\r\n|\r|\n/', $presentation) ?: [];
-            $items = '';
-            foreach ($lines as $line) {
-                $line = trim((string) $line);
-                if ($line === '' || preg_match('/^[a-z]>+$/i', $line)) {
-                    continue;
-                }
-                $items .= \html_writer::div(
-                    \html_writer::empty_tag('input', ['type' => 'radio', 'disabled' => 'disabled', 'class' => 'me-2'])
-                        . format_string($line),
-                    'd-flex align-items-center'
-                );
-            }
-            return $items;
-        }
-
-        if ($type === 'textarea') {
-            return \html_writer::tag('textarea', '', [
-                'class' => 'form-control',
-                'rows' => 3,
-                'disabled' => 'disabled',
-            ]);
-        }
-
-        return \html_writer::empty_tag('input', [
-            'type' => 'text',
-            'class' => 'form-control',
-            'disabled' => 'disabled',
-        ]);
+    public function header_description(): string {
+        return '';
     }
 
     /**
