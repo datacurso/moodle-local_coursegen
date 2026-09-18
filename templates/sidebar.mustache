@@ -18,43 +18,14 @@
 }}
 <aside class="courseai-sidebar" id="courseaiSidebar">
   <div class="courseai-sidebar-body">
-    <!-- New course: the only place the creation mode is chosen. Clicking
-         opens a two-item menu (free / from template) instead of the old
-         always-visible tab strip, which named a mode you might not be
-         about to start yet. -->
-    <div class="courseai-newcourse-wrap">
-      <button class="courseai-sidebar-btn-new" id="courseaiBtnNew" type="button"
-              aria-haspopup="menu" aria-expanded="false" aria-controls="courseaiNewMenu">
-        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
-        </svg>
-        <span class="courseai-sidebar-btn-text">{{#str}}courseai_sidebar_newcourse, local_coursegen{{/str}}</span>
-        <svg class="courseai-newcourse-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <polyline points="6 9 12 15 18 9"/>
-        </svg>
-      </button>
-      <div class="courseai-newcourse-menu" id="courseaiNewMenu" role="menu" hidden>
-        <button class="courseai-newcourse-item" type="button" role="menuitem" data-mode="free">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="m12 3-1.9 5.8a2 2 0 0 1-1.287 1.288L3 12l5.8 1.9a2 2 0 0 1 1.288 1.287L12 21l1.9-5.8a2 2 0 0 1 1.287-1.288L21 12l-5.8-1.9a2 2 0 0 1-1.288-1.287Z"/>
-          </svg>
-          <span class="courseai-newcourse-item-text">
-            <b>{{#str}}courseai_mode_free, local_coursegen{{/str}}</b>
-            <small>{{#str}}courseai_mode_free_desc, local_coursegen{{/str}}</small>
-          </span>
-        </button>
-        <button class="courseai-newcourse-item" type="button" role="menuitem" data-mode="template">
-          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <path d="M16 3H5a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2V8Z"/>
-            <path d="M15 3v4a2 2 0 0 0 2 2h4"/>
-          </svg>
-          <span class="courseai-newcourse-item-text">
-            <b>{{#str}}courseai_mode_template, local_coursegen{{/str}}</b>
-            <small>{{#str}}courseai_mode_template_desc, local_coursegen{{/str}}</small>
-          </span>
-        </button>
-      </div>
-    </div>
+    <!-- New course: starts over on a clean page. The creation mode is picked
+         in the composer itself (see local_coursegen/mode_switch). -->
+    <button class="courseai-sidebar-btn-new" id="courseaiBtnNew" type="button">
+      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+      </svg>
+      <span class="courseai-sidebar-btn-text">{{#str}}courseai_sidebar_newcourse, local_coursegen{{/str}}</span>
+    </button>
 
     <!-- Recent section -->
     <div class="courseai-sidebar-section">
