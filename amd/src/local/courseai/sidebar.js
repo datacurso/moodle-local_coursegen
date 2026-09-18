@@ -196,7 +196,9 @@ export const initSidebar = () => {
         toggleBtn.setAttribute('aria-expanded', String(!closed || isFloating()));
         if (label) {
             toggleBtn.setAttribute('aria-label', label);
-            toggleBtn.title = `${label} [`;
+            // The native tooltip would sit on top of the floating panel, so
+            // it is only offered while there is nothing under it.
+            toggleBtn.title = isFloating() ? '' : `${label} [`;
         }
     };
 

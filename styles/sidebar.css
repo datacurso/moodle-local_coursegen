@@ -125,7 +125,8 @@
   position: relative;
   flex-shrink: 0;
 }
-.courseai-sidebar-toggle:hover {
+.courseai-sidebar-toggle:hover,
+.courseai-app-layout.sidebar-floating .courseai-sidebar-toggle {
   background: var(--muted);
   color: var(--fg);
 }
@@ -198,7 +199,7 @@
   z-index: 1035;
   border: 1px solid var(--border);
   border-radius: 14px;
-  box-shadow: 0 2px 4px hsl(215 28% 17% / .08), 0 24px 48px -16px hsl(215 28% 17% / .35);
+  box-shadow: 0 0 0 1px hsl(215 20% 88%), 0 6px 16px -6px hsl(215 28% 17% / .18), 0 28px 56px -18px hsl(215 28% 17% / .42);
   visibility: visible;
   transition: transform var(--courseai-float-t) var(--courseai-sidebar-ease),
               opacity var(--courseai-float-t) var(--courseai-sidebar-ease),
