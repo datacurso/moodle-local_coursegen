@@ -42,7 +42,7 @@ class preview_factory {
         'choice' => choice_preview::class,
         'data' => data_preview::class,
         'feedback' => feedback_preview::class,
-        'folder' => file_preview::class,
+        'folder' => folder_preview::class,
         'forum' => forum_preview::class,
         'glossary' => glossary_preview::class,
         'h5pactivity' => package_preview::class,
