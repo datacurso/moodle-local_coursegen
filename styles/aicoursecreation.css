@@ -157,14 +157,16 @@ svg { display: block; flex-shrink: 0; }
 
 .courseai-workspace.is-planning,
 .courseai-workspace.is-template {
-  /* Wide-ish by default — the conversation/feed is the primary surface. Kept in
-     PX (not vw) so the splitter, which reads/writes this property in px, can drag
-     smoothly and reach the default. Splitter clamps to the same [320,720] range.
+  /* A conversation column, not a second page: 450px by default, the width a
+     chat composer reads well at, leaving the structure the room it needs. Kept
+     in PX (not vw) so the splitter, which reads/writes this property in px, can
+     drag smoothly and reach the default. Splitter clamps to the same [360,720]
+     range; 360 is the narrowest the compact composer row below still fits.
      Template mode reuses this exact grid: left picker/input-bar panel, shared
      splitter, main structure column. */
-  --cg-left-w: 560px;
+  --cg-left-w: 450px;
   display: grid;
-  grid-template-columns: clamp(320px, var(--cg-left-w), 720px) 10px minmax(0, 1fr);
+  grid-template-columns: clamp(360px, var(--cg-left-w), 720px) 10px minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   height: calc(100vh - 100px);
   overflow: hidden;
@@ -307,8 +309,55 @@ svg { display: block; flex-shrink: 0; }
   /* .context-wrap in-grid is display:flex — stack picker over input bar. */
   flex-direction: column;
   margin-bottom: 0;
-  padding: 0 12px 16px 16px;
-  gap: 12px;
+  padding: 0 12px 14px 16px;
+  gap: 10px;
+}
+
+/* In the grid the heading is a column title, not a page title: left-aligned
+   and one step smaller, so the picker and the composer get the room. */
+.courseai-workspace.is-planning .context-head,
+.courseai-workspace.is-template .context-head {
+  text-align: left;
+  margin-bottom: 12px;
+}
+.courseai-workspace.is-planning .context-head h2,
+.courseai-workspace.is-template .context-head h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.courseai-workspace.is-planning .context-head p,
+.courseai-workspace.is-template .context-head p {
+  font-size: 13px;
+}
+
+/* The picker is a Moodle form row (label column | field column). At 450px
+   the two columns fight for space, so the label sits above a full-width
+   field. Scoped to the panel: nothing else in Moodle sees this. */
+.tpl-left-panel #fitem_id_templateid {
+  flex-direction: column;
+  margin-bottom: 12px;
+}
+.tpl-left-panel #fitem_id_templateid > [class*="col-md-"] {
+  flex: 0 0 100%;
+  max-width: 100%;
+  padding-right: 0;
+}
+.tpl-left-panel #fitem_id_templateid .col-form-label {
+  justify-content: flex-start;
+  gap: 6px;
+  padding-top: 0;
+  padding-bottom: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted-fg);
+}
+.tpl-left-panel #fitem_id_templateid .form-label-addon {
+  margin-left: 0;
+}
+.tpl-left-panel #fitem_id_templateid .felement > .d-md-inline-block,
+.tpl-left-panel #fitem_id_templateid .felement .form-autocomplete-input {
+  width: 100%;
 }
 
 .tpl-left-scroll {
@@ -318,23 +367,68 @@ svg { display: block; flex-shrink: 0; }
   scrollbar-width: thin;
 }
 
-/* Input bar pinned at the panel bottom, chat-composer style. */
+/* Input bar pinned at the panel bottom, chat-composer style. Its toolbar is
+   one row that fits the 450px column: attach, images, language on the left,
+   Generate on the right; below ~380px of card the Generate label folds into
+   its icon rather than the row wrapping. */
 .tpl-input-bar {
   flex: 0 0 auto;
+  container-type: inline-size;
 }
 /* .compact-prompt-textarea (chatui.css) expects the card to supply the outer
    padding — the compact chat card does; this bare .card does it here. */
 .tpl-input-bar .compact-prompt-textarea {
-  padding: 12px 14px 6px;
+  padding: 10px 12px 4px;
+  min-height: 54px;
 }
 .tpl-input-bar .chips-row {
-  padding-top: 10px;
+  padding-top: 8px;
 }
 .tpl-input-bar .card-toolbar {
-  gap: 8px;
+  gap: 6px;
+  padding: 6px 8px;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.tpl-input-bar .tbar-left {
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.tpl-input-bar .plus-menu-btn {
+  width: 32px;
+  height: 32px;
+  flex: none;
 }
 .tpl-input-bar .tbar-toggle-wrap {
+  height: 30px;
+  padding: 0 6px;
   gap: 6px;
+  flex: none;
+}
+.tpl-input-bar .tbar-toggle-label {
+  font-size: 13px;
+}
+.tpl-input-bar .tbar-select {
+  height: 30px;
+  padding: 0 6px;
+  font-size: 12.5px;
+  flex: 0 1 130px;
+  min-width: 64px;
+  max-width: 130px;
+}
+.tpl-input-bar .tbar-right {
+  gap: 6px;
+  flex: none;
+}
+.tpl-input-bar .btn-generate {
+  height: 32px;
+  padding: 0 12px;
+  font-size: 13.5px;
+}
+@container (max-width: 380px) {
+  .tpl-input-bar .btn-generate .btn-generate__label { display: none; }
+  .tpl-input-bar .btn-generate { padding: 0 10px; }
 }
 
 /* Badge row at the top of the main column: "N sections · M activities" stats
