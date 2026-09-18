@@ -58,60 +58,7 @@ import {makeEmitLog, makeRenderPlanMarkdown} from 'local_coursegen/courseai/boot
 import {makeHydratePlan} from 'local_coursegen/courseai/bootstrap/hydrate-plan';
 import {createExecutionControls} from 'local_coursegen/local/courseai/actions/execution-control';
 import {wireTemplateMode} from 'local_coursegen/local/courseai/template_mode';
-
-/**
- * Reset the workspace chrome back to the context-gathering view.
- *
- * On reload the page is server-rendered in planning mode (is-planning +
- * in-place skeletons) so the static chrome shows immediately. If there is
- * nothing to resume, fall back to the context form. Only relevant when
- * resumeSessionId is actually set — an ordinary load (free or template
- * mode, no ?sessionid=) never runs any of this, so it can't clobber
- * whatever #contextView/#templateModeView the server already rendered.
- *
- * @param {Object} elements
- */
-const revertToContextView = (elements) => {
-    const workspace = document.getElementById('courseaiWorkspace');
-    if (workspace) {
-        workspace.classList.remove('is-planning');
-    }
-    const planningView = document.getElementById('planningView');
-    if (planningView) {
-        planningView.style.display = 'none';
-    }
-    const compactChat = document.getElementById('compactChatCard');
-    if (compactChat) {
-        compactChat.style.display = 'none';
-    }
-    if (elements.contextView) {
-        elements.contextView.style.display = '';
-    }
-};
-
-/**
- * Resume the workspace from a snapshot when one is pending, falling back
- * to the context view when there is nothing to resume or resuming fails.
- *
- * @param {string} resumeSessionId
- * @param {Function} resumeFromSnapshot
- * @param {Object} elements
- * @param {Function} setResumeBootLoading
- */
-const attemptResume = async(resumeSessionId, resumeFromSnapshot, elements, setResumeBootLoading) => {
-    try {
-        if (resumeSessionId) {
-            const resumed = await resumeFromSnapshot();
-            if (!resumed) {
-                revertToContextView(elements);
-            }
-        }
-    } catch (resumeError) {
-        revertToContextView(elements);
-    } finally {
-        setResumeBootLoading(false);
-    }
-};
+import {wireStartPath} from 'local_coursegen/local/courseai/start_path';
 
 /**
  * Initialize the courseai page.
@@ -139,10 +86,7 @@ export const init = async(params) => {
         // Decision log (§4) — instantiate before any module that needs it.
         const {emitLog, clearLog} = makeEmitLog(state);
 
-        let markedParser = markedModule.marked;
-        if (markedModule.parse) {
-            markedParser = markedModule;
-        }
+        const markedParser = markedModule.parse ? markedModule : markedModule.marked;
         const activityLabels = getActivityLabels(texts);
         const generateButtonHtml = getGenerateButtonHtml(texts);
 
@@ -156,6 +100,9 @@ export const init = async(params) => {
             YUI,
             texts,
         });
+
+        // The first screen (which starting point) and the bar that names it.
+        const startPath = wireStartPath({state, contextUi});
 
         const stepsUi = createStepsUi({
             state,
@@ -313,20 +260,59 @@ export const init = async(params) => {
             texts,
         });
 
-        await attemptResume(resumeSessionId, resumeFromSnapshot, elements, setResumeBootLoading);
+        // On reload the page is server-rendered in planning mode (is-planning +
+        // in-place skeletons) so the static chrome shows immediately. If there is
+        // nothing to resume, fall back to the context form. Only relevant when
+        // resumeSessionId is actually set — an ordinary load (free or template
+        // mode, no ?sessionid=) never runs any of this, so it can't clobber
+        // whatever #contextView/#templateModeView the server already rendered.
+        const revertToContextView = () => {
+            const workspace = document.getElementById('courseaiWorkspace');
+            if (workspace) {
+                workspace.classList.remove('is-planning');
+            }
+            const planningView = document.getElementById('planningView');
+            if (planningView) {
+                planningView.style.display = 'none';
+            }
+            const compactChat = document.getElementById('compactChatCard');
+            if (compactChat) {
+                compactChat.style.display = 'none';
+            }
+            if (elements.contextView) {
+                elements.contextView.style.display = '';
+            }
+            // Nothing to resume: start over, from the first screen.
+            startPath.showChooser();
+        };
+
+        try {
+            if (resumeSessionId) {
+                const resumed = await resumeFromSnapshot();
+                if (!resumed) {
+                    revertToContextView();
+                }
+            }
+        } catch (resumeError) {
+            revertToContextView();
+        } finally {
+            setResumeBootLoading(false);
+        }
 
         contextUi.renderGuidelineList();
         stepsUi.updateFlowNav();
         contextUi.updateGenerateButton();
 
-        // The old template page is now "this page, with a template attached":
-        // ?templateid= attaches it, ?mode=template opens the list to pick one.
+        // The old template page is now the template path of this one, entered
+        // without the first screen: ?templateid= with that template chosen,
+        // ?mode=template with the list open to choose one.
         if (!resumeSessionId) {
             const preselect = parseInt(params?.preselecttemplateid || 0, 10);
             if (preselect > 0) {
+                startPath.setStartPath('template', {openList: false});
                 contextUi.selectTemplate(preselect);
             } else if (params?.opentemplates) {
-                contextUi.openTemplatePopover('templatesPopover', document.getElementById('btnTemplates'));
+                startPath.setStartPath('template');
             }
         }
 

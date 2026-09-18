@@ -80,11 +80,9 @@ export const setupContextSection = (deps) => {
         if (!compactChipsRow) {
             return;
         }
-        const compactChipTemplate = document.getElementById('compactChipTemplate');
         const hasSyllabus = compactChipSyllabus && !compactChipSyllabus.classList.contains('hidden');
         const hasGuideline = compactChipGuideline && !compactChipGuideline.classList.contains('hidden');
-        const hasTemplate = compactChipTemplate && !compactChipTemplate.classList.contains('hidden');
-        compactChipsRow.style.display = (hasSyllabus || hasGuideline || hasTemplate) ? 'flex' : 'none';
+        compactChipsRow.style.display = (hasSyllabus || hasGuideline) ? 'flex' : 'none';
     };
 
     const refreshChipsRow = () => {
@@ -96,11 +94,9 @@ export const setupContextSection = (deps) => {
             return;
         }
 
-        const chipTemplate = document.getElementById('chipTemplate');
         const hasSyllabus = chipSyllabus && !chipSyllabus.classList.contains('hidden');
         const hasGuideline = chipGuideline && !chipGuideline.classList.contains('hidden');
-        const hasTemplate = chipTemplate && !chipTemplate.classList.contains('hidden');
-        chipsRow.style.display = (hasSyllabus || hasGuideline || hasTemplate) ? 'flex' : 'none';
+        chipsRow.style.display = (hasSyllabus || hasGuideline) ? 'flex' : 'none';
     };
 
     const closeGuidelinePopover = ({returnFocus = false} = {}) => {
@@ -249,28 +245,19 @@ export const setupContextSection = (deps) => {
         });
     }
 
-    // ─── Templates: the lists that attach one, in every composer ────────────
-    // Free landing (#mainCard), free planning (compact card) and the template
-    // column's input bar each carry the same searchable list; picking from any
-    // of them attaches the template, which is what opens the template layout
-    // (context/template.js). "Change" on the template card and the quiet link
-    // under the free tip open the same lists.
-    const {renderTemplateLists, selectTemplate, detachTemplate, closeTemplatePopovers} = createTemplateHandlers({
-        state, texts,
-    });
+    // ─── Templates: the list the template column picks from ─────────────────
+    // "From a template" is chosen on the page's first screen (start_path.js);
+    // inside that path, the column opens with a button that offers this list
+    // right below it, and once a template is chosen the card's "Change" opens
+    // the same list in the same place (context/template.js).
+    const {
+        renderTemplateLists, selectTemplate, detachTemplate, setTemplateLayout, closeTemplatePopovers,
+    } = createTemplateHandlers({state, texts});
 
     const templatePopovers = [
         {
-            panel: 'templatesPopover', search: 'templateSearch', close: 'templatesPopoverClose',
-            triggers: ['btnTemplates', 'heroTemplateLink'],
-        },
-        {
-            panel: 'templatesPopoverCompact', search: 'templateSearchCompact', close: 'templatesPopoverCompactClose',
-            triggers: ['btnTemplatesCompact'],
-        },
-        {
             panel: 'templatesPopoverTpl', search: 'templateSearchTpl', close: 'templatesPopoverTplClose',
-            triggers: ['tplBtnTemplates', 'tplCardChange'],
+            triggers: ['tplPickBtn', 'tplCardChange'],
         },
     ];
 
@@ -333,12 +320,10 @@ export const setupContextSection = (deps) => {
         }
     });
 
-    // Detaching: the chip's × in each composer, and Remove on the template card.
-    ['chipTemplateRemoveBtn', 'compactChipTemplateRemoveBtn', 'tplChipTemplateRemove', 'tplCardRemove'].forEach((id) => {
-        document.getElementById(id)?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            detachTemplate();
-        });
+    // Remove on the template card: back to the button, still on this path.
+    document.getElementById('tplCardRemove')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        detachTemplate();
     });
 
     if (btnWithSubsections && subToggleWrap) {
@@ -382,6 +367,7 @@ export const setupContextSection = (deps) => {
         renderGuidelineList,
         selectTemplate,
         detachTemplate,
+        setTemplateLayout,
         openTemplatePopover,
     };
 };

@@ -57,11 +57,13 @@ use local_coursegen\local\service\course_session_service;
 
 $resumesessionid = optional_param('sessionid', 0, PARAM_INT);
 $showsessionsview = optional_param('view', '', PARAM_ALPHA) === 'courses';
-// There is no separate template page any more: a template is attached from
-// the composer. The old ?mode=template link still works, as "open the
-// page with the template list open", and ?templateid= attaches one directly.
+// A fresh visit opens on the choice of starting point (free creation or from
+// a template). The old ?mode=template link still works, as "the template path
+// with the list of templates open", and ?templateid= opens it with that
+// template chosen; a resumed session skips the choice, as it was made.
 $opentemplates = optional_param('mode', 'free', PARAM_ALPHA) === 'template';
 $preselecttemplateid = optional_param('templateid', 0, PARAM_INT);
+$startchooser = !$resumesessionid && !$opentemplates && !$preselecttemplateid;
 
 // Load system instructions (directrices institucionales).
 $systeminstructions = [];
@@ -155,8 +157,8 @@ $logourl = new moodle_url('/local/coursegen/pix/logo.png');
 $sidebarpinned = (bool) get_user_preferences('local_coursegen_sidebar_pinned', true);
 
 // Native Moodle form (single autocomplete field) whose <select> is the value
-// template_mode.js listens to. It is rendered hidden: the composer's template
-// list is what the professor sees and it drives this select.
+// template_mode.js listens to. It is rendered hidden: the template column's
+// own list is what the professor sees and it drives this select.
 $templatepickerform = new \local_coursegen\form\course_template_picker_form(
     null, ['templates' => $coursetemplates], 'post', '', ['id' => 'tpl-select-form']);
 ob_start();
@@ -180,6 +182,7 @@ $templatecontext = [
     'subsectionsenabled' => $subsectionsenabled,
     'closeurl' => (new moodle_url('/my/courses.php'))->out(false),
     'sidebarclosed' => !$sidebarpinned,
+    'startchooser' => $startchooser,
 ];
 
 echo $OUTPUT->header();
