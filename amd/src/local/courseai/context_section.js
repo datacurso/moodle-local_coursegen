@@ -245,11 +245,87 @@ export const setupContextSection = (deps) => {
         });
     }
 
-    // ─── Templates: the template column's own field ──────────────────────────
+    // ─── Templates: the list the template column picks from ─────────────────
     // "From a template" is chosen on the page's first screen (start_path.js);
-    // inside that path the template is picked in Moodle's autocomplete field,
-    // and context/template.js keeps the rest of the column following it.
-    const {selectTemplate, setTemplateLayout, focusTemplatePicker} = createTemplateHandlers({state, texts});
+    // inside that path, the column's one-line picker opens this list right
+    // below itself, before and after a template is chosen; its × clears the
+    // choice without opening the list.
+    const {
+        renderTemplateLists, selectTemplate, detachTemplate, setTemplateLayout, closeTemplatePopovers,
+        isLocked: isTemplateLocked,
+    } = createTemplateHandlers({state, texts});
+
+    const templatePopovers = [
+        {
+            panel: 'templatesPopoverTpl', search: 'templateSearchTpl', close: 'templatesPopoverTplClose',
+            triggers: ['tplPicker'],
+        },
+    ];
+
+    const openTemplatePopover = (panelId, triggerEl = null) => {
+        const spec = templatePopovers.find((p) => p.panel === panelId);
+        const panel = document.getElementById(panelId);
+        if (!spec || !panel || isTemplateLocked()) {
+            return;
+        }
+        closeTemplatePopovers();
+        closeGuidelinePopover();
+        panel.classList.add('open');
+        spec.triggers.forEach((id) => {
+            document.getElementById(id)?.setAttribute('aria-expanded', id === triggerEl?.id ? 'true' : 'false');
+        });
+        const search = document.getElementById(spec.search);
+        if (search) {
+            search.value = '';
+            state.templateSearchQuery = '';
+        }
+        renderTemplateLists();
+        search?.focus();
+    };
+
+    templatePopovers.forEach((spec) => {
+        const panel = document.getElementById(spec.panel);
+        if (!panel) {
+            return;
+        }
+        spec.triggers.forEach((id) => {
+            const trigger = document.getElementById(id);
+            if (!trigger) {
+                return;
+            }
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (panel.classList.contains('open')) {
+                    closeTemplatePopovers();
+                } else {
+                    openTemplatePopover(spec.panel, trigger);
+                }
+            });
+        });
+        document.getElementById(spec.close)?.addEventListener('click', (e) => {
+            e.stopPropagation();
+            closeTemplatePopovers();
+        });
+        document.getElementById(spec.search)?.addEventListener('input', (e) => {
+            state.templateSearchQuery = e.target.value;
+            renderTemplateLists();
+        });
+        // Clicks inside the panel must not count as "outside".
+        panel.addEventListener('click', (e) => e.stopPropagation());
+    });
+
+    document.addEventListener('click', () => closeTemplatePopovers());
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeTemplatePopovers();
+        }
+    });
+
+    // The × on the picker line: clears the choice, the list stays closed.
+    document.getElementById('tplPickerClear')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        detachTemplate();
+    });
 
     if (btnWithSubsections && subToggleWrap) {
         bindToggleWrap(subToggleWrap, btnWithSubsections);
@@ -291,7 +367,9 @@ export const setupContextSection = (deps) => {
         refreshChipsRow,
         renderGuidelineList,
         selectTemplate,
+        detachTemplate,
         setTemplateLayout,
-        focusTemplatePicker,
+        openTemplatePopover,
+        closeTemplatePopovers,
     };
 };

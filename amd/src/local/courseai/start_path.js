@@ -31,15 +31,15 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-/** How long after the template card is picked the picker takes focus, so the column lands first. */
-const FOCUS_PICKER_DELAY_MS = 150;
+/** How long after the template card is picked the list opens, so the column lands first. */
+const OPEN_LIST_DELAY_MS = 150;
 
 /**
  * Wire the chooser cards and the top bar's path crumb.
  *
  * @param {Object} params
  * @param {Object} params.state Page state; gains `startPath` (null|'free'|'template').
- * @param {Object} params.contextUi Context UI handlers (setTemplateLayout, focusTemplatePicker).
+ * @param {Object} params.contextUi Context UI handlers (setTemplateLayout, openTemplatePopover, closeTemplatePopovers).
  * @returns {{setStartPath: Function, showChooser: Function, syncBars: Function}}
  */
 export const wireStartPath = ({state, contextUi}) => {
@@ -68,9 +68,9 @@ export const wireStartPath = ({state, contextUi}) => {
      *
      * @param {'free'|'template'} path
      * @param {Object} [options]
-     * @param {boolean} [options.focusPicker=true] On the template path, put the cursor in the picker.
+     * @param {boolean} [options.openList=true] On the template path, open the list of templates.
      */
-    const setStartPath = (path, {focusPicker = true} = {}) => {
+    const setStartPath = (path, {openList = true} = {}) => {
         state.startPath = path;
         workspace?.classList.remove('is-choosing');
         contextUi.setTemplateLayout(path === 'template');
@@ -79,8 +79,10 @@ export const wireStartPath = ({state, contextUi}) => {
             document.getElementById('promptInput')?.focus();
             return;
         }
-        if (focusPicker && !state.selectedTemplateId) {
-            setTimeout(() => contextUi.focusTemplatePicker(), FOCUS_PICKER_DELAY_MS);
+        if (openList && !state.selectedTemplateId) {
+            setTimeout(() => {
+                contextUi.openTemplatePopover('templatesPopoverTpl', document.getElementById('tplPicker'));
+            }, OPEN_LIST_DELAY_MS);
         }
     };
 
@@ -92,6 +94,7 @@ export const wireStartPath = ({state, contextUi}) => {
             return;
         }
         state.startPath = null;
+        contextUi.closeTemplatePopovers();
         contextUi.setTemplateLayout(false);
         workspace?.classList.add('is-choosing');
         syncBars();

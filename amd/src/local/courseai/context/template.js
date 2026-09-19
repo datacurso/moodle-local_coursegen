@@ -18,14 +18,13 @@
  *
  * "From a template" is a starting point chosen on the page's first screen
  * (start_path.js), and this module is what happens inside it. The template is
- * chosen in Moodle's own autocomplete field (the native picker form, whose
- * <select> template_mode.js listens to): picking one there loads the
- * structure, and the field's own × clears it. What this module adds is the
- * rest of the column following that value: the composer stays locked until
- * there is a template, and the page can attach one itself (?templateid=).
- * Opening and closing the template layout (the `is-template` class, the
- * shared ids, the professor's text carried between composers) lives here
- * too, for start_path.js to drive.
+ * chosen from the list the column's one-line picker (#tplPicker) opens below
+ * itself: picking one names it on that line, tells the hidden native select
+ * (which template_mode.js listens to, loading the structure), and unlocks the
+ * composer; the line's × clears it and the column offers the list again. The
+ * page can attach one itself too (?templateid=). Opening and closing the
+ * template layout (the `is-template` class, the shared ids, the professor's
+ * text carried between composers) lives here too, for start_path.js to drive.
  *
  * The two layouts share the ids of their thread and decision elements
  * (data-shared-id): only the column that is active carries them, so every
@@ -35,6 +34,13 @@
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
+import {escapeHtml} from 'local_coursegen/local/courseai/utils';
+
+/** The list a template is picked from: its <ul> and its search box. */
+const LISTS = [
+    {list: 'templateListTpl', search: 'templateSearchTpl'},
+];
 
 /**
  * Give the shared ids to the column that is active and take them from the other.
@@ -54,21 +60,31 @@ const claimSharedIds = (templateActive) => {
 };
 
 /**
+ * Whether the starting point is fixed: planning has started in the free path,
+ * or a generation is running in the template path.
+ *
+ * @returns {boolean}
+ */
+const isLocked = () => (document.getElementById('courseaiWorkspace')?.classList.contains('is-planning') ?? false)
+    || document.body.classList.contains('cg-generating');
+
+/**
  * Create template interaction handlers.
  *
  * @param {Object} params
  * @param {Object} params.state
  * @param {Object} params.texts
  * @returns {{
+ *   renderTemplateLists: Function,
  *   selectTemplate: Function,
+ *   detachTemplate: Function,
  *   getSelectedTemplate: Function,
  *   setTemplateLayout: Function,
- *   focusTemplatePicker: Function
+ *   closeTemplatePopovers: Function,
+ *   isLocked: Function
  * }}
  */
 export const createTemplateHandlers = ({state, texts}) => {
-    const picker = () => document.getElementById('id_templateid');
-
     const getSelectedTemplate = () => {
         if (state.selectedTemplateId === null || state.selectedTemplateId === undefined) {
             return null;
@@ -77,8 +93,49 @@ export const createTemplateHandlers = ({state, texts}) => {
     };
 
     /**
-     * Let the composer be used only once there is a template: before that,
-     * the column's whole job is to pick it.
+     * Render every template list that exists on the page.
+     */
+    const renderTemplateLists = () => {
+        const query = (state.templateSearchQuery || '').toLowerCase();
+        const filtered = (state.templates || []).filter((t) =>
+            !query ||
+            (t.name || '').toLowerCase().includes(query) ||
+            (t.coursefullname || '').toLowerCase().includes(query)
+        );
+        LISTS.forEach(({list}) => {
+            const el = document.getElementById(list);
+            if (!el) {
+                return;
+            }
+            if (filtered.length === 0) {
+                el.innerHTML = `<li class="pop-empty">${escapeHtml(texts.courseai_no_results || '')}</li>`;
+                return;
+            }
+            el.innerHTML = filtered.map((t) => {
+                const isSelected = String(state.selectedTemplateId) === String(t.id);
+                return `
+                    <li class="pop-item${isSelected ? ' selected' : ''}" data-id="${t.id}">
+                        <button class="pop-select-btn" data-select="${t.id}" type="button"
+                                role="option" aria-selected="${isSelected}">
+                            <div class="pop-radio"><div class="pop-dot"></div></div>
+                            <div class="pop-item-text">
+                                <span class="pop-item-name">${escapeHtml(t.name)}</span>
+                                <span class="pop-item-cat">${escapeHtml(t.coursefullname || '')}</span>
+                            </div>
+                        </button>
+                    </li>
+                `;
+            }).join('');
+            el.querySelectorAll('.pop-select-btn').forEach((btn) => {
+                btn.addEventListener('click', () => selectTemplate(btn.getAttribute('data-select')));
+            });
+        });
+    };
+
+    /**
+     * Name the chosen template on the picker line, and let the composer be
+     * used only once there is one: before that, the column's whole job is to
+     * pick it.
      */
     const refreshTemplateChrome = () => {
         const template = getSelectedTemplate();
@@ -95,6 +152,23 @@ export const createTemplateHandlers = ({state, texts}) => {
         }
         if (plusBtn) {
             plusBtn.disabled = !template;
+        }
+        const picker = document.getElementById('tplPicker');
+        const nameEl = document.getElementById('tplPickerName');
+        const courseEl = document.getElementById('tplPickerCourse');
+        const clearBtn = document.getElementById('tplPickerClear');
+        if (picker) {
+            picker.classList.toggle('has-value', !!template);
+            picker.title = template ? [template.name, template.coursefullname].filter(Boolean).join(' · ') : '';
+        }
+        if (nameEl) {
+            nameEl.textContent = template ? template.name : '';
+        }
+        if (courseEl) {
+            courseEl.textContent = template ? (template.coursefullname || '') : '';
+        }
+        if (clearBtn) {
+            clearBtn.hidden = !template;
         }
     };
 
@@ -140,59 +214,86 @@ export const createTemplateHandlers = ({state, texts}) => {
     };
 
     /**
-     * Put the cursor in the picker's search box.
+     * Tell the native picker which template is attached; template_mode.js
+     * listens to its 'change' and loads or clears the structure. The change
+     * is always dispatched: for a template named in the address the server
+     * has already given the select that value, and the structure still has
+     * to load.
      *
-     * Core enhances the field a moment after the page arrives, so the box is
-     * looked up when asked for, not once at start.
+     * @param {string} value
      */
-    const focusTemplatePicker = () => {
-        document.querySelector('#fitem_id_templateid .form-autocomplete-input input')?.focus();
+    const setPickerValue = (value) => {
+        const select = document.getElementById('id_templateid');
+        if (!select) {
+            return;
+        }
+        select.value = value;
+        select.dispatchEvent(new Event('change', {bubbles: true}));
     };
 
     /**
-     * Attach a template the page named itself (?templateid=). The form has
-     * already given the select that value, so the field already shows it; what
-     * is left is to tell template_mode.js, which loads the structure on the
-     * select's change.
+     * Choose a template. Choosing the one already chosen just closes the list.
      *
      * @param {string|number} id
      */
     const selectTemplate = (id) => {
-        const select = picker();
-        const template = (state.templates || []).find((t) => String(t.id) === String(id));
-        if (!select || !template) {
+        const strId = String(id);
+        const currentId = state.selectedTemplateId !== null && state.selectedTemplateId !== undefined
+            ? String(state.selectedTemplateId) : null;
+        if (currentId === strId) {
+            closeTemplatePopovers();
+            return;
+        }
+        const template = (state.templates || []).find((t) => String(t.id) === strId);
+        if (!template) {
             return;
         }
         state.selectedTemplateId = template.id;
         refreshTemplateChrome();
-        select.value = String(id);
-        select.dispatchEvent(new Event('change', {bubbles: true}));
+        renderTemplateLists();
+        setPickerValue(strId);
         setTemplateLayout(true);
+        closeTemplatePopovers();
+        document.getElementById('tplPromptInput')?.focus();
     };
 
-    // Whatever the professor does in the field, picking or clearing with the
-    // tag's ×, arrives as the select's change; the composer follows it. The
-    // cursor moves on to what comes next: the composer once there is a
-    // template, the search box again once there is none (core leaves the
-    // focus on the tag it just removed).
-    picker()?.addEventListener('change', () => {
-        const value = picker().value;
-        state.selectedTemplateId = value === '' ? null : value;
-        refreshTemplateChrome();
-        if (value !== '') {
-            document.getElementById('tplPromptInput')?.focus();
-        } else {
-            focusTemplatePicker();
+    /**
+     * Remove the chosen template. The path stays "from a template": the line
+     * reads "Choose template" again and the column offers the list.
+     */
+    const detachTemplate = () => {
+        if (isLocked()) {
+            return;
         }
-    });
+        state.selectedTemplateId = null;
+        refreshTemplateChrome();
+        renderTemplateLists();
+        setPickerValue('');
+        closeTemplatePopovers();
+    };
+
+    /**
+     * Close every template popover and reset its trigger.
+     */
+    const closeTemplatePopovers = () => {
+        document.querySelectorAll('.popover-panel[id^="templatesPopover"].open').forEach((panel) => {
+            panel.classList.remove('open');
+        });
+        document.querySelectorAll('[aria-controls^="templatesPopover"]').forEach((btn) => {
+            btn.setAttribute('aria-expanded', 'false');
+        });
+    };
 
     // The composer starts locked: nothing to adapt until a template is chosen.
     refreshTemplateChrome();
 
     return {
+        renderTemplateLists,
         selectTemplate,
+        detachTemplate,
         getSelectedTemplate,
         setTemplateLayout,
-        focusTemplatePicker,
+        closeTemplatePopovers,
+        isLocked,
     };
 };
