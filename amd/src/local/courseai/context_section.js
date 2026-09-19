@@ -252,14 +252,11 @@ export const setupContextSection = (deps) => {
     // choice without opening the list.
     const {
         renderTemplateLists, selectTemplate, detachTemplate, setTemplateLayout, closeTemplatePopovers,
-        isLocked: isTemplateLocked,
+        isLocked: isTemplateLocked, setPickerOpen, moveActive, pickActive,
     } = createTemplateHandlers({state, texts});
 
     const templatePopovers = [
-        {
-            panel: 'templatesPopoverTpl', search: 'templateSearchTpl', close: 'templatesPopoverTplClose',
-            triggers: ['tplPicker'],
-        },
+        {panel: 'templatesPopoverTpl', search: 'templateSearchTpl', triggers: ['tplPicker']},
     ];
 
     const openTemplatePopover = (panelId, triggerEl = null) => {
@@ -274,13 +271,8 @@ export const setupContextSection = (deps) => {
         spec.triggers.forEach((id) => {
             document.getElementById(id)?.setAttribute('aria-expanded', id === triggerEl?.id ? 'true' : 'false');
         });
-        const search = document.getElementById(spec.search);
-        if (search) {
-            search.value = '';
-            state.templateSearchQuery = '';
-        }
+        setPickerOpen(true);
         renderTemplateLists();
-        search?.focus();
     };
 
     templatePopovers.forEach((spec) => {
@@ -302,16 +294,36 @@ export const setupContextSection = (deps) => {
                 }
             });
         });
-        document.getElementById(spec.close)?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            closeTemplatePopovers();
-        });
         document.getElementById(spec.search)?.addEventListener('input', (e) => {
             state.templateSearchQuery = e.target.value;
             renderTemplateLists();
         });
+        document.getElementById(spec.search)?.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                moveActive(1);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                moveActive(-1);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                pickActive();
+            }
+        });
         // Clicks inside the panel must not count as "outside".
         panel.addEventListener('click', (e) => e.stopPropagation());
+    });
+
+    // Clicking into the search line itself (focusing it, not typing) must
+    // not count as "outside" either: only the picker's own trigger, clear
+    // and chevron handlers below decide what a click there does.
+    document.getElementById('tplPickerShell')?.addEventListener('click', (e) => e.stopPropagation());
+
+    // The chevron closes the list while it is open; the button state has no
+    // use for it (pointer-events is off there), so one listener covers both.
+    document.getElementById('tplPickerChevron')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeTemplatePopovers();
     });
 
     document.addEventListener('click', () => closeTemplatePopovers());

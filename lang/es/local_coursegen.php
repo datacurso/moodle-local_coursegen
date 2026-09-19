@@ -835,7 +835,6 @@ $string['courseai_template_selected_activity'] = 'Actividad seleccionada';
 $string['invalidtemplate'] = 'Plantilla inválida.';
 $string['courseai_template_pick'] = 'Elegir plantilla';
 $string['courseai_chip_remove_template'] = 'Quitar plantilla';
-$string['courseai_templates_dialog_label'] = 'Plantillas de curso';
 $string['courseai_templates_list_label'] = 'Lista de plantillas';
 $string['courseai_templates_search_placeholder'] = 'Buscar plantillas...';
 $string['courseai_template_picker'] = 'Plantilla de curso';
