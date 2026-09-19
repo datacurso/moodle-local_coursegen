@@ -166,8 +166,13 @@ ob_start();
 $templatepickerform->display();
 $templatepickerformhtml = ob_get_clean();
 
+// The template picker's label carries Moodle's standard help icon, with the
+// same explanation the native form field used to show.
+$templatepickerhelp = $OUTPUT->help_icon('courseai_template_picker', 'local_coursegen');
+
 // Prepare template context.
 $templatecontext = [
+    'templatepickerhelp' => $templatepickerhelp,
     'guidelines' => json_encode($systeminstructions),
     'coursetemplates' => $coursetemplates,
     'templatepickerformhtml' => $templatepickerformhtml,
