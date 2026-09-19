@@ -64,8 +64,12 @@
     {{! The starting point, once chosen: a quiet crumb that names the path and
         leads back to the cards. Hidden while the cards are showing; locked
         (no chevron, no action) once planning has started. Both path names are
-        in the markup; data-start-path, kept by start_path.js, picks one. }}
-    <button class="courseai-topbar-path" id="courseaiPathBack" type="button" hidden
+        in the markup; data-start-path picks one - set here from the very
+        first render, so it never sits blank waiting for start_path.js to
+        learn what the server already decided. }}
+    <button class="courseai-topbar-path" id="courseaiPathBack" type="button"
+            {{^showstartcrumb}}hidden{{/showstartcrumb}}
+            data-start-path="{{initialstartpath}}"
             data-start-modebar
             title="{{#str}}courseai_start_back, local_coursegen{{/str}}"
             data-title-unlocked="{{#str}}courseai_start_back, local_coursegen{{/str}}"

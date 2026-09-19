@@ -68,6 +68,11 @@ $modeparam = optional_param('mode', null, PARAM_ALPHA);
 $opentemplates = $modeparam === 'template';
 $preselecttemplateid = optional_param('templateid', 0, PARAM_INT);
 $startchooser = !$resumesessionid && $modeparam === null && !$preselecttemplateid;
+// The top bar's path crumb (start_path.js) needs to know which name to show
+// from the very first render too, or it sits empty until the JS bundle
+// finishes loading: null while the cards are showing, otherwise whichever
+// path is actually opening - the same rule start_path.js falls back to itself.
+$initialstartpath = $startchooser ? null : (($opentemplates || $preselecttemplateid > 0) ? 'template' : 'free');
 
 // Load system instructions (directrices institucionales).
 $systeminstructions = [];
@@ -189,6 +194,8 @@ $templatecontext = [
     // the class that shows the template column belongs on the very first
     // render, or a moment of the free hero flashes before JS corrects it.
     'initialtemplate' => $opentemplates || $preselecttemplateid > 0,
+    'showstartcrumb' => $initialstartpath !== null,
+    'initialstartpath' => $initialstartpath,
 ];
 
 echo $OUTPUT->header();
