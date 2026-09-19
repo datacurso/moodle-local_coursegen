@@ -57,7 +57,22 @@ use local_coursegen\local\service\course_session_service;
 
 $resumesessionid = optional_param('sessionid', 0, PARAM_INT);
 $showsessionsview = optional_param('view', '', PARAM_ALPHA) === 'courses';
-$templatemodeactive = optional_param('mode', 'free', PARAM_ALPHA) === 'template';
+// A fresh visit opens on the choice of starting point (free creation or from
+// a template). The old ?mode=template link still works, as "the template path
+// with the list of templates open", and ?templateid= opens it with that
+// template chosen; a resumed session skips the choice, as it was made.
+// Picking a card writes its own ?mode= into the address, so a reload lands
+// back on that path instead of the choice screen: the parameter being
+// absent is what means "nothing chosen yet", not the value 'free' itself.
+$modeparam = optional_param('mode', null, PARAM_ALPHA);
+$opentemplates = $modeparam === 'template';
+$preselecttemplateid = optional_param('templateid', 0, PARAM_INT);
+$startchooser = !$resumesessionid && $modeparam === null && !$preselecttemplateid;
+// The top bar's path crumb (start_path.js) needs to know which name to show
+// from the very first render too, or it sits empty until the JS bundle
+// finishes loading: null while the cards are showing, otherwise whichever
+// path is actually opening - the same rule start_path.js falls back to itself.
+$initialstartpath = $startchooser ? null : (($opentemplates || $preselecttemplateid > 0) ? 'template' : 'free');
 
 // Load system instructions (directrices institucionales).
 $systeminstructions = [];
@@ -137,24 +152,31 @@ $subsectionsenabled = \local_coursegen\local\service\course_planning_service::su
 // Get logo URL (sidebar top bar, left of the collapse toggle).
 $logourl = new moodle_url('/local/coursegen/pix/logo.png');
 
-// Native Moodle form (single autocomplete field) for the template-mode picker.
+// The sidebar's pinned/closed state is a per-user preference: read it here so
+// the first render already carries the right class, with no flash and no
+// dependency on browser storage (see lib.php's local_coursegen_user_preferences()).
+$sidebarpinned = (bool) get_user_preferences('local_coursegen_sidebar_pinned', true);
+
+// Native Moodle form (single autocomplete field) whose <select> is the value
+// template_mode.js listens to. It is the template column's picker: a template
+// named in the address is its value from the first render, so the field
+// shows it as a tag straight away.
 $templatepickerform = new \local_coursegen\form\course_template_picker_form(
-    null, ['templates' => $coursetemplates], 'post', '', ['id' => 'tpl-select-form']);
+    null, ['templates' => $coursetemplates, 'preselect' => $preselecttemplateid], 'post', '', ['id' => 'tpl-select-form']);
 ob_start();
 $templatepickerform->display();
 $templatepickerformhtml = ob_get_clean();
 
-// Native Moodle "info" notification (same alert-info markup report builder
-// uses for "Nothing to display") shown until a template is picked.
-$templateemptystatehtml = $OUTPUT->notification(
-    get_string('courseai_template_empty_state', 'local_coursegen'), 'info', false);
+// The template picker's label carries Moodle's standard help icon, with the
+// same explanation the native form field used to show.
+$templatepickerhelp = $OUTPUT->help_icon('courseai_template_picker', 'local_coursegen');
 
 // Prepare template context.
 $templatecontext = [
+    'templatepickerhelp' => $templatepickerhelp,
     'guidelines' => json_encode($systeminstructions),
     'coursetemplates' => $coursetemplates,
     'templatepickerformhtml' => $templatepickerformhtml,
-    'templateemptystatehtml' => $templateemptystatehtml,
     'hascoursetemplates' => !empty($coursetemplates),
     'languages' => json_encode($languageoptions),
     'defaultlang' => current_language(),
@@ -164,9 +186,16 @@ $templatecontext = [
     'allsessions' => $allsessionsdata,
     'isresuming' => $resumesessionid > 0,
     'showsessionsview' => $showsessionsview,
-    'templatemodeactive' => $templatemodeactive,
     'subsectionsenabled' => $subsectionsenabled,
     'closeurl' => (new moodle_url('/my/courses.php'))->out(false),
+    'sidebarclosed' => !$sidebarpinned,
+    'startchooser' => $startchooser,
+    // Which path opens is decided here, not learned after the JS bundle runs:
+    // the class that shows the template column belongs on the very first
+    // render, or a moment of the free hero flashes before JS corrects it.
+    'initialtemplate' => $opentemplates || $preselecttemplateid > 0,
+    'showstartcrumb' => $initialstartpath !== null,
+    'initialstartpath' => $initialstartpath,
 ];
 
 echo $OUTPUT->header();
@@ -183,6 +212,8 @@ $PAGE->requires->js_call_amd('local_coursegen/courseai', 'init', [
         'sessions' => $allsessionsdata,
         'resumesessionid' => $resumesessionid,
         'isresuming' => $resumesessionid > 0,
+        'opentemplates' => $opentemplates,
+        'preselecttemplateid' => $preselecttemplateid,
     ],
 ]);
 

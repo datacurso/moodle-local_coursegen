@@ -58,6 +58,7 @@ import {makeEmitLog, makeRenderPlanMarkdown} from 'local_coursegen/courseai/boot
 import {makeHydratePlan} from 'local_coursegen/courseai/bootstrap/hydrate-plan';
 import {createExecutionControls} from 'local_coursegen/local/courseai/actions/execution-control';
 import {wireTemplateMode} from 'local_coursegen/local/courseai/template_mode';
+import {wireStartPath} from 'local_coursegen/local/courseai/start_path';
 
 /**
  * Initialize the courseai page.
@@ -99,6 +100,9 @@ export const init = async(params) => {
             YUI,
             texts,
         });
+
+        // The first screen (which starting point) and the bar that names it.
+        const startPath = wireStartPath({state, contextUi});
 
         const stepsUi = createStepsUi({
             state,
@@ -278,6 +282,8 @@ export const init = async(params) => {
             if (elements.contextView) {
                 elements.contextView.style.display = '';
             }
+            // Nothing to resume: start over, from the first screen.
+            startPath.showChooser();
         };
 
         try {
@@ -296,6 +302,19 @@ export const init = async(params) => {
         contextUi.renderGuidelineList();
         stepsUi.updateFlowNav();
         contextUi.updateGenerateButton();
+
+        // The old template page is now the template path of this one, entered
+        // without the first screen: ?templateid= with that template chosen,
+        // ?mode=template with the column shown and its picker ready to click.
+        if (!resumeSessionId) {
+            const preselect = parseInt(params?.preselecttemplateid || 0, 10);
+            if (preselect > 0) {
+                startPath.setStartPath('template');
+                contextUi.selectTemplate(preselect, {focus: false});
+            } else if (params?.opentemplates) {
+                startPath.setStartPath('template');
+            }
+        }
 
         // Initialize sidebar.
         initSidebar(state, actions.resetForAnotherCourse);

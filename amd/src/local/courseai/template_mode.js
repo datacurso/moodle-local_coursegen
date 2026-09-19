@@ -32,6 +32,7 @@ import YUI from 'core/yui';
 import {getStrings} from 'core/str';
 import {initFilepicker} from '../../repository/courseai';
 import {bindToggleWrap, showFilePicker} from './context/filepicker';
+import {wirePlusMenu} from './context/plus-menu';
 import {
     getTemplateStructure,
     startTemplateGeneration,
@@ -134,33 +135,14 @@ const updateStats = (tplState, statsTemplate) => {
  * @param {Object} state
  */
 export const wireTemplateMode = (state) => {
-    // Free/Template mode switching is plain <a href> navigation
-    // (aicoursecreation.php / ?mode=template), server-rendered from the
-    // mode param — no JS involved.
-    //
-    // The template picker itself is a native Moodle form (single autocomplete
-    // element, see classes/form/course_template_picker_form.php), rendered
-    // server-side and embedded as-is — Moodle's own form renderer already
-    // enhances the underlying <select> into the autocomplete widget, so no
-    // JS wiring is needed here beyond listening for its 'change' event.
+    // The template is chosen in the native picker form's autocomplete
+    // (classes/form/course_template_picker_form.php); a template named in the
+    // address is set by context/template.js, which dispatches the same
+    // 'change'. Everything below listens to that select, so the structure
+    // loads and clears the same way however it was set.
     // Moodleform's default id for an unnamed-id element is "id_<fieldname>".
     const tplSelect = document.getElementById('id_templateid');
-    const sidebar = document.getElementById('courseaiSidebar');
-    const collapseBtn = document.getElementById('courseaiSidebarCollapse');
-    const expandBtn = document.getElementById('courseaiSidebarExpand');
     const container = document.getElementById('tplModeStructure');
-
-    // Sidebar collapse/expand.
-    if (collapseBtn && sidebar) {
-        collapseBtn.addEventListener('click', () => {
-            sidebar.classList.add('collapsed');
-        });
-    }
-    if (expandBtn && sidebar) {
-        expandBtn.addEventListener('click', () => {
-            sidebar.classList.remove('collapsed');
-        });
-    }
 
     // Input-bar defaults: no images, page default language, no syllabus yet.
     const tplState = createTemplateState({lang: state.defaultLang || ''});
@@ -307,7 +289,8 @@ const refreshSyllabusChip = (tplState) => {
         chip.classList.toggle('hidden', !hasFile);
     }
     if (chipsRow) {
-        chipsRow.style.display = hasFile ? '' : 'none';
+        const anyChip = chipsRow.querySelector('.chip:not(.hidden)');
+        chipsRow.style.display = anyChip ? 'flex' : 'none';
     }
 };
 
@@ -323,9 +306,14 @@ const refreshSyllabusChip = (tplState) => {
 const wireInputBar = (tplState, state) => {
     // Adaptation prompt — composer textarea, value tracked in tplState.
     const promptInput = document.getElementById('tplPromptInput');
+    const genBtn = document.getElementById('tplModeGenerate');
     if (promptInput) {
         promptInput.addEventListener('input', () => {
             tplState.prompt = promptInput.value;
+            // Same cue as free mode's send button: filled once there is text.
+            if (genBtn) {
+                genBtn.classList.toggle('is-ready', promptInput.value.trim() !== '');
+            }
         });
     }
 
@@ -349,6 +337,21 @@ const wireInputBar = (tplState, state) => {
             tplState.lang = langSelect.value;
         });
     }
+
+    // "+" options menu (Sílabo / Idioma / Imágenes) — the same module free
+    // mode's compact composer uses, over this bar's own elements.
+    wirePlusMenu({
+        button: document.getElementById('tplBtnPlusMenu'),
+        panel: document.getElementById('tplPlusMenuPanel'),
+        langItem: document.getElementById('pmTplLangItem'),
+        langValue: document.getElementById('pmTplLangValue'),
+        langPopover: document.getElementById('langPopoverTpl'),
+        langSearch: document.getElementById('langSearchTpl'),
+        langList: document.getElementById('langListTpl'),
+        langCloseBtn: document.getElementById('langPopoverTplClose'),
+        langSelect,
+        languages: state.languages || [],
+    });
 
     // Generate-images toggle — same toggle-track pattern as free mode.
     const imgToggleWrap = document.getElementById('tplImgToggleWrap');

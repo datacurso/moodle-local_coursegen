@@ -16,10 +16,21 @@
 /**
  * Sidebar component for the AI course creation page.
  *
+ * Whether the sidebar is pinned open or closed is a per-user preference
+ * (local_coursegen_user_preferences() in lib.php), not browser storage: the
+ * page reads it server-side before the first render (aicoursecreation.php
+ * sets the "sidebar-closed" class from it directly), so there is nothing to
+ * restore here and no flash of the wrong state. This module only writes the
+ * preference back after the user acts.
+ *
  * @module     local_coursegen/local/courseai/sidebar
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
+import {setUserPreference} from 'core_user/repository';
+
+const SIDEBAR_PINNED_PREFERENCE = 'local_coursegen_sidebar_pinned';
 
 /**
  * Initialize the sidebar component.
@@ -37,8 +48,6 @@ export const initSidebar = () => {
     if (!sidebar) {
         return;
     }
-
-    // Sidebar starts collapsed (class already in HTML template).
 
     // ─── Search + status filter ───────────────────────────────────────
     const searchInput = document.getElementById('courseaiSessionsSearch');
@@ -127,40 +136,132 @@ export const initSidebar = () => {
         coursesList.style.maxHeight = coursesList.scrollHeight + 'px';
     };
 
-    // ─── Open / close helpers ────────────────────────────────────────
-    const openSidebar = () => {
-        sidebar.classList.remove('collapsed');
-        if (toggleBtn) {
-            toggleBtn.classList.remove('collapsed');
+    // ─── Pin / float / close ─────────────────────────────────────────
+    // The toggle in the top bar owns the sidebar's state:
+    //  - pinned:   a column of the layout; clicking the toggle closes it.
+    //  - closed:   slid out; the toggle shows the menu glyph. Hovering it
+    //              floats the sidebar over the content without moving
+    //              anything; leaving hides it again. Clicking pins it.
+    // The pinned state is remembered per user (see the module docblock);
+    // the class on this element already reflects it on arrival.
+    const layout = document.getElementById('courseaiAppLayout');
+    const toggleWrap = document.getElementById('courseaiSidebarToggleWrap');
+    const HOVER_OPEN_MS = 120;
+    const HOVER_CLOSE_MS = 220;
+    const FLOAT_OUT_MS = 240;
+    let hoverTimer = null;
+    let floatOutTimer = null;
+
+    const isClosed = () => layout?.classList.contains('sidebar-closed') ?? false;
+    const isFloating = () => layout?.classList.contains('sidebar-floating') ?? false;
+
+    // Hold the "no transitions" class for one frame so a state that leaves
+    // the normal flow (floating) can land in its rest state without the
+    // rest state's own slide replaying.
+    const snap = () => {
+        if (!layout) {
+            return;
         }
-        if (backdrop) {
-            backdrop.classList.add('open');
-        }
-        syncCoursesListHeight();
+        layout.classList.add('sidebar-snap');
+        requestAnimationFrame(() => requestAnimationFrame(() => layout.classList.remove('sidebar-snap')));
     };
 
-    const closeSidebar = () => {
-        sidebar.classList.add('collapsed');
-        if (toggleBtn) {
-            toggleBtn.classList.add('collapsed');
+    const syncToggle = () => {
+        if (!toggleBtn) {
+            return;
         }
-        if (backdrop) {
-            backdrop.classList.remove('open');
+        const closed = isClosed();
+        const label = closed ? toggleBtn.dataset.labelOpen : toggleBtn.dataset.labelClose;
+        toggleBtn.setAttribute('aria-expanded', String(!closed || isFloating()));
+        if (label) {
+            toggleBtn.setAttribute('aria-label', label);
+            // The native tooltip would sit on top of the floating panel, so
+            // it is only offered while there is nothing under it.
+            toggleBtn.title = isFloating() ? '' : `${label} [`;
         }
     };
 
-    // ─── Toggle ──────────────────────────────────────────────────────
-    const toggleSidebar = () => {
-        if (sidebar.classList.contains('collapsed')) {
-            openSidebar();
-        } else {
-            closeSidebar();
+    const setFloating = (on) => {
+        if (!layout || !isClosed()) {
+            return;
         }
+        clearTimeout(floatOutTimer);
+        if (on) {
+            const resuming = layout.classList.contains('sidebar-floating-out');
+            layout.classList.remove('sidebar-floating-out');
+            layout.classList.add('sidebar-floating');
+            if (resuming) {
+                snap();
+            }
+        } else if (isFloating()) {
+            layout.classList.remove('sidebar-floating');
+            layout.classList.add('sidebar-floating-out');
+            floatOutTimer = setTimeout(() => {
+                snap();
+                layout.classList.remove('sidebar-floating-out');
+            }, FLOAT_OUT_MS);
+        }
+        syncToggle();
     };
+
+    const setPinned = (pinned) => {
+        if (!layout) {
+            return;
+        }
+        clearTimeout(floatOutTimer);
+        clearTimeout(hoverTimer);
+        layout.classList.remove('sidebar-floating', 'sidebar-floating-out');
+        layout.classList.toggle('sidebar-closed', !pinned);
+        if (backdrop) {
+            backdrop.classList.toggle('open', pinned);
+        }
+        if (pinned) {
+            syncCoursesListHeight();
+        }
+        syncToggle();
+        setUserPreference(SIDEBAR_PINNED_PREFERENCE, pinned ? 1 : 0).catch(() => {
+            // The preference failed to save; the sidebar still behaves
+            // correctly for the rest of this visit, it just will not be
+            // remembered on the next one.
+        });
+    };
+
+    const closeSidebar = () => setPinned(false);
+    const toggleSidebar = () => setPinned(isClosed());
 
     if (toggleBtn) {
         toggleBtn.addEventListener('click', toggleSidebar);
     }
+
+    const scheduleFloatClose = () => {
+        clearTimeout(hoverTimer);
+        hoverTimer = setTimeout(() => setFloating(false), HOVER_CLOSE_MS);
+    };
+    if (toggleWrap) {
+        toggleWrap.addEventListener('mouseenter', () => {
+            clearTimeout(hoverTimer);
+            if (isClosed()) {
+                hoverTimer = setTimeout(() => setFloating(true), HOVER_OPEN_MS);
+            }
+        });
+        toggleWrap.addEventListener('mouseleave', scheduleFloatClose);
+    }
+    sidebar.addEventListener('mouseenter', () => clearTimeout(hoverTimer));
+    sidebar.addEventListener('mouseleave', scheduleFloatClose);
+
+    document.addEventListener('keydown', (e) => {
+        const target = document.activeElement;
+        const typing = target && (/^(INPUT|TEXTAREA|SELECT)$/.test(target.tagName) || target.isContentEditable);
+        if (e.key === '[' && !typing && !e.ctrlKey && !e.metaKey && !e.altKey) {
+            e.preventDefault();
+            toggleSidebar();
+        }
+        if (e.key === 'Escape' && isFloating()) {
+            setFloating(false);
+        }
+    });
+
+    syncToggle();
 
     // ─── Backdrop click closes sidebar ───────────────────────────────
     if (backdrop) {
@@ -168,18 +269,13 @@ export const initSidebar = () => {
     }
 
     // ─── New course button ───────────────────────────────────────────
-    // No closeSidebar() here: the page navigates away immediately after, so
-    // collapsing it first only shows a jarring flash of the close animation.
-    // Keeps the current ?mode= (free/template) — "new course" should reset
-    // the session, not the mode you'd chosen to work in.
+    // A clean page, no query string: the creation mode is chosen in the
+    // composer (mode_switch partial), so nothing from the current page
+    // carries over. No closeSidebar() here: the page navigates away at
+    // once, so collapsing first only flashes the close animation.
     if (btnNew) {
         btnNew.addEventListener('click', () => {
-            const currentMode = new URLSearchParams(window.location.search).get('mode');
-            const url = new URL('aicoursecreation.php', window.location.href);
-            if (currentMode) {
-                url.searchParams.set('mode', currentMode);
-            }
-            window.location.href = url.toString();
+            window.location.href = new URL('aicoursecreation.php', window.location.href).toString();
         });
     }
 

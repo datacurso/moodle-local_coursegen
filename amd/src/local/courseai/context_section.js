@@ -245,54 +245,99 @@ export const setupContextSection = (deps) => {
         });
     }
 
-    // ─── Template popover wiring ────────────────────────────────────────────
-    const btnTemplates = document.getElementById('btnTemplates');
-    const templatesPopover = document.getElementById('templatesPopover');
-    const templateSearch = document.getElementById('templateSearch');
+    // ─── Templates: the list the template column picks from ─────────────────
+    // "From a template" is chosen on the page's first screen (start_path.js);
+    // inside that path, the column's one-line picker opens this list right
+    // below itself, before and after a template is chosen; its × clears the
+    // choice without opening the list.
+    const {
+        renderTemplateLists, selectTemplate, detachTemplate, setTemplateLayout, closeTemplatePopovers,
+        isLocked: isTemplateLocked, setPickerOpen, moveActive, pickActive,
+    } = createTemplateHandlers({state, texts});
 
-    const {renderTemplateList, selectTemplate} = createTemplateHandlers({
-        state, texts,
-        refreshTemplateChip: () => {},
-        refreshChipsRow,
-        refreshCompactChipsRow,
+    const templatePopovers = [
+        {panel: 'templatesPopoverTpl', search: 'templateSearchTpl', triggers: ['tplPicker']},
+    ];
+
+    const openTemplatePopover = (panelId, triggerEl = null) => {
+        const spec = templatePopovers.find((p) => p.panel === panelId);
+        const panel = document.getElementById(panelId);
+        if (!spec || !panel || isTemplateLocked()) {
+            return;
+        }
+        closeTemplatePopovers();
+        closeGuidelinePopover();
+        panel.classList.add('open');
+        spec.triggers.forEach((id) => {
+            document.getElementById(id)?.setAttribute('aria-expanded', id === triggerEl?.id ? 'true' : 'false');
+        });
+        setPickerOpen(true);
+        renderTemplateLists();
+    };
+
+    templatePopovers.forEach((spec) => {
+        const panel = document.getElementById(spec.panel);
+        if (!panel) {
+            return;
+        }
+        spec.triggers.forEach((id) => {
+            const trigger = document.getElementById(id);
+            if (!trigger) {
+                return;
+            }
+            trigger.addEventListener('click', (e) => {
+                e.stopPropagation();
+                if (panel.classList.contains('open')) {
+                    closeTemplatePopovers();
+                } else {
+                    openTemplatePopover(spec.panel, trigger);
+                }
+            });
+        });
+        document.getElementById(spec.search)?.addEventListener('input', (e) => {
+            state.templateSearchQuery = e.target.value;
+            renderTemplateLists();
+        });
+        document.getElementById(spec.search)?.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowDown') {
+                e.preventDefault();
+                moveActive(1);
+            } else if (e.key === 'ArrowUp') {
+                e.preventDefault();
+                moveActive(-1);
+            } else if (e.key === 'Enter') {
+                e.preventDefault();
+                pickActive();
+            }
+        });
+        // Clicks inside the panel must not count as "outside".
+        panel.addEventListener('click', (e) => e.stopPropagation());
     });
 
-    if (btnTemplates && templatesPopover) {
-        btnTemplates.addEventListener('click', (e) => {
-            e.stopPropagation();
-            const willOpen = !templatesPopover.classList.contains('open');
-            templatesPopover.classList.toggle('open', willOpen);
-            btnTemplates.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
-            if (willOpen && templateSearch) {
-                templateSearch.value = '';
-                state.templateSearchQuery = '';
-                renderTemplateList();
-                templateSearch.focus();
-            }
-        });
-    }
+    // Clicking into the search line itself (focusing it, not typing) must
+    // not count as "outside" either: only the picker's own trigger, clear
+    // and chevron handlers below decide what a click there does.
+    document.getElementById('tplPickerShell')?.addEventListener('click', (e) => e.stopPropagation());
 
-    if (templateSearch) {
-        templateSearch.addEventListener('input', () => {
-            state.templateSearchQuery = templateSearch.value;
-            renderTemplateList();
-        });
-    }
+    // The chevron closes the list while it is open; the button state has no
+    // use for it (pointer-events is off there), so one listener covers both.
+    document.getElementById('tplPickerChevron')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeTemplatePopovers();
+    });
 
-    const templatesPopoverClose = document.getElementById('templatesPopoverClose');
-    if (templatesPopoverClose) {
-        templatesPopoverClose.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (templatesPopover) {
-                templatesPopover.classList.remove('open');
-            }
-            if (btnTemplates) {
-                btnTemplates.setAttribute('aria-expanded', 'false');
-            }
-        });
-    }
+    document.addEventListener('click', () => closeTemplatePopovers());
+    document.addEventListener('keydown', (e) => {
+        if (e.key === 'Escape') {
+            closeTemplatePopovers();
+        }
+    });
 
-    void selectTemplate;
+    // The × on the picker line: clears the choice, the list stays closed.
+    document.getElementById('tplPickerClear')?.addEventListener('click', (e) => {
+        e.stopPropagation();
+        detachTemplate();
+    });
 
     if (btnWithSubsections && subToggleWrap) {
         bindToggleWrap(subToggleWrap, btnWithSubsections);
@@ -333,5 +378,10 @@ export const setupContextSection = (deps) => {
         refreshGuidelineChip,
         refreshChipsRow,
         renderGuidelineList,
+        selectTemplate,
+        detachTemplate,
+        setTemplateLayout,
+        openTemplatePopover,
+        closeTemplatePopovers,
     };
 };

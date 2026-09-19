@@ -61,7 +61,11 @@ class course_template_picker_form extends \moodleform {
             ]
         );
         $mform->setType('templateid', PARAM_INT);
-        $mform->setDefault('templateid', '');
+        // A template named in the address (?templateid=) is the field's value
+        // from the first render: core's autocomplete draws its tag from the
+        // select as it enhances it, and does not watch the select afterwards.
+        $preselect = (int) ($this->_customdata['preselect'] ?? 0);
+        $mform->setDefault('templateid', $preselect > 0 && isset($choices[$preselect]) ? $preselect : '');
         $mform->addHelpButton('templateid', 'courseai_template_picker', 'local_coursegen');
     }
 }

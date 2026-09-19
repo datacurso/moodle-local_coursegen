@@ -17,6 +17,12 @@
 - **Every element of a generation is named by a uid**  
   The activities a template generates have no course module until they are created, so until now they travelled under an identifier derived from an internal record, first offset by a constant and then negated so it would not be mistaken for a real one. Each element now carries a uid of its own instead, which is what the preview links use.
 
+- **The sidebar folds away and comes back on hover**  
+  The sidebar's toggle and the way out of the page used to float over the content, one on each side, and the toggle covered the page title once the sidebar was folded. A thin bar across the top now holds both: the toggle at its left, which never moves, and the way back to My courses at its right. Folding the sidebar slides it out and the content over; hovering the toggle while it is folded shows the sidebar on top of the content, without moving anything, and moving away hides it again; a click pins it back. The choice is remembered, and the `[` key toggles it.
+
+- **The page opens by asking how you want to start**  
+  Free creation or from a template used to be two tabs at the top of the sidebar, then briefly a switch inside the composer or an attachment in its "+" menu. None of those made it clear which one you were in. The page now opens on that one question, with a card for each starting point: describe the course and let the AI propose the structure, or start from an institutional template. Picking a card opens that path's workspace, and the thin bar at the top of the page names the choice, "Create with AI / From a template", as a quiet crumb that leads back to the cards until planning starts and the choice is fixed. On the template path the template is chosen on one line at the top of the column, the height of a field: it reads "Choose template" and opens a searchable list right below itself; once picked, the same line names the template and its course, with a small × that removes it, and nothing else in the column moves. The composer waits until one is picked. The old template link and a preselected template still land straight on the template column, with the template already named on that line.
+
 ## Fixed
 
 - **Only the activities marked to be rewritten are rewritten**  
