@@ -310,7 +310,7 @@ export const init = async(params) => {
             const preselect = parseInt(params?.preselecttemplateid || 0, 10);
             if (preselect > 0) {
                 startPath.setStartPath('template', {openList: false});
-                contextUi.selectTemplate(preselect);
+                contextUi.selectTemplate(preselect, {focus: false});
             } else if (params?.opentemplates) {
                 startPath.setStartPath('template', {focusList: false});
             }
