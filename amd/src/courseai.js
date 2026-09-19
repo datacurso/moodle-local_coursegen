@@ -312,7 +312,7 @@ export const init = async(params) => {
                 startPath.setStartPath('template', {openList: false});
                 contextUi.selectTemplate(preselect);
             } else if (params?.opentemplates) {
-                startPath.setStartPath('template');
+                startPath.setStartPath('template', {focusList: false});
             }
         }
 

@@ -218,12 +218,17 @@ export const createTemplateHandlers = ({state, texts}) => {
     /**
      * Switch the picker line between its two mutually-exclusive states: the
      * button naming the choice, or the search box the list is filtered
-     * from. Opening focuses and clears the box; closing restores the label
-     * and forgets whatever was typed, so the next open starts fresh.
+     * from. Closing restores the label and forgets whatever was typed, so
+     * the next open starts fresh.
      *
      * @param {boolean} open
+     * @param {Object} [options]
+     * @param {boolean} [options.focus=true] Give the search box the keyboard focus.
+     *                  Only for an open a professor's own click asked for - a popover
+     *                  the page opens by itself (landing on ?mode=template) must not
+     *                  steal focus nobody asked to give it.
      */
-    const setPickerOpen = (open) => {
+    const setPickerOpen = (open, {focus = true} = {}) => {
         const shell = document.getElementById('tplPickerShell');
         const picker = document.getElementById('tplPicker');
         const search = document.getElementById('templateSearchTpl');
@@ -238,7 +243,9 @@ export const createTemplateHandlers = ({state, texts}) => {
             search.value = '';
             state.templateSearchQuery = '';
             activeIndex = -1;
-            search.focus();
+            if (focus) {
+                search.focus();
+            }
         }
     };
 
