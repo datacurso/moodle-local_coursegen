@@ -305,14 +305,14 @@ export const init = async(params) => {
 
         // The old template page is now the template path of this one, entered
         // without the first screen: ?templateid= with that template chosen,
-        // ?mode=template with the list open to choose one.
+        // ?mode=template with the column shown and its picker ready to click.
         if (!resumeSessionId) {
             const preselect = parseInt(params?.preselecttemplateid || 0, 10);
             if (preselect > 0) {
-                startPath.setStartPath('template', {openList: false});
+                startPath.setStartPath('template');
                 contextUi.selectTemplate(preselect, {focus: false});
             } else if (params?.opentemplates) {
-                startPath.setStartPath('template', {focusList: false});
+                startPath.setStartPath('template');
             }
         }
 
