@@ -61,9 +61,13 @@ $showsessionsview = optional_param('view', '', PARAM_ALPHA) === 'courses';
 // a template). The old ?mode=template link still works, as "the template path
 // with the list of templates open", and ?templateid= opens it with that
 // template chosen; a resumed session skips the choice, as it was made.
-$opentemplates = optional_param('mode', 'free', PARAM_ALPHA) === 'template';
+// Picking a card writes its own ?mode= into the address, so a reload lands
+// back on that path instead of the choice screen: the parameter being
+// absent is what means "nothing chosen yet", not the value 'free' itself.
+$modeparam = optional_param('mode', null, PARAM_ALPHA);
+$opentemplates = $modeparam === 'template';
 $preselecttemplateid = optional_param('templateid', 0, PARAM_INT);
-$startchooser = !$resumesessionid && !$opentemplates && !$preselecttemplateid;
+$startchooser = !$resumesessionid && $modeparam === null && !$preselecttemplateid;
 
 // Load system instructions (directrices institucionales).
 $systeminstructions = [];
