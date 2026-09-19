@@ -813,8 +813,6 @@ $string['courseai_start_mostused'] = 'Most used';
 $string['courseai_start_note'] = 'Nothing is created in Moodle until you approve a plan.';
 $string['courseai_start_back'] = 'Back to choosing how to start';
 $string['courseai_start_locked'] = 'The starting point is fixed once planning starts';
-$string['courseai_template_pick'] = 'Choose template';
-$string['courseai_template_pick_sub'] = 'Search your institution\'s templates';
 $string['courseai_template_prompt_locked'] = 'Choose the template first';
 $string['courseai_template_structure_empty_title'] = 'Here the template\'s structure appears';
 $string['courseai_template_structure_empty'] = 'Choose a template on the left.';
@@ -875,10 +873,6 @@ $string['courseai_template_mock_generic'] = 'Placeholder content generated for s
 $string['courseai_template_mock_reference'] = 'Reference content used for this activity';
 $string['courseai_template_selected_activity'] = 'Selected activity';
 $string['invalidtemplate'] = 'Invalid template.';
-$string['courseai_chip_remove_template'] = 'Remove template';
-$string['courseai_templates_dialog_label'] = 'Course templates';
-$string['courseai_templates_list_label'] = 'Templates list';
-$string['courseai_templates_search_placeholder'] = 'Search templates...';
 
 // Template wizard strings.
 $string['managetemplates'] = 'Manage course templates';

@@ -157,10 +157,11 @@ $logourl = new moodle_url('/local/coursegen/pix/logo.png');
 $sidebarpinned = (bool) get_user_preferences('local_coursegen_sidebar_pinned', true);
 
 // Native Moodle form (single autocomplete field) whose <select> is the value
-// template_mode.js listens to. It is rendered hidden: the template column's
-// own list is what the professor sees and it drives this select.
+// template_mode.js listens to. It is the template column's picker: a template
+// named in the address is its value from the first render, so the field
+// shows it as a tag straight away.
 $templatepickerform = new \local_coursegen\form\course_template_picker_form(
-    null, ['templates' => $coursetemplates], 'post', '', ['id' => 'tpl-select-form']);
+    null, ['templates' => $coursetemplates, 'preselect' => $preselecttemplateid], 'post', '', ['id' => 'tpl-select-form']);
 ob_start();
 $templatepickerform->display();
 $templatepickerformhtml = ob_get_clean();

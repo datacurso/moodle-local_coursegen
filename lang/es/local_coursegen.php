@@ -777,8 +777,6 @@ $string['courseai_start_mostused'] = 'Más usado';
 $string['courseai_start_note'] = 'Nada se crea en Moodle hasta que apruebes un plan.';
 $string['courseai_start_back'] = 'Volver a elegir cómo empezar';
 $string['courseai_start_locked'] = 'El punto de partida queda fijo al iniciar la planificación';
-$string['courseai_template_pick'] = 'Elegir plantilla';
-$string['courseai_template_pick_sub'] = 'Busca entre las plantillas de tu institución';
 $string['courseai_template_prompt_locked'] = 'Elige primero la plantilla';
 $string['courseai_template_structure_empty_title'] = 'Aquí aparece la estructura de la plantilla';
 $string['courseai_template_structure_empty'] = 'Elige una plantilla a la izquierda.';
@@ -841,10 +839,6 @@ $string['courseai_template_picker_placeholder'] = 'Buscar plantillas de curso...
 $string['courseai_template_prompt_placeholder'] = 'Describe cómo adaptar esta plantilla a tu curso…';
 
 // Review modal strings.
-$string['courseai_chip_remove_template'] = 'Quitar plantilla';
-$string['courseai_templates_dialog_label'] = 'Plantillas de curso';
-$string['courseai_templates_list_label'] = 'Lista de plantillas';
-$string['courseai_templates_search_placeholder'] = 'Buscar plantillas...';
 $string['managetemplates'] = 'Gestionar plantillas de curso';
 $string['template_wizard_title'] = 'Plantillas de curso';
 $string['template_wizard_subtitle'] = 'Configura cómo debe generar la IA los cursos a partir de uno existente';
