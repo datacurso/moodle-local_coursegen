@@ -270,11 +270,15 @@ export const createTemplateHandlers = ({state, texts}) => {
         if (!workspace) {
             return;
         }
+        // Always align the shared ids with what's being asked for: this runs
+        // once at boot too, to settle a page the server already rendered
+        // into the template layout, and claimSharedIds() only ever looks at
+        // where each element currently sits, so repeating it is harmless.
+        claimSharedIds(on);
         const wasOn = workspace.classList.contains('is-template');
         if (on === wasOn) {
             return;
         }
-        claimSharedIds(on);
         workspace.classList.toggle('is-template', on);
         if (on) {
             carryPrompt('promptInput', 'tplPromptInput');

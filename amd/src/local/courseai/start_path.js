@@ -148,8 +148,15 @@ export const wireStartPath = ({state, contextUi}) => {
         observer.observe(document.body, {attributes: true, attributeFilter: ['class']});
     }
 
-    // What the server rendered: the cards, or (on a resumed session) the free planning column.
-    state.startPath = workspace?.classList.contains('is-choosing') ? null : 'free';
+    // What the server already decided and rendered: the cards, the template
+    // column, or the free hero - never a guess this module makes on its own.
+    if (workspace?.classList.contains('is-choosing')) {
+        state.startPath = null;
+    } else if (workspace?.classList.contains('is-template')) {
+        state.startPath = 'template';
+    } else {
+        state.startPath = 'free';
+    }
     syncBars();
 
     return {setStartPath, showChooser, syncBars};

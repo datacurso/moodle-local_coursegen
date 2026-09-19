@@ -99,7 +99,7 @@
 <!-- ══════════════════════ MAIN ════════════════════════════════════════ -->
 <main class="app-main aicoursecreation-main" style="position:relative">
   <div class="container"{{#showsessionsview}} style="display:none"{{/showsessionsview}}>
-    <div class="courseai-workspace{{#isresuming}} is-planning{{/isresuming}}{{#startchooser}} is-choosing{{/startchooser}}" id="courseaiWorkspace">
+    <div class="courseai-workspace{{#isresuming}} is-planning{{/isresuming}}{{#startchooser}} is-choosing{{/startchooser}}{{#initialtemplate}} is-template{{/initialtemplate}}" id="courseaiWorkspace">
 
     {{! Step one: how do you want to start? Shown while the workspace carries
         `is-choosing`; picking a card opens that path below (start_path.js). }}

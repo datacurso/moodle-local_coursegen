@@ -193,6 +193,10 @@ $templatecontext = [
     'closeurl' => (new moodle_url('/my/courses.php'))->out(false),
     'sidebarclosed' => !$sidebarpinned,
     'startchooser' => $startchooser,
+    // Which path opens is decided here, not learned after the JS bundle runs:
+    // the class that shows the template column belongs on the very first
+    // render, or a moment of the free hero flashes before JS corrects it.
+    'initialtemplate' => $opentemplates || $preselecttemplateid > 0,
 ];
 
 echo $OUTPUT->header();
