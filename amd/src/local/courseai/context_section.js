@@ -245,86 +245,11 @@ export const setupContextSection = (deps) => {
         });
     }
 
-    // ─── Templates: the list the template column picks from ─────────────────
+    // ─── Templates: the template column's own field ──────────────────────────
     // "From a template" is chosen on the page's first screen (start_path.js);
-    // inside that path, the column opens with a button that offers this list
-    // right below it, and once a template is chosen the card is the same
-    // toggle: it opens and closes the same list in the same place.
-    const {
-        renderTemplateLists, selectTemplate, detachTemplate, setTemplateLayout, closeTemplatePopovers,
-    } = createTemplateHandlers({state, texts});
-
-    const templatePopovers = [
-        {
-            panel: 'templatesPopoverTpl', search: 'templateSearchTpl', close: 'templatesPopoverTplClose',
-            triggers: ['tplPickBtn', 'tplCardBtn'],
-        },
-    ];
-
-    const openTemplatePopover = (panelId, triggerEl = null) => {
-        const spec = templatePopovers.find((p) => p.panel === panelId);
-        const panel = document.getElementById(panelId);
-        if (!spec || !panel) {
-            return;
-        }
-        closeTemplatePopovers();
-        closeGuidelinePopover();
-        panel.classList.add('open');
-        spec.triggers.forEach((id) => {
-            document.getElementById(id)?.setAttribute('aria-expanded', id === triggerEl?.id ? 'true' : 'false');
-        });
-        const search = document.getElementById(spec.search);
-        if (search) {
-            search.value = '';
-            state.templateSearchQuery = '';
-        }
-        renderTemplateLists();
-        search?.focus();
-    };
-
-    templatePopovers.forEach((spec) => {
-        const panel = document.getElementById(spec.panel);
-        if (!panel) {
-            return;
-        }
-        spec.triggers.forEach((id) => {
-            const trigger = document.getElementById(id);
-            if (!trigger) {
-                return;
-            }
-            trigger.addEventListener('click', (e) => {
-                e.stopPropagation();
-                if (panel.classList.contains('open')) {
-                    closeTemplatePopovers();
-                } else {
-                    openTemplatePopover(spec.panel, trigger);
-                }
-            });
-        });
-        document.getElementById(spec.close)?.addEventListener('click', (e) => {
-            e.stopPropagation();
-            closeTemplatePopovers();
-        });
-        document.getElementById(spec.search)?.addEventListener('input', (e) => {
-            state.templateSearchQuery = e.target.value;
-            renderTemplateLists();
-        });
-        // Clicks inside the panel must not count as "outside".
-        panel.addEventListener('click', (e) => e.stopPropagation());
-    });
-
-    document.addEventListener('click', () => closeTemplatePopovers());
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closeTemplatePopovers();
-        }
-    });
-
-    // Remove on the template card: back to the button, still on this path.
-    document.getElementById('tplCardRemove')?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        detachTemplate();
-    });
+    // inside that path the template is picked in Moodle's autocomplete field,
+    // and context/template.js keeps the rest of the column following it.
+    const {selectTemplate, setTemplateLayout, focusTemplatePicker} = createTemplateHandlers({state, texts});
 
     if (btnWithSubsections && subToggleWrap) {
         bindToggleWrap(subToggleWrap, btnWithSubsections);
@@ -366,8 +291,7 @@ export const setupContextSection = (deps) => {
         refreshChipsRow,
         renderGuidelineList,
         selectTemplate,
-        detachTemplate,
         setTemplateLayout,
-        openTemplatePopover,
+        focusTemplatePicker,
     };
 };

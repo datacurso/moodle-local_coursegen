@@ -14,16 +14,18 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * The chosen template: the list that picks it and what picking it does.
+ * The chosen template and what choosing it does.
  *
  * "From a template" is a starting point chosen on the page's first screen
- * (start_path.js), and this module is what happens inside it. Picking a
- * template from the list sets the native picker's <select> (the value
- * template_mode.js listens to) and tells it it changed, so the structure
- * loads; removing it clears the select and the column goes back to offering
- * the list. Opening and closing the template layout itself (the `is-template`
- * class, the shared ids, the professor's text carried between composers) is
- * exposed here too, for start_path.js to drive.
+ * (start_path.js), and this module is what happens inside it. The template is
+ * chosen in Moodle's own autocomplete field (the native picker form, whose
+ * <select> template_mode.js listens to): picking one there loads the
+ * structure, and the field's own × clears it. What this module adds is the
+ * rest of the column following that value: the composer stays locked until
+ * there is a template, and the page can attach one itself (?templateid=).
+ * Opening and closing the template layout (the `is-template` class, the
+ * shared ids, the professor's text carried between composers) lives here
+ * too, for start_path.js to drive.
  *
  * The two layouts share the ids of their thread and decision elements
  * (data-shared-id): only the column that is active carries them, so every
@@ -33,13 +35,6 @@
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
-import {escapeHtml} from 'local_coursegen/local/courseai/utils';
-
-/** The list a template is picked from: its <ul> and its search box. */
-const LISTS = [
-    {list: 'templateListTpl', search: 'templateSearchTpl'},
-];
 
 /**
  * Give the shared ids to the column that is active and take them from the other.
@@ -65,15 +60,15 @@ const claimSharedIds = (templateActive) => {
  * @param {Object} params.state
  * @param {Object} params.texts
  * @returns {{
- *   renderTemplateLists: Function,
  *   selectTemplate: Function,
- *   detachTemplate: Function,
  *   getSelectedTemplate: Function,
  *   setTemplateLayout: Function,
- *   closeTemplatePopovers: Function
+ *   focusTemplatePicker: Function
  * }}
  */
 export const createTemplateHandlers = ({state, texts}) => {
+    const picker = () => document.getElementById('id_templateid');
+
     const getSelectedTemplate = () => {
         if (state.selectedTemplateId === null || state.selectedTemplateId === undefined) {
             return null;
@@ -82,48 +77,8 @@ export const createTemplateHandlers = ({state, texts}) => {
     };
 
     /**
-     * Render every template list that exists on the page.
-     */
-    const renderTemplateLists = () => {
-        const query = (state.templateSearchQuery || '').toLowerCase();
-        const filtered = (state.templates || []).filter((t) =>
-            !query ||
-            (t.name || '').toLowerCase().includes(query) ||
-            (t.coursefullname || '').toLowerCase().includes(query)
-        );
-        LISTS.forEach(({list}) => {
-            const el = document.getElementById(list);
-            if (!el) {
-                return;
-            }
-            if (filtered.length === 0) {
-                el.innerHTML = `<li class="pop-empty">${escapeHtml(texts.courseai_no_results || '')}</li>`;
-                return;
-            }
-            el.innerHTML = filtered.map((t) => {
-                const isSelected = String(state.selectedTemplateId) === String(t.id);
-                return `
-                    <li class="pop-item${isSelected ? ' selected' : ''}" data-id="${t.id}">
-                        <button class="pop-select-btn" data-select="${t.id}" type="button"
-                                role="option" aria-selected="${isSelected}">
-                            <div class="pop-radio"><div class="pop-dot"></div></div>
-                            <div class="pop-item-text">
-                                <span class="pop-item-name">${escapeHtml(t.name)}</span>
-                                <span class="pop-item-cat">${escapeHtml(t.coursefullname || '')}</span>
-                            </div>
-                        </button>
-                    </li>
-                `;
-            }).join('');
-            el.querySelectorAll('.pop-select-btn').forEach((btn) => {
-                btn.addEventListener('click', () => selectTemplate(btn.getAttribute('data-select')));
-            });
-        });
-    };
-
-    /**
-     * Show the chosen template in the card, and let the composer be used only
-     * once there is one: before that, the column's whole job is to pick it.
+     * Let the composer be used only once there is a template: before that,
+     * the column's whole job is to pick it.
      */
     const refreshTemplateChrome = () => {
         const template = getSelectedTemplate();
@@ -140,23 +95,6 @@ export const createTemplateHandlers = ({state, texts}) => {
         }
         if (plusBtn) {
             plusBtn.disabled = !template;
-        }
-        const thumb = document.getElementById('tplCardThumb');
-        const nameEl = document.getElementById('tplCardName');
-        const courseEl = document.getElementById('tplCardCourse');
-        const statsEl = document.getElementById('tplCardStats');
-        if (thumb) {
-            const initials = (template?.name || '').replace(/[^\p{L}\p{N}]/gu, '').slice(0, 3).toUpperCase();
-            thumb.textContent = initials;
-        }
-        if (nameEl) {
-            nameEl.textContent = template ? template.name : '';
-        }
-        if (courseEl) {
-            courseEl.textContent = template ? (template.coursefullname || '') : '';
-        }
-        if (statsEl && !template) {
-            statsEl.textContent = '';
         }
     };
 
@@ -202,82 +140,59 @@ export const createTemplateHandlers = ({state, texts}) => {
     };
 
     /**
-     * Tell the native picker which template is attached; template_mode.js
-     * listens to its 'change' and loads or clears the structure.
+     * Put the cursor in the picker's search box.
      *
-     * @param {string} value
+     * Core enhances the field a moment after the page arrives, so the box is
+     * looked up when asked for, not once at start.
      */
-    const setPickerValue = (value) => {
-        const select = document.getElementById('id_templateid');
-        if (!select) {
-            return;
-        }
-        if (select.value === value) {
-            return;
-        }
-        select.value = value;
-        select.dispatchEvent(new Event('change', {bubbles: true}));
+    const focusTemplatePicker = () => {
+        document.querySelector('#fitem_id_templateid .form-autocomplete-input input')?.focus();
     };
 
     /**
-     * Choose a template. Choosing the one already chosen just closes the list.
+     * Attach a template the page named itself (?templateid=). The form has
+     * already given the select that value, so the field already shows it; what
+     * is left is to tell template_mode.js, which loads the structure on the
+     * select's change.
      *
      * @param {string|number} id
      */
     const selectTemplate = (id) => {
-        const strId = String(id);
-        const currentId = state.selectedTemplateId !== null && state.selectedTemplateId !== undefined
-            ? String(state.selectedTemplateId) : null;
-        if (currentId === strId) {
-            closeTemplatePopovers();
-            return;
-        }
-        const template = (state.templates || []).find((t) => String(t.id) === strId);
-        if (!template) {
+        const select = picker();
+        const template = (state.templates || []).find((t) => String(t.id) === String(id));
+        if (!select || !template) {
             return;
         }
         state.selectedTemplateId = template.id;
         refreshTemplateChrome();
-        renderTemplateLists();
-        setPickerValue(strId);
+        select.value = String(id);
+        select.dispatchEvent(new Event('change', {bubbles: true}));
         setTemplateLayout(true);
-        closeTemplatePopovers();
-        document.getElementById('tplPromptInput')?.focus();
     };
 
-    /**
-     * Remove the chosen template. The path stays "from a template": the column
-     * offers the list again.
-     */
-    const detachTemplate = () => {
-        state.selectedTemplateId = null;
+    // Whatever the professor does in the field, picking or clearing with the
+    // tag's ×, arrives as the select's change; the composer follows it. The
+    // cursor moves on to what comes next: the composer once there is a
+    // template, the search box again once there is none (core leaves the
+    // focus on the tag it just removed).
+    picker()?.addEventListener('change', () => {
+        const value = picker().value;
+        state.selectedTemplateId = value === '' ? null : value;
         refreshTemplateChrome();
-        renderTemplateLists();
-        setPickerValue('');
-        closeTemplatePopovers();
-    };
-
-    /**
-     * Close every template popover and reset its trigger.
-     */
-    const closeTemplatePopovers = () => {
-        document.querySelectorAll('.popover-panel[id^="templatesPopover"].open').forEach((panel) => {
-            panel.classList.remove('open');
-        });
-        document.querySelectorAll('[aria-controls^="templatesPopover"]').forEach((btn) => {
-            btn.setAttribute('aria-expanded', 'false');
-        });
-    };
+        if (value !== '') {
+            document.getElementById('tplPromptInput')?.focus();
+        } else {
+            focusTemplatePicker();
+        }
+    });
 
     // The composer starts locked: nothing to adapt until a template is chosen.
     refreshTemplateChrome();
 
     return {
-        renderTemplateLists,
         selectTemplate,
-        detachTemplate,
         getSelectedTemplate,
         setTemplateLayout,
-        closeTemplatePopovers,
+        focusTemplatePicker,
     };
 };

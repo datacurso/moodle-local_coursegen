@@ -127,12 +127,6 @@ const updateStats = (tplState, statsTemplate) => {
         sections: tplState.sections.length,
         activities: totalActivities,
     });
-    // The template card at the top of the left column says the same, so the
-    // professor reads the size of the template next to its name.
-    const cardStats = document.getElementById('tplCardStats');
-    if (cardStats) {
-        cardStats.textContent = statsEl.textContent.replace(/\.$/, '');
-    }
 };
 
 /**
@@ -141,11 +135,11 @@ const updateStats = (tplState, statsTemplate) => {
  * @param {Object} state
  */
 export const wireTemplateMode = (state) => {
-    // The template is chosen from the column's own list (context/template.js),
-    // which sets the native picker form's <select>
-    // (classes/form/course_template_picker_form.php, rendered hidden) and
-    // dispatches its 'change'. Everything below listens to that select, so
-    // the structure loads and clears the same way however it was set.
+    // The template is chosen in the native picker form's autocomplete
+    // (classes/form/course_template_picker_form.php); a template named in the
+    // address is set by context/template.js, which dispatches the same
+    // 'change'. Everything below listens to that select, so the structure
+    // loads and clears the same way however it was set.
     // Moodleform's default id for an unnamed-id element is "id_<fieldname>".
     const tplSelect = document.getElementById('id_templateid');
     const container = document.getElementById('tplModeStructure');
@@ -517,10 +511,6 @@ const clearStructure = (tplState, container, state) => {
     const statsEl = document.getElementById('tplModeStats');
     if (statsEl) {
         statsEl.textContent = '';
-    }
-    const cardStats = document.getElementById('tplCardStats');
-    if (cardStats) {
-        cardStats.textContent = '';
     }
     // Reset only the structure: the input-bar values (images/lang/syllabus)
     // belong to the professor's session and survive clearing the template.

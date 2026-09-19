@@ -385,45 +385,8 @@ svg { display: block; flex-shrink: 0; }
 
 /* ─── TEMPLATE PATH: BEFORE AND AFTER A TEMPLATE IS CHOSEN ───────────────
    template_mode.js sets `tpl-active` on the workspace while the picker's
-   select has a value; that class swaps the button for the card and hides
-   the structure column's empty state. */
-.tpl-pick-anchor { position: relative; }
-.tpl-pick {
-  display: grid;
-  grid-template-columns: 36px minmax(0, 1fr) auto;
-  gap: 12px;
-  align-items: center;
-  width: 100%;
-  padding: 10px 12px;
-  border: 1px dashed var(--border);
-  border-radius: var(--radius);
-  background: var(--card);
-  text-align: left;
-  color: var(--muted-fg);
-  font: inherit;
-  cursor: pointer;
-}
-.tpl-pick:hover { border-color: var(--muted-fg); color: var(--fg); }
-.tpl-pick[aria-expanded="true"] { border-style: solid; border-color: var(--muted-fg); color: var(--fg); }
-.tpl-pick-chevron { transition: transform var(--t-base) var(--ease); }
-.tpl-pick[aria-expanded="true"] .tpl-pick-chevron { transform: rotate(180deg); }
-.tpl-pick-icon {
-  width: 36px;
-  height: 36px;
-  border-radius: 9px;
-  background: var(--muted);
-  color: var(--fg);
-  display: grid;
-  place-items: center;
-}
-.tpl-pick-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
-.tpl-pick-text b { font-weight: 600; color: var(--fg); font-size: 14px; }
-.tpl-pick-text small { font-size: 12.5px; }
-.tpl-pick-chevron { color: var(--muted-fg); }
-.tpl-pick-anchor .tpl-pick-popover { left: 0; right: 0; width: auto; }
-.courseai-workspace.is-template.tpl-active #tplPickBtn,
-.courseai-workspace.is-template.tpl-active #tplModeEmpty,
-.courseai-workspace.is-template:not(.tpl-active) #tplCard { display: none; }
+   select has a value; that class hides the structure column's empty state. */
+.courseai-workspace.is-template.tpl-active #tplModeEmpty { display: none; }
 .tpl-structure-empty {
   display: flex;
   flex-direction: column;
@@ -459,55 +422,6 @@ svg { display: block; flex-shrink: 0; }
 #fitem_id_templateid .form-autocomplete-selection:not(:has([role="option"])) {
   display: none;
 }
-
-/* The attached template, at the top of the left column: the same toggle as
-   the "Choose template" button, drawn with the template's own thumb, solid
-   because it holds a value, with Remove beside it. Both are locked once
-   planning or generation has started, like the path crumb. */
-.tpl-card-row { display: flex; align-items: center; gap: 10px; }
-.tpl-card-row .tpl-pick { flex: 1 1 auto; min-width: 0; }
-.tpl-pick--set {
-  grid-template-columns: 40px minmax(0, 1fr) auto;
-  gap: 10px;
-  padding: 8px 10px;
-  border-style: solid;
-  border-radius: 10px;
-  color: var(--muted-fg);
-}
-.tpl-pick--set .tpl-pick-text small { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.tpl-pick--set .tpl-pick-text b { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
-.courseai-workspace.is-planning .tpl-card-row .tpl-pick,
-body.cg-generating .tpl-card-row .tpl-pick { pointer-events: none; }
-.courseai-workspace.is-planning .tpl-card-row .tpl-pick .tpl-pick-chevron,
-body.cg-generating .tpl-card-row .tpl-pick .tpl-pick-chevron,
-.courseai-workspace.is-planning .tpl-card-row .tpl-card-link,
-body.cg-generating .tpl-card-row .tpl-card-link { display: none; }
-.tpl-card-thumb {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  background: hsl(200, 30%, 40%);
-  color: #fff;
-  display: grid;
-  place-items: center;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: .02em;
-}
-#tplCardStats:not(:empty)::before { content: " · "; }
-.tpl-card-link {
-  border: 0;
-  background: none;
-  padding: 0;
-  color: var(--muted-fg);
-  font-size: 13px;
-  text-decoration: underline;
-  text-underline-offset: 2px;
-  white-space: nowrap;
-  cursor: pointer;
-}
-.tpl-card-link:hover { color: var(--fg); }
-.tpl-card-link:disabled { text-decoration: none; opacity: .5; cursor: default; }
 
 
 /* ─── TEMPLATE MODE LAYOUT ───────────────────────────────────────────────
@@ -639,6 +553,65 @@ body.cg-generating .tpl-card-row .tpl-card-link { display: none; }
    field's width and not the row's. */
 .tpl-left-panel #fitem_id_templateid .felement {
   position: relative;
+}
+
+/* The chosen template is the field's own selection tag, drawn as a small
+   pill above the search box: the template's name and core's × beside it,
+   which clears the select (template_mode.js then clears the structure). */
+.tpl-left-panel #fitem_id_templateid .form-autocomplete-selection {
+  margin: 0;
+  padding: 0;
+}
+.tpl-left-panel #fitem_id_templateid .form-autocomplete-selection [role="option"] {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  max-width: 100%;
+  height: 28px;
+  margin: 0 0 6px;
+  padding: 0 4px 0 10px;
+  border-radius: 999px;
+  background: var(--muted);
+  color: var(--fg);
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  cursor: default;
+}
+.tpl-left-panel #fitem_id_templateid .form-autocomplete-selection [role="option"]:hover,
+.tpl-left-panel #fitem_id_templateid .form-autocomplete-selection [role="option"]:focus {
+  background: var(--muted);
+  color: var(--fg);
+  outline: none;
+}
+/* Core marks the tag the keyboard is on with data-active-selection and the
+   theme rings it in blue at all times; here the ring shows only while the
+   selection list itself has the focus, in the page's own accent. */
+.tpl-left-panel #fitem_id_templateid .form-autocomplete-selection [data-active-selection="true"] {
+  box-shadow: none;
+}
+.tpl-left-panel #fitem_id_templateid .form-autocomplete-selection:focus-within [data-active-selection="true"],
+.tpl-left-panel #fitem_id_templateid .form-autocomplete-selection [role="option"]:focus-visible {
+  box-shadow: 0 0 0 2px var(--primary-soft);
+}
+.tpl-left-panel #fitem_id_templateid .form-autocomplete-selection [role="option"] span[aria-hidden="true"] {
+  order: 1; /* core puts the × first; here it closes the pill */
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  border-radius: 50%;
+  color: var(--muted-fg);
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+}
+.tpl-left-panel #fitem_id_templateid .form-autocomplete-selection [role="option"]:hover span[aria-hidden="true"] {
+  background: var(--card);
+  color: var(--fg);
 }
 
 .tpl-left-scroll {
