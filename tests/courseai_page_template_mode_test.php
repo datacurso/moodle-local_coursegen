@@ -101,7 +101,7 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
 
         // One button opens the list; its × is its own button, hidden until there is a value.
         $this->assertMatchesRegularExpression(
-            '/<button class="tpl-picker" id="tplPicker" type="button"\s+aria-haspopup="dialog" aria-expanded="false"'
+            '/<button class="tpl-picker" id="tplPicker" type="button"\s+aria-haspopup="listbox" aria-expanded="false"'
                 . ' aria-controls="templatesPopoverTpl">/',
             $html
         );
@@ -113,9 +113,12 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
             $html
         );
         foreach (['id="tplPickAnchor"', 'id="tplPickerName"', 'id="tplPickerCourse"', 'id="templateListTpl"',
-            'id="templateSearchTpl"', 'id="templatesPopoverTplClose"'] as $needle) {
+            'id="templateSearchTpl"', 'id="tplPickerChevron"'] as $needle) {
             $this->assertStringContainsString($needle, $html, "$needle missing");
         }
+
+        // The search line replaces the button while open: closed by default.
+        $this->assertMatchesRegularExpression('/<input type="text" class="tpl-picker-search" id="templateSearchTpl" hidden/', $html);
 
         // The native picker is hidden: it is the value, not what the professor sees.
         $this->assertMatchesRegularExpression(

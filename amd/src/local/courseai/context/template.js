@@ -42,6 +42,9 @@ const LISTS = [
     {list: 'templateListTpl', search: 'templateSearchTpl'},
 ];
 
+/** Index of the keyboard-highlighted row within the currently filtered list. */
+let activeIndex = -1;
+
 /**
  * Give the shared ids to the column that is active and take them from the other.
  *
@@ -81,7 +84,10 @@ const isLocked = () => (document.getElementById('courseaiWorkspace')?.classList.
  *   getSelectedTemplate: Function,
  *   setTemplateLayout: Function,
  *   closeTemplatePopovers: Function,
- *   isLocked: Function
+ *   isLocked: Function,
+ *   setPickerOpen: Function,
+ *   moveActive: Function,
+ *   pickActive: Function
  * }}
  */
 export const createTemplateHandlers = ({state, texts}) => {
@@ -93,41 +99,78 @@ export const createTemplateHandlers = ({state, texts}) => {
     };
 
     /**
-     * Render every template list that exists on the page.
+     * The templates the current search query matches, in list order.
+     *
+     * @returns {Array}
      */
-    const renderTemplateLists = () => {
+    const getFilteredTemplates = () => {
         const query = (state.templateSearchQuery || '').toLowerCase();
-        const filtered = (state.templates || []).filter((t) =>
+        return (state.templates || []).filter((t) =>
             !query ||
             (t.name || '').toLowerCase().includes(query) ||
             (t.coursefullname || '').toLowerCase().includes(query)
         );
+    };
+
+    /**
+     * Move the keyboard-highlighted row.
+     *
+     * @param {number} delta +1 or -1
+     */
+    const moveActive = (delta) => {
+        const filtered = getFilteredTemplates();
+        if (filtered.length === 0) {
+            return;
+        }
+        activeIndex = ((activeIndex < 0 ? -1 : activeIndex) + delta + filtered.length) % filtered.length;
+        renderTemplateLists();
+    };
+
+    /**
+     * Choose whichever row the keyboard is currently on.
+     */
+    const pickActive = () => {
+        const filtered = getFilteredTemplates();
+        const template = filtered[activeIndex] || filtered[0];
+        if (template) {
+            selectTemplate(template.id);
+        }
+    };
+
+    /**
+     * Render every template list that exists on the page: one line per
+     * template, the chosen one carrying a check instead of a radio.
+     */
+    const renderTemplateLists = () => {
+        const filtered = getFilteredTemplates();
         LISTS.forEach(({list}) => {
             const el = document.getElementById(list);
             if (!el) {
                 return;
             }
             if (filtered.length === 0) {
-                el.innerHTML = `<li class="pop-empty">${escapeHtml(texts.courseai_no_results || '')}</li>`;
+                el.innerHTML = `<li class="tpl-combo-empty">${escapeHtml(texts.courseai_no_results || '')}</li>`;
                 return;
             }
-            el.innerHTML = filtered.map((t) => {
+            el.innerHTML = filtered.map((t, index) => {
                 const isSelected = String(state.selectedTemplateId) === String(t.id);
+                const isActive = index === activeIndex;
                 return `
-                    <li class="pop-item${isSelected ? ' selected' : ''}" data-id="${t.id}">
-                        <button class="pop-select-btn" data-select="${t.id}" type="button"
-                                role="option" aria-selected="${isSelected}">
-                            <div class="pop-radio"><div class="pop-dot"></div></div>
-                            <div class="pop-item-text">
-                                <span class="pop-item-name">${escapeHtml(t.name)}</span>
-                                <span class="pop-item-cat">${escapeHtml(t.coursefullname || '')}</span>
-                            </div>
-                        </button>
+                    <li class="tpl-combo-item${isSelected ? ' selected' : ''}${isActive ? ' is-active' : ''}"
+                        id="tplComboItem-${t.id}" data-select="${t.id}"
+                        role="option" aria-selected="${isSelected}">
+                        <span class="tpl-combo-item-name">${escapeHtml(t.name)}</span>
+                        <span class="tpl-combo-item-course">${escapeHtml(t.coursefullname || '')}</span>
+                        <svg class="tpl-combo-item-check" width="14" height="14" viewBox="0 0 24 24" fill="none"
+                             stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"
+                             aria-hidden="true">
+                            <path d="M5 12.5l4.5 4.5L19 7.5"/>
+                        </svg>
                     </li>
                 `;
             }).join('');
-            el.querySelectorAll('.pop-select-btn').forEach((btn) => {
-                btn.addEventListener('click', () => selectTemplate(btn.getAttribute('data-select')));
+            el.querySelectorAll('.tpl-combo-item[data-select]').forEach((row) => {
+                row.addEventListener('click', () => selectTemplate(row.getAttribute('data-select')));
             });
         });
     };
@@ -169,6 +212,33 @@ export const createTemplateHandlers = ({state, texts}) => {
         }
         if (clearBtn) {
             clearBtn.hidden = !template;
+        }
+    };
+
+    /**
+     * Switch the picker line between its two mutually-exclusive states: the
+     * button naming the choice, or the search box the list is filtered
+     * from. Opening focuses and clears the box; closing restores the label
+     * and forgets whatever was typed, so the next open starts fresh.
+     *
+     * @param {boolean} open
+     */
+    const setPickerOpen = (open) => {
+        const shell = document.getElementById('tplPickerShell');
+        const picker = document.getElementById('tplPicker');
+        const search = document.getElementById('templateSearchTpl');
+        if (!shell || !picker || !search) {
+            return;
+        }
+        shell.classList.toggle('is-open', open);
+        picker.hidden = open;
+        picker.setAttribute('aria-expanded', open ? 'true' : 'false');
+        search.hidden = !open;
+        if (open) {
+            search.value = '';
+            state.templateSearchQuery = '';
+            activeIndex = -1;
+            search.focus();
         }
     };
 
@@ -282,6 +352,7 @@ export const createTemplateHandlers = ({state, texts}) => {
         document.querySelectorAll('[aria-controls^="templatesPopover"]').forEach((btn) => {
             btn.setAttribute('aria-expanded', 'false');
         });
+        setPickerOpen(false);
     };
 
     // The composer starts locked: nothing to adapt until a template is chosen.
@@ -295,5 +366,8 @@ export const createTemplateHandlers = ({state, texts}) => {
         setTemplateLayout,
         closeTemplatePopovers,
         isLocked,
+        setPickerOpen,
+        moveActive,
+        pickActive,
     };
 };

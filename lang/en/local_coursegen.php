@@ -821,7 +821,6 @@ $string['courseai_template_title'] = 'Create course from template';
 $string['courseai_template_subtitle'] = 'Select a template, customize the structure, and generate.';
 $string['courseai_template_pick'] = 'Choose template';
 $string['courseai_chip_remove_template'] = 'Remove template';
-$string['courseai_templates_dialog_label'] = 'Course templates';
 $string['courseai_templates_list_label'] = 'Templates list';
 $string['courseai_templates_search_placeholder'] = 'Search templates...';
 $string['courseai_template_picker'] = 'Course template';

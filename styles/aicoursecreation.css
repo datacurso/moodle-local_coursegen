@@ -453,7 +453,6 @@ svg { display: block; flex-shrink: 0; }
    moves when a template is picked or removed. The list opens 8px below it,
    as wide as the line (.tpl-pick-popover, positioned by .tpl-pick-anchor). */
 .tpl-pick-anchor { position: relative; margin-bottom: 12px; }
-.tpl-picker-shell { position: relative; }
 .tpl-picker-label {
   display: flex;
   align-items: center;
@@ -465,23 +464,31 @@ svg { display: block; flex-shrink: 0; }
 }
 .tpl-picker-label label { margin: 0; cursor: pointer; }
 .tpl-picker-label .btn.btn-link { padding: 0 2px; line-height: 1; }
-.tpl-picker {
-  display: flex;
-  align-items: center;
-  gap: 8px;
+/* The shell holds two mutually-exclusive lines of the same box (the closed
+   button, the open search field) plus the chevron and the × clear, both
+   positioned once here instead of duplicated inside each line, so opening
+   the list never shifts anything below it. */
+.tpl-picker-shell { position: relative; }
+.tpl-picker,
+.tpl-picker-search {
+  box-sizing: border-box;
+  display: block;
   width: 100%;
   height: 36px;
-  padding: 0 12px;
+  padding: 0 34px 0 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--card);
-  color: var(--muted-fg);
   font: inherit;
   font-size: 14px;
-  line-height: 1;
+  transition: border-color .12s, box-shadow .12s;
+}
+.tpl-picker {
+  display: flex;
+  align-items: center;
+  color: var(--muted-fg);
   text-align: left;
   cursor: pointer;
-  transition: border-color .12s, box-shadow .12s;
 }
 .tpl-picker:hover { border-color: var(--muted-fg); }
 .tpl-picker:focus-visible,
@@ -490,6 +497,7 @@ svg { display: block; flex-shrink: 0; }
   border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--primary-soft);
 }
+.tpl-picker[hidden] { display: none; }
 .tpl-picker-text {
   flex: 1 1 auto;
   min-width: 0;
@@ -509,17 +517,33 @@ svg { display: block; flex-shrink: 0; }
 .tpl-picker.has-value .tpl-picker-name,
 .tpl-picker.has-value .tpl-picker-course { display: block; }
 /* The chosen state makes room for the × between the text and the chevron. */
-.tpl-picker.has-value .tpl-picker-text { padding-right: 28px; }
+.tpl-picker.has-value { padding-right: 58px; }
+/* The search field replaces the button while the list is open; closing
+   restores the button and clears whatever was typed. */
+.tpl-picker-search {
+  color: var(--fg);
+  outline: none;
+}
+.tpl-picker-search:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.tpl-picker-search[hidden] { display: none; }
 .tpl-picker-chevron {
-  flex: 0 0 auto;
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
   color: var(--muted-fg);
+  pointer-events: none;
   transition: transform var(--t-base) var(--ease);
 }
-.tpl-picker[aria-expanded="true"] .tpl-picker-chevron { transform: rotate(180deg); }
+.tpl-picker-shell.is-open .tpl-picker-chevron {
+  transform: translateY(-50%) rotate(180deg);
+  pointer-events: auto;
+  cursor: pointer;
+}
 .tpl-picker-clear {
   position: absolute;
   top: 50%;
-  right: 36px; /* 12px padding + 16px chevron + 8px gap: just left of the chevron */
+  right: 34px; /* just left of the chevron, mirroring the button's own padding */
   transform: translateY(-50%);
   display: inline-grid;
   place-items: center;
@@ -535,13 +559,43 @@ svg { display: block; flex-shrink: 0; }
 .tpl-picker-clear:hover,
 .tpl-picker-clear:focus-visible { background: var(--muted); color: var(--fg); outline: none; }
 .tpl-picker-clear[hidden] { display: none; }
-.tpl-pick-anchor .tpl-pick-popover { left: 0; right: 0; width: auto; }
+.tpl-picker-shell.is-open .tpl-picker-clear { display: none; }
+.tpl-pick-anchor .tpl-pick-popover { left: 0; right: 0; width: auto; margin-top: 6px; }
+/* The list itself: one line per template, no radio, no header row. */
+.tpl-combo-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  max-height: 210px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.tpl-combo-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.tpl-combo-item:hover,
+.tpl-combo-item.is-active { background: var(--muted); }
+.tpl-combo-item.selected { background: var(--muted); }
+.tpl-combo-item-name { color: var(--fg); font-weight: 500; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; }
+.tpl-combo-item-course { color: var(--muted-fg); font-size: 13px; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.tpl-combo-item-course:not(:empty)::before { content: "\00a0·\00a0"; }
+.tpl-combo-item-check { flex: 0 0 auto; color: var(--primary); margin-left: auto; visibility: hidden; }
+.tpl-combo-item.selected .tpl-combo-item-check { visibility: visible; }
+.tpl-combo-empty { padding: 8px 8px; color: var(--muted-fg); font-size: 13px; }
 /* Once planning or generation has started the choice is fixed: the line
    stays as the template's name, with nothing to open or clear. */
 .courseai-workspace.is-planning .tpl-picker,
 body.cg-generating .tpl-picker { pointer-events: none; }
-.courseai-workspace.is-planning .tpl-picker.has-value .tpl-picker-text,
-body.cg-generating .tpl-picker.has-value .tpl-picker-text { padding-right: 0; }
+.courseai-workspace.is-planning .tpl-picker.has-value,
+body.cg-generating .tpl-picker.has-value { padding-right: 12px; }
 .courseai-workspace.is-planning .tpl-picker-chevron,
 body.cg-generating .tpl-picker-chevron,
 .courseai-workspace.is-planning .tpl-picker-clear,
