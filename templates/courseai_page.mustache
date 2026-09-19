@@ -608,6 +608,10 @@
             moves when a template is picked or removed. The list is the same
             searchable popover as before, anchored to this line. }}
         <div class="tpl-pick-anchor" id="tplPickAnchor">
+          <div class="tpl-picker-label">
+            <label for="tplPicker">{{#str}}courseai_template_picker, local_coursegen{{/str}}</label>
+            {{{templatepickerhelp}}}
+          </div>
           <div class="tpl-picker-shell">
             <button class="tpl-picker" id="tplPicker" type="button"
                     aria-haspopup="dialog" aria-expanded="false" aria-controls="templatesPopoverTpl">

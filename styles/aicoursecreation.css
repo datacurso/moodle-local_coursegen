@@ -454,6 +454,17 @@ svg { display: block; flex-shrink: 0; }
    as wide as the line (.tpl-pick-popover, positioned by .tpl-pick-anchor). */
 .tpl-pick-anchor { position: relative; margin-bottom: 12px; }
 .tpl-picker-shell { position: relative; }
+.tpl-picker-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted-fg);
+}
+.tpl-picker-label label { margin: 0; cursor: pointer; }
+.tpl-picker-label .btn.btn-link { padding: 0 2px; line-height: 1; }
 .tpl-picker {
   display: flex;
   align-items: center;
