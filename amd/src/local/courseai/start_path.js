@@ -35,6 +35,35 @@
 const OPEN_LIST_DELAY_MS = 150;
 
 /**
+ * Write which path is showing into the address bar, without navigating.
+ *
+ * A reload has to land back on the path the professor was on: the chooser
+ * itself already honours ?mode=template on load, so picking a card here
+ * only has to keep the address in step with it. History is replaced, not
+ * pushed - "back" leading out of the tool by one step matters more than a
+ * card click growing the browser history.
+ *
+ * @param {'free'|'template'|null} path
+ */
+const writePathToUrl = (path) => {
+    const url = new URL(window.location.href);
+    if (path) {
+        // The server tells "nothing chosen yet" apart from "free creation
+        // was chosen" by whether this parameter is present at all, so free
+        // needs its own value here rather than the parameter being dropped.
+        url.searchParams.set('mode', path);
+    } else {
+        // Back to the chooser: the parameter's absence is what shows it again.
+        url.searchParams.delete('mode');
+    }
+    if (path !== 'template') {
+        // A template chosen for a path that's being left no longer applies.
+        url.searchParams.delete('templateid');
+    }
+    window.history.replaceState(window.history.state, '', url);
+};
+
+/**
  * Wire the chooser cards and the top bar's path crumb.
  *
  * @param {Object} params
@@ -69,12 +98,18 @@ export const wireStartPath = ({state, contextUi}) => {
      * @param {'free'|'template'} path
      * @param {Object} [options]
      * @param {boolean} [options.openList=true] On the template path, open the list of templates.
+     * @param {boolean} [options.fromCard=false] A card was clicked, as opposed to the address
+     *                  bar already saying which path to open: only then is the address updated,
+     *                  so restoring it on load never rewrites what the professor typed.
      */
-    const setStartPath = (path, {openList = true} = {}) => {
+    const setStartPath = (path, {openList = true, fromCard = false} = {}) => {
         state.startPath = path;
         workspace?.classList.remove('is-choosing');
         contextUi.setTemplateLayout(path === 'template');
         syncBars();
+        if (fromCard) {
+            writePathToUrl(path);
+        }
         if (path === 'free') {
             document.getElementById('promptInput')?.focus();
             return;
@@ -98,10 +133,11 @@ export const wireStartPath = ({state, contextUi}) => {
         contextUi.setTemplateLayout(false);
         workspace?.classList.add('is-choosing');
         syncBars();
+        writePathToUrl(null);
     };
 
     document.querySelectorAll('[data-start-path]').forEach((card) => {
-        card.addEventListener('click', () => setStartPath(card.dataset.startPath));
+        card.addEventListener('click', () => setStartPath(card.dataset.startPath, {fromCard: true}));
     });
     crumb?.addEventListener('click', showChooser);
 
