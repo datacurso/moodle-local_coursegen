@@ -316,8 +316,13 @@ export const createTemplateHandlers = ({state, texts}) => {
      * Choose a template. Choosing the one already chosen just closes the list.
      *
      * @param {string|number} id
+     * @param {Object} [options]
+     * @param {boolean} [options.focus=true] Give the composer focus once the template
+     *                  is attached. Off for the one automatic call - a template already
+     *                  named in the address (?templateid=) on page load - where nobody
+     *                  clicked a row to get here.
      */
-    const selectTemplate = (id) => {
+    const selectTemplate = (id, {focus = true} = {}) => {
         const strId = String(id);
         const currentId = state.selectedTemplateId !== null && state.selectedTemplateId !== undefined
             ? String(state.selectedTemplateId) : null;
@@ -335,7 +340,9 @@ export const createTemplateHandlers = ({state, texts}) => {
         setPickerValue(strId);
         setTemplateLayout(true);
         closeTemplatePopovers();
-        document.getElementById('tplPromptInput')?.focus();
+        if (focus) {
+            document.getElementById('tplPromptInput')?.focus();
+        }
     };
 
     /**
