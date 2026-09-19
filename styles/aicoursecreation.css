@@ -414,15 +414,6 @@ svg { display: block; flex-shrink: 0; }
   margin: 0;
 }
 
-/* Before a template is picked, core/form-autocomplete renders its
-   noselectionstring as a floating hint span sitting above the search box —
-   two stacked rows for one single field. The search input's own "Search"
-   placeholder already says the same thing, so drop the redundant hint and
-   let this read as one plain field, not a two-part composer. */
-#fitem_id_templateid .form-autocomplete-selection:not(:has([role="option"])) {
-  display: none;
-}
-
 
 /* ─── TEMPLATE MODE LAYOUT ───────────────────────────────────────────────
    Template mode reuses the free-mode planning grid (see the shared
@@ -455,164 +446,95 @@ svg { display: block; flex-shrink: 0; }
   font-size: 13px;
 }
 
-/* The picker is a Moodle form row (label column | field column). At 450px
-   the two columns fight for space, so the label sits above a full-width
-   field. Scoped to the panel: nothing else in Moodle sees this. */
-.tpl-left-panel #fitem_id_templateid {
-  flex-direction: column;
-  /* Bootstrap's .row bleeds 15px past its parent on each side; inside the
-     scroll box that bleed is what summons a horizontal scrollbar. */
-  margin: 0 0 12px;
-}
-.tpl-left-panel #fitem_id_templateid > [class*="col-md-"] {
-  flex: 0 0 100%;
-  max-width: 100%;
-  padding-left: 0;
-  padding-right: 0;
-}
-.tpl-left-panel #fitem_id_templateid .col-form-label {
-  justify-content: flex-start;
-  gap: 6px;
-  padding-top: 0;
-  padding-bottom: 4px;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--muted-fg);
-}
-.tpl-left-panel #fitem_id_templateid .form-label-addon {
-  margin-left: 0;
-}
-.tpl-left-panel #fitem_id_templateid .felement > .d-md-inline-block,
-.tpl-left-panel #fitem_id_templateid .felement .form-autocomplete-input {
-  width: 100%;
-}
-/* The picker is drawn at the composer's scale, with the plugin's own focus
-   and highlight colours instead of Bootstrap's blue. */
-.tpl-left-panel #fitem_id_templateid .form-autocomplete-input {
+/* ─── THE PICKER LINE ────────────────────────────────────────────────────
+   One line the height of a field, the column's width. Empty: "Choose
+   template" + chevron. Chosen: the template's name · its course, a small ×
+   that clears it, the chevron. Same height either way, so nothing below
+   moves when a template is picked or removed. The list opens 8px below it,
+   as wide as the line (.tpl-pick-popover, positioned by .tpl-pick-anchor). */
+.tpl-pick-anchor { position: relative; margin-bottom: 12px; }
+.tpl-picker-shell { position: relative; }
+.tpl-picker {
   display: flex;
   align-items: center;
+  gap: 8px;
+  width: 100%;
   height: 36px;
-  padding: 0;
-  margin: 0;
+  padding: 0 12px;
   border: 1px solid var(--border);
   border-radius: 10px;
   background: var(--card);
+  color: var(--muted-fg);
+  font: inherit;
+  font-size: 14px;
+  line-height: 1;
+  text-align: left;
+  cursor: pointer;
   transition: border-color .12s, box-shadow .12s;
 }
-/* The ring belongs to the box, not to the bare input Bootstrap paints blue. */
-.tpl-left-panel #fitem_id_templateid .form-autocomplete-input:focus-within {
+.tpl-picker:hover { border-color: var(--muted-fg); }
+.tpl-picker:focus-visible,
+.tpl-picker[aria-expanded="true"] {
+  outline: none;
   border-color: var(--primary);
   box-shadow: 0 0 0 3px var(--primary-soft);
 }
-.tpl-left-panel #fitem_id_templateid .form-autocomplete-input .form-control {
+.tpl-picker-text {
   flex: 1 1 auto;
-  height: 34px;
-  padding: 0 34px 0 12px;
-  font-size: 14px;
-  border: 0;
-  border-radius: 10px;
-  background: transparent;
-  box-shadow: none;
-  outline: none;
-}
-.tpl-left-panel #fitem_id_templateid .form-autocomplete-downarrow {
-  color: var(--muted-fg);
-  font-size: 12px;
-  right: 12px;
-}
-/* The suggestions list spans the field it belongs to; Moodle sizes it to the
-   inline-block the field used to be. */
-.tpl-left-panel #fitem_id_templateid .form-autocomplete-suggestions {
-  /* Popper positions the list inline (inset + transform); the width is the
-     one thing it leaves to us, and it is the field's. */
-  width: 100%;
   min-width: 0;
-  max-width: none;
-  padding: 4px;
-  border: 1px solid var(--border);
-  border-radius: 10px;
-  box-shadow: var(--shadow-elevated);
-  font-size: 14px;
-}
-.tpl-left-panel #fitem_id_templateid .form-autocomplete-suggestions li {
-  padding: 7px 10px;
-  border-radius: 6px;
-  color: var(--fg);
-}
-.tpl-left-panel #fitem_id_templateid .form-autocomplete-suggestions li:hover,
-.tpl-left-panel #fitem_id_templateid .form-autocomplete-suggestions li[aria-selected="true"] {
-  background: var(--muted);
-  color: var(--fg);
-}
-/* The blank leading choice keeps the native select honest (see the form
-   class); it is not something to offer in the list. */
-.tpl-left-panel #fitem_id_templateid .form-autocomplete-suggestions li[data-value=""] {
-  display: none !important; /* core/form-autocomplete sets display inline */
-}
-/* The list is positioned against the field's own column, so "100%" is the
-   field's width and not the row's. */
-.tpl-left-panel #fitem_id_templateid .felement {
-  position: relative;
-}
-
-/* The chosen template is the field's own selection tag, drawn as a small
-   pill above the search box: the template's name and core's × beside it,
-   which clears the select (template_mode.js then clears the structure). */
-.tpl-left-panel #fitem_id_templateid .form-autocomplete-selection {
-  margin: 0;
-  padding: 0;
-}
-.tpl-left-panel #fitem_id_templateid .form-autocomplete-selection [role="option"] {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  max-width: 100%;
-  height: 28px;
-  margin: 0 0 6px;
-  padding: 0 4px 0 10px;
-  border-radius: 999px;
-  background: var(--muted);
-  color: var(--fg);
-  font-size: 13.5px;
-  font-weight: 500;
-  line-height: 1;
+  display: flex;
+  align-items: baseline;
   white-space: nowrap;
   overflow: hidden;
   text-overflow: ellipsis;
-  cursor: default;
 }
-.tpl-left-panel #fitem_id_templateid .form-autocomplete-selection [role="option"]:hover,
-.tpl-left-panel #fitem_id_templateid .form-autocomplete-selection [role="option"]:focus {
-  background: var(--muted);
-  color: var(--fg);
-  outline: none;
+.tpl-picker-name { color: var(--fg); font-weight: 500; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; }
+.tpl-picker-course { color: var(--muted-fg); flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.tpl-picker-course:not(:empty)::before { content: "\00a0·\00a0"; }
+/* Which of the two texts shows is one class on the button. */
+.tpl-picker .tpl-picker-name,
+.tpl-picker .tpl-picker-course { display: none; }
+.tpl-picker.has-value .tpl-picker-placeholder { display: none; }
+.tpl-picker.has-value .tpl-picker-name,
+.tpl-picker.has-value .tpl-picker-course { display: block; }
+/* The chosen state makes room for the × between the text and the chevron. */
+.tpl-picker.has-value .tpl-picker-text { padding-right: 28px; }
+.tpl-picker-chevron {
+  flex: 0 0 auto;
+  color: var(--muted-fg);
+  transition: transform var(--t-base) var(--ease);
 }
-/* Core marks the tag the keyboard is on with data-active-selection and the
-   theme rings it in blue at all times; here the ring shows only while the
-   selection list itself has the focus, in the page's own accent. */
-.tpl-left-panel #fitem_id_templateid .form-autocomplete-selection [data-active-selection="true"] {
-  box-shadow: none;
-}
-.tpl-left-panel #fitem_id_templateid .form-autocomplete-selection:focus-within [data-active-selection="true"],
-.tpl-left-panel #fitem_id_templateid .form-autocomplete-selection [role="option"]:focus-visible {
-  box-shadow: 0 0 0 2px var(--primary-soft);
-}
-.tpl-left-panel #fitem_id_templateid .form-autocomplete-selection [role="option"] span[aria-hidden="true"] {
-  order: 1; /* core puts the × first; here it closes the pill */
+.tpl-picker[aria-expanded="true"] .tpl-picker-chevron { transform: rotate(180deg); }
+.tpl-picker-clear {
+  position: absolute;
+  top: 50%;
+  right: 36px; /* 12px padding + 16px chevron + 8px gap: just left of the chevron */
+  transform: translateY(-50%);
   display: inline-grid;
   place-items: center;
   width: 20px;
   height: 20px;
+  padding: 0;
+  border: 0;
   border-radius: 50%;
+  background: transparent;
   color: var(--muted-fg);
-  font-size: 16px;
-  line-height: 1;
   cursor: pointer;
 }
-.tpl-left-panel #fitem_id_templateid .form-autocomplete-selection [role="option"]:hover span[aria-hidden="true"] {
-  background: var(--card);
-  color: var(--fg);
-}
+.tpl-picker-clear:hover,
+.tpl-picker-clear:focus-visible { background: var(--muted); color: var(--fg); outline: none; }
+.tpl-picker-clear[hidden] { display: none; }
+.tpl-pick-anchor .tpl-pick-popover { left: 0; right: 0; width: auto; }
+/* Once planning or generation has started the choice is fixed: the line
+   stays as the template's name, with nothing to open or clear. */
+.courseai-workspace.is-planning .tpl-picker,
+body.cg-generating .tpl-picker { pointer-events: none; }
+.courseai-workspace.is-planning .tpl-picker.has-value .tpl-picker-text,
+body.cg-generating .tpl-picker.has-value .tpl-picker-text { padding-right: 0; }
+.courseai-workspace.is-planning .tpl-picker-chevron,
+body.cg-generating .tpl-picker-chevron,
+.courseai-workspace.is-planning .tpl-picker-clear,
+body.cg-generating .tpl-picker-clear { display: none; }
 
 .tpl-left-scroll {
   flex: 1 1 auto;

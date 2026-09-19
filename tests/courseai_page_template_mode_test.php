@@ -65,11 +65,13 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
     }
 
     /**
-     * The template column renders with Moodle's own picker field first (the
-     * select template_mode.js listens to, shown as the column's search box)
-     * and the input bar below. Nothing of the old button, card or list is left.
+     * The template column renders with the one-line picker first (the button
+     * that opens the list, its × and the list itself), the native picker form
+     * hidden right after it (its select is the value template_mode.js listens
+     * to), and the input bar below. Nothing of the old card or Remove link is
+     * left.
      */
-    public function test_template_column_renders_native_picker_and_input_bar(): void {
+    public function test_template_column_renders_picker_line_and_input_bar(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -77,30 +79,53 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
 
         $leftpanelpos = strpos($html, 'data-region="tpl-left-panel"');
         $headpos = strpos($html, get_string('courseai_template_title', 'local_coursegen'));
-        $pickerpos = strpos($html, self::PICKER_SENTINEL);
+        $pickerpos = strpos($html, 'id="tplPicker"');
+        $popoverpos = strpos($html, 'id="templatesPopoverTpl"');
+        $formpos = strpos($html, self::PICKER_SENTINEL);
         $inputbarpos = strpos($html, 'data-region="tpl-input-bar"');
 
         $this->assertNotFalse($leftpanelpos, 'Left panel region missing');
         $this->assertNotFalse($headpos, 'Column heading missing');
-        $this->assertNotFalse($pickerpos, 'Picker form slot missing');
+        $this->assertNotFalse($pickerpos, 'Picker line missing');
+        $this->assertNotFalse($popoverpos, 'Templates popover missing');
+        $this->assertNotFalse($formpos, 'Picker form slot missing');
         $this->assertNotFalse($inputbarpos, 'Input bar region missing');
 
-        // Order inside the panel: heading, picker, input bar pinned at the bottom.
+        // Order inside the panel: heading, picker line, its list, the hidden
+        // form, input bar pinned at the bottom.
         $this->assertGreaterThan($leftpanelpos, $headpos, 'Heading must render inside the left panel');
-        $this->assertGreaterThan($headpos, $pickerpos, 'Picker must render after the heading');
-        $this->assertGreaterThan($pickerpos, $inputbarpos, 'Input bar must render below the picker');
+        $this->assertGreaterThan($headpos, $pickerpos, 'Picker line must render after the heading');
+        $this->assertGreaterThan($pickerpos, $popoverpos, 'The list must render after the picker line');
+        $this->assertGreaterThan($popoverpos, $formpos, 'The native form must render after the list');
+        $this->assertGreaterThan($formpos, $inputbarpos, 'Input bar must render below the picker');
 
-        // The native picker is what the professor sees: no hidden class on its slot.
+        // One button opens the list; its × is its own button, hidden until there is a value.
         $this->assertMatchesRegularExpression(
-            '/<div id="templateModeCard">\s*' . preg_quote(self::PICKER_SENTINEL, '/') . '/',
-            $html,
-            'The native picker must render visible'
+            '/<button class="tpl-picker" id="tplPicker" type="button"\s+aria-haspopup="dialog" aria-expanded="false"'
+                . ' aria-controls="templatesPopoverTpl">/',
+            $html
         );
-        $this->assertStringNotContainsString('class="hidden" id="templateModeCard"', $html);
+        $this->assertSame(1, substr_count($html, 'id="tplPicker"'), 'One picker line');
+        $this->assertStringContainsString(get_string('courseai_template_pick', 'local_coursegen'), $html);
+        $this->assertMatchesRegularExpression('/<button class="tpl-picker-clear" id="tplPickerClear" type="button" hidden/', $html);
+        $this->assertStringContainsString(
+            'aria-label="' . get_string('courseai_chip_remove_template', 'local_coursegen') . '"',
+            $html
+        );
+        foreach (['id="tplPickAnchor"', 'id="tplPickerName"', 'id="tplPickerCourse"', 'id="templateListTpl"',
+            'id="templateSearchTpl"', 'id="templatesPopoverTplClose"'] as $needle) {
+            $this->assertStringContainsString($needle, $html, "$needle missing");
+        }
 
-        // The custom button, the chosen-template card and its list are gone.
-        foreach (['tplPickBtn', 'tplPickAnchor', 'tplCard', 'tplCardBtn', 'tplCardRemove', 'templatesPopoverTpl',
-            'templateListTpl', 'templateSearchTpl'] as $id) {
+        // The native picker is hidden: it is the value, not what the professor sees.
+        $this->assertMatchesRegularExpression(
+            '/<div class="hidden" id="templateModeCard">\s*' . preg_quote(self::PICKER_SENTINEL, '/') . '/',
+            $html,
+            'The native picker form must render hidden'
+        );
+
+        // The old button, the chosen-template card and its Remove link are gone.
+        foreach (['tplPickBtn', 'tplCard', 'tplCardBtn', 'tplCardRemove', 'tplCardThumb', 'tplCardName'] as $id) {
             $this->assertStringNotContainsString('id="' . $id . '"', $html, "$id must be gone");
         }
     }
@@ -263,10 +288,10 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
         $this->assertStringNotContainsString('courseai-modebar', $html);
         $this->assertStringNotContainsString('id="tplPickHint"', $html);
 
-        // The template is chosen in its own column's native field, not from the free composer.
-        $this->assertStringContainsString('id="templateModeCard"', $html);
+        // The template is chosen on its own column's picker line, not from the free composer.
+        $this->assertStringContainsString('id="tplPicker"', $html);
+        $this->assertStringContainsString('id="templatesPopoverTpl"', $html);
         $this->assertStringNotContainsString('id="tplPickBtn"', $html);
-        $this->assertStringNotContainsString('id="templatesPopoverTpl"', $html);
         $this->assertStringNotContainsString('id="heroTemplateLink"', $html);
         $this->assertStringNotContainsString('id="btnTemplates"', $html);
         $this->assertStringNotContainsString('id="btnTemplatesCompact"', $html);

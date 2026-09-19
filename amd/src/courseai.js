@@ -309,7 +309,7 @@ export const init = async(params) => {
         if (!resumeSessionId) {
             const preselect = parseInt(params?.preselecttemplateid || 0, 10);
             if (preselect > 0) {
-                startPath.setStartPath('template', {focusPicker: false});
+                startPath.setStartPath('template', {openList: false});
                 contextUi.selectTemplate(preselect);
             } else if (params?.opentemplates) {
                 startPath.setStartPath('template');
