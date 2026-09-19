@@ -31,9 +31,6 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-/** How long after the template card is picked the list opens, so the column lands first. */
-const OPEN_LIST_DELAY_MS = 150;
-
 /**
  * Write which path is showing into the address bar, without navigating.
  *
@@ -93,19 +90,17 @@ export const wireStartPath = ({state, contextUi}) => {
     };
 
     /**
-     * Open one of the two paths.
+     * Open one of the two paths. The template list itself never opens from
+     * here - only the professor's own click on its button opens it
+     * (context_section.js); this only shows the column and its picker.
      *
      * @param {'free'|'template'} path
      * @param {Object} [options]
-     * @param {boolean} [options.openList=true] On the template path, open the list of templates.
      * @param {boolean} [options.fromCard=false] A card was clicked, as opposed to the address
      *                  bar already saying which path to open: only then is the address updated,
      *                  so restoring it on load never rewrites what the professor typed.
-     * @param {boolean} [options.focusList=true] Give the template list's search box focus once
-     *                  it opens. Off for the page landing on this path by itself (?mode=template
-     *                  on load) - nobody clicked anything there, so nothing should steal focus.
      */
-    const setStartPath = (path, {openList = true, fromCard = false, focusList = true} = {}) => {
+    const setStartPath = (path, {fromCard = false} = {}) => {
         state.startPath = path;
         workspace?.classList.remove('is-choosing');
         contextUi.setTemplateLayout(path === 'template');
@@ -115,13 +110,6 @@ export const wireStartPath = ({state, contextUi}) => {
         }
         if (path === 'free') {
             document.getElementById('promptInput')?.focus();
-            return;
-        }
-        if (openList && !state.selectedTemplateId) {
-            setTimeout(() => {
-                contextUi.openTemplatePopover(
-                    'templatesPopoverTpl', document.getElementById('tplPicker'), {focus: focusList});
-            }, OPEN_LIST_DELAY_MS);
         }
     };
 
