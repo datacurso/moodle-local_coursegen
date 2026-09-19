@@ -560,7 +560,9 @@ svg { display: block; flex-shrink: 0; }
 .tpl-picker-clear:focus-visible { background: var(--muted); color: var(--fg); outline: none; }
 .tpl-picker-clear[hidden] { display: none; }
 .tpl-picker-shell.is-open .tpl-picker-clear { display: none; }
-.tpl-pick-anchor .tpl-pick-popover { left: 0; right: 0; width: auto; margin-top: 6px; }
+/* Tighter than the generic .popover-panel--down offset (8px): the list
+   reads as this one control unfolding, not a separate floating panel. */
+.tpl-pick-anchor .tpl-pick-popover { left: 0; right: 0; width: auto; top: calc(100% + 4px); margin-top: 0; }
 /* The list itself: one line per template, no radio, no header row. */
 .tpl-combo-list {
   list-style: none;
