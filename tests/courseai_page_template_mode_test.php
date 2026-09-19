@@ -285,9 +285,13 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
         $this->assertStringContainsString('data-start-path="template"', $html);
         $this->assertSame(1, substr_count($html, 'data-start-modebar'), 'One path crumb, in the top bar');
         $this->assertMatchesRegularExpression(
-            '/<button class="courseai-topbar-path" id="courseaiPathBack" type="button" hidden/',
+            '/<button class="courseai-topbar-path" id="courseaiPathBack"[^>]*\bhidden\b[^>]*>/',
             $html
         );
+        // The crumb's own data-start-path (which name it shows) is empty while
+        // nothing is chosen yet - it must come from the server too, not sit
+        // blank until start_path.js runs.
+        $this->assertStringContainsString('data-start-path=""', $html);
         $this->assertStringNotContainsString('courseai-modebar', $html);
         $this->assertStringNotContainsString('id="tplPickHint"', $html);
 
