@@ -101,8 +101,11 @@ export const wireStartPath = ({state, contextUi}) => {
      * @param {boolean} [options.fromCard=false] A card was clicked, as opposed to the address
      *                  bar already saying which path to open: only then is the address updated,
      *                  so restoring it on load never rewrites what the professor typed.
+     * @param {boolean} [options.focusList=true] Give the template list's search box focus once
+     *                  it opens. Off for the page landing on this path by itself (?mode=template
+     *                  on load) - nobody clicked anything there, so nothing should steal focus.
      */
-    const setStartPath = (path, {openList = true, fromCard = false} = {}) => {
+    const setStartPath = (path, {openList = true, fromCard = false, focusList = true} = {}) => {
         state.startPath = path;
         workspace?.classList.remove('is-choosing');
         contextUi.setTemplateLayout(path === 'template');
@@ -116,7 +119,8 @@ export const wireStartPath = ({state, contextUi}) => {
         }
         if (openList && !state.selectedTemplateId) {
             setTimeout(() => {
-                contextUi.openTemplatePopover('templatesPopoverTpl', document.getElementById('tplPicker'));
+                contextUi.openTemplatePopover(
+                    'templatesPopoverTpl', document.getElementById('tplPicker'), {focus: focusList});
             }, OPEN_LIST_DELAY_MS);
         }
     };

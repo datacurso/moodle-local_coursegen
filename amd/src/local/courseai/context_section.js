@@ -259,7 +259,7 @@ export const setupContextSection = (deps) => {
         {panel: 'templatesPopoverTpl', search: 'templateSearchTpl', triggers: ['tplPicker']},
     ];
 
-    const openTemplatePopover = (panelId, triggerEl = null) => {
+    const openTemplatePopover = (panelId, triggerEl = null, {focus = true} = {}) => {
         const spec = templatePopovers.find((p) => p.panel === panelId);
         const panel = document.getElementById(panelId);
         if (!spec || !panel || isTemplateLocked()) {
@@ -271,7 +271,7 @@ export const setupContextSection = (deps) => {
         spec.triggers.forEach((id) => {
             document.getElementById(id)?.setAttribute('aria-expanded', id === triggerEl?.id ? 'true' : 'false');
         });
-        setPickerOpen(true);
+        setPickerOpen(true, {focus});
         renderTemplateLists();
     };
 
