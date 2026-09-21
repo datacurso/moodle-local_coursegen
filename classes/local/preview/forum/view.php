@@ -264,13 +264,11 @@ class view {
             }
             return 'mod_forum/news_discussion_list';
         }
-        if ($type === 'qanda') {
-            return 'mod_forum/qanda_discussion_list';
-        }
-        if ($type === 'blog') {
-            return 'mod_forum/blog_discussion_list';
-        }
-        return 'mod_forum/discussion_list';
+        $templates = [
+            'qanda' => 'mod_forum/qanda_discussion_list',
+            'blog' => 'mod_forum/blog_discussion_list',
+        ];
+        return $templates[$type] ?? 'mod_forum/discussion_list';
     }
 
     /**

@@ -176,6 +176,26 @@ class view {
     }
 
     /**
+     * The book_toc_* class one of book's numbering constants draws, mapped
+     * rather than switched on.
+     *
+     * @param mixed $numbering One of self::BOOK_NUM_*.
+     * @return string|null Null for a numbering the map does not describe.
+     */
+    protected static function numbering_class($numbering): ?string {
+        $classes = [
+            self::BOOK_NUM_NONE => 'book_toc_none',
+            self::BOOK_NUM_NUMBERS => 'book_toc_numbered',
+            self::BOOK_NUM_BULLETS => 'book_toc_bullets',
+            self::BOOK_NUM_INDENTED => 'book_toc_indented',
+        ];
+        if (!array_key_exists($numbering, $classes)) {
+            return null;
+        }
+        return $classes[$numbering];
+    }
+
+    /**
      * mod/book/locallib.php book_get_toc(), the branch shown when not editing.
      *
      * @param array $chapters
@@ -193,14 +213,9 @@ class view {
 
         $viewhidden = has_capability('mod/book:viewhiddenchapters', $context);
 
-        if ($book->numbering == self::BOOK_NUM_NONE) {
-            $toc .= html_writer::start_tag('div', array('class' => 'book_toc book_toc_none clearfix'));
-        } else if ($book->numbering == self::BOOK_NUM_NUMBERS) {
-            $toc .= html_writer::start_tag('div', array('class' => 'book_toc book_toc_numbered clearfix'));
-        } else if ($book->numbering == self::BOOK_NUM_BULLETS) {
-            $toc .= html_writer::start_tag('div', array('class' => 'book_toc book_toc_bullets clearfix'));
-        } else if ($book->numbering == self::BOOK_NUM_INDENTED) {
-            $toc .= html_writer::start_tag('div', array('class' => 'book_toc book_toc_indented clearfix'));
+        $numberingclass = self::numbering_class($book->numbering);
+        if ($numberingclass !== null) {
+            $toc .= html_writer::start_tag('div', array('class' => 'book_toc ' . $numberingclass . ' clearfix'));
         }
 
         // Editing off. Normal students, teachers view.

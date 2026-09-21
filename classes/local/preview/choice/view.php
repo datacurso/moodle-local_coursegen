@@ -159,24 +159,7 @@ class view {
         if ( (!$current or $choice->allowupdate) and $choiceopen and $this->can_choose()) {
 
             // Show information on how the results will be published to students.
-            $publishinfo = null;
-            if ($choice->showresults == self::CHOICE_SHOWRESULTS_NOT) {
-                $publishinfo = get_string('publishinfonever', 'choice');
-            } else if ($choice->showresults == self::CHOICE_SHOWRESULTS_AFTER_ANSWER) {
-                if ($choice->publish == self::CHOICE_PUBLISH_ANONYMOUS) {
-                    $publishinfo = get_string('publishinfoanonafter', 'choice');
-                } else {
-                    $publishinfo = get_string('publishinfofullafter', 'choice');
-                }
-            } else if ($choice->showresults == self::CHOICE_SHOWRESULTS_AFTER_CLOSE) {
-                if ($choice->publish == self::CHOICE_PUBLISH_ANONYMOUS) {
-                    $publishinfo = get_string('publishinfoanonclose', 'choice');
-                } else {
-                    $publishinfo = get_string('publishinfofullclose', 'choice');
-                }
-            }
-            // No need to inform the user in the case of CHOICE_SHOWRESULTS_ALWAYS since it's already obvious that the results are
-            // being published.
+            $publishinfo = $this->publish_info($choice);
 
             // Show info if necessary.
             if (!empty($publishinfo)) {
@@ -213,6 +196,33 @@ class view {
         }
 
         return $out;
+    }
+
+    /**
+     * How the choice tells the reader its results will be published, mapped
+     * by showresults rather than switched on. CHOICE_SHOWRESULTS_ALWAYS needs
+     * no message, since it is already obvious that the results are published.
+     *
+     * @param stdClass $choice
+     * @return string|null
+     */
+    protected function publish_info(stdClass $choice): ?string {
+        $anonymous = $choice->publish == self::CHOICE_PUBLISH_ANONYMOUS;
+        $afterstring = 'publishinfofullafter';
+        $closestring = 'publishinfofullclose';
+        if ($anonymous) {
+            $afterstring = 'publishinfoanonafter';
+            $closestring = 'publishinfoanonclose';
+        }
+        $strings = [
+            self::CHOICE_SHOWRESULTS_NOT => 'publishinfonever',
+            self::CHOICE_SHOWRESULTS_AFTER_ANSWER => $afterstring,
+            self::CHOICE_SHOWRESULTS_AFTER_CLOSE => $closestring,
+        ];
+        if (!array_key_exists($choice->showresults, $strings)) {
+            return null;
+        }
+        return get_string($strings[$choice->showresults], 'choice');
     }
 
     /**

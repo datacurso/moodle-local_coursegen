@@ -53,6 +53,7 @@ class view {
     use workshop_plan_early;
     use workshop_plan_late;
     use workshop_plan_render;
+    use workshop_submissions_report;
     use workshop_queries;
     use workshop_urls;
 

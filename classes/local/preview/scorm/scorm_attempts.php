@@ -52,25 +52,9 @@ trait scorm_attempts {
         $result .= get_string('noattemptsmade', 'scorm').': ' . $attemptcount . html_writer::empty_tag('br');
 
         if ($scorm->maxattempt == 1) {
-            if ($scorm->grademethod == GRADEHIGHEST) {
-                $grademethod = get_string('gradehighest', 'scorm');
-            } else if ($scorm->grademethod == GRADEAVERAGE) {
-                $grademethod = get_string('gradeaverage', 'scorm');
-            } else if ($scorm->grademethod == GRADESUM) {
-                $grademethod = get_string('gradesum', 'scorm');
-            } else if ($scorm->grademethod == GRADESCOES) {
-                $grademethod = get_string('gradescoes', 'scorm');
-            }
+            $grademethod = $this->grade_method_label($this->grademethod_labels(), $scorm->grademethod);
         } else {
-            if ($scorm->whatgrade == HIGHESTATTEMPT) {
-                $grademethod = get_string('highestattempt', 'scorm');
-            } else if ($scorm->whatgrade == AVERAGEATTEMPT) {
-                $grademethod = get_string('averageattempt', 'scorm');
-            } else if ($scorm->whatgrade == FIRSTATTEMPT) {
-                $grademethod = get_string('firstattempt', 'scorm');
-            } else if ($scorm->whatgrade == LASTATTEMPT) {
-                $grademethod = get_string('lastattempt', 'scorm');
-            }
+            $grademethod = $this->grade_method_label($this->whatgrade_labels(), $scorm->whatgrade);
         }
 
         // The grade of each attempt would follow here; there are no attempts.
@@ -94,6 +78,52 @@ trait scorm_attempts {
         // The button that deletes the reader's attempts is offered only to a
         // reader who has some; none are carried, so it is never offered.
         return $result;
+    }
+
+    /**
+     * mod/scorm/locallib.php's GRADEHIGHEST..GRADESCOES constants, each
+     * mapped to the lang string key that names it - read when the scorm
+     * allows one attempt.
+     *
+     * @return array
+     */
+    protected function grademethod_labels(): array {
+        return [
+            GRADEHIGHEST => 'gradehighest',
+            GRADEAVERAGE => 'gradeaverage',
+            GRADESUM => 'gradesum',
+            GRADESCOES => 'gradescoes',
+        ];
+    }
+
+    /**
+     * mod/scorm/locallib.php's HIGHESTATTEMPT..LASTATTEMPT constants,
+     * likewise - read when the scorm allows more than one attempt.
+     *
+     * @return array
+     */
+    protected function whatgrade_labels(): array {
+        return [
+            HIGHESTATTEMPT => 'highestattempt',
+            AVERAGEATTEMPT => 'averageattempt',
+            FIRSTATTEMPT => 'firstattempt',
+            LASTATTEMPT => 'lastattempt',
+        ];
+    }
+
+    /**
+     * The language string a grading-method constant names, mapped rather
+     * than switched on.
+     *
+     * @param array $labels grademethod_labels() or whatgrade_labels().
+     * @param mixed $value
+     * @return string|null Null for a value the map does not describe.
+     */
+    protected function grade_method_label(array $labels, $value): ?string {
+        if (!array_key_exists($value, $labels)) {
+            return null;
+        }
+        return get_string($labels[$value], 'scorm');
     }
 
     /**

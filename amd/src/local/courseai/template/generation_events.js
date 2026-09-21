@@ -59,39 +59,63 @@ export const markRow = (cmid, status) => {
 };
 
 /**
- * Apply one decoded stream event.
+ * Reset the progress counters for a phase that is starting over.
+ *
+ * @param {Object} progress Mutable {total, done} counters.
+ * @param {Object} data
+ */
+const resetProgress = (progress, data) => {
+    progress.total = Math.max(0, Number(data.total) || 0);
+    progress.done = 0;
+};
+
+/**
+ * One activity's generation failed or finished; count it and, once every
+ * activity is accounted for, move the header on to the next phase.
  *
  * @param {Object} data
  * @param {Object} progress Mutable {total, done} counters.
  * @param {Function} paintStage Shows one phase label, by key.
- * @returns {string} '' to keep listening, otherwise 'review'/'completed'/'failed'.
+ * @returns {string} ''
  */
-export const applyEvent = (data, progress, paintStage) => {
-    if (data.type === 'template_stage') {
+const finishActivity = (data, progress, paintStage) => {
+    // A failed activity is still counted and still stops looking
+    // "in progress": the run itself then fails, which is what the
+    // professor is told about.
+    markRow(data.cmid, 'done');
+    progress.done += 1;
+    if (progress.total > 0 && progress.done >= progress.total) {
+        paintStage('saving');
+    }
+    return '';
+};
+
+/** One handler per stream event type, keyed the way the server names them. */
+const EVENT_HANDLERS = {
+    template_stage: (data, progress, paintStage) => {
         paintStage(data.stage);
         return '';
-    }
-    if (data.type === 'plan_progress_init') {
-        progress.total = Math.max(0, Number(data.total) || 0);
-        progress.done = 0;
+    },
+    plan_progress_init: (data, progress, paintStage) => {
+        resetProgress(progress, data);
         paintStage('planning');
         openChecklist(data.sections);
         return '';
-    }
-    if (data.type === 'plan_progress_start') {
+    },
+    plan_progress_start: (data) => {
         markRow(data.cmid, 'running');
         startPlanEntry(data);
         return '';
-    }
-    if (data.type === 'plan_progress_summary') {
+    },
+    plan_progress_summary: (data) => {
         addPlanSummary(data);
         return '';
-    }
-    if (data.type === 'plan_progress_part') {
+    },
+    plan_progress_part: (data) => {
         addPlanPart(data);
         return '';
-    }
-    if (data.type === 'plan_progress_done') {
+    },
+    plan_progress_done: (data, progress) => {
         markRow(data.cmid, 'done');
         progress.done += 1;
         finishChecklistRow(data.plan || {});
@@ -100,36 +124,35 @@ export const applyEvent = (data, progress, paintStage) => {
         // plan lands.
         renderActivityPlan(data.plan || {});
         return '';
-    }
-    if (data.type === 'review_needed') {
-        return 'review';
-    }
-    if (data.type === 'activity_progress_init') {
-        progress.total = Math.max(0, Number(data.total) || 0);
-        progress.done = 0;
+    },
+    review_needed: () => 'review',
+    activity_progress_init: (data, progress, paintStage) => {
+        resetProgress(progress, data);
         paintStage('activities');
         return '';
-    }
-    if (data.type === 'activity_progress_start') {
+    },
+    activity_progress_start: (data) => {
         markRow(data.cmid, 'running');
         return '';
-    }
-    if (data.type === 'activity_progress_done' || data.type === 'activity_progress_failed') {
-        // A failed activity is still counted and still stops looking
-        // "in progress": the run itself then fails, which is what the
-        // professor is told about.
-        markRow(data.cmid, 'done');
-        progress.done += 1;
-        if (progress.total > 0 && progress.done >= progress.total) {
-            paintStage('saving');
-        }
+    },
+    activity_progress_done: finishActivity,
+    activity_progress_failed: finishActivity,
+    completed: () => 'completed',
+    failed: () => 'failed',
+};
+
+/**
+ * Apply one decoded stream event.
+ *
+ * @param {Object} data
+ * @param {Object} progress Mutable {total, done} counters.
+ * @param {Function} paintStage Shows one phase label, by key.
+ * @returns {string} '' to keep listening, otherwise 'review'/'completed'/'failed'.
+ */
+export const applyEvent = (data, progress, paintStage) => {
+    const handler = EVENT_HANDLERS[data.type];
+    if (!handler) {
         return '';
     }
-    if (data.type === 'completed') {
-        return 'completed';
-    }
-    if (data.type === 'failed') {
-        return 'failed';
-    }
-    return '';
+    return handler(data, progress, paintStage);
 };

@@ -27,6 +27,8 @@ namespace local_coursegen\local\preview;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class quiz_question_data {
+    use quiz_question_options;
+
     /**
      * One question from its form fields to the bank's loaded shape.
      *
@@ -101,71 +103,9 @@ class quiz_question_data {
         }
 
         $options = ['id' => $id++, 'questionid' => $questionid];
-        if ($qtype === 'multichoice') {
-            foreach (['correctfeedback', 'partiallycorrectfeedback', 'incorrectfeedback'] as $field) {
-                $text = $editor($form[$field] ?? '');
-                $options[$field] = $text['text'];
-                $options[$field . 'format'] = $text['format'];
-            }
-            $options += [
-                'layout' => 0,
-                'single' => (int) ($form['single'] ?? 1),
-                'shuffleanswers' => (int) ($form['shuffleanswers'] ?? 1),
-                'answernumbering' => (string) ($form['answernumbering'] ?? 'abc'),
-                'shownumcorrect' => (int) ($form['shownumcorrect'] ?? 0),
-                'showstandardinstruction' => (int) ($form['showstandardinstruction'] ?? 0),
-                'answers' => $answers,
-            ];
-        } else if ($qtype === 'truefalse') {
-            $correct = (int) ($form['correctanswer'] ?? 1);
-            $true = $editor($form['feedbacktrue'] ?? '');
-            $false = $editor($form['feedbackfalse'] ?? '');
-            $answers = [];
-            $trueid = $id++;
-            $falseid = $id++;
-            $answers[$trueid] = [
-                'id' => $trueid, 'question' => $questionid, 'answer' => get_string('true', 'qtype_truefalse'),
-                'answerformat' => FORMAT_MOODLE, 'fraction' => $correct ? 1.0 : 0.0,
-                'feedback' => $true['text'], 'feedbackformat' => $true['format'],
-            ];
-            $answers[$falseid] = [
-                'id' => $falseid, 'question' => $questionid, 'answer' => get_string('false', 'qtype_truefalse'),
-                'answerformat' => FORMAT_MOODLE, 'fraction' => $correct ? 0.0 : 1.0,
-                'feedback' => $false['text'], 'feedbackformat' => $false['format'],
-            ];
-            $options += [
-                'question' => $questionid, 'trueanswer' => $trueid, 'falseanswer' => $falseid,
-                'showstandardinstruction' => (int) ($form['showstandardinstruction'] ?? 0),
-                'answers' => $answers,
-            ];
-        } else if ($qtype === 'shortanswer') {
-            $options += ['usecase' => (int) ($form['usecase'] ?? 0), 'answers' => $answers];
-        } else if ($qtype === 'numerical') {
-            $options += ['answers' => $answers, 'units' => [], 'unitgradingtype' => 0, 'unitpenalty' => 0.1,
-                'showunits' => 3, 'unitsleft' => 0];
-            $tolerances = (array) ($form['tolerance'] ?? []);
-            $index = 0;
-            foreach ($options['answers'] as $answerid => $answer) {
-                $options['answers'][$answerid]['tolerance'] = (float) ($tolerances[$index] ?? 0);
-                $index++;
-            }
-        } else if ($qtype === 'essay') {
-            $graderinfo = $editor($form['graderinfo'] ?? '');
-            $template = $editor($form['responsetemplate'] ?? '');
-            $options += [
-                'responseformat' => (string) ($form['responseformat'] ?? 'editor'),
-                'responserequired' => (int) ($form['responserequired'] ?? 1),
-                'responsefieldlines' => (int) ($form['responsefieldlines'] ?? 15),
-                'minwordlimit' => $form['minwordlimit'] ?? null,
-                'maxwordlimit' => $form['maxwordlimit'] ?? null,
-                'attachments' => (int) ($form['attachments'] ?? 0),
-                'attachmentsrequired' => (int) ($form['attachmentsrequired'] ?? 0),
-                'graderinfo' => $graderinfo['text'], 'graderinfoformat' => $graderinfo['format'],
-                'responsetemplate' => $template['text'], 'responsetemplateformat' => $template['format'],
-                'maxbytes' => (int) ($form['maxbytes'] ?? 0),
-                'filetypeslist' => (string) ($form['filetypeslist'] ?? ''),
-                'answers' => [],
-            ];
+        $method = self::options_builder($qtype);
+        if ($method !== null) {
+            $options += self::$method($form, $answers, $questionid, $id, $editor);
         } else {
             // A type this does not know how to lay out is left to the
             // engine as it is; a type the engine cannot make is skipped
@@ -175,4 +115,23 @@ class quiz_question_data {
         $data['options'] = $options;
         return $data;
     }
+
+    /**
+     * Which method lays out a question type's options, mapped rather than
+     * switched on.
+     *
+     * @param string $qtype
+     * @return string|null Null for a type this class does not know how to lay out.
+     */
+    protected static function options_builder(string $qtype): ?string {
+        $builders = [
+            'multichoice' => 'options_for_multichoice',
+            'truefalse' => 'options_for_truefalse',
+            'shortanswer' => 'options_for_shortanswer',
+            'numerical' => 'options_for_numerical',
+            'essay' => 'options_for_essay',
+        ];
+        return $builders[$qtype] ?? null;
+    }
+
 }

@@ -255,26 +255,80 @@ class view {
         $resource->mainfile = $file->get_filename();
         $out .= '<div class="resourceworkaround">';
         $finaldisplaytype = $this->resource_get_final_display_type($resource);
-        if ($finaldisplaytype == RESOURCELIB_DISPLAY_POPUP) {
-            $path = '/'.$file->get_contextid().'/mod_resource/content/'.$resource->revision.$file->get_filepath().$file->get_filename();
-            $fullurl = file_encode_url($this->wwwroot().'/pluginfile.php', $path, false);
-            $options = empty($resource->displayoptions) ? [] : (array) unserialize_array($resource->displayoptions);
-            $width  = empty($options['popupwidth'])  ? 620 : $options['popupwidth'];
-            $height = empty($options['popupheight']) ? 450 : $options['popupheight'];
-            $wh = "width=$width,height=$height,toolbar=no,location=no,menubar=no,copyhistory=no,status=no,directories=no,scrollbars=yes,resizable=yes";
-            $extra = "onclick=\"window.open('$fullurl', '', '$wh'); return false;\"";
-            $out .= $this->resource_get_clicktoopen($file, $resource->revision, $extra);
-        } else if ($finaldisplaytype == RESOURCELIB_DISPLAY_NEW) {
-            $extra = 'onclick="this.target=\'_blank\'"';
-            $out .= $this->resource_get_clicktoopen($file, $resource->revision, $extra);
-        } else if ($finaldisplaytype == RESOURCELIB_DISPLAY_DOWNLOAD) {
-            $out .= $this->resource_get_clicktodownload($file, $resource->revision);
-        } else {
-            $out .= $this->resource_get_clicktoopen($file, $resource->revision);
-        }
+        $method = $this->workaround_method($finaldisplaytype);
+        $out .= $this->$method($resource, $file);
         $out .= '</div>';
 
         return $out;
+    }
+
+    /**
+     * Which method draws a resource's workaround link for a display type,
+     * mapped rather than switched on.
+     *
+     * @param mixed $displaytype
+     * @return string
+     */
+    protected function workaround_method($displaytype): string {
+        $methods = [
+            RESOURCELIB_DISPLAY_POPUP => 'workaround_popup',
+            RESOURCELIB_DISPLAY_NEW => 'workaround_new_window',
+            RESOURCELIB_DISPLAY_DOWNLOAD => 'workaround_download',
+        ];
+        return $methods[$displaytype] ?? 'workaround_open';
+    }
+
+    /**
+     * RESOURCELIB_DISPLAY_POPUP's own workaround link, opening in a popup window.
+     *
+     * @param stdClass $resource
+     * @param json_file $file
+     * @return string
+     */
+    protected function workaround_popup($resource, $file): string {
+        $path = '/'.$file->get_contextid().'/mod_resource/content/'.$resource->revision.$file->get_filepath().$file->get_filename();
+        $fullurl = file_encode_url($this->wwwroot().'/pluginfile.php', $path, false);
+        $options = empty($resource->displayoptions) ? [] : (array) unserialize_array($resource->displayoptions);
+        $width  = empty($options['popupwidth'])  ? 620 : $options['popupwidth'];
+        $height = empty($options['popupheight']) ? 450 : $options['popupheight'];
+        $wh = "width=$width,height=$height,toolbar=no,location=no,menubar=no,copyhistory=no,status=no,directories=no,scrollbars=yes,resizable=yes";
+        $extra = "onclick=\"window.open('$fullurl', '', '$wh'); return false;\"";
+        return $this->resource_get_clicktoopen($file, $resource->revision, $extra);
+    }
+
+    /**
+     * RESOURCELIB_DISPLAY_NEW's own workaround link, opening in a new tab.
+     *
+     * @param stdClass $resource
+     * @param json_file $file
+     * @return string
+     */
+    protected function workaround_new_window($resource, $file): string {
+        $extra = 'onclick="this.target=\'_blank\'"';
+        return $this->resource_get_clicktoopen($file, $resource->revision, $extra);
+    }
+
+    /**
+     * RESOURCELIB_DISPLAY_DOWNLOAD's own workaround link.
+     *
+     * @param stdClass $resource
+     * @param json_file $file
+     * @return string
+     */
+    protected function workaround_download($resource, $file): string {
+        return $this->resource_get_clicktodownload($file, $resource->revision);
+    }
+
+    /**
+     * RESOURCELIB_DISPLAY_OPEN's own workaround link, and every display type
+     * the map above does not name.
+     *
+     * @param stdClass $resource
+     * @param json_file $file
+     * @return string
+     */
+    protected function workaround_open($resource, $file): string {
+        return $this->resource_get_clicktoopen($file, $resource->revision);
     }
 
     /**
