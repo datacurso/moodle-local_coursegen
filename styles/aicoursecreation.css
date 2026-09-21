@@ -364,8 +364,8 @@ svg { display: block; flex-shrink: 0; }
   right: 14px;
   padding: 3px 8px;
   border-radius: 999px;
-  background: var(--muted);
-  color: var(--muted-fg);
+  background: var(--success-soft);
+  color: var(--success-strong);
   font-size: 11.5px;
   font-weight: 600;
   letter-spacing: .04em;
