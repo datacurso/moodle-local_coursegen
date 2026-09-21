@@ -51,6 +51,7 @@ import {
     restorePicker,
     turn,
 } from 'local_coursegen/local/courseai/template/thread';
+import {refreshPreviewLinks} from 'local_coursegen/local/courseai/template/preview';
 import {sendTemplatePlanningFeedback} from 'local_coursegen/local/courseai/template/repository';
 import {hideWorkingIndicator, showWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
 import {ALL_STATUS_CLASSES, STATUS_CLASS, applyEvent} from 'local_coursegen/local/courseai/template/generation_events';
@@ -143,6 +144,7 @@ const openView = async(context) => {
         row.classList.add(STATUS_CLASS.pending);
     });
     showGeneratingHeader((await getLabels()).title);
+    refreshPreviewLinks();
 };
 
 /**
