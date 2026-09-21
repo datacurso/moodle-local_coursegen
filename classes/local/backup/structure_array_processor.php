@@ -163,28 +163,16 @@ class structure_array_processor extends base_processor {
      */
     protected function remember_source(base_nested_element $nested): void {
         $name = $nested->get_name();
-        if (isset($this->tables[$name]) || !($nested instanceof backup_nested_element)) {
+        if (isset($this->tables[$name])) {
             return;
         }
-        $table = $nested->get_source_table();
-        if (!$table) {
-            $sql = (string) $nested->get_source_sql();
-            if ($sql !== '' && preg_match('~FROM\\s+\\{(\\w+)\\}~i', $sql, $found)) {
-                $table = $found[1];
-            }
-        }
+        $table = structure_node_resolver::source_table($nested);
         if ($table) {
             $this->tables[$name] = $table;
         }
-        // An alias is declared as "this column travels under that name" and
-        // kept by the element as column => final element. There is no reader
-        // for it, only a writer, so it is read the one way it can be.
-        $property = new \ReflectionProperty(backup_nested_element::class, 'aliases');
-        $property->setAccessible(true);
-        foreach ((array) $property->getValue($nested) as $column => $final) {
-            if (is_object($final) && method_exists($final, 'get_name')) {
-                $this->aliases[$name][$final->get_name()] = $column;
-            }
+        $aliases = structure_node_resolver::aliases($nested);
+        if ($aliases) {
+            $this->aliases[$name] = $aliases;
         }
     }
 
@@ -211,7 +199,8 @@ class structure_array_processor extends base_processor {
         if ($finished === null) {
             return;
         }
-        $finished['node'] = $this->with_file_addresses($finished['node'], $finished['files']);
+        $finished['node'] = structure_node_resolver::with_file_addresses(
+            $finished['node'], $finished['files'], (int) $this->get_var(\backup::VAR_CONTEXTID));
 
         if (!$this->stack) {
             $this->result = $finished['node'];
@@ -225,41 +214,6 @@ class structure_array_processor extends base_processor {
         $parent = array_pop($this->stack);
         $parent['node'][$finished['name']][] = $finished['node'];
         $this->stack[] = $parent;
-    }
-
-    /**
-     * Text that names its files by a placeholder, renamed to where they are.
-     *
-     * A module keeps "@@PLUGINFILE@@/x.png" in its text and resolves it on the
-     * way out with the file area the text belongs to. Backup keeps the
-     * placeholder, because restore resolves it again; this tree is read by
-     * things that own no file area, so it is resolved here, with the same
-     * areas backup declares for the element and the same context the module
-     * would use. Text with no placeholder is left exactly as it was.
-     *
-     * @param array $node
-     * @param array $annotations component => filearea => info, as declared.
-     * @return array
-     */
-    protected function with_file_addresses(array $node, array $annotations): array {
-        if (!$annotations) {
-            return $node;
-        }
-        foreach ($node as $key => $value) {
-            if (!is_string($value) || strpos($value, '@@PLUGINFILE@@') === false) {
-                continue;
-            }
-            foreach ($annotations as $component => $areas) {
-                foreach ($areas as $filearea => $info) {
-                    $contextid = $info->contextid ?? null;
-                    $contextid = $contextid !== null ? (int) $contextid : (int) $this->get_var(\backup::VAR_CONTEXTID);
-                    $itemid = isset($info->element) && $info->element !== null ? $info->element->get_value() : null;
-                    $value = file_rewrite_pluginfile_urls($value, 'pluginfile.php', $contextid, $component, $filearea, $itemid);
-                }
-            }
-            $node[$key] = $value;
-        }
-        return $node;
     }
 
     /**
