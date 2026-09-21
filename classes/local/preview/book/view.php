@@ -193,19 +193,14 @@ class view {
 
         $viewhidden = has_capability('mod/book:viewhiddenchapters', $context);
 
-        switch ($book->numbering) {
-            case self::BOOK_NUM_NONE:
-                $toc .= html_writer::start_tag('div', array('class' => 'book_toc book_toc_none clearfix'));
-                break;
-            case self::BOOK_NUM_NUMBERS:
-                $toc .= html_writer::start_tag('div', array('class' => 'book_toc book_toc_numbered clearfix'));
-                break;
-            case self::BOOK_NUM_BULLETS:
-                $toc .= html_writer::start_tag('div', array('class' => 'book_toc book_toc_bullets clearfix'));
-                break;
-            case self::BOOK_NUM_INDENTED:
-                $toc .= html_writer::start_tag('div', array('class' => 'book_toc book_toc_indented clearfix'));
-                break;
+        if ($book->numbering == self::BOOK_NUM_NONE) {
+            $toc .= html_writer::start_tag('div', array('class' => 'book_toc book_toc_none clearfix'));
+        } else if ($book->numbering == self::BOOK_NUM_NUMBERS) {
+            $toc .= html_writer::start_tag('div', array('class' => 'book_toc book_toc_numbered clearfix'));
+        } else if ($book->numbering == self::BOOK_NUM_BULLETS) {
+            $toc .= html_writer::start_tag('div', array('class' => 'book_toc book_toc_bullets clearfix'));
+        } else if ($book->numbering == self::BOOK_NUM_INDENTED) {
+            $toc .= html_writer::start_tag('div', array('class' => 'book_toc book_toc_indented clearfix'));
         }
 
         // Editing off. Normal students, teachers view.

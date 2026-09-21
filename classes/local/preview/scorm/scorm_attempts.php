@@ -52,34 +52,24 @@ trait scorm_attempts {
         $result .= get_string('noattemptsmade', 'scorm').': ' . $attemptcount . html_writer::empty_tag('br');
 
         if ($scorm->maxattempt == 1) {
-            switch ($scorm->grademethod) {
-                case GRADEHIGHEST:
-                    $grademethod = get_string('gradehighest', 'scorm');
-                    break;
-                case GRADEAVERAGE:
-                    $grademethod = get_string('gradeaverage', 'scorm');
-                    break;
-                case GRADESUM:
-                    $grademethod = get_string('gradesum', 'scorm');
-                    break;
-                case GRADESCOES:
-                    $grademethod = get_string('gradescoes', 'scorm');
-                    break;
+            if ($scorm->grademethod == GRADEHIGHEST) {
+                $grademethod = get_string('gradehighest', 'scorm');
+            } else if ($scorm->grademethod == GRADEAVERAGE) {
+                $grademethod = get_string('gradeaverage', 'scorm');
+            } else if ($scorm->grademethod == GRADESUM) {
+                $grademethod = get_string('gradesum', 'scorm');
+            } else if ($scorm->grademethod == GRADESCOES) {
+                $grademethod = get_string('gradescoes', 'scorm');
             }
         } else {
-            switch ($scorm->whatgrade) {
-                case HIGHESTATTEMPT:
-                    $grademethod = get_string('highestattempt', 'scorm');
-                    break;
-                case AVERAGEATTEMPT:
-                    $grademethod = get_string('averageattempt', 'scorm');
-                    break;
-                case FIRSTATTEMPT:
-                    $grademethod = get_string('firstattempt', 'scorm');
-                    break;
-                case LASTATTEMPT:
-                    $grademethod = get_string('lastattempt', 'scorm');
-                    break;
+            if ($scorm->whatgrade == HIGHESTATTEMPT) {
+                $grademethod = get_string('highestattempt', 'scorm');
+            } else if ($scorm->whatgrade == AVERAGEATTEMPT) {
+                $grademethod = get_string('averageattempt', 'scorm');
+            } else if ($scorm->whatgrade == FIRSTATTEMPT) {
+                $grademethod = get_string('firstattempt', 'scorm');
+            } else if ($scorm->whatgrade == LASTATTEMPT) {
+                $grademethod = get_string('lastattempt', 'scorm');
             }
         }
 

@@ -145,13 +145,10 @@ class view {
             return $OUTPUT->notification(get_string('filenotfound', 'resource'));
         }
 
-        switch ($this->display_type()) {
-            case RESOURCELIB_DISPLAY_EMBED:
-                return $this->resource_display_embed($this->resource, $this->cm, $this->course, $file);
-            case RESOURCELIB_DISPLAY_FRAME:
-            default:
-                return $this->resource_print_workaround($this->resource, $this->cm, $this->course, $file);
+        if ($this->display_type() === RESOURCELIB_DISPLAY_EMBED) {
+            return $this->resource_display_embed($this->resource, $this->cm, $this->course, $file);
         }
+        return $this->resource_print_workaround($this->resource, $this->cm, $this->course, $file);
     }
 
     /**
@@ -257,31 +254,23 @@ class view {
         $out = '';
         $resource->mainfile = $file->get_filename();
         $out .= '<div class="resourceworkaround">';
-        switch ($this->resource_get_final_display_type($resource)) {
-            case RESOURCELIB_DISPLAY_POPUP:
-                $path = '/'.$file->get_contextid().'/mod_resource/content/'.$resource->revision.$file->get_filepath().$file->get_filename();
-                $fullurl = file_encode_url($this->wwwroot().'/pluginfile.php', $path, false);
-                $options = empty($resource->displayoptions) ? [] : (array) unserialize_array($resource->displayoptions);
-                $width  = empty($options['popupwidth'])  ? 620 : $options['popupwidth'];
-                $height = empty($options['popupheight']) ? 450 : $options['popupheight'];
-                $wh = "width=$width,height=$height,toolbar=no,location=no,menubar=no,copyhistory=no,status=no,directories=no,scrollbars=yes,resizable=yes";
-                $extra = "onclick=\"window.open('$fullurl', '', '$wh'); return false;\"";
-                $out .= $this->resource_get_clicktoopen($file, $resource->revision, $extra);
-                break;
-
-            case RESOURCELIB_DISPLAY_NEW:
-                $extra = 'onclick="this.target=\'_blank\'"';
-                $out .= $this->resource_get_clicktoopen($file, $resource->revision, $extra);
-                break;
-
-            case RESOURCELIB_DISPLAY_DOWNLOAD:
-                $out .= $this->resource_get_clicktodownload($file, $resource->revision);
-                break;
-
-            case RESOURCELIB_DISPLAY_OPEN:
-            default:
-                $out .= $this->resource_get_clicktoopen($file, $resource->revision);
-                break;
+        $finaldisplaytype = $this->resource_get_final_display_type($resource);
+        if ($finaldisplaytype == RESOURCELIB_DISPLAY_POPUP) {
+            $path = '/'.$file->get_contextid().'/mod_resource/content/'.$resource->revision.$file->get_filepath().$file->get_filename();
+            $fullurl = file_encode_url($this->wwwroot().'/pluginfile.php', $path, false);
+            $options = empty($resource->displayoptions) ? [] : (array) unserialize_array($resource->displayoptions);
+            $width  = empty($options['popupwidth'])  ? 620 : $options['popupwidth'];
+            $height = empty($options['popupheight']) ? 450 : $options['popupheight'];
+            $wh = "width=$width,height=$height,toolbar=no,location=no,menubar=no,copyhistory=no,status=no,directories=no,scrollbars=yes,resizable=yes";
+            $extra = "onclick=\"window.open('$fullurl', '', '$wh'); return false;\"";
+            $out .= $this->resource_get_clicktoopen($file, $resource->revision, $extra);
+        } else if ($finaldisplaytype == RESOURCELIB_DISPLAY_NEW) {
+            $extra = 'onclick="this.target=\'_blank\'"';
+            $out .= $this->resource_get_clicktoopen($file, $resource->revision, $extra);
+        } else if ($finaldisplaytype == RESOURCELIB_DISPLAY_DOWNLOAD) {
+            $out .= $this->resource_get_clicktodownload($file, $resource->revision);
+        } else {
+            $out .= $this->resource_get_clicktoopen($file, $resource->revision);
         }
         $out .= '</div>';
 

@@ -160,32 +160,23 @@ class view {
 
             // Show information on how the results will be published to students.
             $publishinfo = null;
-            switch ($choice->showresults) {
-                case self::CHOICE_SHOWRESULTS_NOT:
-                    $publishinfo = get_string('publishinfonever', 'choice');
-                    break;
-
-                case self::CHOICE_SHOWRESULTS_AFTER_ANSWER:
-                    if ($choice->publish == self::CHOICE_PUBLISH_ANONYMOUS) {
-                        $publishinfo = get_string('publishinfoanonafter', 'choice');
-                    } else {
-                        $publishinfo = get_string('publishinfofullafter', 'choice');
-                    }
-                    break;
-
-                case self::CHOICE_SHOWRESULTS_AFTER_CLOSE:
-                    if ($choice->publish == self::CHOICE_PUBLISH_ANONYMOUS) {
-                        $publishinfo = get_string('publishinfoanonclose', 'choice');
-                    } else {
-                        $publishinfo = get_string('publishinfofullclose', 'choice');
-                    }
-                    break;
-
-                default:
-                    // No need to inform the user in the case of CHOICE_SHOWRESULTS_ALWAYS since it's already obvious that the results are
-                    // being published.
-                    break;
+            if ($choice->showresults == self::CHOICE_SHOWRESULTS_NOT) {
+                $publishinfo = get_string('publishinfonever', 'choice');
+            } else if ($choice->showresults == self::CHOICE_SHOWRESULTS_AFTER_ANSWER) {
+                if ($choice->publish == self::CHOICE_PUBLISH_ANONYMOUS) {
+                    $publishinfo = get_string('publishinfoanonafter', 'choice');
+                } else {
+                    $publishinfo = get_string('publishinfofullafter', 'choice');
+                }
+            } else if ($choice->showresults == self::CHOICE_SHOWRESULTS_AFTER_CLOSE) {
+                if ($choice->publish == self::CHOICE_PUBLISH_ANONYMOUS) {
+                    $publishinfo = get_string('publishinfoanonclose', 'choice');
+                } else {
+                    $publishinfo = get_string('publishinfofullclose', 'choice');
+                }
             }
+            // No need to inform the user in the case of CHOICE_SHOWRESULTS_ALWAYS since it's already obvious that the results are
+            // being published.
 
             // Show info if necessary.
             if (!empty($publishinfo)) {

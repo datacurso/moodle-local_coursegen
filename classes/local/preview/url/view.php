@@ -50,17 +50,14 @@ class view {
         require_once($CFG->libdir . '/resourcelib.php');
 
         $displaytype = self::url_get_final_display_type($url);
-        switch ($displaytype) {
-            case RESOURCELIB_DISPLAY_EMBED:
-                return self::url_display_embed($url, $cm, $course, $context);
-            case RESOURCELIB_DISPLAY_FRAME:
-                // A frameset is a whole document of its own and cannot be
-                // shown inside a page; the real page shows the link instead
-                // when it cannot frame, and so does this.
-                return self::url_print_workaround($url, $cm, $course, $context);
-            default:
-                return self::url_print_workaround($url, $cm, $course, $context);
+        if ($displaytype == RESOURCELIB_DISPLAY_EMBED) {
+            return self::url_display_embed($url, $cm, $course, $context);
         }
+        // A frameset is a whole document of its own and cannot be shown
+        // inside a page; the real page shows the link instead when it cannot
+        // frame, and so does this - for RESOURCELIB_DISPLAY_FRAME and for
+        // every other display type.
+        return self::url_print_workaround($url, $cm, $course, $context);
     }
 
     /**

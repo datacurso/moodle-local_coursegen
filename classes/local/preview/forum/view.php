@@ -257,19 +257,20 @@ class view {
      * @return string
      */
     protected function template(forum_entity $forum): string {
-        switch ($forum->get_type()) {
-            case 'news':
-                if ($forum->get_course_id() == SITEID) {
-                    return 'mod_forum/frontpage_news_discussion_list';
-                }
-                return 'mod_forum/news_discussion_list';
-            case 'qanda':
-                return 'mod_forum/qanda_discussion_list';
-            case 'blog':
-                return 'mod_forum/blog_discussion_list';
-            default:
-                return 'mod_forum/discussion_list';
+        $type = $forum->get_type();
+        if ($type === 'news') {
+            if ($forum->get_course_id() == SITEID) {
+                return 'mod_forum/frontpage_news_discussion_list';
+            }
+            return 'mod_forum/news_discussion_list';
         }
+        if ($type === 'qanda') {
+            return 'mod_forum/qanda_discussion_list';
+        }
+        if ($type === 'blog') {
+            return 'mod_forum/blog_discussion_list';
+        }
+        return 'mod_forum/discussion_list';
     }
 
     /**

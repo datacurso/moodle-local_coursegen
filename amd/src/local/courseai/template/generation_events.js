@@ -67,61 +67,69 @@ export const markRow = (cmid, status) => {
  * @returns {string} '' to keep listening, otherwise 'review'/'completed'/'failed'.
  */
 export const applyEvent = (data, progress, paintStage) => {
-    switch (data.type) {
-        case 'template_stage':
-            paintStage(data.stage);
-            return '';
-        case 'plan_progress_init':
-            progress.total = Math.max(0, Number(data.total) || 0);
-            progress.done = 0;
-            paintStage('planning');
-            openChecklist(data.sections);
-            return '';
-        case 'plan_progress_start':
-            markRow(data.cmid, 'running');
-            startPlanEntry(data);
-            return '';
-        case 'plan_progress_summary':
-            addPlanSummary(data);
-            return '';
-        case 'plan_progress_part':
-            addPlanPart(data);
-            return '';
-        case 'plan_progress_done':
-            markRow(data.cmid, 'done');
-            progress.done += 1;
-            finishChecklistRow(data.plan || {});
-            // Each activity's plan appears under its own row the moment it is
-            // ready, so the review is already half read by the time the whole
-            // plan lands.
-            renderActivityPlan(data.plan || {});
-            return '';
-        case 'review_needed':
-            return 'review';
-        case 'activity_progress_init':
-            progress.total = Math.max(0, Number(data.total) || 0);
-            progress.done = 0;
-            paintStage('activities');
-            return '';
-        case 'activity_progress_start':
-            markRow(data.cmid, 'running');
-            return '';
-        case 'activity_progress_done':
-        case 'activity_progress_failed':
-            // A failed activity is still counted and still stops looking
-            // "in progress": the run itself then fails, which is what the
-            // professor is told about.
-            markRow(data.cmid, 'done');
-            progress.done += 1;
-            if (progress.total > 0 && progress.done >= progress.total) {
-                paintStage('saving');
-            }
-            return '';
-        case 'completed':
-            return 'completed';
-        case 'failed':
-            return 'failed';
-        default:
-            return '';
+    if (data.type === 'template_stage') {
+        paintStage(data.stage);
+        return '';
     }
+    if (data.type === 'plan_progress_init') {
+        progress.total = Math.max(0, Number(data.total) || 0);
+        progress.done = 0;
+        paintStage('planning');
+        openChecklist(data.sections);
+        return '';
+    }
+    if (data.type === 'plan_progress_start') {
+        markRow(data.cmid, 'running');
+        startPlanEntry(data);
+        return '';
+    }
+    if (data.type === 'plan_progress_summary') {
+        addPlanSummary(data);
+        return '';
+    }
+    if (data.type === 'plan_progress_part') {
+        addPlanPart(data);
+        return '';
+    }
+    if (data.type === 'plan_progress_done') {
+        markRow(data.cmid, 'done');
+        progress.done += 1;
+        finishChecklistRow(data.plan || {});
+        // Each activity's plan appears under its own row the moment it is
+        // ready, so the review is already half read by the time the whole
+        // plan lands.
+        renderActivityPlan(data.plan || {});
+        return '';
+    }
+    if (data.type === 'review_needed') {
+        return 'review';
+    }
+    if (data.type === 'activity_progress_init') {
+        progress.total = Math.max(0, Number(data.total) || 0);
+        progress.done = 0;
+        paintStage('activities');
+        return '';
+    }
+    if (data.type === 'activity_progress_start') {
+        markRow(data.cmid, 'running');
+        return '';
+    }
+    if (data.type === 'activity_progress_done' || data.type === 'activity_progress_failed') {
+        // A failed activity is still counted and still stops looking
+        // "in progress": the run itself then fails, which is what the
+        // professor is told about.
+        markRow(data.cmid, 'done');
+        progress.done += 1;
+        if (progress.total > 0 && progress.done >= progress.total) {
+            paintStage('saving');
+        }
+        return '';
+    }
+    if (data.type === 'completed') {
+        return 'completed';
+    }
+    if (data.type === 'failed') {
+        return 'failed';
+    }
+    return '';
 };
