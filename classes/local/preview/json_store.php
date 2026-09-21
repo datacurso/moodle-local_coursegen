@@ -42,6 +42,8 @@ use stdClass;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class json_store {
+    use json_store_writes;
+
     /** @var array Table => list of rows, each a stdClass. */
     protected array $rows = [];
 
@@ -60,56 +62,6 @@ class json_store {
             (array) ($parameters['structure_aliases'] ?? [])
         );
         return $store;
-    }
-
-    /**
-     * Put one row in, for the few things a module reads that are not its own.
-     *
-     * A view page reads its course module, its course and its context as well
-     * as the activity, and none of those are in the activity's own tree. They
-     * are given to the store by whoever knows what they should be.
-     *
-     * @param string $table
-     * @param array|stdClass $row
-     */
-    public function add(string $table, $row): void {
-        $this->rows[$table][] = (object) $row;
-    }
-
-    /**
-     * Take out the rows of a table that match, the way $DB->delete_records() does.
-     *
-     * @param string $table
-     * @param array $conditions
-     */
-    public function delete_records(string $table, array $conditions = []): void {
-        $this->rows[$table] = array_values(array_filter(
-            $this->rows[$table] ?? [],
-            fn(stdClass $row): bool => !$this->matches($row, $conditions)
-        ));
-    }
-
-    /**
-     * Change one value of one row.
-     *
-     * A plan lays what it intends to write over the mould it will be written
-     * into, page by page; this is how a drafted title or body replaces the
-     * mould's on the row the module's code will read.
-     *
-     * @param string $table
-     * @param mixed $id The row's id.
-     * @param string $column
-     * @param mixed $value
-     * @return bool Whether a row with that id was there to change.
-     */
-    public function set(string $table, $id, string $column, $value): bool {
-        foreach ($this->rows[$table] ?? [] as $row) {
-            if ((string) ($row->id ?? '') === (string) $id) {
-                $row->$column = $value;
-                return true;
-            }
-        }
-        return false;
     }
 
     /**
