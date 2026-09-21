@@ -36,11 +36,9 @@ require_once(__DIR__ . '/../../config.php');
 
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\models\template;
-use local_coursegen\local\preview\plan_activity;
+use local_coursegen\local\preview\activity_preview_lookup;
 use local_coursegen\local\preview\preview_factory;
-use local_coursegen\local\preview\real_activity;
 use local_coursegen\local\service\template_export_service;
-use local_coursegen\local\service\template_ai_api_service;
 
 $sessionid = required_param('sessionid', PARAM_INT);
 
@@ -61,92 +59,17 @@ if ((int) $session->get('userid') !== (int) $USER->id) {
     throw new moodle_exception('nopermissions', 'error', '', 'preview this generation');
 }
 
-$api = new template_ai_api_service();
-$threadid = (string) $session->get('session_id');
-
 // Exactly what was sent to the service, read again rather than remembered. It
 // describes every activity of the template, kept or written, and the mould a
 // written one is built into, and names each by the uid the answer echoes.
 $coursedata = json_decode((string) $session->get('coursedata'), true);
 $templateid = (int) ($coursedata['templateid'] ?? 0);
 $payload = $templateid > 0 ? template_export_service::build_init_payload($templateid) : [];
-$activitybycmid = static function (int $cmid) use ($payload): array {
-    foreach (($payload['activities'] ?? []) as $activity) {
-        if ((int) ($activity['cmid'] ?? 0) === $cmid) {
-            return $activity;
-        }
-    }
-    return [];
-};
 
-// The finished activity when there is one, the draft while there is not. A run
-// under review has no result yet, and asking for one is how that is found out.
-// Alongside what will be shown travels what it is shown against: the activity
-// as the payload describes it, which for one the run writes is its mould.
-$modname = '';
-$parameters = [];
-$source = [];
-try {
-    foreach (($api->get_result($threadid)['generated_activities'] ?? []) as $activity) {
-        if ((string) ($activity['uid'] ?? '') === $uid) {
-            $modname = (string) ($activity['resource_type'] ?? '');
-            $parameters = (array) ($activity['parameters'] ?? []);
-            $source = $activitybycmid((int) (($activity['template_behavior'] ?? [])['template_source_cmid'] ?? 0));
-            break;
-        }
-    }
-} catch (moodle_exception $exception) {
-    $parameters = [];
-}
-
-// A run the service no longer knows, or one that never reached it, has no
-// plan to ask for; its kept activities are still in the payload and still
-// preview.
-$plan = [];
-try {
-    $plan = $api->get_plan($threadid)['template_plan'] ?? [];
-} catch (moodle_exception $exception) {
-    $plan = [];
-}
-
-if (!$parameters) {
-    foreach ($plan as $entry) {
-        if ((string) ($entry['uid'] ?? '') === $uid) {
-            $modname = (string) ($entry['resource_type'] ?? '');
-            $parameters = plan_activity::to_parameters((array) $entry);
-            // A plan describes the pieces the mould offered to fill, and a
-            // mould also holds pieces it offers to nobody, which carry through
-            // to the delivered activity as they are. So the mould is what is
-            // shown, with the plan laid over it.
-            $parameters = plan_activity::over_mould(
-                $parameters,
-                $modname,
-                (int) ($entry['source_cmid'] ?? 0),
-                $session
-            );
-            $source = $activitybycmid((int) ($entry['source_cmid'] ?? 0));
-            break;
-        }
-    }
-}
-
-// An activity the run keeps rather than writes is not in the answer at all,
-// so it is read from what was sent: the payload describes every activity of
-// the template completely, and names each one by the same uid.
-if (!$parameters) {
-    foreach (($payload['activities'] ?? []) as $activity) {
-        if ((string) ($activity['uid'] ?? '') === $uid) {
-            $modname = (string) ($activity['resource_type'] ?? '');
-            $parameters = real_activity::to_parameters($activity);
-            $source = $activity;
-            break;
-        }
-    }
-}
-
-if (!$parameters) {
-    throw new moodle_exception('courseai_preview_not_found', 'local_coursegen');
-}
+$found = activity_preview_lookup::resolve($uid, $payload, $session);
+$modname = $found['modname'];
+$parameters = $found['parameters'];
+$source = $found['source'];
 
 // The activity is read in its course's language, which is the language its
 // content is in and the one it will be read in once it exists.
