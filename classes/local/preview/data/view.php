@@ -46,6 +46,8 @@ require_once($CFG->dirroot . '/mod/data/locallib.php');
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class view {
+    use data_empty_state;
+
     /** @var stdClass */
     protected stdClass $data;
     /** @var cm_info */
@@ -204,97 +206,5 @@ class view {
         }
         $fieldselect->set_additional_classes('singlebutton');
         return $fieldselect;
-    }
-
-    /**
-     * mod_data_renderer::render_empty_database().
-     *
-     * @param int $currentgroup
-     * @param int $groupmode
-     * @return string
-     */
-    protected function render_empty_database(int $currentgroup, int $groupmode): string {
-        global $OUTPUT;
-        $data = $this->empty_database_action_bar($currentgroup, $groupmode);
-        $data['noitemsimgurl'] = $OUTPUT->image_url('view_zero_state', 'mod_data')->out();
-
-        return $OUTPUT->render_from_template('mod_data/view_noentries', $data);
-    }
-
-    /**
-     * empty_database_action_bar::export_for_template(), with every button leading back to the preview.
-     *
-     * @param int $currentgroup
-     * @param int $groupmode
-     * @return array
-     */
-    protected function empty_database_action_bar(int $currentgroup, int $groupmode): array {
-        global $OUTPUT;
-        $data = ['addentrybutton' => $this->add_entries_action($currentgroup, $groupmode)];
-        if (has_capability('mod/data:manageentries', $this->context)) {
-            $importentriesbutton = new \single_button(new moodle_url($this->here),
-                get_string('importentries', 'mod_data'), 'get');
-            $data['importentriesbutton'] = $importentriesbutton->export_for_template($OUTPUT);
-        }
-        return $data;
-    }
-
-    /**
-     * add_entries_action::export_for_template().
-     *
-     * @param int $currentgroup
-     * @param int $groupmode
-     * @return stdClass|null
-     */
-    protected function add_entries_action(int $currentgroup, int $groupmode): ?stdClass {
-        global $OUTPUT;
-        if ($this->data_user_can_add_entry($this->data, $currentgroup, $groupmode, $this->context)) {
-            $button = new \single_button(new moodle_url($this->here), get_string('add', 'mod_data'), 'get', \single_button::BUTTON_PRIMARY);
-            return $button->export_for_template($OUTPUT);
-        }
-        return null;
-    }
-
-    /**
-     * mod/data/lib.php data_user_can_add_entry(), with the fields read from the store and no entries yet.
-     *
-     * @param stdClass $data
-     * @param int $currentgroup
-     * @param int $groupmode
-     * @param context $context
-     * @return bool
-     */
-    protected function data_user_can_add_entry($data, $currentgroup, $groupmode, $context) {
-        // Don't let add entry to a database that has no fields.
-        if (!$this->has_fields()) {
-            return false;
-        }
-
-        if (has_capability('mod/data:manageentries', $context)) {
-            // no entry limits apply if user can manage
-
-        } else if (!has_capability('mod/data:writeentry', $context)) {
-            return false;
-
-        } else if (data_in_readonly_period($data)) {
-            // Check whether we're in a read-only period
-            return false;
-        }
-        // data_atmaxentries(): the reader has added none.
-
-        if (!$groupmode or has_capability('moodle/site:accessallgroups', $context)) {
-            return true;
-        }
-
-        if ($currentgroup) {
-            return groups_is_member($currentgroup);
-        } else {
-            //else it might be group 0 in visible mode
-            if ($groupmode == VISIBLEGROUPS){
-                return true;
-            } else {
-                return false;
-            }
-        }
     }
 }
