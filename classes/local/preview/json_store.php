@@ -30,7 +30,8 @@ use stdClass;
  *
  * This is the whole of what makes that possible, and it is written once: it
  * knows nothing about any module. What it knows is how a backup tree is
- * shaped, which is the same for all of them.
+ * shaped, which is the same for all of them - turning the tree into rows is
+ * json_store_builder's job, this class only answers reads against the result.
  *
  * It answers the reads a view page makes. It has no writes, because a preview
  * changes nothing, and rendering code that tries to write during a view is
@@ -53,7 +54,7 @@ class json_store {
     public static function from_activity(array $activity): self {
         $parameters = $activity['parameters'] ?? [];
         $store = new self();
-        $store->load(
+        $store->rows = json_store_builder::build(
             (array) ($parameters['structure'] ?? []),
             (array) ($parameters['structure_tables'] ?? []),
             (array) ($parameters['structure_aliases'] ?? [])
@@ -73,81 +74,6 @@ class json_store {
      */
     public function add(string $table, $row): void {
         $this->rows[$table][] = (object) $row;
-    }
-
-    /**
-     * Turn the tree into rows, table by table.
-     *
-     * Every element with a known table is a row of it: its attributes and its
-     * final values are the columns. The tree does not carry the column that
-     * ties a row to its parent, because a backup restores those on the way
-     * back in, so it is put back here from the element the row sits under.
-     *
-     * @param array $tree
-     * @param array $tables Element name => table.
-     * @param array $aliases Element name => declared column => table column.
-     */
-    protected function load(array $tree, array $tables, array $aliases): void {
-        // The tree opens with the "activity" wrapper, which is not a row of
-        // anything; the module's own element hangs under it.
-        foreach ($tree as $name => $value) {
-            if (is_array($value)) {
-                foreach ($value as $node) {
-                    if (is_array($node)) {
-                        $this->walk($name, $node, null, null, $tables, $aliases);
-                    }
-                }
-            }
-        }
-    }
-
-    /**
-     * One element and everything under it.
-     *
-     * @param string $name The element's name.
-     * @param array $node Its attributes, values and children.
-     * @param string|null $parentname The element it sits under.
-     * @param mixed $parentid That element's id.
-     * @param array $tables
-     * @param array $aliases
-     */
-    protected function walk(string $name, array $node, ?string $parentname, $parentid, array $tables, array $aliases): void {
-        $row = [];
-        $children = [];
-        foreach ($node as $key => $value) {
-            if (is_array($value)) {
-                $children[$key] = $value;
-                continue;
-            }
-            $column = $aliases[$name][$key] ?? $key;
-            $row[$column] = $value;
-        }
-
-        $table = $tables[$name] ?? null;
-        if ($table !== null) {
-            if ($parentname !== null && $parentid !== null) {
-                // The parent's key, under the two names Moodle tables use for
-                // it: "lessonid" for a lesson's pages, "forum" for a forum's
-                // discussions. Both are set; a column the table does not have
-                // costs nothing in a store that has no columns.
-                $row[$parentname . 'id'] ??= $parentid;
-                $row[$parentname] ??= $parentid;
-            }
-            $this->rows[$table][] = (object) $row;
-        }
-
-        // A grouping element ("pages") is not a row; it holds the rows
-        // ("page"). The parent of what it holds is the row it sits under.
-        $ownid = $table !== null ? ($row['id'] ?? null) : $parentid;
-        $ownname = $table !== null ? $name : $parentname;
-
-        foreach ($children as $childname => $items) {
-            foreach ($items as $item) {
-                if (is_array($item)) {
-                    $this->walk($childname, $item, $ownname, $ownid, $tables, $aliases);
-                }
-            }
-        }
     }
 
     /**
