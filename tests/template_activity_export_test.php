@@ -17,12 +17,16 @@
 namespace local_coursegen;
 
 use local_coursegen\local\service\template_activity_export;
+use local_coursegen\mod_settings\quiz_settings;
 
 defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
 require_once($CFG->libdir . '/resourcelib.php');
 require_once($CFG->dirroot . '/mod/wiki/locallib.php');
+require_once($CFG->dirroot . '/mod/quiz/lib.php');
+require_once($CFG->dirroot . '/mod/quiz/locallib.php');
+require_once($CFG->dirroot . '/question/type/numerical/questiontype.php');
 
 /**
  * What a mold activity ships to the AI service.
@@ -40,6 +44,10 @@ require_once($CFG->dirroot . '/mod/wiki/locallib.php');
 final class template_activity_export_test extends \advanced_testcase {
     /** @var string An intro carrying both marker kinds plus real markup. */
     private const MARKED_INTRO = '<p>⟦coursegen:url: repositorio de la materia⟧</p><p>Ver <b>⟦tema⟧</b></p>';
+
+    /** @var string The repeat marker the real quiz mold carries in its question text. */
+    private const MARKED_QUESTIONTEXT = '[[coursegen:repeat: genera la pregunta por cada unidad '
+        . 'del temario del sílabo con sus respuestas correspondientes]]';
 
     /**
      * Export the parameters of a freshly created module.
@@ -979,6 +987,871 @@ final class template_activity_export_test extends \advanced_testcase {
             $values[$pair['field_name']] = $pair['value'];
         }
         return $values;
+    }
+
+    /**
+     * A Quiz mold ships its raw description and every instance setting.
+     */
+    public function test_quiz_exports_intro_and_every_instance_setting(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('quiz', [
+            'name' => 'Cuestionario plantilla prueba',
+            'intro' => self::MARKED_INTRO,
+            'introformat' => FORMAT_HTML,
+            'timeopen' => 1700000000,
+            'timeclose' => 1700600000,
+            'timelimit' => 3000,
+            'overduehandling' => 'graceperiod',
+            'graceperiod' => 600,
+            'attempts' => 3,
+            'attemptonlast' => 1,
+            'delay1' => 60,
+            'delay2' => 120,
+            'grademethod' => QUIZ_GRADEHIGHEST,
+            'grade' => 10.0,
+            'decimalpoints' => 1,
+            'questiondecimalpoints' => 2,
+            'preferredbehaviour' => 'immediatefeedback',
+            'canredoquestions' => 1,
+            'shuffleanswers' => 0,
+            'questionsperpage' => 2,
+            'navmethod' => 'seq',
+            'showuserpicture' => 1,
+            'showblocks' => 1,
+            'quizpassword' => 'la contraseña',
+            'subnet' => '10.0.0.0/8',
+            'browsersecurity' => 'securewindow',
+            'completionattemptsexhausted' => 0,
+            'completionminattempts' => 2,
+            'allowofflineattempts' => 1,
+        ]);
+
+        $this->assertSame('Cuestionario plantilla prueba', $params['name']);
+        // Raw: the service parses those markers itself.
+        $this->assertSame(self::MARKED_INTRO, $params['intro']);
+        $this->assertSame(1700000000, (int) $params['timeopen']);
+        $this->assertSame(1700600000, (int) $params['timeclose']);
+        $this->assertSame(3000, (int) $params['timelimit']);
+        $this->assertSame('graceperiod', $params['overduehandling']);
+        $this->assertSame(600, (int) $params['graceperiod']);
+        $this->assertSame(3, (int) $params['attempts']);
+        $this->assertSame(1, (int) $params['attemptonlast']);
+        $this->assertSame(60, (int) $params['delay1']);
+        $this->assertSame(120, (int) $params['delay2']);
+        $this->assertSame((int) QUIZ_GRADEHIGHEST, (int) $params['grademethod']);
+        $this->assertSame(10.0, (float) $params['grade']);
+        $this->assertSame(1, (int) $params['decimalpoints']);
+        $this->assertSame(2, (int) $params['questiondecimalpoints']);
+        $this->assertSame('immediatefeedback', $params['preferredbehaviour']);
+        $this->assertSame(1, (int) $params['canredoquestions']);
+        $this->assertSame(0, (int) $params['shuffleanswers']);
+        $this->assertSame(2, (int) $params['questionsperpage']);
+        $this->assertSame('seq', $params['navmethod']);
+        $this->assertSame(1, (int) $params['showuserpicture']);
+        $this->assertSame(1, (int) $params['showblocks']);
+        $this->assertSame('10.0.0.0/8', $params['subnet']);
+        $this->assertSame('securewindow', $params['browsersecurity']);
+        $this->assertSame(0, (int) $params['completionattemptsexhausted']);
+        $this->assertSame(2, (int) $params['completionminattempts']);
+        $this->assertSame(1, (int) $params['allowofflineattempts']);
+        // The column is 'password', but quiz_process_options() reads the form's
+        // 'quizpassword' and copies it over, so both names travel.
+        $this->assertSame('la contraseña', $params['password']);
+        $this->assertSame('la contraseña', $params['quizpassword']);
+    }
+
+    /**
+     * The mold's pass mark travels, even though the quiz table does not hold it.
+     *
+     * gradepass lives in grade_items, which is where mod/quiz/view.php reads
+     * it from; without this the mold's pass mark was silently lost.
+     */
+    public function test_quiz_exports_the_grade_to_pass_from_its_grade_item(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('quiz', ['grade' => 10.0, 'gradepass' => 7.0]);
+
+        $this->assertSame(7.0, $params['gradepass']);
+        $this->assertSame(10.0, (float) $params['grade']);
+    }
+
+    /**
+     * A quiz with no pass mark set still exports one, as zero.
+     */
+    public function test_quiz_without_a_pass_mark_exports_zero(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('quiz', ['grade' => 10.0]);
+
+        $this->assertSame(0.0, $params['gradepass']);
+    }
+
+    /**
+     * The eight review columns are bitmasks; they travel as the 32 booleans
+     * quiz_process_options() packs them from.
+     *
+     * add_moduleinfo() cannot consume the columns: quiz_process_options()
+     * rebuilds each one out of <field><whenname> checkboxes, so shipping the
+     * packed integer lost every review setting of the mold.
+     */
+    public function test_quiz_decodes_the_review_bitmasks_into_their_form_booleans(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('quiz', [
+            'marksduring' => 0,
+            'marksimmediately' => 1,
+            'marksopen' => 0,
+            'marksclosed' => 1,
+        ]);
+
+        // The reviewmarks column kept exactly two of the four times.
+        $this->assertSame(0, $params['marksduring']);
+        $this->assertSame(1, $params['marksimmediately']);
+        $this->assertSame(0, $params['marksopen']);
+        $this->assertSame(1, $params['marksclosed']);
+        // Core's two forced invariants are reported as stored, not fought.
+        $this->assertSame(1, $params['attemptduring']);
+        $this->assertSame(0, $params['overallfeedbackduring']);
+        // All 32 booleans travel, and no packed column does.
+        foreach (self::review_option_keys() as $key) {
+            $this->assertArrayHasKey($key, $params);
+            $this->assertIsInt($params[$key]);
+        }
+        $this->assertCount(32, self::review_option_keys());
+    }
+
+    /**
+     * Every review boolean quiz_process_options() expects.
+     *
+     * @return string[]
+     */
+    private static function review_option_keys(): array {
+        $keys = [];
+        $fields = ['attempt', 'correctness', 'maxmarks', 'marks',
+            'specificfeedback', 'generalfeedback', 'rightanswer', 'overallfeedback'];
+        foreach ($fields as $field) {
+            foreach (['during', 'immediately', 'open', 'closed'] as $whenname) {
+                $keys[] = $field . $whenname;
+            }
+        }
+        return $keys;
+    }
+
+    /**
+     * A multichoice mold question travels in the shape save_question() reads.
+     */
+    public function test_quiz_exports_a_multichoice_question(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $quiz] = $this->make_quiz_mold();
+        $this->add_mold_question($quiz, 'multichoice', 'two_of_four', [
+            'name' => 'Pregunta plantilla',
+            'questiontext' => ['text' => self::MARKED_QUESTIONTEXT, 'format' => FORMAT_HTML],
+            'generalfeedback' => ['text' => 'Retro ⟦tema⟧', 'format' => FORMAT_HTML],
+            'single' => '1',
+            'answernumbering' => '123',
+            'correctfeedback' => ['text' => 'Correcto ⟦tema⟧', 'format' => FORMAT_HTML],
+            'answer' => self::MULTICHOICE_MOLD_ANSWERS,
+            'fraction' => ['1.0', '0.0', '0.0', '0.0', '0.0'],
+        ], 1, 2.0);
+
+        $question = $this->exported_questions($course, $quiz)[0];
+
+        $this->assertSame('multichoice', $question['qtype']);
+        $this->assertSame('Pregunta plantilla', $question['name']);
+        // Byte for byte: those markers are what the service expands.
+        $this->assertSame(self::MARKED_QUESTIONTEXT, $question['questiontext']['text']);
+        $this->assertSame((int) FORMAT_HTML, $question['questiontext']['format']);
+        $this->assertSame('Retro ⟦tema⟧', $question['generalfeedback']['text']);
+        $this->assertSame(1.0, $question['defaultmark']);
+        $this->assertSame(1, $question['single']);
+        $this->assertSame(1, $question['shuffleanswers']);
+        $this->assertSame('123', $question['answernumbering']);
+        $this->assertSame(1, $question['shownumcorrect']);
+        $this->assertSame(0, $question['showstandardinstruction']);
+        $this->assertSame('Correcto ⟦tema⟧', $question['correctfeedback']['text']);
+        $this->assertSame((int) FORMAT_HTML, $question['correctfeedback']['format']);
+        $this->assertArrayHasKey('partiallycorrectfeedback', $question);
+        $this->assertArrayHasKey('incorrectfeedback', $question);
+        // The three authored answers, in id order, raw.
+        $this->assertSame(
+            ['[[ respuesta 1 ]]', '[[ respuesta 2]]', '[[ respuesta 3 ]]'],
+            array_column($question['answer'], 'text')
+        );
+        $this->assertSame([1.0, 0.0, 0.0], $question['fraction']);
+        $this->assertSame('One is odd.', $question['feedback'][0]['text']);
+        $this->assertSame(['Hint 1.', 'Hint 2.'], array_column($question['hint'], 'text'));
+        // The per-hint grading options are part of multichoice's own form shape.
+        $this->assertSame([0, 1], $question['hintclearwrong']);
+        $this->assertSame([1, 1], $question['hintshownumcorrect']);
+        $this->assertSame(1, $question['page']);
+        $this->assertSame(2.0, $question['maxmark']);
+    }
+
+    /** @var array The three marker-bearing answers of the real mold, plus the two blanks. */
+    private const MULTICHOICE_MOLD_ANSWERS = [
+        ['text' => '[[ respuesta 1 ]]', 'format' => FORMAT_HTML],
+        ['text' => '[[ respuesta 2]]', 'format' => FORMAT_HTML],
+        ['text' => '[[ respuesta 3 ]]', 'format' => FORMAT_HTML],
+        ['text' => '', 'format' => FORMAT_HTML],
+        ['text' => '', 'format' => FORMAT_HTML],
+    ];
+
+    /**
+     * A truefalse mold question derives its correct answer, both ways round.
+     *
+     * The two question_answers rows hold the LOCALISED "True"/"False" labels,
+     * which must never travel as text: the qtype writes them itself from
+     * get_string(). What the payload needs is the 0|1 the mold was authored
+     * with, and a wrong constant there silently mis-grades every attempt.
+     */
+    public function test_quiz_exports_a_truefalse_question_with_a_derived_correct_answer(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $quiz] = $this->make_quiz_mold();
+        $this->add_mold_question($quiz, 'truefalse', 'true', [
+            'name' => 'La verdadera',
+            'questiontext' => ['text' => 'Es verdadero ⟦tema⟧', 'format' => FORMAT_HTML],
+            'correctanswer' => '1',
+            'feedbacktrue' => ['text' => 'Bien ⟦tema⟧', 'format' => FORMAT_HTML],
+            'feedbackfalse' => ['text' => 'Mal ⟦tema⟧', 'format' => FORMAT_HTML],
+            'showstandardinstruction' => 1,
+        ], 1, 1.0);
+        $this->add_mold_question($quiz, 'truefalse', 'true', [
+            'name' => 'La falsa',
+            'correctanswer' => '0',
+        ], 1, 1.0);
+
+        [$true, $false] = $this->exported_questions($course, $quiz);
+
+        $this->assertSame('truefalse', $true['qtype']);
+        $this->assertSame('Es verdadero ⟦tema⟧', $true['questiontext']['text']);
+        $this->assertSame(1, $true['correctanswer']);
+        $this->assertSame('Bien ⟦tema⟧', $true['feedbacktrue']['text']);
+        $this->assertSame('Mal ⟦tema⟧', $true['feedbackfalse']['text']);
+        $this->assertSame(1, $true['showstandardinstruction']);
+        // The other direction: fraction 1 sits on the false row.
+        $this->assertSame(0, $false['correctanswer']);
+        // The localised labels of those two rows never travel.
+        $this->assertArrayNotHasKey('answer', $true);
+        $this->assertArrayNotHasKey('fraction', $true);
+    }
+
+    /**
+     * A shortanswer mold question ships plain answers, wildcards intact.
+     */
+    public function test_quiz_exports_a_shortanswer_question(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $quiz] = $this->make_quiz_mold();
+        $this->add_mold_question($quiz, 'shortanswer', 'frogtoad', [
+            'name' => 'Respuesta corta',
+            'questiontext' => ['text' => 'Nombra un anfibio ⟦tema⟧', 'format' => FORMAT_HTML],
+            'usecase' => 1,
+        ], 1, 1.0);
+
+        $question = $this->exported_questions($course, $quiz)[0];
+
+        $this->assertSame('shortanswer', $question['qtype']);
+        $this->assertSame('Nombra un anfibio ⟦tema⟧', $question['questiontext']['text']);
+        $this->assertSame(1, $question['usecase']);
+        // Plain strings, and the '*' wildcard survives as an answer.
+        $this->assertSame(['frog', 'toad', '*'], $question['answer']);
+        $this->assertSame([1.0, 0.8, 0.0], $question['fraction']);
+        $this->assertSame('Frog is a very good answer.', $question['feedback'][0]['text']);
+        $this->assertSame((int) FORMAT_HTML, $question['feedback'][0]['format']);
+    }
+
+    /**
+     * A numerical mold question ships its per-answer tolerance and unit options.
+     */
+    public function test_quiz_exports_a_numerical_question(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $quiz] = $this->make_quiz_mold();
+        $this->add_mold_question($quiz, 'numerical', 'pi', [
+            'name' => 'Numérica',
+            'questiontext' => ['text' => '¿Cuánto es pi? ⟦tema⟧', 'format' => FORMAT_HTML],
+        ], 1, 1.0);
+
+        $question = $this->exported_questions($course, $quiz)[0];
+
+        $this->assertSame('numerical', $question['qtype']);
+        $this->assertSame('¿Cuánto es pi? ⟦tema⟧', $question['questiontext']['text']);
+        $this->assertSame(['3.14', '3.142', '3.1', '3', '*'], $question['answer']);
+        $this->assertSame([1.0, 0.0, 0.0, 0.0, 0.0], $question['fraction']);
+        // One tolerance per answer, parallel to them: it lives in its own table.
+        $this->assertSame(['0', '0', '0', '0', '0'], $question['tolerance']);
+        $this->assertSame('Very good.', $question['feedback'][0]['text']);
+        $this->assertSame((int) \qtype_numerical::UNITNONE, $question['showunits']);
+        $this->assertSame(0, $question['unitsleft']);
+        $this->assertSame(0, $question['unitgradingtype']);
+        $this->assertSame(0.1, $question['unitpenalty']);
+    }
+
+    /**
+     * An essay mold question ships its editor options and its word-limit gates.
+     *
+     * qtype_essay writes minwordlimit/maxwordlimit only when the matching
+     * minwordenabled/maxwordenabled gate is SET, so the limits have to travel
+     * with their gates or the generated question would drop them.
+     */
+    public function test_quiz_exports_an_essay_question_with_its_word_limit_gates(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $quiz] = $this->make_quiz_mold();
+        $this->add_mold_question($quiz, 'essay', 'editor', [
+            'name' => 'Ensayo',
+            'questiontext' => ['text' => 'Redacta ⟦tema⟧', 'format' => FORMAT_HTML],
+            'responseformat' => 'editor',
+            'responserequired' => 0,
+            'responsefieldlines' => 20,
+            'minwordenabled' => 1,
+            'minwordlimit' => 50,
+            'maxwordenabled' => 1,
+            'maxwordlimit' => 200,
+            'attachments' => 2,
+            'attachmentsrequired' => 1,
+            'maxbytes' => 1024,
+            'filetypeslist' => '.pdf',
+            'graderinfo' => ['text' => 'Para el corrector ⟦tema⟧', 'format' => FORMAT_HTML],
+            'responsetemplate' => ['text' => 'Plantilla ⟦tema⟧', 'format' => FORMAT_HTML],
+        ], 1, 1.0);
+
+        $question = $this->exported_questions($course, $quiz)[0];
+
+        $this->assertSame('essay', $question['qtype']);
+        $this->assertSame('Redacta ⟦tema⟧', $question['questiontext']['text']);
+        $this->assertSame('editor', $question['responseformat']);
+        $this->assertSame(0, $question['responserequired']);
+        $this->assertSame(20, $question['responsefieldlines']);
+        $this->assertSame(1, $question['minwordenabled']);
+        $this->assertSame(50, $question['minwordlimit']);
+        $this->assertSame(1, $question['maxwordenabled']);
+        $this->assertSame(200, $question['maxwordlimit']);
+        $this->assertSame(2, $question['attachments']);
+        $this->assertSame(1, $question['attachmentsrequired']);
+        $this->assertSame(1024, $question['maxbytes']);
+        $this->assertSame('.pdf', $question['filetypeslist']);
+        $this->assertSame('Para el corrector ⟦tema⟧', $question['graderinfo']['text']);
+        $this->assertSame((int) FORMAT_HTML, $question['graderinfo']['format']);
+        $this->assertSame('Plantilla ⟦tema⟧', $question['responsetemplate']['text']);
+    }
+
+    /**
+     * An essay without word limits ships neither the limits nor their gates.
+     *
+     * The gate is read with isset(), so shipping minwordenabled => 0 would
+     * still make the consumer store a limit the mold does not have.
+     */
+    public function test_quiz_essay_without_word_limits_ships_no_gates(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $quiz] = $this->make_quiz_mold();
+        $this->add_mold_question($quiz, 'essay', 'editor', ['name' => 'Ensayo libre'], 1, 1.0);
+
+        $question = $this->exported_questions($course, $quiz)[0];
+
+        $this->assertArrayNotHasKey('minwordenabled', $question);
+        $this->assertArrayNotHasKey('minwordlimit', $question);
+        $this->assertArrayNotHasKey('maxwordenabled', $question);
+        $this->assertArrayNotHasKey('maxwordlimit', $question);
+    }
+
+    /**
+     * A description mold question is only its two texts: it owns no answer and
+     * Moodle forces its mark to zero.
+     */
+    public function test_quiz_exports_a_description_question(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $quiz] = $this->make_quiz_mold();
+        $this->add_mold_question($quiz, 'description', 'info', [
+            'name' => 'Aviso',
+            'questiontext' => ['text' => 'Lee esto ⟦tema⟧', 'format' => FORMAT_HTML],
+            'generalfeedback' => ['text' => 'Y esto ⟦tema⟧', 'format' => FORMAT_HTML],
+        ], 1);
+
+        $question = $this->exported_questions($course, $quiz)[0];
+
+        $this->assertSame('description', $question['qtype']);
+        $this->assertSame('Lee esto ⟦tema⟧', $question['questiontext']['text']);
+        $this->assertSame('Y esto ⟦tema⟧', $question['generalfeedback']['text']);
+        $this->assertSame(0.0, $question['defaultmark']);
+        $this->assertSame(0.0, $question['maxmark']);
+        $this->assertArrayNotHasKey('answer', $question);
+        $this->assertArrayNotHasKey('fraction', $question);
+    }
+
+    /**
+     * A gapselect mold question decodes its choices out of question_answers.
+     *
+     * The qtype stores a choice's GROUP number in the feedback column and
+     * always leaves fraction at 0 (see qtype_gapselect_base), so a naive
+     * answers export would ship a group as feedback and lose the groups.
+     */
+    public function test_quiz_exports_a_gapselect_question_with_decoded_choice_groups(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $quiz] = $this->make_quiz_mold();
+        $this->add_mold_question($quiz, 'gapselect', 'missingchoiceno', [
+            'name' => 'Huecos',
+            'questiontext' => ['text' => 'La [[1]] contiene el [[2]] ⟦tema⟧.', 'format' => FORMAT_HTML],
+            'choices' => [
+                ['answer' => 'célula', 'choicegroup' => '1'],
+                ['answer' => 'núcleo', 'choicegroup' => '2'],
+                ['answer' => 'ribosoma', 'choicegroup' => '2'],
+            ],
+            'shuffleanswers' => 1,
+            'shownumcorrect' => 1,
+        ], 1, 1.0);
+
+        $question = $this->exported_questions($course, $quiz)[0];
+
+        $this->assertSame('gapselect', $question['qtype']);
+        // The [[n]] placeholders are positional and travel raw.
+        $this->assertSame('La [[1]] contiene el [[2]] ⟦tema⟧.', $question['questiontext']['text']);
+        $this->assertSame(1, $question['shuffleanswers']);
+        $this->assertSame(1, $question['shownumcorrect']);
+        $this->assertArrayHasKey('correctfeedback', $question);
+        $this->assertSame([
+            ['answer' => 'célula', 'choicegroup' => 1],
+            ['answer' => 'núcleo', 'choicegroup' => 2],
+            ['answer' => 'ribosoma', 'choicegroup' => 2],
+        ], $question['choices']);
+        // The answers table is not shipped as answers: it holds the choices.
+        $this->assertArrayNotHasKey('answer', $question);
+        $this->assertArrayNotHasKey('fraction', $question);
+        $this->assertArrayNotHasKey('feedback', $question);
+    }
+
+    /**
+     * A calculated mold question ships its formula plus every wildcard.
+     *
+     * The wildcards span three tables, and the definition packs its whole
+     * range into one string - "<distribution>:<min>:<max>:<decimals>" - so it
+     * travels decoded into the four parts import_datasets() reads back.
+     */
+    public function test_quiz_exports_a_calculated_question_with_its_datasets(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $quiz] = $this->make_quiz_mold();
+        $this->seed_calculated_question($quiz, 'calculated');
+
+        $question = $this->exported_questions($course, $quiz)[0];
+
+        $this->assertSame('calculated', $question['qtype']);
+        $this->assertSame('¿Cuánto es {a} + {b}? ⟦tema⟧', $question['questiontext']['text']);
+        $this->assertSame(['{a} + {b}'], $question['answer']);
+        $this->assertSame([1.0], $question['fraction']);
+        $this->assertSame(['0.01'], $question['tolerance']);
+        $this->assertSame([1], $question['tolerancetype']);
+        $this->assertSame([2], $question['correctanswerlength']);
+        $this->assertSame([1], $question['correctanswerformat']);
+        $this->assertSame('Correcto ⟦tema⟧', $question['feedback'][0]['text']);
+        $this->assertSame(0, $question['synchronize']);
+        $this->assertSame('abc', $question['answernumbering']);
+        $this->assertSame(1, $question['shuffleanswers']);
+        $this->assertSame((int) \qtype_numerical::UNITNONE, $question['showunits']);
+        $this->assertSame(0.1, $question['unitpenalty']);
+        // The consumer only creates the dataset items on the import path.
+        $this->assertTrue($question['import_process']);
+
+        $datasets = $question['dataset'];
+        $this->assertCount(2, $datasets);
+        $this->assertSame(['a', 'b'], array_column($datasets, 'name'));
+        $this->assertSame('uniform', $datasets[0]['distribution']);
+        $this->assertSame('1', $datasets[0]['min']);
+        $this->assertSame('10', $datasets[0]['max']);
+        $this->assertSame('1', $datasets[0]['length']);
+        $this->assertSame('private', $datasets[0]['status']);
+        $this->assertSame(2, $datasets[0]['itemcount']);
+        $this->assertSame(2, $datasets[0]['number_of_items']);
+        $this->assertSame([
+            ['itemnumber' => 1, 'value' => '3.0'],
+            ['itemnumber' => 2, 'value' => '5.0'],
+        ], $datasets[0]['datasetitem']);
+    }
+
+    /**
+     * A calculatedmulti mold question adds the combined feedback trio and its
+     * single/shownumcorrect pair, and its answers travel in editor shape.
+     */
+    public function test_quiz_exports_a_calculatedmulti_question(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $quiz] = $this->make_quiz_mold();
+        $this->seed_calculated_question($quiz, 'calculatedmulti');
+
+        $question = $this->exported_questions($course, $quiz)[0];
+
+        $this->assertSame('calculatedmulti', $question['qtype']);
+        $this->assertSame(1, $question['single']);
+        $this->assertSame(0, $question['shownumcorrect']);
+        $this->assertSame('Bien hecho ⟦tema⟧', $question['correctfeedback']['text']);
+        $this->assertArrayHasKey('partiallycorrectfeedback', $question);
+        $this->assertArrayHasKey('incorrectfeedback', $question);
+        // A calculatedmulti answer is a real editor field, not a bare formula.
+        $this->assertSame([['text' => '{a} + {b}', 'format' => (int) FORMAT_HTML]], $question['answer']);
+        $this->assertCount(2, $question['dataset']);
+    }
+
+    /**
+     * Questions travel in slot order, each carrying the page and the mark of
+     * its own slot.
+     *
+     * The mark lives on quiz_slots.maxmark, never on the question, and the
+     * page is the mold's layout: both are lost if only the question is read.
+     */
+    public function test_quiz_exports_its_questions_in_slot_order_with_page_and_mark(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $quiz] = $this->make_quiz_mold(['questionsperpage' => 0]);
+        $this->add_mold_question($quiz, 'truefalse', 'true', ['name' => 'Primera'], 1, 3.0);
+        $this->add_mold_question($quiz, 'shortanswer', 'frogtoad', ['name' => 'Segunda'], 2, 5.0);
+        $this->add_mold_question($quiz, 'essay', 'editor', ['name' => 'Tercera'], 2, 7.0);
+
+        $questions = $this->exported_questions($course, $quiz);
+
+        $this->assertSame(['Primera', 'Segunda', 'Tercera'], array_column($questions, 'name'));
+        $this->assertSame([1, 2, 2], array_column($questions, 'page'));
+        $this->assertSame([3.0, 5.0, 7.0], array_column($questions, 'maxmark'));
+    }
+
+    /**
+     * A random slot and an unsupported type are skipped, the rest still travels.
+     *
+     * A random slot is a question_set_reference, and the consumer builds slots
+     * with quiz_add_quiz_question(), which throws on random.
+     */
+    public function test_quiz_skips_random_slots_and_unsupported_question_types(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $quiz] = $this->make_quiz_mold(['questionsperpage' => 0]);
+        $this->add_mold_question($quiz, 'truefalse', 'true', ['name' => 'Soportada'], 1, 1.0);
+        $this->add_mold_question($quiz, 'match', 'foursubq', ['name' => 'No soportada'], 1, 1.0);
+        $this->add_random_mold_slot($quiz);
+
+        $questions = $this->exported_questions($course, $quiz);
+
+        // Only the unsupported qtype is worth a developer note; a random slot
+        // is a structural feature, not a payload defect.
+        $this->assertDebuggingCalledCount(1);
+        $this->assertSame(['Soportada'], array_column($questions, 'name'));
+    }
+
+    /**
+     * A quiz nobody has filled yet still exports: it simply declares no
+     * questions, and an empty mod_settings would only make create_mod_service
+     * log a discarded-settings warning.
+     */
+    public function test_quiz_without_questions_exports_no_mod_settings(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('quiz', ['name' => 'Cuestionario vacío']);
+
+        $this->assertSame('Cuestionario vacío', $params['name']);
+        $this->assertArrayNotHasKey('mod_settings', $params);
+    }
+
+    /**
+     * Identity columns never travel - nor the packed review bitmasks, which
+     * add_moduleinfo() cannot consume.
+     */
+    public function test_quiz_export_omits_identity_columns(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('quiz', ['intro' => 'Plain', 'introformat' => FORMAT_HTML]);
+
+        $columns = [
+            'id', 'course', 'sumgrades', 'timecreated', 'timemodified', 'introformat',
+            'reviewattempt', 'reviewcorrectness', 'reviewmaxmarks', 'reviewmarks',
+            'reviewspecificfeedback', 'reviewgeneralfeedback', 'reviewrightanswer',
+            'reviewoverallfeedback',
+        ];
+        foreach ($columns as $column) {
+            $this->assertArrayNotHasKey($column, $params);
+        }
+    }
+
+    /**
+     * The exported payload is exactly what quiz_settings can consume: fed back
+     * into a brand new quiz it rebuilds the mold, slots included.
+     */
+    public function test_quiz_export_round_trips_through_quiz_settings(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $mold] = $this->make_quiz_mold([
+            'name' => 'Cuestionario plantilla prueba',
+            'questionsperpage' => 0,
+        ]);
+        $this->add_mold_question($mold, 'multichoice', 'two_of_four', [
+            'name' => 'Opción múltiple',
+            'questiontext' => ['text' => self::MARKED_QUESTIONTEXT, 'format' => FORMAT_HTML],
+            'single' => '1',
+            'answer' => self::MULTICHOICE_MOLD_ANSWERS,
+            'fraction' => ['1.0', '0.0', '0.0', '0.0', '0.0'],
+        ], 1, 3.0);
+        $this->add_mold_question($mold, 'truefalse', 'true', [
+            'name' => 'Verdadero o falso',
+            'correctanswer' => '0',
+        ], 2, 5.0);
+
+        $exported = $this->export_cm($course, $mold);
+
+        $clone = $this->getDataGenerator()->create_module('quiz', [
+            'course' => $course->id,
+            'name' => 'Cuestionario generado',
+            'questionsperpage' => 0,
+        ]);
+        $settings = new quiz_settings(
+            (object) ['coursemodule' => $clone->cmid, 'instance' => $clone->id],
+            $exported['mod_settings']
+        );
+        $settings->add_settings();
+
+        $rebuilt = $this->export_cm($course, $clone)['mod_settings']['questions'];
+        $original = $exported['mod_settings']['questions'];
+
+        // The whole payload survives the round trip, key for key.
+        $this->assertSame($original, $rebuilt);
+        // And the things a lost round trip would quietly break.
+        $this->assertSame(['multichoice', 'truefalse'], array_column($rebuilt, 'qtype'));
+        $this->assertSame([1, 2], array_column($rebuilt, 'page'));
+        $this->assertSame([3.0, 5.0], array_column($rebuilt, 'maxmark'));
+        $this->assertSame([1.0, 0.0, 0.0], $rebuilt[0]['fraction']);
+        $this->assertSame(0, $rebuilt[1]['correctanswer']);
+        $this->assertSame(self::MARKED_QUESTIONTEXT, $rebuilt[0]['questiontext']['text']);
+    }
+
+    /**
+     * A hint's two grading options travel with it, and survive the round trip.
+     *
+     * multichoice saves its hints with parts (save_hints($q, true)), so
+     * "clear incorrect responses" and "show the number of correct responses"
+     * are settings of the mold like any other: shipping only the hint text
+     * silently reset both on the generated quiz.
+     */
+    public function test_quiz_multichoice_hint_flags_survive_the_round_trip(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $mold] = $this->make_quiz_mold(['questionsperpage' => 0]);
+        $this->add_mold_question($mold, 'multichoice', 'one_of_four', [
+            'name' => 'Con pistas',
+            'hint' => [
+                ['text' => 'Pista 1 ⟦tema⟧', 'format' => FORMAT_HTML],
+                ['text' => 'Pista 2 ⟦tema⟧', 'format' => FORMAT_HTML],
+            ],
+            'hintclearwrong' => [0, 1],
+            'hintshownumcorrect' => [1, 0],
+        ], 1, 2.0);
+
+        $exported = $this->export_cm($course, $mold);
+        $question = $exported['mod_settings']['questions'][0];
+
+        $this->assertSame(['Pista 1 ⟦tema⟧', 'Pista 2 ⟦tema⟧'], array_column($question['hint'], 'text'));
+        // Parallel to the hints, one entry each, exactly as save_hints() reads them.
+        $this->assertSame([0, 1], $question['hintclearwrong']);
+        $this->assertSame([1, 0], $question['hintshownumcorrect']);
+
+        $clone = $this->getDataGenerator()->create_module('quiz', [
+            'course' => $course->id,
+            'name' => 'Cuestionario generado',
+            'questionsperpage' => 0,
+        ]);
+        $settings = new quiz_settings(
+            (object) ['coursemodule' => $clone->cmid, 'instance' => $clone->id],
+            $exported['mod_settings']
+        );
+        $settings->add_settings();
+
+        $rebuilt = $this->export_cm($course, $clone)['mod_settings']['questions'][0];
+
+        $this->assertSame($question, $rebuilt);
+        $this->assertSame([0, 1], $rebuilt['hintclearwrong']);
+        $this->assertSame([1, 0], $rebuilt['hintshownumcorrect']);
+    }
+
+    /**
+     * A question the author wrote no hint for ships no hint key at all.
+     *
+     * Inventing empty arrays would make the consumer create blank hints the
+     * mold does not have, and turn a hintless question into a three-key
+     * payload that no longer matches the mold.
+     */
+    public function test_quiz_question_without_hints_exports_no_hint_keys(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $quiz] = $this->make_quiz_mold();
+        $this->add_mold_question($quiz, 'multichoice', 'one_of_four', [
+            'name' => 'Sin pistas',
+            'hint' => [
+                ['text' => '', 'format' => FORMAT_HTML],
+                ['text' => '', 'format' => FORMAT_HTML],
+            ],
+            'hintclearwrong' => [0, 0],
+            'hintshownumcorrect' => [0, 0],
+        ], 1, 1.0);
+
+        $question = $this->exported_questions($course, $quiz)[0];
+
+        $this->assertArrayNotHasKey('hint', $question);
+        $this->assertArrayNotHasKey('hintclearwrong', $question);
+        $this->assertArrayNotHasKey('hintshownumcorrect', $question);
+    }
+
+    /**
+     * Create a quiz mold and return it with its course.
+     *
+     * @param array $options Module generator options.
+     * @return array [course, quiz instance]
+     */
+    private function make_quiz_mold(array $options = []): array {
+        $course = $this->getDataGenerator()->create_course();
+        $quiz = $this->getDataGenerator()->create_module('quiz', $options + ['course' => $course->id]);
+
+        return [$course, $quiz];
+    }
+
+    /**
+     * Create one question in the quiz's own category and give it a slot.
+     *
+     * @param \stdClass $quiz The quiz mold.
+     * @param string $qtype Question type to create.
+     * @param string|null $which Which example of it (see each qtype's test helper).
+     * @param array $overrides Form data overriding that example's.
+     * @param int $page The page of the quiz to put it on.
+     * @param float|null $maxmark The slot's mark, null for the question's own default.
+     * @return \stdClass The created question.
+     */
+    private function add_mold_question(
+        \stdClass $quiz,
+        string $qtype,
+        ?string $which = null,
+        array $overrides = [],
+        int $page = 1,
+        ?float $maxmark = null
+    ): \stdClass {
+        $generator = $this->getDataGenerator()->get_plugin_generator('core_question');
+        $category = $generator->create_question_category([
+            'contextid' => \context_module::instance($quiz->cmid)->id,
+        ]);
+        $question = $generator->create_question($qtype, $which, $overrides + ['category' => $category->id]);
+        quiz_add_quiz_question($question->id, $quiz, $page, $maxmark);
+
+        return $question;
+    }
+
+    /**
+     * Add one random slot to a quiz mold.
+     *
+     * @param \stdClass $quiz The quiz mold.
+     */
+    private function add_random_mold_slot(\stdClass $quiz): void {
+        $category = $this->getDataGenerator()->get_plugin_generator('core_question')
+            ->create_question_category(['contextid' => \context_module::instance($quiz->cmid)->id]);
+        $structure = \mod_quiz\structure::create_for_quiz(\mod_quiz\quiz_settings::create($quiz->id));
+        $structure->add_random_questions(1, 1, [
+            'filter' => [
+                'category' => [
+                    'jointype' => \core_question\local\bank\condition::JOINTYPE_DEFAULT,
+                    'values' => [$category->id],
+                    'filteroptions' => ['includesubcategories' => false],
+                ],
+            ],
+        ]);
+    }
+
+    /**
+     * Seed one calculated-family question through the plugin's own import path.
+     *
+     * The core generator's form data carries no dataset at all (save_question()
+     * is a multi-page wizard for these types), so the only way to build a mold
+     * with real wildcard values is the import path quiz_settings already uses.
+     *
+     * @param \stdClass $quiz The quiz mold.
+     * @param string $qtype Either 'calculated' or 'calculatedmulti'.
+     */
+    private function seed_calculated_question(\stdClass $quiz, string $qtype): void {
+        $dataset = static function (string $name): array {
+            return [
+                'name' => $name,
+                'distribution' => 'uniform',
+                'min' => '1',
+                'max' => '10',
+                'length' => '1',
+                'datasetitem' => [
+                    ['itemnumber' => 1, 'value' => '3.0'],
+                    ['itemnumber' => 2, 'value' => '5.0'],
+                ],
+            ];
+        };
+        $ismulti = $qtype === 'calculatedmulti';
+        $payload = [
+            'qtype' => $qtype,
+            'name' => 'Calculada plantilla',
+            'questiontext' => ['text' => '¿Cuánto es {a} + {b}? ⟦tema⟧', 'format' => FORMAT_HTML],
+            'generalfeedback' => ['text' => '', 'format' => FORMAT_HTML],
+            'defaultmark' => 1,
+            'penalty' => 0.3333333,
+            'synchronize' => 0,
+            'answernumbering' => 'abc',
+            'shuffleanswers' => 1,
+            'showunits' => \qtype_numerical::UNITNONE,
+            'unitpenalty' => 0.1,
+            'unitgradingtype' => 0,
+            'answer' => [$ismulti ? ['text' => '{a} + {b}', 'format' => FORMAT_HTML] : '{a} + {b}'],
+            'fraction' => ['1.0'],
+            'tolerance' => ['0.01'],
+            'tolerancetype' => ['1'],
+            'correctanswerlength' => ['2'],
+            'correctanswerformat' => ['1'],
+            'feedback' => [['text' => 'Correcto ⟦tema⟧', 'format' => FORMAT_HTML]],
+            'dataset' => [$dataset('a'), $dataset('b')],
+        ];
+        if ($ismulti) {
+            $payload['single'] = 1;
+            $payload['shownumcorrect'] = 0;
+            $payload['correctfeedback'] = ['text' => 'Bien hecho ⟦tema⟧', 'format' => FORMAT_HTML];
+            $payload['partiallycorrectfeedback'] = ['text' => 'Casi', 'format' => FORMAT_HTML];
+            $payload['incorrectfeedback'] = ['text' => 'Mal', 'format' => FORMAT_HTML];
+        }
+
+        $cm = (object) ['coursemodule' => $quiz->cmid, 'instance' => $quiz->id];
+        (new quiz_settings($cm, ['questions' => [$payload]]))->add_settings();
+    }
+
+    /**
+     * The questions one quiz mold exports.
+     *
+     * @param \stdClass $course The course holding it.
+     * @param \stdClass $quiz The quiz instance.
+     * @return array
+     */
+    private function exported_questions(\stdClass $course, \stdClass $quiz): array {
+        return $this->export_cm($course, $quiz)['mod_settings']['questions'];
     }
 
     /**

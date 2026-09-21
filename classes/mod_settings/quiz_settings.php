@@ -100,10 +100,55 @@ class quiz_settings extends base_settings {
         // Add a single question to the current quiz.
         $structure->check_can_be_edited();
         quiz_require_question_use($question->id);
-        $addonpage = optional_param('addonpage', 0, PARAM_INT);
-        quiz_add_quiz_question($question->id, $quiz, $addonpage);
+        quiz_add_quiz_question(
+            $question->id,
+            $quiz,
+            $this->slot_page($aiquestiondata),
+            $this->slot_maxmark($aiquestiondata)
+        );
         quiz_delete_previews($quiz);
         $gradecalculator->recompute_quiz_sumgrades();
+    }
+
+    /**
+     * The page this question's slot must land on.
+     *
+     * A mold's question carries the page it was authored on, which is the only
+     * source that works outside the web flow: the legacy fallback reads the
+     * 'addonpage' HTTP parameter - the editing page the user came from - so in
+     * any other context every question landed on page 0 (append at the end)
+     * and the mold's layout was lost. The model-driven path ships no page and
+     * keeps that fallback.
+     *
+     * Out of scope on purpose, and still unsupported on the way back in:
+     * quiz_sections (headings and per-section shuffle), quiz_feedback (overall
+     * feedback bands), random slots, displaynumber and requireprevious.
+     *
+     * @param array $aiquestiondata Question payload.
+     * @return int The page for quiz_add_quiz_question(); 0 means "append".
+     */
+    protected function slot_page($aiquestiondata): int {
+        if (isset($aiquestiondata['page'])) {
+            // Cast is load-bearing: quiz_add_quiz_question() only honours a
+            // given page when it is a real int (is_int) and at least 1.
+            return (int) $aiquestiondata['page'];
+        }
+
+        return optional_param('addonpage', 0, PARAM_INT);
+    }
+
+    /**
+     * The mark this question's slot must be worth.
+     *
+     * The mark of a slot lives in quiz_slots.maxmark, not on the question, so
+     * without it every generated slot silently inherited question.defaultmark
+     * and the mold's weighting was lost. Null keeps that default.
+     *
+     * @param array $aiquestiondata Question payload.
+     * @return float|null The maxmark for quiz_add_quiz_question(), or null.
+     */
+    protected function slot_maxmark($aiquestiondata): ?float {
+        return isset($aiquestiondata['maxmark']) ? (float) $aiquestiondata['maxmark'] : null;
     }
 
     /**

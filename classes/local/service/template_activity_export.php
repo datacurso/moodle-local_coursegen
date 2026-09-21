@@ -17,6 +17,8 @@
 namespace local_coursegen\local\service;
 
 use cm_info;
+use mod_quiz\question\bank\qbank_helper;
+use mod_quiz\question\display_options;
 
 /**
  * One real activity's "parameters" for the course-template payload.
@@ -60,9 +62,683 @@ class template_activity_export {
         if ($cm->modname === 'data') {
             return self::data_parameters($cm);
         }
+        if ($cm->modname === 'quiz') {
+            return self::quiz_parameters($cm);
+        }
         return [
             'name' => $cm->name,
             'section' => (int) $cm->sectionnum,
+        ];
+    }
+
+    /** @var string[] Every quiz instance setting worth reproducing on the generated activity. */
+    private const QUIZ_SETTINGS_COLUMNS = [
+        'timeopen', 'timeclose', 'timelimit', 'overduehandling', 'graceperiod',
+        'attempts', 'attemptonlast', 'delay1', 'delay2',
+        'grademethod', 'grade', 'decimalpoints', 'questiondecimalpoints',
+        'preferredbehaviour', 'canredoquestions', 'shuffleanswers', 'questionsperpage',
+        'navmethod', 'showuserpicture', 'showblocks',
+        'password', 'subnet', 'browsersecurity',
+        'completionattemptsexhausted', 'completionminattempts', 'allowofflineattempts',
+    ];
+
+    /** @var string[] The eight review bitmask columns, named by the form prefix each one packs. */
+    private const QUIZ_REVIEW_FIELDS = [
+        'attempt', 'correctness', 'maxmarks', 'marks',
+        'specificfeedback', 'generalfeedback', 'rightanswer', 'overallfeedback',
+    ];
+
+    /** @var array<string, int> The four review times, named as quiz_process_options() reads them. */
+    private const QUIZ_REVIEW_TIMES = [
+        'during' => display_options::DURING,
+        'immediately' => display_options::IMMEDIATELY_AFTER,
+        'open' => display_options::LATER_WHILE_OPEN,
+        'closed' => display_options::AFTER_CLOSE,
+    ];
+
+    /** @var string[] The question types the AI service has a schema for; any other one is skipped. */
+    private const QUIZ_SUPPORTED_QTYPES = [
+        'multichoice', 'truefalse', 'shortanswer', 'numerical', 'essay',
+        'description', 'gapselect', 'calculated', 'calculatedmulti',
+    ];
+
+    /** @var string[] The combined-feedback trio, shared by several question types. */
+    private const QUIZ_COMBINED_FEEDBACK = [
+        'correctfeedback', 'partiallycorrectfeedback', 'incorrectfeedback',
+    ];
+
+    /**
+     * A Quiz's raw description, every instance setting and its questions.
+     *
+     * Three traps of mod_quiz's schema shape this branch:
+     *
+     * - gradepass is NOT a quiz column. It lives in grade_items, which is where
+     *   mod/quiz/view.php reads the pass mark from, so it travels through the
+     *   grades API; read off the quiz row it would always have been lost.
+     * - The eight review* columns are BITMASKS and add_moduleinfo() cannot
+     *   consume them: quiz_process_options() rebuilds each one out of four
+     *   <field><whenname> checkboxes. They therefore travel decoded into those
+     *   32 booleans, never as the packed integer.
+     * - password is the column, but the form field is quizpassword and
+     *   quiz_process_options() copies the latter onto the former. Both names
+     *   travel, or add_moduleinfo() would read an undefined property.
+     *
+     * @param cm_info $cm
+     * @return array
+     */
+    private static function quiz_parameters(cm_info $cm): array {
+        global $DB;
+
+        $quiz = $DB->get_record('quiz', ['id' => $cm->instance]);
+        if (!$quiz) {
+            return ['name' => $cm->name, 'section' => (int) $cm->sectionnum];
+        }
+
+        $parameters = array_merge(
+            self::quiz_settings_columns($quiz),
+            self::quiz_review_options($quiz),
+            [
+                'name' => $cm->name,
+                'section' => (int) $cm->sectionnum,
+                'intro' => $quiz->intro ?? '',
+                'quizpassword' => (string) ($quiz->password ?? ''),
+                'gradepass' => self::quiz_grade_pass($cm),
+            ]
+        );
+
+        $questions = self::quiz_questions($cm);
+        if ($questions) {
+            $parameters['mod_settings'] = ['questions' => $questions];
+        }
+
+        return $parameters;
+    }
+
+    /**
+     * The mod_quiz settings worth reproducing on the generated activity.
+     *
+     * Identity and derived columns (id, course, sumgrades, timecreated,
+     * timemodified, introformat) are left out on purpose - they describe THIS
+     * quiz, never the new one.
+     *
+     * @param \stdClass $quiz
+     * @return array
+     */
+    private static function quiz_settings_columns($quiz): array {
+        $settings = [];
+        foreach (self::QUIZ_SETTINGS_COLUMNS as $field) {
+            if (isset($quiz->$field)) {
+                $settings[$field] = $quiz->$field;
+            }
+        }
+        return $settings;
+    }
+
+    /**
+     * The mold's review settings, decoded into the 32 booleans the form owns.
+     *
+     * Core forces two invariants of its own on the way back in (reviewattempt
+     * always gets DURING, reviewoverallfeedback never keeps it), so this
+     * reports each bit exactly as stored instead of fighting them.
+     *
+     * @param \stdClass $quiz
+     * @return array<string, int>
+     */
+    private static function quiz_review_options($quiz): array {
+        $options = [];
+        foreach (self::QUIZ_REVIEW_FIELDS as $field) {
+            $bitmask = (int) ($quiz->{'review' . $field} ?? 0);
+            foreach (self::QUIZ_REVIEW_TIMES as $whenname => $when) {
+                $options[$field . $whenname] = ($bitmask & $when) ? 1 : 0;
+            }
+        }
+        return $options;
+    }
+
+    /**
+     * The mold's grade to pass, or 0.0 when it has none.
+     *
+     * @param cm_info $cm
+     * @return float
+     */
+    private static function quiz_grade_pass(cm_info $cm): float {
+        global $CFG;
+
+        require_once($CFG->libdir . '/gradelib.php');
+
+        $item = \grade_item::fetch([
+            'itemtype' => 'mod',
+            'itemmodule' => 'quiz',
+            'iteminstance' => (int) $cm->instance,
+            'itemnumber' => 0,
+            'courseid' => (int) $cm->course,
+        ]);
+
+        return $item ? (float) $item->gradepass : 0.0;
+    }
+
+    /**
+     * Every question of one quiz, in slot order, page and mark included.
+     *
+     * The supported API resolves the whole quiz_slots -> question_references ->
+     * question_bank_entries -> question_versions -> question chain and picks
+     * the right version, which hand-written SQL over quiz_slots cannot.
+     *
+     * @param cm_info $cm
+     * @return array
+     */
+    private static function quiz_questions(cm_info $cm): array {
+        $structure = qbank_helper::get_question_structure((int) $cm->instance, $cm->context);
+
+        $questions = [];
+        foreach ($structure as $slot) {
+            $question = self::quiz_question_parameters($slot);
+            if ($question !== null) {
+                $questions[] = $question;
+            }
+        }
+        return $questions;
+    }
+
+    /**
+     * One slot's question, or null when this slot cannot be reproduced.
+     *
+     * Two kinds of slot are skipped without a word, because neither is a
+     * payload defect:
+     *
+     * - 'random' is a question_set_reference, not a question. The consumer
+     *   builds slots with quiz_add_quiz_question(), which throws outright on
+     *   random questions, so there is nothing to send.
+     * - 'missingtype' is the placeholder the API puts in when the question
+     *   itself is gone, or its qtype plugin is uninstalled: there is no
+     *   definition left to reproduce.
+     *
+     * @param \stdClass $slot One row of qbank_helper::get_question_structure().
+     * @return array|null
+     */
+    private static function quiz_question_parameters($slot): ?array {
+        $qtype = (string) ($slot->qtype ?? '');
+        if ($qtype === 'random' || $qtype === 'missingtype') {
+            return null;
+        }
+        if (!in_array($qtype, self::QUIZ_SUPPORTED_QTYPES, true)) {
+            debugging(
+                'local_coursegen: mold quiz slot ' . (int) $slot->slot . ' holds a "' . $qtype
+                    . '" question, which the AI service has no schema for; it is not exported.',
+                DEBUG_DEVELOPER
+            );
+            return null;
+        }
+
+        // All text travels raw: it carries the mold's markers, and the editor
+        // shape is exactly what qtype_*::save_question() reads back.
+        $question = [
+            'qtype' => $qtype,
+            'name' => (string) $slot->name,
+            'questiontext' => [
+                'text' => (string) ($slot->questiontext ?? ''),
+                'format' => (int) ($slot->questiontextformat ?? FORMAT_HTML),
+            ],
+            'generalfeedback' => [
+                'text' => (string) ($slot->generalfeedback ?? ''),
+                'format' => (int) ($slot->generalfeedbackformat ?? FORMAT_HTML),
+            ],
+            'defaultmark' => (float) $slot->defaultmark,
+            'penalty' => (float) $slot->penalty,
+            // The slot's own data: the page is the mold's layout and the mark
+            // lives on quiz_slots, never on the question.
+            'page' => (int) $slot->page,
+            'maxmark' => (float) $slot->maxmark,
+        ];
+
+        return array_merge($question, self::quiz_question_options($qtype, (int) $slot->questionid));
+    }
+
+    /**
+     * One question's type-specific payload.
+     *
+     * @param string $qtype The question type.
+     * @param int $questionid The question id.
+     * @return array
+     */
+    private static function quiz_question_options(string $qtype, int $questionid): array {
+        switch ($qtype) {
+            case 'multichoice':
+                return self::quiz_multichoice_options($questionid);
+            case 'truefalse':
+                return self::quiz_truefalse_options($questionid);
+            case 'shortanswer':
+                return self::quiz_shortanswer_options($questionid);
+            case 'numerical':
+                return self::quiz_numerical_options($questionid);
+            case 'essay':
+                return self::quiz_essay_options($questionid);
+            case 'gapselect':
+                return self::quiz_gapselect_options($questionid);
+            case 'calculated':
+            case 'calculatedmulti':
+                return self::quiz_calculated_options($qtype, $questionid);
+            default:
+                // A description is its two texts and nothing else: it owns no
+                // answer and Moodle forces its mark to zero.
+                return [];
+        }
+    }
+
+    /**
+     * A multichoice question: its options, its parallel answer arrays and hints.
+     *
+     * @param int $questionid
+     * @return array
+     */
+    private static function quiz_multichoice_options(int $questionid): array {
+        global $DB;
+
+        $exported = [];
+        $options = $DB->get_record('qtype_multichoice_options', ['questionid' => $questionid]);
+        if ($options) {
+            $exported = array_merge(
+                [
+                    'single' => (int) $options->single,
+                    'shuffleanswers' => (int) $options->shuffleanswers,
+                    'answernumbering' => (string) $options->answernumbering,
+                    'shownumcorrect' => (int) $options->shownumcorrect,
+                    'showstandardinstruction' => (int) $options->showstandardinstruction,
+                ],
+                self::quiz_combined_feedback($options)
+            );
+        }
+
+        $exported = array_merge($exported, self::quiz_answers($questionid, true));
+
+        return array_merge($exported, self::quiz_question_hints($questionid));
+    }
+
+    /**
+     * A truefalse question: the 0|1 it was authored with, and its two feedbacks.
+     *
+     * The two question_answers rows hold the LOCALISED "True"/"False" labels
+     * that qtype_truefalse writes itself from get_string(), so they must never
+     * travel as text. What the payload needs is correctanswer, which is derived
+     * from the fraction of the row question_truefalse points at as the true
+     * one - a wrong constant there silently mis-grades every attempt.
+     *
+     * @param int $questionid
+     * @return array
+     */
+    private static function quiz_truefalse_options(int $questionid): array {
+        global $DB;
+
+        $options = $DB->get_record('question_truefalse', ['question' => $questionid]);
+        if (!$options) {
+            return [];
+        }
+
+        $answers = $DB->get_records('question_answers', ['question' => $questionid], 'id ASC');
+        $true = $answers[$options->trueanswer] ?? null;
+        $false = $answers[$options->falseanswer] ?? null;
+
+        return [
+            'correctanswer' => ($true && (float) $true->fraction > 0) ? 1 : 0,
+            'feedbacktrue' => self::quiz_editor_field($true, 'feedback'),
+            'feedbackfalse' => self::quiz_editor_field($false, 'feedback'),
+            'showstandardinstruction' => (int) $options->showstandardinstruction,
+        ];
+    }
+
+    /**
+     * A shortanswer question: its case flag and its plain answers.
+     *
+     * The answers stay plain strings, wildcards ('*') and all: that is the
+     * shape the qtype reads, and a '*' answer is how the mold catches anything
+     * else.
+     *
+     * @param int $questionid
+     * @return array
+     */
+    private static function quiz_shortanswer_options(int $questionid): array {
+        global $DB;
+
+        $options = $DB->get_record('qtype_shortanswer_options', ['questionid' => $questionid]);
+        $exported = $options ? ['usecase' => (int) $options->usecase] : [];
+
+        return array_merge($exported, self::quiz_answers($questionid, false));
+    }
+
+    /**
+     * A numerical question: its answers with one tolerance each, plus the units.
+     *
+     * The tolerance of an answer lives in its own table (question_numerical,
+     * one row per answer), so it is rebuilt as an array parallel to the answers
+     * - which is how the qtype reads it back.
+     *
+     * @param int $questionid
+     * @return array
+     */
+    private static function quiz_numerical_options(int $questionid): array {
+        global $DB;
+
+        $tolerances = $DB->get_records_menu(
+            'question_numerical',
+            ['question' => $questionid],
+            '',
+            'answer, tolerance'
+        );
+
+        $exported = self::quiz_answers($questionid, false);
+        $exported['tolerance'] = [];
+        foreach (array_keys($DB->get_records('question_answers', ['question' => $questionid], 'id ASC')) as $answerid) {
+            $exported['tolerance'][] = (string) ($tolerances[$answerid] ?? '0');
+        }
+
+        return array_merge($exported, self::quiz_unit_options($questionid));
+    }
+
+    /**
+     * The unit options shared by numerical and calculated, when the mold has them.
+     *
+     * qtype_calculatedmulti never writes this row (it has no unit handling at
+     * all), so an absent row ships nothing rather than inventing defaults.
+     *
+     * @param int $questionid
+     * @return array
+     */
+    private static function quiz_unit_options(int $questionid): array {
+        global $DB;
+
+        $options = $DB->get_record('question_numerical_options', ['question' => $questionid]);
+        if (!$options) {
+            return [];
+        }
+
+        return [
+            'showunits' => (int) $options->showunits,
+            'unitsleft' => (int) $options->unitsleft,
+            'unitgradingtype' => (int) $options->unitgradingtype,
+            'unitpenalty' => (float) $options->unitpenalty,
+        ];
+    }
+
+    /**
+     * An essay question: its whole response setup, word-limit gates included.
+     *
+     * qtype_essay writes minwordlimit/maxwordlimit only when the matching
+     * minwordenabled/maxwordenabled gate is SET - isset(), not truthy - so a
+     * limit has to travel with its gate, and a mold without limits must ship
+     * neither: a gate of 0 would still make the consumer store one.
+     *
+     * @param int $questionid
+     * @return array
+     */
+    private static function quiz_essay_options(int $questionid): array {
+        global $DB;
+
+        $options = $DB->get_record('qtype_essay_options', ['questionid' => $questionid]);
+        if (!$options) {
+            return [];
+        }
+
+        $exported = [
+            'responseformat' => (string) $options->responseformat,
+            'responserequired' => (int) $options->responserequired,
+            'responsefieldlines' => (int) $options->responsefieldlines,
+            'attachments' => (int) $options->attachments,
+            'attachmentsrequired' => (int) $options->attachmentsrequired,
+            'maxbytes' => (int) $options->maxbytes,
+            'filetypeslist' => (string) ($options->filetypeslist ?? ''),
+            'graderinfo' => self::quiz_editor_field($options, 'graderinfo'),
+            'responsetemplate' => self::quiz_editor_field($options, 'responsetemplate'),
+        ];
+
+        if ($options->minwordlimit !== null) {
+            $exported['minwordenabled'] = 1;
+            $exported['minwordlimit'] = (int) $options->minwordlimit;
+        }
+        if ($options->maxwordlimit !== null) {
+            $exported['maxwordenabled'] = 1;
+            $exported['maxwordlimit'] = (int) $options->maxwordlimit;
+        }
+
+        return $exported;
+    }
+
+    /**
+     * A gapselect question: its options and its decoded choices.
+     *
+     * The choices live in question_answers under a special encoding (see
+     * qtype_gapselect_base::save_question_options): answer is the choice word,
+     * fraction is always 0 and the FEEDBACK column carries the choice's group
+     * number. Exported as answers they would ship a group as feedback and lose
+     * the groups, so they travel as the 'choices' list the qtype reads back.
+     * The [[1]], [[2]] placeholders inside questiontext are positional -
+     * choice N answers gap N - and travel raw with it.
+     *
+     * @param int $questionid
+     * @return array
+     */
+    private static function quiz_gapselect_options(int $questionid): array {
+        global $DB;
+
+        $exported = [];
+        $options = $DB->get_record('question_gapselect', ['questionid' => $questionid]);
+        if ($options) {
+            $exported = array_merge(
+                [
+                    'shuffleanswers' => (int) $options->shuffleanswers,
+                    'shownumcorrect' => (int) $options->shownumcorrect,
+                ],
+                self::quiz_combined_feedback($options)
+            );
+        }
+
+        $choices = [];
+        foreach ($DB->get_records('question_answers', ['question' => $questionid], 'id ASC') as $answer) {
+            $choices[] = [
+                'answer' => (string) $answer->answer,
+                'choicegroup' => (int) $answer->feedback,
+            ];
+        }
+        $exported['choices'] = $choices;
+
+        return $exported;
+    }
+
+    /**
+     * A calculated or calculatedmulti question: its formulas and its wildcards.
+     *
+     * The formula itself is the answer text ('{a} + {b}'), and each answer owns
+     * a tolerance, a tolerance type and the shape of the printed right answer
+     * in question_calculated - all rebuilt as arrays parallel to the answers.
+     * import_process tells the consumer to take the import path, which is the
+     * only one that creates the dataset ITEMS as well as the definitions.
+     *
+     * @param string $qtype Either 'calculated' or 'calculatedmulti'.
+     * @param int $questionid
+     * @return array
+     */
+    private static function quiz_calculated_options(string $qtype, int $questionid): array {
+        global $DB;
+
+        $ismulti = $qtype === 'calculatedmulti';
+        $options = $DB->get_record('question_calculated_options', ['question' => $questionid]);
+
+        $exported = [
+            'synchronize' => (int) ($options->synchronize ?? 0),
+            'answernumbering' => (string) ($options->answernumbering ?? 'abc'),
+            'shuffleanswers' => (int) ($options->shuffleanswers ?? 0),
+            'import_process' => true,
+        ];
+        if ($ismulti && $options) {
+            $exported['single'] = (int) $options->single;
+            $exported['shownumcorrect'] = (int) $options->shownumcorrect;
+            $exported = array_merge($exported, self::quiz_combined_feedback($options));
+        }
+
+        // In calculatedmulti the answers are real editor fields, while in
+        // calculated they are bare formula strings: that is what each qtype reads.
+        $exported = array_merge($exported, self::quiz_answers($questionid, $ismulti));
+
+        $peranswer = $DB->get_records(
+            'question_calculated',
+            ['question' => $questionid],
+            '',
+            'answer, tolerance, tolerancetype, correctanswerlength, correctanswerformat'
+        );
+        $exported['tolerance'] = [];
+        $exported['tolerancetype'] = [];
+        $exported['correctanswerlength'] = [];
+        $exported['correctanswerformat'] = [];
+        foreach (array_keys($DB->get_records('question_answers', ['question' => $questionid], 'id ASC')) as $answerid) {
+            $row = $peranswer[$answerid] ?? null;
+            $exported['tolerance'][] = (string) ($row->tolerance ?? '0');
+            $exported['tolerancetype'][] = (int) ($row->tolerancetype ?? 1);
+            $exported['correctanswerlength'][] = (int) ($row->correctanswerlength ?? 2);
+            $exported['correctanswerformat'][] = (int) ($row->correctanswerformat ?? 2);
+        }
+
+        $exported = array_merge($exported, self::quiz_unit_options($questionid));
+        $exported['dataset'] = self::quiz_question_datasets($questionid);
+
+        return $exported;
+    }
+
+    /**
+     * Every wildcard of one calculated question, definitions and values alike.
+     *
+     * A wildcard spans three tables, and its definition packs the whole range
+     * into ONE string - "<distribution>:<min>:<max>:<decimals>" (see
+     * qtype_calculated::get_datasets_for_export) - so it travels decoded into
+     * the four parts import_datasets() reads back. Without the items the
+     * question always fails at attempt time ('cannotgetdsfordependent').
+     *
+     * @param int $questionid
+     * @return array
+     */
+    private static function quiz_question_datasets(int $questionid): array {
+        global $DB;
+
+        $sql = 'SELECT def.id, def.name, def.options, def.itemcount, def.category
+                  FROM {question_datasets} qd
+                  JOIN {question_dataset_definitions} def ON def.id = qd.datasetdefinition
+                 WHERE qd.question = :questionid
+              ORDER BY def.id ASC';
+        $definitions = $DB->get_records_sql($sql, ['questionid' => $questionid]);
+
+        $datasets = [];
+        foreach ($definitions as $definition) {
+            $range = explode(':', (string) $definition->options, 4);
+
+            $items = [];
+            $records = $DB->get_records(
+                'question_dataset_items',
+                ['definition' => $definition->id],
+                'itemnumber ASC, id ASC'
+            );
+            foreach ($records as $item) {
+                $items[] = ['itemnumber' => (int) $item->itemnumber, 'value' => (string) $item->value];
+            }
+
+            $datasets[] = [
+                'name' => (string) $definition->name,
+                'distribution' => (string) ($range[0] ?? 'uniform'),
+                'min' => (string) ($range[1] ?? '0'),
+                'max' => (string) ($range[2] ?? '0'),
+                // The fourth part is the number of decimals of the values.
+                'length' => (string) ($range[3] ?? '1'),
+                // A definition of category 0 is private to its question; any
+                // other one is shared with the whole question category.
+                'status' => ((int) $definition->category === 0) ? 'private' : 'shared',
+                // The real count, never the stored one: the attempt runtime
+                // picks the variant range from MIN(itemcount).
+                'itemcount' => count($items),
+                'number_of_items' => count($items),
+                'datasetitem' => $items,
+            ];
+        }
+        return $datasets;
+    }
+
+    /**
+     * One question's answers, as the parallel arrays the qtypes read.
+     *
+     * @param int $questionid
+     * @param bool $answerseditor Whether the answer itself is an editor field
+     *     (multichoice, calculatedmulti) rather than a plain string.
+     * @return array
+     */
+    private static function quiz_answers(int $questionid, bool $answerseditor): array {
+        global $DB;
+
+        $exported = ['answer' => [], 'fraction' => [], 'feedback' => []];
+        foreach ($DB->get_records('question_answers', ['question' => $questionid], 'id ASC') as $answer) {
+            $exported['answer'][] = $answerseditor
+                ? ['text' => (string) $answer->answer, 'format' => (int) $answer->answerformat]
+                : (string) $answer->answer;
+            $exported['fraction'][] = (float) $answer->fraction;
+            $exported['feedback'][] = self::quiz_editor_field($answer, 'feedback');
+        }
+        return $exported;
+    }
+
+    /**
+     * One question's hints, in authoring order, grading options included.
+     *
+     * multichoice saves its hints with parts (save_hints($q, true)), so
+     * clearwrong and shownumcorrect are settings of the mold like any other:
+     * they travel as two arrays parallel to the hints, which is the shape
+     * save_hints() reads them back from.
+     *
+     * A question with no hint ships no key at all - neither an empty hint list
+     * nor empty flag arrays - because inventing them would make the consumer
+     * create blank hints the mold never had.
+     *
+     * @param int $questionid
+     * @return array Empty when the question has no hint.
+     */
+    private static function quiz_question_hints(int $questionid): array {
+        global $DB;
+
+        $records = $DB->get_records('question_hints', ['questionid' => $questionid], 'id ASC');
+        if (!$records) {
+            return [];
+        }
+
+        $exported = ['hint' => [], 'hintclearwrong' => [], 'hintshownumcorrect' => []];
+        foreach ($records as $hint) {
+            $exported['hint'][] = ['text' => (string) $hint->hint, 'format' => (int) $hint->hintformat];
+            // Both columns are nullable: a qtype that saves its hints without
+            // parts leaves them unset, which means "off".
+            $exported['hintclearwrong'][] = (int) ($hint->clearwrong ?? 0);
+            $exported['hintshownumcorrect'][] = (int) ($hint->shownumcorrect ?? 0);
+        }
+        return $exported;
+    }
+
+    /**
+     * The combined-feedback trio, in the editor shape the qtypes read.
+     *
+     * @param \stdClass $options The qtype's options row.
+     * @return array
+     */
+    private static function quiz_combined_feedback($options): array {
+        $feedback = [];
+        foreach (self::QUIZ_COMBINED_FEEDBACK as $name) {
+            $feedback[$name] = self::quiz_editor_field($options, $name);
+        }
+        return $feedback;
+    }
+
+    /**
+     * One stored text plus its format, in the editor shape.
+     *
+     * @param \stdClass|null $record The row holding it, or null.
+     * @param string $field The text column; its format is $field . 'format'.
+     * @return array ['text' => raw, 'format' => int]
+     */
+    private static function quiz_editor_field($record, string $field): array {
+        return [
+            'text' => (string) ($record->$field ?? ''),
+            'format' => (int) ($record->{$field . 'format'} ?? FORMAT_HTML),
         ];
     }
 
