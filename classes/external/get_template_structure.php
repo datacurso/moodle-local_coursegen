@@ -36,7 +36,7 @@ use local_coursegen\local\models\template;
 use local_coursegen\local\models\template_section;
 use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_instance;
-use local_coursegen\local\service\template_export_service;
+use local_coursegen\local\service\template_export_uids;
 use local_coursegen\local\service\template_instance_layout;
 use local_coursegen\output\template_row_options;
 
@@ -246,12 +246,12 @@ class get_template_structure extends external_api {
             // The id this row will answer to in the generation's progress
             // events, so the live view can mark THIS activity when its own
             // content lands. Same value template_export_service sends.
-            'generationcmid' => template_export_service::instance_cmid((int) $instance->get('id')),
+            'generationcmid' => template_export_uids::instance_cmid((int) $instance->get('id')),
             // The name this row answers to in the generation's answer, which is
             // what a preview of it is asked for by. Read from the instance
             // itself, which is also where the payload reads it, so the link on
             // this page and the answer it opens can never name it differently.
-            'generationuid' => template_export_service::instance_uid($instance),
+            'generationuid' => template_export_uids::instance_uid($instance),
         ];
     }
 
