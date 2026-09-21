@@ -18,7 +18,6 @@ namespace local_coursegen\local\preview\h5pactivity;
 
 use action_link;
 use context;
-use core_h5p\local\library\autoloader;
 use core_h5p\factory;
 use core_h5p\helper;
 use local_coursegen\local\preview\json_file;
@@ -46,6 +45,8 @@ use stdClass;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class view {
+    use h5p_embed;
+
     /** @var stdClass The h5pactivity row. */
     protected stdClass $instance;
 
@@ -121,68 +122,6 @@ class view {
         $config = helper::decode_display_options($core, (int) $this->instance->displayoptions);
         $output .= $this->display($this->file->get_url(), $config, true, 'mod_h5pactivity', true, $extraactions);
         return $output;
-    }
-
-    /**
-     * Ported from core_h5p\player::display().
-     *
-     * @param string $url
-     * @param stdClass $config
-     * @param bool $preventredirect
-     * @param string $component
-     * @param bool $displayedit
-     * @param array $extraactions
-     * @return string
-     */
-    protected function display(string $url, stdClass $config, bool $preventredirect = true, string $component = '',
-            bool $displayedit = false, array $extraactions = []): string {
-        global $OUTPUT;
-        $params = [
-                'url' => $url,
-                'preventredirect' => $preventredirect,
-                'component' => $component,
-            ];
-
-        $optparams = ['frame', 'export', 'embed', 'copyright'];
-        foreach ($optparams as $optparam) {
-            if (!empty($config->$optparam)) {
-                $params[$optparam] = $config->$optparam;
-            }
-        }
-        $fileurl = new moodle_url('/h5p/embed.php', $params);
-
-        $template = new stdClass();
-        $template->embedurl = $fileurl->out(false);
-
-        if ($displayedit) {
-            // Check if the user can edit this content.
-            if ($this->can_edit_content()) {
-                $template->editurl = (new moodle_url('/h5p/edit.php', ['url' => $url]))->out(false);
-            }
-        }
-
-        $template->extraactions = [];
-        foreach ($extraactions as $action) {
-            $template->extraactions[] = $action->export_for_template($OUTPUT);
-        }
-
-        $result = $OUTPUT->render_from_template('core_h5p/h5pembed', $template);
-        $result .= $this->get_resize_code();
-        return $result;
-    }
-
-    /**
-     * Ported from core_h5p\player::get_resize_code().
-     *
-     * @return string
-     */
-    protected function get_resize_code(): string {
-        global $OUTPUT;
-
-        $template = new stdClass();
-        $template->resizeurl = autoloader::get_h5p_core_library_url('js/h5p-resizer.js');
-
-        return $OUTPUT->render_from_template('core_h5p/h5presize', $template);
     }
 
     /**
