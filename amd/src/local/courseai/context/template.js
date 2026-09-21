@@ -23,53 +23,17 @@
  * (which template_mode.js listens to, loading the structure), and unlocks the
  * composer; the line's × clears it and the column offers the list again. The
  * page can attach one itself too (?templateid=). Opening and closing the
- * template layout (the `is-template` class, the shared ids, the professor's
- * text carried between composers) lives here too, for start_path.js to drive.
- *
- * The two layouts share the ids of their thread and decision elements
- * (data-shared-id): only the column that is active carries them, so every
- * module that looks an id up finds the element that is on screen.
+ * template layout itself lives in template_layout.js; the list the picker
+ * opens below itself lives in template_list.js. This module is what ties a
+ * chosen template's id to both of those and to the picker line's own chrome.
  *
  * @module     local_coursegen/local/courseai/context/template
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {escapeHtml} from 'local_coursegen/local/courseai/utils';
-
-/** The list a template is picked from: its <ul> and its search box. */
-const LISTS = [
-    {list: 'templateListTpl', search: 'templateSearchTpl'},
-];
-
-/** Index of the keyboard-highlighted row within the currently filtered list. */
-let activeIndex = -1;
-
-/**
- * Give the shared ids to the column that is active and take them from the other.
- *
- * @param {boolean} templateActive
- */
-const claimSharedIds = (templateActive) => {
-    const templateColumn = document.getElementById('templateModeView');
-    document.querySelectorAll('[data-shared-id]').forEach((el) => {
-        const inTemplate = !!templateColumn && templateColumn.contains(el);
-        if (inTemplate === templateActive) {
-            el.id = el.dataset.sharedId;
-        } else {
-            el.removeAttribute('id');
-        }
-    });
-};
-
-/**
- * Whether the starting point is fixed: planning has started in the free path,
- * or a generation is running in the template path.
- *
- * @returns {boolean}
- */
-const isLocked = () => (document.getElementById('courseaiWorkspace')?.classList.contains('is-planning') ?? false)
-    || document.body.classList.contains('cg-generating');
+import {createTemplateList} from 'local_coursegen/local/courseai/context/template_list';
+import {isLocked, setTemplateLayout, setPickerValue} from 'local_coursegen/local/courseai/context/template_layout';
 
 /**
  * Create template interaction handlers.
@@ -98,119 +62,11 @@ export const createTemplateHandlers = ({state, texts}) => {
         return (state.templates || []).find((t) => String(t.id) === String(state.selectedTemplateId)) || null;
     };
 
-    /**
-     * The templates the current search query matches, in list order.
-     *
-     * @returns {Array}
-     */
-    const getFilteredTemplates = () => {
-        const query = (state.templateSearchQuery || '').toLowerCase();
-        return (state.templates || []).filter((t) =>
-            !query ||
-            (t.name || '').toLowerCase().includes(query) ||
-            (t.coursefullname || '').toLowerCase().includes(query)
-        );
-    };
-
-    /**
-     * Move the keyboard-highlighted row.
-     *
-     * @param {number} delta +1 or -1
-     */
-    const moveActive = (delta) => {
-        const filtered = getFilteredTemplates();
-        if (filtered.length === 0) {
-            return;
-        }
-        let base = activeIndex;
-        if (base < 0) {
-            base = -1;
-        }
-        activeIndex = (base + delta + filtered.length) % filtered.length;
-        renderTemplateLists();
-    };
-
-    /**
-     * Choose whichever row the keyboard is currently on.
-     */
-    const pickActive = () => {
-        const filtered = getFilteredTemplates();
-        const template = filtered[activeIndex] || filtered[0];
-        if (template) {
-            selectTemplate(template.id);
-        }
-    };
-
-    /**
-     * One template's row markup for the combo list.
-     *
-     * @param {Object} t
-     * @param {number} index
-     * @returns {string}
-     */
-    const templateComboRowHtml = (t, index) => {
-        const isSelected = String(state.selectedTemplateId) === String(t.id);
-        const isActive = index === activeIndex;
-        let rowClass = 'tpl-combo-item';
-        if (isSelected) {
-            rowClass += ' selected';
-        }
-        if (isActive) {
-            rowClass += ' is-active';
-        }
-        return `
-                    <li class="${rowClass}"
-                        id="tplComboItem-${t.id}" data-select="${t.id}"
-                        role="option" aria-selected="${isSelected}">
-                        <span class="tpl-combo-item-name">${escapeHtml(t.name)}</span>
-                        <span class="tpl-combo-item-course">${escapeHtml(t.coursefullname || '')}</span>
-                        <svg class="tpl-combo-item-check" width="14" height="14" viewBox="0 0 24 24" fill="none"
-                             stroke="currentColor" stroke-width="2.6" stroke-linecap="round" stroke-linejoin="round"
-                             aria-hidden="true">
-                            <path d="M5 12.5l4.5 4.5L19 7.5"/>
-                        </svg>
-                    </li>
-                `;
-    };
-
-    /**
-     * Wire every row's click in one rendered combo list.
-     *
-     * @param {HTMLElement} el
-     */
-    const wireTemplateComboRows = (el) => {
-        el.querySelectorAll('.tpl-combo-item[data-select]').forEach((row) => {
-            row.addEventListener('click', () => selectTemplate(row.getAttribute('data-select')));
-        });
-    };
-
-    /**
-     * Render one template combo list element with the filtered templates.
-     *
-     * @param {Array} filtered
-     * @param {string} listId
-     */
-    const renderOneTemplateList = (filtered, listId) => {
-        const el = document.getElementById(listId);
-        if (!el) {
-            return;
-        }
-        if (filtered.length === 0) {
-            el.innerHTML = `<li class="tpl-combo-empty">${escapeHtml(texts.courseai_no_results || '')}</li>`;
-            return;
-        }
-        el.innerHTML = filtered.map(templateComboRowHtml).join('');
-        wireTemplateComboRows(el);
-    };
-
-    /**
-     * Render every template list that exists on the page: one line per
-     * template, the chosen one carrying a check instead of a radio.
-     */
-    const renderTemplateLists = () => {
-        const filtered = getFilteredTemplates();
-        LISTS.forEach(({list}) => renderOneTemplateList(filtered, list));
-    };
+    const {renderTemplateLists, moveActive, pickActive, resetActive} = createTemplateList({
+        state,
+        texts,
+        onSelect: (id) => selectTemplate(id),
+    });
 
     /**
      * Name the chosen template on the picker line, and let the composer be
@@ -290,72 +146,9 @@ export const createTemplateHandlers = ({state, texts}) => {
         if (open) {
             search.value = '';
             state.templateSearchQuery = '';
-            activeIndex = -1;
+            resetActive();
             search.focus();
         }
-    };
-
-    /**
-     * Carry the professor's text from one composer to the other.
-     *
-     * @param {string} fromId
-     * @param {string} toId
-     */
-    const carryPrompt = (fromId, toId) => {
-        const from = document.getElementById(fromId);
-        const to = document.getElementById(toId);
-        if (!from || !to) {
-            return;
-        }
-        if (from.value.trim() !== '' || to.value.trim() === '') {
-            to.value = from.value;
-        }
-        to.dispatchEvent(new Event('input', {bubbles: true}));
-    };
-
-    /**
-     * Open or close the template layout.
-     *
-     * @param {boolean} on
-     */
-    const setTemplateLayout = (on) => {
-        const workspace = document.getElementById('courseaiWorkspace');
-        if (!workspace) {
-            return;
-        }
-        // Always align the shared ids with what's being asked for: this runs
-        // once at boot too, to settle a page the server already rendered
-        // into the template layout, and claimSharedIds() only ever looks at
-        // where each element currently sits, so repeating it is harmless.
-        claimSharedIds(on);
-        const wasOn = workspace.classList.contains('is-template');
-        if (on === wasOn) {
-            return;
-        }
-        workspace.classList.toggle('is-template', on);
-        if (on) {
-            carryPrompt('promptInput', 'tplPromptInput');
-        } else {
-            carryPrompt('tplPromptInput', 'promptInput');
-        }
-    };
-
-    /**
-     * Tell the native picker which template is attached; template_mode.js
-     * listens to its 'change' and loads or clears the structure. The change
-     * is always dispatched: for a template named in the address the server
-     * has already given the select that value, and the structure still has
-     * to load.
-     *
-     * @param {string} value
-     */
-    const setPickerValue = (value) => {
-        const select = document.getElementById('id_templateid');
-        if (!select) {
-            return;
-        }
-        select.value = value;
-        select.dispatchEvent(new Event('change', {bubbles: true}));
     };
 
     /**
