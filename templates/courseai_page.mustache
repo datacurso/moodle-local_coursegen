@@ -592,8 +592,8 @@
          shares with the free thread (data-shared-id) are given to it only
          while it is the active column (context/template.js). -->
     {{! LEFT PANEL — mirrors the free-mode planning chat column (grid col 1,
-        resizable via the shared #cgSplitter). Picker on top, reduced input
-        bar pinned at the bottom. }}
+        resizable via the shared #cgSplitter). Heading and the native picker
+        field on top, reduced input bar pinned at the bottom. }}
     <div class="context-wrap tpl-left-panel" id="templateModeView" data-region="tpl-left-panel">
       <div class="tpl-left-scroll">
         <div class="context-head">
@@ -601,67 +601,58 @@
           <p>{{#str}}courseai_template_subtitle, local_coursegen{{/str}}</p>
         </div>
 
-        {{! Where the template is chosen. Before one is: a button that opens the
-            searchable list right below it. After: the card naming the template,
-            from which course and how big, with Change (the same list) and
-            Remove (back to the button, still on this path). The workspace's
-            `tpl-active` class, set by template_mode.js when the picker's select
-            has a value, decides which of the two shows. }}
+        {{! Where the template is chosen: one line, the height of a field, that
+            opens the list of templates below it. Empty it reads "Choose
+            template"; chosen it names the template and its course, with a
+            small × that clears it. Same height either way, so nothing below
+            moves when a template is picked or removed. The list is the same
+            searchable popover as before, anchored to this line. }}
         <div class="tpl-pick-anchor" id="tplPickAnchor">
-          <button class="tpl-pick" id="tplPickBtn" type="button"
-                  aria-haspopup="dialog" aria-expanded="false" aria-controls="templatesPopoverTpl">
-            <span class="tpl-pick-icon" aria-hidden="true">
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
-                <rect x="3" y="4" width="18" height="16" rx="2"/><path d="M3 10h18M9 10v10"/>
+          <div class="tpl-picker-shell">
+            <button class="tpl-picker" id="tplPicker" type="button"
+                    aria-haspopup="dialog" aria-expanded="false" aria-controls="templatesPopoverTpl">
+              <span class="tpl-picker-text">
+                <span class="tpl-picker-placeholder" id="tplPickerPlaceholder">{{#str}}courseai_template_pick, local_coursegen{{/str}}</span>
+                <span class="tpl-picker-name" id="tplPickerName"></span><span class="tpl-picker-course" id="tplPickerCourse"></span>
+              </span>
+              <svg class="tpl-picker-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M6 9l6 6 6-6"/>
               </svg>
-            </span>
-            <span class="tpl-pick-text">
-              <b>{{#str}}courseai_template_pick, local_coursegen{{/str}}</b>
-              <small>{{#str}}courseai_template_pick_sub, local_coursegen{{/str}}</small>
-            </span>
-            <svg class="tpl-pick-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-              <path d="M6 9l6 6 6-6"/>
-            </svg>
-          </button>
-          <div class="tpl-card" id="tplCard">
-            <span class="tpl-card-thumb" id="tplCardThumb" aria-hidden="true"></span>
-            <span class="tpl-card-text">
-              <b id="tplCardName"></b>
-              <small><span id="tplCardCourse"></span><span id="tplCardStats"></span></small>
-            </span>
-            <span class="tpl-card-actions">
-              <button class="tpl-card-link" id="tplCardChange" type="button"
-                      aria-haspopup="dialog" aria-expanded="false" aria-controls="templatesPopoverTpl">{{#str}}courseai_template_change, local_coursegen{{/str}}</button>
-              <button class="tpl-card-link" id="tplCardRemove" type="button"
-                      aria-label="{{#str}}courseai_chip_remove_template, local_coursegen{{/str}}">{{#str}}remove, core{{/str}}</button>
-            </span>
+            </button>
+            <button class="tpl-picker-clear" id="tplPickerClear" type="button" hidden
+                    aria-label="{{#str}}courseai_chip_remove_template, local_coursegen{{/str}}">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
           </div>
-          <!-- Templates popover (template column): searchable list, opens below the button or the card -->
-        <div class="popover-panel popover-panel--down tpl-pick-popover" id="templatesPopoverTpl" role="dialog" aria-label="{{#str}}courseai_templates_dialog_label, local_coursegen{{/str}}">
-          <button class="pop-close-btn" id="templatesPopoverTplClose" type="button" aria-label="{{#str}}closebuttontitle, core{{/str}}">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
-              <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-            </svg>
-          </button>
-          <div class="pop-search-row">
-            <div class="pop-search-inner">
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <circle cx="11" cy="11" r="8"/>
-                <path d="m21 21-4.35-4.35"/>
+          <!-- Templates popover (template column): searchable list, opens below the picker line -->
+          <div class="popover-panel popover-panel--down tpl-pick-popover" id="templatesPopoverTpl" role="dialog" aria-label="{{#str}}courseai_templates_dialog_label, local_coursegen{{/str}}">
+            <button class="pop-close-btn" id="templatesPopoverTplClose" type="button" aria-label="{{#str}}closebuttontitle, core{{/str}}">
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
               </svg>
-              <input type="text" id="templateSearchTpl" placeholder="{{#str}}courseai_templates_search_placeholder, local_coursegen{{/str}}" autocomplete="off" />
+            </button>
+            <div class="pop-search-row">
+              <div class="pop-search-inner">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                  <circle cx="11" cy="11" r="8"/>
+                  <path d="m21 21-4.35-4.35"/>
+                </svg>
+                <input type="text" id="templateSearchTpl" placeholder="{{#str}}courseai_templates_search_placeholder, local_coursegen{{/str}}" autocomplete="off" />
+              </div>
             </div>
+            <ul class="pop-list" id="templateListTpl" role="listbox" aria-label="{{#str}}courseai_templates_list_label, local_coursegen{{/str}}"></ul>
           </div>
-          <ul class="pop-list" id="templateListTpl" role="listbox" aria-label="{{#str}}courseai_templates_list_label, local_coursegen{{/str}}"></ul>
-        </div>
         </div>
 
         {{! The native picker form stays in the DOM, hidden: its <select> is the
-            value template_mode.js listens to, and the list above drives it. }}
+            value template_mode.js listens to (and the server gives it the
+            preselected template, ?templateid=). The line above is what the
+            professor sees and drives that select. }}
         <div class="hidden" id="templateModeCard">
           {{{templatepickerformhtml}}}
         </div>
-
 
         {{! Thread feed — the professor's own instruction is re-stated here as a
             turn once generation starts, because the composer that held it is put
