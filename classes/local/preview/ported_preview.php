@@ -39,6 +39,8 @@ use stdClass;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 abstract class ported_preview extends activity_preview {
+    use ported_module_intro;
+
     /** @var array The activity as the payload describes it: the mould or the kept one. */
     protected array $source;
 
@@ -235,27 +237,4 @@ abstract class ported_preview extends activity_preview {
         return $DB->get_record($table, $conditions);
     }
 
-    /**
-     * The module's description formatted the way format_module_intro() formats it.
-     *
-     * Copied from lib/weblib.php format_module_intro() (Moodle 4.5), with the
-     * context handed in rather than looked up from a course module id.
-     *
-     * @param stdClass $activity The module's row.
-     * @param bool $filter
-     * @return string
-     */
-    protected function module_intro(stdClass $activity, bool $filter = true): string {
-        $context = $this->context();
-        $options = ['noclean' => true, 'para' => false, 'filter' => $filter, 'context' => $context, 'overflowdiv' => true];
-        $intro = file_rewrite_pluginfile_urls(
-            (string) ($activity->intro ?? ''),
-            'pluginfile.php',
-            $context->id,
-            'mod_' . $this->modname(),
-            'intro',
-            null
-        );
-        return trim(format_text($intro, (int) ($activity->introformat ?? FORMAT_HTML), $options, null));
-    }
 }
