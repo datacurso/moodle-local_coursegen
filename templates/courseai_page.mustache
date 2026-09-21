@@ -113,6 +113,10 @@
          bar names it and leads back. -->
     <div class="context-wrap" id="contextView">
 
+      <div class="courseai-modebar-slot courseai-modebar-slot--hero">
+        {{> local_coursegen/start_modebar }}
+      </div>
+
       <div class="courseai-context-editor" id="courseaiContextEditor">
 
       <div class="context-head">
@@ -596,6 +600,9 @@
         field on top, reduced input bar pinned at the bottom. }}
     <div class="context-wrap tpl-left-panel" id="templateModeView" data-region="tpl-left-panel">
       <div class="tpl-left-scroll">
+        <div class="courseai-modebar-slot courseai-modebar-slot--column">
+          {{> local_coursegen/start_modebar }}
+        </div>
         <div class="context-head">
           <h2>{{#str}}courseai_template_title, local_coursegen{{/str}}</h2>
           <p>{{#str}}courseai_template_subtitle, local_coursegen{{/str}}</p>
