@@ -16,58 +16,59 @@
 
 namespace local_coursegen\local\preview;
 
+use local_coursegen\local\preview\choice\view;
+
 /**
- * A choice's options, drawn the way mod_choice draws them.
- *
- * The activity is its question and the options under it, so both are shown,
- * with the options disabled: there is nothing to answer yet.
+ * A choice, drawn by mod_choice's own view code run against the payload.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class choice_preview extends activity_preview {
+class choice_preview extends ported_preview {
     /**
-     * The options, as the choice offers them.
+     * The module's short name.
      *
      * @return string
      */
-    public function render(): string {
-        global $OUTPUT;
-
-        $options = $this->options();
-        if (!$options) {
-            return $this->nothing_yet();
-        }
-
-        $items = '';
-        foreach ($options as $option) {
-            $items .= \html_writer::div(
-                \html_writer::empty_tag('input', ['type' => 'radio', 'disabled' => 'disabled', 'class' => 'me-2'])
-                    . \html_writer::tag('label', format_string($option)),
-                'option d-flex align-items-center'
-            );
-        }
-
-        return $OUTPUT->box(
-            \html_writer::div($items, 'choices')
-                . \html_writer::tag('button', get_string('savemychoice', 'choice'), [
-                    'type' => 'button',
-                    'class' => 'btn btn-primary mt-3',
-                    'disabled' => 'disabled',
-                ]),
-            'generalbox choicecontainer'
-        );
+    protected function modname(): string {
+        return 'choice';
     }
 
     /**
-     * The option texts, whichever shape the answer put them in.
+     * A draft's options replace the mould's.
+     *
+     * @param json_store $store
+     */
+    protected function overlay(json_store $store): void {
+        $rows = $store->get_records('choice');
+        $options = $this->drafted_options();
+        if (!$rows || !$options) {
+            return;
+        }
+        $choice = reset($rows);
+        $store->delete_records('choice_options', ['choiceid' => $choice->id]);
+        $now = time();
+        $id = 1;
+        foreach ($options as $text) {
+            $store->add('choice_options', [
+                'id' => $id++,
+                'choiceid' => $choice->id,
+                'text' => $text,
+                'maxanswers' => 0,
+                'timemodified' => $now,
+            ]);
+        }
+    }
+
+    /**
+     * The option texts the plan intends, whichever shape the answer put them in.
      *
      * @return string[]
      */
-    private function options(): array {
-        $options = $this->items('options');
-        if (!$options) {
+    private function drafted_options(): array {
+        $options = $this->parameters['options'] ?? null;
+        if (!is_array($options)) {
             $options = [];
             foreach ($this->parameters as $key => $value) {
                 if (preg_match('/^option\[?\d+\]?$/', (string) $key) && trim((string) $value) !== '') {
@@ -76,7 +77,6 @@ class choice_preview extends activity_preview {
             }
             return $options;
         }
-
         $texts = [];
         foreach ($options as $option) {
             $text = is_array($option) ? (string) ($option['text'] ?? $option['option'] ?? '') : (string) $option;
@@ -85,6 +85,20 @@ class choice_preview extends activity_preview {
             }
         }
         return $texts;
+    }
+
+    /**
+     * The choice page, as mod/choice/view.php draws it.
+     *
+     * @return string
+     */
+    public function render(): string {
+        $choice = $this->instance();
+        if ($choice === null) {
+            return $this->nothing_yet();
+        }
+        $view = new view($choice, $this->cm(), $this->course(), $this->context(), $this->store(), $this->url_to());
+        return $view->page();
     }
 
     /**

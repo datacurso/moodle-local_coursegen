@@ -77,6 +77,19 @@ class json_store {
     }
 
     /**
+     * Take out the rows of a table that match, the way $DB->delete_records() does.
+     *
+     * @param string $table
+     * @param array $conditions
+     */
+    public function delete_records(string $table, array $conditions = []): void {
+        $this->rows[$table] = array_values(array_filter(
+            $this->rows[$table] ?? [],
+            fn(stdClass $row): bool => !$this->matches($row, $conditions)
+        ));
+    }
+
+    /**
      * Change one value of one row.
      *
      * A plan lays what it intends to write over the mould it will be written
