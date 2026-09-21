@@ -260,8 +260,256 @@ svg { display: block; flex-shrink: 0; }
    the card visibly jumps to the top the moment the structure loads and the
    page grows taller than the viewport. Anchor template mode to the top from
    the very first paint instead, so picking a template never shifts it. */
-.courseai-workspace:has(#templateModeView) {
+.courseai-workspace.is-template {
   justify-content: flex-start;
+}
+
+/* Both paths live in the DOM from the first paint; the starting point chosen
+   on the first screen decides which one shows (start_path.js). */
+.courseai-workspace:not(.is-template) #templateModeView,
+.courseai-workspace:not(.is-template) #tplModeMain,
+.courseai-workspace.is-template #contextView {
+  display: none;
+}
+
+/* ─── STEP ONE: HOW DO YOU WANT TO START ─────────────────────────────────
+   Two cards, centred, and nothing else: the paths, the splitter and the
+   planning column stay out of the way until a card is picked. */
+.courseai-workspace { position: relative; }
+.courseai-start { display: none; }
+.courseai-workspace.is-choosing .courseai-start {
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+}
+.courseai-workspace.is-choosing #contextView,
+.courseai-workspace.is-choosing #templateModeView,
+.courseai-workspace.is-choosing #tplModeMain,
+.courseai-workspace.is-choosing .cg-splitter,
+.courseai-workspace.is-choosing #planningView {
+  display: none !important;
+}
+.courseai-start-inner {
+  width: min(820px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+}
+.courseai-start-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  text-align: center;
+  color: var(--fg);
+}
+.courseai-start-subtitle {
+  margin: -10px 0 0;
+  color: var(--muted-fg);
+  font-size: 15px;
+  text-align: center;
+}
+.courseai-start-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  width: 100%;
+}
+.courseai-start-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 220px;
+  padding: 22px 22px 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+  text-align: left;
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+  transition: transform var(--t-base) var(--ease), border-color var(--t-base) var(--ease), box-shadow var(--t-base) var(--ease);
+}
+.courseai-start-card:hover,
+.courseai-start-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--muted-fg);
+  box-shadow: var(--shadow-elevated);
+}
+.courseai-start-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.courseai-start-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+}
+.courseai-start-card--free .courseai-start-icon { background: var(--brand-soft); color: var(--brand); }
+.courseai-start-card--template .courseai-start-icon { background: var(--tpl-tint); color: var(--tpl-tint-fg); }
+.courseai-start-card-title { font-size: 18px; font-weight: 700; }
+.courseai-start-card-desc { color: var(--muted-fg); font-size: 14.5px; line-height: 1.45; }
+.courseai-start-card-for {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted-fg);
+  font-size: 13px;
+}
+.courseai-start-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--muted);
+  color: var(--muted-fg);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.courseai-start-note { margin: 0; color: var(--muted-fg); font-size: 13px; text-align: center; }
+@media (max-width: 720px) {
+  .courseai-start-cards { grid-template-columns: 1fr; }
+}
+
+/* ─── THE BAR NAMING THE CHOSEN STARTING POINT ───────────────────────────
+   Above the free hero and at the top of the template column. Both chips are
+   in the markup; the bar's data-start-path picks one. */
+:root {
+  --tpl-tint: hsl(190, 60%, 94%);
+  --tpl-tint-fg: hsl(190, 60%, 28%);
+}
+.courseai-modebar {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 40px;
+}
+.courseai-modebar-slot { width: 100%; flex: 0 0 auto; }
+/* On the free landing the bar sits at the top-left of the whole area, not
+   inside the centred island; while planning, the column is the area. */
+.courseai-workspace:not(.is-planning) .courseai-modebar-slot--hero {
+  position: absolute;
+  top: 0;
+  left: 0;
+  right: 0;
+  padding: 14px 24px 0;
+}
+.courseai-workspace.is-planning .courseai-modebar-slot--hero { padding: 0 0 6px; }
+.courseai-modebar-slot--column .courseai-modebar-change { display: none; }
+.courseai-modebar-back {
+  width: 32px;
+  height: 32px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--muted-fg);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+}
+.courseai-modebar-back:hover { background: var(--muted); color: var(--fg); }
+.courseai-modebar-back:disabled { opacity: .45; cursor: not-allowed; }
+.courseai-modebar-crumb {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  color: var(--muted-fg);
+  font-size: 13px;
+  white-space: nowrap;
+}
+.courseai-modebar-chip {
+  display: none;
+  align-items: center;
+  gap: 7px;
+  height: 28px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 13.5px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+.courseai-modebar[data-start-path="free"] .courseai-modebar-chip--free,
+.courseai-modebar[data-start-path="template"] .courseai-modebar-chip--template { display: inline-flex; }
+.courseai-modebar-chip--free { background: var(--brand-soft); color: var(--brand); }
+.courseai-modebar-chip--template { background: var(--tpl-tint); color: var(--tpl-tint-fg); }
+.courseai-modebar-change {
+  margin-left: auto;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--muted-fg);
+  font: inherit;
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+  white-space: nowrap;
+}
+.courseai-modebar-change:hover { color: var(--fg); }
+.courseai-modebar.is-locked .courseai-modebar-change { display: none; }
+
+/* ─── TEMPLATE PATH: BEFORE AND AFTER A TEMPLATE IS CHOSEN ───────────────
+   template_mode.js sets `tpl-active` on the workspace while the picker's
+   select has a value; that class swaps the button for the card and hides
+   both empty states. */
+.tpl-pick-anchor { position: relative; }
+.tpl-pick {
+  display: grid;
+  grid-template-columns: 36px minmax(0, 1fr) auto;
+  gap: 12px;
+  align-items: center;
+  width: 100%;
+  padding: 10px 12px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
+  background: var(--card);
+  text-align: left;
+  color: var(--muted-fg);
+  font: inherit;
+  cursor: pointer;
+}
+.tpl-pick:hover,
+.tpl-pick[aria-expanded="true"] { border-color: var(--muted-fg); color: var(--fg); }
+.tpl-pick-icon {
+  width: 36px;
+  height: 36px;
+  border-radius: 9px;
+  background: var(--muted);
+  color: var(--fg);
+  display: grid;
+  place-items: center;
+}
+.tpl-pick-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.tpl-pick-text b { font-weight: 600; color: var(--fg); font-size: 14px; }
+.tpl-pick-text small { font-size: 12.5px; }
+.tpl-pick-chevron { color: var(--muted-fg); }
+.tpl-pick-anchor .tpl-pick-popover { left: 0; right: 0; width: auto; }
+.courseai-workspace.is-template.tpl-active #tplPickBtn,
+.courseai-workspace.is-template.tpl-active #tplPickHint,
+.courseai-workspace.is-template.tpl-active #tplModeEmpty,
+.courseai-workspace.is-template:not(.tpl-active) #tplCard { display: none; }
+.tpl-pick-hint,
+.tpl-structure-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  color: var(--muted-fg);
+  font-size: 14px;
+}
+.tpl-pick-hint { margin: auto 0; padding: 24px 12px; }
+.tpl-pick-hint svg, .tpl-structure-empty svg { color: var(--muted-fg); opacity: .8; }
+.tpl-pick-hint b, .tpl-structure-empty b { color: var(--fg); font-weight: 600; }
+.tpl-structure-empty {
+  padding: 36px 24px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
 }
 
 /* .context-wrap's default max-width:768px + margin:0 auto (below) centers it
@@ -274,15 +522,6 @@ svg { display: block; flex-shrink: 0; }
   margin: 0;
 }
 
-/* #templateModeCard never shows a border/shadow — flat at every state, no
-   dependence on selection: nothing about the selector itself (border, size,
-   position) ever changes, so picking a template can't shift it or make it
-   read as "locked". */
-#templateModeCard {
-  border-color: transparent;
-  box-shadow: none;
-}
-
 /* Before a template is picked, core/form-autocomplete renders its
    noselectionstring as a floating hint span sitting above the search box —
    two stacked rows for one single field. The search input's own "Search"
@@ -292,13 +531,48 @@ svg { display: block; flex-shrink: 0; }
   display: none;
 }
 
-/* Empty-state notification (#tplModeEmpty, real core/notification "info"
-   markup): marks where the template's structure will render in the main
-   column, shown until a template is picked. template_mode.js sets .tpl-active
-   on the workspace on the autocomplete's 'change' event. */
-.courseai-workspace.tpl-active #tplModeEmpty {
-  display: none;
+/* The attached template, at the top of the left column. */
+.tpl-card {
+  display: grid;
+  grid-template-columns: 40px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: center;
+  padding: 8px 10px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
 }
+.tpl-card-thumb {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: hsl(200, 30%, 40%);
+  color: #fff;
+  display: grid;
+  place-items: center;
+  font-size: 12px;
+  font-weight: 700;
+  letter-spacing: .02em;
+}
+.tpl-card-text { display: flex; flex-direction: column; min-width: 0; line-height: 1.25; }
+.tpl-card-text b { font-weight: 600; font-size: 14px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.tpl-card-text small { color: var(--muted-fg); font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+#tplCardStats:not(:empty)::before { content: " · "; }
+.tpl-card-actions { display: flex; gap: 10px; }
+.tpl-card-link {
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--muted-fg);
+  font-size: 13px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  white-space: nowrap;
+  cursor: pointer;
+}
+.tpl-card-link:hover { color: var(--fg); }
+.tpl-card-link:disabled { text-decoration: none; opacity: .5; cursor: default; }
+
 
 /* ─── TEMPLATE MODE LAYOUT ───────────────────────────────────────────────
    Template mode reuses the free-mode planning grid (see the shared
