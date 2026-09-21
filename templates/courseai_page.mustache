@@ -647,11 +647,54 @@
             log and working-indicator modules find them by id, and the two blocks
             are mutually exclusive, so the ids never collide. }}
         <div class="cg-log cg-thread-feed" id="cgLog" aria-live="polite"></div>
+
+        {{! One row per activity the AI is planning, exactly the checklist free
+            mode builds while it plans its own sections: the same group head,
+            the same spinner that becomes a check, and the same detail slot
+            underneath, which here holds that activity's plan. }}
+        <div class="courseai-checklist cg-thread-checklist hidden" id="courseaiChecklist">
+          <div class="cg-group-head" role="button" tabindex="0" aria-expanded="true">
+            <span class="cg-group-chevron" aria-hidden="true">⌄</span>
+            <span class="cg-group-avatar" aria-hidden="true"></span>
+            <span class="cg-group-title">{{#str}}courseai_template_log_planned, local_coursegen{{/str}}</span>
+            <span class="cg-group-count"></span>
+          </div>
+          <ul class="courseai-checklist-list" id="courseaiChecklistList"></ul>
+        </div>
+
+        {{! Everything said after the plan settles, which is where free mode
+            puts its own post-plan turns too. }}
+        <div class="cg-log cg-thread-feed" id="cgLogAfter" aria-live="polite"></div>
       </div>
 
       {{! Bottom slot — free mode pins its live "working" indicator here whenever
           the composer is away, which in template mode is the whole generation. }}
       <div class="cg-working-slot" id="cgWorkingSlot" aria-live="polite"></div>
+
+      {{! The decision itself, in the composer's own slot at the bottom of this
+          column, exactly where free mode puts it: the thread above stays
+          readable, only the field to write in is replaced. Same ids, so the
+          decision-overlay module drives it with no code of its own; the two
+          mode blocks are mutually exclusive, so the ids never collide.
+          There is no control here for adding, deleting or reordering: free mode
+          offers those because the structure is its own proposal, and here it
+          belongs to the template. }}
+      <div class="cg-decision-overlay" id="cgDecisionOverlay" style="display:none" role="group"
+           aria-label="{{#str}}courseai_template_review_title, local_coursegen{{/str}}">
+        <div class="cg-decision-card">
+          <p class="cg-decision-title">{{#str}}courseai_template_review_title, local_coursegen{{/str}}</p>
+          <p class="cg-decision-subtitle">{{#str}}courseai_template_review_hint, local_coursegen{{/str}}</p>
+          <div class="cg-decision-body" id="cgDecisionBody"></div>
+          <div class="cg-decision-actions">
+            <button class="cg-decision-btn cg-decision-btn--accept" id="cgDecisionAccept" type="button">
+              {{#str}}courseai_template_review_approve, local_coursegen{{/str}}
+            </button>
+            <button class="cg-decision-btn cg-decision-btn--adjust" id="cgDecisionAdjust" type="button">
+              {{#str}}courseai_template_review_adjust, local_coursegen{{/str}}
+            </button>
+          </div>
+        </div>
+      </div>
 
       {{! Reduced input bar — chat-composer style, pinned at the panel bottom.
           Only syllabus attach, generate-images toggle, language select and the
@@ -758,6 +801,12 @@
         <div id="tplModeLimits" class="mb-3 tpl-badge-row" style="display:none">
           <span class="badge badge-light border" id="tplModeStats"></span>
           <span class="badge badge-light border" id="tplModeLimitsBadge"></span>
+          {{! Opens the whole course as it will be delivered. Hidden until a
+              run exists, because there is nothing to preview before one does. }}
+          <a href="#" class="btn btn-link btn-sm p-0 ms-2" id="tplPreviewCourse" target="_blank" rel="noopener" hidden>
+            {{#pix}} i/preview, core {{/pix}}
+            {{#str}}courseai_preview_course, local_coursegen{{/str}}
+          </a>
         </div>
 
         {{! Live generation status — hidden until Generate is pressed, then fed

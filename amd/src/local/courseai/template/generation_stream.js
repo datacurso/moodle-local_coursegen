@@ -22,18 +22,20 @@
  * its SSE endpoint. So this module is not a progress decoration on top of a
  * background job - it is the job.
  *
- * It renders nothing. Free mode's generation view works by putting the page in
- * `body.cg-generating` and stamping one of three status classes on each
- * activity row that already exists; every visual state (dimmed and desaturated
- * while pending, a spinner on the icon while running, a check badge when done,
- * edit controls hidden throughout) comes from the shared stylesheet. Doing the
- * same here is what keeps the two modes looking like one product instead of
- * two: there is no second design to keep in sync, because there is no second
- * design.
+ * The run is planned first, stops so the professor can read and approve the
+ * plan, and only generates once it is approved; asking for changes plans
+ * again and stops again, which is why runGenerationStream loops. Watching one
+ * pass of the SSE connection lives in generation_watch.js; turning a decoded
+ * event into a DOM update lives in generation_events.js. This module owns the
+ * phase label and the generating/not-generating view state, and passes both
+ * of the others what they need as callbacks rather than importing them
+ * circularly.
  *
- * Progress is reported per activity and keyed by the activity's own id, never
- * by arrival order: activities are generated concurrently, so the order they
- * finish in says nothing about which one just landed.
+ * It renders nothing beyond that. Free mode's generation view works by
+ * putting the page in `body.cg-generating` and stamping one of three status
+ * classes on each activity row that already exists; every visual state comes
+ * from the shared stylesheet. Doing the same here is what keeps the two modes
+ * looking like one product instead of two.
  *
  * @module     local_coursegen/local/courseai/template/generation_stream
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -41,22 +43,24 @@
  */
 
 import {getStrings} from 'core/str';
-import {createLog} from 'local_coursegen/local/courseai/ui/log';
+import {askForDecision, clearPlans} from 'local_coursegen/local/courseai/template/plan_review';
 import {
-    hideWorkingIndicator,
-    showWorkingIndicator,
-} from 'local_coursegen/local/courseai/ui/feedback-progress';
-
-/** The status classes the shared generation stylesheet reacts to. */
-const STATUS_CLASS = {
-    pending: 'cg-gen-pending',
-    running: 'cg-gen-active',
-    done: 'cg-gen-done',
-};
-const ALL_STATUS_CLASSES = Object.values(STATUS_CLASS);
+    announceTemplate,
+    milestone,
+    resetThread,
+    restorePicker,
+    turn,
+} from 'local_coursegen/local/courseai/template/thread';
+import {sendTemplatePlanningFeedback} from 'local_coursegen/local/courseai/template/repository';
+import {hideWorkingIndicator, showWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
+import {ALL_STATUS_CLASSES, STATUS_CLASS, applyEvent} from 'local_coursegen/local/courseai/template/generation_events';
+import {watchOnce} from 'local_coursegen/local/courseai/template/generation_watch';
+import {hideHeader, markHeaderDone, showGeneratingHeader} from 'local_coursegen/local/courseai/template/generation_header';
 
 /** Phase keys the service reports, plus the two this module owns. */
 const STAGE_STRINGS = {
+    planning: 'courseai_template_stage_planning',
+    reviewing: 'courseai_template_stage_reviewing',
     style: 'courseai_template_stage_style',
     activities: 'courseai_template_stage_activities',
     activity_images: 'courseai_template_stage_activity_images',
@@ -89,32 +93,8 @@ const getLabels = async() => {
     return labels;
 };
 
-/** The left panel's thread feed, built on the shared log module. */
-let log = null;
-const getLog = () => {
-    if (!log) {
-        log = createLog({container: document.getElementById('cgLog')});
-    }
-    return log;
-};
-
 /** Every activity row the AI is going to generate. */
 const generatedRows = () => document.querySelectorAll('[data-generation-cmid]');
-
-/**
- * Mark one activity row with the state its generation is in.
- *
- * @param {number|string} cmid
- * @param {string} status A key of STATUS_CLASS.
- */
-const markRow = (cmid, status) => {
-    const row = document.querySelector(`[data-generation-cmid="${cmid}"]`);
-    if (!row) {
-        return;
-    }
-    row.classList.remove(...ALL_STATUS_CLASSES);
-    row.classList.add(STATUS_CLASS[status] || STATUS_CLASS.pending);
-};
 
 /**
  * Show one phase label in the header's subtitle.
@@ -141,9 +121,9 @@ const paintStage = async(key) => {
  * Put the page in its generating state: header visible and spinning, every
  * activity the AI will generate dimmed and waiting, edit controls gone.
  *
- * @param {string} prompt The professor's own instruction, restated as a turn.
+ * @param {Object} context {prompt, templateName} for the opening turns.
  */
-const openView = async(prompt) => {
+const openView = async(context) => {
     document.body.classList.add('cg-generating');
 
     // The composer goes away for the duration, the way free mode's does: there
@@ -154,31 +134,15 @@ const openView = async(prompt) => {
     if (composer) {
         composer.hidden = true;
     }
-    if (String(prompt || '').trim()) {
-        getLog().add({actor: 'user', kind: 'user', message: String(prompt).trim()});
-    }
+    resetThread();
+    await announceTemplate(context.templateName);
+    turn('user', 'user', String(context.prompt || '').trim());
+    milestone('courseai_template_log_planning');
     generatedRows().forEach((row) => {
         row.classList.remove(...ALL_STATUS_CLASSES);
         row.classList.add(STATUS_CLASS.pending);
     });
-
-    const header = document.getElementById('tplGenHeader');
-    const spinner = document.getElementById('tplGenSpinnerIcon');
-    const check = document.getElementById('tplGenCheckIcon');
-    const title = document.getElementById('tplGenTitle');
-    if (header) {
-        header.hidden = false;
-        header.classList.remove('prv-header--done');
-    }
-    if (spinner) {
-        spinner.style.display = '';
-    }
-    if (check) {
-        check.style.display = 'none';
-    }
-    if (title) {
-        title.textContent = (await getLabels()).title;
-    }
+    showGeneratingHeader((await getLabels()).title);
 };
 
 /**
@@ -190,146 +154,72 @@ const closeView = (message) => {
     document.body.classList.remove('cg-generating');
     generatedRows().forEach((row) => row.classList.remove(...ALL_STATUS_CLASSES));
     hideWorkingIndicator();
-    const header = document.getElementById('tplGenHeader');
-    if (header) {
-        header.hidden = true;
-    }
+    hideHeader();
     const composer = document.getElementById('tplInputBar');
     if (composer) {
         composer.hidden = false;
     }
+    restorePicker();
     if (message) {
-        getLog().add({actor: 'ai', kind: 'danger', message});
+        turn('ai', 'danger', message);
     }
 };
 
 /**
- * Swap the header's spinner for its check.
- *
- * Free mode does this only on the terminal event, never when the last activity
- * lands: phases still run after that, and a check while work continues reads
- * as "finished" to someone who is waiting.
- */
-const markHeaderDone = () => {
-    const header = document.getElementById('tplGenHeader');
-    const spinner = document.getElementById('tplGenSpinnerIcon');
-    const check = document.getElementById('tplGenCheckIcon');
-    if (header) {
-        header.classList.add('prv-header--done');
-    }
-    if (spinner) {
-        spinner.style.display = 'none';
-    }
-    if (check) {
-        check.style.display = '';
-    }
-};
-
-/**
- * Apply one decoded stream event.
- *
- * @param {Object} data
- * @param {Object} progress Mutable {total, done} counters.
- * @returns {string} '' to keep listening, otherwise 'completed' or 'failed'.
- */
-const applyEvent = (data, progress) => {
-    switch (data.type) {
-        case 'template_stage':
-            paintStage(data.stage);
-            return '';
-        case 'activity_progress_init':
-            progress.total = Math.max(0, Number(data.total) || 0);
-            progress.done = 0;
-            paintStage('activities');
-            return '';
-        case 'activity_progress_start':
-            markRow(data.cmid, 'running');
-            return '';
-        case 'activity_progress_done':
-        case 'activity_progress_failed':
-            // A failed activity is still counted and still stops looking
-            // "in progress": the run itself then fails, which is what the
-            // professor is told about.
-            markRow(data.cmid, 'done');
-            progress.done += 1;
-            if (progress.total > 0 && progress.done >= progress.total) {
-                paintStage('saving');
-            }
-            return '';
-        case 'completed':
-            return 'completed';
-        case 'failed':
-            return 'failed';
-        default:
-            return '';
-    }
-};
-
-/**
- * Run one generation and resolve when its course has been built.
+ * Run one generation, pausing for the professor's review, and resolve when
+ * the course has been built.
  *
  * @param {string} streamUrl SSE endpoint returned by start_template_generation.
  * @param {Function} buildCourse Called once the run completes; resolves to {courseurl}.
- * @param {string} prompt The professor's instruction, restated in the feed.
+ * @param {number} sessionId Session the review answers belong to.
+ * @param {Object} context {prompt, templateName}, for the opening turns.
  * @returns {Promise<Object>} The built course, as buildCourse resolved it.
  */
-export const runGenerationStream = async(streamUrl, buildCourse, prompt) => {
-    await openView(prompt);
+export const runGenerationStream = async(streamUrl, buildCourse, sessionId, context) => {
+    await openView(context);
+    clearPlans();
     await paintStage('connecting');
 
-    return new Promise((resolve, reject) => {
-        const progress = {total: 0, done: 0};
-        const source = new EventSource(streamUrl);
-        let settled = false;
+    const progress = {total: 0, done: 0};
+    for (;;) {
+        // eslint-disable-next-line no-await-in-loop
+        const {outcome, data} = await watchOnce(
+            streamUrl,
+            progress,
+            (eventData, eventProgress) => applyEvent(eventData, eventProgress, paintStage),
+            closeView
+        );
 
-        const finish = (action) => {
-            if (settled) {
-                return;
-            }
-            settled = true;
-            source.close();
-            action();
-        };
+        if (outcome === 'completed') {
+            // The result payload stays server-side: the browser only reports
+            // that the run finished, and Moodle fetches it to build the course.
+            markHeaderDone();
+            paintStage('building');
+            milestone('courseai_template_log_completed');
+            return buildCourse();
+        }
 
-        const fail = (message) => finish(() => {
-            closeView(message);
-            reject(new Error(message));
-        });
+        await paintStage('reviewing');
+        milestone('courseai_template_log_plan_ready');
+        // eslint-disable-next-line no-await-in-loop
+        const decision = await askForDecision(data.template_plan || []);
 
-        source.addEventListener('message', (event) => {
-            let data = null;
-            try {
-                data = JSON.parse(event.data);
-            } catch (e) {
-                return;
-            }
+        if (decision.action === 'accept') {
+            milestone('courseai_template_log_approved', 'user', 'success');
+            milestone('courseai_template_log_generating');
+            await paintStage('style');
+        } else {
+            turn('user', 'user', decision.instruction);
+            milestone('courseai_template_log_adjusting');
+            await paintStage('planning');
+        }
 
-            const outcome = applyEvent(data, progress);
-            if (outcome === 'completed') {
-                // The result payload stays server-side: the browser only reports
-                // that the run finished, and Moodle fetches it to build the course.
-                markHeaderDone();
-                paintStage('building');
-                finish(() => buildCourse().then(resolve).catch(reject));
-            } else if (outcome === 'failed') {
-                fail(data.message || 'The generation could not be completed.');
-            }
-        });
-
-        source.addEventListener('done', () => {
-            // A 'done' with no terminal event before it means the stream ended
-            // without ever saying how: reported as a failure rather than leaving
-            // the professor watching a header that will never resolve.
-            fail('The generation ended unexpectedly.');
-        });
-
-        source.onerror = () => {
-            // EventSource reconnects by itself on a transient drop, reporting
-            // CONNECTING while it does; only a closed connection is a failure.
-            if (source.readyState === EventSource.CONNECTING) {
-                return;
-            }
-            fail('The connection to the generation was lost.');
-        };
-    });
+        // eslint-disable-next-line no-await-in-loop
+        await sendTemplatePlanningFeedback(
+            sessionId,
+            decision.action,
+            decision.targetIds,
+            decision.instruction
+        );
+    }
 };

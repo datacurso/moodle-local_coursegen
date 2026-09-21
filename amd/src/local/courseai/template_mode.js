@@ -95,7 +95,11 @@ const runGeneration = async(tplState, tplSelect, genBtn) => {
         const created = await runGenerationStream(
             started.streamurl,
             () => finishTemplateGeneration(started.sessionid),
-            tplState.prompt || ''
+            started.sessionid,
+            {
+                prompt: tplState.prompt || '',
+                templateName: tplSelect?.options[tplSelect.selectedIndex]?.text || '',
+            }
         );
         window.location.href = created.courseurl;
     } catch (e) {
