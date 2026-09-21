@@ -100,8 +100,7 @@ abstract class activity_preview {
     abstract public function render(): string;
 
     /**
-     * What the module puts in the page header's button slot, if anything.
-     *
+     * What the module puts in the page header's button slot, if anything -
      * mod_wiki puts its search box there. Rendered HTML, or an empty string.
      *
      * @return string
