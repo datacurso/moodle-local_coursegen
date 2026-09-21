@@ -564,6 +564,424 @@ final class template_activity_export_test extends \advanced_testcase {
     }
 
     /**
+     * A Database mold ships its raw description and every instance setting.
+     */
+    public function test_data_exports_intro_and_every_instance_setting(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('data', [
+            'name' => 'Base de datos plantilla prueba',
+            'intro' => self::MARKED_INTRO,
+            'introformat' => FORMAT_HTML,
+            'approval' => 1,
+            'manageapproved' => 0,
+            'comments' => 1,
+            'requiredentries' => 2,
+            'requiredentriestoview' => 1,
+            'maxentries' => 5,
+            'timeavailablefrom' => 1700000000,
+            'timeavailableto' => 1700600000,
+            'timeviewfrom' => 1700100000,
+            'timeviewto' => 1700500000,
+            'editany' => 1,
+            'notification' => 1,
+            'completionentries' => 3,
+            'assessed' => 1,
+            'scale' => 100,
+            'ratingtime' => 1,
+            'assesstimestart' => 1700000000,
+            'assesstimefinish' => 1700600000,
+            'defaultsortdir' => 1,
+            'rssarticles' => 4,
+        ]);
+
+        $this->assertSame('Base de datos plantilla prueba', $params['name']);
+        // Raw: the service parses those markers itself.
+        $this->assertSame(self::MARKED_INTRO, $params['intro']);
+        $this->assertSame(1, (int) $params['approval']);
+        $this->assertSame(0, (int) $params['manageapproved']);
+        $this->assertSame(1, (int) $params['comments']);
+        $this->assertSame(2, (int) $params['requiredentries']);
+        $this->assertSame(1, (int) $params['requiredentriestoview']);
+        $this->assertSame(5, (int) $params['maxentries']);
+        $this->assertSame(1700000000, (int) $params['timeavailablefrom']);
+        $this->assertSame(1700600000, (int) $params['timeavailableto']);
+        $this->assertSame(1700100000, (int) $params['timeviewfrom']);
+        $this->assertSame(1700500000, (int) $params['timeviewto']);
+        $this->assertSame(1, (int) $params['editany']);
+        $this->assertSame(1, (int) $params['notification']);
+        $this->assertSame(3, (int) $params['completionentries']);
+        $this->assertSame(1, (int) $params['assessed']);
+        $this->assertSame(100, (int) $params['scale']);
+        $this->assertSame(1700000000, (int) $params['assesstimestart']);
+        $this->assertSame(1700600000, (int) $params['assesstimefinish']);
+        $this->assertSame(1, (int) $params['defaultsortdir']);
+        $this->assertSame(4, (int) $params['rssarticles']);
+        // Moodle drops the rating window unless this flag says it is in use
+        // (see data_add_instance), exactly as mod_forum does.
+        $this->assertSame(1, (int) $params['ratingtime']);
+    }
+
+    /**
+     * The default sort travels as the field NAME, never as the mold's row id.
+     *
+     * data.defaultsort holds a data_fields.id of THIS database: reused as is it
+     * would point at a foreign field (or at nothing) in the generated one.
+     */
+    public function test_data_exports_its_default_sort_as_a_field_name(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        global $DB;
+        [$course, $data] = $this->make_data_mold();
+        $generator = $this->getDataGenerator()->get_plugin_generator('mod_data');
+        $generator->create_field((object) ['type' => 'text', 'name' => 'Titulo'], $data);
+        $categoria = $generator->create_field((object) ['type' => 'text', 'name' => 'Categoria'], $data);
+
+        // No default sort yet: nothing to name.
+        $this->assertSame('', $this->export_cm($course, $data)['defaultsortfield']);
+
+        $DB->set_field('data', 'defaultsort', $categoria->field->id, ['id' => $data->id]);
+        $params = $this->export_cm($course, $data);
+
+        $this->assertSame('Categoria', $params['defaultsortfield']);
+        $this->assertArrayNotHasKey('defaultsort', $params);
+    }
+
+    /**
+     * The mold's fields travel in creation order, params included.
+     *
+     * The params ARE the field definition (choices, sizes, autolink, ...), so
+     * the generated database reproduces the mold's columns instead of the
+     * plugin's generic per-type guesses.
+     */
+    public function test_data_exports_its_fields_in_order_with_their_params(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $data] = $this->make_data_mold();
+        $generator = $this->getDataGenerator()->get_plugin_generator('mod_data');
+        $generator->create_field((object) [
+            'type' => 'text',
+            'name' => 'Título del Recurso',
+            'description' => 'El título del recurso',
+            'required' => 1,
+        ], $data);
+        $generator->create_field((object) [
+            'type' => 'menu',
+            'name' => 'Categoría / Temática',
+            'param1' => "Artículo\nVideo\nLibro",
+        ], $data);
+        $generator->create_field((object) ['type' => 'textarea', 'name' => 'Resumen y Análisis'], $data);
+
+        $fields = $this->export_cm($course, $data)['mod_settings']['fields'];
+
+        $this->assertCount(3, $fields);
+        $this->assertSame('text', $fields[0]['type']);
+        $this->assertSame('Título del Recurso', $fields[0]['name']);
+        $this->assertSame('El título del recurso', $fields[0]['description']);
+        $this->assertSame(1, $fields[0]['required']);
+        $this->assertSame('menu', $fields[1]['type']);
+        $this->assertSame('Categoría / Temática', $fields[1]['name']);
+        // Choices live one per line in param1.
+        $this->assertSame("Artículo\nVideo\nLibro", $fields[1]['param1']);
+        $this->assertSame('textarea', $fields[2]['type']);
+        $this->assertSame('60', $fields[2]['param2']);
+        $this->assertSame('35', $fields[2]['param3']);
+        // All ten params travel: data_fields owns param1..param10.
+        $this->assertArrayHasKey('param10', $fields[2]);
+    }
+
+    /**
+     * Every non-empty template column travels raw, field references included.
+     *
+     * A template is the mold's layout: its [[Field name]] references have to
+     * arrive byte for byte or the generated database renders nothing.
+     */
+    public function test_data_exports_all_its_non_empty_templates_raw(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        global $DB;
+        [$course, $data] = $this->make_data_mold();
+        $listtemplate = '<div>[[Título del Recurso]] — [[Categoría / Temática]] ##edit## ##more##</div>';
+        $DB->update_record('data', (object) [
+            'id' => $data->id,
+            'listtemplate' => $listtemplate,
+            'singletemplate' => '<h2>[[Título del Recurso]] ⟦tema⟧</h2>',
+            'listtemplateheader' => '<table>',
+            'listtemplatefooter' => '</table>',
+            'addtemplate' => '<div>[[Título del Recurso]]</div>',
+            'rsstemplate' => '<p>[[Resumen y Análisis]]</p>',
+            'rsstitletemplate' => '[[Título del Recurso]]',
+            'csstemplate' => '.c { color: red; }',
+            'jstemplate' => 'window.console.log("x");',
+            'asearchtemplate' => '<div>[[Título del Recurso]]</div>',
+        ]);
+
+        $templates = $this->export_cm($course, $data)['mod_settings']['templates'];
+
+        $this->assertCount(10, $templates);
+        // Byte for byte: the service resolves those references itself.
+        $this->assertSame($listtemplate, $templates['listtemplate']);
+        $this->assertSame('<h2>[[Título del Recurso]] ⟦tema⟧</h2>', $templates['singletemplate']);
+        $this->assertSame('<table>', $templates['listtemplateheader']);
+        $this->assertSame('</table>', $templates['listtemplatefooter']);
+        $this->assertSame('<div>[[Título del Recurso]]</div>', $templates['addtemplate']);
+        $this->assertSame('<p>[[Resumen y Análisis]]</p>', $templates['rsstemplate']);
+        $this->assertSame('[[Título del Recurso]]', $templates['rsstitletemplate']);
+        $this->assertSame('.c { color: red; }', $templates['csstemplate']);
+        $this->assertSame('window.console.log("x");', $templates['jstemplate']);
+        $this->assertSame('<div>[[Título del Recurso]]</div>', $templates['asearchtemplate']);
+    }
+
+    /**
+     * The mold's entries travel in order, each value re-encoded to the string
+     * form data_settings::insert_content() reads back.
+     *
+     * A picture/file value is dropped on purpose: the consumer cannot seed one
+     * (copying the mold's embedded files is not implemented plugin-wide).
+     */
+    public function test_data_exports_its_entries_with_values_per_type(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $data] = $this->make_data_mold();
+        $ids = $this->create_typed_fields($data);
+        $generator = $this->getDataGenerator()->get_plugin_generator('mod_data');
+        $generator->create_entry($data, [
+            $ids['Titulo'] => 'Cien años ⟦tema⟧',
+            $ids['Genero'] => 'Novela',
+            $ids['Tags'] => ['A', 'C'],
+            $ids['Fecha'] => '30-05-1967',
+            $ids['Enlace'] => ['https://example.org/uno', 'Sitio'],
+            $ids['Lugar'] => ['1.5', '-2.25'],
+            $ids['Resumen'] => '<p>Resumen ⟦texto⟧</p>',
+            $ids['Precio'] => '42.5',
+            $ids['Foto'] => ['sample.png', 'Alt'],
+        ]);
+        $generator->create_entry($data, [
+            $ids['Titulo'] => 'Segunda ⟦tema⟧',
+            $ids['Genero'] => 'Ensayo',
+            $ids['Tags'] => ['B'],
+            $ids['Fecha'] => '01-02-2020',
+            $ids['Enlace'] => ['https://example.org/dos', ''],
+            $ids['Lugar'] => ['3.25', '4.75'],
+            $ids['Resumen'] => '<p>Otro</p>',
+            $ids['Precio'] => '7.5',
+            $ids['Foto'] => ['sample.png', ''],
+        ]);
+
+        $entries = $this->export_cm($course, $data)['mod_settings']['example_entries'];
+
+        $this->assertCount(2, $entries);
+        $first = $this->values_by_name($entries[0]);
+        $this->assertSame('Cien años ⟦tema⟧', $first['Titulo']);
+        $this->assertSame('Novela', $first['Genero']);
+        // Choices come back comma separated: that is what insert_content reads.
+        $this->assertSame('A, C', $first['Tags']);
+        $this->assertSame('1967-05-30', $first['Fecha']);
+        $this->assertSame('https://example.org/uno', $first['Enlace']);
+        $this->assertSame('1.5, -2.25', $first['Lugar']);
+        $this->assertSame('<p>Resumen ⟦texto⟧</p>', $first['Resumen']);
+        $this->assertSame('42.5', $first['Precio']);
+        // A picture (like a file) cannot be seeded back, so it never travels.
+        $this->assertArrayNotHasKey('Foto', $first);
+        // Values keep the field order of the mold.
+        $this->assertSame(
+            ['Titulo', 'Genero', 'Tags', 'Fecha', 'Enlace', 'Lugar', 'Resumen', 'Precio'],
+            array_keys($first)
+        );
+        $this->assertSame('Segunda ⟦tema⟧', $this->values_by_name($entries[1])['Titulo']);
+    }
+
+    /**
+     * A url field carries TWO authored things - the address in data_content.content
+     * and the visible link text in content1 - so both travel: the address as
+     * value, the link text as value1. Shipping only the address left the
+     * generated entry showing a raw url where the mold shows a label.
+     */
+    public function test_data_exports_a_url_link_text_as_a_second_value(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $data] = $this->make_data_mold();
+        $ids = $this->create_typed_fields($data);
+        $this->create_entry_with($data, $ids, ['https://example.org/uno', 'Sitio oficial']);
+
+        $entries = $this->export_cm($course, $data)['mod_settings']['example_entries'];
+        $enlace = $this->value_row($entries[0], 'Enlace');
+
+        $this->assertSame(
+            ['field_name' => 'Enlace', 'value' => 'https://example.org/uno', 'value1' => 'Sitio oficial'],
+            $enlace
+        );
+    }
+
+    /**
+     * A url with no link text ships no value1 at all.
+     *
+     * The absence of the key is the message: it tells the consumer to leave
+     * content1 alone, and it keeps every payload produced before url learned to
+     * carry a link text byte-identical. Latlong keeps its pair in one comma
+     * separated value, so it declares no value1 either.
+     */
+    public function test_data_url_without_link_text_exports_no_second_value(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $data] = $this->make_data_mold();
+        $ids = $this->create_typed_fields($data);
+        $this->create_entry_with($data, $ids, ['https://example.org/dos', '']);
+
+        $entries = $this->export_cm($course, $data)['mod_settings']['example_entries'];
+        $enlace = $this->value_row($entries[0], 'Enlace');
+
+        $this->assertSame('https://example.org/dos', $enlace['value']);
+        $this->assertArrayNotHasKey('value1', $enlace);
+        $this->assertSame('1.5, -2.25', $this->value_row($entries[0], 'Lugar')['value']);
+        $this->assertArrayNotHasKey('value1', $this->value_row($entries[0], 'Lugar'));
+    }
+
+    /**
+     * A database nobody has built yet still exports: it simply has no
+     * collections to declare, and an empty mod_settings would only make
+     * create_mod_service log a discarded-settings warning.
+     */
+    public function test_data_without_fields_or_entries_exports_no_mod_settings(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('data', ['name' => 'Empty database']);
+
+        $this->assertSame('Empty database', $params['name']);
+        $this->assertSame('', $params['defaultsortfield']);
+        $this->assertArrayNotHasKey('mod_settings', $params);
+    }
+
+    /**
+     * Identity columns never travel - defaultsort above all, since it is a row
+     * id of THIS database.
+     */
+    public function test_data_export_omits_identity_columns(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('data', ['intro' => 'Plain', 'introformat' => FORMAT_HTML]);
+
+        foreach (['id', 'course', 'timemodified', 'introformat', 'config', 'defaultsort'] as $column) {
+            $this->assertArrayNotHasKey($column, $params);
+        }
+    }
+
+    /**
+     * Create a database mold and return it with its course.
+     *
+     * @param array $options Module generator options.
+     * @return array [course, data instance]
+     */
+    private function make_data_mold(array $options = []): array {
+        $course = $this->getDataGenerator()->create_course();
+        $data = $this->getDataGenerator()->create_module('data', $options + ['course' => $course->id]);
+
+        return [$course, $data];
+    }
+
+    /**
+     * Export the parameters of an already built module.
+     *
+     * @param \stdClass $course The course holding it.
+     * @param \stdClass $instance The module instance (needs ->cmid).
+     * @return array Exported parameters.
+     */
+    private function export_cm(\stdClass $course, \stdClass $instance): array {
+        return template_activity_export::parameters_for(get_fast_modinfo($course)->get_cm($instance->cmid));
+    }
+
+    /**
+     * Create one field of every seedable type, plus an unseedable picture.
+     *
+     * @param \stdClass $data The database instance.
+     * @return array<string, int> Field id keyed by field name, in creation order.
+     */
+    private function create_typed_fields(\stdClass $data): array {
+        $generator = $this->getDataGenerator()->get_plugin_generator('mod_data');
+        $specs = [
+            ['type' => 'text', 'name' => 'Titulo'],
+            ['type' => 'menu', 'name' => 'Genero', 'param1' => "Novela\nEnsayo"],
+            ['type' => 'multimenu', 'name' => 'Tags', 'param1' => "A\nB\nC"],
+            ['type' => 'date', 'name' => 'Fecha'],
+            ['type' => 'url', 'name' => 'Enlace'],
+            ['type' => 'latlong', 'name' => 'Lugar'],
+            ['type' => 'textarea', 'name' => 'Resumen'],
+            ['type' => 'number', 'name' => 'Precio'],
+            ['type' => 'picture', 'name' => 'Foto'],
+        ];
+        $ids = [];
+        foreach ($specs as $spec) {
+            $field = $generator->create_field((object) $spec, $data);
+            $ids[$spec['name']] = (int) $field->field->id;
+        }
+        return $ids;
+    }
+
+    /**
+     * Create one entry filling every field, the url one as given.
+     *
+     * The mod_data generator walks every field of the database and reads its
+     * value out of the map, so a partial map errors out before anything is
+     * stored - only the url pair actually varies between these cases.
+     *
+     * @param \stdClass $data The database instance.
+     * @param array<string, int> $ids Field id keyed by field name.
+     * @param array $enlace The url field's [address, link text] pair.
+     */
+    private function create_entry_with(\stdClass $data, array $ids, array $enlace): void {
+        $this->getDataGenerator()->get_plugin_generator('mod_data')->create_entry($data, [
+            $ids['Titulo'] => 'Cien años',
+            $ids['Genero'] => 'Novela',
+            $ids['Tags'] => ['A'],
+            $ids['Fecha'] => '30-05-1967',
+            $ids['Enlace'] => $enlace,
+            $ids['Lugar'] => ['1.5', '-2.25'],
+            $ids['Resumen'] => '<p>Resumen</p>',
+            $ids['Precio'] => '42.5',
+            $ids['Foto'] => ['sample.png', ''],
+        ]);
+    }
+
+    /**
+     * One exported entry's whole value row for a field, keys included.
+     *
+     * @param array $entry One exported example entry.
+     * @param string $fieldname The field whose row is wanted.
+     * @return array|null The row, or null when the field shipped no value.
+     */
+    private function value_row(array $entry, string $fieldname): ?array {
+        foreach ($entry['values'] as $pair) {
+            if ($pair['field_name'] === $fieldname) {
+                return $pair;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * Flatten one exported entry into field name => value, order preserved.
+     *
+     * @param array $entry One exported example entry.
+     * @return array<string, string>
+     */
+    private function values_by_name(array $entry): array {
+        $values = [];
+        foreach ($entry['values'] as $pair) {
+            $values[$pair['field_name']] = $pair['value'];
+        }
+        return $values;
+    }
+
+    /**
      * Types without their own export still ship the minimal pair, so adding
      * the URL branch cannot have changed them.
      */
