@@ -23,8 +23,6 @@
 - **The way a course starts is chosen in the composer**  
   Free creation or from a template used to be two tabs at the top of the sidebar, always on show, naming a mode for a course that might not be about to start. The choice now sits inside the composer, next to the "+" menu, as a small two-way switch: it is read where the writing happens, the page never presumes a mode, and once a plan exists the switch is gone because the mode is settled. "New course" simply opens a clean page.
 
-
-
 ## Fixed
 
 - **Only the activities marked to be rewritten are rewritten**  
