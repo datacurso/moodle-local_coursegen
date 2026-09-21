@@ -77,6 +77,29 @@ class json_store {
     }
 
     /**
+     * Change one value of one row.
+     *
+     * A plan lays what it intends to write over the mould it will be written
+     * into, page by page; this is how a drafted title or body replaces the
+     * mould's on the row the module's code will read.
+     *
+     * @param string $table
+     * @param mixed $id The row's id.
+     * @param string $column
+     * @param mixed $value
+     * @return bool Whether a row with that id was there to change.
+     */
+    public function set(string $table, $id, string $column, $value): bool {
+        foreach ($this->rows[$table] ?? [] as $row) {
+            if ((string) ($row->id ?? '') === (string) $id) {
+                $row->$column = $value;
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
      * One row, or false.
      *
      * @param string $table

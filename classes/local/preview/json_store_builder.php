@@ -48,7 +48,7 @@ class json_store_builder {
             if (is_array($value)) {
                 foreach ($value as $node) {
                     if (is_array($node)) {
-                        self::walk($rows, $name, $node, null, null, $tables, $aliases);
+                        self::walk($rows, $name, $node, [], $tables, $aliases);
                     }
                 }
             }
@@ -62,8 +62,8 @@ class json_store_builder {
      * @param array $rows Accumulator, passed by reference: table => rows.
      * @param string $name The element's name.
      * @param array $node Its attributes, values and children.
-     * @param string|null $parentname The element it sits under.
-     * @param mixed $parentid That element's id.
+     * @param array $ancestors Element name => id, for every row this one sits
+     *                         under, outermost first.
      * @param array $tables
      * @param array $aliases
      */
@@ -71,8 +71,7 @@ class json_store_builder {
         array &$rows,
         string $name,
         array $node,
-        ?string $parentname,
-        $parentid,
+        array $ancestors,
         array $tables,
         array $aliases
     ): void {
@@ -89,26 +88,30 @@ class json_store_builder {
 
         $table = $tables[$name] ?? null;
         if ($table !== null) {
-            if ($parentname !== null && $parentid !== null) {
-                // The parent's key, under the two names Moodle tables use for
-                // it: "lessonid" for a lesson's pages, "forum" for a forum's
-                // discussions. Both are set; a column the table does not have
-                // costs nothing in a store that has no columns.
-                $row[$parentname . 'id'] ??= $parentid;
-                $row[$parentname] ??= $parentid;
+            // The keys of every row this one sits under, not only the nearest:
+            // an answer belongs to its page and to its lesson, and mod_lesson
+            // asks for it by both. Each under the two names Moodle tables use,
+            // "lessonid" for a lesson's pages and "forum" for a forum's
+            // discussions; a column the table does not have costs nothing in
+            // a store that has no columns.
+            foreach ($ancestors as $ancestorname => $ancestorid) {
+                $row[$ancestorname . 'id'] ??= $ancestorid;
+                $row[$ancestorname] ??= $ancestorid;
             }
             $rows[$table][] = (object) $row;
         }
 
         // A grouping element ("pages") is not a row; it holds the rows
-        // ("page"). The parent of what it holds is the row it sits under.
-        $ownid = $table !== null ? ($row['id'] ?? null) : $parentid;
-        $ownname = $table !== null ? $name : $parentname;
+        // ("page"). What it holds sits under the same rows it does.
+        $below = $ancestors;
+        if ($table !== null && isset($row['id'])) {
+            $below[$name] = $row['id'];
+        }
 
         foreach ($children as $childname => $items) {
             foreach ($items as $item) {
                 if (is_array($item)) {
-                    self::walk($rows, $childname, $item, $ownname, $ownid, $tables, $aliases);
+                    self::walk($rows, $childname, $item, $below, $tables, $aliases);
                 }
             }
         }

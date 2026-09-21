@@ -65,9 +65,9 @@ class preview_factory {
      * @param array $parameters The activity's parameters, as the AI returned them.
      * @return activity_preview
      */
-    public static function for_activity(string $modname, array $parameters): activity_preview {
+    public static function for_activity(string $modname, array $parameters, array $source = []): activity_preview {
         $class = self::PREVIEWS[$modname] ?? intro_preview::class;
-        return new $class($parameters);
+        return new $class($parameters, $source);
     }
 
     /**

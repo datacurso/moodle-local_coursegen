@@ -16,234 +16,173 @@
 
 namespace local_coursegen\local\preview;
 
-use block_contents;
-use html_writer;
+use local_coursegen\local\preview\lesson\lesson;
+use local_coursegen\local\preview\lesson\lesson_menu;
 use moodle_url;
 
 /**
- * A lesson, read the way a lesson is read.
+ * A lesson, drawn by mod_lesson's own code run against the payload.
  *
- * A lesson shows one page at a time, with its menu of pages down the side and
- * its navigation buttons at the foot of each one. Laying every page out on top
- * of each other instead shows what the lesson contains but not what it is, and
- * a teacher deciding whether to accept it is deciding about an activity their
- * students will walk through a page at a time.
- *
- * So it is read a page at a time here too. The buttons move between the pages
- * of the preview rather than through the lesson's own jumps, because the pages
- * being shown are drafts and the jumps point at pages of the activity that
- * does not exist yet.
- *
- * The shape of each page mirrors mod_lesson's own content page
- * (mod/lesson/pagetypes/branchtable.php): the contents in a box, then the
- * branch buttons in their container.
+ * Nothing here decides what a lesson looks like. The classes under lesson/ are
+ * mod_lesson's own view code, ported to read the rows the payload carries
+ * instead of the database, and this only hands them what they need: the rows,
+ * the page being read, where links go, and what the plan intends to write
+ * laid over the mould page by page.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class lesson_preview extends activity_preview {
+    /** @var lesson|null The lesson, once built. */
+    protected ?lesson $lesson = null;
+
+    /** @var array The activity as the payload describes it. */
+    protected array $source;
+
     /**
-     * The page being read, with its navigation.
+     * Constructor.
+     *
+     * @param array $parameters The draft: pages with id, title and content_html.
+     * @param array $source The mould (or the kept activity) with its structure.
+     */
+    public function __construct(array $parameters, array $source = []) {
+        parent::__construct($parameters, $source);
+        $this->source = $source;
+    }
+
+    /**
+     * The lesson, built from the payload with the draft laid over it.
+     *
+     * @return lesson|null Null when the payload holds no lesson row.
+     */
+    protected function lesson(): ?lesson {
+        if ($this->lesson !== null) {
+            return $this->lesson;
+        }
+        if (!$this->source) {
+            return null;
+        }
+
+        $store = json_store::from_activity($this->source);
+        // A draft names the page it fills by id. A finished answer does not,
+        // because the generator that wrote it matched pages by title, so the
+        // same match is made here for the pages that arrive without one.
+        $idbytitle = [];
+        foreach ($store->get_records('lesson_pages') as $row) {
+            $idbytitle[trim((string) ($row->title ?? ''))] ??= $row->id;
+        }
+        foreach (($this->parameters['mod_settings']['pages'] ?? []) as $page) {
+            $id = $page['id'] ?? ($idbytitle[trim((string) ($page['title'] ?? ''))] ?? null);
+            if ($id === null) {
+                continue;
+            }
+            if (isset($page['title'])) {
+                $store->set('lesson_pages', $id, 'title', (string) $page['title']);
+            }
+            if (isset($page['content_html'])) {
+                $store->set('lesson_pages', $id, 'contents', (string) $page['content_html']);
+            }
+        }
+
+        $rows = $store->get_records('lesson');
+        if (!$rows) {
+            return null;
+        }
+        $row = reset($rows);
+
+        $cm = (object) [
+            'id' => (int) ($this->source['cmid'] ?? 0),
+            'course' => (int) ($row->course ?? 0),
+        ];
+        $structure = ($this->source['parameters'] ?? [])['structure'] ?? [];
+        $contextid = isset($structure['contextid']) ? (int) $structure['contextid'] : null;
+
+        $this->lesson = new lesson(
+            $row,
+            $store,
+            $cm,
+            fn(int $pageid): moodle_url => $this->page_url($this->index_of($pageid)),
+            fn(): moodle_url => new moodle_url('/local/coursegen/course_preview.php', [
+                'sessionid' => $this->here->get_param('sessionid'),
+            ]),
+            $contextid
+        );
+        return $this->lesson;
+    }
+
+    /**
+     * Where a page sits in the order the lesson is walked.
+     *
+     * @param int $pageid
+     * @return int
+     */
+    protected function index_of(int $pageid): int {
+        $position = array_search($pageid, array_keys($this->lesson->load_all_pages()), false);
+        return $position === false ? 0 : (int) $position;
+    }
+
+    /**
+     * The page being read, or null when the lesson has none.
+     *
+     * @return lesson\lesson_page|null
+     */
+    protected function current_page() {
+        $lesson = $this->lesson();
+        if ($lesson === null) {
+            return null;
+        }
+        $pages = array_values($lesson->load_all_pages());
+        if (!$pages) {
+            return null;
+        }
+        $at = max(0, min($this->page, count($pages) - 1));
+        return $pages[$at];
+    }
+
+    /**
+     * The page being read, as mod_lesson draws it.
      *
      * @return string
      */
     public function render(): string {
-        global $OUTPUT;
+        global $PAGE;
 
-        $pages = $this->pages();
-        if (!$pages) {
+        $page = $this->current_page();
+        if ($page === null) {
             return $this->nothing_yet();
         }
-
-        $at = max(0, min($this->page, count($pages) - 1));
-        $page = $pages[$at];
-
-        $out = $OUTPUT->box($this->content((string) ($page['content_html'] ?? '')), 'contents');
-        $out .= $this->buttons($at, $pages);
-        return $out;
+        // mod_lesson's own renderer: its heading, box and button are what the
+        // real page is drawn with.
+        $renderer = $PAGE->get_renderer('mod_lesson');
+        $out = '';
+        if ($this->lesson->displayleft) {
+            $out .= '<a name="maincontent" id="maincontent" title="' . get_string('anchortitle', 'lesson') . '"></a>';
+        }
+        return $out . $page->display($renderer, false);
     }
 
     /**
-     * A lesson's page carries its own title, so the header shows that.
-     *
-     * The activity's own name is on every page of a real lesson, and the page's
-     * title under it; the header is where both of those live.
+     * A lesson's page carries its own heading inside the content.
      *
      * @return string
      */
     public function header_description(): string {
-        $pages = $this->pages();
-        if (!$pages) {
-            return '';
-        }
-        $at = max(0, min($this->page, count($pages) - 1));
-        $title = trim((string) ($pages[$at]['title'] ?? ''));
-        return $title === '' ? '' : html_writer::tag('h3', format_string($title), ['class' => 'mb-0']);
+        return '';
     }
 
     /**
-     * The lesson menu, built the way mod_lesson builds it.
+     * The lesson menu, when the lesson is set to show one.
      *
-     * The page being read is not a link in it: it is its own title as plain
-     * text, marked as the selected one, and the rest are links. That is what
-     * tells a reader where they are, and a menu whose every entry is a link
-     * tells them nothing.
-     *
-     * The markup is the one lesson_menu_block_contents() produces
-     * (mod/lesson/locallib.php), down to the skip link and the two classes,
-     * and only the pages a lesson lists are listed: the branch tables that are
-     * set to show.
-     *
-     * @return block_contents[]
+     * @return \block_contents[]
      */
     public function side_blocks(): array {
-        $pages = $this->pages();
-        $listed = [];
-        foreach ($pages as $index => $page) {
-            if (self::shows_in_menu($page) && trim((string) ($page['title'] ?? '')) !== '') {
-                $listed[$index] = $page;
-            }
-        }
-        if (count($listed) < 2) {
+        $page = $this->current_page();
+        if ($page === null) {
             return [];
         }
-
-        $at = max(0, min($this->page, count($pages) - 1));
-        $items = '';
-        foreach ($listed as $index => $page) {
-            $title = format_string((string) $page['title'], true);
-            $items .= $index === $at
-                ? '<li class="selected">' . $title . "</li>\n"
-                : '<li class="notselected">'
-                    . html_writer::link($this->page_url($index), $title) . "</li>\n";
-        }
-
-        $block = new block_contents();
-        $block->title = get_string('lessonmenu', 'lesson');
-        $block->attributes['class'] = 'menu block';
-        $block->content = html_writer::link('#maincontent', get_string('skip', 'lesson'), ['class' => 'accesshide'])
-            . "\n<div class=\"menuwrapper\">\n<ul>\n" . $items . "</ul>\n</div>\n";
-        return [$block];
-    }
-
-    /**
-     * Whether a page is one of the ones the lesson menu lists.
-     *
-     * A lesson lists the pages a reader moves between, which are its branch
-     * tables, and only the ones set to be shown.
-     *
-     * @param array $page
-     * @return bool
-     */
-    private static function shows_in_menu(array $page): bool {
-        // What mod_lesson calls a content page, declared in
-        // mod/lesson/pagetypes/branchtable.php. Loading that file to read the
-        // name would load the page class hierarchy it belongs to, which is
-        // several files of an activity nothing here is running.
-        $branchtable = 20;
-
-        // A drafted page has no type of its own yet: it is filling a branch
-        // table of the mould, which is what a content page is.
-        $qtype = $page['qtype'] ?? $branchtable;
-        return (int) $qtype === $branchtable && (int) ($page['display'] ?? 1) === 1;
-    }
-
-    /**
-     * The lesson's pages, as the draft or the answer holds them.
-     *
-     * @return array
-     */
-    private function pages(): array {
-        $pages = ($this->parameters['mod_settings']['pages'] ?? []);
-        return is_array($pages) ? array_values($pages) : [];
-    }
-
-    /**
-     * The page's own navigation, drawn the way mod_lesson draws it.
-     *
-     * A content page's buttons are that page's answers: their labels are what
-     * the author wrote on them, and where each one goes is the jump saved with
-     * it. mod_lesson renders each as a plain button in a box
-     * (mod/lesson/pagetypes/branchtable.php), laid out across or down
-     * according to the page's own setting, so that is what is drawn here.
-     *
-     * The jumps are followed within the preview: a jump to a page of the
-     * activity is a jump to that page of this preview, and one that leaves the
-     * lesson has nowhere to go, so it is shown without going anywhere.
-     *
-     * @param int $at
-     * @param array $pages Every page, in order.
-     * @return string
-     */
-    private function buttons(int $at, array $pages): string {
-        global $OUTPUT;
-
-        $page = $pages[$at];
-        $buttons = [];
-        foreach (($page['buttons'] ?? []) as $button) {
-            $label = trim(html_to_text((string) ($button['text'] ?? ''), 0, false));
-            if ($label === '') {
-                continue;
-            }
-            $target = $this->jump_target($at, $pages, $button['jumpto'] ?? null);
-            $buttons[] = $target === null
-                ? html_writer::tag('button', s($label), [
-                    'type' => 'button',
-                    'class' => 'btn btn-secondary',
-                    'disabled' => 'disabled',
-                ])
-                : $OUTPUT->single_button($this->page_url($target), $label, 'get');
-        }
-
-        if (!$buttons) {
-            return '';
-        }
-
-        // A page says whether its buttons sit across or down.
-        $vertical = ((int) ($page['layout'] ?? 1)) === 0;
-        return $OUTPUT->box(
-            implode("\n", $buttons),
-            'branchbuttoncontainer ' . ($vertical ? 'vertical' : 'horizontal')
-        );
-    }
-
-    /**
-     * Which page of the preview one of a page's jumps leads to.
-     *
-     * @param int $at Where the reader is now.
-     * @param array $pages
-     * @param mixed $jumpto The jump as the activity saved it.
-     * @return int|null The page to open, or null when it leaves the lesson.
-     */
-    private function jump_target(int $at, array $pages, $jumpto): ?int {
-        global $CFG;
-        // The names mod_lesson gives the jumps it saves.
-        require_once($CFG->dirroot . '/mod/lesson/locallib.php');
-
-        $jump = (int) $jumpto;
-
-        if ($jump === LESSON_NEXTPAGE || $jump === LESSON_UNSEENPAGE || $jump === LESSON_UNANSWEREDPAGE) {
-            return $at + 1 < count($pages) ? $at + 1 : null;
-        }
-        if ($jump === LESSON_PREVIOUSPAGE) {
-            return $at > 0 ? $at - 1 : null;
-        }
-        if ($jump === LESSON_THISPAGE) {
-            return $at;
-        }
-        if ($jump < 0) {
-            // The end of the lesson, or a jump only a reader's history can
-            // settle. Neither leads anywhere in a preview.
-            return null;
-        }
-
-        foreach ($pages as $index => $page) {
-            if ((int) ($page['id'] ?? 0) === $jump) {
-                return $index;
-            }
-        }
-        return null;
+        $block = lesson_menu::block_contents($this->lesson, (int) $page->id);
+        return $block === null ? [] : [$block];
     }
 
     /**
