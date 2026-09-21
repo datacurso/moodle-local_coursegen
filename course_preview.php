@@ -15,17 +15,22 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Read-only preview of the course one generation will produce.
+ * Read-only preview of the course a template run is going to produce.
  *
- * The course does not exist yet, so nothing that draws a course page can draw
- * this: those renderers all begin from a course id. What does exist is the
- * answer the AI returned, and the template's own structure, and between them
- * they describe the course completely.
+ * The course is drawn from two things and nothing else: the payload that was
+ * sent to the service, which describes the template's sections and every
+ * activity in them, and the answer that came back, which says what the run
+ * intends to write. Both name every element by a uid, and that is what this
+ * page asks for things by.
  *
- * So the page is assembled from those two: the template says which sections
- * there are and which activities are copied into them, the answer says what the
- * AI is writing, and every activity the AI writes links to its own preview,
- * which draws that activity from the same answer.
+ * Nothing on the site is read and nothing is created. An earlier version drew
+ * the template's real course by handing it to its own format, which produced
+ * a page that looked right and was the wrong page: it showed the activities
+ * that exist rather than the ones being decided about, and opening one led
+ * into them. A preview exists so the teacher can decide before anything does.
+ *
+ * The sections and rows are drawn by core's own course format templates, fed
+ * with what the payload says, so they are the same rows a course page has.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -34,11 +39,16 @@
 
 require_once(__DIR__ . '/../../config.php');
 
-use local_coursegen\external\get_template_structure;
 use local_coursegen\local\models\course_session;
+use local_coursegen\local\preview\course_from_payload;
+use local_coursegen\local\preview\grid_from_payload;
 use local_coursegen\local\service\template_ai_api_service;
+use local_coursegen\local\service\template_export_service;
 
 $sessionid = required_param('sessionid', PARAM_INT);
+
+// Which section to show, for a format that shows them one at a time.
+$section = optional_param('section', null, PARAM_INT);
 
 require_login();
 $context = context_system::instance();
@@ -55,59 +65,67 @@ if ($templateid <= 0) {
     throw new moodle_exception('invalidtemplate', 'local_coursegen');
 }
 
-$structure = get_template_structure::execute($templateid);
+// Exactly what was sent to the service, read again rather than remembered, so
+// the preview and the run can never be describing different things.
+$payload = template_export_service::build_init_payload($templateid);
 
-// What the AI has said so far about each activity it is writing, keyed by the
-// name the structure knows that activity by.
-$api = new template_ai_api_service();
+// What the answer says each activity will contain. A run still under review
+// has no result, so the plan is what there is to show of its intent.
 $summaries = [];
-foreach (($api->get_plan((string) $session->get('session_id'))['template_plan'] ?? []) as $entry) {
-    $summaries[(string) ($entry['uid'] ?? '')] = (string) ($entry['summary'] ?? '');
+try {
+    $api = new template_ai_api_service();
+    foreach (($api->get_plan((string) $session->get('session_id'))['template_plan'] ?? []) as $entry) {
+        $summaries[(string) ($entry['uid'] ?? '')] = (string) ($entry['summary'] ?? '');
+    }
+} catch (moodle_exception $exception) {
+    $summaries = [];
 }
 
-$sections = [];
-foreach ($structure['sections'] as $section) {
-    $activities = [];
-    foreach ($section['activities'] as $activity) {
-        $generationuid = (string) ($activity['generationuid'] ?? '');
-        $activities[] = [
-            'name' => $activity['name'],
-            'modname' => $activity['modname'],
-            'purpose' => $activity['purpose'],
-            'iconhtml' => $activity['iconhtml'],
-            'typelabel' => $activity['typelabel'],
-            'aigenerated' => !empty($activity['aigenerated']),
-            'summary' => $summaries[$generationuid] ?? '',
-            // Only what the AI writes has a preview to open: everything else is
-            // copied from the base course unchanged and already exists there.
-            'previewurl' => $generationuid !== ''
-                ? (new moodle_url('/local/coursegen/activity_preview.php', [
-                    'sessionid' => $sessionid,
-                    'uid' => $generationuid,
-                ]))->out(false)
-                : '',
-        ];
-    }
-    $sections[] = [
-        'name' => $section['name'],
-        'activitycount' => count($activities),
-        'activities' => $activities,
-    ];
+$configuration = $payload['course_configuration'] ?? [];
+$coursename = (string) ($configuration['fullname'] ?? '');
+$format = (string) ($configuration['format'] ?? 'topics');
+
+// The course is read in its own language, the way it would be read once it
+// exists: it is what the payload was built in, and what its content is in.
+if (!empty($configuration['lang'])) {
+    force_current_language((string) $configuration['lang']);
 }
 
 $PAGE->set_url('/local/coursegen/course_preview.php', ['sessionid' => $sessionid]);
 $PAGE->set_context($context);
-$PAGE->set_pagelayout('incourse');
+$PAGE->set_pagelayout('course');
+// The width a course page is read at. Without it the page runs the whole width
+// of the window, which no course page does.
 $PAGE->add_body_class('limitedwidth');
+// The class a page carries for the format laying it out, which is what the
+// format styles itself by: without it a grid's own dialog is sized by nothing
+// and comes out the size of any other dialog.
+$PAGE->add_body_class('format-' . $format);
 $PAGE->add_body_class('local-coursegen-course-preview');
+// What kind of page this is, which a theme and a format both read.
+$PAGE->set_pagetype('course-view-' . $format);
 $PAGE->set_secondary_navigation(false);
 $PAGE->set_title(get_string('courseai_preview_course_title', 'local_coursegen'));
-$PAGE->set_heading(get_string('courseai_preview_course_title', 'local_coursegen'));
+$PAGE->set_heading($coursename);
 
 echo $OUTPUT->header();
 echo $OUTPUT->notification(
     get_string('courseai_preview_course_notice', 'local_coursegen'),
     \core\output\notification::NOTIFY_INFO
 );
-echo $OUTPUT->render_from_template('local_coursegen/course_preview', ['sections' => $sections]);
+
+// The course is drawn by its own format's template when it has one, so the
+// preview is laid out the way the template's course is: the same tiles, the
+// same pictures, the same settings, all of them read from what was sent.
+$content = course_from_payload::content($payload, $summaries, $sessionid, $section);
+$template = 'core_courseformat/local/content';
+if ($section === null && grid_from_payload::applies($payload)) {
+    $content = grid_from_payload::content($content, $payload, $sessionid);
+    $template = 'format_grid/local/content';
+}
+
+echo html_writer::start_tag('div', ['class' => 'course-content']);
+echo $OUTPUT->render_from_template($template, $content);
+echo html_writer::end_tag('div');
+
 echo $OUTPUT->footer();

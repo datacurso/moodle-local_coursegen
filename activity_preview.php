@@ -37,14 +37,19 @@ require_once(__DIR__ . '/../../config.php');
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\preview\plan_activity;
 use local_coursegen\local\preview\preview_factory;
+use local_coursegen\local\preview\real_activity;
+use local_coursegen\local\service\template_export_service;
 use local_coursegen\local\service\template_ai_api_service;
 
 $sessionid = required_param('sessionid', PARAM_INT);
 
-// The name the answer itself gives this activity, used exactly as it arrives.
-// Deriving one here instead is how the 900000-based number came about, and it
-// bought nothing: the answer already names every element it describes.
+// Every element of a run carries a uid, in what was sent and in what came
+// back, and that is the only thing this page is asked for. Deriving an id here
+// instead is how the 900000-based number came about, and it bought nothing.
 $uid = required_param('uid', PARAM_ALPHANUMEXT);
+
+// Which page of it, for an activity that is read a page at a time.
+$page = optional_param('page', 0, PARAM_INT);
 
 require_login();
 $context = context_system::instance();
@@ -84,14 +89,36 @@ if (!$parameters) {
     }
 }
 
+// An activity the run keeps rather than writes is not in the answer at all,
+// so it is read from what was sent: the payload describes every activity of
+// the template completely, and names each one by the same uid.
+if (!$parameters) {
+    $coursedata = json_decode((string) $session->get('coursedata'), true);
+    $templateid = (int) ($coursedata['templateid'] ?? 0);
+    if ($templateid > 0) {
+        foreach ((template_export_service::build_init_payload($templateid)['activities'] ?? []) as $activity) {
+            if ((string) ($activity['uid'] ?? '') === $uid) {
+                $modname = (string) ($activity['resource_type'] ?? '');
+                $parameters = real_activity::to_parameters($activity);
+                break;
+            }
+        }
+    }
+}
+
 if (!$parameters) {
     throw new moodle_exception('courseai_preview_not_found', 'local_coursegen');
 }
 
 $preview = preview_factory::for_activity($modname, $parameters);
+$preview->opened_at(
+    new moodle_url('/local/coursegen/activity_preview.php', ['sessionid' => $sessionid, 'uid' => $uid]),
+    $page
+);
 $name = $preview->name();
 
-$PAGE->set_url('/local/coursegen/activity_preview.php', ['sessionid' => $sessionid, 'uid' => $uid]);
+$PAGE->set_url('/local/coursegen/activity_preview.php',
+    ['sessionid' => $sessionid, 'uid' => $uid, 'page' => $page]);
 $PAGE->set_context($context);
 $PAGE->set_pagelayout('incourse');
 $PAGE->add_body_class('local-coursegen-activity-preview');

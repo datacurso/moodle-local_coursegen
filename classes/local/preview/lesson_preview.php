@@ -16,18 +16,27 @@
 
 namespace local_coursegen\local\preview;
 
+use block_contents;
+use html_writer;
+use moodle_url;
+
 /**
- * A lesson's pages, drawn the way mod_lesson draws them.
+ * A lesson, read the way a lesson is read.
  *
- * A real lesson shows one page at a time and moves between them with its
- * navigation buttons. There is nothing to navigate here, and a preview whose
- * point is to show what the whole activity will contain would be a poor one if
- * it showed a seventh of it, so every page is laid out in order, each with the
- * heading, the content box and the buttons its own page would have.
+ * A lesson shows one page at a time, with its menu of pages down the side and
+ * its navigation buttons at the foot of each one. Laying every page out on top
+ * of each other instead shows what the lesson contains but not what it is, and
+ * a teacher deciding whether to accept it is deciding about an activity their
+ * students will walk through a page at a time.
+ *
+ * So it is read a page at a time here too. The buttons move between the pages
+ * of the preview rather than through the lesson's own jumps, because the pages
+ * being shown are drafts and the jumps point at pages of the activity that
+ * does not exist yet.
  *
  * The shape of each page mirrors mod_lesson's own content page
- * (mod/lesson/pagetypes/branchtable.php): a heading, the contents in a box,
- * then the branch buttons in their container.
+ * (mod/lesson/pagetypes/branchtable.php): the contents in a box, then the
+ * branch buttons in their container.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -35,113 +44,126 @@ namespace local_coursegen\local\preview;
  */
 class lesson_preview extends activity_preview {
     /**
-     * Every page of the lesson, in order.
+     * The page being read, with its navigation.
      *
      * @return string
      */
     public function render(): string {
         global $OUTPUT;
 
-        $pages = ($this->parameters['mod_settings']['pages'] ?? []);
+        $pages = $this->pages();
         if (!$pages) {
-            return $OUTPUT->notification(
-                get_string('courseai_preview_empty', 'local_coursegen'),
-                \core\output\notification::NOTIFY_INFO
-            );
+            return $this->nothing_yet();
         }
 
-        $out = '';
-        foreach ($pages as $index => $page) {
-            $out .= \html_writer::start_div('cg-preview-page');
-            $out .= $OUTPUT->heading(format_string((string) ($page['title'] ?? '')), 3);
-            $out .= $OUTPUT->box($this->content((string) ($page['content_html'] ?? '')), 'contents');
-            $out .= $this->buttons($page);
-            $out .= \html_writer::end_div();
-        }
+        $at = max(0, min($this->page, count($pages) - 1));
+        $page = $pages[$at];
+
+        $out = $OUTPUT->box($this->content((string) ($page['content_html'] ?? '')), 'contents');
+        $out .= $this->buttons($at, count($pages));
         return $out;
     }
 
     /**
-     * A lesson puts its description on its first page, not in the header.
+     * A lesson's page carries its own title, so the header shows that.
+     *
+     * The activity's own name is on every page of a real lesson, and the page's
+     * title under it; the header is where both of those live.
      *
      * @return string
      */
     public function header_description(): string {
-        return '';
+        $pages = $this->pages();
+        if (!$pages) {
+            return '';
+        }
+        $at = max(0, min($this->page, count($pages) - 1));
+        $title = trim((string) ($pages[$at]['title'] ?? ''));
+        return $title === '' ? '' : html_writer::tag('h3', format_string($title), ['class' => 'mb-0']);
     }
 
     /**
-     * The lesson menu, when the lesson is set to show one.
+     * The lesson menu, listing every page with the one being read marked.
      *
      * mod_lesson lists the titles of its content pages down the left, and a
      * lesson read without that list is a different activity to look at. The
-     * block is built with the same markup lesson_menu_block_contents() builds,
-     * minus the links, because there is nowhere to navigate in a preview.
+     * block carries the same markup lesson_menu_block_contents() builds, with
+     * each title linking to that page of the preview.
      *
-     * @return \block_contents[]
+     * @return block_contents[]
      */
     public function side_blocks(): array {
-        if (empty($this->parameters['displayleft'])) {
-            return [];
-        }
-        $pages = ($this->parameters['mod_settings']['pages'] ?? []);
-        if (!$pages) {
+        $pages = $this->pages();
+        if (count($pages) < 2) {
             return [];
         }
 
+        $at = max(0, min($this->page, count($pages) - 1));
         $items = '';
-        foreach ($pages as $page) {
+        foreach ($pages as $index => $page) {
             $title = trim((string) ($page['title'] ?? ''));
-            if ($title !== '') {
-                $items .= \html_writer::tag('li', format_string($title));
+            if ($title === '') {
+                continue;
             }
+            $items .= html_writer::tag(
+                'li',
+                html_writer::link($this->page_url($index), format_string($title)),
+                ['class' => $index === $at ? 'active' : '']
+            );
         }
         if ($items === '') {
             return [];
         }
 
-        $block = new \block_contents();
+        $block = new block_contents();
         $block->title = get_string('lessonmenu', 'lesson');
         $block->attributes['class'] = 'menu block';
-        $block->content = \html_writer::div(\html_writer::tag('ul', $items), 'menuwrapper');
+        $block->content = html_writer::div(html_writer::tag('ul', $items), 'menuwrapper');
         return [$block];
     }
 
     /**
-     * One page's navigation buttons, shown but never usable.
+     * The lesson's pages, as the draft or the answer holds them.
      *
-     * The buttons are part of what the page looks like, so they are drawn; they
-     * are disabled because a preview navigates nowhere, and because every page
-     * is already on screen there is nowhere to go.
+     * @return array
+     */
+    private function pages(): array {
+        $pages = ($this->parameters['mod_settings']['pages'] ?? []);
+        return is_array($pages) ? array_values($pages) : [];
+    }
+
+    /**
+     * The page's navigation, moving through the preview.
      *
-     * @param array $page
+     * A real page's buttons carry the lesson's own jumps. Those point at pages
+     * of an activity that has not been created, so here they move to the page
+     * before and the page after, which is what the lesson's own navigation
+     * does on a content page anyway.
+     *
+     * @param int $at
+     * @param int $total
      * @return string
      */
-    private function buttons(array $page): string {
+    private function buttons(int $at, int $total): string {
         global $OUTPUT;
 
-        $labels = [];
-        foreach (($page['buttons'] ?? []) as $button) {
-            $text = trim((string) ($button['text'] ?? ''));
-            if ($text !== '') {
-                $labels[] = $text;
-            }
-        }
-        if (!$labels) {
-            $fallback = trim((string) ($page['button_text'] ?? ''));
-            if ($fallback === '') {
-                return '';
-            }
-            $labels[] = $fallback;
-        }
-
         $buttons = '';
-        foreach ($labels as $label) {
-            $buttons .= \html_writer::tag('button', s($label), [
-                'type' => 'button',
-                'class' => 'btn btn-secondary',
-                'disabled' => 'disabled',
-            ]);
+        if ($at > 0) {
+            $buttons .= html_writer::link(
+                $this->page_url($at - 1),
+                get_string('previouspage', 'lesson'),
+                ['class' => 'btn btn-secondary me-2']
+            );
+        }
+        if ($at + 1 < $total) {
+            $buttons .= html_writer::link(
+                $this->page_url($at + 1),
+                get_string('nextpage', 'lesson'),
+                ['class' => 'btn btn-primary']
+            );
+        }
+        if ($buttons === '') {
+            return '';
         }
         return $OUTPUT->box($buttons, 'branchbuttoncontainer horizontal');
     }

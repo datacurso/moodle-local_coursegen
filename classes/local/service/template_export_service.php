@@ -111,6 +111,12 @@ class template_export_service {
                 'shortname' => $course->shortname,
                 'lang' => $course->lang ?: current_language(),
                 'numsections' => count($modinfo->get_section_info_all()) - 1,
+                // How the course is laid out, and how its format is set up.
+                // A course generated from a template is the template's course
+                // with other content in it, so it is read the same way, and a
+                // preview of it has to be drawn the same way.
+                'format' => $course->format,
+                'format_options' => self::format_settings($course),
             ],
             'sections_info' => self::sections_info($course, $modinfo, $behaviors),
             'activities' => array_merge(
@@ -164,6 +170,9 @@ class template_export_service {
      * @return array
      */
     private static function sections_info($course, $modinfo, array $behaviors): array {
+        $format = course_get_format($course);
+        $images = self::section_images($course);
+
         $sections = [];
         foreach ($modinfo->get_section_info_all() as $section) {
             $sections[] = [
@@ -172,10 +181,65 @@ class template_export_service {
                 'uid' => \core\uuid::generate(),
                 'section' => (int) $section->section,
                 'name' => get_section_name($course, $section),
+                'summary' => (string) ($section->summary ?? ''),
+                // What the format was told about this section in particular,
+                // which is where a format keeps the look of it.
+                'format_options' => $format->get_format_options($section),
+                'image' => $images[(int) $section->id] ?? null,
                 'template_behavior' => ['behavior' => $behaviors[$section->id] ?? 'aimodify'],
             ];
         }
         return $sections;
+    }
+
+    /**
+     * How the course's format is set up, with its defaults already resolved.
+     *
+     * A format option left alone is stored empty and means "whatever the site
+     * says", so a payload carrying it raw describes a course laid out at zero
+     * width. A format that resolves its own settings is asked to.
+     *
+     * @param \stdClass $course
+     * @return array
+     */
+    private static function format_settings($course): array {
+        $format = course_get_format($course);
+        if (method_exists($format, 'get_settings')) {
+            return (array) $format->get_settings();
+        }
+        return $format->get_format_options();
+    }
+
+    /**
+     * The picture each section is shown with, where its format gives it one.
+     *
+     * A format can put a picture on a section, and for the formats that do it
+     * is most of what the course looks like. The picture is a file on this
+     * site, so what travels is where it can be read from.
+     *
+     * @param \stdClass $course
+     * @return array Section id => image address.
+     */
+    private static function section_images($course): array {
+        global $DB, $CFG;
+
+        if ($course->format !== 'grid' || !file_exists($CFG->dirroot . '/course/format/grid/classes/toolbox.php')) {
+            return [];
+        }
+
+        $toolbox = \format_grid\toolbox::get_instance();
+        $contextid = \context_course::instance($course->id)->id;
+        $webp = (get_config('format_grid', 'defaultdisplayedimagefiletype') == 2);
+
+        $images = [];
+        foreach ($DB->get_records('format_grid_image', ['courseid' => $course->id]) as $image) {
+            if ((int) $image->displayedimagestate < 1) {
+                continue;
+            }
+            $uri = $toolbox->get_displayed_image_uri($image, $contextid, (int) $image->sectionid, $webp);
+            $images[(int) $image->sectionid] = $uri instanceof \moodle_url ? $uri->out(false) : (string) $uri;
+        }
+        return $images;
     }
 
     /**

@@ -37,6 +37,12 @@ abstract class activity_preview {
     /** @var array The activity's parameters, as the AI returned them. */
     protected array $parameters;
 
+    /** @var \moodle_url Where this preview is being read, for a type that has pages. */
+    protected \moodle_url $here;
+
+    /** @var int Which of them is being read. */
+    protected int $page = 0;
+
     /**
      * Constructor.
      *
@@ -44,6 +50,33 @@ abstract class activity_preview {
      */
     public function __construct(array $parameters) {
         $this->parameters = $parameters;
+        $this->here = new \moodle_url('/local/coursegen/activity_preview.php');
+    }
+
+    /**
+     * Say where this preview is, and which of its pages is being read.
+     *
+     * An activity that is read one page at a time has to be able to link to
+     * its own other pages, which it cannot do without knowing its own address.
+     *
+     * @param \moodle_url $here
+     * @param int $page
+     */
+    public function opened_at(\moodle_url $here, int $page): void {
+        $this->here = $here;
+        $this->page = $page;
+    }
+
+    /**
+     * This preview's address, showing a different page of it.
+     *
+     * @param int $page
+     * @return \moodle_url
+     */
+    protected function page_url(int $page): \moodle_url {
+        $url = new \moodle_url($this->here);
+        $url->param('page', $page);
+        return $url;
     }
 
     /**
