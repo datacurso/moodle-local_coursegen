@@ -44,10 +44,8 @@ class template_instance extends persistent {
      */
     protected static function define_properties(): array {
         return [
-            // This instance's own name in a generation: it has no course
-            // module, so there is no cmid to call it by, and a name derived
-            // from this row's id would be a course module id that belongs to
-            // some other activity. A UUID belongs to nothing else.
+            // This instance's own name in a generation. An instance has no
+            // course module, so nothing else can serve as its id.
             'uid' => [
                 'type' => PARAM_ALPHANUMEXT,
                 'null' => NULL_NOT_ALLOWED,
