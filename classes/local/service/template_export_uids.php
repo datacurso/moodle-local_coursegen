@@ -32,16 +32,10 @@ class template_export_uids {
     /**
      * The name one instance travels under, everywhere it is named.
      *
-     * An instance is the one element of a generation with no course module of
-     * its own, so it has nothing to be called by, and every id invented for it
-     * so far was really some other activity's: first a course module id offset
-     * by 900000 to be improbable, then the same id negated to be impossible.
-     * Both were a row id in a costume.
-     *
-     * It is stored rather than derived because it has to be the same string in
-     * two different requests - the page that draws the link, and the payload
+     * Stored rather than derived: it has to be the same string in two
+     * different requests - the page that draws a link to it, and the payload
      * the answer comes back against - and those cannot agree on something
-     * generated in either of them.
+     * generated fresh in either one.
      *
      * @param template_instance $instance
      * @return string A UUID.
@@ -52,9 +46,8 @@ class template_export_uids {
             return $uid;
         }
 
-        // A row from before the column existed and missed by the upgrade's
-        // backfill. Naming it here rather than returning an empty string keeps
-        // the two requests agreeing, which is the whole point of storing it.
+        // No uid stored yet: name it now and persist it, so every later
+        // read of this row agrees on the same name.
         $uid = \core\uuid::generate();
         $instance->set('uid', $uid);
         $instance->update();
@@ -70,10 +63,6 @@ class template_export_uids {
      * template it is being read for, and the same element is named the same
      * way on every export. That is what lets the page that draws a link to it
      * and the page that answers that link, two requests apart, agree.
-     *
-     * A fresh random name on every export looked the same and was not: it
-     * sent the reader to a preview that could not find what it had just been
-     * asked for.
      *
      * The result is a UUID (RFC 4122, version 5): a name hashed from a
      * namespace of this plugin's own and the element's identity.
@@ -100,12 +89,9 @@ class template_export_uids {
     /**
      * The id one virtual instance travels under.
      *
-     * Negative, because an instance is not a course module and has no id of its
-     * own in that space: every real cmid is positive, so a negative one cannot
-     * be mistaken for one, and no constant has to be chosen high enough to stay
-     * out of their way. Which is what the previous base of 900000 was, a number
-     * picked to be improbable, leaking into URLs and quietly waiting for a site
-     * large enough to reach it.
+     * Negative, because an instance is not a course module and has no id of
+     * its own in that space: every real cmid is positive, so a negative one
+     * can never be mistaken for one.
      *
      * @param int $instanceid
      * @return int
