@@ -1,0 +1,42 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/template_plan_activity
+
+    One line under an activity's row saying what it is planned to cover.
+
+    Only the line: the plan itself runs to dozens of entries, and it already has
+    a home in the thread on the left, folded behind its own "Show more". Free
+    mode's rows carry a one-line description for the same reason, which is the
+    class this reuses.
+
+    Context variables required for this template:
+    * summary string - One sentence on what the activity will cover
+    * hasparts bool - Whether the mould has anything to plan at all
+    * emptylabel string - Shown when it does not
+
+    Example context (json):
+    {
+        "summary": "Introducción a los componentes de un sistema informático.",
+        "hasparts": true,
+        "emptylabel": ""
+    }
+}}
+<p class="cg-activity-desc cg-tpl-plan" data-region="template-plan">
+  {{#hasparts}}{{summary}}{{/hasparts}}
+  {{^hasparts}}{{emptylabel}}{{/hasparts}}
+</p>
