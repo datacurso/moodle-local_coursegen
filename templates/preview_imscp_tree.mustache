@@ -1,0 +1,40 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/preview_imscp_tree
+
+    A previewed IMS package's table of contents, ported from
+    mod/imscp/locallib.php imscp_print_content().
+
+    Context variables required for this template:
+    * items - array, each shaped the way preview_imscp_item.mustache expects.
+}}
+<div id="imscp_layout">
+    <div id="imscp_toc">
+        <div id="imscp_tree">
+            <ul>
+                {{#items}}
+                {{> local_coursegen/preview_imscp_item }}
+                {{/items}}
+            </ul>
+        </div>
+        <div id="imscp_nav" style="display:none">
+            <button id="nav_skipprev">&lt;&lt;</button><button id="nav_prev">&lt;</button><button id="nav_up">^</button>
+            <button id="nav_next">&gt;</button><button id="nav_skipnext">&gt;&gt;</button>
+        </div>
+    </div>
+</div>
