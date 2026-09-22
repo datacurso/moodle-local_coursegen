@@ -366,5 +366,28 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026091504, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026091613) {
+        // A virtual instance is the one element of a generation that has no
+        // course module, so until now it had no id of its own either: it
+        // travelled under a made-up number derived from this row's id, which
+        // is what leaked into preview URLs. It gets a real name instead.
+        $table = new xmldb_table('local_coursegen_tpl_instance');
+        $field = new xmldb_field('uid', XMLDB_TYPE_CHAR, '36', null, XMLDB_NOTNULL, null, '', 'id');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Rows saved before the column existed are named now rather than when
+        // they are next exported: the name has to be the same in the payload
+        // and in the page that links to it, and those are two requests.
+        $rs = $DB->get_recordset_select('local_coursegen_tpl_instance', "uid = '' OR uid IS NULL", null, '', 'id');
+        foreach ($rs as $record) {
+            $DB->set_field('local_coursegen_tpl_instance', 'uid', \core\uuid::generate(), ['id' => $record->id]);
+        }
+        $rs->close();
+
+        upgrade_plugin_savepoint(true, 2026091613, 'local', 'coursegen');
+    }
+
     return true;
 }
