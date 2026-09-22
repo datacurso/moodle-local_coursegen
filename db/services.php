@@ -220,6 +220,15 @@ $functions = [
         'capabilities' => 'local/coursegen:createcoursewithai',
         'loginrequired' => true,
     ],
+    'local_coursegen_template_planning_feedback' => [
+        'classname' => 'local_coursegen\\external\\template_planning_feedback',
+        'methodname' => 'execute',
+        'description' => 'Answer the plan review of a paused template generation',
+        'type' => 'write',
+        'ajax' => true,
+        'capabilities' => 'local/coursegen:createcoursewithai',
+        'loginrequired' => true,
+    ],
     'local_coursegen_finish_template_generation' => [
         'classname' => 'local_coursegen\\external\\finish_template_generation',
         'methodname' => 'execute',

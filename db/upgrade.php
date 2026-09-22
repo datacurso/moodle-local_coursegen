@@ -366,5 +366,18 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026091504, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026091613) {
+        // uid names this virtual instance in the generation payload; an
+        // instance has no course module, so this is its only identifier.
+        // A row with no uid is named lazily by template_export_uids::instance_uid().
+        $table = new xmldb_table('local_coursegen_tpl_instance');
+        $field = new xmldb_field('uid', XMLDB_TYPE_CHAR, '36', null, XMLDB_NOTNULL, null, '', 'id');
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        upgrade_plugin_savepoint(true, 2026091613, 'local', 'coursegen');
+    }
+
     return true;
 }
