@@ -367,13 +367,9 @@ function xmldb_local_coursegen_upgrade($oldversion) {
     }
 
     if ($oldversion < 2026091613) {
-        // A virtual instance is the one element of a generation that has no
-        // course module, so until now it had no id of its own either: it
-        // travelled under a made-up number derived from this row's id, which
-        // is what leaked into preview URLs. It gets a real name instead.
-        // A row saved before this column existed is named lazily instead,
-        // the first time template_export_uids::instance_uid() reads it, so
-        // no backfill runs here.
+        // uid names this virtual instance in the generation payload; an
+        // instance has no course module, so this is its only identifier.
+        // A row with no uid is named lazily by template_export_uids::instance_uid().
         $table = new xmldb_table('local_coursegen_tpl_instance');
         $field = new xmldb_field('uid', XMLDB_TYPE_CHAR, '36', null, XMLDB_NOTNULL, null, '', 'id');
         if (!$dbman->field_exists($table, $field)) {
