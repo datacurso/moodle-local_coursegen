@@ -16,7 +16,6 @@
 
 namespace local_coursegen\local\preview\scorm;
 
-use html_writer;
 use moodle_url;
 use single_select;
 
@@ -43,7 +42,10 @@ trait scorm_launch {
 
         if ($scorm->displaycoursestructure == 1) {
             $output .= $OUTPUT->box_start('generalbox boxaligncenter toc', 'toc');
-            $output .= html_writer::div(get_string('contents', 'scorm'), 'structurehead');
+            $output .= $OUTPUT->render_from_template('local_coursegen/preview_container', [
+                'classes' => 'structurehead',
+                'content' => get_string('contents', 'scorm'),
+            ]);
         }
         if (empty($organization)) {
             $organization = $scorm->launch;
@@ -103,9 +105,10 @@ trait scorm_launch {
         // preview button opens the page the package launches with, as a page,
         // in its own tab.
         if ($scorm->hidebrowse == 0) {
-            $output .= html_writer::start_div('scorm-center');
-            $output .= $this->browse_link($launchsco);
-            $output .= html_writer::end_div();
+            $output .= $OUTPUT->render_from_template('local_coursegen/preview_container', [
+                'classes' => 'scorm-center',
+                'content' => $this->browse_link($launchsco),
+            ]);
         }
         return $output;
     }

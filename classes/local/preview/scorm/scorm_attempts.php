@@ -16,8 +16,6 @@
 
 namespace local_coursegen\local\preview\scorm;
 
-use html_writer;
-
 /**
  * The reader's attempt standing, which the payload never carries, kept apart
  * from view.php only because together they crossed the 250-line cap.
@@ -37,19 +35,15 @@ trait scorm_attempts {
         $scorm = $this->scorm;
 
         $attempts = $this->scorm_get_attempt_count(true);
-        if (empty($attempts)) {
-            $attemptcount = 0;
-        } else {
+        $attemptcount = 0;
+        if (!empty($attempts)) {
             $attemptcount = count($attempts);
         }
 
-        $result = html_writer::start_tag('p').get_string('noattemptsallowed', 'scorm').': ';
+        $allowedattempts = get_string('unlimited');
         if ($scorm->maxattempt > 0) {
-            $result .= $scorm->maxattempt . html_writer::empty_tag('br');
-        } else {
-            $result .= get_string('unlimited').html_writer::empty_tag('br');
+            $allowedattempts = (string) $scorm->maxattempt;
         }
-        $result .= get_string('noattemptsmade', 'scorm').': ' . $attemptcount . html_writer::empty_tag('br');
 
         if ($scorm->maxattempt == 1) {
             $grademethod = $this->grade_method_label($this->grademethod_labels(), $scorm->grademethod);
@@ -63,21 +57,21 @@ trait scorm_attempts {
             $calculatedgrade = $calculatedgrade / $scorm->maxgrade;
             $calculatedgrade = number_format($calculatedgrade * 100, 0) .'%';
         }
-        $result .= get_string('grademethod', 'scorm'). ': ' . ($grademethod ?? '');
-        if (empty($attempts)) {
-            $result .= html_writer::empty_tag('br').get_string('gradereported', 'scorm').
-                        ': '.get_string('none').html_writer::empty_tag('br');
-        } else {
-            $result .= html_writer::empty_tag('br').get_string('gradereported', 'scorm').
-                        ': '.$calculatedgrade.html_writer::empty_tag('br');
+
+        $gradereported = get_string('none');
+        if (!empty($attempts)) {
+            $gradereported = $calculatedgrade;
         }
-        $result .= html_writer::end_tag('p');
-        if ($attemptcount >= $scorm->maxattempt && $scorm->maxattempt > 0) {
-            $result .= html_writer::tag('p', get_string('exceededmaxattempts', 'scorm'), ['class' => 'exceededmaxattempts']);
-        }
+
         // The button that deletes the reader's attempts is offered only to a
         // reader who has some; none are carried, so it is never offered.
-        return $result;
+        return $OUTPUT->render_from_template('local_coursegen/preview_scorm_attempt_status', [
+            'allowedattempts' => $allowedattempts,
+            'attemptcount' => $attemptcount,
+            'grademethod' => $grademethod ?? '',
+            'gradereported' => $gradereported,
+            'exceeded' => $attemptcount >= $scorm->maxattempt && $scorm->maxattempt > 0,
+        ]);
     }
 
     /**

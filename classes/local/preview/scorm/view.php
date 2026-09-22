@@ -17,7 +17,6 @@
 namespace local_coursegen\local\preview\scorm;
 
 use context;
-use html_writer;
 use local_coursegen\local\preview\json_file_storage;
 use local_coursegen\local\preview\json_store;
 use moodle_url;
@@ -134,7 +133,7 @@ class view {
 
         if (!empty(get_config('scorm', 'forcejavascript'))) {
             $message = $OUTPUT->box(get_string("forcejavascriptmessage", "scorm"), "forcejavascriptmessage");
-            $output .= html_writer::tag('noscript', $message);
+            $output .= $OUTPUT->render_from_template('local_coursegen/preview_noscript', ['content' => $message]);
         }
         return $output;
     }

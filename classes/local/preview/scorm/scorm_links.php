@@ -16,7 +16,6 @@
 
 namespace local_coursegen\local\preview\scorm;
 
-use html_writer;
 use moodle_url;
 
 /**
@@ -72,44 +71,56 @@ trait scorm_links {
      * @return string
      */
     protected function browse_link($launchsco): string {
-        $label = get_string('browse', 'scorm');
-        $sco = $launchsco ? $this->scorm_get_sco($launchsco) : false;
-        $launch = $sco ? trim((string) ($sco->launch ?? '')) : '';
-
-        $url = null;
-        if ($launch !== '' && $this->files !== null) {
-            $query = '';
-            $path = $launch;
-            if (($at = strpos($launch, '?')) !== false) {
-                $query = substr($launch, $at);
-                $path = substr($launch, 0, $at);
-            }
-            $parameters = trim((string) ($sco->parameters ?? ''));
-            if ($parameters !== '') {
-                $query .= ($query === '' ? '?' : '&') . $parameters;
-            }
-            $wanted = '/' . ltrim($path, '/');
-            // mod_scorm keeps the unpacked package under one item, whatever
-            // the package's revision says, so the area is read whole.
-            foreach ($this->files->get_area_files($this->context->id, 'mod_scorm', 'content', false, 'filepath, filename', false) as $file) {
-                if ($file->get_filepath() . $file->get_filename() === $wanted && $file->get_url()) {
-                    $url = $file->get_url() . $query;
-                    break;
-                }
-            }
-        }
-
-        if ($url === null) {
-            return html_writer::tag('button', $label, [
-                'type' => 'button',
-                'class' => 'btn btn-secondary me-1',
-                'disabled' => 'disabled',
-            ]);
-        }
-        return html_writer::link($url, $label, [
-            'class' => 'btn btn-secondary me-1',
-            'target' => '_blank',
-            'rel' => 'noopener',
+        global $OUTPUT;
+        return $OUTPUT->render_from_template('local_coursegen/preview_browse_button', [
+            'label' => get_string('browse', 'scorm'),
+            'url' => $this->browse_url($launchsco),
         ]);
+    }
+
+    /**
+     * The url of the file the payload carries for a package's launch object,
+     * when there is one.
+     *
+     * @param mixed $launchsco The id of the object the package launches with.
+     * @return string|null
+     */
+    protected function browse_url($launchsco): ?string {
+        $sco = false;
+        if ($launchsco) {
+            $sco = $this->scorm_get_sco($launchsco);
+        }
+        $launch = '';
+        if ($sco) {
+            $launch = trim((string) ($sco->launch ?? ''));
+        }
+        if ($launch === '' || $this->files === null) {
+            return null;
+        }
+
+        $query = '';
+        $path = $launch;
+        if (($at = strpos($launch, '?')) !== false) {
+            $query = substr($launch, $at);
+            $path = substr($launch, 0, $at);
+        }
+        $parameters = trim((string) ($sco->parameters ?? ''));
+        if ($parameters !== '') {
+            $separator = '&';
+            if ($query === '') {
+                $separator = '?';
+            }
+            $query .= $separator . $parameters;
+        }
+
+        $wanted = '/' . ltrim($path, '/');
+        // mod_scorm keeps the unpacked package under one item, whatever
+        // the package's revision says, so the area is read whole.
+        foreach ($this->files->get_area_files($this->context->id, 'mod_scorm', 'content', false, 'filepath, filename', false) as $file) {
+            if ($file->get_filepath() . $file->get_filename() === $wanted && $file->get_url()) {
+                return $file->get_url() . $query;
+            }
+        }
+        return null;
     }
 }
