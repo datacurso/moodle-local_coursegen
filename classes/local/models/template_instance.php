@@ -44,6 +44,13 @@ class template_instance extends persistent {
      */
     protected static function define_properties(): array {
         return [
+            // This instance's own name in a generation. An instance has no
+            // course module, so nothing else can serve as its id.
+            'uid' => [
+                'type' => PARAM_ALPHANUMEXT,
+                'null' => NULL_NOT_ALLOWED,
+                'default' => '',
+            ],
             'templateid' => [
                 'type' => PARAM_INT,
                 'null' => NULL_NOT_ALLOWED,
