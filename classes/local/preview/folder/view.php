@@ -17,7 +17,6 @@
 namespace local_coursegen\local\preview\folder;
 
 use context;
-use html_writer;
 use local_coursegen\local\preview\json_file_storage;
 use moodle_url;
 use stdClass;
@@ -161,8 +160,8 @@ class view {
             $url = moodle_url::make_pluginfile_url($file->get_contextid(), $file->get_component(),
                 $file->get_filearea(), $file->get_itemid(), $file->get_filepath(), $filename, false);
             if (file_extension_in_typegroup($filename, 'web_image')) {
-                $image = $url->out(false, ['preview' => 'tinyicon', 'oid' => $file->get_timemodified()]);
-                $image = html_writer::empty_tag('img', ['src' => $image]);
+                $imagesrc = $url->out(false, ['preview' => 'tinyicon', 'oid' => $file->get_timemodified()]);
+                $image = $OUTPUT->render_from_template('local_coursegen/preview_image', ['src' => $imagesrc]);
             } else {
                 $image = $OUTPUT->pix_icon(file_file_icon($file), $filenamedisplay, 'moodle');
             }

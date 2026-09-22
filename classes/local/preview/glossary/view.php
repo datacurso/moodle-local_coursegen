@@ -18,7 +18,6 @@ namespace local_coursegen\local\preview\glossary;
 
 use context;
 use core_text;
-use html_writer;
 use local_coursegen\local\preview\json_store;
 use stdClass;
 use url_select;
@@ -151,15 +150,10 @@ class view {
         // All this depends if whe have $showcommonelements
         // Start to print glossary controls. The approval link is drawn only on
         // a page without secondary navigation; a module page has it.
-        $out .= '<div class="glossarycontrol" style="text-align: right">';
-        $out .= '';
-        $out .= '</div><br />';
-
         // require("tabs.php");
-        $out .= html_writer::start_div('entrybox');
-        $out .= $this->glossary_print_alphabet_menu($mode, $hook, $sortkey, $sortorder);
-        $out .= html_writer::empty_tag('hr');
-        $out .= html_writer::end_div();
+        $out .= $OUTPUT->render_from_template('local_coursegen/preview_glossary_controls', [
+            'alphabetmenu' => $this->glossary_print_alphabet_menu($mode, $hook, $sortkey, $sortorder),
+        ]);
 
         // require("sql.php"); browsing by letter.
         $fullpivot = false;

@@ -144,16 +144,23 @@ trait glossary_entry_view {
      * @return string
      */
     protected function glossary_print_entry_aliases($entry) {
-        $return = '';
+        global $OUTPUT;
         $aliases = [];
         foreach ($this->store->get_records('glossary_alias', ['entryid' => $entry->id]) as $alias) {
             $aliases[] = $alias->alias;
         }
-        if ($aliases) {
-            $id = "keyword-{$entry->id}";
-            $return = html_writer::select($aliases, $id, '', false, ['id' => $id]);
+        if (!$aliases) {
+            return '';
         }
-        return $return;
+
+        $options = [];
+        foreach ($aliases as $index => $label) {
+            $options[] = ['value' => $index, 'label' => $label];
+        }
+        return $OUTPUT->render_from_template('local_coursegen/preview_select', [
+            'id' => "keyword-{$entry->id}",
+            'options' => $options,
+        ]);
     }
 
     /**

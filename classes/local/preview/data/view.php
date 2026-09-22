@@ -18,7 +18,6 @@ namespace local_coursegen\local\preview\data;
 
 use cm_info;
 use context;
-use html_writer;
 use local_coursegen\local\preview\json_store;
 use moodle_url;
 use stdClass;
@@ -122,7 +121,10 @@ class view {
             }
 
             if ($groupmode != NOGROUPS) {
-                $out .= html_writer::div(groups_print_activity_menu($cm, $this->here, true), 'mb-3');
+                $out .= $OUTPUT->render_from_template('local_coursegen/preview_container', [
+                    'classes' => 'mb-3',
+                    'content' => groups_print_activity_menu($cm, $this->here, true),
+                ]);
             }
 
             // data_search_entries() finds nothing; $maxcount == 0.

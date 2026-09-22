@@ -40,75 +40,109 @@ trait glossary_entry_icons {
      * @return string
      */
     protected function glossary_print_entry_icons($entry, $mode = '', $hook = '') {
-        global $USER, $CFG, $OUTPUT;
+        global $OUTPUT;
 
+        $data = $this->glossary_entry_icons_data($entry, $mode, $hook);
+        return $OUTPUT->render_from_template('local_coursegen/preview_glossary_entry_icons', $data);
+    }
+
+    /**
+     * glossary_print_entry_icons(), as data for preview_glossary_entry_icons.mustache.
+     *
+     * @param stdClass $entry
+     * @param string $mode
+     * @param string $hook
+     * @return array
+     */
+    protected function glossary_entry_icons_data($entry, string $mode, string $hook): array {
+        global $OUTPUT;
         $context = $this->context;
         $glossary = $this->glossary;
-        $cm = $this->cm;
-
-        $output = false;   // To decide if we must really return text in "return". Activate when needed only!
-        $importedentry = (($entry->sourceglossaryid ?? 0) == $glossary->id);
-
-        $return = '<span class="commands">';
-        // Differentiate links for each entry.
         $altsuffix = strip_tags(format_text($entry->concept));
 
+        $data = ['show' => false, 'hidden' => false, 'hiddentext' => '', 'exportedtext' => ''];
+
         if (!$entry->approved) {
-            $output = true;
-            $return .= html_writer::tag('span', get_string('entryishidden', 'glossary'),
-                array('class' => 'glossary-hidden-note'));
+            $data['show'] = true;
+            $data['hidden'] = true;
+            $data['hiddentext'] = get_string('entryishidden', 'glossary');
         }
 
         if ($entry->approved || has_capability('mod/glossary:approve', $context)) {
-            $output = true;
-            $return .= \html_writer::link(
-                ($this->urls)(['eid' => $entry->id]),
-                $OUTPUT->pix_icon('fp/link', get_string('entrylink', 'glossary', $altsuffix), 'theme'),
-                ['title' => get_string('entrylink', 'glossary', $altsuffix), 'class' => 'icon']
-            );
+            $data['show'] = true;
+            $data['linkicon'] = [
+                'url' => ($this->urls)(['eid' => $entry->id])->out(false),
+                'title' => get_string('entrylink', 'glossary', $altsuffix),
+                'iconhtml' => $OUTPUT->pix_icon('fp/link', get_string('entrylink', 'glossary', $altsuffix), 'theme'),
+            ];
         }
 
         if (has_capability('mod/glossary:approve', $context) && !$glossary->defaultapproval && $entry->approved) {
-            $output = true;
-            $return .= '<a class="icon" title="' . get_string('disapprove', 'glossary') .
-                       '" href="' . $this->url(['mode' => $mode, 'hook' => $hook]) .
-                       '">' . $OUTPUT->pix_icon('t/block', get_string('disapprove', 'glossary')) . '</a>';
+            $data['show'] = true;
+            $data['disapproveicon'] = [
+                'url' => $this->url(['mode' => $mode, 'hook' => $hook]),
+                'title' => get_string('disapprove', 'glossary'),
+                'iconhtml' => $OUTPUT->pix_icon('t/block', get_string('disapprove', 'glossary')),
+            ];
         }
 
-        $iscurrentuser = (($entry->userid ?? 0) == $USER->id);
-
-        if (has_capability('mod/glossary:manageentries', $context) or (isloggedin() and has_capability('mod/glossary:write', $context) and $iscurrentuser)) {
-            $icon = 't/delete';
-            $iconcomponent = 'moodle';
-            if (!empty($entry->sourceglossaryid)) {
-                $icon = 'minus';   // graphical metaphor (minus) for deleting an imported entry
-                $iconcomponent = 'glossary';
-            }
-
-            //Decide if an entry is editable:
-            // -It isn't a imported entry (so nobody can edit a imported (from secondary to main) entry)) and
-            // -The user is teacher or he is a student with time permissions (edit period or editalways defined).
-            $ineditperiod = ((time() - ($entry->timecreated ?? 0) <  $CFG->maxeditingtime) || $glossary->editalways);
-            if (!$importedentry and (has_capability('mod/glossary:manageentries', $context) or (($entry->userid ?? 0) == $USER->id and ($ineditperiod and has_capability('mod/glossary:write', $context))))) {
-                $output = true;
-                $url = $this->url(['mode' => $mode, 'hook' => $hook]);
-                $return .= "<a class='icon' title=\"" . get_string("delete") . "\" " .
-                           "href=\"$url\">" . $OUTPUT->pix_icon($icon, get_string('deleteentrya', 'mod_glossary', $altsuffix), $iconcomponent) . '</a>';
-
-                $url = $this->url(['mode' => $mode, 'hook' => $hook]);
-                $return .= "<a class='icon' title=\"" . get_string("edit") . "\" href=\"$url\">" .
-                           $OUTPUT->pix_icon('i/edit', get_string('editentrya', 'mod_glossary', $altsuffix)) . '</a>';
-            } else if ($importedentry) {
-                $return .= "<font size=\"-1\">" . get_string("exportedentry", "glossary") . "</font>";
-            }
-        }
-        $return .= '</span>';
-
-        //If we haven't calculated any REAL thing, delete result ($return)
-        if (!$output) {
-            $return = '';
-        }
-        return $return;
+        $this->glossary_entry_icons_manage_data($data, $entry, $mode, $hook, $altsuffix);
+        return $data;
     }
 
+    /**
+     * glossary_print_entry_icons(), the manage-entries icons (edit/delete,
+     * or the "exported" note for an entry the reader may not edit).
+     *
+     * @param array $data Mutated in place.
+     * @param stdClass $entry
+     * @param string $mode
+     * @param string $hook
+     * @param string $altsuffix
+     */
+    protected function glossary_entry_icons_manage_data(array &$data, $entry, string $mode, string $hook, string $altsuffix): void {
+        global $USER, $CFG, $OUTPUT;
+        $context = $this->context;
+        $glossary = $this->glossary;
+        $importedentry = (($entry->sourceglossaryid ?? 0) == $glossary->id);
+
+        $canmanage = has_capability('mod/glossary:manageentries', $context);
+        $iscurrentuser = (($entry->userid ?? 0) == $USER->id);
+        $canwriteown = isloggedin() && has_capability('mod/glossary:write', $context) && $iscurrentuser;
+        if (!$canmanage && !$canwriteown) {
+            return;
+        }
+
+        $icon = 't/delete';
+        $iconcomponent = 'moodle';
+        if (!empty($entry->sourceglossaryid)) {
+            // Graphical metaphor (minus) for deleting an imported entry.
+            $icon = 'minus';
+            $iconcomponent = 'glossary';
+        }
+
+        // An entry is editable when it is not imported (so nobody can edit an
+        // imported entry) and the reader may manage entries, or is its
+        // author within the editing period (or the glossary always allows it).
+        $ineditperiod = ((time() - ($entry->timecreated ?? 0) < $CFG->maxeditingtime) || $glossary->editalways);
+        $editable = !$importedentry && ($canmanage || ($iscurrentuser && $ineditperiod && $canwriteown));
+
+        if ($editable) {
+            $data['show'] = true;
+            $url = $this->url(['mode' => $mode, 'hook' => $hook]);
+            $data['deleteicon'] = [
+                'url' => $url,
+                'title' => get_string('delete'),
+                'iconhtml' => $OUTPUT->pix_icon($icon, get_string('deleteentrya', 'mod_glossary', $altsuffix), $iconcomponent),
+            ];
+            $data['editicon'] = [
+                'url' => $url,
+                'title' => get_string('edit'),
+                'iconhtml' => $OUTPUT->pix_icon('i/edit', get_string('editentrya', 'mod_glossary', $altsuffix)),
+            ];
+        } else if ($importedentry) {
+            $data['show'] = true;
+            $data['exportedtext'] = get_string('exportedentry', 'glossary');
+        }
+    }
 }
