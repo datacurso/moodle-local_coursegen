@@ -97,7 +97,11 @@ class wiki_preview extends ported_preview {
         $format = $wiki->defaultformat ?: 'html';
         $first = '';
         foreach (array_keys($planned) as $title) {
-            $first .= $format === 'html' ? "<p>[[{$title}]]</p>\n" : "[[{$title}]]\n\n";
+            if ($format === 'html') {
+                $first .= "<p>[[{$title}]]</p>\n";
+            } else {
+                $first .= "[[{$title}]]\n\n";
+            }
         }
         $pages = [(string) $wiki->firstpagetitle => $first] + $planned;
         $now = time();

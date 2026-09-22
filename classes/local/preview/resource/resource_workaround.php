@@ -36,15 +36,15 @@ trait resource_workaround {
      * @return string
      */
     protected function resource_print_workaround($resource, $cm, $course, $file) {
-        $out = '';
+        global $OUTPUT;
         $resource->mainfile = $file->get_filename();
-        $out .= '<div class="resourceworkaround">';
         $finaldisplaytype = $this->resource_get_final_display_type($resource);
         $method = $this->workaround_method($finaldisplaytype);
-        $out .= $this->$method($resource, $file);
-        $out .= '</div>';
 
-        return $out;
+        return $OUTPUT->render_from_template('local_coursegen/preview_container', [
+            'classes' => 'resourceworkaround',
+            'content' => $this->$method($resource, $file),
+        ]);
     }
 
     /**
@@ -77,8 +77,8 @@ trait resource_workaround {
         $width  = empty($options['popupwidth'])  ? 620 : $options['popupwidth'];
         $height = empty($options['popupheight']) ? 450 : $options['popupheight'];
         $wh = "width=$width,height=$height,toolbar=no,location=no,menubar=no,copyhistory=no,status=no,directories=no,scrollbars=yes,resizable=yes";
-        $extra = "onclick=\"window.open('$fullurl', '', '$wh'); return false;\"";
-        return $this->resource_get_clicktoopen($file, $resource->revision, $extra);
+        $onclick = "window.open('$fullurl', '', '$wh'); return false;";
+        return $this->resource_get_clicktoopen($file, $resource->revision, $onclick);
     }
 
     /**
@@ -89,8 +89,7 @@ trait resource_workaround {
      * @return string
      */
     protected function workaround_new_window($resource, $file): string {
-        $extra = 'onclick="this.target=\'_blank\'"';
-        return $this->resource_get_clicktoopen($file, $resource->revision, $extra);
+        return $this->resource_get_clicktoopen($file, $resource->revision, "this.target='_blank'");
     }
 
     /**

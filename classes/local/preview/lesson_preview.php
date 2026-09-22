@@ -146,7 +146,7 @@ class lesson_preview extends activity_preview {
      * @return string
      */
     public function render(): string {
-        global $PAGE;
+        global $PAGE, $OUTPUT;
 
         $page = $this->current_page();
         if ($page === null) {
@@ -157,7 +157,10 @@ class lesson_preview extends activity_preview {
         $renderer = $PAGE->get_renderer('mod_lesson');
         $out = '';
         if ($this->lesson->displayleft) {
-            $out .= '<a name="maincontent" id="maincontent" title="' . get_string('anchortitle', 'lesson') . '"></a>';
+            $out .= $OUTPUT->render_from_template('local_coursegen/preview_anchor', [
+                'name' => 'maincontent',
+                'title' => get_string('anchortitle', 'lesson'),
+            ]);
         }
         return $out . $page->display($renderer, false);
     }

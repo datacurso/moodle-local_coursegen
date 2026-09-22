@@ -16,7 +16,6 @@
 
 namespace local_coursegen\local\preview\scorm;
 
-use html_writer;
 use stdClass;
 
 /**
@@ -44,122 +43,136 @@ trait scorm_toc_tree {
     protected function scorm_format_toc_for_treeview(array $scoes, array $usertracks, int $toclink = TOCJSLINK,
             string $currentorg = '', $attempt = '', bool $play = false, ?stdClass $organizationsco = null,
             bool $children = false): stdClass {
+        global $OUTPUT;
         $scorm = $this->scorm;
         $result = new stdClass();
         $result->prerequisites = true;
         $result->incomplete = true;
+        $result->nodes = [];
         $result->toc = '';
 
         if (!$children) {
             $attemptsmade = $this->scorm_get_attempt_count();
-            $result->attemptleft = $scorm->maxattempt == 0 ? 1 : $scorm->maxattempt - $attemptsmade;
-        }
-
-        if (!$children) {
-            $result->toc = html_writer::start_tag('ul');
-
-            if (!$play && !empty($organizationsco)) {
-                $result->toc .= html_writer::start_tag('li').$organizationsco->title.html_writer::end_tag('li');
+            $result->attemptleft = 1;
+            if ($scorm->maxattempt != 0) {
+                $result->attemptleft = $scorm->maxattempt - $attemptsmade;
             }
         }
 
         $prevsco = '';
         if (!empty($scoes)) {
             foreach ($scoes as $sco) {
-
                 if ($sco->isvisible === 'false') {
                     continue;
                 }
 
-                $result->toc .= html_writer::start_tag('li');
-                $scoid = $sco->id;
-
-                $score = '';
-
-                if (!empty($sco->prereq)) {
-                    if ($sco->id == $scoid) {
-                        $result->prerequisites = true;
-                    }
-
-                    if (!empty($prevsco) && scorm_version_check($scorm->version, SCORM_13) && !empty($prevsco->hidecontinue)) {
-                        if ($sco->scormtype == 'sco') {
-                            $result->toc .= html_writer::span($sco->statusicon.'&nbsp;'.format_string($sco->title));
-                        } else {
-                            $result->toc .= html_writer::span('&nbsp;'.format_string($sco->title));
-                        }
-                    } else if ($toclink == TOCFULLURL) {
-                        $url = $this->player_url($sco->url)->out(false);
-                        if (!empty($sco->launch)) {
-                            if ($sco->scormtype == 'sco') {
-                                $result->toc .= $sco->statusicon.'&nbsp;';
-                                $result->toc .= html_writer::link($url, format_string($sco->title)).$score;
-                            } else {
-                                $result->toc .= '&nbsp;'.html_writer::link($url, format_string($sco->title),
-                                                                            ['data-scoid' => $sco->id]).$score;
-                            }
-                        } else {
-                            if ($sco->scormtype == 'sco') {
-                                $result->toc .= $sco->statusicon.'&nbsp;'.format_string($sco->title).$score;
-                            } else {
-                                $result->toc .= '&nbsp;'.format_string($sco->title).$score;
-                            }
-                        }
-                    } else {
-                        if (!empty($sco->launch)) {
-                            if ($sco->scormtype == 'sco') {
-                                $result->toc .= html_writer::tag('a', $sco->statusicon.'&nbsp;'.
-                                                                    format_string($sco->title).'&nbsp;'.$score,
-                                                                    ['data-scoid' => $sco->id, 'title' => $sco->url]);
-                            } else {
-                                $result->toc .= html_writer::tag('a', '&nbsp;'.format_string($sco->title).'&nbsp;'.$score,
-                                                                    ['data-scoid' => $sco->id, 'title' => $sco->url]);
-                            }
-                        } else {
-                            if ($sco->scormtype == 'sco') {
-                                $result->toc .= html_writer::span($sco->statusicon.'&nbsp;'.format_string($sco->title));
-                            } else {
-                                $result->toc .= html_writer::span('&nbsp;'.format_string($sco->title));
-                            }
-                        }
-                    }
-                } else {
-                    if ($play) {
-                        if ($sco->scormtype == 'sco') {
-                            $result->toc .= html_writer::span($sco->statusicon.'&nbsp;'.format_string($sco->title));
-                        } else {
-                            $result->toc .= '&nbsp;'.format_string($sco->title).html_writer::end_span();
-                        }
-                    } else {
-                        if ($sco->scormtype == 'sco') {
-                            $result->toc .= $sco->statusicon.'&nbsp;'.format_string($sco->title);
-                        } else {
-                            $result->toc .= '&nbsp;'.format_string($sco->title);
-                        }
-                    }
-                }
+                // $result->prerequisites already defaults to true, and the
+                // ported code's own check for whether it should be set here
+                // compared a scoid to itself - always true, so always a
+                // no-op. Nothing sets it to false anywhere in this function.
+                $node = $this->scorm_toc_node($sco, $prevsco, $toclink, $play);
 
                 if (!empty($sco->children)) {
-                    $result->toc .= html_writer::start_tag('ul');
                     $childresult = $this->scorm_format_toc_for_treeview($sco->children, $usertracks, $toclink, $currentorg,
                         $attempt, $play, $organizationsco, true);
-
                     // Is any of the children incomplete?
                     $sco->incomplete = $childresult->incomplete;
-                    $result->toc .= $childresult->toc;
-                    $result->toc .= html_writer::end_tag('ul');
-                    $result->toc .= html_writer::end_tag('li');
+                    $node['haschildren'] = !empty($childresult->nodes);
+                    $node['children'] = $childresult->nodes;
                 } else {
-                    $result->toc .= html_writer::end_tag('li');
+                    $node['haschildren'] = false;
+                    $node['children'] = [];
                 }
+
+                $result->nodes[] = $node;
                 $prevsco = $sco;
             }
             $result->incomplete = $sco->incomplete;
         }
 
-        if (!$children) {
-            $result->toc .= html_writer::end_tag('ul');
+        if ($children) {
+            return $result;
         }
 
+        $orgtitle = '';
+        if (!$play && !empty($organizationsco)) {
+            $orgtitle = $organizationsco->title;
+        }
+        $result->toc = $OUTPUT->render_from_template('local_coursegen/preview_scorm_toc', [
+            'orgtitle' => $orgtitle,
+            'nodes' => $result->nodes,
+        ]);
         return $result;
+    }
+
+    /**
+     * One learning object's own row, ready for preview_scorm_toc_node.mustache.
+     *
+     * @param stdClass $sco
+     * @param stdClass|string $prevsco
+     * @param int $toclink
+     * @param bool $play
+     * @return array
+     */
+    protected function scorm_toc_node(stdClass $sco, $prevsco, int $toclink, bool $play): array {
+        $label = $sco->statusicon . '&nbsp;' . format_string($sco->title);
+        if ($sco->scormtype !== 'sco') {
+            $label = '&nbsp;' . format_string($sco->title);
+        }
+
+        $node = [
+            'label' => $label,
+            'reallink' => false,
+            'hooklink' => false,
+            'spanwrap' => false,
+            'bare' => false,
+            'url' => '',
+            'scoid' => $sco->id,
+            'title' => $sco->url,
+        ];
+
+        $mode = $this->scorm_toc_node_mode($sco, $prevsco, $toclink, $play);
+        $node[$mode] = true;
+        if ($mode === 'reallink') {
+            $node['url'] = $this->player_url($sco->url)->out(false);
+        }
+        return $node;
+    }
+
+    /**
+     * Which of the four forms a learning object's row takes, mapped from
+     * the same conditions scorm_format_toc_for_treeview() branched on.
+     *
+     * @param stdClass $sco
+     * @param stdClass|string $prevsco
+     * @param int $toclink
+     * @param bool $play
+     * @return string One of reallink/hooklink/spanwrap/bare.
+     */
+    protected function scorm_toc_node_mode(stdClass $sco, $prevsco, int $toclink, bool $play): string {
+        if (empty($sco->prereq)) {
+            if ($play) {
+                return 'spanwrap';
+            }
+            return 'bare';
+        }
+
+        $hideleadingcontent = !empty($prevsco) && scorm_version_check($this->scorm->version, SCORM_13)
+            && !empty($prevsco->hidecontinue);
+        if ($hideleadingcontent) {
+            return 'spanwrap';
+        }
+
+        if (empty($sco->launch)) {
+            if ($toclink == TOCFULLURL) {
+                return 'bare';
+            }
+            return 'spanwrap';
+        }
+
+        if ($toclink == TOCFULLURL) {
+            return 'reallink';
+        }
+        return 'hooklink';
     }
 }

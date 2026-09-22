@@ -31,19 +31,22 @@ trait resource_links {
      *
      * @param json_file $file
      * @param int $revision
-     * @param string $extra
+     * @param string $onclick Inline JS for a link the real page opens as a popup or new tab.
      * @return string
      */
-    protected function resource_get_clicktoopen($file, $revision, $extra='') {
-        global $CFG;
+    protected function resource_get_clicktoopen($file, $revision, $onclick = '') {
+        global $CFG, $OUTPUT;
 
         $filename = $file->get_filename();
         $path = '/'.$file->get_contextid().'/mod_resource/content/'.$revision.$file->get_filepath().$file->get_filename();
         $fullurl = file_encode_url($CFG->wwwroot.'/pluginfile.php', $path, false);
 
-        $string = get_string('clicktoopen2', 'resource', "<a href=\"$fullurl\" $extra>$filename</a>");
-
-        return $string;
+        $link = $OUTPUT->render_from_template('local_coursegen/preview_link', [
+            'url' => $fullurl,
+            'text' => $filename,
+            'onclick' => $onclick,
+        ]);
+        return get_string('clicktoopen2', 'resource', $link);
     }
 
     /**
@@ -54,14 +57,16 @@ trait resource_links {
      * @return string
      */
     protected function resource_get_clicktodownload($file, $revision) {
-        global $CFG;
+        global $CFG, $OUTPUT;
 
         $filename = $file->get_filename();
         $path = '/'.$file->get_contextid().'/mod_resource/content/'.$revision.$file->get_filepath().$file->get_filename();
         $fullurl = file_encode_url($CFG->wwwroot.'/pluginfile.php', $path, true);
 
-        $string = get_string('clicktodownload', 'resource', "<a href=\"$fullurl\">$filename</a>");
-
-        return $string;
+        $link = $OUTPUT->render_from_template('local_coursegen/preview_link', [
+            'url' => $fullurl,
+            'text' => $filename,
+        ]);
+        return get_string('clicktodownload', 'resource', $link);
     }
 }
