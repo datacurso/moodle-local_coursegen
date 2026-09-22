@@ -16,6 +16,7 @@
 
 namespace local_coursegen;
 
+use local_coursegen\local\service\create_mod_service;
 use local_coursegen\local\service\template_activity_export;
 use local_coursegen\mod_settings\quiz_settings;
 
@@ -1535,25 +1536,51 @@ final class template_activity_export_test extends \advanced_testcase {
     }
 
     /**
-     * A random slot and an unsupported type are skipped, the rest still travels.
+     * A random slot is skipped, and says so.
      *
-     * A random slot is a question_set_reference, and the consumer builds slots
-     * with quiz_add_quiz_question(), which throws on random.
+     * A random slot draws from a question bank CATEGORY of the template's own
+     * course, which does not exist in the generated one, and
+     * quiz_add_quiz_question() throws on random questions anyway - so it cannot
+     * travel. Skipping it silently just handed the admin a shorter quiz with no
+     * explanation, which is the one thing worse than skipping it.
      */
-    public function test_quiz_skips_random_slots_and_unsupported_question_types(): void {
+    public function test_quiz_random_slot_is_skipped_with_a_warning(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
 
-        [$course, $quiz] = $this->make_quiz_mold(['questionsperpage' => 0]);
+        [$course, $quiz] = $this->make_quiz_mold(['name' => 'Cuestionario molde', 'questionsperpage' => 0]);
         $this->add_mold_question($quiz, 'truefalse', 'true', ['name' => 'Soportada'], 1, 1.0);
-        $this->add_mold_question($quiz, 'match', 'foursubq', ['name' => 'No soportada'], 1, 1.0);
         $this->add_random_mold_slot($quiz);
 
         $questions = $this->exported_questions($course, $quiz);
 
-        // Only the unsupported qtype is worth a developer note; a random slot
-        // is a structural feature, not a payload defect.
-        $this->assertDebuggingCalledCount(1);
+        $this->assertDebuggingCalled(
+            'local_coursegen: quiz "Cuestionario molde" slot 2 holds a random question, which draws from a '
+                . 'question bank category of the template course; it cannot be reproduced in the generated '
+                . 'course and is not exported.',
+            DEBUG_DEVELOPER
+        );
+        $this->assertSame(['Soportada'], array_column($questions, 'name'));
+    }
+
+    /**
+     * A question type outside the supported nine is skipped, and says so too.
+     */
+    public function test_quiz_unsupported_question_type_is_skipped_with_a_warning(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $quiz] = $this->make_quiz_mold(['name' => 'Cuestionario molde', 'questionsperpage' => 0]);
+        $this->add_mold_question($quiz, 'truefalse', 'true', ['name' => 'Soportada'], 1, 1.0);
+        $this->add_mold_question($quiz, 'match', 'foursubq', ['name' => 'No soportada'], 1, 1.0);
+
+        $questions = $this->exported_questions($course, $quiz);
+
+        $this->assertDebuggingCalled(
+            'local_coursegen: quiz "Cuestionario molde" slot 2 holds a "match" question, which the AI '
+                . 'service has no schema for; it is not exported.',
+            DEBUG_DEVELOPER
+        );
         $this->assertSame(['Soportada'], array_column($questions, 'name'));
     }
 
@@ -1720,6 +1747,357 @@ final class template_activity_export_test extends \advanced_testcase {
         $this->assertArrayNotHasKey('hint', $question);
         $this->assertArrayNotHasKey('hintclearwrong', $question);
         $this->assertArrayNotHasKey('hintshownumcorrect', $question);
+    }
+
+    /**
+     * A gapselect hint travels with its two part flags, exactly like multichoice.
+     *
+     * qtype_gapselect_base::save_question_options() calls save_hints($q, true),
+     * so "clear incorrect responses" and "show the number of correct responses"
+     * belong to its form shape too. The hints used to leave the export only
+     * through the multichoice branch, so every other hint-bearing mold lost
+     * them whole.
+     */
+    public function test_quiz_gapselect_hints_travel_with_their_part_flags(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $mold] = $this->make_quiz_mold(['questionsperpage' => 0]);
+        $this->add_mold_question($mold, 'gapselect', 'missingchoiceno', [
+            'name' => 'Huecos con pistas',
+            'hint' => [
+                ['text' => 'Pista 1 ⟦tema⟧', 'format' => FORMAT_HTML],
+                ['text' => 'Pista 2', 'format' => FORMAT_HTML],
+            ],
+            'hintclearwrong' => [1, 0],
+            'hintshownumcorrect' => [0, 1],
+        ], 1, 2.0);
+
+        $exported = $this->export_cm($course, $mold);
+        $question = $exported['mod_settings']['questions'][0];
+
+        $this->assertSame(['Pista 1 ⟦tema⟧', 'Pista 2'], array_column($question['hint'], 'text'));
+        $this->assertSame([1, 0], $question['hintclearwrong']);
+        $this->assertSame([0, 1], $question['hintshownumcorrect']);
+
+        $rebuilt = $this->round_trip_mod_settings($course, $exported)['questions'][0];
+
+        $this->assertSame($question, $rebuilt);
+    }
+
+    /**
+     * A shortanswer hint travels alone: its qtype has no parts.
+     *
+     * qtype_shortanswer calls save_hints() without the $withparts flag, so
+     * hintclearwrong and hintshownumcorrect are not part of its form shape and
+     * the columns stay null. Shipping them anyway would invent two settings the
+     * mold cannot express.
+     */
+    public function test_quiz_shortanswer_hints_travel_without_the_part_flags(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $mold] = $this->make_quiz_mold(['questionsperpage' => 0]);
+        $this->add_mold_question($mold, 'shortanswer', 'frogtoad', [
+            'name' => 'Respuesta corta con pistas',
+            'hint' => [
+                ['text' => 'Pista 1 ⟦tema⟧', 'format' => FORMAT_HTML],
+                ['text' => 'Pista 2', 'format' => FORMAT_HTML],
+            ],
+        ], 1, 1.0);
+
+        $exported = $this->export_cm($course, $mold);
+        $question = $exported['mod_settings']['questions'][0];
+
+        $this->assertSame(['Pista 1 ⟦tema⟧', 'Pista 2'], array_column($question['hint'], 'text'));
+        $this->assertArrayNotHasKey('hintclearwrong', $question);
+        $this->assertArrayNotHasKey('hintshownumcorrect', $question);
+
+        $rebuilt = $this->round_trip_mod_settings($course, $exported)['questions'][0];
+
+        $this->assertSame($question, $rebuilt);
+    }
+
+    /**
+     * An essay carries no hints at all, however many the payload would allow.
+     *
+     * qtype_essay::save_question_options() never calls save_hints(), so the
+     * hint fields are not on its form: a hint key would be written by nobody.
+     */
+    public function test_quiz_essay_never_exports_hint_keys(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $quiz] = $this->make_quiz_mold();
+        $this->add_mold_question($quiz, 'essay', 'editor', ['name' => 'Ensayo'], 1, 1.0);
+
+        $question = $this->exported_questions($course, $quiz)[0];
+
+        $this->assertArrayNotHasKey('hint', $question);
+    }
+
+    /**
+     * A question's tags are authored content and travel with it.
+     *
+     * A mold's author classifies the bank with tags; without them the generated
+     * questions land unclassified and the mold's taxonomy is lost.
+     */
+    public function test_quiz_question_tags_travel_and_survive_the_round_trip(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $mold] = $this->make_quiz_mold(['questionsperpage' => 0]);
+        $question = $this->add_mold_question($mold, 'truefalse', 'true', ['name' => 'Etiquetada'], 1, 1.0);
+        \core_tag_tag::set_item_tags(
+            'core_question',
+            'question',
+            $question->id,
+            \context_module::instance($mold->cmid),
+            ['Álgebra', 'Unidad 1']
+        );
+
+        $exported = $this->export_cm($course, $mold);
+
+        $this->assertSame(['Álgebra', 'Unidad 1'], $exported['mod_settings']['questions'][0]['tags']);
+
+        $rebuilt = $this->round_trip_mod_settings($course, $exported)['questions'][0];
+
+        $this->assertSame(['Álgebra', 'Unidad 1'], $rebuilt['tags']);
+    }
+
+    /**
+     * A question nobody tagged ships no tag key at all.
+     */
+    public function test_quiz_untagged_question_exports_no_tag_key(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $quiz] = $this->make_quiz_mold();
+        $this->add_mold_question($quiz, 'truefalse', 'true', ['name' => 'Sin etiquetas'], 1, 1.0);
+
+        $question = $this->exported_questions($course, $quiz)[0];
+
+        $this->assertArrayNotHasKey('tags', $question);
+    }
+
+    /**
+     * The two authored slot columns travel and are applied back.
+     *
+     * requireprevious gates a question behind the previous one and displaynumber
+     * overrides the number the student sees; both live on quiz_slots, and
+     * quiz_add_quiz_question() takes neither, so without this the mold's
+     * numbering and its navigation gate were silently dropped.
+     */
+    public function test_quiz_slot_display_number_and_dependency_round_trip(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $mold] = $this->make_quiz_mold(['questionsperpage' => 0]);
+        $this->add_mold_question($mold, 'truefalse', 'true', ['name' => 'Primera'], 1, 1.0);
+        $this->add_mold_question($mold, 'shortanswer', 'frogtoad', ['name' => 'Segunda'], 2, 1.0);
+
+        $structure = \mod_quiz\structure::create_for_quiz(\mod_quiz\quiz_settings::create($mold->id));
+        $secondslotid = $structure->get_slot_id_for_slot(2);
+        $structure->update_slot_display_number($secondslotid, 'A1');
+        $structure->update_question_dependency($secondslotid, true);
+
+        $exported = $this->export_cm($course, $mold);
+        [$first, $second] = $exported['mod_settings']['questions'];
+
+        // The first slot carries neither, so it ships neither.
+        $this->assertArrayNotHasKey('displaynumber', $first);
+        $this->assertArrayNotHasKey('requireprevious', $first);
+        $this->assertSame('A1', $second['displaynumber']);
+        $this->assertSame(1, $second['requireprevious']);
+
+        $rebuilt = $this->round_trip_mod_settings($course, $exported)['questions'];
+
+        $this->assertSame($exported['mod_settings']['questions'], $rebuilt);
+    }
+
+    /**
+     * A mold's section headings and per-section shuffle travel and are rebuilt.
+     *
+     * The sections have to be rebuilt after the questions are in place: adding a
+     * question on a given page makes quiz_add_quiz_question() shift the
+     * firstslot of every section after it.
+     */
+    public function test_quiz_sections_round_trip(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $mold] = $this->make_quiz_mold(['questionsperpage' => 0]);
+        $this->add_mold_question($mold, 'truefalse', 'true', ['name' => 'Primera'], 1, 1.0);
+        $this->add_mold_question($mold, 'shortanswer', 'frogtoad', ['name' => 'Segunda'], 2, 1.0);
+
+        $structure = \mod_quiz\structure::create_for_quiz(\mod_quiz\quiz_settings::create($mold->id));
+        $moldsections = $structure->get_sections();
+        $default = reset($moldsections);
+        $structure->set_section_heading($default->id, 'Primera parte ⟦tema⟧');
+        $structure->set_section_shuffle($default->id, 1);
+        $structure->add_section_heading(2, 'Segunda parte');
+
+        $exported = $this->export_cm($course, $mold);
+
+        $this->assertSame([
+            ['heading' => 'Primera parte ⟦tema⟧', 'shufflequestions' => 1, 'firstslot' => 1],
+            ['heading' => 'Segunda parte', 'shufflequestions' => 0, 'firstslot' => 2],
+        ], $exported['mod_settings']['sections']);
+
+        $rebuilt = $this->round_trip_mod_settings($course, $exported);
+
+        // The default section of the generated quiz was updated, not duplicated.
+        $this->assertSame($exported['mod_settings']['sections'], $rebuilt['sections']);
+    }
+
+    /**
+     * A quiz nobody split into sections ships no sections key.
+     *
+     * Every quiz is created with one empty default section, so reporting it
+     * would make every single mold carry a section it never had.
+     */
+    public function test_quiz_with_only_the_default_section_exports_no_sections_key(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $quiz] = $this->make_quiz_mold();
+        $this->add_mold_question($quiz, 'truefalse', 'true', ['name' => 'Unica'], 1, 1.0);
+
+        $params = $this->export_cm($course, $quiz);
+
+        $this->assertArrayNotHasKey('sections', $params['mod_settings']);
+    }
+
+    /**
+     * The overall feedback bands travel as the two top-level arrays the form owns.
+     *
+     * quiz_feedback is NOT a mod_settings collection: the quiz mod_form takes
+     * the bands as the repeated feedbacktext[] editors and feedbackboundaries[]
+     * strings, which quiz_process_options()/quiz_after_add_or_update() turn into
+     * rows. Shipping them in any other shape would need a consumer change.
+     */
+    public function test_quiz_overall_feedback_bands_round_trip_through_add_moduleinfo(): void {
+        global $DB, $PAGE;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $mold] = $this->make_quiz_mold([
+            'name' => 'Cuestionario con retroalimentación',
+            'grade' => 10.0,
+            'questionsperpage' => 0,
+        ]);
+        // The bands as quiz_after_add_or_update() writes them: highest first,
+        // the top one reaching grade + 1 and the lowest one starting at zero.
+        $this->add_mold_feedback_band($mold, '<p>Excelente ⟦tema⟧</p>', 5.0, 11.0);
+        $this->add_mold_feedback_band($mold, '<p>A repasar</p>', 0.0, 5.0);
+        $this->add_mold_question($mold, 'truefalse', 'true', ['name' => 'Primera'], 1, 1.0);
+
+        $exported = $this->export_cm($course, $mold);
+
+        // Top level, never under mod_settings.
+        $this->assertSame(['5'], $exported['feedbackboundaries']);
+        $this->assertSame(
+            ['<p>Excelente ⟦tema⟧</p>', '<p>A repasar</p>'],
+            array_column($exported['feedbacktext'], 'text')
+        );
+        $this->assertArrayNotHasKey('feedbacktext', $exported['mod_settings']);
+
+        // moodleform_mod reads the section off the GLOBAL $COURSE rather than off
+        // the course it is handed (course/moodleform_mod.php:532), which a web
+        // request always has set and a test does not. Without this the form
+        // resolves the section against the site course and dies on a null.
+        $PAGE->set_course($course);
+
+        $newcm = create_mod_service::create_from_ai_result(
+            [
+                'resource_type' => 'quiz',
+                'parameters' => array_merge($exported, [
+                    'modulename' => 'quiz',
+                    'visible' => 1,
+                    'cmidnumber' => '',
+                    // The export ships `intro` RAW and no `introformat` on
+                    // purpose: the description carries markers and it is the AI
+                    // service that hands the consumer a filled `introeditor`.
+                    // add_moduleinfo() derives intro/introformat from that, and
+                    // quiz_after_add_or_update() needs introformat to build the
+                    // calendar event. Mirror the real payload here.
+                    'introeditor' => [
+                        'text' => $exported['intro'],
+                        'format' => FORMAT_HTML,
+                        'itemid' => 0,
+                    ],
+                ]),
+            ],
+            $course,
+            0
+        );
+
+        $bands = array_values($DB->get_records('quiz_feedback', ['quizid' => $newcm->instance], 'mingrade DESC'));
+
+        $this->assertCount(2, $bands);
+        $this->assertSame('<p>Excelente ⟦tema⟧</p>', $bands[0]->feedbacktext);
+        $this->assertSame(5.0, (float) $bands[0]->mingrade);
+        $this->assertSame(11.0, (float) $bands[0]->maxgrade);
+        $this->assertSame('<p>A repasar</p>', $bands[1]->feedbacktext);
+        $this->assertSame(0.0, (float) $bands[1]->mingrade);
+        $this->assertSame(5.0, (float) $bands[1]->maxgrade);
+    }
+
+    /**
+     * A quiz with no overall feedback ships no band keys.
+     */
+    public function test_quiz_without_overall_feedback_exports_no_bands(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('quiz', ['name' => 'Sin retroalimentación', 'grade' => 10.0]);
+
+        $this->assertArrayNotHasKey('feedbacktext', $params);
+        $this->assertArrayNotHasKey('feedbackboundaries', $params);
+        $this->assertArrayNotHasKey('boundary_repeats', $params);
+    }
+
+    /**
+     * Add one overall feedback band to a quiz mold.
+     *
+     * @param \stdClass $quiz The quiz mold.
+     * @param string $text The band's message.
+     * @param float $mingrade The grade the band starts at, inclusive.
+     * @param float $maxgrade The grade the band ends at, exclusive.
+     */
+    private function add_mold_feedback_band(\stdClass $quiz, string $text, float $mingrade, float $maxgrade): void {
+        global $DB;
+
+        $DB->insert_record('quiz_feedback', (object) [
+            'quizid' => $quiz->id,
+            'feedbacktext' => $text,
+            'feedbacktextformat' => FORMAT_HTML,
+            'mingrade' => $mingrade,
+            'maxgrade' => $maxgrade,
+        ]);
+    }
+
+    /**
+     * Feed one exported mold back into a brand new quiz and export that again.
+     *
+     * @param \stdClass $course The course to build the generated quiz in.
+     * @param array $exported The mold's exported parameters.
+     * @return array The generated quiz's own mod_settings.
+     */
+    private function round_trip_mod_settings(\stdClass $course, array $exported): array {
+        $clone = $this->getDataGenerator()->create_module('quiz', [
+            'course' => $course->id,
+            'name' => 'Cuestionario generado',
+            'questionsperpage' => 0,
+        ]);
+        $settings = new quiz_settings(
+            (object) ['coursemodule' => $clone->cmid, 'instance' => $clone->id],
+            $exported['mod_settings']
+        );
+        $settings->add_settings();
+
+        return $this->export_cm($course, $clone)['mod_settings'];
     }
 
     /**

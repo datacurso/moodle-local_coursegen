@@ -17,6 +17,7 @@
 namespace local_coursegen\local\service;
 
 use cm_info;
+use core_tag_tag;
 use mod_quiz\question\bank\qbank_helper;
 use mod_quiz\question\display_options;
 
@@ -108,6 +109,27 @@ class template_activity_export {
     ];
 
     /**
+     * @var array<string, bool> The supported qtypes that save hints, and whether they do it WITH parts.
+     *
+     * The value is the $withparts argument each qtype passes to
+     * question_type::save_hints(), which is what decides whether
+     * hintclearwrong and hintshownumcorrect are on that qtype's form at all:
+     * true for multichoice, gapselect (qtype_gapselect_base) and
+     * calculatedmulti, false for truefalse, shortanswer, numerical and
+     * calculated. essay and description are absent because neither ever calls
+     * save_hints(), so a hint of theirs would be written by nobody.
+     */
+    private const QUIZ_HINT_QTYPES = [
+        'multichoice' => true,
+        'gapselect' => true,
+        'calculatedmulti' => true,
+        'truefalse' => false,
+        'shortanswer' => false,
+        'numerical' => false,
+        'calculated' => false,
+    ];
+
+    /**
      * A Quiz's raw description, every instance setting and its questions.
      *
      * Three traps of mod_quiz's schema shape this branch:
@@ -123,6 +145,11 @@ class template_activity_export {
      *   quiz_process_options() copies the latter onto the former. Both names
      *   travel, or add_moduleinfo() would read an undefined property.
      *
+     * The overall feedback bands are NOT a mod_settings collection: the quiz
+     * mod_form owns them as two top-level repeated arrays, so they travel there
+     * (see quiz_overall_feedback()). The sections are, because they describe
+     * the layout of the questions and can only be rebuilt once those exist.
+     *
      * @param cm_info $cm
      * @return array
      */
@@ -137,6 +164,7 @@ class template_activity_export {
         $parameters = array_merge(
             self::quiz_settings_columns($quiz),
             self::quiz_review_options($quiz),
+            self::quiz_overall_feedback($quiz),
             [
                 'name' => $cm->name,
                 'section' => (int) $cm->sectionnum,
@@ -146,12 +174,170 @@ class template_activity_export {
             ]
         );
 
-        $questions = self::quiz_questions($cm);
+        [$questions, $slotmap] = self::quiz_questions($cm);
         if ($questions) {
             $parameters['mod_settings'] = ['questions' => $questions];
+
+            $sections = self::quiz_sections($quiz, $slotmap);
+            if ($sections) {
+                $parameters['mod_settings']['sections'] = $sections;
+            }
         }
 
         return $parameters;
+    }
+
+    /**
+     * The mold's overall feedback bands, in the shape the quiz form owns.
+     *
+     * quiz_feedback rows are written by quiz_after_add_or_update() out of two
+     * top-level repeated form arrays, so they have to travel back the same way:
+     * feedbacktext[] carries one editor field per band, highest band first, and
+     * feedbackboundaries[] the grade that each band starts at - one FEWER entry
+     * than the texts, because the lowest band always starts at zero and the
+     * form never carries that boundary (see quiz_after_add_or_update(), which
+     * reads feedbackboundaries[$i] for the min and [$i - 1] for the max, with
+     * quiz_process_options() filling [-1] with grade + 1 and [count] with 0).
+     *
+     * The boundaries travel ABSOLUTE. quiz_process_options() also accepts a
+     * '50%' string and turns it into a grade, but only the absolute form can be
+     * rebuilt from the stored mingrade without knowing which of the two the
+     * author typed. The text travels raw: it may carry the mold's markers.
+     *
+     * @param \stdClass $quiz The quiz row.
+     * @return array Empty when the mold has no authored band.
+     */
+    private static function quiz_overall_feedback($quiz): array {
+        global $DB;
+
+        $grade = (float) ($quiz->grade ?? 0);
+        $rows = array_values($DB->get_records('quiz_feedback', ['quizid' => $quiz->id], 'mingrade DESC'));
+        if (!$rows || $grade <= 0) {
+            return [];
+        }
+
+        $texts = [];
+        $boundaries = [];
+        $previous = null;
+        $last = count($rows) - 1;
+        foreach ($rows as $index => $row) {
+            $texts[] = [
+                'text' => (string) $row->feedbacktext,
+                'format' => (int) $row->feedbacktextformat,
+                // quiz_after_add_or_update() reads this key straight off the
+                // payload; zero simply means "no draft file area to merge in".
+                'itemid' => 0,
+            ];
+            if ($index === $last) {
+                continue;
+            }
+
+            $boundary = (float) $row->mingrade;
+            if ($boundary <= 0 || $boundary >= $grade || ($previous !== null && $boundary >= $previous)) {
+                // quiz_process_options() refuses the WHOLE quiz on a boundary
+                // out of range or out of order, which a grade lowered after the
+                // bands were written produces. An unusable band set therefore
+                // travels as no band set at all, rather than as an activity the
+                // consumer cannot create.
+                return [];
+            }
+            $previous = $boundary;
+            $boundaries[] = self::quiz_feedback_boundary($boundary);
+        }
+
+        foreach ($texts as $text) {
+            if (!html_is_blank($text['text'])) {
+                return [
+                    'feedbacktext' => $texts,
+                    'feedbackboundaries' => $boundaries,
+                    // The mod_form repeat counter. quiz_process_options()
+                    // ignores it, but it is part of the shape the service's
+                    // QuizParameters declares.
+                    'boundary_repeats' => count($boundaries),
+                ];
+            }
+        }
+
+        // A single blank band is what mod_quiz stores for a feedback form
+        // nobody ever filled in: there is nothing authored to reproduce.
+        return [];
+    }
+
+    /**
+     * One stored grade boundary, as the absolute string the quiz form reads.
+     *
+     * @param float $boundary The stored mingrade.
+     * @return string
+     */
+    private static function quiz_feedback_boundary(float $boundary): string {
+        // The column is number(10,5). Formatting it explicitly and trimming the
+        // trailing zeros keeps a small boundary out of scientific notation,
+        // which quiz_process_options() would read as junk.
+        $formatted = rtrim(rtrim(number_format($boundary, 5, '.', ''), '0'), '.');
+
+        return $formatted === '' ? '0' : $formatted;
+    }
+
+    /**
+     * The mold's section headings, renumbered onto the exported slots.
+     *
+     * A quiz always owns at least one section, created with it at slot 1
+     * (mod/quiz/lib.php), so an untouched default one describes nothing the
+     * generated quiz does not already have and is not reported.
+     *
+     * firstslot is a SLOT NUMBER, and the export skips the slots it cannot
+     * reproduce (random, unsupported types), so every section is moved onto the
+     * first exported slot at or after the one it started on. A section whose
+     * questions were all skipped disappears with them, and two sections that
+     * end up on the same slot collapse into the first.
+     *
+     * @param \stdClass $quiz The quiz row.
+     * @param array<int, int> $slotmap Mold slot number => exported slot number.
+     * @return array
+     */
+    private static function quiz_sections($quiz, array $slotmap): array {
+        global $DB;
+
+        $rows = $DB->get_records('quiz_sections', ['quizid' => $quiz->id], 'firstslot ASC');
+
+        $sections = [];
+        $claimed = [];
+        foreach ($rows as $row) {
+            $firstslot = self::quiz_section_first_slot((int) $row->firstslot, $slotmap);
+            if ($firstslot === null || isset($claimed[$firstslot])) {
+                continue;
+            }
+            $claimed[$firstslot] = true;
+            $sections[] = [
+                'heading' => (string) ($row->heading ?? ''),
+                'shufflequestions' => (int) $row->shufflequestions,
+                'firstslot' => $firstslot,
+            ];
+        }
+
+        if (count($sections) === 1 && $sections[0]['firstslot'] === 1
+                && $sections[0]['heading'] === '' && $sections[0]['shufflequestions'] === 0) {
+            return [];
+        }
+
+        return $sections;
+    }
+
+    /**
+     * The exported slot one section starts at, or null when it lost every slot.
+     *
+     * @param int $firstslot The section's firstslot in the mold.
+     * @param array<int, int> $slotmap Mold slot number => exported slot number, in slot order.
+     * @return int|null
+     */
+    private static function quiz_section_first_slot(int $firstslot, array $slotmap): ?int {
+        foreach ($slotmap as $moldslot => $exportedslot) {
+            if ($moldslot >= $firstslot) {
+                return $exportedslot;
+            }
+        }
+
+        return null;
     }
 
     /**
@@ -225,45 +411,65 @@ class template_activity_export {
      * the right version, which hand-written SQL over quiz_slots cannot.
      *
      * @param cm_info $cm
-     * @return array
+     * @return array [questions, mold slot number => exported slot number]
      */
     private static function quiz_questions(cm_info $cm): array {
         $structure = qbank_helper::get_question_structure((int) $cm->instance, $cm->context);
 
         $questions = [];
+        $slotmap = [];
         foreach ($structure as $slot) {
-            $question = self::quiz_question_parameters($slot);
+            $question = self::quiz_question_parameters($slot, (string) $cm->name);
             if ($question !== null) {
                 $questions[] = $question;
+                // The exported slots are renumbered from one: the skipped ones
+                // leave no gap in the generated quiz, so the sections have to
+                // be renumbered onto this map rather than onto the mold's.
+                $slotmap[(int) $slot->slot] = count($questions);
             }
         }
-        return $questions;
+        return [$questions, $slotmap];
     }
 
     /**
      * One slot's question, or null when this slot cannot be reproduced.
      *
-     * Two kinds of slot are skipped without a word, because neither is a
-     * payload defect:
+     * Three kinds of slot never travel:
      *
-     * - 'random' is a question_set_reference, not a question. The consumer
-     *   builds slots with quiz_add_quiz_question(), which throws outright on
-     *   random questions, so there is nothing to send.
+     * - 'random' is a question_set_reference, not a question: it draws from a
+     *   question bank CATEGORY of the template's own course, which does not
+     *   exist in the generated one, and quiz_add_quiz_question() throws
+     *   outright on random questions. It is skipped WITH a developer notice,
+     *   because an admin who molded a quiz full of random slots would otherwise
+     *   just get a shorter quiz and no explanation.
+     * - a qtype outside the supported nine is skipped the same way, and for the
+     *   same reason.
      * - 'missingtype' is the placeholder the API puts in when the question
-     *   itself is gone, or its qtype plugin is uninstalled: there is no
-     *   definition left to reproduce.
+     *   itself is gone, or its qtype plugin is uninstalled. It is skipped in
+     *   silence: there is no definition left to describe, and the broken mold
+     *   is already visible as such in the mold's own course.
      *
      * @param \stdClass $slot One row of qbank_helper::get_question_structure().
+     * @param string $quizname The mold quiz's name, for the developer notices.
      * @return array|null
      */
-    private static function quiz_question_parameters($slot): ?array {
+    private static function quiz_question_parameters($slot, string $quizname): ?array {
         $qtype = (string) ($slot->qtype ?? '');
-        if ($qtype === 'random' || $qtype === 'missingtype') {
+        if ($qtype === 'missingtype') {
+            return null;
+        }
+        if ($qtype === 'random') {
+            debugging(
+                'local_coursegen: quiz "' . $quizname . '" slot ' . (int) $slot->slot . ' holds a random '
+                    . 'question, which draws from a question bank category of the template course; it '
+                    . 'cannot be reproduced in the generated course and is not exported.',
+                DEBUG_DEVELOPER
+            );
             return null;
         }
         if (!in_array($qtype, self::QUIZ_SUPPORTED_QTYPES, true)) {
             debugging(
-                'local_coursegen: mold quiz slot ' . (int) $slot->slot . ' holds a "' . $qtype
+                'local_coursegen: quiz "' . $quizname . '" slot ' . (int) $slot->slot . ' holds a "' . $qtype
                     . '" question, which the AI service has no schema for; it is not exported.',
                 DEBUG_DEVELOPER
             );
@@ -291,7 +497,22 @@ class template_activity_export {
             'maxmark' => (float) $slot->maxmark,
         ];
 
-        return array_merge($question, self::quiz_question_options($qtype, (int) $slot->questionid));
+        // The other two authored quiz_slots columns. Both ship only when the
+        // mold really set them, so an absent key still means exactly what it
+        // has always meant: automatic numbering and no dependency.
+        if ($slot->displaynumber !== null && (string) $slot->displaynumber !== '') {
+            $question['displaynumber'] = (string) $slot->displaynumber;
+        }
+        if (!empty($slot->requireprevious)) {
+            $question['requireprevious'] = 1;
+        }
+
+        return array_merge(
+            $question,
+            self::quiz_question_options($qtype, (int) $slot->questionid),
+            self::quiz_question_hints($qtype, (int) $slot->questionid),
+            self::quiz_question_tags((int) $slot->questionid)
+        );
     }
 
     /**
@@ -326,7 +547,7 @@ class template_activity_export {
     }
 
     /**
-     * A multichoice question: its options, its parallel answer arrays and hints.
+     * A multichoice question: its options and its parallel answer arrays.
      *
      * @param int $questionid
      * @return array
@@ -349,9 +570,7 @@ class template_activity_export {
             );
         }
 
-        $exported = array_merge($exported, self::quiz_answers($questionid, true));
-
-        return array_merge($exported, self::quiz_question_hints($questionid));
+        return array_merge($exported, self::quiz_answers($questionid, true));
     }
 
     /**
@@ -683,35 +902,78 @@ class template_activity_export {
     /**
      * One question's hints, in authoring order, grading options included.
      *
-     * multichoice saves its hints with parts (save_hints($q, true)), so
-     * clearwrong and shownumcorrect are settings of the mold like any other:
-     * they travel as two arrays parallel to the hints, which is the shape
-     * save_hints() reads them back from.
+     * Seven of the nine supported types save hints; which of them also save the
+     * two part flags is decided by the $withparts argument each one passes to
+     * question_type::save_hints(), listed in QUIZ_HINT_QTYPES. A qtype without
+     * parts leaves clearwrong and shownumcorrect null in the database and has
+     * no form field for them, so reporting them would invent two settings the
+     * mold cannot express - and reporting the hints only for multichoice, which
+     * is what this used to do, lost every hint of the other six.
      *
      * A question with no hint ships no key at all - neither an empty hint list
      * nor empty flag arrays - because inventing them would make the consumer
      * create blank hints the mold never had.
      *
+     * @param string $qtype The question type.
      * @param int $questionid
-     * @return array Empty when the question has no hint.
+     * @return array Empty when this type has no hints, or the question has none.
      */
-    private static function quiz_question_hints(int $questionid): array {
+    private static function quiz_question_hints(string $qtype, int $questionid): array {
         global $DB;
+
+        if (!array_key_exists($qtype, self::QUIZ_HINT_QTYPES)) {
+            return [];
+        }
 
         $records = $DB->get_records('question_hints', ['questionid' => $questionid], 'id ASC');
         if (!$records) {
             return [];
         }
 
-        $exported = ['hint' => [], 'hintclearwrong' => [], 'hintshownumcorrect' => []];
+        $withparts = self::QUIZ_HINT_QTYPES[$qtype];
+        $exported = ['hint' => []];
+        if ($withparts) {
+            $exported['hintclearwrong'] = [];
+            $exported['hintshownumcorrect'] = [];
+        }
         foreach ($records as $hint) {
             $exported['hint'][] = ['text' => (string) $hint->hint, 'format' => (int) $hint->hintformat];
-            // Both columns are nullable: a qtype that saves its hints without
-            // parts leaves them unset, which means "off".
-            $exported['hintclearwrong'][] = (int) ($hint->clearwrong ?? 0);
-            $exported['hintshownumcorrect'][] = (int) ($hint->shownumcorrect ?? 0);
+            if ($withparts) {
+                // Both columns are nullable, and null there means "off".
+                $exported['hintclearwrong'][] = (int) ($hint->clearwrong ?? 0);
+                $exported['hintshownumcorrect'][] = (int) ($hint->shownumcorrect ?? 0);
+            }
         }
         return $exported;
+    }
+
+    /**
+     * One question's tags, in the order the author put them in.
+     *
+     * The tags are authored classification of the mold's question bank, so they
+     * travel with the question and the consumer re-applies them. They are read
+     * with their rawname, which preserves the author's own casing.
+     *
+     * Two neighbouring pieces of the bank deliberately do NOT travel:
+     *
+     * - idnumber, because it has to be unique inside a question bank category
+     *   and a copy carrying the mold's one would collide with it the moment the
+     *   generated course shares a category with the template.
+     * - anything beyond version 1 of the question. The export describes one
+     *   question, and the consumer creates it as a fresh bank entry whose first
+     *   version is the only one there has ever been; a mold's version history
+     *   belongs to the mold's own bank entry and cannot be re-created.
+     *
+     * @param int $questionid
+     * @return array Empty when the question has no tag.
+     */
+    private static function quiz_question_tags(int $questionid): array {
+        $tags = [];
+        foreach (core_tag_tag::get_item_tags('core_question', 'question', $questionid) as $tag) {
+            $tags[] = (string) $tag->rawname;
+        }
+
+        return $tags ? ['tags' => $tags] : [];
     }
 
     /**

@@ -26,10 +26,18 @@ namespace local_coursegen\mod_settings;
 class quiz_settings extends base_settings {
     /**
      * Add specific settings for book module.
+     *
+     * The sections come last on purpose: quiz_add_quiz_question() shifts the
+     * firstslot of every section after the page it inserts on, so a section
+     * rebuilt before the questions exist would end up pointing somewhere else.
      */
     public function add_settings() {
         foreach ($this->modsettings['questions'] as $question) {
             $this->add_question($question);
+        }
+
+        if (!empty($this->modsettings['sections'])) {
+            $this->add_sections($this->modsettings['sections']);
         }
     }
 
@@ -87,6 +95,8 @@ class quiz_settings extends base_settings {
         // Purge this question from the cache.
         \question_bank::notify_question_edited($question->id);
 
+        $this->add_question_tags($aiquestiondata, (int) $question->id, $context);
+
         require_capability('mod/quiz:manage', $context);
 
         [$quiz, $cm] = get_module_from_cmid($cm->coursemodule);
@@ -106,8 +116,144 @@ class quiz_settings extends base_settings {
             $this->slot_page($aiquestiondata),
             $this->slot_maxmark($aiquestiondata)
         );
+        $this->apply_slot_options((int) $quiz->id, (int) $question->id, $aiquestiondata);
         quiz_delete_previews($quiz);
         $gradecalculator->recompute_quiz_sumgrades();
+    }
+
+    /**
+     * Re-apply the mold's tags to the question just created.
+     *
+     * The mold's tags may have been set at its own course context as well as at
+     * the question's; they all land on the generated question's context here,
+     * because the course they were set in is not the generated one.
+     *
+     * @param array $aiquestiondata Question payload.
+     * @param int $questionid The created question id.
+     * @param \context_module $context The generated quiz's context.
+     */
+    protected function add_question_tags($aiquestiondata, int $questionid, $context): void {
+        $tags = $aiquestiondata['tags'] ?? null;
+        if (!is_array($tags) || !$tags) {
+            return;
+        }
+
+        \core_tag_tag::set_item_tags('core_question', 'question', $questionid, $context, array_values($tags));
+    }
+
+    /**
+     * Apply the two slot columns quiz_add_quiz_question() does not take.
+     *
+     * requireprevious gates the question behind the previous one and
+     * displaynumber overrides the number the student sees; both live on
+     * quiz_slots, so they can only be set once the slot exists. The two
+     * mod_quiz\structure setters own them, which keeps the slot events - and,
+     * for the display number, the structure refresh - that a raw set_field
+     * would skip.
+     *
+     * A payload with neither key touches nothing, so it behaves exactly as it
+     * always has.
+     *
+     * @param int $quizid The generated quiz's instance id.
+     * @param int $questionid The question whose slot to adjust.
+     * @param array $aiquestiondata Question payload.
+     */
+    protected function apply_slot_options(int $quizid, int $questionid, $aiquestiondata): void {
+        $displaynumber = $aiquestiondata['displaynumber'] ?? '';
+        $requireprevious = !empty($aiquestiondata['requireprevious']);
+        if ((string) $displaynumber === '' && !$requireprevious) {
+            return;
+        }
+
+        $structure = \mod_quiz\quiz_settings::create($quizid)->get_structure();
+        $slotid = null;
+        foreach ($structure->get_slots() as $slot) {
+            if ((int) $slot->questionid === $questionid) {
+                $slotid = (int) $slot->id;
+                break;
+            }
+        }
+        if ($slotid === null) {
+            return;
+        }
+
+        if ($requireprevious) {
+            $structure->update_question_dependency($slotid, true);
+        }
+        if ((string) $displaynumber !== '') {
+            $structure->update_slot_display_number($slotid, (string) $displaynumber);
+        }
+    }
+
+    /**
+     * Rebuild the quiz's section headings from the mold.
+     *
+     * mod_quiz creates every quiz with one section starting at slot 1
+     * (mod/quiz/lib.php), so that row is UPDATED rather than joined by a second
+     * first section: quiz_sections has a unique (quizid, firstslot) index.
+     *
+     * The rows are written directly because mod_quiz exposes no setter that can
+     * express them: structure::add_section_heading() takes a PAGE number and
+     * derives firstslot from the first slot on it, so it cannot place a section
+     * that starts inside a page, nor two sections that share one. The heading
+     * and the shuffle flag of the section that already exists are the only
+     * parts an API could set, and splitting the write in two just to use it
+     * would leave the row half-built if the second half failed.
+     *
+     * A section starting past the last slot is dropped: mod_quiz cannot render
+     * a section with no slots in it.
+     *
+     * @param array $sections The mold's sections, in firstslot order.
+     */
+    protected function add_sections($sections): void {
+        global $DB;
+
+        $quizid = (int) $this->cm->instance;
+        $slotcount = $DB->count_records('quiz_slots', ['quizid' => $quizid]);
+        if ($slotcount === 0) {
+            return;
+        }
+
+        $wanted = [];
+        foreach ($sections as $section) {
+            $firstslot = (int) ($section['firstslot'] ?? 0);
+            if ($firstslot < 1 || $firstslot > $slotcount || isset($wanted[$firstslot])) {
+                continue;
+            }
+            $wanted[$firstslot] = [
+                'heading' => (string) ($section['heading'] ?? ''),
+                'shufflequestions' => empty($section['shufflequestions']) ? 0 : 1,
+            ];
+        }
+        if (!isset($wanted[1])) {
+            // Every quiz must own the slot it starts at; a set of sections that
+            // does not cover slot 1 would hide the first questions altogether.
+            return;
+        }
+        ksort($wanted);
+
+        $existing = array_values($DB->get_records('quiz_sections', ['quizid' => $quizid], 'firstslot ASC'));
+        $default = array_shift($existing);
+        foreach ($existing as $extra) {
+            // Nothing else may hold a firstslot the rebuilt sections will claim.
+            $DB->delete_records('quiz_sections', ['id' => $extra->id]);
+        }
+
+        foreach ($wanted as $firstslot => $section) {
+            $row = (object) [
+                'quizid' => $quizid,
+                'firstslot' => $firstslot,
+                'heading' => $section['heading'],
+                'shufflequestions' => $section['shufflequestions'],
+            ];
+            if ($default !== null) {
+                $row->id = $default->id;
+                $DB->update_record('quiz_sections', $row);
+                $default = null;
+                continue;
+            }
+            $DB->insert_record('quiz_sections', $row);
+        }
     }
 
     /**
@@ -120,9 +266,10 @@ class quiz_settings extends base_settings {
      * and the mold's layout was lost. The model-driven path ships no page and
      * keeps that fallback.
      *
-     * Out of scope on purpose, and still unsupported on the way back in:
-     * quiz_sections (headings and per-section shuffle), quiz_feedback (overall
-     * feedback bands), random slots, displaynumber and requireprevious.
+     * Still unsupported on the way back in, and unsupportable: a random slot
+     * draws from a question bank category of the template's own course, which
+     * the generated course does not have, and quiz_add_quiz_question() throws
+     * on random questions anyway. The export says so out loud instead.
      *
      * @param array $aiquestiondata Question payload.
      * @return int The page for quiz_add_quiz_question(); 0 means "append".
