@@ -28,7 +28,7 @@ use stdClass;
  */
 trait scorm_toc_build {
     /**
-     * Ported from scorm_get_toc(), for the view page's call: full links, no player, no header.
+     * Copied from scorm_get_toc(), for the view page's call: full links, no player, no header.
      *
      * @param int $toclink
      * @param string $currentorg
@@ -75,7 +75,7 @@ trait scorm_toc_build {
     }
 
     /**
-     * Ported from scorm_get_toc_object(): every object as not attempted, because no tracks are carried.
+     * Copied from scorm_get_toc_object(): every object as not attempted, because no tracks are carried.
      *
      * @param string $currentorg
      * @param string $scoid
@@ -108,7 +108,7 @@ trait scorm_toc_build {
 
         $usertracks = [];
         if ($scoes = $this->scorm_get_scoes($currentorg)) {
-            // The reader's tracks would be read here for each learning object; none are carried.
+            // $usertracks stays empty: a previewed SCO has no real attempt to report on.
             foreach ($scoes as $sco) {
                 if (!isset($sco->isvisible)) {
                     $sco->isvisible = 'true';
