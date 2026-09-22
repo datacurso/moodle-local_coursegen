@@ -37,13 +37,18 @@ use moodle_url;
  */
 class grid_from_payload {
     /**
-     * Whether the course is set to grid format and that format's own
-     * content template is installed on this site.
+     * Whether this preview should be rendered with the grid format's own
+     * layout instead of the generic course-format layout.
+     *
+     * True only when the course is set to grid format and that format's own
+     * content template is actually installed on this site: a course could be
+     * set to a format whose plugin was later removed, and there is no
+     * layout to render with in that case.
      *
      * @param array $payload
      * @return bool
      */
-    public static function matches_installed_grid_format(array $payload): bool {
+    public static function should_render_grid_preview(array $payload): bool {
         global $CFG;
 
         $courseconfig = $payload['course_configuration'] ?? [];
