@@ -45,6 +45,10 @@ class structure_node_resolver {
         if ($table) {
             return $table;
         }
+        // Some steps declare their source as a raw query instead (a JOIN or a
+        // WHERE get_source_table() cannot express), so there is no table to
+        // read back - only the query text, where Moodle always wraps a real
+        // table name in braces for the db layer to prefix it.
         $sql = (string) $nested->get_source_sql();
         if ($sql !== '' && preg_match('~FROM\s+\{(\w+)\}~i', $sql, $found)) {
             return $found[1];
