@@ -72,64 +72,67 @@ class view {
      * @return string
      */
     public function imscp_print_content(): string {
-        global $PAGE;
+        global $PAGE, $OUTPUT;
 
         $imscp = $this->imscp;
-        $cm = $this->cm;
         $items = array_filter((array) unserialize_array($imscp->structure));
 
-        $out = '';
-        $out .= '<div id="imscp_layout">';
-        $out .= '<div id="imscp_toc">';
-        $out .= '<div id="imscp_tree"><ul>';
+        $nodes = [];
         foreach ($items as $item) {
-            $out .= $this->imscp_htmllize_item($item, $imscp, $cm);
+            $nodes[] = $this->imscp_item_node($item, $imscp);
         }
-        $out .= '</ul></div>';
-        $out .= '<div id="imscp_nav" style="display:none">';
-        $out .= '<button id="nav_skipprev">&lt;&lt;</button><button id="nav_prev">&lt;</button><button id="nav_up">^</button>';
-        $out .= '<button id="nav_next">&gt;</button><button id="nav_skipnext">&gt;&gt;</button>';
-        $out .= '</div>';
-        $out .= '</div>';
-        $out .= '</div>';
+        $out = $OUTPUT->render_from_template('local_coursegen/preview_imscp_tree', ['items' => $nodes]);
 
         $PAGE->requires->js_init_call('M.mod_imscp.init');
         return $out;
     }
 
     /**
-     * mod/imscp/locallib.php imscp_htmllize_item().
+     * mod/imscp/locallib.php imscp_htmllize_item(), as data for preview_imscp_item.mustache.
      *
      * @param array $item
      * @param stdClass $imscp
-     * @param stdClass $cm
+     * @return array
+     */
+    protected function imscp_item_node($item, $imscp): array {
+        $node = [
+            'haslink' => (bool) $item['href'],
+            'url' => '',
+            'title' => $item['title'],
+            'hassubitems' => false,
+            'subitems' => [],
+        ];
+
+        if ($node['haslink']) {
+            $node['url'] = $this->imscp_item_url($item['href'], $imscp);
+        }
+
+        if ($item['subitems']) {
+            $node['hassubitems'] = true;
+            foreach ($item['subitems'] as $subitem) {
+                $node['subitems'][] = $this->imscp_item_node($subitem, $imscp);
+            }
+        }
+
+        return $node;
+    }
+
+    /**
+     * mod/imscp/locallib.php imscp_htmllize_item(), the url of one item's own file.
+     *
+     * @param string $href
+     * @param stdClass $imscp
      * @return string
      */
-    protected function imscp_htmllize_item($item, $imscp, $cm) {
+    protected function imscp_item_url(string $href, $imscp): string {
         global $CFG;
 
-        if ($item['href']) {
-            if (preg_match('|^https?://|', $item['href'])) {
-                $url = $item['href'];
-            } else {
-                $context = $this->context;
-                $urlbase = "$CFG->wwwroot/pluginfile.php";
-                $path = '/'.$context->id.'/mod_imscp/content/'.$imscp->revision.'/'.$item['href'];
-                $url = file_encode_url($urlbase, $path, false);
-            }
-            $result = "<li><a href=\"$url\">".$item['title'].'</a>';
-        } else {
-            $result = '<li>'.$item['title'];
+        if (preg_match('|^https?://|', $href)) {
+            return $href;
         }
-        if ($item['subitems']) {
-            $result .= '<ul>';
-            foreach ($item['subitems'] as $subitem) {
-                $result .= $this->imscp_htmllize_item($subitem, $imscp, $cm);
-            }
-            $result .= '</ul>';
-        }
-        $result .= '</li>';
-
-        return $result;
+        $context = $this->context;
+        $urlbase = "$CFG->wwwroot/pluginfile.php";
+        $path = '/'.$context->id.'/mod_imscp/content/'.$imscp->revision.'/'.$href;
+        return file_encode_url($urlbase, $path, false);
     }
 }

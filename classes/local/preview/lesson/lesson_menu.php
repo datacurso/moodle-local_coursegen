@@ -56,25 +56,30 @@ class lesson_menu {
             return null;
         }
 
-        $content = '<a href="#maincontent" class="accesshide">' .
-            get_string('skip', 'lesson') .
-            "</a>\n<div class=\"menuwrapper\">\n<ul>\n";
-
+        global $OUTPUT;
+        $items = [];
         while ($pageid != 0) {
             $page = $pages[$pageid];
 
             // Only process branch tables with display turned on.
             if ($page->displayinmenublock && $page->display) {
-                if ($page->id == $currentpageid) {
-                    $content .= '<li class="selected">' . format_string($page->title, true) . "</li>\n";
-                } else {
-                    $content .= '<li class="notselected"><a href="' . $lesson->page_url((int) $page->id)->out() . '">'
-                        . format_string($page->title, true) . "</a></li>\n";
+                $url = '';
+                $selected = $page->id == $currentpageid;
+                if (!$selected) {
+                    $url = $lesson->page_url((int) $page->id)->out();
                 }
+                $items[] = [
+                    'selected' => $selected,
+                    'title' => format_string($page->title, true),
+                    'url' => $url,
+                ];
             }
             $pageid = $page->nextpageid;
         }
-        $content .= "</ul>\n</div>\n";
+        $content = $OUTPUT->render_from_template('local_coursegen/preview_lesson_menu', [
+            'skiplabel' => get_string('skip', 'lesson'),
+            'pages' => $items,
+        ]);
 
         $bc = new block_contents();
         $bc->title = get_string('lessonmenu', 'lesson');
