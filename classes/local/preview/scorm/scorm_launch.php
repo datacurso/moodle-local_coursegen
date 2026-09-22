@@ -20,7 +20,7 @@ use moodle_url;
 use single_select;
 
 /**
- * Ported from mod/scorm/locallib.php scorm_print_launch(), kept apart from
+ * Copied from mod/scorm/locallib.php scorm_print_launch(), kept apart from
  * view.php only because together they crossed the 250-line cap.
  *
  * @package    local_coursegen
@@ -29,7 +29,7 @@ use single_select;
  */
 trait scorm_launch {
     /**
-     * Ported from mod/scorm/locallib.php scorm_print_launch(), returning rather than echoing.
+     * Copied from mod/scorm/locallib.php scorm_print_launch(), returning rather than echoing.
      *
      * @return string
      */
