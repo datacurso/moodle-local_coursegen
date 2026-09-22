@@ -39,6 +39,21 @@ class template_export_service {
     const INSTANCE_CMID_BASE = 900000;
 
     /**
+     * The synthetic cmid that stands for one virtual instance.
+     *
+     * Derived from the instance's own id rather than from its position in the
+     * export, so the professor-facing structure can name the same activity the
+     * generation's progress events name, without either side having to
+     * reproduce the other's ordering.
+     *
+     * @param int $instanceid
+     * @return int
+     */
+    public static function instance_cmid(int $instanceid): int {
+        return self::INSTANCE_CMID_BASE + $instanceid;
+    }
+
+    /**
      * Build the full init payload.
      *
      * @param int $templateid
@@ -170,12 +185,11 @@ class template_export_service {
         }
 
         $activities = [];
-        $cmid = self::INSTANCE_CMID_BASE;
         $instances = template_instance::get_records(['templateid' => $templateid], 'sortorder');
         foreach ($instances as $instance) {
             $activities[] = [
                 'resource_type' => $instance->get('modname') ?: 'lesson',
-                'cmid' => $cmid++,
+                'cmid' => self::instance_cmid((int) $instance->get('id')),
                 'parameters' => [
                     'name' => $instance->get('name'),
                     'section' => $sectionnums[(int) $instance->get('sectionid')] ?? 0,

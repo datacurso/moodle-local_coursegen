@@ -1,3 +1,14 @@
+## 2.0.7
+
+**Released on:** 2026-09-15
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Changed
+
+- **Live view of a course being generated from a template**  
+  Generating a course from a template previously disabled the button and then asked the service every few seconds whether it had finished, so several minutes could pass with nothing to look at. The generation is now watched as it happens, and it looks exactly like course creation without a template already does: the activities still waiting are shown dimmed, the one being generated spins on its own icon, and each is marked as it lands. Because activities are generated at the same time and finish in whatever order they finish, each one updates its own row rather than the next one in the list. While the run is in progress the structure becomes read-only, the instruction written by the professor is kept on screen, and a single live message names the phase the generation is in.
+
 ## 2.0.6
 
 **Released on:** 2026-09-15
