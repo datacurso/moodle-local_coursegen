@@ -140,7 +140,7 @@ echo $OUTPUT->notification(
 // same pictures, the same settings, all of them read from what was sent.
 $content = course_from_payload::content($payload, $summaries, $sessionid, $section);
 $template = 'core_courseformat/local/content';
-if ($section === null && grid_from_payload::matches_installed_grid_format($payload)) {
+if ($section === null && grid_from_payload::should_render_grid_preview($payload)) {
     $content = grid_from_payload::content($content, $payload, $sessionid);
     $template = 'format_grid/local/content';
 }
