@@ -16,8 +16,6 @@
 
 namespace local_coursegen\local\preview\lesson;
 
-use html_writer;
-
 /**
  * A content page, drawn the way mod_lesson draws it.
  *
@@ -54,24 +52,18 @@ class lesson_page_type_branchtable extends lesson_page {
      * @return string
      */
     public function display($renderer, $attempt) {
-        global $PAGE;
+        global $PAGE, $OUTPUT;
 
-        $output = '';
         $options = new \stdClass;
         $options->para = false;
         $options->noclean = true;
 
-        if ($this->lesson->slideshow) {
-            $output .= $this->slideshow_start();
-        }
-
         // The heading level depends on whether the theme's activity header displays a heading (usually the activity name).
         $headinglevel = $PAGE->activityheader->get_heading_level();
-        $output .= $renderer->heading(format_string($this->properties->title), $headinglevel);
+        $output = $renderer->heading(format_string($this->properties->title), $headinglevel);
         $output .= $renderer->box($this->get_contents(), 'contents');
 
         $buttons = [];
-        $i = 0;
         foreach ($this->get_answers() as $answer) {
             if ($answer->answer === '') {
                 // Not a branch!
@@ -79,34 +71,36 @@ class lesson_page_type_branchtable extends lesson_page {
             }
             $url = $this->lesson->jump_url($this, (int) $answer->jumpto);
             $buttons[] = $renderer->single_button($url, strip_tags(format_text($answer->answer, FORMAT_MOODLE, $options)));
-            $i++;
         }
         // Set the orientation.
+        $orientation = 'vertical';
         if ($this->properties->layout) {
-            $buttonshtml = $renderer->box(implode("\n", $buttons), 'branchbuttoncontainer horizontal');
-        } else {
-            $buttonshtml = $renderer->box(implode("\n", $buttons), 'branchbuttoncontainer vertical');
+            $orientation = 'horizontal';
         }
-        $output .= $buttonshtml;
+        $output .= $renderer->box(implode("\n", $buttons), 'branchbuttoncontainer ' . $orientation);
 
-        if ($this->lesson->slideshow) {
-            $output .= html_writer::end_tag('div');
+        if (!$this->lesson->slideshow) {
+            return $output;
         }
-
-        return $output;
+        return $OUTPUT->render_from_template('local_coursegen/preview_container', [
+            'classes' => 'slideshow',
+            'style' => $this->slideshow_style(),
+            'content' => $output,
+        ]);
     }
 
     /**
-     * The opening of a slideshow, as mod_lesson_renderer::slideshow_start() writes it.
+     * The slideshow wrapper's inline style, as mod_lesson_renderer::slideshow_start() writes it.
+     *
+     * A slideshow's background colour and size are the lesson's own settings,
+     * not something a stylesheet can state.
      *
      * @return string
      */
-    protected function slideshow_start(): string {
-        $attributes = [];
-        $attributes['class'] = 'slideshow';
-        $attributes['style'] = 'background-color:' . $this->lesson->properties()->bgcolor . ';height:' .
-                $this->lesson->properties()->height . 'px;width:' . $this->lesson->properties()->width . 'px;';
-        return html_writer::start_tag('div', $attributes);
+    protected function slideshow_style(): string {
+        $properties = $this->lesson->properties();
+        return 'background-color:' . $properties->bgcolor . ';height:' .
+            $properties->height . 'px;width:' . $properties->width . 'px;';
     }
 
     /**

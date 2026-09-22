@@ -15,19 +15,15 @@
     along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 }}
 {{!
-    @template local_coursegen/preview_container
+    @template local_coursegen/preview_quiz_response_form
 
-    One plain div, shared by every previewed module that used to build one
-    with html_writer::div() or html_writer::tag('div', ...) just to wrap
-    already-rendered content under an id and/or a class.
-
-    Context variables optional for this template:
-    * id - string.
-    * classes - string.
-    * style - string, inline style for the rare case a size or a colour is
-              per-instance data rather than something a stylesheet can state.
+    The form a previewed quiz's questions are printed inside, which is the
+    markup the questions' own scripts expect.
 
     Context variables required for this template:
-    * content - string, already-rendered HTML.
+    * action - string.
+    * questionshtml - string, already-rendered HTML from the question engine.
 }}
-<div{{#id}} id="{{id}}"{{/id}}{{#classes}} class="{{classes}}"{{/classes}}{{#style}} style="{{style}}"{{/style}}>{{{content}}}</div>
+<form action="{{{action}}}" method="post" enctype="multipart/form-data" accept-charset="utf-8" id="responseform">
+    <div>{{{questionshtml}}}</div>
+</form>

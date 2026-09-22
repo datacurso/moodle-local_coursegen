@@ -16,7 +16,6 @@
 
 namespace local_coursegen\local\preview;
 
-use html_writer;
 use stdClass;
 
 /**
@@ -90,7 +89,10 @@ class page_preview extends ported_preview {
 
         if (!isset($options['printlastmodified']) || !empty($options['printlastmodified'])) {
             $strlastmodified = get_string("lastmodified");
-            $out .= html_writer::div("$strlastmodified: " . userdate($page->timemodified), 'modified');
+            $out .= $OUTPUT->render_from_template('local_coursegen/preview_container', [
+                'classes' => 'modified',
+                'content' => "$strlastmodified: " . userdate($page->timemodified),
+            ]);
         }
         return $out;
     }

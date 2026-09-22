@@ -16,7 +16,6 @@
 
 namespace local_coursegen\local\preview\quiz;
 
-use html_writer;
 use question_bank;
 use question_display_options;
 use question_engine;
@@ -45,7 +44,7 @@ trait quiz_question_engine {
      * @return string
      */
     protected function questions(): string {
-        global $CFG;
+        global $CFG, $OUTPUT;
         require_once($CFG->dirroot . '/question/engine/lib.php');
 
         $quba = question_engine::make_questions_usage_by_activity('local_coursegen', $this->context);
@@ -82,20 +81,21 @@ trait quiz_question_engine {
 
         // The attempt page prints its questions inside the form that submits
         // them, and that is the markup the questions' own scripts expect.
-        $output = html_writer::start_tag('form', [
-            'action' => $this->here, 'method' => 'post', 'enctype' => 'multipart/form-data',
-            'accept-charset' => 'utf-8', 'id' => 'responseform',
-        ]);
-        $output .= html_writer::start_tag('div');
+        $questionshtml = '';
         $index = 0;
         foreach ($quba->get_slots() as $slot) {
             $index++;
             $displaynumber = $numbers[$slot] ?? null;
-            $output .= $quba->render_question($slot, $options, $displaynumber !== null && $displaynumber !== '' ? $displaynumber : $index);
+            $slotnumber = $index;
+            if ($displaynumber !== null && $displaynumber !== '') {
+                $slotnumber = $displaynumber;
+            }
+            $questionshtml .= $quba->render_question($slot, $options, $slotnumber);
         }
-        $output .= html_writer::end_tag('div');
-        $output .= html_writer::end_tag('form');
-        return $output;
+        return $OUTPUT->render_from_template('local_coursegen/preview_quiz_response_form', [
+            'action' => $this->here->out(false),
+            'questionshtml' => $questionshtml,
+        ]);
     }
 
     /**

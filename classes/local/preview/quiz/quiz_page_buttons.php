@@ -16,7 +16,6 @@
 
 namespace local_coursegen\local\preview\quiz;
 
-use html_writer;
 use moodle_url;
 use single_button;
 use stdClass;
@@ -37,6 +36,7 @@ trait quiz_page_buttons {
      * @return string
      */
     protected function view_page_tertiary_nav(stdClass $viewobj): string {
+        global $OUTPUT;
         $content = '';
 
         if ($viewobj->buttontext) {
@@ -48,11 +48,14 @@ trait quiz_page_buttons {
         // The "add question" link is for someone who may edit a quiz that
         // exists; nothing here does.
 
-        if ($content) {
-            return html_writer::div(html_writer::div($content, 'row'), 'container-fluid tertiary-navigation');
-        } else {
+        if (!$content) {
             return '';
         }
+        $row = $OUTPUT->render_from_template('local_coursegen/preview_container', ['classes' => 'row', 'content' => $content]);
+        return $OUTPUT->render_from_template('local_coursegen/preview_container', [
+            'classes' => 'container-fluid tertiary-navigation',
+            'content' => $row,
+        ]);
     }
 
     /**
@@ -115,9 +118,10 @@ trait quiz_page_buttons {
         $output = '';
 
         if (!$viewobj->quizhasquestions) {
-            $output .= html_writer::div(
-                    $OUTPUT->notification(get_string('noquestions', 'quiz'), 'warning', false),
-                    'text-start mb-3');
+            $output .= $OUTPUT->render_from_template('local_coursegen/preview_container', [
+                'classes' => 'text-start mb-3',
+                'content' => $OUTPUT->notification(get_string('noquestions', 'quiz'), 'warning', false),
+            ]);
         }
         $output .= $this->access_messages($viewobj->preventmessages);
 
@@ -131,10 +135,14 @@ trait quiz_page_buttons {
      * @return string
      */
     protected function access_messages(array $messages): string {
-        $output = '';
+        global $OUTPUT;
+        $paragraphs = [];
         foreach ($messages as $message) {
-            $output .= html_writer::tag('p', $message, ['class' => 'text-start']);
+            $paragraphs[] = ['text' => $message];
         }
-        return $output;
+        return $OUTPUT->render_from_template('local_coursegen/preview_paragraphs', [
+            'classes' => 'text-start',
+            'paragraphs' => $paragraphs,
+        ]);
     }
 }
