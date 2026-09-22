@@ -1,0 +1,29 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/preview_activity_name_link
+
+    An activity's name, linked to its preview, the way a course page links
+    to the real activity - fed as the "displayvalue" of core_courseformat's
+    own cmname template, which this plugin reuses so a previewed activity
+    row looks exactly like the course page's own.
+
+    Context variables required for this template:
+    * url - string.
+    * name - string, already format_string()-safe.
+}}
+<a class="aalink" href="{{{url}}}"><span class="instancename">{{{name}}}</span></a>
