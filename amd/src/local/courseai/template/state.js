@@ -51,12 +51,16 @@ export const createTemplateState = (inputbar = {}) => ({
     allowedActivities: [],
     sections: [],
     typeLabels: {},
-    // Client-only placeholder id for sections the professor adds — negative
-    // so it never collides with a real Moodle section id. A new activity's
-    // id is a fresh crypto.randomUUID() instead (see insertActivity): every
-    // activity id, real or virtual, is a uid string now, so there is no
-    // shared numeric space left for a section-style counter to protect.
+    // Client-only placeholder ids for sections/activities the professor adds
+    // — negative, and never sent anywhere: this row has nothing server-side
+    // to answer to yet (no cmid, no template_instance record), so there is
+    // nothing for the server to name it by either. The generation-start
+    // request that will eventually persist it is where a real id gets
+    // assigned, server-side, the same way every other id in this model is —
+    // never minted here just because a key is needed to address the row
+    // in this array meanwhile.
     nextSectionId: -1,
+    nextActivityId: -1,
     // Input-bar values, ready for the future generation payload.
     prompt: inputbar.prompt || '',
     generateimages: inputbar.generateimages || 0,
@@ -160,7 +164,7 @@ export const insertActivity = (state, sectionId, position, activity) => {
         return null;
     }
     const newActivity = {
-        id: crypto.randomUUID(),
+        id: state.nextActivityId--,
         name: activity.displayname,
         modname: activity.modname,
         purpose: activity.purpose,
