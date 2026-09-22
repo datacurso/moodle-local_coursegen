@@ -37,16 +37,19 @@ use moodle_url;
  */
 class grid_from_payload {
     /**
-     * Whether this course is laid out by a format this can draw.
+     * Whether the course is set to grid format and that format's own
+     * content template is installed on this site.
      *
      * @param array $payload
      * @return bool
      */
-    public static function applies(array $payload): bool {
+    public static function matches_installed_grid_format(array $payload): bool {
         global $CFG;
 
-        return (($payload['course_configuration'] ?? [])['format'] ?? '') === 'grid'
-            && file_exists($CFG->dirroot . '/course/format/grid/templates/local/content.mustache');
+        $format = ($payload['course_configuration'] ?? [])['format'] ?? '';
+        $gridtemplatepath = $CFG->dirroot . '/course/format/grid/templates/local/content.mustache';
+        $isinstalled = file_exists($gridtemplatepath);
+        return $format === 'grid' && $isinstalled;
     }
 
     /**
