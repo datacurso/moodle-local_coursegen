@@ -62,26 +62,20 @@ trait glossary_entry_view {
     protected function glossary_show_entry_dictionary($entry, $mode = '', $hook = '', $printicons = 1, $aliases = true) {
         global $OUTPUT;
 
-        $out = '<table class="glossarypost dictionary" cellspacing="0">';
-        $out .= '<tr valign="top">';
-        $out .= '<td class="entry">';
         // glossary_print_entry_approval(): nothing outside approval mode.
-        $out .= '<div class="concept">';
-        $out .= $this->glossary_print_entry_concept($entry);
-        $out .= '</div> ';
-        $out .= $this->glossary_print_entry_definition($entry);
         // glossary_print_entry_attachment(): an entry the payload describes
         // carries no attachment.
+        $tagshtml = '';
         if (\core_tag_tag::is_enabled('mod_glossary', 'glossary_entries')) {
-            $out .= $OUTPUT->tag_list([], null, 'glossary-tags');
+            $tagshtml = $OUTPUT->tag_list([], null, 'glossary-tags');
         }
-        $out .= '</td></tr>';
-        $out .= '<tr valign="top"><td class="entrylowersection">';
-        $out .= $this->glossary_print_entry_lower_section($entry, $mode, $hook, $printicons, $aliases);
-        $out .= '</td>';
-        $out .= '</tr>';
-        $out .= "</table>\n";
-        return $out;
+
+        return $OUTPUT->render_from_template('local_coursegen/preview_glossary_entry', [
+            'concepthtml' => $this->glossary_print_entry_concept($entry),
+            'definitionhtml' => $this->glossary_print_entry_definition($entry),
+            'tagshtml' => $tagshtml,
+            'lowersectionhtml' => $this->glossary_print_entry_lower_section($entry, $mode, $hook, $printicons, $aliases),
+        ]);
     }
 
     /**
@@ -176,32 +170,24 @@ trait glossary_entry_view {
      */
     protected function glossary_print_entry_lower_section($entry, $mode, $hook, $printicons, $aliases = true,
             $printseparator = true) {
-        $out = '';
-        if ($aliases) {
-            $aliases = $this->glossary_print_entry_aliases($entry);
-        }
-        $icons   = '';
-        if ($printicons) {
-            $icons   = $this->glossary_print_entry_icons($entry, $mode, $hook);
-        }
-        if ($aliases || $icons || !empty($entry->rating)) {
-            $out .= '<table>';
-            if ($aliases) {
-                $id = "keyword-{$entry->id}";
-                $out .= '<tr valign="top"><td class="aliases">' .
-                    '<label for="' . $id . '">' . get_string('aliases', 'glossary') . ': </label>' .
-                    $aliases . '</td></tr>';
-            }
-            if ($icons) {
-                $out .= '<tr valign="top"><td class="icons">' . $icons . '</td></tr>';
-            }
-            $out .= '</table>';
+        global $OUTPUT;
 
-            if ($printseparator) {
-                $out .= "<hr>\n";
-            }
+        $aliaseshtml = '';
+        if ($aliases) {
+            $aliaseshtml = $this->glossary_print_entry_aliases($entry);
         }
-        return $out;
+        $icons = '';
+        if ($printicons) {
+            $icons = $this->glossary_print_entry_icons($entry, $mode, $hook);
+        }
+
+        return $OUTPUT->render_from_template('local_coursegen/preview_glossary_lower_section', [
+            'show' => $aliaseshtml !== '' || $icons !== '' || !empty($entry->rating),
+            'aliasesid' => "keyword-{$entry->id}",
+            'aliaseshtml' => $aliaseshtml,
+            'icons' => $icons,
+            'printseparator' => $printseparator,
+        ]);
     }
 
 }

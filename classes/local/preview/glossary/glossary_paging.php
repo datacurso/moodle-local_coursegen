@@ -41,122 +41,84 @@ trait glossary_paging {
      * @param bool $previousandnext
      * @return string
      */
-    public static function glossary_get_paging_bar($totalcount, $page, $perpage, $baseurl, $maxpageallowed = 99999, $maxdisplay = 20, $separator = "&nbsp;", $specialtext = "", $specialvalue = -1, $previousandnext = true) {
+    public static function glossary_get_paging_bar($totalcount, $page, $perpage, $baseurl, $maxpageallowed = 99999,
+            $maxdisplay = 20, $separator = "&nbsp;", $specialtext = "", $specialvalue = -1, $previousandnext = true) {
+        global $OUTPUT;
 
-        $code = '';
-
-        $showspecial = false;
-        $specialselected = false;
-
-        //Check if we have to show the special link
-        if (!empty($specialtext)) {
-            $showspecial = true;
-        }
-        //Check if we are with the special link selected
-        if ($showspecial && $page == $specialvalue) {
-            $specialselected = true;
+        if ($totalcount <= $perpage) {
+            return '';
         }
 
-        //If there are results (more than 1 page)
-        if ($totalcount > $perpage) {
-            $code .= "<div style=\"text-align:center\">";
-            $code .= "<p>" . get_string("page") . ":";
+        $data = self::glossary_paging_data($totalcount, $page, $perpage, $baseurl, $maxpageallowed, $maxdisplay,
+            $separator, $specialtext, $specialvalue, $previousandnext);
+        return $OUTPUT->render_from_template('local_coursegen/preview_glossary_paging', $data);
+    }
 
-            $maxpage = (int)(($totalcount - 1) / $perpage);
+    /**
+     * glossary_get_paging_bar(), as data for preview_glossary_paging.mustache.
+     *
+     * @param int $totalcount
+     * @param int $page
+     * @param int $perpage
+     * @param string $baseurl
+     * @param int $maxpageallowed
+     * @param int $maxdisplay
+     * @param string $separator
+     * @param string $specialtext
+     * @param int $specialvalue
+     * @param bool $previousandnext
+     * @return array
+     */
+    protected static function glossary_paging_data($totalcount, $page, $perpage, $baseurl, $maxpageallowed,
+            $maxdisplay, $separator, $specialtext, $specialvalue, $previousandnext): array {
+        $maxpage = (int) (($totalcount - 1) / $perpage);
 
-            //Lower and upper limit of page
-            if ($page < 0) {
-                $page = 0;
-            }
-            if ($page > $maxpageallowed) {
-                $page = $maxpageallowed;
-            }
-            if ($page > $maxpage) {
-                $page = $maxpage;
-            }
+        // Whether the special entry is the one selected is decided from the
+        // page as it was asked for, before it is clamped into the display
+        // range below - a request for the special page itself is often
+        // outside that range (glossary's own call passes -1 for both).
+        $showspecial = !empty($specialtext);
+        $specialselected = $showspecial && $page == $specialvalue;
 
-            //Calculate the window of pages
-            $pagefrom = $page - ((int)($maxdisplay / 2));
-            if ($pagefrom < 0) {
-                $pagefrom = 0;
-            }
-            $pageto = $pagefrom + $maxdisplay - 1;
-            if ($pageto > $maxpageallowed) {
-                $pageto = $maxpageallowed;
-            }
-            if ($pageto > $maxpage) {
-                $pageto = $maxpage;
-            }
+        $page = max(0, $page);
+        $page = min($page, $maxpageallowed, $maxpage);
 
-            //Some movements can be necessary if don't see enought pages
-            if ($pageto - $pagefrom < $maxdisplay - 1) {
-                if ($pageto - $maxdisplay + 1 > 0) {
-                    $pagefrom = $pageto - $maxdisplay + 1;
-                }
-            }
-
-            //Calculate first and last if necessary
-            $firstpagecode = '';
-            $lastpagecode = '';
-            if ($pagefrom > 0) {
-                $firstpagecode = "$separator<a href=\"{$baseurl}page=0\">1</a>";
-                if ($pagefrom > 1) {
-                    $firstpagecode .= "$separator...";
-                }
-            }
-            if ($pageto < $maxpage) {
-                if ($pageto < $maxpage - 1) {
-                    $lastpagecode = "$separator...";
-                }
-                $lastpagecode .= "$separator<a href=\"{$baseurl}page=$maxpage\">" . ($maxpage + 1) . "</a>";
-            }
-
-            //Previous
-            if ($page > 0 && $previousandnext) {
-                $pagenum = $page - 1;
-                $code .= "&nbsp;(<a  href=\"{$baseurl}page=$pagenum\">" . get_string("previous") . "</a>)&nbsp;";
-            }
-
-            //Add first
-            $code .= $firstpagecode;
-
-            $pagenum = $pagefrom;
-
-            //List of maxdisplay pages
-            while ($pagenum <= $pageto) {
-                $pagetoshow = $pagenum + 1;
-                if ($pagenum == $page && !$specialselected) {
-                    $code .= "$separator<b>$pagetoshow</b>";
-                } else {
-                    $code .= "$separator<a href=\"{$baseurl}page=$pagenum\">$pagetoshow</a>";
-                }
-                $pagenum++;
-            }
-
-            //Add last
-            $code .= $lastpagecode;
-
-            //Next
-            if ($page < $maxpage && $page < $maxpageallowed && $previousandnext) {
-                $pagenum = $page + 1;
-                $code .= "$separator(<a href=\"{$baseurl}page=$pagenum\">" . get_string("next") . "</a>)";
-            }
-
-            //Add special
-            if ($showspecial) {
-                $code .= '<br />';
-                if ($specialselected) {
-                    $code .= "$separator<b>$specialtext</b>";
-                } else {
-                    $code .= "$separator<a href=\"{$baseurl}page=$specialvalue\">$specialtext</a>";
-                }
-            }
-
-            //End html
-            $code .= "</p>";
-            $code .= "</div>";
+        $pagefrom = max(0, $page - (int) ($maxdisplay / 2));
+        $pageto = min($pagefrom + $maxdisplay - 1, $maxpageallowed, $maxpage);
+        if ($pageto - $pagefrom < $maxdisplay - 1 && $pageto - $maxdisplay + 1 > 0) {
+            $pagefrom = $pageto - $maxdisplay + 1;
         }
 
-        return $code;
+        $pages = [];
+        for ($pagenum = $pagefrom; $pagenum <= $pageto; $pagenum++) {
+            $pages[] = [
+                'url' => "{$baseurl}page=$pagenum",
+                'label' => $pagenum + 1,
+                'current' => $pagenum == $page && !$specialselected,
+            ];
+        }
+
+        return [
+            'show' => true,
+            'separator' => $separator,
+            'hasprev' => $page > 0 && $previousandnext,
+            'prevurl' => "{$baseurl}page=" . ($page - 1),
+            'prevlabel' => get_string('previous'),
+            'showfirstpage' => $pagefrom > 0,
+            'firsturl' => "{$baseurl}page=0",
+            'showfirstellipsis' => $pagefrom > 1,
+            'pages' => $pages,
+            'showlastellipsis' => $pageto < $maxpage - 1,
+            'showlastpage' => $pageto < $maxpage,
+            'lasturl' => "{$baseurl}page=$maxpage",
+            'lastlabel' => $maxpage + 1,
+            'hasnext' => $page < $maxpage && $page < $maxpageallowed && $previousandnext,
+            'nexturl' => "{$baseurl}page=" . ($page + 1),
+            'nextlabel' => get_string('next'),
+            'showspecial' => $showspecial,
+            'specialselected' => $specialselected,
+            'specialurl' => "{$baseurl}page=$specialvalue",
+            'specialtext' => $specialtext,
+        ];
     }
 }

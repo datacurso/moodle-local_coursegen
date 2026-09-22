@@ -16,6 +16,9 @@
 
 namespace local_coursegen\local\preview\glossary;
 
+use core_text;
+use stdClass;
+
 /**
  * mod_glossary's alphabet menu (A-Z, ALL, SPECIAL) and its paging bar,
  * ported the same way view.php is. Kept apart from view.php only because
@@ -37,10 +40,13 @@ trait glossary_navigation {
      * @return string
      */
     protected function glossary_print_alphabet_menu($mode, $hook, $sortkey = '', $sortorder = '') {
+        global $OUTPUT;
         $out = '';
         if ($mode != 'date') {
             if ($this->glossary->showalphabet) {
-                $out .= '<div class="glossaryexplain">' . get_string("explainalphabet", "glossary") . '</div><br />';
+                $out .= $OUTPUT->render_from_template('local_coursegen/preview_glossary_explain', [
+                    'text' => get_string('explainalphabet', 'glossary'),
+                ]);
             }
 
             $out .= $this->glossary_print_special_links($mode, $hook);
@@ -60,17 +66,17 @@ trait glossary_navigation {
      * @return string
      */
     protected function glossary_print_all_links($mode, $hook) {
-        $out = '';
-        if ($this->glossary->showall) {
-            $strallentries       = get_string("allentries", "glossary");
-            if ($hook == 'ALL') {
-                $out .= "<b>$strallentries</b>";
-            } else {
-                $strexplainall = strip_tags(get_string("explainall", "glossary"));
-                $out .= "<a title=\"$strexplainall\" href=\"" . $this->url(['mode' => $mode, 'hook' => 'ALL']) . "\">$strallentries</a>";
-            }
+        global $OUTPUT;
+        if (!$this->glossary->showall) {
+            return '';
         }
-        return $out;
+        return $OUTPUT->render_from_template('local_coursegen/preview_bold_or_link', [
+            'current' => $hook == 'ALL',
+            'text' => get_string('allentries', 'glossary'),
+            'title' => strip_tags(get_string('explainall', 'glossary')),
+            'url' => $this->url(['mode' => $mode, 'hook' => 'ALL']),
+            'suffix' => '',
+        ]);
     }
 
     /**
@@ -81,17 +87,17 @@ trait glossary_navigation {
      * @return string
      */
     protected function glossary_print_special_links($mode, $hook) {
-        $out = '';
-        if ($this->glossary->showspecial) {
-            $strspecial          = get_string("special", "glossary");
-            if ($hook == 'SPECIAL') {
-                $out .= "<b>$strspecial</b> | ";
-            } else {
-                $strexplainspecial = strip_tags(get_string("explainspecial", "glossary"));
-                $out .= "<a title=\"$strexplainspecial\" href=\"" . $this->url(['mode' => $mode, 'hook' => 'SPECIAL']) . "\">$strspecial</a> | ";
-            }
+        global $OUTPUT;
+        if (!$this->glossary->showspecial) {
+            return '';
         }
-        return $out;
+        return $OUTPUT->render_from_template('local_coursegen/preview_bold_or_link', [
+            'current' => $hook == 'SPECIAL',
+            'text' => get_string('special', 'glossary'),
+            'title' => strip_tags(get_string('explainspecial', 'glossary')),
+            'url' => $this->url(['mode' => $mode, 'hook' => 'SPECIAL']),
+            'suffix' => ' | ',
+        ]);
     }
 
     /**
@@ -104,17 +110,19 @@ trait glossary_navigation {
      * @return string
      */
     protected function glossary_print_alphabet_links($mode, $hook, $sortkey, $sortorder) {
+        global $OUTPUT;
+        if (!$this->glossary->showalphabet) {
+            return '';
+        }
         $out = '';
-        if ($this->glossary->showalphabet) {
-            $alphabet = explode(",", get_string('alphabet', 'langconfig'));
-            for ($i = 0; $i < count($alphabet); $i++) {
-                if ($hook == $alphabet[$i] and $hook) {
-                    $out .= "<b>$alphabet[$i]</b>";
-                } else {
-                    $out .= "<a href=\"" . $this->url(['mode' => $mode, 'hook' => $alphabet[$i], 'sortkey' => $sortkey, 'sortorder' => $sortorder]) . "\">$alphabet[$i]</a>";
-                }
-                $out .= ' | ';
-            }
+        $alphabet = explode(",", get_string('alphabet', 'langconfig'));
+        foreach ($alphabet as $letter) {
+            $out .= $OUTPUT->render_from_template('local_coursegen/preview_bold_or_link', [
+                'current' => $hook == $letter && $hook,
+                'text' => $letter,
+                'url' => $this->url(['mode' => $mode, 'hook' => $letter, 'sortkey' => $sortkey, 'sortorder' => $sortorder]),
+                'suffix' => ' | ',
+            ]);
         }
         return $out;
     }
@@ -151,11 +159,24 @@ trait glossary_navigation {
             }
             $all[] = $entry;
         }
-        usort($all, static function (stdClass $a, stdClass $b): int {
-            $order = strcmp(core_text::strtolower((string) $a->concept), core_text::strtolower((string) $b->concept));
-            return $order !== 0 ? $order : ((int) $a->id <=> (int) $b->id);
-        });
+        usort($all, [$this, 'compare_entries_by_concept']);
         $count = count($all);
         return [array_slice($all, $from, $limit ?: null), $count];
+    }
+
+    /**
+     * usort() comparator for glossary_get_entries_by_letter(): by concept,
+     * then by id to break a tie.
+     *
+     * @param stdClass $a
+     * @param stdClass $b
+     * @return int
+     */
+    protected function compare_entries_by_concept(stdClass $a, stdClass $b): int {
+        $order = strcmp(core_text::strtolower((string) $a->concept), core_text::strtolower((string) $b->concept));
+        if ($order !== 0) {
+            return $order;
+        }
+        return (int) $a->id <=> (int) $b->id;
     }
 }
