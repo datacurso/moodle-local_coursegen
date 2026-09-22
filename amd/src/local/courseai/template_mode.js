@@ -238,15 +238,14 @@ export const wireTemplateMode = (state) => {
         if (!activity) {
             return;
         }
-        // InsertActivity assigns this id (via the pre-decrement of nextActivityId)
-        // to the new row — captured so the catch below can find and undo it.
-        const pendingActivityId = tplState.nextActivityId;
-        if (insertActivity(tplState, sectionId, position, {...activity, ...(extras || {})})) {
+        const inserted = insertActivity(tplState, sectionId, position, {...activity, ...(extras || {})});
+        if (inserted) {
             try {
                 await rerenderStructure();
             } catch (e) {
+                // Undo the insertion so state matches the still-rendered DOM.
                 const section = tplState.sections.find((s) => s.id === sectionId);
-                const idx = section ? section.activities.findIndex((a) => a.id === pendingActivityId) : -1;
+                const idx = section ? section.activities.indexOf(inserted) : -1;
                 if (idx !== -1) {
                     section.activities.splice(idx, 1);
                 }

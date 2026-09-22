@@ -51,10 +51,12 @@ export const createTemplateState = (inputbar = {}) => ({
     allowedActivities: [],
     sections: [],
     typeLabels: {},
-    // Client-only placeholder ids for sections/activities the professor adds —
-    // negative so they never collide with real Moodle section/cm ids.
+    // Client-only placeholder id for sections the professor adds — negative
+    // so it never collides with a real Moodle section id. A new activity's
+    // id is a fresh crypto.randomUUID() instead (see insertActivity): every
+    // activity id, real or virtual, is a uid string now, so there is no
+    // shared numeric space left for a section-style counter to protect.
     nextSectionId: -1,
-    nextActivityId: -1,
     // Input-bar values, ready for the future generation payload.
     prompt: inputbar.prompt || '',
     generateimages: inputbar.generateimages || 0,
@@ -92,8 +94,9 @@ export const applyStructureResponse = (state, data) => {
             locked: !!activity.locked,
             action: activity.action || '',
             // Virtual instance rows ("AI will generate an activity here,
-            // molded on a template activity") arrive with NEGATIVE ids
-            // (-recordid on the server), locked and non-removable.
+            // molded on a template activity") arrive with the instance's own
+            // uid as their id (see get_template_structure.php), locked and
+            // non-removable.
             isinstance: !!activity.isinstance,
             aigenerated: !!activity.aigenerated,
             // The id this row answers to in the generation's progress events.
@@ -103,11 +106,6 @@ export const applyStructureResponse = (state, data) => {
             generationuid: activity.generationuid || '',
         })),
     }));
-    // Server-sent instance rows use negative ids, the same sign space as the
-    // client-only placeholder ids — re-seed the counter below the smallest
-    // received id so professor-added rows can never collide with them.
-    const minReceivedId = Math.min(0, ...state.sections.flatMap((s) => s.activities.map((a) => a.id)));
-    state.nextActivityId = minReceivedId - 1;
 };
 
 /**
@@ -152,15 +150,17 @@ export const addSection = (state, sectionLabel) => {
  * @param {Object} activity - {modname, displayname, purpose, iconhtml} plus the
  *     optional chooser prompt-panel extras {prompt, generateimages, draftitemid,
  *     filename}, defaulted to ''/0/0/'' when absent.
- * @returns {boolean} Whether the insertion happened.
+ * @returns {Object|null} The created activity row, or null if the insertion
+ *     did not happen — the caller uses the returned reference (not its id)
+ *     to find and undo the insertion if a later step fails.
  */
 export const insertActivity = (state, sectionId, position, activity) => {
     const section = state.sections.find((s) => s.id === sectionId);
     if (!section || section.locked) {
-        return false;
+        return null;
     }
     const newActivity = {
-        id: state.nextActivityId--,
+        id: crypto.randomUUID(),
         name: activity.displayname,
         modname: activity.modname,
         purpose: activity.purpose,
@@ -177,7 +177,7 @@ export const insertActivity = (state, sectionId, position, activity) => {
     } else {
         section.activities.push(newActivity);
     }
-    return true;
+    return newActivity;
 };
 
 /**
