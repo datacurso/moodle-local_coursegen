@@ -141,11 +141,9 @@ class grid_from_payload {
      * @return string
      */
     private static function generated_image(string $name): string {
+        global $OUTPUT;
         $initial = \core_text::strtoupper(\core_text::substr(trim($name), 0, 1));
-        $svg = '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 100 67">'
-            . '<rect width="100" height="67" fill="#8ca0ad"/>'
-            . '<text x="50" y="42" font-size="28" fill="#ffffff" text-anchor="middle">' . s($initial) . '</text>'
-            . '</svg>';
+        $svg = $OUTPUT->render_from_template('local_coursegen/preview_initial_svg', ['initial' => $initial]);
         return 'data:image/svg+xml;base64,' . base64_encode($svg);
     }
 

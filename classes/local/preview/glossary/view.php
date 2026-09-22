@@ -181,9 +181,10 @@ class view {
             $paging = self::glossary_get_paging_bar($count, $page, $entriesbypage, $baseurl . '&amp;',
                 9999, 10, '&nbsp;&nbsp;', $specialtext, -1);
 
-            $out .= '<div class="paging">';
-            $out .= $paging;
-            $out .= '</div>';
+            $out .= $OUTPUT->render_from_template('local_coursegen/preview_container', [
+                'classes' => 'paging',
+                'content' => $paging,
+            ]);
 
             foreach ($allentries as $entry) {
 
@@ -204,15 +205,9 @@ class view {
                         $currentpivot = $upperpivot;
 
                         // print the group break if apply
-
-                        $out .= '<div>';
-                        $out .= '<table cellspacing="0" class="glossarycategoryheader">';
-
-                        $out .= '<tr>';
-                        $out .= '<th >';
-
-                        $out .= $OUTPUT->heading($pivottoshow, 3);
-                        $out .= "</th></tr></table></div>\n";
+                        $out .= $OUTPUT->render_from_template('local_coursegen/preview_glossary_category_header', [
+                            'headinghtml' => $OUTPUT->heading($pivottoshow, 3),
+                        ]);
                     }
                 }
 
@@ -225,13 +220,7 @@ class view {
             $out .= $OUTPUT->box(get_string("noentries", "glossary"), "generalbox boxaligncenter boxwidthwide");
         }
 
-        if ($paging) {
-            $out .= '<hr />';
-            $out .= '<div class="paging">';
-            $out .= $paging;
-            $out .= '</div>';
-        }
-        $out .= '<br />';
+        $out .= $OUTPUT->render_from_template('local_coursegen/preview_glossary_footer', ['paging' => $paging]);
 
         return $out;
     }
