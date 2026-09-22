@@ -171,6 +171,26 @@ class course_from_payload {
 
         $summary = trim((string) ($summaries[$uid] ?? ''));
 
+        $activitybadge = null;
+        if ($writing) {
+            // An activity the run is going to write says so, because that is
+            // what the teacher is deciding about.
+            $activitybadge = [
+                'badgecontent' => get_string('courseai_template_instance_badge', 'local_coursegen'),
+                'badgestyle' => 'badge-none border',
+            ];
+        }
+
+        $altcontent = '';
+        if ($summary !== '') {
+            $altcontent = format_text($summary, FORMAT_PLAIN);
+        }
+
+        $extraclasses = '';
+        if ($writing) {
+            $extraclasses = 'local-coursegen-planned';
+        }
+
         return [
             'cmformat' => [
                 'hasname' => true,
@@ -183,26 +203,20 @@ class course_from_payload {
                     // The name as a course page carries it: the value on its
                     // own, because there is nothing here to edit in place.
                     'activityname' => [
-                        'displayvalue' => html_writer::link(
-                            $url,
-                            html_writer::span(format_string($name), 'instancename'),
-                            ['class' => 'aalink']
-                        ),
+                        'displayvalue' => $OUTPUT->render_from_template('local_coursegen/preview_activity_name_link', [
+                            'url' => $url,
+                            'name' => format_string($name),
+                        ]),
                     ],
-                    // An activity the run is going to write says so, because
-                    // that is what the teacher is deciding about.
-                    'activitybadge' => $writing ? [
-                        'badgecontent' => get_string('courseai_template_instance_badge', 'local_coursegen'),
-                        'badgestyle' => 'badge-none border',
-                    ] : null,
+                    'activitybadge' => $activitybadge,
                 ],
-                'altcontent' => $summary === '' ? '' : format_text($summary, FORMAT_PLAIN),
+                'altcontent' => $altcontent,
                 'hasaltcontent' => $summary !== '',
             ],
             'id' => $uid,
             'anchor' => 'activity-' . $uid,
             'module' => $modname,
-            'extraclasses' => $writing ? 'local-coursegen-planned' : '',
+            'extraclasses' => $extraclasses,
             'indent' => 0,
         ];
     }

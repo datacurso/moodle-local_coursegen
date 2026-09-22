@@ -171,12 +171,15 @@ class real_activity {
      * @return string[]
      */
     private static function text_parts(array $node): array {
+        global $OUTPUT;
         $parts = [];
         foreach (self::TEXT_FIELDS as $field) {
             $value = $node[$field] ?? null;
             if (is_string($value) && trim($value) !== '') {
-                $title = self::title_of($node);
-                $parts[] = $title === '' ? $value : \html_writer::tag('h4', $title) . $value;
+                $parts[] = $OUTPUT->render_from_template('local_coursegen/preview_titled_text', [
+                    'title' => self::title_of($node),
+                    'value' => $value,
+                ]);
                 break;
             }
         }
