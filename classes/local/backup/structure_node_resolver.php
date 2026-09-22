@@ -54,7 +54,7 @@ class structure_node_resolver {
         // read back out of the query text itself, where Moodle always wraps a
         // real table name in braces for the db layer to prefix it.
         $sql = (string) $nested->get_source_sql();
-        if ($sql !== '' && preg_match('~FROM\s+\{(\w+)\}~i', $sql, $found)) {
+        if ($sql !== '' && preg_match('~^\s*SELECT\s+.*?FROM\s+\{(\w+)\}~is', $sql, $found)) {
             return $found[1];
         }
         return null;
