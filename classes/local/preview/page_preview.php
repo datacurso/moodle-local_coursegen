@@ -137,19 +137,6 @@ class page_preview extends preview_base {
     }
 
     /**
-     * A page's own display options, decoded from its stored row.
-     *
-     * @param stdClass $page
-     * @return array
-     */
-    protected function display_options(stdClass $page): array {
-        if (empty($page->displayoptions)) {
-            return [];
-        }
-        return (array) unserialize_array($page->displayoptions);
-    }
-
-    /**
      * This module reads its own page at the narrower width (mod/page/view.php).
      *
      * @return bool
