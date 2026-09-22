@@ -19,34 +19,19 @@ namespace local_coursegen\local\backup;
 use backup_activity_task;
 
 /**
- * The little a module's own structure needs to know about who is asking.
- *
- * A module's backup structure is declared by a step, and a step belongs to a
- * task, which is how the declaration learns which activity it is describing.
- * The real task exists to produce a whole backup: it builds directories, adds
- * a dozen steps and settles every setting the person taking the backup chose.
- * None of that happens here, because nothing is being backed up. What is
- * wanted is only the declaration, and the declaration needs a task that can
- * answer four questions about the activity and one about the settings.
- *
- * The settings it answers are the ones a structure asks before deciding
- * whether to include a branch: whether the people's own data travels with the
- * activity, and whether groups do. Both are no. An activity is being read to
- * describe how it is built, not who has used it, so attempts, grades, timers
- * and submissions have no place in the answer, and a module that asks about
- * something else gets the same no rather than an error, because a module this
- * code has never seen must not be able to break it.
+ * A minimal backup_activity_task: answers the four questions a backup
+ * structure needs from its task (course id, and whether user data and group
+ * data travel with the activity) without producing an actual backup.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class reader_task extends backup_activity_task {
-    /** @var int The course the activity belongs to. */
     /** @var string[] Modules whose content backup files as user data. */
     private const PAGES_ARE_THE_MODULE = ['wiki'];
 
-    /** @var int */
+    /** @var int The course the activity belongs to. */
     protected int $courseid;
 
     /**
@@ -73,12 +58,6 @@ class reader_task extends backup_activity_task {
         return $this->courseid;
     }
 
-    /**
-     * Whatever a structure asks about the backup being taken, the answer is no.
-     *
-     * @param string $name
-     * @return bool
-     */
     /**
      * Every setting is off, except that a module's own pages travel with it.
      *
