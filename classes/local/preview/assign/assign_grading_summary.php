@@ -16,10 +16,6 @@
 
 namespace local_coursegen\local\preview\assign;
 
-use html_table;
-use html_table_cell;
-use html_table_row;
-use html_writer;
 use stdClass;
 
 /**
@@ -72,124 +68,107 @@ trait assign_grading_summary {
      */
     protected function render_assign_grading_summary(stdClass $summary): string {
         global $OUTPUT;
-        // Create a table for the data.
+        $table = $OUTPUT->render_from_template('local_coursegen/preview_table', [
+            'classes' => 'generaltable table-bordered',
+            'rows' => $this->grading_summary_rows($summary),
+        ]);
+
         $o = '';
         $o .= $OUTPUT->container_start('gradingsummary');
         $o .= $OUTPUT->heading(get_string('gradingsummary', 'assign'), 3);
-
-        $o .= $OUTPUT->box_start('boxaligncenter gradingsummarytable');
-        $t = new html_table();
-        $t->attributes['class'] = 'generaltable table-bordered';
-
-        // Visibility Status.
-        $cell1content = get_string('hiddenfromstudents');
-        $cell2content = (!$summary->isvisible) ? get_string('yes') : get_string('no');
-        $this->add_table_row_tuple($t, $cell1content, $cell2content);
-
-        // Status.
-        if ($summary->teamsubmission) {
-            $cell1content = get_string('numberofteams', 'assign');
-        } else {
-            $cell1content = get_string('numberofparticipants', 'assign');
-        }
-
-        $cell2content = $summary->participantcount;
-        $this->add_table_row_tuple($t, $cell1content, $cell2content);
-
-        // Drafts count and dont show drafts count when using offline assignment.
-        if ($summary->submissiondraftsenabled && $summary->submissionsenabled) {
-            $cell1content = get_string('numberofdraftsubmissions', 'assign');
-            $cell2content = $summary->submissiondraftscount;
-            $this->add_table_row_tuple($t, $cell1content, $cell2content);
-        }
-
-        // Submitted for grading.
-        if ($summary->submissionsenabled) {
-            $cell1content = get_string('numberofsubmittedassignments', 'assign');
-            $cell2content = $summary->submissionssubmittedcount;
-            $this->add_table_row_tuple($t, $cell1content, $cell2content);
-
-            if (!$summary->teamsubmission) {
-                $cell1content = get_string('numberofsubmissionsneedgrading', 'assign');
-                $cell2content = $summary->submissionsneedgradingcount;
-                $this->add_table_row_tuple($t, $cell1content, $cell2content);
-            }
-        }
-
-        $time = time();
-        if ($summary->duedate) {
-            // Time remaining.
-            $duedate = $summary->duedate;
-            $cell1content = get_string('timeremaining', 'assign');
-            if ($summary->courserelativedatesmode) {
-                $cell2content = get_string('relativedatessubmissiontimeleft', 'mod_assign');
-            } else {
-                if ($duedate - $time <= 0) {
-                    $cell2content = get_string('assignmentisdue', 'assign');
-                } else {
-                    $cell2content = format_time($duedate - $time);
-                }
-            }
-
-            $this->add_table_row_tuple($t, $cell1content, $cell2content);
-
-            if ($duedate < $time) {
-                $cell1content = get_string('latesubmissions', 'assign');
-                $cutoffdate = $summary->cutoffdate;
-                if ($cutoffdate) {
-                    if ($cutoffdate > $time) {
-                        $cell2content = get_string('latesubmissionsaccepted', 'assign', userdate($summary->cutoffdate));
-                    } else {
-                        $cell2content = get_string('nomoresubmissionsaccepted', 'assign');
-                    }
-
-                    $this->add_table_row_tuple($t, $cell1content, $cell2content);
-                }
-            }
-
-        }
-
-        // Add time limit info if there is one.
-        $timelimitenabled = get_config('assign', 'enabletimelimit');
-        if ($timelimitenabled && $summary->timelimit > 0) {
-            $cell1content = get_string('timelimit', 'assign');
-            $cell2content = format_time($summary->timelimit);
-            $this->add_table_row_tuple($t, $cell1content, $cell2content, [], []);
-        }
-
-        // All done - write the table.
-        $o .= html_writer::table($t);
-        $o .= $OUTPUT->box_end();
-
-        // Close the container and insert a spacer.
+        $o .= $OUTPUT->box($table, 'boxaligncenter gradingsummarytable');
         $o .= $OUTPUT->container_end();
-        $o .= html_writer::end_tag('center');
-
         return $o;
     }
 
     /**
-     * renderer::add_table_row_tuple().
+     * renderer::render_assign_grading_summary(), the table's rows.
      *
-     * @param html_table $table
-     * @param mixed $first
-     * @param mixed $second
-     * @param array $firstattributes
-     * @param array $secondattributes
+     * @param stdClass $summary
+     * @return array Rows of {first, second}, ready for preview_table.mustache.
      */
-    private function add_table_row_tuple(html_table $table, $first, $second, $firstattributes = [],
-            $secondattributes = []) {
-        $row = new html_table_row();
-        $cell1 = new html_table_cell($first);
-        $cell1->header = true;
-        if (!empty($firstattributes)) {
-            $cell1->attributes = $firstattributes;
+    protected function grading_summary_rows(stdClass $summary): array {
+        $rows = [];
+
+        // Visibility Status.
+        $visible = get_string('no');
+        if (!$summary->isvisible) {
+            $visible = get_string('yes');
         }
-        $cell2 = new html_table_cell($second);
-        if (!empty($secondattributes)) {
-            $cell2->attributes = $secondattributes;
+        $rows[] = ['first' => get_string('hiddenfromstudents'), 'second' => $visible];
+
+        // Status.
+        $participantslabel = get_string('numberofparticipants', 'assign');
+        if ($summary->teamsubmission) {
+            $participantslabel = get_string('numberofteams', 'assign');
         }
-        $row->cells = array($cell1, $cell2);
-        $table->data[] = $row;
+        $rows[] = ['first' => $participantslabel, 'second' => $summary->participantcount];
+
+        // Drafts count and dont show drafts count when using offline assignment.
+        if ($summary->submissiondraftsenabled && $summary->submissionsenabled) {
+            $rows[] = [
+                'first' => get_string('numberofdraftsubmissions', 'assign'),
+                'second' => $summary->submissiondraftscount,
+            ];
+        }
+
+        // Submitted for grading.
+        if ($summary->submissionsenabled) {
+            $rows[] = [
+                'first' => get_string('numberofsubmittedassignments', 'assign'),
+                'second' => $summary->submissionssubmittedcount,
+            ];
+
+            if (!$summary->teamsubmission) {
+                $rows[] = [
+                    'first' => get_string('numberofsubmissionsneedgrading', 'assign'),
+                    'second' => $summary->submissionsneedgradingcount,
+                ];
+            }
+        }
+
+        $rows = array_merge($rows, $this->grading_summary_time_rows($summary));
+
+        // Add time limit info if there is one.
+        $timelimitenabled = get_config('assign', 'enabletimelimit');
+        if ($timelimitenabled && $summary->timelimit > 0) {
+            $rows[] = ['first' => get_string('timelimit', 'assign'), 'second' => format_time($summary->timelimit)];
+        }
+
+        return $rows;
+    }
+
+    /**
+     * renderer::render_assign_grading_summary(), the due-date-dependent rows.
+     *
+     * @param stdClass $summary
+     * @return array Rows of {first, second}, ready for preview_table.mustache.
+     */
+    protected function grading_summary_time_rows(stdClass $summary): array {
+        if (!$summary->duedate) {
+            return [];
+        }
+
+        $time = time();
+        $duedate = $summary->duedate;
+
+        // Time remaining.
+        $timeremaining = format_time($duedate - $time);
+        if ($summary->courserelativedatesmode) {
+            $timeremaining = get_string('relativedatessubmissiontimeleft', 'mod_assign');
+        } else if ($duedate - $time <= 0) {
+            $timeremaining = get_string('assignmentisdue', 'assign');
+        }
+        $rows = [['first' => get_string('timeremaining', 'assign'), 'second' => $timeremaining]];
+
+        if ($duedate < $time && $summary->cutoffdate) {
+            $latesubmissions = get_string('nomoresubmissionsaccepted', 'assign');
+            if ($summary->cutoffdate > $time) {
+                $latesubmissions = get_string('latesubmissionsaccepted', 'assign', userdate($summary->cutoffdate));
+            }
+            $rows[] = ['first' => get_string('latesubmissions', 'assign'), 'second' => $latesubmissions];
+        }
+
+        return $rows;
     }
 }

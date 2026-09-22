@@ -1,0 +1,44 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/preview_workshop_plan
+
+    A previewed workshop's phases timeline, ported from
+    mod_workshop_renderer::render_workshop_user_plan().
+
+    Context variables required for this template:
+    * numberofphases - int.
+    * phases - array of {classes, active, title, actionshtml, taskshtml}.
+}}
+<div class="userplan" aria-labelledby="mod_workshop-userplanheading" aria-describedby="mod_workshop-userplanaccessibilitytitle">
+    <span id="mod_workshop-userplanaccessibilitytitle" class="accesshide">
+        {{#str}} userplanaccessibilitytitle, workshop, {{numberofphases}} {{/str}}
+    </span>
+    <a class="accesshide" href="#mod_workshop-userplancurrenttasks">{{#str}} userplanaccessibilityskip, workshop {{/str}}</a>
+    {{#phases}}
+    <dl class="phase">
+        <dt class="{{classes}}">
+            <div>
+                {{#active}}<span id="mod_workshop-userplancurrenttasks" class="phasetitle">{{title}}</span>{{/active}}
+                {{^active}}<span class="phasetitle">{{title}}</span>{{/active}}
+                {{#actionshtml}}<div class="actions">{{{actionshtml}}}</div>{{/actionshtml}}
+            </div>
+        </dt>
+        <dd class="{{classes}} phasetasks">{{{taskshtml}}}</dd>
+    </dl>
+    {{/phases}}
+</div>

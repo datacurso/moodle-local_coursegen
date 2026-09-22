@@ -16,9 +16,8 @@
 
 namespace local_coursegen\local\preview\workshop;
 
-use html_writer;
-use moodle_url;
 use pix_icon;
+use stdClass;
 use workshop;
 
 /**
@@ -37,61 +36,73 @@ trait workshop_plan_render {
      */
     protected function render_workshop_user_plan(): string {
         global $OUTPUT;
-        $o = ''; // Output HTML code.
-        $numberofphases = count($this->phases);
-        $o .= html_writer::start_tag('div', [
-            'class' => 'userplan',
-            'aria-labelledby' => 'mod_workshop-userplanheading',
-            'aria-describedby' => 'mod_workshop-userplanaccessibilitytitle',
-        ]);
-        $o .= html_writer::span(get_string('userplanaccessibilitytitle', 'workshop', $numberofphases),
-            'accesshide', ['id' => 'mod_workshop-userplanaccessibilitytitle']);
-        $o .= html_writer::link('#mod_workshop-userplancurrenttasks', get_string('userplanaccessibilityskip', 'workshop'),
-            ['class' => 'accesshide']);
+        $phases = [];
         foreach ($this->phases as $phasecode => $phase) {
-            $o .= html_writer::start_tag('dl', ['class' => 'phase']);
-            $actions = '';
-
-            if ($phase->active) {
-                // Mark the section as the current one.
-                $icon = $OUTPUT->pix_icon('i/marked', '');
-                $actions .= get_string('userplancurrentphase', 'workshop').' '.$icon;
-
-            } else {
-                // Display a control widget to switch to the given phase or mark the phase as the current one.
-                foreach ($phase->actions as $action) {
-                    if ($action->type === 'switchphase') {
-                        if ($phasecode == workshop::PHASE_ASSESSMENT && $this->workshop->phase == workshop::PHASE_SUBMISSION
-                                && $this->workshop->phaseswitchassessment) {
-                            $icon = new pix_icon('i/scheduled', get_string('switchphaseauto', 'mod_workshop'));
-                        } else {
-                            $icon = new pix_icon('i/marker', get_string('switchphase'.$phasecode, 'mod_workshop'));
-                        }
-                        $actions .= $OUTPUT->action_icon($action->url, $icon, null, null, true);
-                    }
-                }
-            }
-
-            if (!empty($actions)) {
-                $actions = $OUTPUT->container($actions, 'actions');
-            }
-            $classes = 'phase' . $phasecode;
-            if ($phase->active) {
-                $title = html_writer::span($phase->title, 'phasetitle', ['id' => 'mod_workshop-userplancurrenttasks']);
-                $classes .= ' active';
-            } else {
-                $title = html_writer::span($phase->title, 'phasetitle');
-                $classes .= ' nonactive';
-            }
-            $o .= html_writer::start_tag('dt', ['class' => $classes]);
-            $o .= $OUTPUT->container($title . $actions);
-            $o .= html_writer::start_tag('dd', ['class' => $classes. ' phasetasks']);
-            $o .= $this->helper_user_plan_tasks($phase->tasks);
-            $o .= html_writer::end_tag('dd');
-            $o .= html_writer::end_tag('dl');
+            $phases[] = $this->workshop_phase_row($phasecode, $phase);
         }
-        $o .= html_writer::end_tag('div');
-        return $o;
+        return $OUTPUT->render_from_template('local_coursegen/preview_workshop_plan', [
+            'numberofphases' => count($this->phases),
+            'phases' => $phases,
+        ]);
+    }
+
+    /**
+     * One phase's row: whether it is the active one, its heading, its
+     * switch-phase actions and its own task list, ready for
+     * preview_workshop_plan.mustache.
+     *
+     * @param mixed $phasecode
+     * @param stdClass $phase
+     * @return array
+     */
+    protected function workshop_phase_row($phasecode, $phase): array {
+        global $OUTPUT;
+        $actionshtml = '';
+        if ($phase->active) {
+            // Mark the section as the current one.
+            $icon = $OUTPUT->pix_icon('i/marked', '');
+            $actionshtml = get_string('userplancurrentphase', 'workshop') . ' ' . $icon;
+        } else {
+            // Display a control widget to switch to the given phase or mark the phase as the current one.
+            foreach ($phase->actions as $action) {
+                if ($action->type !== 'switchphase') {
+                    continue;
+                }
+                $icon = $this->phase_switch_icon($phasecode);
+                $actionshtml .= $OUTPUT->action_icon($action->url, $icon, null, null, true);
+            }
+        }
+
+        $classes = 'phase' . $phasecode;
+        if ($phase->active) {
+            $classes .= ' active';
+        } else {
+            $classes .= ' nonactive';
+        }
+
+        return [
+            'classes' => $classes,
+            'active' => $phase->active,
+            'title' => $phase->title,
+            'actionshtml' => $actionshtml,
+            'taskshtml' => $this->helper_user_plan_tasks($phase->tasks),
+        ];
+    }
+
+    /**
+     * Which icon marks a phase's switch-phase action: the scheduled-allocator
+     * icon for the one switch a running allocator will make on its own,
+     * the plain marker for every other.
+     *
+     * @param mixed $phasecode
+     * @return pix_icon
+     */
+    protected function phase_switch_icon($phasecode): pix_icon {
+        if ($phasecode == workshop::PHASE_ASSESSMENT && $this->workshop->phase == workshop::PHASE_SUBMISSION
+                && $this->workshop->phaseswitchassessment) {
+            return new pix_icon('i/scheduled', get_string('switchphaseauto', 'mod_workshop'));
+        }
+        return new pix_icon('i/marker', get_string('switchphase' . $phasecode, 'mod_workshop'));
     }
 
     /**
@@ -102,38 +113,50 @@ trait workshop_plan_render {
      */
     protected function helper_user_plan_tasks(array $tasks): string {
         global $OUTPUT;
-        $out = '';
+        if (empty($tasks)) {
+            return '';
+        }
+        $rows = [];
         foreach ($tasks as $taskcode => $task) {
-            $classes = '';
-            $accessibilitytext = '';
-            $icon = null;
-            if ($task->completed === true) {
-                $classes .= ' completed';
-                $accessibilitytext .= get_string('taskdone', 'workshop') . ' ';
-            } else if ($task->completed === false) {
-                $classes .= ' fail';
-                $accessibilitytext .= get_string('taskfail', 'workshop') . ' ';
-            } else if ($task->completed === 'info') {
-                $classes .= ' info';
-                $accessibilitytext .= get_string('taskinfo', 'workshop') . ' ';
-            } else {
-                $accessibilitytext .= get_string('tasktodo', 'workshop') . ' ';
-            }
-            if (is_null($task->link)) {
-                $title = html_writer::tag('span', $accessibilitytext, ['class' => 'accesshide']);
-                $title .= $task->title;
-            } else {
-                $title = html_writer::tag('span', $accessibilitytext, ['class' => 'accesshide']);
-                $title .= html_writer::link($task->link, $task->title);
-            }
-            $title = $OUTPUT->container($title, 'title');
-            $details = $OUTPUT->container($task->details, 'details');
-            $out .= html_writer::tag('li', $title . $details, ['class' => $classes]);
+            $rows[] = $this->workshop_task_row($task);
         }
-        if ($out) {
-            $out = html_writer::tag('ul', $out, ['class' => 'tasks']);
+        return $OUTPUT->render_from_template('local_coursegen/preview_workshop_tasks', ['tasks' => $rows]);
+    }
+
+    /**
+     * One task's row, ready for preview_workshop_tasks.mustache.
+     *
+     * @param stdClass $task
+     * @return array
+     */
+    protected function workshop_task_row(stdClass $task): array {
+        $classes = '';
+        $accessibilitytext = '';
+        if ($task->completed === true) {
+            $classes = 'completed';
+            $accessibilitytext = get_string('taskdone', 'workshop');
+        } else if ($task->completed === false) {
+            $classes = 'fail';
+            $accessibilitytext = get_string('taskfail', 'workshop');
+        } else if ($task->completed === 'info') {
+            $classes = 'info';
+            $accessibilitytext = get_string('taskinfo', 'workshop');
+        } else {
+            $accessibilitytext = get_string('tasktodo', 'workshop');
         }
-        return $out;
+
+        $link = null;
+        if (!is_null($task->link)) {
+            $link = $task->link->out(false);
+        }
+
+        return [
+            'classes' => $classes,
+            'accessibilitytext' => $accessibilitytext,
+            'link' => $link,
+            'title' => $task->title,
+            'details' => $task->details,
+        ];
     }
 
     /**

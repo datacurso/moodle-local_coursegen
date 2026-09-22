@@ -17,7 +17,6 @@
 namespace local_coursegen\local\preview\book;
 
 use context;
-use html_writer;
 use stdClass;
 
 /**
@@ -67,11 +66,38 @@ class view {
             'mod_book/main_action_menu',
             self::main_action_menu_data($chapters, $chapter, $context, $urls)
         );
-        $out = html_writer::div($renderedmenu, '', ['id' => 'mod_book-chaptersnavigation']);
+        $out = $OUTPUT->render_from_template('local_coursegen/preview_container', [
+            'id' => 'mod_book-chaptersnavigation',
+            'content' => $renderedmenu,
+        ]);
 
-        // The chapter itself.
-        $hidden = $chapter->hidden ? ' dimmed_text' : null;
-        $out .= $OUTPUT->box_start('generalbox book_content' . $hidden, 'mod_book-chapter');
+        $boxclasses = 'generalbox book_content';
+        if ($chapter->hidden) {
+            $boxclasses .= ' dimmed_text';
+        }
+        $out .= $OUTPUT->box(self::chapter_content($book, $chapters, $chapter, $context), $boxclasses, 'mod_book-chapter');
+
+        if (\core_tag_tag::is_enabled('mod_book', 'book_chapters')) {
+            // The chapter's tags travel in the structure as chaptertags; a
+            // preview of a chapter that carries none shows none, which is
+            // what tag_list() prints for an empty list.
+            $out .= $OUTPUT->tag_list(self::chapter_tags($chapter), null, 'book-tags');
+        }
+        return $out;
+    }
+
+    /**
+     * The chapter's own titles and text, inside chapter_page()'s box.
+     *
+     * @param stdClass $book
+     * @param array $chapters
+     * @param stdClass $chapter
+     * @param context $context
+     * @return string
+     */
+    protected static function chapter_content($book, $chapters, $chapter, context $context): string {
+        global $OUTPUT;
+        $out = '';
 
         if (!$book->customtitles) {
             if (!$chapter->subchapter) {
@@ -89,14 +115,6 @@ class view {
         $out .= format_text($chaptertext, $chapter->contentformat, ['noclean' => true, 'overflowdiv' => true,
             'context' => $context]);
 
-        $out .= $OUTPUT->box_end();
-
-        if (\core_tag_tag::is_enabled('mod_book', 'book_chapters')) {
-            // The chapter's tags travel in the structure as chaptertags; a
-            // preview of a chapter that carries none shows none, which is
-            // what tag_list() prints for an empty list.
-            $out .= $OUTPUT->tag_list(self::chapter_tags($chapter), null, 'book-tags');
-        }
         return $out;
     }
 

@@ -16,8 +16,6 @@
 
 namespace local_coursegen\local\preview\resource;
 
-use html_writer;
-
 /**
  * The file's size/type/date details and the description built around them,
  * ported from mod/resource/locallib.php. Kept apart from view.php only
@@ -162,10 +160,11 @@ trait resource_details {
     protected function resource_get_intro(object $resource, object $cm, bool $ignoresettings = false): string {
         $options = empty($resource->displayoptions) ? [] : (array) unserialize_array($resource->displayoptions);
 
+        global $OUTPUT;
         $extraintro = $this->resource_get_optional_details($resource, $cm);
         if ($extraintro) {
             // Put a paragaph tag around the details
-            $extraintro = html_writer::tag('p', $extraintro, array('class' => 'resourcedetails'));
+            $extraintro = $OUTPUT->render_from_template('local_coursegen/preview_resource_details', ['text' => $extraintro]);
         }
 
         $content = "";

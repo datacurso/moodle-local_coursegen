@@ -18,7 +18,6 @@ namespace local_coursegen\local\preview\url;
 
 use context;
 use core_media_manager;
-use html_writer;
 use moodle_url;
 use stdClass;
 
@@ -126,10 +125,15 @@ trait url_display {
             $attributes = [];
         }
 
-        $out = '<div class="urlworkaround">';
-        $out .= get_string('clicktoopen', 'url', html_writer::link($fullurl, format_string($cm->name), $attributes));
-        $out .= '</div>';
-        return $out;
+        global $OUTPUT;
+        $link = $OUTPUT->render_from_template('local_coursegen/preview_link', [
+            'url' => $fullurl->out(false),
+            'text' => format_string($cm->name),
+            'onclick' => $attributes['onclick'] ?? '',
+        ]);
+        return $OUTPUT->render_from_template('local_coursegen/preview_url_workaround', [
+            'clicktoopen' => get_string('clicktoopen', 'url', $link),
+        ]);
     }
 
     /**
@@ -142,14 +146,17 @@ trait url_display {
      * @return string
      */
     public static function url_display_embed($url, $cm, $course, context $context): string {
-        global $PAGE;
+        global $PAGE, $OUTPUT;
 
         $mimetype = resourcelib_guess_url_mimetype($url->externalurl);
         $fullurl  = self::url_get_full_url($url, $cm, $course);
         $title    = $url->name;
 
         $moodleurl = new moodle_url($fullurl);
-        $link = html_writer::link($moodleurl, format_string($cm->name));
+        $link = $OUTPUT->render_from_template('local_coursegen/preview_link', [
+            'url' => $moodleurl->out(false),
+            'text' => format_string($cm->name),
+        ]);
         $clicktoopen = get_string('clicktoopen', 'url', $link);
 
         $extension = resourcelib_get_extension($url->externalurl);

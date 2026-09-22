@@ -17,10 +17,6 @@
 namespace local_coursegen\local\preview\choice;
 
 use context;
-use html_table;
-use html_table_cell;
-use html_table_row;
-use html_writer;
 use local_coursegen\local\preview\json_store;
 use moodle_url;
 use stdClass;
@@ -184,7 +180,7 @@ class view {
             $out .= $heading;
             if ($results) {
                 if ($results->publish) { // If set to publish full results, display a heading for the responses section.
-                    $out .= html_writer::tag('h3', format_string(get_string("responses", "choice")), ['class' => 'mt-4']);
+                    $out .= $OUTPUT->heading(format_string(get_string("responses", "choice")), 3, 'mt-4');
                 }
                 // The group menu needs the course's groups; a template course
                 // has none to offer a preview.

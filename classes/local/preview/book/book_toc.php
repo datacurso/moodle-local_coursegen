@@ -18,7 +18,7 @@ namespace local_coursegen\local\preview\book;
 
 use block_contents;
 use context;
-use html_writer;
+use stdClass;
 
 /**
  * The book's table of contents, as a fake block and as the tree
@@ -81,81 +81,114 @@ trait book_toc {
      * @return string
      */
     public static function book_get_toc($chapters, $chapter, $book, context $context, callable $urls) {
-        $toc = '';
-        $nch = 0;   // Chapter number
-        $ns = 0;    // Subchapter number
-        $first = 1;
+        global $OUTPUT;
 
-        $viewhidden = has_capability('mod/book:viewhiddenchapters', $context);
-
-        $numberingclass = self::numbering_class($book->numbering);
-        if ($numberingclass !== null) {
-            $toc .= html_writer::start_tag('div', array('class' => 'book_toc ' . $numberingclass . ' clearfix'));
+        $tree = self::book_toc_tree($chapters, $chapter, $book, $context, $urls);
+        if (empty($tree)) {
+            return '';
         }
 
-        // Editing off. Normal students, teachers view.
-        $toc .= html_writer::start_tag('ul');
+        return $OUTPUT->render_from_template('local_coursegen/preview_book_toc', [
+            'numberingclass' => self::numbering_class($book->numbering) ?? '',
+            'chapters' => $tree,
+        ]);
+    }
+
+    /**
+     * The chapters nested one level into their subchapters, the way
+     * book_get_toc() draws them, with hidden chapters (and the subchapters
+     * that inherit their hidden state) left out entirely.
+     *
+     * A book's first chapter can never be a subchapter
+     * (book_preload_chapters() forces it), and a subchapter's hidden state
+     * always matches its parent's, so a subchapter is never orphaned by this
+     * filter.
+     *
+     * @param array $chapters
+     * @param stdClass $chapter
+     * @param stdClass $book
+     * @param context $context
+     * @param callable $urls chapter id => moodle_url
+     * @return array
+     */
+    protected static function book_toc_tree($chapters, $chapter, $book, context $context, callable $urls): array {
+        $viewhidden = has_capability('mod/book:viewhiddenchapters', $context);
+        $nch = 0;
+        $ns = 0;
+        $tree = [];
+        $current = -1;
+
         foreach ($chapters as $ch) {
-            $title = trim(format_string($ch->title, true, array('context' => $context)));
-            $titleunescaped = trim(format_string($ch->title, true, array('context' => $context, 'escape' => false)));
-            if (!$ch->hidden || ($ch->hidden && $viewhidden)) {
-                if (!$ch->subchapter) {
-                    $nch++;
-                    $ns = 0;
-
-                    if ($first) {
-                        $toc .= html_writer::start_tag('li');
-                    } else {
-                        $toc .= html_writer::end_tag('ul');
-                        $toc .= html_writer::end_tag('li');
-                        $toc .= html_writer::start_tag('li');
-                    }
-
-                    if ($book->numbering == self::BOOK_NUM_NUMBERS) {
-                          $title = "$nch. $title";
-                    }
-                } else {
-                    $ns++;
-
-                    if ($first) {
-                        $toc .= html_writer::start_tag('li');
-                        $toc .= html_writer::start_tag('ul');
-                        $toc .= html_writer::start_tag('li');
-                    } else {
-                        $toc .= html_writer::start_tag('li');
-                    }
-
-                    if ($book->numbering == self::BOOK_NUM_NUMBERS) {
-                          $title = "$nch.$ns. $title";
-                    }
-                }
-
-                $cssclass = ($ch->hidden && $viewhidden) ? 'dimmed_text' : '';
-
-                if ($ch->id == $chapter->id) {
-                    $toc .= html_writer::tag('strong', $title, array('class' => $cssclass));
-                } else {
-                    $toc .= html_writer::link($urls((int) $ch->id), $title, array('title' => s($titleunescaped), 'class' => $cssclass));
-                }
-
-                if (!$ch->subchapter) {
-                    $toc .= html_writer::start_tag('ul');
-                } else {
-                    $toc .= html_writer::end_tag('li');
-                }
-
-                $first = 0;
+            if ($ch->hidden && !$viewhidden) {
+                continue;
+            }
+            $node = self::book_toc_node($ch, $chapter, $book, $context, $urls, $viewhidden, $nch, $ns);
+            if (!$ch->subchapter) {
+                $tree[] = $node;
+                $current++;
+            } else {
+                $tree[$current]['subchapters'][] = $node;
             }
         }
 
-        $toc .= html_writer::end_tag('ul');
-        $toc .= html_writer::end_tag('li');
-        $toc .= html_writer::end_tag('ul');
+        foreach ($tree as $index => $node) {
+            $tree[$index]['hassubchapters'] = !empty($node['subchapters']);
+        }
+        return $tree;
+    }
 
-        $toc .= html_writer::end_tag('div');
+    /**
+     * One chapter's own row in the tree, numbered as book_get_toc() numbers it.
+     *
+     * @param stdClass $ch
+     * @param stdClass $chapter
+     * @param stdClass $book
+     * @param context $context
+     * @param callable $urls
+     * @param bool $viewhidden
+     * @param int $nch Chapter number, incremented in place for a chapter.
+     * @param int $ns Subchapter number, incremented in place for a subchapter.
+     * @return array
+     */
+    protected static function book_toc_node(
+        stdClass $ch,
+        stdClass $chapter,
+        stdClass $book,
+        context $context,
+        callable $urls,
+        bool $viewhidden,
+        int &$nch,
+        int &$ns
+    ): array {
+        $title = trim(format_string($ch->title, true, array('context' => $context)));
+        $titleunescaped = trim(format_string($ch->title, true, array('context' => $context, 'escape' => false)));
 
-        $toc = str_replace('<ul></ul>', '', $toc); // Cleanup of invalid structures.
+        if (!$ch->subchapter) {
+            $nch++;
+            $ns = 0;
+            if ($book->numbering == self::BOOK_NUM_NUMBERS) {
+                $title = "$nch. $title";
+            }
+        } else {
+            $ns++;
+            if ($book->numbering == self::BOOK_NUM_NUMBERS) {
+                $title = "$nch.$ns. $title";
+            }
+        }
 
-        return $toc;
+        $cssclass = '';
+        if ($ch->hidden && $viewhidden) {
+            $cssclass = 'dimmed_text';
+        }
+
+        return [
+            'id' => (int) $ch->id,
+            'title' => $title,
+            'titleunescaped' => $titleunescaped,
+            'cssclass' => $cssclass,
+            'iscurrent' => ($ch->id == $chapter->id),
+            'url' => $urls((int) $ch->id)->out(false),
+            'subchapters' => [],
+        ];
     }
 }

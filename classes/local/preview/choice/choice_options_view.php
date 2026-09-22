@@ -16,6 +16,9 @@
 
 namespace local_coursegen\local\preview\choice;
 
+use moodle_url;
+use stdClass;
+
 /**
  * mod_choice's option list, ported the same way view.php is: preparing each
  * option's response count/ratio (nobody has answered a choice being
@@ -85,62 +88,67 @@ trait choice_options_view {
      * @return string
      */
     protected function display_options($options, $coursemoduleid, $vertical = false, $multiple = false) {
+        global $OUTPUT;
         $layoutclass = 'horizontal';
         if ($vertical) {
             $layoutclass = 'vertical';
         }
         $target = new moodle_url($this->here);
-        $attributes = array('method'=>'POST', 'action'=>$target, 'class'=> $layoutclass);
-        $disabled = empty($options['previewonly']) ? array() : array('disabled' => 'disabled');
+        $disabled = !empty($options['previewonly']);
 
-        $html = html_writer::start_tag('form', $attributes);
-        $html .= html_writer::start_tag('ul', array('class' => 'choices list-unstyled unstyled'));
-
-        $availableoption = count($options['options']);
+        $rows = [];
         $choicecount = 0;
         foreach ($options['options'] as $option) {
             $choicecount++;
-            $html .= html_writer::start_tag('li', array('class' => 'option me-3'));
-            if ($multiple) {
-                $option->attributes->name = 'answer[]';
-                $option->attributes->type = 'checkbox';
-            } else {
-                $option->attributes->name = 'answer';
-                $option->attributes->type = 'radio';
-            }
-            $option->attributes->id = 'choice_'.$choicecount;
-            $option->attributes->class = 'mx-1';
-
-            $labeltext = $option->text;
-            if (!empty($option->attributes->disabled)) {
-                $labeltext .= ' ' . get_string('full', 'choice');
-                $availableoption--;
-            }
-
-            if (!empty($options['limitanswers']) && !empty($options['showavailable'])) {
-                $labeltext .= html_writer::empty_tag('br');
-                $labeltext .= get_string("responsesa", "choice", $option->countanswers);
-                $labeltext .= html_writer::empty_tag('br');
-                $labeltext .= get_string("limita", "choice", $option->maxanswers);
-            }
-
-            $html .= html_writer::empty_tag('input', (array)$option->attributes + $disabled);
-            $html .= html_writer::tag('label', $labeltext, array('for'=>$option->attributes->id));
-            $html .= html_writer::end_tag('li');
+            $rows[] = $this->choice_option_row($option, $options, $multiple, $choicecount, $disabled);
         }
-        $html .= html_writer::tag('li','', array('class'=>'clearfloat'));
-        $html .= html_writer::end_tag('ul');
-        $html .= html_writer::tag('div', '', array('class'=>'clearfloat'));
-        $html .= html_writer::empty_tag('input', array('type'=>'hidden', 'name'=>'sesskey', 'value'=>sesskey()));
-        $html .= html_writer::empty_tag('input', array('type'=>'hidden', 'name'=>'action', 'value'=>'makechoice'));
-        $html .= html_writer::empty_tag('input', array('type'=>'hidden', 'name'=>'id', 'value'=>$coursemoduleid));
 
         // The real form ends with the button that saves a choice, or with the
         // reason it cannot be saved. Nobody may act on an activity that does not exist, so the
         // options are shown and nothing follows them.
 
-        $html .= html_writer::end_tag('form');
+        return $OUTPUT->render_from_template('local_coursegen/preview_choice_options', [
+            'action' => $target->out(false),
+            'layoutclass' => $layoutclass,
+            'sesskey' => sesskey(),
+            'coursemoduleid' => $coursemoduleid,
+            'options' => $rows,
+        ]);
+    }
 
-        return $html;
+    /**
+     * One option's own row, ready for preview_choice_options.mustache.
+     *
+     * @param stdClass $option
+     * @param array $options
+     * @param bool $multiple
+     * @param int $choicecount
+     * @param bool $disabled
+     * @return array
+     */
+    protected function choice_option_row(stdClass $option, array $options, bool $multiple, int $choicecount, bool $disabled): array {
+        $type = 'radio';
+        $name = 'answer';
+        if ($multiple) {
+            $type = 'checkbox';
+            $name = 'answer[]';
+        }
+
+        $isfull = !empty($option->attributes->disabled);
+        $showavailable = !empty($options['limitanswers']) && !empty($options['showavailable']);
+
+        return [
+            'type' => $type,
+            'name' => $name,
+            'id' => 'choice_' . $choicecount,
+            'value' => $option->attributes->value,
+            'disabled' => $disabled || $isfull,
+            'text' => $option->text,
+            'isfull' => $isfull,
+            'fulltext' => get_string('full', 'choice'),
+            'showavailable' => $showavailable,
+            'responsestext' => get_string('responsesa', 'choice', $option->countanswers),
+            'limittext' => get_string('limita', 'choice', $option->maxanswers),
+        ];
     }
 }
