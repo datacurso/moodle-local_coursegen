@@ -47,12 +47,16 @@ trait wiki_content {
         $content = $this->wiki_refresh_cachedcontent($page);
         if (isset($content)) {
             $page = $content['page'];
-            $box = '';
+            $paragraphs = [];
             foreach ($content['sections'] as $s) {
-                $box .= '<p>' . get_string('repeatedsection', 'wiki', $s) . '</p>';
+                $paragraphs[] = ['text' => get_string('repeatedsection', 'wiki', $s)];
             }
 
-            if (!empty($box)) {
+            if (!empty($paragraphs)) {
+                $box = $OUTPUT->render_from_template('local_coursegen/preview_paragraphs', [
+                    'classes' => '',
+                    'paragraphs' => $paragraphs,
+                ]);
                 $out .= $OUTPUT->box($box);
             }
         }

@@ -16,7 +16,6 @@
 
 namespace local_coursegen\local\preview\feedback;
 
-use action_link;
 use cm_info;
 use context;
 use local_coursegen\local\preview\json_store;
@@ -39,6 +38,8 @@ use stdClass;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class view {
+    use feedback_actionbar;
+
     /** @var stdClass */
     protected stdClass $feedback;
     /** @var cm_info */
@@ -93,14 +94,27 @@ class view {
         $allitems = $this->store->get_records('feedback_item', ['feedback' => $this->feedback->id], 'position');
         $idx = 1;
         foreach ($allitems as $id => $item) {
-            $allitems[$id]->itemnr = !empty($item->hasvalue) ? ($idx++) : null;
+            $itemnr = null;
+            if (!empty($item->hasvalue)) {
+                $itemnr = $idx;
+                $idx++;
+            }
+            $allitems[$id]->itemnr = $itemnr;
         }
         if ($hasvalueonly && $allitems) {
-            return array_filter($allitems, function($item) {
-                return !empty($item->hasvalue);
-            });
+            return array_filter($allitems, [$this, 'item_has_value']);
         }
         return $allitems;
+    }
+
+    /**
+     * Whether an item counts towards the "answered" total.
+     *
+     * @param stdClass $item
+     * @return bool
+     */
+    protected function item_has_value(stdClass $item): bool {
+        return !empty($item->hasvalue);
     }
 
     /**
@@ -178,7 +192,11 @@ class view {
 
             $groupselect = groups_print_activity_menu($cm, $this->here, true);
 
-            $out .= $groupselect.'<div class="clearer">&nbsp;</div>';
+            $out .= $groupselect;
+            $out .= $OUTPUT->render_from_template('local_coursegen/preview_container', [
+                'classes' => 'clearer',
+                'content' => '&nbsp;',
+            ]);
             // mod_feedback\output\summary: nobody has answered.
             $summary = (object) [
                 'completedcount' => 0,
@@ -209,39 +227,4 @@ class view {
         return $out;
     }
 
-    /**
-     * standard_action_bar::get_items(), rendered through mod_feedback/main_action_menu.
-     *
-     * @param bool $viewcompletion
-     * @return string
-     */
-    protected function main_action_bar(bool $viewcompletion): string {
-        global $OUTPUT;
-        $items = [];
-        if (has_capability('mod/feedback:edititems', $this->context)) {
-            $items['left'][]['actionlink'] = new action_link(new moodle_url($this->here, ['tab' => 'edit']),
-                get_string('edit_items', 'feedback'), null, ['class' => 'btn btn-secondary']);
-        }
-        // The preview icon should be displayed only to users with capability to edit or view reports (to include
-        // non-editing teachers too).
-        $capabilities = [
-            'mod/feedback:edititems',
-            'mod/feedback:viewreports',
-        ];
-        if (has_any_capability($capabilities, $this->context)) {
-            $items['left'][]['actionlink'] = new action_link(new moodle_url($this->here, ['tab' => 'print']),
-                get_string('previewquestions', 'feedback'), null, ['class' => 'btn btn-secondary']);
-        }
-        if ($viewcompletion) {
-            // Display a link to complete feedback: nobody has started one to resume.
-            $label = get_string('complete_the_form', 'feedback');
-            $items['left'][]['actionlink'] = new action_link(new moodle_url($this->here, ['tab' => 'complete']),
-                $label, null, ['class' => 'btn btn-primary']);
-        }
-        // base_action_bar::export_for_template().
-        foreach ($items['left'] ?? [] as $i => $item) {
-            $items['left'][$i]['actionlink'] = $item['actionlink']->export_for_template($OUTPUT);
-        }
-        return $OUTPUT->render_from_template('mod_feedback/main_action_menu', $items);
-    }
 }

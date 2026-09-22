@@ -134,7 +134,7 @@ class view {
         // choice_show_reportlink() is drawn only on a page without secondary
         // navigation; a module page has it.
 
-        $out .= '<div class="clearer"></div>';
+        $out .= $OUTPUT->render_from_template('local_coursegen/preview_container', ['classes' => 'clearer', 'content' => '']);
 
         $timenow = time();
         $current = [];
