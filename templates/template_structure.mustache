@@ -32,18 +32,24 @@
     Data attributes required for JS:
     * data-action="local_coursegen/template/toggle-section" on the section chevron
     * data-action="local_coursegen/template/open-chooser" on "+ Add activity" triggers
-      and on the between-activities insert dividers (data-section-id, optional data-position)
+      and on the between-activities insert dividers (data-section-index, optional data-position)
     * data-action="local_coursegen/template/remove-activity" on the per-activity delete
-      control (data-section-id, data-activity-index)
+      control (data-section-index, data-activity-index)
     * data-action="local_coursegen/template/add-section" on the bottom "+ Add section" button
 
+    A section/activity has no id of its own here: every data-section-index and
+    data-activity-index is a position in the in-memory model (state.js), not a
+    database id — a row the professor just added has no id at all yet, and a
+    row loaded from the server addresses clicks the exact same way a new one
+    does, so there is only one addressing scheme, not two.
+
     Context variables required for this template:
-    * sections array - id int, name string, locked bool, activitiescount int,
+    * sections array - index int, name string, locked bool, activitiescount int,
       showaddactivity bool, activities array
-        * activities[].id int, name string, modname string (may be empty),
+        * activities[].name string, modname string (may be empty),
           purpose string, iconhtml string (raw, may be empty), locked bool,
           isinstance bool, aigenerated bool (shows the "AI will generate it"
-          badge), sectionid int, index int, typelabel string (optional),
+          badge), sectionindex int, index int, typelabel string (optional),
           showinsertzone bool
     * showaddsection bool
     * addsectiondisabled bool
@@ -53,14 +59,14 @@
     {
         "sections": [
             {
-                "id": 5, "name": "Introduction", "locked": true, "collapsed": false,
+                "index": 0, "name": "Introduction", "locked": true, "collapsed": false,
                 "activitiescount": 1, "showaddactivity": false,
                 "activities": [
                     {
-                        "id": 12, "name": "Welcome page", "modname": "page", "purpose": "content",
+                        "name": "Welcome page", "modname": "page", "purpose": "content",
                         "iconhtml": "<img class=\"icon activityicon\" src=\"#\" alt=\"\">",
                         "locked": true, "isinstance": false, "aigenerated": false,
-                        "sectionid": 5, "index": 0, "typelabel": "Page",
+                        "sectionindex": 0, "index": 0, "typelabel": "Page",
                         "showinsertzone": false
                     }
                 ]
@@ -73,13 +79,13 @@
 }}
 <ul class="course-content course-section-list list-unstyled m-0" data-region="template-section-list">
 {{#sections}}
-  <li class="section course-section main clearfix{{#locked}} is-locked{{/locked}}" data-section-id="{{id}}">
+  <li class="section course-section main clearfix{{#locked}} is-locked{{/locked}}" data-section-index="{{index}}">
     <div class="section-item">
       <div class="course-section-header d-flex align-items-center position-relative">
-        <a role="button" href="#tplSectionCollapse{{id}}" aria-expanded="{{#collapsed}}false{{/collapsed}}{{^collapsed}}true{{/collapsed}}"
-           aria-controls="tplSectionCollapse{{id}}"
+        <a role="button" href="#tplSectionCollapse{{index}}" aria-expanded="{{#collapsed}}false{{/collapsed}}{{^collapsed}}true{{/collapsed}}"
+           aria-controls="tplSectionCollapse{{index}}"
            class="btn btn-icon me-3 icons-collapse-expand justify-content-center{{#collapsed}} collapsed{{/collapsed}}"
-           data-action="local_coursegen/template/toggle-section" data-section-id="{{id}}">
+           data-action="local_coursegen/template/toggle-section" data-section-index="{{index}}">
           <span class="expanded-icon icon-no-margin p-2">{{#pix}} t/expandedchevron, core {{/pix}}</span>
           <span class="collapsed-icon icon-no-margin p-2">{{#pix}} t/collapsedchevron, core {{/pix}}</span>
         </a>
@@ -102,17 +108,17 @@
         {{#str}}courseai_template_locked_note, local_coursegen{{/str}}
       </p>
       {{/locked}}
-      <div id="tplSectionCollapse{{id}}" class="content course-content-item-content collapse{{^collapsed}} show{{/collapsed}}">
+      <div id="tplSectionCollapse{{index}}" class="content course-content-item-content collapse{{^collapsed}} show{{/collapsed}}">
         <ul class="section m-0 p-0 img-text d-block">
           {{#activities}}
           <li class="activity activity-wrapper {{modname}} modtype_{{modname}}{{#locked}} is-locked{{/locked}}"
-              data-section-id="{{sectionid}}" data-activity-index="{{index}}"
+              data-section-index="{{sectionindex}}" data-activity-index="{{index}}"
               {{#generationcmid}}data-generation-cmid="{{generationcmid}}"{{/generationcmid}}>
             {{#showinsertzone}}
             <div class="cg-insert-zone" role="presentation">
               <button type="button" class="cg-insert-btn"
                       data-action="local_coursegen/template/open-chooser"
-                      data-section-id="{{sectionid}}" data-position="{{index}}"
+                      data-section-index="{{sectionindex}}" data-position="{{index}}"
                       aria-label="{{#str}}courseai_template_add_activity, local_coursegen{{/str}}"
                       title="{{#str}}courseai_template_add_activity, local_coursegen{{/str}}">
                 <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
@@ -159,7 +165,7 @@
                   {{^locked}}
                   <span class="dp-action-btn dp-action-btn--delete" role="button" tabindex="0"
                         data-action="local_coursegen/template/remove-activity"
-                        data-section-id="{{sectionid}}" data-activity-index="{{index}}"
+                        data-section-index="{{sectionindex}}" data-activity-index="{{index}}"
                         aria-label="{{#str}}courseai_btn_cancel, local_coursegen{{/str}}"
                         title="{{#str}}courseai_btn_cancel, local_coursegen{{/str}}">
                     <span class="dp-action-icon dp-action-icon--delete">{{#pix}} t/delete, core {{/pix}}</span>
@@ -173,7 +179,7 @@
           {{#showaddactivity}}
           <li class="dp-add-activity-wrap">
             <button type="button" class="dp-add-control"
-                    data-action="local_coursegen/template/open-chooser" data-section-id="{{id}}">
+                    data-action="local_coursegen/template/open-chooser" data-section-index="{{index}}">
               <span class="dp-add-control__icon">+</span>
               <span>{{#str}}courseai_template_add_activity, local_coursegen{{/str}}</span>
             </button>

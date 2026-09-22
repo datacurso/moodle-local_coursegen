@@ -69,15 +69,19 @@ const ensureTypeLabels = async(state) => {
  * @returns {Object}
  */
 const buildContext = (state, labels) => ({
-    sections: state.sections.map((section) => ({
-        id: section.id,
+    sections: state.sections.map((section, sectionindex) => ({
+        // Every place a click needs to find its way back to this section
+        // (collapse toggle, add-activity, remove-activity) addresses it by
+        // this render-time position, never by section.id: a section the
+        // professor just added has no id at all (see state.js addSection),
+        // and a real section's id has nothing to do with routing a click.
+        index: sectionindex,
         name: section.name,
         locked: section.locked,
         collapsed: !!section.collapsed,
         activitiescount: section.activities.length,
         showaddactivity: !section.locked,
         activities: section.activities.map((activity, index) => ({
-            id: activity.id,
             name: activity.name,
             modname: activity.modname,
             purpose: activity.purpose,
@@ -90,7 +94,7 @@ const buildContext = (state, labels) => ({
             // as a meaningless zero.
             generationcmid: activity.generationcmid || '',
             generationuid: activity.generationuid || '',
-            sectionid: section.id,
+            sectionindex,
             index,
             typelabel: activity.typelabel || state.typeLabels[activity.modname] || '',
             // The insert-between-rows "+" divider is a planning affordance: it never
@@ -135,9 +139,9 @@ export const renderStructure = async(container, state, labels) => {
  *
  * @param {HTMLElement} container
  * @param {Object} handlers
- * @param {Function} handlers.onToggleSection - (sectionId) => void
- * @param {Function} handlers.onOpenChooser - (sectionId, position|null) => void
- * @param {Function} handlers.onRemoveActivity - (sectionId, activityIndex) => void
+ * @param {Function} handlers.onToggleSection - (sectionIndex) => void
+ * @param {Function} handlers.onOpenChooser - (sectionIndex, position|null) => void
+ * @param {Function} handlers.onRemoveActivity - (sectionIndex, activityIndex) => void
  * @param {Function} handlers.onAddSection - () => void
  */
 export const wireStructureEvents = (container, handlers) => {
@@ -156,7 +160,7 @@ export const wireStructureEvents = (container, handlers) => {
         removalPending = true;
         try {
             await handlers.onRemoveActivity(
-                parseInt(removeEl.dataset.sectionId, 10),
+                parseInt(removeEl.dataset.sectionIndex, 10),
                 parseInt(removeEl.dataset.activityIndex, 10)
             );
         } finally {
@@ -168,16 +172,16 @@ export const wireStructureEvents = (container, handlers) => {
         const toggleEl = event.target.closest(Selectors.actions.toggleSection);
         if (toggleEl) {
             event.preventDefault();
-            handlers.onToggleSection(parseInt(toggleEl.dataset.sectionId, 10));
+            handlers.onToggleSection(parseInt(toggleEl.dataset.sectionIndex, 10));
             return;
         }
 
         const chooserEl = event.target.closest(Selectors.actions.openChooser);
         if (chooserEl) {
             event.preventDefault();
-            const sectionId = parseInt(chooserEl.dataset.sectionId, 10);
+            const sectionIndex = parseInt(chooserEl.dataset.sectionIndex, 10);
             const position = 'position' in chooserEl.dataset ? parseInt(chooserEl.dataset.position, 10) : null;
-            handlers.onOpenChooser(sectionId, position);
+            handlers.onOpenChooser(sectionIndex, position);
             return;
         }
 

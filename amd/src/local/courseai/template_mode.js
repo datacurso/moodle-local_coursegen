@@ -184,23 +184,23 @@ export const wireTemplateMode = (state) => {
     };
 
     wireStructureEvents(container, {
-        onToggleSection: async(sectionId) => {
-            toggleSectionCollapsed(tplState, sectionId);
+        onToggleSection: async(sectionIndex) => {
+            toggleSectionCollapsed(tplState, sectionIndex);
             try {
                 await rerenderStructure();
             } catch (e) {
                 // Revert so the in-memory model matches what is still on screen.
-                toggleSectionCollapsed(tplState, sectionId);
+                toggleSectionCollapsed(tplState, sectionIndex);
                 Notification.exception(e);
             }
         },
-        onOpenChooser: (sectionId, position) => {
-            openActivityChooser(sectionId, position);
+        onOpenChooser: (sectionIndex, position) => {
+            openActivityChooser(sectionIndex, position);
         },
-        onRemoveActivity: async(sectionId, activityIndex) => {
-            const section = tplState.sections.find((s) => s.id === sectionId);
+        onRemoveActivity: async(sectionIndex, activityIndex) => {
+            const section = tplState.sections[sectionIndex];
             const removedActivity = section ? section.activities[activityIndex] : null;
-            if (removeActivity(tplState, sectionId, activityIndex)) {
+            if (removeActivity(tplState, sectionIndex, activityIndex)) {
                 try {
                     await rerenderStructure();
                 } catch (e) {
@@ -233,18 +233,18 @@ export const wireTemplateMode = (state) => {
         },
     });
 
-    wireChooserModal(async(sectionId, position, modname, extras) => {
+    wireChooserModal(async(sectionIndex, position, modname, extras) => {
         const activity = tplState.allowedActivities.find((a) => a.modname === modname);
         if (!activity) {
             return;
         }
-        const inserted = insertActivity(tplState, sectionId, position, {...activity, ...(extras || {})});
+        const inserted = insertActivity(tplState, sectionIndex, position, {...activity, ...(extras || {})});
         if (inserted) {
             try {
                 await rerenderStructure();
             } catch (e) {
                 // Undo the insertion so state matches the still-rendered DOM.
-                const section = tplState.sections.find((s) => s.id === sectionId);
+                const section = tplState.sections[sectionIndex];
                 const idx = section ? section.activities.indexOf(inserted) : -1;
                 if (idx !== -1) {
                     section.activities.splice(idx, 1);
