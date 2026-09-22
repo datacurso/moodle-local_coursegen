@@ -46,7 +46,7 @@ class structure_node_resolver {
             return $table;
         }
         $sql = (string) $nested->get_source_sql();
-        if ($sql !== '' && preg_match('~FROM\\s+\\{(\\w+)\\}~i', $sql, $found)) {
+        if ($sql !== '' && preg_match('~FROM\s+\{(\w+)\}~i', $sql, $found)) {
             return $found[1];
         }
         return null;
