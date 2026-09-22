@@ -46,7 +46,8 @@ class grid_from_payload {
     public static function matches_installed_grid_format(array $payload): bool {
         global $CFG;
 
-        $format = ($payload['course_configuration'] ?? [])['format'] ?? '';
+        $courseconfig = $payload['course_configuration'] ?? [];
+        $format = $courseconfig['format'] ?? '';
         $gridtemplatepath = $CFG->dirroot . '/course/format/grid/templates/local/content.mustache';
         $isinstalled = file_exists($gridtemplatepath);
         return $format === 'grid' && $isinstalled;
@@ -61,7 +62,8 @@ class grid_from_payload {
      * @return array
      */
     public static function content(array $content, array $payload, int $sessionid): array {
-        $settings = ($payload['course_configuration'] ?? [])['format_options'] ?? [];
+        $courseconfig = $payload['course_configuration'] ?? [];
+        $settings = $courseconfig['format_options'] ?? [];
 
         $tiles = [];
         $numbers = [];
@@ -71,6 +73,15 @@ class grid_from_payload {
             $options = $info['format_options'] ?? [];
 
             $numbers[] = (int) $section['num'];
+
+            // A section with no picture of its own is drawn with the one the
+            // format makes up for it, which is why both are offered and only
+            // one is ever set.
+            $generatedimageuri = false;
+            if (empty($info['image'])) {
+                $generatedimageuri = self::generated_image($section['sectionname']);
+            }
+
             $tiles[] = [
                 'number' => (int) $section['num'],
                 'sectionname' => $section['sectionname'],
@@ -82,12 +93,9 @@ class grid_from_payload {
                 'iscurrent' => false,
                 'sectionbreak' => !empty($options['sectionbreak']),
                 'sectionbreakheading' => (string) ($options['sectionbreakheading'] ?? ''),
-                // A section with no picture of its own is drawn with the one
-                // the format makes up for it, which is why both are offered
-                // and only one is ever set.
                 'imageuri' => $info['image'] ?? false,
                 'imagealttext' => (string) ($options['sectionimagealttext'] ?? ''),
-                'generatedimageuri' => empty($info['image']) ? self::generated_image($section['sectionname']) : false,
+                'generatedimageuri' => $generatedimageuri,
                 'sectioncompletionmarkup' => '',
             ];
 
@@ -95,6 +103,14 @@ class grid_from_payload {
         }
 
         $showsinpopup = ((int) ($settings['popup'] ?? 0)) === 2;
+
+        // A grid can open a section in a dialog instead of on its own page,
+        // and the dialog holds the same sections this page already built, so
+        // what is in them is what the run is going to produce.
+        $popupsections = [];
+        if ($showsinpopup) {
+            $popupsections = $popups;
+        }
 
         // A section shown as a tile is not also shown in the list above it:
         // the format draws both from what it is given, so giving it the same
@@ -111,11 +127,8 @@ class grid_from_payload {
             'sectiontitleingridbox' => ((int) ($settings['sectiontitleingridbox'] ?? 0)) === 2,
             'sectionbadgeingridbox' => ((int) ($settings['sectionbadgeingridbox'] ?? 0)) === 2,
             'showcompletion' => false,
-            // A grid can open a section in a dialog instead of on its own page,
-            // and the dialog holds the same sections this page already built,
-            // so what is in them is what the run is going to produce.
             'popup' => $showsinpopup,
-            'popupsections' => $showsinpopup ? $popups : [],
+            'popupsections' => $popupsections,
             'coursestyles' => self::styles($settings),
         ];
     }
