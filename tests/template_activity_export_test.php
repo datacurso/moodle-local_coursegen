@@ -29,6 +29,7 @@ require_once($CFG->dirroot . '/mod/quiz/lib.php');
 require_once($CFG->dirroot . '/mod/quiz/locallib.php');
 require_once($CFG->dirroot . '/question/type/numerical/questiontype.php');
 require_once(__DIR__ . '/fixtures/h5p_package_fixture.php');
+require_once(__DIR__ . '/fixtures/scorm_package_fixture.php');
 
 /**
  * What a mold activity ships to the AI service.
@@ -384,6 +385,286 @@ final class template_activity_export_test extends \advanced_testcase {
             'filepath' => '/',
             'filename' => $filename,
         ], $bytes);
+    }
+
+    /**
+     * A SCORM mold ships its raw description, every instance setting it owns
+     * and the grade to pass its grade item carries.
+     *
+     * The packed options column canNOT travel: scorm_add_instance() runs the
+     * payload through scorm_option2text(), which REBUILDS that column out of
+     * the six window checkboxes and would overwrite anything sent in it. So
+     * the six values travel expanded, and options itself never does.
+     */
+    public function test_scorm_exports_intro_settings_and_grade_pass(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('scorm', [
+            'name' => 'Interactive quiz',
+            'intro' => self::MARKED_INTRO,
+            'introformat' => FORMAT_HTML,
+            'popup' => 1,
+            'scrollbars' => 1,
+            'directories' => 0,
+            'location' => 0,
+            'menubar' => 0,
+            'toolbar' => 1,
+            'status' => 1,
+            'width' => 900,
+            'height' => 700,
+            'skipview' => 2,
+            'hidebrowse' => 1,
+            'hidetoc' => 3,
+            'nav' => 2,
+            'navpositionleft' => -120,
+            'navpositiontop' => -80,
+            'displayattemptstatus' => 2,
+            'displaycoursestructure' => 1,
+            'timeopen' => 1767225600,
+            'timeclose' => 1769904000,
+            'grademethod' => 2,
+            'maxgrade' => 90,
+            'maxattempt' => 3,
+            'whatgrade' => 1,
+            'forcenewattempt' => 2,
+            'lastattemptlock' => 1,
+            'forcecompleted' => 1,
+            'auto' => 1,
+            'autocommit' => 1,
+            'masteryoverride' => 0,
+            'updatefreq' => 1,
+            'completionstatusrequired' => 4,
+            'completionscorerequired' => 60,
+            'completionstatusallscos' => 1,
+            'gradepass' => 55.5,
+        ]);
+
+        $this->assertSame('Interactive quiz', $params['name']);
+        $this->assertSame(self::MARKED_INTRO, $params['intro']);
+        // The only scormtype a generated activity can reproduce.
+        $this->assertSame('local', $params['scormtype']);
+        $this->assertSame(1, (int) $params['popup']);
+        // The mold's window chrome, expanded; the packed column stays behind.
+        $this->assertSame(1, (int) $params['scrollbars']);
+        $this->assertSame(0, (int) $params['directories']);
+        $this->assertSame(0, (int) $params['location']);
+        $this->assertSame(0, (int) $params['menubar']);
+        $this->assertSame(1, (int) $params['toolbar']);
+        $this->assertSame(1, (int) $params['status']);
+        $this->assertArrayNotHasKey('options', $params);
+        $this->assertSame(900, (int) $params['width']);
+        $this->assertSame(700, (int) $params['height']);
+        $this->assertSame(2, (int) $params['skipview']);
+        $this->assertSame(1, (int) $params['hidebrowse']);
+        $this->assertSame(3, (int) $params['hidetoc']);
+        $this->assertSame(2, (int) $params['nav']);
+        $this->assertSame(-120, (int) $params['navpositionleft']);
+        $this->assertSame(-80, (int) $params['navpositiontop']);
+        $this->assertSame(2, (int) $params['displayattemptstatus']);
+        $this->assertSame(1, (int) $params['displaycoursestructure']);
+        $this->assertSame(1767225600, (int) $params['timeopen']);
+        $this->assertSame(1769904000, (int) $params['timeclose']);
+        $this->assertSame(2, (int) $params['grademethod']);
+        $this->assertSame(90.0, (float) $params['maxgrade']);
+        $this->assertSame(3, (int) $params['maxattempt']);
+        $this->assertSame(1, (int) $params['whatgrade']);
+        $this->assertSame(2, (int) $params['forcenewattempt']);
+        $this->assertSame(1, (int) $params['lastattemptlock']);
+        $this->assertSame(1, (int) $params['forcecompleted']);
+        $this->assertSame(1, (int) $params['auto']);
+        $this->assertSame(1, (int) $params['autocommit']);
+        $this->assertSame(0, (int) $params['masteryoverride']);
+        $this->assertSame(1, (int) $params['updatefreq']);
+        $this->assertSame(4, (int) $params['completionstatusrequired']);
+        $this->assertSame(60, (int) $params['completionscorerequired']);
+        $this->assertSame(1, (int) $params['completionstatusallscos']);
+        $this->assertSame(55.5, (float) $params['gradepass']);
+    }
+
+    /**
+     * A framed mold has no window chrome at all.
+     *
+     * scorm_option2text() blanks the options column whenever popup is not 1,
+     * so there is nothing packed to read back. The six fields still travel, as
+     * the zeros scorm_option2text() itself substitutes for a checkbox the form
+     * did not post - a partial payload would leave the generated activity on
+     * the site defaults instead of on the mold's own chrome.
+     */
+    public function test_scorm_without_a_popup_exports_zeroed_window_options(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('scorm', [
+            'popup' => 0,
+            // Set on the way in, and dropped by scorm_option2text(): a framed
+            // activity stores no chrome, so none of it can be reproduced.
+            'scrollbars' => 1,
+            'toolbar' => 1,
+        ]);
+
+        $this->assertSame(0, (int) $params['popup']);
+        foreach (['scrollbars', 'directories', 'location', 'menubar', 'toolbar', 'status'] as $name) {
+            $this->assertSame(0, (int) $params[$name]);
+        }
+        $this->assertArrayNotHasKey('options', $params);
+    }
+
+    /**
+     * A package our own generator wrote ships its index.html raw.
+     *
+     * Every piece of a generated SCORM's content lives as JSON inside that one
+     * entry, and the other four are the fixed skeleton the service owns - so
+     * the text travels byte for byte, markers included, and nothing else does.
+     */
+    public function test_scorm_exports_its_mold_index_html_raw(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $cm = $this->create_scorm_with_package(scorm_package_fixture::mold_bytes(), 'cuestionario-ia.zip');
+
+        $params = template_activity_export::parameters_for($cm);
+
+        $this->assertIsArray($params['moldscorm']);
+        $this->assertSame('cuestionario-ia.zip', $params['moldscorm']['filename']);
+        $this->assertTrue($params['moldscorm']['ours']);
+        $this->assertSame(scorm_package_fixture::MOLD_INDEX_HTML, $params['moldscorm']['indexhtml']);
+        $this->assertStringContainsString(scorm_package_fixture::MOLD_MARKER, $params['moldscorm']['indexhtml']);
+        // Only the one text entry travels; the skeleton is the service's own.
+        $this->assertArrayNotHasKey('imsmanifest', $params['moldscorm']);
+    }
+
+    /**
+     * A package somebody else published is reported, not shipped.
+     *
+     * The service can only rebuild its own template, so a Storyline or iSpring
+     * export declares itself as not ours and carries no text at all - and the
+     * whole template export survives it rather than throwing.
+     */
+    public function test_scorm_third_party_package_exports_no_index_html(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $cm = $this->create_scorm_with_package(scorm_package_fixture::third_party_bytes(), 'storyline.zip');
+
+        $params = template_activity_export::parameters_for($cm);
+
+        $this->assertIsArray($params['moldscorm']);
+        $this->assertSame('storyline.zip', $params['moldscorm']['filename']);
+        $this->assertFalse($params['moldscorm']['ours']);
+        $this->assertSame('', $params['moldscorm']['indexhtml']);
+    }
+
+    /**
+     * A package whose entry point is not an index.html is reported the same
+     * way: it is a real local package, but not one the service can rebuild.
+     */
+    public function test_scorm_package_without_an_index_exports_no_index_html(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $cm = $this->create_scorm_with_package(scorm_package_fixture::bytes_without_index(), 'legacy.zip');
+
+        $params = template_activity_export::parameters_for($cm);
+
+        $this->assertIsArray($params['moldscorm']);
+        $this->assertFalse($params['moldscorm']['ours']);
+        $this->assertSame('', $params['moldscorm']['indexhtml']);
+    }
+
+    /**
+     * A SCORM whose package is gone still exports: it simply declares that it
+     * carries no mold package, rather than throwing.
+     */
+    public function test_scorm_without_a_package_exports_a_null_mold(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $module = $this->getDataGenerator()->create_module('scorm', ['course' => $course->id]);
+        $cm = get_fast_modinfo($course)->get_cm($module->cmid);
+        get_file_storage()->delete_area_files($cm->context->id, 'mod_scorm', 'package', 0);
+
+        $params = template_activity_export::parameters_for($cm);
+
+        $this->assertArrayHasKey('moldscorm', $params);
+        $this->assertNull($params['moldscorm']);
+        // The rest of the activity still travels: only the package is missing.
+        $this->assertSame($module->name, $params['name']);
+        $this->assertArrayHasKey('grademethod', $params);
+    }
+
+    /**
+     * An externally hosted SCORM owns no local package at all, so there is no
+     * mold to rebuild and no scormtype a generated activity could reproduce.
+     */
+    public function test_scorm_external_exports_a_null_mold(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $module = $this->getDataGenerator()->create_module('scorm', ['course' => $course->id]);
+        $DB->set_field('scorm', 'scormtype', 'external', ['id' => $module->id]);
+        $cm = get_fast_modinfo($course)->get_cm($module->cmid);
+
+        $params = template_activity_export::parameters_for($cm);
+
+        $this->assertArrayHasKey('moldscorm', $params);
+        $this->assertNull($params['moldscorm']);
+        $this->assertArrayNotHasKey('scormtype', $params);
+    }
+
+    /**
+     * Identity columns never travel. Beyond the usual ones, everything the
+     * package parser derives from the uploaded file - version, reference, the
+     * hashes, revision and launch - belongs to the mold's own package and
+     * would describe a file the generated activity does not have.
+     */
+    public function test_scorm_export_omits_identity_columns(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('scorm', ['intro' => 'Plain', 'introformat' => FORMAT_HTML]);
+
+        $columns = [
+            'id', 'course', 'timemodified', 'introformat',
+            'version', 'reference', 'sha1hash', 'md5hash', 'revision', 'launch',
+        ];
+        foreach ($columns as $column) {
+            $this->assertArrayNotHasKey($column, $params);
+        }
+    }
+
+    /**
+     * Create a SCORM activity whose package is the given bytes.
+     *
+     * The generator needs a real, parseable package to create the instance, so
+     * the fixture replaces it afterwards - the export only ever reads the file
+     * area, never the scoes the parser wrote.
+     *
+     * @param string $bytes The package bytes.
+     * @param string $filename Package name, extension included.
+     * @return \cm_info
+     */
+    private function create_scorm_with_package(string $bytes, string $filename): \cm_info {
+        $course = $this->getDataGenerator()->create_course();
+        $module = $this->getDataGenerator()->create_module('scorm', ['course' => $course->id]);
+        $cm = get_fast_modinfo($course)->get_cm($module->cmid);
+
+        $fs = get_file_storage();
+        $fs->delete_area_files($cm->context->id, 'mod_scorm', 'package', 0);
+        $fs->create_file_from_string([
+            'contextid' => $cm->context->id,
+            'component' => 'mod_scorm',
+            'filearea' => 'package',
+            'itemid' => 0,
+            'filepath' => '/',
+            'filename' => $filename,
+        ], $bytes);
+
+        return $cm;
     }
 
     /**
