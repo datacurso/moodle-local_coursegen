@@ -28,6 +28,7 @@ require_once($CFG->dirroot . '/mod/wiki/locallib.php');
 require_once($CFG->dirroot . '/mod/quiz/lib.php');
 require_once($CFG->dirroot . '/mod/quiz/locallib.php');
 require_once($CFG->dirroot . '/question/type/numerical/questiontype.php');
+require_once(__DIR__ . '/fixtures/h5p_package_fixture.php');
 
 /**
  * What a mold activity ships to the AI service.
@@ -262,6 +263,127 @@ final class template_activity_export_test extends \advanced_testcase {
             $this->assertArrayNotHasKey($column, $params);
         }
         $this->assertArrayNotHasKey('mod_settings', $params);
+    }
+
+    /**
+     * An H5P mold ships its raw description, every instance setting it owns and
+     * the grade to pass its grade item carries.
+     *
+     * mod_h5pactivity has NO maxattempts column: the "attempt options" fieldset
+     * is enabletracking/grademethod/reviewmode and nothing else.
+     */
+    public function test_h5pactivity_exports_intro_settings_and_grade_pass(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('h5pactivity', [
+            'name' => 'Game map',
+            'intro' => self::MARKED_INTRO,
+            'introformat' => FORMAT_HTML,
+            // A packed int with several bits set; it travels verbatim.
+            'displayoptions' => 12,
+            'enabletracking' => 1,
+            'grademethod' => 2,
+            'reviewmode' => 2,
+            'grade' => 80,
+            'gradepass' => 55.5,
+        ]);
+
+        $this->assertSame('Game map', $params['name']);
+        $this->assertSame(self::MARKED_INTRO, $params['intro']);
+        $this->assertSame(12, (int) $params['displayoptions']);
+        $this->assertSame(1, (int) $params['enabletracking']);
+        $this->assertSame(2, (int) $params['grademethod']);
+        $this->assertSame(2, (int) $params['reviewmode']);
+        $this->assertSame(80, (int) $params['grade']);
+        $this->assertSame(55.5, (float) $params['gradepass']);
+        // mod_h5pactivity owns no attempt limit at all.
+        $this->assertArrayNotHasKey('maxattempts', $params);
+    }
+
+    /**
+     * The mold's own package is what the service reads its text out of: the
+     * main library with its versions, and BOTH text entries raw, markers
+     * included. The bytes of everything else never travel.
+     */
+    public function test_h5pactivity_exports_its_mold_package_raw(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $module = $this->getDataGenerator()->create_module('h5pactivity', ['course' => $course->id]);
+        $cm = get_fast_modinfo($course)->get_cm($module->cmid);
+        $this->attach_h5p_package($cm, h5p_package_fixture::mold_bytes(), 'mapa-del-juego.h5p');
+
+        $params = template_activity_export::parameters_for($cm);
+
+        $this->assertIsArray($params['moldh5p']);
+        $this->assertSame((int) $cm->id, $params['moldh5p']['cmid']);
+        $this->assertSame('H5P.Fixture', $params['moldh5p']['mainlibrary']);
+        $this->assertSame(1, $params['moldh5p']['majorversion']);
+        $this->assertSame(5, $params['moldh5p']['minorversion']);
+        $this->assertSame('mapa-del-juego.h5p', $params['moldh5p']['filename']);
+        // Byte for byte: these two texts carry the markers the service fills in.
+        $this->assertSame(h5p_package_fixture::MOLD_H5P_JSON, $params['moldh5p']['h5pjson']);
+        $this->assertSame(h5p_package_fixture::MOLD_CONTENT_JSON, $params['moldh5p']['contentjson']);
+        $this->assertStringContainsString('⟦coursegen:tema 1 del silabo⟧', $params['moldh5p']['contentjson']);
+    }
+
+    /**
+     * An H5P activity whose package is gone still exports: it simply declares
+     * that it carries no mold package, rather than throwing.
+     */
+    public function test_h5pactivity_without_a_package_exports_a_null_mold(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $module = $this->getDataGenerator()->create_module('h5pactivity', ['course' => $course->id]);
+        $cm = get_fast_modinfo($course)->get_cm($module->cmid);
+        get_file_storage()->delete_area_files($cm->context->id, 'mod_h5pactivity', 'package', 0);
+
+        $params = template_activity_export::parameters_for($cm);
+
+        $this->assertArrayHasKey('moldh5p', $params);
+        $this->assertNull($params['moldh5p']);
+        // The rest of the activity still travels: only the package is missing.
+        $this->assertSame($module->name, $params['name']);
+        $this->assertArrayHasKey('enabletracking', $params);
+    }
+
+    /**
+     * Identity columns never travel: the generated activity lives in another
+     * course and owns its own identity.
+     */
+    public function test_h5pactivity_export_omits_identity_columns(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = $this->export_module('h5pactivity', ['intro' => 'Plain', 'introformat' => FORMAT_HTML]);
+
+        foreach (['id', 'course', 'timecreated', 'timemodified', 'introformat'] as $column) {
+            $this->assertArrayNotHasKey($column, $params);
+        }
+    }
+
+    /**
+     * Replace an H5P activity's package with the given bytes.
+     *
+     * @param \cm_info $cm The H5P activity.
+     * @param string $bytes The package bytes.
+     * @param string $filename Package name, extension included.
+     */
+    private function attach_h5p_package(\cm_info $cm, string $bytes, string $filename): void {
+        $fs = get_file_storage();
+        $fs->delete_area_files($cm->context->id, 'mod_h5pactivity', 'package', 0);
+        $fs->create_file_from_string([
+            'contextid' => $cm->context->id,
+            'component' => 'mod_h5pactivity',
+            'filearea' => 'package',
+            'itemid' => 0,
+            'filepath' => '/',
+            'filename' => $filename,
+        ], $bytes);
     }
 
     /**
