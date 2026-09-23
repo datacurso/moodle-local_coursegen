@@ -163,7 +163,7 @@ class activity_preview_lookup {
             if ((string) ($activity['uid'] ?? '') === $uid) {
                 return [
                     'modname' => (string) ($activity['resource_type'] ?? ''),
-                    'parameters' => real_activity::to_parameters($activity),
+                    'parameters' => kept_activity::to_parameters($activity),
                     'source' => $activity,
                 ];
             }
