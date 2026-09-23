@@ -20,7 +20,7 @@ use context;
 use stdClass;
 
 /**
- * mod_book's view code, ported to run against the payload.
+ * mod_book's view code, run here against the payload instead of the database.
  *
  * Copied from mod/book/locallib.php, mod/book/view.php,
  * mod/book/classes/output/main_action_menu.php and mod/book/classes/helper.php
