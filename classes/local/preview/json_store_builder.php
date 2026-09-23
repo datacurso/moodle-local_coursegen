@@ -94,9 +94,15 @@ class json_store_builder {
             // "lessonid" for a lesson's pages and "forum" for a forum's
             // discussions; a column the table does not have costs nothing in
             // a store that has no columns.
+            //
+            // Never already set: a backup element never declares its own
+            // parent's id among its final elements (confirmed against
+            // mod_lesson's 'page' and mod_forum's 'discussion' - neither
+            // lists lessonid/forum among their own columns), because backup
+            // restores that link from the nesting itself, not from a column.
             foreach ($ancestors as $ancestorname => $ancestorid) {
-                $row[$ancestorname . 'id'] ??= $ancestorid;
-                $row[$ancestorname] ??= $ancestorid;
+                $row[$ancestorname . 'id'] = $ancestorid;
+                $row[$ancestorname] = $ancestorid;
             }
             $rows[$table][] = (object) $row;
         }

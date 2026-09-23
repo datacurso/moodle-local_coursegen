@@ -40,13 +40,13 @@ trait ported_module_intro {
         $context = $this->context();
         $options = ['noclean' => true, 'para' => false, 'filter' => $filter, 'context' => $context, 'overflowdiv' => true];
         $intro = file_rewrite_pluginfile_urls(
-            (string) ($activity->intro ?? ''),
+            $activity->intro,
             'pluginfile.php',
             $context->id,
             'mod_' . $this->modname(),
             'intro',
             null
         );
-        return trim(format_text($intro, (int) ($activity->introformat ?? FORMAT_HTML), $options, null));
+        return trim(format_text($intro, $activity->introformat, $options, null));
     }
 }
