@@ -17,15 +17,15 @@
 namespace local_coursegen\local\preview;
 
 /**
- * A ported module's description, formatted the way core's own
- * format_module_intro() formats it. Kept apart from ported_preview.php only
- * because together they crossed the 250-line cap.
+ * A module's description, formatted the way core's own format_module_intro()
+ * formats it. Kept apart from preview_base.php only because together they
+ * crossed the 250-line cap.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-trait ported_module_intro {
+trait preview_base_module_intro {
     /**
      * The module's description formatted the way format_module_intro() formats it.
      *
