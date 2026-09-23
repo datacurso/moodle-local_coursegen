@@ -29,22 +29,14 @@ namespace local_coursegen\local\preview;
  * That matters because a preview must not reach the real thing. Reading the
  * payload instead means the page cannot, whatever it is asked for.
  *
- * The pieces of text are laid out in the shape the previews already read,
- * which is the shape a plan arrives in.
+ * The result is laid out in the shape the previews already read, which is
+ * the shape a plan arrives in.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class kept_activity {
-    /** @var string[] Where a module keeps text somebody wrote, in reading order. */
-    private const TEXT_FIELDS = [
-        'contents', 'content', 'definition', 'questiontext', 'intro', 'page', 'summary', 'message', 'text',
-    ];
-
-    /** @var string[] What an element calls itself, in the same order. */
-    private const TITLE_FIELDS = ['title', 'name', 'concept', 'subject', 'heading'];
-
     /**
      * One activity of the payload, in the shape its preview reads.
      *
@@ -78,17 +70,14 @@ class kept_activity {
             return ['name' => $name, 'mod_settings' => ['pages' => $pages]];
         }
 
-        // Every other type keeps its text in one field or in a list of them,
-        // and its preview reads one body, so the pieces are laid end to end in
-        // the order the module declares them.
-        $html = '';
-        foreach (self::text_parts($root) as $part) {
-            $html .= $part;
-        }
+        // Every module table carries its own intro, and a type with no
+        // dedicated preview class shows only that: this is what
+        // intro_preview::render() reads.
+        $intro = (string) ($root['intro'] ?? '');
         return [
             'name' => $name,
-            'introeditor' => ['text' => $html, 'format' => FORMAT_HTML, 'itemid' => 0],
-            'page' => $html,
+            'introeditor' => ['text' => $intro, 'format' => FORMAT_HTML, 'itemid' => 0],
+            'page' => $intro,
         ];
     }
 
@@ -162,53 +151,5 @@ class kept_activity {
             }
         }
         return $buttons;
-    }
-
-    /**
-     * Every piece of written text in the activity, outermost first.
-     *
-     * @param array $node
-     * @return string[]
-     */
-    private static function text_parts(array $node): array {
-        global $OUTPUT;
-        $parts = [];
-        foreach (self::TEXT_FIELDS as $field) {
-            $value = $node[$field] ?? null;
-            if (is_string($value) && trim($value) !== '') {
-                $parts[] = $OUTPUT->render_from_template('local_coursegen/preview_titled_text', [
-                    'title' => self::title_of($node),
-                    'value' => $value,
-                ]);
-                break;
-            }
-        }
-        foreach ($node as $value) {
-            if (!is_array($value)) {
-                continue;
-            }
-            foreach ($value as $child) {
-                if (is_array($child)) {
-                    $parts = array_merge($parts, self::text_parts($child));
-                }
-            }
-        }
-        return $parts;
-    }
-
-    /**
-     * What an element calls itself.
-     *
-     * @param array $node
-     * @return string
-     */
-    private static function title_of(array $node): string {
-        foreach (self::TITLE_FIELDS as $field) {
-            $value = $node[$field] ?? null;
-            if (is_string($value) && trim($value) !== '') {
-                return format_string($value);
-            }
-        }
-        return '';
     }
 }
