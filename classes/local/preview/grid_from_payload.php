@@ -16,6 +16,7 @@
 
 namespace local_coursegen\local\preview;
 
+use format_grid\toolbox;
 use moodle_url;
 
 /**
@@ -105,14 +106,16 @@ class grid_from_payload {
                 ]))->out(false),
                 'sectionuservisible' => true,
                 'iscurrent' => false,
-                'sectionbreak' => !empty($options['sectionbreak']),
-                'sectionbreakheading' => (string) $options['sectionbreakheading'],
+                // sectionbreak's declared default is 1, meaning "No": as in
+                // format_grid's own content.php, only 2 means the break is on.
+                'sectionbreak' => $options['sectionbreak'] == 2,
+                'sectionbreakheading' => $options['sectionbreakheading'],
                 // Unlike the format options above, 'image' really is only
                 // sometimes set: template_export_sections::sections_info()
                 // gives it the value null for a section with no uploaded
                 // image, which is a real, not a missing, state.
                 'imageuri' => $info['image'] ?? false,
-                'imagealttext' => (string) $options['sectionimagealttext'],
+                'imagealttext' => $options['sectionimagealttext'],
                 'generatedimageuri' => $generatedimageuri,
                 'sectioncompletionmarkup' => '',
             ];
@@ -120,7 +123,7 @@ class grid_from_payload {
             $popups[] = $section;
         }
 
-        $showsinpopup = ((int) $settings['popup']) === 2;
+        $showsinpopup = $settings['popup'] == 2;
 
         // A grid can open a section in a dialog instead of on its own page,
         // and the dialog holds the same sections this page already built, so
@@ -140,10 +143,10 @@ class grid_from_payload {
             'hasgridsections' => !empty($tiles),
             'gridsections' => $tiles,
             'gridsectionnumbers' => implode(',', $numbers),
-            'gridjustification' => (string) $settings['gridjustification'],
-            'imageresizemethodcrop' => ((int) $settings['imageresizemethod']) === 2,
-            'sectiontitleingridbox' => ((int) $settings['sectiontitleingridbox']) === 2,
-            'sectionbadgeingridbox' => ((int) $settings['sectionbadgeingridbox']) === 2,
+            'gridjustification' => $settings['gridjustification'],
+            'imageresizemethodcrop' => $settings['imageresizemethod'] == 2,
+            'sectiontitleingridbox' => $settings['sectiontitleingridbox'] == 2,
+            'sectionbadgeingridbox' => $settings['sectionbadgeingridbox'] == 2,
             'showcompletion' => false,
             'popup' => $showsinpopup,
             'popupsections' => $popupsections,
@@ -154,17 +157,19 @@ class grid_from_payload {
     /**
      * The tile size and shape the course was set up with.
      *
+     * imagecontainerratio is stored as one of format_grid's own ratio codes
+     * (1 to 7), not as a literal "3-2" string, so its height is worked out
+     * by the format's own toolbox rather than parsed here again.
+     *
      * @param array $settings
      * @return array
      */
     private static function styles(array $settings): array {
-        $width = (int) $settings['imagecontainerwidth'];
-        $ratio = (string) $settings['imagecontainerratio'];
-        [$across, $down] = array_pad(explode('-', $ratio), 2, 1);
+        $properties = toolbox::get_instance()->get_displayed_image_container_properties($settings);
 
         return [
-            'imagecontainerwidth' => $width,
-            'imagecontainerheight' => (int) round($width * ((int) $down / max(1, (int) $across))),
+            'imagecontainerwidth' => $properties['width'],
+            'imagecontainerheight' => $properties['height'],
         ];
     }
 
