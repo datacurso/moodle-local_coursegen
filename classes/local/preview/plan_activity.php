@@ -114,7 +114,7 @@ class plan_activity {
         $payload = \local_coursegen\local\service\template_export_service::build_init_payload($templateid);
         foreach (($payload['activities'] ?? []) as $activity) {
             if ((int) ($activity['cmid'] ?? 0) === $sourcecmid) {
-                $mould = real_activity::to_parameters($activity)['mod_settings']['pages'] ?? [];
+                $mould = kept_activity::to_parameters($activity)['mod_settings']['pages'] ?? [];
                 break;
             }
         }
