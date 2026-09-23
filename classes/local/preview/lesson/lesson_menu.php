@@ -21,7 +21,7 @@ use block_contents;
 /**
  * The lesson menu, built the way mod_lesson builds it.
  *
- * Ported from mod/lesson/locallib.php (function lesson_menu_block_contents(),
+ * Copied from mod/lesson/locallib.php (function lesson_menu_block_contents(),
  * Moodle 4.5). The skip link, the wrapper and the two classes are the
  * original's; the links go to the preview instead of to view.php, and the
  * page being read is given rather than read off the request.
