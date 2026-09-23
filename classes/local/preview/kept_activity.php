@@ -36,7 +36,7 @@ namespace local_coursegen\local\preview;
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class real_activity {
+class kept_activity {
     /** @var string[] Where a module keeps text somebody wrote, in reading order. */
     private const TEXT_FIELDS = [
         'contents', 'content', 'definition', 'questiontext', 'intro', 'page', 'summary', 'message', 'text',
