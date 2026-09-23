@@ -51,8 +51,11 @@ class grid_from_payload {
     public static function should_render_grid_preview(array $payload): bool {
         global $CFG;
 
-        $courseconfig = $payload['course_configuration'] ?? [];
-        $format = $courseconfig['format'] ?? '';
+        // course_configuration and format are always in this payload:
+        // template_export_service::build_init_payload() writes both as
+        // literal array keys, and $course->format is a not-null column, so
+        // there is no state where either is missing to fall back from.
+        $format = $payload['course_configuration']['format'];
         $gridtemplatepath = $CFG->dirroot . '/course/format/grid/templates/local/content.mustache';
         $isinstalled = file_exists($gridtemplatepath);
         return $format === 'grid' && $isinstalled;
@@ -67,15 +70,21 @@ class grid_from_payload {
      * @return array
      */
     public static function content(array $content, array $payload, int $sessionid): array {
-        $courseconfig = $payload['course_configuration'] ?? [];
-        $settings = $courseconfig['format_options'] ?? [];
+        // format_options is filled by format_grid::get_settings(): every
+        // option it declares (course/format/grid/lib.php:course_format_options())
+        // comes back with its default already resolved, never absent.
+        $settings = $payload['course_configuration']['format_options'];
 
         $tiles = [];
         $numbers = [];
         $popups = [];
         foreach ($content['sections'] as $section) {
             $info = self::section_info($payload, (int) $section['num']);
-            $options = $info['format_options'] ?? [];
+            // Same guarantee as above, at the section level: base.php's
+            // get_format_options($section) fills every declared section
+            // option (course/format/grid/lib.php:section_format_options())
+            // with its default before this payload is built.
+            $options = $info['format_options'];
 
             $numbers[] = (int) $section['num'];
 
@@ -97,9 +106,13 @@ class grid_from_payload {
                 'sectionuservisible' => true,
                 'iscurrent' => false,
                 'sectionbreak' => !empty($options['sectionbreak']),
-                'sectionbreakheading' => (string) ($options['sectionbreakheading'] ?? ''),
+                'sectionbreakheading' => (string) $options['sectionbreakheading'],
+                // Unlike the format options above, 'image' really is only
+                // sometimes set: template_export_sections::sections_info()
+                // gives it the value null for a section with no uploaded
+                // image, which is a real, not a missing, state.
                 'imageuri' => $info['image'] ?? false,
-                'imagealttext' => (string) ($options['sectionimagealttext'] ?? ''),
+                'imagealttext' => (string) $options['sectionimagealttext'],
                 'generatedimageuri' => $generatedimageuri,
                 'sectioncompletionmarkup' => '',
             ];
@@ -107,7 +120,7 @@ class grid_from_payload {
             $popups[] = $section;
         }
 
-        $showsinpopup = ((int) ($settings['popup'] ?? 0)) === 2;
+        $showsinpopup = ((int) $settings['popup']) === 2;
 
         // A grid can open a section in a dialog instead of on its own page,
         // and the dialog holds the same sections this page already built, so
@@ -127,10 +140,10 @@ class grid_from_payload {
             'hasgridsections' => !empty($tiles),
             'gridsections' => $tiles,
             'gridsectionnumbers' => implode(',', $numbers),
-            'gridjustification' => (string) ($settings['gridjustification'] ?? 'space-between'),
-            'imageresizemethodcrop' => ((int) ($settings['imageresizemethod'] ?? 0)) === 2,
-            'sectiontitleingridbox' => ((int) ($settings['sectiontitleingridbox'] ?? 0)) === 2,
-            'sectionbadgeingridbox' => ((int) ($settings['sectionbadgeingridbox'] ?? 0)) === 2,
+            'gridjustification' => (string) $settings['gridjustification'],
+            'imageresizemethodcrop' => ((int) $settings['imageresizemethod']) === 2,
+            'sectiontitleingridbox' => ((int) $settings['sectiontitleingridbox']) === 2,
+            'sectionbadgeingridbox' => ((int) $settings['sectionbadgeingridbox']) === 2,
             'showcompletion' => false,
             'popup' => $showsinpopup,
             'popupsections' => $popupsections,
@@ -145,8 +158,8 @@ class grid_from_payload {
      * @return array
      */
     private static function styles(array $settings): array {
-        $width = (int) ($settings['imagecontainerwidth'] ?? 210);
-        $ratio = (string) ($settings['imagecontainerratio'] ?? '3-2');
+        $width = (int) $settings['imagecontainerwidth'];
+        $ratio = (string) $settings['imagecontainerratio'];
         [$across, $down] = array_pad(explode('-', $ratio), 2, 1);
 
         return [
@@ -176,8 +189,12 @@ class grid_from_payload {
      * @return array
      */
     private static function section_info(array $payload, int $number): array {
-        foreach (($payload['sections_info'] ?? []) as $info) {
-            if ((int) ($info['section'] ?? -1) === $number) {
+        // sections_info is another literal key build_init_payload() always
+        // writes, and each entry always has 'section' (template_export_sections::
+        // sections_info()); no course has zero sections, so an empty return
+        // here is unreached, kept only so this stays an array-returning method.
+        foreach ($payload['sections_info'] as $info) {
+            if ((int) $info['section'] === $number) {
                 return $info;
             }
         }
