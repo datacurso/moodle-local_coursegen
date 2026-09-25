@@ -39,17 +39,30 @@ trait quiz_question_options {
     protected static function options_for_multichoice(array $form, array $answers, int $questionid, int &$id, callable $editor): array {
         $options = [];
         foreach (['correctfeedback', 'partiallycorrectfeedback', 'incorrectfeedback'] as $field) {
-            $text = $editor($form[$field] ?? '');
+            $fieldvalue = $form[$field] ?? '';
+            $text = $editor($fieldvalue);
             $options[$field] = $text['text'];
             $options[$field . 'format'] = $text['format'];
         }
+
+        $single = $form['single'] ?? 1;
+        $single = (int) $single;
+        $shuffleanswers = $form['shuffleanswers'] ?? 1;
+        $shuffleanswers = (int) $shuffleanswers;
+        $answernumbering = $form['answernumbering'] ?? 'abc';
+        $answernumbering = (string) $answernumbering;
+        $shownumcorrect = $form['shownumcorrect'] ?? 0;
+        $shownumcorrect = (int) $shownumcorrect;
+        $showstandardinstruction = $form['showstandardinstruction'] ?? 0;
+        $showstandardinstruction = (int) $showstandardinstruction;
+
         $options += [
             'layout' => 0,
-            'single' => (int) ($form['single'] ?? 1),
-            'shuffleanswers' => (int) ($form['shuffleanswers'] ?? 1),
-            'answernumbering' => (string) ($form['answernumbering'] ?? 'abc'),
-            'shownumcorrect' => (int) ($form['shownumcorrect'] ?? 0),
-            'showstandardinstruction' => (int) ($form['showstandardinstruction'] ?? 0),
+            'single' => $single,
+            'shuffleanswers' => $shuffleanswers,
+            'answernumbering' => $answernumbering,
+            'shownumcorrect' => $shownumcorrect,
+            'showstandardinstruction' => $showstandardinstruction,
             'answers' => $answers,
         ];
         return $options;
@@ -67,25 +80,41 @@ trait quiz_question_options {
      * @return array
      */
     protected static function options_for_truefalse(array $form, array $answers, int $questionid, int &$id, callable $editor): array {
-        $correct = (int) ($form['correctanswer'] ?? 1);
-        $true = $editor($form['feedbacktrue'] ?? '');
-        $false = $editor($form['feedbackfalse'] ?? '');
+        $correct = $form['correctanswer'] ?? 1;
+        $correct = (int) $correct;
+        $truefeedback = $form['feedbacktrue'] ?? '';
+        $true = $editor($truefeedback);
+        $falsefeedback = $form['feedbackfalse'] ?? '';
+        $false = $editor($falsefeedback);
         $trueid = $id++;
         $falseid = $id++;
+
+        $truefraction = 0.0;
+        if ($correct) {
+            $truefraction = 1.0;
+        }
+        $falsefraction = 1.0;
+        if ($correct) {
+            $falsefraction = 0.0;
+        }
+
         $ownanswers = [];
         $ownanswers[$trueid] = [
             'id' => $trueid, 'question' => $questionid, 'answer' => get_string('true', 'qtype_truefalse'),
-            'answerformat' => FORMAT_MOODLE, 'fraction' => $correct ? 1.0 : 0.0,
+            'answerformat' => FORMAT_MOODLE, 'fraction' => $truefraction,
             'feedback' => $true['text'], 'feedbackformat' => $true['format'],
         ];
         $ownanswers[$falseid] = [
             'id' => $falseid, 'question' => $questionid, 'answer' => get_string('false', 'qtype_truefalse'),
-            'answerformat' => FORMAT_MOODLE, 'fraction' => $correct ? 0.0 : 1.0,
+            'answerformat' => FORMAT_MOODLE, 'fraction' => $falsefraction,
             'feedback' => $false['text'], 'feedbackformat' => $false['format'],
         ];
+
+        $showstandardinstruction = $form['showstandardinstruction'] ?? 0;
+        $showstandardinstruction = (int) $showstandardinstruction;
         return [
             'question' => $questionid, 'trueanswer' => $trueid, 'falseanswer' => $falseid,
-            'showstandardinstruction' => (int) ($form['showstandardinstruction'] ?? 0),
+            'showstandardinstruction' => $showstandardinstruction,
             'answers' => $ownanswers,
         ];
     }
@@ -101,7 +130,9 @@ trait quiz_question_options {
      * @return array
      */
     protected static function options_for_shortanswer(array $form, array $answers, int $questionid, int &$id, callable $editor): array {
-        return ['usecase' => (int) ($form['usecase'] ?? 0), 'answers' => $answers];
+        $usecase = $form['usecase'] ?? 0;
+        $usecase = (int) $usecase;
+        return ['usecase' => $usecase, 'answers' => $answers];
     }
 
     /**
@@ -117,10 +148,13 @@ trait quiz_question_options {
     protected static function options_for_numerical(array $form, array $answers, int $questionid, int &$id, callable $editor): array {
         $options = ['answers' => $answers, 'units' => [], 'unitgradingtype' => 0, 'unitpenalty' => 0.1,
             'showunits' => 3, 'unitsleft' => 0];
-        $tolerances = (array) ($form['tolerance'] ?? []);
+        $tolerances = $form['tolerance'] ?? [];
+        $tolerances = (array) $tolerances;
         $index = 0;
         foreach ($options['answers'] as $answerid => $answer) {
-            $options['answers'][$answerid]['tolerance'] = (float) ($tolerances[$index] ?? 0);
+            $tolerance = $tolerances[$index] ?? 0;
+            $tolerance = (float) $tolerance;
+            $options['answers'][$answerid]['tolerance'] = $tolerance;
             $index++;
         }
         return $options;
@@ -137,20 +171,38 @@ trait quiz_question_options {
      * @return array
      */
     protected static function options_for_essay(array $form, array $answers, int $questionid, int &$id, callable $editor): array {
-        $graderinfo = $editor($form['graderinfo'] ?? '');
-        $template = $editor($form['responsetemplate'] ?? '');
+        $graderinfotext = $form['graderinfo'] ?? '';
+        $graderinfo = $editor($graderinfotext);
+        $templatetext = $form['responsetemplate'] ?? '';
+        $template = $editor($templatetext);
+
+        $responseformat = $form['responseformat'] ?? 'editor';
+        $responseformat = (string) $responseformat;
+        $responserequired = $form['responserequired'] ?? 1;
+        $responserequired = (int) $responserequired;
+        $responsefieldlines = $form['responsefieldlines'] ?? 15;
+        $responsefieldlines = (int) $responsefieldlines;
+        $attachments = $form['attachments'] ?? 0;
+        $attachments = (int) $attachments;
+        $attachmentsrequired = $form['attachmentsrequired'] ?? 0;
+        $attachmentsrequired = (int) $attachmentsrequired;
+        $maxbytes = $form['maxbytes'] ?? 0;
+        $maxbytes = (int) $maxbytes;
+        $filetypeslist = $form['filetypeslist'] ?? '';
+        $filetypeslist = (string) $filetypeslist;
+
         return [
-            'responseformat' => (string) ($form['responseformat'] ?? 'editor'),
-            'responserequired' => (int) ($form['responserequired'] ?? 1),
-            'responsefieldlines' => (int) ($form['responsefieldlines'] ?? 15),
+            'responseformat' => $responseformat,
+            'responserequired' => $responserequired,
+            'responsefieldlines' => $responsefieldlines,
             'minwordlimit' => $form['minwordlimit'] ?? null,
             'maxwordlimit' => $form['maxwordlimit'] ?? null,
-            'attachments' => (int) ($form['attachments'] ?? 0),
-            'attachmentsrequired' => (int) ($form['attachmentsrequired'] ?? 0),
+            'attachments' => $attachments,
+            'attachmentsrequired' => $attachmentsrequired,
             'graderinfo' => $graderinfo['text'], 'graderinfoformat' => $graderinfo['format'],
             'responsetemplate' => $template['text'], 'responsetemplateformat' => $template['format'],
-            'maxbytes' => (int) ($form['maxbytes'] ?? 0),
-            'filetypeslist' => (string) ($form['filetypeslist'] ?? ''),
+            'maxbytes' => $maxbytes,
+            'filetypeslist' => $filetypeslist,
             'answers' => [],
         ];
     }

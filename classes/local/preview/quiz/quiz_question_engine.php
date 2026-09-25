@@ -50,6 +50,30 @@ trait quiz_question_engine {
         $quba = question_engine::make_questions_usage_by_activity('local_coursegen', $this->context);
         $quba->set_preferred_behaviour($this->quiz->preferredbehaviour ?: 'deferredfeedback');
 
+        $numbers = $this->add_slots_to_usage($quba);
+        if (!$quba->get_slots()) {
+            return '';
+        }
+        $quba->start_all_questions();
+
+        $options = self::attempt_display_options($this->quiz_get_grade_format(), $this->context);
+
+        // The attempt page prints its questions inside the form that submits
+        // them, and that is the markup the questions' own scripts expect.
+        $questionshtml = self::render_questions($quba, $options, $numbers);
+        return $OUTPUT->render_from_template('local_coursegen/preview_quiz_response_form', [
+            'action' => $this->here->out(false),
+            'questionshtml' => $questionshtml,
+        ]);
+    }
+
+    /**
+     * Adds each slot's question to the usage, at its mark.
+     *
+     * @param \question_usage_by_activity $quba
+     * @return array Usage slot number => the slot's display number.
+     */
+    protected function add_slots_to_usage($quba): array {
         $numbers = [];
         foreach ($this->slots as $slot) {
             if (empty($slot['question'])) {
@@ -57,19 +81,29 @@ trait quiz_question_engine {
                 // question, and cannot be drawn as one.
                 continue;
             }
-            $question = question_bank::make_question(self::question_data($slot['question']));
-            $number = $quba->add_question($question, (float) ($slot['maxmark'] ?? $question->defaultmark));
+            $questiondata = self::question_data($slot['question']);
+            $question = question_bank::make_question($questiondata);
+            $maxmark = $slot['maxmark'] ?? $question->defaultmark;
+            $maxmark = (float) $maxmark;
+            $number = $quba->add_question($question, $maxmark);
             $numbers[$number] = $slot['displaynumber'] ?? null;
         }
-        if (!$quba->get_slots()) {
-            return '';
-        }
-        $quba->start_all_questions();
+        return $numbers;
+    }
 
+    /**
+     * The display options an attempt page renders its questions with, with
+     * every mark of progress or correctness hidden: nothing has been answered.
+     *
+     * @param int $markdp
+     * @param \context $context
+     * @return question_display_options
+     */
+    protected static function attempt_display_options(int $markdp, $context): question_display_options {
         $options = new question_display_options();
         $options->flags = question_display_options::HIDDEN;
         $options->marks = question_display_options::MARK_AND_MAX;
-        $options->markdp = $this->quiz_get_grade_format();
+        $options->markdp = $markdp;
         $options->feedback = question_display_options::HIDDEN;
         $options->generalfeedback = question_display_options::HIDDEN;
         $options->rightanswer = question_display_options::HIDDEN;
@@ -77,10 +111,19 @@ trait quiz_question_engine {
         $options->numpartscorrect = question_display_options::HIDDEN;
         $options->manualcomment = question_display_options::HIDDEN;
         $options->history = question_display_options::HIDDEN;
-        $options->context = $this->context;
+        $options->context = $context;
+        return $options;
+    }
 
-        // The attempt page prints its questions inside the form that submits
-        // them, and that is the markup the questions' own scripts expect.
+    /**
+     * Each question rendered as an attempt page draws it.
+     *
+     * @param \question_usage_by_activity $quba
+     * @param question_display_options $options
+     * @param array $numbers Usage slot number => the slot's display number.
+     * @return string
+     */
+    protected static function render_questions($quba, question_display_options $options, array $numbers): string {
         $questionshtml = '';
         $index = 0;
         foreach ($quba->get_slots() as $slot) {
@@ -92,10 +135,7 @@ trait quiz_question_engine {
             }
             $questionshtml .= $quba->render_question($slot, $options, $slotnumber);
         }
-        return $OUTPUT->render_from_template('local_coursegen/preview_quiz_response_form', [
-            'action' => $this->here->out(false),
-            'questionshtml' => $questionshtml,
-        ]);
+        return $questionshtml;
     }
 
     /**
@@ -126,12 +166,32 @@ trait quiz_question_engine {
         }
         $islist = array_keys($value) === range(0, count($value) - 1);
         if ($islist || in_array($key, ['answers', 'hints'], true)) {
-            $out = [];
-            foreach ($value as $k => $v) {
-                $out[$k] = self::objectify($v, (string) $k);
-            }
-            return $out;
+            return self::objectify_list($value);
         }
+        return self::objectify_map($value);
+    }
+
+    /**
+     * A list's own values, objectified, keeping its keys.
+     *
+     * @param array $value
+     * @return array
+     */
+    private static function objectify_list(array $value): array {
+        $out = [];
+        foreach ($value as $k => $v) {
+            $out[$k] = self::objectify($v, (string) $k);
+        }
+        return $out;
+    }
+
+    /**
+     * A map's own values, objectified into a plain object.
+     *
+     * @param array $value
+     * @return stdClass
+     */
+    private static function objectify_map(array $value): stdClass {
         $object = new stdClass();
         foreach ($value as $k => $v) {
             $object->$k = self::objectify($v, (string) $k);
