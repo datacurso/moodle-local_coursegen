@@ -33,17 +33,15 @@ final class courseai_page_close_button_test extends \advanced_testcase {
     /**
      * Render the courseai_page template with a minimal context.
      *
-     * @param bool $templatemode Whether template mode is active.
      * @return string Rendered HTML.
      */
-    private function render_page(bool $templatemode): string {
+    private function render_page(): string {
         global $OUTPUT;
 
         return $OUTPUT->render_from_template('local_coursegen/courseai_page', [
             'guidelines' => '[]',
             'coursetemplates' => [],
             'templatepickerformhtml' => '',
-            'templateemptystatehtml' => '',
             'hascoursetemplates' => false,
             'languages' => '[]',
             'defaultlang' => 'en',
@@ -53,7 +51,6 @@ final class courseai_page_close_button_test extends \advanced_testcase {
             'allsessions' => [],
             'isresuming' => false,
             'showsessionsview' => false,
-            'templatemodeactive' => $templatemode,
             'subsectionsenabled' => false,
             'closeurl' => (new \moodle_url('/my/courses.php'))->out(false),
         ]);
@@ -66,7 +63,7 @@ final class courseai_page_close_button_test extends \advanced_testcase {
         $this->resetAfterTest();
         $this->setAdminUser();
 
-        $html = $this->render_page(true);
+        $html = $this->render_page();
 
         $this->assertStringContainsString('id="courseaiCloseBtn"', $html);
         $this->assertStringContainsString('/my/courses.php', $html);
@@ -79,7 +76,7 @@ final class courseai_page_close_button_test extends \advanced_testcase {
         $this->resetAfterTest();
         $this->setAdminUser();
 
-        $html = $this->render_page(false);
+        $html = $this->render_page();
 
         $this->assertStringContainsString('id="courseaiCloseBtn"', $html);
         $this->assertStringContainsString('/my/courses.php', $html);
