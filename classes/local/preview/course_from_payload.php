@@ -52,16 +52,7 @@ class course_from_payload {
      * @return array
      */
     public static function content(array $payload, array $summaries, int $sessionid, ?int $only = null): array {
-        $bysection = [];
-        foreach (($payload['activities'] ?? []) as $activity) {
-            // A mould is read to write the activities built on it and is never
-            // one of them, so it is not part of the course being previewed.
-            if ((($activity['template_behavior'] ?? [])['action'] ?? '') === 'template') {
-                continue;
-            }
-            $number = (int) (($activity['parameters'] ?? [])['section'] ?? 0);
-            $bysection[$number][] = $activity;
-        }
+        $bysection = self::activities_by_section($payload);
 
         $sections = [];
         $initial = null;
@@ -89,6 +80,26 @@ class course_from_payload {
             'sections' => $sections,
             'hassections' => !empty($sections),
         ];
+    }
+
+    /**
+     * Every activity, grouped by its own section number.
+     *
+     * @param array $payload
+     * @return array
+     */
+    private static function activities_by_section(array $payload): array {
+        $bysection = [];
+        foreach (($payload['activities'] ?? []) as $activity) {
+            // A mould is read to write the activities built on it and is never
+            // one of them, so it is not part of the course being previewed.
+            if ((($activity['template_behavior'] ?? [])['action'] ?? '') === 'template') {
+                continue;
+            }
+            $number = (int) (($activity['parameters'] ?? [])['section'] ?? 0);
+            $bysection[$number][] = $activity;
+        }
+        return $bysection;
     }
 
     /**
@@ -171,6 +182,22 @@ class course_from_payload {
 
         $summary = trim((string) ($summaries[$uid] ?? ''));
 
+        $activitybadge = null;
+        if ($writing) {
+            $activitybadge = [
+                'badgecontent' => get_string('courseai_template_instance_badge', 'local_coursegen'),
+                'badgestyle' => 'badge-none border',
+            ];
+        }
+        $altcontent = '';
+        if ($summary !== '') {
+            $altcontent = format_text($summary, FORMAT_PLAIN);
+        }
+        $extraclasses = '';
+        if ($writing) {
+            $extraclasses = 'local-coursegen-planned';
+        }
+
         return [
             'cmformat' => [
                 'hasname' => true,
@@ -191,18 +218,15 @@ class course_from_payload {
                     ],
                     // An activity the run is going to write says so, because
                     // that is what the teacher is deciding about.
-                    'activitybadge' => $writing ? [
-                        'badgecontent' => get_string('courseai_template_instance_badge', 'local_coursegen'),
-                        'badgestyle' => 'badge-none border',
-                    ] : null,
+                    'activitybadge' => $activitybadge,
                 ],
-                'altcontent' => $summary === '' ? '' : format_text($summary, FORMAT_PLAIN),
+                'altcontent' => $altcontent,
                 'hasaltcontent' => $summary !== '',
             ],
             'id' => $uid,
             'anchor' => 'activity-' . $uid,
             'module' => $modname,
-            'extraclasses' => $writing ? 'local-coursegen-planned' : '',
+            'extraclasses' => $extraclasses,
             'indent' => 0,
         ];
     }
