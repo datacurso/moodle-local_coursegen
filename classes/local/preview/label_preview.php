@@ -51,7 +51,10 @@ class label_preview extends preview_base {
             return;
         }
         $row = reset($rows);
-        $intro = $this->parameters['introeditor'] ?? ($this->parameters['intro'] ?? null);
+        $intro = $this->parameters['introeditor'] ?? null;
+        if ($intro === null) {
+            $intro = $this->parameters['intro'] ?? null;
+        }
         if (is_array($intro)) {
             $intro = $intro['text'] ?? null;
         }
@@ -76,7 +79,9 @@ class label_preview extends preview_base {
         // (course/format/classes/output/local/content/cm.php:202), which
         // filters it. Both steps, in that order.
         $content = $this->module_intro($label, false);
-        return format_text($content, FORMAT_HTML, ['overflowdiv' => true, 'noclean' => true, 'context' => $this->context()]);
+        $context = $this->context();
+        $options = ['overflowdiv' => true, 'noclean' => true, 'context' => $context];
+        return format_text($content, FORMAT_HTML, $options);
     }
 
     /**
