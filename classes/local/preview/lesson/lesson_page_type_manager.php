@@ -86,36 +86,82 @@ class lesson_page_type_manager {
         if (!($pages = $lesson->get_store()->get_records('lesson_pages', ['lessonid' => $lesson->id]))) {
             return []; // Records returned empty.
         }
+        $pages = $this->typed_pages($pages, $lesson);
+        $orderedpages = $this->walk_chain($pages);
+        return $this->with_remaining_pages($orderedpages, $pages);
+    }
+
+    /**
+     * Every raw row, as its own page type's object.
+     *
+     * @param array $pages
+     * @param lesson $lesson
+     * @return lesson_page[]
+     */
+    private function typed_pages(array $pages, lesson $lesson): array {
         foreach ($pages as $key => $page) {
             $pagetype = $this->class_for($page->qtype);
             $pages[$key] = new $pagetype($page, $lesson);
         }
+        return $pages;
+    }
 
-        $orderedpages = [];
-        $lastpageid = 0;
-        $morepages = true;
-        while ($morepages) {
-            $morepages = false;
-            foreach ($pages as $page) {
-                if ((int) $page->prevpageid === (int) $lastpageid) {
-                    $morepages = true;
-                    $orderedpages[$page->id] = $page;
-                    unset($pages[$page->id]);
-                    $lastpageid = $page->id;
-                    if ((int) $page->nextpageid === 0) {
-                        break 2;
-                    } else {
-                        break 1;
-                    }
-                }
+    /**
+     * The page, among the given ones, whose prevpageid names the last page
+     * walked so far, if any.
+     *
+     * @param lesson_page[] $pages
+     * @param int $lastpageid
+     * @return lesson_page|null
+     */
+    private function next_in_chain(array $pages, int $lastpageid) {
+        foreach ($pages as $page) {
+            if ((int) $page->prevpageid === $lastpageid) {
+                return $page;
             }
         }
+        return null;
+    }
 
-        // Add remaining pages, which the chain did not reach.
-        foreach ($pages as $page) {
+    /**
+     * Every page reachable by following prevpageid/nextpageid from the start,
+     * in the order the chain walks them. Walked pages are removed from
+     * $pages, so what is left afterwards is whatever the chain never reached.
+     *
+     * @param lesson_page[] $pages Passed by reference: walked pages are removed.
+     * @return lesson_page[]
+     */
+    private function walk_chain(array &$pages): array {
+        $orderedpages = [];
+        $lastpageid = 0;
+        $more = true;
+        while ($more) {
+            $next = $this->next_in_chain($pages, $lastpageid);
+            if ($next === null) {
+                $more = false;
+                continue;
+            }
+            $orderedpages[$next->id] = $next;
+            unset($pages[$next->id]);
+            $lastpageid = $next->id;
+            if ((int) $next->nextpageid === 0) {
+                $more = false;
+            }
+        }
+        return $orderedpages;
+    }
+
+    /**
+     * The walked pages, with whatever the chain did not reach appended after.
+     *
+     * @param lesson_page[] $orderedpages
+     * @param lesson_page[] $remaining
+     * @return lesson_page[]
+     */
+    private function with_remaining_pages(array $orderedpages, array $remaining): array {
+        foreach ($remaining as $page) {
             $orderedpages[$page->id] = $page;
         }
-
         return $orderedpages;
     }
 }

@@ -157,10 +157,16 @@ class lesson extends lesson_base {
             return $this->page_url((int) $page->id);
         }
         if ($jumpto === self::NEXTPAGE || $jumpto === self::UNSEENPAGE || $jumpto === self::UNANSWEREDPAGE) {
-            return (int) $page->nextpageid > 0 ? $this->page_url((int) $page->nextpageid) : ($this->exit)();
+            if ((int) $page->nextpageid > 0) {
+                return $this->page_url((int) $page->nextpageid);
+            }
+            return ($this->exit)();
         }
         if ($jumpto === self::PREVIOUSPAGE) {
-            return (int) $page->prevpageid > 0 ? $this->page_url((int) $page->prevpageid) : ($this->exit)();
+            if ((int) $page->prevpageid > 0) {
+                return $this->page_url((int) $page->prevpageid);
+            }
+            return ($this->exit)();
         }
         return ($this->exit)();
     }
