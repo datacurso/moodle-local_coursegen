@@ -56,12 +56,7 @@ trait workshop_plan_late {
             $examples = $this->get_examples();
             $a = new stdClass();
             $a->expected = count($examples);
-            $a->assessed = 0;
-            foreach ($examples as $exampleid => $example) {
-                if (!is_null($example->grade)) {
-                    $a->assessed++;
-                }
-            }
+            $a->assessed = $this->count_examples_assessed($examples);
             $task->details = get_string('exampleassesstaskdetails', 'workshop', $a);
             if ($a->assessed == $a->expected) {
                 $task->completed = true;
@@ -154,45 +149,8 @@ trait workshop_plan_late {
         $phase->title = get_string('phaseevaluation', 'workshop');
         $phase->tasks = [];
         if (has_capability('mod/workshop:overridegrades', $this->context)) {
-            $expected = $this->count_potential_authors(false);
-            $calculated = 0;
-            foreach ($this->store->get_records('workshop_submissions', ['workshopid' => $workshop->id]) as $s) {
-                if (!is_null($s->grade ?? null) || !is_null($s->gradeover ?? null)) {
-                    $calculated++;
-                }
-            }
-            $task = new stdClass();
-            $task->title = get_string('calculatesubmissiongrades', 'workshop');
-            $a = new stdClass();
-            $a->expected    = $expected;
-            $a->calculated  = $calculated;
-            $task->details  = get_string('calculatesubmissiongradesdetails', 'workshop', $a);
-            if ($calculated >= $expected) {
-                $task->completed = true;
-            } else if ($workshop->phase > workshop::PHASE_EVALUATION) {
-                $task->completed = false;
-            }
-            $phase->tasks['calculatesubmissiongrade'] = $task;
-
-            $expected = $this->count_potential_reviewers(false);
-            $calculated = 0;
-            foreach ($this->store->get_records('workshop_aggregations', ['workshopid' => $workshop->id]) as $g) {
-                if (!is_null($g->gradinggrade ?? null)) {
-                    $calculated++;
-                }
-            }
-            $task = new stdClass();
-            $task->title = get_string('calculategradinggrades', 'workshop');
-            $a = new stdClass();
-            $a->expected    = $expected;
-            $a->calculated  = $calculated;
-            $task->details  = get_string('calculategradinggradesdetails', 'workshop', $a);
-            if ($calculated >= $expected) {
-                $task->completed = true;
-            } else if ($workshop->phase > workshop::PHASE_EVALUATION) {
-                $task->completed = false;
-            }
-            $phase->tasks['calculategradinggrade'] = $task;
+            $phase->tasks['calculatesubmissiongrade'] = $this->build_calculate_submission_grade_task($workshop);
+            $phase->tasks['calculategradinggrade'] = $this->build_calculate_grading_grade_task($workshop);
 
         } else if ($workshop->phase == workshop::PHASE_EVALUATION) {
             $task = new stdClass();
@@ -214,6 +172,62 @@ trait workshop_plan_late {
         }
 
         return $phase;
+    }
+
+    /**
+     * Copied from workshop_user_plan::__construct(): the submission grades a manager has calculated so far.
+     *
+     * @param stdClass $workshop
+     * @return stdClass
+     */
+    protected function build_calculate_submission_grade_task(stdClass $workshop): stdClass {
+        $expected = $this->count_potential_authors(false);
+        $calculated = 0;
+        foreach ($this->store->get_records('workshop_submissions', ['workshopid' => $workshop->id]) as $s) {
+            if (!is_null($s->grade ?? null) || !is_null($s->gradeover ?? null)) {
+                $calculated++;
+            }
+        }
+        $task = new stdClass();
+        $task->title = get_string('calculatesubmissiongrades', 'workshop');
+        $a = new stdClass();
+        $a->expected    = $expected;
+        $a->calculated  = $calculated;
+        $task->details  = get_string('calculatesubmissiongradesdetails', 'workshop', $a);
+        if ($calculated >= $expected) {
+            $task->completed = true;
+        } else if ($workshop->phase > workshop::PHASE_EVALUATION) {
+            $task->completed = false;
+        }
+        return $task;
+    }
+
+    /**
+     * Copied from workshop_user_plan::__construct(): the grading grades a manager has calculated so far.
+     *
+     * @param stdClass $workshop
+     * @return stdClass
+     */
+    protected function build_calculate_grading_grade_task(stdClass $workshop): stdClass {
+        $expected = $this->count_potential_reviewers(false);
+        $calculated = 0;
+        foreach ($this->store->get_records('workshop_aggregations', ['workshopid' => $workshop->id]) as $g) {
+            if (!is_null($g->gradinggrade ?? null)) {
+                $calculated++;
+            }
+        }
+        $task = new stdClass();
+        $task->title = get_string('calculategradinggrades', 'workshop');
+        $a = new stdClass();
+        $a->expected    = $expected;
+        $a->calculated  = $calculated;
+        $task->details  = get_string('calculategradinggradesdetails', 'workshop', $a);
+        if ($calculated >= $expected) {
+            $task->completed = true;
+        } else if ($workshop->phase > workshop::PHASE_EVALUATION) {
+            $task->completed = false;
+        }
+        return $task;
     }
 
     /**
