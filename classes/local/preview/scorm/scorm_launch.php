@@ -56,13 +56,11 @@ trait scorm_launch {
                 $orgs[$org->id] = $org->title;
             }
         }
-        if ($orgs) {
-            if (count($orgs) > 1) {
-                $select = new single_select(new moodle_url($this->here), 'organization', $orgs, $organization, null);
-                $select->label = get_string('organizations', 'scorm');
-                $select->class = 'scorm-center';
-                $output .= $OUTPUT->render($select);
-            }
+        if (count($orgs) > 1) {
+            $select = new single_select(new moodle_url($this->here), 'organization', $orgs, $organization, null);
+            $select->label = get_string('organizations', 'scorm');
+            $select->class = 'scorm-center';
+            $output .= $OUTPUT->render($select);
         }
         $orgidentifier = '';
         if ($sco = $this->scorm_get_sco($organization, SCO_ONLY)) {
