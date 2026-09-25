@@ -85,18 +85,33 @@ trait workshop_submissions_report {
             $output .= print_collapsible_region_start('', 'workshop-viewlet-allexamples',
                 get_string('examplesubmissions', 'workshop'), 'workshop-viewlet-allexamples-collapsed', false, true);
             $output .= $OUTPUT->box_start('generalbox examples');
-            if ($this->form_ready()) {
-                if (!$examples = $this->get_examples_for_manager()) {
-                    $output .= $OUTPUT->container(get_string('noexamples', 'workshop'), 'noexamples');
-                }
-                $aurl = new moodle_url($this->exsubmission_url(0), ['edit' => 'on']);
-                $output .= $OUTPUT->single_button($aurl, get_string('exampleadd', 'workshop'), 'get');
-            } else {
-                $output .= $OUTPUT->container(get_string('noexamplesformready', 'workshop'));
-            }
+            $output .= $this->examples_box_content();
             $output .= $OUTPUT->box_end();
             $output .= print_collapsible_region_end(true);
         }
+        return $output;
+    }
+
+    /**
+     * The manager's own examples box: a notice when there are none yet, and
+     * always the button to add one.
+     *
+     * @return string
+     */
+    protected function examples_box_content(): string {
+        global $OUTPUT;
+        $output = '';
+
+        if (!$this->form_ready()) {
+            $output .= $OUTPUT->container(get_string('noexamplesformready', 'workshop'));
+            return $output;
+        }
+        $examples = $this->get_examples_for_manager();
+        if (!$examples) {
+            $output .= $OUTPUT->container(get_string('noexamples', 'workshop'), 'noexamples');
+        }
+        $aurl = new moodle_url($this->exsubmission_url(0), ['edit' => 'on']);
+        $output .= $OUTPUT->single_button($aurl, get_string('exampleadd', 'workshop'), 'get');
         return $output;
     }
 
