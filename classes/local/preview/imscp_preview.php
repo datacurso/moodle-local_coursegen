@@ -75,7 +75,9 @@ class imscp_preview extends preview_base {
         if (empty($imscp->structure)) {
             return $OUTPUT->notification(get_string('deploymenterror', 'imscp'), 'error', false);
         }
-        $view = new view($imscp, $this->cm(), $this->context());
+        $cm = $this->cm();
+        $context = $this->context();
+        $view = new view($imscp, $cm, $context);
         $view->require_page_assets();
         return $view->imscp_print_content();
     }
