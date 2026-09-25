@@ -144,7 +144,8 @@ class view {
         $choiceopen = true;
         if ((!empty($choice->timeopen)) && ($choice->timeopen > $timenow)) {
             if ($choice->showpreview) {
-                $out .= $OUTPUT->box(get_string('previewing', 'choice'), 'generalbox alert');
+                $previewingtext = get_string('previewing', 'choice');
+                $out .= $OUTPUT->box($previewingtext, 'generalbox alert');
             } else {
                 return $out;
             }
@@ -178,19 +179,40 @@ class view {
         if ($this->choice_can_view_results($choice, $current, $choiceopen)) {
             [$results, $heading] = $this->prepare_choice_show_results($choice, $this->course, $cm, $allresponses);
             $out .= $heading;
-            if ($results) {
-                if ($results->publish) { // If set to publish full results, display a heading for the responses section.
-                    $out .= $OUTPUT->heading(format_string(get_string("responses", "choice")), 3, 'mt-4');
-                }
-                // The group menu needs the course's groups; a template course
-                // has none to offer a preview.
-                $resultstable = $this->display_result($results);
-                $out .= $OUTPUT->box($resultstable);
-            }
+            $out .= $this->results_section($results);
         } else if (!$choiceformshown) {
-            $out .= $OUTPUT->box(get_string('noresultsviewable', 'choice'));
+            $noresultstext = get_string('noresultsviewable', 'choice');
+            $out .= $OUTPUT->box($noresultstext);
         }
 
+        return $out;
+    }
+
+    /**
+     * The results block: the "full results published" heading, when the
+     * choice publishes them, followed by the results table itself. Nothing
+     * is drawn when there are no results to show.
+     *
+     * @param stdClass|false $results
+     * @return string
+     */
+    protected function results_section($results): string {
+        global $OUTPUT;
+
+        if (!$results) {
+            return '';
+        }
+
+        $out = '';
+        if ($results->publish) { // If set to publish full results, display a heading for the responses section.
+            $responsestext = get_string("responses", "choice");
+            $heading = format_string($responsestext);
+            $out .= $OUTPUT->heading($heading, 3, 'mt-4');
+        }
+        // The group menu needs the course's groups; a template course
+        // has none to offer a preview.
+        $resultstable = $this->display_result($results);
+        $out .= $OUTPUT->box($resultstable);
         return $out;
     }
 
