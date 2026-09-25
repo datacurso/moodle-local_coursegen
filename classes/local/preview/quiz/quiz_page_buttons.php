@@ -77,10 +77,10 @@ trait quiz_page_buttons {
         }
 
         $popupjsoptions = null;
+        $startattemptlabel = get_string('startattempt', 'quiz');
+        $amdargs = ['.quizstartbuttondiv [type=submit]', $startattemptlabel, '#mod_quiz_preflight_form', $popupjsoptions];
 
-        $PAGE->requires->js_call_amd('mod_quiz/preflightcheck', 'init',
-                ['.quizstartbuttondiv [type=submit]', get_string('startattempt', 'quiz'),
-                        '#mod_quiz_preflight_form', $popupjsoptions]);
+        $PAGE->requires->js_call_amd('mod_quiz/preflightcheck', 'init', $amdargs);
 
         return $OUTPUT->render($button);
     }
@@ -101,7 +101,8 @@ trait quiz_page_buttons {
 
         // Output any access messages.
         if ($messages) {
-            $output .= $OUTPUT->box($this->access_messages($messages), 'quizinfo');
+            $messageshtml = $this->access_messages($messages);
+            $output .= $OUTPUT->box($messageshtml, 'quizinfo');
         }
 
         return $output;
@@ -118,9 +119,11 @@ trait quiz_page_buttons {
         $output = '';
 
         if (!$viewobj->quizhasquestions) {
+            $noquestionslabel = get_string('noquestions', 'quiz');
+            $notification = $OUTPUT->notification($noquestionslabel, 'warning', false);
             $output .= $OUTPUT->render_from_template('local_coursegen/preview_container', [
                 'classes' => 'text-start mb-3',
-                'content' => $OUTPUT->notification(get_string('noquestions', 'quiz'), 'warning', false),
+                'content' => $notification,
             ]);
         }
         $output .= $this->access_messages($viewobj->preventmessages);
