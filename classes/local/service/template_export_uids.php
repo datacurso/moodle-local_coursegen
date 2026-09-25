@@ -82,8 +82,12 @@ class template_export_uids {
         $bytes[6] = chr((ord($bytes[6]) & 0x0f) | 0x50);
         $bytes[8] = chr((ord($bytes[8]) & 0x3f) | 0x80);
         $hex = bin2hex($bytes);
-        return sprintf('%s-%s-%s-%s-%s',
-            substr($hex, 0, 8), substr($hex, 8, 4), substr($hex, 12, 4), substr($hex, 16, 4), substr($hex, 20, 12));
+        $part1 = substr($hex, 0, 8);
+        $part2 = substr($hex, 8, 4);
+        $part3 = substr($hex, 12, 4);
+        $part4 = substr($hex, 16, 4);
+        $part5 = substr($hex, 20, 12);
+        return sprintf('%s-%s-%s-%s-%s', $part1, $part2, $part3, $part4, $part5);
     }
 
     /**

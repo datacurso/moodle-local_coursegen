@@ -142,17 +142,25 @@ class structure_array_processor extends base_processor {
      */
     public function pre_process_nested_element(base_nested_element $nested) {
         $this->remember_source($nested);
+
+        $attributes = $nested->get_attributes();
         $node = [];
-        foreach ($nested->get_attributes() as $attribute) {
+        foreach ($attributes as $attribute) {
             $node[$attribute->get_name()] = $attribute->get_value();
         }
+
+        // Which file areas this element's text may refer to, declared by
+        // the structure itself: this is what backup uses to know which
+        // files to carry, and here it is what says how to name them.
+        $files = [];
+        if ($nested instanceof backup_nested_element) {
+            $files = $nested->get_file_annotations();
+        }
+
         $this->stack[] = [
             'name' => $nested->get_name(),
             'node' => $node,
-            // Which file areas this element's text may refer to, declared by
-            // the structure itself: this is what backup uses to know which
-            // files to carry, and here it is what says how to name them.
-            'files' => $nested instanceof backup_nested_element ? $nested->get_file_annotations() : [],
+            'files' => $files,
         ];
     }
 
