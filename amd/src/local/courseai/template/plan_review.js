@@ -48,19 +48,38 @@ const STRING_KEYS = [
 let labels = null;
 
 /**
+ * The batched string request for every review string key.
+ *
+ * @param {Array<string>} keys
+ * @returns {Array<Object>}
+ */
+const reviewStringRequests = (keys) => keys.map((key) => ({key, component: 'local_coursegen'}));
+
+/**
+ * Copy the fetched review strings onto the labels map, keyed by string id.
+ *
+ * @param {Object} target
+ * @param {Array<string>} keys
+ * @param {Array<string>} values
+ * @returns {void}
+ */
+const assignReviewLabels = (target, keys, values) => {
+    keys.forEach((key, index) => {
+        target[key] = values[index];
+    });
+};
+
+/**
  * The review's localised strings, fetched once.
  *
  * @returns {Promise<Object>} Keyed by string id.
  */
 const getLabels = async() => {
     if (!labels) {
-        const values = await getStrings(
-            STRING_KEYS.map((key) => ({key, component: 'local_coursegen'}))
-        );
+        const requests = reviewStringRequests(STRING_KEYS);
+        const values = await getStrings(requests);
         labels = {};
-        STRING_KEYS.forEach((key, index) => {
-            labels[key] = values[index];
-        });
+        assignReviewLabels(labels, STRING_KEYS, values);
     }
     return labels;
 };
@@ -114,10 +133,8 @@ export const renderActivityPlan = async(entry) => {
         return;
     }
     const texts = await getLabels();
-    const {html, js} = await Templates.renderForPromise(
-        'local_coursegen/template_plan_activity',
-        planContext(entry, texts)
-    );
+    const context = planContext(entry, texts);
+    const {html, js} = await Templates.renderForPromise('local_coursegen/template_plan_activity', context);
     const existing = row.querySelector('[data-region="template-plan"]');
     if (existing) {
         Templates.replaceNode(existing, html, js);
@@ -134,13 +151,107 @@ export const clearPlans = () => {
 };
 
 /**
+ * Resolve the decision promise with "accept" and close the overlay.
+ *
+ * @param {Object} overlay
+ * @param {Function} resolve
+ * @returns {void}
+ */
+const acceptDecision = (overlay, resolve) => {
+    overlay.hide();
+    resolve({action: 'accept', targetIds: [], instruction: ''});
+};
+
+/**
+ * Validate the composer's instruction and, once it is not empty, resolve
+ * with a "replan" decision.
+ *
+ * @param {Object} elements {send, input, composer}
+ * @param {Object} texts
+ * @param {Function} resolve
+ * @returns {void}
+ */
+const submitAdjustment = (elements, texts, resolve) => {
+    const {send, input, composer} = elements;
+    const instruction = ((input && input.value) || '').trim();
+    if (!instruction) {
+        if (input) {
+            input.focus();
+        }
+        return;
+    }
+    if (composer) {
+        composer.hidden = true;
+    }
+    send.textContent = texts.courseai_btn_generate;
+    // No targets means the change is for every activity. Naming them one by
+    // one is the next step here, not a different mechanism: the service
+    // already accepts the list.
+    resolve({action: 'replan_activity', targetIds: [], instruction});
+};
+
+/**
+ * Bring the composer back so the professor can type a change, and wire its
+ * send button to resolve once they do.
+ *
+ * Asking for a change means writing it, so the composer comes back for
+ * exactly that, the way free mode's does. Its own button sends the change
+ * instead of starting a second run.
+ *
+ * @param {Object} elements {composer, input, send}
+ * @param {Object} texts
+ * @param {Function} resolve
+ * @returns {void}
+ */
+const openAdjustComposer = (elements, texts, resolve) => {
+    const {composer, input, send} = elements;
+    if (composer) {
+        composer.hidden = false;
+    }
+    if (input) {
+        input.value = '';
+        input.focus();
+    }
+    if (!send) {
+        return;
+    }
+    send.textContent = texts.courseai_template_review_adjust;
+    send.disabled = false;
+    send.addEventListener('click', () => submitAdjustment({send, input, composer}, texts, resolve), {once: true});
+};
+
+/**
+ * Wire the overlay's two decision buttons: accept resolves immediately,
+ * adjust brings the composer back for a change.
+ *
+ * @param {Object} overlay
+ * @param {Object} texts
+ * @param {Function} resolve
+ * @returns {void}
+ */
+const wireDecisionButtons = (overlay, texts, resolve) => {
+    const accept = document.getElementById('cgDecisionAccept');
+    const adjust = document.getElementById('cgDecisionAdjust');
+    const composer = document.getElementById('tplInputBar');
+    const input = document.getElementById('tplPromptInput');
+    const send = document.getElementById('tplModeGenerate');
+
+    accept.addEventListener('click', () => acceptDecision(overlay, resolve), {once: true});
+    adjust.addEventListener('click', () => {
+        overlay.hide();
+        openAdjustComposer({composer, input, send}, texts, resolve);
+    }, {once: true});
+};
+
+/**
  * Open the review and resolve with what the professor answered.
  *
  * @param {Array} plan The whole plan, one entry per activity.
  * @returns {Promise<Object>} {action, targetIds, instruction}
  */
 export const askForDecision = async(plan) => {
-    await Promise.all((plan || []).map((entry) => renderActivityPlan(entry)));
+    const renders = (plan || []).map((entry) => renderActivityPlan(entry));
+    await Promise.all(renders);
 
     const texts = await getLabels();
     const overlay = getDecisionOverlay();
@@ -151,59 +262,7 @@ export const askForDecision = async(plan) => {
     }
     overlay.show();
 
-    return new Promise((resolve) => {
-        const accept = document.getElementById('cgDecisionAccept');
-        const adjust = document.getElementById('cgDecisionAdjust');
-        const composer = document.getElementById('tplInputBar');
-        const input = document.getElementById('tplPromptInput');
-        const send = document.getElementById('tplModeGenerate');
-
-        const answer = (decision) => {
-            overlay.hide();
-            resolve(decision);
-        };
-
-        accept.addEventListener('click', () => answer({
-            action: 'accept',
-            targetIds: [],
-            instruction: '',
-        }), {once: true});
-
-        adjust.addEventListener('click', () => {
-            // Asking for a change means writing it, so the composer comes back
-            // for exactly that, the way free mode's does. Its own button sends
-            // the change instead of starting a second run.
-            overlay.hide();
-            if (composer) {
-                composer.hidden = false;
-            }
-            if (input) {
-                input.value = '';
-                input.focus();
-            }
-            if (send) {
-                send.textContent = texts.courseai_template_review_adjust;
-                send.disabled = false;
-                send.addEventListener('click', () => {
-                    const instruction = ((input && input.value) || '').trim();
-                    if (!instruction) {
-                        if (input) {
-                            input.focus();
-                        }
-                        return;
-                    }
-                    if (composer) {
-                        composer.hidden = true;
-                    }
-                    send.textContent = texts.courseai_btn_generate;
-                    // No targets means the change is for every activity. Naming
-                    // them one by one is the next step here, not a different
-                    // mechanism: the service already accepts the list.
-                    resolve({action: 'replan_activity', targetIds: [], instruction});
-                }, {once: true});
-            }
-        }, {once: true});
-    });
+    return new Promise((resolve) => wireDecisionButtons(overlay, texts, resolve));
 };
 
 /**
