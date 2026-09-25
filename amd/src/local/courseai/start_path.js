@@ -86,7 +86,11 @@ export const wireStartPath = ({state, contextUi}) => {
         crumb.dataset.startPath = state.startPath || '';
         crumb.classList.toggle('is-locked', locked);
         crumb.disabled = locked;
-        crumb.title = locked ? (crumb.dataset.titleLocked || '') : (crumb.dataset.titleUnlocked || '');
+        let title = crumb.dataset.titleUnlocked || '';
+        if (locked) {
+            title = crumb.dataset.titleLocked || '';
+        }
+        crumb.title = title;
     };
 
     /**

@@ -203,13 +203,20 @@ export const initSidebar = () => {
             return;
         }
         const closed = isClosed();
-        const label = closed ? toggleBtn.dataset.labelOpen : toggleBtn.dataset.labelClose;
+        let label = toggleBtn.dataset.labelClose;
+        if (closed) {
+            label = toggleBtn.dataset.labelOpen;
+        }
         toggleBtn.setAttribute('aria-expanded', String(!closed || isFloating()));
         if (label) {
             toggleBtn.setAttribute('aria-label', label);
             // The native tooltip would sit on top of the floating panel, so
             // it is only offered while there is nothing under it.
-            toggleBtn.title = isFloating() ? '' : `${label} [`;
+            let title = `${label} [`;
+            if (isFloating()) {
+                title = '';
+            }
+            toggleBtn.title = title;
         }
     };
 
@@ -251,7 +258,11 @@ export const initSidebar = () => {
             syncCoursesListHeight();
         }
         syncToggle();
-        setUserPreference(SIDEBAR_PINNED_PREFERENCE, pinned ? 1 : 0).catch(() => {
+        let preferenceValue = 0;
+        if (pinned) {
+            preferenceValue = 1;
+        }
+        setUserPreference(SIDEBAR_PINNED_PREFERENCE, preferenceValue).catch(() => {
             // The preference failed to save; the sidebar still behaves
             // correctly for the rest of this visit, it just will not be
             // remembered on the next one.

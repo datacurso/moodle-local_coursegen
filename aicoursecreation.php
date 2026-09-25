@@ -72,7 +72,13 @@ $startchooser = !$resumesessionid && $modeparam === null && !$preselecttemplatei
 // from the very first render too, or it sits empty until the JS bundle
 // finishes loading: null while the cards are showing, otherwise whichever
 // path is actually opening - the same rule start_path.js falls back to itself.
-$initialstartpath = $startchooser ? null : (($opentemplates || $preselecttemplateid > 0) ? 'template' : 'free');
+$initialstartpath = null;
+if (!$startchooser) {
+    $initialstartpath = 'free';
+    if ($opentemplates || $preselecttemplateid > 0) {
+        $initialstartpath = 'template';
+    }
+}
 
 // Load system instructions (directrices institucionales).
 $systeminstructions = [];
