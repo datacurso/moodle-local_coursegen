@@ -46,19 +46,51 @@ class template_persistence_service {
         self::delete_children($templateid);
 
         foreach ($sections as $sectiondata) {
-            $sec = new template_section(0);
-            $sec->set('templateid', $templateid);
-            $sec->set('sectionid', $sectiondata['sectionid']);
-            $sec->set('sectionnum', $sectiondata['sectionnum']);
-            $sec->set('behavior', $sectiondata['behavior']);
-            $sec->create();
+            self::save_section($templateid, $sectiondata);
+        }
+    }
 
-            foreach ($sectiondata['activities'] as $actdata) {
-                self::create_activity($templateid, $sectiondata['sectionid'], $actdata);
-            }
-            foreach (($sectiondata['instances'] ?? []) as $instdata) {
-                self::create_instance($templateid, $sectiondata['sectionid'], $instdata);
-            }
+    /**
+     * Persist one section and every activity/instance it carries.
+     *
+     * @param int $templateid
+     * @param array $sectiondata
+     */
+    private static function save_section(int $templateid, array $sectiondata): void {
+        $sec = new template_section(0);
+        $sec->set('templateid', $templateid);
+        $sec->set('sectionid', $sectiondata['sectionid']);
+        $sec->set('sectionnum', $sectiondata['sectionnum']);
+        $sec->set('behavior', $sectiondata['behavior']);
+        $sec->create();
+
+        self::save_activities($templateid, $sectiondata['sectionid'], $sectiondata['activities']);
+        self::save_instances($templateid, $sectiondata['sectionid'], $sectiondata['instances'] ?? []);
+    }
+
+    /**
+     * Persist one section's activities.
+     *
+     * @param int $templateid
+     * @param int $sectionid
+     * @param array $activities
+     */
+    private static function save_activities(int $templateid, int $sectionid, array $activities): void {
+        foreach ($activities as $actdata) {
+            self::create_activity($templateid, $sectionid, $actdata);
+        }
+    }
+
+    /**
+     * Persist one section's virtual instances.
+     *
+     * @param int $templateid
+     * @param int $sectionid
+     * @param array $instances
+     */
+    private static function save_instances(int $templateid, int $sectionid, array $instances): void {
+        foreach ($instances as $instdata) {
+            self::create_instance($templateid, $sectionid, $instdata);
         }
     }
 
@@ -68,13 +100,19 @@ class template_persistence_service {
      * @param int $templateid
      */
     private static function delete_children(int $templateid): void {
-        foreach (template_activity::get_records(['templateid' => $templateid]) as $record) {
-            $record->delete();
-        }
-        foreach (template_section::get_records(['templateid' => $templateid]) as $record) {
-            $record->delete();
-        }
-        foreach (template_instance::get_records(['templateid' => $templateid]) as $record) {
+        self::delete_records(template_activity::class, $templateid);
+        self::delete_records(template_section::class, $templateid);
+        self::delete_records(template_instance::class, $templateid);
+    }
+
+    /**
+     * Delete every record of one model class for a template.
+     *
+     * @param string $modelclass
+     * @param int $templateid
+     */
+    private static function delete_records(string $modelclass, int $templateid): void {
+        foreach ($modelclass::get_records(['templateid' => $templateid]) as $record) {
             $record->delete();
         }
     }
@@ -114,7 +152,11 @@ class template_persistence_service {
         $instance->set('sourcename', $instdata['sourcename']);
         $instance->set('name', $instdata['name']);
         $instance->set('typelabel', $instdata['typelabel']);
-        $instance->set('modname', $instdata['modname'] ?? '' ?: null);
+        $modname = $instdata['modname'] ?? '';
+        if (empty($modname)) {
+            $modname = null;
+        }
+        $instance->set('modname', $modname);
         $instance->set('prompt', $instdata['prompt'] ?? '');
         $instance->set('aftercmid', $instdata['aftercmid'] ?? 0);
         $instance->set('sortorder', $instdata['sortorder'] ?? 0);
