@@ -148,16 +148,18 @@ class plan_activity {
             return $parameters;
         }
 
+        // The payload the run was given, not the template's course as it
+        // happens to look right now: the mould has to be the one the plan's
+        // ids were matched against, not whatever the professor may have
+        // edited since.
         $coursedata = $session->get('coursedata');
         $coursedata = (string) $coursedata;
         $coursedata = json_decode($coursedata, true);
-        $templateid = $coursedata['templateid'] ?? 0;
-        $templateid = (int) $templateid;
-        if ($templateid <= 0) {
+        $payload = $coursedata['payload'] ?? [];
+        if (!$payload) {
             return $parameters;
         }
 
-        $payload = \local_coursegen\local\service\template_export_service::build_init_payload($templateid);
         $mould = self::mould_pages($payload, $sourcecmid);
         if (!$mould) {
             return $parameters;
