@@ -44,30 +44,23 @@ class kept_activity {
      * @return array
      */
     public static function to_parameters(array $activity): array {
-        $modname = (string) ($activity['resource_type'] ?? '');
+        $modname = $activity['resource_type'] ?? '';
+        $modname = (string) $modname;
+
         $parameters = $activity['parameters'] ?? [];
-        $root = (($parameters['structure'] ?? [])[$modname] ?? [])[0] ?? [];
-        $name = format_string((string) ($parameters['name'] ?? ''));
+        $structure = $parameters['structure'] ?? [];
+        $modstructure = $structure[$modname] ?? [];
+        $root = $modstructure[0] ?? [];
+
+        $name = $parameters['name'] ?? '';
+        $name = (string) $name;
+        $name = format_string($name);
 
         if ($modname === 'lesson') {
             $orderedpages = self::lesson_pages_in_order($root);
             $pages = [];
             foreach ($orderedpages as $page) {
-                $buttons = self::buttons_of($page);
-                $pages[] = [
-                    // The page's own id and layout, because a page's buttons
-                    // are jumps to pages and a page says how they are laid out.
-                    'id' => $page['id'] ?? null,
-                    'layout' => $page['layout'] ?? 1,
-                    // What kind of page it is and whether it is shown, which
-                    // is what decides if the lesson's menu lists it.
-                    'qtype' => $page['qtype'] ?? null,
-                    'display' => $page['display'] ?? 1,
-                    'page_type' => 'content',
-                    'title' => (string) ($page['title'] ?? ''),
-                    'content_html' => (string) ($page['contents'] ?? ''),
-                    'buttons' => $buttons,
-                ];
+                $pages[] = self::lesson_page_entry($page);
             }
             return ['name' => $name, 'mod_settings' => ['pages' => $pages]];
         }
@@ -75,11 +68,43 @@ class kept_activity {
         // Every module table carries its own intro, and a type with no
         // dedicated preview class shows only that: this is what
         // intro_preview::render() reads.
-        $intro = (string) ($root['intro'] ?? '');
+        $intro = $root['intro'] ?? '';
+        $intro = (string) $intro;
         return [
             'name' => $name,
             'introeditor' => ['text' => $intro, 'format' => FORMAT_HTML, 'itemid' => 0],
             'page' => $intro,
+        ];
+    }
+
+    /**
+     * One lesson page, in the shape its preview reads.
+     *
+     * @param array $page
+     * @return array
+     */
+    private static function lesson_page_entry(array $page): array {
+        $buttons = self::buttons_of($page);
+
+        $title = $page['title'] ?? '';
+        $title = (string) $title;
+
+        $contenthtml = $page['contents'] ?? '';
+        $contenthtml = (string) $contenthtml;
+
+        return [
+            // The page's own id and layout, because a page's buttons
+            // are jumps to pages and a page says how they are laid out.
+            'id' => $page['id'] ?? null,
+            'layout' => $page['layout'] ?? 1,
+            // What kind of page it is and whether it is shown, which
+            // is what decides if the lesson's menu lists it.
+            'qtype' => $page['qtype'] ?? null,
+            'display' => $page['display'] ?? 1,
+            'page_type' => 'content',
+            'title' => $title,
+            'content_html' => $contenthtml,
+            'buttons' => $buttons,
         ];
     }
 
@@ -113,8 +138,10 @@ class kept_activity {
      */
     private static function flatten_lesson_pages(array $root): array {
         $pages = [];
-        foreach (($root['pages'] ?? []) as $group) {
-            $pages = array_merge($pages, $group['page'] ?? []);
+        $groups = $root['pages'] ?? [];
+        foreach ($groups as $group) {
+            $grouppages = $group['page'] ?? [];
+            $pages = array_merge($pages, $grouppages);
         }
         return $pages;
     }
@@ -128,7 +155,9 @@ class kept_activity {
     private static function lesson_pages_by_id(array $pages): array {
         $byid = [];
         foreach ($pages as $page) {
-            $byid[(string) ($page['id'] ?? '')] = $page;
+            $id = $page['id'] ?? '';
+            $id = (string) $id;
+            $byid[$id] = $page;
         }
         return $byid;
     }
@@ -141,7 +170,9 @@ class kept_activity {
      */
     private static function first_lesson_page(array $pages): ?array {
         foreach ($pages as $page) {
-            if ((string) ($page['prevpageid'] ?? '0') === '0') {
+            $prevpageid = $page['prevpageid'] ?? '0';
+            $prevpageid = (string) $prevpageid;
+            if ($prevpageid === '0') {
                 return $page;
             }
         }
@@ -160,13 +191,16 @@ class kept_activity {
         $ordered = [];
         $seen = [];
         while ($current !== null) {
-            $id = (string) ($current['id'] ?? '');
+            $id = $current['id'] ?? '';
+            $id = (string) $id;
             if (isset($seen[$id])) {
                 break;
             }
             $seen[$id] = true;
             $ordered[] = $current;
-            $current = $byid[(string) ($current['nextpageid'] ?? '0')] ?? null;
+            $nextid = $current['nextpageid'] ?? '0';
+            $nextid = (string) $nextid;
+            $current = $byid[$nextid] ?? null;
         }
         return $ordered;
     }
@@ -181,7 +215,9 @@ class kept_activity {
     private static function append_orphan_pages(array $ordered, array $pages): array {
         $seen = self::lesson_page_ids($ordered);
         foreach ($pages as $page) {
-            if (!isset($seen[(string) ($page['id'] ?? '')])) {
+            $id = $page['id'] ?? '';
+            $id = (string) $id;
+            if (!isset($seen[$id])) {
                 $ordered[] = $page;
             }
         }
@@ -197,7 +233,9 @@ class kept_activity {
     private static function lesson_page_ids(array $pages): array {
         $ids = [];
         foreach ($pages as $page) {
-            $ids[(string) ($page['id'] ?? '')] = true;
+            $id = $page['id'] ?? '';
+            $id = (string) $id;
+            $ids[$id] = true;
         }
         return $ids;
     }
@@ -212,7 +250,9 @@ class kept_activity {
         $answers = self::lesson_answers_of($page);
         $buttons = [];
         foreach ($answers as $answer) {
-            $text = html_to_text((string) ($answer['answer_text'] ?? ''), 0, false);
+            $answertext = $answer['answer_text'] ?? '';
+            $answertext = (string) $answertext;
+            $text = html_to_text($answertext, 0, false);
             $buttons[] = [
                 'text' => $text,
                 'jumpto' => $answer['jumpto'] ?? null,
@@ -229,8 +269,10 @@ class kept_activity {
      */
     private static function lesson_answers_of(array $page): array {
         $answers = [];
-        foreach (($page['answers'] ?? []) as $group) {
-            $answers = array_merge($answers, $group['answer'] ?? []);
+        $groups = $page['answers'] ?? [];
+        foreach ($groups as $group) {
+            $groupanswers = $group['answer'] ?? [];
+            $answers = array_merge($answers, $groupanswers);
         }
         return $answers;
     }
