@@ -64,8 +64,11 @@ class template_export_uids {
      * way on every export. That is what lets the page that draws a link to it
      * and the page that answers that link, two requests apart, agree.
      *
-     * The result is a UUID (RFC 4122, version 5): a name hashed from a
-     * namespace of this plugin's own and the element's identity.
+     * $templateid, $kind and $id are already a unique, stable key on their
+     * own - $kind alone tells apart the two id spaces that would otherwise
+     * collide. Nothing reads this value expecting a UUID's shape: every
+     * caller takes it through PARAM_ALPHANUMEXT, so the key itself, joined
+     * by dashes, is exactly what is needed here.
      *
      * @param int $templateid
      * @param string $kind 'cm' or 'section'.
@@ -73,23 +76,7 @@ class template_export_uids {
      * @return string
      */
     public static function stable_uid(int $templateid, string $kind, int $id): string {
-        // This plugin's own namespace for these names, fixed so the same
-        // element always hashes to the same uid.
-        $namespace = hex2bin('6f0d2a4c1b7e4a7f9c3e2d1b0a9f8e7d');
-        $hash = sha1($namespace . "local_coursegen/{$templateid}/{$kind}/{$id}", true);
-        $bytes = substr($hash, 0, 16);
-        // Version 5 in the high nibble of byte 6; RFC 4122 variant in byte 8.
-        $byte6 = ord($bytes[6]);
-        $bytes[6] = chr(($byte6 & 0x0f) | 0x50);
-        $byte8 = ord($bytes[8]);
-        $bytes[8] = chr(($byte8 & 0x3f) | 0x80);
-        $hex = bin2hex($bytes);
-        $part1 = substr($hex, 0, 8);
-        $part2 = substr($hex, 8, 4);
-        $part3 = substr($hex, 12, 4);
-        $part4 = substr($hex, 16, 4);
-        $part5 = substr($hex, 20, 12);
-        return sprintf('%s-%s-%s-%s-%s', $part1, $part2, $part3, $part4, $part5);
+        return "{$kind}-{$templateid}-{$id}";
     }
 
     /**
