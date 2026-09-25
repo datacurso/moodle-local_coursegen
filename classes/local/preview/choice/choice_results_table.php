@@ -41,14 +41,23 @@ trait choice_results_table {
         global $OUTPUT;
 
         ksort($choices->options);
+
+        $url = new moodle_url($this->here);
+        $action = $url->out(false);
+        $sesskeyvalue = sesskey();
+        $choicename = format_string($choices->name);
+        $summary = get_string('responsesto', 'choice', $choicename);
+        $columns = $this->choice_results_columns($choices);
+        $actiondata = $this->choice_results_actions($choices);
+
         return $OUTPUT->render_from_template('local_coursegen/preview_choice_results_table', [
             'showform' => $choices->viewresponsecapability,
-            'action' => (new moodle_url($this->here))->out(false),
+            'action' => $action,
             'coursemoduleid' => $choices->coursemoduleid,
-            'sesskey' => sesskey(),
-            'summary' => get_string('responsesto', 'choice', format_string($choices->name)),
-            'columns' => $this->choice_results_columns($choices),
-            'actiondata' => $this->choice_results_actions($choices),
+            'sesskey' => $sesskeyvalue,
+            'summary' => $summary,
+            'columns' => $columns,
+            'actiondata' => $actiondata,
         ]);
     }
 
@@ -121,13 +130,15 @@ trait choice_results_table {
     protected function choice_option_toggle($optionid, string $headertitle) {
         $selectallid = 'select-response-option-' . $optionid;
         $togglegroup = 'responses response-option-' . $optionid;
+        $selectalltext = get_string('selectalloption', 'choice', $headertitle);
+        $deselectalltext = get_string('deselectalloption', 'choice', $headertitle);
         return new \core\output\checkbox_toggleall($togglegroup, true, [
             'id' => $selectallid,
             'name' => $selectallid,
             'value' => 1,
-            'selectall' => get_string('selectalloption', 'choice', $headertitle),
-            'deselectall' => get_string('deselectalloption', 'choice', $headertitle),
-            'label' => get_string('selectalloption', 'choice', $headertitle),
+            'selectall' => $selectalltext,
+            'deselectall' => $deselectalltext,
+            'label' => $selectalltext,
             'labelclasses' => 'accesshide',
         ]);
     }
@@ -145,24 +156,29 @@ trait choice_results_table {
             return '';
         }
 
+        $selectalllabel = get_string('selectall');
         $selectallcheckbox = new \core\output\checkbox_toggleall('responses', true, [
             'id' => 'select-all-responses',
             'name' => 'select-all-responses',
             'value' => 1,
-            'label' => get_string('selectall'),
+            'label' => $selectalllabel,
             'classes' => 'btn-secondary me-1',
         ], true);
 
-        $actionurl = new moodle_url($this->here, ['sesskey' => sesskey(), 'action' => 'delete_confirmation()']);
-        $actionoptions = ['delete' => get_string('delete')];
+        $sesskeyvalue = sesskey();
+        $actionurl = new moodle_url($this->here, ['sesskey' => $sesskeyvalue, 'action' => 'delete_confirmation()']);
+        $deletetext = get_string('delete');
+        $actionoptions = ['delete' => $deletetext];
         foreach ($choices->options as $optionid => $option) {
             if ($optionid > 0) {
                 $actionoptions['choose_' . $optionid] = get_string('chooseoption', 'choice', $option->text);
             }
         }
-        $select = new single_select($actionurl, 'action', $actionoptions, null, ['' => get_string('chooseaction', 'choice')],
+        $chooseactiontext = get_string('chooseaction', 'choice');
+        $select = new single_select($actionurl, 'action', $actionoptions, null, ['' => $chooseactiontext],
             'attemptsform');
-        $select->set_label(get_string('withselected', 'choice'));
+        $withselectedtext = get_string('withselected', 'choice');
+        $select->set_label($withselectedtext);
         $select->disabled = true;
         $select->attributes = [
             'data-action' => 'toggle',
