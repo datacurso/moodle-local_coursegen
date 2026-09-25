@@ -49,21 +49,14 @@ class kept_activity {
      *
      * Example, for a kept lesson named "My Lesson" with one page:
      * ```php
-     * $activity = [
-     *     'resource_type' => 'lesson',
-     *     'parameters' => [
-     *         'name' => 'My Lesson',
-     *         'structure' => ['lesson' => [['pages' => [...]]]],
-     *     ],
-     * ];
+     * $activity = ['resource_type' => 'lesson',
+     *     'parameters' => ['name' => 'My Lesson', 'structure' => ['lesson' => [['pages' => [...]]]]]];
      * // returns:
      * ['name' => 'My Lesson', 'mod_settings' => ['pages' => [...]]]
      * ```
      *
      * For any other module type, returns instead:
-     * ```php
-     * ['name' => ..., 'introeditor' => ['text' => ..., ...], 'page' => ...]
-     * ```
+     * `['name' => ..., 'introeditor' => ['text' => ..., ...], 'page' => ...]`.
      *
      * @param array $activity The activity as the payload describes it.
      * @return array
@@ -82,12 +75,7 @@ class kept_activity {
         $name = format_string($name);
 
         if ($modname === 'lesson') {
-            $orderedpages = self::lesson_pages_in_order($root);
-            $pages = [];
-            foreach ($orderedpages as $page) {
-                $pages[] = self::lesson_page_entry($page);
-            }
-            return ['name' => $name, 'mod_settings' => ['pages' => $pages]];
+            return self::lesson_activity_parameters($root, $name);
         }
 
         // Every module table carries its own intro, and a type with no
@@ -103,23 +91,40 @@ class kept_activity {
     }
 
     /**
+     * A lesson's parameters, in the shape its preview reads.
+     *
+     * Example:
+     * ```php
+     * $root = ['pages' => [['page' => [$pageA, $pageB]]]];
+     * $name = 'My Lesson';
+     * // returns:
+     * ['name' => 'My Lesson', 'mod_settings' => ['pages' => [entryA, entryB]]]
+     * ```
+     *
+     * @param array $root The lesson's own raw backup node.
+     * @param string $name The activity's already-formatted name.
+     * @return array
+     */
+    private static function lesson_activity_parameters(array $root, string $name): array {
+        $orderedpages = self::lesson_pages_in_order($root);
+        $pages = [];
+        foreach ($orderedpages as $page) {
+            $pages[] = self::lesson_page_entry($page);
+        }
+        return ['name' => $name, 'mod_settings' => ['pages' => $pages]];
+    }
+
+    /**
      * One lesson page, in the shape its preview reads.
      *
      * Example:
      * ```php
-     * $page = [
-     *     'id' => 101, 'title' => 'Page A', 'contents' => '<p>Welcome</p>',
-     *     'layout' => 1, 'qtype' => 20, 'display' => 1,
+     * $page = ['id' => 101, 'title' => 'Page A', 'contents' => '<p>Welcome</p>',
      *     'prevpageid' => '0', 'nextpageid' => '102',
-     *     'answers' => [['answer' => [['answer_text' => 'Continue', 'jumpto' => 102]]]],
-     * ];
+     *     'answers' => [['answer' => [['answer_text' => 'Continue', 'jumpto' => 102]]]]];
      * // returns:
-     * [
-     *     'id' => 101, 'layout' => 1, 'qtype' => 20, 'display' => 1,
-     *     'page_type' => 'content', 'title' => 'Page A',
-     *     'content_html' => '<p>Welcome</p>',
-     *     'buttons' => [['text' => 'Continue', 'jumpto' => 102]],
-     * ]
+     * ['id' => 101, 'page_type' => 'content', 'title' => 'Page A',
+     *     'content_html' => '<p>Welcome</p>', 'buttons' => [['text' => 'Continue', 'jumpto' => 102]]]
      * ```
      *
      * @param array $page One raw page node, as lesson_pages_in_order() returns it.
