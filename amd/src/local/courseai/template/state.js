@@ -51,10 +51,6 @@ export const createTemplateState = (inputbar = {}) => ({
     allowedActivities: [],
     sections: [],
     typeLabels: {},
-    // Client-only placeholder ids for sections/activities the professor adds —
-    // negative so they never collide with real Moodle section/cm ids.
-    nextSectionId: -1,
-    nextActivityId: -1,
     // Input-bar values, ready for the future generation payload.
     prompt: inputbar.prompt || '',
     generateimages: inputbar.generateimages || 0,
@@ -92,19 +88,18 @@ export const applyStructureResponse = (state, data) => {
             locked: !!activity.locked,
             action: activity.action || '',
             // Virtual instance rows ("AI will generate an activity here,
-            // molded on a template activity") arrive with NEGATIVE ids
-            // (-recordid on the server), locked and non-removable.
+            // molded on a template activity") arrive with the instance's own
+            // uid as their id (see get_template_structure.php), locked and
+            // non-removable.
             isinstance: !!activity.isinstance,
             aigenerated: !!activity.aigenerated,
             // The id this row answers to in the generation's progress events.
             generationcmid: activity.generationcmid || 0,
+            // The name this row answers to in the generation's answer, which
+            // is what its preview is asked for by.
+            generationuid: activity.generationuid || '',
         })),
     }));
-    // Server-sent instance rows use negative ids, the same sign space as the
-    // client-only placeholder ids — re-seed the counter below the smallest
-    // received id so professor-added rows can never collide with them.
-    const minReceivedId = Math.min(0, ...state.sections.flatMap((s) => s.activities.map((a) => a.id)));
-    state.nextActivityId = minReceivedId - 1;
 };
 
 /**
@@ -118,6 +113,13 @@ export const canAddSection = (state) => state.nolimit || state.remainingSections
 /**
  * Append a new, empty, unlocked section.
  *
+ * A newly added section has no id: it has nothing server-side to answer to
+ * yet (no real Moodle section), so there is nothing to name it by. Every
+ * function below that acts on "a section" is given its position in
+ * state.sections instead — the same way a newly added activity is already
+ * addressed by its position, not by an id of its own (see insertActivity).
+ * A real, locked section keeps whatever id the server sent it, unaffected.
+ *
  * @param {Object} state
  * @param {string} sectionLabel - Localised generic label (e.g. "Section"), numbered by position.
  * @returns {Object|null} The created section, or null if the limit was reached.
@@ -127,7 +129,6 @@ export const addSection = (state, sectionLabel) => {
         return null;
     }
     const section = {
-        id: state.nextSectionId--,
         name: `${sectionLabel || 'Section'} ${state.sections.length + 1}`,
         locked: false,
         collapsed: false,
@@ -144,20 +145,21 @@ export const addSection = (state, sectionLabel) => {
  * Insert an activity (picked from the chooser) into a section's activity list.
  *
  * @param {Object} state
- * @param {number} sectionId
+ * @param {number} sectionIndex - The section's position in state.sections.
  * @param {number|null} position - 0-based index to insert BEFORE, or null/undefined to append.
  * @param {Object} activity - {modname, displayname, purpose, iconhtml} plus the
  *     optional chooser prompt-panel extras {prompt, generateimages, draftitemid,
  *     filename}, defaulted to ''/0/0/'' when absent.
- * @returns {boolean} Whether the insertion happened.
+ * @returns {Object|null} The created activity row, or null if the insertion
+ *     did not happen — the caller uses the returned reference (not its id)
+ *     to find and undo the insertion if a later step fails.
  */
-export const insertActivity = (state, sectionId, position, activity) => {
-    const section = state.sections.find((s) => s.id === sectionId);
+export const insertActivity = (state, sectionIndex, position, activity) => {
+    const section = state.sections[sectionIndex];
     if (!section || section.locked) {
-        return false;
+        return null;
     }
     const newActivity = {
-        id: state.nextActivityId--,
         name: activity.displayname,
         modname: activity.modname,
         purpose: activity.purpose,
@@ -174,19 +176,19 @@ export const insertActivity = (state, sectionId, position, activity) => {
     } else {
         section.activities.push(newActivity);
     }
-    return true;
+    return newActivity;
 };
 
 /**
  * Remove one (unlocked) activity from a section by its current render index.
  *
  * @param {Object} state
- * @param {number} sectionId
+ * @param {number} sectionIndex - The section's position in state.sections.
  * @param {number} activityIndex
  * @returns {boolean} Whether a row was removed.
  */
-export const removeActivity = (state, sectionId, activityIndex) => {
-    const section = state.sections.find((s) => s.id === sectionId);
+export const removeActivity = (state, sectionIndex, activityIndex) => {
+    const section = state.sections[sectionIndex];
     if (!section) {
         return false;
     }
@@ -202,10 +204,10 @@ export const removeActivity = (state, sectionId, activityIndex) => {
  * Toggle a section's collapsed state.
  *
  * @param {Object} state
- * @param {number} sectionId
+ * @param {number} sectionIndex - The section's position in state.sections.
  */
-export const toggleSectionCollapsed = (state, sectionId) => {
-    const section = state.sections.find((s) => s.id === sectionId);
+export const toggleSectionCollapsed = (state, sectionIndex) => {
+    const section = state.sections[sectionIndex];
     if (section) {
         section.collapsed = !section.collapsed;
     }
