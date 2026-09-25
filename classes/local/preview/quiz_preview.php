@@ -175,86 +175,174 @@ class quiz_preview extends ported_preview {
         }
 
         $options = ['id' => $id++, 'questionid' => $questionid];
-        switch ($qtype) {
-            case 'multichoice':
-                foreach (['correctfeedback', 'partiallycorrectfeedback', 'incorrectfeedback'] as $field) {
-                    $text = $editor($form[$field] ?? '');
-                    $options[$field] = $text['text'];
-                    $options[$field . 'format'] = $text['format'];
-                }
-                $options += [
-                    'layout' => 0,
-                    'single' => (int) ($form['single'] ?? 1),
-                    'shuffleanswers' => (int) ($form['shuffleanswers'] ?? 1),
-                    'answernumbering' => (string) ($form['answernumbering'] ?? 'abc'),
-                    'shownumcorrect' => (int) ($form['shownumcorrect'] ?? 0),
-                    'showstandardinstruction' => (int) ($form['showstandardinstruction'] ?? 0),
-                    'answers' => $answers,
-                ];
-                break;
-            case 'truefalse':
-                $correct = (int) ($form['correctanswer'] ?? 1);
-                $true = $editor($form['feedbacktrue'] ?? '');
-                $false = $editor($form['feedbackfalse'] ?? '');
-                $answers = [];
-                $trueid = $id++;
-                $falseid = $id++;
-                $answers[$trueid] = [
-                    'id' => $trueid, 'question' => $questionid, 'answer' => get_string('true', 'qtype_truefalse'),
-                    'answerformat' => FORMAT_MOODLE, 'fraction' => $correct ? 1.0 : 0.0,
-                    'feedback' => $true['text'], 'feedbackformat' => $true['format'],
-                ];
-                $answers[$falseid] = [
-                    'id' => $falseid, 'question' => $questionid, 'answer' => get_string('false', 'qtype_truefalse'),
-                    'answerformat' => FORMAT_MOODLE, 'fraction' => $correct ? 0.0 : 1.0,
-                    'feedback' => $false['text'], 'feedbackformat' => $false['format'],
-                ];
-                $options += [
-                    'question' => $questionid, 'trueanswer' => $trueid, 'falseanswer' => $falseid,
-                    'showstandardinstruction' => (int) ($form['showstandardinstruction'] ?? 0),
-                    'answers' => $answers,
-                ];
-                break;
-            case 'shortanswer':
-                $options += ['usecase' => (int) ($form['usecase'] ?? 0), 'answers' => $answers];
-                break;
-            case 'numerical':
-                $options += ['answers' => $answers, 'units' => [], 'unitgradingtype' => 0, 'unitpenalty' => 0.1,
-                    'showunits' => 3, 'unitsleft' => 0];
-                $tolerances = (array) ($form['tolerance'] ?? []);
-                $index = 0;
-                foreach ($options['answers'] as $answerid => $answer) {
-                    $options['answers'][$answerid]['tolerance'] = (float) ($tolerances[$index] ?? 0);
-                    $index++;
-                }
-                break;
-            case 'essay':
-                $graderinfo = $editor($form['graderinfo'] ?? '');
-                $template = $editor($form['responsetemplate'] ?? '');
-                $options += [
-                    'responseformat' => (string) ($form['responseformat'] ?? 'editor'),
-                    'responserequired' => (int) ($form['responserequired'] ?? 1),
-                    'responsefieldlines' => (int) ($form['responsefieldlines'] ?? 15),
-                    'minwordlimit' => $form['minwordlimit'] ?? null,
-                    'maxwordlimit' => $form['maxwordlimit'] ?? null,
-                    'attachments' => (int) ($form['attachments'] ?? 0),
-                    'attachmentsrequired' => (int) ($form['attachmentsrequired'] ?? 0),
-                    'graderinfo' => $graderinfo['text'], 'graderinfoformat' => $graderinfo['format'],
-                    'responsetemplate' => $template['text'], 'responsetemplateformat' => $template['format'],
-                    'maxbytes' => (int) ($form['maxbytes'] ?? 0),
-                    'filetypeslist' => (string) ($form['filetypeslist'] ?? ''),
-                    'answers' => [],
-                ];
-                break;
-            default:
-                // A type this does not know how to lay out is left to the
-                // engine as it is; a type the engine cannot make is skipped
-                // by it.
-                $options += ['answers' => $answers];
-                break;
-        }
+        $options += $this->options_for($qtype, $form, $questionid, $id, $answers, $editor);
         $data['options'] = $options;
         return $data;
+    }
+
+    /** @var string[] Question type => the method that lays out its options. */
+    private const QTYPE_OPTIONS_BUILDERS = [
+        'multichoice' => 'options_for_multichoice',
+        'truefalse' => 'options_for_truefalse',
+        'shortanswer' => 'options_for_shortanswer',
+        'numerical' => 'options_for_numerical',
+        'essay' => 'options_for_essay',
+    ];
+
+    /**
+     * One question type's own options, laid out the way the engine expects.
+     *
+     * @param string $qtype
+     * @param array $form
+     * @param int $questionid
+     * @param int $id Counter for the ids the engine wants every row to carry.
+     * @param array $answers The answers already built from the form's answer/fraction/feedback lists.
+     * @param callable $editor Turns one raw form field into {text, format}.
+     * @return array
+     */
+    private function options_for(string $qtype, array $form, int $questionid, int &$id, array $answers, callable $editor): array {
+        $method = self::QTYPE_OPTIONS_BUILDERS[$qtype] ?? 'options_for_default';
+        return $this->$method($form, $questionid, $id, $answers, $editor);
+    }
+
+    /**
+     * @param array $form
+     * @param int $questionid
+     * @param int $id
+     * @param array $answers
+     * @param callable $editor
+     * @return array
+     */
+    private function options_for_multichoice(array $form, int $questionid, int &$id, array $answers, callable $editor): array {
+        $options = [];
+        foreach (['correctfeedback', 'partiallycorrectfeedback', 'incorrectfeedback'] as $field) {
+            $text = $editor($form[$field] ?? '');
+            $options[$field] = $text['text'];
+            $options[$field . 'format'] = $text['format'];
+        }
+        return $options + [
+            'layout' => 0,
+            'single' => (int) ($form['single'] ?? 1),
+            'shuffleanswers' => (int) ($form['shuffleanswers'] ?? 1),
+            'answernumbering' => (string) ($form['answernumbering'] ?? 'abc'),
+            'shownumcorrect' => (int) ($form['shownumcorrect'] ?? 0),
+            'showstandardinstruction' => (int) ($form['showstandardinstruction'] ?? 0),
+            'answers' => $answers,
+        ];
+    }
+
+    /**
+     * @param array $form
+     * @param int $questionid
+     * @param int $id
+     * @param array $answers Unused: truefalse builds its own two answers.
+     * @param callable $editor
+     * @return array
+     */
+    private function options_for_truefalse(array $form, int $questionid, int &$id, array $answers, callable $editor): array {
+        $correct = (int) ($form['correctanswer'] ?? 1);
+        $true = $editor($form['feedbacktrue'] ?? '');
+        $false = $editor($form['feedbackfalse'] ?? '');
+        $trueid = $id++;
+        $falseid = $id++;
+        $truefraction = 0.0;
+        if ($correct) {
+            $truefraction = 1.0;
+        }
+        $falsefraction = 0.0;
+        if (!$correct) {
+            $falsefraction = 1.0;
+        }
+        $answers = [];
+        $answers[$trueid] = [
+            'id' => $trueid, 'question' => $questionid, 'answer' => get_string('true', 'qtype_truefalse'),
+            'answerformat' => FORMAT_MOODLE, 'fraction' => $truefraction,
+            'feedback' => $true['text'], 'feedbackformat' => $true['format'],
+        ];
+        $answers[$falseid] = [
+            'id' => $falseid, 'question' => $questionid, 'answer' => get_string('false', 'qtype_truefalse'),
+            'answerformat' => FORMAT_MOODLE, 'fraction' => $falsefraction,
+            'feedback' => $false['text'], 'feedbackformat' => $false['format'],
+        ];
+        return [
+            'question' => $questionid, 'trueanswer' => $trueid, 'falseanswer' => $falseid,
+            'showstandardinstruction' => (int) ($form['showstandardinstruction'] ?? 0),
+            'answers' => $answers,
+        ];
+    }
+
+    /**
+     * @param array $form
+     * @param int $questionid Unused.
+     * @param int $id Unused.
+     * @param array $answers
+     * @param callable $editor Unused.
+     * @return array
+     */
+    private function options_for_shortanswer(array $form, int $questionid, int &$id, array $answers, callable $editor): array {
+        return ['usecase' => (int) ($form['usecase'] ?? 0), 'answers' => $answers];
+    }
+
+    /**
+     * @param array $form
+     * @param int $questionid Unused.
+     * @param int $id Unused.
+     * @param array $answers
+     * @param callable $editor Unused.
+     * @return array
+     */
+    private function options_for_numerical(array $form, int $questionid, int &$id, array $answers, callable $editor): array {
+        $options = ['answers' => $answers, 'units' => [], 'unitgradingtype' => 0, 'unitpenalty' => 0.1,
+            'showunits' => 3, 'unitsleft' => 0];
+        $tolerances = (array) ($form['tolerance'] ?? []);
+        $index = 0;
+        foreach ($options['answers'] as $answerid => $answer) {
+            $options['answers'][$answerid]['tolerance'] = (float) ($tolerances[$index] ?? 0);
+            $index++;
+        }
+        return $options;
+    }
+
+    /**
+     * @param array $form
+     * @param int $questionid Unused.
+     * @param int $id Unused.
+     * @param array $answers Unused: an essay has none.
+     * @param callable $editor
+     * @return array
+     */
+    private function options_for_essay(array $form, int $questionid, int &$id, array $answers, callable $editor): array {
+        $graderinfo = $editor($form['graderinfo'] ?? '');
+        $template = $editor($form['responsetemplate'] ?? '');
+        return [
+            'responseformat' => (string) ($form['responseformat'] ?? 'editor'),
+            'responserequired' => (int) ($form['responserequired'] ?? 1),
+            'responsefieldlines' => (int) ($form['responsefieldlines'] ?? 15),
+            'minwordlimit' => $form['minwordlimit'] ?? null,
+            'maxwordlimit' => $form['maxwordlimit'] ?? null,
+            'attachments' => (int) ($form['attachments'] ?? 0),
+            'attachmentsrequired' => (int) ($form['attachmentsrequired'] ?? 0),
+            'graderinfo' => $graderinfo['text'], 'graderinfoformat' => $graderinfo['format'],
+            'responsetemplate' => $template['text'], 'responsetemplateformat' => $template['format'],
+            'maxbytes' => (int) ($form['maxbytes'] ?? 0),
+            'filetypeslist' => (string) ($form['filetypeslist'] ?? ''),
+            'answers' => [],
+        ];
+    }
+
+    /**
+     * A type this does not know how to lay out is left to the engine as it
+     * is; a type the engine cannot make is skipped by it.
+     *
+     * @param array $form Unused.
+     * @param int $questionid Unused.
+     * @param int $id Unused.
+     * @param array $answers
+     * @param callable $editor Unused.
+     * @return array
+     */
+    private function options_for_default(array $form, int $questionid, int &$id, array $answers, callable $editor): array {
+        return ['answers' => $answers];
     }
 
     /**
