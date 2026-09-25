@@ -58,7 +58,8 @@ trait glossary_entry_icons {
         global $OUTPUT;
         $context = $this->context;
         $glossary = $this->glossary;
-        $altsuffix = strip_tags(format_text($entry->concept));
+        $formattedconcept = format_text($entry->concept);
+        $altsuffix = strip_tags($formattedconcept);
 
         $data = ['show' => false, 'hidden' => false, 'hiddentext' => '', 'exportedtext' => ''];
 
@@ -70,19 +71,26 @@ trait glossary_entry_icons {
 
         if ($entry->approved || has_capability('mod/glossary:approve', $context)) {
             $data['show'] = true;
+            $linkurl = ($this->urls)(['eid' => $entry->id]);
+            $linkouturl = $linkurl->out(false);
+            $linktitle = get_string('entrylink', 'glossary', $altsuffix);
+            $linkiconhtml = $OUTPUT->pix_icon('fp/link', $linktitle, 'theme');
             $data['linkicon'] = [
-                'url' => ($this->urls)(['eid' => $entry->id])->out(false),
-                'title' => get_string('entrylink', 'glossary', $altsuffix),
-                'iconhtml' => $OUTPUT->pix_icon('fp/link', get_string('entrylink', 'glossary', $altsuffix), 'theme'),
+                'url' => $linkouturl,
+                'title' => $linktitle,
+                'iconhtml' => $linkiconhtml,
             ];
         }
 
         if (has_capability('mod/glossary:approve', $context) && !$glossary->defaultapproval && $entry->approved) {
             $data['show'] = true;
+            $disapproveurl = $this->url(['mode' => $mode, 'hook' => $hook]);
+            $disapprovetitle = get_string('disapprove', 'glossary');
+            $disapproveiconhtml = $OUTPUT->pix_icon('t/block', $disapprovetitle);
             $data['disapproveicon'] = [
-                'url' => $this->url(['mode' => $mode, 'hook' => $hook]),
-                'title' => get_string('disapprove', 'glossary'),
-                'iconhtml' => $OUTPUT->pix_icon('t/block', get_string('disapprove', 'glossary')),
+                'url' => $disapproveurl,
+                'title' => $disapprovetitle,
+                'iconhtml' => $disapproveiconhtml,
             ];
         }
 
@@ -104,10 +112,12 @@ trait glossary_entry_icons {
         global $USER, $CFG, $OUTPUT;
         $context = $this->context;
         $glossary = $this->glossary;
-        $importedentry = (($entry->sourceglossaryid ?? 0) == $glossary->id);
+        $sourceglossaryid = $entry->sourceglossaryid ?? 0;
+        $importedentry = ($sourceglossaryid == $glossary->id);
 
         $canmanage = has_capability('mod/glossary:manageentries', $context);
-        $iscurrentuser = (($entry->userid ?? 0) == $USER->id);
+        $entryuserid = $entry->userid ?? 0;
+        $iscurrentuser = ($entryuserid == $USER->id);
         $canwriteown = isloggedin() && has_capability('mod/glossary:write', $context) && $iscurrentuser;
         if (!$canmanage && !$canwriteown) {
             return;
@@ -124,21 +134,29 @@ trait glossary_entry_icons {
         // An entry is editable when it is not imported (so nobody can edit an
         // imported entry) and the reader may manage entries, or is its
         // author within the editing period (or the glossary always allows it).
-        $ineditperiod = ((time() - ($entry->timecreated ?? 0) < $CFG->maxeditingtime) || $glossary->editalways);
+        $entrytimecreated = $entry->timecreated ?? 0;
+        $editingtimeelapsed = time() - $entrytimecreated;
+        $ineditperiod = ($editingtimeelapsed < $CFG->maxeditingtime || $glossary->editalways);
         $editable = !$importedentry && ($canmanage || ($iscurrentuser && $ineditperiod && $canwriteown));
 
         if ($editable) {
             $data['show'] = true;
             $url = $this->url(['mode' => $mode, 'hook' => $hook]);
+            $deletetitle = get_string('delete');
+            $deletealt = get_string('deleteentrya', 'mod_glossary', $altsuffix);
+            $deleteiconhtml = $OUTPUT->pix_icon($icon, $deletealt, $iconcomponent);
             $data['deleteicon'] = [
                 'url' => $url,
-                'title' => get_string('delete'),
-                'iconhtml' => $OUTPUT->pix_icon($icon, get_string('deleteentrya', 'mod_glossary', $altsuffix), $iconcomponent),
+                'title' => $deletetitle,
+                'iconhtml' => $deleteiconhtml,
             ];
+            $edittitle = get_string('edit');
+            $editalt = get_string('editentrya', 'mod_glossary', $altsuffix);
+            $editiconhtml = $OUTPUT->pix_icon('i/edit', $editalt);
             $data['editicon'] = [
                 'url' => $url,
-                'title' => get_string('edit'),
-                'iconhtml' => $OUTPUT->pix_icon('i/edit', get_string('editentrya', 'mod_glossary', $altsuffix)),
+                'title' => $edittitle,
+                'iconhtml' => $editiconhtml,
             ];
         } else if ($importedentry) {
             $data['show'] = true;
