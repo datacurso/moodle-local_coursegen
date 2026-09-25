@@ -64,6 +64,75 @@ export const createTemplateState = (inputbar = {}) => ({
 });
 
 /**
+ * One activity of a get_template_structure response, in the shape state keeps it.
+ *
+ * @param {Object} activity
+ * @returns {Object}
+ */
+const stateActivity = (activity) => ({
+    id: activity.id,
+    name: activity.name,
+    modname: activity.modname,
+    purpose: activity.purpose,
+    iconhtml: activity.iconhtml,
+    // Instance rows carry their snapshotted type label; real rows
+    // resolve theirs client-side (render.js ensureTypeLabels).
+    typelabel: activity.typelabel || '',
+    locked: !!activity.locked,
+    action: activity.action || '',
+    // Virtual instance rows ("AI will generate an activity here,
+    // molded on a template activity") arrive with NEGATIVE ids
+    // (-recordid on the server), locked and non-removable.
+    isinstance: !!activity.isinstance,
+    aigenerated: !!activity.aigenerated,
+    // The id this row answers to in the generation's progress events.
+    generationcmid: activity.generationcmid || 0,
+    // The name this row answers to in the generation's answer, which
+    // is what its preview is asked for by.
+    generationuid: activity.generationuid || '',
+});
+
+/**
+ * One section of a get_template_structure response, in the shape state keeps it.
+ *
+ * @param {Object} section
+ * @returns {Object}
+ */
+const stateSection = (section) => ({
+    id: section.id,
+    name: section.name,
+    behavior: section.behavior || 'aimodify',
+    locked: !!section.locked,
+    collapsed: false,
+    activities: (section.activities || []).map(stateActivity),
+});
+
+/**
+ * The smallest activity id across every section, 0 when there are none.
+ *
+ * @param {Array} sections
+ * @returns {number}
+ */
+const minActivityId = (sections) => {
+    const ids = sections.flatMap(sectionActivityIds);
+    return Math.min(0, ...ids);
+};
+
+/**
+ * One section's own activity ids.
+ *
+ * @param {Object} section
+ * @returns {Array}
+ */
+const sectionActivityIds = (section) => section.activities.map(activityId);
+
+/**
+ * @param {Object} activity
+ * @returns {number}
+ */
+const activityId = (activity) => activity.id;
+
+/**
  * Populate state from a get_template_structure response.
  *
  * @param {Object} state
@@ -74,40 +143,11 @@ export const applyStructureResponse = (state, data) => {
     state.nolimit = !!data.nolimit;
     state.remainingSections = data.remainingsections || 0;
     state.allowedActivities = data.allowedactivities || [];
-    state.sections = (data.sections || []).map((section) => ({
-        id: section.id,
-        name: section.name,
-        behavior: section.behavior || 'aimodify',
-        locked: !!section.locked,
-        collapsed: false,
-        activities: (section.activities || []).map((activity) => ({
-            id: activity.id,
-            name: activity.name,
-            modname: activity.modname,
-            purpose: activity.purpose,
-            iconhtml: activity.iconhtml,
-            // Instance rows carry their snapshotted type label; real rows
-            // resolve theirs client-side (render.js ensureTypeLabels).
-            typelabel: activity.typelabel || '',
-            locked: !!activity.locked,
-            action: activity.action || '',
-            // Virtual instance rows ("AI will generate an activity here,
-            // molded on a template activity") arrive with NEGATIVE ids
-            // (-recordid on the server), locked and non-removable.
-            isinstance: !!activity.isinstance,
-            aigenerated: !!activity.aigenerated,
-            // The id this row answers to in the generation's progress events.
-            generationcmid: activity.generationcmid || 0,
-            // The name this row answers to in the generation's answer, which
-            // is what its preview is asked for by.
-            generationuid: activity.generationuid || '',
-        })),
-    }));
+    state.sections = (data.sections || []).map(stateSection);
     // Server-sent instance rows use negative ids, the same sign space as the
     // client-only placeholder ids — re-seed the counter below the smallest
     // received id so professor-added rows can never collide with them.
-    const minReceivedId = Math.min(0, ...state.sections.flatMap((s) => s.activities.map((a) => a.id)));
-    state.nextActivityId = minReceivedId - 1;
+    state.nextActivityId = minActivityId(state.sections) - 1;
 };
 
 /**
@@ -144,6 +184,19 @@ export const addSection = (state, sectionLabel) => {
 };
 
 /**
+ * 1 when the chooser's extras asked for images, 0 otherwise.
+ *
+ * @param {Object} activity
+ * @returns {number}
+ */
+const generateimagesFlag = (activity) => {
+    if (activity.generateimages) {
+        return 1;
+    }
+    return 0;
+};
+
+/**
  * Insert an activity (picked from the chooser) into a section's activity list.
  *
  * @param {Object} state
@@ -167,7 +220,7 @@ export const insertActivity = (state, sectionId, position, activity) => {
         iconhtml: activity.iconhtml,
         locked: false,
         prompt: activity.prompt || '',
-        generateimages: activity.generateimages ? 1 : 0,
+        generateimages: generateimagesFlag(activity),
         draftitemid: activity.draftitemid || 0,
         filename: activity.filename || '',
     };
