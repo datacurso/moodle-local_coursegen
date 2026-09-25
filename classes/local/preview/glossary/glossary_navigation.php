@@ -44,8 +44,9 @@ trait glossary_navigation {
         $out = '';
         if ($mode != 'date') {
             if ($this->glossary->showalphabet) {
+                $explaintext = get_string('explainalphabet', 'glossary');
                 $out .= $OUTPUT->render_from_template('local_coursegen/preview_glossary_explain', [
-                    'text' => get_string('explainalphabet', 'glossary'),
+                    'text' => $explaintext,
                 ]);
             }
 
@@ -70,11 +71,15 @@ trait glossary_navigation {
         if (!$this->glossary->showall) {
             return '';
         }
+        $alltext = get_string('allentries', 'glossary');
+        $allexplaintext = get_string('explainall', 'glossary');
+        $alltitle = strip_tags($allexplaintext);
+        $allurl = $this->url(['mode' => $mode, 'hook' => 'ALL']);
         return $OUTPUT->render_from_template('local_coursegen/preview_bold_or_link', [
             'current' => $hook == 'ALL',
-            'text' => get_string('allentries', 'glossary'),
-            'title' => strip_tags(get_string('explainall', 'glossary')),
-            'url' => $this->url(['mode' => $mode, 'hook' => 'ALL']),
+            'text' => $alltext,
+            'title' => $alltitle,
+            'url' => $allurl,
             'suffix' => '',
         ]);
     }
@@ -91,11 +96,15 @@ trait glossary_navigation {
         if (!$this->glossary->showspecial) {
             return '';
         }
+        $specialtext = get_string('special', 'glossary');
+        $specialexplaintext = get_string('explainspecial', 'glossary');
+        $specialtitle = strip_tags($specialexplaintext);
+        $specialurl = $this->url(['mode' => $mode, 'hook' => 'SPECIAL']);
         return $OUTPUT->render_from_template('local_coursegen/preview_bold_or_link', [
             'current' => $hook == 'SPECIAL',
-            'text' => get_string('special', 'glossary'),
-            'title' => strip_tags(get_string('explainspecial', 'glossary')),
-            'url' => $this->url(['mode' => $mode, 'hook' => 'SPECIAL']),
+            'text' => $specialtext,
+            'title' => $specialtitle,
+            'url' => $specialurl,
             'suffix' => ' | ',
         ]);
     }
@@ -115,12 +124,14 @@ trait glossary_navigation {
             return '';
         }
         $out = '';
-        $alphabet = explode(",", get_string('alphabet', 'langconfig'));
+        $alphabetstring = get_string('alphabet', 'langconfig');
+        $alphabet = explode(",", $alphabetstring);
         foreach ($alphabet as $letter) {
+            $letterurl = $this->url(['mode' => $mode, 'hook' => $letter, 'sortkey' => $sortkey, 'sortorder' => $sortorder]);
             $out .= $OUTPUT->render_from_template('local_coursegen/preview_bold_or_link', [
                 'current' => $hook == $letter && $hook,
                 'text' => $letter,
-                'url' => $this->url(['mode' => $mode, 'hook' => $letter, 'sortkey' => $sortkey, 'sortorder' => $sortorder]),
+                'url' => $letterurl,
                 'suffix' => ' | ',
             ]);
         }
@@ -141,19 +152,23 @@ trait glossary_navigation {
      */
     protected function glossary_get_entries_by_letter(string $letter, int $from, int $limit): array {
         $all = [];
-        foreach ($this->store->get_records('glossary_entries', ['glossaryid' => $this->glossary->id]) as $entry) {
+        $entries = $this->store->get_records('glossary_entries', ['glossaryid' => $this->glossary->id]);
+        foreach ($entries as $entry) {
             if (empty($entry->approved)) {
                 continue;
             }
-            $first = core_text::strtoupper(core_text::substr((string) $entry->concept, 0, 1));
+            $conceptfirstchar = core_text::substr((string) $entry->concept, 0, 1);
+            $first = core_text::strtoupper($conceptfirstchar);
             if ($letter != 'ALL' && $letter != 'SPECIAL' && core_text::strlen($letter)) {
                 if ($first !== core_text::strtoupper($letter)) {
                     continue;
                 }
             }
             if ($letter == 'SPECIAL') {
-                $alphabet = explode(',', get_string('alphabet', 'langconfig'));
-                if (in_array($first, array_map([core_text::class, 'strtoupper'], $alphabet), true)) {
+                $alphabetstring = get_string('alphabet', 'langconfig');
+                $alphabet = explode(',', $alphabetstring);
+                $upperalphabet = array_map([core_text::class, 'strtoupper'], $alphabet);
+                if (in_array($first, $upperalphabet, true)) {
                     continue;
                 }
             }
@@ -161,7 +176,12 @@ trait glossary_navigation {
         }
         usort($all, [$this, 'compare_entries_by_concept']);
         $count = count($all);
-        return [array_slice($all, $from, $limit ?: null), $count];
+        $sizelimit = $limit;
+        if (!$limit) {
+            $sizelimit = null;
+        }
+        $page = array_slice($all, $from, $sizelimit);
+        return [$page, $count];
     }
 
     /**
@@ -173,7 +193,9 @@ trait glossary_navigation {
      * @return int
      */
     protected function compare_entries_by_concept(stdClass $a, stdClass $b): int {
-        $order = strcmp(core_text::strtolower((string) $a->concept), core_text::strtolower((string) $b->concept));
+        $aconcept = core_text::strtolower((string) $a->concept);
+        $bconcept = core_text::strtolower((string) $b->concept);
+        $order = strcmp($aconcept, $bconcept);
         if ($order !== 0) {
             return $order;
         }

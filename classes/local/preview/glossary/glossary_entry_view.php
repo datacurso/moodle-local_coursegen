@@ -70,12 +70,16 @@ trait glossary_entry_view {
             $tagshtml = $OUTPUT->tag_list([], null, 'glossary-tags');
         }
 
-        return $OUTPUT->render_from_template('local_coursegen/preview_glossary_entry', [
-            'concepthtml' => $this->glossary_print_entry_concept($entry),
-            'definitionhtml' => $this->glossary_print_entry_definition($entry),
+        $concepthtml = $this->glossary_print_entry_concept($entry);
+        $definitionhtml = $this->glossary_print_entry_definition($entry);
+        $lowersectionhtml = $this->glossary_print_entry_lower_section($entry, $mode, $hook, $printicons, $aliases);
+        $entrydata = [
+            'concepthtml' => $concepthtml,
+            'definitionhtml' => $definitionhtml,
             'tagshtml' => $tagshtml,
-            'lowersectionhtml' => $this->glossary_print_entry_lower_section($entry, $mode, $hook, $printicons, $aliases),
-        ]);
+            'lowersectionhtml' => $lowersectionhtml,
+        ];
+        return $OUTPUT->render_from_template('local_coursegen/preview_glossary_entry', $entrydata);
     }
 
     /**
@@ -87,7 +91,8 @@ trait glossary_entry_view {
     protected function glossary_print_entry_concept($entry) {
         global $OUTPUT;
 
-        $text = $OUTPUT->heading(format_string($entry->concept), 4);
+        $formattedconcept = format_string($entry->concept);
+        $text = $OUTPUT->heading($formattedconcept, 4);
         if (!empty($entry->highlight)) {
             $text = highlight($entry->highlight, $text);
         }
@@ -117,7 +122,8 @@ trait glossary_entry_view {
         $options->context = $context;
         $options->overflowdiv = true;
 
-        $text = format_text($definition, $entry->definitionformat ?? FORMAT_HTML, $options);
+        $definitionformat = $entry->definitionformat ?? FORMAT_HTML;
+        $text = format_text($definition, $definitionformat, $options);
 
         // Stop excluding concepts from autolinking
         unset($GLOSSARY_EXCLUDEENTRY);
@@ -140,7 +146,8 @@ trait glossary_entry_view {
     protected function glossary_print_entry_aliases($entry) {
         global $OUTPUT;
         $aliases = [];
-        foreach ($this->store->get_records('glossary_alias', ['entryid' => $entry->id]) as $alias) {
+        $aliasrecords = $this->store->get_records('glossary_alias', ['entryid' => $entry->id]);
+        foreach ($aliasrecords as $alias) {
             $aliases[] = $alias->alias;
         }
         if (!$aliases) {
