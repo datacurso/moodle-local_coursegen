@@ -134,12 +134,26 @@ trait workshop_queries {
     protected function get_examples(): array {
         $examples = [];
         foreach ($this->get_examples_for_manager() as $example) {
-            $assessment = $this->store->get_record('workshop_assessments',
-                ['submissionid' => $example->id, 'reviewerid' => $this->userid, 'weight' => 0]);
-            $example->grade = $assessment ? ($assessment->grade ?? null) : null;
+            $example->grade = $this->example_grade($example->id);
             $examples[$example->id] = $example;
         }
         return $examples;
+    }
+
+    /**
+     * The reader's own grade for one example submission, if they assessed it.
+     *
+     * @param int $exampleid
+     * @return mixed
+     */
+    protected function example_grade(int $exampleid) {
+        $assessment = $this->store->get_record('workshop_assessments',
+            ['submissionid' => $exampleid, 'reviewerid' => $this->userid, 'weight' => 0]);
+        if (!$assessment) {
+            return null;
+        }
+        $grade = $assessment->grade ?? null;
+        return $grade;
     }
 
     /**
