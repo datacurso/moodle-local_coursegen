@@ -87,6 +87,7 @@ const STRING_KEYS = [
     'courseai_modal_subtitle_text',
     'courseai_modal_fullcontext',
     'courseai_no_results',
+    'courseai_template_prompt_locked',
     'courseai_category_general',
     'courseai_state_planning',
     'courseai_state_starting',

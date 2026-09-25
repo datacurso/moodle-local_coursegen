@@ -36,23 +36,20 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
     /** @var string Sentinel markup standing in for the server-rendered picker form. */
     private const PICKER_SENTINEL = '<div class="tpl-picker-sentinel"></div>';
 
-    /** @var string Sentinel markup standing in for the server-rendered empty state. */
-    private const EMPTY_SENTINEL = '<div class="tpl-empty-sentinel"></div>';
-
     /**
      * Render the courseai_page template with a minimal context.
      *
-     * @param bool $templatemode Whether template mode is active.
+     * @param array $overrides Context values replacing the defaults.
      * @return string Rendered HTML.
      */
-    private function render_page(bool $templatemode): string {
+    private function render_page(array $overrides = []): string {
         global $OUTPUT;
 
-        return $OUTPUT->render_from_template('local_coursegen/courseai_page', [
+        return $OUTPUT->render_from_template('local_coursegen/courseai_page', $overrides + [
+            'startchooser' => true,
             'guidelines' => '[]',
             'coursetemplates' => [],
             'templatepickerformhtml' => self::PICKER_SENTINEL,
-            'templateemptystatehtml' => self::EMPTY_SENTINEL,
             'hascoursetemplates' => false,
             'languages' => '[]',
             'defaultlang' => 'en',
@@ -62,32 +59,78 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
             'allsessions' => [],
             'isresuming' => false,
             'showsessionsview' => false,
-            'templatemodeactive' => $templatemode,
             'subsectionsenabled' => false,
             'closeurl' => (new \moodle_url('/my/courses.php'))->out(false),
         ]);
     }
 
     /**
-     * Template mode renders the left panel: picker form first, input bar below.
+     * The template column renders with the one-line picker first (the button
+     * that opens the list, its × and the list itself), the native picker form
+     * hidden right after it (its select is the value template_mode.js listens
+     * to), and the input bar below. Nothing of the old card or Remove link is
+     * left.
      */
-    public function test_template_mode_renders_left_panel_with_picker_and_input_bar(): void {
+    public function test_template_column_renders_picker_line_and_input_bar(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
 
-        $html = $this->render_page(true);
+        $html = $this->render_page();
 
         $leftpanelpos = strpos($html, 'data-region="tpl-left-panel"');
-        $pickerpos = strpos($html, self::PICKER_SENTINEL);
+        $headpos = strpos($html, get_string('courseai_template_title', 'local_coursegen'));
+        $pickerpos = strpos($html, 'id="tplPicker"');
+        $popoverpos = strpos($html, 'id="templatesPopoverTpl"');
+        $formpos = strpos($html, self::PICKER_SENTINEL);
         $inputbarpos = strpos($html, 'data-region="tpl-input-bar"');
 
         $this->assertNotFalse($leftpanelpos, 'Left panel region missing');
-        $this->assertNotFalse($pickerpos, 'Picker form slot missing');
+        $this->assertNotFalse($headpos, 'Column heading missing');
+        $this->assertNotFalse($pickerpos, 'Picker line missing');
+        $this->assertNotFalse($popoverpos, 'Templates popover missing');
+        $this->assertNotFalse($formpos, 'Picker form slot missing');
         $this->assertNotFalse($inputbarpos, 'Input bar region missing');
 
-        // Order inside the panel: picker first, input bar pinned at the bottom.
-        $this->assertGreaterThan($leftpanelpos, $pickerpos, 'Picker must render inside/after the left panel');
-        $this->assertGreaterThan($pickerpos, $inputbarpos, 'Input bar must render below the picker');
+        // Order inside the panel: heading, picker line, its list, the hidden
+        // form, input bar pinned at the bottom.
+        $this->assertGreaterThan($leftpanelpos, $headpos, 'Heading must render inside the left panel');
+        $this->assertGreaterThan($headpos, $pickerpos, 'Picker line must render after the heading');
+        $this->assertGreaterThan($pickerpos, $popoverpos, 'The list must render after the picker line');
+        $this->assertGreaterThan($popoverpos, $formpos, 'The native form must render after the list');
+        $this->assertGreaterThan($formpos, $inputbarpos, 'Input bar must render below the picker');
+
+        // One button opens the list; its × is its own button, hidden until there is a value.
+        $this->assertMatchesRegularExpression(
+            '/<button class="tpl-picker" id="tplPicker" type="button"\s+aria-haspopup="listbox" aria-expanded="false"'
+                . ' aria-controls="templatesPopoverTpl">/',
+            $html
+        );
+        $this->assertSame(1, substr_count($html, 'id="tplPicker"'), 'One picker line');
+        $this->assertStringContainsString(get_string('courseai_template_pick', 'local_coursegen'), $html);
+        $this->assertMatchesRegularExpression('/<button class="tpl-picker-clear" id="tplPickerClear" type="button" hidden/', $html);
+        $this->assertStringContainsString(
+            'aria-label="' . get_string('courseai_chip_remove_template', 'local_coursegen') . '"',
+            $html
+        );
+        foreach (['id="tplPickAnchor"', 'id="tplPickerName"', 'id="tplPickerCourse"', 'id="templateListTpl"',
+            'id="templateSearchTpl"', 'id="tplPickerChevron"'] as $needle) {
+            $this->assertStringContainsString($needle, $html, "$needle missing");
+        }
+
+        // The search line replaces the button while open: closed by default.
+        $this->assertMatchesRegularExpression('/<input type="text" class="tpl-picker-search" id="templateSearchTpl" hidden/', $html);
+
+        // The native picker is hidden: it is the value, not what the professor sees.
+        $this->assertMatchesRegularExpression(
+            '/<div class="hidden" id="templateModeCard">\s*' . preg_quote(self::PICKER_SENTINEL, '/') . '/',
+            $html,
+            'The native picker form must render hidden'
+        );
+
+        // The old button, the chosen-template card and its Remove link are gone.
+        foreach (['tplPickBtn', 'tplCard', 'tplCardBtn', 'tplCardRemove', 'tplCardThumb', 'tplCardName'] as $id) {
+            $this->assertStringNotContainsString('id="' . $id . '"', $html, "$id must be gone");
+        }
     }
 
     /**
@@ -99,7 +142,7 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
         $this->resetAfterTest();
         $this->setAdminUser();
 
-        $html = $this->render_page(true);
+        $html = $this->render_page();
 
         $inputbarpos = strpos($html, 'data-region="tpl-input-bar"');
         $this->assertNotFalse($inputbarpos, 'Input bar region missing');
@@ -140,20 +183,20 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
     }
 
     /**
-     * Template mode renders the shared splitter and a main column holding the
-     * structure containers, with the empty state shown before a pick.
+     * The shared splitter and a main column holding the structure containers
+     * render alongside the free hero; the layout class is JS-driven, so the
+     * server never emits it.
      */
-    public function test_template_mode_renders_splitter_and_main_column(): void {
+    public function test_template_column_renders_splitter_and_main_column(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
 
-        $html = $this->render_page(true);
+        $html = $this->render_page();
 
-        // The workspace opts into the two-column template grid server-side.
-        $this->assertMatchesRegularExpression(
+        $this->assertDoesNotMatchRegularExpression(
             '/class="courseai-workspace[^"]*\bis-template\b/',
             $html,
-            'Workspace must carry the is-template layout class'
+            'The template layout class is added by JS when a template is attached'
         );
 
         // Shared resizable divider (same element/module as free mode).
@@ -162,10 +205,9 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
         $maincolpos = strpos($html, 'data-region="tpl-main-column"');
         $this->assertNotFalse($maincolpos, 'Main column region missing');
 
-        // Structure containers plus the pre-pick empty state live in the main column.
+        // Structure containers live in the main column.
         foreach (
             [
-                self::EMPTY_SENTINEL,
                 'id="tplModeLimits"',
                 'id="tplModeLimitsBadge"',
                 'id="tplModeStats"',
@@ -197,17 +239,90 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
     }
 
     /**
-     * Free mode renders none of the template-mode layout regions.
+     * Both columns render on every load, the free hero included, and the ids
+     * the two threads share belong to the free thread until a template is
+     * chosen: the template column carries them only as data-shared-id.
      */
-    public function test_free_mode_renders_no_template_layout_regions(): void {
+    public function test_free_hero_and_template_column_share_thread_ids_without_duplicates(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
 
-        $html = $this->render_page(false);
+        $html = $this->render_page();
 
-        $this->assertStringNotContainsString('data-region="tpl-left-panel"', $html);
-        $this->assertStringNotContainsString('data-region="tpl-input-bar"', $html);
-        $this->assertStringNotContainsString('data-region="tpl-main-column"', $html);
-        $this->assertStringNotContainsString('is-template', $html);
+        $this->assertStringContainsString('id="contextView"', $html);
+        $this->assertStringContainsString('data-region="tpl-left-panel"', $html);
+        $this->assertStringNotContainsString('courseai-mode-seg', $html);
+        $this->assertStringNotContainsString('courseai-sidebar-modes', $html);
+
+        foreach (
+            [
+                'cgLog', 'cgLogAfter', 'courseaiChecklist', 'courseaiChecklistList', 'cgWorkingSlot',
+                'cgDecisionOverlay', 'cgDecisionBody', 'cgDecisionAccept', 'cgDecisionAdjust',
+            ] as $sharedid
+        ) {
+            // A leading space: the shared marker is data-shared-id="…", not an id.
+            $this->assertSame(1, substr_count($html, ' id="' . $sharedid . '"'), "id {$sharedid} must render once");
+            $this->assertSame(2, substr_count($html, 'data-shared-id="' . $sharedid . '"'),
+                "both columns must declare {$sharedid} as shared");
+        }
+    }
+
+    /**
+     * A fresh visit opens on the chooser: the workspace carries is-choosing,
+     * the two cards render, and the top bar holds the one path crumb, hidden
+     * until a card is picked. Nothing names the path inside the columns. The
+     * old ways of reaching a template from the free composer are gone.
+     */
+    public function test_fresh_visit_opens_on_the_start_chooser_with_the_path_crumb_in_the_top_bar(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $html = $this->render_page();
+
+        $this->assertMatchesRegularExpression('/class="courseai-workspace[^"]*\bis-choosing\b[^"]*" id="courseaiWorkspace"/', $html);
+        $this->assertStringContainsString('id="courseaiChooser"', $html);
+        $this->assertStringContainsString('data-start-path="free"', $html);
+        $this->assertStringContainsString('data-start-path="template"', $html);
+        $this->assertSame(1, substr_count($html, 'data-start-modebar'), 'One path crumb, in the top bar');
+        $this->assertMatchesRegularExpression(
+            '/<button class="courseai-topbar-path" id="courseaiPathBack"[^>]*\bhidden\b[^>]*>/',
+            $html
+        );
+        // The crumb's own data-start-path (which name it shows) is empty while
+        // nothing is chosen yet - it must come from the server too, not sit
+        // blank until start_path.js runs.
+        $this->assertStringContainsString('data-start-path=""', $html);
+        $this->assertStringNotContainsString('courseai-modebar', $html);
+        $this->assertStringNotContainsString('id="tplPickHint"', $html);
+
+        // The template is chosen on its own column's picker line, not from the free composer.
+        $this->assertStringContainsString('id="tplPicker"', $html);
+        $this->assertStringContainsString('id="templatesPopoverTpl"', $html);
+        $this->assertStringNotContainsString('id="tplPickBtn"', $html);
+        $this->assertStringNotContainsString('id="heroTemplateLink"', $html);
+        $this->assertStringNotContainsString('id="btnTemplates"', $html);
+        $this->assertStringNotContainsString('id="btnTemplatesCompact"', $html);
+        $this->assertStringNotContainsString('id="templatesPopover"', $html);
+        $this->assertStringNotContainsString('id="templatesPopoverCompact"', $html);
+        $this->assertStringNotContainsString('id="chipTemplate"', $html);
+    }
+
+    /**
+     * When the page is opened straight onto a template (a preselected
+     * template, the template list, or a resumed session) the chooser is
+     * skipped: the workspace renders without is-choosing.
+     */
+    public function test_direct_entry_points_skip_the_chooser(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $html = $this->render_page(['startchooser' => false]);
+
+        $this->assertDoesNotMatchRegularExpression(
+            '/class="courseai-workspace[^"]*\bis-choosing\b[^"]*" id="courseaiWorkspace"/',
+            $html
+        );
+        // The chooser markup still renders; JS brings it back on "Change starting point".
+        $this->assertStringContainsString('id="courseaiChooser"', $html);
     }
 }

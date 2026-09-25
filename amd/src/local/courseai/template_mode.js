@@ -96,33 +96,14 @@ const runGeneration = async(tplState, tplSelect, genBtn) => {
  * @param {Object} state
  */
 export const wireTemplateMode = (state) => {
-    // Free/Template mode switching is plain <a href> navigation
-    // (aicoursecreation.php / ?mode=template), server-rendered from the
-    // mode param — no JS involved.
-    //
-    // The template picker itself is a native Moodle form (single autocomplete
-    // element, see classes/form/course_template_picker_form.php), rendered
-    // server-side and embedded as-is — Moodle's own form renderer already
-    // enhances the underlying <select> into the autocomplete widget, so no
-    // JS wiring is needed here beyond listening for its 'change' event.
+    // The template is chosen in the native picker form's autocomplete
+    // (classes/form/course_template_picker_form.php); a template named in the
+    // address is set by context/template.js, which dispatches the same
+    // 'change'. Everything below listens to that select, so the structure
+    // loads and clears the same way however it was set.
     // Moodleform's default id for an unnamed-id element is "id_<fieldname>".
     const tplSelect = document.getElementById('id_templateid');
-    const sidebar = document.getElementById('courseaiSidebar');
-    const collapseBtn = document.getElementById('courseaiSidebarCollapse');
-    const expandBtn = document.getElementById('courseaiSidebarExpand');
     const container = document.getElementById('tplModeStructure');
-
-    // Sidebar collapse/expand.
-    if (collapseBtn && sidebar) {
-        collapseBtn.addEventListener('click', () => {
-            sidebar.classList.add('collapsed');
-        });
-    }
-    if (expandBtn && sidebar) {
-        expandBtn.addEventListener('click', () => {
-            sidebar.classList.remove('collapsed');
-        });
-    }
 
     // Input-bar defaults: no images, page default language, no syllabus yet.
     const tplState = createTemplateState({lang: state.defaultLang || ''});

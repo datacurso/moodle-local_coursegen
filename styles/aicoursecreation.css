@@ -116,28 +116,6 @@ svg { display: block; flex-shrink: 0; }
   padding-right: 0;
 }
 
-/* ─── CLOSE BUTTON ────────────────────────────────────────────────────── */
-/* The popup layout has no Moodle navbar: this is the only exit back to
-   My courses. Mirrors .courseai-sidebar-expand-btn, anchored top-right. */
-.courseai-close-btn {
-  position: absolute;
-  top: 12px;
-  right: 16px;
-  z-index: 6;
-  background: var(--card);
-  border: none;
-  border-radius: 6px;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: var(--muted-fg);
-  box-shadow: 0 1px 4px hsl(0,0%,0%,.08);
-}
-.courseai-close-btn:hover { background: var(--muted); color: var(--fg); }
-
 /* ─── MAIN ────────────────────────────────────────────────────────────── */
 .app-main,
 .aicoursecreation-main {
@@ -179,14 +157,16 @@ svg { display: block; flex-shrink: 0; }
 
 .courseai-workspace.is-planning,
 .courseai-workspace.is-template {
-  /* Wide-ish by default — the conversation/feed is the primary surface. Kept in
-     PX (not vw) so the splitter, which reads/writes this property in px, can drag
-     smoothly and reach the default. Splitter clamps to the same [320,720] range.
+  /* A conversation column, not a second page: 450px by default, the width a
+     chat composer reads well at, leaving the structure the room it needs. Kept
+     in PX (not vw) so the splitter, which reads/writes this property in px, can
+     drag smoothly and reach the default. Splitter clamps to the same [360,720]
+     range; 360 is the narrowest the compact composer row below still fits.
      Template mode reuses this exact grid: left picker/input-bar panel, shared
      splitter, main structure column. */
-  --cg-left-w: 560px;
+  --cg-left-w: 450px;
   display: grid;
-  grid-template-columns: clamp(320px, var(--cg-left-w), 720px) 10px minmax(0, 1fr);
+  grid-template-columns: clamp(360px, var(--cg-left-w), 720px) 10px minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   height: calc(100vh - 100px);
   overflow: hidden;
@@ -280,8 +260,148 @@ svg { display: block; flex-shrink: 0; }
    the card visibly jumps to the top the moment the structure loads and the
    page grows taller than the viewport. Anchor template mode to the top from
    the very first paint instead, so picking a template never shifts it. */
-.courseai-workspace:has(#templateModeView) {
+.courseai-workspace.is-template {
   justify-content: flex-start;
+}
+
+/* Both paths live in the DOM from the first paint; the starting point chosen
+   on the first screen decides which one shows (start_path.js). */
+.courseai-workspace:not(.is-template) #templateModeView,
+.courseai-workspace:not(.is-template) #tplModeMain,
+.courseai-workspace.is-template #contextView {
+  display: none;
+}
+
+/* ─── STEP ONE: HOW DO YOU WANT TO START ─────────────────────────────────
+   Two cards, centred, and nothing else: the paths, the splitter and the
+   planning column stay out of the way until a card is picked. */
+.courseai-workspace { position: relative; }
+.courseai-start { display: none; }
+.courseai-workspace.is-choosing .courseai-start {
+  display: flex;
+  justify-content: center;
+  padding: 24px;
+}
+.courseai-workspace.is-choosing #contextView,
+.courseai-workspace.is-choosing #templateModeView,
+.courseai-workspace.is-choosing #tplModeMain,
+.courseai-workspace.is-choosing .cg-splitter,
+.courseai-workspace.is-choosing #planningView {
+  display: none !important;
+}
+.courseai-start-inner {
+  width: min(820px, 100%);
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 22px;
+}
+.courseai-start-title {
+  margin: 0;
+  font-size: 26px;
+  font-weight: 700;
+  letter-spacing: -.01em;
+  text-align: center;
+  color: var(--fg);
+}
+.courseai-start-subtitle {
+  margin: -10px 0 0;
+  color: var(--muted-fg);
+  font-size: 15px;
+  text-align: center;
+}
+.courseai-start-cards {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 16px;
+  width: 100%;
+}
+.courseai-start-card {
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+  min-height: 220px;
+  padding: 22px 22px 20px;
+  border: 1px solid var(--border);
+  border-radius: 16px;
+  background: var(--card);
+  text-align: left;
+  color: var(--fg);
+  font: inherit;
+  cursor: pointer;
+  transition: transform var(--t-base) var(--ease), border-color var(--t-base) var(--ease), box-shadow var(--t-base) var(--ease);
+}
+.courseai-start-card:hover,
+.courseai-start-card:focus-visible {
+  transform: translateY(-2px);
+  border-color: var(--muted-fg);
+  box-shadow: var(--shadow-elevated);
+}
+.courseai-start-card:focus-visible { outline: 2px solid var(--primary); outline-offset: 2px; }
+.courseai-start-icon {
+  width: 48px;
+  height: 48px;
+  border-radius: 12px;
+  display: grid;
+  place-items: center;
+}
+.courseai-start-card--free .courseai-start-icon { background: var(--brand-soft); color: var(--brand); }
+.courseai-start-card--template .courseai-start-icon { background: var(--tpl-tint); color: var(--tpl-tint-fg); }
+.courseai-start-card-title { font-size: 18px; font-weight: 700; }
+.courseai-start-card-desc { color: var(--muted-fg); font-size: 14.5px; line-height: 1.45; }
+.courseai-start-card-for {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--muted-fg);
+  font-size: 13px;
+}
+.courseai-start-badge {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  padding: 3px 8px;
+  border-radius: 999px;
+  background: var(--success-soft);
+  color: var(--success-strong);
+  font-size: 11.5px;
+  font-weight: 600;
+  letter-spacing: .04em;
+  text-transform: uppercase;
+}
+.courseai-start-note { margin: 0; color: var(--muted-fg); font-size: 13px; text-align: center; }
+@media (max-width: 720px) {
+  .courseai-start-cards { grid-template-columns: 1fr; }
+}
+
+/* ─── PATH TINTS ────────────────────────────────────────────────────────
+   Shared by the start cards and the top bar's path crumb. */
+:root {
+  --tpl-tint: hsl(190, 60%, 94%);
+  --tpl-tint-fg: hsl(190, 60%, 28%);
+}
+
+/* ─── TEMPLATE PATH: BEFORE AND AFTER A TEMPLATE IS CHOSEN ───────────────
+   template_mode.js sets `tpl-active` on the workspace while the picker's
+   select has a value; that class hides the structure column's empty state. */
+.courseai-workspace.is-template.tpl-active #tplModeEmpty { display: none; }
+.tpl-structure-empty {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  text-align: center;
+  color: var(--muted-fg);
+  font-size: 14px;
+}
+.tpl-structure-empty svg { color: var(--muted-fg); opacity: .8; }
+.tpl-structure-empty b { color: var(--fg); font-weight: 600; }
+.tpl-structure-empty {
+  padding: 36px 24px;
+  border: 1px dashed var(--border);
+  border-radius: var(--radius);
 }
 
 /* .context-wrap's default max-width:768px + margin:0 auto (below) centers it
@@ -294,31 +414,6 @@ svg { display: block; flex-shrink: 0; }
   margin: 0;
 }
 
-/* #templateModeCard never shows a border/shadow — flat at every state, no
-   dependence on selection: nothing about the selector itself (border, size,
-   position) ever changes, so picking a template can't shift it or make it
-   read as "locked". */
-#templateModeCard {
-  border-color: transparent;
-  box-shadow: none;
-}
-
-/* Before a template is picked, core/form-autocomplete renders its
-   noselectionstring as a floating hint span sitting above the search box —
-   two stacked rows for one single field. The search input's own "Search"
-   placeholder already says the same thing, so drop the redundant hint and
-   let this read as one plain field, not a two-part composer. */
-#fitem_id_templateid .form-autocomplete-selection:not(:has([role="option"])) {
-  display: none;
-}
-
-/* Empty-state notification (#tplModeEmpty, real core/notification "info"
-   markup): marks where the template's structure will render in the main
-   column, shown until a template is picked. template_mode.js sets .tpl-active
-   on the workspace on the autocomplete's 'change' event. */
-.courseai-workspace.tpl-active #tplModeEmpty {
-  display: none;
-}
 
 /* ─── TEMPLATE MODE LAYOUT ───────────────────────────────────────────────
    Template mode reuses the free-mode planning grid (see the shared
@@ -329,34 +424,197 @@ svg { display: block; flex-shrink: 0; }
   /* .context-wrap in-grid is display:flex — stack picker over input bar. */
   flex-direction: column;
   margin-bottom: 0;
-  padding: 0 12px 16px 16px;
-  gap: 12px;
+  padding: 0 12px 14px 16px;
+  gap: 16px;
 }
+
+/* In the grid the heading is a column title, not a page title: left-aligned
+   and one step smaller, so the picker and the composer get the room. */
+.courseai-workspace.is-planning .context-head,
+.courseai-workspace.is-template .context-head {
+  text-align: left;
+  margin-bottom: 12px;
+}
+.courseai-workspace.is-planning .context-head h2,
+.courseai-workspace.is-template .context-head h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.courseai-workspace.is-planning .context-head p,
+.courseai-workspace.is-template .context-head p {
+  font-size: 13px;
+}
+
+/* ─── THE PICKER LINE ────────────────────────────────────────────────────
+   One line the height of a field, the column's width. Empty: "Choose
+   template" + chevron. Chosen: the template's name · its course, a small ×
+   that clears it, the chevron. Same height either way, so nothing below
+   moves when a template is picked or removed. The list opens 8px below it,
+   as wide as the line (.tpl-pick-popover, positioned by .tpl-pick-anchor). */
+.tpl-pick-anchor { position: relative; margin-bottom: 12px; }
+.tpl-picker-label {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  margin-bottom: 6px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted-fg);
+}
+.tpl-picker-label label { margin: 0; cursor: pointer; }
+.tpl-picker-label .btn.btn-link { padding: 0 2px; line-height: 1; }
+/* The shell holds two mutually-exclusive lines of the same box (the closed
+   button, the open search field) plus the chevron and the × clear, both
+   positioned once here instead of duplicated inside each line, so opening
+   the list never shifts anything below it. */
+.tpl-picker-shell { position: relative; }
+.tpl-picker,
+.tpl-picker-search {
+  box-sizing: border-box;
+  display: block;
+  width: 100%;
+  height: 36px;
+  padding: 0 34px 0 12px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  font: inherit;
+  font-size: 14px;
+  transition: border-color .12s, box-shadow .12s;
+}
+.tpl-picker {
+  display: flex;
+  align-items: center;
+  color: var(--muted-fg);
+  text-align: left;
+  cursor: pointer;
+}
+.tpl-picker:hover { border-color: var(--muted-fg); }
+.tpl-picker:focus-visible,
+.tpl-picker[aria-expanded="true"] {
+  outline: none;
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+.tpl-picker[hidden] { display: none; }
+.tpl-picker-text {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  align-items: baseline;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+.tpl-picker-name { color: var(--fg); font-weight: 500; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; }
+.tpl-picker-course { color: var(--muted-fg); flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.tpl-picker-course:not(:empty)::before { content: "\00a0·\00a0"; }
+/* Which of the two texts shows is one class on the button. */
+.tpl-picker .tpl-picker-name,
+.tpl-picker .tpl-picker-course { display: none; }
+.tpl-picker.has-value .tpl-picker-placeholder { display: none; }
+.tpl-picker.has-value .tpl-picker-name,
+.tpl-picker.has-value .tpl-picker-course { display: block; }
+/* The chosen state makes room for the × between the text and the chevron. */
+.tpl-picker.has-value { padding-right: 58px; }
+/* The search field replaces the button while the list is open; closing
+   restores the button and clears whatever was typed. */
+.tpl-picker-search {
+  color: var(--fg);
+  outline: none;
+}
+.tpl-picker-search:focus { border-color: var(--primary); box-shadow: 0 0 0 3px var(--primary-soft); }
+.tpl-picker-search[hidden] { display: none; }
+.tpl-picker-chevron {
+  position: absolute;
+  top: 50%;
+  right: 12px;
+  transform: translateY(-50%);
+  color: var(--muted-fg);
+  pointer-events: none;
+  transition: transform var(--t-base) var(--ease);
+}
+.tpl-picker-shell.is-open .tpl-picker-chevron {
+  transform: translateY(-50%) rotate(180deg);
+  pointer-events: auto;
+  cursor: pointer;
+}
+.tpl-picker-clear {
+  position: absolute;
+  top: 50%;
+  right: 34px; /* just left of the chevron, mirroring the button's own padding */
+  transform: translateY(-50%);
+  display: inline-grid;
+  place-items: center;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  color: var(--muted-fg);
+  cursor: pointer;
+}
+.tpl-picker-clear:hover,
+.tpl-picker-clear:focus-visible { background: var(--muted); color: var(--fg); outline: none; }
+.tpl-picker-clear[hidden] { display: none; }
+.tpl-picker-shell.is-open .tpl-picker-clear { display: none; }
+/* Tighter than the generic .popover-panel--down offset (8px): the list
+   reads as this one control unfolding, not a separate floating panel. */
+.tpl-pick-anchor .tpl-pick-popover { left: 0; right: 0; width: auto; top: calc(100% + 4px); margin-top: 0; }
+/* The list itself: one line per template, no radio, no header row. */
+.tpl-combo-list {
+  list-style: none;
+  margin: 0;
+  padding: 6px;
+  max-height: 210px;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+.tpl-combo-item {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  height: 34px;
+  padding: 0 8px;
+  border-radius: 6px;
+  cursor: pointer;
+  white-space: nowrap;
+  overflow: hidden;
+}
+.tpl-combo-item:hover,
+.tpl-combo-item.is-active { background: var(--muted); }
+.tpl-combo-item.selected { background: var(--muted); }
+.tpl-combo-item-name { color: var(--fg); font-weight: 500; flex: 0 1 auto; overflow: hidden; text-overflow: ellipsis; }
+.tpl-combo-item-course { color: var(--muted-fg); font-size: 13px; flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.tpl-combo-item-course:not(:empty)::before { content: "\00a0·\00a0"; }
+.tpl-combo-item-check { flex: 0 0 auto; color: var(--primary); margin-left: auto; visibility: hidden; }
+.tpl-combo-item.selected .tpl-combo-item-check { visibility: visible; }
+.tpl-combo-empty { padding: 8px 8px; color: var(--muted-fg); font-size: 13px; }
+/* Once planning or generation has started the choice is fixed: the line
+   stays as the template's name, with nothing to open or clear. */
+.courseai-workspace.is-planning .tpl-picker,
+body.cg-generating .tpl-picker { pointer-events: none; }
+.courseai-workspace.is-planning .tpl-picker.has-value,
+body.cg-generating .tpl-picker.has-value { padding-right: 12px; }
+.courseai-workspace.is-planning .tpl-picker-chevron,
+body.cg-generating .tpl-picker-chevron,
+.courseai-workspace.is-planning .tpl-picker-clear,
+body.cg-generating .tpl-picker-clear { display: none; }
 
 .tpl-left-scroll {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   scrollbar-width: thin;
 }
 
-/* Input bar pinned at the panel bottom, chat-composer style. */
+/* Input bar pinned at the panel bottom: free mode's compact-chat-card
+   (chatui.css) with nothing added, so both modes share one composer. */
 .tpl-input-bar {
   flex: 0 0 auto;
-}
-/* .compact-prompt-textarea (chatui.css) expects the card to supply the outer
-   padding — the compact chat card does; this bare .card does it here. */
-.tpl-input-bar .compact-prompt-textarea {
-  padding: 12px 14px 6px;
-}
-.tpl-input-bar .chips-row {
-  padding-top: 10px;
-}
-.tpl-input-bar .card-toolbar {
-  gap: 8px;
-}
-.tpl-input-bar .tbar-toggle-wrap {
-  gap: 6px;
 }
 
 /* Badge row at the top of the main column: "N sections · M activities" stats
