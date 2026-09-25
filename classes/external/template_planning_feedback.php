@@ -96,7 +96,8 @@ class template_planning_feedback extends external_api {
 
         $intent = ['action' => $params['action']];
         if ($params['action'] === 'replan_activity') {
-            $intent['target_ids'] = array_values(array_map('intval', $params['targetids']));
+            $targetids = array_map('intval', $params['targetids']);
+            $intent['target_ids'] = array_values($targetids);
             $intent['instruction'] = $params['instruction'];
         }
 
