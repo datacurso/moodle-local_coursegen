@@ -102,7 +102,9 @@ class wiki_preview extends preview_base {
         $planned = [];
         $pages = $parameters['mod_settings']['pages'] ?? [];
         foreach ($pages as $page) {
-            $title = trim((string) ($page['title'] ?? ''));
+            $rawtitle = $page['title'] ?? '';
+            $rawtitle = (string) $rawtitle;
+            $title = trim($rawtitle);
             if ($title === '' || $title === (string) $wiki->firstpagetitle) {
                 continue;
             }
