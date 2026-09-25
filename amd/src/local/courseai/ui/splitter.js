@@ -82,7 +82,10 @@ const readPersistedWidth = () => {
             return null;
         }
         const parsed = parseInt(raw, 10);
-        return isNaN(parsed) ? null : parsed;
+        if (isNaN(parsed)) {
+            return null;
+        }
+        return parsed;
     } catch (e) {
         return null;
     }
@@ -202,7 +205,10 @@ export const createSplitter = ({workspace, divider}) => {
      */
     const onKeyDown = (e) => {
         const currentRaw = workspace.style.getPropertyValue(CSS_PROP);
-        const current = currentRaw ? parseInt(currentRaw, 10) : DEFAULT_W;
+        let current = DEFAULT_W;
+        if (currentRaw) {
+            current = parseInt(currentRaw, 10);
+        }
         let next = current;
 
         if (e.key === 'ArrowLeft') {
