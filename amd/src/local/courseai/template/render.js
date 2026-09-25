@@ -41,24 +41,116 @@ import {canAddSection} from './state';
  * @param {Object} state
  * @returns {Promise<void>}
  */
-const ensureTypeLabels = async(state) => {
-    const modnames = [...new Set(
-        state.sections.flatMap((section) => section.activities
-            // Instance rows carry their own snapshotted label (and their
-            // modname snapshot may even be empty — never ask core/str for
-            // "mod_"), so only real rows without a label round-trip here.
-            .filter((a) => a.modname && !a.typelabel)
-            .map((a) => a.modname))
-    )].filter((modname) => !(modname in state.typeLabels));
+/**
+ * The modnames of one section's activities that still need a label:
+ * real rows (not instance rows, which carry their own snapshot) without one.
+ *
+ * @param {Object} section
+ * @returns {string[]}
+ */
+const unlabeledModnamesOf = (section) => section.activities
+    // Instance rows carry their own snapshotted label (and their
+    // modname snapshot may even be empty — never ask core/str for
+    // "mod_"), so only real rows without a label round-trip here.
+    .filter((a) => a.modname && !a.typelabel)
+    .map((a) => a.modname);
 
+/**
+ * Every distinct modname across the state that still needs a label.
+ *
+ * @param {Object} state
+ * @returns {string[]}
+ */
+const modnamesNeedingLabels = (state) => {
+    const modnames = [...new Set(state.sections.flatMap(unlabeledModnamesOf))];
+    return modnames.filter((modname) => !(modname in state.typeLabels));
+};
+
+/**
+ * Fetch and cache one modname's plugin display name.
+ *
+ * @param {Object} state
+ * @param {string} modname
+ * @param {string} label
+ */
+const cacheTypeLabel = (state, modname, label) => {
+    state.typeLabels[modname] = label;
+};
+
+const ensureTypeLabels = async(state) => {
+    const modnames = modnamesNeedingLabels(state);
     if (!modnames.length) {
         return;
     }
 
     const labels = await getStrings(modnames.map((modname) => ({key: 'pluginname', component: 'mod_' + modname})));
-    modnames.forEach((modname, index) => {
-        state.typeLabels[modname] = labels[index];
-    });
+    modnames.forEach((modname, index) => cacheTypeLabel(state, modname, labels[index]));
+};
+
+/**
+ * One activity row's Mustache context.
+ *
+ * @param {Object} state
+ * @param {Object} section Its own section, already resolved.
+ * @param {Object} activity
+ * @param {number} index
+ * @returns {Object}
+ */
+const activityContext = (state, section, activity, index) => ({
+    id: activity.id,
+    name: activity.name,
+    modname: activity.modname,
+    purpose: activity.purpose,
+    iconhtml: activity.iconhtml,
+    locked: activity.locked,
+    isinstance: !!activity.isinstance,
+    aigenerated: !!activity.aigenerated,
+    // Only an AI-generated row ever receives progress events, so the
+    // attribute is omitted entirely on the rest rather than rendered
+    // as a meaningless zero.
+    generationcmid: activity.generationcmid || '',
+    generationuid: activity.generationuid || '',
+    sectionid: section.id,
+    index,
+    typelabel: activity.typelabel || state.typeLabels[activity.modname] || '',
+    // The insert-between-rows "+" divider is a planning affordance: it never
+    // shows in a locked section (nothing may be added there at all), but it
+    // DOES show above a locked activity inside an unlocked section — the
+    // professor can still insert a new activity next to a reference one.
+    showinsertzone: !section.locked,
+});
+
+/**
+ * One section's Mustache context.
+ *
+ * @param {Object} state
+ * @param {Object} section
+ * @returns {Object}
+ */
+const sectionContext = (state, section) => ({
+    id: section.id,
+    name: section.name,
+    locked: section.locked,
+    collapsed: !!section.collapsed,
+    activitiescount: section.activities.length,
+    showaddactivity: !section.locked,
+    activities: section.activities.map(
+        (activity, index) => activityContext(state, section, activity, index)
+    ),
+});
+
+/**
+ * The "+ Add section" label, with the remaining count when the template limits it.
+ *
+ * @param {Object} state
+ * @param {Object} labels - {addSection}
+ * @returns {string}
+ */
+const addSectionLabel = (state, labels) => {
+    if (state.nolimit) {
+        return labels.addSection;
+    }
+    return `${labels.addSection} (${state.remainingSections})`;
 };
 
 /**
@@ -69,42 +161,10 @@ const ensureTypeLabels = async(state) => {
  * @returns {Object}
  */
 const buildContext = (state, labels) => ({
-    sections: state.sections.map((section) => ({
-        id: section.id,
-        name: section.name,
-        locked: section.locked,
-        collapsed: !!section.collapsed,
-        activitiescount: section.activities.length,
-        showaddactivity: !section.locked,
-        activities: section.activities.map((activity, index) => ({
-            id: activity.id,
-            name: activity.name,
-            modname: activity.modname,
-            purpose: activity.purpose,
-            iconhtml: activity.iconhtml,
-            locked: activity.locked,
-            isinstance: !!activity.isinstance,
-            aigenerated: !!activity.aigenerated,
-            // Only an AI-generated row ever receives progress events, so the
-            // attribute is omitted entirely on the rest rather than rendered
-            // as a meaningless zero.
-            generationcmid: activity.generationcmid || '',
-            generationuid: activity.generationuid || '',
-            sectionid: section.id,
-            index,
-            typelabel: activity.typelabel || state.typeLabels[activity.modname] || '',
-            // The insert-between-rows "+" divider is a planning affordance: it never
-            // shows in a locked section (nothing may be added there at all), but it
-            // DOES show above a locked activity inside an unlocked section — the
-            // professor can still insert a new activity next to a reference one.
-            showinsertzone: !section.locked,
-        })),
-    })),
+    sections: state.sections.map((section) => sectionContext(state, section)),
     showaddsection: true,
     addsectiondisabled: !canAddSection(state),
-    addsectionlabel: state.nolimit
-        ? labels.addSection
-        : `${labels.addSection} (${state.remainingSections})`,
+    addsectionlabel: addSectionLabel(state, labels),
 });
 
 /**
@@ -176,7 +236,10 @@ export const wireStructureEvents = (container, handlers) => {
         if (chooserEl) {
             event.preventDefault();
             const sectionId = parseInt(chooserEl.dataset.sectionId, 10);
-            const position = 'position' in chooserEl.dataset ? parseInt(chooserEl.dataset.position, 10) : null;
+            let position = null;
+            if ('position' in chooserEl.dataset) {
+                position = parseInt(chooserEl.dataset.position, 10);
+            }
             handlers.onOpenChooser(sectionId, position);
             return;
         }
