@@ -142,11 +142,12 @@ class json_file_storage {
                 continue;
             }
             unset($files[$hash]);
-            if ($dir->get_filepath() === '/') {
+            $dirpath = $dir->get_filepath();
+            if ($dirpath === '/') {
                 $result['dirfile'] = $dir;
                 continue;
             }
-            $node = &$this->tree_node_for($result, $dir->get_filepath());
+            $node = &$this->tree_node_for($result, $dirpath);
             $node['dirfile'] = $dir;
             unset($node);
         }
@@ -162,8 +163,10 @@ class json_file_storage {
      */
     protected function place_files(array $result, array $files): array {
         foreach ($files as $hash=>$file) {
-            $node = &$this->tree_node_for($result, $file->get_filepath());
-            $node['files'][$file->get_filename()] = $file;
+            $filepath = $file->get_filepath();
+            $node = &$this->tree_node_for($result, $filepath);
+            $filename = $file->get_filename();
+            $node['files'][$filename] = $file;
             unset($node);
         }
         return $result;
