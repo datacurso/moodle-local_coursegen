@@ -60,6 +60,60 @@ import {createExecutionControls} from 'local_coursegen/local/courseai/actions/ex
 import {wireTemplateMode} from 'local_coursegen/local/courseai/template_mode';
 
 /**
+ * Reset the workspace chrome back to the context-gathering view.
+ *
+ * On reload the page is server-rendered in planning mode (is-planning +
+ * in-place skeletons) so the static chrome shows immediately. If there is
+ * nothing to resume, fall back to the context form. Only relevant when
+ * resumeSessionId is actually set — an ordinary load (free or template
+ * mode, no ?sessionid=) never runs any of this, so it can't clobber
+ * whatever #contextView/#templateModeView the server already rendered.
+ *
+ * @param {Object} elements
+ */
+const revertToContextView = (elements) => {
+    const workspace = document.getElementById('courseaiWorkspace');
+    if (workspace) {
+        workspace.classList.remove('is-planning');
+    }
+    const planningView = document.getElementById('planningView');
+    if (planningView) {
+        planningView.style.display = 'none';
+    }
+    const compactChat = document.getElementById('compactChatCard');
+    if (compactChat) {
+        compactChat.style.display = 'none';
+    }
+    if (elements.contextView) {
+        elements.contextView.style.display = '';
+    }
+};
+
+/**
+ * Resume the workspace from a snapshot when one is pending, falling back
+ * to the context view when there is nothing to resume or resuming fails.
+ *
+ * @param {string} resumeSessionId
+ * @param {Function} resumeFromSnapshot
+ * @param {Object} elements
+ * @param {Function} setResumeBootLoading
+ */
+const attemptResume = async(resumeSessionId, resumeFromSnapshot, elements, setResumeBootLoading) => {
+    try {
+        if (resumeSessionId) {
+            const resumed = await resumeFromSnapshot();
+            if (!resumed) {
+                revertToContextView(elements);
+            }
+        }
+    } catch (resumeError) {
+        revertToContextView(elements);
+    } finally {
+        setResumeBootLoading(false);
+    }
+};
+
+/**
  * Initialize the courseai page.
  *
  * @param {Object} params
@@ -85,7 +139,10 @@ export const init = async(params) => {
         // Decision log (§4) — instantiate before any module that needs it.
         const {emitLog, clearLog} = makeEmitLog(state);
 
-        const markedParser = markedModule.parse ? markedModule : markedModule.marked;
+        let markedParser = markedModule.marked;
+        if (markedModule.parse) {
+            markedParser = markedModule;
+        }
         const activityLabels = getActivityLabels(texts);
         const generateButtonHtml = getGenerateButtonHtml(texts);
 
@@ -256,42 +313,7 @@ export const init = async(params) => {
             texts,
         });
 
-        // On reload the page is server-rendered in planning mode (is-planning +
-        // in-place skeletons) so the static chrome shows immediately. If there is
-        // nothing to resume, fall back to the context form. Only relevant when
-        // resumeSessionId is actually set — an ordinary load (free or template
-        // mode, no ?sessionid=) never runs any of this, so it can't clobber
-        // whatever #contextView/#templateModeView the server already rendered.
-        const revertToContextView = () => {
-            const workspace = document.getElementById('courseaiWorkspace');
-            if (workspace) {
-                workspace.classList.remove('is-planning');
-            }
-            const planningView = document.getElementById('planningView');
-            if (planningView) {
-                planningView.style.display = 'none';
-            }
-            const compactChat = document.getElementById('compactChatCard');
-            if (compactChat) {
-                compactChat.style.display = 'none';
-            }
-            if (elements.contextView) {
-                elements.contextView.style.display = '';
-            }
-        };
-
-        try {
-            if (resumeSessionId) {
-                const resumed = await resumeFromSnapshot();
-                if (!resumed) {
-                    revertToContextView();
-                }
-            }
-        } catch (resumeError) {
-            revertToContextView();
-        } finally {
-            setResumeBootLoading(false);
-        }
+        await attemptResume(resumeSessionId, resumeFromSnapshot, elements, setResumeBootLoading);
 
         contextUi.renderGuidelineList();
         stepsUi.updateFlowNav();
