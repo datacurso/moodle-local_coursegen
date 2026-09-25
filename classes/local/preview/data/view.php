@@ -121,9 +121,10 @@ class view {
             }
 
             if ($groupmode != NOGROUPS) {
+                $groupselect = groups_print_activity_menu($cm, $this->here, true);
                 $out .= $OUTPUT->render_from_template('local_coursegen/preview_container', [
                     'classes' => 'mb-3',
-                    'content' => groups_print_activity_menu($cm, $this->here, true),
+                    'content' => $groupselect,
                 ]);
             }
 
@@ -179,24 +180,49 @@ class view {
     protected function get_create_fields(bool $isprimarybutton = false): \action_menu {
         // Get the list of possible fields (plugins).
         $plugins = \core_component::get_plugin_list('datafield');
+        $menufield = $this->field_type_menu($plugins);
+        $fieldselect = new \action_menu();
+        $triggerclasses = ['btn'];
+        if ($isprimarybutton) {
+            $triggerclasses[] = 'btn-primary';
+        } else {
+            $triggerclasses[] = 'btn-secondary';
+        }
+        $triggerlabel = get_string('newfield', 'mod_data');
+        $triggerclass = join(' ', $triggerclasses);
+        $fieldselect->set_menu_trigger($triggerlabel, $triggerclass);
+        $this->add_field_type_links($fieldselect, $menufield);
+        $fieldselect->set_additional_classes('singlebutton');
+        return $fieldselect;
+    }
+
+    /**
+     * Field type names, keyed by plugin and sorted for display.
+     *
+     * @param array $plugins
+     * @return array
+     */
+    protected function field_type_menu(array $plugins): array {
         $menufield = [];
         foreach ($plugins as $plugin => $fulldir) {
             $menufield[$plugin] = get_string('pluginname', "datafield_{$plugin}");
         }
         asort($menufield);
-        $fieldselect = new \action_menu();
-        $triggerclasses = ['btn'];
-        $triggerclasses[] = $isprimarybutton ? 'btn-primary' : 'btn-secondary';
-        $fieldselect->set_menu_trigger(get_string('newfield', 'mod_data'), join(' ', $triggerclasses));
+        return $menufield;
+    }
+
+    /**
+     * action_bar::get_create_fields()'s per-type links, each leading back to the preview.
+     *
+     * @param \action_menu $fieldselect
+     * @param array $menufield
+     */
+    protected function add_field_type_links(\action_menu $fieldselect, array $menufield): void {
         foreach ($menufield as $fieldtype => $fieldname) {
-            $fieldselect->add(new \action_menu_link(
-                new moodle_url($this->here, ['newtype' => $fieldtype]),
-                new \pix_icon('field/' . $fieldtype, $fieldname, 'data'),
-                $fieldname,
-                false
-            ));
+            $fieldurl = new moodle_url($this->here, ['newtype' => $fieldtype]);
+            $fieldicon = new \pix_icon('field/' . $fieldtype, $fieldname, 'data');
+            $fieldlink = new \action_menu_link($fieldurl, $fieldicon, $fieldname, false);
+            $fieldselect->add($fieldlink);
         }
-        $fieldselect->set_additional_classes('singlebutton');
-        return $fieldselect;
     }
 }
