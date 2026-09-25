@@ -46,6 +46,48 @@ use local_coursegen\local\preview\grid_from_payload;
 use local_coursegen\local\service\template_ai_api_service;
 use local_coursegen\local\service\template_export_service;
 
+/**
+ * What the answer says each activity will contain, keyed by uid. A run still
+ * under review has no result, so the plan is what there is to show of its
+ * intent; a run the service no longer knows has no plan either, and shows
+ * none.
+ *
+ * @param string $threadid
+ * @return array
+ */
+function local_coursegen_course_preview_plan_summaries(string $threadid): array {
+    $summaries = [];
+    try {
+        $api = new template_ai_api_service();
+        $planresult = $api->get_plan($threadid);
+        $plan = $planresult['template_plan'] ?? [];
+        foreach ($plan as $entry) {
+            $uid = $entry['uid'] ?? '';
+            $uid = (string) $uid;
+            $summary = $entry['summary'] ?? '';
+            $summary = (string) $summary;
+            $summaries[$uid] = $summary;
+        }
+    } catch (moodle_exception $exception) {
+        $summaries = [];
+    }
+    return $summaries;
+}
+
+/**
+ * A course page marks no entry of the primary navigation as where the reader
+ * is, so neither does this one. The navigation marks the site home on any page
+ * it cannot place, and a page it is told about picks an entry instead; a
+ * course page ends up with none, so none is what is shown here, by unmarking
+ * whatever the navigation chose once it has chosen.
+ */
+function local_coursegen_course_preview_deactivate_primary_nav(): void {
+    global $PAGE;
+    foreach ($PAGE->primarynav->children as $entry) {
+        $entry->make_inactive();
+    }
+}
+
 $sessionid = required_param('sessionid', PARAM_INT);
 
 // Which section to show, for a format that shows them one at a time.
@@ -60,8 +102,11 @@ if ((int) $session->get('userid') !== (int) $USER->id) {
     throw new moodle_exception('nopermissions', 'error', '', 'preview this generation');
 }
 
-$coursedata = json_decode((string) $session->get('coursedata'), true);
-$templateid = (int) ($coursedata['templateid'] ?? 0);
+$coursedata = $session->get('coursedata');
+$coursedata = (string) $coursedata;
+$coursedata = json_decode($coursedata, true);
+$templateid = $coursedata['templateid'] ?? 0;
+$templateid = (int) $templateid;
 if ($templateid <= 0) {
     throw new moodle_exception('invalidtemplate', 'local_coursegen');
 }
@@ -70,21 +115,15 @@ if ($templateid <= 0) {
 // the preview and the run can never be describing different things.
 $payload = template_export_service::build_init_payload($templateid);
 
-// What the answer says each activity will contain. A run still under review
-// has no result, so the plan is what there is to show of its intent.
-$summaries = [];
-try {
-    $api = new template_ai_api_service();
-    foreach (($api->get_plan((string) $session->get('session_id'))['template_plan'] ?? []) as $entry) {
-        $summaries[(string) ($entry['uid'] ?? '')] = (string) ($entry['summary'] ?? '');
-    }
-} catch (moodle_exception $exception) {
-    $summaries = [];
-}
+$threadid = $session->get('session_id');
+$threadid = (string) $threadid;
+$summaries = local_coursegen_course_preview_plan_summaries($threadid);
 
 $configuration = $payload['course_configuration'] ?? [];
-$coursename = (string) ($configuration['fullname'] ?? '');
-$format = (string) ($configuration['format'] ?? 'topics');
+$coursename = $configuration['fullname'] ?? '';
+$coursename = (string) $coursename;
+$format = $configuration['format'] ?? 'topics';
+$format = (string) $format;
 
 // The course is read in its own language, the way it would be read once it
 // exists: it is what the payload was built in, and what its content is in.
@@ -99,7 +138,10 @@ if (!empty($configuration['lang'])) {
 // about a course is a lie. Nothing of the course is drawn from this: the
 // course index, which would list the real course, is turned off, and the
 // trail is written here from the payload rather than taken from the course.
-$PAGE->set_course(get_course(template::get_record(['id' => $templateid])->get('courseid')));
+$templaterecord = template::get_record(['id' => $templateid]);
+$templatecourseid = $templaterecord->get('courseid');
+$templatecourse = get_course($templatecourseid);
+$PAGE->set_course($templatecourse);
 $PAGE->set_show_course_index(false);
 $PAGE->navbar->ignore_active(true);
 $PAGE->set_url('/local/coursegen/course_preview.php', ['sessionid' => $sessionid]);
@@ -115,25 +157,18 @@ $PAGE->add_body_class('local-coursegen-course-preview');
 // What kind of page this is, which a theme and a format both read.
 $PAGE->set_pagetype('course-view-' . $format);
 $PAGE->set_secondary_navigation(false);
-$PAGE->set_title(get_string('courseai_preview_course_title', 'local_coursegen'));
+$previewtitle = get_string('courseai_preview_course_title', 'local_coursegen');
+$PAGE->set_title($previewtitle);
 $PAGE->set_heading($coursename);
 
-// A course page marks no entry of the primary navigation as where the reader
-// is, so neither does this one. The navigation marks the site home on any page
-// it cannot place, and a page it is told about picks an entry instead; a
-// course page ends up with none, so none is what is shown here, by unmarking
-// whatever the navigation chose once it has chosen. Asking for the navigation
-// settles the theme, so it comes after everything the theme is told about the
-// page: its layout, its kind, its width and its blocks.
-foreach ($PAGE->primarynav->children as $entry) {
-    $entry->make_inactive();
-}
+// Asking for the navigation settles the theme, so it comes after everything
+// the theme is told about the page: its layout, its kind, its width and its
+// blocks.
+local_coursegen_course_preview_deactivate_primary_nav();
 
 echo $OUTPUT->header();
-echo $OUTPUT->notification(
-    get_string('courseai_preview_course_notice', 'local_coursegen'),
-    \core\output\notification::NOTIFY_INFO
-);
+$noticemessage = get_string('courseai_preview_course_notice', 'local_coursegen');
+echo $OUTPUT->notification($noticemessage, \core\output\notification::NOTIFY_INFO);
 
 // The course is drawn by its own format's template when it has one, so the
 // preview is laid out the way the template's course is: the same tiles, the
