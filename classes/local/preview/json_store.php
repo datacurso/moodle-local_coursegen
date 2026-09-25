@@ -55,12 +55,18 @@ class json_store {
      */
     public static function from_activity(array $activity): self {
         $parameters = $activity['parameters'] ?? [];
+
+        $structure = $parameters['structure'] ?? [];
+        $structure = (array) $structure;
+
+        $tables = $parameters['structure_tables'] ?? [];
+        $tables = (array) $tables;
+
+        $aliases = $parameters['structure_aliases'] ?? [];
+        $aliases = (array) $aliases;
+
         $store = new self();
-        $store->rows = json_store_builder::build(
-            (array) ($parameters['structure'] ?? []),
-            (array) ($parameters['structure_tables'] ?? []),
-            (array) ($parameters['structure_aliases'] ?? [])
-        );
+        $store->rows = json_store_builder::build($structure, $tables, $aliases);
         return $store;
     }
 
@@ -72,7 +78,8 @@ class json_store {
      * @return stdClass|false
      */
     public function get_record(string $table, array $conditions = []) {
-        foreach ($this->rows[$table] ?? [] as $row) {
+        $rows = $this->rows[$table] ?? [];
+        foreach ($rows as $row) {
             if ($this->matches($row, $conditions)) {
                 return clone $row;
             }
@@ -89,17 +96,40 @@ class json_store {
      * @return stdClass[]
      */
     public function get_records(string $table, array $conditions = [], string $sort = ''): array {
+        $found = $this->matching_rows($table, $conditions);
+        if ($sort !== '') {
+            $found = $this->sorted($found, $sort);
+        }
+        return $this->keyed_by_id($found);
+    }
+
+    /**
+     * Every row of a table matching the given conditions, cloned.
+     *
+     * @param string $table
+     * @param array $conditions
+     * @return stdClass[]
+     */
+    protected function matching_rows(string $table, array $conditions): array {
         $found = [];
-        foreach ($this->rows[$table] ?? [] as $row) {
+        $rows = $this->rows[$table] ?? [];
+        foreach ($rows as $row) {
             if ($this->matches($row, $conditions)) {
                 $found[] = clone $row;
             }
         }
-        if ($sort !== '') {
-            $found = $this->sorted($found, $sort);
-        }
+        return $found;
+    }
+
+    /**
+     * A list of rows keyed by their own id, or by position if they have none.
+     *
+     * @param stdClass[] $rows
+     * @return stdClass[]
+     */
+    protected function keyed_by_id(array $rows): array {
         $keyed = [];
-        foreach ($found as $index => $row) {
+        foreach ($rows as $index => $row) {
             $keyed[$row->id ?? $index] = $row;
         }
         return $keyed;
@@ -137,7 +167,10 @@ class json_store {
      */
     public function get_field(string $table, string $column, array $conditions = []) {
         $row = $this->get_record($table, $conditions);
-        return $row === false ? false : ($row->$column ?? null);
+        if ($row === false) {
+            return false;
+        }
+        return $row->$column ?? null;
     }
 
     /**
@@ -158,9 +191,13 @@ class json_store {
         string $valuecolumn = ''
     ): array {
         $menu = [];
-        foreach ($this->get_records($table, $conditions, $sort) as $row) {
+        $rows = $this->get_records($table, $conditions, $sort);
+        foreach ($rows as $row) {
             $columns = array_keys(get_object_vars($row));
-            $value = $valuecolumn !== '' ? $valuecolumn : ($columns[1] ?? $columns[0]);
+            $value = $valuecolumn;
+            if ($value === '') {
+                $value = $columns[1] ?? $columns[0];
+            }
             $menu[$row->$keycolumn] = $row->$value ?? null;
         }
         return $menu;
@@ -195,14 +232,23 @@ class json_store {
      * @return stdClass[]
      */
     protected function sorted(array $rows, string $sort): array {
-        $parts = preg_split('~\s+~', trim($sort));
+        $trimmedsort = trim($sort);
+        $parts = preg_split('~\s+~', $trimmedsort);
         $column = $parts[0];
         $descending = isset($parts[1]) && strtoupper($parts[1]) === 'DESC';
         usort($rows, static function (stdClass $a, stdClass $b) use ($column, $descending): int {
             $left = $a->$column ?? null;
             $right = $b->$column ?? null;
-            $order = is_numeric($left) && is_numeric($right) ? $left <=> $right : strcmp((string) $left, (string) $right);
-            return $descending ? -$order : $order;
+            $order = 0;
+            if (is_numeric($left) && is_numeric($right)) {
+                $order = $left <=> $right;
+            } else {
+                $order = strcmp((string) $left, (string) $right);
+            }
+            if ($descending) {
+                return -$order;
+            }
+            return $order;
         });
         return $rows;
     }

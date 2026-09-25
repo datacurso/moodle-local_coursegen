@@ -42,32 +42,67 @@ class template_export_sections {
         $images = self::section_images($course);
         $contextid = \context_course::instance($course->id)->id;
 
+        $sectioninfos = $modinfo->get_section_info_all();
         $sections = [];
-        foreach ($modinfo->get_section_info_all() as $section) {
-            $sections[] = [
-                'uid' => template_export_uids::stable_uid($templateid, 'section', (int) $section->id),
-                'section' => (int) $section->section,
-                'name' => get_section_name($course, $section),
-                // A summary refers to its pictures by a placeholder that only
-                // means something to the page that owns them. Whatever reads
-                // this payload owns nothing, so they travel as addresses.
-                'summary' => file_rewrite_pluginfile_urls(
-                    (string) ($section->summary ?? ''),
-                    'pluginfile.php',
-                    $contextid,
-                    'course',
-                    'section',
-                    (int) $section->id
-                ),
-                'summaryformat' => (int) ($section->summaryformat ?? FORMAT_HTML),
-                // What the format was told about this section in particular,
-                // which is where a format keeps the look of it.
-                'format_options' => $format->get_format_options($section),
-                'image' => $images[(int) $section->id] ?? null,
-                'template_behavior' => ['behavior' => $behaviors[$section->id] ?? 'aimodify'],
-            ];
+        foreach ($sectioninfos as $section) {
+            $sections[] = self::section_entry($templateid, $course, $format, $section, $images, $behaviors, $contextid);
         }
         return $sections;
+    }
+
+    /**
+     * One section, in the shape the course preview reads.
+     *
+     * @param int $templateid
+     * @param \stdClass $course
+     * @param mixed $format The course's format, as course_get_format() returns it.
+     * @param \section_info $section
+     * @param array $images Section id => image address, as section_images() returns it.
+     * @param array $behaviors Section id => template behavior.
+     * @param int $contextid
+     * @return array
+     */
+    private static function section_entry(
+        int $templateid,
+        $course,
+        $format,
+        $section,
+        array $images,
+        array $behaviors,
+        int $contextid
+    ): array {
+        $sectionid = (int) $section->id;
+
+        $uid = template_export_uids::stable_uid($templateid, 'section', $sectionid);
+        $name = get_section_name($course, $section);
+
+        $summary = $section->summary ?? '';
+        $summary = (string) $summary;
+        // A summary refers to its pictures by a placeholder that only
+        // means something to the page that owns them. Whatever reads
+        // this payload owns nothing, so they travel as addresses.
+        $summary = file_rewrite_pluginfile_urls($summary, 'pluginfile.php', $contextid, 'course', 'section', $sectionid);
+
+        $summaryformat = $section->summaryformat ?? FORMAT_HTML;
+        $summaryformat = (int) $summaryformat;
+
+        // What the format was told about this section in particular,
+        // which is where a format keeps the look of it.
+        $formatoptions = $format->get_format_options($section);
+
+        $image = $images[$sectionid] ?? null;
+        $behavior = $behaviors[$sectionid] ?? 'aimodify';
+
+        return [
+            'uid' => $uid,
+            'section' => (int) $section->section,
+            'name' => $name,
+            'summary' => $summary,
+            'summaryformat' => $summaryformat,
+            'format_options' => $formatoptions,
+            'image' => $image,
+            'template_behavior' => ['behavior' => $behavior],
+        ];
     }
 
     /**
@@ -109,13 +144,19 @@ class template_export_sections {
         $contextid = \context_course::instance($course->id)->id;
         $webp = (get_config('format_grid', 'defaultdisplayedimagefiletype') == 2);
 
+        $gridimages = $DB->get_records('format_grid_image', ['courseid' => $course->id]);
         $images = [];
-        foreach ($DB->get_records('format_grid_image', ['courseid' => $course->id]) as $image) {
+        foreach ($gridimages as $image) {
             if ((int) $image->displayedimagestate < 1) {
                 continue;
             }
-            $uri = $toolbox->get_displayed_image_uri($image, $contextid, (int) $image->sectionid, $webp);
-            $images[(int) $image->sectionid] = $uri instanceof \moodle_url ? $uri->out(false) : (string) $uri;
+            $sectionid = (int) $image->sectionid;
+            $uri = $toolbox->get_displayed_image_uri($image, $contextid, $sectionid, $webp);
+            $address = (string) $uri;
+            if ($uri instanceof \moodle_url) {
+                $address = $uri->out(false);
+            }
+            $images[$sectionid] = $address;
         }
         return $images;
     }
