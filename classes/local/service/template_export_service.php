@@ -30,29 +30,15 @@ use local_coursegen\local\models\template_section;
  * own and are submitted as action="modify" driven by the mold they were
  * created from (template_source_cmid).
  *
+ * How every element is named stably across requests lives in
+ * template_export_uids.php; how a section's own layout is described lives in
+ * template_export_sections.php.
+ *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class template_export_service {
-    /** First synthetic cmid for virtual instances (never a real Moodle cmid). */
-    const INSTANCE_CMID_BASE = 900000;
-
-    /**
-     * The synthetic cmid that stands for one virtual instance.
-     *
-     * Derived from the instance's own id rather than from its position in the
-     * export, so the professor-facing structure can name the same activity the
-     * generation's progress events name, without either side having to
-     * reproduce the other's ordering.
-     *
-     * @param int $instanceid
-     * @return int
-     */
-    public static function instance_cmid(int $instanceid): int {
-        return self::INSTANCE_CMID_BASE + $instanceid;
-    }
-
     /**
      * Build the full init payload.
      *
@@ -68,26 +54,47 @@ class template_export_service {
             throw new \moodle_exception('invalidtemplate', 'local_coursegen');
         }
 
-        $course = get_course($template->get('courseid'));
+        $courseid = $template->get('courseid');
+        $course = get_course($courseid);
         $modinfo = get_fast_modinfo($course);
 
         $actions = self::saved_activity_actions($templateid);
         $behaviors = self::saved_section_behaviors($templateid);
 
+        $lang = $course->lang;
+        if (!$lang) {
+            $lang = current_language();
+        }
+
+        $sectioninfoall = $modinfo->get_section_info_all();
+        $numsections = count($sectioninfoall) - 1;
+
+        $formatoptions = template_export_sections::format_settings($course);
+        $sectionsinfo = template_export_sections::sections_info($templateid, $course, $modinfo, $behaviors);
+
+        $realactivities = self::real_activities($templateid, $modinfo, $actions);
+        $instanceactivities = self::instance_activities($templateid, $modinfo);
+        $activities = array_merge($realactivities, $instanceactivities);
+
+        $courseconfiguration = [
+            'fullname' => $course->fullname,
+            'shortname' => $course->shortname,
+            'lang' => $lang,
+            'numsections' => $numsections,
+            // How the course is laid out, and how its format is set up.
+            // A course generated from a template is the template's course
+            // with other content in it, so it is read the same way, and a
+            // preview of it has to be drawn the same way.
+            'format' => $course->format,
+            'format_options' => $formatoptions,
+        ];
+
         return [
-            'course_configuration' => [
-                'fullname' => $course->fullname,
-                'shortname' => $course->shortname,
-                'lang' => $course->lang ?: current_language(),
-                'numsections' => count($modinfo->get_section_info_all()) - 1,
-            ],
-            'sections_info' => self::sections_info($course, $modinfo, $behaviors),
-            'activities' => array_merge(
-                self::real_activities($modinfo, $actions),
-                self::instance_activities($templateid, $modinfo)
-            ),
+            'course_configuration' => $courseconfiguration,
+            'sections_info' => $sectionsinfo,
+            'activities' => $activities,
             'general_instruction' => $generalinstruction,
-            'lang' => $course->lang ?: current_language(),
+            'lang' => $lang,
             'with_images' => false,
             'site_url' => $CFG->wwwroot,
             // Reference files are attached after /init (they need its
@@ -103,8 +110,9 @@ class template_export_service {
      * @return array
      */
     private static function saved_activity_actions(int $templateid): array {
+        $records = template_activity::get_records(['templateid' => $templateid]);
         $actions = [];
-        foreach (template_activity::get_records(['templateid' => $templateid]) as $activity) {
+        foreach ($records as $activity) {
             $actions[(int) $activity->get('cmid')] = $activity->get('action');
         }
         return $actions;
@@ -117,43 +125,26 @@ class template_export_service {
      * @return array
      */
     private static function saved_section_behaviors(int $templateid): array {
+        $records = template_section::get_records(['templateid' => $templateid]);
         $behaviors = [];
-        foreach (template_section::get_records(['templateid' => $templateid]) as $section) {
+        foreach ($records as $section) {
             $behaviors[(int) $section->get('sectionid')] = $section->get('behavior');
         }
         return $behaviors;
     }
 
     /**
-     * Every section, with its saved behavior merged in.
-     *
-     * @param \stdClass $course
-     * @param \course_modinfo $modinfo
-     * @param array $behaviors
-     * @return array
-     */
-    private static function sections_info($course, $modinfo, array $behaviors): array {
-        $sections = [];
-        foreach ($modinfo->get_section_info_all() as $section) {
-            $sections[] = [
-                'section' => (int) $section->section,
-                'name' => get_section_name($course, $section),
-                'template_behavior' => ['behavior' => $behaviors[$section->id] ?? 'aimodify'],
-            ];
-        }
-        return $sections;
-    }
-
-    /**
      * The base course's own activities, excluding the ones marked "exclude".
      *
+     * @param int $templateid
      * @param \course_modinfo $modinfo
      * @param array $actions
      * @return array
      */
-    private static function real_activities($modinfo, array $actions): array {
+    private static function real_activities(int $templateid, $modinfo, array $actions): array {
+        $cms = $modinfo->get_cms();
         $activities = [];
-        foreach ($modinfo->get_cms() as $cm) {
+        foreach ($cms as $cm) {
             if (!$cm->uservisible) {
                 continue;
             }
@@ -161,14 +152,30 @@ class template_export_service {
             if ($action === 'exclude') {
                 continue;
             }
-            $activities[] = [
-                'resource_type' => $cm->modname,
-                'cmid' => (int) $cm->id,
-                'parameters' => template_activity_export::parameters_for($cm),
-                'template_behavior' => ['action' => $action, 'useasreference' => true],
-            ];
+            $activities[] = self::real_activity_entry($templateid, $cm, $action);
         }
         return $activities;
+    }
+
+    /**
+     * One real activity's own entry.
+     *
+     * @param int $templateid
+     * @param \cm_info $cm
+     * @param string $action
+     * @return array
+     */
+    private static function real_activity_entry(int $templateid, $cm, string $action): array {
+        $cmid = (int) $cm->id;
+        $uid = template_export_uids::stable_uid($templateid, 'cm', $cmid);
+        $parameters = template_activity_export::parameters_for($cm);
+        return [
+            'resource_type' => $cm->modname,
+            'uid' => $uid,
+            'cmid' => $cmid,
+            'parameters' => $parameters,
+            'template_behavior' => ['action' => $action, 'useasreference' => true],
+        ];
     }
 
     /**
@@ -179,29 +186,76 @@ class template_export_service {
      * @return array
      */
     private static function instance_activities(int $templateid, $modinfo): array {
-        $sectionnums = [];
-        foreach ($modinfo->get_section_info_all() as $section) {
-            $sectionnums[(int) $section->id] = (int) $section->section;
-        }
+        $sectionnums = self::section_numbers_by_id($modinfo);
 
-        $activities = [];
         $instances = template_instance::get_records(['templateid' => $templateid], 'sortorder');
+        $activities = [];
         foreach ($instances as $instance) {
-            $activities[] = [
-                'resource_type' => $instance->get('modname') ?: 'lesson',
-                'cmid' => self::instance_cmid((int) $instance->get('id')),
-                'parameters' => [
-                    'name' => $instance->get('name'),
-                    'section' => $sectionnums[(int) $instance->get('sectionid')] ?? 0,
-                ],
-                'template_behavior' => [
-                    'action' => 'modify',
-                    'useasreference' => true,
-                    'prompt' => (string) $instance->get('prompt'),
-                    'template_source_cmid' => (int) $instance->get('sourcecmid'),
-                ],
-            ];
+            $activities[] = self::instance_activity_entry($instance, $sectionnums);
         }
         return $activities;
+    }
+
+    /**
+     * Every section's own number, keyed by its id.
+     *
+     * @param \course_modinfo $modinfo
+     * @return array
+     */
+    private static function section_numbers_by_id($modinfo): array {
+        $sections = $modinfo->get_section_info_all();
+        $sectionnums = [];
+        foreach ($sections as $section) {
+            $sectionnums[(int) $section->id] = (int) $section->section;
+        }
+        return $sectionnums;
+    }
+
+    /**
+     * One template instance's own entry, as a "modify" activity driven by its mold.
+     *
+     * @param \local_coursegen\local\models\template_instance $instance
+     * @param array $sectionnums Section id => section number.
+     * @return array
+     */
+    private static function instance_activity_entry($instance, array $sectionnums): array {
+        $modname = $instance->get('modname');
+        if (!$modname) {
+            $modname = 'lesson';
+        }
+
+        $instanceid = $instance->get('id');
+        $instanceid = (int) $instanceid;
+
+        $uid = template_export_uids::instance_uid($instance);
+        $cmid = template_export_uids::instance_cmid($instanceid);
+
+        $sectionid = $instance->get('sectionid');
+        $sectionid = (int) $sectionid;
+        $section = $sectionnums[$sectionid] ?? 0;
+
+        $name = $instance->get('name');
+
+        $prompt = $instance->get('prompt');
+        $prompt = (string) $prompt;
+
+        $sourcecmid = $instance->get('sourcecmid');
+        $sourcecmid = (int) $sourcecmid;
+
+        return [
+            'resource_type' => $modname,
+            'uid' => $uid,
+            'cmid' => $cmid,
+            'parameters' => [
+                'name' => $name,
+                'section' => $section,
+            ],
+            'template_behavior' => [
+                'action' => 'modify',
+                'useasreference' => true,
+                'prompt' => $prompt,
+                'template_source_cmid' => $sourcecmid,
+            ],
+        ];
     }
 }
