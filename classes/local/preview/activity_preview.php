@@ -149,7 +149,10 @@ abstract class activity_preview {
         if ($intro === '') {
             $intro = trim($this->text('intro'));
         }
-        return $intro === '' ? '' : $this->content($intro);
+        if ($intro === '') {
+            return '';
+        }
+        return $this->content($intro);
     }
 
     /**
@@ -190,7 +193,10 @@ abstract class activity_preview {
      */
     protected function items(string $key): array {
         $items = ($this->parameters['mod_settings'] ?? [])[$key] ?? [];
-        return is_array($items) ? $items : [];
+        if (!is_array($items)) {
+            return [];
+        }
+        return $items;
     }
 
     /**
