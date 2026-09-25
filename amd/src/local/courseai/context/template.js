@@ -122,7 +122,11 @@ export const createTemplateHandlers = ({state, texts}) => {
         if (filtered.length === 0) {
             return;
         }
-        activeIndex = ((activeIndex < 0 ? -1 : activeIndex) + delta + filtered.length) % filtered.length;
+        let base = activeIndex;
+        if (base < 0) {
+            base = -1;
+        }
+        activeIndex = (base + delta + filtered.length) % filtered.length;
         renderTemplateLists();
     };
 
@@ -138,25 +142,24 @@ export const createTemplateHandlers = ({state, texts}) => {
     };
 
     /**
-     * Render every template list that exists on the page: one line per
-     * template, the chosen one carrying a check instead of a radio.
+     * One template's row markup for the combo list.
+     *
+     * @param {Object} t
+     * @param {number} index
+     * @returns {string}
      */
-    const renderTemplateLists = () => {
-        const filtered = getFilteredTemplates();
-        LISTS.forEach(({list}) => {
-            const el = document.getElementById(list);
-            if (!el) {
-                return;
-            }
-            if (filtered.length === 0) {
-                el.innerHTML = `<li class="tpl-combo-empty">${escapeHtml(texts.courseai_no_results || '')}</li>`;
-                return;
-            }
-            el.innerHTML = filtered.map((t, index) => {
-                const isSelected = String(state.selectedTemplateId) === String(t.id);
-                const isActive = index === activeIndex;
-                return `
-                    <li class="tpl-combo-item${isSelected ? ' selected' : ''}${isActive ? ' is-active' : ''}"
+    const templateComboRowHtml = (t, index) => {
+        const isSelected = String(state.selectedTemplateId) === String(t.id);
+        const isActive = index === activeIndex;
+        let rowClass = 'tpl-combo-item';
+        if (isSelected) {
+            rowClass += ' selected';
+        }
+        if (isActive) {
+            rowClass += ' is-active';
+        }
+        return `
+                    <li class="${rowClass}"
                         id="tplComboItem-${t.id}" data-select="${t.id}"
                         role="option" aria-selected="${isSelected}">
                         <span class="tpl-combo-item-name">${escapeHtml(t.name)}</span>
@@ -168,11 +171,45 @@ export const createTemplateHandlers = ({state, texts}) => {
                         </svg>
                     </li>
                 `;
-            }).join('');
-            el.querySelectorAll('.tpl-combo-item[data-select]').forEach((row) => {
-                row.addEventListener('click', () => selectTemplate(row.getAttribute('data-select')));
-            });
+    };
+
+    /**
+     * Wire every row's click in one rendered combo list.
+     *
+     * @param {HTMLElement} el
+     */
+    const wireTemplateComboRows = (el) => {
+        el.querySelectorAll('.tpl-combo-item[data-select]').forEach((row) => {
+            row.addEventListener('click', () => selectTemplate(row.getAttribute('data-select')));
         });
+    };
+
+    /**
+     * Render one template combo list element with the filtered templates.
+     *
+     * @param {Array} filtered
+     * @param {string} listId
+     */
+    const renderOneTemplateList = (filtered, listId) => {
+        const el = document.getElementById(listId);
+        if (!el) {
+            return;
+        }
+        if (filtered.length === 0) {
+            el.innerHTML = `<li class="tpl-combo-empty">${escapeHtml(texts.courseai_no_results || '')}</li>`;
+            return;
+        }
+        el.innerHTML = filtered.map(templateComboRowHtml).join('');
+        wireTemplateComboRows(el);
+    };
+
+    /**
+     * Render every template list that exists on the page: one line per
+     * template, the chosen one carrying a check instead of a radio.
+     */
+    const renderTemplateLists = () => {
+        const filtered = getFilteredTemplates();
+        LISTS.forEach(({list}) => renderOneTemplateList(filtered, list));
     };
 
     /**
@@ -189,9 +226,11 @@ export const createTemplateHandlers = ({state, texts}) => {
                 promptInput.dataset.placeholderReady = promptInput.placeholder;
             }
             promptInput.disabled = !template;
-            promptInput.placeholder = template
-                ? promptInput.dataset.placeholderReady
-                : (texts.courseai_template_prompt_locked || promptInput.dataset.placeholderReady);
+            let placeholder = texts.courseai_template_prompt_locked || promptInput.dataset.placeholderReady;
+            if (template) {
+                placeholder = promptInput.dataset.placeholderReady;
+            }
+            promptInput.placeholder = placeholder;
         }
         if (plusBtn) {
             plusBtn.disabled = !template;
@@ -202,13 +241,25 @@ export const createTemplateHandlers = ({state, texts}) => {
         const clearBtn = document.getElementById('tplPickerClear');
         if (picker) {
             picker.classList.toggle('has-value', !!template);
-            picker.title = template ? [template.name, template.coursefullname].filter(Boolean).join(' · ') : '';
+            let pickerTitle = '';
+            if (template) {
+                pickerTitle = [template.name, template.coursefullname].filter(Boolean).join(' · ');
+            }
+            picker.title = pickerTitle;
         }
         if (nameEl) {
-            nameEl.textContent = template ? template.name : '';
+            let name = '';
+            if (template) {
+                name = template.name;
+            }
+            nameEl.textContent = name;
         }
         if (courseEl) {
-            courseEl.textContent = template ? (template.coursefullname || '') : '';
+            let courseName = '';
+            if (template) {
+                courseName = template.coursefullname || '';
+            }
+            courseEl.textContent = courseName;
         }
         if (clearBtn) {
             clearBtn.hidden = !template;
@@ -234,7 +285,7 @@ export const createTemplateHandlers = ({state, texts}) => {
         }
         shell.classList.toggle('is-open', open);
         picker.hidden = open;
-        picker.setAttribute('aria-expanded', open ? 'true' : 'false');
+        picker.setAttribute('aria-expanded', String(open));
         search.hidden = !open;
         if (open) {
             search.value = '';
@@ -319,8 +370,10 @@ export const createTemplateHandlers = ({state, texts}) => {
      */
     const selectTemplate = (id, {focus = true} = {}) => {
         const strId = String(id);
-        const currentId = state.selectedTemplateId !== null && state.selectedTemplateId !== undefined
-            ? String(state.selectedTemplateId) : null;
+        let currentId = null;
+        if (state.selectedTemplateId !== null && state.selectedTemplateId !== undefined) {
+            currentId = String(state.selectedTemplateId);
+        }
         if (currentId === strId) {
             closeTemplatePopovers();
             return;
@@ -356,15 +409,29 @@ export const createTemplateHandlers = ({state, texts}) => {
     };
 
     /**
-     * Close every template popover and reset its trigger.
+     * Close every open template popover panel.
      */
-    const closeTemplatePopovers = () => {
+    const closeTemplatePopoverPanels = () => {
         document.querySelectorAll('.popover-panel[id^="templatesPopover"].open').forEach((panel) => {
             panel.classList.remove('open');
         });
+    };
+
+    /**
+     * Reset every template popover trigger's expanded state.
+     */
+    const resetTemplatePopoverTriggers = () => {
         document.querySelectorAll('[aria-controls^="templatesPopover"]').forEach((btn) => {
             btn.setAttribute('aria-expanded', 'false');
         });
+    };
+
+    /**
+     * Close every template popover and reset its trigger.
+     */
+    const closeTemplatePopovers = () => {
+        closeTemplatePopoverPanels();
+        resetTemplatePopoverTriggers();
         setPickerOpen(false);
     };
 
