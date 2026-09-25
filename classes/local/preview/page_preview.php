@@ -54,13 +54,30 @@ class page_preview extends preview_base {
             return;
         }
         $row = reset($rows);
-        $body = $this->parameters['page'] ?? (($this->parameters['content'] ?? null));
+        $body = $this->parameters['page'] ?? null;
+        if ($body === null) {
+            $body = $this->parameters['content'] ?? null;
+        }
         if (is_array($body)) {
             $body = $body['text'] ?? null;
         }
         if (is_string($body) && trim($body) !== '') {
             $store->set('page', $row->id, 'content', $body);
         }
+    }
+
+    /**
+     * The page's saved display options, unserialized.
+     *
+     * @param stdClass $page
+     * @return array
+     */
+    private function display_options(stdClass $page): array {
+        if (empty($page->displayoptions)) {
+            return [];
+        }
+        $options = unserialize_array($page->displayoptions);
+        return (array) $options;
     }
 
     /**
@@ -76,7 +93,7 @@ class page_preview extends preview_base {
             return $this->nothing_yet();
         }
         $context = $this->context();
-        $options = empty($page->displayoptions) ? [] : (array) unserialize_array($page->displayoptions);
+        $options = $this->display_options($page);
 
         // From here, mod/page/view.php.
         $content = file_rewrite_pluginfile_urls($page->content, 'pluginfile.php', $context->id, 'mod_page', 'content', $page->revision);
@@ -89,10 +106,12 @@ class page_preview extends preview_base {
 
         if (!isset($options['printlastmodified']) || !empty($options['printlastmodified'])) {
             $strlastmodified = get_string("lastmodified");
-            $out .= $OUTPUT->render_from_template('local_coursegen/preview_container', [
+            $lastmodified = "$strlastmodified: " . userdate($page->timemodified);
+            $templatecontext = [
                 'classes' => 'modified',
-                'content' => "$strlastmodified: " . userdate($page->timemodified),
-            ]);
+                'content' => $lastmodified,
+            ];
+            $out .= $OUTPUT->render_from_template('local_coursegen/preview_container', $templatecontext);
         }
         return $out;
     }
@@ -110,7 +129,7 @@ class page_preview extends preview_base {
         if ($page === null) {
             return '';
         }
-        $options = empty($page->displayoptions) ? [] : (array) unserialize_array($page->displayoptions);
+        $options = $this->display_options($page);
         if (empty($options['printintro'])) {
             return '';
         }
