@@ -30,7 +30,7 @@
 {{! Wizard CSS will be loaded via PHP $PAGE->requires->css() }}
 
 <!-- ══════════════════════ APP LAYOUT ══════════════════════════════════ -->
-<div class="courseai-app-layout" id="courseaiAppLayout">
+<div class="courseai-app-layout{{#sidebarclosed}} sidebar-closed{{/sidebarclosed}}" id="courseaiAppLayout">
 
 <!-- ══════════════════════ TOP BAR ═════════════════════════════════════
      One thin bar owns the two controls that used to float over the page:
@@ -608,41 +608,41 @@
             moves when a template is picked or removed. The list is the same
             searchable popover as before, anchored to this line. }}
         <div class="tpl-pick-anchor" id="tplPickAnchor">
-          <div class="tpl-picker-shell">
+          <div class="tpl-picker-label">
+            <label for="tplPicker">{{#str}}courseai_template_picker, local_coursegen{{/str}}</label>
+            {{{templatepickerhelp}}}
+          </div>
+          {{! One control, one line: closed it is a button naming the choice;
+              open, the line itself becomes the search box — no separate
+              search row, no close button. Both share the same box (height,
+              padding, border) so nothing moves when the line switches
+              between them; the chevron sits above both, positioned once in
+              the shell rather than duplicated in each. }}
+          <div class="tpl-picker-shell" id="tplPickerShell">
             <button class="tpl-picker" id="tplPicker" type="button"
-                    aria-haspopup="dialog" aria-expanded="false" aria-controls="templatesPopoverTpl">
+                    aria-haspopup="listbox" aria-expanded="false" aria-controls="templatesPopoverTpl">
               <span class="tpl-picker-text">
                 <span class="tpl-picker-placeholder" id="tplPickerPlaceholder">{{#str}}courseai_template_pick, local_coursegen{{/str}}</span>
                 <span class="tpl-picker-name" id="tplPickerName"></span><span class="tpl-picker-course" id="tplPickerCourse"></span>
               </span>
-              <svg class="tpl-picker-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                <path d="M6 9l6 6 6-6"/>
-              </svg>
             </button>
+            <input type="text" class="tpl-picker-search" id="templateSearchTpl" hidden
+                   placeholder="{{#str}}courseai_templates_search_placeholder, local_coursegen{{/str}}" autocomplete="off" />
             <button class="tpl-picker-clear" id="tplPickerClear" type="button" hidden
                     aria-label="{{#str}}courseai_chip_remove_template, local_coursegen{{/str}}">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
               </svg>
             </button>
+            <svg class="tpl-picker-chevron" id="tplPickerChevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M6 9l6 6 6-6"/>
+            </svg>
           </div>
-          <!-- Templates popover (template column): searchable list, opens below the picker line -->
-          <div class="popover-panel popover-panel--down tpl-pick-popover" id="templatesPopoverTpl" role="dialog" aria-label="{{#str}}courseai_templates_dialog_label, local_coursegen{{/str}}">
-            <button class="pop-close-btn" id="templatesPopoverTplClose" type="button" aria-label="{{#str}}closebuttontitle, core{{/str}}">
-              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
-                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
-              </svg>
-            </button>
-            <div class="pop-search-row">
-              <div class="pop-search-inner">
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                  <circle cx="11" cy="11" r="8"/>
-                  <path d="m21 21-4.35-4.35"/>
-                </svg>
-                <input type="text" id="templateSearchTpl" placeholder="{{#str}}courseai_templates_search_placeholder, local_coursegen{{/str}}" autocomplete="off" />
-              </div>
-            </div>
-            <ul class="pop-list" id="templateListTpl" role="listbox" aria-label="{{#str}}courseai_templates_list_label, local_coursegen{{/str}}"></ul>
+          {{! The list itself, one line per template: no radio, no header row.
+              The chosen row carries a small check instead. }}
+          <div class="popover-panel popover-panel--down tpl-pick-popover" id="templatesPopoverTpl">
+            <ul class="tpl-combo-list" id="templateListTpl" role="listbox"
+                aria-label="{{#str}}courseai_templates_list_label, local_coursegen{{/str}}"></ul>
           </div>
         </div>
 
