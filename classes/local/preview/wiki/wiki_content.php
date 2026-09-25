@@ -60,7 +60,9 @@ trait wiki_content {
                 $out .= $OUTPUT->box($box);
             }
         }
-        $html = file_rewrite_pluginfile_urls((string) ($page->cachedcontent ?? ''), 'pluginfile.php', $context->id, 'mod_wiki', 'attachments', $subwikiid);
+        $cachedcontent = $page->cachedcontent ?? '';
+        $cachedcontent = (string) $cachedcontent;
+        $html = file_rewrite_pluginfile_urls($cachedcontent, 'pluginfile.php', $context->id, 'mod_wiki', 'attachments', $subwikiid);
         $html = format_text($html, FORMAT_HTML, array('overflowdiv' => true, 'allowid' => true));
         $out .= $OUTPUT->box($html);
 
@@ -242,7 +244,8 @@ trait wiki_content {
      * @return array
      */
     private static function wiki_parser_link_for_new_title($view, $link): array {
-        $firstpage = $view->wiki_get_first_page() ?? (object) ['id' => 0];
+        $missingpage = (object) ['id' => 0];
+        $firstpage = $view->wiki_get_first_page() ?? $missingpage;
         $index = $view->index_of($firstpage);
         $urls = $view->urls;
         $here = $urls($index, []);
