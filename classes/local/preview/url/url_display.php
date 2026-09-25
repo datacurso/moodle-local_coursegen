@@ -84,17 +84,30 @@ trait url_display {
      * @return string
      */
     public static function url_get_intro(stdClass $url, stdClass $cm, context $context, bool $ignoresettings = false): string {
-        $options = empty($url->displayoptions) ? [] : (array) unserialize_array($url->displayoptions);
-        if ($ignoresettings || !empty($options['printintro'])) {
-            if (!html_is_blank($url->intro)) {
-                // format_module_intro('url', $url, $cm->id), with the context given.
-                $formatoptions = ['noclean' => true, 'para' => false, 'filter' => true, 'context' => $context, 'overflowdiv' => true];
-                $intro = file_rewrite_pluginfile_urls($url->intro, 'pluginfile.php', $context->id, 'mod_url', 'intro', null);
-                return trim(format_text($intro, $url->introformat, $formatoptions, null));
-            }
+        $options = self::url_display_options($url);
+        if (!$ignoresettings && empty($options['printintro'])) {
+            return '';
         }
+        if (html_is_blank($url->intro)) {
+            return '';
+        }
+        // format_module_intro('url', $url, $cm->id), with the context given.
+        $formatoptions = ['noclean' => true, 'para' => false, 'filter' => true, 'context' => $context, 'overflowdiv' => true];
+        $intro = file_rewrite_pluginfile_urls($url->intro, 'pluginfile.php', $context->id, 'mod_url', 'intro', null);
+        return trim(format_text($intro, $url->introformat, $formatoptions, null));
+    }
 
-        return '';
+    /**
+     * A URL's saved display options, unserialized.
+     *
+     * @param stdClass $url
+     * @return array
+     */
+    private static function url_display_options(stdClass $url): array {
+        if (empty($url->displayoptions)) {
+            return [];
+        }
+        return (array) unserialize_array($url->displayoptions);
     }
 
     /**
@@ -112,9 +125,15 @@ trait url_display {
         $display = self::url_get_final_display_type($url);
         if ($display == RESOURCELIB_DISPLAY_POPUP) {
             $jsfullurl = addslashes_js($fullurl->out(false));
-            $options = empty($url->displayoptions) ? [] : (array) unserialize_array($url->displayoptions);
-            $width  = empty($options['popupwidth'])  ? 620 : $options['popupwidth'];
-            $height = empty($options['popupheight']) ? 450 : $options['popupheight'];
+            $options = self::url_display_options($url);
+            $width = 620;
+            if (!empty($options['popupwidth'])) {
+                $width = $options['popupwidth'];
+            }
+            $height = 450;
+            if (!empty($options['popupheight'])) {
+                $height = $options['popupheight'];
+            }
             $wh = "width=$width,height=$height,toolbar=no,location=no,menubar=no,copyhistory=no,status=no,directories=no,scrollbars=yes,resizable=yes";
             $attributes = ['onclick' => "window.open('$jsfullurl', '', '$wh'); return false;"];
 
