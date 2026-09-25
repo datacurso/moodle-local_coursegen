@@ -40,109 +40,25 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {getStrings} from 'core/str';
-import {askForDecision, clearPlans, renderActivityPlan} from 'local_coursegen/local/courseai/template/plan_review';
+import {askForDecision, clearPlans} from 'local_coursegen/local/courseai/template/plan_review';
 import {
-    addPlanPart,
-    addPlanSummary,
     announceTemplate,
-    finishChecklistRow,
     milestone,
-    openChecklist,
     resetThread,
     restorePicker,
-    startPlanEntry,
     turn,
 } from 'local_coursegen/local/courseai/template/thread';
 import {refreshPreviewLinks} from 'local_coursegen/local/courseai/template/preview';
 import {sendTemplatePlanningFeedback} from 'local_coursegen/local/courseai/template/repository';
+import {hideWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
 import {
-    hideWorkingIndicator,
-    showWorkingIndicator,
-} from 'local_coursegen/local/courseai/ui/feedback-progress';
-
-/** The status classes the shared generation stylesheet reacts to. */
-const STATUS_CLASS = {
-    pending: 'cg-gen-pending',
-    running: 'cg-gen-active',
-    done: 'cg-gen-done',
-};
-const ALL_STATUS_CLASSES = Object.values(STATUS_CLASS);
-
-/** Phase keys the service reports, plus the two this module owns. */
-const STAGE_STRINGS = {
-    planning: 'courseai_template_stage_planning',
-    reviewing: 'courseai_template_stage_reviewing',
-    style: 'courseai_template_stage_style',
-    activities: 'courseai_template_stage_activities',
-    activity_images: 'courseai_template_stage_activity_images',
-    section_images: 'courseai_template_stage_section_images',
-    saving: 'courseai_template_stage_saving',
-    connecting: 'courseai_template_stage_connecting',
-    building: 'courseai_template_stage_building',
-};
-const TITLE_STRING = 'courseai_template_generating_title';
-
-let labels = null;
-
-/**
- * The localised header strings, fetched once.
- *
- * @returns {Promise<Object>} Keyed by phase key, plus `title`.
- */
-const getLabels = async() => {
-    if (!labels) {
-        const keys = Object.keys(STAGE_STRINGS);
-        const values = await getStrings([
-            ...keys.map((key) => ({key: STAGE_STRINGS[key], component: 'local_coursegen'})),
-            {key: TITLE_STRING, component: 'local_coursegen'},
-        ]);
-        labels = {title: values[keys.length]};
-        keys.forEach((key, index) => {
-            labels[key] = values[index];
-        });
-    }
-    return labels;
-};
-
-/** Every activity row the AI is going to generate. */
-const generatedRows = () => document.querySelectorAll('[data-generation-cmid]');
-
-/**
- * Mark one activity row with the state its generation is in.
- *
- * @param {number|string} cmid
- * @param {string} status A key of STATUS_CLASS.
- */
-const markRow = (cmid, status) => {
-    const row = document.querySelector(`[data-generation-cmid="${cmid}"]`);
-    if (!row) {
-        return;
-    }
-    row.classList.remove(...ALL_STATUS_CLASSES);
-    row.classList.add(STATUS_CLASS[status] || STATUS_CLASS.pending);
-};
-
-/**
- * Show one phase label in the header's subtitle.
- *
- * @param {string} key
- */
-const paintStage = async(key) => {
-    const text = (await getLabels())[key];
-    if (!text) {
-        return;
-    }
-    const stage = document.getElementById('tplGenStage');
-    if (stage) {
-        stage.textContent = text;
-    }
-    // Free mode keeps both panels on the same sentence, updating one indicator
-    // in place rather than stacking an entry per phase. showWorkingIndicator
-    // does exactly that, and pins itself to the bottom slot while the composer
-    // is away - which here is the whole generation.
-    showWorkingIndicator({}, text);
-};
+    ALL_STATUS_CLASSES,
+    STATUS_CLASS,
+    applyEvent,
+    generatedRows,
+    getLabels,
+    paintStage,
+} from 'local_coursegen/local/courseai/template/stream_events';
 
 /**
  * Put the page in its generating state: header visible and spinning, every
@@ -232,73 +148,6 @@ const markHeaderDone = () => {
     }
     if (check) {
         check.style.display = '';
-    }
-};
-
-/**
- * Apply one decoded stream event.
- *
- * @param {Object} data
- * @param {Object} progress Mutable {total, done} counters.
- * @returns {string} '' to keep listening, otherwise 'completed' or 'failed'.
- */
-const applyEvent = (data, progress) => {
-    switch (data.type) {
-        case 'template_stage':
-            paintStage(data.stage);
-            return '';
-        case 'plan_progress_init':
-            progress.total = Math.max(0, Number(data.total) || 0);
-            progress.done = 0;
-            paintStage('planning');
-            openChecklist(data.sections);
-            return '';
-        case 'plan_progress_start':
-            markRow(data.cmid, 'running');
-            startPlanEntry(data);
-            return '';
-        case 'plan_progress_summary':
-            addPlanSummary(data);
-            return '';
-        case 'plan_progress_part':
-            addPlanPart(data);
-            return '';
-        case 'plan_progress_done':
-            markRow(data.cmid, 'done');
-            progress.done += 1;
-            finishChecklistRow(data.plan || {});
-            // Each activity's plan appears under its own row the moment it is
-            // ready, so the review is already half read by the time the whole
-            // plan lands.
-            renderActivityPlan(data.plan || {});
-            return '';
-        case 'review_needed':
-            return 'review';
-        case 'activity_progress_init':
-            progress.total = Math.max(0, Number(data.total) || 0);
-            progress.done = 0;
-            paintStage('activities');
-            return '';
-        case 'activity_progress_start':
-            markRow(data.cmid, 'running');
-            return '';
-        case 'activity_progress_done':
-        case 'activity_progress_failed':
-            // A failed activity is still counted and still stops looking
-            // "in progress": the run itself then fails, which is what the
-            // professor is told about.
-            markRow(data.cmid, 'done');
-            progress.done += 1;
-            if (progress.total > 0 && progress.done >= progress.total) {
-                paintStage('saving');
-            }
-            return '';
-        case 'completed':
-            return 'completed';
-        case 'failed':
-            return 'failed';
-        default:
-            return '';
     }
 };
 
