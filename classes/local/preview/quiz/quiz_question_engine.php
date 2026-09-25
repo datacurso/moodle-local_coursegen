@@ -56,7 +56,8 @@ trait quiz_question_engine {
         }
         $quba->start_all_questions();
 
-        $options = self::attempt_display_options($this->quiz_get_grade_format(), $this->context);
+        $markdp = $this->quiz_get_grade_format();
+        $options = self::attempt_display_options($markdp, $this->context);
 
         // The attempt page prints its questions inside the form that submits
         // them, and that is the markup the questions' own scripts expect.
@@ -164,8 +165,11 @@ trait quiz_question_engine {
         if (!is_array($value)) {
             return $value;
         }
-        $islist = array_keys($value) === range(0, count($value) - 1);
-        if ($islist || in_array($key, ['answers', 'hints'], true)) {
+        $lastindex = count($value) - 1;
+        $sequentialkeys = range(0, $lastindex);
+        $islist = array_keys($value) === $sequentialkeys;
+        $listkeys = ['answers', 'hints'];
+        if ($islist || in_array($key, $listkeys, true)) {
             return self::objectify_list($value);
         }
         return self::objectify_map($value);
