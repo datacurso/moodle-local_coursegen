@@ -75,13 +75,16 @@ class view {
         global $PAGE, $OUTPUT;
 
         $imscp = $this->imscp;
-        $items = array_filter((array) unserialize_array($imscp->structure));
+        $structure = unserialize_array($imscp->structure);
+        $structure = (array) $structure;
+        $items = array_filter($structure);
 
         $nodes = [];
         foreach ($items as $item) {
             $nodes[] = $this->imscp_item_node($item, $imscp);
         }
-        $out = $OUTPUT->render_from_template('local_coursegen/preview_imscp_tree', ['items' => $nodes]);
+        $treedata = ['items' => $nodes];
+        $out = $OUTPUT->render_from_template('local_coursegen/preview_imscp_tree', $treedata);
 
         $PAGE->requires->js_init_call('M.mod_imscp.init');
         return $out;
@@ -109,12 +112,25 @@ class view {
 
         if ($item['subitems']) {
             $node['hassubitems'] = true;
-            foreach ($item['subitems'] as $subitem) {
-                $node['subitems'][] = $this->imscp_item_node($subitem, $imscp);
-            }
+            $node['subitems'] = $this->imscp_subitem_nodes($item['subitems'], $imscp);
         }
 
         return $node;
+    }
+
+    /**
+     * mod/imscp/locallib.php imscp_htmllize_item(), one item's own subitems.
+     *
+     * @param array $subitems
+     * @param stdClass $imscp
+     * @return array
+     */
+    protected function imscp_subitem_nodes(array $subitems, $imscp): array {
+        $nodes = [];
+        foreach ($subitems as $subitem) {
+            $nodes[] = $this->imscp_item_node($subitem, $imscp);
+        }
+        return $nodes;
     }
 
     /**
