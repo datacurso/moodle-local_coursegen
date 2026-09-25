@@ -110,13 +110,17 @@ class activity_reader {
         // A structure names the activity it describes through these rather
         // than hardcoding it, which is what lets one declaration serve every
         // instance of its module.
+        $sectionid = (int) $task->get_sectionid();
+        $activityid = (int) $task->get_activityid();
+        $contextid = (int) $task->get_contextid();
+
         $processor = new structure_array_processor();
         $processor->set_var(backup::VAR_MODID, $cmid);
         $processor->set_var(backup::VAR_COURSEID, (int) $cm->course);
-        $processor->set_var(backup::VAR_SECTIONID, (int) $task->get_sectionid());
+        $processor->set_var(backup::VAR_SECTIONID, $sectionid);
         $processor->set_var(backup::VAR_MODNAME, $modname);
-        $processor->set_var(backup::VAR_ACTIVITYID, (int) $task->get_activityid());
-        $processor->set_var(backup::VAR_CONTEXTID, (int) $task->get_contextid());
+        $processor->set_var(backup::VAR_ACTIVITYID, $activityid);
+        $processor->set_var(backup::VAR_CONTEXTID, $contextid);
         $processor->set_var(backup::VAR_BACKUPID, 'local_coursegen');
 
         $structure->process($processor);
