@@ -70,7 +70,8 @@ abstract class lesson_page extends lesson_base {
     final public function get_answers() {
         if ($this->answers === null) {
             $this->answers = [];
-            $answers = $this->lesson->get_store()->get_records(
+            $store = $this->lesson->get_store();
+            $answers = $store->get_records(
                 'lesson_answers',
                 ['pageid' => $this->properties->id, 'lessonid' => $this->lesson->id],
                 'id'

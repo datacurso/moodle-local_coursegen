@@ -60,33 +60,41 @@ class lesson_page_type_branchtable extends lesson_page {
 
         // The heading level depends on whether the theme's activity header displays a heading (usually the activity name).
         $headinglevel = $PAGE->activityheader->get_heading_level();
-        $output = $renderer->heading(format_string($this->properties->title), $headinglevel);
-        $output .= $renderer->box($this->get_contents(), 'contents');
+        $title = format_string($this->properties->title);
+        $output = $renderer->heading($title, $headinglevel);
+        $contents = $this->get_contents();
+        $output .= $renderer->box($contents, 'contents');
 
         $buttons = [];
-        foreach ($this->get_answers() as $answer) {
+        $answers = $this->get_answers();
+        foreach ($answers as $answer) {
             if ($answer->answer === '') {
                 // Not a branch!
                 continue;
             }
             $url = $this->lesson->jump_url($this, (int) $answer->jumpto);
-            $buttons[] = $renderer->single_button($url, strip_tags(format_text($answer->answer, FORMAT_MOODLE, $options)));
+            $label = format_text($answer->answer, FORMAT_MOODLE, $options);
+            $label = strip_tags($label);
+            $buttons[] = $renderer->single_button($url, $label);
         }
         // Set the orientation.
         $orientation = 'vertical';
         if ($this->properties->layout) {
             $orientation = 'horizontal';
         }
-        $output .= $renderer->box(implode("\n", $buttons), 'branchbuttoncontainer ' . $orientation);
+        $buttonshtml = implode("\n", $buttons);
+        $output .= $renderer->box($buttonshtml, 'branchbuttoncontainer ' . $orientation);
 
         if (!$this->lesson->slideshow) {
             return $output;
         }
-        return $OUTPUT->render_from_template('local_coursegen/preview_container', [
+        $style = $this->slideshow_style();
+        $templatecontext = [
             'classes' => 'slideshow',
-            'style' => $this->slideshow_style(),
+            'style' => $style,
             'content' => $output,
-        ]);
+        ];
+        return $OUTPUT->render_from_template('local_coursegen/preview_container', $templatecontext);
     }
 
     /**
