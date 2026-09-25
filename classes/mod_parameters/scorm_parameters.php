@@ -16,8 +16,6 @@
 
 namespace local_coursegen\mod_parameters;
 
-use aiprovider_datacurso\httpclient\ai_course_api;
-
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir . '/filelib.php');
@@ -33,17 +31,19 @@ class scorm_parameters extends base_parameters {
     /**
      * Returns the adjusted parameters for the module scorm.
      *
+     * When the AI provider client cannot be built or the download fails the
+     * parameters are returned without the package (the module is still created)
+     * and a package_download_skipped event is triggered.
+     *
      * @return object Adjusted parameters for the module scorm.
      */
     public function get_parameters() {
         $downloadinfo = $this->get_package_download_info();
 
-        $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
-        $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
-
-        $client = new ai_course_api(null, $baseurl, $baseurleu);
-        $file = $client->download_file($downloadinfo['endpoint'], $downloadinfo['filename']);
-        $this->parameters->packagefile = $file->get_itemid();
+        $file = $this->download_package($downloadinfo['endpoint'], $downloadinfo['filename']);
+        if ($file !== null) {
+            $this->parameters->packagefile = $file->get_itemid();
+        }
         return $this->parameters;
     }
 }
