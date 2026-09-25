@@ -64,7 +64,10 @@ const sanitize = (parse, md) => {
         return '';
     }
     const html = parse(String(md || ''));
-    const purify = DOMPurify.sanitize ? DOMPurify : (DOMPurify.default || null);
+    let purify = DOMPurify.default || null;
+    if (DOMPurify.sanitize) {
+        purify = DOMPurify;
+    }
     if (!purify || typeof purify.sanitize !== 'function') {
         // Sanitizing is not optional: show the text rather than raw HTML.
         return String(md || '');
