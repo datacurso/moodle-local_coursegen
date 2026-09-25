@@ -32,7 +32,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {renderMarkdown, formatSectionMd} from 'local_coursegen/local/courseai/ui/markdown';
+import {renderMarkdown} from 'local_coursegen/local/courseai/ui/markdown';
+import {formatSectionMd} from 'local_coursegen/local/courseai/ui/plan_markdown';
 import {get_string} from 'core/str';
 
 /** Collapsed max-height (px) before the detail fades + shows a "Show more" toggle. */
