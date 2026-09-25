@@ -50,11 +50,10 @@ class h5pactivity_preview extends ported_preview {
         }
         $row = reset($rows);
         $value = $this->parameters['introeditor'] ?? ($this->parameters['intro'] ?? null);
-        $text = is_array($value) ? (string) ($value['text'] ?? '') : (string) ($value ?? '');
+        $text = self::editor_field_text($value);
         if (trim($text) !== '') {
             $store->set('h5pactivity', $row->id, 'intro', $text);
-            $store->set('h5pactivity', $row->id, 'introformat',
-                is_array($value) ? (int) ($value['format'] ?? FORMAT_HTML) : FORMAT_HTML);
+            $store->set('h5pactivity', $row->id, 'introformat', self::editor_field_format($value));
         }
     }
 
@@ -70,7 +69,10 @@ class h5pactivity_preview extends ported_preview {
         }
         // The package, as view.php finds it: the one file in the package area.
         $files = $this->files()->get_area_files($this->context()->id, 'mod_h5pactivity', 'package', 0, 'id', false);
-        $file = $files ? reset($files) : null;
+        $file = null;
+        if ($files) {
+            $file = reset($files);
+        }
         $view = new view($instance, $this->context(), $this->store(), $file, $this->url_to());
         return $view->page();
     }

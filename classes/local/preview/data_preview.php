@@ -66,13 +66,17 @@ class data_preview extends ported_preview {
             if (!is_array($field) || trim((string) ($field['name'] ?? '')) === '') {
                 continue;
             }
+            $required = 0;
+            if (!empty($field['required'])) {
+                $required = 1;
+            }
             $store->add('data_fields', [
                 'id' => $id++,
                 'dataid' => $data->id,
                 'type' => (string) ($field['type'] ?? 'text'),
                 'name' => (string) $field['name'],
                 'description' => (string) ($field['description'] ?? ''),
-                'required' => !empty($field['required']) ? 1 : 0,
+                'required' => $required,
             ]);
         }
     }

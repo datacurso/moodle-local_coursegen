@@ -96,7 +96,10 @@ class forum_preview extends ported_preview {
      */
     public function render(): string {
         $view = $this->view();
-        return $view === null ? $this->nothing_yet() : $view->page();
+        if ($view === null) {
+            return $this->nothing_yet();
+        }
+        return $view->page();
     }
 
     /**

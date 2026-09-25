@@ -64,6 +64,15 @@ class feedback_preview extends ported_preview {
                 continue;
             }
             $typ = (string) $question['typ'];
+            // A label and a page break ask nothing; every other item does.
+            $hasvalue = 1;
+            if (in_array($typ, ['label', 'pagebreak'], true)) {
+                $hasvalue = 0;
+            }
+            $required = 0;
+            if (!empty($question['required'])) {
+                $required = 1;
+            }
             $store->add('feedback_item', [
                 'id' => $position,
                 'feedback' => $feedback->id,
@@ -72,10 +81,9 @@ class feedback_preview extends ported_preview {
                 'label' => (string) ($question['label'] ?? ''),
                 'presentation' => '',
                 'typ' => $typ,
-                // A label and a page break ask nothing; every other item does.
-                'hasvalue' => in_array($typ, ['label', 'pagebreak'], true) ? 0 : 1,
+                'hasvalue' => $hasvalue,
                 'position' => $position,
-                'required' => !empty($question['required']) ? 1 : 0,
+                'required' => $required,
                 'dependitem' => 0,
                 'dependvalue' => '',
                 'options' => '',

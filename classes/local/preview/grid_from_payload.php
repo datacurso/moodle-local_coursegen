@@ -67,6 +67,11 @@ class grid_from_payload {
             $info = self::section_info($payload, (int) $section['num']);
             $options = $info['format_options'] ?? [];
 
+            $generatedimageuri = false;
+            if (empty($info['image'])) {
+                $generatedimageuri = self::generated_image($section['sectionname']);
+            }
+
             $numbers[] = (int) $section['num'];
             $tiles[] = [
                 'number' => (int) $section['num'],
@@ -84,7 +89,7 @@ class grid_from_payload {
                 // and only one is ever set.
                 'imageuri' => $info['image'] ?? false,
                 'imagealttext' => (string) ($options['sectionimagealttext'] ?? ''),
-                'generatedimageuri' => empty($info['image']) ? self::generated_image($section['sectionname']) : false,
+                'generatedimageuri' => $generatedimageuri,
                 'sectioncompletionmarkup' => '',
             ];
 
@@ -92,6 +97,10 @@ class grid_from_payload {
         }
 
         $showsinpopup = ((int) ($settings['popup'] ?? 0)) === 2;
+        $popupsections = [];
+        if ($showsinpopup) {
+            $popupsections = $popups;
+        }
 
         // A section shown as a tile is not also shown in the list above it:
         // the format draws both from what it is given, so giving it the same
@@ -112,7 +121,7 @@ class grid_from_payload {
             // and the dialog holds the same sections this page already built,
             // so what is in them is what the run is going to produce.
             'popup' => $showsinpopup,
-            'popupsections' => $showsinpopup ? $popups : [],
+            'popupsections' => $popupsections,
             'coursestyles' => self::styles($settings),
         ];
     }
