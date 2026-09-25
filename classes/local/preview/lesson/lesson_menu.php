@@ -44,13 +44,7 @@ class lesson_menu {
         }
 
         $pages = $lesson->load_all_pages();
-        $pageid = 0;
-        foreach ($pages as $page) {
-            if ((int) $page->prevpageid === 0) {
-                $pageid = $page->id;
-                break;
-            }
-        }
+        $pageid = self::first_page_id($pages);
 
         if (!$pageid || !$pages) {
             return null;
@@ -87,5 +81,21 @@ class lesson_menu {
         $bc->content = $content;
 
         return $bc;
+    }
+
+    /**
+     * The id of the lesson's first page: the one no other page's nextpageid
+     * points to.
+     *
+     * @param lesson_page[] $pages
+     * @return int
+     */
+    private static function first_page_id(array $pages): int {
+        foreach ($pages as $page) {
+            if ((int) $page->prevpageid === 0) {
+                return $page->id;
+            }
+        }
+        return 0;
     }
 }

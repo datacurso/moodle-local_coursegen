@@ -54,12 +54,11 @@ class lesson_preview extends preview_base {
      * @param json_store $store
      */
     protected function overlay(json_store $store): void {
-        $idbytitle = [];
-        foreach ($store->get_records('lesson_pages') as $row) {
-            $idbytitle[trim((string) ($row->title ?? ''))] ??= $row->id;
-        }
+        $idbytitle = $this->ids_by_title($store);
         foreach (($this->parameters['mod_settings']['pages'] ?? []) as $page) {
-            $id = $page['id'] ?? ($idbytitle[trim((string) ($page['title'] ?? ''))] ?? null);
+            $title = trim((string) ($page['title'] ?? ''));
+            $fallbackid = $idbytitle[$title] ?? null;
+            $id = $page['id'] ?? $fallbackid;
             if ($id === null) {
                 continue;
             }
@@ -70,6 +69,21 @@ class lesson_preview extends preview_base {
                 $store->set('lesson_pages', $id, 'contents', (string) $page['content_html']);
             }
         }
+    }
+
+    /**
+     * Every lesson page's own row id, keyed by its title, for the pages a
+     * draft names by title rather than by id.
+     *
+     * @param json_store $store
+     * @return array
+     */
+    protected function ids_by_title(json_store $store): array {
+        $idbytitle = [];
+        foreach ($store->get_records('lesson_pages') as $row) {
+            $idbytitle[trim((string) ($row->title ?? ''))] ??= $row->id;
+        }
+        return $idbytitle;
     }
 
     /**
@@ -94,13 +108,32 @@ class lesson_preview extends preview_base {
             $row,
             $store,
             $this->cm(),
-            fn(int $pageid): moodle_url => $this->page_url($this->index_of($pageid)),
-            fn(): moodle_url => new moodle_url('/local/coursegen/course_preview.php', [
-                'sessionid' => $this->here->get_param('sessionid'),
-            ]),
+            [$this, 'lesson_page_url'],
+            [$this, 'lesson_exit_url'],
             $contextid
         );
         return $this->lesson;
+    }
+
+    /**
+     * Where a lesson page is opened in the preview.
+     *
+     * @param int $pageid
+     * @return moodle_url
+     */
+    protected function lesson_page_url(int $pageid): moodle_url {
+        return $this->page_url($this->index_of($pageid));
+    }
+
+    /**
+     * Where leaving the lesson goes.
+     *
+     * @return moodle_url
+     */
+    protected function lesson_exit_url(): moodle_url {
+        return new moodle_url('/local/coursegen/course_preview.php', [
+            'sessionid' => $this->here->get_param('sessionid'),
+        ]);
     }
 
     /**
@@ -110,8 +143,12 @@ class lesson_preview extends preview_base {
      * @return int
      */
     protected function index_of(int $pageid): int {
-        $position = array_search($pageid, array_keys($this->lesson->load_all_pages()), false);
-        return $position === false ? 0 : (int) $position;
+        $pageids = array_keys($this->lesson->load_all_pages());
+        $position = array_search($pageid, $pageids, false);
+        if ($position === false) {
+            return 0;
+        }
+        return (int) $position;
     }
 
     /**
@@ -128,7 +165,8 @@ class lesson_preview extends preview_base {
         if (!$pages) {
             return null;
         }
-        $at = max(0, min($this->page, count($pages) - 1));
+        $upperbound = min($this->page, count($pages) - 1);
+        $at = max(0, $upperbound);
         return $pages[$at];
     }
 
@@ -177,7 +215,10 @@ class lesson_preview extends preview_base {
             return [];
         }
         $block = lesson_menu::block_contents($this->lesson, (int) $page->id);
-        return $block === null ? [] : [$block];
+        if ($block === null) {
+            return [];
+        }
+        return [$block];
     }
 
     /**
