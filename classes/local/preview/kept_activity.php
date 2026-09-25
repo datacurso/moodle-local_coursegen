@@ -49,14 +49,21 @@ class kept_activity {
      *
      * Example, for a kept lesson named "My Lesson" with one page:
      * ```php
-     * $activity = ['resource_type' => 'lesson',
-     *     'parameters' => ['name' => 'My Lesson', 'structure' => ['lesson' => [['pages' => [...]]]]]];
+     * $activity = [
+     *     'resource_type' => 'lesson',
+     *     'parameters' => [
+     *         'name' => 'My Lesson',
+     *         'structure' => ['lesson' => [['pages' => [...]]]],
+     *     ],
+     * ];
      * // returns:
      * ['name' => 'My Lesson', 'mod_settings' => ['pages' => [...]]]
      * ```
      *
      * For any other module type, returns instead:
-     * `['name' => ..., 'introeditor' => ['text' => ..., ...], 'page' => ...]`.
+     * ```php
+     * ['name' => ..., 'introeditor' => ['text' => ..., ...], 'page' => ...]
+     * ```
      *
      * @param array $activity The activity as the payload describes it.
      * @return array
@@ -119,12 +126,19 @@ class kept_activity {
      *
      * Example:
      * ```php
-     * $page = ['id' => 101, 'title' => 'Page A', 'contents' => '<p>Welcome</p>',
+     * $page = [
+     *     'id' => 101, 'title' => 'Page A', 'contents' => '<p>Welcome</p>',
+     *     'layout' => 1, 'qtype' => 20, 'display' => 1,
      *     'prevpageid' => '0', 'nextpageid' => '102',
-     *     'answers' => [['answer' => [['answer_text' => 'Continue', 'jumpto' => 102]]]]];
+     *     'answers' => [['answer' => [['answer_text' => 'Continue', 'jumpto' => 102]]]],
+     * ];
      * // returns:
-     * ['id' => 101, 'page_type' => 'content', 'title' => 'Page A',
-     *     'content_html' => '<p>Welcome</p>', 'buttons' => [['text' => 'Continue', 'jumpto' => 102]]]
+     * [
+     *     'id' => 101, 'layout' => 1, 'qtype' => 20, 'display' => 1,
+     *     'page_type' => 'content', 'title' => 'Page A',
+     *     'content_html' => '<p>Welcome</p>',
+     *     'buttons' => [['text' => 'Continue', 'jumpto' => 102]],
+     * ]
      * ```
      *
      * @param array $page One raw page node, as lesson_pages_in_order() returns it.
