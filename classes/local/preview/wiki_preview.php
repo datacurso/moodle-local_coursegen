@@ -191,13 +191,11 @@ class wiki_preview extends preview_base {
         if ($wiki === null) {
             return null;
         }
-        $this->view = new view(
-            $wiki,
-            $this->cm(),
-            $this->context(),
-            $this->store(),
-            fn(int $index, array $extra): moodle_url => $this->url_to(['page' => $index] + $extra)
-        );
+        $cm = $this->cm();
+        $context = $this->context();
+        $store = $this->store();
+        $urls = fn(int $index, array $extra): moodle_url => $this->url_to(['page' => $index] + $extra);
+        $this->view = new view($wiki, $cm, $context, $store, $urls);
         return $this->view;
     }
 
@@ -213,7 +211,10 @@ class wiki_preview extends preview_base {
             return null;
         }
         if ($this->here->get_param('page') !== null) {
-            return $pages[max(0, min($this->page, count($pages) - 1))];
+            $lastindex = count($pages) - 1;
+            $boundedindex = min($this->page, $lastindex);
+            $boundedindex = max(0, $boundedindex);
+            return $pages[$boundedindex];
         }
         return $view->wiki_get_first_page() ?? $pages[0];
     }
@@ -234,7 +235,8 @@ class wiki_preview extends preview_base {
         if ($page === null) {
             // view.php sends the reader to create the first page; a preview
             // has nothing to create, so it says what the wiki still lacks.
-            return $OUTPUT->notification(get_string('nocontent', 'wiki'), 'info', false);
+            $nocontent = get_string('nocontent', 'wiki');
+            return $OUTPUT->notification($nocontent, 'info', false);
         }
         return $view->page($page);
     }
@@ -263,12 +265,14 @@ class wiki_preview extends preview_base {
         if (!empty($subwiki->id)) {
             $hiddenfields[] = (object) ['type' => 'hidden', 'name' => 'subwikiid', 'value' => $subwiki->id];
         }
+        $action = $this->url_to();
+        $searchstring = get_string('searchwikis', 'wiki');
         $data = [
-            'action' => $this->url_to(),
+            'action' => $action,
             'hiddenfields' => $hiddenfields,
             'inputname' => 'searchstring',
             'query' => '',
-            'searchstring' => get_string('searchwikis', 'wiki'),
+            'searchstring' => $searchstring,
             'extraclasses' => 'mt-2'
         ];
         return $OUTPUT->render_from_template('core/search_input', $data);
