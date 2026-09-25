@@ -117,6 +117,20 @@ class page_preview extends preview_base {
     }
 
     /**
+     * The page's saved display options, unserialized.
+     *
+     * @param stdClass $page
+     * @return array
+     */
+    private function display_options(stdClass $page): array {
+        if (empty($page->displayoptions)) {
+            return [];
+        }
+        $options = unserialize_array($page->displayoptions);
+        return (array) $options;
+    }
+
+    /**
      * The description, only when the page is set to print it.
      *
      * mod/page/view.php empties the header's description unless printintro is
