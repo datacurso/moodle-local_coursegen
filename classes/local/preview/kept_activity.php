@@ -50,8 +50,10 @@ class kept_activity {
         $name = format_string((string) ($parameters['name'] ?? ''));
 
         if ($modname === 'lesson') {
+            $orderedpages = self::lesson_pages_in_order($root);
             $pages = [];
-            foreach (self::lesson_pages_in_order($root) as $page) {
+            foreach ($orderedpages as $page) {
+                $buttons = self::buttons_of($page);
                 $pages[] = [
                     // The page's own id and layout, because a page's buttons
                     // are jumps to pages and a page says how they are laid out.
@@ -64,7 +66,7 @@ class kept_activity {
                     'page_type' => 'content',
                     'title' => (string) ($page['title'] ?? ''),
                     'content_html' => (string) ($page['contents'] ?? ''),
-                    'buttons' => self::buttons_of($page),
+                    'buttons' => $buttons,
                 ];
             }
             return ['name' => $name, 'mod_settings' => ['pages' => $pages]];
@@ -207,10 +209,12 @@ class kept_activity {
      * @return array
      */
     private static function buttons_of(array $page): array {
+        $answers = self::lesson_answers_of($page);
         $buttons = [];
-        foreach (self::lesson_answers_of($page) as $answer) {
+        foreach ($answers as $answer) {
+            $text = html_to_text((string) ($answer['answer_text'] ?? ''), 0, false);
             $buttons[] = [
-                'text' => html_to_text((string) ($answer['answer_text'] ?? ''), 0, false),
+                'text' => $text,
                 'jumpto' => $answer['jumpto'] ?? null,
             ];
         }
