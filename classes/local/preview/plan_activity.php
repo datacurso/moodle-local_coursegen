@@ -43,29 +43,73 @@ class plan_activity {
      */
     public static function to_parameters(array $entry): array {
         $parts = $entry['parts'] ?? [];
-        $name = (string) ($entry['name'] ?? '');
+        $name = $entry['name'] ?? '';
+        $name = (string) $name;
 
-        if (($entry['resource_type'] ?? '') === 'lesson') {
-            $pages = [];
-            foreach ($parts as $part) {
-                $pages[] = [
-                    // The piece of the mould this one fills, named by the id
-                    // the mould's own module gave it.
-                    'id' => self::element_id((string) ($part['key'] ?? '')),
-                    'page_type' => 'content',
-                    'title' => (string) ($part['title'] ?? ''),
-                    'content_html' => (string) ($part['html'] ?? ''),
-                    'buttons' => [],
-                ];
-            }
-            return ['name' => $name, 'mod_settings' => ['pages' => $pages]];
+        $resourcetype = $entry['resource_type'] ?? '';
+        if ($resourcetype === 'lesson') {
+            return self::lesson_parameters($name, $parts);
         }
+        return self::flat_parameters($name, $parts);
+    }
 
-        // Every other type keeps its text in one field, so the parts are simply
-        // concatenated in the order the mould authored them.
+    /**
+     * A lesson plan entry's parameters: one page per part.
+     *
+     * @param string $name
+     * @param array $parts
+     * @return array
+     */
+    private static function lesson_parameters(string $name, array $parts): array {
+        $pages = [];
+        foreach ($parts as $part) {
+            $pages[] = self::lesson_plan_page($part);
+        }
+        return ['name' => $name, 'mod_settings' => ['pages' => $pages]];
+    }
+
+    /**
+     * One plan part, as a lesson page.
+     *
+     * @param array $part
+     * @return array
+     */
+    private static function lesson_plan_page(array $part): array {
+        $key = $part['key'] ?? '';
+        $key = (string) $key;
+        $id = self::element_id($key);
+
+        $title = $part['title'] ?? '';
+        $title = (string) $title;
+
+        $contenthtml = $part['html'] ?? '';
+        $contenthtml = (string) $contenthtml;
+
+        return [
+            // The piece of the mould this one fills, named by the id
+            // the mould's own module gave it.
+            'id' => $id,
+            'page_type' => 'content',
+            'title' => $title,
+            'content_html' => $contenthtml,
+            'buttons' => [],
+        ];
+    }
+
+    /**
+     * A non-lesson plan entry's parameters: every part's text concatenated,
+     * in the order the mould authored them.
+     *
+     * @param string $name
+     * @param array $parts
+     * @return array
+     */
+    private static function flat_parameters(string $name, array $parts): array {
         $html = '';
         foreach ($parts as $part) {
-            $html .= (string) ($part['html'] ?? '');
+            $parthtml = $part['html'] ?? '';
+            $parthtml = (string) $parthtml;
+            $html .= $parthtml;
         }
         return [
             'name' => $name,
@@ -104,41 +148,89 @@ class plan_activity {
             return $parameters;
         }
 
-        $coursedata = json_decode((string) $session->get('coursedata'), true);
-        $templateid = (int) ($coursedata['templateid'] ?? 0);
+        $coursedata = $session->get('coursedata');
+        $coursedata = (string) $coursedata;
+        $coursedata = json_decode($coursedata, true);
+        $templateid = $coursedata['templateid'] ?? 0;
+        $templateid = (int) $templateid;
         if ($templateid <= 0) {
             return $parameters;
         }
 
-        $mould = [];
         $payload = \local_coursegen\local\service\template_export_service::build_init_payload($templateid);
-        foreach (($payload['activities'] ?? []) as $activity) {
-            if ((int) ($activity['cmid'] ?? 0) === $sourcecmid) {
-                $mould = kept_activity::to_parameters($activity)['mod_settings']['pages'] ?? [];
-                break;
-            }
-        }
+        $mould = self::mould_pages($payload, $sourcecmid);
         if (!$mould) {
             return $parameters;
         }
 
-        $drafted = [];
-        foreach (($parameters['mod_settings']['pages'] ?? []) as $page) {
-            $drafted[(string) ($page['id'] ?? '')] = $page;
-        }
+        $drafted = self::drafted_pages_by_id($parameters);
+        $pages = self::merged_pages($mould, $drafted);
 
+        $parameters['mod_settings']['pages'] = $pages;
+        return $parameters;
+    }
+
+    /**
+     * The mould activity's own lesson pages, from the payload's activities.
+     *
+     * @param array $payload
+     * @param int $sourcecmid
+     * @return array
+     */
+    private static function mould_pages(array $payload, int $sourcecmid): array {
+        $activities = $payload['activities'] ?? [];
+        foreach ($activities as $activity) {
+            $cmid = $activity['cmid'] ?? 0;
+            $cmid = (int) $cmid;
+            if ($cmid === $sourcecmid) {
+                $activityparameters = kept_activity::to_parameters($activity);
+                $modsettings = $activityparameters['mod_settings'] ?? [];
+                return $modsettings['pages'] ?? [];
+            }
+        }
+        return [];
+    }
+
+    /**
+     * The drafted pages already in $parameters, keyed by the mould page id
+     * each one fills.
+     *
+     * @param array $parameters
+     * @return array
+     */
+    private static function drafted_pages_by_id(array $parameters): array {
+        $modsettings = $parameters['mod_settings'] ?? [];
+        $draftedpages = $modsettings['pages'] ?? [];
+        $drafted = [];
+        foreach ($draftedpages as $page) {
+            $id = $page['id'] ?? '';
+            $id = (string) $id;
+            $drafted[$id] = $page;
+        }
+        return $drafted;
+    }
+
+    /**
+     * The mould's pages, with any drafted page's title/content laid over the
+     * one it fills.
+     *
+     * @param array $mould
+     * @param array $drafted Page id (string) => drafted page.
+     * @return array
+     */
+    private static function merged_pages(array $mould, array $drafted): array {
         $pages = [];
         foreach ($mould as $page) {
-            $draft = $drafted[(string) ($page['id'] ?? '')] ?? null;
+            $id = $page['id'] ?? '';
+            $id = (string) $id;
+            $draft = $drafted[$id] ?? null;
             if ($draft !== null) {
                 $page['title'] = $draft['title'] ?? $page['title'];
                 $page['content_html'] = $draft['content_html'] ?? $page['content_html'];
             }
             $pages[] = $page;
         }
-
-        $parameters['mod_settings']['pages'] = $pages;
-        return $parameters;
+        return $pages;
     }
 
     /**
@@ -156,6 +248,9 @@ class plan_activity {
             return null;
         }
         $id = substr($key, $at + 1);
-        return ctype_digit($id) ? (int) $id : null;
+        if (!ctype_digit($id)) {
+            return null;
+        }
+        return (int) $id;
     }
 }
