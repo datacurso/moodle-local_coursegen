@@ -38,28 +38,35 @@ class quiz_question_data {
      * @return array|null Null for a type this cannot lay out.
      */
     public static function from_form(array $form, int &$id, int $contextid): ?array {
-        $qtype = (string) ($form['qtype'] ?? '');
-        $editor = static function ($value): array {
-            if (is_array($value)) {
-                return ['text' => (string) ($value['text'] ?? ''), 'format' => (int) ($value['format'] ?? FORMAT_HTML)];
-            }
-            return ['text' => (string) $value, 'format' => FORMAT_HTML];
-        };
-        $questiontext = $editor($form['questiontext'] ?? '');
-        $generalfeedback = $editor($form['generalfeedback'] ?? '');
+        $qtype = $form['qtype'] ?? '';
+        $qtype = (string) $qtype;
+        $editor = self::field_editor();
+
+        $questiontextraw = $form['questiontext'] ?? '';
+        $questiontext = $editor($questiontextraw);
+        $generalfeedbackraw = $form['generalfeedback'] ?? '';
+        $generalfeedback = $editor($generalfeedbackraw);
 
         $questionid = $id++;
+        $name = $form['name'] ?? '';
+        $name = (string) $name;
+        $defaultmark = $form['defaultmark'] ?? 1;
+        $defaultmark = (float) $defaultmark;
+        $penalty = $form['penalty'] ?? 0.3333333;
+        $penalty = (float) $penalty;
+        $hints = self::build_hints($form, $id, $questionid, $editor);
+
         $data = [
             'id' => $questionid,
             'category' => 0,
             'parent' => 0,
-            'name' => (string) ($form['name'] ?? ''),
+            'name' => $name,
             'questiontext' => $questiontext['text'],
             'questiontextformat' => $questiontext['format'],
             'generalfeedback' => $generalfeedback['text'],
             'generalfeedbackformat' => $generalfeedback['format'],
-            'defaultmark' => (float) ($form['defaultmark'] ?? 1),
-            'penalty' => (float) ($form['penalty'] ?? 0.3333333),
+            'defaultmark' => $defaultmark,
+            'penalty' => $penalty,
             'qtype' => $qtype,
             'length' => 1,
             'stamp' => '',
@@ -73,34 +80,10 @@ class quiz_question_data {
             'versionid' => 0,
             'version' => 1,
             'questionbankentryid' => 0,
-            'hints' => [],
+            'hints' => $hints,
         ];
-        foreach ((array) ($form['hint'] ?? []) as $hint) {
-            $hint = $editor($hint);
-            if (trim($hint['text']) === '') {
-                continue;
-            }
-            $data['hints'][] = [
-                'id' => $id++, 'questionid' => $questionid, 'hint' => $hint['text'], 'hintformat' => $hint['format'],
-                'shownumcorrect' => 0, 'clearwrong' => 0, 'options' => null,
-            ];
-        }
 
-        $answers = [];
-        $answertexts = (array) ($form['answer'] ?? []);
-        $fractions = (array) ($form['fraction'] ?? []);
-        $feedbacks = (array) ($form['feedback'] ?? []);
-        foreach (array_values($answertexts) as $index => $answer) {
-            $answer = $editor($answer);
-            $feedback = $editor($feedbacks[$index] ?? '');
-            $answers[$id] = [
-                'id' => $id, 'question' => $questionid,
-                'answer' => $answer['text'], 'answerformat' => $answer['format'],
-                'fraction' => (float) ($fractions[$index] ?? 0),
-                'feedback' => $feedback['text'], 'feedbackformat' => $feedback['format'],
-            ];
-            $id++;
-        }
+        $answers = self::build_answers($form, $id, $questionid, $editor);
 
         $options = ['id' => $id++, 'questionid' => $questionid];
         $method = self::options_builder($qtype);
@@ -114,6 +97,87 @@ class quiz_question_data {
         }
         $data['options'] = $options;
         return $data;
+    }
+
+    /**
+     * An editor field's text and format, whether the form sent it as an
+     * array (editor/textarea) or a plain string.
+     *
+     * @return callable
+     */
+    protected static function field_editor(): callable {
+        return static function ($value): array {
+            if (is_array($value)) {
+                $text = $value['text'] ?? '';
+                $text = (string) $text;
+                $format = $value['format'] ?? FORMAT_HTML;
+                $format = (int) $format;
+                return ['text' => $text, 'format' => $format];
+            }
+            $text = (string) $value;
+            return ['text' => $text, 'format' => FORMAT_HTML];
+        };
+    }
+
+    /**
+     * A drafted question's hint rows, in the shape the engine expects,
+     * skipping a hint whose editor field was left empty.
+     *
+     * @param array $form
+     * @param int $id
+     * @param int $questionid
+     * @param callable $editor
+     * @return array
+     */
+    protected static function build_hints(array $form, int &$id, int $questionid, callable $editor): array {
+        $hints = [];
+        $rawhints = $form['hint'] ?? [];
+        $rawhints = (array) $rawhints;
+        foreach ($rawhints as $rawhint) {
+            $hint = $editor($rawhint);
+            if (trim($hint['text']) === '') {
+                continue;
+            }
+            $hints[] = [
+                'id' => $id++, 'questionid' => $questionid, 'hint' => $hint['text'], 'hintformat' => $hint['format'],
+                'shownumcorrect' => 0, 'clearwrong' => 0, 'options' => null,
+            ];
+        }
+        return $hints;
+    }
+
+    /**
+     * A drafted question's answer rows, in the shape the engine expects.
+     *
+     * @param array $form
+     * @param int $id
+     * @param int $questionid
+     * @param callable $editor
+     * @return array
+     */
+    protected static function build_answers(array $form, int &$id, int $questionid, callable $editor): array {
+        $answers = [];
+        $answertexts = $form['answer'] ?? [];
+        $answertexts = (array) $answertexts;
+        $fractions = $form['fraction'] ?? [];
+        $fractions = (array) $fractions;
+        $feedbacks = $form['feedback'] ?? [];
+        $feedbacks = (array) $feedbacks;
+        foreach (array_values($answertexts) as $index => $rawanswer) {
+            $answer = $editor($rawanswer);
+            $rawfeedback = $feedbacks[$index] ?? '';
+            $feedback = $editor($rawfeedback);
+            $fraction = $fractions[$index] ?? 0;
+            $fraction = (float) $fraction;
+            $answers[$id] = [
+                'id' => $id, 'question' => $questionid,
+                'answer' => $answer['text'], 'answerformat' => $answer['format'],
+                'fraction' => $fraction,
+                'feedback' => $feedback['text'], 'feedbackformat' => $feedback['format'],
+            ];
+            $id++;
+        }
+        return $answers;
     }
 
     /**
