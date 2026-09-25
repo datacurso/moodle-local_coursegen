@@ -92,13 +92,15 @@ trait choice_results_view {
 
             if (array_key_exists($optionid, $allresponses)) {
                 $display->options[$optionid]->user = $allresponses[$optionid];
-                $allusers = array_merge($allusers, array_keys($allresponses[$optionid]));
+                $responderids = array_keys($allresponses[$optionid]);
+                $allusers = array_merge($allusers, $responderids);
             }
         }
         unset($display->option);
         unset($display->maxanswers);
 
-        $display->numberofuser = count(array_unique($allusers));
+        $uniqueusers = array_unique($allusers);
+        $display->numberofuser = count($uniqueusers);
         $context = $this->context;
         $display->viewresponsecapability = has_capability('mod/choice:readresponses', $context);
         $display->deleterepsonsecapability = has_capability('mod/choice:deleteresponses',$context);
