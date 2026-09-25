@@ -200,8 +200,9 @@ class view {
         global $OUTPUT;
         $html = '';
 
+        $title = format_string($page->title);
         $html .= $OUTPUT->container_start('wiki_headingtitle');
-        $html .= $OUTPUT->heading(format_string($page->title), 3);
+        $html .= $OUTPUT->heading($title, 3);
         $html .= $OUTPUT->container_end();
         return $html;
     }

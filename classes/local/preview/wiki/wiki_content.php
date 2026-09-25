@@ -49,7 +49,8 @@ trait wiki_content {
             $page = $content['page'];
             $paragraphs = [];
             foreach ($content['sections'] as $s) {
-                $paragraphs[] = ['text' => get_string('repeatedsection', 'wiki', $s)];
+                $sectiontext = get_string('repeatedsection', 'wiki', $s);
+                $paragraphs[] = ['text' => $sectiontext];
             }
 
             if (!empty($paragraphs)) {
@@ -249,7 +250,8 @@ trait wiki_content {
         $index = $view->index_of($firstpage);
         $urls = $view->urls;
         $here = $urls($index, []);
-        return array('content' => $link, 'url' => $here->out(false), 'new' => true,
+        $url = $here->out(false);
+        return array('content' => $link, 'url' => $url, 'new' => true,
             'link_info' => array('link' => $link, 'new' => true, 'pageid' => 0));
     }
 
