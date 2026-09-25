@@ -107,10 +107,12 @@ trait choice_options_view {
         // reason it cannot be saved. Nobody may act on an activity that does not exist, so the
         // options are shown and nothing follows them.
 
+        $action = $target->out(false);
+        $sesskeyvalue = sesskey();
         return $OUTPUT->render_from_template('local_coursegen/preview_choice_options', [
-            'action' => $target->out(false),
+            'action' => $action,
             'layoutclass' => $layoutclass,
-            'sesskey' => sesskey(),
+            'sesskey' => $sesskeyvalue,
             'coursemoduleid' => $coursemoduleid,
             'options' => $rows,
         ]);
@@ -136,6 +138,9 @@ trait choice_options_view {
 
         $isfull = !empty($option->attributes->disabled);
         $showavailable = !empty($options['limitanswers']) && !empty($options['showavailable']);
+        $fulltext = get_string('full', 'choice');
+        $responsestext = get_string('responsesa', 'choice', $option->countanswers);
+        $limittext = get_string('limita', 'choice', $option->maxanswers);
 
         return [
             'type' => $type,
@@ -145,10 +150,10 @@ trait choice_options_view {
             'disabled' => $disabled || $isfull,
             'text' => $option->text,
             'isfull' => $isfull,
-            'fulltext' => get_string('full', 'choice'),
+            'fulltext' => $fulltext,
             'showavailable' => $showavailable,
-            'responsestext' => get_string('responsesa', 'choice', $option->countanswers),
-            'limittext' => get_string('limita', 'choice', $option->maxanswers),
+            'responsestext' => $responsestext,
+            'limittext' => $limittext,
         ];
     }
 }
