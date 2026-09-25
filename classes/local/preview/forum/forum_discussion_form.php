@@ -74,8 +74,12 @@ trait forum_discussion_form {
         $mformpost = new \mod_forum_post_form($posturl, $formparams, 'post', '', array('id' => 'mformforum'));
         $discussionsubscribe = \mod_forum\subscriptions::get_user_default_subscription($forumrecord, $coursecontext, $cm, null);
 
+        $groupidparam = array();
+        if (isset($post->groupid)) {
+            $groupidparam = array('groupid' => $post->groupid);
+        }
         $params = array('reply' => 0, 'forum' => $forumrecord->id, 'edit' => 0) +
-            (isset($post->groupid) ? array('groupid' => $post->groupid) : array()) +
+            $groupidparam +
             array(
                 'userid' => $post->userid,
                 'parent' => $post->parent,
