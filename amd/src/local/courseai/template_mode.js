@@ -245,7 +245,10 @@ export const wireTemplateMode = (state) => {
             } catch (e) {
                 // Undo the insertion so state matches the still-rendered DOM.
                 const section = tplState.sections[sectionIndex];
-                const idx = section ? section.activities.indexOf(inserted) : -1;
+                let idx = -1;
+                if (section) {
+                    idx = section.activities.indexOf(inserted);
+                }
                 if (idx !== -1) {
                     section.activities.splice(idx, 1);
                 }
