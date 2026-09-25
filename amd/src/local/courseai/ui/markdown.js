@@ -118,7 +118,10 @@ export const renderMarkdownInline = (md) => {
  * @returns {string} Sanitized HTML, or '' when sanitizing is unavailable.
  */
 export const renderHtml = (html) => {
-    const purify = DOMPurify.sanitize ? DOMPurify : (DOMPurify.default || null);
+    let purify = DOMPurify.default || null;
+    if (DOMPurify.sanitize) {
+        purify = DOMPurify;
+    }
     if (!purify || typeof purify.sanitize !== 'function') {
         // Sanitizing is not optional: show nothing rather than raw HTML.
         return '';
