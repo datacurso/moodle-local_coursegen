@@ -95,28 +95,25 @@ class kept_activity {
     private static function lesson_pages_in_order(array $root): array {
         $pages = [];
         foreach (($root['pages'] ?? []) as $group) {
-            foreach (($group['page'] ?? []) as $page) {
-                $pages[] = $page;
-            }
+            $pages = array_merge($pages, $group['page'] ?? []);
         }
         if (!$pages) {
             return [];
         }
 
+        // The page nobody names as "next" is the first one, found in the
+        // same pass that indexes every page by id for the walk below.
         $byid = [];
+        $current = null;
         foreach ($pages as $page) {
             $byid[(string) ($page['id'] ?? '')] = $page;
+            if ($current === null && (string) ($page['prevpageid'] ?? '0') === '0') {
+                $current = $page;
+            }
         }
 
         $ordered = [];
         $seen = [];
-        $current = null;
-        foreach ($pages as $page) {
-            if ((string) ($page['prevpageid'] ?? '0') === '0') {
-                $current = $page;
-                break;
-            }
-        }
         while ($current !== null) {
             $id = (string) ($current['id'] ?? '');
             if (isset($seen[$id])) {
