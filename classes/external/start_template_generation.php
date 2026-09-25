@@ -85,11 +85,18 @@ class start_template_generation extends external_api {
             $api->upload_reference_file($threadid, $file);
         }
 
+        // The exact payload the run was given, kept alongside the session:
+        // a preview reading it back later must see what the run saw, not the
+        // template's course as it happens to look whenever the preview loads.
+        $coursedata = [
+            'templateid' => $params['templateid'],
+            'payload' => $payload,
+        ];
         $session = new course_session(0, (object) [
             'userid' => (int) $USER->id,
             'session_id' => $threadid,
             'status' => course_session::STATUS_PENDING,
-            'coursedata' => json_encode(['templateid' => $params['templateid']]),
+            'coursedata' => json_encode($coursedata),
         ]);
         $session->create();
 
