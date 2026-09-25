@@ -140,8 +140,8 @@ class view {
         // Display information about this quiz.
         $viewobj->infomessages = $this->describe_rules($canignoretimelimits);
         if ($quiz->attempts != 1) {
-            $viewobj->infomessages[] = get_string('gradingmethod', 'quiz',
-                    $this->quiz_get_grading_option_name($quiz->grademethod));
+            $gradingoptionname = $this->quiz_get_grading_option_name($quiz->grademethod);
+            $viewobj->infomessages[] = get_string('gradingmethod', 'quiz', $gradingoptionname);
         }
 
         // The grade to pass lives on the grade item, which is the course's
@@ -178,7 +178,8 @@ class view {
         $output .= $this->view_information($viewobj->infomessages);
         // view_result_info() draws nothing without an attempt or a grade, and
         // the list of attempts draws nothing without attempts.
-        $output .= $OUTPUT->box($this->view_page_buttons($viewobj), 'quizattempt');
+        $pagebuttonshtml = $this->view_page_buttons($viewobj);
+        $output .= $OUTPUT->box($pagebuttonshtml, 'quizattempt');
         return $output;
     }
 }
