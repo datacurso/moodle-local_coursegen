@@ -62,8 +62,9 @@ trait quiz_question_engine {
         // The attempt page prints its questions inside the form that submits
         // them, and that is the markup the questions' own scripts expect.
         $questionshtml = self::render_questions($quba, $options, $numbers);
+        $action = $this->here->out(false);
         return $OUTPUT->render_from_template('local_coursegen/preview_quiz_response_form', [
-            'action' => $this->here->out(false),
+            'action' => $action,
             'questionshtml' => $questionshtml,
         ]);
     }
