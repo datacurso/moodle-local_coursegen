@@ -39,16 +39,17 @@ class intro_preview extends activity_preview {
     public function render(): string {
         global $OUTPUT;
 
-        $intro = trim($this->text('introeditor'));
+        $introeditor = $this->text('introeditor');
+        $intro = trim($introeditor);
         if ($intro === '') {
-            $intro = trim($this->text('intro'));
+            $rawintro = $this->text('intro');
+            $intro = trim($rawintro);
         }
         if ($intro === '') {
-            return $OUTPUT->notification(
-                get_string('courseai_preview_empty', 'local_coursegen'),
-                \core\output\notification::NOTIFY_INFO
-            );
+            $message = get_string('courseai_preview_empty', 'local_coursegen');
+            return $OUTPUT->notification($message, \core\output\notification::NOTIFY_INFO);
         }
-        return $OUTPUT->box($this->content($intro), 'mod_introbox');
+        $content = $this->content($intro);
+        return $OUTPUT->box($content, 'mod_introbox');
     }
 }

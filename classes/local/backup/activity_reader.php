@@ -121,10 +121,9 @@ class activity_reader {
 
         $structure->process($processor);
 
-        return [
-            'tree' => $processor->get_result(),
-            'tables' => $processor->get_tables(),
-            'aliases' => $processor->get_aliases(),
-        ];
+        $tree = $processor->get_result();
+        $tables = $processor->get_tables();
+        $aliases = $processor->get_aliases();
+        return ['tree' => $tree, 'tables' => $tables, 'aliases' => $aliases];
     }
 }
