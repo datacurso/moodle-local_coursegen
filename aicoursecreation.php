@@ -76,11 +76,15 @@ $coursetemplates = [];
 $tplrecords = \local_coursegen\local\models\template::get_records([], 'name', 'ASC');
 foreach ($tplrecords as $tpl) {
     $tplcourse = $DB->get_record('course', ['id' => $tpl->get('courseid')], 'id, fullname', IGNORE_MISSING);
+    $tplcoursefullname = '';
+    if ($tplcourse) {
+        $tplcoursefullname = format_string($tplcourse->fullname);
+    }
     $coursetemplates[] = [
         'id' => (int) $tpl->get('id'),
         'name' => $tpl->get('name'),
         'courseid' => (int) $tpl->get('courseid'),
-        'coursefullname' => $tplcourse ? format_string($tplcourse->fullname) : '',
+        'coursefullname' => $tplcoursefullname,
         'description' => $tpl->get('description') ?? '',
     ];
 }
@@ -108,9 +112,13 @@ $buildsessiondata = function ($session, $maxtitle = 50) {
     ];
     $coursedata = json_decode($session->get('coursedata') ?? '{}', true);
     $rawtitle = $coursedata['fullname'] ?? $coursedata['local_coursegen_custom_prompt'] ?? '';
+    $title = \core_text::str_max_bytes($rawtitle, $maxtitle);
+    if (empty($title)) {
+        $title = get_string('courseai_untitled', 'local_coursegen');
+    }
     return [
         'id' => $session->get('id'),
-        'title' => \core_text::str_max_bytes($rawtitle, $maxtitle) ?: get_string('courseai_untitled', 'local_coursegen'),
+        'title' => $title,
         'statuslabel' => $statuslabels[$session->get('status')] ?? '',
         'status' => $session->get('status'),
         'timecreated' => userdate($session->get('timecreated'), get_string('strftimedatetimeshort', 'langconfig')),
