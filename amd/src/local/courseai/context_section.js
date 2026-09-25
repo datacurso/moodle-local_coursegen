@@ -22,8 +22,10 @@
  */
 
 import {createGuidelineHandlers} from 'local_coursegen/local/courseai/context/guideline';
-import {createTemplateHandlers} from 'local_coursegen/local/courseai/context/template';
+import {wireGuidelinePopover} from 'local_coursegen/local/courseai/context/guideline_popover';
+import {wireTemplatePopover} from 'local_coursegen/local/courseai/context/template_popover';
 import {wireCompactControls} from 'local_coursegen/local/courseai/context/compact';
+import {wireMirroredToggle} from 'local_coursegen/local/courseai/context/mirrored_toggle';
 import {bindToggleWrap, showFilePicker as openFilePicker} from 'local_coursegen/local/courseai/context/filepicker';
 import {wirePlusMenu} from 'local_coursegen/local/courseai/context/plus-menu';
 import {refreshGuidelineChip as doRefreshGuidelineChip} from 'local_coursegen/local/courseai/context/chip';
@@ -159,49 +161,9 @@ export const setupContextSection = (deps) => {
 
     // ─── Main context controls ────────────────────────────────────────────────
 
-    if (btnDirectrices && guidelinesPopover) {
-        btnDirectrices.addEventListener('click', (e) => {
-            e.stopPropagation();
-            // Base the toggle on the panel's real visible state, not on the shared
-            // flag: a sibling popover (compact) can leave the flag out of sync.
-            const willOpen = !guidelinesPopover.classList.contains('open');
-            state.guidelinePopoverOpen = willOpen;
-            guidelinesPopover.classList.toggle('open', willOpen);
-            btnDirectrices.setAttribute('aria-expanded', String(willOpen));
-
-            if (willOpen && guidelineSearch) {
-                guidelineSearch.value = '';
-                state.guidelineSearchQuery = '';
-                renderGuidelineList();
-                guidelineSearch.focus();
-            }
-        });
-    }
-
-    // Close on outside click. Guard on THIS panel's own .open class rather than the
-    // shared state flag, so the compact popover's document listener can't clobber it.
-    document.addEventListener('click', (e) => {
-        if (guidelinesPopover &&
-            guidelinesPopover.classList.contains('open') &&
-            !guidelinesPopover.contains(e.target) &&
-            e.target !== btnDirectrices) {
-            closeGuidelinePopover();
-        }
+    wireGuidelinePopover({
+        state, btnDirectrices, guidelinesPopover, guidelineSearch, closeGuidelinePopover, renderGuidelineList,
     });
-
-    // Close on Escape and return focus to the trigger (accessibility).
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape' && guidelinesPopover && guidelinesPopover.classList.contains('open')) {
-            closeGuidelinePopover({returnFocus: true});
-        }
-    });
-
-    if (guidelineSearch) {
-        guidelineSearch.addEventListener('input', () => {
-            state.guidelineSearchQuery = guidelineSearch.value;
-            renderGuidelineList();
-        });
-    }
 
     if (btnSyllabus) {
         btnSyllabus.addEventListener('click', async() => {
@@ -219,19 +181,16 @@ export const setupContextSection = (deps) => {
         });
     }
 
-    if (btnWithImages && imgToggleWrap) {
-        bindToggleWrap(imgToggleWrap, btnWithImages);
-        btnWithImages.addEventListener('change', () => {
-            state.withImages = btnWithImages.checked;
-            imgToggleWrap.classList.toggle('on', state.withImages);
-            if (elements.btnCompactWithImages) {
-                elements.btnCompactWithImages.checked = state.withImages;
-            }
-            if (elements.compactImgToggleWrap) {
-                elements.compactImgToggleWrap.classList.toggle('on', state.withImages);
-            }
-        });
-    }
+    wireMirroredToggle({
+        toggle: btnWithImages,
+        wrap: imgToggleWrap,
+        bindToggleWrap,
+        compactToggle: elements.btnCompactWithImages,
+        compactWrap: elements.compactImgToggleWrap,
+        onChange: (checked) => {
+            state.withImages = checked;
+        },
+    });
 
     // "+" options menu: presentation layer over the controls wired above.
     // Wired AFTER the language options are populated so the flyout lists them.
@@ -251,143 +210,21 @@ export const setupContextSection = (deps) => {
         onOpen: closeGuidelinePopover,
     });
 
-    // Explicit close (X) for the guidelines popover.
-    const guidelinesPopoverClose = document.getElementById('guidelinesPopoverClose');
-    if (guidelinesPopoverClose) {
-        guidelinesPopoverClose.addEventListener('click', (event) => {
-            event.stopPropagation();
-            closeGuidelinePopover();
-        });
-    }
-
     // ─── Templates: the list the template column picks from ─────────────────
-    // "From a template" is chosen on the page's first screen (start_path.js);
-    // inside that path, the column's one-line picker opens this list right
-    // below itself, before and after a template is chosen; its × clears the
-    // choice without opening the list.
     const {
-        renderTemplateLists, selectTemplate, detachTemplate, setTemplateLayout, closeTemplatePopovers,
-        isLocked: isTemplateLocked, setPickerOpen, moveActive, pickActive,
-    } = createTemplateHandlers({state, texts});
+        selectTemplate, detachTemplate, setTemplateLayout, openTemplatePopover, closeTemplatePopovers,
+    } = wireTemplatePopover({state, texts, closeGuidelinePopover});
 
-    const templatePopovers = [
-        {panel: 'templatesPopoverTpl', search: 'templateSearchTpl', triggers: ['tplPicker']},
-    ];
-
-    const openTemplatePopover = (panelId, triggerEl = null) => {
-        const spec = templatePopovers.find((p) => p.panel === panelId);
-        const panel = document.getElementById(panelId);
-        if (!spec || !panel || isTemplateLocked()) {
-            return;
-        }
-        closeTemplatePopovers();
-        closeGuidelinePopover();
-        panel.classList.add('open');
-        spec.triggers.forEach((id) => {
-            let expanded = 'false';
-            if (id === triggerEl?.id) {
-                expanded = 'true';
-            }
-            document.getElementById(id)?.setAttribute('aria-expanded', expanded);
-        });
-        setPickerOpen(true);
-        renderTemplateLists();
-    };
-
-    /**
-     * Wire one template popover trigger's click handler.
-     *
-     * @param {Object} spec
-     * @param {HTMLElement} panel
-     * @param {string} id
-     */
-    const wireTemplatePopoverTrigger = (spec, panel, id) => {
-        const trigger = document.getElementById(id);
-        if (!trigger) {
-            return;
-        }
-        trigger.addEventListener('click', (e) => {
-            e.stopPropagation();
-            if (panel.classList.contains('open')) {
-                closeTemplatePopovers();
-            } else {
-                openTemplatePopover(spec.panel, trigger);
-            }
-        });
-    };
-
-    /**
-     * Wire one template popover spec: its triggers, its search box, and the
-     * panel's own click guard.
-     *
-     * @param {Object} spec
-     */
-    const wireTemplatePopoverSpec = (spec) => {
-        const panel = document.getElementById(spec.panel);
-        if (!panel) {
-            return;
-        }
-        spec.triggers.forEach((id) => wireTemplatePopoverTrigger(spec, panel, id));
-        document.getElementById(spec.search)?.addEventListener('input', (e) => {
-            state.templateSearchQuery = e.target.value;
-            renderTemplateLists();
-        });
-        document.getElementById(spec.search)?.addEventListener('keydown', (e) => {
-            if (e.key === 'ArrowDown') {
-                e.preventDefault();
-                moveActive(1);
-            } else if (e.key === 'ArrowUp') {
-                e.preventDefault();
-                moveActive(-1);
-            } else if (e.key === 'Enter') {
-                e.preventDefault();
-                pickActive();
-            }
-        });
-        // Clicks inside the panel must not count as "outside".
-        panel.addEventListener('click', (e) => e.stopPropagation());
-    };
-
-    templatePopovers.forEach(wireTemplatePopoverSpec);
-
-    // Clicking into the search line itself (focusing it, not typing) must
-    // not count as "outside" either: only the picker's own trigger, clear
-    // and chevron handlers below decide what a click there does.
-    document.getElementById('tplPickerShell')?.addEventListener('click', (e) => e.stopPropagation());
-
-    // The chevron closes the list while it is open; the button state has no
-    // use for it (pointer-events is off there), so one listener covers both.
-    document.getElementById('tplPickerChevron')?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        closeTemplatePopovers();
+    wireMirroredToggle({
+        toggle: btnWithSubsections,
+        wrap: subToggleWrap,
+        bindToggleWrap,
+        compactToggle: elements.btnCompactWithSubsections,
+        compactWrap: elements.compactSubToggleWrap,
+        onChange: (checked) => {
+            state.withSubsections = checked;
+        },
     });
-
-    document.addEventListener('click', () => closeTemplatePopovers());
-    document.addEventListener('keydown', (e) => {
-        if (e.key === 'Escape') {
-            closeTemplatePopovers();
-        }
-    });
-
-    // The × on the picker line: clears the choice, the list stays closed.
-    document.getElementById('tplPickerClear')?.addEventListener('click', (e) => {
-        e.stopPropagation();
-        detachTemplate();
-    });
-
-    if (btnWithSubsections && subToggleWrap) {
-        bindToggleWrap(subToggleWrap, btnWithSubsections);
-        btnWithSubsections.addEventListener('change', () => {
-            state.withSubsections = btnWithSubsections.checked;
-            subToggleWrap.classList.toggle('on', state.withSubsections);
-            if (elements.btnCompactWithSubsections) {
-                elements.btnCompactWithSubsections.checked = state.withSubsections;
-            }
-            if (elements.compactSubToggleWrap) {
-                elements.compactSubToggleWrap.classList.toggle('on', state.withSubsections);
-            }
-        });
-    }
 
     // ─── Compact toolbar mirroring ────────────────────────────────────────────
 
