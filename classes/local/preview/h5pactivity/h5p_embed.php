@@ -48,33 +48,57 @@ trait h5p_embed {
                 'preventredirect' => $preventredirect,
                 'component' => $component,
             ];
+        $params = $this->with_display_params($params, $config);
+        $fileurl = new moodle_url('/h5p/embed.php', $params);
 
+        $template = new stdClass();
+        $template->embedurl = $fileurl->out(false);
+
+        // Check if the user can edit this content.
+        if ($displayedit && $this->can_edit_content()) {
+            $editurl = new moodle_url('/h5p/edit.php', ['url' => $url]);
+            $template->editurl = $editurl->out(false);
+        }
+
+        $template->extraactions = $this->exported_actions($extraactions);
+
+        $result = $OUTPUT->render_from_template('core_h5p/h5pembed', $template);
+        $result .= $this->get_resize_code();
+        return $result;
+    }
+
+    /**
+     * The embed url's own parameters, with whichever of the display config's
+     * optional ones the config carries.
+     *
+     * @param array $params
+     * @param stdClass $config
+     * @return array
+     */
+    protected function with_display_params(array $params, stdClass $config): array {
         $optparams = ['frame', 'export', 'embed', 'copyright'];
         foreach ($optparams as $optparam) {
             if (!empty($config->$optparam)) {
                 $params[$optparam] = $config->$optparam;
             }
         }
-        $fileurl = new moodle_url('/h5p/embed.php', $params);
+        return $params;
+    }
 
-        $template = new stdClass();
-        $template->embedurl = $fileurl->out(false);
+    /**
+     * The extra actions, exported for the template.
+     *
+     * @param array $extraactions
+     * @return array
+     */
+    protected function exported_actions(array $extraactions): array {
+        global $OUTPUT;
 
-        if ($displayedit) {
-            // Check if the user can edit this content.
-            if ($this->can_edit_content()) {
-                $template->editurl = (new moodle_url('/h5p/edit.php', ['url' => $url]))->out(false);
-            }
-        }
-
-        $template->extraactions = [];
+        $exported = [];
         foreach ($extraactions as $action) {
-            $template->extraactions[] = $action->export_for_template($OUTPUT);
+            $exported[] = $action->export_for_template($OUTPUT);
         }
-
-        $result = $OUTPUT->render_from_template('core_h5p/h5pembed', $template);
-        $result .= $this->get_resize_code();
-        return $result;
+        return $exported;
     }
 
     /**
