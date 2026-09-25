@@ -50,25 +50,64 @@ class book_preview extends preview_base {
      * @param json_store $store
      */
     protected function overlay(json_store $store): void {
-        $idbytitle = [];
-        foreach ($store->get_records('book_chapters') as $row) {
-            $idbytitle[trim((string) ($row->title ?? ''))] ??= $row->id;
+        $rows = $store->get_records('book_chapters');
+        $idbytitle = self::chapter_ids_by_title($rows);
+        $drafts = $this->parameters['mod_settings']['chapters'] ?? [];
+        foreach ($drafts as $chapter) {
+            $this->overlay_chapter($store, $chapter, $idbytitle);
         }
-        foreach (($this->parameters['mod_settings']['chapters'] ?? []) as $chapter) {
-            $id = $chapter['id'] ?? ($idbytitle[trim((string) ($chapter['title'] ?? ''))] ?? null);
-            if ($id === null) {
-                continue;
+    }
+
+    /**
+     * A mould's own chapter id, keyed by its title, for a draft that arrives
+     * without ids.
+     *
+     * @param \stdClass[] $rows
+     * @return array
+     */
+    private static function chapter_ids_by_title(array $rows): array {
+        $idbytitle = [];
+        foreach ($rows as $row) {
+            $title = $row->title ?? '';
+            $title = (string) $title;
+            $title = trim($title);
+            if (!isset($idbytitle[$title])) {
+                $idbytitle[$title] = $row->id;
             }
-            if (isset($chapter['title'])) {
-                $store->set('book_chapters', $id, 'title', (string) $chapter['title']);
-            }
-            $content = $chapter['content_editor'] ?? ($chapter['content'] ?? null);
-            if (is_array($content)) {
-                $content = $content['text'] ?? null;
-            }
-            if (is_string($content)) {
-                $store->set('book_chapters', $id, 'content', $content);
-            }
+        }
+        return $idbytitle;
+    }
+
+    /**
+     * Lay one drafted chapter over the mould's row it fills.
+     *
+     * @param json_store $store
+     * @param array $chapter
+     * @param array $idbytitle
+     */
+    private function overlay_chapter(json_store $store, array $chapter, array $idbytitle): void {
+        $id = $chapter['id'] ?? null;
+        if ($id === null) {
+            $title = $chapter['title'] ?? '';
+            $title = (string) $title;
+            $title = trim($title);
+            $id = $idbytitle[$title] ?? null;
+        }
+        if ($id === null) {
+            return;
+        }
+        if (isset($chapter['title'])) {
+            $store->set('book_chapters', $id, 'title', (string) $chapter['title']);
+        }
+        $content = $chapter['content_editor'] ?? null;
+        if ($content === null) {
+            $content = $chapter['content'] ?? null;
+        }
+        if (is_array($content)) {
+            $content = $content['text'] ?? null;
+        }
+        if (is_string($content)) {
+            $store->set('book_chapters', $id, 'content', $content);
         }
     }
 
@@ -83,7 +122,10 @@ class book_preview extends preview_base {
         }
         $book = $this->instance();
         $store = $this->store();
-        $this->chapters = ($book === null || $store === null) ? [] : view::book_preload_chapters($book, $store);
+        $this->chapters = [];
+        if ($book !== null && $store !== null) {
+            $this->chapters = view::book_preload_chapters($book, $store);
+        }
         return $this->chapters;
     }
 
@@ -96,15 +138,19 @@ class book_preview extends preview_base {
      * @return stdClass|null
      */
     protected function current_chapter(): ?stdClass {
-        $chapters = array_values($this->chapters());
+        $chapterlist = $this->chapters();
+        $chapters = array_values($chapterlist);
         if (!$chapters) {
             return null;
         }
         if ($this->here->get_param('page') !== null) {
-            $at = max(0, min($this->page, count($chapters) - 1));
+            $upper = count($chapters) - 1;
+            $clamped = min($this->page, $upper);
+            $at = max(0, $clamped);
             return $chapters[$at];
         }
-        $viewhidden = has_capability('mod/book:viewhiddenchapters', $this->context());
+        $context = $this->context();
+        $viewhidden = has_capability('mod/book:viewhiddenchapters', $context);
         foreach ($chapters as $ch) {
             if ($ch->hidden && $viewhidden) {
                 return $ch;
@@ -123,8 +169,13 @@ class book_preview extends preview_base {
      * @return moodle_url
      */
     protected function chapter_url(int $chapterid): moodle_url {
-        $position = array_search($chapterid, array_keys($this->chapters()), false);
-        return $this->page_url($position === false ? 0 : (int) $position);
+        $chapters = $this->chapters();
+        $chapterids = array_keys($chapters);
+        $position = array_search($chapterid, $chapterids, false);
+        if ($position === false) {
+            return $this->page_url(0);
+        }
+        return $this->page_url((int) $position);
     }
 
     /**
@@ -142,9 +193,13 @@ class book_preview extends preview_base {
         }
         if ($chapter === null) {
             // mod/book/view.php, when the book has no chapters.
-            return $OUTPUT->notification(get_string('nocontent', 'mod_book'), 'info', false);
+            $message = get_string('nocontent', 'mod_book');
+            return $OUTPUT->notification($message, 'info', false);
         }
-        return view::chapter_page($book, $this->chapters(), $chapter, $this->context(), fn(int $id) => $this->chapter_url($id));
+        $chapters = $this->chapters();
+        $context = $this->context();
+        $urls = fn(int $id) => $this->chapter_url($id);
+        return view::chapter_page($book, $chapters, $chapter, $context, $urls);
     }
 
     /**
@@ -158,7 +213,11 @@ class book_preview extends preview_base {
         if ($book === null || $chapter === null) {
             return [];
         }
-        return [view::book_fake_block($this->chapters(), $chapter, $book, $this->context(), fn(int $id) => $this->chapter_url($id))];
+        $chapters = $this->chapters();
+        $context = $this->context();
+        $urls = fn(int $id) => $this->chapter_url($id);
+        $block = view::book_fake_block($chapters, $chapter, $book, $context, $urls);
+        return [$block];
     }
 
     /**
