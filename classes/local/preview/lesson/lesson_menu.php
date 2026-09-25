@@ -70,10 +70,12 @@ class lesson_menu {
             }
             $pageid = $page->nextpageid;
         }
-        $content = $OUTPUT->render_from_template('local_coursegen/preview_lesson_menu', [
-            'skiplabel' => get_string('skip', 'lesson'),
+        $skiplabel = get_string('skip', 'lesson');
+        $templatecontext = [
+            'skiplabel' => $skiplabel,
             'pages' => $items,
-        ]);
+        ];
+        $content = $OUTPUT->render_from_template('local_coursegen/preview_lesson_menu', $templatecontext);
 
         $bc = new block_contents();
         $bc->title = get_string('lessonmenu', 'lesson');

@@ -55,8 +55,10 @@ class lesson_preview extends preview_base {
      */
     protected function overlay(json_store $store): void {
         $idbytitle = $this->ids_by_title($store);
-        foreach (($this->parameters['mod_settings']['pages'] ?? []) as $page) {
-            $title = trim((string) ($page['title'] ?? ''));
+        $pages = $this->parameters['mod_settings']['pages'] ?? [];
+        foreach ($pages as $page) {
+            $rawtitle = $page['title'] ?? '';
+            $title = trim((string) $rawtitle);
             $fallbackid = $idbytitle[$title] ?? null;
             $id = $page['id'] ?? $fallbackid;
             if ($id === null) {
@@ -81,7 +83,11 @@ class lesson_preview extends preview_base {
     protected function ids_by_title(json_store $store): array {
         $idbytitle = [];
         foreach ($store->get_records('lesson_pages') as $row) {
-            $idbytitle[trim((string) ($row->title ?? ''))] ??= $row->id;
+            $rawtitle = $row->title ?? '';
+            $title = trim((string) $rawtitle);
+            if (!isset($idbytitle[$title])) {
+                $idbytitle[$title] = $row->id;
+            }
         }
         return $idbytitle;
     }
@@ -101,8 +107,12 @@ class lesson_preview extends preview_base {
             return null;
         }
 
-        $structure = ($this->source['parameters'] ?? [])['structure'] ?? [];
-        $contextid = isset($structure['contextid']) ? (int) $structure['contextid'] : null;
+        $sourceparameters = $this->source['parameters'] ?? [];
+        $structure = $sourceparameters['structure'] ?? [];
+        $contextid = null;
+        if (isset($structure['contextid'])) {
+            $contextid = (int) $structure['contextid'];
+        }
 
         $this->lesson = new lesson(
             $row,
@@ -122,7 +132,8 @@ class lesson_preview extends preview_base {
      * @return moodle_url
      */
     protected function lesson_page_url(int $pageid): moodle_url {
-        return $this->page_url($this->index_of($pageid));
+        $index = $this->index_of($pageid);
+        return $this->page_url($index);
     }
 
     /**
@@ -131,9 +142,8 @@ class lesson_preview extends preview_base {
      * @return moodle_url
      */
     protected function lesson_exit_url(): moodle_url {
-        return new moodle_url('/local/coursegen/course_preview.php', [
-            'sessionid' => $this->here->get_param('sessionid'),
-        ]);
+        $sessionid = $this->here->get_param('sessionid');
+        return new moodle_url('/local/coursegen/course_preview.php', ['sessionid' => $sessionid]);
     }
 
     /**
@@ -143,7 +153,8 @@ class lesson_preview extends preview_base {
      * @return int
      */
     protected function index_of(int $pageid): int {
-        $pageids = array_keys($this->lesson->load_all_pages());
+        $allpages = $this->lesson->load_all_pages();
+        $pageids = array_keys($allpages);
         $position = array_search($pageid, $pageids, false);
         if ($position === false) {
             return 0;
@@ -161,11 +172,13 @@ class lesson_preview extends preview_base {
         if ($lesson === null) {
             return null;
         }
-        $pages = array_values($lesson->load_all_pages());
+        $allpages = $lesson->load_all_pages();
+        $pages = array_values($allpages);
         if (!$pages) {
             return null;
         }
-        $upperbound = min($this->page, count($pages) - 1);
+        $lastindex = count($pages) - 1;
+        $upperbound = min($this->page, $lastindex);
         $at = max(0, $upperbound);
         return $pages[$at];
     }
@@ -187,10 +200,12 @@ class lesson_preview extends preview_base {
         $renderer = $PAGE->get_renderer('mod_lesson');
         $out = '';
         if ($this->lesson->displayleft) {
-            $out .= $OUTPUT->render_from_template('local_coursegen/preview_anchor', [
+            $anchortitle = get_string('anchortitle', 'lesson');
+            $templatecontext = [
                 'name' => 'maincontent',
-                'title' => get_string('anchortitle', 'lesson'),
-            ]);
+                'title' => $anchortitle,
+            ];
+            $out .= $OUTPUT->render_from_template('local_coursegen/preview_anchor', $templatecontext);
         }
         return $out . $page->display($renderer, false);
     }
