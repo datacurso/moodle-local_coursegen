@@ -69,7 +69,8 @@ class lesson_page_type_manager {
      * @return lesson_page
      */
     public function load_page($pageid, lesson $lesson) {
-        if (!($page = $lesson->get_store()->get_record('lesson_pages', ['id' => $pageid, 'lessonid' => $lesson->id]))) {
+        $store = $lesson->get_store();
+        if (!($page = $store->get_record('lesson_pages', ['id' => $pageid, 'lessonid' => $lesson->id]))) {
             throw new \moodle_exception('cannotfindpages', 'lesson');
         }
         $pagetype = $this->class_for($page->qtype);
@@ -83,7 +84,8 @@ class lesson_page_type_manager {
      * @return lesson_page[]
      */
     public function load_all_pages(lesson $lesson) {
-        if (!($pages = $lesson->get_store()->get_records('lesson_pages', ['lessonid' => $lesson->id]))) {
+        $store = $lesson->get_store();
+        if (!($pages = $store->get_records('lesson_pages', ['lessonid' => $lesson->id]))) {
             return []; // Records returned empty.
         }
         $pages = $this->typed_pages($pages, $lesson);
