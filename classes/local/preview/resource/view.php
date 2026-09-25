@@ -99,7 +99,10 @@ class view {
         if (!$this->looked) {
             $this->looked = true;
             $files = $this->fs->get_area_files($this->context->id, 'mod_resource', 'content', 0, 'sortorder DESC, id ASC', false);
-            $this->file = $files ? reset($files) : null;
+            $this->file = null;
+            if ($files) {
+                $this->file = reset($files);
+            }
             if ($this->file) {
                 $this->resource->mainfile = $this->file->get_filename();
             }
