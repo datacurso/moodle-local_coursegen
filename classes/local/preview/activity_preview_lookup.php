@@ -40,21 +40,13 @@ class activity_preview_lookup {
      * @return array {modname: string, parameters: array, source: array}
      */
     public static function resolve(string $uid, array $payload, course_session $session): array {
-        $activitybycmid = static function (int $cmid) use ($payload): array {
-            foreach (($payload['activities'] ?? []) as $activity) {
-                if ((int) ($activity['cmid'] ?? 0) === $cmid) {
-                    return $activity;
-                }
-            }
-            return [];
-        };
-
         $api = new template_ai_api_service();
-        $threadid = (string) $session->get('session_id');
+        $threadid = $session->get('session_id');
+        $threadid = (string) $threadid;
 
-        $found = self::from_result($api, $threadid, $uid, $activitybycmid);
+        $found = self::from_result($api, $threadid, $uid, $payload);
         if (!$found['parameters']) {
-            $found = self::from_plan($api, $threadid, $uid, $session, $activitybycmid);
+            $found = self::from_plan($api, $threadid, $uid, $session, $payload);
         }
         if (!$found['parameters']) {
             $found = self::from_payload($payload, $uid);
@@ -66,32 +58,65 @@ class activity_preview_lookup {
     }
 
     /**
+     * The payload's own copy of one activity, by its course module id.
+     *
+     * @param array $payload
+     * @param int $cmid
+     * @return array
+     */
+    private static function activity_by_cmid(array $payload, int $cmid): array {
+        $activities = $payload['activities'] ?? [];
+        foreach ($activities as $activity) {
+            $activitycmid = $activity['cmid'] ?? 0;
+            $activitycmid = (int) $activitycmid;
+            if ($activitycmid === $cmid) {
+                return $activity;
+            }
+        }
+        return [];
+    }
+
+    /**
      * The finished activity when there is one. A run under review has no
      * result yet, and asking for one is how that is found out.
      *
      * @param template_ai_api_service $api
      * @param string $threadid
      * @param string $uid
-     * @param callable $activitybycmid
+     * @param array $payload
      * @return array {modname: string, parameters: array, source: array}
      */
     private static function from_result(
         template_ai_api_service $api,
         string $threadid,
         string $uid,
-        callable $activitybycmid
+        array $payload
     ): array {
         try {
-            foreach (($api->get_result($threadid)['generated_activities'] ?? []) as $activity) {
-                if ((string) ($activity['uid'] ?? '') === $uid) {
-                    return [
-                        'modname' => (string) ($activity['resource_type'] ?? ''),
-                        'parameters' => (array) ($activity['parameters'] ?? []),
-                        'source' => $activitybycmid(
-                            (int) (($activity['template_behavior'] ?? [])['template_source_cmid'] ?? 0)
-                        ),
-                    ];
+            $result = $api->get_result($threadid);
+            $activities = $result['generated_activities'] ?? [];
+            foreach ($activities as $activity) {
+                $activityuid = $activity['uid'] ?? '';
+                $activityuid = (string) $activityuid;
+                if ($activityuid !== $uid) {
+                    continue;
                 }
+                $modname = $activity['resource_type'] ?? '';
+                $modname = (string) $modname;
+
+                $parameters = $activity['parameters'] ?? [];
+                $parameters = (array) $parameters;
+
+                $templatebehavior = $activity['template_behavior'] ?? [];
+                $sourcecmid = $templatebehavior['template_source_cmid'] ?? 0;
+                $sourcecmid = (int) $sourcecmid;
+                $source = self::activity_by_cmid($payload, $sourcecmid);
+
+                return [
+                    'modname' => $modname,
+                    'parameters' => $parameters,
+                    'source' => $source,
+                ];
             }
         } catch (\moodle_exception $exception) {
             // No result yet - fall through to the plan.
@@ -108,7 +133,7 @@ class activity_preview_lookup {
      * @param string $threadid
      * @param string $uid
      * @param course_session $session
-     * @param callable $activitybycmid
+     * @param array $payload
      * @return array {modname: string, parameters: array, source: array}
      */
     private static function from_plan(
@@ -116,33 +141,38 @@ class activity_preview_lookup {
         string $threadid,
         string $uid,
         course_session $session,
-        callable $activitybycmid
+        array $payload
     ): array {
         try {
-            $plan = $api->get_plan($threadid)['template_plan'] ?? [];
+            $planresult = $api->get_plan($threadid);
+            $plan = $planresult['template_plan'] ?? [];
         } catch (\moodle_exception $exception) {
             $plan = [];
         }
         foreach ($plan as $entry) {
-            if ((string) ($entry['uid'] ?? '') !== $uid) {
+            $entryuid = $entry['uid'] ?? '';
+            $entryuid = (string) $entryuid;
+            if ($entryuid !== $uid) {
                 continue;
             }
-            $modname = (string) ($entry['resource_type'] ?? '');
+            $modname = $entry['resource_type'] ?? '';
+            $modname = (string) $modname;
+
+            $sourcecmid = $entry['source_cmid'] ?? 0;
+            $sourcecmid = (int) $sourcecmid;
+
             $parameters = plan_activity::to_parameters((array) $entry);
             // A plan describes the pieces the mould offered to fill, and a
             // mould also holds pieces it offers to nobody, which carry through
             // to the delivered activity as they are. So the mould is what is
             // shown, with the plan laid over it.
-            $parameters = plan_activity::over_mould(
-                $parameters,
-                $modname,
-                (int) ($entry['source_cmid'] ?? 0),
-                $session
-            );
+            $parameters = plan_activity::over_mould($parameters, $modname, $sourcecmid, $session);
+
+            $source = self::activity_by_cmid($payload, $sourcecmid);
             return [
                 'modname' => $modname,
                 'parameters' => $parameters,
-                'source' => $activitybycmid((int) ($entry['source_cmid'] ?? 0)),
+                'source' => $source,
             ];
         }
         return ['modname' => '', 'parameters' => [], 'source' => []];
@@ -159,14 +189,21 @@ class activity_preview_lookup {
      * @return array {modname: string, parameters: array, source: array}
      */
     private static function from_payload(array $payload, string $uid): array {
-        foreach (($payload['activities'] ?? []) as $activity) {
-            if ((string) ($activity['uid'] ?? '') === $uid) {
-                return [
-                    'modname' => (string) ($activity['resource_type'] ?? ''),
-                    'parameters' => kept_activity::to_parameters($activity),
-                    'source' => $activity,
-                ];
+        $activities = $payload['activities'] ?? [];
+        foreach ($activities as $activity) {
+            $activityuid = $activity['uid'] ?? '';
+            $activityuid = (string) $activityuid;
+            if ($activityuid !== $uid) {
+                continue;
             }
+            $modname = $activity['resource_type'] ?? '';
+            $modname = (string) $modname;
+            $parameters = kept_activity::to_parameters($activity);
+            return [
+                'modname' => $modname,
+                'parameters' => $parameters,
+                'source' => $activity,
+            ];
         }
         return ['modname' => '', 'parameters' => [], 'source' => []];
     }
