@@ -147,9 +147,11 @@ abstract class activity_preview {
      * @return string
      */
     public function header_description(): string {
-        $intro = trim($this->text('introeditor'));
+        $introeditor = $this->text('introeditor');
+        $intro = trim($introeditor);
         if ($intro === '') {
-            $intro = trim($this->text('intro'));
+            $rawintro = $this->text('intro');
+            $intro = trim($rawintro);
         }
         if ($intro === '') {
             return '';
