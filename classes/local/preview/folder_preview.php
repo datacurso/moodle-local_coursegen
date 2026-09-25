@@ -68,15 +68,14 @@ class folder_preview extends preview_base {
         if ($folder === null) {
             return $this->nothing_yet();
         }
-        $view = new view(
-            $folder,
-            $this->cm(),
-            $this->context(),
-            $this->files(),
-            (int) get_config('folder', 'maxsizetodownload'),
-            $this->url_to(),
-            fn($activity, $filter = true) => $this->module_intro($activity, $filter)
-        );
+        $cm = $this->cm();
+        $context = $this->context();
+        $files = $this->files();
+        $maxsizetodownload = get_config('folder', 'maxsizetodownload');
+        $maxsizetodownload = (int) $maxsizetodownload;
+        $here = $this->url_to();
+        $introcallback = fn($activity, $filter = true) => $this->module_intro($activity, $filter);
+        $view = new view($folder, $cm, $context, $files, $maxsizetodownload, $here, $introcallback);
         return $view->display_folder();
     }
 
