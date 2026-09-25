@@ -49,13 +49,25 @@ class h5pactivity_preview extends preview_base {
             return;
         }
         $row = reset($rows);
-        $value = $this->parameters['introeditor'] ?? ($this->parameters['intro'] ?? null);
-        $text = is_array($value) ? (string) ($value['text'] ?? '') : (string) ($value ?? '');
-        if (trim($text) !== '') {
-            $store->set('h5pactivity', $row->id, 'intro', $text);
-            $store->set('h5pactivity', $row->id, 'introformat',
-                is_array($value) ? (int) ($value['format'] ?? FORMAT_HTML) : FORMAT_HTML);
+        $value = $this->parameters['introeditor'] ?? $this->parameters['intro'] ?? null;
+
+        if (is_array($value)) {
+            $text = (string) ($value['text'] ?? '');
+        } else {
+            $text = (string) ($value ?? '');
         }
+
+        if (trim($text) === '') {
+            return;
+        }
+
+        $introformat = FORMAT_HTML;
+        if (is_array($value)) {
+            $introformat = (int) ($value['format'] ?? FORMAT_HTML);
+        }
+
+        $store->set('h5pactivity', $row->id, 'intro', $text);
+        $store->set('h5pactivity', $row->id, 'introformat', $introformat);
     }
 
     /**
@@ -68,10 +80,17 @@ class h5pactivity_preview extends preview_base {
         if ($instance === null) {
             return $this->nothing_yet();
         }
+        $context = $this->context();
+        $filestorage = $this->files();
         // The package, as view.php finds it: the one file in the package area.
-        $files = $this->files()->get_area_files($this->context()->id, 'mod_h5pactivity', 'package', 0, 'id', false);
-        $file = $files ? reset($files) : null;
-        $view = new view($instance, $this->context(), $this->store(), $file, $this->url_to());
+        $packagefiles = $filestorage->get_area_files($context->id, 'mod_h5pactivity', 'package', 0, 'id', false);
+        $file = null;
+        if ($packagefiles) {
+            $file = reset($packagefiles);
+        }
+        $store = $this->store();
+        $here = $this->url_to();
+        $view = new view($instance, $context, $store, $file, $here);
         return $view->page();
     }
 }

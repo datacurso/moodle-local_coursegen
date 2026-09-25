@@ -89,15 +89,7 @@ class view {
         if (!$this->can_submit() && !isguestuser()) {
             $message = get_string('previewmode', 'mod_h5pactivity');
             $output .= $OUTPUT->notification($message, \core\output\notification::NOTIFY_INFO, false);
-            if (!$this->is_tracking_enabled()) {
-                if (has_capability('moodle/course:manageactivities', $this->context)) {
-                    $url = $this->url_to(['update' => 1]);
-                    $message = get_string('trackingdisabled_enable', 'mod_h5pactivity', $url->out());
-                } else {
-                    $message = get_string('trackingdisabled', 'mod_h5pactivity');
-                }
-                $output .= $OUTPUT->notification($message, \core\output\notification::NOTIFY_WARNING);
-            }
+            $output .= $this->tracking_notice();
         }
 
         $extraactions = [];
@@ -106,14 +98,38 @@ class view {
         // exist: neither is offered.
 
         if ($this->file === null || $this->file->get_url() === null) {
-            return $output . $OUTPUT->notification(get_string('courseai_preview_empty', 'local_coursegen'),
-                \core\output\notification::NOTIFY_INFO);
+            $emptymessage = get_string('courseai_preview_empty', 'local_coursegen');
+            return $output . $OUTPUT->notification($emptymessage, \core\output\notification::NOTIFY_INFO);
         }
 
-        $core = (new factory())->get_core();
-        $config = helper::decode_display_options($core, (int) $this->instance->displayoptions);
-        $output .= $this->display($this->file->get_url(), $config, true, 'mod_h5pactivity', false, $extraactions);
+        $factory = new factory();
+        $core = $factory->get_core();
+        $displayoptions = (int) $this->instance->displayoptions;
+        $config = helper::decode_display_options($core, $displayoptions);
+        $fileurl = $this->file->get_url();
+        $output .= $this->display($fileurl, $config, true, 'mod_h5pactivity', false, $extraactions);
         return $output;
+    }
+
+    /**
+     * The notice for tracking being disabled, or nothing when it is enabled.
+     *
+     * @return string
+     */
+    protected function tracking_notice(): string {
+        global $OUTPUT;
+
+        if ($this->is_tracking_enabled()) {
+            return '';
+        }
+
+        if (has_capability('moodle/course:manageactivities', $this->context)) {
+            $url = $this->url_to(['update' => 1]);
+            $message = get_string('trackingdisabled_enable', 'mod_h5pactivity', $url->out());
+        } else {
+            $message = get_string('trackingdisabled', 'mod_h5pactivity');
+        }
+        return $OUTPUT->notification($message, \core\output\notification::NOTIFY_WARNING);
     }
 
     /**
@@ -122,7 +138,10 @@ class view {
      * @return bool
      */
     protected function can_edit_content(): bool {
-        $context = context::instance_by_id($this->file->get_contextid(), IGNORE_MISSING) ?: $this->context;
+        $context = context::instance_by_id($this->file->get_contextid(), IGNORE_MISSING);
+        if (!$context) {
+            $context = $this->context;
+        }
         return has_capability('mod/h5pactivity:addinstance', $context);
     }
 
