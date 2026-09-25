@@ -192,10 +192,8 @@ abstract class activity_preview {
     protected function nothing_yet(): string {
         global $OUTPUT;
 
-        return $OUTPUT->notification(
-            get_string('courseai_preview_empty', 'local_coursegen'),
-            \core\output\notification::NOTIFY_INFO
-        );
+        $message = get_string('courseai_preview_empty', 'local_coursegen');
+        return $OUTPUT->notification($message, \core\output\notification::NOTIFY_INFO);
     }
 
 }
