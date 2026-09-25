@@ -35,19 +35,22 @@ trait scorm_sco_data {
      * @return stdClass|false
      */
     protected function scorm_get_sco($id, $what = SCO_ALL) {
-        if ($sco = $this->store->get_record('scorm_scoes', ['id' => $id])) {
-            $sco = ($what == SCO_DATA) ? new stdClass() : $sco;
-            if (($what != SCO_ONLY) && ($scodatas = $this->store->get_records('scorm_scoes_data', ['scoid' => $id]))) {
-                foreach ($scodatas as $scodata) {
-                    $sco->{$scodata->name} = $scodata->value;
-                }
-            } else if (($what != SCO_ONLY) && (!($scodatas = $this->store->get_records('scorm_scoes_data', ['scoid' => $id])))) {
-                $sco->parameters = '';
-            }
-            return $sco;
-        } else {
+        $sco = $this->store->get_record('scorm_scoes', ['id' => $id]);
+        if (!$sco) {
             return false;
         }
+        if ($what == SCO_DATA) {
+            $sco = new stdClass();
+        }
+        if ($what != SCO_ONLY) {
+            $scodatas = $this->store->get_records('scorm_scoes_data', ['scoid' => $id]);
+            if ($scodatas) {
+                self::apply_sco_data($sco, $scodatas);
+            } else {
+                $sco->parameters = '';
+            }
+        }
+        return $sco;
     }
 
     /**
@@ -65,15 +68,29 @@ trait scorm_sco_data {
             // Drop keys so that it is a simple array as expected.
             $scoes = array_values($scoes);
             foreach ($scoes as $sco) {
-                if ($scodatas = $this->store->get_records('scorm_scoes_data', ['scoid' => $sco->id])) {
-                    foreach ($scodatas as $scodata) {
-                        $sco->{$scodata->name} = $scodata->value;
-                    }
+                $scodatas = $this->store->get_records('scorm_scoes_data', ['scoid' => $sco->id]);
+                if ($scodatas) {
+                    self::apply_sco_data($sco, $scodatas);
                 }
             }
             return $scoes;
         } else {
             return false;
+        }
+    }
+
+    /**
+     * Copy a learning object's own data rows onto its record.
+     *
+     * Shared by scorm_get_sco() and scorm_get_scoes(), which both read the
+     * same scorm_scoes_data rows and fold them onto the sco the same way.
+     *
+     * @param stdClass $sco
+     * @param iterable $scodatas
+     */
+    private static function apply_sco_data(stdClass $sco, iterable $scodatas): void {
+        foreach ($scodatas as $scodata) {
+            $sco->{$scodata->name} = $scodata->value;
         }
     }
 }
