@@ -47,9 +47,7 @@ trait book_chapters {
             return array();
         }
 
-        $prev = null;
         $prevsub = null;
-
         $first = true;
         $hidesub = true;
         $parent = null;
@@ -65,16 +63,7 @@ trait book_chapters {
                 $first = false;
             }
             if (!$ch->subchapter) {
-                if ($ch->hidden) {
-                    if ($book->numbering == self::BOOK_NUM_NUMBERS) {
-                        $ch->number = 'x';
-                    } else {
-                        $ch->number = null;
-                    }
-                } else {
-                    $i++;
-                    $ch->number = $i;
-                }
+                $ch->number = self::chapter_number($book, $ch->hidden, $i);
                 $j = 0;
                 $prevsub = null;
                 $hidesub = $ch->hidden;
@@ -89,22 +78,35 @@ trait book_chapters {
                     // all subchapters in hidden chapter must be hidden too
                     $ch->hidden = 1;
                 }
-                if ($ch->hidden) {
-                    if ($book->numbering == self::BOOK_NUM_NUMBERS) {
-                        $ch->number = 'x';
-                    } else {
-                        $ch->number = null;
-                    }
-                } else {
-                    $j++;
-                    $ch->number = $j;
-                }
+                $ch->number = self::chapter_number($book, $ch->hidden, $j);
             }
 
             $chapters[$id] = $ch;
         }
 
         return $chapters;
+    }
+
+    /**
+     * The number to show beside one chapter: 'x' for a hidden chapter under
+     * numbered numbering, none for a hidden chapter under any other
+     * numbering, or the next value of the counter handed in, which this
+     * advances in place.
+     *
+     * @param stdClass $book
+     * @param bool $hidden
+     * @param int $counter Advanced in place for a chapter that is not hidden.
+     * @return string|int|null
+     */
+    private static function chapter_number($book, $hidden, &$counter) {
+        if ($hidden) {
+            if ($book->numbering == self::BOOK_NUM_NUMBERS) {
+                return 'x';
+            }
+            return null;
+        }
+        $counter++;
+        return $counter;
     }
 
     /**
@@ -118,7 +120,8 @@ trait book_chapters {
      */
     public static function book_get_chapter_title($chid, $chapters, $book, $context) {
         $ch = $chapters[$chid];
-        $title = trim(format_string($ch->title, true, array('context' => $context)));
+        $formatted = format_string($ch->title, true, array('context' => $context));
+        $title = trim($formatted);
         $numbers = array();
         if ($book->numbering == self::BOOK_NUM_NUMBERS) {
             if ($ch->parent and $chapters[$ch->parent]->number) {
