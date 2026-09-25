@@ -79,8 +79,10 @@ class template_export_uids {
         $hash = sha1($namespace . "local_coursegen/{$templateid}/{$kind}/{$id}", true);
         $bytes = substr($hash, 0, 16);
         // Version 5 in the high nibble of byte 6; RFC 4122 variant in byte 8.
-        $bytes[6] = chr((ord($bytes[6]) & 0x0f) | 0x50);
-        $bytes[8] = chr((ord($bytes[8]) & 0x3f) | 0x80);
+        $byte6 = ord($bytes[6]);
+        $bytes[6] = chr(($byte6 & 0x0f) | 0x50);
+        $byte8 = ord($bytes[8]);
+        $bytes[8] = chr(($byte8 & 0x3f) | 0x80);
         $hex = bin2hex($bytes);
         $part1 = substr($hex, 0, 8);
         $part2 = substr($hex, 8, 4);

@@ -157,8 +157,9 @@ class structure_array_processor extends base_processor {
             $files = $nested->get_file_annotations();
         }
 
+        $name = $nested->get_name();
         $this->stack[] = [
-            'name' => $nested->get_name(),
+            'name' => $name,
             'node' => $node,
             'files' => $files,
         ];
@@ -207,8 +208,9 @@ class structure_array_processor extends base_processor {
         if ($finished === null) {
             return;
         }
+        $contextid = (int) $this->get_var(\backup::VAR_CONTEXTID);
         $finished['node'] = structure_node_resolver::with_file_addresses(
-            $finished['node'], $finished['files'], (int) $this->get_var(\backup::VAR_CONTEXTID));
+            $finished['node'], $finished['files'], $contextid);
 
         if (!$this->stack) {
             $this->result = $finished['node'];
