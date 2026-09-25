@@ -56,8 +56,9 @@ class wiki_preview extends preview_base {
         }
         $wiki = reset($rows);
         if (!empty($this->parameters['firstpagetitle'])) {
-            $store->set('wiki', $wiki->id, 'firstpagetitle', (string) $this->parameters['firstpagetitle']);
-            $wiki->firstpagetitle = (string) $this->parameters['firstpagetitle'];
+            $firstpagetitle = (string) $this->parameters['firstpagetitle'];
+            $store->set('wiki', $wiki->id, 'firstpagetitle', $firstpagetitle);
+            $wiki->firstpagetitle = $firstpagetitle;
         }
         $intro = $this->parameters['introeditor'] ?? null;
         if (is_array($intro)) {
@@ -67,18 +68,7 @@ class wiki_preview extends preview_base {
             $store->set('wiki', $wiki->id, 'intro', $intro);
         }
 
-        $planned = [];
-        foreach (($this->parameters['mod_settings']['pages'] ?? []) as $page) {
-            $title = trim((string) ($page['title'] ?? ''));
-            if ($title === '' || $title === (string) $wiki->firstpagetitle) {
-                continue;
-            }
-            $content = $page['newcontent_editor'] ?? ($page['content'] ?? ($page['description'] ?? ''));
-            if (is_array($content)) {
-                $content = $content['text'] ?? '';
-            }
-            $planned[$title] = (string) $content;
-        }
+        $planned = self::planned_pages($this->parameters, $wiki);
         if (!$planned) {
             return;
         }
@@ -88,27 +78,93 @@ class wiki_preview extends preview_base {
             $subwiki = (object) ['id' => 1, 'wikiid' => $wiki->id, 'groupid' => 0, 'userid' => 0];
             $store->add('wiki_subwikis', $subwiki);
         }
-        foreach ($store->get_records('wiki_pages', ['subwikiid' => $subwiki->id]) as $old) {
-            $store->delete_records('wiki_versions', ['pageid' => $old->id]);
-        }
-        $store->delete_records('wiki_pages', ['subwikiid' => $subwiki->id]);
+        self::clear_existing_pages($store, $subwiki->id);
 
         // wiki_settings::get_first_page(): the first page links to every other.
-        $format = $wiki->defaultformat ?: 'html';
+        $format = $wiki->defaultformat;
+        if (!$format) {
+            $format = 'html';
+        }
+        $first = self::first_page_content($planned, $format);
+        $pages = [(string) $wiki->firstpagetitle => $first] + $planned;
+        self::write_pages($store, $subwiki->id, $pages, $format);
+    }
+
+    /**
+     * The plan's pages, keyed by title, with the wiki's own first page left
+     * out: the way wiki_settings writes the pages a run intends.
+     *
+     * @param array $parameters
+     * @param stdClass $wiki
+     * @return array Title => content.
+     */
+    private static function planned_pages(array $parameters, $wiki): array {
+        $planned = [];
+        $pages = $parameters['mod_settings']['pages'] ?? [];
+        foreach ($pages as $page) {
+            $title = trim((string) ($page['title'] ?? ''));
+            if ($title === '' || $title === (string) $wiki->firstpagetitle) {
+                continue;
+            }
+            $content = $page['newcontent_editor'] ?? $page['content'] ?? $page['description'] ?? '';
+            if (is_array($content)) {
+                $content = $content['text'] ?? '';
+            }
+            $planned[$title] = (string) $content;
+        }
+        return $planned;
+    }
+
+    /**
+     * Empties a subwiki of its pages and their versions, before the plan's
+     * own pages are written.
+     *
+     * @param json_store $store
+     * @param int $subwikiid
+     */
+    private static function clear_existing_pages(json_store $store, int $subwikiid): void {
+        $oldpages = $store->get_records('wiki_pages', ['subwikiid' => $subwikiid]);
+        foreach ($oldpages as $old) {
+            $store->delete_records('wiki_versions', ['pageid' => $old->id]);
+        }
+        $store->delete_records('wiki_pages', ['subwikiid' => $subwikiid]);
+    }
+
+    /**
+     * wiki_settings::get_first_page(): the first page's own content, a link
+     * to every planned page.
+     *
+     * @param array $planned Title => content.
+     * @param string $format
+     * @return string
+     */
+    private static function first_page_content(array $planned, string $format): string {
         $first = '';
-        foreach (array_keys($planned) as $title) {
+        $titles = array_keys($planned);
+        foreach ($titles as $title) {
             if ($format === 'html') {
                 $first .= "<p>[[{$title}]]</p>\n";
             } else {
                 $first .= "[[{$title}]]\n\n";
             }
         }
-        $pages = [(string) $wiki->firstpagetitle => $first] + $planned;
+        return $first;
+    }
+
+    /**
+     * Writes every page and its first version.
+     *
+     * @param json_store $store
+     * @param int $subwikiid
+     * @param array $pages Title => content.
+     * @param string $format
+     */
+    private static function write_pages(json_store $store, int $subwikiid, array $pages, string $format): void {
         $now = time();
         $id = 1;
         foreach ($pages as $title => $content) {
             $store->add('wiki_pages', [
-                'id' => $id, 'subwikiid' => $subwiki->id, 'title' => $title, 'cachedcontent' => '',
+                'id' => $id, 'subwikiid' => $subwikiid, 'title' => $title, 'cachedcontent' => '',
                 'timecreated' => $now, 'timemodified' => $now, 'timerendered' => 0, 'userid' => 0,
                 'pageviews' => 0, 'readonly' => 0,
             ]);
