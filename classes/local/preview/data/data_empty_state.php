@@ -16,6 +16,10 @@
 
 namespace local_coursegen\local\preview\data;
 
+use moodle_url;
+use single_button;
+use stdClass;
+
 /**
  * mod_data's "fields exist, no entries yet" state: the empty database
  * message, its action bar, and whether the reader could add an entry (a
@@ -70,7 +74,9 @@ trait data_empty_state {
     protected function add_entries_action(int $currentgroup, int $groupmode): ?stdClass {
         global $OUTPUT;
         if ($this->data_user_can_add_entry($this->data, $currentgroup, $groupmode, $this->context)) {
-            $button = new \single_button(new moodle_url($this->here), get_string('add', 'mod_data'), 'get', \single_button::BUTTON_PRIMARY);
+            $addurl = new moodle_url($this->here);
+            $addlabel = get_string('add', 'mod_data');
+            $button = new single_button($addurl, $addlabel, 'get', single_button::BUTTON_PRIMARY);
             return $button->export_for_template($OUTPUT);
         }
         return null;
