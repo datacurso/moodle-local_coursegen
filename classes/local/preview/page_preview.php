@@ -42,6 +42,19 @@ class page_preview extends ported_preview {
     }
 
     /**
+     * The page's stored display options, decoded.
+     *
+     * @param stdClass $page
+     * @return array
+     */
+    private function display_options(stdClass $page): array {
+        if (empty($page->displayoptions)) {
+            return [];
+        }
+        return (array) unserialize_array($page->displayoptions);
+    }
+
+    /**
      * A draft replaces the page's body.
      *
      * A page is one piece, so a plan for it has one part, and the answer for
@@ -77,7 +90,7 @@ class page_preview extends ported_preview {
             return $this->nothing_yet();
         }
         $context = $this->context();
-        $options = empty($page->displayoptions) ? [] : (array) unserialize_array($page->displayoptions);
+        $options = $this->display_options($page);
 
         // From here, mod/page/view.php.
         $content = file_rewrite_pluginfile_urls($page->content, 'pluginfile.php', $context->id, 'mod_page', 'content', $page->revision);
@@ -108,7 +121,7 @@ class page_preview extends ported_preview {
         if ($page === null) {
             return '';
         }
-        $options = empty($page->displayoptions) ? [] : (array) unserialize_array($page->displayoptions);
+        $options = $this->display_options($page);
         if (empty($options['printintro'])) {
             return '';
         }

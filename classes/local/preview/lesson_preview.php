@@ -52,6 +52,20 @@ class lesson_preview extends activity_preview {
     }
 
     /**
+     * Map each stored page's trimmed title to its database id.
+     *
+     * @param json_store $store
+     * @return array
+     */
+    private function page_ids_by_title(json_store $store): array {
+        $idbytitle = [];
+        foreach ($store->get_records('lesson_pages') as $row) {
+            $idbytitle[trim((string) ($row->title ?? ''))] ??= $row->id;
+        }
+        return $idbytitle;
+    }
+
+    /**
      * The lesson, built from the payload with the draft laid over it.
      *
      * @return lesson|null Null when the payload holds no lesson row.
@@ -68,10 +82,7 @@ class lesson_preview extends activity_preview {
         // A draft names the page it fills by id. A finished answer does not,
         // because the generator that wrote it matched pages by title, so the
         // same match is made here for the pages that arrive without one.
-        $idbytitle = [];
-        foreach ($store->get_records('lesson_pages') as $row) {
-            $idbytitle[trim((string) ($row->title ?? ''))] ??= $row->id;
-        }
+        $idbytitle = $this->page_ids_by_title($store);
         foreach (($this->parameters['mod_settings']['pages'] ?? []) as $page) {
             $id = $page['id'] ?? ($idbytitle[trim((string) ($page['title'] ?? ''))] ?? null);
             if ($id === null) {
@@ -96,7 +107,10 @@ class lesson_preview extends activity_preview {
             'course' => (int) ($row->course ?? 0),
         ];
         $structure = ($this->source['parameters'] ?? [])['structure'] ?? [];
-        $contextid = isset($structure['contextid']) ? (int) $structure['contextid'] : null;
+        $contextid = null;
+        if (isset($structure['contextid'])) {
+            $contextid = (int) $structure['contextid'];
+        }
 
         $this->lesson = new lesson(
             $row,
@@ -119,7 +133,10 @@ class lesson_preview extends activity_preview {
      */
     protected function index_of(int $pageid): int {
         $position = array_search($pageid, array_keys($this->lesson->load_all_pages()), false);
-        return $position === false ? 0 : (int) $position;
+        if ($position === false) {
+            return 0;
+        }
+        return (int) $position;
     }
 
     /**
@@ -182,7 +199,10 @@ class lesson_preview extends activity_preview {
             return [];
         }
         $block = lesson_menu::block_contents($this->lesson, (int) $page->id);
-        return $block === null ? [] : [$block];
+        if ($block === null) {
+            return [];
+        }
+        return [$block];
     }
 
     /**
