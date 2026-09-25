@@ -140,12 +140,16 @@ class template_export_service {
 
         $actions = self::saved_activity_actions($templateid);
         $behaviors = self::saved_section_behaviors($templateid);
+        $lang = $course->lang;
+        if (empty($lang)) {
+            $lang = current_language();
+        }
 
         return [
             'course_configuration' => [
                 'fullname' => $course->fullname,
                 'shortname' => $course->shortname,
-                'lang' => $course->lang ?: current_language(),
+                'lang' => $lang,
                 'numsections' => count($modinfo->get_section_info_all()) - 1,
                 // How the course is laid out, and how its format is set up.
                 // A course generated from a template is the template's course
@@ -160,7 +164,7 @@ class template_export_service {
                 self::instance_activities($templateid, $modinfo)
             ),
             'general_instruction' => $generalinstruction,
-            'lang' => $course->lang ?: current_language(),
+            'lang' => $lang,
             'with_images' => false,
             'site_url' => $CFG->wwwroot,
             // Reference files are attached after /init (they need its
@@ -283,7 +287,11 @@ class template_export_service {
                 continue;
             }
             $uri = $toolbox->get_displayed_image_uri($image, $contextid, (int) $image->sectionid, $webp);
-            $images[(int) $image->sectionid] = $uri instanceof \moodle_url ? $uri->out(false) : (string) $uri;
+            $address = (string) $uri;
+            if ($uri instanceof \moodle_url) {
+                $address = $uri->out(false);
+            }
+            $images[(int) $image->sectionid] = $address;
         }
         return $images;
     }
@@ -332,8 +340,12 @@ class template_export_service {
         $activities = [];
         $instances = template_instance::get_records(['templateid' => $templateid], 'sortorder');
         foreach ($instances as $instance) {
+            $resourcetype = $instance->get('modname');
+            if (empty($resourcetype)) {
+                $resourcetype = 'lesson';
+            }
             $activities[] = [
-                'resource_type' => $instance->get('modname') ?: 'lesson',
+                'resource_type' => $resourcetype,
                 'uid' => self::instance_uid($instance),
                 'cmid' => self::instance_cmid((int) $instance->get('id')),
                 'parameters' => [
