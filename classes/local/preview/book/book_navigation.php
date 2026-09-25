@@ -40,56 +40,93 @@ trait book_navigation {
      */
     public static function main_action_menu_data($chapters, $chapter, context $context, callable $urls): array {
         $viewhidden = has_capability('mod/book:viewhiddenchapters', $context);
-        $getchapter = static function (int $id) use ($chapters, $viewhidden): ?stdClass {
-            foreach ($chapters as $candidate) {
-                // Also make sure that the chapter is not hidden or the user can view hidden chapters before returning
-                // the chapter object.
-                if (($candidate->pagenum == $id) && (!$candidate->hidden || $viewhidden)) {
-                    return $candidate;
-                }
-            }
-            return null;
-        };
-
-        $next = null;
-        $nextpageid = $chapter->pagenum + 1;
-        // Early return if the current chapter is also the last chapter.
-        if ($nextpageid <= count($chapters)) {
-            while ((!$next = $getchapter($nextpageid))) {
-                // Break the loop if this is the last chapter.
-                if ($nextpageid === count($chapters)) {
-                    break;
-                }
-                $nextpageid++;
-            }
-        }
-
-        $previous = null;
-        $prevpageid = $chapter->pagenum - 1;
-        // Early return if the current chapter is also the first chapter.
-        if ($prevpageid >= 1) {
-            while ((!$previous = $getchapter($prevpageid))) {
-                // Break the loop if this is the first chapter.
-                if ($prevpageid === 1) {
-                    break;
-                }
-                $prevpageid--;
-            }
-        }
+        $next = self::next_chapter($chapters, $chapter, $viewhidden);
+        $previous = self::previous_chapter($chapters, $chapter, $viewhidden);
 
         $data = [];
         if ($next) {
+            $nexturl = $urls((int) $next->id);
             $data['next'] = [
                 'title' => get_string('navnext', 'mod_book'),
-                'url' => $urls((int) $next->id)->out(false),
+                'url' => $nexturl->out(false),
             ];
         }
         if ($previous) {
+            $prevurl = $urls((int) $previous->id);
             $data['previous'] = [
                 'title' => get_string('navprev', 'mod_book'),
-                'url' => $urls((int) $previous->id)->out(false),
+                'url' => $prevurl->out(false),
             ];
         }
         return $data;
+    }
+
+    /**
+     * The next chapter after the current one that the reader may see.
+     *
+     * @param array $chapters
+     * @param stdClass $chapter
+     * @param bool $viewhidden
+     * @return stdClass|null
+     */
+    private static function next_chapter($chapters, stdClass $chapter, bool $viewhidden): ?stdClass {
+        $nextpageid = $chapter->pagenum + 1;
+        if ($nextpageid > count($chapters)) {
+            return null;
+        }
+        $found = self::visible_chapter_at($chapters, $nextpageid, $viewhidden);
+        while ($found === null) {
+            // Stop once the last chapter has been tried.
+            if ($nextpageid === count($chapters)) {
+                return null;
+            }
+            $nextpageid++;
+            $found = self::visible_chapter_at($chapters, $nextpageid, $viewhidden);
+        }
+        return $found;
+    }
+
+    /**
+     * The chapter before the current one that the reader may see.
+     *
+     * @param array $chapters
+     * @param stdClass $chapter
+     * @param bool $viewhidden
+     * @return stdClass|null
+     */
+    private static function previous_chapter($chapters, stdClass $chapter, bool $viewhidden): ?stdClass {
+        $prevpageid = $chapter->pagenum - 1;
+        if ($prevpageid < 1) {
+            return null;
+        }
+        $found = self::visible_chapter_at($chapters, $prevpageid, $viewhidden);
+        while ($found === null) {
+            // Stop once the first chapter has been tried.
+            if ($prevpageid === 1) {
+                return null;
+            }
+            $prevpageid--;
+            $found = self::visible_chapter_at($chapters, $prevpageid, $viewhidden);
+        }
+        return $found;
+    }
+
+    /**
+     * The chapter at one page number, if the reader is allowed to see it.
+     *
+     * @param array $chapters
+     * @param int $pagenum
+     * @param bool $viewhidden
+     * @return stdClass|null
+     */
+    private static function visible_chapter_at($chapters, int $pagenum, bool $viewhidden): ?stdClass {
+        foreach ($chapters as $candidate) {
+            // Also make sure that the chapter is not hidden or the user can view hidden chapters before returning
+            // the chapter object.
+            if (($candidate->pagenum == $pagenum) && (!$candidate->hidden || $viewhidden)) {
+                return $candidate;
+            }
+        }
+        return null;
     }
 }
