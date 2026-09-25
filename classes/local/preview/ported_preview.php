@@ -127,7 +127,10 @@ abstract class ported_preview extends activity_preview {
      */
     public function activity_record(): ?stdClass {
         $instance = $this->instance();
-        return $instance === null ? null : clone $instance;
+        if ($instance === null) {
+            return null;
+        }
+        return clone $instance;
     }
 
     /**
@@ -215,6 +218,36 @@ abstract class ported_preview extends activity_preview {
      */
     protected function files(): json_file_storage {
         return new json_file_storage((array) (($this->source['parameters'] ?? [])['files'] ?? []));
+    }
+
+    /**
+     * The plain text of an editor-field value, whatever shape it arrived in.
+     *
+     * A drafted field travels either as the plain string or as the
+     * {text, format} pair Moodle's editors use, depending on the type and on
+     * whether the value came from the draft or from the finished answer.
+     *
+     * @param mixed $value
+     * @return string
+     */
+    protected static function editor_field_text($value): string {
+        if (is_array($value)) {
+            return (string) ($value['text'] ?? '');
+        }
+        return (string) ($value ?? '');
+    }
+
+    /**
+     * The format of an editor-field value, whatever shape it arrived in.
+     *
+     * @param mixed $value
+     * @return int
+     */
+    protected static function editor_field_format($value): int {
+        if (is_array($value)) {
+            return (int) ($value['format'] ?? FORMAT_HTML);
+        }
+        return FORMAT_HTML;
     }
 
     /**

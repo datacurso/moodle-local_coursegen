@@ -52,11 +52,10 @@ class assign_preview extends ported_preview {
         $assign = reset($rows);
         foreach (['introeditor' => 'intro', 'activityeditor' => 'activity'] as $field => $column) {
             $value = $this->parameters[$field] ?? null;
-            $text = is_array($value) ? (string) ($value['text'] ?? '') : (string) ($value ?? '');
+            $text = self::editor_field_text($value);
             if (trim($text) !== '') {
                 $store->set('assign', $assign->id, $column, $text);
-                $store->set('assign', $assign->id, $column . 'format',
-                    is_array($value) ? (int) ($value['format'] ?? FORMAT_HTML) : FORMAT_HTML);
+                $store->set('assign', $assign->id, $column . 'format', self::editor_field_format($value));
             }
         }
     }
