@@ -82,7 +82,11 @@ export const setupContextSection = (deps) => {
         }
         const hasSyllabus = compactChipSyllabus && !compactChipSyllabus.classList.contains('hidden');
         const hasGuideline = compactChipGuideline && !compactChipGuideline.classList.contains('hidden');
-        compactChipsRow.style.display = (hasSyllabus || hasGuideline) ? 'flex' : 'none';
+        let display = 'none';
+        if (hasSyllabus || hasGuideline) {
+            display = 'flex';
+        }
+        compactChipsRow.style.display = display;
     };
 
     const refreshChipsRow = () => {
@@ -96,7 +100,11 @@ export const setupContextSection = (deps) => {
 
         const hasSyllabus = chipSyllabus && !chipSyllabus.classList.contains('hidden');
         const hasGuideline = chipGuideline && !chipGuideline.classList.contains('hidden');
-        chipsRow.style.display = (hasSyllabus || hasGuideline) ? 'flex' : 'none';
+        let display = 'none';
+        if (hasSyllabus || hasGuideline) {
+            display = 'flex';
+        }
+        chipsRow.style.display = display;
     };
 
     const closeGuidelinePopover = ({returnFocus = false} = {}) => {
@@ -121,11 +129,18 @@ export const setupContextSection = (deps) => {
 
     // ─── Lang selects ────────────────────────────────────────────────────────
 
-    const optionsHtml = languages.length > 0
-        ? languages.map((lang) =>
-            `<option value="${lang.code}" ${lang.code === defaultLang ? 'selected' : ''}>🌐 ${lang.code.toUpperCase()}</option>`
-        ).join('')
-        : null;
+    const langOptionHtml = (lang) => {
+        let selected = '';
+        if (lang.code === defaultLang) {
+            selected = 'selected';
+        }
+        return `<option value="${lang.code}" ${selected}>🌐 ${lang.code.toUpperCase()}</option>`;
+    };
+
+    let optionsHtml = null;
+    if (languages.length > 0) {
+        optionsHtml = languages.map(langOptionHtml).join('');
+    }
 
     if (optionsHtml) {
         if (langSelect) {
@@ -152,7 +167,7 @@ export const setupContextSection = (deps) => {
             const willOpen = !guidelinesPopover.classList.contains('open');
             state.guidelinePopoverOpen = willOpen;
             guidelinesPopover.classList.toggle('open', willOpen);
-            btnDirectrices.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+            btnDirectrices.setAttribute('aria-expanded', String(willOpen));
 
             if (willOpen && guidelineSearch) {
                 guidelineSearch.value = '';
@@ -262,7 +277,7 @@ export const setupContextSection = (deps) => {
             e.stopPropagation();
             const willOpen = !templatesPopover.classList.contains('open');
             templatesPopover.classList.toggle('open', willOpen);
-            btnTemplates.setAttribute('aria-expanded', willOpen ? 'true' : 'false');
+            btnTemplates.setAttribute('aria-expanded', String(willOpen));
             if (willOpen && templateSearch) {
                 templateSearch.value = '';
                 state.templateSearchQuery = '';
