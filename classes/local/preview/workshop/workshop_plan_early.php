@@ -117,12 +117,7 @@ trait workshop_plan_early {
             $examples = $this->get_examples();
             $a = new stdClass();
             $a->expected = count($examples);
-            $a->assessed = 0;
-            foreach ($examples as $exampleid => $example) {
-                if (!is_null($example->grade)) {
-                    $a->assessed++;
-                }
-            }
+            $a->assessed = $this->count_examples_assessed($examples);
             $task->details = get_string('exampleassesstaskdetails', 'workshop', $a);
             if ($a->assessed == $a->expected) {
                 $task->completed = true;
@@ -146,22 +141,7 @@ trait workshop_plan_early {
             $phase->tasks['submit'] = $task;
         }
         if (has_capability('mod/workshop:allocate', $this->context, $userid)) {
-            if ($workshop->phaseswitchassessment) {
-                $task = new stdClass();
-                $allocator = $this->store->get_record('workshopallocation_scheduled', ['workshopid' => $workshop->id]);
-                if (empty($allocator)) {
-                    $task->completed = false;
-                } else if ($allocator->enabled && is_null($allocator->resultstatus)) {
-                    $task->completed = true;
-                } else if ($workshop->submissionend > time()) {
-                    $task->completed = null;
-                } else {
-                    $task->completed = false;
-                }
-                $task->title = get_string('setup', 'workshopallocation_scheduled');
-                $task->link = $this->allocation_url('scheduled');
-                $phase->tasks['allocatescheduled'] = $task;
-            }
+            $this->add_allocate_scheduled_task($phase, $workshop);
             $task = new stdClass();
             $task->title = get_string('allocate', 'workshop');
             $task->link = $this->allocation_url();
@@ -232,5 +212,48 @@ trait workshop_plan_early {
             }
         }
         return $phase;
+    }
+
+    /**
+     * How many of the reader's example submissions already carry a grade.
+     *
+     * @param array $examples
+     * @return int
+     */
+    protected function count_examples_assessed(array $examples): int {
+        $assessed = 0;
+        foreach ($examples as $example) {
+            if (!is_null($example->grade)) {
+                $assessed++;
+            }
+        }
+        return $assessed;
+    }
+
+    /**
+     * The scheduled-allocator task, only when the workshop switches to the
+     * assessment phase on its own.
+     *
+     * @param stdClass $phase
+     * @param stdClass $workshop
+     */
+    protected function add_allocate_scheduled_task(stdClass $phase, stdClass $workshop): void {
+        if (!$workshop->phaseswitchassessment) {
+            return;
+        }
+        $task = new stdClass();
+        $allocator = $this->store->get_record('workshopallocation_scheduled', ['workshopid' => $workshop->id]);
+        if (empty($allocator)) {
+            $task->completed = false;
+        } else if ($allocator->enabled && is_null($allocator->resultstatus)) {
+            $task->completed = true;
+        } else if ($workshop->submissionend > time()) {
+            $task->completed = null;
+        } else {
+            $task->completed = false;
+        }
+        $task->title = get_string('setup', 'workshopallocation_scheduled');
+        $task->link = $this->allocation_url('scheduled');
+        $phase->tasks['allocatescheduled'] = $task;
     }
 }
