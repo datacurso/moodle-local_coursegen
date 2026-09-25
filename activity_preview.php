@@ -69,7 +69,10 @@ $threadid = (string) $session->get('session_id');
 // written one is built into, and names each by the uid the answer echoes.
 $coursedata = json_decode((string) $session->get('coursedata'), true);
 $templateid = (int) ($coursedata['templateid'] ?? 0);
-$payload = $templateid > 0 ? template_export_service::build_init_payload($templateid) : [];
+$payload = [];
+if ($templateid > 0) {
+    $payload = template_export_service::build_init_payload($templateid);
+}
 $activitybycmid = static function (int $cmid) use ($payload): array {
     foreach (($payload['activities'] ?? []) as $activity) {
         if ((int) ($activity['cmid'] ?? 0) === $cmid) {
@@ -109,38 +112,62 @@ try {
     $plan = [];
 }
 
-if (!$parameters) {
+// A plan describes the pieces the mould offered to fill, and a mould also
+// holds pieces it offers to nobody, which carry through to the delivered
+// activity as they are. So the mould is what is shown, with the plan laid
+// over it.
+$fromplan = static function () use ($plan, $uid, $session, $activitybycmid): array {
     foreach ($plan as $entry) {
-        if ((string) ($entry['uid'] ?? '') === $uid) {
-            $modname = (string) ($entry['resource_type'] ?? '');
-            $parameters = plan_activity::to_parameters((array) $entry);
-            // A plan describes the pieces the mould offered to fill, and a
-            // mould also holds pieces it offers to nobody, which carry through
-            // to the delivered activity as they are. So the mould is what is
-            // shown, with the plan laid over it.
-            $parameters = plan_activity::over_mould(
-                $parameters,
-                $modname,
-                (int) ($entry['source_cmid'] ?? 0),
-                $session
-            );
-            $source = $activitybycmid((int) ($entry['source_cmid'] ?? 0));
-            break;
+        if ((string) ($entry['uid'] ?? '') !== $uid) {
+            continue;
         }
+        $entrymodname = (string) ($entry['resource_type'] ?? '');
+        $entryparameters = plan_activity::to_parameters((array) $entry);
+        $entryparameters = plan_activity::over_mould(
+            $entryparameters,
+            $entrymodname,
+            (int) ($entry['source_cmid'] ?? 0),
+            $session
+        );
+        return [
+            'modname' => $entrymodname,
+            'parameters' => $entryparameters,
+            'source' => $activitybycmid((int) ($entry['source_cmid'] ?? 0)),
+        ];
+    }
+    return [];
+};
+if (!$parameters) {
+    $found = $fromplan();
+    if ($found) {
+        $modname = $found['modname'];
+        $parameters = $found['parameters'];
+        $source = $found['source'];
     }
 }
 
 // An activity the run keeps rather than writes is not in the answer at all,
 // so it is read from what was sent: the payload describes every activity of
 // the template completely, and names each one by the same uid.
-if (!$parameters) {
+$fromkept = static function () use ($payload, $uid): array {
     foreach (($payload['activities'] ?? []) as $activity) {
-        if ((string) ($activity['uid'] ?? '') === $uid) {
-            $modname = (string) ($activity['resource_type'] ?? '');
-            $parameters = real_activity::to_parameters($activity);
-            $source = $activity;
-            break;
+        if ((string) ($activity['uid'] ?? '') !== $uid) {
+            continue;
         }
+        return [
+            'modname' => (string) ($activity['resource_type'] ?? ''),
+            'parameters' => real_activity::to_parameters($activity),
+            'source' => $activity,
+        ];
+    }
+    return [];
+};
+if (!$parameters) {
+    $found = $fromkept();
+    if ($found) {
+        $modname = $found['modname'];
+        $parameters = $found['parameters'];
+        $source = $found['source'];
     }
 }
 
