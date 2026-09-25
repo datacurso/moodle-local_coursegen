@@ -17,6 +17,7 @@
 namespace local_coursegen\local\preview\forum;
 
 use core\output\notification;
+use mod_forum\local\entities\forum as forum_entity;
 use stdClass;
 
 /**
@@ -59,30 +60,9 @@ trait forum_notifications {
         }
 
         if ($forum->is_in_group_mode() && !$capabilitymanager->can_access_all_groups($user)) {
-            if ($groupid === null) {
-                $isvisiblegroupsmode = $forum->get_effective_group_mode() == VISIBLEGROUPS;
-                $isgroupmember = !empty(groups_get_user_groups($forum->get_course_id(), $user->id)[0]);
-
-                if (
-                    !$capabilitymanager->can_post_to_my_groups($user)
-                    && $isvisiblegroupsmode
-                    && $isgroupmember
-                ) {
-                    $notifications[] = (new notification(
-                        get_string('cannotadddiscussionall', 'mod_forum'),
-                        notification::NOTIFY_WARNING
-                    ))->set_show_closebutton();
-                } else {
-                    $notifications[] = (new notification(
-                        get_string('cannotadddiscussiongroup', 'mod_forum'),
-                        notification::NOTIFY_WARNING
-                    ))->set_show_closebutton();
-                }
-            } else if (!$capabilitymanager->can_access_group($user, $groupid)) {
-                $notifications[] = (new notification(
-                    get_string('cannotadddiscussion', 'mod_forum'),
-                    notification::NOTIFY_WARNING
-                ))->set_show_closebutton();
+            $groupnotification = $this->group_mode_notification($forum, $user, $groupid, $capabilitymanager);
+            if ($groupnotification !== null) {
+                $notifications[] = $groupnotification;
             }
         }
 
@@ -103,5 +83,46 @@ trait forum_notifications {
         return array_map(function($notification) use ($OUTPUT) {
             return $notification->export_for_template($OUTPUT);
         }, $notifications);
+    }
+
+    /**
+     * The one notification a group-restricted forum shows, if any: the
+     * reader is asked to pick a group, or told why they cannot post to the
+     * one they are in.
+     *
+     * @param forum_entity $forum
+     * @param stdClass $user
+     * @param int|null $groupid
+     * @param \mod_forum\local\managers\capability $capabilitymanager
+     * @return notification|null
+     */
+    private function group_mode_notification(
+        forum_entity $forum,
+        stdClass $user,
+        ?int $groupid,
+        $capabilitymanager
+    ): ?notification {
+        if ($groupid !== null) {
+            if ($capabilitymanager->can_access_group($user, $groupid)) {
+                return null;
+            }
+            return (new notification(
+                get_string('cannotadddiscussion', 'mod_forum'),
+                notification::NOTIFY_WARNING
+            ))->set_show_closebutton();
+        }
+
+        $isvisiblegroupsmode = $forum->get_effective_group_mode() == VISIBLEGROUPS;
+        $isgroupmember = !empty(groups_get_user_groups($forum->get_course_id(), $user->id)[0]);
+        if (!$capabilitymanager->can_post_to_my_groups($user) && $isvisiblegroupsmode && $isgroupmember) {
+            return (new notification(
+                get_string('cannotadddiscussionall', 'mod_forum'),
+                notification::NOTIFY_WARNING
+            ))->set_show_closebutton();
+        }
+        return (new notification(
+            get_string('cannotadddiscussiongroup', 'mod_forum'),
+            notification::NOTIFY_WARNING
+        ))->set_show_closebutton();
     }
 }
