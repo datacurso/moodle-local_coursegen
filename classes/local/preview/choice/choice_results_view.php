@@ -105,7 +105,9 @@ trait choice_results_view {
         $display->fullnamecapability = has_capability('moodle/site:viewfullnames', $context);
 
         if (empty($allresponses)) {
-            return [false, $OUTPUT->heading(get_string("nousersyet"), 3, null)];
+            $nousersyet = get_string("nousersyet");
+            $heading = $OUTPUT->heading($nousersyet, 3, null);
+            return [false, $heading];
         }
 
         return [$display, ''];
@@ -163,12 +165,17 @@ trait choice_results_view {
         if ($displaylayout == self::CHOICE_DISPLAY_VERTICAL) {
             $chart->set_horizontal(true); // Horizontal bars when choices are vertical.
         }
-        $series = new \core\chart_series(format_string(get_string("responses", "choice")), $data['series']);
+        $responsestext = get_string("responses", "choice");
+        $serieslabel = format_string($responsestext);
+        $series = new \core\chart_series($serieslabel, $data['series']);
         $series->set_labels($data['series_labels']);
         $chart->add_series($series);
         $chart->set_labels($data['labels']);
         $yaxis = $chart->get_yaxis(0, true);
-        $yaxis->set_stepsize(max(1, round(max($data['series']) / 10)));
+        $rawseriesmax = max($data['series']);
+        $roundedstep = round($rawseriesmax / 10);
+        $stepsize = max(1, $roundedstep);
+        $yaxis->set_stepsize($stepsize);
         return $OUTPUT->render($chart);
     }
 }
