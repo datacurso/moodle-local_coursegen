@@ -49,19 +49,38 @@ let labels = null;
 let log = null;
 
 /**
+ * The batched string request for every thread string key.
+ *
+ * @param {Array<string>} keys
+ * @returns {Array<Object>}
+ */
+const threadStringRequests = (keys) => keys.map((key) => ({key, component: 'local_coursegen'}));
+
+/**
+ * Copy the fetched thread strings onto the labels map, keyed by string id.
+ *
+ * @param {Object} target
+ * @param {Array<string>} keys
+ * @param {Array<string>} values
+ * @returns {void}
+ */
+const assignThreadLabels = (target, keys, values) => {
+    keys.forEach((key, index) => {
+        target[key] = values[index];
+    });
+};
+
+/**
  * The thread's localised strings, fetched once.
  *
  * @returns {Promise<Object>} Keyed by string id.
  */
 const getLabels = async() => {
     if (!labels) {
-        const values = await getStrings(
-            STRING_KEYS.map((key) => ({key, component: 'local_coursegen'}))
-        );
+        const requests = threadStringRequests(STRING_KEYS);
+        const values = await getStrings(requests);
         labels = {};
-        STRING_KEYS.forEach((key, index) => {
-            labels[key] = values[index];
-        });
+        assignThreadLabels(labels, STRING_KEYS, values);
     }
     return labels;
 };
