@@ -52,6 +52,8 @@ class template_activity_export {
      */
     public static function parameters_for(cm_info $cm): array {
         $read = activity_reader::read_with_sources($cm);
+        $files = self::files_of($cm);
+        $questions = self::questions_of($cm);
         return [
             'name' => $cm->name,
             'section' => (int) $cm->sectionnum,
@@ -65,8 +67,8 @@ class template_activity_export {
             'structure_aliases' => $read['aliases'],
             // The files the activity keeps, which its tree only points at: a
             // folder is its files, a file resource is one of them.
-            'files' => self::files_of($cm),
-        ] + self::questions_of($cm);
+            'files' => $files,
+        ] + $questions;
     }
 
     /**
@@ -88,42 +90,81 @@ class template_activity_export {
         }
         require_once($CFG->dirroot . '/question/engine/lib.php');
 
-        $questions = [];
         $slots = $DB->get_records('quiz_slots', ['quizid' => $cm->instance], 'slot');
+        $questions = [];
         foreach ($slots as $slot) {
-            $reference = $DB->get_record('question_references', [
-                'component' => 'mod_quiz',
-                'questionarea' => 'slot',
-                'itemid' => $slot->id,
-            ]);
-            $entry = [
-                'slot' => (int) $slot->slot,
-                'page' => (int) $slot->page,
-                'maxmark' => (float) $slot->maxmark,
-                'displaynumber' => $slot->displaynumber,
-                'requireprevious' => (int) ($slot->requireprevious ?? 0),
-            ];
-            if ($reference) {
-                $version = $reference->version
-                    ? $DB->get_record('question_versions',
-                        ['questionbankentryid' => $reference->questionbankentryid, 'version' => $reference->version])
-                    : $DB->get_record_sql(
-                        'SELECT * FROM {question_versions} WHERE questionbankentryid = :entry ORDER BY version DESC',
-                        ['entry' => $reference->questionbankentryid], IGNORE_MULTIPLE);
-                if ($version) {
-                    // Everything the engine needs to make the question: the
-                    // row, its options, its answers, its hints.
-                    $entry['question'] = json_decode(
-                        json_encode(\question_bank::load_question_data((int) $version->questionid)),
-                        true
-                    );
-                }
-            }
-            // A slot filled at random from a category is a reference to a set
-            // of questions, not to one, and no one of them can stand for it.
-            $questions[] = $entry;
+            $questions[] = self::quiz_slot_entry($slot);
         }
         return ['questions' => $questions];
+    }
+
+    /**
+     * One quiz slot's own entry: the slot itself, and the question it
+     * references, if the question bank still has a resolvable version of it.
+     *
+     * A slot filled at random from a category is a reference to a set of
+     * questions, not to one, and no one of them can stand for it, so it
+     * carries no 'question' entry.
+     *
+     * @param \stdClass $slot A row of quiz_slots.
+     * @return array
+     */
+    private static function quiz_slot_entry($slot): array {
+        global $DB;
+
+        $requireprevious = $slot->requireprevious ?? 0;
+        $requireprevious = (int) $requireprevious;
+
+        $entry = [
+            'slot' => (int) $slot->slot,
+            'page' => (int) $slot->page,
+            'maxmark' => (float) $slot->maxmark,
+            'displaynumber' => $slot->displaynumber,
+            'requireprevious' => $requireprevious,
+        ];
+
+        $reference = $DB->get_record('question_references', [
+            'component' => 'mod_quiz',
+            'questionarea' => 'slot',
+            'itemid' => $slot->id,
+        ]);
+        if (!$reference) {
+            return $entry;
+        }
+
+        $version = self::quiz_slot_question_version($reference);
+        if (!$version) {
+            return $entry;
+        }
+
+        // Everything the engine needs to make the question: the
+        // row, its options, its answers, its hints.
+        $questionid = (int) $version->questionid;
+        $questiondata = \question_bank::load_question_data($questionid);
+        $questionjson = json_encode($questiondata);
+        $entry['question'] = json_decode($questionjson, true);
+        return $entry;
+    }
+
+    /**
+     * The question_versions row a slot's reference points at: the exact
+     * version it names, or the latest one when it names none in particular.
+     *
+     * @param \stdClass $reference A row of question_references.
+     * @return \stdClass|false
+     */
+    private static function quiz_slot_question_version($reference) {
+        global $DB;
+
+        if ($reference->version) {
+            return $DB->get_record('question_versions', [
+                'questionbankentryid' => $reference->questionbankentryid,
+                'version' => $reference->version,
+            ]);
+        }
+        return $DB->get_record_sql(
+            'SELECT * FROM {question_versions} WHERE questionbankentryid = :entry ORDER BY version DESC',
+            ['entry' => $reference->questionbankentryid], IGNORE_MULTIPLE);
     }
 
     /**
@@ -139,42 +180,77 @@ class template_activity_export {
     private static function files_of(cm_info $cm): array {
         global $DB;
         $context = \context_module::instance($cm->id);
-        $files = [];
+        $component = 'mod_' . $cm->modname;
         // The file storage lists one area, or a named set of them, never all.
         $areas = $DB->get_fieldset_sql(
             'SELECT DISTINCT filearea FROM {files} WHERE contextid = :contextid AND component = :component',
-            ['contextid' => $context->id, 'component' => 'mod_' . $cm->modname]
+            ['contextid' => $context->id, 'component' => $component]
         );
         if (!$areas) {
             return [];
         }
-        $stored = get_file_storage()->get_area_files(
-            $context->id, 'mod_' . $cm->modname, $areas, false, 'filearea, itemid, filepath, filename', true
+        $filestorage = get_file_storage();
+        $stored = $filestorage->get_area_files(
+            $context->id, $component, $areas, false, 'filearea, itemid, filepath, filename', true
         );
+        $files = [];
         foreach ($stored as $file) {
-            $isdir = $file->is_directory();
-            $files[] = [
-                'id' => (int) $file->get_id(),
-                'contextid' => (int) $file->get_contextid(),
-                'component' => $file->get_component(),
-                'filearea' => $file->get_filearea(),
-                'itemid' => (int) $file->get_itemid(),
-                'filepath' => $file->get_filepath(),
-                'filename' => $file->get_filename(),
-                'isdir' => $isdir,
-                'filesize' => (int) $file->get_filesize(),
-                'mimetype' => $isdir ? null : $file->get_mimetype(),
-                'timecreated' => (int) $file->get_timecreated(),
-                'timemodified' => (int) $file->get_timemodified(),
-                'sortorder' => (int) $file->get_sortorder(),
-                'author' => $file->get_author(),
-                'license' => $file->get_license(),
-                'url' => $isdir ? null : \moodle_url::make_pluginfile_url(
-                    $file->get_contextid(), $file->get_component(), $file->get_filearea(),
-                    $file->get_itemid(), $file->get_filepath(), $file->get_filename()
-                )->out(false),
-            ];
+            $files[] = self::stored_file_entry($file);
         }
         return $files;
+    }
+
+    /**
+     * One stored file's own entry, in the same columns a stored_file answers for.
+     *
+     * @param \stored_file $file
+     * @return array
+     */
+    private static function stored_file_entry($file): array {
+        $isdir = $file->is_directory();
+
+        $id = (int) $file->get_id();
+        $contextid = (int) $file->get_contextid();
+        $component = $file->get_component();
+        $filearea = $file->get_filearea();
+        $itemid = (int) $file->get_itemid();
+        $filepath = $file->get_filepath();
+        $filename = $file->get_filename();
+        $filesize = (int) $file->get_filesize();
+        $timecreated = (int) $file->get_timecreated();
+        $timemodified = (int) $file->get_timemodified();
+        $sortorder = (int) $file->get_sortorder();
+        $author = $file->get_author();
+        $license = $file->get_license();
+
+        // A directory marker has no content of its own, so it has neither a
+        // mime type nor an address to be served from.
+        $mimetype = null;
+        $url = null;
+        if (!$isdir) {
+            $mimetype = $file->get_mimetype();
+            $fileurl = \moodle_url::make_pluginfile_url(
+                $contextid, $component, $filearea, $itemid, $filepath, $filename);
+            $url = $fileurl->out(false);
+        }
+
+        return [
+            'id' => $id,
+            'contextid' => $contextid,
+            'component' => $component,
+            'filearea' => $filearea,
+            'itemid' => $itemid,
+            'filepath' => $filepath,
+            'filename' => $filename,
+            'isdir' => $isdir,
+            'filesize' => $filesize,
+            'mimetype' => $mimetype,
+            'timecreated' => $timecreated,
+            'timemodified' => $timemodified,
+            'sortorder' => $sortorder,
+            'author' => $author,
+            'license' => $license,
+            'url' => $url,
+        ];
     }
 }
