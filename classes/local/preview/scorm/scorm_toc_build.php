@@ -124,24 +124,7 @@ trait scorm_toc_build {
                     $sco->prereq = empty($sco->prerequisites) || scorm_eval_prerequisites($sco->prerequisites, $usertracks);
                 }
 
-                $statusicon = '';
-                if ($sco->isvisible === 'true') {
-                    if (!empty($sco->launch)) {
-                        // Set first sco to launch if in browse/review mode.
-                        if (empty($scoid) && ($mode != 'normal')) {
-                            $scoid = $sco->id;
-                        }
-                        if (empty($scoid)) {
-                            $scoid = $sco->id;
-                        }
-                        $incomplete = true;
-                        if ($sco->scormtype == 'sco') {
-                            $statusicon = $OUTPUT->pix_icon('notattempted', get_string('notattempted', 'scorm'), 'scorm');
-                        } else {
-                            $statusicon = $OUTPUT->pix_icon('asset', get_string('asset', 'scorm'), 'scorm');
-                        }
-                    }
-                }
+                $statusicon = $this->scorm_toc_status_icon($sco, $mode, $scoid, $incomplete);
 
                 if (empty($statusicon)) {
                     $sco->statusicon = $OUTPUT->pix_icon('notattempted', get_string('notattempted', 'scorm'), 'scorm');
@@ -159,7 +142,11 @@ trait scorm_toc_build {
         }
 
         // Get the parent scoes!
-        $result = $result ? scorm_get_toc_get_parent_child($result, $currentorg) : [];
+        if ($result) {
+            $result = scorm_get_toc_get_parent_child($result, $currentorg);
+        } else {
+            $result = [];
+        }
 
         // Be safe, prevent warnings from showing up while returning array.
         if (!isset($scoid)) {
@@ -167,5 +154,37 @@ trait scorm_toc_build {
         }
 
         return ['scoes' => $result, 'usertracks' => $usertracks, 'scoid' => $scoid];
+    }
+
+    /**
+     * One learning object's status icon, while also updating the loop's own
+     * running $scoid and $incomplete the way scorm_get_toc_object() did
+     * inline.
+     *
+     * @param stdClass $sco
+     * @param string $mode
+     * @param mixed $scoid By reference: the first launchable sco found so far.
+     * @param bool $incomplete By reference: whether any launchable sco was found.
+     * @return string
+     */
+    protected function scorm_toc_status_icon(stdClass $sco, string $mode, &$scoid, bool &$incomplete): string {
+        global $OUTPUT;
+
+        if ($sco->isvisible !== 'true' || empty($sco->launch)) {
+            return '';
+        }
+
+        // Set first sco to launch if in browse/review mode.
+        if (empty($scoid) && ($mode != 'normal')) {
+            $scoid = $sco->id;
+        }
+        if (empty($scoid)) {
+            $scoid = $sco->id;
+        }
+        $incomplete = true;
+        if ($sco->scormtype == 'sco') {
+            return $OUTPUT->pix_icon('notattempted', get_string('notattempted', 'scorm'), 'scorm');
+        }
+        return $OUTPUT->pix_icon('asset', get_string('asset', 'scorm'), 'scorm');
     }
 }
