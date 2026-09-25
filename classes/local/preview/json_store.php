@@ -105,11 +105,23 @@ class json_store {
         // anything; the module's own element hangs under it.
         foreach ($tree as $name => $value) {
             if (is_array($value)) {
-                foreach ($value as $node) {
-                    if (is_array($node)) {
-                        $this->walk($name, $node, [], $tables, $aliases);
-                    }
-                }
+                $this->load_element_nodes($name, $value, $tables, $aliases);
+            }
+        }
+    }
+
+    /**
+     * Walk every node of one top-level element name.
+     *
+     * @param string $name
+     * @param array $nodes
+     * @param array $tables
+     * @param array $aliases
+     */
+    private function load_element_nodes(string $name, array $nodes, array $tables, array $aliases): void {
+        foreach ($nodes as $node) {
+            if (is_array($node)) {
+                $this->walk($name, $node, [], $tables, $aliases);
             }
         }
     }
@@ -125,16 +137,7 @@ class json_store {
      * @param array $aliases
      */
     protected function walk(string $name, array $node, array $ancestors, array $tables, array $aliases): void {
-        $row = [];
-        $children = [];
-        foreach ($node as $key => $value) {
-            if (is_array($value)) {
-                $children[$key] = $value;
-                continue;
-            }
-            $column = $aliases[$name][$key] ?? $key;
-            $row[$column] = $value;
-        }
+        [$row, $children] = $this->split_node($node, $name, $aliases);
 
         $table = $tables[$name] ?? null;
         if ($table !== null) {
@@ -144,10 +147,7 @@ class json_store {
             // "lessonid" for a lesson's pages and "forum" for a forum's
             // discussions; a column the table does not have costs nothing in
             // a store that has no columns.
-            foreach ($ancestors as $ancestorname => $ancestorid) {
-                $row[$ancestorname . 'id'] ??= $ancestorid;
-                $row[$ancestorname] ??= $ancestorid;
-            }
+            $row = $this->with_ancestor_columns($row, $ancestors);
             $this->rows[$table][] = (object) $row;
         }
 
@@ -158,11 +158,73 @@ class json_store {
             $below[$name] = $row['id'];
         }
 
+        $this->walk_children($children, $below, $tables, $aliases);
+    }
+
+    /**
+     * Split one node into its own row columns and its child elements.
+     *
+     * @param array $node
+     * @param string $name The element's name.
+     * @param array $aliases
+     * @return array [row, children]
+     */
+    private function split_node(array $node, string $name, array $aliases): array {
+        $row = [];
+        $children = [];
+        foreach ($node as $key => $value) {
+            if (is_array($value)) {
+                $children[$key] = $value;
+                continue;
+            }
+            $column = $aliases[$name][$key] ?? $key;
+            $row[$column] = $value;
+        }
+        return [$row, $children];
+    }
+
+    /**
+     * Add every ancestor row's id, under both column names a module might ask for.
+     *
+     * @param array $row
+     * @param array $ancestors Element name => id.
+     * @return array
+     */
+    private function with_ancestor_columns(array $row, array $ancestors): array {
+        foreach ($ancestors as $ancestorname => $ancestorid) {
+            $row[$ancestorname . 'id'] ??= $ancestorid;
+            $row[$ancestorname] ??= $ancestorid;
+        }
+        return $row;
+    }
+
+    /**
+     * Walk every child element name's list of items.
+     *
+     * @param array $children Element name => list of item nodes.
+     * @param array $below
+     * @param array $tables
+     * @param array $aliases
+     */
+    private function walk_children(array $children, array $below, array $tables, array $aliases): void {
         foreach ($children as $childname => $items) {
-            foreach ($items as $item) {
-                if (is_array($item)) {
-                    $this->walk($childname, $item, $below, $tables, $aliases);
-                }
+            $this->walk_child_items($childname, $items, $below, $tables, $aliases);
+        }
+    }
+
+    /**
+     * Walk every item of one child element name.
+     *
+     * @param string $childname
+     * @param array $items
+     * @param array $below
+     * @param array $tables
+     * @param array $aliases
+     */
+    private function walk_child_items(string $childname, array $items, array $below, array $tables, array $aliases): void {
+        foreach ($items as $item) {
+            if (is_array($item)) {
+                $this->walk($childname, $item, $below, $tables, $aliases);
             }
         }
     }
@@ -263,7 +325,10 @@ class json_store {
      */
     public function get_field(string $table, string $column, array $conditions = []) {
         $row = $this->get_record($table, $conditions);
-        return $row === false ? false : ($row->$column ?? null);
+        if ($row === false) {
+            return false;
+        }
+        return $row->$column ?? null;
     }
 
     /**
@@ -286,7 +351,10 @@ class json_store {
         $menu = [];
         foreach ($this->get_records($table, $conditions, $sort) as $row) {
             $columns = array_keys(get_object_vars($row));
-            $value = $valuecolumn !== '' ? $valuecolumn : ($columns[1] ?? $columns[0]);
+            $value = $valuecolumn;
+            if ($value === '') {
+                $value = $columns[1] ?? $columns[0];
+            }
             $menu[$row->$keycolumn] = $row->$value ?? null;
         }
         return $menu;
@@ -327,8 +395,14 @@ class json_store {
         usort($rows, static function (stdClass $a, stdClass $b) use ($column, $descending): int {
             $left = $a->$column ?? null;
             $right = $b->$column ?? null;
-            $order = is_numeric($left) && is_numeric($right) ? $left <=> $right : strcmp((string) $left, (string) $right);
-            return $descending ? -$order : $order;
+            $order = strcmp((string) $left, (string) $right);
+            if (is_numeric($left) && is_numeric($right)) {
+                $order = $left <=> $right;
+            }
+            if ($descending) {
+                return -$order;
+            }
+            return $order;
         });
         return $rows;
     }
