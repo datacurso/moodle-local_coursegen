@@ -39,8 +39,9 @@ trait feedback_actionbar {
         global $OUTPUT;
         $items = [];
         if (has_capability('mod/feedback:edititems', $this->context)) {
-            $items['left'][]['actionlink'] = new action_link(new moodle_url($this->here, ['tab' => 'edit']),
-                get_string('edit_items', 'feedback'), null, ['class' => 'btn btn-secondary']);
+            $editurl = new moodle_url($this->here, ['tab' => 'edit']);
+            $editlabel = get_string('edit_items', 'feedback');
+            $items['left'][]['actionlink'] = new action_link($editurl, $editlabel, null, ['class' => 'btn btn-secondary']);
         }
         // The preview icon should be displayed only to users with capability to edit or view reports (to include
         // non-editing teachers too).
@@ -49,14 +50,15 @@ trait feedback_actionbar {
             'mod/feedback:viewreports',
         ];
         if (has_any_capability($capabilities, $this->context)) {
-            $items['left'][]['actionlink'] = new action_link(new moodle_url($this->here, ['tab' => 'print']),
-                get_string('previewquestions', 'feedback'), null, ['class' => 'btn btn-secondary']);
+            $printurl = new moodle_url($this->here, ['tab' => 'print']);
+            $printlabel = get_string('previewquestions', 'feedback');
+            $items['left'][]['actionlink'] = new action_link($printurl, $printlabel, null, ['class' => 'btn btn-secondary']);
         }
         if ($viewcompletion) {
             // Display a link to complete feedback: nobody has started one to resume.
+            $completeurl = new moodle_url($this->here, ['tab' => 'complete']);
             $label = get_string('complete_the_form', 'feedback');
-            $items['left'][]['actionlink'] = new action_link(new moodle_url($this->here, ['tab' => 'complete']),
-                $label, null, ['class' => 'btn btn-primary']);
+            $items['left'][]['actionlink'] = new action_link($completeurl, $label, null, ['class' => 'btn btn-primary']);
         }
         // base_action_bar::export_for_template().
         foreach ($items['left'] ?? [] as $i => $item) {
