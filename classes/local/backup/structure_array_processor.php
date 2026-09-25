@@ -146,13 +146,17 @@ class structure_array_processor extends base_processor {
         foreach ($nested->get_attributes() as $attribute) {
             $node[$attribute->get_name()] = $attribute->get_value();
         }
+        $files = [];
+        if ($nested instanceof backup_nested_element) {
+            $files = $nested->get_file_annotations();
+        }
         $this->stack[] = [
             'name' => $nested->get_name(),
             'node' => $node,
             // Which file areas this element's text may refer to, declared by
             // the structure itself: this is what backup uses to know which
             // files to carry, and here it is what says how to name them.
-            'files' => $nested instanceof backup_nested_element ? $nested->get_file_annotations() : [],
+            'files' => $files,
         ];
     }
 
@@ -249,17 +253,48 @@ class structure_array_processor extends base_processor {
             if (!is_string($value) || strpos($value, '@@PLUGINFILE@@') === false) {
                 continue;
             }
-            foreach ($annotations as $component => $areas) {
-                foreach ($areas as $filearea => $info) {
-                    $contextid = $info->contextid ?? null;
-                    $contextid = $contextid !== null ? (int) $contextid : (int) $this->get_var(\backup::VAR_CONTEXTID);
-                    $itemid = isset($info->element) && $info->element !== null ? $info->element->get_value() : null;
-                    $value = file_rewrite_pluginfile_urls($value, 'pluginfile.php', $contextid, $component, $filearea, $itemid);
-                }
-            }
-            $node[$key] = $value;
+            $node[$key] = $this->rewritten_for_annotations($value, $annotations);
         }
         return $node;
+    }
+
+    /**
+     * Rewrite one text value's file placeholders for every declared component/filearea.
+     *
+     * @param string $value
+     * @param array $annotations component => filearea => info, as declared.
+     * @return string
+     */
+    protected function rewritten_for_annotations(string $value, array $annotations): string {
+        foreach ($annotations as $component => $areas) {
+            $value = $this->rewritten_for_component($value, $component, $areas);
+        }
+        return $value;
+    }
+
+    /**
+     * Rewrite one text value's file placeholders for one component's fileareas.
+     *
+     * @param string $value
+     * @param string $component
+     * @param array $areas filearea => info.
+     * @return string
+     */
+    protected function rewritten_for_component(string $value, string $component, array $areas): string {
+        foreach ($areas as $filearea => $info) {
+            $contextid = $info->contextid ?? null;
+            if ($contextid !== null) {
+                $contextid = (int) $contextid;
+            } else {
+                $contextid = (int) $this->get_var(\backup::VAR_CONTEXTID);
+            }
+            $itemid = null;
+            if (isset($info->element) && $info->element !== null) {
+                $itemid = $info->element->get_value();
+            }
+            $value = file_rewrite_pluginfile_urls($value, 'pluginfile.php', $contextid, $component, $filearea, $itemid);
+        }
+        return $value;
     }
 
     /**
