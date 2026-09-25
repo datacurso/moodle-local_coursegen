@@ -106,7 +106,8 @@ class view {
     protected function choice_get_choice(stdClass $choice): stdClass {
         $choice->option = [];
         $choice->maxanswers = [];
-        foreach ($this->store->get_records('choice_options', ['choiceid' => $choice->id], 'id') as $option) {
+        $options = $this->store->get_records('choice_options', ['choiceid' => $choice->id], 'id');
+        foreach ($options as $option) {
             $choice->option[$option->id] = $option->text;
             $choice->maxanswers[$option->id] = $option->maxanswers;
         }
