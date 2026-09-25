@@ -52,7 +52,12 @@ class quiz_preview extends preview_base {
         if ($quiz === null) {
             return $this->nothing_yet();
         }
-        $view = new view($quiz, $this->cm(), $this->course(), $this->context(), $this->slots(), $this->url_to());
+        $cm = $this->cm();
+        $course = $this->course();
+        $context = $this->context();
+        $slots = $this->slots();
+        $here = $this->url_to();
+        $view = new view($quiz, $cm, $course, $context, $slots, $here);
         return $view->page();
     }
 
@@ -63,11 +68,17 @@ class quiz_preview extends preview_base {
      */
     protected function slots(): array {
         $drafted = $this->parameters['mod_settings']['questions'] ?? null;
-        $ismould = (string) ($this->source['uid'] ?? '') === (string) $this->here->get_param('uid');
+        $sourceuid = $this->source['uid'] ?? '';
+        $sourceuid = (string) $sourceuid;
+        $requesteduid = $this->here->get_param('uid');
+        $requesteduid = (string) $requesteduid;
+        $ismould = $sourceuid === $requesteduid;
         if (!$ismould && is_array($drafted) && $drafted) {
             return $this->slots_from_draft($drafted);
         }
-        return (array) (($this->source['parameters'] ?? [])['questions'] ?? []);
+        $sourceparameters = $this->source['parameters'] ?? [];
+        $sourcequestions = $sourceparameters['questions'] ?? [];
+        return (array) $sourcequestions;
     }
 
     /**
@@ -87,14 +98,18 @@ class quiz_preview extends preview_base {
         $slots = [];
         $slotnumber = 0;
         $id = 1;
+        $context = $this->context();
+        $contextid = $context->id;
         foreach ($drafted as $question) {
             $question = (array) $question;
             $slotnumber++;
-            $data = quiz_question_data::from_form($question, $id, $this->context()->id);
+            $data = quiz_question_data::from_form($question, $id, $contextid);
+            $maxmark = $question['defaultmark'] ?? 1;
+            $maxmark = (float) $maxmark;
             $slots[] = [
                 'slot' => $slotnumber,
                 'page' => $slotnumber,
-                'maxmark' => (float) ($question['defaultmark'] ?? 1),
+                'maxmark' => $maxmark,
                 'displaynumber' => null,
                 'question' => $data,
             ];
