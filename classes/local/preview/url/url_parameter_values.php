@@ -45,21 +45,29 @@ trait url_parameter_values {
         $site = get_site();
 
         $coursecontext = \context_course::instance($course->id);
+        $formatoptions = array('context' => $coursecontext);
+
+        $coursefullname = format_string($course->fullname, true, $formatoptions);
+        $courseshortname = format_string($course->shortname, true, $formatoptions);
+        $sitename = format_string($site->fullname, true, $formatoptions);
+        $urlname = format_string($url->name, true, $formatoptions);
+        $lang = current_language();
+        $currenttime = time();
 
         $values = array (
             'courseid'        => $course->id,
-            'coursefullname'  => format_string($course->fullname, true, array('context' => $coursecontext)),
-            'courseshortname' => format_string($course->shortname, true, array('context' => $coursecontext)),
+            'coursefullname'  => $coursefullname,
+            'courseshortname' => $courseshortname,
             'courseidnumber'  => $course->idnumber,
             'coursesummary'   => $course->summary,
             'courseformat'    => $course->format,
-            'lang'            => current_language(),
-            'sitename'        => format_string($site->fullname, true, array('context' => $coursecontext)),
+            'lang'            => $lang,
+            'sitename'        => $sitename,
             'serverurl'       => $CFG->wwwroot,
-            'currenttime'     => time(),
+            'currenttime'     => $currenttime,
             'urlinstance'     => $url->id,
             'urlcmid'         => $cm->id,
-            'urlname'         => format_string($url->name, true, array('context' => $coursecontext)),
+            'urlname'         => $urlname,
             'urlidnumber'     => $cm->idnumber ?? '',
         );
 
@@ -92,15 +100,29 @@ trait url_parameter_values {
 
         //hmm, this is pretty fragile and slow, why do we need it here??
         if ($url->parameters) {
-            $parameters = (array) unserialize_array($url->parameters);
-            foreach ($parameters as $parse => $parameter) {
-                if (strpos($parameter, 'course') === 0 && substr($parameter, 0, 6) === 'course') {
-                    $field = substr($parameter, 6);
-                    $values[$parameter] = $course->$field ?? '';
-                }
-            }
+            $values = self::url_apply_course_field_parameters($values, $url, $course);
         }
 
+        return $values;
+    }
+
+    /**
+     * Every "course<field>" variable a URL declares, resolved against the
+     * course's own field of that name.
+     *
+     * @param array $values
+     * @param stdClass $url
+     * @param stdClass $course
+     * @return array
+     */
+    private static function url_apply_course_field_parameters(array $values, $url, $course): array {
+        $parameters = (array) unserialize_array($url->parameters);
+        foreach ($parameters as $parse => $parameter) {
+            if (strpos($parameter, 'course') === 0 && substr($parameter, 0, 6) === 'course') {
+                $field = substr($parameter, 6);
+                $values[$parameter] = $course->$field ?? '';
+            }
+        }
         return $values;
     }
 

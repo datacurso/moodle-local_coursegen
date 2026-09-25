@@ -37,7 +37,10 @@ trait url_link_building {
      */
     public static function url_get_full_url($url, $cm, $course, $config = null) {
 
-        $parameters = empty($url->parameters) ? [] : (array) unserialize_array($url->parameters);
+        $parameters = [];
+        if (!empty($url->parameters)) {
+            $parameters = (array) unserialize_array($url->parameters);
+        }
 
         // make sure there are no encoded entities, it is ok to do this twice
         $fullurl = html_entity_decode($url->externalurl, ENT_QUOTES, 'UTF-8');
@@ -74,30 +77,49 @@ trait url_link_building {
 
         // add variable url parameters
         if ($config->allowvariables && !empty($parameters)) {
-            $paramvalues = self::url_get_variable_values($url, $cm, $course, $config);
-
-            foreach ($parameters as $parse => $parameter) {
-                if (isset($paramvalues[$parameter])) {
-                    $parameters[$parse] = rawurlencode($parse) . '=' . rawurlencode($paramvalues[$parameter]);
-                } else {
-                    unset($parameters[$parse]);
-                }
-            }
-
-            if (!empty($parameters)) {
-                if (stripos($fullurl, 'teamspeak://') === 0) {
-                    $fullurl = $fullurl . '?' . implode('?', $parameters);
-                } else {
-                    $join = (strpos($fullurl, '?') === false) ? '?' : '&';
-                    $fullurl = $fullurl . $join . implode('&', $parameters);
-                }
-            }
+            $fullurl = self::url_append_variable_parameters($fullurl, $parameters, $url, $cm, $course, $config);
         }
 
         // encode all & to &amp; entity
         $fullurl = str_replace('&', '&amp;', $fullurl);
 
         return $fullurl;
+    }
+
+    /**
+     * Resolves every variable url parameter against the course/reader values,
+     * and appends the surviving ones to the full url.
+     *
+     * @param string $fullurl
+     * @param array $parameters
+     * @param stdClass $url
+     * @param stdClass $cm
+     * @param stdClass $course
+     * @param stdClass $config
+     * @return string
+     */
+    private static function url_append_variable_parameters($fullurl, array $parameters, $url, $cm, $course, $config): string {
+        $paramvalues = self::url_get_variable_values($url, $cm, $course, $config);
+
+        foreach ($parameters as $parse => $parameter) {
+            if (isset($paramvalues[$parameter])) {
+                $parameters[$parse] = rawurlencode($parse) . '=' . rawurlencode($paramvalues[$parameter]);
+            } else {
+                unset($parameters[$parse]);
+            }
+        }
+
+        if (empty($parameters)) {
+            return $fullurl;
+        }
+        if (stripos($fullurl, 'teamspeak://') === 0) {
+            return $fullurl . '?' . implode('?', $parameters);
+        }
+        $join = '&';
+        if (strpos($fullurl, '?') === false) {
+            $join = '?';
+        }
+        return $fullurl . $join . implode('&', $parameters);
     }
 
     /**
