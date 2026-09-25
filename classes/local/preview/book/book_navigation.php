@@ -46,16 +46,20 @@ trait book_navigation {
         $data = [];
         if ($next) {
             $nexturl = $urls((int) $next->id);
+            $nexturlout = $nexturl->out(false);
+            $nexttitle = get_string('navnext', 'mod_book');
             $data['next'] = [
-                'title' => get_string('navnext', 'mod_book'),
-                'url' => $nexturl->out(false),
+                'title' => $nexttitle,
+                'url' => $nexturlout,
             ];
         }
         if ($previous) {
             $prevurl = $urls((int) $previous->id);
+            $prevurlout = $prevurl->out(false);
+            $prevtitle = get_string('navprev', 'mod_book');
             $data['previous'] = [
-                'title' => get_string('navprev', 'mod_book'),
-                'url' => $prevurl->out(false),
+                'title' => $prevtitle,
+                'url' => $prevurlout,
             ];
         }
         return $data;
