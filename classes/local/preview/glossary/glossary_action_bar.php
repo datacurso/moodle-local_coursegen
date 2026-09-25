@@ -52,11 +52,15 @@ trait glossary_action_bar {
         int $tab
     ): array {
         global $OUTPUT;
+        $addnewbutton = $this->create_add_button($OUTPUT);
+        $searchbox = $this->create_search_box($mode, $hook);
+        $tools = $this->get_additional_tools($OUTPUT, $mode, $hook, $sortkey, $sortorder, $offset, $pagelimit);
+        $tabjumps = $this->generate_tab_jumps($OUTPUT, $mode, $tab);
         return [
-            'addnewbutton' => $this->create_add_button($OUTPUT),
-            'searchbox' => $this->create_search_box($mode, $hook),
-            'tools' => $this->get_additional_tools($OUTPUT, $mode, $hook, $sortkey, $sortorder, $offset, $pagelimit),
-            'tabjumps' => $this->generate_tab_jumps($OUTPUT, $mode, $tab),
+            'addnewbutton' => $addnewbutton,
+            'searchbox' => $searchbox,
+            'tools' => $tools,
+            'tabjumps' => $tabjumps,
         ];
     }
 
@@ -71,12 +75,13 @@ trait glossary_action_bar {
         global $OUTPUT;
         $fullsearchchecked = true;
 
+        $checklabel = get_string("searchindefinition", "glossary");
         $check = [
             'name' => 'fullsearch',
             'id' => 'fullsearch',
             'value' => '1',
             'checked' => $fullsearchchecked,
-            'label' => get_string("searchindefinition", "glossary"),
+            'label' => $checklabel,
         ];
 
         $checkbox = $OUTPUT->render_from_template('core/checkbox', $check);
@@ -85,13 +90,20 @@ trait glossary_action_bar {
             (object) ['name' => 'id', 'value' => $this->cm->id],
             (object) ['name' => 'mode', 'value' => 'search'],
         ];
+
+        $query = '';
+        if ($mode == 'search') {
+            $query = s($hook);
+        }
+        $actionurl = ($this->urls)([]);
+        $searchstring = get_string('search');
         $data = [
-            'action' => ($this->urls)([]),
+            'action' => $actionurl,
             'hiddenfields' => $hiddenfields,
             'otherfields' => $checkbox,
             'inputname' => 'hook',
-            'query' => ($mode == 'search') ? s($hook) : '',
-            'searchstring' => get_string('search'),
+            'query' => $query,
+            'searchstring' => $searchstring,
         ];
 
         return $data;

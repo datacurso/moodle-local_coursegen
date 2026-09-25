@@ -92,19 +92,26 @@ trait glossary_tab_tools {
         foreach ($validtabs as $key => $tabinfo) {
             if (in_array($key, $tabs)) {
                 $baseurl->params(['mode' => $tabinfo['mode']]);
-                $active = $active ?? $baseurl->out(false);
-                $active = ($tabinfo['mode'] == $mode ? $baseurl->out(false) : $active);
-                $options[get_string($tabinfo['descriptor'], 'glossary')] = $baseurl->out(false);
+                $tabouturl = $baseurl->out(false);
+                $active = $active ?? $tabouturl;
+                if ($tabinfo['mode'] == $mode) {
+                    $active = $tabouturl;
+                }
+                $taboptionlabel = get_string($tabinfo['descriptor'], 'glossary');
+                $options[$taboptionlabel] = $tabouturl;
             }
         }
 
         if ($tab < self::GLOSSARY_STANDARD_VIEW || $tab > self::GLOSSARY_AUTHOR_VIEW) {
-            $options[get_string('edit')] = '#';
+            $editlabel = get_string('edit');
+            $options[$editlabel] = '#';
         }
 
         if (count($options) > 1) {
-            $select = new url_select(array_flip($options), $active, null);
-            $select->set_label(get_string('explainalphabet', 'glossary'), ['class' => 'sr-only']);
+            $urloptions = array_flip($options);
+            $select = new url_select($urloptions, $active, null);
+            $selectlabel = get_string('explainalphabet', 'glossary');
+            $select->set_label($selectlabel, ['class' => 'sr-only']);
             return $select->export_for_template($output);
         }
 
