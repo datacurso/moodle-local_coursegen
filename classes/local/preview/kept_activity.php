@@ -93,25 +93,68 @@ class kept_activity {
      * @return array
      */
     private static function lesson_pages_in_order(array $root): array {
+        $pages = self::flatten_lesson_pages($root);
+        if (!$pages) {
+            return [];
+        }
+        $byid = self::lesson_pages_by_id($pages);
+        $first = self::first_lesson_page($pages);
+        $ordered = self::walk_lesson_page_chain($first, $byid);
+        return self::append_orphan_pages($ordered, $pages);
+    }
+
+    /**
+     * Every page of a lesson, still in the backup's own grouping.
+     *
+     * @param array $root
+     * @return array
+     */
+    private static function flatten_lesson_pages(array $root): array {
         $pages = [];
         foreach (($root['pages'] ?? []) as $group) {
             $pages = array_merge($pages, $group['page'] ?? []);
         }
-        if (!$pages) {
-            return [];
-        }
+        return $pages;
+    }
 
-        // The page nobody names as "next" is the first one, found in the
-        // same pass that indexes every page by id for the walk below.
+    /**
+     * Every page, keyed by its own id.
+     *
+     * @param array $pages
+     * @return array
+     */
+    private static function lesson_pages_by_id(array $pages): array {
         $byid = [];
-        $current = null;
         foreach ($pages as $page) {
             $byid[(string) ($page['id'] ?? '')] = $page;
-            if ($current === null && (string) ($page['prevpageid'] ?? '0') === '0') {
-                $current = $page;
+        }
+        return $byid;
+    }
+
+    /**
+     * The page nobody names as "next": where the walk starts.
+     *
+     * @param array $pages
+     * @return array|null
+     */
+    private static function first_lesson_page(array $pages): ?array {
+        foreach ($pages as $page) {
+            if ((string) ($page['prevpageid'] ?? '0') === '0') {
+                return $page;
             }
         }
+        return null;
+    }
 
+    /**
+     * Walks the chain from a page to the one it names as next, until it
+     * loops back on a page already walked.
+     *
+     * @param array|null $current
+     * @param array $byid
+     * @return array
+     */
+    private static function walk_lesson_page_chain(?array $current, array $byid): array {
         $ordered = [];
         $seen = [];
         while ($current !== null) {
@@ -123,12 +166,38 @@ class kept_activity {
             $ordered[] = $current;
             $current = $byid[(string) ($current['nextpageid'] ?? '0')] ?? null;
         }
+        return $ordered;
+    }
+
+    /**
+     * Pages the chain walk never reached, appended after the ones it did.
+     *
+     * @param array $ordered
+     * @param array $pages
+     * @return array
+     */
+    private static function append_orphan_pages(array $ordered, array $pages): array {
+        $seen = self::lesson_page_ids($ordered);
         foreach ($pages as $page) {
             if (!isset($seen[(string) ($page['id'] ?? '')])) {
                 $ordered[] = $page;
             }
         }
         return $ordered;
+    }
+
+    /**
+     * The ids of a list of pages, as lookup keys.
+     *
+     * @param array $pages
+     * @return array
+     */
+    private static function lesson_page_ids(array $pages): array {
+        $ids = [];
+        foreach ($pages as $page) {
+            $ids[(string) ($page['id'] ?? '')] = true;
+        }
+        return $ids;
     }
 
     /**
@@ -139,14 +208,26 @@ class kept_activity {
      */
     private static function buttons_of(array $page): array {
         $buttons = [];
-        foreach (($page['answers'] ?? []) as $group) {
-            foreach (($group['answer'] ?? []) as $answer) {
-                $buttons[] = [
-                    'text' => html_to_text((string) ($answer['answer_text'] ?? ''), 0, false),
-                    'jumpto' => $answer['jumpto'] ?? null,
-                ];
-            }
+        foreach (self::lesson_answers_of($page) as $answer) {
+            $buttons[] = [
+                'text' => html_to_text((string) ($answer['answer_text'] ?? ''), 0, false),
+                'jumpto' => $answer['jumpto'] ?? null,
+            ];
         }
         return $buttons;
+    }
+
+    /**
+     * A page's answers, still in the backup's own grouping.
+     *
+     * @param array $page
+     * @return array
+     */
+    private static function lesson_answers_of(array $page): array {
+        $answers = [];
+        foreach (($page['answers'] ?? []) as $group) {
+            $answers = array_merge($answers, $group['answer'] ?? []);
+        }
+        return $answers;
     }
 }
