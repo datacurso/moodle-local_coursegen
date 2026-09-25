@@ -144,4 +144,17 @@ class page_preview extends preview_base {
     public function limited_width(): bool {
         return true;
     }
+
+    /**
+     * The page's display options, unserialized (mod/page/view.php).
+     *
+     * @param stdClass $page
+     * @return array
+     */
+    private function display_options(stdClass $page): array {
+        if (empty($page->displayoptions)) {
+            return [];
+        }
+        return (array) unserialize_array($page->displayoptions);
+    }
 }
