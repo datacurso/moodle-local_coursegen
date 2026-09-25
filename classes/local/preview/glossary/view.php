@@ -116,7 +116,8 @@ class view {
      * @return string
      */
     protected function url(array $params): string {
-        return ($this->urls)($params)->out(false);
+        $url = ($this->urls)($params);
+        return $url->out(false);
     }
 
     /**
@@ -142,17 +143,16 @@ class view {
 
         $out = '';
         // echo $renderer->main_action_bar($actionbar);
-        $out .= $OUTPUT->render_from_template(
-            'mod_glossary/standard_action_menu',
-            $this->standard_action_bar_data($mode, $hook, $sortkey, $sortorder, $offset, $entriesbypage, $tab)
-        );
+        $actionbardata = $this->standard_action_bar_data($mode, $hook, $sortkey, $sortorder, $offset, $entriesbypage, $tab);
+        $out .= $OUTPUT->render_from_template('mod_glossary/standard_action_menu', $actionbardata);
 
         // All this depends if whe have $showcommonelements
         // Start to print glossary controls. The approval link is drawn only on
         // a page without secondary navigation; a module page has it.
         // require("tabs.php");
+        $alphabetmenu = $this->glossary_print_alphabet_menu($mode, $hook, $sortkey, $sortorder);
         $out .= $OUTPUT->render_from_template('local_coursegen/preview_glossary_controls', [
-            'alphabetmenu' => $this->glossary_print_alphabet_menu($mode, $hook, $sortkey, $sortorder),
+            'alphabetmenu' => $alphabetmenu,
         ]);
 
         // require("sql.php"); browsing by letter.
@@ -172,7 +172,7 @@ class view {
             //Decide if we must show the ALL link in the pagebar
             $specialtext = '';
             if ($this->glossary->showall) {
-                $specialtext = get_string("allentries", "glossary");
+                $specialtext = get_string('allentries', 'glossary');
             }
 
             //Build paging bar
@@ -192,7 +192,8 @@ class view {
                 if ($printpivot) {
                     $pivot = $entry->{$pivotkey};
                     $upperpivot = core_text::strtoupper($pivot);
-                    $pivottoshow = core_text::strtoupper(format_string($pivot, true, $fmtoptions));
+                    $formattedpivot = format_string($pivot, true, $fmtoptions);
+                    $pivottoshow = core_text::strtoupper($formattedpivot);
 
                     // Reduce pivot to 1cc if necessary.
                     if (!$fullpivot) {
@@ -205,8 +206,9 @@ class view {
                         $currentpivot = $upperpivot;
 
                         // print the group break if apply
+                        $headinghtml = $OUTPUT->heading($pivottoshow, 3);
                         $out .= $OUTPUT->render_from_template('local_coursegen/preview_glossary_category_header', [
-                            'headinghtml' => $OUTPUT->heading($pivottoshow, 3),
+                            'headinghtml' => $headinghtml,
                         ]);
                     }
                 }
@@ -217,7 +219,8 @@ class view {
             }
         }
         if (!$entriesshown) {
-            $out .= $OUTPUT->box(get_string("noentries", "glossary"), "generalbox boxaligncenter boxwidthwide");
+            $noentriestext = get_string('noentries', 'glossary');
+            $out .= $OUTPUT->box($noentriestext, 'generalbox boxaligncenter boxwidthwide');
         }
 
         $out .= $OUTPUT->render_from_template('local_coursegen/preview_glossary_footer', ['paging' => $paging]);
