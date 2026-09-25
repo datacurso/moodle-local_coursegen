@@ -120,11 +120,13 @@ trait url_display {
      * @return string
      */
     public static function url_print_workaround($url, $cm, $course, context $context): string {
-        $fullurl = new moodle_url(self::url_get_full_url($url, $cm, $course));
+        $rawfullurl = self::url_get_full_url($url, $cm, $course);
+        $fullurl = new moodle_url($rawfullurl);
+        $urlout = $fullurl->out(false);
 
         $display = self::url_get_final_display_type($url);
         if ($display == RESOURCELIB_DISPLAY_POPUP) {
-            $jsfullurl = addslashes_js($fullurl->out(false));
+            $jsfullurl = addslashes_js($urlout);
             $options = self::url_display_options($url);
             $width = 620;
             if (!empty($options['popupwidth'])) {
@@ -145,13 +147,15 @@ trait url_display {
         }
 
         global $OUTPUT;
+        $linktext = format_string($cm->name);
         $link = $OUTPUT->render_from_template('local_coursegen/preview_link', [
-            'url' => $fullurl->out(false),
-            'text' => format_string($cm->name),
+            'url' => $urlout,
+            'text' => $linktext,
             'onclick' => $attributes['onclick'] ?? '',
         ]);
+        $clicktoopen = get_string('clicktoopen', 'url', $link);
         return $OUTPUT->render_from_template('local_coursegen/preview_url_workaround', [
-            'clicktoopen' => get_string('clicktoopen', 'url', $link),
+            'clicktoopen' => $clicktoopen,
         ]);
     }
 
@@ -172,9 +176,11 @@ trait url_display {
         $title    = $url->name;
 
         $moodleurl = new moodle_url($fullurl);
+        $moodleurlout = $moodleurl->out(false);
+        $linktext = format_string($cm->name);
         $link = $OUTPUT->render_from_template('local_coursegen/preview_link', [
-            'url' => $moodleurl->out(false),
-            'text' => format_string($cm->name),
+            'url' => $moodleurlout,
+            'text' => $linktext,
         ]);
         $clicktoopen = get_string('clicktoopen', 'url', $link);
 
