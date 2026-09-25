@@ -66,6 +66,32 @@ export const initSidebar = () => {
     const paginationNext = document.getElementById('courseaiPaginationNext');
     const paginationInfo = document.getElementById('courseaiPaginationInfo');
 
+    /**
+     * Hide every card; the current page's matches are shown afterwards.
+     *
+     * @param {Array} cards
+     */
+    const hideAllCards = (cards) => {
+        cards.forEach((card) => {
+            card.style.display = 'none';
+        });
+    };
+
+    /**
+     * Show only the matching cards that fall on the current page.
+     *
+     * @param {Array} matching
+     */
+    const showCurrentPageCards = (matching) => {
+        matching.forEach((card, i) => {
+            let display = 'none';
+            if (Math.floor(i / PER_PAGE) + 1 === currentPage) {
+                display = '';
+            }
+            card.style.display = display;
+        });
+    };
+
     const renderPage = (page) => {
         const cards = Array.from(document.querySelectorAll('#courseaiSessionsGrid .courseai-session-row'));
         if (!cards.length) {
@@ -76,16 +102,22 @@ export const initSidebar = () => {
         totalPages = Math.max(1, Math.ceil(matching.length / PER_PAGE));
         currentPage = Math.max(1, Math.min(page, totalPages));
 
-        cards.forEach((card) => { card.style.display = 'none'; });
-        matching.forEach((card, i) => {
-            card.style.display = Math.floor(i / PER_PAGE) + 1 === currentPage ? '' : 'none';
-        });
+        hideAllCards(cards);
+        showCurrentPageCards(matching);
 
         if (noResultsEl) {
-            noResultsEl.style.display = matching.length ? 'none' : '';
+            let noResultsDisplay = '';
+            if (matching.length) {
+                noResultsDisplay = 'none';
+            }
+            noResultsEl.style.display = noResultsDisplay;
         }
         if (paginationEl) {
-            paginationEl.style.display = totalPages > 1 ? 'flex' : 'none';
+            let paginationDisplay = 'none';
+            if (totalPages > 1) {
+                paginationDisplay = 'flex';
+            }
+            paginationEl.style.display = paginationDisplay;
         }
         if (paginationInfo) {
             paginationInfo.textContent = `${currentPage} / ${totalPages}`;
