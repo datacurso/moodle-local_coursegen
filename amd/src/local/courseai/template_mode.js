@@ -28,45 +28,25 @@
  */
 
 import Notification from 'core/notification';
-import YUI from 'core/yui';
-import {getStrings} from 'core/str';
-import {initFilepicker} from '../../repository/courseai';
-import {bindToggleWrap, showFilePicker} from './context/filepicker';
-import {
-    getTemplateStructure,
-    startTemplateGeneration,
-    finishTemplateGeneration,
-} from './template/repository';
+import {startTemplateGeneration, finishTemplateGeneration} from './template/repository';
 import {runGenerationStream} from './template/generation_stream';
-import {refreshPreviewLinks, usePreviewSession} from './template/preview';
+import {usePreviewSession} from './template/preview';
 import {
     createTemplateState,
-    applyStructureResponse,
     addSection,
     insertActivity,
     removeActivity,
     toggleSectionCollapsed,
 } from './template/state';
-import {renderStructure, wireStructureEvents} from './template/render';
-import {renderChooserGrid, openActivityChooser, wireChooserModal} from './template/chooser';
-import {formatTemplate} from './utils';
-
-// Localised labels used while mutating the structure (add-section button text,
-// generic "Section" word for naming new sections, and the "N sections · M
-// activities" stats template). Fetched once and cached — wireTemplateMode runs
-// before the page's own translated strings are loaded (see courseai.js), so
-// this module fetches only the couple of strings it needs.
-let labelsPromise = null;
-const getLabels = () => {
-    if (!labelsPromise) {
-        labelsPromise = getStrings([
-            {key: 'courseai_template_add_section', component: 'local_coursegen'},
-            {key: 'section', component: 'moodle'},
-            {key: 'courseai_plan_sections_counter', component: 'local_coursegen'},
-        ]).then(([addSectionLabel, sectionWord, statsTemplate]) => ({addSectionLabel, sectionWord, statsTemplate}));
-    }
-    return labelsPromise;
-};
+import {wireStructureEvents} from './template/render';
+import {openActivityChooser, wireChooserModal} from './template/chooser';
+import {wireInputBar} from './template/input_bar';
+import {
+    getLabels,
+    rerenderStructure,
+    loadTemplateStructure,
+    clearStructure,
+} from './template/structure_loader';
 
 /**
  * Generate the course from the picked template, with the input bar's own
@@ -108,24 +88,6 @@ const runGeneration = async(tplState, tplSelect, genBtn) => {
         genBtn.disabled = false;
         Notification.exception(e);
     }
-};
-
-/**
- * Update the "N sections · M activities" summary line in the toolbar.
- *
- * @param {Object} tplState
- * @param {string} statsTemplate
- */
-const updateStats = (tplState, statsTemplate) => {
-    const statsEl = document.getElementById('tplModeStats');
-    if (!statsEl) {
-        return;
-    }
-    const totalActivities = tplState.sections.reduce((sum, section) => sum + section.activities.length, 0);
-    statsEl.textContent = formatTemplate(statsTemplate, {
-        sections: tplState.sections.length,
-        activities: totalActivities,
-    });
 };
 
 /**
@@ -174,20 +136,11 @@ export const wireTemplateMode = (state) => {
     // was launched with and discards its response if it no longer matches.
     const requestTracker = {id: 0};
 
-    // Single source of truth for re-rendering: always resolves the localised
-    // label first so the "+ Add section" button never flashes untranslated text.
-    const rerenderStructure = async() => {
-        const {addSectionLabel, statsTemplate} = await getLabels();
-        await renderStructure(container, tplState, {addSection: addSectionLabel});
-        refreshPreviewLinks();
-        updateStats(tplState, statsTemplate);
-    };
-
     wireStructureEvents(container, {
         onToggleSection: async(sectionId) => {
             toggleSectionCollapsed(tplState, sectionId);
             try {
-                await rerenderStructure();
+                await rerenderStructure(container, tplState);
             } catch (e) {
                 // Revert so the in-memory model matches what is still on screen.
                 toggleSectionCollapsed(tplState, sectionId);
@@ -199,10 +152,13 @@ export const wireTemplateMode = (state) => {
         },
         onRemoveActivity: async(sectionId, activityIndex) => {
             const section = tplState.sections.find((s) => s.id === sectionId);
-            const removedActivity = section ? section.activities[activityIndex] : null;
+            let removedActivity = null;
+            if (section) {
+                removedActivity = section.activities[activityIndex];
+            }
             if (removeActivity(tplState, sectionId, activityIndex)) {
                 try {
-                    await rerenderStructure();
+                    await rerenderStructure(container, tplState);
                 } catch (e) {
                     // Put the removed row back so state matches the still-rendered DOM.
                     if (section && removedActivity) {
@@ -217,7 +173,7 @@ export const wireTemplateMode = (state) => {
             const section = addSection(tplState, sectionWord);
             if (section) {
                 try {
-                    await rerenderStructure();
+                    await rerenderStructure(container, tplState);
                 } catch (e) {
                     // Undo the append so state matches the still-rendered DOM.
                     const idx = tplState.sections.indexOf(section);
@@ -243,10 +199,13 @@ export const wireTemplateMode = (state) => {
         const pendingActivityId = tplState.nextActivityId;
         if (insertActivity(tplState, sectionId, position, {...activity, ...(extras || {})})) {
             try {
-                await rerenderStructure();
+                await rerenderStructure(container, tplState);
             } catch (e) {
                 const section = tplState.sections.find((s) => s.id === sectionId);
-                const idx = section ? section.activities.findIndex((a) => a.id === pendingActivityId) : -1;
+                let idx = -1;
+                if (section) {
+                    idx = section.activities.findIndex((a) => a.id === pendingActivityId);
+                }
                 if (idx !== -1) {
                     section.activities.splice(idx, 1);
                 }
@@ -288,235 +247,4 @@ export const wireTemplateMode = (state) => {
             }
         });
     }
-};
-
-/**
- * Show/refresh or hide the input bar's syllabus chip to match tplState.
- *
- * @param {Object} tplState
- */
-const refreshSyllabusChip = (tplState) => {
-    const hasFile = !!tplState.syllabusdraftitemid;
-    const chipsRow = document.getElementById('tplChipsRow');
-    const chip = document.getElementById('tplChipSyllabus');
-    const chipName = document.getElementById('tplChipSyllabusName');
-    if (chipName) {
-        chipName.textContent = tplState.syllabusfilename || '';
-    }
-    if (chip) {
-        chip.classList.toggle('hidden', !hasFile);
-    }
-    if (chipsRow) {
-        chipsRow.style.display = hasFile ? '' : 'none';
-    }
-};
-
-/**
- * Wire the reduced input bar pinned at the bottom of the left panel: syllabus
- * attach (same no-course filepicker mechanics as free mode), generate-images
- * toggle, and language select. Values live in tplState, ready for the future
- * generation payload — the Generate button itself stays a stub elsewhere.
- *
- * @param {Object} tplState
- * @param {Object} state - Page state (createInitialState) carrying languages/defaultLang.
- */
-const wireInputBar = (tplState, state) => {
-    // Adaptation prompt — composer textarea, value tracked in tplState.
-    const promptInput = document.getElementById('tplPromptInput');
-    if (promptInput) {
-        promptInput.addEventListener('input', () => {
-            tplState.prompt = promptInput.value;
-        });
-    }
-
-    // Language select — same options source as free mode (the page-context
-    // languages array parsed by courseai.js into state.languages).
-    const langSelect = document.getElementById('tplLangSelect');
-    if (langSelect) {
-        (state.languages || []).forEach((language) => {
-            const option = document.createElement('option');
-            option.value = language.code;
-            option.textContent = language.name;
-            langSelect.appendChild(option);
-        });
-        if (tplState.lang) {
-            langSelect.value = tplState.lang;
-        }
-        // If the default language isn't offered, track whatever the select
-        // actually shows so state and UI never disagree.
-        tplState.lang = langSelect.value || tplState.lang;
-        langSelect.addEventListener('change', () => {
-            tplState.lang = langSelect.value;
-        });
-    }
-
-    // Generate-images toggle — same toggle-track pattern as free mode.
-    const imgToggleWrap = document.getElementById('tplImgToggleWrap');
-    const imgCheckbox = document.getElementById('tplWithImages');
-    if (imgToggleWrap && imgCheckbox) {
-        bindToggleWrap(imgToggleWrap, imgCheckbox);
-        imgCheckbox.addEventListener('change', () => {
-            tplState.generateimages = imgCheckbox.checked ? 1 : 0;
-            imgToggleWrap.classList.toggle('on', imgCheckbox.checked);
-        });
-    }
-
-    // Syllabus attach — reuses the free-mode courseai_filepicker_init flow via
-    // showFilePicker's onPicked hook; the picked draft file lives in tplState.
-    const attachBtn = document.getElementById('tplBtnSyllabus');
-    if (attachBtn) {
-        attachBtn.addEventListener('click', async() => {
-            await showFilePicker({
-                state: {},
-                CourseaiRepository: {initFilepicker},
-                Notification,
-                YUI,
-                texts: {},
-                onPicked: (filename, draftitemid) => {
-                    tplState.syllabusfilename = filename;
-                    tplState.syllabusdraftitemid = draftitemid;
-                    refreshSyllabusChip(tplState);
-                },
-            });
-        });
-    }
-
-    const removeBtn = document.getElementById('tplChipSyllabusRemove');
-    if (removeBtn) {
-        removeBtn.addEventListener('click', () => {
-            tplState.syllabusfilename = '';
-            tplState.syllabusdraftitemid = 0;
-            refreshSyllabusChip(tplState);
-        });
-    }
-};
-
-/**
- * Load a template's guided-form structure (locked sections/activities, section
- * limits, and the admin-allowed activity catalog) and render it.
- *
- * @param {number} templateId
- * @param {Object} tplState
- * @param {HTMLElement} container
- * @param {Object} state
- * @param {Object} requestTracker - {id} mutable holder of the latest request id.
- * @param {number} requestId - The id this call was launched with.
- */
-const loadTemplateStructure = async(templateId, tplState, container, state, requestTracker, requestId) => {
-    const detailsEl = document.getElementById('tplModeDetails');
-    const limitsEl = document.getElementById('tplModeLimits');
-    const limitsBadge = document.getElementById('tplModeLimitsBadge');
-    const genBtn = document.getElementById('tplModeGenerate');
-    if (!container) {
-        return;
-    }
-
-    try {
-        const data = await getTemplateStructure(templateId);
-        if (requestTracker.id !== requestId) {
-            // A newer template was selected while this fetch was in flight — discard.
-            return;
-        }
-        applyStructureResponse(tplState, data);
-
-        if (detailsEl) {
-            detailsEl.style.display = '';
-        }
-
-        const {addSectionLabel, statsTemplate} = await getLabels();
-        await renderStructure(container, tplState, {addSection: addSectionLabel});
-        refreshPreviewLinks();
-        updateStats(tplState, statsTemplate);
-        await renderChooserGrid(tplState.allowedActivities);
-        await renderLimitsBanner(limitsEl, limitsBadge, tplState);
-
-        if (genBtn) {
-            genBtn.disabled = false;
-        }
-        state.templateStructureLoaded = true;
-    } catch (e) {
-        if (requestTracker.id !== requestId) {
-            // A newer template selection superseded this failed fetch — its own
-            // handler already owns the UI, so this stale failure stays silent.
-            return;
-        }
-        // Reset the structure panel, limits badge and Generate button so the
-        // professor doesn't see a mix of the failed template's name with the
-        // previous template's structure still on screen.
-        clearStructure(tplState, container, state);
-        Notification.exception(e);
-    }
-};
-
-/**
- * Render the section limits banner text (the badge markup itself is static,
- * see courseai_page.mustache#tplModeLimits — this only toggles it and sets text).
- *
- * @param {HTMLElement} limitsEl
- * @param {HTMLElement} limitsBadge
- * @param {Object} tplState
- */
-const renderLimitsBanner = async(limitsEl, limitsBadge, tplState) => {
-    if (!limitsEl || !limitsBadge) {
-        return;
-    }
-    if (tplState.nolimit) {
-        const [nolimitStr] = await getStrings([
-            {key: 'courseai_template_limits_nolimit', component: 'local_coursegen'},
-        ]);
-        limitsBadge.textContent = nolimitStr;
-    } else {
-        const [remainingStr] = await getStrings([
-            {key: 'courseai_template_limits_remaining', component: 'local_coursegen'},
-        ]);
-        limitsBadge.textContent = remainingStr.replace('{$a}', tplState.remainingSections);
-    }
-    limitsEl.style.display = '';
-};
-
-/**
- * Clear the structure display.
- *
- * @param {Object} tplState
- * @param {HTMLElement} container
- * @param {Object} state
- */
-const clearStructure = (tplState, container, state) => {
-    if (container) {
-        container.innerHTML = '';
-    }
-    const detailsEl = document.getElementById('tplModeDetails');
-    if (detailsEl) {
-        detailsEl.style.display = 'none';
-    }
-    const workspace = document.getElementById('courseaiWorkspace');
-    if (workspace) {
-        workspace.classList.remove('tpl-active');
-    }
-    const limitsEl = document.getElementById('tplModeLimits');
-    const limitsBadge = document.getElementById('tplModeLimitsBadge');
-    if (limitsEl) {
-        limitsEl.style.display = 'none';
-    }
-    if (limitsBadge) {
-        limitsBadge.textContent = '';
-    }
-    const genBtn = document.getElementById('tplModeGenerate');
-    if (genBtn) {
-        genBtn.disabled = true;
-    }
-    const statsEl = document.getElementById('tplModeStats');
-    if (statsEl) {
-        statsEl.textContent = '';
-    }
-    // Reset only the structure: the input-bar values (images/lang/syllabus)
-    // belong to the professor's session and survive clearing the template.
-    Object.assign(tplState, createTemplateState({
-        prompt: tplState.prompt,
-        generateimages: tplState.generateimages,
-        lang: tplState.lang,
-        syllabusdraftitemid: tplState.syllabusdraftitemid,
-        syllabusfilename: tplState.syllabusfilename,
-    }));
-    state.templateStructureLoaded = false;
 };
