@@ -154,7 +154,8 @@ class json_store {
      * @return int
      */
     public function count_records(string $table, array $conditions = []): int {
-        return count($this->get_records($table, $conditions));
+        $records = $this->get_records($table, $conditions);
+        return count($records);
     }
 
     /**
@@ -193,7 +194,8 @@ class json_store {
         $menu = [];
         $rows = $this->get_records($table, $conditions, $sort);
         foreach ($rows as $row) {
-            $columns = array_keys(get_object_vars($row));
+            $rowvars = get_object_vars($row);
+            $columns = array_keys($rowvars);
             $value = $valuecolumn;
             if ($value === '') {
                 $value = $columns[1] ?? $columns[0];
