@@ -69,22 +69,56 @@ class choice_preview extends preview_base {
     private function drafted_options(): array {
         $options = $this->parameters['options'] ?? null;
         if (!is_array($options)) {
-            $options = [];
-            foreach ($this->parameters as $key => $value) {
-                if (preg_match('/^option\[?\d+\]?$/', (string) $key) && trim((string) $value) !== '') {
-                    $options[] = (string) $value;
-                }
-            }
-            return $options;
+            return $this->drafted_options_from_flat_parameters();
         }
+        return $this->drafted_option_texts($options);
+    }
+
+    /**
+     * The option texts, when the answer put them as flat "option[0]",
+     * "option1", ... parameters rather than as an options array.
+     *
+     * @return string[]
+     */
+    private function drafted_options_from_flat_parameters(): array {
+        $options = [];
+        foreach ($this->parameters as $key => $value) {
+            if (preg_match('/^option\[?\d+\]?$/', (string) $key) && trim((string) $value) !== '') {
+                $options[] = (string) $value;
+            }
+        }
+        return $options;
+    }
+
+    /**
+     * Every non-blank option text, from an options array.
+     *
+     * @param array $options
+     * @return string[]
+     */
+    private function drafted_option_texts(array $options): array {
         $texts = [];
         foreach ($options as $option) {
-            $text = is_array($option) ? (string) ($option['text'] ?? $option['option'] ?? '') : (string) $option;
+            $text = $this->drafted_option_text($option);
             if (trim($text) !== '') {
                 $texts[] = $text;
             }
         }
         return $texts;
+    }
+
+    /**
+     * One option's own text, whichever shape the answer put it in.
+     *
+     * @param mixed $option
+     * @return string
+     */
+    private function drafted_option_text($option): string {
+        if (is_array($option)) {
+            $fallback = $option['text'] ?? $option['option'] ?? '';
+            return (string) $fallback;
+        }
+        return (string) $option;
     }
 
     /**
@@ -97,7 +131,12 @@ class choice_preview extends preview_base {
         if ($choice === null) {
             return $this->nothing_yet();
         }
-        $view = new view($choice, $this->cm(), $this->course(), $this->context(), $this->store(), $this->url_to());
+        $cm = $this->cm();
+        $course = $this->course();
+        $context = $this->context();
+        $store = $this->store();
+        $here = $this->url_to();
+        $view = new view($choice, $cm, $course, $context, $store, $here);
         return $view->page();
     }
 
