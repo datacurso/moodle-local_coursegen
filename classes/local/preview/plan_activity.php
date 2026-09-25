@@ -46,32 +46,54 @@ class plan_activity {
         $name = (string) ($entry['name'] ?? '');
 
         if (($entry['resource_type'] ?? '') === 'lesson') {
-            $pages = [];
-            foreach ($parts as $part) {
-                $pages[] = [
-                    // The piece of the mould this one fills, named by the id
-                    // the mould's own module gave it.
-                    'id' => self::element_id((string) ($part['key'] ?? '')),
-                    'page_type' => 'content',
-                    'title' => (string) ($part['title'] ?? ''),
-                    'content_html' => (string) ($part['html'] ?? ''),
-                    'buttons' => [],
-                ];
-            }
+            $pages = self::lesson_pages_from_parts($parts);
             return ['name' => $name, 'mod_settings' => ['pages' => $pages]];
         }
 
         // Every other type keeps its text in one field, so the parts are simply
         // concatenated in the order the mould authored them.
-        $html = '';
-        foreach ($parts as $part) {
-            $html .= (string) ($part['html'] ?? '');
-        }
+        $html = self::concatenated_html($parts);
         return [
             'name' => $name,
             'introeditor' => ['text' => $html, 'format' => FORMAT_HTML, 'itemid' => 0],
             'page' => $html,
         ];
+    }
+
+    /**
+     * A lesson's plan parts, as the pages they each fill.
+     *
+     * @param array $parts
+     * @return array
+     */
+    private static function lesson_pages_from_parts(array $parts): array {
+        $pages = [];
+        foreach ($parts as $part) {
+            $pages[] = [
+                // The piece of the mould this one fills, named by the id
+                // the mould's own module gave it.
+                'id' => self::element_id((string) ($part['key'] ?? '')),
+                'page_type' => 'content',
+                'title' => (string) ($part['title'] ?? ''),
+                'content_html' => (string) ($part['html'] ?? ''),
+                'buttons' => [],
+            ];
+        }
+        return $pages;
+    }
+
+    /**
+     * Every plan part's HTML, concatenated in authored order.
+     *
+     * @param array $parts
+     * @return string
+     */
+    private static function concatenated_html(array $parts): string {
+        $html = '';
+        foreach ($parts as $part) {
+            $html .= (string) ($part['html'] ?? '');
+        }
+        return $html;
     }
 
     /**
@@ -110,23 +132,55 @@ class plan_activity {
             return $parameters;
         }
 
-        $mould = [];
         $payload = \local_coursegen\local\service\template_export_service::build_init_payload($templateid);
-        foreach (($payload['activities'] ?? []) as $activity) {
-            if ((int) ($activity['cmid'] ?? 0) === $sourcecmid) {
-                $mould = real_activity::to_parameters($activity)['mod_settings']['pages'] ?? [];
-                break;
-            }
-        }
+        $mould = self::mould_pages($payload, $sourcecmid);
         if (!$mould) {
             return $parameters;
         }
 
-        $drafted = [];
-        foreach (($parameters['mod_settings']['pages'] ?? []) as $page) {
-            $drafted[(string) ($page['id'] ?? '')] = $page;
-        }
+        $drafted = self::pages_by_id($parameters['mod_settings']['pages'] ?? []);
+        $parameters['mod_settings']['pages'] = self::mould_with_drafts($mould, $drafted);
+        return $parameters;
+    }
 
+    /**
+     * The mould activity's own pages, from the template's export payload.
+     *
+     * @param array $payload
+     * @param int $sourcecmid
+     * @return array
+     */
+    private static function mould_pages(array $payload, int $sourcecmid): array {
+        foreach (($payload['activities'] ?? []) as $activity) {
+            if ((int) ($activity['cmid'] ?? 0) === $sourcecmid) {
+                return real_activity::to_parameters($activity)['mod_settings']['pages'] ?? [];
+            }
+        }
+        return [];
+    }
+
+    /**
+     * Pages keyed by their own id.
+     *
+     * @param array $pages
+     * @return array
+     */
+    private static function pages_by_id(array $pages): array {
+        $byid = [];
+        foreach ($pages as $page) {
+            $byid[(string) ($page['id'] ?? '')] = $page;
+        }
+        return $byid;
+    }
+
+    /**
+     * The mould's pages, with each one's draft (when there is one) laid over it.
+     *
+     * @param array $mould
+     * @param array $drafted Pages keyed by id, from pages_by_id().
+     * @return array
+     */
+    private static function mould_with_drafts(array $mould, array $drafted): array {
         $pages = [];
         foreach ($mould as $page) {
             $draft = $drafted[(string) ($page['id'] ?? '')] ?? null;
@@ -136,9 +190,7 @@ class plan_activity {
             }
             $pages[] = $page;
         }
-
-        $parameters['mod_settings']['pages'] = $pages;
-        return $parameters;
+        return $pages;
     }
 
     /**
@@ -156,6 +208,9 @@ class plan_activity {
             return null;
         }
         $id = substr($key, $at + 1);
-        return ctype_digit($id) ? (int) $id : null;
+        if (!ctype_digit($id)) {
+            return null;
+        }
+        return (int) $id;
     }
 }
