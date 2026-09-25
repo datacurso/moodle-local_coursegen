@@ -60,11 +60,13 @@ class lesson_menu {
                 $url = '';
                 $selected = $page->id == $currentpageid;
                 if (!$selected) {
-                    $url = $lesson->page_url((int) $page->id)->out();
+                    $pageurl = $lesson->page_url((int) $page->id);
+                    $url = $pageurl->out();
                 }
+                $title = format_string($page->title, true);
                 $items[] = [
                     'selected' => $selected,
-                    'title' => format_string($page->title, true),
+                    'title' => $title,
                     'url' => $url,
                 ];
             }
