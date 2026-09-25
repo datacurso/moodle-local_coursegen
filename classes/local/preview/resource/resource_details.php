@@ -34,58 +34,97 @@ trait resource_details {
      * @return array
      */
     protected function resource_get_file_details($resource, $cm) {
-        $options = empty($resource->displayoptions) ? [] : (array) unserialize_array($resource->displayoptions);
+        $options = [];
+        if (!empty($resource->displayoptions)) {
+            $options = (array) unserialize_array($resource->displayoptions);
+        }
         $filedetails = array();
-        if (!empty($options['showsize']) || !empty($options['showtype']) || !empty($options['showdate'])) {
-            $context = $this->context;
-            $files = $this->fs->get_area_files($context->id, 'mod_resource', 'content', 0, 'sortorder DESC, id ASC', false);
-            // For a typical file resource, the sortorder is 1 for the main file
-            // and 0 for all other files. This sort approach is used just in case
-            // there are situations where the file has a different sort order.
-            $mainfile = $files ? reset($files) : null;
-            if (!empty($options['showsize'])) {
-                $filedetails['size'] = 0;
-                foreach ($files as $file) {
-                    // This will also synchronize the file size for external files if needed.
-                    $filedetails['size'] += $file->get_filesize();
-                    if ($file->get_repository_id()) {
-                        // If file is a reference the 'size' attribute can not be cached.
-                        $filedetails['isref'] = true;
-                    }
-                }
-            }
-            if (!empty($options['showtype'])) {
-                if ($mainfile) {
-                    $filedetails['type'] = get_mimetype_description($mainfile);
-                    $filedetails['mimetype'] = $mainfile->get_mimetype();
-                    $filedetails['extension'] = strtoupper(resourcelib_get_extension($mainfile->get_filename()));
-                    // Only show type if it is not unknown.
-                    if ($filedetails['type'] === get_mimetype_description('document/unknown')) {
-                        $filedetails['type'] = '';
-                    }
-                } else {
-                    $filedetails['type'] = '';
-                }
-            }
-            if (!empty($options['showdate'])) {
-                if ($mainfile) {
-                    // Modified date may be up to several minutes later than uploaded date just because
-                    // teacher did not submit the form promptly. Give teacher up to 5 minutes to do it.
-                    if ($mainfile->get_timemodified() > $mainfile->get_timecreated() + 5 * MINSECS) {
-                        $filedetails['modifieddate'] = $mainfile->get_timemodified();
-                    } else {
-                        $filedetails['uploadeddate'] = $mainfile->get_timecreated();
-                    }
-                    if ($mainfile->get_repository_id()) {
-                        // If main file is a reference the 'date' attribute can not be cached.
-                        $filedetails['isref'] = true;
-                    }
-                } else {
-                    $filedetails['uploadeddate'] = '';
-                }
-            }
+        if (empty($options['showsize']) && empty($options['showtype']) && empty($options['showdate'])) {
+            return $filedetails;
+        }
+        $context = $this->context;
+        $files = $this->fs->get_area_files($context->id, 'mod_resource', 'content', 0, 'sortorder DESC, id ASC', false);
+        // For a typical file resource, the sortorder is 1 for the main file
+        // and 0 for all other files. This sort approach is used just in case
+        // there are situations where the file has a different sort order.
+        $mainfile = null;
+        if ($files) {
+            $mainfile = reset($files);
+        }
+        if (!empty($options['showsize'])) {
+            $this->add_resource_size_details($filedetails, $files);
+        }
+        if (!empty($options['showtype'])) {
+            $this->add_resource_type_details($filedetails, $mainfile);
+        }
+        if (!empty($options['showdate'])) {
+            $this->add_resource_date_details($filedetails, $mainfile);
         }
         return $filedetails;
+    }
+
+    /**
+     * mod/resource/locallib.php resource_get_file_details(): the size part.
+     *
+     * @param array $filedetails Filled in place.
+     * @param \stored_file[] $files
+     */
+    protected function add_resource_size_details(array &$filedetails, array $files): void {
+        $filedetails['size'] = 0;
+        foreach ($files as $file) {
+            // This will also synchronize the file size for external files if needed.
+            $filedetails['size'] += $file->get_filesize();
+            if ($file->get_repository_id()) {
+                // If file is a reference the 'size' attribute can not be cached.
+                $filedetails['isref'] = true;
+            }
+        }
+    }
+
+    /**
+     * mod/resource/locallib.php resource_get_file_details(): the type part.
+     *
+     * @param array $filedetails Filled in place.
+     * @param \stored_file|null $mainfile
+     */
+    protected function add_resource_type_details(array &$filedetails, $mainfile): void {
+        if (!$mainfile) {
+            $filedetails['type'] = '';
+            return;
+        }
+        $filedetails['type'] = get_mimetype_description($mainfile);
+        $filedetails['mimetype'] = $mainfile->get_mimetype();
+        $extension = resourcelib_get_extension($mainfile->get_filename());
+        $filedetails['extension'] = strtoupper($extension);
+        // Only show type if it is not unknown.
+        $unknowntype = get_mimetype_description('document/unknown');
+        if ($filedetails['type'] === $unknowntype) {
+            $filedetails['type'] = '';
+        }
+    }
+
+    /**
+     * mod/resource/locallib.php resource_get_file_details(): the date part.
+     *
+     * @param array $filedetails Filled in place.
+     * @param \stored_file|null $mainfile
+     */
+    protected function add_resource_date_details(array &$filedetails, $mainfile): void {
+        if (!$mainfile) {
+            $filedetails['uploadeddate'] = '';
+            return;
+        }
+        // Modified date may be up to several minutes later than uploaded date just because
+        // teacher did not submit the form promptly. Give teacher up to 5 minutes to do it.
+        if ($mainfile->get_timemodified() > $mainfile->get_timecreated() + 5 * MINSECS) {
+            $filedetails['modifieddate'] = $mainfile->get_timemodified();
+        } else {
+            $filedetails['uploadeddate'] = $mainfile->get_timecreated();
+        }
+        if ($mainfile->get_repository_id()) {
+            // If main file is a reference the 'date' attribute can not be cached.
+            $filedetails['isref'] = true;
+        }
     }
 
     /**
@@ -97,56 +136,69 @@ trait resource_details {
      * @return string
      */
     protected function resource_get_optional_details($resource, $cm, bool $showtype = true) {
-        $details = '';
-
-        $options = empty($resource->displayoptions) ? [] : (array) unserialize_array($resource->displayoptions);
-        if (!empty($options['showsize']) || ($showtype && !empty($options['showtype'])) || !empty($options['showdate'])) {
-            if (!array_key_exists('filedetails', $options)) {
-                $filedetails = $this->resource_get_file_details($resource, $cm);
-            } else {
-                $filedetails = $options['filedetails'];
-            }
-            $size = '';
-            $type = '';
-            $date = '';
-            $langstring = '';
-            $infodisplayed = 0;
-            if (!empty($options['showsize'])) {
-                if (!empty($filedetails['size'])) {
-                    $size = display_size($filedetails['size']);
-                    $langstring .= 'size';
-                    $infodisplayed += 1;
-                }
-            }
-            if ($showtype && !empty($options['showtype'])) {
-                if (!empty($filedetails['type'])) {
-                    $type = $filedetails['extension'];
-                    $langstring .= 'type';
-                    $infodisplayed += 1;
-                }
-            }
-            if (!empty($options['showdate']) && (!empty($filedetails['modifieddate']) || !empty($filedetails['uploadeddate']))) {
-                if (!empty($filedetails['modifieddate'])) {
-                    $date = get_string('modifieddate', 'mod_resource', userdate($filedetails['modifieddate'],
-                        get_string('strftimedatetimeshort', 'langconfig')));
-                } else if (!empty($filedetails['uploadeddate'])) {
-                    $date = get_string('uploadeddate', 'mod_resource', userdate($filedetails['uploadeddate'],
-                        get_string('strftimedatetimeshort', 'langconfig')));
-                }
-                $langstring .= 'date';
-                $infodisplayed += 1;
-            }
-
-            if ($infodisplayed > 1) {
-                $details = get_string("resourcedetails_{$langstring}", 'resource',
-                        (object)array('size' => $size, 'type' => $type, 'date' => $date));
-            } else {
-                // Only one of size, type and date is set, so just append.
-                $details = $size . $type . $date;
-            }
+        $options = [];
+        if (!empty($resource->displayoptions)) {
+            $options = (array) unserialize_array($resource->displayoptions);
+        }
+        $hassize = !empty($options['showsize']);
+        $hastype = $showtype && !empty($options['showtype']);
+        $hasdate = !empty($options['showdate']);
+        if (!$hassize && !$hastype && !$hasdate) {
+            return '';
         }
 
-        return $details;
+        if (!array_key_exists('filedetails', $options)) {
+            $filedetails = $this->resource_get_file_details($resource, $cm);
+        } else {
+            $filedetails = $options['filedetails'];
+        }
+
+        $size = '';
+        $langstring = '';
+        $infodisplayed = 0;
+        if ($hassize && !empty($filedetails['size'])) {
+            $size = display_size($filedetails['size']);
+            $langstring .= 'size';
+            $infodisplayed += 1;
+        }
+
+        $type = '';
+        if ($hastype && !empty($filedetails['type'])) {
+            $type = $filedetails['extension'];
+            $langstring .= 'type';
+            $infodisplayed += 1;
+        }
+
+        $date = '';
+        $hasdatevalue = !empty($filedetails['modifieddate']) || !empty($filedetails['uploadeddate']);
+        if ($hasdate && $hasdatevalue) {
+            $date = $this->resource_date_string($filedetails);
+            $langstring .= 'date';
+            $infodisplayed += 1;
+        }
+
+        if ($infodisplayed > 1) {
+            $detailsobject = (object) array('size' => $size, 'type' => $type, 'date' => $date);
+            return get_string("resourcedetails_{$langstring}", 'resource', $detailsobject);
+        }
+        // Only one of size, type and date is set, so just append.
+        return $size . $type . $date;
+    }
+
+    /**
+     * mod/resource/locallib.php resource_get_optional_details(): the date string.
+     *
+     * @param array $filedetails
+     * @return string
+     */
+    protected function resource_date_string(array $filedetails): string {
+        $dateformat = get_string('strftimedatetimeshort', 'langconfig');
+        if (!empty($filedetails['modifieddate'])) {
+            $formatteddate = userdate($filedetails['modifieddate'], $dateformat);
+            return get_string('modifieddate', 'mod_resource', $formatteddate);
+        }
+        $formatteddate = userdate($filedetails['uploadeddate'], $dateformat);
+        return get_string('uploadeddate', 'mod_resource', $formatteddate);
     }
 
     /**
@@ -158,7 +210,10 @@ trait resource_details {
      * @return string
      */
     protected function resource_get_intro(object $resource, object $cm, bool $ignoresettings = false): string {
-        $options = empty($resource->displayoptions) ? [] : (array) unserialize_array($resource->displayoptions);
+        $options = [];
+        if (!empty($resource->displayoptions)) {
+            $options = (array) unserialize_array($resource->displayoptions);
+        }
 
         global $OUTPUT;
         $extraintro = $this->resource_get_optional_details($resource, $cm);

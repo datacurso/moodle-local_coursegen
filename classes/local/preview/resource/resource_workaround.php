@@ -40,10 +40,11 @@ trait resource_workaround {
         $resource->mainfile = $file->get_filename();
         $finaldisplaytype = $this->resource_get_final_display_type($resource);
         $method = $this->workaround_method($finaldisplaytype);
+        $content = $this->$method($resource, $file);
 
         return $OUTPUT->render_from_template('local_coursegen/preview_container', [
             'classes' => 'resourceworkaround',
-            'content' => $this->$method($resource, $file),
+            'content' => $content,
         ]);
     }
 
@@ -73,9 +74,18 @@ trait resource_workaround {
     protected function workaround_popup($resource, $file): string {
         $path = '/'.$file->get_contextid().'/mod_resource/content/'.$resource->revision.$file->get_filepath().$file->get_filename();
         $fullurl = file_encode_url($this->wwwroot().'/pluginfile.php', $path, false);
-        $options = empty($resource->displayoptions) ? [] : (array) unserialize_array($resource->displayoptions);
-        $width  = empty($options['popupwidth'])  ? 620 : $options['popupwidth'];
-        $height = empty($options['popupheight']) ? 450 : $options['popupheight'];
+        $options = [];
+        if (!empty($resource->displayoptions)) {
+            $options = (array) unserialize_array($resource->displayoptions);
+        }
+        $width = 620;
+        if (!empty($options['popupwidth'])) {
+            $width = $options['popupwidth'];
+        }
+        $height = 450;
+        if (!empty($options['popupheight'])) {
+            $height = $options['popupheight'];
+        }
         $wh = "width=$width,height=$height,toolbar=no,location=no,menubar=no,copyhistory=no,status=no,directories=no,scrollbars=yes,resizable=yes";
         $onclick = "window.open('$fullurl', '', '$wh'); return false;";
         return $this->resource_get_clicktoopen($file, $resource->revision, $onclick);
