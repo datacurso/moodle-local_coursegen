@@ -147,37 +147,107 @@ trait wiki_content {
     public static function wiki_parser_link($link, $options = null) {
         $view = self::$parsing;
         if ($view === null) {
-            return array('content' => is_object($link) ? $link->title : $link, 'url' => '#', 'new' => true,
-                'link_info' => array('link' => is_object($link) ? $link->title : $link, 'new' => true, 'pageid' => 0));
+            return self::wiki_parser_link_unresolved($link);
         }
-
         if (is_object($link)) {
-            $parsedlink = array('content' => $link->title, 'url' => ($view->urls)($view->index_of($link), [])->out(false),
-                'new' => false, 'link_info' => array('link' => $link->title, 'pageid' => $link->id, 'new' => false));
-
-            $version = $view->wiki_get_current_version($link->id);
-            if (!$version || $version->version == 0) {
-                $parsedlink['new'] = true;
-            }
-            return $parsedlink;
-        } else {
-            foreach ($view->pages() as $index => $page) {
-                if ((string) $page->title === (string) $link) {
-                    $parsedlink = array('content' => $link, 'url' => ($view->urls)($index, [])->out(false), 'new' => false,
-                        'link_info' => array('link' => $link, 'pageid' => $page->id, 'new' => false));
-
-                    $version = $view->wiki_get_current_version($page->id);
-                    if (!$version || $version->version == 0) {
-                        $parsedlink['new'] = true;
-                    }
-
-                    return $parsedlink;
-                }
-            }
-            $here = ($view->urls)($view->index_of($view->wiki_get_first_page() ?? (object) ['id' => 0]), []);
-            return array('content' => $link, 'url' => $here->out(false), 'new' => true,
-                'link_info' => array('link' => $link, 'new' => true, 'pageid' => 0));
+            return self::wiki_parser_link_for_page_object($view, $link);
         }
+        return self::wiki_parser_link_for_title($view, $link);
+    }
+
+    /**
+     * A link drawn with no view to resolve it against: the new link it would be.
+     *
+     * @param string|stdClass $link
+     * @return array
+     */
+    private static function wiki_parser_link_unresolved($link): array {
+        $title = $link;
+        if (is_object($link)) {
+            $title = $link->title;
+        }
+        return array('content' => $title, 'url' => '#', 'new' => true,
+            'link_info' => array('link' => $title, 'new' => true, 'pageid' => 0));
+    }
+
+    /**
+     * A link that names one of the subwiki's pages directly.
+     *
+     * @param view $view
+     * @param stdClass $link
+     * @return array
+     */
+    private static function wiki_parser_link_for_page_object($view, $link): array {
+        $urls = $view->urls;
+        $index = $view->index_of($link);
+        $url = $urls($index, [])->out(false);
+        $parsedlink = array('content' => $link->title, 'url' => $url,
+            'new' => false, 'link_info' => array('link' => $link->title, 'pageid' => $link->id, 'new' => false));
+
+        $version = $view->wiki_get_current_version($link->id);
+        if (!$version || $version->version == 0) {
+            $parsedlink['new'] = true;
+        }
+        return $parsedlink;
+    }
+
+    /**
+     * A link that names a page by its title, resolved against the subwiki's pages.
+     *
+     * @param view $view
+     * @param string $link
+     * @return array
+     */
+    private static function wiki_parser_link_for_title($view, $link): array {
+        $page = self::find_page_by_title($view, $link);
+        if ($page === null) {
+            return self::wiki_parser_link_for_new_title($view, $link);
+        }
+
+        $urls = $view->urls;
+        $index = $view->index_of($page);
+        $url = $urls($index, [])->out(false);
+        $parsedlink = array('content' => $link, 'url' => $url, 'new' => false,
+            'link_info' => array('link' => $link, 'pageid' => $page->id, 'new' => false));
+
+        $version = $view->wiki_get_current_version($page->id);
+        if (!$version || $version->version == 0) {
+            $parsedlink['new'] = true;
+        }
+        return $parsedlink;
+    }
+
+    /**
+     * The subwiki's page with the given title, if it has one.
+     *
+     * @param view $view
+     * @param string $title
+     * @return stdClass|null
+     */
+    private static function find_page_by_title($view, $title) {
+        foreach ($view->pages() as $page) {
+            if ((string) $page->title === (string) $title) {
+                return $page;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * A link to a title the subwiki has no page for: leads to where a new
+     * page would go, next to the wiki's first page.
+     *
+     * @param view $view
+     * @param string $link
+     * @return array
+     */
+    private static function wiki_parser_link_for_new_title($view, $link): array {
+        $firstpage = $view->wiki_get_first_page() ?? (object) ['id' => 0];
+        $index = $view->index_of($firstpage);
+        $urls = $view->urls;
+        $here = $urls($index, []);
+        return array('content' => $link, 'url' => $here->out(false), 'new' => true,
+            'link_info' => array('link' => $link, 'new' => true, 'pageid' => 0));
     }
 
 
