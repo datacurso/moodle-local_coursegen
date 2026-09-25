@@ -60,9 +60,25 @@ class json_file_storage {
      */
     public function get_area_files($contextid, $component, $filearea = false, $itemid = false,
             $sort = "itemid, filepath, filename", $includedirs = true): array {
+        $found = $this->matching_files((int) $contextid, (string) $component, $filearea, $itemid, $includedirs);
+        $this->order($found, (string) $sort);
+        return $this->keyed_by_pathnamehash($found);
+    }
+
+    /**
+     * Every stored file matching the given area, in no particular order.
+     *
+     * @param int $contextid
+     * @param string $component
+     * @param string|false $filearea
+     * @param int|false $itemid
+     * @param bool $includedirs
+     * @return json_file[]
+     */
+    protected function matching_files(int $contextid, string $component, $filearea, $itemid, bool $includedirs): array {
         $found = [];
         foreach ($this->files as $file) {
-            if ((int) $contextid !== $file->get_contextid() || (string) $component !== $file->get_component()) {
+            if ($contextid !== $file->get_contextid() || $component !== $file->get_component()) {
                 continue;
             }
             if ($filearea !== false && (string) $filearea !== $file->get_filearea()) {
@@ -76,9 +92,18 @@ class json_file_storage {
             }
             $found[] = $file;
         }
-        $this->order($found, (string) $sort);
+        return $found;
+    }
+
+    /**
+     * A list of files, keyed by pathname hash, as the file storage keys them.
+     *
+     * @param json_file[] $files
+     * @return json_file[]
+     */
+    protected function keyed_by_pathnamehash(array $files): array {
         $keyed = [];
-        foreach ($found as $file) {
+        foreach ($files as $file) {
             $keyed[$file->get_pathnamehash()] = $file;
         }
         return $keyed;
@@ -96,6 +121,21 @@ class json_file_storage {
     public function get_area_tree($contextid, $component, $filearea, $itemid): array {
         $result = array('dirname'=>'', 'dirfile'=>null, 'subdirs'=>array(), 'files'=>array());
         $files = $this->get_area_files($contextid, $component, $filearea, $itemid, '', true);
+        $result = $this->place_directories($result, $files);
+        $result = $this->place_files($result, $files);
+        $result = $this->sort_area_tree($result);
+        return $result;
+    }
+
+    /**
+     * Builds the tree's directory structure from the directory-marker files,
+     * removing each from the list as it is placed.
+     *
+     * @param array $result
+     * @param json_file[] $files Passed by reference: directory entries are removed.
+     * @return array
+     */
+    protected function place_directories(array $result, array &$files): array {
         // first create directory structure
         foreach ($files as $hash=>$dir) {
             if (!$dir->is_directory()) {
@@ -106,38 +146,52 @@ class json_file_storage {
                 $result['dirfile'] = $dir;
                 continue;
             }
-            $parts = explode('/', trim($dir->get_filepath(),'/'));
-            $pointer =& $result;
-            foreach ($parts as $part) {
-                if ($part === '') {
-                    continue;
-                }
-                if (!isset($pointer['subdirs'][$part])) {
-                    $pointer['subdirs'][$part] = array('dirname'=>$part, 'dirfile'=>null, 'subdirs'=>array(), 'files'=>array());
-                }
-                $pointer =& $pointer['subdirs'][$part];
-            }
-            $pointer['dirfile'] = $dir;
-            unset($pointer);
+            $node = &$this->tree_node_for($result, $dir->get_filepath());
+            $node['dirfile'] = $dir;
+            unset($node);
         }
-        foreach ($files as $hash=>$file) {
-            $parts = explode('/', trim($file->get_filepath(),'/'));
-            $pointer =& $result;
-            foreach ($parts as $part) {
-                if ($part === '') {
-                    continue;
-                }
-                // A file whose directory was never listed still has a place.
-                if (!isset($pointer['subdirs'][$part])) {
-                    $pointer['subdirs'][$part] = array('dirname'=>$part, 'dirfile'=>null, 'subdirs'=>array(), 'files'=>array());
-                }
-                $pointer =& $pointer['subdirs'][$part];
-            }
-            $pointer['files'][$file->get_filename()] = $file;
-            unset($pointer);
-        }
-        $result = $this->sort_area_tree($result);
         return $result;
+    }
+
+    /**
+     * Places every remaining (non-directory) file into the tree.
+     *
+     * @param array $result
+     * @param json_file[] $files
+     * @return array
+     */
+    protected function place_files(array $result, array $files): array {
+        foreach ($files as $hash=>$file) {
+            $node = &$this->tree_node_for($result, $file->get_filepath());
+            $node['files'][$file->get_filename()] = $file;
+            unset($node);
+        }
+        return $result;
+    }
+
+    /**
+     * The tree node a filepath's directory parts lead to, creating any that
+     * are missing along the way.
+     *
+     * @param array $result Passed by reference: the tree grows in place.
+     * @param string $filepath
+     * @return array Reference to the leaf node.
+     */
+    protected function &tree_node_for(array &$result, string $filepath): array {
+        $trimmed = trim($filepath, '/');
+        $parts = explode('/', $trimmed);
+        $pointer = &$result;
+        foreach ($parts as $part) {
+            if ($part === '') {
+                continue;
+            }
+            // A file whose directory was never listed still has a place.
+            if (!isset($pointer['subdirs'][$part])) {
+                $pointer['subdirs'][$part] = array('dirname'=>$part, 'dirfile'=>null, 'subdirs'=>array(), 'files'=>array());
+            }
+            $pointer = &$pointer['subdirs'][$part];
+        }
+        return $pointer;
     }
 
     /**
@@ -150,14 +204,25 @@ class json_file_storage {
         foreach ($tree as $key => &$value) {
             if ($key == 'subdirs') {
                 core_collator::ksort($value, core_collator::SORT_NATURAL);
-                foreach ($value as $subdirname => &$subtree) {
-                    $subtree = $this->sort_area_tree($subtree);
-                }
+                $value = $this->sort_subdirs($value);
             } else if ($key == 'files') {
                 core_collator::ksort($value, core_collator::SORT_NATURAL);
             }
         }
         return $tree;
+    }
+
+    /**
+     * Sorts every subdirectory's own tree, recursively.
+     *
+     * @param array $subdirs
+     * @return array
+     */
+    protected function sort_subdirs(array $subdirs): array {
+        foreach ($subdirs as $subdirname => $subtree) {
+            $subdirs[$subdirname] = $this->sort_area_tree($subtree);
+        }
+        return $subdirs;
     }
 
     /**
@@ -167,10 +232,13 @@ class json_file_storage {
      * @param string $sort
      */
     protected function order(array &$files, string $sort): void {
+        $rawterms = explode(',', $sort);
+        $trimmedterms = array_map('trim', $rawterms);
+        $termstrings = array_filter($trimmedterms);
+
         $terms = [];
-        foreach (array_filter(array_map('trim', explode(',', $sort))) as $term) {
-            $parts = preg_split('/\s+/', $term);
-            $terms[] = [strtolower($parts[0]), strtoupper($parts[1] ?? 'ASC') === 'DESC' ? -1 : 1];
+        foreach ($termstrings as $term) {
+            $terms[] = $this->sort_term($term);
         }
         if (!$terms) {
             return;
@@ -188,5 +256,24 @@ class json_file_storage {
             }
             return 0;
         });
+    }
+
+    /**
+     * One ORDER BY term ("column" or "column DESC"), as a [column, direction] pair.
+     *
+     * @param string $term
+     * @return array [string $column, int $direction] (1 ascending, -1 descending).
+     */
+    protected function sort_term(string $term): array {
+        $parts = preg_split('/\s+/', $term);
+        $column = strtolower($parts[0]);
+
+        $rawdirection = $parts[1] ?? 'ASC';
+        $direction = strtoupper($rawdirection);
+        $factor = 1;
+        if ($direction === 'DESC') {
+            $factor = -1;
+        }
+        return [$column, $factor];
     }
 }

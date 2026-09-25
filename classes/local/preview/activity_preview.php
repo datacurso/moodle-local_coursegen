@@ -91,7 +91,8 @@ abstract class activity_preview {
      * @return string
      */
     public function name(): string {
-        return (string) ($this->parameters['name'] ?? '');
+        $name = $this->parameters['name'] ?? '';
+        return (string) $name;
     }
 
     /**
@@ -150,7 +151,10 @@ abstract class activity_preview {
         if ($intro === '') {
             $intro = trim($this->text('intro'));
         }
-        return $intro === '' ? '' : $this->content($intro);
+        if ($intro === '') {
+            return '';
+        }
+        return $this->content($intro);
     }
 
     /**
