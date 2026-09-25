@@ -144,10 +144,14 @@ class finish_template_generation extends external_api {
      * @return array
      */
     private static function created_response(int $courseid, string $wwwroot): array {
+        $courseurl = '';
+        if ($courseid > 0) {
+            $courseurl = $wwwroot . '/course/view.php?id=' . $courseid;
+        }
         return [
             'status' => 'completed',
             'courseid' => $courseid,
-            'courseurl' => $courseid > 0 ? $wwwroot . '/course/view.php?id=' . $courseid : '',
+            'courseurl' => $courseurl,
         ];
     }
 

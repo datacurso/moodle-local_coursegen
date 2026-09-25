@@ -67,8 +67,6 @@ class get_template_structure extends external_api {
      * @return array
      */
     public static function execute($templateid) {
-        global $OUTPUT;
-
         $params = self::validate_parameters(self::execute_parameters(), ['templateid' => $templateid]);
 
         $context = context_system::instance();
@@ -84,19 +82,93 @@ class get_template_structure extends external_api {
         $modinfo = get_fast_modinfo($course);
 
         // Index the saved per-section/per-activity settings by their live IDs.
+        $sectionsettings = self::section_settings_by_id($template);
+        $activitysettings = self::activity_settings_by_cmid($template);
+        $instancesbysection = self::instances_by_section($template);
+
+        $sections = self::build_sections($course, $modinfo, $sectionsettings, $activitysettings, $instancesbysection);
+
+        $nolimit = (bool) $template->get('nolimit');
+        $maxsections = (int) ($template->get('maxsections') ?? 0);
+        // The stored value already IS the extra allowance — how many sections
+        // the professor may add ON TOP of the template's own — so the
+        // template's sections never get subtracted from it.
+        $remaining = 0;
+        if (!$nolimit) {
+            $remaining = max(0, $maxsections);
+        }
+
+        $allowedtypes = self::allowed_types($template);
+        $allowedactivities = self::allowed_activities($allowedtypes);
+
+        return [
+            'nolimit' => $nolimit,
+            'maxsections' => $maxsections,
+            'remainingsections' => $remaining,
+            'sections' => $sections,
+            'allowedactivities' => $allowedactivities,
+        ];
+    }
+
+    /**
+     * Section id => saved behavior, for this template.
+     *
+     * @param template $template
+     * @return array
+     */
+    private static function section_settings_by_id(template $template): array {
         $sectionsettings = [];
         foreach (template_section::get_records(['templateid' => $template->get('id')]) as $s) {
             $sectionsettings[$s->get('sectionid')] = $s->get('behavior');
         }
+        return $sectionsettings;
+    }
+
+    /**
+     * Cmid => saved action, for this template.
+     *
+     * @param template $template
+     * @return array
+     */
+    private static function activity_settings_by_cmid(template $template): array {
         $activitysettings = [];
         foreach (template_activity::get_records(['templateid' => $template->get('id')]) as $a) {
             $activitysettings[$a->get('cmid')] = $a->get('action');
         }
+        return $activitysettings;
+    }
+
+    /**
+     * Section id => its virtual instances, for this template.
+     *
+     * @param template $template
+     * @return array
+     */
+    private static function instances_by_section(template $template): array {
         $instancesbysection = [];
         foreach (template_instance::get_records(['templateid' => $template->get('id')]) as $instance) {
             $instancesbysection[$instance->get('sectionid')][] = $instance;
         }
+        return $instancesbysection;
+    }
 
+    /**
+     * Every section the guided form shows, with its rows.
+     *
+     * @param \stdClass $course
+     * @param \course_modinfo $modinfo
+     * @param array $sectionsettings
+     * @param array $activitysettings
+     * @param array $instancesbysection
+     * @return array
+     */
+    private static function build_sections(
+        $course,
+        $modinfo,
+        array $sectionsettings,
+        array $activitysettings,
+        array $instancesbysection
+    ): array {
         $sections = [];
         foreach ($modinfo->get_section_info_all() as $section) {
             $behavior = $sectionsettings[$section->id] ?? 'aimodify';
@@ -117,70 +189,111 @@ class get_template_structure extends external_api {
                 $instancesbysection[$section->id] ?? []
             );
 
-            $activities = [];
-            foreach ($rows as $row) {
-                if ($row['type'] === 'instance') {
-                    $activities[] = self::instance_row($row['record']);
-                    continue;
-                }
-                $cm = $modinfo->cms[$row['cmid']];
-                if (!$cm->uservisible) {
-                    continue;
-                }
-                // Mirror the admin's action mapping: keep (with unset
-                // defaulting to keep, and a legacy saved "modify"
-                // normalising to keep) stays visible and locked; reference,
-                // template (mold) and exclude rows never reach the
-                // professor at all.
-                $action = $activitysettings[$cm->id] ?? 'keep';
-                if ($action === 'modify') {
-                    $action = 'keep';
-                }
-                if ($action !== 'keep') {
-                    continue;
-                }
-                $activities[] = [
-                    'id'      => (int) $cm->id,
-                    'name'    => format_string($cm->name),
-                    'modname' => $cm->modname,
-                    'purpose' => self::get_purpose($cm->modname),
-                    'typelabel' => '',
-                    'iconhtml' => $OUTPUT->image_icon('monologo', $cm->modname, 'mod_' . $cm->modname,
-                        ['class' => 'icon activityicon']),
-                    'locked'  => true,
-                    'action'  => $action,
-                    'isinstance' => false,
-                    'aigenerated' => false,
-                    'generationcmid' => 0,
-                    'generationuid' => '',
-                ];
+            $locked = false;
+            if ($behavior === 'keep') {
+                $locked = true;
             }
-
             $sections[] = [
                 'id'         => (int) $section->id,
                 'num'        => (int) $section->section,
                 'name'       => get_section_name($course, $section),
                 'behavior'   => $behavior,
-                'locked'     => ($behavior === 'keep'),
-                'activities' => $activities,
+                'locked'     => $locked,
+                'activities' => self::section_activities($rows, $modinfo, $activitysettings),
             ];
         }
+        return $sections;
+    }
 
-        $nolimit = (bool) $template->get('nolimit');
-        $maxsections = (int) ($template->get('maxsections') ?? 0);
-        // The stored value already IS the extra allowance — how many sections
-        // the professor may add ON TOP of the template's own — so the
-        // template's sections never get subtracted from it.
-        $remaining = $nolimit ? 0 : max(0, $maxsections);
-
-        $allowedtypes = [];
-        $raw = $template->get('allowedtypes');
-        if (!empty($raw)) {
-            $decoded = json_decode($raw, true);
-            if (is_array($decoded)) {
-                $allowedtypes = $decoded;
+    /**
+     * One section's activity rows: its kept real activities and its virtual instances.
+     *
+     * @param array $rows
+     * @param \course_modinfo $modinfo
+     * @param array $activitysettings
+     * @return array
+     */
+    private static function section_activities(array $rows, $modinfo, array $activitysettings): array {
+        $activities = [];
+        foreach ($rows as $row) {
+            if ($row['type'] === 'instance') {
+                $activities[] = self::instance_row($row['record']);
+                continue;
             }
+            $cm = $modinfo->cms[$row['cmid']];
+            if (!$cm->uservisible) {
+                continue;
+            }
+            // Mirror the admin's action mapping: keep (with unset
+            // defaulting to keep, and a legacy saved "modify"
+            // normalising to keep) stays visible and locked; reference,
+            // template (mold) and exclude rows never reach the
+            // professor at all.
+            $action = $activitysettings[$cm->id] ?? 'keep';
+            if ($action === 'modify') {
+                $action = 'keep';
+            }
+            if ($action !== 'keep') {
+                continue;
+            }
+            $activities[] = self::real_activity_row($cm, $action);
         }
+        return $activities;
+    }
+
+    /**
+     * One kept real activity's row.
+     *
+     * @param \cm_info $cm
+     * @param string $action
+     * @return array
+     */
+    private static function real_activity_row($cm, string $action): array {
+        global $OUTPUT;
+
+        return [
+            'id'      => (int) $cm->id,
+            'name'    => format_string($cm->name),
+            'modname' => $cm->modname,
+            'purpose' => self::get_purpose($cm->modname),
+            'typelabel' => '',
+            'iconhtml' => $OUTPUT->image_icon('monologo', $cm->modname, 'mod_' . $cm->modname,
+                ['class' => 'icon activityicon']),
+            'locked'  => true,
+            'action'  => $action,
+            'isinstance' => false,
+            'aigenerated' => false,
+            'generationcmid' => 0,
+            'generationuid' => '',
+        ];
+    }
+
+    /**
+     * The template's own list of allowed activity type names.
+     *
+     * @param template $template
+     * @return array
+     */
+    private static function allowed_types(template $template): array {
+        $raw = $template->get('allowedtypes');
+        if (empty($raw)) {
+            return [];
+        }
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+        return $decoded;
+    }
+
+    /**
+     * The allowed activity catalog, sorted by display name.
+     *
+     * @param array $allowedtypes
+     * @return array
+     */
+    private static function allowed_activities(array $allowedtypes): array {
+        global $OUTPUT;
 
         $allowedactivities = [];
         foreach ($allowedtypes as $modname) {
@@ -195,14 +308,7 @@ class get_template_structure extends external_api {
             ];
         }
         usort($allowedactivities, fn($a, $b) => strcasecmp($a['displayname'], $b['displayname']));
-
-        return [
-            'nolimit' => $nolimit,
-            'maxsections' => $maxsections,
-            'remainingsections' => $remaining,
-            'sections' => $sections,
-            'allowedactivities' => $allowedactivities,
-        ];
+        return $allowedactivities;
     }
 
     /**
@@ -232,11 +338,15 @@ class get_template_structure extends external_api {
         if ($iconurl !== '') {
             $iconhtml = \html_writer::empty_tag('img', ['src' => $iconurl, 'class' => 'icon activityicon', 'alt' => '']);
         }
+        $purpose = MOD_PURPOSE_OTHER;
+        if ($modname !== '') {
+            $purpose = self::get_purpose($modname);
+        }
         return [
             'id'      => -((int) $instance->get('id')),
             'name'    => format_string($instance->get('name')),
             'modname' => $modname,
-            'purpose' => $modname === '' ? MOD_PURPOSE_OTHER : self::get_purpose($modname),
+            'purpose' => $purpose,
             'typelabel' => format_string($instance->get('typelabel')),
             'iconhtml' => $iconhtml,
             'locked'  => true,
