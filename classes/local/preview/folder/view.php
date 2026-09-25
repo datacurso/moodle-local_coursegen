@@ -138,12 +138,25 @@ class view {
      * @return array
      */
     protected function renderable_tree_elements(stdClass $tree, array $dir): array {
-        global $OUTPUT;
         if (empty($dir['subdirs']) && empty($dir['files'])) {
             return [];
         }
+        $subdirelements = $this->renderable_subdir_elements($tree, $dir['subdirs']);
+        $fileelements = $this->renderable_file_elements($tree, $dir['files']);
+        return array_merge($subdirelements, $fileelements);
+    }
+
+    /**
+     * mod/folder/renderer.php renderable_tree_elements(), the subdirectory entries.
+     *
+     * @param stdClass $tree
+     * @param array $subdirs
+     * @return array
+     */
+    protected function renderable_subdir_elements(stdClass $tree, array $subdirs): array {
+        global $OUTPUT;
         $elements = [];
-        foreach ($dir['subdirs'] as $subdir) {
+        foreach ($subdirs as $subdir) {
             $htmllize = $this->renderable_tree_elements($tree, $subdir);
             $image = $OUTPUT->pix_icon(file_folder_icon(), $subdir['dirname'], 'moodle');
             $elements[] = [
@@ -153,7 +166,20 @@ class view {
                 'hassubdirs' => !empty($htmllize),
             ];
         }
-        foreach ($dir['files'] as $file) {
+        return $elements;
+    }
+
+    /**
+     * mod/folder/renderer.php renderable_tree_elements(), the file entries.
+     *
+     * @param stdClass $tree
+     * @param array $files
+     * @return array
+     */
+    protected function renderable_file_elements(stdClass $tree, array $files): array {
+        global $OUTPUT;
+        $elements = [];
+        foreach ($files as $file) {
             $filename = $file->get_filename();
             $filenamedisplay = clean_filename($filename);
 
@@ -218,16 +244,36 @@ class view {
      * @return int
      */
     protected function folder_get_directory_size($directory) {
-        $size = 0;
+        $filessize = $this->folder_files_size($directory['files']);
+        $subdirssize = $this->folder_subdirs_size($directory['subdirs']);
+        return $filessize + $subdirssize;
+    }
 
-        foreach ($directory['files'] as $file) {
+    /**
+     * mod/folder/lib.php folder_get_directory_size(), the size of one level's own files.
+     *
+     * @param array $files
+     * @return int
+     */
+    protected function folder_files_size(array $files): int {
+        $size = 0;
+        foreach ($files as $file) {
             $size += $file->get_filesize();
         }
+        return $size;
+    }
 
-        foreach ($directory['subdirs'] as $subdirectory) {
+    /**
+     * mod/folder/lib.php folder_get_directory_size(), the size of one level's own subdirectories.
+     *
+     * @param array $subdirectories
+     * @return int
+     */
+    protected function folder_subdirs_size(array $subdirectories): int {
+        $size = 0;
+        foreach ($subdirectories as $subdirectory) {
             $size += $this->folder_get_directory_size($subdirectory);
         }
-
         return $size;
     }
 }
