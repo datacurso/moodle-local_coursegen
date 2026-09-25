@@ -47,6 +47,22 @@ const ALLOWED_TAGS = [
 const ALLOWED_ATTR = ['href', 'title'];
 
 /**
+ * The usable DOMPurify entry point, whichever shape the bundle exposed it in.
+ *
+ * @returns {Object|null}
+ */
+const resolvePurify = () => {
+    let purify = DOMPurify;
+    if (!DOMPurify.sanitize) {
+        purify = DOMPurify.default || null;
+    }
+    if (!purify || typeof purify.sanitize !== 'function') {
+        return null;
+    }
+    return purify;
+};
+
+/**
  * Run a marked parser and sanitize what it produced.
  *
  * DOMPurify does the sanitizing: it parses the HTML and walks it, which is the
@@ -64,8 +80,8 @@ const sanitize = (parse, md) => {
         return '';
     }
     const html = parse(String(md || ''));
-    const purify = DOMPurify.sanitize ? DOMPurify : (DOMPurify.default || null);
-    if (!purify || typeof purify.sanitize !== 'function') {
+    const purify = resolvePurify();
+    if (!purify) {
         // Sanitizing is not optional: show the text rather than raw HTML.
         return String(md || '');
     }
@@ -84,8 +100,8 @@ const sanitize = (parse, md) => {
  * @returns {string} Sanitized HTML, or '' when sanitizing is unavailable.
  */
 export const renderHtml = (html) => {
-    const purify = DOMPurify.sanitize ? DOMPurify : (DOMPurify.default || null);
-    if (!purify || typeof purify.sanitize !== 'function') {
+    const purify = resolvePurify();
+    if (!purify) {
         // Sanitizing is not optional: show nothing rather than raw HTML.
         return '';
     }
@@ -158,40 +174,75 @@ export const renderMarkdownInline = (md) => {
  * @param {Object} detail - detailed_plan object (or null).
  * @returns {string[]}
  */
+const FIELDS_WITH_LISTS = ['chapters', 'questions', 'pages', 'discussions', 'entries', 'options'];
+
+/**
+ * One list item's primary/secondary text, whatever shape it arrived in.
+ *
+ * @param {Object|string} it
+ * @returns {{primary: string, secondary: string}}
+ */
+const readListItem = (it) => {
+    if (typeof it === 'string') {
+        return {primary: it, secondary: ''};
+    }
+    return {
+        primary: String(it.title || it.question || it.name || it.concept || '').trim(),
+        secondary: String(it.summary || it.type || it.description || '').trim(),
+    };
+};
+
+/**
+ * One list item's own Markdown line.
+ *
+ * A real Markdown ordered list — one item per line — so `marked` renders each
+ * on its own <li> and CSS counters number them (1, 2, …). Book subchapters
+ * (subchapter=1) are nested (3-space indent, under the ordered marker) so the
+ * CSS counters read 1.1, 1.2 and the hierarchy shows. The literal "1." we write
+ * is irrelevant — marked/CSS handle the actual numbering.
+ *
+ * @param {string} field The FIELDS_WITH_LISTS entry this item belongs to.
+ * @param {Object|string} raw
+ * @returns {string}
+ */
+const listItemLine = (field, raw) => {
+    const {primary, secondary} = readListItem(raw);
+    const isSub = field === 'chapters' && raw && typeof raw === 'object' && Number(raw.subchapter) === 1;
+    let indent = '';
+    if (isSub) {
+        indent = '   ';
+    }
+    let suffix = '';
+    if (secondary) {
+        suffix = ' — ' + secondary;
+    }
+    return indent + '1. **' + primary + '**' + suffix;
+};
+
+/**
+ * One field's Markdown lines, blank-line-prefixed, or none when it is empty.
+ *
+ * @param {Object} detail
+ * @param {string} field
+ * @returns {string[]}
+ */
+const fieldListLines = (detail, field) => {
+    let items = [];
+    if (Array.isArray(detail[field])) {
+        items = detail[field];
+    }
+    if (!items.length) {
+        return [];
+    }
+    const itemLines = items.map((raw) => listItemLine(field, raw));
+    return [''].concat(itemLines);
+};
+
 const detailListsMd = (detail) => {
     if (!detail) {
         return [];
     }
-    const readItem = (it) => {
-        if (typeof it === 'string') {
-            return {primary: it, secondary: ''};
-        }
-        return {
-            primary: String(it.title || it.question || it.name || it.concept || '').trim(),
-            secondary: String(it.summary || it.type || it.description || '').trim(),
-        };
-    };
-    const fields = ['chapters', 'questions', 'pages', 'discussions', 'entries', 'options'];
-    const lines = [];
-    fields.forEach((field) => {
-        const items = Array.isArray(detail[field]) ? detail[field] : [];
-        if (!items.length) {
-            return;
-        }
-        // A real Markdown ordered list — one item per line — so `marked` renders each
-        // on its own <li> and CSS counters number them (1, 2, …). Book subchapters
-        // (subchapter=1) are nested (3-space indent, under the ordered marker) so the
-        // CSS counters read 1.1, 1.2 and the hierarchy shows. The literal "1." we write
-        // is irrelevant — marked/CSS handle the actual numbering.
-        lines.push('');
-        items.forEach((raw) => {
-            const {primary, secondary} = readItem(raw);
-            const isSub = field === 'chapters' && raw && typeof raw === 'object' && Number(raw.subchapter) === 1;
-            const indent = isSub ? '   ' : '';
-            lines.push(indent + '1. **' + primary + '**' + (secondary ? ' — ' + secondary : ''));
-        });
-    });
-    return lines;
+    return FIELDS_WITH_LISTS.flatMap((field) => fieldListLines(detail, field));
 };
 
 /**
@@ -242,7 +293,11 @@ export const formatSectionMd = (section) => {
         const title = String(activity.title || '').trim() || 'Activity';
         const type = String(activity.activity_type || '').trim();
         lines.push('');
-        lines.push(type ? '**' + title + '** _(' + type + ')_' : '**' + title + '**');
+        let titleLine = '**' + title + '**';
+        if (type) {
+            titleLine = '**' + title + '** _(' + type + ')_';
+        }
+        lines.push(titleLine);
         const activityDesc = activityDescription(activity);
         if (activityDesc) {
             lines.push('');
