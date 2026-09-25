@@ -68,6 +68,70 @@ const detailEl = (sectionId) => document.querySelector(
 );
 
 /**
+ * Update one toggle's label and aria-expanded state.
+ *
+ * @param {HTMLElement} toggle
+ * @param {boolean} expanded
+ * @returns {void}
+ */
+const setToggleLabel = (toggle, expanded) => {
+    toggle.setAttribute('aria-expanded', String(expanded));
+    let label = SHOW_MORE;
+    if (expanded) {
+        label = SHOW_LESS;
+    }
+    toggle.innerHTML = '<span class="cg-log-toggle-text">' + label + '</span>'
+        + '<span class="cg-log-toggle-chevron" aria-hidden="true">⌄</span>';
+};
+
+/**
+ * Expand or collapse one detail block together with its toggle.
+ *
+ * @param {HTMLElement} el
+ * @param {HTMLElement} toggle
+ * @param {boolean} expanded
+ * @returns {void}
+ */
+const applyClampState = (el, toggle, expanded) => {
+    el.classList.toggle('is-expanded', expanded);
+    setToggleLabel(toggle, expanded);
+};
+
+/**
+ * Build and wire the "Show more"/"Show less" toggle for one clamped detail,
+ * once its real height is known.
+ *
+ * @param {HTMLElement} el - The detail container.
+ * @returns {void}
+ */
+const measureAndClamp = (el) => {
+    if (el.scrollHeight <= CLAMP_PX + 4) {
+        // Short enough — make sure it is NOT clamped (callers may pre-apply the
+        // clamp class before this measures, to avoid a full-height→clamped flash
+        // when a whole transcript is rebuilt at once; see rebuildTranscriptFromPlan).
+        el.classList.remove('cg-detail-clamped');
+        return;
+    }
+    el.classList.add('cg-detail-clamped');
+    const toggle = document.createElement('button');
+    toggle.type = 'button';
+    toggle.className = 'cg-log-toggle cg-detail-toggle';
+    setToggleLabel(toggle, false);
+    toggle.addEventListener('click', () => {
+        const expanded = !el.classList.contains('is-expanded');
+        applyClampState(el, toggle, expanded);
+    });
+    // The whole faded (collapsed) detail is a click target → the user can
+    // expand by clicking anywhere in the fade zone, not only on the button.
+    el.addEventListener('click', () => {
+        if (!el.classList.contains('is-expanded')) {
+            applyClampState(el, toggle, true);
+        }
+    });
+    el.insertAdjacentElement('afterend', toggle);
+};
+
+/**
  * Attach a "Show more"/"Show less" clamp to a detail block once it overflows.
  * Mirrors the long-message fade+expand used elsewhere (160–200px + mask).
  *
@@ -83,39 +147,7 @@ export const clampDetail = (el) => {
     // before the rAF fires they would each insert a toggle → the duplicate "Show
     // more". Marking the element now blocks the second call.
     el.dataset.cgClamp = '1';
-    window.requestAnimationFrame(() => {
-        if (el.scrollHeight <= CLAMP_PX + 4) {
-            // Short enough — make sure it is NOT clamped (callers may pre-apply the
-            // clamp class before this measures, to avoid a full-height→clamped flash
-            // when a whole transcript is rebuilt at once; see rebuildTranscriptFromPlan).
-            el.classList.remove('cg-detail-clamped');
-            return;
-        }
-        el.classList.add('cg-detail-clamped');
-        const toggle = document.createElement('button');
-        toggle.type = 'button';
-        toggle.className = 'cg-log-toggle cg-detail-toggle';
-        const setLabel = (expanded) => {
-            toggle.setAttribute('aria-expanded', expanded ? 'true' : 'false');
-            toggle.innerHTML = '<span class="cg-log-toggle-text">'
-                + (expanded ? SHOW_LESS : SHOW_MORE) + '</span>'
-                + '<span class="cg-log-toggle-chevron" aria-hidden="true">⌄</span>';
-        };
-        const apply = (expanded) => {
-            el.classList.toggle('is-expanded', expanded);
-            setLabel(expanded);
-        };
-        setLabel(false);
-        toggle.addEventListener('click', () => apply(!el.classList.contains('is-expanded')));
-        // The whole faded (collapsed) detail is a click target → the user can
-        // expand by clicking anywhere in the fade zone, not only on the button.
-        el.addEventListener('click', () => {
-            if (!el.classList.contains('is-expanded')) {
-                apply(true);
-            }
-        });
-        el.insertAdjacentElement('afterend', toggle);
-    });
+    window.requestAnimationFrame(() => measureAndClamp(el));
 };
 
 /**
@@ -130,12 +162,13 @@ const renderDetail = (sectionId) => {
     if (!entry || !target) {
         return;
     }
+    const activities = entry.activityOrder.map((id) => entry.activities.get(id));
     const md = formatSectionMd({
         // The section NAME is already the checklist item label — don't repeat it
         // in the detail; show only the description + activities.
         name: '',
         description: entry.description,
-        activities: entry.activityOrder.map((id) => entry.activities.get(id)),
+        activities,
     });
     target.innerHTML = renderMarkdown(md);
 };
@@ -271,9 +304,10 @@ export const rebuildTranscriptFromPlan = (plan) => {
                 description: a.description || '',
                 detailedPlan: a.detailed_plan || null,
             }));
-        const md = renderMarkdown(formatSectionMd({
+        const sectionMd = formatSectionMd({
             name: '', description: section.description || '', activities,
-        }));
+        });
+        const md = renderMarkdown(sectionMd);
         item.innerHTML = '<div class="courseai-checklist-head">'
             + '<span class="courseai-checklist-check">'
             + '<svg class="spinner-icon" viewBox="0 0 24 24">'

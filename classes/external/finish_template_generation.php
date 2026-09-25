@@ -32,7 +32,6 @@ use external_value;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\create_course_service;
 use local_coursegen\local\service\template_ai_api_service;
-use local_coursegen\local\service\template_export_service;
 use local_coursegen\local\service\template_keep_copier;
 
 defined('MOODLE_INTERNAL') || die();
@@ -95,7 +94,8 @@ class finish_template_generation extends external_api {
         $result['generated_activities'] = self::ai_generated_only($result['generated_activities'] ?? []);
 
         $created = create_course_service::create_course($session, $result);
-        $courseid = (int) ($created['courseid'] ?? 0);
+        $courseid = $created['courseid'] ?? 0;
+        $courseid = (int) $courseid;
         if ($courseid > 0 && $templateid > 0) {
             template_keep_copier::copy_into($templateid, $courseid);
         }
@@ -110,8 +110,11 @@ class finish_template_generation extends external_api {
      * @return int 0 when the session predates this field.
      */
     private static function template_id_of(course_session $session): int {
-        $data = json_decode((string) $session->get('coursedata'), true);
-        return (int) ($data['templateid'] ?? 0);
+        $coursedata = $session->get('coursedata');
+        $coursedata = (string) $coursedata;
+        $data = json_decode($coursedata, true);
+        $templateid = $data['templateid'] ?? 0;
+        return (int) $templateid;
     }
 
     /**
@@ -119,9 +122,10 @@ class finish_template_generation extends external_api {
      *
      * A "keep"/"reference" activity comes back exactly as it was submitted -
      * a description of an activity that already exists elsewhere, not
-     * something to build. Only the entries the AI actually generated (the
-     * template's virtual instances, which carry a synthetic cmid) are created
-     * from the payload.
+     * something to build. Only the entries the AI was asked to write are
+     * created from the payload, and the payload says which those are: it is
+     * the action each activity was submitted with, not a guess from the shape
+     * of its id.
      *
      * @param array $activities
      * @return array
@@ -129,7 +133,9 @@ class finish_template_generation extends external_api {
     private static function ai_generated_only(array $activities): array {
         $generated = [];
         foreach ($activities as $activity) {
-            if ((int) ($activity['cmid'] ?? 0) >= template_export_service::INSTANCE_CMID_BASE) {
+            $behavior = $activity['template_behavior'] ?? [];
+            $action = $behavior['action'] ?? '';
+            if ($action === 'modify') {
                 $generated[] = $activity;
             }
         }
@@ -144,10 +150,14 @@ class finish_template_generation extends external_api {
      * @return array
      */
     private static function created_response(int $courseid, string $wwwroot): array {
+        $courseurl = '';
+        if ($courseid > 0) {
+            $courseurl = $wwwroot . '/course/view.php?id=' . $courseid;
+        }
         return [
             'status' => 'completed',
             'courseid' => $courseid,
-            'courseurl' => $courseid > 0 ? $wwwroot . '/course/view.php?id=' . $courseid : '',
+            'courseurl' => $courseurl,
         ];
     }
 

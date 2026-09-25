@@ -70,6 +70,27 @@ const TITLE_STRING = 'courseai_template_generating_title';
 let labels = null;
 
 /**
+ * The batched string request for every phase key.
+ *
+ * @param {Array<string>} keys
+ * @returns {Array<Object>}
+ */
+const stageStringRequests = (keys) => keys.map((key) => ({key: STAGE_STRINGS[key], component: 'local_coursegen'}));
+
+/**
+ * Copy the fetched phase strings onto the labels map, keyed by phase.
+ *
+ * @param {Object} target
+ * @param {Array<string>} keys
+ * @param {Array<string>} values
+ */
+const assignStageLabels = (target, keys, values) => {
+    keys.forEach((key, index) => {
+        target[key] = values[index];
+    });
+};
+
+/**
  * The localised header strings, fetched once.
  *
  * @returns {Promise<Object>} Keyed by phase key, plus `title`.
@@ -77,14 +98,10 @@ let labels = null;
 const getLabels = async() => {
     if (!labels) {
         const keys = Object.keys(STAGE_STRINGS);
-        const values = await getStrings([
-            ...keys.map((key) => ({key: STAGE_STRINGS[key], component: 'local_coursegen'})),
-            {key: TITLE_STRING, component: 'local_coursegen'},
-        ]);
+        const requests = stageStringRequests(keys);
+        const values = await getStrings([...requests, {key: TITLE_STRING, component: 'local_coursegen'}]);
         labels = {title: values[keys.length]};
-        keys.forEach((key, index) => {
-            labels[key] = values[index];
-        });
+        assignStageLabels(labels, keys, values);
     }
     return labels;
 };
