@@ -59,16 +59,7 @@ class workshop_preview extends ported_preview {
             return;
         }
         $workshop = reset($rows);
-        foreach (['introeditor' => 'intro', 'instructauthors' => 'instructauthors',
-                'instructreviewers' => 'instructreviewers'] as $field => $column) {
-            $value = $this->parameters[$field] ?? ($this->parameters[$field . 'editor'] ?? null);
-            $text = is_array($value) ? (string) ($value['text'] ?? '') : (string) ($value ?? '');
-            if (trim($text) !== '') {
-                $store->set('workshop', $workshop->id, $column, $text);
-                $store->set('workshop', $workshop->id, $column . 'format',
-                    is_array($value) ? (int) ($value['format'] ?? FORMAT_HTML) : FORMAT_HTML);
-            }
-        }
+        $this->overlay_texts($store, $workshop);
 
         $settings = (array) ($this->parameters['mod_settings'] ?? []);
         $token = $settings['initial_phase'] ?? null;
@@ -81,6 +72,35 @@ class workshop_preview extends ported_preview {
             return;
         }
         $store->delete_records('workshopform_accumulative', ['workshopid' => $workshop->id]);
+        $this->overlay_criteria($store, $workshop, $criteria);
+    }
+
+    /**
+     * Replace the workshop's own text fields with what the answer wrote.
+     *
+     * @param json_store $store
+     * @param \stdClass $workshop
+     */
+    private function overlay_texts(json_store $store, \stdClass $workshop): void {
+        foreach (['introeditor' => 'intro', 'instructauthors' => 'instructauthors',
+                'instructreviewers' => 'instructreviewers'] as $field => $column) {
+            $value = $this->parameters[$field] ?? ($this->parameters[$field . 'editor'] ?? null);
+            $text = self::editor_field_text($value);
+            if (trim($text) !== '') {
+                $store->set('workshop', $workshop->id, $column, $text);
+                $store->set('workshop', $workshop->id, $column . 'format', self::editor_field_format($value));
+            }
+        }
+    }
+
+    /**
+     * Store the answer's assessment criteria as accumulative dimensions.
+     *
+     * @param json_store $store
+     * @param \stdClass $workshop
+     * @param array $criteria
+     */
+    private function overlay_criteria(json_store $store, \stdClass $workshop, array $criteria): void {
         $sort = 1;
         foreach ($criteria as $criterion) {
             $criterion = (array) $criterion;
@@ -121,7 +141,10 @@ class workshop_preview extends ported_preview {
      */
     public function header_title(): string {
         $view = $this->view();
-        return $view === null ? '' : $view->heading();
+        if ($view === null) {
+            return '';
+        }
+        return $view->heading();
     }
 
     /**
