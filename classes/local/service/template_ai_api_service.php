@@ -81,6 +81,23 @@ class template_ai_api_service {
     }
 
     /**
+     * Answer the review a paused run is waiting on.
+     *
+     * The run stops inside its approval step until this lands. Writing the
+     * answer is all this does; reopening the stream is what resumes it.
+     *
+     * @param string $threadid
+     * @param array $action {action: accept|replan_activity, target_ids?: int[], instruction?: string}
+     * @return array Decoded response.
+     */
+    public function send_feedback(string $threadid, array $action): array {
+        return $this->client->request('POST', '/course-template/feedback', [
+            'thread_id' => $threadid,
+            'pending_action' => $action,
+        ]);
+    }
+
+    /**
      * The SSE URL whose consumption drives one session's generation.
      *
      * Handed to the browser, which opens it directly: the progress events the
@@ -92,6 +109,19 @@ class template_ai_api_service {
      */
     public function stream_url(string $threadid): string {
         return streaming_url_builder::course_template_stream($this->client->get_base_url(), $threadid);
+    }
+
+    /**
+     * The plan a run has produced, while it is still only a plan.
+     *
+     * Read from outside the stream that already carries it: a preview opened
+     * in its own tab cannot reach into the tab that is watching the run.
+     *
+     * @param string $threadid
+     * @return array
+     */
+    public function get_plan(string $threadid): array {
+        return (array) $this->client->request('GET', '/course-template/plan/' . $threadid);
     }
 
     /**
