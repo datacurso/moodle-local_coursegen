@@ -38,7 +38,6 @@ use local_coursegen\local\models\course_session;
 use local_coursegen\local\models\template;
 use local_coursegen\local\preview\activity_preview_lookup;
 use local_coursegen\local\preview\preview_factory;
-use local_coursegen\local\service\template_export_service;
 
 /**
  * The uid's own section number, from the payload's activity list.
@@ -163,19 +162,16 @@ if ((int) $session->get('userid') !== (int) $USER->id) {
     throw new moodle_exception('nopermissions', 'error', '', 'preview this generation');
 }
 
-// Exactly what was sent to the service, read again rather than remembered. It
+// Exactly what was sent to the service, read back rather than rebuilt. It
 // describes every activity of the template, kept or written, and the mould a
-// written one is built into, and names each by the uid the answer echoes.
+// written one is built into, and names each by the uid the answer echoes -
+// as the run was actually given it, not as the template's course looks now.
 $coursedata = $session->get('coursedata');
 $coursedata = (string) $coursedata;
 $coursedata = json_decode($coursedata, true);
 $templateid = $coursedata['templateid'] ?? 0;
 $templateid = (int) $templateid;
-
-$payload = [];
-if ($templateid > 0) {
-    $payload = template_export_service::build_init_payload($templateid);
-}
+$payload = $coursedata['payload'] ?? [];
 
 $found = activity_preview_lookup::resolve($uid, $payload, $session);
 $modname = $found['modname'];
