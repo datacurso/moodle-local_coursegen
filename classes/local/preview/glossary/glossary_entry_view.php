@@ -145,23 +145,45 @@ trait glossary_entry_view {
      */
     protected function glossary_print_entry_aliases($entry) {
         global $OUTPUT;
+        $aliases = $this->glossary_entry_alias_labels($entry);
+        if (!$aliases) {
+            return '';
+        }
+
+        $options = $this->glossary_entry_alias_options($aliases);
+        return $OUTPUT->render_from_template('local_coursegen/preview_select', [
+            'id' => "keyword-{$entry->id}",
+            'options' => $options,
+        ]);
+    }
+
+    /**
+     * The alias labels a glossary entry carries, read from the store.
+     *
+     * @param stdClass $entry
+     * @return string[]
+     */
+    protected function glossary_entry_alias_labels($entry): array {
         $aliases = [];
         $aliasrecords = $this->store->get_records('glossary_alias', ['entryid' => $entry->id]);
         foreach ($aliasrecords as $alias) {
             $aliases[] = $alias->alias;
         }
-        if (!$aliases) {
-            return '';
-        }
+        return $aliases;
+    }
 
+    /**
+     * Alias labels, as options for the preview_select template.
+     *
+     * @param string[] $aliases
+     * @return array
+     */
+    protected function glossary_entry_alias_options(array $aliases): array {
         $options = [];
         foreach ($aliases as $index => $label) {
             $options[] = ['value' => $index, 'label' => $label];
         }
-        return $OUTPUT->render_from_template('local_coursegen/preview_select', [
-            'id' => "keyword-{$entry->id}",
-            'options' => $options,
-        ]);
+        return $options;
     }
 
     /**
