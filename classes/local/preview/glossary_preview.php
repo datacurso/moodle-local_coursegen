@@ -54,17 +54,23 @@ class glossary_preview extends preview_base {
         $glossary = reset($rows);
         $now = time();
         $id = 1;
-        foreach (($this->parameters['mod_settings']['entries'] ?? []) as $entry) {
-            $definition = $entry['definition_editor'] ?? ($entry['definition'] ?? '');
+        $entries = $this->parameters['mod_settings']['entries'] ?? [];
+        $usedynalink = $glossary->usedynalink ?? 0;
+        $usedynalink = (int) $usedynalink;
+        foreach ($entries as $entry) {
+            $definition = $entry['definition_editor'] ?? $entry['definition'] ?? '';
             if (is_array($definition)) {
                 $definition = $definition['text'] ?? '';
             }
+            $definition = (string) $definition;
+            $concept = $entry['concept'] ?? '';
+            $concept = (string) $concept;
             $store->add('glossary_entries', [
                 'id' => $id++,
                 'glossaryid' => $glossary->id,
                 'userid' => 0,
-                'concept' => (string) ($entry['concept'] ?? ''),
-                'definition' => (string) $definition,
+                'concept' => $concept,
+                'definition' => $definition,
                 'definitionformat' => FORMAT_HTML,
                 'definitiontrust' => 0,
                 'attachment' => '',
@@ -72,7 +78,7 @@ class glossary_preview extends preview_base {
                 'timemodified' => $now,
                 'teacherentry' => 1,
                 'sourceglossaryid' => 0,
-                'usedynalink' => (int) ($glossary->usedynalink ?? 0),
+                'usedynalink' => $usedynalink,
                 'casesensitive' => 0,
                 'fullmatch' => 1,
                 'approved' => 1,
@@ -103,7 +109,11 @@ class glossary_preview extends preview_base {
             $this->context(),
             $this->store(),
             $displayformat,
-            fn(array $params): moodle_url => $this->url_to(array_intersect_key($params, ['hook' => 1, 'page' => 1, 'mode' => 1]))
+            function (array $params): moodle_url {
+                $allowedkeys = ['hook' => 1, 'page' => 1, 'mode' => 1];
+                $filteredparams = array_intersect_key($params, $allowedkeys);
+                return $this->url_to($filteredparams);
+            }
         );
         $hook = optional_param('hook', 'ALL', PARAM_ALPHANUMEXT);
         return $view->page($hook, $this->page);
