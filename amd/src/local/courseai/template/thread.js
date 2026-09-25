@@ -199,7 +199,11 @@ export const openChecklist = (sections) => {
     const rows = sections || [];
     const count = checklist.querySelector('.cg-group-count');
     if (count) {
-        count.textContent = rows.length ? String(rows.length) : '';
+        let countText = '';
+        if (rows.length) {
+            countText = String(rows.length);
+        }
+        count.textContent = countText;
     }
 
     rows.forEach((section) => {
@@ -259,7 +263,10 @@ const entryFor = (event) => {
 const repaint = (section) => {
     const list = document.getElementById('courseaiChecklistList');
     const key = String(section);
-    const item = list ? list.querySelector(`[data-section-key="${key}"]`) : null;
+    let item = null;
+    if (list) {
+        item = list.querySelector(`[data-section-key="${key}"]`);
+    }
     if (item) {
         fillChecklistDetail(item.querySelector('.courseai-checklist-detail'), planned.get(key) || []);
     }
