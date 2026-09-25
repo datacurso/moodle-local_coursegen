@@ -78,10 +78,15 @@ abstract class preview_base extends activity_preview {
             return null;
         }
         $this->store = json_store::from_activity($this->source);
+
         // The plan is laid over the mould only when what is shown is not the
         // mould itself. A kept activity is shown as it is, and the parameters
         // built for it describe it a second time, less exactly than its rows.
-        if ((string) ($this->source['uid'] ?? '') !== (string) $this->here->get_param('uid')) {
+        $sourceuid = $this->source['uid'] ?? '';
+        $sourceuid = (string) $sourceuid;
+        $hereuid = $this->here->get_param('uid');
+        $hereuid = (string) $hereuid;
+        if ($sourceuid !== $hereuid) {
             $this->overlay($this->store);
         }
         return $this->store;
@@ -109,7 +114,8 @@ abstract class preview_base extends activity_preview {
         if ($store === null) {
             return null;
         }
-        $rows = $store->get_records($this->modname());
+        $modname = $this->modname();
+        $rows = $store->get_records($modname);
         if (!$rows) {
             return null;
         }
@@ -129,7 +135,10 @@ abstract class preview_base extends activity_preview {
      */
     public function activity_record(): ?stdClass {
         $instance = $this->instance();
-        return $instance === null ? null : clone $instance;
+        if ($instance === null) {
+            return null;
+        }
+        return clone $instance;
     }
 
     /**
@@ -139,12 +148,30 @@ abstract class preview_base extends activity_preview {
      */
     protected function cm(): stdClass {
         $instance = $this->instance();
+
+        $cmid = $this->source['cmid'] ?? 0;
+        $cmid = (int) $cmid;
+
+        $courseid = $instance->course ?? 0;
+        $courseid = (int) $courseid;
+
+        $instanceid = $instance->id ?? 0;
+        $instanceid = (int) $instanceid;
+
+        $name = $instance->name ?? null;
+        if ($name === null) {
+            $name = $this->name();
+        }
+        $name = (string) $name;
+
+        $modname = $this->modname();
+
         return (object) [
-            'id' => (int) ($this->source['cmid'] ?? 0),
-            'course' => (int) ($instance->course ?? 0),
-            'instance' => (int) ($instance->id ?? 0),
-            'name' => (string) ($instance->name ?? $this->name()),
-            'modname' => $this->modname(),
+            'id' => $cmid,
+            'course' => $courseid,
+            'instance' => $instanceid,
+            'name' => $name,
+            'modname' => $modname,
         ];
     }
 
@@ -169,9 +196,11 @@ abstract class preview_base extends activity_preview {
      */
     protected function context(): context {
         global $PAGE;
-        $structure = ($this->source['parameters'] ?? [])['structure'] ?? [];
+        $sourceparameters = $this->source['parameters'] ?? [];
+        $structure = $sourceparameters['structure'] ?? [];
         if (!empty($structure['contextid'])) {
-            $context = context::instance_by_id((int) $structure['contextid'], IGNORE_MISSING);
+            $contextid = (int) $structure['contextid'];
+            $context = context::instance_by_id($contextid, IGNORE_MISSING);
             if ($context) {
                 return $context;
             }
@@ -204,7 +233,13 @@ abstract class preview_base extends activity_preview {
      */
     public function header_description(): string {
         $instance = $this->instance();
-        if ($instance === null || trim((string) ($instance->intro ?? '')) === '') {
+        if ($instance === null) {
+            return '';
+        }
+        $intro = $instance->intro ?? '';
+        $intro = (string) $intro;
+        $intro = trim($intro);
+        if ($intro === '') {
             return '';
         }
         return $this->module_intro($instance);
@@ -216,7 +251,10 @@ abstract class preview_base extends activity_preview {
      * @return json_file_storage
      */
     protected function files(): json_file_storage {
-        return new json_file_storage((array) (($this->source['parameters'] ?? [])['files'] ?? []));
+        $sourceparameters = $this->source['parameters'] ?? [];
+        $files = $sourceparameters['files'] ?? [];
+        $files = (array) $files;
+        return new json_file_storage($files);
     }
 
     /**
