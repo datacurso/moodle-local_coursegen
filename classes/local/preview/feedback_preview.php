@@ -17,6 +17,7 @@
 namespace local_coursegen\local\preview;
 
 use local_coursegen\local\preview\feedback\view;
+use stdClass;
 
 /**
  * A feedback, drawn by mod_feedback's own view code run against the payload.
@@ -53,7 +54,10 @@ class feedback_preview extends preview_base {
         if (is_string($intro) && trim($intro) !== '') {
             $store->set('feedback', $feedback->id, 'intro', $intro);
         }
-        $questions = $this->parameters['mod_settings']['questions'] ?? ($this->parameters['mod_settings']['items'] ?? []);
+        $questions = $this->parameters['mod_settings']['questions'] ?? null;
+        if (!is_array($questions)) {
+            $questions = $this->parameters['mod_settings']['items'] ?? [];
+        }
         if (!is_array($questions) || !$questions) {
             return;
         }
@@ -64,6 +68,16 @@ class feedback_preview extends preview_base {
                 continue;
             }
             $typ = (string) $question['typ'];
+            // A label and a page break ask nothing; every other item does.
+            $asksnothing = in_array($typ, ['label', 'pagebreak'], true);
+            $hasvalue = 1;
+            if ($asksnothing) {
+                $hasvalue = 0;
+            }
+            $required = 0;
+            if (!empty($question['required'])) {
+                $required = 1;
+            }
             $store->add('feedback_item', [
                 'id' => $position,
                 'feedback' => $feedback->id,
@@ -72,10 +86,9 @@ class feedback_preview extends preview_base {
                 'label' => (string) ($question['label'] ?? ''),
                 'presentation' => '',
                 'typ' => $typ,
-                // A label and a page break ask nothing; every other item does.
-                'hasvalue' => in_array($typ, ['label', 'pagebreak'], true) ? 0 : 1,
+                'hasvalue' => $hasvalue,
                 'position' => $position,
-                'required' => !empty($question['required']) ? 1 : 0,
+                'required' => $required,
                 'dependitem' => 0,
                 'dependvalue' => '',
                 'options' => '',
@@ -107,9 +120,19 @@ class feedback_preview extends preview_base {
             $this->context(),
             $this->store(),
             $this->url_to(),
-            fn($activity) => $this->module_intro($activity)
+            [$this, 'intro_for']
         );
         return $view->page();
+    }
+
+    /**
+     * module_intro(), exposed publicly so view can call it as a callable.
+     *
+     * @param stdClass $activity
+     * @return string
+     */
+    public function intro_for(stdClass $activity): string {
+        return $this->module_intro($activity);
     }
 
     /**
