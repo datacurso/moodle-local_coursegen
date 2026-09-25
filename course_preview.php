@@ -44,7 +44,6 @@ use local_coursegen\local\models\template;
 use local_coursegen\local\preview\course_from_payload;
 use local_coursegen\local\preview\grid_from_payload;
 use local_coursegen\local\service\template_ai_api_service;
-use local_coursegen\local\service\template_export_service;
 
 /**
  * What the answer says each activity will contain, keyed by uid. A run still
@@ -111,9 +110,10 @@ if ($templateid <= 0) {
     throw new moodle_exception('invalidtemplate', 'local_coursegen');
 }
 
-// Exactly what was sent to the service, read again rather than remembered, so
-// the preview and the run can never be describing different things.
-$payload = template_export_service::build_init_payload($templateid);
+// Exactly what was sent to the service, read back rather than rebuilt, so
+// the preview and the run can never be describing different things - even
+// once the template's own course has moved on since the run started.
+$payload = $coursedata['payload'] ?? [];
 
 $threadid = $session->get('session_id');
 $threadid = (string) $threadid;
