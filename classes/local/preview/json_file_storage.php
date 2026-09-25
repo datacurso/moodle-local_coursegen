@@ -94,10 +94,48 @@ class json_file_storage {
      * @return array
      */
     public function get_area_tree($contextid, $component, $filearea, $itemid): array {
-        $result = array('dirname'=>'', 'dirfile'=>null, 'subdirs'=>array(), 'files'=>array());
+        $result = ['dirname' => '', 'dirfile' => null, 'subdirs' => [], 'files' => []];
         $files = $this->get_area_files($contextid, $component, $filearea, $itemid, '', true);
+        $this->build_directory_structure($result, $files);
+        $this->place_files_in_tree($result, $files);
+        $result = $this->sort_area_tree($result);
+        return $result;
+    }
+
+    /**
+     * Walk to a filepath's directory node inside the tree, creating any
+     * missing subdirectory nodes along the way.
+     *
+     * @param array $root The tree node to walk from, by reference.
+     * @param string $filepath
+     * @return array The filepath's own directory node, by reference.
+     */
+    private function &directory_node(array &$root, string $filepath): array {
+        $parts = explode('/', trim($filepath, '/'));
+        $pointer =& $root;
+        foreach ($parts as $part) {
+            if ($part === '') {
+                continue;
+            }
+            if (!isset($pointer['subdirs'][$part])) {
+                $pointer['subdirs'][$part] = ['dirname' => $part, 'dirfile' => null, 'subdirs' => [], 'files' => []];
+            }
+            $pointer =& $pointer['subdirs'][$part];
+        }
+        return $pointer;
+    }
+
+    /**
+     * Fold every directory entry from the area's files into the tree, and
+     * remove those entries from $files - what is left afterwards is plain
+     * files only.
+     *
+     * @param array $result The tree, by reference.
+     * @param array $files The area's files, by reference.
+     */
+    private function build_directory_structure(array &$result, array &$files): void {
         // first create directory structure
-        foreach ($files as $hash=>$dir) {
+        foreach ($files as $hash => $dir) {
             if (!$dir->is_directory()) {
                 continue;
             }
@@ -106,38 +144,27 @@ class json_file_storage {
                 $result['dirfile'] = $dir;
                 continue;
             }
-            $parts = explode('/', trim($dir->get_filepath(),'/'));
-            $pointer =& $result;
-            foreach ($parts as $part) {
-                if ($part === '') {
-                    continue;
-                }
-                if (!isset($pointer['subdirs'][$part])) {
-                    $pointer['subdirs'][$part] = array('dirname'=>$part, 'dirfile'=>null, 'subdirs'=>array(), 'files'=>array());
-                }
-                $pointer =& $pointer['subdirs'][$part];
-            }
-            $pointer['dirfile'] = $dir;
-            unset($pointer);
+            $node =& $this->directory_node($result, $dir->get_filepath());
+            $node['dirfile'] = $dir;
+            unset($node);
         }
-        foreach ($files as $hash=>$file) {
-            $parts = explode('/', trim($file->get_filepath(),'/'));
-            $pointer =& $result;
-            foreach ($parts as $part) {
-                if ($part === '') {
-                    continue;
-                }
-                // A file whose directory was never listed still has a place.
-                if (!isset($pointer['subdirs'][$part])) {
-                    $pointer['subdirs'][$part] = array('dirname'=>$part, 'dirfile'=>null, 'subdirs'=>array(), 'files'=>array());
-                }
-                $pointer =& $pointer['subdirs'][$part];
-            }
-            $pointer['files'][$file->get_filename()] = $file;
-            unset($pointer);
+    }
+
+    /**
+     * Place every remaining (non-directory) file into its directory node.
+     *
+     * A file whose directory was never listed still has a place: the node
+     * is created on the way down, the same as for a listed directory.
+     *
+     * @param array $result The tree, by reference.
+     * @param array $files The area's files left after build_directory_structure().
+     */
+    private function place_files_in_tree(array &$result, array $files): void {
+        foreach ($files as $file) {
+            $node =& $this->directory_node($result, $file->get_filepath());
+            $node['files'][$file->get_filename()] = $file;
+            unset($node);
         }
-        $result = $this->sort_area_tree($result);
-        return $result;
     }
 
     /**
@@ -150,14 +177,23 @@ class json_file_storage {
         foreach ($tree as $key => &$value) {
             if ($key == 'subdirs') {
                 core_collator::ksort($value, core_collator::SORT_NATURAL);
-                foreach ($value as $subdirname => &$subtree) {
-                    $subtree = $this->sort_area_tree($subtree);
-                }
+                $this->sort_subdirs($value);
             } else if ($key == 'files') {
                 core_collator::ksort($value, core_collator::SORT_NATURAL);
             }
         }
         return $tree;
+    }
+
+    /**
+     * Recursively sort every subdirectory node.
+     *
+     * @param array $subdirs
+     */
+    private function sort_subdirs(array &$subdirs): void {
+        foreach ($subdirs as $subdirname => &$subtree) {
+            $subtree = $this->sort_area_tree($subtree);
+        }
     }
 
     /**
@@ -170,7 +206,11 @@ class json_file_storage {
         $terms = [];
         foreach (array_filter(array_map('trim', explode(',', $sort))) as $term) {
             $parts = preg_split('/\s+/', $term);
-            $terms[] = [strtolower($parts[0]), strtoupper($parts[1] ?? 'ASC') === 'DESC' ? -1 : 1];
+            $direction = 1;
+            if (strtoupper($parts[1] ?? 'ASC') === 'DESC') {
+                $direction = -1;
+            }
+            $terms[] = [strtolower($parts[0]), $direction];
         }
         if (!$terms) {
             return;

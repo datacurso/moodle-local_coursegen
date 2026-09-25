@@ -119,7 +119,10 @@ class json_file {
      * @return string|null
      */
     public function get_mimetype(): ?string {
-        return isset($this->row['mimetype']) ? (string) $this->row['mimetype'] : null;
+        if (!isset($this->row['mimetype'])) {
+            return null;
+        }
+        return (string) $this->row['mimetype'];
     }
 
     /**
@@ -155,7 +158,10 @@ class json_file {
      * @return string|null
      */
     public function get_author(): ?string {
-        return isset($this->row['author']) ? (string) $this->row['author'] : null;
+        if (!isset($this->row['author'])) {
+            return null;
+        }
+        return (string) $this->row['author'];
     }
 
     /**
@@ -164,7 +170,10 @@ class json_file {
      * @return string|null
      */
     public function get_license(): ?string {
-        return isset($this->row['license']) ? (string) $this->row['license'] : null;
+        if (!isset($this->row['license'])) {
+            return null;
+        }
+        return (string) $this->row['license'];
     }
 
     /**
@@ -219,6 +228,9 @@ class json_file {
      * @return string|null
      */
     public function get_url(): ?string {
-        return isset($this->row['url']) ? (string) $this->row['url'] : null;
+        if (!isset($this->row['url'])) {
+            return null;
+        }
+        return (string) $this->row['url'];
     }
 }
