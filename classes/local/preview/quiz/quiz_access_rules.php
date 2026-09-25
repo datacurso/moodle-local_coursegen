@@ -53,7 +53,8 @@ trait quiz_access_rules {
         }
         // quizaccess_timelimit.
         if (!empty($quiz->timelimit) && !$canignoretimelimits) {
-            $result[] = get_string('quiztimelimit', 'quizaccess_timelimit', format_time($quiz->timelimit));
+            $formattedtimelimit = format_time($quiz->timelimit);
+            $result[] = get_string('quiztimelimit', 'quizaccess_timelimit', $formattedtimelimit);
         }
         return $result;
     }
@@ -68,7 +69,8 @@ trait quiz_access_rules {
         $result = [];
 
         // quizaccess_ipaddress.
-        if (!empty($quiz->subnet) && !address_in_subnet(getremoteaddr(), $quiz->subnet)) {
+        $remoteaddress = getremoteaddr();
+        if (!empty($quiz->subnet) && !address_in_subnet($remoteaddress, $quiz->subnet)) {
             $result[] = get_string('subnetwrong', 'quizaccess_ipaddress');
         }
 
@@ -77,8 +79,10 @@ trait quiz_access_rules {
         if ($this->timenow < $quiz->timeopen) {
             $result[] = $message;
         } else if (!empty($quiz->timeclose) && $this->timenow > $quiz->timeclose) {
-            if (($quiz->overduehandling ?? '') !== 'graceperiod'
-                    || $this->timenow > $quiz->timeclose + (int) ($quiz->graceperiod ?? 0)) {
+            $overduehandling = $quiz->overduehandling ?? '';
+            $graceperiod = $quiz->graceperiod ?? 0;
+            $graceperiod = (int) $graceperiod;
+            if ($overduehandling !== 'graceperiod' || $this->timenow > $quiz->timeclose + $graceperiod) {
                 $result[] = $message;
             }
         }
@@ -111,7 +115,8 @@ trait quiz_access_rules {
      * @return bool
      */
     protected function attempt_must_be_in_popup(): bool {
-        return ($this->quiz->browsersecurity ?? '') === 'securewindow';
+        $browsersecurity = $this->quiz->browsersecurity ?? '';
+        return $browsersecurity === 'securewindow';
     }
 
     /**
@@ -121,13 +126,18 @@ trait quiz_access_rules {
      * @return string
      */
     protected function quiz_get_grading_option_name($option): string {
+        $gradehighest = get_string('gradehighest', 'quiz');
+        $gradeaverage = get_string('gradeaverage', 'quiz');
+        $attemptfirst = get_string('attemptfirst', 'quiz');
+        $attemptlast = get_string('attemptlast', 'quiz');
         $strings = [
-            self::QUIZ_GRADEHIGHEST => get_string('gradehighest', 'quiz'),
-            self::QUIZ_GRADEAVERAGE => get_string('gradeaverage', 'quiz'),
-            self::QUIZ_ATTEMPTFIRST => get_string('attemptfirst', 'quiz'),
-            self::QUIZ_ATTEMPTLAST  => get_string('attemptlast', 'quiz'),
+            self::QUIZ_GRADEHIGHEST => $gradehighest,
+            self::QUIZ_GRADEAVERAGE => $gradeaverage,
+            self::QUIZ_ATTEMPTFIRST => $attemptfirst,
+            self::QUIZ_ATTEMPTLAST  => $attemptlast,
         ];
-        return $strings[(string) $option] ?? '';
+        $key = (string) $option;
+        return $strings[$key] ?? '';
     }
 
     /**
