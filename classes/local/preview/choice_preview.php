@@ -62,6 +62,52 @@ class choice_preview extends ported_preview {
     }
 
     /**
+     * Option texts read from flat option[N] parameter keys, the shape a plan
+     * without a structured `options` array arrives in.
+     *
+     * @return string[]
+     */
+    private function options_from_indexed_parameters(): array {
+        $options = [];
+        foreach ($this->parameters as $key => $value) {
+            if (preg_match('/^option\[?\d+\]?$/', (string) $key) && trim((string) $value) !== '') {
+                $options[] = (string) $value;
+            }
+        }
+        return $options;
+    }
+
+    /**
+     * One option's text, whichever shape it arrived in.
+     *
+     * @param mixed $option
+     * @return string
+     */
+    private static function option_text($option): string {
+        if (is_array($option)) {
+            return (string) ($option['text'] ?? $option['option'] ?? '');
+        }
+        return (string) $option;
+    }
+
+    /**
+     * Option texts read from a structured `options` array.
+     *
+     * @param array $options
+     * @return string[]
+     */
+    private function options_from_structured_array(array $options): array {
+        $texts = [];
+        foreach ($options as $option) {
+            $text = self::option_text($option);
+            if (trim($text) !== '') {
+                $texts[] = $text;
+            }
+        }
+        return $texts;
+    }
+
+    /**
      * The option texts the plan intends, whichever shape the answer put them in.
      *
      * @return string[]
@@ -69,22 +115,9 @@ class choice_preview extends ported_preview {
     private function drafted_options(): array {
         $options = $this->parameters['options'] ?? null;
         if (!is_array($options)) {
-            $options = [];
-            foreach ($this->parameters as $key => $value) {
-                if (preg_match('/^option\[?\d+\]?$/', (string) $key) && trim((string) $value) !== '') {
-                    $options[] = (string) $value;
-                }
-            }
-            return $options;
+            return $this->options_from_indexed_parameters();
         }
-        $texts = [];
-        foreach ($options as $option) {
-            $text = is_array($option) ? (string) ($option['text'] ?? $option['option'] ?? '') : (string) $option;
-            if (trim($text) !== '') {
-                $texts[] = $text;
-            }
-        }
-        return $texts;
+        return $this->options_from_structured_array($options);
     }
 
     /**

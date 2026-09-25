@@ -41,6 +41,20 @@ class book_preview extends ported_preview {
     }
 
     /**
+     * Map each stored chapter's trimmed title to its database id.
+     *
+     * @param json_store $store
+     * @return array
+     */
+    private function chapter_ids_by_title(json_store $store): array {
+        $idbytitle = [];
+        foreach ($store->get_records('book_chapters') as $row) {
+            $idbytitle[trim((string) ($row->title ?? ''))] ??= $row->id;
+        }
+        return $idbytitle;
+    }
+
+    /**
      * A draft's chapters replace the mould's, matched by id.
      *
      * A plan names each piece by the id its module gave it; an answer that
@@ -50,10 +64,7 @@ class book_preview extends ported_preview {
      * @param json_store $store
      */
     protected function overlay(json_store $store): void {
-        $idbytitle = [];
-        foreach ($store->get_records('book_chapters') as $row) {
-            $idbytitle[trim((string) ($row->title ?? ''))] ??= $row->id;
-        }
+        $idbytitle = $this->chapter_ids_by_title($store);
         foreach (($this->parameters['mod_settings']['chapters'] ?? []) as $chapter) {
             $id = $chapter['id'] ?? ($idbytitle[trim((string) ($chapter['title'] ?? ''))] ?? null);
             if ($id === null) {
@@ -83,7 +94,11 @@ class book_preview extends ported_preview {
         }
         $book = $this->instance();
         $store = $this->store();
-        $this->chapters = ($book === null || $store === null) ? [] : view::book_preload_chapters($book, $store);
+        if ($book === null || $store === null) {
+            $this->chapters = [];
+            return $this->chapters;
+        }
+        $this->chapters = view::book_preload_chapters($book, $store);
         return $this->chapters;
     }
 
@@ -124,7 +139,10 @@ class book_preview extends ported_preview {
      */
     protected function chapter_url(int $chapterid): moodle_url {
         $position = array_search($chapterid, array_keys($this->chapters()), false);
-        return $this->page_url($position === false ? 0 : (int) $position);
+        if ($position === false) {
+            return $this->page_url(0);
+        }
+        return $this->page_url((int) $position);
     }
 
     /**
