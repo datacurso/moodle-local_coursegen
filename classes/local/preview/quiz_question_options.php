@@ -98,14 +98,17 @@ trait quiz_question_options {
             $falsefraction = 0.0;
         }
 
+        $truelabel = get_string('true', 'qtype_truefalse');
+        $falselabel = get_string('false', 'qtype_truefalse');
+
         $ownanswers = [];
         $ownanswers[$trueid] = [
-            'id' => $trueid, 'question' => $questionid, 'answer' => get_string('true', 'qtype_truefalse'),
+            'id' => $trueid, 'question' => $questionid, 'answer' => $truelabel,
             'answerformat' => FORMAT_MOODLE, 'fraction' => $truefraction,
             'feedback' => $true['text'], 'feedbackformat' => $true['format'],
         ];
         $ownanswers[$falseid] = [
-            'id' => $falseid, 'question' => $questionid, 'answer' => get_string('false', 'qtype_truefalse'),
+            'id' => $falseid, 'question' => $questionid, 'answer' => $falselabel,
             'answerformat' => FORMAT_MOODLE, 'fraction' => $falsefraction,
             'feedback' => $false['text'], 'feedbackformat' => $false['format'],
         ];
