@@ -62,10 +62,8 @@ class view {
     public static function chapter_page($book, $chapters, $chapter, context $context, callable $urls): string {
         global $OUTPUT;
 
-        $renderedmenu = $OUTPUT->render_from_template(
-            'mod_book/main_action_menu',
-            self::main_action_menu_data($chapters, $chapter, $context, $urls)
-        );
+        $menudata = self::main_action_menu_data($chapters, $chapter, $context, $urls);
+        $renderedmenu = $OUTPUT->render_from_template('mod_book/main_action_menu', $menudata);
         $out = $OUTPUT->render_from_template('local_coursegen/preview_container', [
             'id' => 'mod_book-chaptersnavigation',
             'content' => $renderedmenu,
@@ -75,13 +73,15 @@ class view {
         if ($chapter->hidden) {
             $boxclasses .= ' dimmed_text';
         }
-        $out .= $OUTPUT->box(self::chapter_content($book, $chapters, $chapter, $context), $boxclasses, 'mod_book-chapter');
+        $content = self::chapter_content($book, $chapters, $chapter, $context);
+        $out .= $OUTPUT->box($content, $boxclasses, 'mod_book-chapter');
 
         if (\core_tag_tag::is_enabled('mod_book', 'book_chapters')) {
             // The chapter's tags travel in the structure as chaptertags; a
             // preview of a chapter that carries none shows none, which is
             // what tag_list() prints for an empty list.
-            $out .= $OUTPUT->tag_list(self::chapter_tags($chapter), null, 'book-tags');
+            $tags = self::chapter_tags($chapter);
+            $out .= $OUTPUT->tag_list($tags, null, 'book-tags');
         }
         return $out;
     }
@@ -125,21 +125,39 @@ class view {
      * @return array
      */
     protected static function chapter_tags(stdClass $chapter): array {
+        $rawtags = $chapter->tags ?? [];
+        $rawtags = (array) $rawtags;
+
         $tags = [];
-        foreach ((array) ($chapter->tags ?? []) as $tag) {
-            $tags[] = \core_tag_tag::from_record((object) [
-                'id' => $tag->id ?? 0,
-                'name' => $tag->rawname ?? '',
-                'rawname' => $tag->rawname ?? '',
-                'isstandard' => 0,
-                'tagcollid' => \core_tag_area::get_collection('mod_book', 'book_chapters'),
-                'taginstanceid' => 0,
-                'taginstancecontextid' => 0,
-                'itemid' => $chapter->id,
-                'ordering' => 0,
-                'flag' => 0,
-            ]);
+        foreach ($rawtags as $tag) {
+            $tags[] = self::chapter_tag($tag, $chapter->id);
         }
         return $tags;
+    }
+
+    /**
+     * One tag of the structure's chaptertags, as a core_tag_tag instance.
+     *
+     * @param stdClass $tag
+     * @param int $chapterid
+     * @return \core_tag_tag
+     */
+    private static function chapter_tag(stdClass $tag, int $chapterid): \core_tag_tag {
+        $tagid = $tag->id ?? 0;
+        $rawname = $tag->rawname ?? '';
+        $collectionid = \core_tag_area::get_collection('mod_book', 'book_chapters');
+        $record = (object) [
+            'id' => $tagid,
+            'name' => $rawname,
+            'rawname' => $rawname,
+            'isstandard' => 0,
+            'tagcollid' => $collectionid,
+            'taginstanceid' => 0,
+            'taginstancecontextid' => 0,
+            'itemid' => $chapterid,
+            'ordering' => 0,
+            'flag' => 0,
+        ];
+        return \core_tag_tag::from_record($record);
     }
 }
