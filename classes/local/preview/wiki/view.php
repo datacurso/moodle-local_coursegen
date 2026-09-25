@@ -91,9 +91,15 @@ class view {
         $subwiki = $this->store->get_record('wiki_subwikis', ['wikiid' => $this->wiki->id, 'groupid' => 0, 'userid' => 0]);
         if (!$subwiki) {
             $all = $this->store->get_records('wiki_subwikis', ['wikiid' => $this->wiki->id], 'id');
-            $subwiki = $all ? reset($all) : false;
+            $subwiki = false;
+            if ($all) {
+                $subwiki = reset($all);
+            }
         }
-        return $subwiki ?: null;
+        if (!$subwiki) {
+            return null;
+        }
+        return $subwiki;
     }
 
     /**
@@ -106,7 +112,11 @@ class view {
             return $this->pages;
         }
         $subwiki = $this->subwiki();
-        $this->pages = $subwiki ? array_values($this->store->get_records('wiki_pages', ['subwikiid' => $subwiki->id], 'id')) : [];
+        $this->pages = [];
+        if ($subwiki) {
+            $rows = $this->store->get_records('wiki_pages', ['subwikiid' => $subwiki->id], 'id');
+            $this->pages = array_values($rows);
+        }
         return $this->pages;
     }
 
