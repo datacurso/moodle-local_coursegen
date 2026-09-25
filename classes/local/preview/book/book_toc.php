@@ -88,8 +88,12 @@ trait book_toc {
             return '';
         }
 
+        $numberingclass = self::numbering_class($book->numbering);
+        if ($numberingclass === null) {
+            $numberingclass = '';
+        }
         return $OUTPUT->render_from_template('local_coursegen/preview_book_toc', [
-            'numberingclass' => self::numbering_class($book->numbering) ?? '',
+            'numberingclass' => $numberingclass,
             'chapters' => $tree,
         ]);
     }
@@ -131,6 +135,16 @@ trait book_toc {
             }
         }
 
+        return self::book_toc_mark_has_subchapters($tree);
+    }
+
+    /**
+     * Mark every chapter node with whether it carries subchapters.
+     *
+     * @param array $tree
+     * @return array
+     */
+    private static function book_toc_mark_has_subchapters(array $tree): array {
         foreach ($tree as $index => $node) {
             $tree[$index]['hassubchapters'] = !empty($node['subchapters']);
         }
@@ -160,8 +174,10 @@ trait book_toc {
         int &$nch,
         int &$ns
     ): array {
-        $title = trim(format_string($ch->title, true, array('context' => $context)));
-        $titleunescaped = trim(format_string($ch->title, true, array('context' => $context, 'escape' => false)));
+        $formatted = format_string($ch->title, true, array('context' => $context));
+        $title = trim($formatted);
+        $formattedunescaped = format_string($ch->title, true, array('context' => $context, 'escape' => false));
+        $titleunescaped = trim($formattedunescaped);
 
         if (!$ch->subchapter) {
             $nch++;
@@ -181,13 +197,16 @@ trait book_toc {
             $cssclass = 'dimmed_text';
         }
 
+        $url = $urls((int) $ch->id);
+        $urlstring = $url->out(false);
+
         return [
             'id' => (int) $ch->id,
             'title' => $title,
             'titleunescaped' => $titleunescaped,
             'cssclass' => $cssclass,
             'iscurrent' => ($ch->id == $chapter->id),
-            'url' => $urls((int) $ch->id)->out(false),
+            'url' => $urlstring,
             'subchapters' => [],
         ];
     }
