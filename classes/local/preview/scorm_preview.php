@@ -51,11 +51,10 @@ class scorm_preview extends ported_preview {
         }
         $scorm = reset($rows);
         $value = $this->parameters['introeditor'] ?? ($this->parameters['intro'] ?? null);
-        $text = is_array($value) ? (string) ($value['text'] ?? '') : (string) ($value ?? '');
+        $text = self::editor_field_text($value);
         if (trim($text) !== '') {
             $store->set('scorm', $scorm->id, 'intro', $text);
-            $store->set('scorm', $scorm->id, 'introformat',
-                is_array($value) ? (int) ($value['format'] ?? FORMAT_HTML) : FORMAT_HTML);
+            $store->set('scorm', $scorm->id, 'introformat', self::editor_field_format($value));
         }
     }
 

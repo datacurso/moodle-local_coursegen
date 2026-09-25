@@ -92,7 +92,10 @@ class resource_preview extends ported_preview {
      */
     public function render(): string {
         $view = $this->view();
-        return $view === null ? $this->nothing_yet() : $view->page();
+        if ($view === null) {
+            return $this->nothing_yet();
+        }
+        return $view->page();
     }
 
     /**
@@ -102,6 +105,9 @@ class resource_preview extends ported_preview {
      */
     public function header_description(): string {
         $view = $this->view();
-        return $view === null ? '' : $view->description();
+        if ($view === null) {
+            return '';
+        }
+        return $view->description();
     }
 }
