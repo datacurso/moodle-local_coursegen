@@ -49,9 +49,11 @@ export const refreshPreviewLinks = () => {
     const course = document.getElementById('tplPreviewCourse');
     if (course) {
         course.hidden = sessionId <= 0;
-        course.href = sessionId > 0
-            ? M.cfg.wwwroot + '/local/coursegen/course_preview.php?sessionid=' + sessionId
-            : '#';
+        let courseHref = '#';
+        if (sessionId > 0) {
+            courseHref = M.cfg.wwwroot + '/local/coursegen/course_preview.php?sessionid=' + sessionId;
+        }
+        course.href = courseHref;
     }
 
     document.querySelectorAll('[data-action="local_coursegen/template/preview-activity"]')
@@ -59,10 +61,12 @@ export const refreshPreviewLinks = () => {
             const uid = link.dataset.generationUid;
             link.hidden = sessionId <= 0 || !uid;
             // The name the answer gives this activity, passed along untouched.
-            link.href = sessionId > 0 && uid
-                ? M.cfg.wwwroot + '/local/coursegen/activity_preview.php'
-                    + '?sessionid=' + sessionId + '&uid=' + encodeURIComponent(uid)
-                : '#';
+            let activityHref = '#';
+            if (sessionId > 0 && uid) {
+                activityHref = M.cfg.wwwroot + '/local/coursegen/activity_preview.php'
+                    + '?sessionid=' + sessionId + '&uid=' + encodeURIComponent(uid);
+            }
+            link.href = activityHref;
             link.target = '_blank';
             link.rel = 'noopener';
         });
