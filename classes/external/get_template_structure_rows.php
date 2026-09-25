@@ -58,11 +58,15 @@ trait get_template_structure_rows {
             $iconhtml = \html_writer::empty_tag('img', ['src' => $iconurl, 'class' => 'icon activityicon', 'alt' => '']);
         }
         $uid = template_export_uids::instance_uid($instance);
+        $purpose = MOD_PURPOSE_OTHER;
+        if ($modname !== '') {
+            $purpose = self::get_purpose($modname);
+        }
         return [
             'id'      => $uid,
             'name'    => format_string($instance->get('name')),
             'modname' => $modname,
-            'purpose' => $modname === '' ? MOD_PURPOSE_OTHER : self::get_purpose($modname),
+            'purpose' => $purpose,
             'typelabel' => format_string($instance->get('typelabel')),
             'iconhtml' => $iconhtml,
             'locked'  => true,
