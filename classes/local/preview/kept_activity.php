@@ -48,17 +48,22 @@ class kept_activity {
      * One activity of the payload, in the shape its preview reads.
      *
      * Example, for a kept lesson named "My Lesson" with one page:
-     *   $activity = [
-     *       'resource_type' => 'lesson',
-     *       'parameters' => [
-     *           'name' => 'My Lesson',
-     *           'structure' => ['lesson' => [['pages' => [...]]]],
-     *       ],
-     *   ];
-     *   returns ['name' => 'My Lesson', 'mod_settings' => ['pages' => [...]]]
+     * ```php
+     * $activity = [
+     *     'resource_type' => 'lesson',
+     *     'parameters' => [
+     *         'name' => 'My Lesson',
+     *         'structure' => ['lesson' => [['pages' => [...]]]],
+     *     ],
+     * ];
+     * // returns:
+     * ['name' => 'My Lesson', 'mod_settings' => ['pages' => [...]]]
+     * ```
      *
      * For any other module type, returns instead:
-     *   ['name' => ..., 'introeditor' => ['text' => ..., ...], 'page' => ...]
+     * ```php
+     * ['name' => ..., 'introeditor' => ['text' => ..., ...], 'page' => ...]
+     * ```
      *
      * @param array $activity The activity as the payload describes it.
      * @return array
@@ -101,18 +106,21 @@ class kept_activity {
      * One lesson page, in the shape its preview reads.
      *
      * Example:
-     *   $page = [
-     *       'id' => 101, 'title' => 'Page A', 'contents' => '<p>Welcome</p>',
-     *       'layout' => 1, 'qtype' => 20, 'display' => 1,
-     *       'prevpageid' => '0', 'nextpageid' => '102',
-     *       'answers' => [['answer' => [['answer_text' => 'Continue', 'jumpto' => 102]]]],
-     *   ];
-     *   returns [
-     *       'id' => 101, 'layout' => 1, 'qtype' => 20, 'display' => 1,
-     *       'page_type' => 'content', 'title' => 'Page A',
-     *       'content_html' => '<p>Welcome</p>',
-     *       'buttons' => [['text' => 'Continue', 'jumpto' => 102]],
-     *   ]
+     * ```php
+     * $page = [
+     *     'id' => 101, 'title' => 'Page A', 'contents' => '<p>Welcome</p>',
+     *     'layout' => 1, 'qtype' => 20, 'display' => 1,
+     *     'prevpageid' => '0', 'nextpageid' => '102',
+     *     'answers' => [['answer' => [['answer_text' => 'Continue', 'jumpto' => 102]]]],
+     * ];
+     * // returns:
+     * [
+     *     'id' => 101, 'layout' => 1, 'qtype' => 20, 'display' => 1,
+     *     'page_type' => 'content', 'title' => 'Page A',
+     *     'content_html' => '<p>Welcome</p>',
+     *     'buttons' => [['text' => 'Continue', 'jumpto' => 102]],
+     * ]
+     * ```
      *
      * @param array $page One raw page node, as lesson_pages_in_order() returns it.
      * @return array
@@ -151,10 +159,13 @@ class kept_activity {
      * ones that are not.
      *
      * Example:
-     *   $root = ['pages' => [['page' => [pageA, pageB]]]];
-     *   // pageA: id 101, prevpageid '0', nextpageid '102'.
-     *   // pageB: id 102, prevpageid '101', nextpageid '0'.
-     *   returns [pageA, pageB]
+     * ```php
+     * // $pageA: id 101, prevpageid '0', nextpageid '102'.
+     * // $pageB: id 102, prevpageid '101', nextpageid '0'.
+     * $root = ['pages' => [['page' => [$pageA, $pageB]]]];
+     * // returns:
+     * [$pageA, $pageB]
+     * ```
      *
      * @param array $root The lesson's own raw backup node (one "structure" entry).
      * @return array The raw page nodes, walk-ordered.
@@ -174,8 +185,11 @@ class kept_activity {
      * Every page of a lesson, still in the backup's own grouping.
      *
      * Example:
-     *   $root = ['pages' => [['page' => [pageA, pageB]]]];
-     *   returns [pageA, pageB]
+     * ```php
+     * $root = ['pages' => [['page' => [$pageA, $pageB]]]];
+     * // returns:
+     * [$pageA, $pageB]
+     * ```
      *
      * @param array $root The lesson's own raw backup node.
      * @return array The raw page nodes, in no particular order.
@@ -194,8 +208,11 @@ class kept_activity {
      * Every page, keyed by its own id.
      *
      * Example:
-     *   $pages = [pageA (id 101), pageB (id 102)];
-     *   returns ['101' => pageA, '102' => pageB]
+     * ```php
+     * $pages = [$pageA, $pageB]; // ids 101 and 102
+     * // returns:
+     * ['101' => $pageA, '102' => $pageB]
+     * ```
      *
      * @param array $pages Raw page nodes, as flatten_lesson_pages() returns them.
      * @return array Page id (string) => raw page node.
@@ -214,8 +231,11 @@ class kept_activity {
      * The page nobody names as "next": where the walk starts.
      *
      * Example:
-     *   $pages = [pageA (prevpageid '0'), pageB (prevpageid '101')];
-     *   returns pageA
+     * ```php
+     * $pages = [$pageA, $pageB]; // $pageA's prevpageid is '0'
+     * // returns:
+     * $pageA
+     * ```
      *
      * @param array $pages Raw page nodes, as flatten_lesson_pages() returns them.
      * @return array|null The page whose prevpageid is '0', or null if none is.
@@ -236,9 +256,12 @@ class kept_activity {
      * loops back on a page already walked.
      *
      * Example:
-     *   $current = pageA (id 101, nextpageid '102');
-     *   $byid = ['101' => pageA, '102' => pageB (nextpageid '0')];
-     *   returns [pageA, pageB] — the walk stops because $byid has no id '0'.
+     * ```php
+     * $current = $pageA; // id 101, nextpageid '102'
+     * $byid = ['101' => $pageA, '102' => $pageB]; // $pageB's nextpageid is '0'
+     * // returns:
+     * [$pageA, $pageB] // the walk stops: $byid has no id '0'
+     * ```
      *
      * @param array|null $current The page to start from, e.g. first_lesson_page()'s result.
      * @param array $byid Page id (string) => raw page node, as lesson_pages_by_id() returns it.
@@ -266,9 +289,12 @@ class kept_activity {
      * Pages the chain walk never reached, appended after the ones it did.
      *
      * Example:
-     *   $ordered = [pageA, pageB];
-     *   $pages = [pageA, pageB, pageC (its prevpageid points at an id no page has)];
-     *   returns [pageA, pageB, pageC] — pageC is still shown, just last.
+     * ```php
+     * $ordered = [$pageA, $pageB];
+     * $pages = [$pageA, $pageB, $pageC]; // $pageC's prevpageid points at no real page
+     * // returns:
+     * [$pageA, $pageB, $pageC] // $pageC is still shown, just last
+     * ```
      *
      * @param array $ordered Raw page nodes, as walk_lesson_page_chain() returns them.
      * @param array $pages Every raw page node, as flatten_lesson_pages() returns them.
@@ -290,8 +316,11 @@ class kept_activity {
      * The ids of a list of pages, as lookup keys.
      *
      * Example:
-     *   $pages = [pageA (id 101), pageB (id 102)];
-     *   returns ['101' => true, '102' => true]
+     * ```php
+     * $pages = [$pageA, $pageB]; // ids 101 and 102
+     * // returns:
+     * ['101' => true, '102' => true]
+     * ```
      *
      * @param array $pages Raw page nodes.
      * @return array Page id (string) => true.
@@ -310,8 +339,11 @@ class kept_activity {
      * One page's navigation, which mod_lesson keeps as that page's answers.
      *
      * Example:
-     *   $page = ['answers' => [['answer' => [['answer_text' => 'Continue', 'jumpto' => 102]]]]];
-     *   returns [['text' => 'Continue', 'jumpto' => 102]]
+     * ```php
+     * $page = ['answers' => [['answer' => [['answer_text' => 'Continue', 'jumpto' => 102]]]]];
+     * // returns:
+     * [['text' => 'Continue', 'jumpto' => 102]]
+     * ```
      *
      * @param array $page One raw page node.
      * @return array List of ['text' => string, 'jumpto' => mixed].
@@ -335,8 +367,11 @@ class kept_activity {
      * A page's answers, still in the backup's own grouping.
      *
      * Example:
-     *   $page = ['answers' => [['answer' => [['answer_text' => 'Continue', 'jumpto' => 102]]]]];
-     *   returns [['answer_text' => 'Continue', 'jumpto' => 102]]
+     * ```php
+     * $page = ['answers' => [['answer' => [['answer_text' => 'Continue', 'jumpto' => 102]]]]];
+     * // returns:
+     * [['answer_text' => 'Continue', 'jumpto' => 102]]
+     * ```
      *
      * @param array $page One raw page node.
      * @return array Raw answer nodes, in no particular order.
