@@ -21,6 +21,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import Modal from 'core/modal';
+import Notification from 'core/notification';
 import {escapeHtml} from 'local_coursegen/local/courseai/utils';
 
 /**
@@ -48,31 +50,40 @@ export const createGuidelineHandlers = (
     /**
      * Show the guideline preview modal for a given guideline id.
      *
+     * Uses core/modal so the dialogue works on both Moodle 4.5 (Bootstrap 4) and
+     * Moodle 5.0 (Bootstrap 5) without touching the jQuery Bootstrap plugin.
+     *
      * @param {string} id
-     * @returns {void}
+     * @returns {Promise<void>}
      */
-    const showGuidelinePreview = (id) => {
+    const showGuidelinePreview = async(id) => {
         const guideline = state.guidelines.find((g) => g.id === id);
         if (!guideline) {
             return;
         }
 
-        const modalLabel = document.getElementById('previewModalLabel');
-        const modalCategory = document.getElementById('previewModalCategory');
-        const modalBody = document.getElementById('previewModalBody');
+        const category = guideline.category || texts.courseai_category_general;
+        const body = `
+            <div class="guideline-preview">
+                <div class="preview-subtitle">
+                    <span class="preview-cat-badge">${escapeHtml(category)}</span>
+                    <span class="preview-subtitle-text">${escapeHtml(texts.courseai_modal_fullcontext)}</span>
+                </div>
+                <div class="preview-desc-box">
+                    <p>${escapeHtml(guideline.description || '')}</p>
+                </div>
+            </div>
+        `;
 
-        if (modalLabel) {
-            modalLabel.textContent = guideline.name;
-        }
-        if (modalCategory) {
-            modalCategory.textContent = guideline.category || texts.courseai_category_general;
-        }
-        if (modalBody) {
-            modalBody.textContent = guideline.description || '';
-        }
-
-        if (window.$ && window.$('#guidelinePreviewModal').length) {
-            window.$('#guidelinePreviewModal').modal('show');
+        try {
+            await Modal.create({
+                title: escapeHtml(guideline.name),
+                body,
+                show: true,
+                removeOnClose: true,
+            });
+        } catch (error) {
+            Notification.exception(error);
         }
     };
 

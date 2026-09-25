@@ -16,6 +16,9 @@
 
 namespace local_coursegen\mod_parameters;
 
+use aiprovider_datacurso\httpclient\ai_course_api;
+use local_coursegen\event\package_download_skipped;
+
 /**
  * Class base_parameters
  *
@@ -28,6 +31,12 @@ abstract class base_parameters {
      * @var object $parameters Default parameters for the module.
      */
     protected $parameters;
+
+    /** @var ai_course_api|null Provider client shared by every download of this instance. */
+    private ?ai_course_api $client = null;
+
+    /** @var bool Whether building the provider client already failed for this instance. */
+    private bool $clientfailed = false;
 
     /**
      * Constructor.
@@ -44,6 +53,108 @@ abstract class base_parameters {
      * @return object Adjusted parameters for the module.
      */
     abstract public function get_parameters();
+
+    /**
+     * Download one AI generated package into a draft file area, never throwing.
+     *
+     * A provider failure (no enabled DataCurso instance with a license key, network
+     * error, unreachable file...) must not abort module creation: the module is
+     * created without its package. The skip is reported through the
+     * package_download_skipped event (site logs) and a debugging notice.
+     *
+     * @param string $endpoint Provider download endpoint (path + query).
+     * @param string $filename Target file name in the draft area.
+     * @param array $filerecord Optional file record overrides (itemid, filepath...).
+     * @return \stored_file|null The stored file, or null when the download was skipped.
+     */
+    protected function download_package(string $endpoint, string $filename, array $filerecord = []): ?\stored_file {
+        try {
+            $client = $this->get_client();
+            $file = $client->download_file($endpoint, $filename, $filerecord);
+            if (!$file) {
+                throw new \moodle_exception('error_download_failed', 'local_coursegen');
+            }
+            return $file;
+        } catch (\Throwable $e) {
+            $this->report_skipped_package($filename, $e);
+            return null;
+        }
+    }
+
+    /**
+     * Build (once) the provider client used to fetch generated files.
+     *
+     * @return ai_course_api
+     * @throws \Throwable When the client cannot be built; the failure is remembered so
+     *                    later downloads of the same instance do not retry it.
+     */
+    private function get_client(): ai_course_api {
+        if ($this->client !== null) {
+            return $this->client;
+        }
+        if ($this->clientfailed) {
+            throw new \moodle_exception('error_provider_unavailable', 'local_coursegen');
+        }
+        try {
+            $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
+            $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
+            $this->client = new ai_course_api(null, $baseurl, $baseurleu);
+        } catch (\Throwable $e) {
+            $this->clientfailed = true;
+            throw $e;
+        }
+        return $this->client;
+    }
+
+    /**
+     * Report a skipped package: admin-visible event plus a debugging notice.
+     *
+     * @param string $filename File name that was not attached.
+     * @param \Throwable $e The failure.
+     * @return void
+     */
+    private function report_skipped_package(string $filename, \Throwable $e): void {
+        $modname = $this->get_modname();
+        $reason = \core_text::substr(trim($e->getMessage()), 0, package_download_skipped::REASON_MAX_LENGTH);
+
+        package_download_skipped::create([
+            'context' => $this->get_event_context(),
+            'other' => ['modname' => $modname, 'filename' => $filename, 'reason' => $reason],
+        ])->trigger();
+
+        debugging(
+            "local_coursegen: skipped {$modname} package \"{$filename}\": {$reason}",
+            DEBUG_NORMAL
+        );
+    }
+
+    /**
+     * Module name handled by this parameters class (derived from the class name).
+     *
+     * @return string
+     */
+    private function get_modname(): string {
+        $shortname = substr(strrchr(static::class, '\\'), 1);
+        return preg_replace('/_parameters$/', '', $shortname);
+    }
+
+    /**
+     * Context for skip events: the target course when known, the system otherwise.
+     *
+     * @return \context
+     */
+    private function get_event_context(): \context {
+        $courseid = (int) ($this->parameters->course ?? 0);
+        if ($courseid > 0) {
+            try {
+                return \context_course::instance($courseid);
+            } catch (\Throwable $e) {
+                // Fall through to the system context.
+                unset($e);
+            }
+        }
+        return \context_system::instance();
+    }
 
     /**
      * Validate and normalize the package download info from mod_settings.

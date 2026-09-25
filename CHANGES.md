@@ -1,3 +1,25 @@
+## 2.0.6
+
+**Released on:** Unreleased
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Fixed
+
+- **Bootstrap 5 compatibility on Moodle 5.0+**  
+  The institutional guideline preview now uses Moodle's `core/modal` API instead of a jQuery Bootstrap 4 modal that never opened on Moodle 5.0, tooltips declare both `data-toggle` and `data-bs-toggle`, and CSS colours fall back from Bootstrap 5 `--bs-*` variables to their Bootstrap 4 names. Two unreferenced templates were removed.
+- **Question bank defaults on Moodle 5.0**  
+  Quiz questions are created in the module default category through `question_get_default_category()` on Moodle 5.0 (the previous helper is deprecated there) and hand-made question bank entries now advertise the next version number like core question import does.
+- **Module creation survives an unavailable AI provider**  
+  IMS CP, file, SCORM and folder resources no longer abort when the provider client cannot be built (for example no enabled DataCurso provider instance with a license key on Moodle 5.0) or a package download fails; the module is created without the package and a new `package_download_skipped` event (module, file name, reason) is written to the site logs.
+- **Schema drift on upgraded sites**  
+  Sites upgraded from early versions had a `model_name` column on the module jobs table while fresh installs use `system_instruction_name`; a new upgrade step renames or merges it.
+
+## Changed
+
+- **CI**  
+  The plugin CI workflow installs the DataCurso AI provider from the branch matching each Moodle version, and the Behat course page scenarios assert the plugin's own AI button rather than core's activity chooser (renamed on Moodle 5.0).
+
 ## 2.0.5
 
 **Released on:** 2026-09-11

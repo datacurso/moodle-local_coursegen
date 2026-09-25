@@ -16,17 +16,26 @@
 
 namespace local_coursegen\mod_parameters;
 
+use local_coursegen\event\package_download_skipped;
+
 defined('MOODLE_INTERNAL') || die();
 
+require_once(__DIR__ . '/../fixtures/aiprovider_datacurso_stub.php');
+
 /**
- * Unit tests for folder_parameters — filepath normalisation and the empty-files no-op.
+ * Unit tests for folder_parameters — filepath normalisation, the empty-files no-op
+ * and graceful degradation when the AI provider client is unavailable.
  *
  * The actual download + ingest path depends on the external AI service and is covered by E2E.
+ * For the degradation test exactly one failure path runs per site: with the provider plugin
+ * installed the real client constructor throws instance_disabled (no enabled instance on a
+ * test site); without it the stub client throws on download.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers \local_coursegen\mod_parameters\folder_parameters
+ * @covers \local_coursegen\mod_parameters\base_parameters
  */
 final class folder_parameters_test extends \advanced_testcase {
     /**
@@ -69,5 +78,41 @@ final class folder_parameters_test extends \advanced_testcase {
         $params2 = (object) ['mod_settings' => []];
         $out2 = (new folder_parameters($params2))->get_parameters();
         $this->assertFalse(isset($out2->files));
+    }
+
+    /**
+     * A provider failure (unavailable client or failed download) is reported per file
+     * (event + debugging) and the folder is still created instead of aborting.
+     */
+    public function test_provider_failure_degrades_gracefully(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $params = (object) [
+            'name' => 'AI folder',
+            'mod_settings' => ['files' => [
+                ['file_path' => '/tmp/generated/a.pdf', 'file_name' => 'a.pdf', 'folder_path' => 'Docs'],
+                ['file_path' => '/tmp/generated/b.pdf', 'file_name' => 'b.pdf', 'folder_path' => ''],
+            ]],
+        ];
+
+        $sink = $this->redirectEvents();
+        $out = (new folder_parameters($params))->get_parameters();
+        $events = $sink->get_events();
+        $sink->close();
+
+        $this->assertDebuggingCalledCount(2);
+        $this->assertSame('AI folder', $out->name);
+        // The (empty) draft area is still attached so the folder gets created.
+        $this->assertTrue(isset($out->files));
+
+        $skipped = array_values(array_filter($events, static function ($event) {
+            return $event instanceof package_download_skipped;
+        }));
+        $this->assertCount(2, $skipped);
+        $this->assertSame(['a.pdf', 'b.pdf'], array_map(static function ($event) {
+            return $event->other['filename'];
+        }, $skipped));
+        $this->assertSame('folder', $skipped[0]->other['modname']);
     }
 }

@@ -272,5 +272,52 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026090900, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026092500) {
+        // Schema drift: the 2025092401 step created local_coursegen_module_jobs with a
+        // model_name column while install.xml and the code use system_instruction_name.
+        $table = new xmldb_table('local_coursegen_module_jobs');
+        $legacy = new xmldb_field('model_name', XMLDB_TYPE_CHAR, '255', null, null, null, null, 'context_type');
+        $current = new xmldb_field(
+            'system_instruction_name',
+            XMLDB_TYPE_CHAR,
+            '255',
+            null,
+            null,
+            null,
+            null,
+            'context_type'
+        );
+
+        if ($dbman->field_exists($table, $legacy)) {
+            if ($dbman->field_exists($table, $current)) {
+                // Both exist: back-fill the current column where empty, then drop the legacy one.
+                // Rows holding two different values keep system_instruction_name; report how
+                // many legacy values are discarded so the site log keeps a trace.
+                $conflicts = $DB->count_records_select(
+                    'local_coursegen_module_jobs',
+                    "system_instruction_name IS NOT NULL AND model_name IS NOT NULL
+                     AND model_name <> system_instruction_name"
+                );
+                if ($conflicts > 0) {
+                    debugging(
+                        "local_coursegen upgrade: {$conflicts} module job(s) had a legacy model_name "
+                            . 'different from system_instruction_name; the legacy value was discarded.',
+                        DEBUG_NORMAL
+                    );
+                }
+                $DB->execute("UPDATE {local_coursegen_module_jobs}
+                                 SET system_instruction_name = model_name
+                               WHERE system_instruction_name IS NULL AND model_name IS NOT NULL");
+                $dbman->drop_field($table, $legacy);
+            } else {
+                // Launch rename field system_instruction_name.
+                $dbman->rename_field($table, $legacy, 'system_instruction_name');
+            }
+        }
+
+        // Coursegen savepoint reached.
+        upgrade_plugin_savepoint(true, 2026092500, 'local', 'coursegen');
+    }
+
     return true;
 }

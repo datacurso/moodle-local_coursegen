@@ -53,7 +53,14 @@ class create_mod_service {
 
         $mform = self::create_mod_form_instance($modname, $data, $cw, $cm, $course);
 
-        $parameters = self::prepare_parameters($modname, $resultinfo['parameters'], $sectionnum, $beforemod, $module->id);
+        $parameters = self::prepare_parameters(
+            $modname,
+            $resultinfo['parameters'],
+            $sectionnum,
+            $beforemod,
+            $module->id,
+            $course->id
+        );
 
         $newcm = add_moduleinfo($parameters, $course, $mform);
 
@@ -152,14 +159,19 @@ class create_mod_service {
      * @param int $sectionnum Target section number.
      * @param int|null $beforemod Optional cm id to insert before.
      * @param int $moduleid Module id from 'modules' table.
+     * @param int|null $courseid Target course id (add_moduleinfo() sets it anyway; parameter
+     *                           handlers use it to log skipped packages against the course).
      * @return object Parameters ready for add_moduleinfo().
      */
-    private static function prepare_parameters($modname, $rawparameters, $sectionnum, $beforemod, $moduleid) {
+    private static function prepare_parameters($modname, $rawparameters, $sectionnum, $beforemod, $moduleid, $courseid = null) {
         $cleanedparameters = text_editor_parameter_cleaner::clean_text_editor_objects($rawparameters);
         $parameters = (object)$cleanedparameters;
         $parameters->section = $sectionnum;
         $parameters->beforemod = $beforemod;
         $parameters->module = $moduleid;
+        if ($courseid !== null) {
+            $parameters->course = $courseid;
+        }
 
         $parameters = self::process_mod_parameters($modname, $parameters);
 

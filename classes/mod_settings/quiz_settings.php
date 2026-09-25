@@ -16,6 +16,10 @@
 
 namespace local_coursegen\mod_settings;
 
+defined('MOODLE_INTERNAL') || die();
+
+require_once($CFG->libdir . '/questionlib.php');
+
 /**
  * Class quiz_settings
  *
@@ -43,6 +47,24 @@ class quiz_settings extends base_settings {
     const CALCULATED_QTYPES = ['calculated', 'calculatedmulti'];
 
     /**
+     * Resolve (creating it when missing) the default question category of a module context.
+     *
+     * Moodle 5.0 moved default-category creation into question_get_default_category()
+     * and deprecated question_make_default_categories(); Moodle 4.5 only offers the latter.
+     *
+     * @param \context $context The quiz module context.
+     * @return \stdClass The default question category record.
+     */
+    private function get_default_question_category(\context $context): \stdClass {
+        global $CFG;
+
+        if ($CFG->branch >= 500) {
+            return question_get_default_category($context->id, true);
+        }
+        return question_make_default_categories([$context]);
+    }
+
+    /**
      * Add question to quiz.
      *
      * @param array $aiquestiondata Question data.
@@ -55,7 +77,7 @@ class quiz_settings extends base_settings {
 
         $DB->get_record('quiz', ['id' => $cm->instance], '*', MUST_EXIST);
 
-        $categoryinfo = question_make_default_categories([$context]);
+        $categoryinfo = $this->get_default_question_category($context);
 
         if (in_array($aiquestiondata['qtype'], self::CALCULATED_QTYPES, true)) {
             try {
@@ -173,6 +195,9 @@ class quiz_settings extends base_settings {
             $bankentry->questioncategoryid = $categoryinfo->id;
             $bankentry->idnumber = null;
             $bankentry->ownerid = $USER->id;
+            // Moodle 5.0 tracks the next version number on the entry (see core question
+            // import); the column does not exist on 4.5, where insert_record ignores it.
+            $bankentry->nextversion = 2;
             $bankentry->id = $DB->insert_record('question_bank_entries', $bankentry);
 
             $version = new \stdClass();

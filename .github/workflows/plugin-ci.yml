@@ -9,7 +9,8 @@ jobs:
 
     services:
       postgres:
-        image: postgres:13
+        # Moodle 5.0 requires PostgreSQL 14 (admin/environment.xml); 4.5 accepts it too.
+        image: postgres:14
         env:
           POSTGRES_USER: 'postgres'
           POSTGRES_HOST_AUTH_METHOD: 'trust'
@@ -34,15 +35,23 @@ jobs:
           - php: 8.3
             moodle-branch: MOODLE_405_STABLE
             database: mariadb
+            provider-branch: MOODLE_405_STABLE
           - php: 8.3
             moodle-branch: MOODLE_405_STABLE
             database: pgsql
+            provider-branch: MOODLE_405_STABLE
           - php: 8.3
             moodle-branch: MOODLE_500_STABLE
             database: mariadb
+            provider-branch: MOODLE_500_STABLE
+          - php: 8.3
+            moodle-branch: MOODLE_500_STABLE
+            database: pgsql
+            provider-branch: MOODLE_500_STABLE
           - php: 8.3
             moodle-branch: MOODLE_501_STABLE
             database: mariadb
+            provider-branch: MOODLE_500_STABLE
 
     steps:
       - name: Check out repository code
@@ -70,9 +79,11 @@ jobs:
 
       # Declared hard dependency (see version.php): the PHPUnit suite mocks
       # aiprovider_datacurso\httpclient\ai_course_api, so the provider plugin
-      # must be present in the CI site.
+      # must be present in the CI site. The provider keeps one branch per Moodle
+      # series (MOODLE_405_STABLE for 4.5, MOODLE_500_STABLE for 5.0 and 5.1), so
+      # each matrix row pins the branch matching its Moodle checkout.
       - name: Add dependent plugins
-        run: moodle-plugin-ci add-plugin datacurso/moodle-aiprovider_datacurso
+        run: moodle-plugin-ci add-plugin --branch ${{ matrix.provider-branch }} datacurso/moodle-aiprovider_datacurso
 
       - name: Install moodle-plugin-ci
         run: moodle-plugin-ci install --plugin ./plugin --db-host=127.0.0.1

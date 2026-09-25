@@ -16,8 +16,6 @@
 
 namespace local_coursegen\mod_parameters;
 
-use aiprovider_datacurso\httpclient\ai_course_api;
-
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir . '/filelib.php');
@@ -29,7 +27,8 @@ require_once($CFG->libdir . '/filelib.php');
  * subfolder path — and points the folder's 'files' parameter at it, so the standard module
  * creation places every file (and its nested folders) into the folder's content filearea.
  * Mirrors resource_parameters, extended from one file to many with a folder tree. When no files
- * were produced the parameters are returned unchanged (the folder is simply created empty).
+ * were produced the parameters are returned unchanged (the folder is simply created empty). Files
+ * that cannot be downloaded are skipped (package_download_skipped event) and the rest still land.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -50,10 +49,6 @@ class folder_parameters extends base_parameters {
             return $this->parameters;
         }
 
-        $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
-        $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
-        $client = new ai_course_api(null, $baseurl, $baseurleu);
-
         $draftid = file_get_unused_draft_itemid();
         $fs = get_file_storage();
         $context = \context_user::instance($USER->id);
@@ -63,22 +58,24 @@ class folder_parameters extends base_parameters {
                 continue;
             }
             $filepath = self::normalize_filepath($file['folder_path'] ?? '');
-            // A single bad file must not abort the whole folder (this runs before creation).
             try {
                 if ($filepath !== '/') {
                     $fs->create_directory($context->id, 'user', 'draft', $draftid, $filepath);
                 }
-                $endpoint = '/files/download?path=' . $file['file_path'];
-                $client->download_file($endpoint, $file['file_name'], [
-                    'itemid' => $draftid,
-                    'filepath' => $filepath,
-                ]);
             } catch (\Throwable $e) {
                 debugging(
                     'local_coursegen: skipped folder file "' . $file['file_name'] . '": ' . $e->getMessage(),
-                    DEBUG_DEVELOPER
+                    DEBUG_NORMAL
                 );
+                continue;
             }
+            // A single bad file (or an unavailable provider) must not abort the whole
+            // folder: download_package() reports the skip and returns null.
+            $endpoint = '/files/download?path=' . $file['file_path'];
+            $this->download_package($endpoint, $file['file_name'], [
+                'itemid' => $draftid,
+                'filepath' => $filepath,
+            ]);
         }
 
         $this->parameters->files = $draftid;
