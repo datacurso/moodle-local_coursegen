@@ -40,6 +40,110 @@ use local_coursegen\local\preview\activity_preview_lookup;
 use local_coursegen\local\preview\preview_factory;
 use local_coursegen\local\service\template_export_service;
 
+/**
+ * The uid's own section number, from the payload's activity list.
+ *
+ * @param array $payload
+ * @param string $uid
+ * @return int|null
+ */
+function local_coursegen_activity_preview_section_number(array $payload, string $uid): ?int {
+    $activities = $payload['activities'] ?? [];
+    foreach ($activities as $activity) {
+        $activityuid = $activity['uid'] ?? '';
+        $activityuid = (string) $activityuid;
+        if ($activityuid === $uid) {
+            $parameters = $activity['parameters'] ?? [];
+            $section = $parameters['section'] ?? 0;
+            return (int) $section;
+        }
+    }
+    return null;
+}
+
+/**
+ * The section's own name, from the payload's section list.
+ *
+ * @param array $payload
+ * @param int $sectionnumber
+ * @return string
+ */
+function local_coursegen_activity_preview_section_name(array $payload, int $sectionnumber): string {
+    $sections = $payload['sections_info'] ?? [];
+    foreach ($sections as $info) {
+        $infosection = $info['section'] ?? -1;
+        $infosection = (int) $infosection;
+        if ($infosection === $sectionnumber) {
+            $name = $info['name'] ?? '';
+            return (string) $name;
+        }
+    }
+    return '';
+}
+
+/**
+ * Where this activity sits, which is how a reader gets back out of it. A real
+ * activity page builds this from the course it belongs to; this one has no
+ * course to ask, so it is read from the payload, which says the same thing.
+ *
+ * @param array $payload
+ * @param string $uid
+ * @param int $sessionid
+ */
+function local_coursegen_activity_preview_add_breadcrumb(array $payload, string $uid, int $sessionid): void {
+    global $PAGE;
+
+    $courseconfiguration = $payload['course_configuration'] ?? [];
+    $coursename = $courseconfiguration['fullname'] ?? '';
+    $coursename = (string) $coursename;
+    if ($coursename !== '') {
+        $courseurl = new moodle_url('/local/coursegen/course_preview.php', ['sessionid' => $sessionid]);
+        $PAGE->navbar->add($coursename, $courseurl);
+    }
+
+    $sectionnumber = local_coursegen_activity_preview_section_number($payload, $uid);
+    if ($sectionnumber === null) {
+        return;
+    }
+    $sectionname = local_coursegen_activity_preview_section_name($payload, $sectionnumber);
+    if ($sectionname === '') {
+        return;
+    }
+    $sectionurl = new moodle_url('/local/coursegen/course_preview.php', [
+        'sessionid' => $sessionid,
+        'section' => $sectionnumber,
+    ]);
+    $PAGE->navbar->add($sectionname, $sectionurl);
+}
+
+/**
+ * A module's own side blocks are part of how it looks: a lesson with its menu
+ * turned on is read with that menu beside it.
+ *
+ * @param \local_coursegen\local\preview\activity_preview $preview
+ */
+function local_coursegen_activity_preview_add_side_blocks($preview): void {
+    global $PAGE;
+    $sideblocks = $preview->side_blocks();
+    foreach ($sideblocks as $block) {
+        $PAGE->blocks->add_fake_block($block, BLOCK_POS_LEFT);
+    }
+}
+
+/**
+ * A course page marks no entry of the primary navigation as where the reader
+ * is, so neither does this one. The navigation marks the site home on any page
+ * it cannot place, and a page it is told about picks an entry instead; a
+ * course page ends up with none, so none is what is shown here, by unmarking
+ * whatever the navigation chose once it has chosen.
+ */
+function local_coursegen_activity_preview_deactivate_primary_nav(): void {
+    global $PAGE;
+    foreach ($PAGE->primarynav->children as $entry) {
+        $entry->make_inactive();
+    }
+}
+
 $sessionid = required_param('sessionid', PARAM_INT);
 
 // Every element of a run carries a uid, in what was sent and in what came
@@ -62,9 +166,16 @@ if ((int) $session->get('userid') !== (int) $USER->id) {
 // Exactly what was sent to the service, read again rather than remembered. It
 // describes every activity of the template, kept or written, and the mould a
 // written one is built into, and names each by the uid the answer echoes.
-$coursedata = json_decode((string) $session->get('coursedata'), true);
-$templateid = (int) ($coursedata['templateid'] ?? 0);
-$payload = $templateid > 0 ? template_export_service::build_init_payload($templateid) : [];
+$coursedata = $session->get('coursedata');
+$coursedata = (string) $coursedata;
+$coursedata = json_decode($coursedata, true);
+$templateid = $coursedata['templateid'] ?? 0;
+$templateid = (int) $templateid;
+
+$payload = [];
+if ($templateid > 0) {
+    $payload = template_export_service::build_init_payload($templateid);
+}
 
 $found = activity_preview_lookup::resolve($uid, $payload, $session);
 $modname = $found['modname'];
@@ -84,10 +195,8 @@ $hereparams = ['sessionid' => $sessionid, 'uid' => $uid];
 if (optional_param('page', null, PARAM_INT) !== null) {
     $hereparams['page'] = $page;
 }
-$preview->opened_at(
-    new moodle_url('/local/coursegen/activity_preview.php', $hereparams),
-    $page
-);
+$hereurl = new moodle_url('/local/coursegen/activity_preview.php', $hereparams);
+$preview->opened_at($hereurl, $page);
 $name = $preview->name();
 
 // The page belongs to the course the template is built on, and says so, the
@@ -97,7 +206,10 @@ $name = $preview->name();
 // about a course is a lie. Nothing of the course is drawn from this: the
 // course index, which would list the real course, is turned off, and the
 // trail is written here from the payload rather than taken from the course.
-$PAGE->set_course(get_course(template::get_record(['id' => $templateid])->get('courseid')));
+$templaterecord = template::get_record(['id' => $templateid]);
+$templatecourseid = $templaterecord->get('courseid');
+$templatecourse = get_course($templatecourseid);
+$PAGE->set_course($templatecourse);
 $PAGE->set_show_course_index(false);
 
 // The page is told which course module it is about, because that is what the
@@ -110,12 +222,17 @@ $PAGE->set_show_course_index(false);
 // navigation at the foot, which would lead to the template's real modules, is
 // not drawn on a course whose format has a course index, which is where this
 // page's formats keep it.
-$sourcecmid = (int) ($source['cmid'] ?? 0);
+$sourcecmid = $source['cmid'] ?? 0;
+$sourcecmid = (int) $sourcecmid;
 $modinfo = get_fast_modinfo($PAGE->course);
-if ($sourcecmid > 0 && isset($modinfo->cms[$sourcecmid]) && course_get_format($PAGE->course)->uses_course_index()) {
-    $PAGE->set_cm($modinfo->get_cm($sourcecmid));
+$courseformat = course_get_format($PAGE->course);
+if ($sourcecmid > 0 && isset($modinfo->cms[$sourcecmid]) && $courseformat->uses_course_index()) {
+    $sourcecm = $modinfo->get_cm($sourcecmid);
+    $PAGE->set_cm($sourcecm);
     $record = $preview->activity_record();
-    if ($record !== null && (int) ($record->id ?? 0) === (int) $PAGE->cm->instance) {
+    $recordid = $record->id ?? 0;
+    $recordid = (int) $recordid;
+    if ($record !== null && $recordid === (int) $PAGE->cm->instance) {
         $record->course = $PAGE->course->id;
         $PAGE->set_activity_record($record);
     }
@@ -138,35 +255,7 @@ $PAGE->set_secondary_navigation(false);
 $PAGE->set_title($name);
 $PAGE->set_heading($name);
 
-// Where this activity sits, which is how a reader gets back out of it. A real
-// activity page builds this from the course it belongs to; this one has no
-// course to ask, so it is read from the payload, which says the same thing.
-$coursename = (string) (($payload['course_configuration'] ?? [])['fullname'] ?? '');
-if ($coursename !== '') {
-    $PAGE->navbar->add(
-        $coursename,
-        new moodle_url('/local/coursegen/course_preview.php', ['sessionid' => $sessionid])
-    );
-}
-$sectionnumber = null;
-foreach (($payload['activities'] ?? []) as $activity) {
-    if ((string) ($activity['uid'] ?? '') === $uid) {
-        $sectionnumber = (int) (($activity['parameters'] ?? [])['section'] ?? 0);
-        break;
-    }
-}
-foreach (($payload['sections_info'] ?? []) as $info) {
-    if ($sectionnumber !== null && (int) ($info['section'] ?? -1) === $sectionnumber) {
-        $PAGE->navbar->add(
-            (string) ($info['name'] ?? ''),
-            new moodle_url('/local/coursegen/course_preview.php', [
-                'sessionid' => $sessionid,
-                'section' => $sectionnumber,
-            ])
-        );
-        break;
-    }
-}
+local_coursegen_activity_preview_add_breadcrumb($payload, $uid, $sessionid);
 $PAGE->navbar->add($name);
 
 // What the module itself adds to the page header, beside the heading.
@@ -187,29 +276,18 @@ $headertitle = $preview->header_title();
 if ($headertitle !== '' && $PAGE->activityheader->is_title_allowed()) {
     $PAGE->activityheader->set_attrs(['title' => $headertitle]);
 }
-$PAGE->activityheader->set_description($preview->header_description());
+$headerdescription = $preview->header_description();
+$PAGE->activityheader->set_description($headerdescription);
 
-// A module's own side blocks are part of how it looks: a lesson with its menu
-// turned on is read with that menu beside it.
-foreach ($preview->side_blocks() as $block) {
-    $PAGE->blocks->add_fake_block($block, BLOCK_POS_LEFT);
-}
+local_coursegen_activity_preview_add_side_blocks($preview);
 
-// A course page marks no entry of the primary navigation as where the reader
-// is, so neither does this one. The navigation marks the site home on any page
-// it cannot place, and a page it is told about picks an entry instead; a
-// course page ends up with none, so none is what is shown here, by unmarking
-// whatever the navigation chose once it has chosen. Asking for the navigation
-// settles the theme, so it comes after everything the theme is told about the
-// page: its layout, its kind, its width and its blocks.
-foreach ($PAGE->primarynav->children as $entry) {
-    $entry->make_inactive();
-}
+// Asking for the navigation settles the theme, so it comes after everything
+// the theme is told about the page: its layout, its kind, its width and its
+// blocks.
+local_coursegen_activity_preview_deactivate_primary_nav();
 
 echo $OUTPUT->header();
-echo $OUTPUT->notification(
-    get_string('courseai_preview_notice', 'local_coursegen'),
-    \core\output\notification::NOTIFY_INFO
-);
+$noticemessage = get_string('courseai_preview_notice', 'local_coursegen');
+echo $OUTPUT->notification($noticemessage, \core\output\notification::NOTIFY_INFO);
 echo $preview->render();
 echo $OUTPUT->footer();
