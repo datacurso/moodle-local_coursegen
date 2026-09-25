@@ -152,29 +152,45 @@ class template_activity_export {
             $context->id, 'mod_' . $cm->modname, $areas, false, 'filearea, itemid, filepath, filename', true
         );
         foreach ($stored as $file) {
-            $isdir = $file->is_directory();
-            $files[] = [
-                'id' => (int) $file->get_id(),
-                'contextid' => (int) $file->get_contextid(),
-                'component' => $file->get_component(),
-                'filearea' => $file->get_filearea(),
-                'itemid' => (int) $file->get_itemid(),
-                'filepath' => $file->get_filepath(),
-                'filename' => $file->get_filename(),
-                'isdir' => $isdir,
-                'filesize' => (int) $file->get_filesize(),
-                'mimetype' => $isdir ? null : $file->get_mimetype(),
-                'timecreated' => (int) $file->get_timecreated(),
-                'timemodified' => (int) $file->get_timemodified(),
-                'sortorder' => (int) $file->get_sortorder(),
-                'author' => $file->get_author(),
-                'license' => $file->get_license(),
-                'url' => $isdir ? null : \moodle_url::make_pluginfile_url(
-                    $file->get_contextid(), $file->get_component(), $file->get_filearea(),
-                    $file->get_itemid(), $file->get_filepath(), $file->get_filename()
-                )->out(false),
-            ];
+            $files[] = self::file_row($file);
         }
         return $files;
+    }
+
+    /**
+     * One stored file's payload row.
+     *
+     * @param \stored_file $file
+     * @return array
+     */
+    private static function file_row(\stored_file $file): array {
+        $isdir = $file->is_directory();
+        $mimetype = null;
+        $url = null;
+        if (!$isdir) {
+            $mimetype = $file->get_mimetype();
+            $url = \moodle_url::make_pluginfile_url(
+                $file->get_contextid(), $file->get_component(), $file->get_filearea(),
+                $file->get_itemid(), $file->get_filepath(), $file->get_filename()
+            )->out(false);
+        }
+        return [
+            'id' => (int) $file->get_id(),
+            'contextid' => (int) $file->get_contextid(),
+            'component' => $file->get_component(),
+            'filearea' => $file->get_filearea(),
+            'itemid' => (int) $file->get_itemid(),
+            'filepath' => $file->get_filepath(),
+            'filename' => $file->get_filename(),
+            'isdir' => $isdir,
+            'filesize' => (int) $file->get_filesize(),
+            'mimetype' => $mimetype,
+            'timecreated' => (int) $file->get_timecreated(),
+            'timemodified' => (int) $file->get_timemodified(),
+            'sortorder' => (int) $file->get_sortorder(),
+            'author' => $file->get_author(),
+            'license' => $file->get_license(),
+            'url' => $url,
+        ];
     }
 }

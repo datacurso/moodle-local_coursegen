@@ -45,8 +45,14 @@ class template_ai_api_service {
             $this->client = $client;
             return;
         }
-        $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
-        $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
+        $baseurl = get_config('local_coursegen', 'datacurso_service_url');
+        if (empty($baseurl)) {
+            $baseurl = null;
+        }
+        $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu');
+        if (empty($baseurleu)) {
+            $baseurleu = null;
+        }
         $this->client = new ai_course_api(null, $baseurl, $baseurleu);
     }
 
