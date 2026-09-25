@@ -54,22 +54,48 @@ trait workshop_plan_orchestrator {
     protected function polish_phases(): void {
         $workshop = $this->workshop;
         foreach ($this->phases as $phasecode => $phase) {
-            $phase->title = isset($phase->title) ? $phase->title : '';
-            $phase->tasks = isset($phase->tasks) ? $phase->tasks : [];
-            if ($phasecode == $workshop->phase) {
-                $phase->active = true;
-            } else {
-                $phase->active = false;
-            }
-            if (!isset($phase->actions)) {
-                $phase->actions = [];
-            }
+            $this->polish_phase($phase, $phasecode == $workshop->phase);
+        }
+    }
 
-            foreach ($phase->tasks as $taskcode => $task) {
-                $task->title = isset($task->title) ? $task->title : '';
-                $task->link = isset($task->link) ? $task->link : null;
-                $task->details = isset($task->details) ? $task->details : '';
-                $task->completed = isset($task->completed) ? $task->completed : null;
+    /**
+     * Copied from workshop_user_plan::__construct(): polish one phase's own data.
+     *
+     * @param stdClass $phase
+     * @param bool $active
+     */
+    protected function polish_phase(stdClass $phase, bool $active): void {
+        if (!isset($phase->title)) {
+            $phase->title = '';
+        }
+        if (!isset($phase->tasks)) {
+            $phase->tasks = [];
+        }
+        $phase->active = $active;
+        if (!isset($phase->actions)) {
+            $phase->actions = [];
+        }
+        $this->polish_phase_tasks($phase->tasks);
+    }
+
+    /**
+     * Copied from workshop_user_plan::__construct(): polish one phase's own tasks.
+     *
+     * @param array $tasks
+     */
+    protected function polish_phase_tasks(array $tasks): void {
+        foreach ($tasks as $task) {
+            if (!isset($task->title)) {
+                $task->title = '';
+            }
+            if (!isset($task->link)) {
+                $task->link = null;
+            }
+            if (!isset($task->details)) {
+                $task->details = '';
+            }
+            if (!isset($task->completed)) {
+                $task->completed = null;
             }
         }
     }
