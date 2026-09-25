@@ -29,6 +29,53 @@
  */
 
 /**
+ * Read one sub-element's primary and secondary text, whether it is given as
+ * a bare string or as a structured item.
+ *
+ * @param {string|Object} raw
+ * @returns {{primary: string, secondary: string}}
+ */
+const readListItem = (raw) => {
+    if (typeof raw === 'string') {
+        return {primary: raw, secondary: ''};
+    }
+    return {
+        primary: String(raw.title || raw.question || raw.name || raw.concept || '').trim(),
+        secondary: String(raw.summary || raw.type || raw.description || '').trim(),
+    };
+};
+
+/**
+ * Markdown lines for one sub-element list (one field of a detailed plan).
+ *
+ * A real Markdown ordered list — one item per line — so `marked` renders each
+ * on its own <li> and CSS counters number them (1, 2, …). Book subchapters
+ * (subchapter=1) are nested (3-space indent, under the ordered marker) so the
+ * CSS counters read 1.1, 1.2 and the hierarchy shows. The literal "1." we
+ * write is irrelevant — marked/CSS handle the actual numbering.
+ *
+ * @param {string} field - The detail field this list belongs to.
+ * @param {Array} items
+ * @returns {string[]}
+ */
+const fieldListMd = (field, items) => {
+    const lines = [''];
+    items.forEach((raw) => {
+        const {primary, secondary} = readListItem(raw);
+        let indent = '';
+        if (field === 'chapters' && raw && typeof raw === 'object' && Number(raw.subchapter) === 1) {
+            indent = '   ';
+        }
+        let suffix = '';
+        if (secondary) {
+            suffix = ' — ' + secondary;
+        }
+        lines.push(indent + '1. **' + primary + '**' + suffix);
+    });
+    return lines;
+};
+
+/**
  * Markdown lines for every sub-element list a detailed plan carries (chapters with
  * subchapter nesting, questions, pages, discussions, entries, options). Mirrors the
  * center card renderer (detail-content.js) so the left transcript lists the same items.
@@ -40,34 +87,14 @@ const detailListsMd = (detail) => {
     if (!detail) {
         return [];
     }
-    const readItem = (it) => {
-        if (typeof it === 'string') {
-            return {primary: it, secondary: ''};
-        }
-        return {
-            primary: String(it.title || it.question || it.name || it.concept || '').trim(),
-            secondary: String(it.summary || it.type || it.description || '').trim(),
-        };
-    };
     const fields = ['chapters', 'questions', 'pages', 'discussions', 'entries', 'options'];
-    const lines = [];
+    let lines = [];
     fields.forEach((field) => {
         const items = Array.isArray(detail[field]) ? detail[field] : [];
         if (!items.length) {
             return;
         }
-        // A real Markdown ordered list — one item per line — so `marked` renders each
-        // on its own <li> and CSS counters number them (1, 2, …). Book subchapters
-        // (subchapter=1) are nested (3-space indent, under the ordered marker) so the
-        // CSS counters read 1.1, 1.2 and the hierarchy shows. The literal "1." we write
-        // is irrelevant — marked/CSS handle the actual numbering.
-        lines.push('');
-        items.forEach((raw) => {
-            const {primary, secondary} = readItem(raw);
-            const isSub = field === 'chapters' && raw && typeof raw === 'object' && Number(raw.subchapter) === 1;
-            const indent = isSub ? '   ' : '';
-            lines.push(indent + '1. **' + primary + '**' + (secondary ? ' — ' + secondary : ''));
-        });
+        lines = lines.concat(fieldListMd(field, items));
     });
     return lines;
 };
@@ -107,8 +134,10 @@ export const formatActivityDetailMd = (activity) => {
     if (activityDesc) {
         lines.push(activityDesc);
     }
-    lines.push(...detailListsMd(activity.detailedPlan || null));
-    return lines.join('\n').trim();
+    const detailLines = detailListsMd(activity.detailedPlan || null);
+    lines.push(...detailLines);
+    const text = lines.join('\n');
+    return text.trim();
 };
 
 /**
@@ -138,13 +167,19 @@ export const formatSectionMd = (section) => {
         const title = String(activity.title || '').trim() || 'Activity';
         const type = String(activity.activity_type || '').trim();
         lines.push('');
-        lines.push(type ? '**' + title + '** _(' + type + ')_' : '**' + title + '**');
+        if (type) {
+            lines.push('**' + title + '** _(' + type + ')_');
+        } else {
+            lines.push('**' + title + '**');
+        }
         const activityDesc = activityDescription(activity);
         if (activityDesc) {
             lines.push('');
             lines.push(activityDesc);
         }
-        lines.push(...detailListsMd(activity.detailedPlan || null));
+        const detailLines = detailListsMd(activity.detailedPlan || null);
+        lines.push(...detailLines);
     });
-    return lines.join('\n').trim();
+    const text = lines.join('\n');
+    return text.trim();
 };
