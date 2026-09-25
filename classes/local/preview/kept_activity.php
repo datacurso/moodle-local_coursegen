@@ -32,6 +32,13 @@ namespace local_coursegen\local\preview;
  * The result is laid out in the shape the previews already read, which is
  * the shape a plan arrives in.
  *
+ * mod_lesson is the one type handled in full here, because it is the one
+ * type whose backup shape is not already the shape a preview reads: it does
+ * not number its pages, it chains them by prevpageid/nextpageid, and it
+ * wraps both its pages and each page's answers in Moodle's own two-level
+ * backup group ("pages" holding "page", "answers" holding "answer"). Every
+ * private method below exists to undo exactly one of those three facts.
+ *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
@@ -39,6 +46,19 @@ namespace local_coursegen\local\preview;
 class kept_activity {
     /**
      * One activity of the payload, in the shape its preview reads.
+     *
+     * Example, for a kept lesson named "My Lesson" with one page:
+     *   $activity = [
+     *       'resource_type' => 'lesson',
+     *       'parameters' => [
+     *           'name' => 'My Lesson',
+     *           'structure' => ['lesson' => [['pages' => [...]]]],
+     *       ],
+     *   ];
+     *   returns ['name' => 'My Lesson', 'mod_settings' => ['pages' => [...]]]
+     *
+     * For any other module type, returns instead:
+     *   ['name' => ..., 'introeditor' => ['text' => ..., ...], 'page' => ...]
      *
      * @param array $activity The activity as the payload describes it.
      * @return array
@@ -80,7 +100,21 @@ class kept_activity {
     /**
      * One lesson page, in the shape its preview reads.
      *
-     * @param array $page
+     * Example:
+     *   $page = [
+     *       'id' => 101, 'title' => 'Page A', 'contents' => '<p>Welcome</p>',
+     *       'layout' => 1, 'qtype' => 20, 'display' => 1,
+     *       'prevpageid' => '0', 'nextpageid' => '102',
+     *       'answers' => [['answer' => [['answer_text' => 'Continue', 'jumpto' => 102]]]],
+     *   ];
+     *   returns [
+     *       'id' => 101, 'layout' => 1, 'qtype' => 20, 'display' => 1,
+     *       'page_type' => 'content', 'title' => 'Page A',
+     *       'content_html' => '<p>Welcome</p>',
+     *       'buttons' => [['text' => 'Continue', 'jumpto' => 102]],
+     *   ]
+     *
+     * @param array $page One raw page node, as lesson_pages_in_order() returns it.
      * @return array
      */
     private static function lesson_page_entry(array $page): array {
@@ -116,8 +150,14 @@ class kept_activity {
      * to sort by. A page whose chain is broken still comes back, after the
      * ones that are not.
      *
-     * @param array $root
-     * @return array
+     * Example:
+     *   $root = ['pages' => [['page' => [pageA, pageB]]]];
+     *   // pageA: id 101, prevpageid '0', nextpageid '102'.
+     *   // pageB: id 102, prevpageid '101', nextpageid '0'.
+     *   returns [pageA, pageB]
+     *
+     * @param array $root The lesson's own raw backup node (one "structure" entry).
+     * @return array The raw page nodes, walk-ordered.
      */
     private static function lesson_pages_in_order(array $root): array {
         $pages = self::flatten_lesson_pages($root);
@@ -133,8 +173,12 @@ class kept_activity {
     /**
      * Every page of a lesson, still in the backup's own grouping.
      *
-     * @param array $root
-     * @return array
+     * Example:
+     *   $root = ['pages' => [['page' => [pageA, pageB]]]];
+     *   returns [pageA, pageB]
+     *
+     * @param array $root The lesson's own raw backup node.
+     * @return array The raw page nodes, in no particular order.
      */
     private static function flatten_lesson_pages(array $root): array {
         $pages = [];
@@ -149,8 +193,12 @@ class kept_activity {
     /**
      * Every page, keyed by its own id.
      *
-     * @param array $pages
-     * @return array
+     * Example:
+     *   $pages = [pageA (id 101), pageB (id 102)];
+     *   returns ['101' => pageA, '102' => pageB]
+     *
+     * @param array $pages Raw page nodes, as flatten_lesson_pages() returns them.
+     * @return array Page id (string) => raw page node.
      */
     private static function lesson_pages_by_id(array $pages): array {
         $byid = [];
@@ -165,8 +213,12 @@ class kept_activity {
     /**
      * The page nobody names as "next": where the walk starts.
      *
-     * @param array $pages
-     * @return array|null
+     * Example:
+     *   $pages = [pageA (prevpageid '0'), pageB (prevpageid '101')];
+     *   returns pageA
+     *
+     * @param array $pages Raw page nodes, as flatten_lesson_pages() returns them.
+     * @return array|null The page whose prevpageid is '0', or null if none is.
      */
     private static function first_lesson_page(array $pages): ?array {
         foreach ($pages as $page) {
@@ -183,9 +235,14 @@ class kept_activity {
      * Walks the chain from a page to the one it names as next, until it
      * loops back on a page already walked.
      *
-     * @param array|null $current
-     * @param array $byid
-     * @return array
+     * Example:
+     *   $current = pageA (id 101, nextpageid '102');
+     *   $byid = ['101' => pageA, '102' => pageB (nextpageid '0')];
+     *   returns [pageA, pageB] — the walk stops because $byid has no id '0'.
+     *
+     * @param array|null $current The page to start from, e.g. first_lesson_page()'s result.
+     * @param array $byid Page id (string) => raw page node, as lesson_pages_by_id() returns it.
+     * @return array The raw page nodes, in walk order.
      */
     private static function walk_lesson_page_chain(?array $current, array $byid): array {
         $ordered = [];
@@ -208,9 +265,14 @@ class kept_activity {
     /**
      * Pages the chain walk never reached, appended after the ones it did.
      *
-     * @param array $ordered
-     * @param array $pages
-     * @return array
+     * Example:
+     *   $ordered = [pageA, pageB];
+     *   $pages = [pageA, pageB, pageC (its prevpageid points at an id no page has)];
+     *   returns [pageA, pageB, pageC] — pageC is still shown, just last.
+     *
+     * @param array $ordered Raw page nodes, as walk_lesson_page_chain() returns them.
+     * @param array $pages Every raw page node, as flatten_lesson_pages() returns them.
+     * @return array $ordered with any page missing from it appended at the end.
      */
     private static function append_orphan_pages(array $ordered, array $pages): array {
         $seen = self::lesson_page_ids($ordered);
@@ -227,8 +289,12 @@ class kept_activity {
     /**
      * The ids of a list of pages, as lookup keys.
      *
-     * @param array $pages
-     * @return array
+     * Example:
+     *   $pages = [pageA (id 101), pageB (id 102)];
+     *   returns ['101' => true, '102' => true]
+     *
+     * @param array $pages Raw page nodes.
+     * @return array Page id (string) => true.
      */
     private static function lesson_page_ids(array $pages): array {
         $ids = [];
@@ -243,8 +309,12 @@ class kept_activity {
     /**
      * One page's navigation, which mod_lesson keeps as that page's answers.
      *
-     * @param array $page
-     * @return array
+     * Example:
+     *   $page = ['answers' => [['answer' => [['answer_text' => 'Continue', 'jumpto' => 102]]]]];
+     *   returns [['text' => 'Continue', 'jumpto' => 102]]
+     *
+     * @param array $page One raw page node.
+     * @return array List of ['text' => string, 'jumpto' => mixed].
      */
     private static function buttons_of(array $page): array {
         $answers = self::lesson_answers_of($page);
@@ -264,8 +334,12 @@ class kept_activity {
     /**
      * A page's answers, still in the backup's own grouping.
      *
-     * @param array $page
-     * @return array
+     * Example:
+     *   $page = ['answers' => [['answer' => [['answer_text' => 'Continue', 'jumpto' => 102]]]]];
+     *   returns [['answer_text' => 'Continue', 'jumpto' => 102]]
+     *
+     * @param array $page One raw page node.
+     * @return array Raw answer nodes, in no particular order.
      */
     private static function lesson_answers_of(array $page): array {
         $answers = [];
