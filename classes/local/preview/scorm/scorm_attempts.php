@@ -158,6 +158,9 @@ trait scorm_attempts {
         foreach ($this->store->get_records('scorm_attempt', ['userid' => $this->user->id, 'scormid' => $this->scorm->id]) as $a) {
             $last = max($last, (int) $a->attempt);
         }
-        return $last ?: 1;
+        if (empty($last)) {
+            return 1;
+        }
+        return $last;
     }
 }
