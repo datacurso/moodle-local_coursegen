@@ -51,11 +51,16 @@ class scorm_preview extends preview_base {
         }
         $scorm = reset($rows);
         $value = $this->parameters['introeditor'] ?? ($this->parameters['intro'] ?? null);
-        $text = is_array($value) ? (string) ($value['text'] ?? '') : (string) ($value ?? '');
+        if (is_array($value)) {
+            $text = (string) ($value['text'] ?? '');
+            $introformat = (int) ($value['format'] ?? FORMAT_HTML);
+        } else {
+            $text = (string) ($value ?? '');
+            $introformat = FORMAT_HTML;
+        }
         if (trim($text) !== '') {
             $store->set('scorm', $scorm->id, 'intro', $text);
-            $store->set('scorm', $scorm->id, 'introformat',
-                is_array($value) ? (int) ($value['format'] ?? FORMAT_HTML) : FORMAT_HTML);
+            $store->set('scorm', $scorm->id, 'introformat', $introformat);
         }
     }
 
