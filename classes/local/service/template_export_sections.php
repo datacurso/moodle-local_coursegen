@@ -31,13 +31,12 @@ class template_export_sections {
     /**
      * Every section, with its saved behavior merged in.
      *
-     * @param int $templateid
      * @param \stdClass $course
      * @param \course_modinfo $modinfo
      * @param array $behaviors
      * @return array
      */
-    public static function sections_info(int $templateid, $course, $modinfo, array $behaviors): array {
+    public static function sections_info($course, $modinfo, array $behaviors): array {
         $format = course_get_format($course);
         $images = self::section_images($course);
         $contextid = \context_course::instance($course->id)->id;
@@ -45,7 +44,7 @@ class template_export_sections {
         $sectioninfos = $modinfo->get_section_info_all();
         $sections = [];
         foreach ($sectioninfos as $section) {
-            $sections[] = self::section_entry($templateid, $course, $format, $section, $images, $behaviors, $contextid);
+            $sections[] = self::section_entry($course, $format, $section, $images, $behaviors, $contextid);
         }
         return $sections;
     }
@@ -53,7 +52,6 @@ class template_export_sections {
     /**
      * One section, in the shape the course preview reads.
      *
-     * @param int $templateid
      * @param \stdClass $course
      * @param mixed $format The course's format, as course_get_format() returns it.
      * @param \section_info $section
@@ -63,7 +61,6 @@ class template_export_sections {
      * @return array
      */
     private static function section_entry(
-        int $templateid,
         $course,
         $format,
         $section,
@@ -73,7 +70,7 @@ class template_export_sections {
     ): array {
         $sectionid = (int) $section->id;
 
-        $uid = template_export_uids::stable_uid($templateid, 'section', $sectionid);
+        $uid = template_export_uids::random_uid();
         $name = get_section_name($course, $section);
 
         $summary = $section->summary ?? '';
