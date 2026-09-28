@@ -31,8 +31,8 @@ use external_single_structure;
 use external_value;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\create_course_service;
+use local_coursegen\local\service\generated_activities_filter;
 use local_coursegen\local\service\template_ai_api_service;
-use local_coursegen\local\service\template_export_service;
 use local_coursegen\local\service\template_keep_copier;
 
 defined('MOODLE_INTERNAL') || die();
@@ -93,7 +93,7 @@ class finish_template_generation extends external_api {
         // the base course - they are copied below instead of being rebuilt
         // from a JSON description that could never carry all of that.
         $generatedactivities = $result['generated_activities'] ?? [];
-        $result['generated_activities'] = self::ai_generated_only($generatedactivities);
+        $result['generated_activities'] = generated_activities_filter::only_ai_written($generatedactivities);
 
         $created = create_course_service::create_course($session, $result);
         $courseid = $created['courseid'] ?? 0;
@@ -115,30 +115,6 @@ class finish_template_generation extends external_api {
         $data = json_decode((string) $session->get('coursedata'), true);
         $templateid = $data['templateid'] ?? 0;
         return (int) $templateid;
-    }
-
-    /**
-     * Drop the activities that are only travelling as context.
-     *
-     * A "keep"/"reference" activity comes back exactly as it was submitted -
-     * a description of an activity that already exists elsewhere, not
-     * something to build. Only the entries the AI actually generated (the
-     * template's virtual instances, which carry a synthetic cmid) are created
-     * from the payload.
-     *
-     * @param array $activities
-     * @return array
-     */
-    private static function ai_generated_only(array $activities): array {
-        $generated = [];
-        foreach ($activities as $activity) {
-            $cmid = $activity['cmid'] ?? 0;
-            $cmid = (int) $cmid;
-            if ($cmid >= template_export_service::INSTANCE_CMID_BASE) {
-                $generated[] = $activity;
-            }
-        }
-        return $generated;
     }
 
     /**
