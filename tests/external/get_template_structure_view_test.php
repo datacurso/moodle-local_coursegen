@@ -317,8 +317,9 @@ final class get_template_structure_view_test extends \advanced_testcase {
     }
 
     /**
-     * Instance rows carry every field the client renders from — a stable
-     * negative id (-recordid, so it can never collide with a cmid), the
+     * Instance rows carry every field the client renders from — a stable uid
+     * id (the same string as generationuid), a stable negative
+     * generationcmid (-recordid, so it can never collide with a cmid), the
      * isinstance/aigenerated flags, the snapshot name/typelabel/modname,
      * locked, a monologo icon resolved from the snapshot modname (empty
      * when the snapshot has none) — and the whole payload survives
@@ -347,7 +348,11 @@ final class get_template_structure_view_test extends \advanced_testcase {
         $this->assertSame(['Discussion 1', format_string($page->name), 'No icon'], array_column($activities, 'name'));
 
         $row = $activities[0];
-        $this->assertSame(-((int) $instance->get('id')), $row['id']);
+        $instanceid = (int) $instance->get('id');
+        $this->assertSame($row['generationuid'], $row['id']);
+        $matched = preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $row['id']);
+        $this->assertSame(1, $matched);
+        $this->assertSame(-$instanceid, $row['generationcmid']);
         $this->assertTrue($row['isinstance']);
         $this->assertTrue($row['aigenerated']);
         $this->assertTrue($row['locked']);
