@@ -49,27 +49,80 @@ class template_keep_copier {
             return [];
         }
 
-        $sourcecourse = get_course($template->get('courseid'));
+        $sourcecourseid = $template->get('courseid');
+        $sourcecourse = get_course($sourcecourseid);
         $targetcourse = get_course($targetcourseid);
         $modinfo = get_fast_modinfo($sourcecourse);
         $keepcmids = self::kept_cmids($templateid, $modinfo);
+        $targetsectionids = self::target_section_ids($targetcourse);
 
-        // duplicate_module() takes the TARGET section's id, not its number.
+        $failures = self::copy_kept_activities($keepcmids, $modinfo, $targetcourse, $targetsectionids);
+
+        rebuild_course_cache($targetcourseid, true);
+        return $failures;
+    }
+
+    /**
+     * Every section of the target course, keyed by its own number.
+     *
+     * duplicate_module() takes the target section's id, not its number, so
+     * this is what turns a source activity's section number into the id the
+     * copy has to land in.
+     *
+     * @param \stdClass $targetcourse
+     * @return array Section number => section id.
+     */
+    private static function target_section_ids($targetcourse): array {
+        $targetmodinfo = get_fast_modinfo($targetcourse);
+        $sections = $targetmodinfo->get_section_info_all();
+
         $targetsectionids = [];
-        foreach (get_fast_modinfo($targetcourse)->get_section_info_all() as $section) {
-            $targetsectionids[(int) $section->section] = (int) $section->id;
+        foreach ($sections as $section) {
+            $sectionnumber = $section->section;
+            $sectionnumber = (int) $sectionnumber;
+            $sectionid = $section->id;
+            $sectionid = (int) $sectionid;
+            $targetsectionids[$sectionnumber] = $sectionid;
         }
+        return $targetsectionids;
+    }
+
+    /**
+     * Copy every kept cmid that still exists, into its matching section.
+     *
+     * A cmid saved as "keep" can stop existing between the run starting and
+     * the course being created - the professor is free to edit the base
+     * course throughout. That is reported as a failure for that one
+     * activity, not a reason to fail the whole course.
+     *
+     * @param int[] $keepcmids
+     * @param \course_modinfo $modinfo The base course's own modinfo.
+     * @param \stdClass $targetcourse
+     * @param array $targetsectionids Section number => section id, from target_section_ids().
+     * @return array Names of the activities that could not be copied.
+     */
+    private static function copy_kept_activities(
+        array $keepcmids,
+        $modinfo,
+        $targetcourse,
+        array $targetsectionids
+    ): array {
+        $cms = $modinfo->get_cms();
 
         $failures = [];
         foreach ($keepcmids as $cmid) {
-            $cm = $modinfo->get_cm($cmid);
-            $sectionid = $targetsectionids[(int) $cm->sectionnum] ?? null;
+            if (!isset($cms[$cmid])) {
+                $failures[] = "cmid {$cmid} (no longer in the base course)";
+                continue;
+            }
+            $cm = $cms[$cmid];
+            $sectionnumber = $cm->sectionnum;
+            $sectionnumber = (int) $sectionnumber;
+            $sectionid = $targetsectionids[$sectionnumber] ?? null;
             if ($sectionid === null || !self::copy_one($cm, $targetcourse, $sectionid)) {
                 $failures[] = $cm->name;
             }
         }
-
-        rebuild_course_cache($targetcourseid, true);
         return $failures;
     }
 
@@ -84,19 +137,35 @@ class template_keep_copier {
      * @return int[]
      */
     private static function kept_cmids(int $templateid, $modinfo): array {
-        $actions = [];
-        foreach (template_activity::get_records(['templateid' => $templateid]) as $activity) {
-            $actions[(int) $activity->get('cmid')] = $activity->get('action');
-        }
+        $actions = self::kept_actions($templateid);
+        $cms = $modinfo->get_cms();
 
         $cmids = [];
-        foreach ($modinfo->get_cms() as $cm) {
+        foreach ($cms as $cm) {
             $action = $actions[$cm->id] ?? 'keep';
             if ($action === 'keep' || $action === 'reference') {
                 $cmids[] = (int) $cm->id;
             }
         }
         return $cmids;
+    }
+
+    /**
+     * Every saved template_activity action for this template, keyed by cmid.
+     *
+     * @param int $templateid
+     * @return array Cmid => action.
+     */
+    private static function kept_actions(int $templateid): array {
+        $records = template_activity::get_records(['templateid' => $templateid]);
+
+        $actions = [];
+        foreach ($records as $activity) {
+            $cmid = $activity->get('cmid');
+            $cmid = (int) $cmid;
+            $actions[$cmid] = $activity->get('action');
+        }
+        return $actions;
     }
 
     /**
@@ -108,9 +177,9 @@ class template_keep_copier {
      * @return bool Whether the copy succeeded.
      */
     private static function copy_one($cm, $targetcourse, int $sectionid): bool {
-        global $DB;
-
-        $before = array_keys(get_fast_modinfo($targetcourse)->get_cms());
+        $targetmodinfo = get_fast_modinfo($targetcourse);
+        $targetcms = $targetmodinfo->get_cms();
+        $before = array_keys($targetcms);
 
         // Moodle's own duplication path prints HTML straight to the output
         // buffer on its way through (course/lib.php echoes a notification when
@@ -135,7 +204,9 @@ class template_keep_copier {
             // module behind and is reported as a failure there.
             $coursefailed = true;
         } finally {
-            $printed = trim((string) ob_get_clean());
+            $buffered = ob_get_clean();
+            $buffered = (string) $buffered;
+            $printed = trim($buffered);
             if ($printed !== '') {
                 debugging(
                     'local_coursegen: output swallowed while copying cmid ' . $cm->id . ': ' . $printed,
@@ -148,8 +219,29 @@ class template_keep_copier {
             return $placed !== null;
         }
 
-        rebuild_course_cache($targetcourse->id, true);
-        $newcmids = array_values(array_diff(array_keys(get_fast_modinfo($targetcourse)->get_cms()), $before));
+        return self::recover_misplaced_copy($cm, $targetcourse, $sectionid, $before);
+    }
+
+    /**
+     * Find and place the copy duplicate_module() made but could not move,
+     * after it failed resolving the target section against the wrong course.
+     *
+     * @param \cm_info $cm Source activity, from the base course.
+     * @param \stdClass $targetcourse
+     * @param int $sectionid Target section id (not its number).
+     * @param int[] $before Target course cmids, from just before the copy.
+     * @return bool Whether the copy was found and placed.
+     */
+    private static function recover_misplaced_copy($cm, $targetcourse, int $sectionid, array $before): bool {
+        global $DB;
+
+        $targetcourseid = $targetcourse->id;
+        rebuild_course_cache($targetcourseid, true);
+        $targetmodinfo = get_fast_modinfo($targetcourse);
+        $targetcms = $targetmodinfo->get_cms();
+        $aftercmids = array_keys($targetcms);
+        $newcmids = array_diff($aftercmids, $before);
+        $newcmids = array_values($newcmids);
         if (count($newcmids) !== 1) {
             debugging(
                 'local_coursegen: could not locate the copy of kept activity ' . $cm->id,
@@ -158,11 +250,14 @@ class template_keep_copier {
             return false;
         }
 
-        $newcm = get_fast_modinfo($targetcourse)->get_cm((int) $newcmids[0]);
-        if ((int) $newcm->section !== $sectionid) {
+        $newcmid = $newcmids[0];
+        $newcm = $targetcms[$newcmid];
+        $newcmsection = $newcm->section;
+        $newcmsection = (int) $newcmsection;
+        if ($newcmsection !== $sectionid) {
             $section = $DB->get_record(
                 'course_sections',
-                ['id' => $sectionid, 'course' => $targetcourse->id],
+                ['id' => $sectionid, 'course' => $targetcourseid],
                 '*',
                 MUST_EXIST
             );
