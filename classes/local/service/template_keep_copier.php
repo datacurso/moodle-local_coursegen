@@ -50,6 +50,14 @@ class template_keep_copier {
         }
 
         $sourcecourseid = $template->get('courseid');
+        if (!self::course_exists($sourcecourseid)) {
+            // The template's own base course is gone: get_course() would
+            // throw, and by the time this runs the target course already
+            // has every AI-generated activity in it, so that has to survive
+            // intact rather than be lost to an exception over activities
+            // there is nothing left to copy.
+            return [];
+        }
         $sourcecourse = get_course($sourcecourseid);
         $targetcourse = get_course($targetcourseid);
         $modinfo = get_fast_modinfo($sourcecourse);
@@ -60,6 +68,20 @@ class template_keep_copier {
 
         rebuild_course_cache($targetcourseid, true);
         return $failures;
+    }
+
+    /**
+     * Whether a course record still exists for this id.
+     *
+     * get_course() throws when it does not, which is too blunt for a course
+     * the professor is free to delete out from under a pending run.
+     *
+     * @param int $courseid
+     * @return bool
+     */
+    private static function course_exists(int $courseid): bool {
+        global $DB;
+        return $DB->record_exists('course', ['id' => $courseid]);
     }
 
     /**
@@ -88,14 +110,14 @@ class template_keep_copier {
     }
 
     /**
-     * Copy every kept cmid that still exists, into its matching section.
+     * Copy every kept cmid into its matching section.
      *
-     * A cmid saved as "keep" can stop existing between the run starting and
-     * the course being created - the professor is free to edit the base
-     * course throughout. That is reported as a failure for that one
+     * $keepcmids comes from kept_cmids() reading this same $modinfo, so
+     * every cmid here is already one of $modinfo's own cms - a target
+     * section it cannot resolve is reported as a failure for that one
      * activity, not a reason to fail the whole course.
      *
-     * @param int[] $keepcmids
+     * @param int[] $keepcmids From kept_cmids(), reading this same $modinfo.
      * @param \course_modinfo $modinfo The base course's own modinfo.
      * @param \stdClass $targetcourse
      * @param array $targetsectionids Section number => section id, from target_section_ids().
@@ -111,10 +133,6 @@ class template_keep_copier {
 
         $failures = [];
         foreach ($keepcmids as $cmid) {
-            if (!isset($cms[$cmid])) {
-                $failures[] = "cmid {$cmid} (no longer in the base course)";
-                continue;
-            }
             $cm = $cms[$cmid];
             $sectionnumber = $cm->sectionnum;
             $sectionnumber = (int) $sectionnumber;
