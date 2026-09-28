@@ -87,8 +87,8 @@ const buildContext = (state, labels) => ({
             aigenerated: !!activity.aigenerated,
             // Only an AI-generated row ever receives progress events, so the
             // attribute is omitted entirely on the rest rather than rendered
-            // as a meaningless zero.
-            generationcmid: activity.generationcmid || '',
+            // as a meaningless empty one.
+            generationuid: activity.generationuid || '',
             sectionid: section.id,
             index,
             typelabel: activity.typelabel || state.typeLabels[activity.modname] || '',

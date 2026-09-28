@@ -92,18 +92,22 @@ export const applyStructureResponse = (state, data) => {
             locked: !!activity.locked,
             action: activity.action || '',
             // Virtual instance rows ("AI will generate an activity here,
-            // molded on a template activity") arrive with NEGATIVE ids
-            // (-recordid on the server), locked and non-removable.
+            // molded on a template activity") arrive with a uid string id,
+            // locked and non-removable.
             isinstance: !!activity.isinstance,
             aigenerated: !!activity.aigenerated,
             // The id this row answers to in the generation's progress events.
-            generationcmid: activity.generationcmid || 0,
+            generationuid: activity.generationuid || '',
         })),
     }));
-    // Server-sent instance rows use negative ids, the same sign space as the
-    // client-only placeholder ids — re-seed the counter below the smallest
-    // received id so professor-added rows can never collide with them.
-    const minReceivedId = Math.min(0, ...state.sections.flatMap((s) => s.activities.map((a) => a.id)));
+    // A real activity's id is its cmid, stringified; an instance row's id is
+    // a uid string, never a number. Only the former can ever numerically
+    // collide with a placeholder id, so the counter is re-seeded below the
+    // smallest of those alone - a uid converts to NaN and is filtered out.
+    const numericIds = state.sections
+        .flatMap((s) => s.activities.map((a) => Number(a.id)))
+        .filter((id) => Number.isFinite(id));
+    const minReceivedId = Math.min(0, ...numericIds);
     state.nextActivityId = minReceivedId - 1;
 };
 

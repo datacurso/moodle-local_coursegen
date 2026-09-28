@@ -104,7 +104,7 @@ export const openChecklist = (sections) => {
 /**
  * Find, or open, one activity's place inside its section.
  *
- * @param {Object} event Any plan event, carrying cmid, name and section.
+ * @param {Object} event Any plan event, carrying uid, name and section.
  * @returns {Object|null} The entry being built, or null with no row yet.
  */
 const entryFor = (event) => {
@@ -114,9 +114,9 @@ const entryFor = (event) => {
         return null;
     }
     const entries = planned.get(key) || [];
-    let entry = entries.find((existing) => existing.cmid === event.cmid);
+    let entry = entries.find((existing) => existing.uid === event.uid);
     if (!entry) {
-        entry = {cmid: event.cmid, name: event.name || '', section: event.section, summary: '', parts: []};
+        entry = {uid: event.uid, name: event.name || '', section: event.section, summary: '', parts: []};
         entries.push(entry);
         planned.set(key, entries);
     }
@@ -204,7 +204,7 @@ export const finishChecklistRow = (entry) => {
     }
 
     const entries = planned.get(key) || [];
-    const at = entries.findIndex((existing) => existing.cmid === entry.cmid);
+    const at = entries.findIndex((existing) => existing.uid === entry.uid);
     if (at >= 0) {
         // The streamed pieces built this already; the finished entry is the
         // authority on what it ended up saying.

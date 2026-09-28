@@ -128,7 +128,7 @@ const planContext = (entry, texts) => ({
  * @returns {Promise<void>}
  */
 export const renderActivityPlan = async(entry) => {
-    const row = document.querySelector(`[data-generation-cmid="${entry.cmid}"]`);
+    const row = document.querySelector(`[data-generation-uid="${entry.uid}"]`);
     if (!row) {
         return;
     }

@@ -202,7 +202,6 @@ trait get_template_structure_rows {
             'action'  => $action,
             'isinstance' => false,
             'aigenerated' => false,
-            'generationcmid' => 0,
             'generationuid' => '',
         ];
     }
@@ -252,16 +251,12 @@ trait get_template_structure_rows {
             'aigenerated' => true,
             // The id this row will answer to in the generation's progress
             // events, so the live view can mark THIS activity when its own
-            // content lands. Same value template_export_service sends.
-            // Deliberately still a negative int, not the uid above: this one
-            // is compared against real cmids (always positive) in a stream
-            // event, so it must stay in that same numeric space.
-            'generationcmid' => template_export_uids::instance_cmid((int) $instance->get('id')),
-            // The name this row answers to in the generation's answer, which is
-            // what a preview of it is asked for by — the same uid as the row's
-            // own id, kept as a separate field because it names a different
-            // thing (what the AI's answer calls this row, not what the tree
-            // calls it), even though today they happen to be the same string.
+            // content lands - the same uid the payload sent and the run's
+            // events echo back, never a number invented for this alone.
+            // Kept as a separate field from the row's own id, because it
+            // names a different thing (what the AI's answer calls this row,
+            // not what the tree calls it), even though today they happen to
+            // be the same string.
             'generationuid' => $uid,
         ];
     }

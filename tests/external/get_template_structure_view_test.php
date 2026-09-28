@@ -318,8 +318,8 @@ final class get_template_structure_view_test extends \advanced_testcase {
 
     /**
      * Instance rows carry every field the client renders from — a stable uid
-     * id (the same string as generationuid), a stable negative
-     * generationcmid (-recordid, so it can never collide with a cmid), the
+     * id, the same uid again as generationuid (the id a live progress event
+     * echoes back, so the two are always the same string), the
      * isinstance/aigenerated flags, the snapshot name/typelabel/modname,
      * locked, a monologo icon resolved from the snapshot modname (empty
      * when the snapshot has none) — and the whole payload survives
@@ -334,7 +334,7 @@ final class get_template_structure_view_test extends \advanced_testcase {
         $section1 = get_fast_modinfo($course)->get_section_info(1);
 
         $templateid = $this->make_template((int) $course->id);
-        $instance = $this->add_instance($templateid, (int) $section1->id, [
+        $this->add_instance($templateid, (int) $section1->id, [
             'name' => 'Discussion 1', 'typelabel' => 'Forum', 'modname' => 'forum', 'aftercmid' => 0,
         ]);
         $this->add_instance($templateid, (int) $section1->id, [
@@ -348,11 +348,10 @@ final class get_template_structure_view_test extends \advanced_testcase {
         $this->assertSame(['Discussion 1', format_string($page->name), 'No icon'], array_column($activities, 'name'));
 
         $row = $activities[0];
-        $instanceid = (int) $instance->get('id');
         $this->assertSame($row['generationuid'], $row['id']);
         $matched = preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $row['id']);
         $this->assertSame(1, $matched);
-        $this->assertSame(-$instanceid, $row['generationcmid']);
+        $this->assertArrayNotHasKey('generationcmid', $row);
         $this->assertTrue($row['isinstance']);
         $this->assertTrue($row['aigenerated']);
         $this->assertTrue($row['locked']);

@@ -63,10 +63,8 @@ trait get_template_structure_schema {
                             'isinstance' => new external_value(PARAM_BOOL, 'Whether this is a virtual instance row'),
                             'aigenerated' => new external_value(PARAM_BOOL,
                                 'Whether AI will generate this activity in the new course (drives the badge)'),
-                            'generationcmid' => new external_value(PARAM_INT,
-                                'Id this row answers to in the generation progress events; 0 when it is not generated'),
                             'generationuid' => new external_value(PARAM_ALPHANUMEXT,
-                                'Name this row answers to in the generation answer; empty when it is not generated'),
+                                'Id this row answers to in the generation progress events; empty when it is not generated'),
                         ])
                     ),
                 ])

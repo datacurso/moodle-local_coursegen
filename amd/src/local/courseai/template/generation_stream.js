@@ -112,7 +112,7 @@ const getLabels = async() => {
 };
 
 /** Every activity row the AI is going to generate. */
-const generatedRows = () => document.querySelectorAll('[data-generation-cmid]');
+const generatedRows = () => document.querySelectorAll('[data-generation-uid]');
 
 /**
  * Show one phase label in the header's subtitle.

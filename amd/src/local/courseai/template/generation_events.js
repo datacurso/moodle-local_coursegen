@@ -46,11 +46,11 @@ export const ALL_STATUS_CLASSES = Object.values(STATUS_CLASS);
 /**
  * Mark one activity row with the state its generation is in.
  *
- * @param {number|string} cmid
+ * @param {string} uid
  * @param {string} status A key of STATUS_CLASS.
  */
-export const markRow = (cmid, status) => {
-    const row = document.querySelector(`[data-generation-cmid="${cmid}"]`);
+export const markRow = (uid, status) => {
+    const row = document.querySelector(`[data-generation-uid="${uid}"]`);
     if (!row) {
         return;
     }
@@ -82,7 +82,7 @@ const finishActivity = (data, progress, paintStage) => {
     // A failed activity is still counted and still stops looking
     // "in progress": the run itself then fails, which is what the
     // professor is told about.
-    markRow(data.cmid, 'done');
+    markRow(data.uid, 'done');
     progress.done += 1;
     if (progress.total > 0 && progress.done >= progress.total) {
         paintStage('saving');
@@ -103,7 +103,7 @@ const EVENT_HANDLERS = {
         return '';
     },
     plan_progress_start: (data) => {
-        markRow(data.cmid, 'running');
+        markRow(data.uid, 'running');
         startPlanEntry(data);
         return '';
     },
@@ -116,7 +116,7 @@ const EVENT_HANDLERS = {
         return '';
     },
     plan_progress_done: (data, progress) => {
-        markRow(data.cmid, 'done');
+        markRow(data.uid, 'done');
         progress.done += 1;
         finishChecklistRow(data.plan || {});
         // Each activity's plan appears under its own row the moment it is
@@ -132,7 +132,7 @@ const EVENT_HANDLERS = {
         return '';
     },
     activity_progress_start: (data) => {
-        markRow(data.cmid, 'running');
+        markRow(data.uid, 'running');
         return '';
     },
     activity_progress_done: finishActivity,
