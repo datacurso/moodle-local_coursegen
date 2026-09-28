@@ -47,7 +47,8 @@ class json_file {
      * @return int
      */
     public function get_id(): int {
-        return (int) ($this->row['id'] ?? 0);
+        $id = $this->row['id'] ?? 0;
+        return (int) $id;
     }
 
     /**
@@ -56,7 +57,8 @@ class json_file {
      * @return int
      */
     public function get_contextid(): int {
-        return (int) ($this->row['contextid'] ?? 0);
+        $contextid = $this->row['contextid'] ?? 0;
+        return (int) $contextid;
     }
 
     /**
@@ -65,7 +67,8 @@ class json_file {
      * @return string
      */
     public function get_component(): string {
-        return (string) ($this->row['component'] ?? '');
+        $component = $this->row['component'] ?? '';
+        return (string) $component;
     }
 
     /**
@@ -74,7 +77,8 @@ class json_file {
      * @return string
      */
     public function get_filearea(): string {
-        return (string) ($this->row['filearea'] ?? '');
+        $filearea = $this->row['filearea'] ?? '';
+        return (string) $filearea;
     }
 
     /**
@@ -83,7 +87,8 @@ class json_file {
      * @return int
      */
     public function get_itemid(): int {
-        return (int) ($this->row['itemid'] ?? 0);
+        $itemid = $this->row['itemid'] ?? 0;
+        return (int) $itemid;
     }
 
     /**
@@ -92,7 +97,8 @@ class json_file {
      * @return string
      */
     public function get_filepath(): string {
-        return (string) ($this->row['filepath'] ?? '/');
+        $filepath = $this->row['filepath'] ?? '/';
+        return (string) $filepath;
     }
 
     /**
@@ -101,7 +107,8 @@ class json_file {
      * @return string
      */
     public function get_filename(): string {
-        return (string) ($this->row['filename'] ?? '');
+        $filename = $this->row['filename'] ?? '';
+        return (string) $filename;
     }
 
     /**
@@ -110,7 +117,8 @@ class json_file {
      * @return int
      */
     public function get_filesize(): int {
-        return (int) ($this->row['filesize'] ?? 0);
+        $filesize = $this->row['filesize'] ?? 0;
+        return (int) $filesize;
     }
 
     /**
@@ -119,7 +127,10 @@ class json_file {
      * @return string|null
      */
     public function get_mimetype(): ?string {
-        return isset($this->row['mimetype']) ? (string) $this->row['mimetype'] : null;
+        if (!isset($this->row['mimetype'])) {
+            return null;
+        }
+        return (string) $this->row['mimetype'];
     }
 
     /**
@@ -128,7 +139,8 @@ class json_file {
      * @return int
      */
     public function get_timecreated(): int {
-        return (int) ($this->row['timecreated'] ?? 0);
+        $timecreated = $this->row['timecreated'] ?? 0;
+        return (int) $timecreated;
     }
 
     /**
@@ -137,7 +149,8 @@ class json_file {
      * @return int
      */
     public function get_timemodified(): int {
-        return (int) ($this->row['timemodified'] ?? 0);
+        $timemodified = $this->row['timemodified'] ?? 0;
+        return (int) $timemodified;
     }
 
     /**
@@ -146,7 +159,8 @@ class json_file {
      * @return int
      */
     public function get_sortorder(): int {
-        return (int) ($this->row['sortorder'] ?? 0);
+        $sortorder = $this->row['sortorder'] ?? 0;
+        return (int) $sortorder;
     }
 
     /**
@@ -155,7 +169,10 @@ class json_file {
      * @return string|null
      */
     public function get_author(): ?string {
-        return isset($this->row['author']) ? (string) $this->row['author'] : null;
+        if (!isset($this->row['author'])) {
+            return null;
+        }
+        return (string) $this->row['author'];
     }
 
     /**
@@ -164,7 +181,10 @@ class json_file {
      * @return string|null
      */
     public function get_license(): ?string {
-        return isset($this->row['license']) ? (string) $this->row['license'] : null;
+        if (!isset($this->row['license'])) {
+            return null;
+        }
+        return (string) $this->row['license'];
     }
 
     /**
@@ -219,6 +239,9 @@ class json_file {
      * @return string|null
      */
     public function get_url(): ?string {
-        return isset($this->row['url']) ? (string) $this->row['url'] : null;
+        if (!isset($this->row['url'])) {
+            return null;
+        }
+        return (string) $this->row['url'];
     }
 }

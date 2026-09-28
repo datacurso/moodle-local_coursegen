@@ -92,10 +92,12 @@ class finish_template_generation extends external_api {
         // kept ones already exist, fully configured and with their files, in
         // the base course - they are copied below instead of being rebuilt
         // from a JSON description that could never carry all of that.
-        $result['generated_activities'] = self::ai_generated_only($result['generated_activities'] ?? []);
+        $generatedactivities = $result['generated_activities'] ?? [];
+        $result['generated_activities'] = self::ai_generated_only($generatedactivities);
 
         $created = create_course_service::create_course($session, $result);
-        $courseid = (int) ($created['courseid'] ?? 0);
+        $courseid = $created['courseid'] ?? 0;
+        $courseid = (int) $courseid;
         if ($courseid > 0 && $templateid > 0) {
             template_keep_copier::copy_into($templateid, $courseid);
         }
@@ -111,7 +113,8 @@ class finish_template_generation extends external_api {
      */
     private static function template_id_of(course_session $session): int {
         $data = json_decode((string) $session->get('coursedata'), true);
-        return (int) ($data['templateid'] ?? 0);
+        $templateid = $data['templateid'] ?? 0;
+        return (int) $templateid;
     }
 
     /**
@@ -129,7 +132,9 @@ class finish_template_generation extends external_api {
     private static function ai_generated_only(array $activities): array {
         $generated = [];
         foreach ($activities as $activity) {
-            if ((int) ($activity['cmid'] ?? 0) >= template_export_service::INSTANCE_CMID_BASE) {
+            $cmid = $activity['cmid'] ?? 0;
+            $cmid = (int) $cmid;
+            if ($cmid >= template_export_service::INSTANCE_CMID_BASE) {
                 $generated[] = $activity;
             }
         }
@@ -144,10 +149,14 @@ class finish_template_generation extends external_api {
      * @return array
      */
     private static function created_response(int $courseid, string $wwwroot): array {
+        $courseurl = '';
+        if ($courseid > 0) {
+            $courseurl = $wwwroot . '/course/view.php?id=' . $courseid;
+        }
         return [
             'status' => 'completed',
             'courseid' => $courseid,
-            'courseurl' => $courseid > 0 ? $wwwroot . '/course/view.php?id=' . $courseid : '',
+            'courseurl' => $courseurl,
         ];
     }
 

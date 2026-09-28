@@ -38,8 +38,12 @@ trait activity_preview_fields {
      * @return array
      */
     protected function items(string $key): array {
-        $items = ($this->parameters['mod_settings'] ?? [])[$key] ?? [];
-        return is_array($items) ? $items : [];
+        $modsettings = $this->parameters['mod_settings'] ?? [];
+        $items = $modsettings[$key] ?? [];
+        if (!is_array($items)) {
+            return [];
+        }
+        return $items;
     }
 
     /**
@@ -79,7 +83,8 @@ trait activity_preview_fields {
     protected function text(string $key): string {
         $value = $this->parameters[$key] ?? '';
         if (is_array($value)) {
-            return (string) ($value['text'] ?? '');
+            $text = $value['text'] ?? '';
+            return (string) $text;
         }
         return (string) $value;
     }

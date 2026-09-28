@@ -71,7 +71,8 @@ class structure_node_resolver {
         $aliases = [];
         foreach ((array) $property->getValue($nested) as $column => $final) {
             if (is_object($final) && method_exists($final, 'get_name')) {
-                $aliases[$final->get_name()] = $column;
+                $name = $final->get_name();
+                $aliases[$name] = $column;
             }
         }
         return $aliases;
@@ -100,16 +101,60 @@ class structure_node_resolver {
             if (!is_string($value) || strpos($value, '@@PLUGINFILE@@') === false) {
                 continue;
             }
-            foreach ($annotations as $component => $areas) {
-                foreach ($areas as $filearea => $info) {
-                    $contextid = $info->contextid ?? null;
-                    $contextid = $contextid !== null ? (int) $contextid : $fallbackcontextid;
-                    $itemid = isset($info->element) && $info->element !== null ? $info->element->get_value() : null;
-                    $value = file_rewrite_pluginfile_urls($value, 'pluginfile.php', $contextid, $component, $filearea, $itemid);
-                }
-            }
-            $node[$key] = $value;
+            $node[$key] = self::rewrite_pluginfile_placeholders($value, $annotations, $fallbackcontextid);
         }
         return $node;
+    }
+
+    /**
+     * One text value, with every annotated component/filearea's placeholders
+     * resolved in turn.
+     *
+     * @param string $value
+     * @param array $annotations component => filearea => info.
+     * @param int $fallbackcontextid
+     * @return string
+     */
+    private static function rewrite_pluginfile_placeholders(string $value, array $annotations, int $fallbackcontextid): string {
+        foreach ($annotations as $component => $areas) {
+            $value = self::rewrite_component_areas($value, $component, $areas, $fallbackcontextid);
+        }
+        return $value;
+    }
+
+    /**
+     * One text value, with one component's fileareas resolved in turn.
+     *
+     * @param string $value
+     * @param string $component
+     * @param array $areas filearea => info.
+     * @param int $fallbackcontextid
+     * @return string
+     */
+    private static function rewrite_component_areas(string $value, string $component, array $areas, int $fallbackcontextid): string {
+        foreach ($areas as $filearea => $info) {
+            $contextid = $info->contextid ?? null;
+            if ($contextid !== null) {
+                $contextid = (int) $contextid;
+            } else {
+                $contextid = $fallbackcontextid;
+            }
+            $itemid = self::annotation_itemid($info);
+            $value = file_rewrite_pluginfile_urls($value, 'pluginfile.php', $contextid, $component, $filearea, $itemid);
+        }
+        return $value;
+    }
+
+    /**
+     * The item id an annotation names, or null when it names none.
+     *
+     * @param \stdClass $info
+     * @return mixed
+     */
+    private static function annotation_itemid($info) {
+        if (!isset($info->element) || $info->element === null) {
+            return null;
+        }
+        return $info->element->get_value();
     }
 }

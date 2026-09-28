@@ -46,14 +46,33 @@ class json_store_builder {
         // anything; the module's own element hangs under it.
         foreach ($tree as $name => $value) {
             if (is_array($value)) {
-                foreach ($value as $node) {
-                    if (is_array($node)) {
-                        self::walk($rows, $name, $node, [], $tables, $aliases);
-                    }
-                }
+                self::walk_top_level_nodes($rows, $name, $value, $tables, $aliases);
             }
         }
         return $rows;
+    }
+
+    /**
+     * Every top-level occurrence of one wrapper's own element.
+     *
+     * @param array $rows Accumulator, passed by reference: table => rows.
+     * @param string $name
+     * @param array $value
+     * @param array $tables
+     * @param array $aliases
+     */
+    private static function walk_top_level_nodes(
+        array &$rows,
+        string $name,
+        array $value,
+        array $tables,
+        array $aliases
+    ): void {
+        foreach ($value as $node) {
+            if (is_array($node)) {
+                self::walk($rows, $name, $node, [], $tables, $aliases);
+            }
+        }
     }
 
     /**
@@ -75,35 +94,11 @@ class json_store_builder {
         array $tables,
         array $aliases
     ): void {
-        $row = [];
-        $children = [];
-        foreach ($node as $key => $value) {
-            if (is_array($value)) {
-                $children[$key] = $value;
-                continue;
-            }
-            $column = $aliases[$name][$key] ?? $key;
-            $row[$column] = $value;
-        }
+        [$row, $children] = self::row_and_children($node, $name, $aliases);
 
         $table = $tables[$name] ?? null;
         if ($table !== null) {
-            // The keys of every row this one sits under, not only the nearest:
-            // an answer belongs to its page and to its lesson, and mod_lesson
-            // asks for it by both. Each under the two names Moodle tables use,
-            // "lessonid" for a lesson's pages and "forum" for a forum's
-            // discussions; a column the table does not have costs nothing in
-            // a store that has no columns.
-            //
-            // Never already set: a backup element never declares its own
-            // parent's id among its final elements (confirmed against
-            // mod_lesson's 'page' and mod_forum's 'discussion' - neither
-            // lists lessonid/forum among their own columns), because backup
-            // restores that link from the nesting itself, not from a column.
-            foreach ($ancestors as $ancestorname => $ancestorid) {
-                $row[$ancestorname . 'id'] = $ancestorid;
-                $row[$ancestorname] = $ancestorid;
-            }
+            $row = self::row_with_ancestor_columns($row, $ancestors);
             $rows[$table][] = (object) $row;
         }
 
@@ -114,11 +109,100 @@ class json_store_builder {
             $below[$name] = $row['id'];
         }
 
+        self::walk_children($rows, $children, $below, $tables, $aliases);
+    }
+
+    /**
+     * One element's own columns and its child elements, split apart.
+     *
+     * @param array $node
+     * @param string $name
+     * @param array $aliases
+     * @return array [row columns, child elements].
+     */
+    private static function row_and_children(array $node, string $name, array $aliases): array {
+        $row = [];
+        $children = [];
+        foreach ($node as $key => $value) {
+            if (is_array($value)) {
+                $children[$key] = $value;
+                continue;
+            }
+            $column = $aliases[$name][$key] ?? $key;
+            $row[$column] = $value;
+        }
+        return [$row, $children];
+    }
+
+    /**
+     * A row's own columns, with every ancestor's id folded in.
+     *
+     * The keys of every row this one sits under, not only the nearest: an
+     * answer belongs to its page and to its lesson, and mod_lesson asks for
+     * it by both. Each under the two names Moodle tables use, "lessonid" for
+     * a lesson's pages and "forum" for a forum's discussions; a column the
+     * table does not have costs nothing in a store that has no columns.
+     *
+     * Never already set: a backup element never declares its own parent's id
+     * among its final elements (confirmed against mod_lesson's 'page' and
+     * mod_forum's 'discussion' - neither lists lessonid/forum among their own
+     * columns), because backup restores that link from the nesting itself,
+     * not from a column.
+     *
+     * @param array $row
+     * @param array $ancestors Element name => id.
+     * @return array
+     */
+    private static function row_with_ancestor_columns(array $row, array $ancestors): array {
+        foreach ($ancestors as $ancestorname => $ancestorid) {
+            $row[$ancestorname . 'id'] = $ancestorid;
+            $row[$ancestorname] = $ancestorid;
+        }
+        return $row;
+    }
+
+    /**
+     * Every child element, walked in turn.
+     *
+     * @param array $rows Accumulator, passed by reference: table => rows.
+     * @param array $children Child element name => its occurrences.
+     * @param array $below Ancestors the children sit under.
+     * @param array $tables
+     * @param array $aliases
+     */
+    private static function walk_children(
+        array &$rows,
+        array $children,
+        array $below,
+        array $tables,
+        array $aliases
+    ): void {
         foreach ($children as $childname => $items) {
-            foreach ($items as $item) {
-                if (is_array($item)) {
-                    self::walk($rows, $childname, $item, $below, $tables, $aliases);
-                }
+            self::walk_child_occurrences($rows, $childname, $items, $below, $tables, $aliases);
+        }
+    }
+
+    /**
+     * Every occurrence of one child element.
+     *
+     * @param array $rows Accumulator, passed by reference: table => rows.
+     * @param string $childname
+     * @param array $items
+     * @param array $below
+     * @param array $tables
+     * @param array $aliases
+     */
+    private static function walk_child_occurrences(
+        array &$rows,
+        string $childname,
+        array $items,
+        array $below,
+        array $tables,
+        array $aliases
+    ): void {
+        foreach ($items as $item) {
+            if (is_array($item)) {
+                self::walk($rows, $childname, $item, $below, $tables, $aliases);
             }
         }
     }

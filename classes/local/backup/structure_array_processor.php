@@ -146,7 +146,9 @@ class structure_array_processor extends base_processor {
         $attributes = $nested->get_attributes();
         $node = [];
         foreach ($attributes as $attribute) {
-            $node[$attribute->get_name()] = $attribute->get_value();
+            $name = $attribute->get_name();
+            $value = $attribute->get_value();
+            $node[$name] = $value;
         }
 
         // Which file areas this element's text may refer to, declared by
@@ -236,7 +238,9 @@ class structure_array_processor extends base_processor {
             return;
         }
         $index = count($this->stack) - 1;
-        $this->stack[$index]['node'][$final->get_name()] = $final->get_value();
+        $name = $final->get_name();
+        $value = $final->get_value();
+        $this->stack[$index]['node'][$name] = $value;
     }
 
     /**

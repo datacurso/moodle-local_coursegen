@@ -125,7 +125,10 @@ class start_template_generation extends external_api {
         $fs = get_file_storage();
         $files = $fs->get_area_files($usercontext->id, 'user', 'draft', $draftitemid, 'itemid', false);
         $file = reset($files);
-        return $file ?: null;
+        if (!$file) {
+            return null;
+        }
+        return $file;
     }
 
     /**
