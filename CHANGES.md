@@ -20,8 +20,8 @@
 - **The sidebar folds away and comes back on hover**  
   The sidebar's toggle and the way out of the page used to float over the content, one on each side, and the toggle covered the page title once the sidebar was folded. A thin bar across the top now holds both: the toggle at its left, which never moves, and the way back to My courses at its right. Folding the sidebar slides it out and the content over; hovering the toggle while it is folded shows the sidebar on top of the content, without moving anything, and moving away hides it again; a click pins it back. The choice is remembered, and the `[` key toggles it.
 
-- **The page opens by asking how you want to start**  
-  Free creation or from a template used to be two tabs at the top of the sidebar, then briefly a switch inside the composer or an attachment in its "+" menu. None of those made it clear which one you were in. The page now opens on that one question, with a card for each starting point: describe the course and let the AI propose the structure, or start from an institutional template. Picking a card opens that path's workspace with a bar above it naming the choice and offering the way back, until planning starts and the choice is fixed. On the template path the template is chosen from its own column, where the list opens on arrival and the composer waits until one is picked; the template can still be changed or removed there. The old template link and a preselected template still land straight on the template column.
+- **The way a course starts is chosen in the composer**  
+  Free creation or from a template used to be two tabs at the top of the sidebar, always on show, naming a mode for a course that might not be about to start. The choice now sits inside the composer, next to the "+" menu, as a small two-way switch: it is read where the writing happens, the page never presumes a mode, and once a plan exists the switch is gone because the mode is settled. "New course" simply opens a clean page.
 
 ## Fixed
 
