@@ -48,6 +48,16 @@ class glossary_settings extends base_settings {
                 'value' => true,
             ],
         ];
+        // The cleaner gave the definition a draft area and copied the mold's
+        // inline images into it; without naming that draft here the entry is
+        // saved without its files and its @@PLUGINFILE@@ images break.
+        $draftitemid = (int) ($entry['definition_editor']['itemid'] ?? 0);
+        if ($draftitemid > 0) {
+            $options[] = [
+                'name' => 'inlineattachmentsid',
+                'value' => $draftitemid,
+            ];
+        }
         mod_glossary_external::add_entry(
             $this->cm->instance,
             $entry['concept'],
