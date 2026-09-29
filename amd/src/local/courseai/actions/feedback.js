@@ -27,7 +27,7 @@ import {
     hideWorkingIndicator,
 } from 'local_coursegen/local/courseai/ui/feedback-progress';
 import {getDecisionOverlay} from 'local_coursegen/local/courseai/ui/decision-overlay';
-import {renderApprovedPlanSummary} from 'local_coursegen/local/courseai/ui/regen-block';
+import {renderApprovedPlanSummary} from 'local_coursegen/local/courseai/ui/regen-block-reload';
 
 /**
  * Emit a log entry if emitLog is wired.

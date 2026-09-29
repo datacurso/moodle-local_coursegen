@@ -33,7 +33,8 @@ import {
     finalizeTranscript,
     rebuildTranscriptFromPlan,
 } from 'local_coursegen/local/courseai/ui/plan-transcript';
-import {finalizeRegen, rebuildRegenFromPlan} from 'local_coursegen/local/courseai/ui/regen-block';
+import {finalizeRegen} from 'local_coursegen/local/courseai/ui/regen-block';
+import {rebuildRegenFromPlan} from 'local_coursegen/local/courseai/ui/regen-block-reload';
 import {addedActivityTurn} from 'local_coursegen/local/courseai/ui/added-turn';
 import {getDecisionOverlay} from 'local_coursegen/local/courseai/ui/decision-overlay';
 
