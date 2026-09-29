@@ -19,10 +19,17 @@ namespace local_coursegen\local\service;
 use local_coursegen\local\models\template_instance;
 
 /**
- * How every element of a template's export payload is named and identified,
- * stably, across two requests that cannot agree on something generated in
- * either of them: the page that draws a link to an element, and the page
- * that answers that link.
+ * How every element of a template's export payload is named and identified.
+ *
+ * Two different lifetimes need two different strategies. A template instance
+ * (template_instance) is a row of ours that outlives any one export: it can be
+ * read again by a later, unrelated build, so its name has to survive between
+ * them and is persisted in the row itself. A real activity or section carries
+ * no row of ours at all, but it no longer needs to survive between builds
+ * either - the payload that names it is built exactly once per generation and
+ * then read back from that same stored copy for as long as the run lasts, so
+ * a name generated fresh at that one point in time is already exactly as
+ * stable as anything reading it will ever need.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -55,28 +62,18 @@ class template_export_uids {
     }
 
     /**
-     * The name an element of the template's course travels under, every time.
+     * The name a real activity or section travels under, for this one export.
      *
-     * An instance stores its uid, because it is a row of ours. A real activity
-     * or section is not: it belongs to Moodle, and there is nowhere of ours to
-     * keep a name for it. So its name is derived, from what it is and which
-     * template it is being read for, and the same element is named the same
-     * way on every export. That is what lets the page that draws a link to it
-     * and the page that answers that link, two requests apart, agree.
+     * Nothing of ours to store this against, and nothing needed: the payload
+     * that carries this name is built once and read back from that same
+     * stored copy for the rest of the run, never rebuilt, so a fresh random
+     * name at build time is read consistently without being remembered
+     * anywhere of our own.
      *
-     * $templateid, $kind and $id are already a unique, stable key on their
-     * own - $kind alone tells apart the two id spaces that would otherwise
-     * collide. Nothing reads this value expecting a UUID's shape: every
-     * caller takes it through PARAM_ALPHANUMEXT, so the key itself, joined
-     * by dashes, is exactly what is needed here.
-     *
-     * @param int $templateid
-     * @param string $kind 'cm' or 'section'.
-     * @param int $id That element's own id within its kind.
-     * @return string
+     * @return string A UUID.
      */
-    public static function stable_uid(int $templateid, string $kind, int $id): string {
-        return "{$kind}-{$templateid}-{$id}";
+    public static function random_uid(): string {
+        return \core\uuid::generate();
     }
 
     /**
