@@ -98,7 +98,7 @@ class finish_template_generation extends external_api {
         $created = create_course_service::create_course($session, $result);
         $courseid = $created['courseid'] ?? 0;
         $courseid = (int) $courseid;
-        if ($courseid > 0 && $templateid > 0) {
+        if ($courseid > 0 && $templateid !== null && $templateid > 0) {
             template_keep_copier::copy_into($templateid, $courseid);
         }
 
@@ -109,13 +109,16 @@ class finish_template_generation extends external_api {
      * Which template this session was started from.
      *
      * @param course_session $session
-     * @return int 0 when the session predates this field.
+     * @return int|null Null when the session predates this field.
      */
-    private static function template_id_of(course_session $session): int {
+    private static function template_id_of(course_session $session): ?int {
         $coursedata = $session->get('coursedata');
         $coursedata = (string) $coursedata;
         $data = json_decode($coursedata, true);
-        $templateid = $data['templateid'] ?? 0;
+        $templateid = $data['templateid'] ?? null;
+        if ($templateid === null) {
+            return null;
+        }
         return (int) $templateid;
     }
 
