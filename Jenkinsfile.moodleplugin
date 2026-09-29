@@ -1,2 +1,9 @@
 @Library('moodle-ci') _
-moodlePluginCI(moodleBranch: 'MOODLE_405_STABLE_V2')
+// This branch's own name (MOODLE_405_STABLE_V2) is this PLUGIN's branch
+// name, not a Moodle core ref -- moodleBranch/moodleVersions must always be
+// a real ref that exists in the CI image's baked Moodle mirror
+// (MOODLE_405_STABLE, MOODLE_500_STABLE, ... or an exact release tag), or
+// moodle-plugin-ci's own git clone against that mirror fails outright
+// ("Remote branch ... not found"). version.php declares
+// $plugin->supported = [405, 501], so both are tested here.
+moodlePluginCI(moodleVersions: ['MOODLE_405_STABLE', 'MOODLE_501_STABLE'])
