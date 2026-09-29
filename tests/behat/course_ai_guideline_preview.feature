@@ -33,6 +33,6 @@ Feature: Preview an institutional guideline in the course AI creation page
     And I click on "#btnDirectrices" "css_element"
     And I click on "#guidelineList .pop-eye-btn" "css_element"
     And I should see "Quality policy" in the ".modal-title" "css_element"
-    When I click on "Close" "button" in the ".modal-header" "css_element"
+    When I click on ".btn-close" "css_element" in the ".modal-header" "css_element"
     Then ".modal-body" "css_element" should not exist
     And I should see "Quality policy" in the "#guidelineList" "css_element"
