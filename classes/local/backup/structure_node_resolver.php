@@ -41,12 +41,20 @@ class structure_node_resolver {
         if (!($nested instanceof backup_nested_element)) {
             return null;
         }
+        // A simple element's step calls set_source_table(), which get_source_table()
+        // returns directly.
         $table = $nested->get_source_table();
         if ($table) {
             return $table;
         }
+        // An element needing a JOIN or a WHERE calls set_source_sql() instead
+        // (backup_book_stepslib.php's tag_instance lookup,
+        // backup_scorm_stepslib.php's attempt/value/element join) - then
+        // get_source_table() returns nothing, and the table name has to be
+        // read back out of the query text itself, where Moodle always wraps a
+        // real table name in braces for the db layer to prefix it.
         $sql = (string) $nested->get_source_sql();
-        if ($sql !== '' && preg_match('~FROM\\s+\\{(\\w+)\\}~i', $sql, $found)) {
+        if ($sql !== '' && preg_match('~^\s*SELECT\s+.*?FROM\s+\{(\w+)\}~is', $sql, $found)) {
             return $found[1];
         }
         return null;
