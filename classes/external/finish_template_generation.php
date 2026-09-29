@@ -116,10 +116,10 @@ class finish_template_generation extends external_api {
         $coursedata = (string) $coursedata;
         $data = json_decode($coursedata, true);
         $templateid = $data['templateid'] ?? null;
-        if ($templateid === null) {
-            return null;
+        if ($templateid !== null) {
+            $templateid = (int) $templateid;
         }
-        return (int) $templateid;
+        return $templateid;
     }
 
     /**
