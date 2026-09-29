@@ -28,12 +28,9 @@ namespace local_coursegen\external;
 
 use external_api;
 use external_function_parameters;
-use external_multiple_structure;
-use external_single_structure;
 use external_value;
 use context_system;
 use local_coursegen\local\models\template;
-use local_coursegen\local\service\template_structure_view;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -43,6 +40,8 @@ require_once($CFG->libdir . '/externallib.php');
  * Builds the guided-form structure for a given template.
  */
 class get_template_structure extends external_api {
+    use get_template_structure_rows;
+    use get_template_structure_schema;
 
     /**
      * Returns description of method parameters.
@@ -78,57 +77,32 @@ class get_template_structure extends external_api {
         $course  = get_course($template->get('courseid'));
         $modinfo = get_fast_modinfo($course);
 
-        return template_structure_view::build($template, $course, $modinfo, $OUTPUT);
-    }
+        $sectionsettings = self::section_settings($template);
+        $activitysettings = self::activity_settings($template);
+        $instancesbysection = self::instances_by_section($template);
+        $sections = self::sections($course, $modinfo, $sectionsettings, $activitysettings, $instancesbysection, $OUTPUT);
 
-    /**
-     * Returns description of method return value.
-     *
-     * @return external_single_structure
-     */
-    public static function execute_returns() {
-        return new external_single_structure([
-            'nolimit' => new external_value(PARAM_BOOL, 'Whether the section limit is disabled'),
-            'maxsections' => new external_value(PARAM_INT, 'Maximum total sections allowed'),
-            'remainingsections' => new external_value(PARAM_INT, 'Additional sections the professor may still add'),
-            'sections' => new external_multiple_structure(
-                new external_single_structure([
-                    'id'     => new external_value(PARAM_INT, 'Section ID'),
-                    'num'    => new external_value(PARAM_INT, 'Section number'),
-                    'name'   => new external_value(PARAM_TEXT, 'Section name'),
-                    'behavior' => new external_value(PARAM_ALPHA, 'Admin-configured section behavior (custom/keep)'),
-                    'locked' => new external_value(PARAM_BOOL, 'Whether the section is kept as-is from the template'),
-                    'activities' => new external_multiple_structure(
-                        new external_single_structure([
-                            'id'       => new external_value(PARAM_INT,
-                                'Course module ID; NEGATIVE (-recordid) for virtual instance rows'),
-                            'name'     => new external_value(PARAM_TEXT, 'Activity name'),
-                            'modname'  => new external_value(PARAM_ALPHANUMEXT,
-                                'Module type name; may be empty on an instance row with no snapshot'),
-                            'purpose'  => new external_value(PARAM_ALPHA, 'Activity purpose category'),
-                            'typelabel' => new external_value(PARAM_TEXT,
-                                'Snapshotted type label for instance rows; empty for real activities'),
-                            'iconhtml' => new external_value(PARAM_RAW, 'Rendered module icon HTML; may be empty'),
-                            'locked'   => new external_value(PARAM_BOOL, 'Always true — activities from the template are reference-only'),
-                            'action'   => new external_value(PARAM_ALPHA,
-                                'Resolved admin action ("keep"); empty for virtual instance rows'),
-                            'isinstance' => new external_value(PARAM_BOOL, 'Whether this is a virtual instance row'),
-                            'aigenerated' => new external_value(PARAM_BOOL,
-                                'Whether AI will generate this activity in the new course (drives the badge)'),
-                            'generationcmid' => new external_value(PARAM_INT,
-                                'Id this row answers to in the generation progress events; 0 when it is not generated'),
-                        ])
-                    ),
-                ])
-            ),
-            'allowedactivities' => new external_multiple_structure(
-                new external_single_structure([
-                    'modname'     => new external_value(PARAM_ALPHANUMEXT, 'Module type name'),
-                    'displayname' => new external_value(PARAM_TEXT, 'Human-readable module name'),
-                    'purpose'     => new external_value(PARAM_ALPHA, 'Activity purpose category'),
-                    'iconhtml'    => new external_value(PARAM_RAW, 'Rendered module icon HTML'),
-                ])
-            ),
-        ]);
+        $nolimit = (bool) $template->get('nolimit');
+        $maxsections = $template->get('maxsections') ?? 0;
+        $maxsections = (int) $maxsections;
+        // The stored value already IS the extra allowance - how many sections
+        // the professor may add ON TOP of the template's own - so the
+        // template's sections never get subtracted from it.
+        if ($nolimit) {
+            $remaining = 0;
+        } else {
+            $remaining = max(0, $maxsections);
+        }
+
+        $allowedtypes = self::allowed_types($template);
+        $allowedactivities = self::allowed_activities($allowedtypes, $OUTPUT);
+
+        return [
+            'nolimit' => $nolimit,
+            'maxsections' => $maxsections,
+            'remainingsections' => $remaining,
+            'sections' => $sections,
+            'allowedactivities' => $allowedactivities,
+        ];
     }
 }
