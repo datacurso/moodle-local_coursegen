@@ -9,7 +9,7 @@
 - **Bootstrap 5 compatibility on Moodle 5.0+**  
   The institutional guideline preview now uses Moodle's `core/modal` API instead of a jQuery Bootstrap 4 modal that never opened on Moodle 5.0, tooltips declare both `data-toggle` and `data-bs-toggle`, and CSS colours fall back from Bootstrap 5 `--bs-*` variables to their Bootstrap 4 names.
 - **Question bank defaults on Moodle 5.0**  
-  Quiz questions are created in the module default category through `question_get_default_category()` on Moodle 5.0 (the previous helper is deprecated there) and hand-made question bank entries now advertise the next version number like core question import does.
+  Quiz questions are created in the module default category through `question_get_default_category()` on Moodle 5.0, since the previous helper is deprecated there.
 
 ## Changed
 

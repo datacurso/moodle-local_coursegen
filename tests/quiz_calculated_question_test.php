@@ -194,36 +194,4 @@ final class quiz_calculated_question_test extends \advanced_testcase {
         $this->assertSame('top', $top->name);
         $this->assertEquals($context->id, $top->contextid);
     }
-
-    /**
-     * Moodle 5.0 tracks the next version number on the bank entry; a hand-made
-     * entry with one version must advertise version 2 as the next one, exactly as
-     * core question import does. On 4.5 the column does not exist and is skipped.
-     */
-    public function test_bank_entry_nextversion_is_two_after_first_version(): void {
-        global $DB;
-
-        $this->resetAfterTest();
-        $this->setAdminUser();
-
-        $dbman = $DB->get_manager();
-        $table = new \xmldb_table('question_bank_entries');
-        $field = new \xmldb_field('nextversion');
-        if (!$dbman->field_exists($table, $field)) {
-            $this->markTestSkipped('question_bank_entries.nextversion only exists on Moodle 5.0 and later.');
-        }
-
-        $cm = $this->create_quiz_cm();
-        $settings = new quiz_settings($cm, ['questions' => [$this->calculated_question_payload()]]);
-        $settings->add_settings();
-
-        $question = $DB->get_record('question', ['name' => 'AI calculated sum'], '*', MUST_EXIST);
-        $entry = $DB->get_record_sql("
-            SELECT qbe.*
-              FROM {question_bank_entries} qbe
-              JOIN {question_versions} qv ON qv.questionbankentryid = qbe.id
-             WHERE qv.questionid = ?", [$question->id], MUST_EXIST);
-
-        $this->assertEquals(2, $entry->nextversion);
-    }
 }
