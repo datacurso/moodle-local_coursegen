@@ -16,6 +16,7 @@
 
 namespace local_coursegen\local\preview;
 
+use format_grid\toolbox;
 use moodle_url;
 
 /**
@@ -37,18 +38,28 @@ use moodle_url;
  */
 class grid_from_payload {
     /**
-     * Whether this course is laid out by a format this can draw.
+     * Whether this preview should be rendered with the grid format's own
+     * layout instead of the generic course-format layout.
+     *
+     * True only when the course is set to grid format and that format's own
+     * content template is actually installed on this site: a course could be
+     * set to a format whose plugin was later removed, and there is no
+     * layout to render with in that case.
      *
      * @param array $payload
      * @return bool
      */
-    public static function applies(array $payload): bool {
+    public static function should_render_grid_preview(array $payload): bool {
         global $CFG;
 
-        $courseconfiguration = $payload['course_configuration'] ?? [];
-        $format = $courseconfiguration['format'] ?? '';
-        $templatefile = $CFG->dirroot . '/course/format/grid/templates/local/content.mustache';
-        return $format === 'grid' && file_exists($templatefile);
+        // course_configuration and format are always in this payload:
+        // template_export_service::build_init_payload() writes both as
+        // literal array keys, and $course->format is a not-null column, so
+        // there is no state where either is missing to fall back from.
+        $format = $payload['course_configuration']['format'];
+        $gridtemplatepath = $CFG->dirroot . '/course/format/grid/templates/local/content.mustache';
+        $isinstalled = file_exists($gridtemplatepath);
+        return $format === 'grid' && $isinstalled;
     }
 
     /**
@@ -60,22 +71,63 @@ class grid_from_payload {
      * @return array
      */
     public static function content(array $content, array $payload, int $sessionid): array {
-        $courseconfiguration = $payload['course_configuration'] ?? [];
-        $settings = $courseconfiguration['format_options'] ?? [];
+        // format_options is filled by format_grid::get_settings(): every
+        // option it declares (course/format/grid/lib.php:course_format_options())
+        // comes back with its default already resolved, never absent.
+        $settings = $payload['course_configuration']['format_options'];
 
         $tiles = [];
         $numbers = [];
         $popups = [];
         foreach ($content['sections'] as $section) {
-            $tiles[] = self::tile($payload, $section, $settings, $sessionid);
+            $info = self::section_info($payload, (int) $section['num']);
+            // Same guarantee as above, at the section level: base.php's
+            // get_format_options($section) fills every declared section
+            // option (course/format/grid/lib.php:section_format_options())
+            // with its default before this payload is built.
+            $options = $info['format_options'];
+
             $numbers[] = (int) $section['num'];
+
+            // A section with no picture of its own is drawn with the one the
+            // format makes up for it, which is why both are offered and only
+            // one is ever set.
+            $generatedimageuri = false;
+            if (empty($info['image'])) {
+                $generatedimageuri = self::generated_image($section['sectionname']);
+            }
+
+            $tiles[] = [
+                'number' => (int) $section['num'],
+                'sectionname' => $section['sectionname'],
+                'sectionurl' => (new moodle_url('/local/coursegen/course_preview.php', [
+                    'sessionid' => $sessionid,
+                    'section' => (int) $section['num'],
+                ]))->out(false),
+                'sectionuservisible' => true,
+                'iscurrent' => false,
+                // sectionbreak's declared default is 1, meaning "No": as in
+                // format_grid's own content.php, only 2 means the break is on.
+                'sectionbreak' => $options['sectionbreak'] == 2,
+                'sectionbreakheading' => $options['sectionbreakheading'],
+                // Unlike the format options above, 'image' really is only
+                // sometimes set: template_export_sections::sections_info()
+                // gives it the value null for a section with no uploaded
+                // image, which is a real, not a missing, state.
+                'imageuri' => $info['image'] ?? false,
+                'imagealttext' => $options['sectionimagealttext'],
+                'generatedimageuri' => $generatedimageuri,
+                'sectioncompletionmarkup' => '',
+            ];
+
             $popups[] = $section;
         }
 
-        $popuptrigger = $settings['popup'] ?? 0;
-        $popuptrigger = (int) $popuptrigger;
-        $showsinpopup = ($popuptrigger === 2);
+        $showsinpopup = $settings['popup'] == 2;
 
+        // A grid can open a section in a dialog instead of on its own page,
+        // and the dialog holds the same sections this page already built, so
+        // what is in them is what the run is going to produce.
         $popupsections = [];
         if ($showsinpopup) {
             $popupsections = $popups;
@@ -87,114 +139,37 @@ class grid_from_payload {
         $content['sections'] = [];
         $content['hassections'] = false;
 
-        $gridjustification = $settings['gridjustification'] ?? 'space-between';
-        $gridjustification = (string) $gridjustification;
-        $styles = self::styles($settings);
-        $sectionnumbers = implode(',', $numbers);
-
         return $content + [
             'hasgridsections' => !empty($tiles),
             'gridsections' => $tiles,
-            'gridsectionnumbers' => $sectionnumbers,
-            'gridjustification' => $gridjustification,
-            'imageresizemethodcrop' => self::flag_equals($settings, 'imageresizemethod', 2),
-            'sectiontitleingridbox' => self::flag_equals($settings, 'sectiontitleingridbox', 2),
-            'sectionbadgeingridbox' => self::flag_equals($settings, 'sectionbadgeingridbox', 2),
+            'gridsectionnumbers' => implode(',', $numbers),
+            'gridjustification' => $settings['gridjustification'],
+            'imageresizemethodcrop' => $settings['imageresizemethod'] == 2,
+            'sectiontitleingridbox' => $settings['sectiontitleingridbox'] == 2,
+            'sectionbadgeingridbox' => $settings['sectionbadgeingridbox'] == 2,
             'showcompletion' => false,
-            // A grid can open a section in a dialog instead of on its own page,
-            // and the dialog holds the same sections this page already built,
-            // so what is in them is what the run is going to produce.
             'popup' => $showsinpopup,
             'popupsections' => $popupsections,
-            'coursestyles' => $styles,
+            'coursestyles' => self::styles($settings),
         ];
-    }
-
-    /**
-     * One section's own tile.
-     *
-     * @param array $payload
-     * @param array $section One of $content['sections'], as core built it.
-     * @param array $settings
-     * @param int $sessionid
-     * @return array
-     */
-    private static function tile(array $payload, array $section, array $settings, int $sessionid): array {
-        $number = (int) $section['num'];
-        $info = self::section_info($payload, $number);
-        $options = $info['format_options'] ?? [];
-
-        $sectionurl = new moodle_url('/local/coursegen/course_preview.php', [
-            'sessionid' => $sessionid,
-            'section' => $number,
-        ]);
-        $sectionurl = $sectionurl->out(false);
-
-        $sectionbreakheading = $options['sectionbreakheading'] ?? '';
-        $sectionbreakheading = (string) $sectionbreakheading;
-        $imagealttext = $options['sectionimagealttext'] ?? '';
-        $imagealttext = (string) $imagealttext;
-
-        // A section with no picture of its own is drawn with the one the
-        // format makes up for it, which is why both are offered and only
-        // one is ever set.
-        $image = $info['image'] ?? false;
-        $generatedimage = false;
-        if (empty($info['image'])) {
-            $generatedimage = self::generated_image($section['sectionname']);
-        }
-
-        return [
-            'number' => $number,
-            'sectionname' => $section['sectionname'],
-            'sectionurl' => $sectionurl,
-            'sectionuservisible' => true,
-            'iscurrent' => false,
-            'sectionbreak' => !empty($options['sectionbreak']),
-            'sectionbreakheading' => $sectionbreakheading,
-            'imageuri' => $image,
-            'imagealttext' => $imagealttext,
-            'generatedimageuri' => $generatedimage,
-            'sectioncompletionmarkup' => '',
-        ];
-    }
-
-    /**
-     * Whether one of the format's own numeric flags equals the given value.
-     *
-     * @param array $settings
-     * @param string $key
-     * @param int $value
-     * @return bool
-     */
-    private static function flag_equals(array $settings, string $key, int $value): bool {
-        $flag = $settings[$key] ?? 0;
-        $flag = (int) $flag;
-        return $flag === $value;
     }
 
     /**
      * The tile size and shape the course was set up with.
      *
+     * imagecontainerratio is stored as one of format_grid's own ratio codes
+     * (1 to 7), not as a literal "3-2" string, so its height is worked out
+     * by the format's own toolbox rather than parsed here again.
+     *
      * @param array $settings
      * @return array
      */
     private static function styles(array $settings): array {
-        $width = $settings['imagecontainerwidth'] ?? 210;
-        $width = (int) $width;
-        $ratio = $settings['imagecontainerratio'] ?? '3-2';
-        $ratio = (string) $ratio;
-        [$across, $down] = array_pad(explode('-', $ratio), 2, 1);
-        $across = (int) $across;
-        $down = (int) $down;
-
-        $height = $width * ($down / max(1, $across));
-        $height = round($height);
-        $height = (int) $height;
+        $properties = toolbox::get_instance()->get_displayed_image_container_properties($settings);
 
         return [
-            'imagecontainerwidth' => $width,
-            'imagecontainerheight' => $height,
+            'imagecontainerwidth' => $properties['width'],
+            'imagecontainerheight' => $properties['height'],
         ];
     }
 
@@ -206,9 +181,7 @@ class grid_from_payload {
      */
     private static function generated_image(string $name): string {
         global $OUTPUT;
-        $trimmed = trim($name);
-        $initial = \core_text::substr($trimmed, 0, 1);
-        $initial = \core_text::strtoupper($initial);
+        $initial = \core_text::strtoupper(\core_text::substr(trim($name), 0, 1));
         $svg = $OUTPUT->render_from_template('local_coursegen/preview_initial_svg', ['initial' => $initial]);
         return 'data:image/svg+xml;base64,' . base64_encode($svg);
     }
@@ -221,11 +194,12 @@ class grid_from_payload {
      * @return array
      */
     private static function section_info(array $payload, int $number): array {
-        $sectionsinfo = $payload['sections_info'] ?? [];
-        foreach ($sectionsinfo as $info) {
-            $sectionnumber = $info['section'] ?? -1;
-            $sectionnumber = (int) $sectionnumber;
-            if ($sectionnumber === $number) {
+        // sections_info is another literal key build_init_payload() always
+        // writes, and each entry always has 'section' (template_export_sections::
+        // sections_info()); no course has zero sections, so an empty return
+        // here is unreached, kept only so this stays an array-returning method.
+        foreach ($payload['sections_info'] as $info) {
+            if ((int) $info['section'] === $number) {
                 return $info;
             }
         }
