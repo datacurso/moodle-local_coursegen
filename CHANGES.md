@@ -1,3 +1,22 @@
+## 2.0.9
+
+**Released on:** 2026-09-29
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Added
+
+- **A generated activity's rich text can carry over a file it points at**  
+  A generated database, quiz, wiki, glossary or lesson can reference a file already stored on the site through its plain URL; that file is now copied into the new activity instead of being left as a broken link, provided the current user can manage activities in the course it comes from.
+
+## Fixed
+
+- **A generated course now explicitly opts into completion tracking**  
+  A course created from a planning session left completion tracking at the database's own default rather than the site's default for new courses, so with the site default off, every completion setting on every generated activity was silently ignored.
+
+- **A generated quiz question's tags no longer write before the permission to add them is checked**  
+  Tags were attached to a newly created question one step before the capability check that can still reject adding it to the quiz, so the tag write could persist even when the operation was refused.
+
 ## 2.0.8
 
 **Released on:** 2026-09-22
