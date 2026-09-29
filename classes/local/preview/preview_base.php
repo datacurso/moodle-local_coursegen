@@ -288,36 +288,6 @@ abstract class preview_base extends activity_preview {
     }
 
     /**
-     * The plain text of an editor-field value, whatever shape it arrived in.
-     *
-     * A drafted field travels either as the plain string or as the
-     * {text, format} pair Moodle's editors use, depending on the type and on
-     * whether the value came from the draft or from the finished answer.
-     *
-     * @param mixed $value
-     * @return string
-     */
-    protected static function editor_field_text($value): string {
-        if (is_array($value)) {
-            return (string) ($value['text'] ?? '');
-        }
-        return (string) ($value ?? '');
-    }
-
-    /**
-     * The format of an editor-field value, whatever shape it arrived in.
-     *
-     * @param mixed $value
-     * @return int
-     */
-    protected static function editor_field_format($value): int {
-        if (is_array($value)) {
-            return (int) ($value['format'] ?? FORMAT_HTML);
-        }
-        return FORMAT_HTML;
-    }
-
-    /**
      * One row of a module's configuration, which is the site's and not the activity's.
      *
      * A module can keep part of how it is set up in a table of its own that
