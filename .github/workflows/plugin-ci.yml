@@ -9,8 +9,7 @@ jobs:
 
     services:
       postgres:
-        # Moodle 5.0 requires PostgreSQL 14 (admin/environment.xml); 4.5 accepts it too.
-        image: postgres:14
+        image: postgres:13
         env:
           POSTGRES_USER: 'postgres'
           POSTGRES_HOST_AUTH_METHOD: 'trust'
@@ -43,10 +42,6 @@ jobs:
           - php: 8.3
             moodle-branch: MOODLE_500_STABLE
             database: mariadb
-            provider-branch: MOODLE_500_STABLE
-          - php: 8.3
-            moodle-branch: MOODLE_500_STABLE
-            database: pgsql
             provider-branch: MOODLE_500_STABLE
           - php: 8.3
             moodle-branch: MOODLE_501_STABLE

@@ -83,6 +83,8 @@ const STRING_KEYS = [
     'courseai_btn_back_context',
     'courseai_btn_cancel_flow',
     'courseai_btn_cancel_and_exit',
+    'courseai_modal_close',
+    'courseai_modal_subtitle_text',
     'courseai_modal_fullcontext',
     'courseai_no_results',
     'courseai_category_general',
