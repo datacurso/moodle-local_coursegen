@@ -2,10 +2,12 @@
 
 **Released on:** Unreleased
 
-**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.2**.
 
 ## Fixed
 
+- **"Create with AI" button missing on My courses in Moodle 5.2**  
+  Moodle 5.2 moved the "Manage courses" and "Create course" buttons from the My courses page header into the Course overview block, so the plugin no longer found the header container it injected its button into and the button silently disappeared for users with enrolled courses. The button is now added by a `before_footer_html_generation` hook that loads a small AMD module, which places it next to core's course action buttons in the page header (Moodle 4.5/5.0), in the Course overview block (Moodle 5.2) or in the empty-state action bar (all versions). This replaces the previous output-buffering approach.
 - **Bootstrap 5 compatibility on Moodle 5.0+**  
   The institutional guideline preview now uses Moodle's `core/modal` API instead of a jQuery Bootstrap 4 modal that never opened on Moodle 5.0, tooltips declare both `data-toggle` and `data-bs-toggle`, and CSS colours fall back from Bootstrap 5 `--bs-*` variables to their Bootstrap 4 names.
 - **Question bank defaults on Moodle 5.0**  
@@ -13,6 +15,8 @@
 
 ## Changed
 
+- **My courses is disabled by default on fresh Moodle 5.2 installs**  
+  The "Create with AI" button on My courses needs that page to be enabled. On a fresh Moodle 5.2 site, enable it in `Site administration > Appearance > Navigation > Enable My courses`; upgraded sites keep their existing setting.
 - **Tests and CI for Moodle 5.0**  
   The plugin CI workflow installs the DataCurso AI provider from the branch matching each Moodle version, the Behat course page scenarios assert the plugin's own AI button rather than core's activity chooser (renamed on Moodle 5.0), and a plugin data generator seeds institutional guidelines so the preview dialogue is covered by Behat.
 
