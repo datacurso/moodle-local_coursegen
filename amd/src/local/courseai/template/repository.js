@@ -54,7 +54,7 @@ export const startTemplateGeneration = (templateId, prompt, draftItemId) => fetc
  *
  * @param {number} sessionId
  * @param {string} action 'accept' or 'replan_activity'.
- * @param {number[]} targetIds Activities to replan; empty means all of them.
+ * @param {string[]} targetIds Activity uids to replan; empty means all of them.
  * @param {string} instruction What to change, in the professor's own words.
  * @returns {Promise<Object>} {status}
  */
