@@ -42,7 +42,9 @@ class create_course_service {
      * @param array $resultdata Result data from the Datacurso API (course_configuration, sections, activities).
      * @param array $overrides Optional user overrides for course fields.
      *     Supported keys: fullname (string), shortname (string), category (int).
-     * @return array Result of the course content application.
+     * @return array Result of the course content application. On success it also
+     *     carries 'generatedcms' (payload cmid => created cmid), which is internal
+     *     and must not be returned through a web service.
      */
     public static function create_course(course_session $session, array $resultdata, array $overrides = []): array {
         global $CFG;
@@ -99,11 +101,13 @@ class create_course_service {
 
             // Process generated activities if provided in the response.
             $activityerrors = [];
+            $generatedcms = [];
             if (!empty($resultdata['generated_activities'])) {
                 $activityerrors = self::process_generated_activities(
                     $course->id,
                     $resultdata['generated_activities'],
                     $subsections,
+                    $generatedcms,
                     $sourcecourseid
                 );
             }
@@ -168,6 +172,10 @@ class create_course_service {
                 'haswarnings' => !empty($activityerrors),
                 'warningscount' => count($activityerrors),
                 'activityerrors' => $activityerrors,
+                // Payload cmid => created course module id, for every
+                // generated activity that was built. Internal: strip it
+                // before returning through a web service.
+                'generatedcms' => $generatedcms,
             ];
         } catch (\Throwable $e) {
             // Update session status to failed if session exists.
@@ -592,6 +600,8 @@ class create_course_service {
      * @param int $courseid Course ID.
      * @param array $activities Generated activities from API.
      * @param array $subsections Declared subsections index, mutated as they materialize.
+     * @param array $generatedcms Filled with payload cmid => created cmid for every activity
+     *     that carries a cmid and was created.
      * @param int|null $sourcecourseid Course whose files the payload may reference (template base course).
      * @return array Activity creation errors.
      */
@@ -599,6 +609,7 @@ class create_course_service {
         int $courseid,
         array $activities,
         array &$subsections = [],
+        array &$generatedcms = [],
         ?int $sourcecourseid = null
     ): array {
         global $CFG;
@@ -642,7 +653,11 @@ class create_course_service {
             }
 
             try {
-                create_mod_service::create_from_ai_result($activity, $course, $sectionnum, null, $sourcecourseid);
+                $newcm = create_mod_service::create_from_ai_result($activity, $course, $sectionnum, null, $sourcecourseid);
+                $payloadcmid = (int) ($activity['cmid'] ?? 0);
+                if ($payloadcmid > 0) {
+                    $generatedcms[$payloadcmid] = (int) $newcm->coursemodule;
+                }
             } catch (\Throwable $e) {
                 $resource = (string)($activity['resource_type'] ?? 'unknown');
                 $title = (string)($activity['parameters']['name'] ?? $activity['parameters']['title'] ?? '');
