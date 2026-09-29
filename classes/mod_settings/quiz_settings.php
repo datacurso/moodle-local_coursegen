@@ -18,6 +18,7 @@ namespace local_coursegen\mod_settings;
 
 defined('MOODLE_INTERNAL') || die();
 
+global $CFG;
 require_once($CFG->libdir . '/questionlib.php');
 
 /**
@@ -195,9 +196,6 @@ class quiz_settings extends base_settings {
             $bankentry->questioncategoryid = $categoryinfo->id;
             $bankentry->idnumber = null;
             $bankentry->ownerid = $USER->id;
-            // Moodle 5.0 tracks the next version number on the entry (see core question
-            // import); the column does not exist on 4.5, where insert_record ignores it.
-            $bankentry->nextversion = 2;
             $bankentry->id = $DB->insert_record('question_bank_entries', $bankentry);
 
             $version = new \stdClass();
