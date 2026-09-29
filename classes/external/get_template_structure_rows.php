@@ -14,65 +14,26 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_coursegen\local\service;
+namespace local_coursegen\external;
 
 use local_coursegen\local\models\template;
 use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_instance;
 use local_coursegen\local\models\template_section;
+use local_coursegen\local\service\template_export_uids;
+use local_coursegen\local\service\template_instance_layout;
 use local_coursegen\output\template_row_options;
 
 /**
- * Builds the professor-facing template guided-form structure: every section
- * with its activities (real ones and virtual instances interleaved in the
- * plan's own display order, with the admin-defined lock state applied), and
- * the catalog of activity types the professor may add.
+ * Per-activity-row building for get_template_structure, kept apart from the
+ * webservice contract (execute/execute_parameters/execute_returns) only
+ * because together they crossed the 250-line cap.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class template_structure_view {
-    /**
-     * The full guided-form structure for one template.
-     *
-     * @param template $template
-     * @param \stdClass $course
-     * @param \course_modinfo $modinfo
-     * @param \renderer_base $output
-     * @return array
-     */
-    public static function build(template $template, $course, $modinfo, $output): array {
-        $sectionsettings = self::section_settings($template);
-        $activitysettings = self::activity_settings($template);
-        $instancesbysection = self::instances_by_section($template);
-
-        $sections = self::sections($course, $modinfo, $sectionsettings, $activitysettings, $instancesbysection, $output);
-
-        $nolimit = (bool) $template->get('nolimit');
-        $maxsections = $template->get('maxsections') ?? 0;
-        $maxsections = (int) $maxsections;
-        // The stored value already IS the extra allowance - how many sections
-        // the professor may add ON TOP of the template's own - so the
-        // template's sections never get subtracted from it.
-        if ($nolimit) {
-            $remaining = 0;
-        } else {
-            $remaining = max(0, $maxsections);
-        }
-
-        $allowedtypes = self::allowed_types($template);
-        $allowedactivities = self::allowed_activities($allowedtypes, $output);
-
-        return [
-            'nolimit' => $nolimit,
-            'maxsections' => $maxsections,
-            'remainingsections' => $remaining,
-            'sections' => $sections,
-            'allowedactivities' => $allowedactivities,
-        ];
-    }
-
+trait get_template_structure_rows {
     /**
      * sectionid => saved behavior, for this template.
      *
@@ -231,7 +192,7 @@ class template_structure_view {
         $name = format_string($cm->name);
         $iconhtml = $output->image_icon('monologo', $cm->modname, 'mod_' . $cm->modname, ['class' => 'icon activityicon']);
         return [
-            'id'      => (int) $cm->id,
+            'id'      => (string) $cm->id,
             'name'    => $name,
             'modname' => $cm->modname,
             'purpose' => $purpose,
@@ -241,7 +202,7 @@ class template_structure_view {
             'action'  => $action,
             'isinstance' => false,
             'aigenerated' => false,
-            'generationcmid' => 0,
+            'generationuid' => '',
         ];
     }
 
@@ -249,15 +210,15 @@ class template_structure_view {
      * Build one virtual-instance activity row ("generate an activity here,
      * molded on one of the template's model activities").
      *
-     * Id scheme: the row id is the NEGATIVE of the tpl_instance record id.
-     * Every other id in this response is a cmid (always positive), so a
-     * negative id can never collide with one, stays stable across reloads,
-     * and remains a usable client-side key; the client re-seeds its own
-     * placeholder-id counter below the smallest received id so
-     * professor-added rows cannot collide either (see state.js).
+     * Id scheme: the row id IS the instance's stable uid
+     * (template_export_uids::instance_uid()) — the same name it already
+     * answers to as generationuid, so this method asks for it once and uses
+     * it for both. A real activity row's id is that cmid, stringified for
+     * type consistency across the whole activities array; nothing about a
+     * real activity's id changes otherwise.
      *
      * Everything renders from the row's own snapshots (name, typelabel,
-     * modname) - sourcecmid is never dereferenced. The icon resolves from
+     * modname) — sourcecmid is never dereferenced. The icon resolves from
      * the snapshot modname through the exact same monologo rule as the
      * admin review (template_row_options::instance_icon_url()), and an
      * empty snapshot yields an empty iconhtml, not a broken image.
@@ -272,21 +233,17 @@ class template_structure_view {
         if ($iconurl !== '') {
             $iconhtml = \html_writer::empty_tag('img', ['src' => $iconurl, 'class' => 'icon activityicon', 'alt' => '']);
         }
-        if ($modname === '') {
-            $purpose = MOD_PURPOSE_OTHER;
-        } else {
+        $uid = template_export_uids::instance_uid($instance);
+        $purpose = MOD_PURPOSE_OTHER;
+        if ($modname !== '') {
             $purpose = self::get_purpose($modname);
         }
-        $instanceid = (int) $instance->get('id');
-        $name = format_string($instance->get('name'));
-        $typelabel = format_string($instance->get('typelabel'));
-        $generationcmid = template_export_service::instance_cmid($instanceid);
         return [
-            'id'      => -$instanceid,
-            'name'    => $name,
+            'id'      => $uid,
+            'name'    => format_string($instance->get('name')),
             'modname' => $modname,
             'purpose' => $purpose,
-            'typelabel' => $typelabel,
+            'typelabel' => format_string($instance->get('typelabel')),
             'iconhtml' => $iconhtml,
             'locked'  => true,
             'action'  => '',
@@ -294,9 +251,24 @@ class template_structure_view {
             'aigenerated' => true,
             // The id this row will answer to in the generation's progress
             // events, so the live view can mark THIS activity when its own
-            // content lands. Same value template_export_service sends.
-            'generationcmid' => $generationcmid,
+            // content lands - the same uid the payload sent and the run's
+            // events echo back, never a number invented for this alone.
+            // Kept as a separate field from the row's own id, because it
+            // names a different thing (what the AI's answer calls this row,
+            // not what the tree calls it), even though today they happen to
+            // be the same string.
+            'generationuid' => $uid,
         ];
+    }
+
+    /**
+     * Resolve a module's Moodle "purpose" (content, assessment, collaboration...).
+     *
+     * @param string $modname Module name.
+     * @return string
+     */
+    private static function get_purpose(string $modname): string {
+        return plugin_supports('mod', $modname, FEATURE_MOD_PURPOSE, MOD_PURPOSE_OTHER);
     }
 
     /**
@@ -358,15 +330,5 @@ class template_structure_view {
             'purpose'     => $purpose,
             'iconhtml'    => $iconhtml,
         ];
-    }
-
-    /**
-     * Resolve a module's Moodle "purpose" (content, assessment, collaboration...).
-     *
-     * @param string $modname Module name.
-     * @return string
-     */
-    private static function get_purpose(string $modname): string {
-        return plugin_supports('mod', $modname, FEATURE_MOD_PURPOSE, MOD_PURPOSE_OTHER);
     }
 }
