@@ -81,6 +81,7 @@ export const createGuidelineHandlers = (
                 body,
                 show: true,
                 removeOnClose: true,
+                templateContext: {classes: 'local-coursegen-guideline-preview'},
             });
         } catch (error) {
             Notification.exception(error);
