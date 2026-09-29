@@ -30,8 +30,11 @@
  * by stream events) and the reload rebuild (from the persisted plan) call the
  * SAME item renderer, so reload === live.
  *
- * Self-contained: the stream handlers and the reload replay import these
- * directly. State is module-level (one wizard per page).
+ * This module owns the live streaming state and its item builders
+ * (``buildItem``/``createBlock``, exported for reuse). Rebuilding a block from
+ * an authoritative, persisted plan - on reload, and for the approved-plan
+ * summary - lives in regen-block-reload.js, which imports those builders
+ * rather than duplicating them.
  *
  * @module     local_coursegen/local/courseai/ui/regen-block
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -80,18 +83,26 @@ const checkMarkup = () => '<span class="courseai-checklist-check">'
  * @param {boolean} [opts.done] - Render in the done (check) state.
  * @returns {HTMLElement}
  */
-const buildItem = ({id, title, iconType, detailHtml = '', done = false}) => {
+export const buildItem = ({id, title, iconType, detailHtml = '', done = false}) => {
     const item = document.createElement('li');
-    item.className = 'courseai-checklist-item ' + (done ? 'is-done' : 'is-loading');
+    let itemState = 'is-loading';
+    if (done) {
+        itemState = 'is-done';
+    }
+    item.className = 'courseai-checklist-item ' + itemState;
     item.setAttribute('data-regen-id', String(id || ''));
-    const icon = iconType
-        ? '<img class="cg-activity-icon" src="' + escapeHtml(getActivityIconUrl(iconType))
-            + '" alt="" onerror="this.style.display=\'none\'">'
-        : '';
+    let icon = '';
+    if (iconType) {
+        const iconUrl = getActivityIconUrl(iconType);
+        const escapedIconUrl = escapeHtml(iconUrl);
+        icon = '<img class="cg-activity-icon" src="' + escapedIconUrl
+            + '" alt="" onerror="this.style.display=\'none\'">';
+    }
+    const safeTitle = String(title || '');
     item.innerHTML = '<div class="courseai-checklist-head">'
         + checkMarkup()
         + icon
-        + '<span class="courseai-checklist-name">' + escapeHtml(String(title || '')) + '</span>'
+        + '<span class="courseai-checklist-name">' + escapeHtml(safeTitle) + '</span>'
         + '</div>'
         + '<div class="courseai-checklist-detail cg-log-md">' + detailHtml + '</div>';
     return item;
@@ -102,7 +113,7 @@ const buildItem = ({id, title, iconType, detailHtml = '', done = false}) => {
  *
  * @returns {HTMLElement|null} The <ul> list, or null when the feed is missing.
  */
-const createBlock = () => {
+export const createBlock = () => {
     const feed = document.getElementById('cgLogAfter') || document.getElementById('cgLog');
     if (!feed) {
         return null;
@@ -117,18 +128,36 @@ const createBlock = () => {
 };
 
 /**
+ * Find one activity by id within a single section.
+ *
+ * @param {Object} section
+ * @param {string} activityId
+ * @returns {Object|null}
+ */
+const findActivityInSection = (section, activityId) => {
+    for (const activity of (section.activities || [])) {
+        if (activity && activity.id === activityId) {
+            return activity;
+        }
+    }
+    return null;
+};
+
+/**
  * Locate an activity (and its section) by id anywhere in a plan tree.
+ *
+ * Exported for regen-block-reload.js, which rebuilds items from the same
+ * plan tree on reload and for the approved-plan summary.
  *
  * @param {Array} plan
  * @param {string} activityId
  * @returns {Object|null} The activity object, or null.
  */
-const findActivity = (plan, activityId) => {
+export const findActivity = (plan, activityId) => {
     for (const section of plan || []) {
-        for (const activity of (section.activities || [])) {
-            if (activity && activity.id === activityId) {
-                return activity;
-            }
+        const activity = findActivityInSection(section, activityId);
+        if (activity) {
+            return activity;
         }
     }
     return null;
@@ -228,7 +257,8 @@ const renderSectionEntry = (entry) => {
     if (!detail) {
         return;
     }
-    const activities = [...entry.activities.values()]
+    const activityValues = entry.activities.values();
+    const activities = [...activityValues]
         .sort((a, b) => (a.position || 0) - (b.position || 0))
         .map((a) => ({
             title: a.title,
@@ -236,11 +266,12 @@ const renderSectionEntry = (entry) => {
             description: a.description || '',
             detailedPlan: a.detailedPlan || null,
         }));
-    detail.innerHTML = renderMarkdown(formatSectionMd({
+    const sectionMd = formatSectionMd({
         name: '',
         description: entry.description || '',
         activities,
-    }));
+    });
+    detail.innerHTML = renderMarkdown(sectionMd);
 };
 
 /**
@@ -285,12 +316,16 @@ export const regenOnSectionActivity = (data) => {
         return;
     }
     const existing = entry.activities.get(data.id) || {};
+    let position = existing.position || 0;
+    if (typeof data.position === 'number') {
+        position = data.position;
+    }
     entry.activities.set(data.id, {
         title: data.title || existing.title || '',
         activity_type: data.activity_type || existing.activity_type || '',
         description: data.description || existing.description || '',
         detailedPlan: existing.detailedPlan || null,
-        position: typeof data.position === 'number' ? data.position : (existing.position || 0),
+        position,
     });
     renderSectionEntry(entry);
 };
@@ -312,7 +347,8 @@ export const regenOnSectionActivityDetail = (data) => {
         act.detailedPlan = data.data || act.detailedPlan || null;
     }
     renderSectionEntry(entry);
-    const all = [...entry.activities.values()];
+    const activityValues = entry.activities.values();
+    const all = [...activityValues];
     if (all.length && all.every((a) => a.detailedPlan)) {
         entry.item.classList.remove('is-loading');
         entry.item.classList.add('is-done');
@@ -333,109 +369,4 @@ export const finalizeRegen = () => {
     activeItems = new Map();
     activeDesc = new Map();
     sectionEntries = new Map();
-};
-
-/**
- * Build a COMPLETE regen block from an authoritative plan — used on RELOAD so
- * the panel looks identical to the live build. Each item renders done + clamped.
- *
- * @param {Object} params
- * @param {string} params.action - 'replan_activity' | 'replan_section'.
- * @param {string[]} params.targetIds - Regenerated activity/section UUIDs.
- * @param {Array} params.plan - Authoritative plan (from the round's ai_planned_structure).
- * @returns {void}
- */
-export const rebuildRegenFromPlan = ({action, targetIds, plan}) => {
-    const list = createBlock();
-    if (!list) {
-        return;
-    }
-    const ids = targetIds || [];
-    if (action === 'replan_section') {
-        const sections = (plan || []).filter((s) => s && !s.deleted && ids.indexOf(s.id) !== -1);
-        sections.forEach((section) => {
-            const md = renderMarkdown(formatSectionMd({
-                name: '',
-                description: section.description || '',
-                activities: (section.activities || [])
-                    .filter((a) => !a.deleted)
-                    .map((a) => ({
-                        title: a.title,
-                        activity_type: a.activity_type,
-                        description: a.description || '',
-                        detailedPlan: a.detailed_plan || null,
-                    })),
-            }));
-            const item = buildItem({id: section.id, title: section.name || '', detailHtml: md, done: true});
-            list.appendChild(item);
-            clampDetail(item.querySelector('.courseai-checklist-detail'));
-        });
-        return;
-    }
-    // replan_activity
-    ids.forEach((id) => {
-        const activity = findActivity(plan, id);
-        if (!activity) {
-            return;
-        }
-        const md = renderMarkdown(formatActivityDetailMd({
-            description: activity.description || '',
-            detailedPlan: activity.detailed_plan || null,
-        }));
-        const item = buildItem({
-            id,
-            title: activity.title || 'Activity',
-            iconType: activity.activity_type || '',
-            detailHtml: md,
-            done: true,
-        });
-        list.appendChild(item);
-        clampDetail(item.querySelector('.courseai-checklist-detail'));
-    });
-};
-
-/**
- * Render the COMPLETE approved plan as ONE single condensed element — every active,
- * named section (its name as a heading, description, activities and each activity's
- * detailed plan) concatenated into ONE Markdown body with ONE "Show more"/"Show
- * less" toggle, shown right after the "You approved the plan" turn. A single block
- * (not one clamped block per section) avoids the repetitive per-section toggles.
- * Live (cached plan) and reload (persisted approved snapshot) build it from the
- * same plan, so they are byte-for-byte identical.
- *
- * @param {Array} plan - The approved plan tree (detailed_plan on activities).
- * @returns {void}
- */
-export const renderApprovedPlanSummary = (plan) => {
-    const sections = (plan || []).filter((s) => s && !s.deleted && String(s.name || '').trim());
-    if (!sections.length) {
-        return;
-    }
-    const md = sections.map((section) => formatSectionMd({
-        name: section.name,
-        description: section.description || '',
-        activities: (section.activities || [])
-            .filter((a) => a && !a.deleted)
-            .map((a) => ({
-                title: a.title,
-                activity_type: a.activity_type,
-                description: a.description || '',
-                detailedPlan: a.detailed_plan || null,
-            })),
-    })).filter(Boolean).join('\n\n');
-    if (!md) {
-        return;
-    }
-    const feed = document.getElementById('cgLogAfter') || document.getElementById('cgLog');
-    if (!feed) {
-        return;
-    }
-    const container = document.createElement('div');
-    container.className = 'courseai-checklist cg-regen-block cg-approved-summary';
-    const detail = document.createElement('div');
-    detail.className = 'courseai-checklist-detail cg-log-md';
-    detail.innerHTML = renderMarkdown(md);
-    container.appendChild(detail);
-    feed.appendChild(container);
-    clampDetail(detail);
 };
