@@ -1,0 +1,60 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/preview_glossary_paging
+
+    A previewed glossary's paging bar, ported verbatim from
+    glossary_get_paging_bar().
+
+    Context variables required for this template:
+    * show - bool.
+    * separator - string, already-rendered HTML.
+    * hasprev, hasnext, showfirstpage, showfirstellipsis, showlastellipsis,
+      showlastpage, showspecial, specialselected - bool.
+
+    Context variables optional for this template:
+    * prevurl, prevlabel, nexturl, nextlabel - string, required when
+      hasprev/hasnext is true.
+    * firsturl - string, required when showfirstpage is true.
+    * lasturl, lastlabel - string, required when showlastpage is true.
+    * specialurl, specialtext - string, required when showspecial is true.
+    * pages - array of {url, label, current}.
+}}
+{{#show}}
+<div style="text-align:center">
+    <p>
+        {{#str}} page {{/str}}:
+        {{#hasprev}}&nbsp;(<a href="{{{prevurl}}}">{{prevlabel}}</a>)&nbsp;{{/hasprev}}
+        {{#showfirstpage}}
+        {{{separator}}}<a href="{{{firsturl}}}">1</a>
+        {{#showfirstellipsis}}{{{separator}}}...{{/showfirstellipsis}}
+        {{/showfirstpage}}
+        {{#pages}}
+        {{#current}}{{{separator}}}<b>{{label}}</b>{{/current}}
+        {{^current}}{{{separator}}}<a href="{{{url}}}">{{label}}</a>{{/current}}
+        {{/pages}}
+        {{#showlastellipsis}}{{{separator}}}...{{/showlastellipsis}}
+        {{#showlastpage}}{{{separator}}}<a href="{{{lasturl}}}">{{lastlabel}}</a>{{/showlastpage}}
+        {{#hasnext}}{{{separator}}}(<a href="{{{nexturl}}}">{{nextlabel}}</a>){{/hasnext}}
+        {{#showspecial}}
+        <br>
+        {{#specialselected}}{{{separator}}}<b>{{specialtext}}</b>{{/specialselected}}
+        {{^specialselected}}{{{separator}}}<a href="{{{specialurl}}}">{{specialtext}}</a>{{/specialselected}}
+        {{/showspecial}}
+    </p>
+</div>
+{{/show}}

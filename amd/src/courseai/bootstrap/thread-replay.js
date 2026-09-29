@@ -33,7 +33,7 @@
  */
 
 import {rebuildTranscriptFromPlan} from 'local_coursegen/local/courseai/ui/plan-transcript';
-import {rebuildRegenFromPlan, renderApprovedPlanSummary} from 'local_coursegen/local/courseai/ui/regen-block';
+import {rebuildRegenFromPlan, renderApprovedPlanSummary} from 'local_coursegen/local/courseai/ui/regen-block-reload';
 import {addedSectionTurn, addedActivityTurn} from 'local_coursegen/local/courseai/ui/added-turn';
 import {getActivityLabels} from 'local_coursegen/local/courseai/utils';
 
