@@ -40,6 +40,26 @@ use local_coursegen\local\models\template_section;
  */
 class template_export_service {
     /**
+     * Base of the synthetic cmids PR #108 gave virtual instances, before this
+     * plugin identified every element with a uid instead (template_export_uids).
+     *
+     * Unused by the current export path - kept only so
+     * instance_id_of() below still means what it says, for any code
+     * that still reasons about that older cmid scheme.
+     */
+    const INSTANCE_CMID_BASE = 900000;
+
+    /**
+     * The saved instance an old-scheme synthetic cmid stood for.
+     *
+     * @param int $cmid A cmid from a payload built the old way.
+     * @return int|null The template_instance id, or null for a real cmid.
+     */
+    public static function instance_id_of(int $cmid): ?int {
+        return $cmid >= self::INSTANCE_CMID_BASE ? $cmid - self::INSTANCE_CMID_BASE : null;
+    }
+
+    /**
      * Build the full init payload.
      *
      * @param int $templateid

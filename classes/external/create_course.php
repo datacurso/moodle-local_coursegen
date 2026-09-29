@@ -107,7 +107,10 @@ class create_course extends external_api {
             $overrides['category'] = $category;
         }
 
-        return create_course_service::create_course($session, $resultdata, $overrides);
+        $result = create_course_service::create_course($session, $resultdata, $overrides);
+        // Internal bookkeeping for the template flow; not part of this contract.
+        unset($result['generatedcms']);
+        return $result;
     }
 
     /**
