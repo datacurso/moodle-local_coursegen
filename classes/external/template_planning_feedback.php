@@ -57,7 +57,7 @@ class template_planning_feedback extends external_api {
             'sessionid' => new external_value(PARAM_INT, 'Local session id'),
             'action' => new external_value(PARAM_ALPHAEXT, 'accept or replan_activity'),
             'targetids' => new external_multiple_structure(
-                new external_value(PARAM_INT, 'Activity id to replan'),
+                new external_value(PARAM_ALPHANUMEXT, 'Activity uid to replan'),
                 'Activities to replan; empty means all of them',
                 VALUE_DEFAULT,
                 []
@@ -71,7 +71,7 @@ class template_planning_feedback extends external_api {
      *
      * @param int $sessionid
      * @param string $action
-     * @param int[] $targetids
+     * @param string[] $targetids
      * @param string $instruction
      * @return array
      */
@@ -96,7 +96,7 @@ class template_planning_feedback extends external_api {
 
         $intent = ['action' => $params['action']];
         if ($params['action'] === 'replan_activity') {
-            $intent['target_ids'] = array_values(array_map('intval', $params['targetids']));
+            $intent['target_ids'] = array_values($params['targetids']);
             $intent['instruction'] = $params['instruction'];
         }
 

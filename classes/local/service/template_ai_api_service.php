@@ -87,7 +87,7 @@ class template_ai_api_service {
      * answer is all this does; reopening the stream is what resumes it.
      *
      * @param string $threadid
-     * @param array $action {action: accept|replan_activity, target_ids?: int[], instruction?: string}
+     * @param array $action {action: accept|replan_activity, target_ids?: string[], instruction?: string}
      * @return array Decoded response.
      */
     public function send_feedback(string $threadid, array $action): array {
