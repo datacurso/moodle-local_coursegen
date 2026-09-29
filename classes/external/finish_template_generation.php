@@ -30,6 +30,7 @@ use external_function_parameters;
 use external_single_structure;
 use external_value;
 use local_coursegen\local\models\course_session;
+use local_coursegen\local\service\course_creation_guard;
 use local_coursegen\local\service\create_course_service;
 use local_coursegen\local\service\generated_activities_filter;
 use local_coursegen\local\service\template_ai_api_service;
@@ -96,6 +97,7 @@ class finish_template_generation extends external_api {
         $result['generated_activities'] = generated_activities_filter::only_ai_written($generatedactivities);
 
         $created = create_course_service::create_course($session, $result);
+        course_creation_guard::ensure_created($created);
         $courseid = $created['courseid'] ?? 0;
         $courseid = (int) $courseid;
         if ($courseid > 0 && $templateid !== null && $templateid > 0) {
