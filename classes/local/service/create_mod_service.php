@@ -38,10 +38,19 @@ class create_mod_service {
      * @param object $course Course object
      * @param int $sectionnum Section number where the module will be created
      * @param int|null $beforemod Before module id where the module will be created
+     * @param int|null $sourcecourseid Course whose files the payload's rich text may
+     *     reference by pluginfile URL (the template's base course); null lets any
+     *     course the current user can access through.
      *
      * @return object New course module.
      */
-    public static function create_from_ai_result($resultinfo, $course, $sectionnum, $beforemod = null) {
+    public static function create_from_ai_result(
+        $resultinfo,
+        $course,
+        $sectionnum,
+        $beforemod = null,
+        ?int $sourcecourseid = null
+    ) {
 
         self::validate_resultinfo($resultinfo);
 
@@ -53,13 +62,20 @@ class create_mod_service {
 
         $mform = self::create_mod_form_instance($modname, $data, $cw, $cm, $course);
 
-        $parameters = self::prepare_parameters($modname, $resultinfo['parameters'], $sectionnum, $beforemod, $module->id);
+        $parameters = self::prepare_parameters(
+            $modname,
+            $resultinfo['parameters'],
+            $sectionnum,
+            $beforemod,
+            $module->id,
+            $sourcecourseid
+        );
 
         $newcm = add_moduleinfo($parameters, $course, $mform);
 
         $modsettings = $parameters->mod_settings;
 
-        self::apply_mod_settings($modname, $newcm, $modsettings);
+        self::apply_mod_settings($modname, $newcm, $modsettings, $sourcecourseid);
 
         return $newcm;
     }
@@ -152,10 +168,18 @@ class create_mod_service {
      * @param int $sectionnum Target section number.
      * @param int|null $beforemod Optional cm id to insert before.
      * @param int $moduleid Module id from 'modules' table.
+     * @param int|null $sourcecourseid Course whose files may be copied into the editors' drafts.
      * @return object Parameters ready for add_moduleinfo().
      */
-    private static function prepare_parameters($modname, $rawparameters, $sectionnum, $beforemod, $moduleid) {
-        $cleanedparameters = text_editor_parameter_cleaner::clean_text_editor_objects($rawparameters);
+    private static function prepare_parameters(
+        $modname,
+        $rawparameters,
+        $sectionnum,
+        $beforemod,
+        $moduleid,
+        ?int $sourcecourseid = null
+    ) {
+        $cleanedparameters = text_editor_parameter_cleaner::clean_text_editor_objects($rawparameters, $sourcecourseid);
         $parameters = (object)$cleanedparameters;
         $parameters->section = $sectionnum;
         $parameters->beforemod = $beforemod;
@@ -254,9 +278,15 @@ class create_mod_service {
      * @param string $modname Module plugin name.
      * @param object $newcm Newly created course module.
      * @param array|null $modsettings Settings to apply.
+     * @param int|null $sourcecourseid Course whose files the settings' rich text may reference.
      * @return void
      */
-    private static function apply_mod_settings(string $modname, $newcm, ?array $modsettings): void {
+    private static function apply_mod_settings(
+        string $modname,
+        $newcm,
+        ?array $modsettings,
+        ?int $sourcecourseid = null
+    ): void {
         if (empty($modsettings)) {
             return;
         }
@@ -271,7 +301,7 @@ class create_mod_service {
         }
 
         /** @var base_settings $modsettingsinstance */
-        $modsettingsinstance = new $classpath($newcm, $modsettings);
+        $modsettingsinstance = new $classpath($newcm, $modsettings, $sourcecourseid);
         $modsettingsinstance->add_settings();
     }
 

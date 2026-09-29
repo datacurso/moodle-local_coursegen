@@ -18,6 +18,7 @@ namespace local_coursegen\local\service;
 
 use core_course_category;
 use local_coursegen\local\models\course_session;
+use local_coursegen\local\models\template;
 
 /**
  * Service responsible for creating a course from an AI planning session.
@@ -92,13 +93,18 @@ class create_course_service {
             // activity loop can materialize each one lazily, in presentation order.
             $subsections = self::index_declared_subsections($resultdata['subsections_info'] ?? []);
 
+            // In template mode the payload's rich text may reference files of
+            // the template's base course; only those may be copied over.
+            $sourcecourseid = self::template_course_id_of($session);
+
             // Process generated activities if provided in the response.
             $activityerrors = [];
             if (!empty($resultdata['generated_activities'])) {
                 $activityerrors = self::process_generated_activities(
                     $course->id,
                     $resultdata['generated_activities'],
-                    $subsections
+                    $subsections,
+                    $sourcecourseid
                 );
             }
 
@@ -197,6 +203,7 @@ class create_course_service {
             $coursedata->fullname = get_string('createwithai', 'local_coursegen');
             $coursedata->shortname = 'courseai-' . time();
             $coursedata->category = $defaultcategoryid;
+            $coursedata->enablecompletion = self::enablecompletion_for(null);
             return $coursedata;
         }
 
@@ -215,8 +222,64 @@ class create_course_service {
         }
 
         $coursedata->category = (int)($config['category'] ?? $defaultcategoryid);
+        $coursedata->enablecompletion = self::enablecompletion_for($config);
 
         return $coursedata;
+    }
+
+    /**
+     * Whether the new course tracks activity completion.
+     *
+     * create_course() inserts the record as given, so an unset value falls to
+     * the DB column default (0), NOT to the site's course default the edit
+     * form applies. With completion disabled on the course, add_moduleinfo()
+     * silently ignores every completion setting of every generated activity
+     * (completion_info::is_enabled() is false), so the value must be explicit.
+     * The payload may name it; otherwise the site's default for new courses
+     * applies, as it does when a course is created through the UI.
+     *
+     * @param array|null $config course_configuration from the payload.
+     * @return int 0 or 1.
+     */
+    private static function enablecompletion_for(?array $config): int {
+        global $CFG;
+
+        if (empty($CFG->enablecompletion)) {
+            return 0;
+        }
+        if (is_array($config) && isset($config['enablecompletion'])) {
+            return (int) (bool) $config['enablecompletion'];
+        }
+        return (int) (bool) get_config('moodlecourse', 'enablecompletion');
+    }
+
+    /**
+     * The base course of the template this session was started from, if any.
+     *
+     * Template-mode sessions store their template id in coursedata; a
+     * free-form planning session has none.
+     *
+     * @param course_session $session
+     * @return int|null Base course id, or null when not a template session.
+     */
+    public static function template_course_id_of(course_session $session): ?int {
+        $templateid = self::template_id_of($session);
+        if ($templateid <= 0) {
+            return null;
+        }
+        $template = template::get_record(['id' => $templateid]);
+        return $template ? (int) $template->get('courseid') : null;
+    }
+
+    /**
+     * Which template this session was started from.
+     *
+     * @param course_session $session
+     * @return int 0 when the session is not a template session.
+     */
+    public static function template_id_of(course_session $session): int {
+        $data = json_decode((string) $session->get('coursedata'), true);
+        return (int) ($data['templateid'] ?? 0);
     }
 
     /**
@@ -529,9 +592,15 @@ class create_course_service {
      * @param int $courseid Course ID.
      * @param array $activities Generated activities from API.
      * @param array $subsections Declared subsections index, mutated as they materialize.
+     * @param int|null $sourcecourseid Course whose files the payload may reference (template base course).
      * @return array Activity creation errors.
      */
-    private static function process_generated_activities(int $courseid, array $activities, array &$subsections = []): array {
+    private static function process_generated_activities(
+        int $courseid,
+        array $activities,
+        array &$subsections = [],
+        ?int $sourcecourseid = null
+    ): array {
         global $CFG;
 
         require_once($CFG->dirroot . '/course/modlib.php');
@@ -573,7 +642,7 @@ class create_course_service {
             }
 
             try {
-                create_mod_service::create_from_ai_result($activity, $course, $sectionnum);
+                create_mod_service::create_from_ai_result($activity, $course, $sectionnum, null, $sourcecourseid);
             } catch (\Throwable $e) {
                 $resource = (string)($activity['resource_type'] ?? 'unknown');
                 $title = (string)($activity['parameters']['name'] ?? $activity['parameters']['title'] ?? '');

@@ -46,9 +46,12 @@ class text_editor_parameter_cleaner {
      * 'format' to 1, and assigning a new unused draft itemid.
      *
      * @param array $parameters Activity parameters to clean
+     * @param int|null $sourcecourseid Course whose files, referenced by pluginfile URL in the
+     *     text, may be copied into the editor's draft area (the template's base course);
+     *     null allows any course the current user can access.
      * @return array Cleaned parameters
      */
-    public static function clean_text_editor_objects($parameters) {
+    public static function clean_text_editor_objects($parameters, ?int $sourcecourseid = null) {
         if (!is_array($parameters)) {
             return $parameters;
         }
@@ -57,18 +60,37 @@ class text_editor_parameter_cleaner {
             if (is_array($value)) {
                 // Check if this is a text editor object (has 'text' key).
                 if (self::is_text_editor_object($value)) {
-                    $parameters[$key] = self::normalize_text_editor_object($value);
+                    $parameters[$key] = self::normalize_text_editor_object($value, $sourcecourseid);
                 } else if (self::is_array_of_text_editor_objects($value)) {
                     // Handle arrays of text editor objects (like feedbacktext).
-                    $parameters[$key] = self::clean_text_editor_array($value);
+                    $parameters[$key] = self::clean_text_editor_array($value, $sourcecourseid);
                 } else {
                     // Recursively clean nested arrays.
-                    $parameters[$key] = self::clean_text_editor_objects($value);
+                    $parameters[$key] = self::clean_text_editor_objects($value, $sourcecourseid);
                 }
             }
         }
 
         return $parameters;
+    }
+
+    /**
+     * Prepare one rich-text value for a draft-backed editor field.
+     *
+     * Downloads generated images, copies the mold files the text references
+     * into the draft area (rewriting them to @@PLUGINFILE@@) and strips the
+     * markers the AI service left unresolved.
+     *
+     * @param string $text Editor text.
+     * @param int $itemid Draft itemid of the field's editor.
+     * @param int|null $sourcecourseid Allowed source course for referenced files, or null.
+     * @return string
+     */
+    public static function prepare_editor_text(string $text, int $itemid, ?int $sourcecourseid = null): string {
+        $text = self::normalize_escaped_html_quotes($text);
+        $text = self::replace_generated_images_in_text($text, $itemid);
+        $text = mold_file_copier::copy_pluginfile_urls_to_draft($text, $itemid, $sourcecourseid);
+        return mold_file_copier::strip_image_markers($text);
     }
 
     /**
@@ -107,17 +129,16 @@ class text_editor_parameter_cleaner {
      * Normalize a single text editor object.
      *
      * @param array $editorobject Text editor object to normalize
+     * @param int|null $sourcecourseid Allowed source course for referenced files, or null.
      * @return array Normalized text editor object
      */
-    private static function normalize_text_editor_object($editorobject) {
+    private static function normalize_text_editor_object($editorobject, ?int $sourcecourseid = null) {
         $itemid = (int)($editorobject['itemid'] ?? 0);
         if ($itemid <= 0) {
             $itemid = file_get_unused_draft_itemid();
         }
 
-        $text = (string)($editorobject['text'] ?? '');
-        $text = self::normalize_escaped_html_quotes($text);
-        $text = self::replace_generated_images_in_text($text, $itemid);
+        $text = self::prepare_editor_text((string)($editorobject['text'] ?? ''), $itemid, $sourcecourseid);
 
         return [
             'text' => $text,
@@ -279,12 +300,18 @@ class text_editor_parameter_cleaner {
             return false;
         }
 
-        // Typical generated image paths are absolute filesystem paths under resource files.
-        if (str_contains($source, '/generated_images/')) {
+        // Typical generated image paths are absolute filesystem paths under
+        // resource files. Only a strict character class is accepted and no
+        // path segment may climb (".."): the path is forwarded to the
+        // service's download endpoint verbatim.
+        if (preg_match('#(^|/)\.\.(/|$)#', $source)) {
+            return false;
+        }
+        if (preg_match('#^(/[A-Za-z0-9._-]+)*/generated_images/[A-Za-z0-9._/-]+$#', $source)) {
             return true;
         }
 
-        return (bool)preg_match('#^/(tmp|var|home|data)/#', $source);
+        return (bool)preg_match('#^/(tmp|var|home|data)/[A-Za-z0-9._/-]+$#', $source);
     }
 
     /**
@@ -335,17 +362,18 @@ class text_editor_parameter_cleaner {
      * Clean an array of text editor objects.
      *
      * @param array $editorarray Array of text editor objects
+     * @param int|null $sourcecourseid Allowed source course for referenced files, or null.
      * @return array Cleaned array of text editor objects
      */
-    private static function clean_text_editor_array($editorarray) {
+    private static function clean_text_editor_array($editorarray, ?int $sourcecourseid = null) {
         $cleaned = [];
 
         foreach ($editorarray as $editorobject) {
             if (self::is_text_editor_object($editorobject)) {
-                $cleaned[] = self::normalize_text_editor_object($editorobject);
+                $cleaned[] = self::normalize_text_editor_object($editorobject, $sourcecourseid);
             } else {
                 // If it's not a text editor object, keep it as is but recursively clean.
-                $cleaned[] = self::clean_text_editor_objects($editorobject);
+                $cleaned[] = self::clean_text_editor_objects($editorobject, $sourcecourseid);
             }
         }
 

@@ -30,15 +30,21 @@ abstract class base_settings {
     /** @var array Module settings object */
     protected array $modsettings;
 
+    /** @var int|null Course whose files the settings' rich text may reference by pluginfile URL. */
+    protected ?int $sourcecourseid;
+
     /**
      * Constructor.
      *
      * @param object $cm Course module
      * @param array $modsettings Module settings
+     * @param int|null $sourcecourseid Course whose files may be copied into the new module
+     *     (the template's base course); null lets any course the user can access through.
      */
-    public function __construct(object $cm, array $modsettings) {
+    public function __construct(object $cm, array $modsettings, ?int $sourcecourseid = null) {
         $this->cm = $cm;
         $this->modsettings = $modsettings;
+        $this->sourcecourseid = $sourcecourseid;
     }
 
     /**
