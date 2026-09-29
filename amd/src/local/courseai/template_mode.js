@@ -38,6 +38,7 @@ import {
     finishTemplateGeneration,
 } from './template/repository';
 import {runGenerationStream} from './template/generation_stream';
+import {refreshPreviewLinks, usePreviewSession} from './template/preview';
 import {
     createTemplateState,
     applyStructureResponse,
@@ -92,10 +93,15 @@ const runGeneration = async(tplState, tplSelect, genBtn) => {
             tplState.prompt || '',
             parseInt(tplState.syllabusdraftitemid || 0, 10) || 0
         );
+        usePreviewSession(started.sessionid);
         const created = await runGenerationStream(
             started.streamurl,
             () => finishTemplateGeneration(started.sessionid),
-            tplState.prompt || ''
+            started.sessionid,
+            {
+                prompt: tplState.prompt || '',
+                templateName: tplSelect?.options[tplSelect.selectedIndex]?.text || '',
+            }
         );
         window.location.href = created.courseurl;
     } catch (e) {
@@ -173,27 +179,28 @@ export const wireTemplateMode = (state) => {
     const rerenderStructure = async() => {
         const {addSectionLabel, statsTemplate} = await getLabels();
         await renderStructure(container, tplState, {addSection: addSectionLabel});
+        refreshPreviewLinks();
         updateStats(tplState, statsTemplate);
     };
 
     wireStructureEvents(container, {
-        onToggleSection: async(sectionId) => {
-            toggleSectionCollapsed(tplState, sectionId);
+        onToggleSection: async(sectionIndex) => {
+            toggleSectionCollapsed(tplState, sectionIndex);
             try {
                 await rerenderStructure();
             } catch (e) {
                 // Revert so the in-memory model matches what is still on screen.
-                toggleSectionCollapsed(tplState, sectionId);
+                toggleSectionCollapsed(tplState, sectionIndex);
                 Notification.exception(e);
             }
         },
-        onOpenChooser: (sectionId, position) => {
-            openActivityChooser(sectionId, position);
+        onOpenChooser: (sectionIndex, position) => {
+            openActivityChooser(sectionIndex, position);
         },
-        onRemoveActivity: async(sectionId, activityIndex) => {
-            const section = tplState.sections.find((s) => s.id === sectionId);
+        onRemoveActivity: async(sectionIndex, activityIndex) => {
+            const section = tplState.sections[sectionIndex];
             const removedActivity = section ? section.activities[activityIndex] : null;
-            if (removeActivity(tplState, sectionId, activityIndex)) {
+            if (removeActivity(tplState, sectionIndex, activityIndex)) {
                 try {
                     await rerenderStructure();
                 } catch (e) {
@@ -226,20 +233,22 @@ export const wireTemplateMode = (state) => {
         },
     });
 
-    wireChooserModal(async(sectionId, position, modname, extras) => {
+    wireChooserModal(async(sectionIndex, position, modname, extras) => {
         const activity = tplState.allowedActivities.find((a) => a.modname === modname);
         if (!activity) {
             return;
         }
-        // InsertActivity assigns this id (via the pre-decrement of nextActivityId)
-        // to the new row — captured so the catch below can find and undo it.
-        const pendingActivityId = tplState.nextActivityId;
-        if (insertActivity(tplState, sectionId, position, {...activity, ...(extras || {})})) {
+        const inserted = insertActivity(tplState, sectionIndex, position, {...activity, ...(extras || {})});
+        if (inserted) {
             try {
                 await rerenderStructure();
             } catch (e) {
-                const section = tplState.sections.find((s) => s.id === sectionId);
-                const idx = section ? section.activities.findIndex((a) => a.id === pendingActivityId) : -1;
+                // Undo the insertion so state matches the still-rendered DOM.
+                const section = tplState.sections[sectionIndex];
+                let idx = -1;
+                if (section) {
+                    idx = section.activities.indexOf(inserted);
+                }
                 if (idx !== -1) {
                     section.activities.splice(idx, 1);
                 }
@@ -418,6 +427,7 @@ const loadTemplateStructure = async(templateId, tplState, container, state, requ
 
         const {addSectionLabel, statsTemplate} = await getLabels();
         await renderStructure(container, tplState, {addSection: addSectionLabel});
+        refreshPreviewLinks();
         updateStats(tplState, statsTemplate);
         await renderChooserGrid(tplState.allowedActivities);
         await renderLimitsBanner(limitsEl, limitsBadge, tplState);
