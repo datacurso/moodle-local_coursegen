@@ -93,11 +93,11 @@ export const renderChooserGrid = async(allowedActivities) => {
 /**
  * Open the chooser modal targeting a given section/position.
  *
- * @param {number} sectionId
+ * @param {number} sectionIndex - The target section's position in state.sections.
  * @param {number|null} position - 0-based insert index, or null to append.
  */
-export const openActivityChooser = (sectionId, position) => {
-    pendingTarget = {sectionId, position};
+export const openActivityChooser = (sectionIndex, position) => {
+    pendingTarget = {sectionIndex, position};
     const search = document.getElementById(SEARCH_ID);
     if (search) {
         search.value = '';
@@ -249,7 +249,7 @@ const openUploadPicker = async() => {
  * Wire the prompt panel below the grid: textarea autoresize, file upload and
  * remove, and the confirm button that performs the actual insertion.
  *
- * @param {Function} onPick - (sectionId, position, modname, extras) => void
+ * @param {Function} onPick - (sectionIndex, position, modname, extras) => void
  */
 const wireChooserPanel = (onPick) => {
     const promptEl = document.querySelector(Selectors.regions.chooserPrompt);
@@ -291,7 +291,7 @@ const wireChooserPanel = (onPick) => {
                 draftitemid: upload.draftitemid || 0,
                 filename: upload.filename || '',
             };
-            onPick(pendingTarget.sectionId, pendingTarget.position, pendingSelection, extras);
+            onPick(pendingTarget.sectionIndex, pendingTarget.position, pendingSelection, extras);
             pendingTarget = null;
             jQuery(MODAL_SELECTOR).modal('hide');
         });
@@ -309,7 +309,7 @@ const wireChooserPanel = (onPick) => {
  * re-renders it. Clicking a grid card only selects it (revealing the prompt
  * panel); onPick fires when the panel's confirm button is pressed.
  *
- * @param {Function} onPick - (sectionId, position, modname, extras) => void where
+ * @param {Function} onPick - (sectionIndex, position, modname, extras) => void where
  *     extras = {prompt: string, generateimages: 0|1, draftitemid: number, filename: string}
  */
 export const wireChooserModal = (onPick) => {
