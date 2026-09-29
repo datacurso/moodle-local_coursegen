@@ -184,9 +184,10 @@ class mold_file_copier {
      * Whether the current user may copy this file.
      *
      * The file must sit in an allowed mold area of a course or module
-     * context. With a source course given it must be that course; otherwise
-     * the current user must be able to manage activities in the file's
-     * course (a mere participant cannot lift its files).
+     * context, in a course the current user can manage activities in - with a
+     * source course given, it must additionally be that exact course, so a
+     * template flow can never be pointed at a different course's files by a
+     * crafted URL in the AI service's response.
      *
      * @param stored_file $file
      * @param int|null $sourcecourseid
@@ -209,8 +210,8 @@ class mold_file_copier {
         }
         $courseid = (int) $coursecontext->instanceid;
 
-        if ($sourcecourseid !== null) {
-            return $courseid === $sourcecourseid;
+        if ($sourcecourseid !== null && $courseid !== $sourcecourseid) {
+            return false;
         }
 
         return has_capability('moodle/course:manageactivities', $coursecontext);

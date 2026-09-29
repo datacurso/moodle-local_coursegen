@@ -149,6 +149,28 @@ final class mold_file_copier_test extends \advanced_testcase {
     }
 
     /**
+     * An enrolled student is refused even when the file's course IS the named source course.
+     *
+     * Naming the source course scopes WHICH course's files may be copied; it is
+     * not by itself a grant to copy them. Without this, any enrolled student
+     * could pull an instructor's mold files merely by being in the right course.
+     */
+    public function test_enrolled_student_is_refused_even_with_matching_source_course(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        [$course, $url] = $this->base_course_with_label_image();
+        $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
+        $this->setUser($student);
+        $draftitemid = file_get_unused_draft_itemid();
+
+        $text = '<img src="' . $url . '">';
+        $result = mold_file_copier::copy_pluginfile_urls_to_draft($text, $draftitemid, (int) $course->id);
+
+        $this->assertSame($text, $result);
+        $this->assertSame([], $this->draft_files($draftitemid));
+    }
+
+    /**
      * Files outside the mold areas are never copied, even from the allowed course by an admin.
      */
     public function test_refuses_files_outside_allowed_areas(): void {
