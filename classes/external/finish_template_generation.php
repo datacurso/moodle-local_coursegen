@@ -114,7 +114,9 @@ class finish_template_generation extends external_api {
      * @return int|null Null when the session predates this field.
      */
     private static function template_id_of(course_session $session): ?int {
-        $data = json_decode((string) $session->get('coursedata'), true);
+        $coursedata = $session->get('coursedata');
+        $coursedata = (string) $coursedata;
+        $data = json_decode($coursedata, true);
         $templateid = $data['templateid'] ?? null;
         if ($templateid !== null) {
             $templateid = (int) $templateid;
