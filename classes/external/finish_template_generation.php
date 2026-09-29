@@ -30,9 +30,10 @@ use external_function_parameters;
 use external_single_structure;
 use external_value;
 use local_coursegen\local\models\course_session;
+use local_coursegen\local\service\course_creation_guard;
 use local_coursegen\local\service\create_course_service;
+use local_coursegen\local\service\generated_activities_filter;
 use local_coursegen\local\service\template_ai_api_service;
-use local_coursegen\local\service\template_export_service;
 use local_coursegen\local\service\template_keep_copier;
 
 defined('MOODLE_INTERNAL') || die();
@@ -92,11 +93,14 @@ class finish_template_generation extends external_api {
         // kept ones already exist, fully configured and with their files, in
         // the base course - they are copied below instead of being rebuilt
         // from a JSON description that could never carry all of that.
-        $result['generated_activities'] = self::ai_generated_only($result['generated_activities'] ?? []);
+        $generatedactivities = $result['generated_activities'] ?? [];
+        $result['generated_activities'] = generated_activities_filter::only_ai_written($generatedactivities);
 
         $created = create_course_service::create_course($session, $result);
-        $courseid = (int) ($created['courseid'] ?? 0);
-        if ($courseid > 0 && $templateid > 0) {
+        course_creation_guard::ensure_created($created);
+        $courseid = $created['courseid'] ?? 0;
+        $courseid = (int) $courseid;
+        if ($courseid > 0 && $templateid !== null && $templateid > 0) {
             template_keep_copier::copy_into($templateid, $courseid);
         }
 
@@ -107,33 +111,15 @@ class finish_template_generation extends external_api {
      * Which template this session was started from.
      *
      * @param course_session $session
-     * @return int 0 when the session predates this field.
+     * @return int|null Null when the session predates this field.
      */
-    private static function template_id_of(course_session $session): int {
+    private static function template_id_of(course_session $session): ?int {
         $data = json_decode((string) $session->get('coursedata'), true);
-        return (int) ($data['templateid'] ?? 0);
-    }
-
-    /**
-     * Drop the activities that are only travelling as context.
-     *
-     * A "keep"/"reference" activity comes back exactly as it was submitted -
-     * a description of an activity that already exists elsewhere, not
-     * something to build. Only the entries the AI actually generated (the
-     * template's virtual instances, which carry a synthetic cmid) are created
-     * from the payload.
-     *
-     * @param array $activities
-     * @return array
-     */
-    private static function ai_generated_only(array $activities): array {
-        $generated = [];
-        foreach ($activities as $activity) {
-            if ((int) ($activity['cmid'] ?? 0) >= template_export_service::INSTANCE_CMID_BASE) {
-                $generated[] = $activity;
-            }
+        $templateid = $data['templateid'] ?? null;
+        if ($templateid !== null) {
+            $templateid = (int) $templateid;
         }
-        return $generated;
+        return $templateid;
     }
 
     /**
@@ -144,10 +130,14 @@ class finish_template_generation extends external_api {
      * @return array
      */
     private static function created_response(int $courseid, string $wwwroot): array {
+        $courseurl = '';
+        if ($courseid > 0) {
+            $courseurl = $wwwroot . '/course/view.php?id=' . $courseid;
+        }
         return [
             'status' => 'completed',
             'courseid' => $courseid,
-            'courseurl' => $courseid > 0 ? $wwwroot . '/course/view.php?id=' . $courseid : '',
+            'courseurl' => $courseurl,
         ];
     }
 

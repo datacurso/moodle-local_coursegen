@@ -50,10 +50,9 @@ trait json_store_writes {
      * @param array $conditions
      */
     public function delete_records(string $table, array $conditions = []): void {
-        $this->rows[$table] = array_values(array_filter(
-            $this->rows[$table] ?? [],
-            fn(stdClass $row): bool => !$this->matches($row, $conditions)
-        ));
+        $rows = $this->rows[$table] ?? [];
+        $kept = array_filter($rows, fn(stdClass $row): bool => !$this->matches($row, $conditions));
+        $this->rows[$table] = array_values($kept);
     }
 
     /**
@@ -70,8 +69,11 @@ trait json_store_writes {
      * @return bool Whether a row with that id was there to change.
      */
     public function set(string $table, $id, string $column, $value): bool {
-        foreach ($this->rows[$table] ?? [] as $row) {
-            if ((string) ($row->id ?? '') === (string) $id) {
+        $rows = $this->rows[$table] ?? [];
+        foreach ($rows as $row) {
+            $rowid = $row->id ?? '';
+            $rowid = (string) $rowid;
+            if ($rowid === (string) $id) {
                 $row->$column = $value;
                 return true;
             }

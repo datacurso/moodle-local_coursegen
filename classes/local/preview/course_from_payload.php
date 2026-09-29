@@ -52,25 +52,19 @@ class course_from_payload {
      * @return array
      */
     public static function content(array $payload, array $summaries, int $sessionid, ?int $only = null): array {
-        $bysection = [];
-        foreach (($payload['activities'] ?? []) as $activity) {
-            // A mould is read to write the activities built on it and is never
-            // one of them, so it is not part of the course being previewed.
-            if ((($activity['template_behavior'] ?? [])['action'] ?? '') === 'template') {
-                continue;
-            }
-            $number = (int) (($activity['parameters'] ?? [])['section'] ?? 0);
-            $bysection[$number][] = $activity;
-        }
+        $bysection = self::activities_by_section($payload);
 
         $sections = [];
         $initial = null;
-        foreach (($payload['sections_info'] ?? []) as $info) {
-            $number = (int) ($info['section'] ?? 0);
+        $sectionsinfo = $payload['sections_info'] ?? [];
+        foreach ($sectionsinfo as $info) {
+            $number = $info['section'] ?? 0;
+            $number = (int) $number;
             if ($only !== null && $number !== $only && $number !== 0) {
                 continue;
             }
-            $section = self::section($info, $bysection[$number] ?? [], $summaries, $sessionid);
+            $sectionactivities = $bysection[$number] ?? [];
+            $section = self::section($info, $sectionactivities, $summaries, $sessionid);
             if ($number === 0 && $only !== null) {
                 continue;
             }
@@ -81,14 +75,44 @@ class course_from_payload {
             $sections[] = $section;
         }
 
+        $courseconfiguration = $payload['course_configuration'] ?? [];
+        $format = $courseconfiguration['format'] ?? 'topics';
+        $format = (string) $format;
+
         return [
             // The class the list of sections carries, which is the format's
             // own name: a format styles its list by it.
-            'format' => (string) (($payload['course_configuration'] ?? [])['format'] ?? 'topics'),
+            'format' => $format,
             'initialsection' => $initial,
             'sections' => $sections,
             'hassections' => !empty($sections),
         ];
+    }
+
+    /**
+     * Every real activity of the payload, grouped by its own section number.
+     *
+     * A mould is read to write the activities built on it and is never one of
+     * them, so it is not part of the course being previewed.
+     *
+     * @param array $payload
+     * @return array Section number => activities.
+     */
+    private static function activities_by_section(array $payload): array {
+        $bysection = [];
+        $activities = $payload['activities'] ?? [];
+        foreach ($activities as $activity) {
+            $templatebehavior = $activity['template_behavior'] ?? [];
+            $action = $templatebehavior['action'] ?? '';
+            if ($action === 'template') {
+                continue;
+            }
+            $parameters = $activity['parameters'] ?? [];
+            $number = $parameters['section'] ?? 0;
+            $number = (int) $number;
+            $bysection[$number][] = $activity;
+        }
+        return $bysection;
     }
 
     /**
@@ -101,17 +125,23 @@ class course_from_payload {
      * @return array
      */
     private static function section(array $info, array $activities, array $summaries, int $sessionid): array {
-        $number = (int) ($info['section'] ?? 0);
-        $name = (string) ($info['name'] ?? '');
+        $number = $info['section'] ?? 0;
+        $number = (int) $number;
+        $name = $info['name'] ?? '';
+        $name = (string) $name;
+        $id = $info['uid'] ?? $number;
+        $id = (string) $id;
+        $summarytext = self::summary($info);
 
         $cms = [];
         foreach ($activities as $activity) {
-            $cms[] = ['cmitem' => self::activity($activity, $summaries, $sessionid)];
+            $cmitem = self::activity($activity, $summaries, $sessionid);
+            $cms[] = ['cmitem' => $cmitem];
         }
 
         return [
             'num' => $number,
-            'id' => (string) ($info['uid'] ?? $number),
+            'id' => $id,
             'sectionname' => $name,
             'header' => [
                 'name' => $name,
@@ -125,7 +155,7 @@ class course_from_payload {
             'ishidden' => false,
             'iscurrent' => false,
             'contentcollapsed' => false,
-            'summary' => ['summarytext' => self::summary($info)],
+            'summary' => ['summarytext' => $summarytext],
         ];
     }
 
@@ -141,11 +171,14 @@ class course_from_payload {
     private static function summary(array $info): string {
         global $PAGE;
 
-        $text = (string) ($info['summary'] ?? '');
+        $text = $info['summary'] ?? '';
+        $text = (string) $text;
         if (trim($text) === '') {
             return '';
         }
-        return format_text($text, (int) ($info['summaryformat'] ?? FORMAT_HTML), ['context' => $PAGE->context]);
+        $summaryformat = $info['summaryformat'] ?? FORMAT_HTML;
+        $summaryformat = (int) $summaryformat;
+        return format_text($text, $summaryformat, ['context' => $PAGE->context]);
     }
 
     /**
@@ -159,17 +192,26 @@ class course_from_payload {
     private static function activity(array $activity, array $summaries, int $sessionid): array {
         global $OUTPUT;
 
-        $uid = (string) ($activity['uid'] ?? '');
-        $modname = (string) ($activity['resource_type'] ?? '');
-        $name = (string) (($activity['parameters'] ?? [])['name'] ?? '');
-        $writing = (($activity['template_behavior'] ?? [])['action'] ?? '') === 'modify';
+        $uid = $activity['uid'] ?? '';
+        $uid = (string) $uid;
+        $modname = $activity['resource_type'] ?? '';
+        $modname = (string) $modname;
+        $parameters = $activity['parameters'] ?? [];
+        $name = $parameters['name'] ?? '';
+        $name = (string) $name;
+        $templatebehavior = $activity['template_behavior'] ?? [];
+        $action = $templatebehavior['action'] ?? '';
+        $writing = ($action === 'modify');
 
-        $url = (new moodle_url('/local/coursegen/activity_preview.php', [
+        $url = new moodle_url('/local/coursegen/activity_preview.php', [
             'sessionid' => $sessionid,
             'uid' => $uid,
-        ]))->out(false);
+        ]);
+        $url = $url->out(false);
 
-        $summary = trim((string) ($summaries[$uid] ?? ''));
+        $summary = $summaries[$uid] ?? '';
+        $summary = (string) $summary;
+        $summary = trim($summary);
 
         $activitybadge = null;
         if ($writing) {
@@ -191,22 +233,26 @@ class course_from_payload {
             $extraclasses = 'local-coursegen-planned';
         }
 
+        $displayname = format_string($name);
+        $namelink = $OUTPUT->render_from_template('local_coursegen/preview_activity_name_link', [
+            'url' => $url,
+            'name' => $displayname,
+        ]);
+        $icon = self::icon($modname);
+
         return [
             'cmformat' => [
                 'hasname' => true,
-                'activityname' => format_string($name),
+                'activityname' => $displayname,
                 'cmname' => [
                     'url' => $url,
                     'modname' => $modname,
                     'textclasses' => '',
-                    'activityicon' => self::icon($modname),
+                    'activityicon' => $icon,
                     // The name as a course page carries it: the value on its
                     // own, because there is nothing here to edit in place.
                     'activityname' => [
-                        'displayvalue' => $OUTPUT->render_from_template('local_coursegen/preview_activity_name_link', [
-                            'url' => $url,
-                            'name' => format_string($name),
-                        ]),
+                        'displayvalue' => $namelink,
                     ],
                     'activitybadge' => $activitybadge,
                 ],
@@ -230,10 +276,15 @@ class course_from_payload {
     private static function icon(string $modname): array {
         global $OUTPUT;
 
+        $iconurl = $OUTPUT->image_url('monologo', $modname);
+        $iconurl = $iconurl->out(false);
+        $purpose = plugin_supports('mod', $modname, FEATURE_MOD_PURPOSE, MOD_PURPOSE_OTHER);
+        $pluginname = get_string('pluginname', 'mod_' . $modname);
+
         return [
-            'icon' => $OUTPUT->image_url('monologo', $modname)->out(false),
-            'purpose' => plugin_supports('mod', $modname, FEATURE_MOD_PURPOSE, MOD_PURPOSE_OTHER),
-            'pluginname' => get_string('pluginname', 'mod_' . $modname),
+            'icon' => $iconurl,
+            'purpose' => $purpose,
+            'pluginname' => $pluginname,
             'showtooltip' => true,
             'branded' => false,
         ];
