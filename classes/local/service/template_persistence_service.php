@@ -107,6 +107,7 @@ class template_persistence_service {
      */
     private static function create_instance(int $templateid, int $sectionid, array $instdata): void {
         $instance = new template_instance(0);
+        $instance->set('uid', \core\uuid::generate());
         $instance->set('templateid', $templateid);
         $instance->set('sectionid', $sectionid);
         $instance->set('sourcecmid', $instdata['sourcecmid']);
