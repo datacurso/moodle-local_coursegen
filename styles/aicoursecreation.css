@@ -116,28 +116,6 @@ svg { display: block; flex-shrink: 0; }
   padding-right: 0;
 }
 
-/* ─── CLOSE BUTTON ────────────────────────────────────────────────────── */
-/* The popup layout has no Moodle navbar: this is the only exit back to
-   My courses. Mirrors .courseai-sidebar-expand-btn, anchored top-right. */
-.courseai-close-btn {
-  position: absolute;
-  top: 12px;
-  right: 16px;
-  z-index: 6;
-  background: var(--card);
-  border: none;
-  border-radius: 6px;
-  width: 32px;
-  height: 32px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  color: var(--muted-fg);
-  box-shadow: 0 1px 4px hsl(0,0%,0%,.08);
-}
-.courseai-close-btn:hover { background: var(--muted); color: var(--fg); }
-
 /* ─── MAIN ────────────────────────────────────────────────────────────── */
 .app-main,
 .aicoursecreation-main {
@@ -179,14 +157,16 @@ svg { display: block; flex-shrink: 0; }
 
 .courseai-workspace.is-planning,
 .courseai-workspace.is-template {
-  /* Wide-ish by default — the conversation/feed is the primary surface. Kept in
-     PX (not vw) so the splitter, which reads/writes this property in px, can drag
-     smoothly and reach the default. Splitter clamps to the same [320,720] range.
+  /* A conversation column, not a second page: 450px by default, the width a
+     chat composer reads well at, leaving the structure the room it needs. Kept
+     in PX (not vw) so the splitter, which reads/writes this property in px, can
+     drag smoothly and reach the default. Splitter clamps to the same [360,720]
+     range; 360 is the narrowest the compact composer row below still fits.
      Template mode reuses this exact grid: left picker/input-bar panel, shared
      splitter, main structure column. */
-  --cg-left-w: 560px;
+  --cg-left-w: 450px;
   display: grid;
-  grid-template-columns: clamp(320px, var(--cg-left-w), 720px) 10px minmax(0, 1fr);
+  grid-template-columns: clamp(360px, var(--cg-left-w), 720px) 10px minmax(0, 1fr);
   grid-template-rows: minmax(0, 1fr);
   height: calc(100vh - 100px);
   overflow: hidden;
@@ -329,34 +309,214 @@ svg { display: block; flex-shrink: 0; }
   /* .context-wrap in-grid is display:flex — stack picker over input bar. */
   flex-direction: column;
   margin-bottom: 0;
-  padding: 0 12px 16px 16px;
-  gap: 12px;
+  padding: 0 12px 14px 16px;
+  gap: 10px;
+}
+
+/* In the grid the heading is a column title, not a page title: left-aligned
+   and one step smaller, so the picker and the composer get the room. */
+.courseai-workspace.is-planning .context-head,
+.courseai-workspace.is-template .context-head {
+  text-align: left;
+  margin-bottom: 12px;
+}
+.courseai-workspace.is-planning .context-head h2,
+.courseai-workspace.is-template .context-head h2 {
+  font-size: 18px;
+  font-weight: 600;
+  margin-bottom: 2px;
+}
+.courseai-workspace.is-planning .context-head p,
+.courseai-workspace.is-template .context-head p {
+  font-size: 13px;
+}
+
+/* The picker is a Moodle form row (label column | field column). At 450px
+   the two columns fight for space, so the label sits above a full-width
+   field. Scoped to the panel: nothing else in Moodle sees this. */
+.tpl-left-panel #fitem_id_templateid {
+  flex-direction: column;
+  /* Bootstrap's .row bleeds 15px past its parent on each side; inside the
+     scroll box that bleed is what summons a horizontal scrollbar. */
+  margin: 0 0 12px;
+}
+.tpl-left-panel #fitem_id_templateid > [class*="col-md-"] {
+  flex: 0 0 100%;
+  max-width: 100%;
+  padding-left: 0;
+  padding-right: 0;
+}
+.tpl-left-panel #fitem_id_templateid .col-form-label {
+  justify-content: flex-start;
+  gap: 6px;
+  padding-top: 0;
+  padding-bottom: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--muted-fg);
+}
+.tpl-left-panel #fitem_id_templateid .form-label-addon {
+  margin-left: 0;
+}
+.tpl-left-panel #fitem_id_templateid .felement > .d-md-inline-block,
+.tpl-left-panel #fitem_id_templateid .felement .form-autocomplete-input {
+  width: 100%;
+}
+/* The picker is drawn at the composer's scale, with the plugin's own focus
+   and highlight colours instead of Bootstrap's blue. */
+.tpl-left-panel #fitem_id_templateid .form-autocomplete-input {
+  display: flex;
+  align-items: center;
+  height: 36px;
+  padding: 0;
+  margin: 0;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  background: var(--card);
+  transition: border-color .12s, box-shadow .12s;
+}
+/* The ring belongs to the box, not to the bare input Bootstrap paints blue. */
+.tpl-left-panel #fitem_id_templateid .form-autocomplete-input:focus-within {
+  border-color: var(--primary);
+  box-shadow: 0 0 0 3px var(--primary-soft);
+}
+.tpl-left-panel #fitem_id_templateid .form-autocomplete-input .form-control {
+  flex: 1 1 auto;
+  height: 34px;
+  padding: 0 34px 0 12px;
+  font-size: 14px;
+  border: 0;
+  border-radius: 10px;
+  background: transparent;
+  box-shadow: none;
+  outline: none;
+}
+.tpl-left-panel #fitem_id_templateid .form-autocomplete-downarrow {
+  color: var(--muted-fg);
+  font-size: 12px;
+  right: 12px;
+}
+/* The suggestions list spans the field it belongs to; Moodle sizes it to the
+   inline-block the field used to be. */
+.tpl-left-panel #fitem_id_templateid .form-autocomplete-suggestions {
+  /* Popper positions the list inline (inset + transform); the width is the
+     one thing it leaves to us, and it is the field's. */
+  width: 100%;
+  min-width: 0;
+  max-width: none;
+  padding: 4px;
+  border: 1px solid var(--border);
+  border-radius: 10px;
+  box-shadow: var(--shadow-elevated);
+  font-size: 14px;
+}
+.tpl-left-panel #fitem_id_templateid .form-autocomplete-suggestions li {
+  padding: 7px 10px;
+  border-radius: 6px;
+  color: var(--fg);
+}
+.tpl-left-panel #fitem_id_templateid .form-autocomplete-suggestions li:hover,
+.tpl-left-panel #fitem_id_templateid .form-autocomplete-suggestions li[aria-selected="true"] {
+  background: var(--muted);
+  color: var(--fg);
+}
+/* The blank leading choice keeps the native select honest (see the form
+   class); it is not something to offer in the list. */
+.tpl-left-panel #fitem_id_templateid .form-autocomplete-suggestions li[data-value=""] {
+  display: none !important; /* core/form-autocomplete sets display inline */
+}
+/* The list is positioned against the field's own column, so "100%" is the
+   field's width and not the row's. */
+.tpl-left-panel #fitem_id_templateid .felement {
+  position: relative;
 }
 
 .tpl-left-scroll {
   flex: 1 1 auto;
   min-height: 0;
   overflow-y: auto;
+  overflow-x: hidden;
   scrollbar-width: thin;
 }
 
-/* Input bar pinned at the panel bottom, chat-composer style. */
+/* Input bar pinned at the panel bottom, chat-composer style. Its toolbar is
+   one row that fits the 450px column: attach, images, language on the left,
+   Generate on the right; below ~380px of card the Generate label folds into
+   its icon rather than the row wrapping. */
 .tpl-input-bar {
   flex: 0 0 auto;
+  container-type: inline-size;
 }
 /* .compact-prompt-textarea (chatui.css) expects the card to supply the outer
    padding — the compact chat card does; this bare .card does it here. */
 .tpl-input-bar .compact-prompt-textarea {
-  padding: 12px 14px 6px;
+  padding: 10px 12px 4px;
+  min-height: 54px;
 }
 .tpl-input-bar .chips-row {
-  padding-top: 10px;
+  padding-top: 8px;
 }
 .tpl-input-bar .card-toolbar {
-  gap: 8px;
+  gap: 6px;
+  padding: 6px 8px;
+  flex-wrap: nowrap;
+  min-width: 0;
+}
+.tpl-input-bar .tbar-left {
+  gap: 4px;
+  min-width: 0;
+  flex: 1 1 auto;
+}
+.tpl-input-bar .plus-menu-btn {
+  width: 32px;
+  height: 32px;
+  flex: none;
 }
 .tpl-input-bar .tbar-toggle-wrap {
+  height: 30px;
+  padding: 0 6px;
   gap: 6px;
+  flex: none;
+}
+.tpl-input-bar .tbar-toggle-label {
+  font-size: 13px;
+}
+.tpl-input-bar .tbar-select {
+  height: 30px;
+  padding: 0 10px;
+  font-size: 13px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: transparent;
+  flex: 0 1 130px;
+  min-width: 64px;
+  max-width: 130px;
+}
+.tpl-input-bar .tbar-right {
+  gap: 6px;
+  flex: none;
+}
+/* The send control is a round icon button, the way chat composers do it;
+   the button's name stays for assistive tech and as the tooltip. */
+.tpl-input-bar .btn-generate {
+  width: 34px;
+  height: 34px;
+  padding: 0;
+  border-radius: 50%;
+  justify-content: center;
+  flex: none;
+}
+.tpl-input-bar .btn-generate svg {
+  width: 16px;
+  height: 16px;
+}
+.tpl-input-bar .btn-generate .btn-generate__label {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
 
 /* Badge row at the top of the main column: "N sections · M activities" stats
@@ -4748,6 +4908,42 @@ body.cg-generating :is(#prvSections, #tplModeStructure) .dp-add-subsection-wrap 
   position: relative;
   display: inline-flex;
 }
+
+/* Mode switch: the pill next to the "+" that picks free vs template.
+   See templates/mode_switch.mustache. */
+.courseai-mode-seg {
+  display: inline-flex;
+  align-items: center;
+  height: 30px;
+  padding: 2px;
+  border-radius: 999px;
+  background: var(--muted);
+  flex: 0 0 auto;
+}
+.tbar-left .courseai-mode-seg { margin-left: 6px; }
+.courseai-mode-seg-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  height: 26px;
+  padding: 0 10px;
+  border-radius: 999px;
+  font-size: 13px;
+  font-weight: 500;
+  color: var(--muted-fg);
+  text-decoration: none;
+  white-space: nowrap;
+  transition: background .15s, color .15s;
+}
+.courseai-mode-seg-item:hover { color: var(--fg); text-decoration: none; }
+.courseai-mode-seg-item.is-active {
+  background: var(--card);
+  color: var(--fg);
+  font-weight: 600;
+  box-shadow: 0 1px 2px hsl(215 28% 17% / .12);
+}
+.courseai-mode-seg-item:focus-visible { outline: 2px solid var(--primary); outline-offset: 1px; }
+.courseai-mode-seg-item svg { flex-shrink: 0; }
 
 .plus-menu-btn {
   display: inline-flex;
