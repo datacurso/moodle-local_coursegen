@@ -16,10 +16,15 @@
 
 namespace local_coursegen\hook;
 
-use core\hook\after_config;
+use core\hook\output\before_footer_html_generation;
 
 /**
- * Hook to add the AI course button in My courses header actions without JS.
+ * Hook to add the "Create with AI" button to the My courses page.
+ *
+ * The button is placed client side by the local_coursegen/mycourses_ai_button
+ * AMD module, because the container holding core's course action buttons
+ * differs between Moodle versions (page header on 4.5/5.0, Course overview
+ * block on 5.2, empty-state action bar when the user has no courses).
  *
  * @package    local_coursegen
  * @copyright  2025 Wilber Narvaez <https://datacurso.com>
@@ -27,20 +32,22 @@ use core\hook\after_config;
  */
 class mycourses_header_hook {
     /**
-     * Hook entrypoint: called after config, set up output buffer to inject the
-     * AI course button into the My courses header actions.
+     * Hook entrypoint: request the AMD module that injects the button on My courses.
      *
-     * @param after_config $hook Hook object.
+     * The footer hook is only dispatched while a page footer is rendered, so
+     * CLI scripts never reach it; AJAX and web service requests are skipped
+     * explicitly.
+     *
+     * @param before_footer_html_generation $hook Hook object.
      */
-    public static function after_config(after_config $hook): void {
-        // after_config fires on EVERY request, including CLI (phpunit init,
-        // cron, admin scripts), AJAX and web services — none of them render a
-        // My courses page to decorate.
-        if (CLI_SCRIPT || AJAX_SCRIPT || WS_SERVER) {
+    public static function before_footer_html_generation(before_footer_html_generation $hook): void {
+        if (AJAX_SCRIPT || WS_SERVER) {
             return;
         }
 
-        if (!self::is_my_courses_page()) {
+        $page = $hook->renderer->get_page();
+
+        if (!self::is_my_courses_page($page)) {
             return;
         }
 
@@ -48,32 +55,23 @@ class mycourses_header_hook {
             return;
         }
 
-        $buttonhtmlfragment = self::render_button_html();
-
-        ob_start(function (string $htmlbuffer) use ($buttonhtmlfragment): string {
-            return self::inject_button_into_buffer($htmlbuffer, $buttonhtmlfragment);
-        }, 0, PHP_OUTPUT_HANDLER_CLEANABLE | PHP_OUTPUT_HANDLER_FLUSHABLE);
+        $page->requires->js_call_amd('local_coursegen/mycourses_ai_button', 'init', [[
+            'url' => (new \moodle_url('/local/coursegen/aicoursecreation.php'))->out(false),
+        ]]);
     }
 
     /**
-     * Determine if the current page is the My courses page.
+     * Determine if the given page is the My courses page.
      *
-     * after_config fires BEFORE the page script calls $PAGE->set_url(), and
-     * reading $PAGE->url before that emits a debugging notice ("This page did
-     * not call $PAGE->set_url"). The path is resolved from the request script
-     * instead, using the page URL only when it was already set.
-     *
+     * @param \moodle_page $page The page being rendered.
      * @return bool
      */
-    private static function is_my_courses_page(): bool {
-        global $PAGE;
-
-        if ($PAGE && $PAGE->has_set_url()) {
-            return str_ends_with($PAGE->url->get_path(), '/my/courses.php');
+    private static function is_my_courses_page(\moodle_page $page): bool {
+        if (!$page->has_set_url()) {
+            return false;
         }
 
-        $script = (string)($_SERVER['SCRIPT_NAME'] ?? '');
-        return str_ends_with($script, '/my/courses.php');
+        return str_ends_with($page->url->get_path(), '/my/courses.php');
     }
 
     /**
@@ -89,109 +87,5 @@ class mycourses_header_hook {
             'moodle/course:create',
             'local/coursegen:createcoursewithai',
         ], $systemcontext);
-    }
-
-    /**
-     * Render the AI button HTML using the Mustache template.
-     *
-     * @return string
-     */
-    private static function render_button_html(): string {
-        global $OUTPUT;
-
-        $url = (new \moodle_url('/local/coursegen/aicoursecreation.php'))->out(false);
-
-        return $OUTPUT->render_from_template('local_coursegen/add_ai_course_button', [
-            'url' => $url,
-        ]);
-    }
-
-    /**
-     * Inject the AI button into the rendered page buffer.
-     *
-     * Tries the header button group first (user has enrolled courses), then
-     * falls back to the empty state action bar (user has no enrolled courses).
-     *
-     * @param string $htmlbuffer Full page HTML buffer.
-     * @param string $buttonhtmlfragment Pre-rendered button HTML.
-     * @return string Modified buffer with the button injected, or original
-     *     buffer when no target container can be located.
-     */
-    private static function inject_button_into_buffer(string $htmlbuffer, string $buttonhtmlfragment): string {
-        // Route 1: user has enrolled courses — inject into the header button group.
-        $headergroupstart = self::find_header_button_group_start($htmlbuffer);
-        if ($headergroupstart !== null) {
-            return self::insert_into_buffer($htmlbuffer, $buttonhtmlfragment, $headergroupstart);
-        }
-
-        // Route 2: no enrolled courses — inject into the "You're not enrolled"
-        // empty state action bar. Wrap in singlebutton to keep it inline.
-        $emptystatebarstart = self::find_empty_state_action_bar_start($htmlbuffer);
-        if ($emptystatebarstart !== null) {
-            $wrappedbutton = \html_writer::div($buttonhtmlfragment, 'singlebutton');
-            return self::insert_into_buffer($htmlbuffer, $wrappedbutton, $emptystatebarstart);
-        }
-
-        return $htmlbuffer;
-    }
-
-    /**
-     * Find where the "my-action-buttons-right" div content starts.
-     *
-     * Returns the byte offset right after the opening <div ...> tag, or null
-     * when the header button group is not present on the page.
-     *
-     * @param string $htmlbuffer Full page HTML buffer.
-     * @return int|null
-     */
-    private static function find_header_button_group_start(string $htmlbuffer): ?int {
-        $classmarker = 'my-action-buttons my-action-buttons-right';
-        $classposition = strpos($htmlbuffer, $classmarker);
-        if ($classposition === false) {
-            return null;
-        }
-
-        $tagclose = strpos($htmlbuffer, '>', $classposition);
-        return ($tagclose === false) ? null : $tagclose + 1;
-    }
-
-    /**
-     * Find where the "action_bar" div inside the empty enrollment state starts.
-     *
-     * This div is rendered by block_myoverview/zero-state.mustache when the
-     * user has no enrolled courses.
-     *
-     * Returns the byte offset right after the opening <div ...> tag, or null
-     * when the empty state action bar is not present on the page.
-     *
-     * @param string $htmlbuffer Full page HTML buffer.
-     * @return int|null
-     */
-    private static function find_empty_state_action_bar_start(string $htmlbuffer): ?int {
-        $idmarker = 'id="action_bar"';
-        $idposition = strpos($htmlbuffer, $idmarker);
-        if ($idposition === false) {
-            return null;
-        }
-
-        $tagclose = strpos($htmlbuffer, '>', $idposition);
-        return ($tagclose === false) ? null : $tagclose + 1;
-    }
-
-    /**
-     * Insert a string fragment into the buffer at the given byte offset.
-     *
-     * @param string $htmlbuffer Full page HTML buffer.
-     * @param string $fragment HTML to insert.
-     * @param int|null $position Byte offset for insertion. Null returns the
-     *     original buffer unchanged.
-     * @return string Modified buffer.
-     */
-    private static function insert_into_buffer(string $htmlbuffer, string $fragment, ?int $position): string {
-        if ($position === null) {
-            return $htmlbuffer;
-        }
-
-        return substr($htmlbuffer, 0, $position) . $fragment . substr($htmlbuffer, $position);
     }
 }

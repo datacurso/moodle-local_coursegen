@@ -59,7 +59,7 @@
                             <div class="font-weight-bold text-dark">{{#str}} override_course, local_coursegen {{/str}}</div>
                         </td>
                         <td class="align-middle py-3">
-                            <div class="custom-control custom-switch" data-toggle="tooltip" title="{{#str}} tooltip_override_course, local_coursegen {{/str}}">
+                            <div class="custom-control custom-switch" data-toggle="tooltip" data-bs-toggle="tooltip" title="{{#str}} tooltip_override_course, local_coursegen {{/str}}">
                                 <input type="checkbox" class="custom-control-input" id="override-course" name="overridecourse" value="1" {{#overridecourse}}checked{{/overridecourse}}>
                                 <label class="custom-control-label" for="override-course" style="cursor: pointer;"></label>
                             </div>
@@ -70,7 +70,7 @@
                             <div class="font-weight-bold text-dark">{{#str}} override_activity, local_coursegen {{/str}}</div>
                         </td>
                         <td class="align-middle py-3">
-                            <div class="custom-control custom-switch" data-toggle="tooltip" title="{{#str}} tooltip_override_activity, local_coursegen {{/str}}">
+                            <div class="custom-control custom-switch" data-toggle="tooltip" data-bs-toggle="tooltip" title="{{#str}} tooltip_override_activity, local_coursegen {{/str}}">
                                 <input type="checkbox" class="custom-control-input" id="override-activity" name="overrideactivity" value="1" {{#overrideactivity}}checked{{/overrideactivity}}>
                                 <label class="custom-control-label" for="override-activity" style="cursor: pointer;"></label>
                             </div>
@@ -157,7 +157,7 @@
                                 </div>
                             </td>
                             <td class="align-middle py-3 text-right">
-                                <div class="custom-control custom-switch d-inline-block" data-toggle="tooltip" title="{{tooltip}}">
+                                <div class="custom-control custom-switch d-inline-block" data-toggle="tooltip" data-bs-toggle="tooltip" title="{{tooltip}}">
                                     <input type="checkbox" class="custom-control-input" id="switch-{{id}}" value="1" data-action="local_coursegen/image_generation/toggle_activity" data-target="content-{{id}}" {{#enabled}}checked{{/enabled}}>
                                     <label class="custom-control-label" for="switch-{{id}}" style="cursor: pointer;"></label>
                                 </div>

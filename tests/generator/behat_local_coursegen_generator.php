@@ -13,26 +13,27 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
-
 /**
- * Hook callbacks for Tenant Navigator
+ * Behat data generator for local_coursegen.
  *
  * @package    local_coursegen
- * @copyright  2025 Wilber Narvaez <https://datacurso.com>
+ * @category   test
+ * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
-defined('MOODLE_INTERNAL') || die();
-
-$callbacks = [
-    [
-        'hook' => core\hook\output\before_footer_html_generation::class,
-        'callback' => 'local_coursegen\hook\chat_hook::before_footer_html_generation',
-        'priority' => 900,
-    ],
-    [
-        'hook' => core\hook\output\before_footer_html_generation::class,
-        'callback' => 'local_coursegen\hook\mycourses_header_hook::before_footer_html_generation',
-        'priority' => 500,
-    ],
-];
+class behat_local_coursegen_generator extends behat_generator_base {
+    /**
+     * Get a list of the entities that Behat can create using the generator step.
+     *
+     * @return array
+     */
+    protected function get_creatable_entities(): array {
+        return [
+            'system instructions' => [
+                'singular' => 'system instruction',
+                'datagenerator' => 'system_instruction',
+                'required' => ['name'],
+            ],
+        ];
+    }
+}

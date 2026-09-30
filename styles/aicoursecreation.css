@@ -675,9 +675,22 @@ svg { display: block; flex-shrink: 0; }
 }
 
 /* ─── Guideline preview modal ─────────────────────────────────────────── */
-.preview-dialog { max-width: 560px; }
+.guideline-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
 
-.preview-modal-content {
+/*
+ * Scoped to the modal-dialog via the "classes" templateContext passed to
+ * core/modal's create() (see guideline.js): core/modal has no hook to attach
+ * a class to individual header/body/close-button elements, only to
+ * modal-dialog itself through {{$classes}} in lib/templates/modal.mustache,
+ * so the compact skin is expressed as descendant rules from there.
+ */
+.local-coursegen-guideline-preview { max-width: 560px; }
+
+.local-coursegen-guideline-preview .modal-content {
   border: 1px solid var(--border) !important;
   border-radius: 14px !important;
   box-shadow: 0 20px 60px hsl(215, 28%, 17%, 0.18) !important;
@@ -686,15 +699,11 @@ svg { display: block; flex-shrink: 0; }
   overflow: hidden;
 }
 
-/* Circle-X close button */
-.preview-close {
+/* Circle close button (core/modal's own .btn-close) */
+.local-coursegen-guideline-preview .btn-close {
   position: absolute;
   top: 16px;
   right: 16px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -703,21 +712,15 @@ svg { display: block; flex-shrink: 0; }
   transition: background .12s;
   z-index: 10;
 }
-.preview-close:hover { background: var(--primary-soft); }
+.local-coursegen-guideline-preview .btn-close:hover { background: var(--primary-soft); }
 
 /* Header area */
-.preview-header {
+.local-coursegen-guideline-preview .modal-header {
   padding: 24px 48px 16px 24px;
   border-bottom: none;
 }
 
-.preview-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-.preview-title span {
+.local-coursegen-guideline-preview .modal-title {
   font-size: 17px;
   font-weight: 700;
   color: var(--fg);
@@ -751,7 +754,7 @@ svg { display: block; flex-shrink: 0; }
 }
 
 /* Body with bordered description box */
-.preview-body {
+.local-coursegen-guideline-preview .modal-body {
   padding: 0 24px 24px;
 }
 

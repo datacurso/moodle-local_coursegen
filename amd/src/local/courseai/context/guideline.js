@@ -16,12 +16,38 @@
 /**
  * Guideline popover and list handlers for the context section.
  *
+ * All markup lives in Mustache templates under templates/local/courseai/;
+ * this module only prepares the template context and injects the result.
+ *
  * @module     local_coursegen/local/courseai/context/guideline
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {escapeHtml} from 'local_coursegen/local/courseai/utils';
+import Modal from 'core/modal';
+import Notification from 'core/notification';
+import Templates from 'core/templates';
+
+/**
+ * Template names rendered by this module.
+ *
+ * @type {{preview: string, list: string, compactList: string}}
+ */
+const TEMPLATES = {
+    preview: 'local_coursegen/local/courseai/guideline_preview',
+    list: 'local_coursegen/local/courseai/guideline_list',
+    compactList: 'local_coursegen/local/courseai/guideline_list_compact',
+};
+
+/**
+ * Delegated click targets inside the main guideline list.
+ *
+ * @type {{selectButton: string, previewButton: string}}
+ */
+const SELECTORS = {
+    selectButton: '[data-select]',
+    previewButton: '[data-preview]',
+};
 
 /**
  * Create guideline interaction handlers.
@@ -45,96 +71,87 @@ export const createGuidelineHandlers = (
 ) => {
     const {guidelineList} = elements;
 
+    // Render sequence counters: a render that finishes after a newer one was
+    // requested (e.g. while the user types in the search box) is dropped.
+    let listRenderSeq = 0;
+    let compactRenderSeq = 0;
+
     /**
      * Show the guideline preview modal for a given guideline id.
      *
+     * Uses core/modal so the dialogue works on both Moodle 4.5 (Bootstrap 4) and
+     * Moodle 5.0 (Bootstrap 5) without touching the jQuery Bootstrap plugin.
+     * The title is passed through the modal template context so core/modal
+     * escapes it the same way it escapes its own titles.
+     *
      * @param {string} id
-     * @returns {void}
+     * @returns {Promise<void>}
      */
-    const showGuidelinePreview = (id) => {
+    const showGuidelinePreview = async(id) => {
         const guideline = state.guidelines.find((g) => g.id === id);
         if (!guideline) {
             return;
         }
 
-        const modalLabel = document.getElementById('previewModalLabel');
-        const modalCategory = document.getElementById('previewModalCategory');
-        const modalBody = document.getElementById('previewModalBody');
+        const body = Templates.render(TEMPLATES.preview, {
+            category: guideline.category || texts.courseai_category_general,
+            fullcontexttext: texts.courseai_modal_fullcontext,
+            description: guideline.description || '',
+        });
 
-        if (modalLabel) {
-            modalLabel.textContent = guideline.name;
-        }
-        if (modalCategory) {
-            modalCategory.textContent = guideline.category || texts.courseai_category_general;
-        }
-        if (modalBody) {
-            modalBody.textContent = guideline.description || '';
-        }
-
-        if (window.$ && window.$('#guidelinePreviewModal').length) {
-            window.$('#guidelinePreviewModal').modal('show');
+        try {
+            await Modal.create({
+                body,
+                show: true,
+                removeOnClose: true,
+                templateContext: {
+                    classes: 'local-coursegen-guideline-preview',
+                    title: guideline.name,
+                },
+            });
+        } catch (error) {
+            Notification.exception(error);
         }
     };
 
     /**
      * Render the main guideline list inside the popover.
      *
-     * @returns {void}
+     * @returns {Promise<void>}
      */
-    const renderGuidelineList = () => {
+    const renderGuidelineList = async() => {
         if (!guidelineList) {
             return;
         }
 
+        const seq = ++listRenderSeq;
         const query = state.guidelineSearchQuery.toLowerCase();
         const filtered = state.guidelines.filter((g) =>
             g.name.toLowerCase().includes(query) ||
             (g.category && g.category.toLowerCase().includes(query))
         );
 
-        if (filtered.length === 0) {
-            guidelineList.innerHTML = `<li class="pop-empty">${escapeHtml(texts.courseai_no_results)}</li>`;
-            return;
+        const context = {
+            hasitems: filtered.length > 0,
+            items: filtered.map((g) => ({
+                id: g.id,
+                name: g.name,
+                category: g.category || texts.courseai_category_general,
+                selected: state.selectedGuidelineId === g.id,
+            })),
+            viewtitle: texts.courseai_chip_view_guideline,
+            emptytext: texts.courseai_no_results,
+        };
+
+        try {
+            const {html, js} = await Templates.renderForPromise(TEMPLATES.list, context);
+            if (seq !== listRenderSeq) {
+                return;
+            }
+            Templates.replaceNodeContents(guidelineList, html, js);
+        } catch (error) {
+            Notification.exception(error);
         }
-
-        guidelineList.innerHTML = filtered.map((g) => {
-            const isSelected = state.selectedGuidelineId === g.id;
-            return `
-                <li class="pop-item${isSelected ? ' selected' : ''}" data-id="${escapeHtml(g.id)}">
-                    <button class="pop-select-btn" data-select="${escapeHtml(g.id)}" type="button">
-                        <div class="pop-radio"><div class="pop-dot"></div></div>
-                        <div class="pop-item-text">
-                            <span class="pop-item-name">${escapeHtml(g.name)}</span>
-                            <span class="pop-item-cat">${escapeHtml(g.category || texts.courseai_category_general)}</span>
-                        </div>
-                    </button>
-                    <button
-                    class="pop-eye-btn"
-                    data-preview="${escapeHtml(g.id)}" type="button" title="${escapeHtml(texts.courseai_chip_view_guideline)}">
-                        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
-                            stroke="currentColor" stroke-width="2" stroke-linecap="round"
-                            stroke-linejoin="round">
-                            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>
-                        </svg>
-                    </button>
-                </li>
-            `;
-        }).join('');
-
-        guidelineList.querySelectorAll('.pop-select-btn').forEach((btn) => {
-            btn.addEventListener('click', () => {
-                const id = btn.getAttribute('data-select');
-                selectGuideline(id);
-            });
-        });
-
-        guidelineList.querySelectorAll('.pop-eye-btn').forEach((btn) => {
-            btn.addEventListener('click', (e) => {
-                e.stopPropagation();
-                const id = btn.getAttribute('data-preview');
-                showGuidelinePreview(id);
-            });
-        });
     };
 
     /**
@@ -156,35 +173,61 @@ export const createGuidelineHandlers = (
     /**
      * Render the compact toolbar guideline list.
      *
-     * @returns {void}
+     * @returns {Promise<void>}
      */
-    const renderCompactGuidelineList = () => {
+    const renderCompactGuidelineList = async() => {
         const compactGuidelineList = document.getElementById('guidelineListCompact');
         if (!compactGuidelineList) {
             return;
         }
+
+        const seq = ++compactRenderSeq;
         const query = (state.guidelineSearchQuery || '').toLowerCase();
         const filtered = state.guidelines.filter((g) =>
             !query || (g.name || '').toLowerCase().includes(query)
         );
-        compactGuidelineList.innerHTML = filtered.map((g) =>
-            `<li class="pop-item${g.id === state.selectedGuidelineId ? ' active' : ''}"
-                 role="option" data-id="${escapeHtml(g.id)}" tabindex="-1">
-               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
-                    stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-                 <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
-                 <polyline points="9 12 11 14 15 10"/>
-               </svg>
-               <span class="pop-item-name">${escapeHtml(g.name)}</span>
-               ${g.id === state.selectedGuidelineId ? '<span class="pop-item-check">✓</span>' : ''}
-             </li>`
-        ).join('');
+
+        const context = {
+            items: filtered.map((g) => ({
+                id: g.id,
+                name: g.name,
+                selected: g.id === state.selectedGuidelineId,
+            })),
+        };
+
+        try {
+            const {html, js} = await Templates.renderForPromise(TEMPLATES.compactList, context);
+            if (seq !== compactRenderSeq) {
+                return;
+            }
+            Templates.replaceNodeContents(compactGuidelineList, html, js);
+        } catch (error) {
+            Notification.exception(error);
+        }
 
         // Suppress unused-variable lint: refreshChipsRow and refreshCompactChipsRow
         // are available for callers that use this factory in different contexts.
         void refreshChipsRow;
         void refreshCompactChipsRow;
     };
+
+    // Delegate clicks on the list container once, so re-rendering the items
+    // (which happens asynchronously) never needs to re-bind per-item handlers.
+    if (guidelineList) {
+        guidelineList.addEventListener('click', (e) => {
+            const previewBtn = e.target.closest(SELECTORS.previewButton);
+            if (previewBtn && guidelineList.contains(previewBtn)) {
+                e.stopPropagation();
+                showGuidelinePreview(previewBtn.getAttribute('data-preview'));
+                return;
+            }
+
+            const selectBtn = e.target.closest(SELECTORS.selectButton);
+            if (selectBtn && guidelineList.contains(selectBtn)) {
+                selectGuideline(selectBtn.getAttribute('data-select'));
+            }
+        });
+    }
 
     return {renderGuidelineList, renderCompactGuidelineList, showGuidelinePreview, selectGuideline};
 };
