@@ -414,13 +414,5 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026093003, 'local', 'coursegen');
     }
 
-    if ($oldversion < 2026093009) {
-        // The token of a section naming pattern that stands for the original
-        // section's name is now written in English; rewrite the stored ones.
-        \local_coursegen\local\upgrade\naming_token_migration::run();
-
-        upgrade_plugin_savepoint(true, 2026093009, 'local', 'coursegen');
-    }
-
     return true;
 }
