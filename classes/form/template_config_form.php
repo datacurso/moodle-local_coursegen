@@ -295,7 +295,8 @@ class template_config_form extends dynamic_form {
      * Checks if current user has access to this form, otherwise throws exception.
      */
     protected function check_access_for_dynamic_submission(): void {
-        require_capability('local/coursegen:managetemplates', $this->get_context_for_dynamic_submission());
+        $context = $this->get_context_for_dynamic_submission();
+        require_capability('local/coursegen:managetemplates', $context);
     }
 
     /**

@@ -57,10 +57,8 @@ class sections_config {
     public static function render(\course_modinfo $modinfo, int $templateid = 0): string {
         global $OUTPUT;
 
-        return $OUTPUT->render_from_template(
-            'local_coursegen/template_course_sections',
-            self::export_for_template($modinfo, $templateid)
-        );
+        $context = self::export_for_template($modinfo, $templateid);
+        return $OUTPUT->render_from_template('local_coursegen/template_course_sections', $context);
     }
 
     /**

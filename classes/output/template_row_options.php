@@ -67,11 +67,13 @@ class template_row_options {
 
         $items = [];
         foreach ($keys as $key) {
+            $label = get_string('template_section_' . $key, 'local_coursegen');
+            $tip = get_string('template_section_' . $key . '_tip', 'local_coursegen');
             $items[] = [
                 'value' => $key,
                 'sectionid' => $sectionid,
-                'label' => get_string('template_section_' . $key, 'local_coursegen'),
-                'tip' => get_string('template_section_' . $key . '_tip', 'local_coursegen'),
+                'label' => $label,
+                'tip' => $tip,
                 'active' => $key === $behavior,
             ];
         }
@@ -159,11 +161,13 @@ class template_row_options {
 
         $items = [];
         foreach (self::SCOPE_VALUES as $key) {
+            $label = get_string('template_activity_scope_' . $key, 'local_coursegen');
+            $tip = get_string('template_activity_scope_' . $key . '_tip', 'local_coursegen');
             $items[] = [
                 'value' => $key,
                 'cmid' => $cmid,
-                'label' => get_string('template_activity_scope_' . $key, 'local_coursegen'),
-                'tip' => get_string('template_activity_scope_' . $key . '_tip', 'local_coursegen'),
+                'label' => $label,
+                'tip' => $tip,
                 'active' => $key === $scope,
             ];
         }
@@ -193,15 +197,20 @@ class template_row_options {
      * @return array
      */
     public static function instance_row_context(template_instance $instance): array {
+        $name = $instance->get('name');
+        $typelabel = $instance->get('typelabel');
+        $sourcename = $instance->get('sourcename');
+        $modname = $instance->get('modname');
+        $iconurl = self::instance_icon_url($modname);
         return [
             'instanceid' => (int) $instance->get('id'),
-            'name' => $instance->get('name'),
-            'typelabel' => $instance->get('typelabel'),
+            'name' => $name,
+            'typelabel' => $typelabel,
             'prompt' => (string) $instance->get('prompt'),
             'sourcecmid' => (int) $instance->get('sourcecmid'),
-            'sourcename' => $instance->get('sourcename'),
-            'modname' => (string) $instance->get('modname'),
-            'iconurl' => self::instance_icon_url($instance->get('modname')),
+            'sourcename' => $sourcename,
+            'modname' => (string) $modname,
+            'iconurl' => $iconurl,
         ];
     }
 
