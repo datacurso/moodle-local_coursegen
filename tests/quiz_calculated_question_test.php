@@ -163,4 +163,35 @@ final class quiz_calculated_question_test extends \advanced_testcase {
 
         $this->assertFalse($DB->record_exists('question', ['name' => 'AI calculated sum']));
     }
+
+    /**
+     * The question must land in the default question category of the quiz
+     * module context, whichever core API resolves that category (4.5 or 5.0).
+     */
+    public function test_question_is_created_in_module_default_category(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $cm = $this->create_quiz_cm();
+        $context = \context_module::instance($cm->coursemodule);
+
+        $settings = new quiz_settings($cm, ['questions' => [$this->calculated_question_payload()]]);
+        $settings->add_settings();
+
+        $question = $DB->get_record('question', ['name' => 'AI calculated sum'], '*', MUST_EXIST);
+        $entry = $DB->get_record_sql("
+            SELECT qbe.*
+              FROM {question_bank_entries} qbe
+              JOIN {question_versions} qv ON qv.questionbankentryid = qbe.id
+             WHERE qv.questionid = ?", [$question->id], MUST_EXIST);
+        $category = $DB->get_record('question_categories', ['id' => $entry->questioncategoryid], '*', MUST_EXIST);
+
+        $this->assertEquals($context->id, $category->contextid);
+        // The default category is the (only) child of the context's top category.
+        $top = $DB->get_record('question_categories', ['id' => $category->parent], '*', MUST_EXIST);
+        $this->assertSame('top', $top->name);
+        $this->assertEquals($context->id, $top->contextid);
+    }
 }
