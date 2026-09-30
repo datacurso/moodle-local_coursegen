@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026093007
+
+### Changed
+- The limits step of the template editor (extra sections allowance, section naming pattern, first section number and the live naming preview) and the summary step are rewritten as small module-level functions that share one explicit context, with no function defined inside another and no nested or repeated loop. The functions these steps lost when the "Allowed activity types" block was removed were edited by that change, so they now follow the code-quality rules too. Behaviour is unchanged.
+- The save payload reads the sections into a variable before building the request, and the save endpoint reads its parameter description and its saved name into variables first.
+
 ## [2.0.10] - 2026093006
 
 ### Changed
