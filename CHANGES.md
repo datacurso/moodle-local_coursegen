@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026093006
+
+### Changed
+- The template editor scripts no longer define any function inside another function. Event handlers, callbacks, loop callbacks and promise executors are now named module-level functions that receive their state through an explicit context, or are bound to it, instead of closing over local variables. This covers the wizard start-up, the save payload, the row action and section behavior handlers, the add-from-template click and input handlers, the space modal, the space rows and the activity chooser.
+- The callback chain of a row action change (scope modal, unmark confirmation, space modal) is now a flat sequence of named functions driven by a shared context. The action a row falls back to when a modal is cancelled is tracked in that context.
+- Every loop over a list in those scripts is a plain `for...of` inside its own small function, and there is no nested or repeated loop left in any function the spaces work touched.
+- The template layout and its tests build their row lists with a `foreach` instead of an inline closure. No behaviour changes.
+
 ## [2.0.10] - 2026093005
 
 ### Changed
