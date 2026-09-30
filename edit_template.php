@@ -165,6 +165,8 @@ $templatecontext = [
     // The activity types a space can be made for: the AI-supported ones that
     // are installed on this site.
     'supportedtypes' => \local_coursegen\local\service\supported_activity_types::installed(),
+    // The naming pattern a fresh template starts with, worded in the admin's language.
+    'defaultnamingpattern' => \local_coursegen\form\template_config_form::default_naming_pattern(),
 ];
 
 echo $OUTPUT->header();

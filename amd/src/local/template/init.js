@@ -48,7 +48,7 @@ const state = {
     // server-side.
     savedSections: {}, savedActivities: {},
     maxSections: 0, noLimit: false, supportedTypes: [], activitySpace: {},
-    namingPattern: 'Unidad {N} — {nombre}', namingStart: 1, categories: [],
+    namingPattern: '', namingStart: 1, categories: [],
 };
 /** @type {HTMLElement} Root element. */
 let root = null;
@@ -196,6 +196,7 @@ export const init = (config) => {
     state.savedSections = config.savedsections || {};
     state.savedActivities = config.savedactivities || {};
     state.supportedTypes = config.supportedtypes || [];
+    state.namingPattern = config.defaultnamingpattern || '';
 
     const initialCourseId = config.initialcourseid || 0;
     const initialCourseName = config.initialcoursename || '';

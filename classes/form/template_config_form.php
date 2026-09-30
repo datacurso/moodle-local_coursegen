@@ -123,6 +123,35 @@ class template_config_form extends dynamic_form {
     }
 
     /**
+     * The numbered section-naming presets, worded in the current language.
+     *
+     * The {N} and {nombre} tokens are the substitution contract shared with
+     * the client-side preview and the course builder, so they are identical in
+     * every language; only the surrounding word comes from the language pack.
+     * A preset's value is the pattern itself, so a pattern saved in another
+     * language simply round-trips through the Custom option.
+     *
+     * @return string[] Pattern => label, both the same text.
+     */
+    public static function naming_presets(): array {
+        $presets = [];
+        foreach (['unit', 'module', 'topic', 'week'] as $kind) {
+            $pattern = get_string('template_naming_preset_' . $kind, 'local_coursegen');
+            $presets[$pattern] = $pattern;
+        }
+        return $presets;
+    }
+
+    /**
+     * The pattern a fresh template starts with: the first preset.
+     *
+     * @return string
+     */
+    public static function default_naming_pattern(): string {
+        return (string) array_key_first(self::naming_presets());
+    }
+
+    /**
      * Section-naming-pattern fields: how each generated section's name is
      * derived from its position, independent of any one course's structure
      * (unlike the type-defaults/limits above, these options don't depend on
@@ -141,11 +170,7 @@ class template_config_form extends dynamic_form {
         $mform->addElement('header', 'namingpatternhdr', get_string('template_naming_pattern', 'local_coursegen'));
         $mform->setExpanded('namingpatternhdr');
 
-        $patterns = [
-            'Unidad {N} — {nombre}' => 'Unidad {N} — {nombre}',
-            'Módulo {N}: {nombre}' => 'Módulo {N}: {nombre}',
-            'Tema {N}: {nombre}' => 'Tema {N}: {nombre}',
-            'Semana {N}: {nombre}' => 'Semana {N}: {nombre}',
+        $patterns = self::naming_presets() + [
             '{nombre}' => get_string('template_naming_name_only', 'local_coursegen'),
             '__custom__' => get_string('template_naming_custom', 'local_coursegen'),
         ];
@@ -153,7 +178,7 @@ class template_config_form extends dynamic_form {
         // A saved pattern that is one of the presets selects that preset; any
         // other saved pattern round-trips through the Custom option with the
         // pattern itself restored into the text field below.
-        $patterndefault = 'Unidad {N} — {nombre}';
+        $patterndefault = self::default_naming_pattern();
         $customdefault = '';
         $savedpattern = $template ? (string) $template->get('namingpattern') : '';
         if ($savedpattern !== '') {
@@ -171,7 +196,7 @@ class template_config_form extends dynamic_form {
         $mform->addHelpButton('namingpattern', 'template_naming_pattern', 'local_coursegen');
 
         $mform->addElement('text', 'custompattern', get_string('template_naming_custom', 'local_coursegen'),
-            ['placeholder' => 'E.g.: Chapter {N} - {nombre}']);
+            ['placeholder' => get_string('template_naming_custom_placeholder', 'local_coursegen')]);
         $mform->setType('custompattern', PARAM_TEXT);
         $mform->setDefault('custompattern', $customdefault);
         $mform->hideIf('custompattern', 'namingpattern', 'neq', '__custom__');
