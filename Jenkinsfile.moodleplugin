@@ -1,2 +1,5 @@
 @Library('moodle-ci') _
-moodlePluginCI(moodleBranch: 'MOODLE_405_STABLE_V2')
+moodlePluginCI(moodleVersions: [
+  [version: 'MOODLE_405_STABLE', dbs: ['mariadb', 'pgsql']],
+  [version: 'MOODLE_502_STABLE', dbs: ['mariadb']],
+])
