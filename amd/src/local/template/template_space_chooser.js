@@ -30,6 +30,7 @@ import Templates from 'core/templates';
 import {get_string as getString} from 'core/str';
 import * as Repository from 'core_course/local/activitychooser/repository';
 import * as ChooserDialogue from 'core_course/local/activitychooser/dialogue';
+import {COMPONENT, EVENT, STRING} from 'local_coursegen/local/template/constants';
 
 /** @type {number} The archetype the web service reports for an activity. */
 const ARCHETYPE_ACTIVITY = 0;
@@ -144,11 +145,16 @@ const templateData = (items) => {
  * @returns {string}
  */
 const iconUrlOf = (iconHtml) => {
-    const holder = document.createElement('div');
-    holder.innerHTML = iconHtml;
-    const img = holder.querySelector('img');
-    const src = img?.getAttribute('src');
-    return src || '';
+    // Parsed into an inert document: nothing in the markup is rendered or
+    // executed, only the address of its image is read.
+    const parser = new DOMParser();
+    const doc = parser.parseFromString(iconHtml, 'text/html');
+    const img = doc.querySelector('img');
+    // Not every activity icon is an image (a plugin may offer a font icon).
+    if (!img) {
+        return '';
+    }
+    return img.getAttribute('src');
 };
 
 /**
@@ -219,7 +225,7 @@ const keepFavouritesUnchanged = async() => null;
  * @returns {Promise<Object>} The modal instance.
  */
 const createChooserModal = (bodyPromise) => {
-    const title = getString('template_add_space', 'local_coursegen');
+    const title = getString(STRING.ADD_SPACE, COMPONENT);
     return Modal.create({
         title,
         body: bodyPromise,
@@ -284,7 +290,7 @@ const bindPick = (modal, items, selection) => {
     const rootList = modal.getRoot();
     const root = rootList[0];
     const onClick = pickFromClick.bind(null, modal, items, selection);
-    root.addEventListener('click', onClick, true);
+    root.addEventListener(EVENT.CLICK, onClick, true);
     const onHidden = selection.settle.bind(selection, null);
     rootList.on(ModalEvents.hidden, onHidden);
 };

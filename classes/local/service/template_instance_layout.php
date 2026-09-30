@@ -35,6 +35,18 @@ use local_coursegen\local\models\template_space;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class template_instance_layout {
+    /** Row type: a real activity of the base course. */
+    const TYPE_REAL = 'real';
+
+    /** Row type: a virtual instance created from a template activity. */
+    const TYPE_INSTANCE = 'instance';
+
+    /** Row type: a virtual space the professor fills. */
+    const TYPE_SPACE = 'space';
+
+    /** Group key of the virtual rows whose anchor activity no longer exists. */
+    const ANCHOR_ORPHAN = 'orphan';
+
     /**
      * Build the final row order for one section.
      *
@@ -51,11 +63,11 @@ class template_instance_layout {
 
         $rows = self::group_rows($groups, 0);
         foreach ($realcmids as $cmid) {
-            $rows[] = ['type' => 'real', 'cmid' => $cmid];
+            $rows[] = ['type' => self::TYPE_REAL, 'cmid' => $cmid];
             $anchored = self::group_rows($groups, $cmid);
             $rows = array_merge($rows, $anchored);
         }
-        $orphans = self::group_rows($groups, 'orphan');
+        $orphans = self::group_rows($groups, self::ANCHOR_ORPHAN);
         $rows = array_merge($rows, $orphans);
 
         return $rows;
@@ -87,7 +99,7 @@ class template_instance_layout {
         $groups = [];
         foreach ($instances as $instance) {
             $anchor = (int) $instance->get('aftercmid');
-            $key = 'orphan';
+            $key = self::ANCHOR_ORPHAN;
             if ($anchor === 0 || isset($validanchors[$anchor])) {
                 $key = $anchor;
             }
@@ -154,9 +166,9 @@ class template_instance_layout {
      * @return array {type: 'instance'|'space', record}
      */
     private static function row_entry($record): array {
-        $type = 'instance';
+        $type = self::TYPE_INSTANCE;
         if ($record instanceof template_space) {
-            $type = 'space';
+            $type = self::TYPE_SPACE;
         }
         return ['type' => $type, 'record' => $record];
     }

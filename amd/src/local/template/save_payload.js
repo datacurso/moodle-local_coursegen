@@ -31,6 +31,8 @@ import Notification from 'core/notification';
 import {get_string as getString} from 'core/str';
 import {resetAllFormDirtyStates} from 'core_form/changechecker';
 import {notifyFormSubmittedByJavascript, eventTypes} from 'core_form/events';
+import {COMPONENT} from 'local_coursegen/local/template/constants';
+import {SELECTOR} from 'local_coursegen/local/template/dom_constants';
 
 /**
  * Remember that the name form reported an invalid field.
@@ -61,7 +63,7 @@ const recordFieldError = (result, e) => {
  * @returns {boolean} False when the form reported at least one invalid field.
  */
 const nameFormIsValid = (root) => {
-    const nameField = root.querySelector('#id_templatename');
+    const nameField = root.querySelector(SELECTOR.TEMPLATE_NAME_FIELD);
     const form = nameField?.closest('form');
     if (!form) {
         return true;
@@ -171,7 +173,7 @@ const buildSections = (state, root) => {
  */
 export const saveTemplate = async(state, root) => {
     if (!state.selectedCourseId || !state.courseStructure) {
-        const msg = await getString('template_select_course_first', 'local_coursegen');
+        const msg = await getString('template_select_course_first', COMPONENT);
         Notification.addNotification({message: msg, type: 'warning'});
         return;
     }
@@ -179,7 +181,7 @@ export const saveTemplate = async(state, root) => {
         return;
     }
     try {
-        const nameVal = root.querySelector('#id_templatename')?.value || state.templateName;
+        const nameVal = root.querySelector(SELECTOR.TEMPLATE_NAME_FIELD)?.value || state.templateName;
         const descVal = root.querySelector('#id_templatedesc')?.value || state.templateDesc;
         state.templateName = nameVal;
         state.templateDesc = descVal;

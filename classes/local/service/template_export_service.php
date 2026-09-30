@@ -176,8 +176,8 @@ class template_export_service {
             if (!$cm->uservisible) {
                 continue;
             }
-            $action = $actions[$cm->id] ?? 'keep';
-            if ($action === 'exclude' || $action === 'space') {
+            $action = $actions[$cm->id] ?? template_activity::ACTION_KEEP;
+            if ($action === template_activity::ACTION_EXCLUDE || $action === template_activity::ACTION_SPACE) {
                 continue;
             }
             $activities[] = self::real_activity_entry($cm, $action);
@@ -278,7 +278,7 @@ class template_export_service {
                 'section' => $section,
             ],
             'template_behavior' => [
-                'action' => 'modify',
+                'action' => template_activity::ACTION_MODIFY,
                 'useasreference' => true,
                 'prompt' => $prompt,
                 'template_source_cmid' => $sourcecmid,

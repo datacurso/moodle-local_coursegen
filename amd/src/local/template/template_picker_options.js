@@ -29,6 +29,8 @@
  */
 
 import {getStrings} from 'core/str';
+import {COMPONENT, SCOPE, STRING} from 'local_coursegen/local/template/constants';
+import {SELECTOR} from 'local_coursegen/local/template/dom_constants';
 
 /**
  * Build one marked row's own picker option, or null if the row is missing
@@ -43,18 +45,18 @@ import {getStrings} from 'core/str';
  */
 const buildOneOption = (row, targetsectionid, state, hints) => {
     const cmid = parseInt(row.dataset.id, 10);
-    const sectionEl = row.closest('[data-for="section"]');
+    const sectionEl = row.closest(SELECTOR.SECTION);
     if (!cmid || !sectionEl) {
         return null;
     }
     const sectionid = parseInt(sectionEl.dataset.id, 10);
-    const scope = state.activityScope[cmid] || 'course';
-    const eligible = scope === 'course' || sectionid === targetsectionid;
+    const scope = state.activityScope[cmid] || SCOPE.COURSE;
+    const eligible = scope === SCOPE.COURSE || sectionid === targetsectionid;
 
     let scopehint = hints.samesectionhint;
     let itemtooltip = '';
     if (eligible) {
-        if (scope === 'course') {
+        if (scope === SCOPE.COURSE) {
             scopehint = hints.coursehint;
         }
     } else {
@@ -85,9 +87,9 @@ const buildOneOption = (row, targetsectionid, state, hints) => {
  */
 export const buildAvailableTemplates = async(container, targetsectionid, state) => {
     const [samesectionhint, coursehint, tooltip] = await getStrings([
-        {key: 'template_instance_scope_same_section', component: 'local_coursegen'},
-        {key: 'template_instance_scope_whole_course', component: 'local_coursegen'},
-        {key: 'template_instance_scope_unavailable', component: 'local_coursegen'},
+        {key: STRING.SCOPE_SAME_SECTION, component: COMPONENT},
+        {key: STRING.SCOPE_WHOLE_COURSE, component: COMPONENT},
+        {key: STRING.SCOPE_UNAVAILABLE, component: COMPONENT},
     ]);
     const hints = {samesectionhint, coursehint, tooltip};
 

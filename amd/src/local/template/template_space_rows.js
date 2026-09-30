@@ -36,6 +36,8 @@ import {chooseActivityType} from 'local_coursegen/local/template/template_space_
 import {closeInstanceMenu} from 'local_coursegen/local/template/template_instance_menu';
 import {get_string as getString} from 'core/str';
 import {prefetchStrings} from 'core/prefetch';
+import {COMPONENT, EVENT, NEW_ROW_PREFIX, REQUIRED_VALUE, STRING} from 'local_coursegen/local/template/constants';
+import {CLASS, SELECTOR, TAG} from 'local_coursegen/local/template/dom_constants';
 
 /** @type {number} Client-only counter for unique data-space-id values on unsaved rows. */
 let nextTempId = 1;
@@ -61,9 +63,9 @@ const requiredFlagOf = (required) => {
  */
 const requirementKeyOf = (required) => {
     if (required) {
-        return 'template_space_required';
+        return STRING.SPACE_REQUIRED;
     }
-    return 'template_space_optional';
+    return STRING.SPACE_OPTIONAL;
 };
 
 /**
@@ -74,8 +76,8 @@ const requirementKeyOf = (required) => {
  */
 export const spaceBadgeText = async(required) => {
     const key = requirementKeyOf(required);
-    const requirement = await getString(key, 'local_coursegen');
-    return getString('template_space_badge', 'local_coursegen', requirement);
+    const requirement = await getString(key, COMPONENT);
+    return getString(STRING.SPACE_BADGE, COMPONENT, requirement);
 };
 
 /**
@@ -89,7 +91,7 @@ const hasLeadingGap = (beforeEl) => {
     if (!previous) {
         return false;
     }
-    return previous.classList.contains('tpl-row-gap');
+    return previous.classList.contains(CLASS.ROW_GAP);
 };
 
 /**
@@ -111,7 +113,7 @@ export const insertSpaceRow = async(tbody, beforeEl, space) => {
     const requiredvalue = requiredFlagOf(space.required);
     const tempId = nextTempId++;
     const context = {
-        spaceid: 'new-' + tempId,
+        spaceid: NEW_ROW_PREFIX + tempId,
         name: space.name,
         typelabel: space.name,
         modname: space.modname,
@@ -122,7 +124,7 @@ export const insertSpaceRow = async(tbody, beforeEl, space) => {
         hasinstruction: space.instruction !== '',
     };
     const fragment = await renderRowFragment('local_coursegen/template_space_row', context);
-    const row = fragment.querySelector('[data-for="spacerow"]');
+    const row = fragment.querySelector(SELECTOR.SPACE_ROW);
     tbody.insertBefore(fragment, beforeEl);
     const trailingGap = await buildGapRow();
     tbody.insertBefore(trailingGap, beforeEl);
@@ -141,9 +143,9 @@ const applyChoiceToRow = async(row, choice) => {
     row.dataset.required = String(flag);
     const badgeEl = row.querySelector('[data-region="space-badge"]');
     badgeEl.textContent = await spaceBadgeText(choice.required);
-    const instructionEl = row.querySelector('[data-region="space-instruction"]');
+    const instructionEl = row.querySelector(SELECTOR.SPACE_INSTRUCTION);
     instructionEl.textContent = choice.instruction;
-    instructionEl.classList.toggle('d-none', choice.instruction === '');
+    instructionEl.classList.toggle(CLASS.HIDDEN, choice.instruction === '');
 };
 
 /**
@@ -170,10 +172,10 @@ const saveNewSpace = async(tbody, beforeEl, picked, markDirty, choice) => {
  * @param {Function} markDirty Marks the wizard as having unsaved changes.
  */
 export const addSpace = async(item, state, markDirty) => {
-    const beforeEl = item.closest('[data-region="row-gap"], [data-region="add-instance"]');
-    const table = beforeEl.closest('table');
-    const tbody = table.querySelector('tbody');
-    const triggerEl = beforeEl.querySelector('[data-instance-menu-trigger]');
+    const beforeEl = item.closest(SELECTOR.GAP_OR_ADD);
+    const table = beforeEl.closest(TAG.TABLE);
+    const tbody = table.querySelector(TAG.TABLE_BODY);
+    const triggerEl = beforeEl.querySelector(SELECTOR.INSTANCE_MENU_TRIGGER);
     closeInstanceMenu(triggerEl);
 
     const picked = await chooseActivityType({
@@ -208,10 +210,10 @@ const saveEditedSpace = async(row, markDirty, choice) => {
 const editSpaceRow = (row, markDirty) => {
     const nameCell = row.querySelector('td:nth-child(3)');
     const subject = nameCell.textContent.trim();
-    const instructionEl = row.querySelector('[data-region="space-instruction"]');
+    const instructionEl = row.querySelector(SELECTOR.SPACE_INSTRUCTION);
     const instruction = instructionEl.textContent.trim();
     const onSave = saveEditedSpace.bind(null, row, markDirty);
-    openSpaceModal({subject, required: row.dataset.required === '1', instruction, onSave});
+    openSpaceModal({subject, required: row.dataset.required === REQUIRED_VALUE, instruction, onSave});
 };
 
 /**
@@ -222,7 +224,7 @@ const editSpaceRow = (row, markDirty) => {
  * @param {MouseEvent} e The click.
  */
 const handleSpaceRowClick = (markDirty, e) => {
-    const row = e.target.closest('[data-for="spacerow"]');
+    const row = e.target.closest(SELECTOR.SPACE_ROW);
     if (!row) {
         return;
     }
@@ -243,14 +245,14 @@ const handleSpaceRowClick = (markDirty, e) => {
  * @param {Function} markDirty Marks the wizard as having unsaved changes.
  */
 export const bindSpaceRows = (container, markDirty) => {
-    prefetchStrings('local_coursegen', [
-        'template_space_badge',
-        'template_space_required',
-        'template_space_optional',
+    prefetchStrings(COMPONENT, [
+        STRING.SPACE_BADGE,
+        STRING.SPACE_REQUIRED,
+        STRING.SPACE_OPTIONAL,
         'template_space_edit',
         'template_space_remove',
-        'template_space_modal_title',
+        STRING.SPACE_MODAL_TITLE,
     ]);
     const onClick = handleSpaceRowClick.bind(null, markDirty);
-    container.addEventListener('click', onClick);
+    container.addEventListener(EVENT.CLICK, onClick);
 };

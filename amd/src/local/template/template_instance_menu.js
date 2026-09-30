@@ -37,6 +37,7 @@
 
 import Templates from 'core/templates';
 import jQuery from 'jquery';
+import {DROPDOWN_COMMAND, SELECTOR} from 'local_coursegen/local/template/dom_constants';
 
 /**
  * @type {WeakMap<HTMLElement, symbol>} Trigger -> the token of its most
@@ -74,7 +75,7 @@ export const beginMenuOpen = (triggerEl) => {
  * @returns {HTMLElement}
  */
 const menuOf = (triggerEl) => {
-    const dropdown = triggerEl.closest('.dropdown');
+    const dropdown = triggerEl.closest(SELECTOR.DROPDOWN);
     return dropdown.querySelector('.dropdown-menu');
 };
 
@@ -100,7 +101,7 @@ export const openAddMenu = async({triggerEl, token}) => {
     const menu = menuOf(triggerEl);
     Templates.replaceNodeContents(menu, rendered, '');
     const trigger = jQuery(triggerEl);
-    trigger.dropdown('toggle');
+    trigger.dropdown(DROPDOWN_COMMAND.TOGGLE);
 };
 
 /**
@@ -114,7 +115,7 @@ export const showAddMenu = async(triggerEl) => {
     const menu = menuOf(triggerEl);
     Templates.replaceNodeContents(menu, rendered, '');
     const trigger = jQuery(triggerEl);
-    trigger.dropdown('update');
+    trigger.dropdown(DROPDOWN_COMMAND.UPDATE);
 };
 
 /**
@@ -134,7 +135,7 @@ export const showTemplateList = async({triggerEl, options}) => {
     const menu = menuOf(triggerEl);
     Templates.replaceNodeContents(menu, rendered, '');
     const trigger = jQuery(triggerEl);
-    trigger.dropdown('update');
+    trigger.dropdown(DROPDOWN_COMMAND.UPDATE);
 };
 
 /**
@@ -146,5 +147,5 @@ export const showTemplateList = async({triggerEl, options}) => {
  */
 export const closeInstanceMenu = (triggerEl) => {
     const trigger = jQuery(triggerEl);
-    trigger.dropdown('hide');
+    trigger.dropdown(DROPDOWN_COMMAND.HIDE);
 };

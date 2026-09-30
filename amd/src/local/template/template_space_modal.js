@@ -29,6 +29,7 @@ import ModalSaveCancel from 'core/modal_save_cancel';
 import ModalEvents from 'core/modal_events';
 import Templates from 'core/templates';
 import {get_string as getString} from 'core/str';
+import {COMPONENT, REQUIRED_VALUE, STRING} from 'local_coursegen/local/template/constants';
 
 /** @type {Promise<Object>|null} The lazily-created shared modal instance. */
 let modalPromise = null;
@@ -40,7 +41,7 @@ let modalPromise = null;
  */
 const getModal = () => {
     if (!modalPromise) {
-        const title = getString('template_space_modal_title', 'local_coursegen');
+        const title = getString(STRING.SPACE_MODAL_TITLE, COMPONENT);
         modalPromise = ModalSaveCancel.create({title, removeOnClose: false});
     }
     return modalPromise;
@@ -59,7 +60,7 @@ const readChoice = (modal) => {
     const instructionField = root.querySelector('#template-space-instruction');
     const instruction = instructionField.value.trim();
     return {
-        required: checked.value === '1',
+        required: checked.value === REQUIRED_VALUE,
         instruction,
     };
 };

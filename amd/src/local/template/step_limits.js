@@ -43,6 +43,10 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {get_string as getString} from 'core/str';
+import {COMPONENT, EVENT} from 'local_coursegen/local/template/constants';
+import {CLASS, SELECTOR, TAG} from 'local_coursegen/local/template/dom_constants';
+
 /**
  * Add a listener to an element, when the form rendered it.
  *
@@ -77,29 +81,70 @@ const readMaxSections = (ctx) => {
 /**
  * The naming pattern the form currently describes.
  *
+ * The naming fields are always rendered once a course is selected (see
+ * template_config_form::definition_naming_pattern()), and the select always
+ * has a selected option, so neither needs a guard. The custom field is typed
+ * by the teacher: when it is empty the pattern is the section's name alone.
+ *
  * @param {Object} ctx The limits context (see buildContext()).
  * @returns {string}
  */
 const readNamingPattern = (ctx) => {
-    if (ctx.patternSelect?.value === '__custom__') {
-        return ctx.customInput?.value || '{nombre}';
+    const contract = ctx.state.namingContract;
+    const selected = ctx.patternSelect.value;
+    if (selected !== contract.customvalue) {
+        return selected;
     }
-    return ctx.patternSelect?.value || ctx.state.namingPattern;
+    return ctx.customInput.value || contract.nametoken;
+};
+
+/**
+ * A naming pattern with its tokens replaced by a section's number and name.
+ *
+ * Tokens are replaced as plain text, so the section's name never acts as a
+ * replacement pattern.
+ *
+ * @param {string} pattern The naming pattern.
+ * @param {Object} contract The tokens of the pattern, from the server.
+ * @param {number} number The section's number.
+ * @param {string} sectionName The section's name.
+ * @returns {string}
+ */
+const applyTokens = (pattern, contract, number, sectionName) => {
+    const numberParts = pattern.split(contract.numbertoken);
+    const numbered = numberParts.join(number);
+    const nameParts = numbered.split(contract.nametoken);
+    return nameParts.join(sectionName);
 };
 
 /**
  * The preview line of one section.
  *
- * @param {Object} state
+ * @param {Object} ctx The limits context (see buildContext()).
  * @param {string} sectionName
  * @param {number} index The section's position.
- * @returns {string}
+ * @returns {HTMLElement}
  */
-const previewLine = (state, sectionName, index) => {
-    const number = state.namingStart + index;
-    const withNumber = state.namingPattern.replace(/\{N\}/g, number);
-    const rendered = withNumber.replace(/\{nombre\}/g, sectionName);
-    return '<small class="d-block">' + rendered + '</small>';
+const buildPreviewLine = (ctx, sectionName, index) => {
+    const number = ctx.state.namingStart + index;
+    const text = applyTokens(ctx.state.namingPattern, ctx.state.namingContract, number, sectionName);
+    const line = document.createElement(TAG.SMALL);
+    line.classList.add(CLASS.NAMING_LINE);
+    line.textContent = text;
+    return line;
+};
+
+/**
+ * The label that heads the preview.
+ *
+ * @param {Object} ctx The limits context (see buildContext()).
+ * @returns {HTMLElement}
+ */
+const buildPreviewLabel = (ctx) => {
+    const label = document.createElement(TAG.SMALL);
+    label.classList.add(...CLASS.NAMING_LABEL);
+    label.textContent = ctx.previewLabel;
+    return label;
 };
 
 /**
@@ -108,17 +153,16 @@ const previewLine = (state, sectionName, index) => {
  * @param {Object} ctx The limits context (see buildContext()).
  */
 const updatePreview = (ctx) => {
-    const container = ctx.panel.querySelector('[data-region="naming-preview"]');
-    if (!container) {
-        return;
-    }
-    let html = '<small class="text-muted d-block mb-1">Preview:</small>';
+    const container = ctx.panel.querySelector(SELECTOR.NAMING_PREVIEW);
+    const label = buildPreviewLabel(ctx);
+    const nodes = [label];
     let index = 0;
     for (const section of ctx.structure) {
-        html += previewLine(ctx.state, section.name, index);
+        const line = buildPreviewLine(ctx, section.name, index);
+        nodes.push(line);
         index++;
     }
-    container.innerHTML = html;
+    container.replaceChildren(...nodes);
 };
 
 /**
@@ -162,10 +206,11 @@ const handleStartChange = (ctx, e) => {
  *
  * @param {HTMLElement} panel The config region (config-form markup).
  * @param {Object} state
+ * @param {string} previewLabel The label that heads the naming preview.
  * @returns {Object}
  */
-const buildContext = (panel, state) => {
-    const structure = state.courseStructure || [];
+const buildContext = (panel, state, previewLabel) => {
+    const structure = state.courseStructure;
     const maxInput = panel.querySelector('[name="maxsections"]');
     // advcheckbox renders a hidden "unchecked" companion input sharing the
     // same name before the real checkbox — [type="checkbox"] is required to
@@ -174,7 +219,7 @@ const buildContext = (panel, state) => {
     const patternSelect = panel.querySelector('select[name="namingpattern"]');
     const customInput = panel.querySelector('input[name="custompattern"]');
     const startSelect = panel.querySelector('select[name="namingstart"]');
-    return {panel, state, structure, maxInput, allowAddCb, patternSelect, customInput, startSelect};
+    return {panel, state, structure, previewLabel, maxInput, allowAddCb, patternSelect, customInput, startSelect};
 };
 
 /**
@@ -190,8 +235,8 @@ const bindMaxSections = (ctx) => {
         ctx.state.noLimit = false;
     }
     const onChange = handleMaxSectionsChange.bind(null, ctx);
-    listen(ctx.maxInput, 'change', onChange);
-    listen(ctx.allowAddCb, 'change', onChange);
+    listen(ctx.maxInput, EVENT.CHANGE, onChange);
+    listen(ctx.allowAddCb, EVENT.CHANGE, onChange);
 };
 
 /**
@@ -200,12 +245,10 @@ const bindMaxSections = (ctx) => {
  * @param {Object} ctx The limits context (see buildContext()).
  */
 const bindNamingPattern = (ctx) => {
-    if (ctx.patternSelect) {
-        ctx.state.namingPattern = readNamingPattern(ctx);
-    }
+    ctx.state.namingPattern = readNamingPattern(ctx);
     const onChange = handleNamingPatternChange.bind(null, ctx);
-    listen(ctx.patternSelect, 'change', onChange);
-    listen(ctx.customInput, 'input', onChange);
+    ctx.patternSelect.addEventListener(EVENT.CHANGE, onChange);
+    ctx.customInput.addEventListener(EVENT.INPUT, onChange);
 };
 
 /**
@@ -214,11 +257,9 @@ const bindNamingPattern = (ctx) => {
  * @param {Object} ctx The limits context (see buildContext()).
  */
 const bindNamingStart = (ctx) => {
-    if (ctx.startSelect) {
-        ctx.state.namingStart = parseInt(ctx.startSelect.value, 10);
-    }
+    ctx.state.namingStart = parseInt(ctx.startSelect.value, 10);
     const onChange = handleStartChange.bind(null, ctx);
-    listen(ctx.startSelect, 'change', onChange);
+    ctx.startSelect.addEventListener(EVENT.CHANGE, onChange);
 };
 
 /**
@@ -226,9 +267,11 @@ const bindNamingStart = (ctx) => {
  *
  * @param {HTMLElement} panel The config region (config-form markup).
  * @param {Object} state
+ * @returns {Promise}
  */
-export const renderStepLimits = (panel, state) => {
-    const ctx = buildContext(panel, state);
+export const renderStepLimits = async(panel, state) => {
+    const previewLabel = await getString('template_naming_preview', COMPONENT);
+    const ctx = buildContext(panel, state, previewLabel);
     bindMaxSections(ctx);
     bindNamingPattern(ctx);
     bindNamingStart(ctx);

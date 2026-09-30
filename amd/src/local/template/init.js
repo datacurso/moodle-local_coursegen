@@ -35,6 +35,8 @@ import {bindCoursePicker, updateSelectedBanner} from 'local_coursegen/local/temp
 import * as Repository from 'local_coursegen/local/template/repository';
 import DynamicForm from 'core_form/dynamicform';
 import Notification from 'core/notification';
+import {BEHAVIOR, EVENT, SCOPE} from 'local_coursegen/local/template/constants';
+import {CLASS} from 'local_coursegen/local/template/dom_constants';
 
 /** @type {Object} Wizard state. */
 const state = {
@@ -48,7 +50,7 @@ const state = {
     // server-side.
     savedSections: {}, savedActivities: {},
     maxSections: 0, noLimit: false, supportedTypes: [], activitySpace: {},
-    namingPattern: '', namingStart: 1, categories: [],
+    namingPattern: '', namingContract: null, namingStart: 1, categories: [],
 };
 /** @type {HTMLElement} Root element. */
 let root = null;
@@ -89,10 +91,10 @@ export const getRoot = () => root;
 const renderConfigRegion = async() => {
     const region = root.querySelector('[data-region="config"]');
     if (!state.selectedCourseId) {
-        region.classList.add('d-none');
+        region.classList.add(CLASS.HIDDEN);
         return;
     }
-    region.classList.remove('d-none');
+    region.classList.remove(CLASS.HIDDEN);
 
     try {
         if (!state.courseStructure) {
@@ -130,7 +132,7 @@ const renderConfigRegion = async() => {
     // Limits and the naming pattern all live inside the
     // config form's own container now (see template_config_form.php) —
     // scope directly to it instead of the whole region.
-    renderStepLimits(configForm.container, state);
+    await renderStepLimits(configForm.container, state);
 };
 
 /**
@@ -169,7 +171,7 @@ const initSectionState = () => {
  * @param {Object} section A section of the loaded course structure.
  */
 const seedSection = (section) => {
-    state.sectionBehavior[section.id] = state.savedSections[section.id] || 'aimodify';
+    state.sectionBehavior[section.id] = state.savedSections[section.id] || BEHAVIOR.AI_MODIFY;
     section.activities.forEach(seedActivity);
 };
 
@@ -188,7 +190,7 @@ const seedActivity = (activity) => {
     }
     state.activityRef[activity.id] = useasreference;
     state.activityPrompt[activity.id] = saved?.prompt || '';
-    state.activityScope[activity.id] = saved?.templatescope || 'course';
+    state.activityScope[activity.id] = saved?.templatescope || SCOPE.COURSE;
     state.activitySpace[activity.id] = {
         required: saved?.spacerequired !== false,
         instruction: saved?.spaceinstruction || '',
@@ -228,6 +230,7 @@ export const init = (config) => {
     state.savedActivities = config.savedactivities || {};
     state.supportedTypes = config.supportedtypes || [];
     state.namingPattern = config.defaultnamingpattern || '';
+    state.namingContract = config.namingcontract;
 
     const initialCourseId = config.initialcourseid || 0;
     const initialCourseName = config.initialcoursename || '';
@@ -252,7 +255,7 @@ export const init = (config) => {
     configForm.addEventListener(configForm.events.FORM_SUBMITTED, keepFormContent);
 
     const saveButton = root.querySelector('[data-action="save"]');
-    saveButton.addEventListener('click', handleSaveClick);
+    saveButton.addEventListener(EVENT.CLICK, handleSaveClick);
     const coursePickerPanel = root.querySelector('[data-region="step-panel"][data-step="1"]');
     bindCoursePicker(coursePickerPanel, state, setState);
 

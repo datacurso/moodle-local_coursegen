@@ -37,6 +37,8 @@
 
 import Templates from 'core/templates';
 import {startNameEdit, currentName} from 'local_coursegen/local/template/template_instance_name_edit';
+import {NEW_ROW_PREFIX, REQUIRED_VALUE} from 'local_coursegen/local/template/constants';
+import {CLASS, SELECTOR, TAG} from 'local_coursegen/local/template/dom_constants';
 
 /** @type {number} Client-only counter for unique data-instance-id values on unsaved rows. */
 let nextTempId = 1;
@@ -53,7 +55,7 @@ let nextTempId = 1;
  */
 export const renderRowFragment = async(templatename, context) => {
     const rendered = await Templates.render(templatename, context);
-    const holder = document.createElement('tbody');
+    const holder = document.createElement(TAG.TABLE_BODY);
     Templates.replaceNodeContents(holder, rendered, '');
     const fragment = document.createDocumentFragment();
     while (holder.firstChild) {
@@ -96,7 +98,7 @@ const buildInstanceRowFragment = (data, instanceid) => renderRowFragment('local_
 export const dropGapBeforeAddRow = (tbody) => {
     const addRow = tbody.querySelector('[data-region="add-instance"]');
     const priorRow = addRow?.previousElementSibling;
-    if (priorRow && priorRow.classList.contains('tpl-row-gap')) {
+    if (priorRow && priorRow.classList.contains(CLASS.ROW_GAP)) {
         priorRow.remove();
     }
 };
@@ -115,7 +117,7 @@ export const dropGapBeforeAddRow = (tbody) => {
 export const insertInstanceRow = async(tbody, beforeEl, picked) => {
     const previous = beforeEl.previousElementSibling;
     let needsLeadingGap = true;
-    if (previous && previous.classList.contains('tpl-row-gap')) {
+    if (previous && previous.classList.contains(CLASS.ROW_GAP)) {
         needsLeadingGap = false;
     }
     if (needsLeadingGap) {
@@ -124,15 +126,15 @@ export const insertInstanceRow = async(tbody, beforeEl, picked) => {
     }
 
     const tempId = nextTempId++;
-    const instanceid = 'new-' + tempId;
+    const instanceid = NEW_ROW_PREFIX + tempId;
     const instanceFragment = await buildInstanceRowFragment(picked, instanceid);
-    const instanceRow = instanceFragment.querySelector('[data-for="instancerow"]');
+    const instanceRow = instanceFragment.querySelector(SELECTOR.INSTANCE_ROW);
     tbody.insertBefore(instanceFragment, beforeEl);
     const trailingGap = await buildGapRow();
     tbody.insertBefore(trailingGap, beforeEl);
     dropGapBeforeAddRow(tbody);
 
-    const nameEl = instanceRow.querySelector('[data-region="instance-name-editable"]');
+    const nameEl = instanceRow.querySelector(SELECTOR.INSTANCE_NAME_EDITABLE);
     startNameEdit(nameEl);
     return instanceRow;
 };
@@ -144,7 +146,7 @@ export const insertInstanceRow = async(tbody, beforeEl, picked) => {
  * @param {HTMLElement} instanceRow The row (data-for="instancerow").
  */
 export const removeInstanceRow = (instanceRow) => {
-    const tbody = instanceRow.closest('tbody');
+    const tbody = instanceRow.closest(TAG.TABLE_BODY);
     const promptRow = instanceRow.nextElementSibling;
     let hasPromptRow = false;
     if (promptRow && promptRow.classList.contains('tpl-instance-prompt-row')) {
@@ -157,7 +159,7 @@ export const removeInstanceRow = (instanceRow) => {
     if (hasPromptRow) {
         promptRow.remove();
     }
-    if (gapRow && gapRow.classList.contains('tpl-row-gap')) {
+    if (gapRow && gapRow.classList.contains(CLASS.ROW_GAP)) {
         gapRow.remove();
     }
     instanceRow.remove();
@@ -173,11 +175,11 @@ export const removeInstanceRow = (instanceRow) => {
  * @returns {Object} {modname, required, instruction, aftercmid, sortorder}
  */
 const spaceEntryOf = (row, aftercmid, sortorder) => {
-    const instructionEl = row.querySelector('[data-region="space-instruction"]');
+    const instructionEl = row.querySelector(SELECTOR.SPACE_INSTRUCTION);
     const instruction = instructionEl.textContent.trim();
     return {
         modname: row.dataset.modname,
-        required: row.dataset.required === '1',
+        required: row.dataset.required === REQUIRED_VALUE,
         instruction,
         aftercmid,
         sortorder,
@@ -202,7 +204,7 @@ const instanceEntryOf = (sectionEl, row, aftercmid, sortorder) => {
     if (promptEl) {
         promptValue = promptEl.value;
     }
-    const nameEl = row.querySelector('[data-region="instance-name-editable"]');
+    const nameEl = row.querySelector(SELECTOR.INSTANCE_NAME_EDITABLE);
     const name = currentName(nameEl);
     const typeCell = row.querySelector('td.text-muted');
     const typelabel = typeCell.textContent.trim();

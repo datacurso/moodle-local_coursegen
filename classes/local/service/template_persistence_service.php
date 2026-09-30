@@ -20,7 +20,6 @@ use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_instance;
 use local_coursegen\local\models\template_section;
 use local_coursegen\local\models\template_space;
-use local_coursegen\output\template_row_options;
 
 /**
  * Replaces a template's saved section/activity/instance configuration.
@@ -234,9 +233,9 @@ class template_persistence_service {
      * @return string
      */
     private static function normalise_scope(string $scope): string {
-        if (in_array($scope, template_row_options::SCOPE_VALUES, true)) {
+        if (in_array($scope, template_activity::SCOPES, true)) {
             return $scope;
         }
-        return 'course';
+        return template_activity::SCOPE_COURSE;
     }
 }

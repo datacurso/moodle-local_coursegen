@@ -29,6 +29,18 @@ class template_section extends persistent {
     /** Table name for the persistent. */
     const TABLE = 'local_coursegen_tpl_section';
 
+    /** Behavior: the AI service may modify the section's activities. */
+    const BEHAVIOR_AI_MODIFY = 'aimodify';
+
+    /** Behavior: the section is copied as it is. */
+    const BEHAVIOR_KEEP = 'keep';
+
+    /** Behavior: the section is left out of the new course. */
+    const BEHAVIOR_EXCLUDE = 'exclude';
+
+    /** Every behavior a section can have, in the order the editor offers them. */
+    const BEHAVIORS = [self::BEHAVIOR_AI_MODIFY, self::BEHAVIOR_KEEP, self::BEHAVIOR_EXCLUDE];
+
     /**
      * Return the definition of the properties of this model.
      *
@@ -51,7 +63,7 @@ class template_section extends persistent {
             'behavior' => [
                 'type' => PARAM_ALPHA,
                 'null' => NULL_NOT_ALLOWED,
-                'default' => 'aimodify',
+                'default' => self::BEHAVIOR_AI_MODIFY,
             ],
         ];
     }

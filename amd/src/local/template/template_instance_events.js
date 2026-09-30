@@ -42,6 +42,8 @@ import {addSpace, bindSpaceRows} from 'local_coursegen/local/template/template_s
 import {buildAvailableTemplates} from 'local_coursegen/local/template/template_picker_options';
 import Notification from 'core/notification';
 import {prefetchStrings} from 'core/prefetch';
+import {COMPONENT, EVENT, STRING} from 'local_coursegen/local/template/constants';
+import {CLASS, SELECTOR, TAG} from 'local_coursegen/local/template/dom_constants';
 
 /**
  * Toggle one instance row's prompt drawer open/closed.
@@ -53,7 +55,7 @@ const togglePromptDrawer = (container, instanceid) => {
     const drawer = container.querySelector(
         '[data-for="instanceprompt"][data-instance-id="' + instanceid + '"]'
     );
-    drawer?.classList.toggle('d-none');
+    drawer?.classList.toggle(CLASS.HIDDEN);
 };
 
 /**
@@ -80,7 +82,7 @@ const openMenuForTrigger = async(trigger) => {
  * @param {Object} state The live wizard state from init.js.
  */
 const showTemplatePicker = async(container, trigger, state) => {
-    const sectionEl = trigger.closest('[data-for="section"]');
+    const sectionEl = trigger.closest(SELECTOR.SECTION);
     const sectionid = parseInt(sectionEl.dataset.id, 10);
     const options = await buildAvailableTemplates(container, sectionid, state);
     await showTemplateList({triggerEl: trigger, options});
@@ -95,8 +97,8 @@ const showTemplatePicker = async(container, trigger, state) => {
  * @param {Function} markDirty Marks the wizard as having unsaved changes.
  */
 const handleMenuAction = async(item, container, state, markDirty) => {
-    const dropdown = item.closest('.dropdown');
-    const trigger = dropdown.querySelector('[data-instance-menu-trigger]');
+    const dropdown = item.closest(SELECTOR.DROPDOWN);
+    const trigger = dropdown.querySelector(SELECTOR.INSTANCE_MENU_TRIGGER);
     const action = item.dataset.menuAction;
     if (action === 'from-template') {
         await showTemplatePicker(container, trigger, state);
@@ -121,10 +123,10 @@ const handleMenuAction = async(item, container, state, markDirty) => {
  * @param {Function} markDirty Marks the wizard as having unsaved changes.
  */
 const pickTemplate = (item, markDirty) => {
-    const beforeEl = item.closest('[data-region="row-gap"], [data-region="add-instance"]');
-    const table = beforeEl.closest('table');
-    const tbody = table.querySelector('tbody');
-    const triggerEl = beforeEl.querySelector('[data-instance-menu-trigger]');
+    const beforeEl = item.closest(SELECTOR.GAP_OR_ADD);
+    const table = beforeEl.closest(TAG.TABLE);
+    const tbody = table.querySelector(TAG.TABLE_BODY);
+    const triggerEl = beforeEl.querySelector(SELECTOR.INSTANCE_MENU_TRIGGER);
     const sourcecmid = parseInt(item.dataset.sourceCmid, 10);
     const picked = {
         sourcecmid,
@@ -147,7 +149,7 @@ const pickTemplate = (item, markDirty) => {
  * @param {MouseEvent} e The click.
  */
 const handleContainerClick = (ctx, e) => {
-    const trigger = e.target.closest('[data-instance-menu-trigger]');
+    const trigger = e.target.closest(SELECTOR.INSTANCE_MENU_TRIGGER);
     if (trigger) {
         // Bound on the CAPTURE phase (see bindInstanceInserts()), not bubble:
         // openMenuForTrigger()'s own dropdown('toggle')
@@ -196,7 +198,7 @@ const handleContainerClick = (ctx, e) => {
 
     const removeBtn = e.target.closest('[data-region="instance-remove"]');
     if (removeBtn) {
-        const instanceRow = removeBtn.closest('[data-for="instancerow"]');
+        const instanceRow = removeBtn.closest(SELECTOR.INSTANCE_ROW);
         removeInstanceRow(instanceRow);
         ctx.markDirty();
         return;
@@ -236,12 +238,12 @@ const handlePromptInput = (markDirty, e) => {
  * @param {Function} markDirty Marks the wizard as having unsaved changes.
  */
 export const bindInstanceInserts = (container, state, markDirty) => {
-    prefetchStrings('local_coursegen', [
-        'template_instance_scope_same_section',
-        'template_instance_scope_whole_course',
-        'template_instance_scope_unavailable',
+    prefetchStrings(COMPONENT, [
+        STRING.SCOPE_SAME_SECTION,
+        STRING.SCOPE_WHOLE_COURSE,
+        STRING.SCOPE_UNAVAILABLE,
         'template_add_instance',
-        'template_add_space',
+        STRING.ADD_SPACE,
         'template_instance_badge',
         'template_instance_name',
         'template_instance_prompt_edit',
@@ -253,10 +255,10 @@ export const bindInstanceInserts = (container, state, markDirty) => {
     // handleContainerClick() for why.
     const ctx = {container, state, markDirty};
     const onClick = handleContainerClick.bind(null, ctx);
-    container.addEventListener('click', onClick, true);
+    container.addEventListener(EVENT.CLICK, onClick, true);
 
     const onInput = handlePromptInput.bind(null, markDirty);
-    container.addEventListener('input', onInput);
+    container.addEventListener(EVENT.INPUT, onInput);
 
     bindSpaceRows(container, markDirty);
 };

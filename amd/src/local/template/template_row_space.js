@@ -26,6 +26,8 @@
  */
 
 import {openSpaceModal} from 'local_coursegen/local/template/template_space_modal';
+import {ACTION, EVENT} from 'local_coursegen/local/template/constants';
+import {CLASS, SELECTOR} from 'local_coursegen/local/template/dom_constants';
 
 /**
  * Reflect a row's space status in the DOM: the row highlight, the badge's
@@ -39,9 +41,9 @@ import {openSpaceModal} from 'local_coursegen/local/template/template_space_moda
  */
 export const applySpaceVisual = (row, isspace, cmid, state) => {
     row.classList.toggle('tpl-row-space', isspace);
-    const tag = row.querySelector('[data-region="space-tag"]');
+    const tag = row.querySelector(SELECTOR.SPACE_TAG);
     const instructionEl = row.querySelector('[data-region="space-row-instruction"]');
-    tag.classList.toggle('d-none', !isspace);
+    tag.classList.toggle(CLASS.HIDDEN, !isspace);
     const space = state.activitySpace[cmid] || {required: true, instruction: ''};
     if (isspace) {
         let badgeLabel = tag.dataset.badgeOptional;
@@ -51,7 +53,7 @@ export const applySpaceVisual = (row, isspace, cmid, state) => {
         tag.textContent = badgeLabel;
         instructionEl.textContent = space.instruction;
     }
-    instructionEl.classList.toggle('d-none', !isspace || space.instruction === '');
+    instructionEl.classList.toggle(CLASS.HIDDEN, !isspace || space.instruction === '');
 };
 
 /**
@@ -66,9 +68,9 @@ export const applySpaceVisual = (row, isspace, cmid, state) => {
  */
 const saveSpaceForNewSelection = (row, cmid, state, onResolved, choice) => {
     state.activitySpace[cmid] = choice;
-    state.activityAction[cmid] = 'space';
+    state.activityAction[cmid] = ACTION.SPACE;
     applySpaceVisual(row, true, cmid, state);
-    onResolved('space');
+    onResolved(ACTION.SPACE);
 };
 
 /**
@@ -101,7 +103,7 @@ const cancelSpaceForNewSelection = (row, select, cmid, prioraction, state, onRes
  * @param {Function} onResolved (finalAction) => void, called once the modal closes.
  */
 export const openSpaceModalForNewSelection = (row, select, cmid, prioraction, state, onResolved) => {
-    const tag = row.querySelector('[data-region="space-tag"]');
+    const tag = row.querySelector(SELECTOR.SPACE_TAG);
     const current = state.activitySpace[cmid] || {required: true, instruction: ''};
     let subject = '';
     if (tag) {
@@ -136,12 +138,12 @@ const saveSpaceFromTag = (row, cmid, state, markDirty, choice) => {
  * @param {MouseEvent} e The click.
  */
 const handleSpaceTagClick = (ctx, e) => {
-    const tag = e.target.closest('[data-region="space-tag"]');
+    const tag = e.target.closest(SELECTOR.SPACE_TAG);
     if (!tag) {
         return;
     }
     const cmid = parseInt(tag.dataset.id);
-    const row = tag.closest('[data-for="cmitem"]');
+    const row = tag.closest(SELECTOR.ACTIVITY_ROW);
     if (!cmid || !row) {
         return;
     }
@@ -160,5 +162,5 @@ const handleSpaceTagClick = (ctx, e) => {
 export const bindSpaceTagClicks = (container, state, markDirty) => {
     const ctx = {state, markDirty};
     const onClick = handleSpaceTagClick.bind(null, ctx);
-    container.addEventListener('click', onClick);
+    container.addEventListener(EVENT.CLICK, onClick);
 };

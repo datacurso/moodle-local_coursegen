@@ -65,6 +65,8 @@ import {
 } from 'local_coursegen/local/template/template_row_space';
 import {bindInstanceInserts} from 'local_coursegen/local/template/template_instance_events';
 import {bindNameEditing} from 'local_coursegen/local/template/template_instance_name_edit';
+import {ACTION, EVENT} from 'local_coursegen/local/template/constants';
+import {SELECTOR} from 'local_coursegen/local/template/dom_constants';
 
 /** @type {boolean} Whether any config has been modified. */
 let dirty = false;
@@ -75,7 +77,7 @@ let dirty = false;
 const markDirty = () => {
     if (!dirty) {
         dirty = true;
-        window.addEventListener('beforeunload', onBeforeUnload);
+        window.addEventListener(EVENT.BEFORE_UNLOAD, onBeforeUnload);
     }
 };
 
@@ -103,7 +105,7 @@ const onBeforeUnload = (e) => {
  */
 export const resetSectionsDirtyState = () => {
     dirty = false;
-    window.removeEventListener('beforeunload', onBeforeUnload);
+    window.removeEventListener(EVENT.BEFORE_UNLOAD, onBeforeUnload);
 };
 
 /**
@@ -116,9 +118,9 @@ export const resetSectionsDirtyState = () => {
  * @returns {string} The action to apply.
  */
 const applicableAction = (action, modname) => {
-    const requestsmodify = action === 'modify' || action === 'template';
+    const requestsmodify = action === ACTION.MODIFY || action === ACTION.TEMPLATE;
     if (requestsmodify && !typeSupportsModify(modname)) {
-        return 'keep';
+        return ACTION.KEEP;
     }
     return action;
 };
@@ -156,7 +158,7 @@ const rememberResolvedAction = (ctx, finalaction) => {
  */
 const applySpaceResolution = (ctx, finalspace) => {
     ctx.prioraction = finalspace;
-    applyTemplateVisual(ctx.row, finalspace === 'template', ctx.cmid, ctx.state);
+    applyTemplateVisual(ctx.row, finalspace === ACTION.TEMPLATE, ctx.cmid, ctx.state);
 };
 
 /**
@@ -169,7 +171,7 @@ const applySpaceResolution = (ctx, finalspace) => {
  */
 const continueAfterUnmark = (ctx, before, finalaction) => {
     ctx.prioraction = finalaction;
-    if (finalaction === 'space') {
+    if (finalaction === ACTION.SPACE) {
         const onSpaceResolved = applySpaceResolution.bind(null, ctx);
         openSpaceModalForNewSelection(ctx.row, ctx.select, ctx.cmid, before, ctx.state, onSpaceResolved);
         return;
@@ -214,7 +216,7 @@ const handleActionChange = (ctx) => {
         markDirty();
         return;
     }
-    if (action === 'template') {
+    if (action === ACTION.TEMPLATE) {
         startTemplateFlow(ctx);
     } else {
         startUnmarkFlow(ctx, action, before);
@@ -238,15 +240,15 @@ const bindActivityActionSelect = (container, select, state) => {
     if (!cmid) {
         return;
     }
-    const row = select.closest('[data-for="cmitem"]');
+    const row = select.closest(SELECTOR.ACTIVITY_ROW);
     const ctx = {container, select, state, cmid, row, prioraction: select.value};
     state.activityAction[cmid] = select.value;
     if (row) {
-        applyTemplateVisual(row, select.value === 'template', cmid, state);
-        applySpaceVisual(row, select.value === 'space', cmid, state);
+        applyTemplateVisual(row, select.value === ACTION.TEMPLATE, cmid, state);
+        applySpaceVisual(row, select.value === ACTION.SPACE, cmid, state);
     }
     const onChange = handleActionChange.bind(null, ctx);
-    select.addEventListener('change', onChange);
+    select.addEventListener(EVENT.CHANGE, onChange);
 };
 
 /**
@@ -287,7 +289,7 @@ const bindSectionBehaviorSelect = (select, state) => {
     state.sectionBehavior[sid] = select.value;
     const ctx = {select, sid, state};
     const onChange = handleSectionBehaviorChange.bind(null, ctx);
-    select.addEventListener('change', onChange);
+    select.addEventListener(EVENT.CHANGE, onChange);
 };
 
 /**
