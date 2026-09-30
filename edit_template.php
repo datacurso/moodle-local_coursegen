@@ -167,6 +167,8 @@ $templatecontext = [
     'supportedtypes' => \local_coursegen\local\service\supported_activity_types::installed(),
     // The naming pattern a fresh template starts with, worded in the admin's language.
     'defaultnamingpattern' => \local_coursegen\form\template_config_form::default_naming_pattern(),
+    // The select value that means "custom pattern" and the two tokens a pattern can use.
+    'namingcontract' => \local_coursegen\form\template_config_form::naming_contract(),
 ];
 
 echo $OUTPUT->header();

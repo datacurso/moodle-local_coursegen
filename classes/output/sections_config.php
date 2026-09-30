@@ -211,7 +211,7 @@ class sections_config {
         $virtualrows = $saved['instances'][$sectionid] ?? [];
         $orderedrows = template_instance_layout::ordered_rows($realcmids, $virtualrows);
         $rows = self::render_rows($orderedrows, $activitiesbycmid);
-        $behavior = $saved['behaviors'][$sectionid] ?? 'aimodify';
+        $behavior = $saved['behaviors'][$sectionid] ?? template_section::BEHAVIOR_AI_MODIFY;
         $name = get_section_name($course, $sectioninfo);
         $actions = template_row_options::section_actions($sectionid, $behavior);
         $activitycount = count($rows);
@@ -262,11 +262,11 @@ class sections_config {
         $savedaction = $saved['actions'][$cmid] ?? null;
         $actionoptions = template_row_options::activity_actions($cmid, $cm->modname, $savedaction);
         $activeaction = template_row_options::active_action($actionoptions);
-        $savedscope = $saved['scopes'][$cmid] ?? 'course';
+        $savedscope = $saved['scopes'][$cmid] ?? template_activity::SCOPE_COURSE;
         $scopeoptions = template_row_options::template_scope_options($cmid, $savedscope);
         $scopelabel = template_row_options::active_scope_label($scopeoptions);
         $space = $saved['spaces'][$cmid] ?? ['required' => true, 'instruction' => ''];
-        $isspace = $activeaction === 'space';
+        $isspace = $activeaction === template_activity::ACTION_SPACE;
         $spacebadge = template_row_options::space_badge_label($space['required']);
 
         // Link to the real activity in the base course; null for modules
@@ -294,7 +294,7 @@ class sections_config {
             // label — kept in sync with the action select, and with scope
             // changes made through local/template/template_scope_modal.js,
             // by sections_events.js.
-            'istemplate' => $activeaction === 'template',
+            'istemplate' => $activeaction === template_activity::ACTION_TEMPLATE,
             'scopelabel' => $scopelabel,
             // Drives the clickable "Space" badge the same way: hidden unless
             // the row's action is "space", reopening the space settings.
@@ -325,9 +325,9 @@ class sections_config {
         $lastindex = count($orderedrows) - 1;
         $index = 0;
         foreach ($orderedrows as $entry) {
-            if ($entry['type'] === 'real') {
+            if ($entry['type'] === template_instance_layout::TYPE_REAL) {
                 $context = $activitiesbycmid[$entry['cmid']];
-            } else if ($entry['type'] === 'space') {
+            } else if ($entry['type'] === template_instance_layout::TYPE_SPACE) {
                 $context = ['isreal' => false, 'isinstance' => false, 'isvirtualspace' => true]
                     + template_row_options::space_row_context($entry['record']);
             } else {

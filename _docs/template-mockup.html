@@ -198,7 +198,7 @@ const state = {
   maxSections: 4,
   noLimit: false,
   allowedTypes: ACTIVITY_TYPES.map(t => t.id),
-  namingPattern: 'Unidad {N} — {nombre}',
+  namingPattern: 'Unidad {N} — {name}',
   namingStart: 1,
 };
 
@@ -630,16 +630,16 @@ function renderPanel5() {
         </div>
       </div>
       <select class="text-sm mb-3" id="namingPattern" onchange="updateNamingPreview()">
-        <option value="Unidad {N} — {nombre}">Unidad {N} — {nombre}</option>
-        <option value="Módulo {N}: {nombre}">Módulo {N}: {nombre}</option>
-        <option value="Tema {N}: {nombre}">Tema {N}: {nombre}</option>
-        <option value="Semana {N}: {nombre}">Semana {N}: {nombre}</option>
-        <option value="{nombre}">{nombre} (solo nombre original)</option>
+        <option value="Unidad {N} — {name}">Unidad {N} — {name}</option>
+        <option value="Módulo {N}: {name}">Módulo {N}: {name}</option>
+        <option value="Tema {N}: {name}">Tema {N}: {name}</option>
+        <option value="Semana {N}: {name}">Semana {N}: {name}</option>
+        <option value="{name}">{name} (solo nombre original)</option>
         <option value="__custom__">✏️ Personalizado...</option>
       </select>
       <div id="customPatternWrap" style="display:none" class="mb-3">
-        <input type="text" placeholder="Ej: Capítulo {N} — {nombre}" class="text-sm" id="customPattern" oninput="updateNamingPreview()">
-        <p class="text-xs mt-1" style="color:var(--muted-fg)">Usá <code>{N}</code> para el número y <code>{nombre}</code> para el nombre original</p>
+        <input type="text" placeholder="Ej: Capítulo {N} — {name}" class="text-sm" id="customPattern" oninput="updateNamingPreview()">
+        <p class="text-xs mt-1" style="color:var(--muted-fg)">Usá <code>{N}</code> para el número y <code>{name}</code> para el nombre original</p>
       </div>
       <div class="flex items-center gap-3 mb-3">
         <span class="text-xs" style="color:var(--muted-fg)">Numerar desde:</span>
@@ -671,14 +671,14 @@ function updateNamingPreview() {
     customInput.value = sel.value;
   }
 
-  state.namingPattern = customInput.value || '{nombre}';
+  state.namingPattern = customInput.value || '{name}';
   state.namingStart = start;
 
   const pattern = state.namingPattern;
   let html = '';
   MOCK_SECTIONS.forEach((s, i) => {
     const n = start + i;
-    const rendered = pattern.replace(/{N}/g, n).replace(/{nombre}/g, s.name);
+    const rendered = pattern.replace(/{N}/g, n).replace(/{name}/g, s.name);
     html += '<div class="flex items-center gap-2 text-sm py-0.5"><span>📖</span><span>' + rendered + '</span></div>';
   });
   preview.innerHTML = html;

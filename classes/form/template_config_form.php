@@ -47,6 +47,15 @@ use moodle_url;
  * Dynamic form for the limits part of the config screen.
  */
 class template_config_form extends dynamic_form {
+    /** Value of the naming select that means "use the pattern typed in the custom field". */
+    const NAMING_CUSTOM = '__custom__';
+
+    /** Token of a naming pattern that stands for the section's number. */
+    const NAMING_TOKEN_NUMBER = '{N}';
+
+    /** Token of a naming pattern that stands for the original section's name. */
+    const NAMING_TOKEN_NAME = '{name}';
+
 
     /**
      * Form definition.
@@ -165,9 +174,9 @@ class template_config_form extends dynamic_form {
     /**
      * The numbered section-naming presets, worded in the current language.
      *
-     * The {N} and {nombre} tokens are the substitution contract shared with
-     * the client-side preview and the course builder, so they are identical in
-     * every language; only the surrounding word comes from the language pack.
+     * The number and name tokens are the substitution contract shared with
+     * the client-side preview, so they are identical in every language; only
+     * the surrounding word comes from the language pack.
      * A preset's value is the pattern itself, so a pattern saved in another
      * language simply round-trips through the Custom option.
      *
@@ -203,7 +212,21 @@ class template_config_form extends dynamic_form {
         $nameonly = get_string('template_naming_name_only', 'local_coursegen');
         $custom = get_string('template_naming_custom', 'local_coursegen');
         $presets = self::naming_presets();
-        return $presets + ['{nombre}' => $nameonly, '__custom__' => $custom];
+        return $presets + [self::NAMING_TOKEN_NAME => $nameonly, self::NAMING_CUSTOM => $custom];
+    }
+
+    /**
+     * What the client-side preview needs to read the naming fields and to
+     * apply a pattern, so the page script holds none of these literals.
+     *
+     * @return string[] {customvalue, numbertoken, nametoken}
+     */
+    public static function naming_contract(): array {
+        return [
+            'customvalue' => self::NAMING_CUSTOM,
+            'numbertoken' => self::NAMING_TOKEN_NUMBER,
+            'nametoken' => self::NAMING_TOKEN_NAME,
+        ];
     }
 
     /**
@@ -229,7 +252,7 @@ class template_config_form extends dynamic_form {
         if (array_key_exists($savedpattern, $patterns)) {
             return [$savedpattern, ''];
         }
-        return ['__custom__', $savedpattern];
+        return [self::NAMING_CUSTOM, $savedpattern];
     }
 
     /**
@@ -265,7 +288,7 @@ class template_config_form extends dynamic_form {
         $mform->addElement('text', 'custompattern', $customlabel, ['placeholder' => $placeholder]);
         $mform->setType('custompattern', PARAM_TEXT);
         $mform->setDefault('custompattern', $customdefault);
-        $mform->hideIf('custompattern', 'namingpattern', 'neq', '__custom__');
+        $mform->hideIf('custompattern', 'namingpattern', 'neq', self::NAMING_CUSTOM);
         $mform->addHelpButton('custompattern', 'template_naming_custom', 'local_coursegen');
 
         $startlabel = get_string('template_naming_start', 'local_coursegen');

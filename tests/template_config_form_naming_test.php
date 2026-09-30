@@ -40,8 +40,8 @@ final class template_config_form_naming_test extends \advanced_testcase {
 
         $this->assertCount(4, $presets);
         foreach ($presets as $pattern => $label) {
-            $this->assertStringContainsString('{N}', $pattern);
-            $this->assertStringContainsString('{nombre}', $pattern);
+            $this->assertStringContainsString(template_config_form::NAMING_TOKEN_NUMBER, $pattern);
+            $this->assertStringContainsString(template_config_form::NAMING_TOKEN_NAME, $pattern);
             $this->assertSame($pattern, $label);
         }
     }
@@ -96,7 +96,8 @@ final class template_config_form_naming_test extends \advanced_testcase {
 
         $keys = array_keys($options);
         $presetkeys = array_keys($presets);
-        $expected = array_merge($presetkeys, ['{nombre}', '__custom__']);
+        $tail = [template_config_form::NAMING_TOKEN_NAME, template_config_form::NAMING_CUSTOM];
+        $expected = array_merge($presetkeys, $tail);
         $this->assertSame($expected, $keys);
     }
 
@@ -134,11 +135,12 @@ final class template_config_form_naming_test extends \advanced_testcase {
      */
     public function test_a_saved_name_only_pattern_selects_the_name_only_option(): void {
         $options = template_config_form::naming_options();
-        $template = new template(0, (object) ['namingpattern' => '{nombre}']);
+        $nameonly = template_config_form::NAMING_TOKEN_NAME;
+        $template = new template(0, (object) ['namingpattern' => $nameonly]);
 
         [$selected, $custom] = template_config_form::naming_defaults($template, $options);
 
-        $this->assertSame('{nombre}', $selected);
+        $this->assertSame($nameonly, $selected);
         $this->assertSame('', $custom);
     }
 
@@ -148,12 +150,13 @@ final class template_config_form_naming_test extends \advanced_testcase {
      */
     public function test_a_saved_pattern_that_is_not_an_option_goes_through_custom(): void {
         $options = template_config_form::naming_options();
-        $template = new template(0, (object) ['namingpattern' => 'Chapter {N} - {nombre}']);
+        $typed = 'Chapter {N} - {name}';
+        $template = new template(0, (object) ['namingpattern' => $typed]);
 
         [$selected, $custom] = template_config_form::naming_defaults($template, $options);
 
-        $this->assertSame('__custom__', $selected);
-        $this->assertSame('Chapter {N} - {nombre}', $custom);
+        $this->assertSame(template_config_form::NAMING_CUSTOM, $selected);
+        $this->assertSame($typed, $custom);
     }
 
     /**
@@ -168,6 +171,20 @@ final class template_config_form_naming_test extends \advanced_testcase {
         $default = template_config_form::default_naming_pattern();
         $this->assertSame($default, $selected);
         $this->assertSame('', $custom);
+    }
+
+    /**
+     * The client is told the tokens and the custom value, so it holds no copy of them.
+     */
+    public function test_the_naming_contract_exposes_the_tokens_and_the_custom_value(): void {
+        $contract = template_config_form::naming_contract();
+
+        $expected = [
+            'customvalue' => template_config_form::NAMING_CUSTOM,
+            'numbertoken' => template_config_form::NAMING_TOKEN_NUMBER,
+            'nametoken' => template_config_form::NAMING_TOKEN_NAME,
+        ];
+        $this->assertSame($expected, $contract);
     }
 
     /**

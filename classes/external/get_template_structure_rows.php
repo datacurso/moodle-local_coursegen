@@ -109,8 +109,8 @@ trait get_template_structure_rows {
         $sections = [];
         $sectioninfos = $modinfo->get_section_info_all();
         foreach ($sectioninfos as $section) {
-            $behavior = $sectionsettings[$section->id] ?? 'aimodify';
-            if ($behavior === 'exclude') {
+            $behavior = $sectionsettings[$section->id] ?? template_section::BEHAVIOR_AI_MODIFY;
+            if ($behavior === template_section::BEHAVIOR_EXCLUDE) {
                 continue;
             }
             $activities = self::section_activities($modinfo, $section, $activitysettings, $instancesbysection, $output);
@@ -120,7 +120,7 @@ trait get_template_structure_rows {
                 'num'        => (int) $section->section,
                 'name'       => $name,
                 'behavior'   => $behavior,
-                'locked'     => ($behavior === 'keep'),
+                'locked'     => ($behavior === template_section::BEHAVIOR_KEEP),
                 'activities' => $activities,
             ];
         }
@@ -178,7 +178,7 @@ trait get_template_structure_rows {
      * @return array|null
      */
     private static function section_activity_row(array $row, $modinfo, array $activitysettings, $output): ?array {
-        if ($row['type'] === 'instance') {
+        if ($row['type'] === template_instance_layout::TYPE_INSTANCE) {
             return self::instance_row($row['record']);
         }
         $cm = $modinfo->cms[$row['cmid']];
@@ -189,11 +189,11 @@ trait get_template_structure_rows {
         // keep, and a legacy saved "modify" normalising to keep) stays
         // visible and locked; reference, template (mold) and exclude rows
         // never reach the professor at all.
-        $action = $activitysettings[$cm->id] ?? 'keep';
-        if ($action === 'modify') {
-            $action = 'keep';
+        $action = $activitysettings[$cm->id] ?? template_activity::ACTION_KEEP;
+        if ($action === template_activity::ACTION_MODIFY) {
+            $action = template_activity::ACTION_KEEP;
         }
-        if ($action !== 'keep') {
+        if ($action !== template_activity::ACTION_KEEP) {
             return null;
         }
         $purpose = self::get_purpose($cm->modname);

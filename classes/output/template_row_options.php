@@ -28,7 +28,9 @@
 
 namespace local_coursegen\output;
 
+use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_instance;
+use local_coursegen\local\models\template_section;
 use local_coursegen\local\models\template_space;
 use local_coursegen\local\service\template_content_generator;
 
@@ -36,9 +38,6 @@ use local_coursegen\local\service\template_content_generator;
  * Builds the per-row select options for sections_config.
  */
 class template_row_options {
-    /** @var string[] Valid values for template_activity::templatescope. */
-    const SCOPE_VALUES = ['course', 'section'];
-
     /**
      * Build the per-section behavior select options (custom/keep/exclude).
      *
@@ -50,18 +49,18 @@ class template_row_options {
      *     editing an existing template, "custom" otherwise).
      * @return array Select option contexts.
      */
-    public static function section_actions(int $sectionid, string $behavior = 'aimodify'): array {
-        $valid = ['aimodify', 'keep', 'exclude'];
+    public static function section_actions(int $sectionid, string $behavior = template_section::BEHAVIOR_AI_MODIFY): array {
+        $valid = template_section::BEHAVIORS;
         if (!in_array($behavior, $valid, true)) {
-            $behavior = 'aimodify';
+            $behavior = template_section::BEHAVIOR_AI_MODIFY;
         }
 
         // "exclude" is not offered in the UI any more: it only renders (and
         // preselects) when an existing template already saved it, so
         // edit-mode hydration never lies about the stored state. The backend
         // keeps accepting and processing it untouched.
-        $keys = ['aimodify', 'keep'];
-        if ($behavior === 'exclude') {
+        $keys = [template_section::BEHAVIOR_AI_MODIFY, template_section::BEHAVIOR_KEEP];
+        if ($behavior === template_section::BEHAVIOR_EXCLUDE) {
             $keys = $valid;
         }
 
@@ -105,13 +104,22 @@ class template_row_options {
      * @return array Select option contexts.
      */
     public static function activity_actions(int $cmid, string $modname, ?string $savedaction = null): array {
-        $keys = ['template', 'keep', 'reference', 'exclude'];
+        $keys = [
+            template_activity::ACTION_TEMPLATE,
+            template_activity::ACTION_KEEP,
+            template_activity::ACTION_REFERENCE,
+            template_activity::ACTION_EXCLUDE,
+        ];
         $cansupporttemplate = in_array($modname, template_content_generator::AI_SUPPORTED_TYPES, true);
         if (!$cansupporttemplate) {
-            $keys = ['keep', 'reference', 'exclude'];
+            $keys = [
+                template_activity::ACTION_KEEP,
+                template_activity::ACTION_REFERENCE,
+                template_activity::ACTION_EXCLUDE,
+            ];
         }
-        $keys[] = 'space';
-        $default = 'keep';
+        $keys[] = template_activity::ACTION_SPACE;
+        $default = template_activity::ACTION_KEEP;
         if ($savedaction !== null && in_array($savedaction, $keys, true)) {
             $default = $savedaction;
         }
@@ -143,7 +151,7 @@ class template_row_options {
                 return $option['value'];
             }
         }
-        return 'keep';
+        return template_activity::ACTION_KEEP;
     }
 
     /**
@@ -154,13 +162,13 @@ class template_row_options {
      *     falls back to "course".
      * @return array Select option contexts.
      */
-    public static function template_scope_options(int $cmid, string $scope = 'course'): array {
-        if (!in_array($scope, self::SCOPE_VALUES, true)) {
-            $scope = 'course';
+    public static function template_scope_options(int $cmid, string $scope = template_activity::SCOPE_COURSE): array {
+        if (!in_array($scope, template_activity::SCOPES, true)) {
+            $scope = template_activity::SCOPE_COURSE;
         }
 
         $items = [];
-        foreach (self::SCOPE_VALUES as $key) {
+        foreach (template_activity::SCOPES as $key) {
             $label = get_string('template_activity_scope_' . $key, 'local_coursegen');
             $tip = get_string('template_activity_scope_' . $key . '_tip', 'local_coursegen');
             $items[] = [
