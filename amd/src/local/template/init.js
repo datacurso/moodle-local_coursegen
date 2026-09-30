@@ -47,12 +47,12 @@ const state = {
     // prompt). The rendered selects already preselect the saved actions
     // server-side.
     savedSections: {}, savedActivities: {},
-    maxSections: 0, noLimit: false, allowedTypes: [],
+    maxSections: 0, noLimit: false, supportedTypes: [], activitySpace: {},
     namingPattern: 'Unidad {N} — {nombre}', namingStart: 1, categories: [],
 };
 /** @type {HTMLElement} Root element. */
 let root = null;
-/** @type {DynamicForm} The type-defaults/limits/allowed-types dynamic form (see init()). */
+/** @type {DynamicForm} The type-defaults/limits dynamic form (see init()). */
 let configForm = null;
 /**
  * Whether configForm's container already holds a real, server-rendered form
@@ -105,7 +105,7 @@ const renderConfigRegion = async() => {
         return;
     }
 
-    // Type-defaults, limits and allowed-types all live in ONE dynamic form
+    // Type-defaults and limits all live in ONE dynamic form
     // now (see classes/form/template_config_form.php) — reloaded via
     // core_form/dynamicform whenever the selected course changes, instead
     // of a custom external function shuttling its HTML around. The very
@@ -127,7 +127,7 @@ const renderConfigRegion = async() => {
     const structurePanel = region.querySelector('[data-region="structure"]');
     await renderStepSections(structurePanel, state, isFreshFromPageLoad);
 
-    // Limits, allowed-types and the naming pattern all live inside the
+    // Limits and the naming pattern all live inside the
     // config form's own container now (see template_config_form.php) —
     // scope directly to it instead of the whole region.
     renderStepLimits(configForm.container, state);
@@ -154,8 +154,8 @@ const initSectionState = () => {
     state.activityRef = {};
     state.activityPrompt = {};
     state.activityScope = {};
+    state.activitySpace = {};
 
-    const actTypes = new Set();
     state.courseStructure.forEach(s => {
         state.sectionBehavior[s.id] = state.savedSections[s.id] || 'aimodify';
         s.activities.forEach(a => {
@@ -168,14 +168,16 @@ const initSectionState = () => {
             state.activityRef[a.id] = useasreference;
             state.activityPrompt[a.id] = saved?.prompt || '';
             state.activityScope[a.id] = saved?.templatescope || 'course';
-            actTypes.add(a.modname);
+            state.activitySpace[a.id] = {
+                required: saved?.spacerequired !== false,
+                instruction: saved?.spaceinstruction || '',
+            };
         });
     });
     // maxSections counts EXTRA sections the teacher may add on top of the
     // template's own — 0 until the allow-add-sections checkbox is ticked
     // (see step_limits.js), never the base course's own section count.
     state.maxSections = 0;
-    state.allowedTypes = [...actTypes];
 };
 
 /**
@@ -193,6 +195,7 @@ export const init = (config) => {
     state.categories = config.categories || [];
     state.savedSections = config.savedsections || {};
     state.savedActivities = config.savedactivities || {};
+    state.supportedTypes = config.supportedtypes || [];
 
     const initialCourseId = config.initialcourseid || 0;
     const initialCourseName = config.initialcoursename || '';

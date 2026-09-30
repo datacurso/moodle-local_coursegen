@@ -58,6 +58,9 @@ class template extends persistent {
                 'type' => PARAM_INT,
                 'default' => 0,
             ],
+            // Legacy: no longer read or written. Every template allows all
+            // the supported activity types; the column stays so existing
+            // rows and installs need no schema change.
             'allowedtypes' => [
                 'type' => PARAM_RAW,
                 'null' => NULL_ALLOWED,

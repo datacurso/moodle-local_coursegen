@@ -27,6 +27,9 @@
  *   "template" opens the shared scope modal (template_scope_modal.js)
  *   instead of applying the action immediately; changing it away from
  *   "template" clears the row's visual signal with no modal involved.
+ * - Changing a row's action TO "space" opens the shared space modal
+ *   (template_row_space.js): required or optional, and what the professor has
+ *   to provide. Its clickable badge (data-region="space-tag") reopens it.
  * - Per-row clickable "Template" tag (data-region="template-tag"): visible
  *   only while the row's action is "template", reopens the same modal to
  *   change an already-set scope.
@@ -55,6 +58,11 @@ import {
     confirmUnmarkTemplate,
     bindTemplateTagClicks,
 } from 'local_coursegen/local/template/template_row_scope';
+import {
+    applySpaceVisual,
+    openSpaceModalForNewSelection,
+    bindSpaceTagClicks,
+} from 'local_coursegen/local/template/template_row_space';
 import {bindInstanceInserts} from 'local_coursegen/local/template/template_instance_events';
 import {bindNameEditing} from 'local_coursegen/local/template/template_instance_name_edit';
 
@@ -136,9 +144,11 @@ export const bindServerRenderedControls = (container, state) => {
         state.activityAction[cmid] = select.value;
         if (row) {
             applyTemplateVisual(row, select.value === 'template', cmid, state);
+            applySpaceVisual(row, select.value === 'space', cmid, state);
         }
         select.addEventListener('change', () => {
             const action = select.value;
+            const before = prioraction;
             state.activityAction[cmid] = action;
             if (!row) {
                 prioraction = action;
@@ -152,6 +162,14 @@ export const bindServerRenderedControls = (container, state) => {
             } else {
                 confirmUnmarkTemplate(container, row, select, action, prioraction, cmid, state, (finalaction) => {
                     prioraction = finalaction;
+                    if (finalaction === 'space') {
+                        openSpaceModalForNewSelection(row, select, cmid, before, state, (finalspace) => {
+                            prioraction = finalspace;
+                            applyTemplateVisual(row, finalspace === 'template', cmid, state);
+                        });
+                        return;
+                    }
+                    applySpaceVisual(row, false, cmid, state);
                 });
             }
             markDirty();
@@ -159,12 +177,19 @@ export const bindServerRenderedControls = (container, state) => {
     });
 
     bindTemplateTagClicks(container, state, markDirty);
+    bindSpaceTagClicks(container, state, markDirty);
     bindInstanceInserts(container, state, markDirty);
     bindNameEditing(container, markDirty);
 
     // Row selection checkboxes (three synced tiers) and the single global
     // bulk action bar — see selection_bulk.js.
-    bindSelectionAndBulk(container, state, {applicableAction, applyTemplateVisual, markDirty});
+    // The bulk bar never sets "space", so whatever it applies to a row also
+    // clears that row's space visual.
+    const applyRowVisual = (row, istemplate, cmid, rowstate) => {
+        applyTemplateVisual(row, istemplate, cmid, rowstate);
+        applySpaceVisual(row, false, cmid, rowstate);
+    };
+    bindSelectionAndBulk(container, state, {applicableAction, applyTemplateVisual: applyRowVisual, markDirty});
 
     // Section behavior selects (custom/keep/exclude): seed state from the
     // server-rendered value — the saved behavior in edit mode — then keep

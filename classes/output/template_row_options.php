@@ -29,6 +29,7 @@
 namespace local_coursegen\output;
 
 use local_coursegen\local\models\template_instance;
+use local_coursegen\local\models\template_space;
 use local_coursegen\local\service\template_content_generator;
 
 /**
@@ -80,7 +81,10 @@ class template_row_options {
     /**
      * Build the per-activity action select options.
      *
-     * Template is the only action gated to a module type in
+     * "Space" (the professor provides this activity instead) is offered for
+     * every type: it asks nothing of the AI service.
+     *
+     * Template is the only other action gated to a module type in
      * template_content_generator::AI_SUPPORTED_TYPES — the real AI service's
      * full content contract, never a constant scoped to whichever
      * implementation currently satisfies it. Anything NOT in that contract
@@ -104,6 +108,7 @@ class template_row_options {
         if (!$cansupporttemplate) {
             $keys = ['keep', 'reference', 'exclude'];
         }
+        $keys[] = 'space';
         $default = 'keep';
         if ($savedaction !== null && in_array($savedaction, $keys, true)) {
             $default = $savedaction;
@@ -195,6 +200,59 @@ class template_row_options {
             'sourcename' => $instance->get('sourcename'),
             'modname' => (string) $instance->get('modname'),
             'iconurl' => self::instance_icon_url($instance->get('modname')),
+        ];
+    }
+
+    /**
+     * The badge text for a space: "Space · Required" / "Space · Optional".
+     *
+     * @param bool $required
+     * @return string
+     */
+    public static function space_badge_label(bool $required): string {
+        $requirement = get_string('template_space_optional', 'local_coursegen');
+        if ($required) {
+            $requirement = get_string('template_space_required', 'local_coursegen');
+        }
+        return get_string('template_space_badge', 'local_coursegen', $requirement);
+    }
+
+    /**
+     * The display name of a module type, from the site's own language pack.
+     *
+     * @param string $modname
+     * @return string The type's name, or the bare module name when that
+     *     module is no longer installed.
+     */
+    public static function module_type_name(string $modname): string {
+        if (\core_component::get_plugin_directory('mod', $modname) === null) {
+            return $modname;
+        }
+        return get_string('modulename', 'mod_' . $modname);
+    }
+
+    /**
+     * Build the render context for one virtual space row.
+     *
+     * @param template_space $space
+     * @return array
+     */
+    public static function space_row_context(template_space $space): array {
+        $modname = (string) $space->get('modname');
+        $required = (bool) $space->get('required');
+        $instruction = (string) $space->get('instruction');
+        $typename = self::module_type_name($modname);
+        return [
+            'spaceid' => (int) $space->get('id'),
+            'name' => $typename,
+            'typelabel' => $typename,
+            'modname' => $modname,
+            'iconurl' => self::instance_icon_url($modname),
+            'required' => $required,
+            'requiredvalue' => (int) $required,
+            'badge' => self::space_badge_label($required),
+            'instruction' => $instruction,
+            'hasinstruction' => $instruction !== '',
         ];
     }
 

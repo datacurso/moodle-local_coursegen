@@ -30,6 +30,7 @@ use external_single_structure;
 use external_value;
 use local_coursegen\local\models\template;
 use local_coursegen\local\models\template_section;
+use local_coursegen\local\models\template_space;
 use local_coursegen\local\models\template_activity;
 use context_system;
 
@@ -70,6 +71,12 @@ class delete_template extends external_api {
         $activities = template_activity::get_records(['templateid' => $params['id']]);
         foreach ($activities as $activity) {
             $activity->delete();
+        }
+
+        // Delete child space records.
+        $spaces = template_space::get_records(['templateid' => $params['id']]);
+        foreach ($spaces as $space) {
+            $space->delete();
         }
 
         // Delete child section records.

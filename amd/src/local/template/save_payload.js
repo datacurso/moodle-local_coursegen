@@ -24,7 +24,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {collectInstancesForSection} from 'local_coursegen/local/template/template_instance_rows';
+import {collectVirtualRowsForSection} from 'local_coursegen/local/template/template_instance_rows';
 import {resetSectionsDirtyState} from 'local_coursegen/local/template/sections_events';
 import * as Repository from 'local_coursegen/local/template/repository';
 import Notification from 'core/notification';
@@ -65,18 +65,18 @@ const nameFormIsValid = (root) => {
 };
 
 /**
- * Scrape one section's currently rendered virtual instances.
+ * Scrape one section's currently rendered virtual rows.
  *
  * @param {HTMLElement} root The wizard root element.
  * @param {number} sectionid
- * @returns {Array}
+ * @returns {Object} {instances, spaces}
  */
-const collectSectionInstances = (root, sectionid) => {
+const collectSectionVirtualRows = (root, sectionid) => {
     const sectionEl = root.querySelector('[data-for="section"][data-id="' + sectionid + '"]');
     if (!sectionEl) {
-        return [];
+        return {instances: [], spaces: []};
     }
-    return collectInstancesForSection(sectionEl);
+    return collectVirtualRowsForSection(sectionEl);
 };
 
 /**
@@ -86,17 +86,23 @@ const collectSectionInstances = (root, sectionid) => {
  * @param {HTMLElement} root The wizard root element.
  * @returns {Array}
  */
-const buildSections = (state, root) => state.courseStructure.map(s => ({
-    sectionid: s.id, sectionnum: s.num,
-    behavior: state.sectionBehavior[s.id] || 'aimodify',
-    instances: collectSectionInstances(root, s.id),
-    activities: s.activities.map(a => ({
-        cmid: a.id, action: state.activityAction[a.id] || 'keep',
-        useasreference: state.activityRef[a.id] !== false,
-        prompt: state.activityPrompt[a.id] || '',
-        templatescope: state.activityScope[a.id] || 'course',
-    })),
-}));
+const buildSections = (state, root) => state.courseStructure.map(s => {
+    const virtualRows = collectSectionVirtualRows(root, s.id);
+    return {
+        sectionid: s.id, sectionnum: s.num,
+        behavior: state.sectionBehavior[s.id] || 'aimodify',
+        instances: virtualRows.instances,
+        spaces: virtualRows.spaces,
+        activities: s.activities.map(a => ({
+            cmid: a.id, action: state.activityAction[a.id] || 'keep',
+            useasreference: state.activityRef[a.id] !== false,
+            prompt: state.activityPrompt[a.id] || '',
+            templatescope: state.activityScope[a.id] || 'course',
+            spacerequired: state.activitySpace[a.id]?.required !== false,
+            spaceinstruction: state.activitySpace[a.id]?.instruction || '',
+        })),
+    };
+});
 
 /**
  * Save the template via the repository, then redirect back to the manage
@@ -123,7 +129,6 @@ export const saveTemplate = async(state, root) => {
             id: state.templateId, name: nameVal,
             description: descVal, courseid: state.selectedCourseId,
             maxsections: state.maxSections, nolimit: state.noLimit,
-            allowedtypes: JSON.stringify(state.allowedTypes),
             namingpattern: state.namingPattern, namingstart: state.namingStart,
             sections: buildSections(state, root),
         });

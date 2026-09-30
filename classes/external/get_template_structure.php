@@ -31,6 +31,7 @@ use external_function_parameters;
 use external_value;
 use context_system;
 use local_coursegen\local\models\template;
+use local_coursegen\local\service\supported_activity_types;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -94,8 +95,7 @@ class get_template_structure extends external_api {
             $remaining = max(0, $maxsections);
         }
 
-        $allowedtypes = self::allowed_types($template);
-        $allowedactivities = self::allowed_activities($allowedtypes, $OUTPUT);
+        $allowedactivities = self::allowed_activities(supported_activity_types::installed(), $OUTPUT);
 
         return [
             'nolimit' => $nolimit,
