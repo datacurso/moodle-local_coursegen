@@ -44,7 +44,8 @@ final class supported_activity_types_test extends \advanced_testcase {
         $installed = supported_activity_types::installed();
 
         $this->assertNotEmpty($installed);
-        $this->assertSame([], array_diff($installed, template_content_generator::AI_SUPPORTED_TYPES));
+        $unsupported = array_diff($installed, template_content_generator::AI_SUPPORTED_TYPES);
+        $this->assertSame([], $unsupported);
         $this->assertContains('page', $installed);
         $this->assertContains('forum', $installed);
     }
@@ -55,9 +56,13 @@ final class supported_activity_types_test extends \advanced_testcase {
     public function test_a_module_without_an_ai_contract_is_not_supported(): void {
         $this->resetAfterTest();
 
-        $this->assertNotContains('lti', supported_activity_types::installed());
-        $this->assertFalse(supported_activity_types::is_supported('lti'));
-        $this->assertTrue(supported_activity_types::is_supported('page'));
+        $installed = supported_activity_types::installed();
+        $ltisupported = supported_activity_types::is_supported('lti');
+        $pagesupported = supported_activity_types::is_supported('page');
+
+        $this->assertNotContains('lti', $installed);
+        $this->assertFalse($ltisupported);
+        $this->assertTrue($pagesupported);
     }
 
     /**
@@ -81,7 +86,8 @@ final class supported_activity_types_test extends \advanced_testcase {
         $this->resetAfterTest();
         $this->setAdminUser();
 
-        $course = $this->getDataGenerator()->create_course();
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
         $template = new template(0, (object) [
             'name' => 'Legacy list',
             'courseid' => $course->id,
@@ -93,6 +99,7 @@ final class supported_activity_types_test extends \advanced_testcase {
 
         $modnames = array_column($result['allowedactivities'], 'modname');
         sort($modnames);
-        $this->assertSame(supported_activity_types::installed(), $modnames);
+        $installed = supported_activity_types::installed();
+        $this->assertSame($installed, $modnames);
     }
 }

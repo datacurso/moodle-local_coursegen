@@ -92,13 +92,12 @@ final class template_row_options_test extends \advanced_testcase {
      */
     public function test_activity_actions_never_offers_modify(): void {
         $supported = template_row_options::activity_actions(1, 'page');
-        $this->assertSame(
-            ['template', 'keep', 'reference', 'exclude', 'space'],
-            array_column($supported, 'value')
-        );
+        $supportedvalues = array_column($supported, 'value');
+        $this->assertSame(['template', 'keep', 'reference', 'exclude', 'space'], $supportedvalues);
 
         $unsupported = template_row_options::activity_actions(1, 'lti');
-        $this->assertSame(['keep', 'reference', 'exclude', 'space'], array_column($unsupported, 'value'));
+        $unsupportedvalues = array_column($unsupported, 'value');
+        $this->assertSame(['keep', 'reference', 'exclude', 'space'], $unsupportedvalues);
     }
 
     /**

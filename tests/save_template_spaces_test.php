@@ -52,35 +52,37 @@ final class save_template_spaces_test extends \advanced_testcase {
         $this->setAdminUser();
 
         [$course, $page] = $this->create_course_fixture();
-        $section1 = get_fast_modinfo($course)->get_section_info(1);
+        $sectionid = $this->first_section_id($course);
+        $activities = [['cmid' => (int) $page->cmid, 'action' => 'keep', 'useasreference' => true, 'prompt' => '']];
+        $space = $this->space_payload('resource', true, 'Upload the weekly guide as a PDF.', (int) $page->cmid, 0);
 
-        $saved = $this->save_with_instances(
-            (int) $course->id,
-            (int) $section1->id,
-            1,
-            [['cmid' => (int) $page->cmid, 'action' => 'keep', 'useasreference' => true, 'prompt' => '']],
-            [],
-            0,
-            [$this->space_payload('resource', true, 'Upload the weekly guide as a PDF.', (int) $page->cmid, 0)]
-        );
+        $saved = $this->save_with_instances((int) $course->id, $sectionid, 1, $activities, [], 0, [$space]);
 
-        $record = template_space::get_record(['templateid' => (int) $saved['id']]);
+        $templateid = (int) $saved['id'];
+        $record = template_space::get_record(['templateid' => $templateid]);
         $this->assertNotFalse($record);
-        $this->assertSame('resource', $record->get('modname'));
-        $this->assertSame(1, (int) $record->get('required'));
-        $this->assertSame('Upload the weekly guide as a PDF.', $record->get('instruction'));
-        $this->assertSame((int) $page->cmid, (int) $record->get('aftercmid'));
-        $this->assertNotSame('', $record->get('uid'));
+        $modname = $record->get('modname');
+        $required = (int) $record->get('required');
+        $instruction = $record->get('instruction');
+        $aftercmid = (int) $record->get('aftercmid');
+        $uid = $record->get('uid');
+        $this->assertSame('resource', $modname);
+        $this->assertSame(1, $required);
+        $this->assertSame('Upload the weekly guide as a PDF.', $instruction);
+        $this->assertSame((int) $page->cmid, $aftercmid);
+        $this->assertNotSame('', $uid);
 
-        $html = sections_config::render(get_fast_modinfo($course), (int) $saved['id']);
-        $area = $this->extract_space_area($html, (int) $record->get('id'));
+        $html = $this->render_review($course, $templateid);
+        $spaceid = (int) $record->get('id');
+        $area = $this->extract_space_area($html, $spaceid);
 
-        $requiredlabel = get_string('template_space_required', 'local_coursegen');
-        $this->assertStringContainsString(get_string('template_space_badge', 'local_coursegen', $requiredlabel), $area);
+        $badge = $this->badge_text('template_space_required');
+        $typename = get_string('modulename', 'mod_resource');
+        $this->assertStringContainsString($badge, $area);
         $this->assertStringContainsString('data-modname="resource"', $area);
         $this->assertStringContainsString('data-required="1"', $area);
         $this->assertStringContainsString('Upload the weekly guide as a PDF.', $area);
-        $this->assertStringContainsString(get_string('modulename', 'mod_resource'), $area);
+        $this->assertStringContainsString($typename, $area);
     }
 
     /**
@@ -92,26 +94,23 @@ final class save_template_spaces_test extends \advanced_testcase {
         $this->setAdminUser();
 
         [$course] = $this->create_course_fixture();
-        $section1 = get_fast_modinfo($course)->get_section_info(1);
+        $sectionid = $this->first_section_id($course);
+        $space = $this->space_payload('forum', false, '   ', 0, 0);
 
-        $saved = $this->save_with_instances(
-            (int) $course->id,
-            (int) $section1->id,
-            1,
-            [],
-            [],
-            0,
-            [$this->space_payload('forum', false, '   ', 0, 0)]
-        );
+        $saved = $this->save_with_instances((int) $course->id, $sectionid, 1, [], [], 0, [$space]);
 
-        $record = template_space::get_record(['templateid' => (int) $saved['id']]);
-        $this->assertSame(0, (int) $record->get('required'));
-        $this->assertNull($record->get('instruction'));
+        $templateid = (int) $saved['id'];
+        $record = template_space::get_record(['templateid' => $templateid]);
+        $required = (int) $record->get('required');
+        $instruction = $record->get('instruction');
+        $this->assertSame(0, $required);
+        $this->assertNull($instruction);
 
-        $html = sections_config::render(get_fast_modinfo($course), (int) $saved['id']);
-        $area = $this->extract_space_area($html, (int) $record->get('id'));
-        $optionallabel = get_string('template_space_optional', 'local_coursegen');
-        $this->assertStringContainsString(get_string('template_space_badge', 'local_coursegen', $optionallabel), $area);
+        $html = $this->render_review($course, $templateid);
+        $spaceid = (int) $record->get('id');
+        $area = $this->extract_space_area($html, $spaceid);
+        $badge = $this->badge_text('template_space_optional');
+        $this->assertStringContainsString($badge, $area);
         $this->assertStringContainsString('data-required="0"', $area);
         $this->assertMatchesRegularExpression('/class="tpl-space-instruction[^"]*d-none"/', $area);
     }
@@ -125,19 +124,15 @@ final class save_template_spaces_test extends \advanced_testcase {
         $this->setAdminUser();
 
         [$course, $page] = $this->create_course_fixture();
-        $section1 = get_fast_modinfo($course)->get_section_info(1);
+        $sectionid = $this->first_section_id($course);
+        $cmid = (int) $page->cmid;
+        $activities = [['cmid' => $cmid, 'action' => 'template', 'useasreference' => true, 'prompt' => '']];
+        $instance = $this->instance_payload($cmid, 'Page template', 'Second', $cmid, 1);
+        $space = $this->space_payload('resource', true, 'First', $cmid, 0);
 
-        $saved = $this->save_with_instances(
-            (int) $course->id,
-            (int) $section1->id,
-            1,
-            [['cmid' => (int) $page->cmid, 'action' => 'template', 'useasreference' => true, 'prompt' => '']],
-            [$this->instance_payload((int) $page->cmid, 'Page template', 'Second', (int) $page->cmid, 1)],
-            0,
-            [$this->space_payload('resource', true, 'First', (int) $page->cmid, 0)]
-        );
+        $saved = $this->save_with_instances((int) $course->id, $sectionid, 1, $activities, [$instance], 0, [$space]);
 
-        $html = sections_config::render(get_fast_modinfo($course), (int) $saved['id']);
+        $html = $this->render_review($course, (int) $saved['id']);
         $spaceposition = strpos($html, 'data-for="spacerow"');
         $instanceposition = strpos($html, 'data-for="instancerow"');
         $this->assertNotFalse($spaceposition);
@@ -154,35 +149,37 @@ final class save_template_spaces_test extends \advanced_testcase {
         $this->setAdminUser();
 
         [$course, $page] = $this->create_course_fixture();
-        $section1 = get_fast_modinfo($course)->get_section_info(1);
+        $sectionid = $this->first_section_id($course);
+        $cmid = (int) $page->cmid;
+        $activities = [[
+            'cmid' => $cmid,
+            'action' => 'space',
+            'useasreference' => true,
+            'prompt' => '',
+            'spacerequired' => false,
+            'spaceinstruction' => 'Replace this page with your own welcome.',
+        ]];
 
-        $saved = $this->save_with_instances(
-            (int) $course->id,
-            (int) $section1->id,
-            1,
-            [[
-                'cmid' => (int) $page->cmid,
-                'action' => 'space',
-                'useasreference' => true,
-                'prompt' => '',
-                'spacerequired' => false,
-                'spaceinstruction' => 'Replace this page with your own welcome.',
-            ]]
-        );
+        $saved = $this->save_with_instances((int) $course->id, $sectionid, 1, $activities, []);
 
-        $record = template_activity::get_record(['templateid' => (int) $saved['id'], 'cmid' => (int) $page->cmid]);
-        $this->assertSame('space', $record->get('action'));
-        $this->assertSame(0, (int) $record->get('spacerequired'));
-        $this->assertSame('Replace this page with your own welcome.', $record->get('spaceinstruction'));
+        $templateid = (int) $saved['id'];
+        $record = template_activity::get_record(['templateid' => $templateid, 'cmid' => $cmid]);
+        $action = $record->get('action');
+        $required = (int) $record->get('spacerequired');
+        $instruction = $record->get('spaceinstruction');
+        $this->assertSame('space', $action);
+        $this->assertSame(0, $required);
+        $this->assertSame('Replace this page with your own welcome.', $instruction);
 
-        $html = sections_config::render(get_fast_modinfo($course), (int) $saved['id']);
-        $select = $this->extract_action_select($html, (int) $page->cmid);
+        $html = $this->render_review($course, $templateid);
+        $select = $this->extract_action_select($html, $cmid);
         $this->assertMatchesRegularExpression('/<option value="space"[^>]*\sselected/', $select);
 
-        $tag = $this->extract_space_tag($html, (int) $page->cmid);
-        $optionallabel = get_string('template_space_optional', 'local_coursegen');
-        $this->assertStringContainsString(get_string('template_space_badge', 'local_coursegen', $optionallabel), $tag);
-        $this->assertStringNotContainsString('d-none', substr($tag, 0, strpos($tag, '>')));
+        $tag = $this->extract_space_tag($html, $cmid);
+        $badge = $this->badge_text('template_space_optional');
+        $opening = $this->opening_tag($tag);
+        $this->assertStringContainsString($badge, $tag);
+        $this->assertStringNotContainsString('d-none', $opening);
         $this->assertStringContainsString('Replace this page with your own welcome.', $html);
     }
 
@@ -195,10 +192,11 @@ final class save_template_spaces_test extends \advanced_testcase {
 
         [$course, $page] = $this->create_course_fixture();
 
-        $html = sections_config::render(get_fast_modinfo($course));
+        $html = $this->render_review($course);
 
         $tag = $this->extract_space_tag($html, (int) $page->cmid);
-        $this->assertStringContainsString('d-none', substr($tag, 0, strpos($tag, '>')));
+        $opening = $this->opening_tag($tag);
+        $this->assertStringContainsString('d-none', $opening);
     }
 
     /**
@@ -209,32 +207,25 @@ final class save_template_spaces_test extends \advanced_testcase {
         $this->setAdminUser();
 
         [$course] = $this->create_course_fixture();
-        $section1 = get_fast_modinfo($course)->get_section_info(1);
+        $sectionid = $this->first_section_id($course);
+        $courseid = (int) $course->id;
+        $resourcespace = $this->space_payload('resource', true, 'One', 0, 0);
+        $forumspace = $this->space_payload('forum', true, 'Two', 0, 1);
+        $twospaces = [$resourcespace, $forumspace];
 
-        $first = $this->save_with_instances(
-            (int) $course->id,
-            (int) $section1->id,
-            1,
-            [],
-            [],
-            0,
-            [$this->space_payload('resource', true, 'One', 0, 0), $this->space_payload('forum', true, 'Two', 0, 1)]
-        );
-        $this->assertSame(2, template_space::count_records(['templateid' => (int) $first['id']]));
+        $first = $this->save_with_instances($courseid, $sectionid, 1, [], [], 0, $twospaces);
+        $firstid = (int) $first['id'];
+        $countbefore = template_space::count_records(['templateid' => $firstid]);
+        $this->assertSame(2, $countbefore);
 
-        $this->save_with_instances(
-            (int) $course->id,
-            (int) $section1->id,
-            1,
-            [],
-            [],
-            (int) $first['id'],
-            [$this->space_payload('page', false, 'Only', 0, 0)]
-        );
+        $pagespace = $this->space_payload('page', false, 'Only', 0, 0);
+        $this->save_with_instances($courseid, $sectionid, 1, [], [], $firstid, [$pagespace]);
 
-        $spaces = template_space::get_records(['templateid' => (int) $first['id']]);
+        $spaces = template_space::get_records(['templateid' => $firstid]);
         $this->assertCount(1, $spaces);
-        $this->assertSame('page', reset($spaces)->get('modname'));
+        $remaining = reset($spaces);
+        $modname = $remaining->get('modname');
+        $this->assertSame('page', $modname);
     }
 
     /**
@@ -245,18 +236,11 @@ final class save_template_spaces_test extends \advanced_testcase {
         $this->setAdminUser();
 
         [$course] = $this->create_course_fixture();
-        $section1 = get_fast_modinfo($course)->get_section_info(1);
+        $sectionid = $this->first_section_id($course);
+        $space = $this->space_payload('notamodule', true, '', 0, 0);
 
         $this->expectException(\invalid_parameter_exception::class);
-        $this->save_with_instances(
-            (int) $course->id,
-            (int) $section1->id,
-            1,
-            [],
-            [],
-            0,
-            [$this->space_payload('notamodule', true, '', 0, 0)]
-        );
+        $this->save_with_instances((int) $course->id, $sectionid, 1, [], [], 0, [$space]);
     }
 
     /**
@@ -267,22 +251,64 @@ final class save_template_spaces_test extends \advanced_testcase {
         $this->setAdminUser();
 
         [$course] = $this->create_course_fixture();
-        $section1 = get_fast_modinfo($course)->get_section_info(1);
+        $sectionid = $this->first_section_id($course);
+        $space = $this->space_payload('resource', true, 'Gone soon', 0, 0);
 
-        $saved = $this->save_with_instances(
-            (int) $course->id,
-            (int) $section1->id,
-            1,
-            [],
-            [],
-            0,
-            [$this->space_payload('resource', true, 'Gone soon', 0, 0)]
-        );
-        $this->assertSame(1, template_space::count_records(['templateid' => (int) $saved['id']]));
+        $saved = $this->save_with_instances((int) $course->id, $sectionid, 1, [], [], 0, [$space]);
+        $templateid = (int) $saved['id'];
+        $countbefore = template_space::count_records(['templateid' => $templateid]);
+        $this->assertSame(1, $countbefore);
 
-        \local_coursegen\external\delete_template::execute((int) $saved['id']);
+        \local_coursegen\external\delete_template::execute($templateid);
 
-        $this->assertSame(0, template_space::count_records(['templateid' => (int) $saved['id']]));
+        $countafter = template_space::count_records(['templateid' => $templateid]);
+        $this->assertSame(0, $countafter);
+    }
+
+    /**
+     * The id of the first section after the general one.
+     *
+     * @param \stdClass $course
+     * @return int
+     */
+    private function first_section_id(\stdClass $course): int {
+        $modinfo = get_fast_modinfo($course);
+        $section = $modinfo->get_section_info(1);
+        return (int) $section->id;
+    }
+
+    /**
+     * Render the sections review, optionally preselecting a saved template.
+     *
+     * @param \stdClass $course
+     * @param int $templateid Saved template id, 0 for a fresh template.
+     * @return string
+     */
+    private function render_review(\stdClass $course, int $templateid = 0): string {
+        $modinfo = get_fast_modinfo($course);
+        return sections_config::render($modinfo, $templateid);
+    }
+
+    /**
+     * The text of a space badge for a requirement label.
+     *
+     * @param string $requirementkey 'template_space_required' or 'template_space_optional'.
+     * @return string
+     */
+    private function badge_text(string $requirementkey): string {
+        $requirement = get_string($requirementkey, 'local_coursegen');
+        return get_string('template_space_badge', 'local_coursegen', $requirement);
+    }
+
+    /**
+     * The opening tag of an element's markup, up to its first closing bracket.
+     *
+     * @param string $markup
+     * @return string
+     */
+    private function opening_tag(string $markup): string {
+        $end = strpos($markup, '>');
+        return substr($markup, 0, $end);
     }
 
     /**
@@ -340,8 +366,10 @@ final class save_template_spaces_test extends \advanced_testcase {
         $marker = 'data-region="space-tag" data-id="' . $cmid . '"';
         $markerpos = strpos($html, $marker);
         $this->assertNotFalse($markerpos, 'No space tag rendered matching: ' . $marker);
-        $tagstart = strrpos(substr($html, 0, $markerpos), '<button');
+        $before = substr($html, 0, $markerpos);
+        $tagstart = strrpos($before, '<button');
         $tagend = strpos($html, '</button>', $tagstart);
-        return substr($html, $tagstart, $tagend + strlen('</button>') - $tagstart);
+        $length = $tagend + strlen('</button>') - $tagstart;
+        return substr($html, $tagstart, $length);
     }
 }

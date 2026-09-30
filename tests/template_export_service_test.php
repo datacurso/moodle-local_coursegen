@@ -80,16 +80,20 @@ final class template_export_service_test extends \advanced_testcase {
         $this->resetAfterTest(true);
         $this->setAdminUser();
 
-        $course = $this->getDataGenerator()->create_course();
-        $page = $this->getDataGenerator()->create_module('page', ['course' => $course->id]);
-        $forum = $this->getDataGenerator()->create_module('forum', ['course' => $course->id]);
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $page = $generator->create_module('page', ['course' => $course->id]);
+        $forum = $generator->create_module('forum', ['course' => $course->id]);
         $template = $this->create_template($course->id);
-        $this->mark_with_action($template->get('id'), (int) $page->cmid, 'space');
+        $templateid = $template->get('id');
+        $this->mark_with_action($templateid, (int) $page->cmid, 'space');
 
-        $payload = template_export_service::build_init_payload($template->get('id'));
+        $payload = template_export_service::build_init_payload($templateid);
 
-        $this->assertNull($this->find_activity($payload, (int) $page->cmid));
-        $this->assertNotNull($this->find_activity($payload, (int) $forum->cmid));
+        $pageentry = $this->find_activity($payload, (int) $page->cmid);
+        $forumentry = $this->find_activity($payload, (int) $forum->cmid);
+        $this->assertNull($pageentry);
+        $this->assertNotNull($forumentry);
     }
 
     /**

@@ -58,25 +58,30 @@ final class course_sections_actions_test extends \advanced_testcase {
 
         [$course, $page, , $lti] = $this->create_course_fixture();
 
-        $html = sections_config::render(get_fast_modinfo($course));
+        $modinfo = get_fast_modinfo($course);
+        $html = sections_config::render($modinfo);
 
         $this->assertStringNotContainsString('data-act-val=', $html);
 
         // AI-supported type (page): template/keep/reference/exclude/space, keep preselected.
         $pageselect = $this->extract_action_select($html, (int) $page->cmid);
-        $this->assertSame(5, substr_count($pageselect, '<option'));
+        $pageoptions = substr_count($pageselect, '<option');
+        $this->assertSame(5, $pageoptions);
         foreach (['template', 'keep', 'reference', 'exclude', 'space'] as $action) {
             $this->assertStringContainsString('<option value="' . $action . '"', $pageselect);
         }
         $this->assertStringNotContainsString('<option value="modify"', $pageselect);
         $this->assertMatchesRegularExpression('/<option value="keep"[^>]*\sselected/', $pageselect);
-        $this->assertStringContainsString(get_string('template_activity_template', 'local_coursegen'), $pageselect);
-        $this->assertStringContainsString(get_string('template_activity_reference', 'local_coursegen'), $pageselect);
+        $templatelabel = get_string('template_activity_template', 'local_coursegen');
+        $referencelabel = get_string('template_activity_reference', 'local_coursegen');
+        $this->assertStringContainsString($templatelabel, $pageselect);
+        $this->assertStringContainsString($referencelabel, $pageselect);
 
         // Unsupported type (lti): modify AND template omitted, keep preselected;
         // a space is still offered, since the professor provides it.
         $ltiselect = $this->extract_action_select($html, (int) $lti->cmid);
-        $this->assertSame(4, substr_count($ltiselect, '<option'));
+        $ltioptions = substr_count($ltiselect, '<option');
+        $this->assertSame(4, $ltioptions);
         $this->assertStringContainsString('<option value="space"', $ltiselect);
         $this->assertStringNotContainsString('<option value="modify"', $ltiselect);
         $this->assertStringNotContainsString('<option value="template"', $ltiselect);

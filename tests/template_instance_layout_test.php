@@ -184,7 +184,8 @@ final class template_instance_layout_test extends \advanced_testcase {
     public function test_space_renders_after_its_anchor_as_a_space_row(): void {
         $space = $this->fake_space(10, 0, 'Upload the guide');
         $rows = template_instance_layout::ordered_rows([10, 20], [$space]);
-        $this->assertSame(['real:10', 'space:Upload the guide', 'real:20'], $this->tokens($rows));
+        $tokens = $this->tokens($rows);
+        $this->assertSame(['real:10', 'space:Upload the guide', 'real:20'], $tokens);
     }
 
     /**
@@ -195,7 +196,8 @@ final class template_instance_layout_test extends \advanced_testcase {
         $instance = $this->fake_instance(10, 1, 'Second');
         $space = $this->fake_space(10, 0, 'First');
         $rows = template_instance_layout::ordered_rows([10], [$instance, $space]);
-        $this->assertSame(['real:10', 'space:First', 'inst:Second'], $this->tokens($rows));
+        $tokens = $this->tokens($rows);
+        $this->assertSame(['real:10', 'space:First', 'inst:Second'], $tokens);
     }
 
     /**
@@ -205,6 +207,7 @@ final class template_instance_layout_test extends \advanced_testcase {
     public function test_space_with_a_missing_anchor_is_appended_at_the_end(): void {
         $space = $this->fake_space(999, 0, 'Orphan');
         $rows = template_instance_layout::ordered_rows([10], [$space]);
-        $this->assertSame(['real:10', 'space:Orphan'], $this->tokens($rows));
+        $tokens = $this->tokens($rows);
+        $this->assertSame(['real:10', 'space:Orphan'], $tokens);
     }
 }

@@ -17,6 +17,7 @@
 namespace local_coursegen;
 
 use local_coursegen\form\template_config_form;
+use local_coursegen\local\models\template;
 
 /**
  * Section-naming presets of the template configuration form.
@@ -54,7 +55,10 @@ final class template_config_form_naming_test extends \advanced_testcase {
             $expected[] = get_string('template_naming_preset_' . $kind, 'local_coursegen');
         }
 
-        $this->assertSame($expected, array_keys(template_config_form::naming_presets()));
+        $presets = template_config_form::naming_presets();
+        $patterns = array_keys($presets);
+
+        $this->assertSame($expected, $patterns);
     }
 
     /**
@@ -63,17 +67,142 @@ final class template_config_form_naming_test extends \advanced_testcase {
     public function test_default_is_the_first_preset(): void {
         $presets = template_config_form::naming_presets();
 
-        $this->assertSame(array_key_first($presets), template_config_form::default_naming_pattern());
+        $first = array_key_first($presets);
+        $default = template_config_form::default_naming_pattern();
+
+        $this->assertSame($first, $default);
     }
 
     /**
      * The English pack no longer carries Spanish wording.
      */
     public function test_english_presets_are_not_spanish(): void {
-        foreach (array_keys(template_config_form::naming_presets()) as $pattern) {
+        $presets = template_config_form::naming_presets();
+        $patterns = array_keys($presets);
+        foreach ($patterns as $pattern) {
             $this->assertStringNotContainsString('Unidad', $pattern);
             $this->assertStringNotContainsString('Módulo', $pattern);
             $this->assertStringNotContainsString('Semana', $pattern);
         }
+    }
+
+    /**
+     * The naming select offers the presets, then the name alone, then the custom entry.
+     */
+    public function test_options_hold_the_presets_the_name_alone_and_the_custom_entry(): void {
+        $presets = template_config_form::naming_presets();
+
+        $options = template_config_form::naming_options();
+
+        $keys = array_keys($options);
+        $expected = array_merge(array_keys($presets), ['{nombre}', '__custom__']);
+        $this->assertSame($expected, $keys);
+    }
+
+    /**
+     * A fresh template selects the first preset and has no custom text.
+     */
+    public function test_a_fresh_template_selects_the_default_preset_with_no_custom_text(): void {
+        $options = template_config_form::naming_options();
+
+        [$selected, $custom] = template_config_form::naming_defaults(null, $options);
+
+        $default = template_config_form::default_naming_pattern();
+        $this->assertSame($default, $selected);
+        $this->assertSame('', $custom);
+    }
+
+    /**
+     * A saved pattern that is one of the presets selects that preset.
+     */
+    public function test_a_saved_preset_selects_that_preset(): void {
+        $options = template_config_form::naming_options();
+        $presets = template_config_form::naming_presets();
+        $patterns = array_keys($presets);
+        $saved = $patterns[1];
+        $template = new template(0, (object) ['namingpattern' => $saved]);
+
+        [$selected, $custom] = template_config_form::naming_defaults($template, $options);
+
+        $this->assertSame($saved, $selected);
+        $this->assertSame('', $custom);
+    }
+
+    /**
+     * The name-only pattern is an option of its own, not a custom one.
+     */
+    public function test_a_saved_name_only_pattern_selects_the_name_only_option(): void {
+        $options = template_config_form::naming_options();
+        $template = new template(0, (object) ['namingpattern' => '{nombre}']);
+
+        [$selected, $custom] = template_config_form::naming_defaults($template, $options);
+
+        $this->assertSame('{nombre}', $selected);
+        $this->assertSame('', $custom);
+    }
+
+    /**
+     * A saved pattern that is not an option goes through the custom entry,
+     * with its text restored.
+     */
+    public function test_a_saved_pattern_that_is_not_an_option_goes_through_custom(): void {
+        $options = template_config_form::naming_options();
+        $template = new template(0, (object) ['namingpattern' => 'Chapter {N} - {nombre}']);
+
+        [$selected, $custom] = template_config_form::naming_defaults($template, $options);
+
+        $this->assertSame('__custom__', $selected);
+        $this->assertSame('Chapter {N} - {nombre}', $custom);
+    }
+
+    /**
+     * A template saved with an empty pattern behaves like a fresh one.
+     */
+    public function test_an_empty_saved_pattern_falls_back_to_the_default(): void {
+        $options = template_config_form::naming_options();
+        $template = new template(0, (object) ['namingpattern' => '']);
+
+        [$selected, $custom] = template_config_form::naming_defaults($template, $options);
+
+        $default = template_config_form::default_naming_pattern();
+        $this->assertSame($default, $selected);
+        $this->assertSame('', $custom);
+    }
+
+    /**
+     * A fresh template starts with one extra section.
+     */
+    public function test_a_fresh_template_starts_with_one_extra_section(): void {
+        $extra = template_config_form::default_extra_sections(null);
+
+        $this->assertSame(1, $extra);
+    }
+
+    /**
+     * A saved allowance of zero falls back to one, a positive one is kept.
+     *
+     * @dataProvider saved_allowance_provider
+     * @param int $saved The saved maxsections.
+     * @param int $expected The default the form shows.
+     */
+    public function test_the_saved_extra_sections_allowance_is_kept_only_when_positive(int $saved, int $expected): void {
+        $template = new template(0, (object) ['maxsections' => $saved]);
+
+        $extra = template_config_form::default_extra_sections($template);
+
+        $this->assertSame($expected, $extra);
+    }
+
+    /**
+     * Saved allowances and the default each one gives.
+     *
+     * @return array
+     */
+    public static function saved_allowance_provider(): array {
+        return [
+            'zero falls back to one' => [0, 1],
+            'one is kept' => [1, 1],
+            'a larger allowance is kept' => [7, 7],
+        ];
     }
 }
