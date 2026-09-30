@@ -1,3 +1,14 @@
+## 2.0.10
+
+**Released on:** 2026-09-30
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.1**.
+
+## Fixed
+
+- **A leftover image marker written with double brackets is now removed too**  
+  When the AI service could not resolve an image, the marker it left behind was only cleaned up if it used the mathematical brackets, so a marker written with plain double brackets showed up as visible text in the generated activity. Both forms are now removed. Only markers that start with the image prefix are touched, so other double-bracket text, such as a wiki link, is left as it is.
+
 ## 2.0.9
 
 **Released on:** 2026-09-29
