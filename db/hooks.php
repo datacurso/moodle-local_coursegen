@@ -31,8 +31,8 @@ $callbacks = [
         'priority' => 900,
     ],
     [
-        'hook' => core\hook\output\before_footer_html_generation::class,
-        'callback' => 'local_coursegen\hook\mycourses_header_hook::before_footer_html_generation',
+        'hook' => core\hook\output\before_http_headers::class,
+        'callback' => 'local_coursegen\hook\mycourses_header_hook::before_http_headers',
         'priority' => 500,
     ],
 ];

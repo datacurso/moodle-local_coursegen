@@ -1,14 +1,15 @@
-@local @local_coursegen @javascript
+@local @local_coursegen
 Feature: Create with AI button on the My courses page
   In order to start creating a course with AI
   As a user allowed to create courses with AI
   I need the "Create with AI" button next to the course actions on My courses
 
-  # These scenarios do NOT need the live DataCurso AI service: they only assert
-  # that the button is injected into the page. On Moodle 4.5/5.0 the course
-  # action buttons live in the page header; on Moodle 5.2 they live inside the
-  # Course overview block. The assertions below are written without a region so
-  # they pass on every supported version.
+  # These scenarios do NOT need the live DataCurso AI service nor JavaScript:
+  # the button is spliced server side into the page HTML by the
+  # before_http_headers hook, so it is present in the initial response. On
+  # Moodle 4.5/5.0 the course action buttons live in the page header; on
+  # Moodle 5.2 they live inside the Course overview block. The assertions below
+  # are written without a region so they pass on every supported version.
 
   Background:
     Given the following config values are set as admin:
