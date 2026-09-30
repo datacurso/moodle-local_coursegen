@@ -62,10 +62,10 @@ final class course_sections_actions_test extends \advanced_testcase {
 
         $this->assertStringNotContainsString('data-act-val=', $html);
 
-        // AI-supported type (page): template/keep/reference/exclude/space, keep preselected.
+        // AI-supported type (page): template/keep/reference/exclude, keep preselected.
         $pageselect = $this->extract_action_select($html, (int) $page->cmid);
-        $this->assertSame(5, substr_count($pageselect, '<option'));
-        foreach (['template', 'keep', 'reference', 'exclude', 'space'] as $action) {
+        $this->assertSame(4, substr_count($pageselect, '<option'));
+        foreach (['template', 'keep', 'reference', 'exclude'] as $action) {
             $this->assertStringContainsString('<option value="' . $action . '"', $pageselect);
         }
         $this->assertStringNotContainsString('<option value="modify"', $pageselect);
@@ -73,11 +73,9 @@ final class course_sections_actions_test extends \advanced_testcase {
         $this->assertStringContainsString(get_string('template_activity_template', 'local_coursegen'), $pageselect);
         $this->assertStringContainsString(get_string('template_activity_reference', 'local_coursegen'), $pageselect);
 
-        // Unsupported type (lti): modify AND template omitted, keep preselected;
-        // a space is still offered, since the professor provides it.
+        // Unsupported type (lti): modify AND template omitted, keep preselected.
         $ltiselect = $this->extract_action_select($html, (int) $lti->cmid);
-        $this->assertSame(4, substr_count($ltiselect, '<option'));
-        $this->assertStringContainsString('<option value="space"', $ltiselect);
+        $this->assertSame(3, substr_count($ltiselect, '<option'));
         $this->assertStringNotContainsString('<option value="modify"', $ltiselect);
         $this->assertStringNotContainsString('<option value="template"', $ltiselect);
         $this->assertMatchesRegularExpression('/<option value="keep"[^>]*\sselected/', $ltiselect);

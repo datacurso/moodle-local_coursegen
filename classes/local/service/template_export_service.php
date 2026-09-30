@@ -158,9 +158,7 @@ class template_export_service {
     }
 
     /**
-     * The base course's own activities, excluding the ones marked "exclude"
-     * and the ones marked "space": those are for the professor to provide,
-     * so the AI service is never asked about them.
+     * The base course's own activities, excluding the ones marked "exclude".
      *
      * @param \course_modinfo $modinfo
      * @param array $actions
@@ -174,7 +172,7 @@ class template_export_service {
                 continue;
             }
             $action = $actions[$cm->id] ?? 'keep';
-            if ($action === 'exclude' || $action === 'space') {
+            if ($action === 'exclude') {
                 continue;
             }
             $activities[] = self::real_activity_entry($cm, $action);

@@ -1,5 +1,5 @@
 @local @local_coursegen @javascript
-Feature: Reopening the "Add activity from a template" picker from the add menu
+Feature: Reopening the "Add activity from a template" picker
   In order to add course activities generated from an already-marked template
   As a teacher configuring a course template
   I need the picker to always list every currently marked template, even after
@@ -28,7 +28,6 @@ Feature: Reopening the "Add activity from a template" picker from the add menu
     And I click on "input[value=section]" "css_element" in the "Configure template" "dialogue"
     And I click on "Save" "button" in the "Configure template" "dialogue"
     And I click on ".tpl-section-card[data-number='1'] [data-region='add-instance'] [data-instance-menu-trigger]" "css_element"
-    And I click on "Add activity from a template" "button" in the ".tpl-section-card[data-number='1'] .dropdown-menu.show" "css_element"
     Then I should see "Lesson one" in the ".tpl-section-card[data-number='1'] .dropdown-menu.show" "css_element"
     And I should not see "Lesson two" in the ".tpl-section-card[data-number='1'] .dropdown-menu.show" "css_element"
     And I press the escape key
@@ -36,7 +35,6 @@ Feature: Reopening the "Add activity from a template" picker from the add menu
     And I click on "input[value=section]" "css_element" in the "Configure template" "dialogue"
     And I click on "Save" "button" in the "Configure template" "dialogue"
     And I click on ".tpl-section-card[data-number='1'] [data-region='add-instance'] [data-instance-menu-trigger]" "css_element"
-    And I click on "Add activity from a template" "button" in the ".tpl-section-card[data-number='1'] .dropdown-menu.show" "css_element"
     Then I should see "Lesson one" in the ".tpl-section-card[data-number='1'] .dropdown-menu.show" "css_element"
     And I should see "Lesson two" in the ".tpl-section-card[data-number='1'] .dropdown-menu.show" "css_element"
 
@@ -46,7 +44,6 @@ Feature: Reopening the "Add activity from a template" picker from the add menu
     And I click on "input[value=section]" "css_element" in the "Configure template" "dialogue"
     And I click on "Save" "button" in the "Configure template" "dialogue"
     And I click on ".tpl-section-card[data-number='1'] tr[data-region='row-gap'] [data-instance-menu-trigger]" "css_element"
-    And I click on "Add activity from a template" "button" in the ".tpl-section-card[data-number='1'] .dropdown-menu.show" "css_element"
     Then I should see "Lesson one" in the ".tpl-section-card[data-number='1'] .dropdown-menu.show" "css_element"
     And I should not see "Lesson two" in the ".tpl-section-card[data-number='1'] .dropdown-menu.show" "css_element"
     And I press the escape key
@@ -54,6 +51,5 @@ Feature: Reopening the "Add activity from a template" picker from the add menu
     And I click on "input[value=section]" "css_element" in the "Configure template" "dialogue"
     And I click on "Save" "button" in the "Configure template" "dialogue"
     And I click on ".tpl-section-card[data-number='1'] tr[data-region='row-gap'] [data-instance-menu-trigger]" "css_element"
-    And I click on "Add activity from a template" "button" in the ".tpl-section-card[data-number='1'] .dropdown-menu.show" "css_element"
     Then I should see "Lesson one" in the ".tpl-section-card[data-number='1'] .dropdown-menu.show" "css_element"
     And I should see "Lesson two" in the ".tpl-section-card[data-number='1'] .dropdown-menu.show" "css_element"

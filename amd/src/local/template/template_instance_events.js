@@ -14,9 +14,9 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Event bindings for the add menu ("Add activity from a template" and "Add a
- * space for an activity"): the hover-reveal gap triggers, the section's
- * persistent trigger, and each instance row's prompt-toggle/remove icons. Bound the same way sections_events.js binds
+ * Event bindings for "Add activity from a template": the hover-reveal gap
+ * triggers, the section's persistent trigger, and each instance row's
+ * prompt-toggle/remove icons. Bound the same way sections_events.js binds
  * everything else — again after every render (initial page load and each
  * AJAX course switch).
  *
@@ -30,18 +30,83 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {
-    openAddMenu,
-    showAddMenu,
-    showTemplateList,
-    closeInstanceMenu,
-    beginMenuOpen,
-} from 'local_coursegen/local/template/template_instance_menu';
+import {openInstanceMenu, closeInstanceMenu, beginMenuOpen} from 'local_coursegen/local/template/template_instance_menu';
 import {insertInstanceRow, removeInstanceRow} from 'local_coursegen/local/template/template_instance_rows';
-import {addSpace, bindSpaceRows} from 'local_coursegen/local/template/template_space_rows';
-import {buildAvailableTemplates} from 'local_coursegen/local/template/template_picker_options';
+import {getStrings} from 'core/str';
 import Notification from 'core/notification';
 import {prefetchStrings} from 'core/prefetch';
+
+/**
+ * Build one marked row's own picker option, or null if the row is missing
+ * something it needs (no cmid, or no section ancestor to check eligibility
+ * against) — a single malformed row must never take the whole list down.
+ *
+ * @param {HTMLElement} row A row carrying the "tpl-row-template" class.
+ * @param {number} targetsectionid The section the "+" was triggered from.
+ * @param {Object} state The live wizard state from init.js.
+ * @param {Object} hints {samesectionhint, coursehint, tooltip} pre-fetched strings.
+ * @returns {Object|null}
+ */
+const buildOneOption = (row, targetsectionid, state, hints) => {
+    const cmid = parseInt(row.dataset.id, 10);
+    const sectionEl = row.closest('[data-for="section"]');
+    if (!cmid || !sectionEl) {
+        return null;
+    }
+    const sectionid = parseInt(sectionEl.dataset.id, 10);
+    const scope = state.activityScope[cmid] || 'course';
+    const eligible = scope === 'course' || sectionid === targetsectionid;
+
+    let scopehint = hints.samesectionhint;
+    let itemtooltip = '';
+    if (eligible) {
+        if (scope === 'course') {
+            scopehint = hints.coursehint;
+        }
+    } else {
+        itemtooltip = hints.tooltip;
+    }
+
+    return {
+        sourcecmid: cmid,
+        name: row.querySelector('.tpl-template-tag')?.dataset.name || '',
+        typelabel: row.dataset.typelabel || '',
+        modname: row.dataset.modname || '',
+        iconurl: row.querySelector('img.activityicon')?.src || '',
+        disabled: !eligible,
+        scopehint,
+        tooltip: itemtooltip,
+    };
+};
+
+/**
+ * Build the picker's option list for one target section: every row
+ * currently marked "Use as template" anywhere in the review, enabled when
+ * its scope makes it eligible for this section.
+ *
+ * @param {HTMLElement} container The rendered course sections review.
+ * @param {number} targetsectionid The section the "+" was triggered from.
+ * @param {Object} state The live wizard state from init.js.
+ * @returns {Promise<Array>} Menu options (see template_instance_menu.mustache).
+ */
+const buildAvailableTemplates = async(container, targetsectionid, state) => {
+    const [samesectionhint, coursehint, tooltip] = await getStrings([
+        {key: 'template_instance_scope_same_section', component: 'local_coursegen'},
+        {key: 'template_instance_scope_whole_course', component: 'local_coursegen'},
+        {key: 'template_instance_scope_unavailable', component: 'local_coursegen'},
+    ]);
+    const hints = {samesectionhint, coursehint, tooltip};
+
+    const templaterows = container.querySelectorAll('.tpl-row-template[data-for="cmitem"]');
+    const options = [];
+    for (const row of templaterows) {
+        const option = buildOneOption(row, targetsectionid, state, hints);
+        if (option !== null) {
+            options.push(option);
+        }
+    }
+    return options;
+};
 
 /**
  * Toggle one instance row's prompt drawer open/closed.
@@ -57,56 +122,24 @@ const togglePromptDrawer = (container, instanceid) => {
 };
 
 /**
- * Open a trigger's add menu.
+ * Resolve a trigger's target section, fetch the available templates for it,
+ * and open its picker.
  *
- * Claims this open's token synchronously, before any async work starts —
- * see template_instance_menu.js's latestOpenToken doc for why: it is what
- * makes a later click on this same trigger win over an earlier one whose
- * own async work happens to settle later.
- *
- * @param {HTMLElement} trigger The clicked "+" button.
- */
-const openMenuForTrigger = async(trigger) => {
-    const token = beginMenuOpen(trigger);
-    await openAddMenu({triggerEl: trigger, token});
-};
-
-/**
- * Switch an open add menu to the list of templates an activity can be
- * created from, for the section the trigger belongs to.
+ * Claims this open's token synchronously, before any of the async work
+ * below starts — see template_instance_menu.js's latestOpenToken doc for
+ * why: it is what makes a later click on this same trigger win over an
+ * earlier one whose own async work happens to settle later.
  *
  * @param {HTMLElement} container The rendered course sections review.
- * @param {HTMLElement} trigger The "+" button whose menu is open.
+ * @param {HTMLElement} trigger The clicked "+" button.
  * @param {Object} state The live wizard state from init.js.
  */
-const showTemplatePicker = async(container, trigger, state) => {
+const openMenuForTrigger = async(container, trigger, state) => {
+    const token = beginMenuOpen(trigger);
     const sectionEl = trigger.closest('[data-for="section"]');
     const sectionid = parseInt(sectionEl.dataset.id, 10);
     const options = await buildAvailableTemplates(container, sectionid, state);
-    await showTemplateList({triggerEl: trigger, options});
-};
-
-/**
- * Handle a click on one of the add menu's own items.
- *
- * @param {HTMLElement} item The clicked item (data-menu-action).
- * @param {HTMLElement} container The rendered course sections review.
- * @param {Object} state The live wizard state from init.js.
- * @param {Function} markDirty Marks the wizard as having unsaved changes.
- */
-const handleMenuAction = async(item, container, state, markDirty) => {
-    const trigger = item.closest('.dropdown').querySelector('[data-instance-menu-trigger]');
-    switch (item.dataset.menuAction) {
-        case 'from-template':
-            await showTemplatePicker(container, trigger, state);
-            break;
-        case 'back':
-            await showAddMenu(trigger);
-            break;
-        case 'add-space':
-            await addSpace(item, state, markDirty);
-            break;
-    }
+    await openInstanceMenu({triggerEl: trigger, options, token});
 };
 
 /**
@@ -154,7 +187,6 @@ export const bindInstanceInserts = (container, state, markDirty) => {
         'template_instance_scope_whole_course',
         'template_instance_scope_unavailable',
         'template_add_instance',
-        'template_add_space',
         'template_instance_badge',
         'template_instance_name',
         'template_instance_prompt_edit',
@@ -182,18 +214,7 @@ export const bindInstanceInserts = (container, state, markDirty) => {
             // stopping it here always wins regardless of how many times this
             // trigger has already been opened before.
             e.stopPropagation();
-            openMenuForTrigger(trigger).catch(Notification.exception);
-            return;
-        }
-
-        // The add menu's own items keep the dropdown open (the template
-        // picker replaces its content in place), so the click must not reach
-        // Bootstrap's document-level handler that closes a dropdown on any
-        // click inside it. "add a space" closes it explicitly.
-        const menuItem = e.target.closest('[data-menu-action]');
-        if (menuItem) {
-            e.stopPropagation();
-            handleMenuAction(menuItem, container, state, markDirty).catch(Notification.exception);
+            openMenuForTrigger(container, trigger, state).catch(Notification.exception);
             return;
         }
 
@@ -226,6 +247,4 @@ export const bindInstanceInserts = (container, state, markDirty) => {
             markDirty();
         }
     });
-
-    bindSpaceRows(container, markDirty);
 };

@@ -19,7 +19,6 @@ namespace local_coursegen\local\service;
 use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_instance;
 use local_coursegen\local\models\template_section;
-use local_coursegen\local\models\template_space;
 use local_coursegen\output\template_row_options;
 
 /**
@@ -40,8 +39,8 @@ class template_persistence_service {
      *
      * @param int $templateid
      * @param array $sections Each with sectionid, sectionnum, behavior,
-     *     activities array, and optional instances and spaces arrays — the
-     *     exact shape save_template::execute_parameters() validates.
+     *     activities array, and an optional instances array — the exact
+     *     shape save_template::execute_parameters() validates.
      */
     public static function save_sections(int $templateid, array $sections): void {
         self::delete_children($templateid);
@@ -67,7 +66,6 @@ class template_persistence_service {
 
         self::save_activities($templateid, $sectiondata['sectionid'], $sectiondata['activities']);
         self::save_instances($templateid, $sectiondata['sectionid'], $sectiondata['instances'] ?? []);
-        self::save_spaces($templateid, $sectiondata['sectionid'], $sectiondata['spaces'] ?? []);
     }
 
     /**
@@ -97,20 +95,7 @@ class template_persistence_service {
     }
 
     /**
-     * Persist one section's virtual spaces.
-     *
-     * @param int $templateid
-     * @param int $sectionid
-     * @param array $spaces
-     */
-    private static function save_spaces(int $templateid, int $sectionid, array $spaces): void {
-        foreach ($spaces as $spacedata) {
-            self::create_space($templateid, $sectionid, $spacedata);
-        }
-    }
-
-    /**
-     * Delete every existing activity, section, instance and space record for a template.
+     * Delete every existing activity, section, and instance record for a template.
      *
      * @param int $templateid
      */
@@ -118,7 +103,6 @@ class template_persistence_service {
         self::delete_records(template_activity::class, $templateid);
         self::delete_records(template_section::class, $templateid);
         self::delete_records(template_instance::class, $templateid);
-        self::delete_records(template_space::class, $templateid);
     }
 
     /**
@@ -149,8 +133,6 @@ class template_persistence_service {
         $act->set('useasreference', (int) $actdata['useasreference']);
         $act->set('templatescope', self::normalise_scope($actdata['templatescope'] ?? 'course'));
         $act->set('prompt', $actdata['prompt']);
-        $act->set('spacerequired', (int) ($actdata['spacerequired'] ?? 1));
-        $act->set('spaceinstruction', self::space_instruction($actdata['spaceinstruction'] ?? ''));
         $act->create();
     }
 
@@ -179,43 +161,6 @@ class template_persistence_service {
         $instance->set('aftercmid', $instdata['aftercmid'] ?? 0);
         $instance->set('sortorder', $instdata['sortorder'] ?? 0);
         $instance->create();
-    }
-
-    /**
-     * Persist one virtual space's saved configuration.
-     *
-     * @param int $templateid
-     * @param int $sectionid
-     * @param array $spacedata
-     */
-    private static function create_space(int $templateid, int $sectionid, array $spacedata): void {
-        if (!\core_component::is_valid_plugin_name('mod', $spacedata['modname'])) {
-            throw new \invalid_parameter_exception('Not an activity type: ' . $spacedata['modname']);
-        }
-        $space = new template_space(0);
-        $space->set('uid', \core\uuid::generate());
-        $space->set('templateid', $templateid);
-        $space->set('sectionid', $sectionid);
-        $space->set('modname', $spacedata['modname']);
-        $space->set('required', (int) ($spacedata['required'] ?? 1));
-        $space->set('instruction', self::space_instruction($spacedata['instruction'] ?? ''));
-        $space->set('aftercmid', $spacedata['aftercmid'] ?? 0);
-        $space->set('sortorder', $spacedata['sortorder'] ?? 0);
-        $space->create();
-    }
-
-    /**
-     * A space's instruction as stored: trimmed, and null when there is none.
-     *
-     * @param string $instruction
-     * @return string|null
-     */
-    private static function space_instruction(string $instruction): ?string {
-        $instruction = trim($instruction);
-        if ($instruction === '') {
-            return null;
-        }
-        return $instruction;
     }
 
     /**

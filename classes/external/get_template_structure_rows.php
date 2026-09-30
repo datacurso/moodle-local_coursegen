@@ -272,6 +272,24 @@ trait get_template_structure_rows {
     }
 
     /**
+     * The template's own allowed-type list, decoded from storage.
+     *
+     * @param template $template
+     * @return array
+     */
+    private static function allowed_types(template $template): array {
+        $raw = $template->get('allowedtypes');
+        if (empty($raw)) {
+            return [];
+        }
+        $decoded = json_decode($raw, true);
+        if (!is_array($decoded)) {
+            return [];
+        }
+        return $decoded;
+    }
+
+    /**
      * The allowed-type catalog, each with its display name, purpose and
      * icon, sorted by display name.
      *

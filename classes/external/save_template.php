@@ -55,6 +55,7 @@ class save_template extends external_api {
             'courseid'       => new external_value(PARAM_INT,  'Base course ID'),
             'maxsections'    => new external_value(PARAM_INT,  'Max sections', VALUE_DEFAULT, 0),
             'nolimit'        => new external_value(PARAM_BOOL, 'No section limit', VALUE_DEFAULT, false),
+            'allowedtypes'   => new external_value(PARAM_RAW,  'JSON array of allowed types', VALUE_DEFAULT, '[]'),
             'namingpattern'  => new external_value(PARAM_RAW,  'Section naming pattern', VALUE_DEFAULT, ''),
             'namingstart'    => new external_value(PARAM_INT,  'Naming start number', VALUE_DEFAULT, 1),
             'sections'       => new external_multiple_structure(
@@ -73,18 +74,6 @@ class save_template extends external_api {
                                 'Template scope (course or section); only meaningful when action=template',
                                 VALUE_DEFAULT,
                                 'course'
-                            ),
-                            'spacerequired'  => new external_value(
-                                PARAM_BOOL,
-                                'Whether the professor must provide this activity; only meaningful when action=space',
-                                VALUE_DEFAULT,
-                                true
-                            ),
-                            'spaceinstruction' => new external_value(
-                                PARAM_RAW,
-                                'What the professor has to provide; only meaningful when action=space',
-                                VALUE_DEFAULT,
-                                ''
                             ),
                         ])
                     ),
@@ -108,23 +97,6 @@ class save_template extends external_api {
                         VALUE_DEFAULT,
                         []
                     ),
-                    'spaces' => new external_multiple_structure(
-                        new external_single_structure([
-                            'modname'     => new external_value(PARAM_PLUGIN, 'Module type the professor provides'),
-                            'required'    => new external_value(PARAM_BOOL, 'Whether the professor must provide it', VALUE_DEFAULT, true),
-                            'instruction' => new external_value(PARAM_RAW, 'What the professor has to provide', VALUE_DEFAULT, ''),
-                            'aftercmid' => new external_value(
-                                PARAM_INT,
-                                'Real cmid this space renders after within its section; 0 = section start',
-                                VALUE_DEFAULT,
-                                0
-                            ),
-                            'sortorder'   => new external_value(PARAM_INT, 'Tiebreaker order among virtual rows sharing an anchor', VALUE_DEFAULT, 0),
-                        ]),
-                        'Virtual spaces the professor fills with an activity of their own',
-                        VALUE_DEFAULT,
-                        []
-                    ),
                 ])
             ),
         ]);
@@ -139,6 +111,7 @@ class save_template extends external_api {
      * @param int    $courseid
      * @param int    $maxsections
      * @param bool   $nolimit
+     * @param string $allowedtypes
      * @param string $namingpattern
      * @param int    $namingstart
      * @param array  $sections
@@ -151,6 +124,7 @@ class save_template extends external_api {
         $courseid,
         $maxsections,
         $nolimit,
+        $allowedtypes,
         $namingpattern,
         $namingstart,
         $sections
@@ -162,6 +136,7 @@ class save_template extends external_api {
             'courseid'      => $courseid,
             'maxsections'   => $maxsections,
             'nolimit'       => $nolimit,
+            'allowedtypes'  => $allowedtypes,
             'namingpattern' => $namingpattern,
             'namingstart'   => $namingstart,
             'sections'      => $sections,
@@ -197,6 +172,7 @@ class save_template extends external_api {
         $tpl->set('courseid',      $params['courseid']);
         $tpl->set('maxsections',   $maxsections);
         $tpl->set('nolimit',       (int) $params['nolimit']);
+        $tpl->set('allowedtypes',  $params['allowedtypes']);
         $tpl->set('namingpattern', $params['namingpattern']);
         $tpl->set('namingstart',   $params['namingstart']);
 

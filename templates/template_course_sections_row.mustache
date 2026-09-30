@@ -17,8 +17,8 @@
 {{!
     @template local_coursegen/template_course_sections_row
 
-    One row of the "Course sections" review table — a real activity, a
-    virtual template instance or a virtual space — plus the hover-reveal insertion gap that
+    One row of the "Course sections" review table — a real activity or a
+    virtual template instance — plus the hover-reveal insertion gap that
     follows it. Included once per entry of a section's "rows" array by
     template_course_sections.mustache (split out to keep that file under
     the project's 250-line cap); never rendered on its own.
@@ -27,7 +27,7 @@
     docblock for the full shape of one "rows" entry.
 }}
 {{#isreal}}
-<tr class="{{#istemplate}}tpl-row-template{{/istemplate}}{{#isspace}} tpl-row-space{{/isspace}}" data-for="cmitem" data-id="{{cmid}}" data-modname="{{modname}}" data-typelabel="{{typelabel}}">
+<tr class="{{#istemplate}}tpl-row-template{{/istemplate}}" data-for="cmitem" data-id="{{cmid}}" data-modname="{{modname}}" data-typelabel="{{typelabel}}">
     <td class="align-middle tpl-select-col">
         <input type="checkbox" data-region="activity-select" data-id="{{cmid}}"
                aria-label="{{name}}">
@@ -42,13 +42,7 @@
                 data-tag-course="{{#str}} template_activity_template_tag, local_coursegen, {{scopelabelcourse}} {{/str}}"
                 data-tag-section="{{#str}} template_activity_template_tag, local_coursegen, {{scopelabelsection}} {{/str}}">
             {{#str}} template_activity_template_tag, local_coursegen, {{scopelabel}} {{/str}}
-        </button>{{!
-        }}<button type="button"
-                class="tpl-badge tpl-badge-space tpl-space-tag ml-2{{^isspace}} d-none{{/isspace}}"
-                data-region="space-tag" data-id="{{cmid}}" data-name="{{name}}"
-                data-badge-required="{{spacebadgerequired}}" data-badge-optional="{{spacebadgeoptional}}">{{spacebadge}}</button>
-        <div class="tpl-space-instruction text-muted small{{^hasspaceinstruction}} d-none{{/hasspaceinstruction}}"
-             data-region="space-row-instruction" data-id="{{cmid}}">{{spaceinstruction}}</div>
+        </button>
     </td>
     <td class="align-middle text-muted">{{typelabel}}</td>
     <td class="align-middle text-right">
@@ -65,9 +59,6 @@
 {{#isinstance}}
 {{> local_coursegen/template_instance_row}}
 {{/isinstance}}
-{{#isvirtualspace}}
-{{> local_coursegen/template_space_row}}
-{{/isvirtualspace}}
 {{^islast}}
 {{> local_coursegen/template_row_gap}}
 {{/islast}}

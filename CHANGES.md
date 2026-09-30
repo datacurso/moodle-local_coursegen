@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026093002
+
+### Reverted
+- The spaces for the professor in the template editor (build 2026093001) were taken out until they are reviewed: the "add a space" menu and chooser, the "Space for the professor" action, the `local_coursegen_tpl_space` table and the two space fields on the template activity are no longer defined by the plugin, and the "Allowed activity types" setting of the template editor is back. Databases already upgraded to 2026093001 keep the table and the fields untouched; nothing reads them while this build is installed.
+
 ## [2.0.10] - 2026093001
 
 ### Added

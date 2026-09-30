@@ -40,7 +40,6 @@ $cssrev = get_config('local_coursegen', 'version');
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/templates.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/templates-widgets.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/templates-instances.css', ['v' => $cssrev]));
-$PAGE->requires->css(new moodle_url('/local/coursegen/styles/templates-spaces.css', ['v' => $cssrev]));
 
 // Edit mode: the whole saved configuration hydrates the page — the base
 // course comes from the template itself (no courseid param needed), the
@@ -64,8 +63,6 @@ if ($id > 0) {
             'useasreference' => (bool) $record->get('useasreference'),
             'prompt' => (string) $record->get('prompt'),
             'templatescope' => (string) $record->get('templatescope'),
-            'spacerequired' => (bool) $record->get('spacerequired'),
-            'spaceinstruction' => (string) $record->get('spaceinstruction'),
         ];
     }
 }
@@ -162,9 +159,6 @@ $templatecontext = [
     // have no controls, so they must round-trip through the JS state.
     'savedsections' => $savedsections,
     'savedactivities' => $savedactivities,
-    // The activity types a space can be made for: the AI-supported ones that
-    // are installed on this site.
-    'supportedtypes' => \local_coursegen\local\service\supported_activity_types::installed(),
 ];
 
 echo $OUTPUT->header();
