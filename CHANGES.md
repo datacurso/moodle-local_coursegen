@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026093015
+
+### Changed
+- The list of installed, AI-supported activity types is read straight from the supported list in one pass, instead of intersecting, sorting and re-indexing arrays: the supported list is already alphabetical, so the result is the same without the extra array calls.
+
+### Added
+- PHPUnit coverage that the supported list stays alphabetical, that the installed list has no repeats and that a hidden module is left out.
+
 ## [2.0.10] - 2026093014
 
 ### Changed
