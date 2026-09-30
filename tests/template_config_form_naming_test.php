@@ -95,7 +95,8 @@ final class template_config_form_naming_test extends \advanced_testcase {
         $options = template_config_form::naming_options();
 
         $keys = array_keys($options);
-        $expected = array_merge(array_keys($presets), ['{nombre}', '__custom__']);
+        $presetkeys = array_keys($presets);
+        $expected = array_merge($presetkeys, ['{nombre}', '__custom__']);
         $this->assertSame($expected, $keys);
     }
 

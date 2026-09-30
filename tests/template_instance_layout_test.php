@@ -82,15 +82,29 @@ final class template_instance_layout_test extends \advanced_testcase {
      *     "inst:<name>" or "space:<instruction>".
      */
     private function tokens(array $rows): array {
-        return array_map(function($row) {
-            if ($row['type'] === 'real') {
-                return 'real:' . $row['cmid'];
-            }
-            if ($row['type'] === 'space') {
-                return 'space:' . $row['record']->get('instruction');
-            }
-            return 'inst:' . $row['record']->get('name');
-        }, $rows);
+        $tokens = [];
+        foreach ($rows as $key => $row) {
+            $tokens[$key] = $this->token_of($row);
+        }
+        return $tokens;
+    }
+
+    /**
+     * Reduce one ordered row to its short token.
+     *
+     * @param array $row A row entry of template_instance_layout::ordered_rows().
+     * @return string "real:<cmid>", "inst:<name>" or "space:<instruction>".
+     */
+    private function token_of(array $row): string {
+        if ($row['type'] === 'real') {
+            return 'real:' . $row['cmid'];
+        }
+        if ($row['type'] === 'space') {
+            $instruction = $row['record']->get('instruction');
+            return 'space:' . $instruction;
+        }
+        $name = $row['record']->get('name');
+        return 'inst:' . $name;
     }
 
     /**

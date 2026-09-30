@@ -93,12 +93,24 @@ class template_instance_layout {
      * @return array
      */
     private static function instance_rows(array $group): array {
-        return array_map(function ($record) {
-            $type = 'instance';
-            if ($record instanceof template_space) {
-                $type = 'space';
-            }
-            return ['type' => $type, 'record' => $record];
-        }, $group);
+        $rows = [];
+        foreach ($group as $key => $record) {
+            $rows[$key] = self::row_entry($record);
+        }
+        return $rows;
+    }
+
+    /**
+     * Wrap one virtual row into its row entry.
+     *
+     * @param template_instance|template_space $record
+     * @return array {type: 'instance'|'space', record}
+     */
+    private static function row_entry($record): array {
+        $type = 'instance';
+        if ($record instanceof template_space) {
+            $type = 'space';
+        }
+        return ['type' => $type, 'record' => $record];
     }
 }
