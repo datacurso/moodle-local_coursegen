@@ -1,0 +1,62 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/template_space_modal_body
+
+    Body of the modal that configures a space for the professor: whether the
+    professor must provide the activity or may skip it, and the instruction
+    that says exactly what to provide. Rendered by template_space_modal.js.
+
+    Context variables:
+    * subject string          - The activity the space is for (its type or name).
+    * requiredchecked bool    - Preselect "Required".
+    * optionalchecked bool    - Preselect "Optional".
+    * instruction string      - The instruction typed so far; may be empty.
+
+    Example context (json):
+    {
+        "subject": "File",
+        "requiredchecked": true,
+        "optionalchecked": false,
+        "instruction": ""
+    }
+}}
+<p class="mb-3">{{#str}} template_space_modal_intro, local_coursegen, {{subject}} {{/str}}</p>
+<fieldset class="mb-3">
+    <legend class="h6">{{#str}} template_space_requirement_label, local_coursegen {{/str}}</legend>
+    <div class="form-check mb-2">
+        <input class="form-check-input" type="radio" name="template-space-required-choice"
+               id="template-space-required-yes" value="1"{{#requiredchecked}} checked{{/requiredchecked}}>
+        <label class="form-check-label" for="template-space-required-yes">
+            <strong>{{#str}} template_space_required, local_coursegen {{/str}}</strong>
+            <span class="d-block text-muted small">{{#str}} template_space_required_desc, local_coursegen {{/str}}</span>
+        </label>
+    </div>
+    <div class="form-check">
+        <input class="form-check-input" type="radio" name="template-space-required-choice"
+               id="template-space-required-no" value="0"{{#optionalchecked}} checked{{/optionalchecked}}>
+        <label class="form-check-label" for="template-space-required-no">
+            <strong>{{#str}} template_space_optional, local_coursegen {{/str}}</strong>
+            <span class="d-block text-muted small">{{#str}} template_space_optional_desc, local_coursegen {{/str}}</span>
+        </label>
+    </div>
+</fieldset>
+<div class="form-group mb-0">
+    <label for="template-space-instruction">{{#str}} template_space_instruction_label, local_coursegen {{/str}}</label>
+    <textarea class="form-control" id="template-space-instruction" rows="4"
+              placeholder="{{#str}} template_space_instruction_placeholder, local_coursegen {{/str}}">{{instruction}}</textarea>
+</div>

@@ -72,6 +72,9 @@
     Each "rows" entry is rendered by the local_coursegen/template_course_sections_row
     partial (its own row plus the hover-reveal gap after it) — split out to
     keep this file under the project's 250-line cap.
+    * data-region="space-tag" data-id on each real row's clickable space badge
+      (hidden unless the row's action is "space"), and data-for="spacerow" on
+      each virtual space row (see template_space_row.mustache)
     * data-region="instance-name" data-id on each instance row's editable
       name input
     * data-region="instance-prompt-toggle" data-id on each instance row's
@@ -83,6 +86,8 @@
     * hassections bool      - True when the course has any section
     * scopelabelcourse string  - "Whole course" scope label, for the tag's data-tag-course
     * scopelabelsection string - "This section only" scope label, for data-tag-section
+    * spacebadgerequired string - "Space · Required", for the space badge's data-badge-required
+    * spacebadgeoptional string - "Space · Optional", for the space badge's data-badge-optional
     * sections array   - Sections, each with: id int, num int, name string,
                          activitycount int, hasactivities bool,
                          actions array (value, sectionid, label, tip, active),
@@ -186,7 +191,7 @@
                                         data-toggle="dropdown"
                                         aria-haspopup="true" aria-expanded="false">
                                     <span>&#65291;</span>
-                                    <span>{{#str}} template_add_instance, local_coursegen {{/str}}</span>
+                                    <span>{{#str}} template_add_menu, local_coursegen {{/str}}</span>
                                 </button>
                                 <div class="dropdown-menu tpl-instance-menu" role="menu"></div>
                             </div>

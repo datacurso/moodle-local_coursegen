@@ -58,7 +58,7 @@ final class save_template_scope_test extends \advanced_testcase {
         $modinfo = get_fast_modinfo($course);
         $section1 = $modinfo->get_section_info(1);
 
-        $saved = save_template::execute(0, 'Mold template', '', (int) $course->id, 0, false, '[]', '', 1, [
+        $saved = save_template::execute(0, 'Mold template', '', (int) $course->id, 0, false, '', 1, [
             [
                 'sectionid' => (int) $section1->id,
                 'sectionnum' => 1,
@@ -105,7 +105,7 @@ final class save_template_scope_test extends \advanced_testcase {
         $modinfo = get_fast_modinfo($course);
         $section1 = $modinfo->get_section_info(1);
 
-        $saved = save_template::execute(0, 'No scope given', '', (int) $course->id, 0, false, '[]', '', 1, [
+        $saved = save_template::execute(0, 'No scope given', '', (int) $course->id, 0, false, '', 1, [
             [
                 'sectionid' => (int) $section1->id,
                 'sectionnum' => 1,
@@ -134,7 +134,7 @@ final class save_template_scope_test extends \advanced_testcase {
         $modinfo = get_fast_modinfo($course);
         $section1 = $modinfo->get_section_info(1);
 
-        $saved = save_template::execute(0, 'Bogus scope', '', (int) $course->id, 0, false, '[]', '', 1, [
+        $saved = save_template::execute(0, 'Bogus scope', '', (int) $course->id, 0, false, '', 1, [
             [
                 'sectionid' => (int) $section1->id,
                 'sectionnum' => 1,
@@ -168,7 +168,7 @@ final class save_template_scope_test extends \advanced_testcase {
         $modinfo = get_fast_modinfo($course);
         $section1 = $modinfo->get_section_info(1);
 
-        $saved = save_template::execute(0, 'Keep with scope', '', (int) $course->id, 0, false, '[]', '', 1, [
+        $saved = save_template::execute(0, 'Keep with scope', '', (int) $course->id, 0, false, '', 1, [
             [
                 'sectionid' => (int) $section1->id,
                 'sectionnum' => 1,

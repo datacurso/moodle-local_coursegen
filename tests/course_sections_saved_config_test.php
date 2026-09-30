@@ -67,7 +67,7 @@ final class course_sections_saved_config_test extends \advanced_testcase {
         $section1 = $modinfo->get_section_info(1);
         $section2 = $modinfo->get_section_info(2);
 
-        $saved = save_template::execute(0, 'Edit me', '', (int) $course->id, 0, false, '[]', '', 1, [
+        $saved = save_template::execute(0, 'Edit me', '', (int) $course->id, 0, false, '', 1, [
             [
                 'sectionid' => (int) $section1->id,
                 'sectionnum' => 1,

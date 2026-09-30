@@ -70,7 +70,7 @@ final class template_instance_menu_markup_test extends \advanced_testcase {
     }
 
     /**
-     * The section's persistent "Add activity from a template" row follows
+     * The section's persistent "Add activity or space" row follows
      * the exact same native-dropdown shape as every row-gap trigger.
      */
     public function test_persistent_add_trigger_renders_as_a_native_dropdown(): void {

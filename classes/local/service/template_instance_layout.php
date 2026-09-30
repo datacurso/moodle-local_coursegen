@@ -16,11 +16,11 @@
 
 namespace local_coursegen\local\service;
 
-use local_coursegen\local\models\template_instance;
+use local_coursegen\local\models\template_space;
 
 /**
- * Interleaves a section's real activity cmids with its saved virtual
- * template_instance rows into a single render order.
+ * Interleaves a section's real activity cmids with its saved virtual rows
+ * (template_instance and template_space) into a single render order.
  *
  * Every instance is anchored to render immediately after a given real cmid
  * (aftercmid=0 means "the start of the section"); sortorder breaks ties
@@ -39,9 +39,12 @@ class template_instance_layout {
      * Build the final row order for one section.
      *
      * @param int[] $realcmids The section's real activity cmids, in course order.
-     * @param template_instance[] $instances Every saved instance for this section.
-     * @return array Each entry is ['type' => 'real', 'cmid' => int] or
-     *     ['type' => 'instance', 'record' => template_instance].
+     * @param array $instances Every saved virtual row for this section:
+     *     template_instance records and template_space records, which share
+     *     the anchor (aftercmid) and sortorder fields.
+     * @return array Each entry is ['type' => 'real', 'cmid' => int],
+     *     ['type' => 'instance', 'record' => template_instance] or
+     *     ['type' => 'space', 'record' => template_space].
      */
     public static function ordered_rows(array $realcmids, array $instances): array {
         $groups = self::group_by_anchor($instances, $realcmids);
@@ -61,9 +64,9 @@ class template_instance_layout {
      * it matches a real cmid in this section (or is 0, "section start"),
      * otherwise the "orphan" bucket appended at the very end.
      *
-     * @param template_instance[] $instances
+     * @param array $instances Instances and spaces.
      * @param int[] $realcmids
-     * @return array<int|string, template_instance[]> Keyed by aftercmid, 0, or "orphan".
+     * @return array<int|string, array> Keyed by aftercmid, 0, or "orphan".
      */
     private static function group_by_anchor(array $instances, array $realcmids): array {
         $validanchors = array_flip($realcmids);
@@ -84,12 +87,18 @@ class template_instance_layout {
     }
 
     /**
-     * Wrap a group of instances into row entries.
+     * Wrap a group of virtual rows into row entries.
      *
-     * @param template_instance[] $group
+     * @param array $group Instances and spaces.
      * @return array
      */
     private static function instance_rows(array $group): array {
-        return array_map(fn($instance) => ['type' => 'instance', 'record' => $instance], $group);
+        return array_map(function ($record) {
+            $type = 'instance';
+            if ($record instanceof template_space) {
+                $type = 'space';
+            }
+            return ['type' => $type, 'record' => $record];
+        }, $group);
     }
 }

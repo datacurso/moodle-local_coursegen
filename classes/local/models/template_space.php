@@ -19,15 +19,20 @@ namespace local_coursegen\local\models;
 use core\persistent;
 
 /**
- * Persistent model for table local_coursegen_tpl_activity.
+ * Persistent model for table local_coursegen_tpl_space.
+ *
+ * A virtual space: it has no real course module of its own and never appears
+ * in the base course. It marks a place in a section where the professor must
+ * (or may) provide an activity of the given type when creating a course from
+ * the template, with an instruction saying what to provide.
  *
  * @package    local_coursegen
- * @copyright  2025 Wilber Narvaez <https://datacurso.com>
+ * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class template_activity extends persistent {
+class template_space extends persistent {
     /** Table name for the persistent. */
-    const TABLE = 'local_coursegen_tpl_activity';
+    const TABLE = 'local_coursegen_tpl_space';
 
     /**
      * Return the definition of the properties of this model.
@@ -36,6 +41,13 @@ class template_activity extends persistent {
      */
     protected static function define_properties(): array {
         return [
+            // This space's own name: a space has no course module, so nothing
+            // else can serve as its id.
+            'uid' => [
+                'type' => PARAM_ALPHANUMEXT,
+                'null' => NULL_NOT_ALLOWED,
+                'default' => '',
+            ],
             'templateid' => [
                 'type' => PARAM_INT,
                 'null' => NULL_NOT_ALLOWED,
@@ -44,44 +56,34 @@ class template_activity extends persistent {
                 'type' => PARAM_INT,
                 'null' => NULL_NOT_ALLOWED,
             ],
-            'cmid' => [
-                'type' => PARAM_INT,
+            // The module type of the activity the professor provides.
+            'modname' => [
+                'type' => PARAM_PLUGIN,
                 'null' => NULL_NOT_ALLOWED,
             ],
-            'action' => [
-                'type' => PARAM_ALPHA,
-                'null' => NULL_NOT_ALLOWED,
-                'default' => 'modify',
-            ],
-            'useasreference' => [
+            // 1: the professor must provide it; 0: it is optional.
+            'required' => [
                 'type' => PARAM_INT,
+                'null' => NULL_NOT_ALLOWED,
                 'default' => 1,
             ],
-            // Only meaningful when action=template: whether this molde may be
-            // used by "modify" activities anywhere in the course, or only by
-            // ones in this same section. Ignored for every other action.
-            'templatescope' => [
-                'type' => PARAM_ALPHA,
-                'null' => NULL_NOT_ALLOWED,
-                'default' => 'course',
-            ],
-            'prompt' => [
+            'instruction' => [
                 'type' => PARAM_RAW,
                 'null' => NULL_ALLOWED,
                 'default' => null,
             ],
-            // Only meaningful when action=space: the professor must provide
-            // this activity (1) or may skip it (0).
-            'spacerequired' => [
+            // The real cmid this space renders immediately after within its
+            // section; 0 means "the start of the section".
+            'aftercmid' => [
                 'type' => PARAM_INT,
-                'default' => 1,
+                'null' => NULL_NOT_ALLOWED,
+                'default' => 0,
             ],
-            // Only meaningful when action=space: what the professor has to
-            // provide in place of this activity.
-            'spaceinstruction' => [
-                'type' => PARAM_RAW,
-                'null' => NULL_ALLOWED,
-                'default' => null,
+            // Tiebreaker order among virtual rows sharing the same aftercmid.
+            'sortorder' => [
+                'type' => PARAM_INT,
+                'null' => NULL_NOT_ALLOWED,
+                'default' => 0,
             ],
         ];
     }

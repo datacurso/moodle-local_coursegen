@@ -65,7 +65,6 @@ export const getCourseStructure = (courseid) => Ajax.call([{
  * @param {number} data.courseid Source course ID.
  * @param {number} data.maxsections Maximum sections allowed.
  * @param {boolean} data.nolimit Whether section limit is disabled.
- * @param {string} data.allowedtypes JSON-encoded array of allowed activity types.
  * @param {string} data.namingpattern Section naming pattern string.
  * @param {number} data.namingstart Starting number for section naming.
  * @param {Array} data.sections Section configuration array.

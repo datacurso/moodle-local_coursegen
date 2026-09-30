@@ -17,6 +17,7 @@
 namespace local_coursegen;
 
 use local_coursegen\local\models\template_instance;
+use local_coursegen\local\models\template_space;
 use local_coursegen\local\service\template_instance_layout;
 
 /**
@@ -54,13 +55,39 @@ final class template_instance_layout_test extends \advanced_testcase {
     }
 
     /**
+     * Build an in-memory template_space persistent (never saved to the DB)
+     * with the given aftercmid/sortorder, for pure ordering tests.
+     *
+     * @param int $aftercmid
+     * @param int $sortorder
+     * @param string $label Identifies the space in assertions (stored as its instruction).
+     * @return template_space
+     */
+    private function fake_space(int $aftercmid, int $sortorder, string $label): template_space {
+        $space = new template_space(0);
+        $space->set('templateid', 1);
+        $space->set('sectionid', 1);
+        $space->set('modname', 'resource');
+        $space->set('instruction', $label);
+        $space->set('aftercmid', $aftercmid);
+        $space->set('sortorder', $sortorder);
+        return $space;
+    }
+
+    /**
+     * Reduce ordered rows to short tokens, so assertions read as a list.
+     *
      * @param array $rows
-     * @return array Each entry simplified to a short token: "real:<cmid>" or "inst:<name>".
+     * @return array Each entry simplified to a short token: "real:<cmid>",
+     *     "inst:<name>" or "space:<instruction>".
      */
     private function tokens(array $rows): array {
         return array_map(function($row) {
             if ($row['type'] === 'real') {
                 return 'real:' . $row['cmid'];
+            }
+            if ($row['type'] === 'space') {
+                return 'space:' . $row['record']->get('instruction');
             }
             return 'inst:' . $row['record']->get('name');
         }, $rows);
@@ -148,5 +175,36 @@ final class template_instance_layout_test extends \advanced_testcase {
      */
     public function test_empty_section_with_no_instances_returns_empty_array(): void {
         $this->assertSame([], template_instance_layout::ordered_rows([], []));
+    }
+
+    /**
+     * A space is emitted as its own kind of row, placed by the same anchor
+     * rule as an instance.
+     */
+    public function test_space_renders_after_its_anchor_as_a_space_row(): void {
+        $space = $this->fake_space(10, 0, 'Upload the guide');
+        $rows = template_instance_layout::ordered_rows([10, 20], [$space]);
+        $this->assertSame(['real:10', 'space:Upload the guide', 'real:20'], $this->tokens($rows));
+    }
+
+    /**
+     * Spaces and instances that share an anchor order by their shared
+     * sortorder, whichever kind they are.
+     */
+    public function test_space_and_instance_sharing_an_anchor_order_by_sortorder(): void {
+        $instance = $this->fake_instance(10, 1, 'Second');
+        $space = $this->fake_space(10, 0, 'First');
+        $rows = template_instance_layout::ordered_rows([10], [$instance, $space]);
+        $this->assertSame(['real:10', 'space:First', 'inst:Second'], $this->tokens($rows));
+    }
+
+    /**
+     * A space whose anchor no longer exists is appended at the end instead
+     * of being dropped.
+     */
+    public function test_space_with_a_missing_anchor_is_appended_at_the_end(): void {
+        $space = $this->fake_space(999, 0, 'Orphan');
+        $rows = template_instance_layout::ordered_rows([10], [$space]);
+        $this->assertSame(['real:10', 'space:Orphan'], $this->tokens($rows));
     }
 }

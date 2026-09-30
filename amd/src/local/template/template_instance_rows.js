@@ -14,7 +14,8 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * DOM shape of a virtual template-instance row: creating one (mirroring
+ * DOM shape of a virtual template-instance row (and the shared row helpers
+ * spaces reuse): creating one (mirroring
  * exactly what sections_config.php/template_course_sections.mustache
  * render server-side, so a freshly inserted row is indistinguishable from
  * one loaded from a saved template), removing one, and scraping every
@@ -50,7 +51,7 @@ let nextTempId = 1;
  * @param {Object} context Template context.
  * @returns {Promise<DocumentFragment>}
  */
-const renderRowFragment = async(templatename, context) => {
+export const renderRowFragment = async(templatename, context) => {
     const rendered = await Templates.render(templatename, context);
     const holder = document.createElement('tbody');
     Templates.replaceNodeContents(holder, rendered, '');
@@ -66,7 +67,7 @@ const renderRowFragment = async(templatename, context) => {
  *     — the trigger's own tooltip renders straight from a language string,
  *     the same as every other gap row.
  */
-const buildGapRow = () => renderRowFragment('local_coursegen/template_row_gap', {});
+export const buildGapRow = () => renderRowFragment('local_coursegen/template_row_gap', {});
 
 /**
  * @param {Object} data {sourcecmid, sourcename, typelabel, modname, iconurl}
@@ -92,7 +93,7 @@ const buildInstanceRowFragment = (data, instanceid) => renderRowFragment('local_
  *
  * @param {HTMLElement} tbody The section's table body.
  */
-const dropGapBeforeAddRow = (tbody) => {
+export const dropGapBeforeAddRow = (tbody) => {
     const addRow = tbody.querySelector('[data-region="add-instance"]');
     const priorRow = addRow?.previousElementSibling;
     if (priorRow && priorRow.classList.contains('tpl-row-gap')) {
@@ -152,21 +153,37 @@ export const removeInstanceRow = (instanceRow) => {
 };
 
 /**
- * Scrape every instance currently rendered in one section, in DOM order,
- * resolving each one's position as "immediately after this real cmid" (0
- * for the section start) plus a monotonically increasing sortorder — the
- * exact shape save_template expects.
+ * Scrape every virtual row currently rendered in one section (template
+ * instances and spaces), in DOM order, resolving each one's position as
+ * "immediately after this real cmid" (0 for the section start) plus a
+ * monotonically increasing sortorder shared by both kinds — the exact shape
+ * save_template expects, and what keeps an instance and a space that sit
+ * next to each other in the order they were placed in.
  *
  * @param {HTMLElement} sectionEl The section card (data-for="section").
- * @returns {Array} {sourcecmid, sourcename, name, typelabel, prompt, aftercmid, sortorder}
+ * @returns {Object} {instances, spaces}: instances are {sourcecmid,
+ *     sourcename, modname, name, typelabel, prompt, aftercmid, sortorder};
+ *     spaces are {modname, required, instruction, aftercmid, sortorder}.
  */
-export const collectInstancesForSection = (sectionEl) => {
+export const collectVirtualRowsForSection = (sectionEl) => {
     const instances = [];
+    const spaces = [];
     let aftercmid = 0;
     let sortorder = 0;
-    sectionEl.querySelectorAll('[data-for="cmitem"], [data-for="instancerow"]').forEach(row => {
+    const rows = sectionEl.querySelectorAll('[data-for="cmitem"], [data-for="instancerow"], [data-for="spacerow"]');
+    rows.forEach(row => {
         if (row.dataset.for === 'cmitem') {
             aftercmid = parseInt(row.dataset.id, 10);
+            return;
+        }
+        if (row.dataset.for === 'spacerow') {
+            spaces.push({
+                modname: row.dataset.modname,
+                required: row.dataset.required === '1',
+                instruction: row.querySelector('[data-region="space-instruction"]').textContent.trim(),
+                aftercmid,
+                sortorder: sortorder++,
+            });
             return;
         }
         const instanceid = row.dataset.instanceId;
@@ -188,5 +205,5 @@ export const collectInstancesForSection = (sectionEl) => {
             sortorder: sortorder++,
         });
     });
-    return instances;
+    return {instances, spaces};
 };
