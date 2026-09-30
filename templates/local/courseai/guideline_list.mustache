@@ -1,0 +1,73 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/local/courseai/guideline_list
+
+    Items of the institutional guidelines popover list on the course AI
+    creation page. Rendered from JavaScript into the existing
+    <ul class="pop-list" id="guidelineList"> container, so this template
+    outputs only <li> elements. Visible strings are passed in as context.
+
+    Classes required for JS:
+    * pop-item on each list item (kept for CSS and Behat)
+
+    Data attributes required for JS:
+    * data-id on each item, data-select on the select button and
+      data-preview on the eye button, all holding the guideline id;
+      click handling is delegated on the list container.
+
+    Context variables required for this template:
+    * hasitems bool   - True when items is non-empty
+    * items array     - Guidelines, each with: id string, name string,
+                        category string, selected bool
+    * viewtitle string - Title attribute of the preview (eye) button
+    * emptytext string - Message shown when there are no items
+
+    Example context (json):
+    {
+        "hasitems": true,
+        "items": [
+            {"id": "7", "name": "Quality policy", "category": "General", "selected": true},
+            {"id": "9", "name": "Tone of voice", "category": "Style", "selected": false}
+        ],
+        "viewtitle": "View guideline",
+        "emptytext": "No results"
+    }
+}}
+{{#hasitems}}
+{{#items}}
+<li class="pop-item{{#selected}} selected{{/selected}}" data-id="{{id}}">
+    <button class="pop-select-btn" data-select="{{id}}" type="button">
+        <div class="pop-radio"><div class="pop-dot"></div></div>
+        <div class="pop-item-text">
+            <span class="pop-item-name">{{name}}</span>
+            <span class="pop-item-cat">{{category}}</span>
+        </div>
+    </button>
+    <button class="pop-eye-btn" data-preview="{{id}}" type="button" title="{{viewtitle}}">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
+            stroke="currentColor" stroke-width="2" stroke-linecap="round"
+            stroke-linejoin="round">
+            <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>
+        </svg>
+    </button>
+</li>
+{{/items}}
+{{/hasitems}}
+{{^hasitems}}
+<li class="pop-empty">{{emptytext}}</li>
+{{/hasitems}}

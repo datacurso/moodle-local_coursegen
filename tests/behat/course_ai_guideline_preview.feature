@@ -7,7 +7,8 @@ Feature: Preview an institutional guideline in the course AI creation page
   # Guidelines are read from the local_coursegen_system_instruction table
   # (aicoursecreation.php), so they can be seeded without the AI service.
   # The preview dialogue is rendered with core/modal, which must work on both
-  # Moodle 4.5 (Bootstrap 4) and Moodle 5.0 (Bootstrap 5).
+  # Moodle 4.5 (Bootstrap 4) and Moodle 5.0 (Bootstrap 5). Its body comes from
+  # the local_coursegen/local/courseai/guideline_preview Mustache template.
 
   Background:
     Given the following "local_coursegen > system instructions" exist:
@@ -22,6 +23,7 @@ Feature: Preview an institutional guideline in the course AI creation page
     Then I should see "Quality policy" in the "#guidelineList" "css_element"
     When I click on "#guidelineList .pop-eye-btn" "css_element"
     Then I should see "Quality policy" in the ".modal-title" "css_element"
+    And ".modal-body .guideline-preview .preview-subtitle" "css_element" should exist
     And I should see "General" in the ".modal-body .preview-cat-badge" "css_element"
     And I should see "Complete content that will be sent to AI as context." in the ".modal-body" "css_element"
     And I should see "All courses must include a welcome forum." in the ".modal-body .preview-desc-box" "css_element"

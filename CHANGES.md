@@ -19,6 +19,8 @@
   The "Create with AI" button on My courses needs that page to be enabled. On a fresh Moodle 5.2 site, enable it in `Site administration > Appearance > Navigation > Enable My courses`; upgraded sites keep their existing setting.
 - **Tests and CI for Moodle 5.0**  
   The plugin CI workflow installs the DataCurso AI provider from the branch matching each Moodle version, the Behat course page scenarios assert the plugin's own AI button rather than core's activity chooser (renamed on Moodle 5.0), and a plugin data generator seeds institutional guidelines so the preview dialogue is covered by Behat.
+- **Guideline popover and preview markup moved from JavaScript to Mustache templates**  
+  The institutional guideline list, its compact toolbar variant and the preview dialogue body were built as HTML strings inside `amd/src/local/courseai/context/guideline.js`. They are now rendered from `local_coursegen/local/courseai/guideline_list`, `guideline_list_compact` and `guideline_preview` through `core/templates`, so the markup is theme-overridable, escaped by the template engine and covered by PHPUnit; list clicks are delegated on the container and stale renders while typing in the search box are dropped.
 
 ## 2.0.5
 
