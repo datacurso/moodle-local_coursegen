@@ -13,6 +13,7 @@
 //
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
 /**
  * Data generator for local_coursegen.
  *
@@ -29,7 +30,7 @@ class local_coursegen_generator extends component_generator_base {
      * local_coursegen_system_instruction as a guideline, so seeding this table
      * is enough to exercise the guideline UI without the external AI service.
      *
-     * @param array  Column overrides: name (required), content, deleted.
+     * @param array $record Column overrides: name (required), content, deleted.
      * @return stdClass The inserted record.
      */
     public function create_system_instruction(array $record): stdClass {
