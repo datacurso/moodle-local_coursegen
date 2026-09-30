@@ -139,11 +139,10 @@ const buildPreviewLine = (ctx, sectionName, index) => {
 const updatePreview = async(ctx) => {
     const container = ctx.panel.querySelector(Selectors.regions.namingPreview);
     const lines = [];
-    let index = 0;
-    for (const section of ctx.structure) {
+    const sections = ctx.structure.entries();
+    for (const [index, section] of sections) {
         const line = buildPreviewLine(ctx, section.name, index);
         lines.push(line);
-        index++;
     }
     const rendered = await Templates.render('local_coursegen/template_naming_preview', {lines});
     Templates.replaceNodeContents(container, rendered, '');

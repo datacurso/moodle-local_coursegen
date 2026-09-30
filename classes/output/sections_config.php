@@ -323,8 +323,7 @@ class sections_config {
     private static function render_rows(array $orderedrows, array $activitiesbycmid): array {
         $rows = [];
         $lastindex = count($orderedrows) - 1;
-        $index = 0;
-        foreach ($orderedrows as $entry) {
+        foreach ($orderedrows as $index => $entry) {
             if ($entry['type'] === template_instance_layout::TYPE_REAL) {
                 $context = $activitiesbycmid[$entry['cmid']];
             } else if ($entry['type'] === template_instance_layout::TYPE_SPACE) {
@@ -336,7 +335,6 @@ class sections_config {
             }
             $context['islast'] = ($index === $lastindex);
             $rows[] = $context;
-            $index++;
         }
         return $rows;
     }

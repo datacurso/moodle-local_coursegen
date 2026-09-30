@@ -238,7 +238,6 @@ export const collectVirtualRowsForSection = (sectionEl) => {
     const instances = [];
     const spaces = [];
     let aftercmid = 0;
-    let sortorder = 0;
     const rows = sectionEl.querySelectorAll(Selectors.rows.anyRow);
     for (const row of rows) {
         if (row.matches(Selectors.rows.activity)) {
@@ -246,14 +245,12 @@ export const collectVirtualRowsForSection = (sectionEl) => {
             continue;
         }
         if (row.matches(Selectors.regions.spaceRow)) {
-            const spaceEntry = spaceEntryOf(row, aftercmid, sortorder);
+            const spaceEntry = spaceEntryOf(row, aftercmid, instances.length + spaces.length);
             spaces.push(spaceEntry);
-            sortorder++;
             continue;
         }
-        const instanceEntry = instanceEntryOf(sectionEl, row, aftercmid, sortorder);
+        const instanceEntry = instanceEntryOf(sectionEl, row, aftercmid, instances.length + spaces.length);
         instances.push(instanceEntry);
-        sortorder++;
     }
     return {instances, spaces};
 };

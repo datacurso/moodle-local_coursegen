@@ -124,7 +124,8 @@ final class template_editor_hooks_test extends \advanced_testcase {
 
         $label = get_string('template_naming_preview', 'local_coursegen');
         $this->assertStringContainsString($label, $html);
-        $this->assertSame(3, substr_count($html, '<small'));
+        $count = substr_count($html, '<small');
+        $this->assertSame(3, $count);
     }
 
     /**
@@ -136,7 +137,8 @@ final class template_editor_hooks_test extends \advanced_testcase {
 
         $html = $OUTPUT->render_from_template('local_coursegen/template_naming_preview', ['lines' => []]);
 
-        $this->assertSame(1, substr_count($html, '<small'));
+        $count = substr_count($html, '<small');
+        $this->assertSame(1, $count);
     }
 
     /**

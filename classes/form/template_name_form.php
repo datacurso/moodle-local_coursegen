@@ -53,16 +53,16 @@ class template_name_form extends \moodleform {
         $mform->updateAttributes(['data-form' => self::HOOK_FORM]);
 
         $nameattributes = ['size' => 60, 'data-region' => self::HOOK_NAME];
-        $mform->addElement('text', 'templatename',
-            get_string('template_name', 'local_coursegen'), $nameattributes);
+        $namelabel = get_string('template_name', 'local_coursegen');
+        $mform->addElement('text', 'templatename', $namelabel, $nameattributes);
         $mform->setType('templatename', PARAM_TEXT);
-        $mform->addRule('templatename', get_string('required'), 'required', null, 'client');
+        $requiredmessage = get_string('required');
+        $mform->addRule('templatename', $requiredmessage, 'required', null, 'client');
         $mform->addHelpButton('templatename', 'template_name', 'local_coursegen');
 
         $descattributes = ['rows' => 3, 'cols' => 60, 'data-region' => self::HOOK_DESCRIPTION];
-        $mform->addElement('textarea', 'templatedesc',
-            get_string('template_description', 'local_coursegen'),
-            $descattributes);
+        $desclabel = get_string('template_description', 'local_coursegen');
+        $mform->addElement('textarea', 'templatedesc', $desclabel, $descattributes);
         $mform->setType('templatedesc', PARAM_TEXT);
     }
 }
