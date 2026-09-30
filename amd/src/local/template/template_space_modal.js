@@ -65,6 +65,43 @@ const readChoice = (modal) => {
 };
 
 /**
+ * The admin saved: hand the choice to the caller and close the modal.
+ *
+ * @param {Object} ctx {modal, onSave, onCancel, resolved} of this open.
+ */
+const handleSave = (ctx) => {
+    ctx.resolved = true;
+    const choice = readChoice(ctx.modal);
+    ctx.onSave(choice);
+    ctx.modal.hide();
+};
+
+/**
+ * The admin cancelled: tell the caller and close the modal.
+ *
+ * @param {Object} ctx {modal, onSave, onCancel, resolved} of this open.
+ */
+const handleCancel = (ctx) => {
+    ctx.resolved = true;
+    if (ctx.onCancel) {
+        ctx.onCancel();
+    }
+    ctx.modal.hide();
+};
+
+/**
+ * The modal closed: any close that was not a save or a cancel counts as one.
+ *
+ * @param {Object} ctx {modal, onSave, onCancel, resolved} of this open.
+ */
+const handleHidden = (ctx) => {
+    if (!ctx.resolved && ctx.onCancel) {
+        ctx.onCancel();
+    }
+    ctx.resolved = true;
+};
+
+/**
  * Open the shared modal to set (or change) one space.
  *
  * Save and Cancel each resolve exactly once per open: closing the modal any
@@ -89,30 +126,17 @@ export const openSpaceModal = async({subject, required, instruction, onSave, onC
     });
     await modal.setBody(body);
 
-    let resolved = false;
+    const ctx = {modal, onSave, onCancel, resolved: false};
+    const saveHandler = handleSave.bind(null, ctx);
+    const cancelHandler = handleCancel.bind(null, ctx);
+    const hiddenHandler = handleHidden.bind(null, ctx);
     const root = modal.getRoot();
     root.off(ModalEvents.save);
-    root.on(ModalEvents.save, () => {
-        resolved = true;
-        const choice = readChoice(modal);
-        onSave(choice);
-        modal.hide();
-    });
+    root.on(ModalEvents.save, saveHandler);
     root.off(ModalEvents.cancel);
-    root.on(ModalEvents.cancel, () => {
-        resolved = true;
-        if (onCancel) {
-            onCancel();
-        }
-        modal.hide();
-    });
+    root.on(ModalEvents.cancel, cancelHandler);
     root.off(ModalEvents.hidden);
-    root.on(ModalEvents.hidden, () => {
-        if (!resolved && onCancel) {
-            onCancel();
-        }
-        resolved = true;
-    });
+    root.on(ModalEvents.hidden, hiddenHandler);
 
     modal.show();
 };

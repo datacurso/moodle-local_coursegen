@@ -196,6 +196,22 @@ const seedActivity = (activity) => {
 };
 
 /**
+ * Stop the dynamic form from emptying its container after a native submit.
+ *
+ * @param {Event} e The form-submitted event.
+ */
+const keepFormContent = (e) => {
+    e.preventDefault();
+};
+
+/**
+ * Save the template when the Save button is clicked.
+ */
+const handleSaveClick = () => {
+    saveTemplate(state, root);
+};
+
+/**
  * Initialise the template configuration screen.
  * @param {Object} config
  * @param {Array} config.courses List of available courses.
@@ -233,10 +249,10 @@ export const init = (config) => {
     // and, by default, empties the container once process_dynamic_submission()
     // returns. Prevent that: an accidental Enter keypress must not wipe the
     // rendered fields out from under the admin.
-    configForm.addEventListener(configForm.events.FORM_SUBMITTED, e => e.preventDefault());
+    configForm.addEventListener(configForm.events.FORM_SUBMITTED, keepFormContent);
 
     const saveButton = root.querySelector('[data-action="save"]');
-    saveButton.addEventListener('click', () => saveTemplate(state, root));
+    saveButton.addEventListener('click', handleSaveClick);
     const coursePickerPanel = root.querySelector('[data-region="step-panel"][data-step="1"]');
     bindCoursePicker(coursePickerPanel, state, setState);
 

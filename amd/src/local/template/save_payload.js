@@ -100,6 +100,22 @@ const buildActivityPayload = (state, activity) => {
 };
 
 /**
+ * Build the payload of every activity of a section from current state.
+ *
+ * @param {Object} state The live wizard state from init.js.
+ * @param {Array} activities The activities of a section of the loaded course structure.
+ * @returns {Array}
+ */
+const buildActivityPayloads = (state, activities) => {
+    const payloads = [];
+    for (const activity of activities) {
+        const payload = buildActivityPayload(state, activity);
+        payloads.push(payload);
+    }
+    return payloads;
+};
+
+/**
  * Build the payload of one section from current state.
  *
  * @param {Object} state The live wizard state from init.js.
@@ -109,7 +125,7 @@ const buildActivityPayload = (state, activity) => {
  */
 const buildSectionPayload = (state, root, section) => {
     const virtualRows = collectSectionVirtualRows(root, section.id);
-    const activities = section.activities.map(activity => buildActivityPayload(state, activity));
+    const activities = buildActivityPayloads(state, section.activities);
     return {
         sectionid: section.id,
         sectionnum: section.num,
@@ -127,7 +143,14 @@ const buildSectionPayload = (state, root, section) => {
  * @param {HTMLElement} root The wizard root element.
  * @returns {Array}
  */
-const buildSections = (state, root) => state.courseStructure.map(section => buildSectionPayload(state, root, section));
+const buildSections = (state, root) => {
+    const sections = [];
+    for (const section of state.courseStructure) {
+        const payload = buildSectionPayload(state, root, section);
+        sections.push(payload);
+    }
+    return sections;
+};
 
 /**
  * Save the template via the repository, then redirect back to the manage

@@ -131,27 +131,37 @@ const saveSpaceFromTag = (row, cmid, state, markDirty, choice) => {
 };
 
 /**
- * Bind the click handler that reopens the space modal from a row's badge,
- * to change an already-marked row's requirement or instruction. Cancelling
- * leaves the row exactly as it was.
+ * Reopen the space modal when a row's badge is clicked, to change an
+ * already-marked row's requirement or instruction. Cancelling leaves the row
+ * exactly as it was.
+ *
+ * @param {Object} ctx {state, markDirty} of the review.
+ * @param {MouseEvent} e The click.
+ */
+const handleSpaceTagClick = (ctx, e) => {
+    const tag = e.target.closest('[data-region="space-tag"]');
+    if (!tag) {
+        return;
+    }
+    const cmid = parseInt(tag.dataset.id);
+    const row = tag.closest('[data-for="cmitem"]');
+    if (!cmid || !row) {
+        return;
+    }
+    const current = ctx.state.activitySpace[cmid] || {required: true, instruction: ''};
+    const onSave = saveSpaceFromTag.bind(null, row, cmid, ctx.state, ctx.markDirty);
+    openSpaceModal({subject: tag.dataset.name, required: current.required, instruction: current.instruction, onSave});
+};
+
+/**
+ * Bind the click handler that reopens the space modal from a row's badge.
  *
  * @param {HTMLElement} container The rendered course sections review.
  * @param {Object} state The live wizard state from init.js.
  * @param {Function} markDirty Marks the wizard as having unsaved changes.
  */
 export const bindSpaceTagClicks = (container, state, markDirty) => {
-    container.addEventListener('click', (e) => {
-        const tag = e.target.closest('[data-region="space-tag"]');
-        if (!tag) {
-            return;
-        }
-        const cmid = parseInt(tag.dataset.id);
-        const row = tag.closest('[data-for="cmitem"]');
-        if (!cmid || !row) {
-            return;
-        }
-        const current = state.activitySpace[cmid] || {required: true, instruction: ''};
-        const onSave = saveSpaceFromTag.bind(null, row, cmid, state, markDirty);
-        openSpaceModal({subject: tag.dataset.name, required: current.required, instruction: current.instruction, onSave});
-    });
+    const ctx = {state, markDirty};
+    const onClick = handleSpaceTagClick.bind(null, ctx);
+    container.addEventListener('click', onClick);
 };

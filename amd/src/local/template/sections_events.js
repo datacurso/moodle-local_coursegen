@@ -139,6 +139,90 @@ const applyRowVisual = (row, istemplate, cmid, rowstate) => {
 };
 
 /**
+ * Remember the action a row settled on once a modal flow resolved it.
+ *
+ * @param {Object} ctx The row's binding context (see bindActivityActionSelect()).
+ * @param {string} finalaction The action the row ended up with.
+ */
+const rememberResolvedAction = (ctx, finalaction) => {
+    ctx.prioraction = finalaction;
+};
+
+/**
+ * Paint a row once the space modal resolved its action.
+ *
+ * @param {Object} ctx The row's binding context (see bindActivityActionSelect()).
+ * @param {string} finalspace The action the row ended up with.
+ */
+const applySpaceResolution = (ctx, finalspace) => {
+    ctx.prioraction = finalspace;
+    applyTemplateVisual(ctx.row, finalspace === 'template', ctx.cmid, ctx.state);
+};
+
+/**
+ * Continue after the unmark-template confirmation resolved: open the space
+ * modal when the row is now a space, otherwise clear its space visual.
+ *
+ * @param {Object} ctx The row's binding context (see bindActivityActionSelect()).
+ * @param {string} before The action the row had before the change.
+ * @param {string} finalaction The action the confirmation left the row with.
+ */
+const continueAfterUnmark = (ctx, before, finalaction) => {
+    ctx.prioraction = finalaction;
+    if (finalaction === 'space') {
+        const onSpaceResolved = applySpaceResolution.bind(null, ctx);
+        openSpaceModalForNewSelection(ctx.row, ctx.select, ctx.cmid, before, ctx.state, onSpaceResolved);
+        return;
+    }
+    applySpaceVisual(ctx.row, false, ctx.cmid, ctx.state);
+};
+
+/**
+ * Changing a row TO "template" opens the scope modal.
+ *
+ * @param {Object} ctx The row's binding context (see bindActivityActionSelect()).
+ */
+const startTemplateFlow = (ctx) => {
+    const onResolved = rememberResolvedAction.bind(null, ctx);
+    openScopeModalForNewSelection(ctx.row, ctx.select, ctx.cmid, ctx.prioraction, ctx.state, onResolved);
+};
+
+/**
+ * Changing a row to anything else first confirms unmarking a template, and a
+ * change TO "space" then opens the space modal.
+ *
+ * @param {Object} ctx The row's binding context (see bindActivityActionSelect()).
+ * @param {string} action The action just selected.
+ * @param {string} before The action the row had before the change.
+ */
+const startUnmarkFlow = (ctx, action, before) => {
+    const onResolved = continueAfterUnmark.bind(null, ctx, before);
+    confirmUnmarkTemplate(ctx.container, ctx.row, ctx.select, action, ctx.prioraction, ctx.cmid, ctx.state, onResolved);
+};
+
+/**
+ * React to a change of a row's action select.
+ *
+ * @param {Object} ctx The row's binding context (see bindActivityActionSelect()).
+ */
+const handleActionChange = (ctx) => {
+    const action = ctx.select.value;
+    const before = ctx.prioraction;
+    ctx.state.activityAction[ctx.cmid] = action;
+    if (!ctx.row) {
+        ctx.prioraction = action;
+        markDirty();
+        return;
+    }
+    if (action === 'template') {
+        startTemplateFlow(ctx);
+    } else {
+        startUnmarkFlow(ctx, action, before);
+    }
+    markDirty();
+};
+
+/**
  * Seed one row's action from its server-rendered select, then track changes.
  *
  * Changing TO "template" opens the scope modal instead of applying the action
@@ -155,40 +239,14 @@ const bindActivityActionSelect = (container, select, state) => {
         return;
     }
     const row = select.closest('[data-for="cmitem"]');
-    let prioraction = select.value;
+    const ctx = {container, select, state, cmid, row, prioraction: select.value};
     state.activityAction[cmid] = select.value;
     if (row) {
         applyTemplateVisual(row, select.value === 'template', cmid, state);
         applySpaceVisual(row, select.value === 'space', cmid, state);
     }
-    select.addEventListener('change', () => {
-        const action = select.value;
-        const before = prioraction;
-        state.activityAction[cmid] = action;
-        if (!row) {
-            prioraction = action;
-            markDirty();
-            return;
-        }
-        if (action === 'template') {
-            openScopeModalForNewSelection(row, select, cmid, prioraction, state, (finalaction) => {
-                prioraction = finalaction;
-            });
-        } else {
-            confirmUnmarkTemplate(container, row, select, action, prioraction, cmid, state, (finalaction) => {
-                prioraction = finalaction;
-                if (finalaction === 'space') {
-                    openSpaceModalForNewSelection(row, select, cmid, before, state, (finalspace) => {
-                        prioraction = finalspace;
-                        applyTemplateVisual(row, finalspace === 'template', cmid, state);
-                    });
-                    return;
-                }
-                applySpaceVisual(row, false, cmid, state);
-            });
-        }
-        markDirty();
-    });
+    const onChange = handleActionChange.bind(null, ctx);
+    select.addEventListener('change', onChange);
 };
 
 /**
@@ -199,7 +257,19 @@ const bindActivityActionSelect = (container, select, state) => {
  */
 const bindActivityActionSelects = (container, state) => {
     const selects = container.querySelectorAll('select[data-region="activity-action"]');
-    selects.forEach(select => bindActivityActionSelect(container, select, state));
+    for (const select of selects) {
+        bindActivityActionSelect(container, select, state);
+    }
+};
+
+/**
+ * React to a change of a section's behavior select.
+ *
+ * @param {Object} ctx {select, sid, state} of the section.
+ */
+const handleSectionBehaviorChange = (ctx) => {
+    ctx.state.sectionBehavior[ctx.sid] = ctx.select.value;
+    markDirty();
 };
 
 /**
@@ -215,10 +285,9 @@ const bindSectionBehaviorSelect = (select, state) => {
         return;
     }
     state.sectionBehavior[sid] = select.value;
-    select.addEventListener('change', () => {
-        state.sectionBehavior[sid] = select.value;
-        markDirty();
-    });
+    const ctx = {select, sid, state};
+    const onChange = handleSectionBehaviorChange.bind(null, ctx);
+    select.addEventListener('change', onChange);
 };
 
 /**
@@ -229,7 +298,9 @@ const bindSectionBehaviorSelect = (select, state) => {
  */
 const bindSectionBehaviorSelects = (container, state) => {
     const selects = container.querySelectorAll('select[data-region="section-behavior"]');
-    selects.forEach(select => bindSectionBehaviorSelect(select, state));
+    for (const select of selects) {
+        bindSectionBehaviorSelect(select, state);
+    }
 };
 
 /**

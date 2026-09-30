@@ -215,8 +215,29 @@ const editSpaceRow = (row, markDirty) => {
 };
 
 /**
- * Bind the clicks of space rows: the badge and the edit icon reopen the
+ * Handle a click on a space row: the badge and the edit icon reopen the
  * shared modal for that row; the remove icon removes it.
+ *
+ * @param {Function} markDirty Marks the wizard as having unsaved changes.
+ * @param {MouseEvent} e The click.
+ */
+const handleSpaceRowClick = (markDirty, e) => {
+    const row = e.target.closest('[data-for="spacerow"]');
+    if (!row) {
+        return;
+    }
+    if (e.target.closest('[data-region="space-remove"]')) {
+        removeInstanceRow(row);
+        markDirty();
+        return;
+    }
+    if (e.target.closest('[data-region="space-badge"], [data-region="space-edit"]')) {
+        editSpaceRow(row, markDirty);
+    }
+};
+
+/**
+ * Bind the clicks of space rows.
  *
  * @param {HTMLElement} container The rendered course sections review.
  * @param {Function} markDirty Marks the wizard as having unsaved changes.
@@ -230,18 +251,6 @@ export const bindSpaceRows = (container, markDirty) => {
         'template_space_remove',
         'template_space_modal_title',
     ]);
-    container.addEventListener('click', (e) => {
-        const row = e.target.closest('[data-for="spacerow"]');
-        if (!row) {
-            return;
-        }
-        if (e.target.closest('[data-region="space-remove"]')) {
-            removeInstanceRow(row);
-            markDirty();
-            return;
-        }
-        if (e.target.closest('[data-region="space-badge"], [data-region="space-edit"]')) {
-            editSpaceRow(row, markDirty);
-        }
-    });
+    const onClick = handleSpaceRowClick.bind(null, markDirty);
+    container.addEventListener('click', onClick);
 };

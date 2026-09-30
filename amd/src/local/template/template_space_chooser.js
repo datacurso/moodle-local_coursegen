@@ -54,7 +54,31 @@ const isSupportedItem = (supportedTypes, item) => {
  * @param {Array} items Content items.
  * @returns {Array}
  */
-const withoutFavouriteStars = (items) => items.map(item => ({...item, legacyitem: true}));
+const withoutFavouriteStars = (items) => {
+    const flagged = [];
+    for (const item of items) {
+        const copy = {...item, legacyitem: true};
+        flagged.push(copy);
+    }
+    return flagged;
+};
+
+/**
+ * The items whose module this plugin supports.
+ *
+ * @param {Array} items Content items from the course chooser web service.
+ * @param {string[]} supportedTypes Module names a space can be made for.
+ * @returns {Array}
+ */
+const supportedItemsOf = (items, supportedTypes) => {
+    const supported = [];
+    for (const item of items) {
+        if (isSupportedItem(supportedTypes, item)) {
+            supported.push(item);
+        }
+    }
+    return supported;
+};
 
 /**
  * The chooser items this plugin supports, as the course page lists them.
@@ -65,7 +89,7 @@ const withoutFavouriteStars = (items) => items.map(item => ({...item, legacyitem
  */
 const fetchSupportedItems = async(courseId, supportedTypes) => {
     const data = await Repository.activityModules(courseId, 0);
-    const supported = data.content_items.filter(item => isSupportedItem(supportedTypes, item));
+    const supported = supportedItemsOf(data.content_items, supportedTypes);
     return withoutFavouriteStars(supported);
 };
 
@@ -76,7 +100,15 @@ const fetchSupportedItems = async(courseId, supportedTypes) => {
  * @param {number} archetype ARCHETYPE_ACTIVITY or ARCHETYPE_RESOURCE.
  * @returns {Array}
  */
-const itemsOfArchetype = (items, archetype) => items.filter(item => item.archetype === archetype);
+const itemsOfArchetype = (items, archetype) => {
+    const matching = [];
+    for (const item of items) {
+        if (item.archetype === archetype) {
+            matching.push(item);
+        }
+    }
+    return matching;
+};
 
 /**
  * The data core's own chooser template expects, for the All / Activities /
@@ -120,15 +152,24 @@ const iconUrlOf = (iconHtml) => {
 };
 
 /**
+ * Keep the resolver a promise executor receives.
+ *
+ * @param {Object} deferred The object that will expose the resolver.
+ * @param {Function} resolve The promise's resolve function.
+ */
+const captureResolver = (deferred, resolve) => {
+    deferred.resolve = resolve;
+};
+
+/**
  * A promise together with the function that resolves it.
  *
  * @returns {{promise: Promise, resolve: Function}}
  */
 const createDeferred = () => {
     const deferred = {};
-    deferred.promise = new Promise(resolve => {
-        deferred.resolve = resolve;
-    });
+    const executor = captureResolver.bind(null, deferred);
+    deferred.promise = new Promise(executor);
     return deferred;
 };
 
@@ -190,6 +231,22 @@ const createChooserModal = (bodyPromise) => {
 };
 
 /**
+ * The content item of a module, by its module name.
+ *
+ * @param {Array} items The content items offered.
+ * @param {string} modname
+ * @returns {Object|null} Null when no item has that module name.
+ */
+const findItemByName = (items, modname) => {
+    for (const item of items) {
+        if (item.name === modname) {
+            return item;
+        }
+    }
+    return null;
+};
+
+/**
  * Settle the session with the activity type behind a clicked chooser link.
  *
  * @param {Object} modal The chooser modal.
@@ -206,7 +263,7 @@ const pickFromClick = (modal, items, selection, e) => {
     e.stopPropagation();
     const url = new URL(link.href, window.location.href);
     const modname = url.searchParams.get('add');
-    const item = items.find(candidate => candidate.name === modname);
+    const item = findItemByName(items, modname);
     if (!item) {
         return;
     }

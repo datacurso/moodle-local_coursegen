@@ -226,20 +226,20 @@ export const collectVirtualRowsForSection = (sectionEl) => {
     let aftercmid = 0;
     let sortorder = 0;
     const rows = sectionEl.querySelectorAll('[data-for="cmitem"], [data-for="instancerow"], [data-for="spacerow"]');
-    rows.forEach(row => {
+    for (const row of rows) {
         if (row.dataset.for === 'cmitem') {
             aftercmid = parseInt(row.dataset.id, 10);
-            return;
+            continue;
         }
         if (row.dataset.for === 'spacerow') {
             const spaceEntry = spaceEntryOf(row, aftercmid, sortorder);
             spaces.push(spaceEntry);
             sortorder++;
-            return;
+            continue;
         }
         const instanceEntry = instanceEntryOf(sectionEl, row, aftercmid, sortorder);
         instances.push(instanceEntry);
         sortorder++;
-    });
+    }
     return {instances, spaces};
 };

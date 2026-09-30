@@ -136,6 +136,88 @@ const pickTemplate = (item, markDirty) => {
 };
 
 /**
+ * Handle a click anywhere in the review that belongs to the add-from-template
+ * feature: a "+" trigger, an item of the add menu, a picked template, an
+ * instance row's remove icon or its prompt toggle.
+ *
+ * @param {Object} ctx {container, state, markDirty} of the review.
+ * @param {MouseEvent} e The click.
+ */
+const handleContainerClick = (ctx, e) => {
+    const trigger = e.target.closest('[data-instance-menu-trigger]');
+    if (trigger) {
+        // Bound on the CAPTURE phase (see bindInstanceInserts()), not bubble:
+        // openMenuForTrigger()'s own dropdown('toggle')
+        // call lazily instantiates Bootstrap's per-element Dropdown the
+        // first time it runs (theme/boost/amd/src/bootstrap/dropdown.js
+        // Dropdown#_addEventListeners, called from its constructor), which
+        // permanently attaches its own click handler directly on this same
+        // trigger — bubble phase, calling stopPropagation() and toggling
+        // the dropdown itself. Since the trigger sits below this container
+        // in the tree, that handler would fire before a bubble-phase
+        // listener here ever could, so every click after the trigger's
+        // first open would be intercepted there — reopening whatever
+        // stale content is already rendered instead of ever reaching this
+        // handler's own fetch-then-open flow. Capture runs on the way
+        // down, ahead of any of the trigger's own bubble listeners, so
+        // stopping it here always wins regardless of how many times this
+        // trigger has already been opened before.
+        e.stopPropagation();
+        const opening = openMenuForTrigger(trigger);
+        opening.catch(Notification.exception);
+        return;
+    }
+
+    // The add menu's own items keep the dropdown open (the template
+    // picker replaces its content in place), so the click must not reach
+    // Bootstrap's document-level handler that closes a dropdown on any
+    // click inside it. "add a space" closes it explicitly.
+    const menuItem = e.target.closest('[data-menu-action]');
+    if (menuItem) {
+        e.stopPropagation();
+        const handling = handleMenuAction(menuItem, ctx.container, ctx.state, ctx.markDirty);
+        handling.catch(Notification.exception);
+        return;
+    }
+
+    // Scoped to the menu item's own class, not just [data-source-cmid]:
+    // every instance row's own <tr> also carries that same attribute
+    // (read back by confirmUnmarkTemplate/collectInstancesForSection),
+    // so the bare attribute selector matched a click ANYWHERE inside an
+    // already-inserted row too, mistaking it for a fresh pick.
+    const pickedItem = e.target.closest('.tpl-instance-menu-item[data-source-cmid]');
+    if (pickedItem) {
+        pickTemplate(pickedItem, ctx.markDirty);
+        return;
+    }
+
+    const removeBtn = e.target.closest('[data-region="instance-remove"]');
+    if (removeBtn) {
+        const instanceRow = removeBtn.closest('[data-for="instancerow"]');
+        removeInstanceRow(instanceRow);
+        ctx.markDirty();
+        return;
+    }
+
+    const promptToggle = e.target.closest('[data-region="instance-prompt-toggle"]');
+    if (promptToggle) {
+        togglePromptDrawer(ctx.container, promptToggle.dataset.id);
+    }
+};
+
+/**
+ * Mark the wizard dirty when an instance row's prompt is edited.
+ *
+ * @param {Function} markDirty Marks the wizard as having unsaved changes.
+ * @param {InputEvent} e The input event.
+ */
+const handlePromptInput = (markDirty, e) => {
+    if (e.target.matches('[data-region="instance-prompt"]')) {
+        markDirty();
+    }
+};
+
+/**
  * Bind everything under "Add activity from a template": gap/persistent
  * triggers open the picker, an accepted pick inserts a new instance row,
  * and each instance row's own icons work (prompt toggle, remove).
@@ -164,73 +246,14 @@ export const bindInstanceInserts = (container, state, markDirty) => {
         'template_instance_prompt_placeholder',
     ]);
 
-    container.addEventListener('click', (e) => {
-        const trigger = e.target.closest('[data-instance-menu-trigger]');
-        if (trigger) {
-            // Bound on the CAPTURE phase (see addEventListener's 3rd argument
-            // below), not bubble: openMenuForTrigger()'s own dropdown('toggle')
-            // call lazily instantiates Bootstrap's per-element Dropdown the
-            // first time it runs (theme/boost/amd/src/bootstrap/dropdown.js
-            // Dropdown#_addEventListeners, called from its constructor), which
-            // permanently attaches its own click handler directly on this same
-            // trigger — bubble phase, calling stopPropagation() and toggling
-            // the dropdown itself. Since the trigger sits below this container
-            // in the tree, that handler would fire before a bubble-phase
-            // listener here ever could, so every click after the trigger's
-            // first open would be intercepted there — reopening whatever
-            // stale content is already rendered instead of ever reaching this
-            // handler's own fetch-then-open flow. Capture runs on the way
-            // down, ahead of any of the trigger's own bubble listeners, so
-            // stopping it here always wins regardless of how many times this
-            // trigger has already been opened before.
-            e.stopPropagation();
-            const opening = openMenuForTrigger(trigger);
-            opening.catch(Notification.exception);
-            return;
-        }
+    // The click listener is added on the CAPTURE phase (3rd argument), see
+    // handleContainerClick() for why.
+    const ctx = {container, state, markDirty};
+    const onClick = handleContainerClick.bind(null, ctx);
+    container.addEventListener('click', onClick, true);
 
-        // The add menu's own items keep the dropdown open (the template
-        // picker replaces its content in place), so the click must not reach
-        // Bootstrap's document-level handler that closes a dropdown on any
-        // click inside it. "add a space" closes it explicitly.
-        const menuItem = e.target.closest('[data-menu-action]');
-        if (menuItem) {
-            e.stopPropagation();
-            const handling = handleMenuAction(menuItem, container, state, markDirty);
-            handling.catch(Notification.exception);
-            return;
-        }
-
-        // Scoped to the menu item's own class, not just [data-source-cmid]:
-        // every instance row's own <tr> also carries that same attribute
-        // (read back by confirmUnmarkTemplate/collectInstancesForSection),
-        // so the bare attribute selector matched a click ANYWHERE inside an
-        // already-inserted row too, mistaking it for a fresh pick.
-        const pickedItem = e.target.closest('.tpl-instance-menu-item[data-source-cmid]');
-        if (pickedItem) {
-            pickTemplate(pickedItem, markDirty);
-            return;
-        }
-
-        const removeBtn = e.target.closest('[data-region="instance-remove"]');
-        if (removeBtn) {
-            const instanceRow = removeBtn.closest('[data-for="instancerow"]');
-            removeInstanceRow(instanceRow);
-            markDirty();
-            return;
-        }
-
-        const promptToggle = e.target.closest('[data-region="instance-prompt-toggle"]');
-        if (promptToggle) {
-            togglePromptDrawer(container, promptToggle.dataset.id);
-        }
-    }, true);
-
-    container.addEventListener('input', (e) => {
-        if (e.target.matches('[data-region="instance-prompt"]')) {
-            markDirty();
-        }
-    });
+    const onInput = handlePromptInput.bind(null, markDirty);
+    container.addEventListener('input', onInput);
 
     bindSpaceRows(container, markDirty);
 };
