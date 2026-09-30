@@ -113,20 +113,27 @@ export const dropGapBeforeAddRow = (tbody) => {
  * @returns {Promise<HTMLElement>} The new instance row, once inserted and focused.
  */
 export const insertInstanceRow = async(tbody, beforeEl, picked) => {
-    const needsLeadingGap = !(beforeEl.previousElementSibling
-        && beforeEl.previousElementSibling.classList.contains('tpl-row-gap'));
+    const previous = beforeEl.previousElementSibling;
+    let needsLeadingGap = true;
+    if (previous && previous.classList.contains('tpl-row-gap')) {
+        needsLeadingGap = false;
+    }
     if (needsLeadingGap) {
-        tbody.insertBefore(await buildGapRow(), beforeEl);
+        const leadingGap = await buildGapRow();
+        tbody.insertBefore(leadingGap, beforeEl);
     }
 
-    const instanceid = 'new-' + (nextTempId++);
+    const tempId = nextTempId++;
+    const instanceid = 'new-' + tempId;
     const instanceFragment = await buildInstanceRowFragment(picked, instanceid);
     const instanceRow = instanceFragment.querySelector('[data-for="instancerow"]');
     tbody.insertBefore(instanceFragment, beforeEl);
-    tbody.insertBefore(await buildGapRow(), beforeEl);
+    const trailingGap = await buildGapRow();
+    tbody.insertBefore(trailingGap, beforeEl);
     dropGapBeforeAddRow(tbody);
 
-    startNameEdit(instanceRow.querySelector('[data-region="instance-name-editable"]'));
+    const nameEl = instanceRow.querySelector('[data-region="instance-name-editable"]');
+    startNameEdit(nameEl);
     return instanceRow;
 };
 
@@ -139,10 +146,15 @@ export const insertInstanceRow = async(tbody, beforeEl, picked) => {
 export const removeInstanceRow = (instanceRow) => {
     const tbody = instanceRow.closest('tbody');
     const promptRow = instanceRow.nextElementSibling;
-    const gapRow = promptRow && promptRow.classList.contains('tpl-instance-prompt-row')
-        ? promptRow.nextElementSibling
-        : instanceRow.nextElementSibling;
+    let hasPromptRow = false;
     if (promptRow && promptRow.classList.contains('tpl-instance-prompt-row')) {
+        hasPromptRow = true;
+    }
+    let gapRow = instanceRow.nextElementSibling;
+    if (hasPromptRow) {
+        gapRow = promptRow.nextElementSibling;
+    }
+    if (hasPromptRow) {
         promptRow.remove();
     }
     if (gapRow && gapRow.classList.contains('tpl-row-gap')) {
