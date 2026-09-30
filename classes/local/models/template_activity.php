@@ -70,19 +70,6 @@ class template_activity extends persistent {
                 'null' => NULL_ALLOWED,
                 'default' => null,
             ],
-            // Only meaningful when action=space: the professor must provide
-            // this activity (1) or may skip it (0).
-            'spacerequired' => [
-                'type' => PARAM_INT,
-                'default' => 1,
-            ],
-            // Only meaningful when action=space: what the professor has to
-            // provide in place of this activity.
-            'spaceinstruction' => [
-                'type' => PARAM_RAW,
-                'null' => NULL_ALLOWED,
-                'default' => null,
-            ],
         ];
     }
 }

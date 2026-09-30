@@ -1,0 +1,37 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/allowed_types_actions
+
+    "Select all" / "Select none" convenience buttons for the allowed
+    activity types field (see amd/src/local/template/step_limits.js), each
+    with a plain native title attribute for its hover explanation — the
+    same everyday browser tooltip Moodle uses for this kind of short hint
+    elsewhere, no custom markup or CSS.
+
+    Example context (json):
+    {
+        "selectalllabel": "Select all",
+        "selectalltooltip": "Selects every AI-supported activity type.",
+        "selectnonelabel": "Select none",
+        "selectnonetooltip": "Clears every currently selected activity type."
+    }
+}}
+<button type="button" class="btn btn-link p-0 mr-3" data-action="select-all-allowedtypes"
+    title="{{selectalltooltip}}">{{selectalllabel}}</button>
+<button type="button" class="btn btn-link p-0" data-action="select-none-allowedtypes"
+    title="{{selectnonetooltip}}">{{selectnonelabel}}</button>

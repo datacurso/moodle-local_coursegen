@@ -53,7 +53,7 @@ final class save_template_name_validation_test extends \advanced_testcase {
         $this->expectException(\moodle_exception::class);
         $this->expectExceptionMessage(get_string('template_name_required', 'local_coursegen'));
 
-        save_template::execute(0, $name, '', (int) $course->id, 0, true, '', 1, []);
+        save_template::execute(0, $name, '', (int) $course->id, 0, true, '[]', '', 1, []);
     }
 
     /**
@@ -75,7 +75,7 @@ final class save_template_name_validation_test extends \advanced_testcase {
         $this->setAdminUser();
         [$course] = $this->create_course_fixture();
 
-        $saved = save_template::execute(0, 'A real template name', '', (int) $course->id, 0, true, '', 1, []);
+        $saved = save_template::execute(0, 'A real template name', '', (int) $course->id, 0, true, '[]', '', 1, []);
 
         $this->assertSame('A real template name', $saved['name']);
     }

@@ -153,7 +153,6 @@ trait sections_config_fixture_trait {
      * @param array $activities
      * @param array $instances
      * @param int $templateid Existing template to re-save, 0 to create a new one.
-     * @param array $spaces Virtual professor-provided spaces placed in the section.
      * @return array \local_coursegen\external\save_template::execute()'s return value.
      */
     private function save_with_instances(
@@ -162,8 +161,7 @@ trait sections_config_fixture_trait {
         int $sectionnum,
         array $activities,
         array $instances,
-        int $templateid = 0,
-        array $spaces = []
+        int $templateid = 0
     ): array {
         return \local_coursegen\external\save_template::execute(
             $templateid,
@@ -172,6 +170,7 @@ trait sections_config_fixture_trait {
             $courseid,
             0,
             false,
+            '[]',
             '',
             1,
             [
@@ -181,7 +180,6 @@ trait sections_config_fixture_trait {
                     'behavior' => 'aimodify',
                     'activities' => $activities,
                     'instances' => $instances,
-                    'spaces' => $spaces,
                 ],
             ]
         );
