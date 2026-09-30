@@ -1,14 +1,4 @@
 @Library('moodle-ci') _
-// Same pattern as local_assign_ai / local_datacurso_ratings: 4.5 and 5.2 are
-// the boundaries of the range this plugin is being validated against, so
-// they carry both db engines; there's nothing "in between" to narrow here
-// since this branch only tests two versions.
-//
-// version.php currently declares $plugin->supported = [405, 501], not 502 --
-// this matrix deliberately goes further, matching the other two plugins'
-// convention, so a real MOODLE_502_STABLE result (pass or fail) is available
-// to decide whether to bump $plugin->supported, instead of leaving it
-// unverified.
 moodlePluginCI(moodleVersions: [
   [version: 'MOODLE_405_STABLE', dbs: ['mariadb', 'pgsql']],
   [version: 'MOODLE_502_STABLE', dbs: ['mariadb']],
