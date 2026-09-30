@@ -252,6 +252,42 @@ final class mold_file_copier_test extends \advanced_testcase {
     }
 
     /**
+     * The ASCII double-bracket form of a leftover image marker is stripped too.
+     */
+    public function test_cleaner_strips_leftover_ascii_image_markers(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $cleaned = text_editor_parameter_cleaner::clean_text_editor_objects([
+            'introeditor' => ['text' => '<p>A [[coursegen:image: banner de la unidad]] B</p>', 'format' => 1],
+        ]);
+
+        $this->assertSame('<p>A  B</p>', $cleaned['introeditor']['text']);
+    }
+
+    /**
+     * Both dialects in one text are stripped; a marker may hold a single bracket or span lines.
+     */
+    public function test_strip_image_markers_handles_both_dialects_in_one_text(): void {
+        $text = "<p>A ⟦coursegen:image:one⟧ B [[coursegen:image:two]] C</p>\n"
+            . "<p>D [[coursegen:image: with ] inside]] E [[coursegen:image:multi\nline]] F</p>";
+
+        $this->assertSame(
+            "<p>A  B  C</p>\n<p>D  E  F</p>",
+            mold_file_copier::strip_image_markers($text)
+        );
+    }
+
+    /**
+     * Only image markers go: wiki-style links and repeat markers written with double brackets stay.
+     */
+    public function test_strip_image_markers_keeps_other_double_bracket_text(): void {
+        $text = '<p>See [[Page]] and [[coursegen:repeat: one per unit]]<li>x</li>[[/coursegen:repeat]] and [[image]].</p>';
+
+        $this->assertSame($text, mold_file_copier::strip_image_markers($text));
+    }
+
+    /**
      * A label built through the service ends up with the mold's image in its own mod_label/intro area.
      */
     public function test_label_created_through_service_owns_the_copied_file(): void {

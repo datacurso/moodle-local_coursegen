@@ -261,10 +261,15 @@ class mold_file_copier {
     /**
      * Remove image markers the AI service left unresolved.
      *
+     * Both dialects are removed: the mathematical brackets and their ASCII
+     * double-bracket form. The ASCII form only counts when it opens with the
+     * image prefix, so ordinary double-bracket text such as a wiki link stays.
+     *
      * @param string $text
      * @return string
      */
     public static function strip_image_markers(string $text): string {
-        return preg_replace('/⟦coursegen:image:[^⟧]*⟧/u', '', $text) ?? $text;
+        $pattern = '/(?:⟦coursegen:image:[^⟧]*⟧|\[\[coursegen:image:.*?\]\])/su';
+        return preg_replace($pattern, '', $text) ?? $text;
     }
 }
