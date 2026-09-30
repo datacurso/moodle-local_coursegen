@@ -56,7 +56,10 @@ class template_export_service {
      * @return int|null The template_instance id, or null for a real cmid.
      */
     public static function instance_id_of(int $cmid): ?int {
-        return $cmid >= self::INSTANCE_CMID_BASE ? $cmid - self::INSTANCE_CMID_BASE : null;
+        if ($cmid >= self::INSTANCE_CMID_BASE) {
+            return $cmid - self::INSTANCE_CMID_BASE;
+        }
+        return null;
     }
 
     /**

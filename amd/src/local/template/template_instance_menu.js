@@ -145,5 +145,6 @@ export const showTemplateList = async({triggerEl, options}) => {
  * @param {HTMLElement} triggerEl The "+" button whose dropdown should close.
  */
 export const closeInstanceMenu = (triggerEl) => {
-    jQuery(triggerEl).dropdown('hide');
+    const trigger = jQuery(triggerEl);
+    trigger.dropdown('hide');
 };

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026093008
+
+### Changed
+- The rest of the template editor code follows the same code-quality rules as the spaces work: the row scripts, the structure rows for the professor, the row options, the layout ordering, the export and persistence services, the configuration form and the sections review no longer hide calls inside other calls' arguments, array literals or loop iterables, no longer use a ternary or an inline closure, and keep one non-nested loop per function. The layout ordering and the catalog sorting use small named comparison methods instead of inline closures.
+- The tests of the template editor read every inner call into a named variable first and use small helpers instead of inline closures. Every assertion, data provider and fixture value is unchanged.
+- The name validation of the save button collects its result through a named handler instead of a function defined inside another.
+
+### Removed
+- The summary step script of the old configuration wizard. Nothing in the plugin loads it any more.
+
 ## [2.0.10] - 2026093007
 
 ### Changed

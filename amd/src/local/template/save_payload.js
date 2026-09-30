@@ -33,6 +33,22 @@ import {resetAllFormDirtyStates} from 'core_form/changechecker';
 import {notifyFormSubmittedByJavascript, eventTypes} from 'core_form/events';
 
 /**
+ * Remember that the name form reported an invalid field.
+ *
+ * qf_errorHandler (lib/formslib.php) fires the event for every checked
+ * field regardless of outcome, with an empty message on success — only a
+ * non-empty one is an actual failure.
+ *
+ * @param {{hasError: boolean}} result Where the failure is recorded.
+ * @param {CustomEvent} e The field validation event.
+ */
+const recordFieldError = (result, e) => {
+    if (e.detail?.message) {
+        result.hasError = true;
+    }
+};
+
+/**
  * Run the name form's own client-side validation (classes/form/
  * template_name_form.php's "required" rule) exactly as if it had been
  * submitted for real — the same red border and inline error text any
@@ -45,23 +61,17 @@ import {notifyFormSubmittedByJavascript, eventTypes} from 'core_form/events';
  * @returns {boolean} False when the form reported at least one invalid field.
  */
 const nameFormIsValid = (root) => {
-    const form = root.querySelector('#id_templatename')?.closest('form');
+    const nameField = root.querySelector('#id_templatename');
+    const form = nameField?.closest('form');
     if (!form) {
         return true;
     }
-    let hasError = false;
-    const onFieldError = (e) => {
-        // qf_errorHandler (lib/formslib.php) fires this for every checked
-        // field regardless of outcome, with an empty message on success —
-        // only a non-empty one is an actual failure.
-        if (e.detail?.message) {
-            hasError = true;
-        }
-    };
+    const result = {hasError: false};
+    const onFieldError = recordFieldError.bind(null, result);
     form.addEventListener(eventTypes.formFieldValidationFailed, onFieldError);
     notifyFormSubmittedByJavascript(form);
     form.removeEventListener(eventTypes.formFieldValidationFailed, onFieldError);
-    return !hasError;
+    return !result.hasError;
 };
 
 /**

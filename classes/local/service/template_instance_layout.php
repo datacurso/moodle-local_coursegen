@@ -49,14 +49,28 @@ class template_instance_layout {
     public static function ordered_rows(array $realcmids, array $instances): array {
         $groups = self::group_by_anchor($instances, $realcmids);
 
-        $rows = self::instance_rows($groups[0] ?? []);
+        $rows = self::group_rows($groups, 0);
         foreach ($realcmids as $cmid) {
             $rows[] = ['type' => 'real', 'cmid' => $cmid];
-            $rows = array_merge($rows, self::instance_rows($groups[$cmid] ?? []));
+            $anchored = self::group_rows($groups, $cmid);
+            $rows = array_merge($rows, $anchored);
         }
-        $rows = array_merge($rows, self::instance_rows($groups['orphan'] ?? []));
+        $orphans = self::group_rows($groups, 'orphan');
+        $rows = array_merge($rows, $orphans);
 
         return $rows;
+    }
+
+    /**
+     * The row entries of one anchor group, none when the group does not exist.
+     *
+     * @param array $groups Groups keyed by aftercmid, 0, or "orphan".
+     * @param int|string $key The group to wrap.
+     * @return array
+     */
+    private static function group_rows(array $groups, $key): array {
+        $group = $groups[$key] ?? [];
+        return self::instance_rows($group);
     }
 
     /**
@@ -79,11 +93,44 @@ class template_instance_layout {
             }
             $groups[$key][] = $instance;
         }
+        return self::sort_groups($groups);
+    }
+
+    /**
+     * Order the rows inside every anchor group by their shared sortorder.
+     *
+     * @param array $groups Groups keyed by aftercmid, 0, or "orphan".
+     * @return array The same groups, each one sorted.
+     */
+    private static function sort_groups(array $groups): array {
         foreach ($groups as $key => $group) {
-            usort($group, fn($a, $b) => $a->get('sortorder') <=> $b->get('sortorder'));
-            $groups[$key] = $group;
+            $groups[$key] = self::sort_group($group);
         }
         return $groups;
+    }
+
+    /**
+     * Order one group of rows by their sortorder.
+     *
+     * @param array $group Instances and spaces.
+     * @return array
+     */
+    private static function sort_group(array $group): array {
+        usort($group, [self::class, 'compare_by_sortorder']);
+        return $group;
+    }
+
+    /**
+     * Compare two virtual rows by their sortorder.
+     *
+     * @param template_instance|template_space $first
+     * @param template_instance|template_space $second
+     * @return int
+     */
+    private static function compare_by_sortorder($first, $second): int {
+        $firstorder = $first->get('sortorder');
+        $secondorder = $second->get('sortorder');
+        return $firstorder <=> $secondorder;
     }
 
     /**

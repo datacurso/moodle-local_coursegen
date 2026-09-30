@@ -122,17 +122,20 @@ const handleMenuAction = async(item, container, state, markDirty) => {
  */
 const pickTemplate = (item, markDirty) => {
     const beforeEl = item.closest('[data-region="row-gap"], [data-region="add-instance"]');
-    const tbody = beforeEl.closest('table').querySelector('tbody');
+    const table = beforeEl.closest('table');
+    const tbody = table.querySelector('tbody');
     const triggerEl = beforeEl.querySelector('[data-instance-menu-trigger]');
+    const sourcecmid = parseInt(item.dataset.sourceCmid, 10);
     const picked = {
-        sourcecmid: parseInt(item.dataset.sourceCmid, 10),
+        sourcecmid,
         sourcename: item.dataset.sourceName,
         typelabel: item.dataset.typeLabel,
         modname: item.dataset.modname,
         iconurl: item.dataset.iconUrl,
     };
     closeInstanceMenu(triggerEl);
-    insertInstanceRow(tbody, beforeEl, picked).then(markDirty);
+    const inserting = insertInstanceRow(tbody, beforeEl, picked);
+    inserting.then(markDirty);
 };
 
 /**

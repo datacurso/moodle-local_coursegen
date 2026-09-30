@@ -130,7 +130,8 @@ class template_persistence_service {
      * @param int $templateid
      */
     private static function delete_records(string $modelclass, int $templateid): void {
-        foreach ($modelclass::get_records(['templateid' => $templateid]) as $record) {
+        $records = $modelclass::get_records(['templateid' => $templateid]);
+        foreach ($records as $record) {
             $record->delete();
         }
     }
