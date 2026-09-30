@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026093014
+
+### Changed
+- The activity catalog of the template editor is sorted with Moodle's own collator instead of a byte comparison of the names, so the order follows the site language and an accented initial sits with the entries of its base letter. The two comparison helpers it needed are gone.
+
+### Added
+- PHPUnit coverage of the catalog the template editor receives: the types it lists, the shape of each entry, that it is a zero-indexed list and that it follows the collation order.
+
 ## [2.0.10] - 2026093013
 
 ### Changed

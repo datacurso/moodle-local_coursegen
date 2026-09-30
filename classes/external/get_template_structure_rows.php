@@ -286,7 +286,7 @@ trait get_template_structure_rows {
 
     /**
      * The allowed-type catalog, each with its display name, purpose and
-     * icon, sorted by display name.
+     * icon, sorted by display name in the site language's collation.
      *
      * @param array $allowedtypes
      * @param \renderer_base $output
@@ -300,29 +300,8 @@ trait get_template_structure_rows {
                 $allowedactivities[] = $activity;
             }
         }
-        return self::sorted_by_display_name($allowedactivities);
-    }
-
-    /**
-     * Catalog entries ordered by display name, ignoring case.
-     *
-     * @param array $activities
-     * @return array
-     */
-    private static function sorted_by_display_name(array $activities): array {
-        usort($activities, [self::class, 'compare_display_names']);
-        return $activities;
-    }
-
-    /**
-     * Compare two catalog entries by display name, ignoring case.
-     *
-     * @param array $first
-     * @param array $second
-     * @return int
-     */
-    private static function compare_display_names(array $first, array $second): int {
-        return strcasecmp($first['displayname'], $second['displayname']);
+        \core_collator::asort_array_of_arrays_by_key($allowedactivities, self::CATALOG_NAME_FIELD);
+        return array_values($allowedactivities);
     }
 
     /**
@@ -341,10 +320,10 @@ trait get_template_structure_rows {
         $purpose = self::get_purpose($modname);
         $iconhtml = $output->image_icon('monologo', $modname, 'mod_' . $modname, ['class' => 'icon activityicon']);
         return [
-            'modname'     => $modname,
-            'displayname' => $displayname,
-            'purpose'     => $purpose,
-            'iconhtml'    => $iconhtml,
+            'modname' => $modname,
+            self::CATALOG_NAME_FIELD => $displayname,
+            'purpose' => $purpose,
+            'iconhtml' => $iconhtml,
         ];
     }
 }

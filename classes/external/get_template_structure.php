@@ -44,6 +44,9 @@ class get_template_structure extends external_api {
     use get_template_structure_rows;
     use get_template_structure_schema;
 
+    /** @var string The catalog entry field holding a module's display name, which the catalog is sorted by. */
+    private const CATALOG_NAME_FIELD = 'displayname';
+
     /**
      * Returns description of method parameters.
      *
