@@ -14,8 +14,8 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Opens/closes a "+" trigger's own template picker as a native Bootstrap
- * dropdown, positioned by Bootstrap's own bundled Popper.
+ * Opens/closes a "+" trigger's own add menu (and, inside it, the template
+ * picker) as a native Bootstrap dropdown, positioned by Bootstrap's own bundled Popper.
  *
  * Every trigger (see template_course_sections.mustache and
  * template_course_sections_row.mustache) carries data-toggle="dropdown" and
@@ -68,31 +68,64 @@ export const beginMenuOpen = (triggerEl) => {
 };
 
 /**
- * Render the picker body into the trigger's own dropdown-menu, then open it
- * as a native Bootstrap dropdown (content is filled in first, so Bootstrap
- * measures the real, final size when it positions the menu). A no-op if a
- * newer open of the same trigger (a later beginMenuOpen() call) has started
- * since this one's own token was claimed.
+ * The dropdown-menu element that belongs to a trigger.
+ *
+ * @param {HTMLElement} triggerEl The "+" button.
+ * @returns {HTMLElement}
+ */
+const menuOf = (triggerEl) => triggerEl.closest('.dropdown').querySelector('.dropdown-menu');
+
+/**
+ * Render the add menu (activity from a template / space for an activity)
+ * into the trigger's own dropdown-menu, then open it as a native Bootstrap
+ * dropdown (content is filled in first, so Bootstrap measures the real,
+ * final size when it positions the menu). A no-op if a newer open of the
+ * same trigger (a later beginMenuOpen() call) has started since this one's
+ * own token was claimed.
  *
  * @param {Object} params
  * @param {HTMLElement} params.triggerEl The "+" button that was clicked —
  *     must sit inside a ".dropdown" wrapper next to a ".dropdown-menu".
- * @param {Array} params.options Menu items: {sourcecmid, name, typelabel,
- *     disabled, scopehint, tooltip} (see template_instance_menu.mustache).
  * @param {symbol} params.token This open's own token, from beginMenuOpen().
  */
-export const openInstanceMenu = async({triggerEl, options, token}) => {
-    const menuEl = triggerEl.closest('.dropdown').querySelector('.dropdown-menu');
-    const rendered = await Templates.render('local_coursegen/template_instance_menu', {
-        hasoptions: options.length > 0,
-        options,
-    });
+export const openAddMenu = async({triggerEl, token}) => {
+    const rendered = await Templates.render('local_coursegen/template_add_menu', {});
 
     if (latestOpenToken.get(triggerEl) !== token) {
         return;
     }
-    Templates.replaceNodeContents(menuEl, rendered, '');
+    Templates.replaceNodeContents(menuOf(triggerEl), rendered, '');
     jQuery(triggerEl).dropdown('toggle');
+};
+
+/**
+ * Put the add menu back into an already-open dropdown (the "Back" item of
+ * the template picker), without closing or reopening it.
+ *
+ * @param {HTMLElement} triggerEl The "+" button whose dropdown is open.
+ */
+export const showAddMenu = async(triggerEl) => {
+    const rendered = await Templates.render('local_coursegen/template_add_menu', {});
+    Templates.replaceNodeContents(menuOf(triggerEl), rendered, '');
+    jQuery(triggerEl).dropdown('update');
+};
+
+/**
+ * Replace the content of an already-open dropdown with the template picker
+ * (every template an activity can be created from), keeping it open.
+ *
+ * @param {Object} params
+ * @param {HTMLElement} params.triggerEl The "+" button whose dropdown is open.
+ * @param {Array} params.options Menu items: {sourcecmid, name, typelabel,
+ *     disabled, scopehint, tooltip} (see template_instance_menu.mustache).
+ */
+export const showTemplateList = async({triggerEl, options}) => {
+    const rendered = await Templates.render('local_coursegen/template_instance_menu', {
+        hasoptions: options.length > 0,
+        options,
+    });
+    Templates.replaceNodeContents(menuOf(triggerEl), rendered, '');
+    jQuery(triggerEl).dropdown('update');
 };
 
 /**

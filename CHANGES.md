@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026093003
+
+### Added
+- Spaces for the professor in the template editor, put back for review after the revert of build 2026093002. A space marks a place where the professor must, or may, provide an activity of their own when creating a course from the template. It is either a new entry (pick the activity type from Moodle's own activity chooser, limited to the types the plugin supports, then say whether it is required or optional and what the professor has to provide), or an existing activity set to the new "Space for the professor" action. A space is never copied into the new course nor written by the AI: it is left out of what is sent to the AI service. Making the professor provide it, and blocking the start while a required one is empty, comes in a later step.
+- New table `local_coursegen_tpl_space` for the entries, and two fields on the template activity (`spacerequired`, `spaceinstruction`) for the marked activities. The upgrade step creates them only when they are missing, so it is safe on databases that already have them from build 2026093001.
+
+### Changed
+- The "+" between rows and the "Add" row at the end of each section open a menu with two options: add an activity from a template (the same list as before, with a Back item) or add a space for an activity.
+- The professor's activity chooser offers every supported and installed activity type for every template.
+
+### Removed
+- The "Allowed activity types" setting of the template editor, with its "Select all" / "Select none" buttons and its summary line. The saved value is no longer read or written; the column stays so no schema change is needed. `save_template` no longer takes the `allowedtypes` parameter.
+
 ## [2.0.10] - 2026093002
 
 ### Reverted

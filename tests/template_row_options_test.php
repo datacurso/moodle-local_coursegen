@@ -87,17 +87,18 @@ final class template_row_options_test extends \advanced_testcase {
     /**
      * activity_actions() never offers "modify" any more, for either an
      * AI-supported type or an unsupported one — "template" is the only
-     * action still gated to AI_SUPPORTED_TYPES.
+     * action still gated to AI_SUPPORTED_TYPES, and "space" is offered for
+     * every type.
      */
     public function test_activity_actions_never_offers_modify(): void {
         $supported = template_row_options::activity_actions(1, 'page');
         $this->assertSame(
-            ['template', 'keep', 'reference', 'exclude'],
+            ['template', 'keep', 'reference', 'exclude', 'space'],
             array_column($supported, 'value')
         );
 
         $unsupported = template_row_options::activity_actions(1, 'lti');
-        $this->assertSame(['keep', 'reference', 'exclude'], array_column($unsupported, 'value'));
+        $this->assertSame(['keep', 'reference', 'exclude', 'space'], array_column($unsupported, 'value'));
     }
 
     /**

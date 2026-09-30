@@ -25,6 +25,8 @@
     from.
 
     Data attributes required for JS:
+    * data-menu-action="back" on the first item, which returns to the add menu
+      (template_add_menu.mustache).
     * data-source-cmid + data-source-name + data-type-label + data-modname +
       data-icon-url on each enabled item, read when the admin picks it.
 
@@ -44,6 +46,9 @@
         ]
     }
 }}
+<button type="button" class="dropdown-item tpl-add-menu-back" role="menuitem" data-menu-action="back">
+    &larr; {{#str}} back, core {{/str}}
+</button>
 {{#hasoptions}}
 <p class="tpl-instance-menu-hint">{{#str}} template_instance_menu_hint, local_coursegen {{/str}}</p>
 {{#options}}

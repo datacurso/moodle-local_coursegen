@@ -41,11 +41,10 @@ use context;
 use context_system;
 use core_form\dynamic_form;
 use local_coursegen\local\models\template;
-use local_coursegen\local\service\template_content_generator;
 use moodle_url;
 
 /**
- * Dynamic form for the limits / allowed-types part of the config screen.
+ * Dynamic form for the limits part of the config screen.
  */
 class template_config_form extends dynamic_form {
 
@@ -76,8 +75,6 @@ class template_config_form extends dynamic_form {
         if ($courseid <= 0) {
             return;
         }
-        $modinfo = get_fast_modinfo($courseid);
-
         // Edit mode: the saved template's values override every fresh-course
         // default below. A stale/unknown id just falls back to the defaults.
         $template = null;
@@ -85,13 +82,6 @@ class template_config_form extends dynamic_form {
         if ($templateid > 0) {
             $template = template::get_record(['id' => $templateid]) ?: null;
         }
-
-        $presentmodnames = [];
-        foreach ($modinfo->get_cms() as $cm) {
-            $presentmodnames[$cm->modname] = true;
-        }
-        $presentmodnames = array_keys($presentmodnames);
-        sort($presentmodnames);
 
         $mform->addElement('header', 'limitshdr', get_string('template_limits_title', 'local_coursegen'));
         $mform->setExpanded('limitshdr');
@@ -128,70 +118,6 @@ class template_config_form extends dynamic_form {
         // Only meaningful while the checkbox above is ticked — this is
         // exactly what hideIf is for, no hand-wired JS needed.
         $mform->hideIf('maxsections', 'allowaddsections', 'notchecked');
-
-        // Only ever offer types the AI service actually has a content
-        // contract for (see template_content_generator::AI_SUPPORTED_TYPES'
-        // own docblock) — never everything installed on the site. On a real
-        // site that can mean dozens of installed module types; restricting
-        // to the AI-supported set both keeps this list scannable and
-        // guarantees an admin can never allow a type here that would just
-        // silently fail (or need manual authoring) when a course is
-        // generated.
-        $modtypes = [];
-        foreach (get_module_types_names() as $modname => $displayname) {
-            if (in_array($modname, template_content_generator::AI_SUPPORTED_TYPES, true)) {
-                $modtypes[$modname] = $displayname;
-            }
-        }
-        if (!empty($modtypes)) {
-            $mform->addElement('header', 'allowedtypeshdr', get_string('template_allowed_types', 'local_coursegen'));
-            $mform->setExpanded('allowedtypeshdr');
-            $mform->addElement('static', 'allowedtypesdesc', '',
-                get_string('template_allowed_types_desc', 'local_coursegen'));
-
-            // Picking every AI-supported type one at a time through the
-            // search-and-click multi-select below is tedious once there are
-            // more than a handful — these two buttons are a JS-only
-            // convenience (see amd/src/local/template/step_limits.js) that
-            // select or clear all of them in one click; they carry no name
-            // and are never submitted themselves, only the allowedtypes
-            // field they act on is. Rendered from templates/allowed_types_
-            // actions.mustache — each button's hover explanation is a plain
-            // native title attribute, the everyday browser tooltip.
-            global $OUTPUT;
-            $mform->addElement('static', 'allowedtypesactions', '',
-                $OUTPUT->render_from_template('local_coursegen/allowed_types_actions', [
-                    'selectalllabel' => get_string('template_select_all', 'local_coursegen'),
-                    'selectalltooltip' => get_string('template_select_all_tooltip', 'local_coursegen'),
-                    'selectnonelabel' => get_string('template_select_none', 'local_coursegen'),
-                    'selectnonetooltip' => get_string('template_select_none_tooltip', 'local_coursegen'),
-                ])
-            );
-
-            // A single searchable multi-select (Moodle's own standard
-            // building block for "pick several from a moderate list", the
-            // same autocomplete element already used for the base-course
-            // picker in course_picker_form.php) replaces what used to be one
-            // checkbox row per installed type — with dozens of installed
-            // types that list became a long wall to scan; typing to filter
-            // and seeing selections as chips is far more scannable, and no
-            // AJAX transport is needed since the AI-supported list is short
-            // enough to send whole, exactly like the category field.
-            $mform->addElement('autocomplete', 'allowedtypes', '', $modtypes, [
-                'multiple' => true,
-                'noselectionstring' => get_string('template_allowed_types_none', 'local_coursegen'),
-            ]);
-            $mform->setType('allowedtypes', PARAM_ALPHANUMEXT);
-            $preselected = array_values(array_intersect($presentmodnames, array_keys($modtypes)));
-            if ($template && $template->get('allowedtypes') !== null && $template->get('allowedtypes') !== '') {
-                $savedtypes = json_decode($template->get('allowedtypes'), true);
-                if (is_array($savedtypes)) {
-                    $preselected = array_values(array_intersect($savedtypes, array_keys($modtypes)));
-                }
-            }
-            $mform->setDefault('allowedtypes', $preselected);
-            $mform->addHelpButton('allowedtypes', 'template_allowed_types', 'local_coursegen');
-        }
 
         $this->definition_naming_pattern($template);
     }

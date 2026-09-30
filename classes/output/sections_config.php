@@ -28,6 +28,7 @@ namespace local_coursegen\output;
 use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_instance;
 use local_coursegen\local\models\template_section;
+use local_coursegen\local\models\template_space;
 use local_coursegen\local\service\template_instance_layout;
 
 /**
@@ -83,6 +84,7 @@ class sections_config {
         $savedbehaviors = [];
         $savedactions = [];
         $savedscopes = [];
+        $savedspaces = [];
         $savedinstances = [];
         if ($templateid > 0) {
             foreach (template_section::get_records(['templateid' => $templateid]) as $record) {
@@ -91,8 +93,16 @@ class sections_config {
             foreach (template_activity::get_records(['templateid' => $templateid]) as $record) {
                 $savedactions[(int) $record->get('cmid')] = $record->get('action');
                 $savedscopes[(int) $record->get('cmid')] = $record->get('templatescope');
+                $savedspaces[(int) $record->get('cmid')] = [
+                    'required' => (bool) $record->get('spacerequired'),
+                    'instruction' => (string) $record->get('spaceinstruction'),
+                ];
             }
-            foreach (template_instance::get_records(['templateid' => $templateid]) as $record) {
+            $virtualrows = array_merge(
+                template_instance::get_records(['templateid' => $templateid]),
+                template_space::get_records(['templateid' => $templateid])
+            );
+            foreach ($virtualrows as $record) {
                 $savedinstances[(int) $record->get('sectionid')][] = $record;
             }
         }
@@ -110,7 +120,7 @@ class sections_config {
                     }
                     $cmid = (int) $cm->id;
                     $realcmids[] = $cmid;
-                    $activitiesbycmid[$cmid] = self::real_row_context($cm, $cmid, $savedactions, $savedscopes);
+                    $activitiesbycmid[$cmid] = self::real_row_context($cm, $cmid, $savedactions, $savedscopes, $savedspaces);
                 }
             }
 
@@ -142,6 +152,11 @@ class sections_config {
             // without an extra string lookup.
             'scopelabelcourse' => get_string('template_activity_scope_course', 'local_coursegen'),
             'scopelabelsection' => get_string('template_activity_scope_section', 'local_coursegen'),
+            // Both space badge labels, for the same reason: the row's badge
+            // swaps between them after a requirement change without a string
+            // lookup.
+            'spacebadgerequired' => template_row_options::space_badge_label(true),
+            'spacebadgeoptional' => template_row_options::space_badge_label(false),
         ];
     }
 
@@ -152,12 +167,21 @@ class sections_config {
      * @param int $cmid
      * @param array $savedactions Saved action per cmid.
      * @param array $savedscopes Saved templatescope per cmid.
+     * @param array $savedspaces Saved space settings (required, instruction) per cmid.
      * @return array
      */
-    private static function real_row_context(\cm_info $cm, int $cmid, array $savedactions, array $savedscopes): array {
+    private static function real_row_context(
+        \cm_info $cm,
+        int $cmid,
+        array $savedactions,
+        array $savedscopes,
+        array $savedspaces
+    ): array {
         $actionoptions = template_row_options::activity_actions($cmid, $cm->modname, $savedactions[$cmid] ?? null);
         $istemplate = template_row_options::active_action($actionoptions) === 'template';
         $scopeoptions = template_row_options::template_scope_options($cmid, $savedscopes[$cmid] ?? 'course');
+        $isspace = template_row_options::active_action($actionoptions) === 'space';
+        $space = $savedspaces[$cmid] ?? ['required' => true, 'instruction' => ''];
 
         // Link to the real activity in the base course; null for modules
         // with no view page of their own (label), whose names stay plain text.
@@ -182,6 +206,14 @@ class sections_config {
             // by sections_events.js.
             'istemplate' => $istemplate,
             'scopelabel' => template_row_options::active_scope_label($scopeoptions),
+            // Drives the clickable "Space" badge the same way: hidden unless
+            // the row's action is "space", reopening the space settings.
+            'isspace' => $isspace,
+            'spacerequired' => $space['required'],
+            'spacerequiredvalue' => (int) $space['required'],
+            'spaceinstruction' => $space['instruction'],
+            'hasspaceinstruction' => $isspace && $space['instruction'] !== '',
+            'spacebadge' => template_row_options::space_badge_label($space['required']),
         ];
     }
 
@@ -205,6 +237,9 @@ class sections_config {
         foreach ($orderedrows as $entry) {
             if ($entry['type'] === 'real') {
                 $context = $activitiesbycmid[$entry['cmid']];
+            } else if ($entry['type'] === 'space') {
+                $context = ['isreal' => false, 'isinstance' => false, 'isvirtualspace' => true]
+                    + template_row_options::space_row_context($entry['record']);
             } else {
                 $context = ['isreal' => false, 'isinstance' => true]
                     + template_row_options::instance_row_context($entry['record']);

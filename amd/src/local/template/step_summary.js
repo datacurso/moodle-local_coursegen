@@ -84,7 +84,6 @@ const buildSummaryHtml = (state) => {
     html += '<div class="row mb-3 pb-3 border-bottom">';
     html += col('Base course', course?.fullname || '-');
     html += col('Max sections', state.noLimit ? 'No limit' : state.maxSections);
-    html += col('Allowed types', state.allowedTypes.length + ' types');
     html += col('Naming', state.namingPattern);
     html += '</div>';
 
