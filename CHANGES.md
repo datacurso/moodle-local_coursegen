@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026093005
+
+### Changed
+- The code of the template editor and of the spaces for the professor now follows the project's code-quality rules that had been skipped: no loop inside another loop, one loop per function, no ternaries, no `switch`, no named function inside another function, no function call inside another call's arguments, an array or a loop's iterable, and no `??` fallback mixed into a larger expression. No behaviour changes.
+- The template wizard state (`init.js`) seeds each section and each activity through their own small functions instead of a loop inside a loop. The rows, events, payload, menu, space modal and activity chooser modules were split the same way; the chooser now keeps its outcome in a small class instead of a function defined inside another.
+- The section review (`sections_config`) reads the saved configuration through one helper per kind of record and builds each section and each real row through its own method, instead of a single method with five loops, one of them nested.
+- The configuration form builds its limits and its naming fields in separate methods, and the pure pieces (extra sections default, naming options, naming defaults) are public and covered by tests.
+- The tests of the editor and of the spaces read their inner calls into named variables first, and the spaces test got small helpers for the section id, the review render and the badge text.
+
+### Fixed
+- A test of the spaces (an activity marked as a space) called the fixture with one argument too few and would have stopped with an error instead of checking anything.
+
 ## [2.0.10] - 2026093004
 
 ### Fixed
