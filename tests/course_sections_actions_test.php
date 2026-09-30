@@ -100,12 +100,15 @@ final class course_sections_actions_test extends \advanced_testcase {
 
         [$course, $page] = $this->create_course_fixture();
 
-        $html = sections_config::render(get_fast_modinfo($course));
+        $modinfo = get_fast_modinfo($course);
+        $html = sections_config::render($modinfo);
 
         $tag = $this->extract_template_tag($html, (int) $page->cmid);
         $tagopenend = strpos($tag, '>');
-        $this->assertStringContainsString('d-none', substr($tag, 0, $tagopenend));
-        $this->assertStringContainsString(get_string('template_activity_scope_course', 'local_coursegen'), $tag);
+        $tagopening = substr($tag, 0, $tagopenend);
+        $courselabel = get_string('template_activity_scope_course', 'local_coursegen');
+        $this->assertStringContainsString('d-none', $tagopening);
+        $this->assertStringContainsString($courselabel, $tag);
     }
 
     /**
@@ -120,19 +123,14 @@ final class course_sections_actions_test extends \advanced_testcase {
 
         [$course, $page] = $this->create_course_fixture();
 
-        $html = sections_config::render(get_fast_modinfo($course));
+        $modinfo = get_fast_modinfo($course);
+        $html = sections_config::render($modinfo);
 
         $tag = $this->extract_template_tag($html, (int) $page->cmid);
-        $expectedcourse = get_string(
-            'template_activity_template_tag',
-            'local_coursegen',
-            get_string('template_activity_scope_course', 'local_coursegen')
-        );
-        $expectedsection = get_string(
-            'template_activity_template_tag',
-            'local_coursegen',
-            get_string('template_activity_scope_section', 'local_coursegen')
-        );
+        $courselabel = get_string('template_activity_scope_course', 'local_coursegen');
+        $expectedcourse = get_string('template_activity_template_tag', 'local_coursegen', $courselabel);
+        $sectionlabel = get_string('template_activity_scope_section', 'local_coursegen');
+        $expectedsection = get_string('template_activity_template_tag', 'local_coursegen', $sectionlabel);
         $this->assertStringContainsString('data-tag-course="' . $expectedcourse . '"', $tag);
         $this->assertStringContainsString('data-tag-section="' . $expectedsection . '"', $tag);
     }
@@ -148,23 +146,25 @@ final class course_sections_actions_test extends \advanced_testcase {
 
         [$course] = $this->create_course_fixture();
 
-        $html = sections_config::render(get_fast_modinfo($course));
+        $modinfo = get_fast_modinfo($course);
+        $html = sections_config::render($modinfo);
 
-        $this->assertSame(1, substr_count($html, 'data-region="bulk-action"'));
+        $barcount = substr_count($html, 'data-region="bulk-action"');
+        $this->assertSame(1, $barcount);
         $this->assertStringNotContainsString('data-region="bulk-action" data-sid', $html);
 
-        $this->assertStringContainsString(
-            get_string('template_with_selected_activities', 'local_coursegen'),
-            $html
-        );
+        $withselectedlabel = get_string('template_with_selected_activities', 'local_coursegen');
+        $this->assertStringContainsString($withselectedlabel, $html);
 
         $start = strpos($html, 'data-region="bulk-action"');
         $end = strpos($html, '</select>', $start);
         $bulkselect = substr($html, $start, $end - $start);
         $this->assertStringContainsString('disabled', $bulkselect);
-        $this->assertSame(5, substr_count($bulkselect, '<option'));
+        $optioncount = substr_count($bulkselect, '<option');
+        $this->assertSame(5, $optioncount);
         $this->assertMatchesRegularExpression('/<option value=""[^>]*\sselected/', $bulkselect);
-        $this->assertStringContainsString(get_string('choosedots'), $bulkselect);
+        $choosedots = get_string('choosedots');
+        $this->assertStringContainsString($choosedots, $bulkselect);
         $this->assertStringNotContainsString('<option value="modify"', $bulkselect);
         foreach (['template', 'keep', 'reference', 'exclude'] as $action) {
             $this->assertStringContainsString('<option value="' . $action . '"', $bulkselect);

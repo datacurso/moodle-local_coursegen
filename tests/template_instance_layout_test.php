@@ -112,7 +112,8 @@ final class template_instance_layout_test extends \advanced_testcase {
      */
     public function test_no_instances_returns_only_real_rows_in_order(): void {
         $rows = template_instance_layout::ordered_rows([10, 20, 30], []);
-        $this->assertSame(['real:10', 'real:20', 'real:30'], $this->tokens($rows));
+        $tokens = $this->tokens($rows);
+        $this->assertSame(['real:10', 'real:20', 'real:30'], $tokens);
     }
 
     /**
@@ -121,7 +122,8 @@ final class template_instance_layout_test extends \advanced_testcase {
     public function test_instance_renders_immediately_after_its_anchor(): void {
         $instance = $this->fake_instance(10, 0, 'A');
         $rows = template_instance_layout::ordered_rows([10, 20], [$instance]);
-        $this->assertSame(['real:10', 'inst:A', 'real:20'], $this->tokens($rows));
+        $tokens = $this->tokens($rows);
+        $this->assertSame(['real:10', 'inst:A', 'real:20'], $tokens);
     }
 
     /**
@@ -130,7 +132,8 @@ final class template_instance_layout_test extends \advanced_testcase {
     public function test_anchor_zero_renders_before_the_first_real_row(): void {
         $instance = $this->fake_instance(0, 0, 'A');
         $rows = template_instance_layout::ordered_rows([10, 20], [$instance]);
-        $this->assertSame(['inst:A', 'real:10', 'real:20'], $this->tokens($rows));
+        $tokens = $this->tokens($rows);
+        $this->assertSame(['inst:A', 'real:10', 'real:20'], $tokens);
     }
 
     /**
@@ -140,7 +143,8 @@ final class template_instance_layout_test extends \advanced_testcase {
         $second = $this->fake_instance(10, 2, 'Second');
         $first = $this->fake_instance(10, 1, 'First');
         $rows = template_instance_layout::ordered_rows([10, 20], [$second, $first]);
-        $this->assertSame(['real:10', 'inst:First', 'inst:Second', 'real:20'], $this->tokens($rows));
+        $tokens = $this->tokens($rows);
+        $this->assertSame(['real:10', 'inst:First', 'inst:Second', 'real:20'], $tokens);
     }
 
     /**
@@ -149,7 +153,8 @@ final class template_instance_layout_test extends \advanced_testcase {
     public function test_instance_anchored_at_the_last_real_row_renders_at_the_end(): void {
         $instance = $this->fake_instance(20, 0, 'A');
         $rows = template_instance_layout::ordered_rows([10, 20], [$instance]);
-        $this->assertSame(['real:10', 'real:20', 'inst:A'], $this->tokens($rows));
+        $tokens = $this->tokens($rows);
+        $this->assertSame(['real:10', 'real:20', 'inst:A'], $tokens);
     }
 
     /**
@@ -160,7 +165,8 @@ final class template_instance_layout_test extends \advanced_testcase {
     public function test_instance_with_an_invalid_anchor_is_appended_at_the_end(): void {
         $instance = $this->fake_instance(999, 0, 'Orphan');
         $rows = template_instance_layout::ordered_rows([10, 20], [$instance]);
-        $this->assertSame(['real:10', 'real:20', 'inst:Orphan'], $this->tokens($rows));
+        $tokens = $this->tokens($rows);
+        $this->assertSame(['real:10', 'real:20', 'inst:Orphan'], $tokens);
     }
 
     /**
@@ -171,7 +177,8 @@ final class template_instance_layout_test extends \advanced_testcase {
         $second = $this->fake_instance(888, 2, 'Second');
         $first = $this->fake_instance(999, 1, 'First');
         $rows = template_instance_layout::ordered_rows([10], [$second, $first]);
-        $this->assertSame(['real:10', 'inst:First', 'inst:Second'], $this->tokens($rows));
+        $tokens = $this->tokens($rows);
+        $this->assertSame(['real:10', 'inst:First', 'inst:Second'], $tokens);
     }
 
     /**
@@ -181,14 +188,16 @@ final class template_instance_layout_test extends \advanced_testcase {
     public function test_empty_section_with_one_instance_renders_just_that_instance(): void {
         $instance = $this->fake_instance(0, 0, 'Only');
         $rows = template_instance_layout::ordered_rows([], [$instance]);
-        $this->assertSame(['inst:Only'], $this->tokens($rows));
+        $tokens = $this->tokens($rows);
+        $this->assertSame(['inst:Only'], $tokens);
     }
 
     /**
      * An entirely empty section with no instances returns an empty list.
      */
     public function test_empty_section_with_no_instances_returns_empty_array(): void {
-        $this->assertSame([], template_instance_layout::ordered_rows([], []));
+        $rows = template_instance_layout::ordered_rows([], []);
+        $this->assertSame([], $rows);
     }
 
     /**
