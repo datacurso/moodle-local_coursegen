@@ -173,12 +173,13 @@ export const saveTemplate = async(state, root) => {
         const descVal = root.querySelector('#id_templatedesc')?.value || state.templateDesc;
         state.templateName = nameVal;
         state.templateDesc = descVal;
+        const sections = buildSections(state, root);
         await Repository.saveTemplate({
             id: state.templateId, name: nameVal,
             description: descVal, courseid: state.selectedCourseId,
             maxsections: state.maxSections, nolimit: state.noLimit,
             namingpattern: state.namingPattern, namingstart: state.namingStart,
-            sections: buildSections(state, root),
+            sections,
         });
         // A real, successful save — the course picker, config form and name
         // form all stay watched for changes (see their own definition()),

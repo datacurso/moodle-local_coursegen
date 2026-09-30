@@ -44,101 +44,193 @@
  */
 
 /**
+ * Add a listener to an element, when the form rendered it.
+ *
+ * @param {HTMLElement|null} element
+ * @param {string} type The event type.
+ * @param {Function} handler
+ */
+const listen = (element, type, handler) => {
+    if (!element) {
+        return;
+    }
+    element.addEventListener(type, handler);
+};
+
+/**
+ * The extra sections the teacher may add, read from the form.
+ *
+ * maxsections is the number of EXTRA sections the teacher may add on top of
+ * the template's own — 0 (no extra sections) unless the allow-add-sections
+ * checkbox is ticked.
+ *
+ * @param {Object} ctx The limits context (see buildContext()).
+ * @returns {number}
+ */
+const readMaxSections = (ctx) => {
+    if (!ctx.allowAddCb?.checked) {
+        return 0;
+    }
+    return parseInt(ctx.maxInput?.value, 10) || 0;
+};
+
+/**
+ * The naming pattern the form currently describes.
+ *
+ * @param {Object} ctx The limits context (see buildContext()).
+ * @returns {string}
+ */
+const readNamingPattern = (ctx) => {
+    if (ctx.patternSelect?.value === '__custom__') {
+        return ctx.customInput?.value || '{nombre}';
+    }
+    return ctx.patternSelect?.value || ctx.state.namingPattern;
+};
+
+/**
+ * The preview line of one section.
+ *
+ * @param {Object} state
+ * @param {string} sectionName
+ * @param {number} index The section's position.
+ * @returns {string}
+ */
+const previewLine = (state, sectionName, index) => {
+    const number = state.namingStart + index;
+    const withNumber = state.namingPattern.replace(/\{N\}/g, number);
+    const rendered = withNumber.replace(/\{nombre\}/g, sectionName);
+    return '<small class="d-block">' + rendered + '</small>';
+};
+
+/**
+ * Update the naming preview.
+ *
+ * @param {Object} ctx The limits context (see buildContext()).
+ */
+const updatePreview = (ctx) => {
+    const container = ctx.panel.querySelector('[data-region="naming-preview"]');
+    if (!container) {
+        return;
+    }
+    let html = '<small class="text-muted d-block mb-1">Preview:</small>';
+    let index = 0;
+    for (const section of ctx.structure) {
+        html += previewLine(ctx.state, section.name, index);
+        index++;
+    }
+    container.innerHTML = html;
+};
+
+/**
+ * Track the extra sections allowance when the form changes it.
+ *
+ * @param {Object} ctx The limits context (see buildContext()).
+ */
+const handleMaxSectionsChange = (ctx) => {
+    ctx.state.maxSections = readMaxSections(ctx);
+};
+
+/**
+ * Track the naming pattern when the form changes it, and refresh the preview.
+ *
+ * @param {Object} ctx The limits context (see buildContext()).
+ */
+const handleNamingPatternChange = (ctx) => {
+    ctx.state.namingPattern = readNamingPattern(ctx);
+    updatePreview(ctx);
+};
+
+/**
+ * Track the first section number when the form changes it, and refresh the preview.
+ *
+ * @param {Object} ctx The limits context (see buildContext()).
+ * @param {Event} e The change event.
+ */
+const handleStartChange = (ctx, e) => {
+    ctx.state.namingStart = parseInt(e.target.value, 10);
+    updatePreview(ctx);
+};
+
+/**
+ * Everything the limits handlers need: the rendered fields and the state.
+ *
+ * Section naming — real mform elements (select[name="namingpattern"],
+ * text[name="custompattern"], select[name="namingstart"], see
+ * classes/form/template_config_form.php::definition_naming_pattern()).
+ * The custom-pattern field's own show/hide is the form's native hideIf()
+ * rule — nothing to do here for that — this only tracks state.
+ *
+ * @param {HTMLElement} panel The config region (config-form markup).
+ * @param {Object} state
+ * @returns {Object}
+ */
+const buildContext = (panel, state) => {
+    const structure = state.courseStructure || [];
+    const maxInput = panel.querySelector('[name="maxsections"]');
+    // advcheckbox renders a hidden "unchecked" companion input sharing the
+    // same name before the real checkbox — [type="checkbox"] is required to
+    // land on the actual toggle, not its always-present hidden sibling.
+    const allowAddCb = panel.querySelector('input[type="checkbox"][name="allowaddsections"]');
+    const patternSelect = panel.querySelector('select[name="namingpattern"]');
+    const customInput = panel.querySelector('input[name="custompattern"]');
+    const startSelect = panel.querySelector('select[name="namingstart"]');
+    return {panel, state, structure, maxInput, allowAddCb, patternSelect, customInput, startSelect};
+};
+
+/**
+ * Seed the extra sections allowance from the rendered form and track changes.
+ * nolimit is never set from this UI any more; it stays false in state and is
+ * only kept in the save payload for backward compatibility with existing rows.
+ *
+ * @param {Object} ctx The limits context (see buildContext()).
+ */
+const bindMaxSections = (ctx) => {
+    if (ctx.maxInput || ctx.allowAddCb) {
+        ctx.state.maxSections = readMaxSections(ctx);
+        ctx.state.noLimit = false;
+    }
+    const onChange = handleMaxSectionsChange.bind(null, ctx);
+    listen(ctx.maxInput, 'change', onChange);
+    listen(ctx.allowAddCb, 'change', onChange);
+};
+
+/**
+ * Seed the naming pattern from the rendered form and track changes.
+ *
+ * @param {Object} ctx The limits context (see buildContext()).
+ */
+const bindNamingPattern = (ctx) => {
+    if (ctx.patternSelect) {
+        ctx.state.namingPattern = readNamingPattern(ctx);
+    }
+    const onChange = handleNamingPatternChange.bind(null, ctx);
+    listen(ctx.patternSelect, 'change', onChange);
+    listen(ctx.customInput, 'input', onChange);
+};
+
+/**
+ * Seed the first section number from the rendered form and track changes.
+ *
+ * @param {Object} ctx The limits context (see buildContext()).
+ */
+const bindNamingStart = (ctx) => {
+    if (ctx.startSelect) {
+        ctx.state.namingStart = parseInt(ctx.startSelect.value, 10);
+    }
+    const onChange = handleStartChange.bind(null, ctx);
+    listen(ctx.startSelect, 'change', onChange);
+};
+
+/**
  * Bind events on the rendered limits form.
  *
  * @param {HTMLElement} panel The config region (config-form markup).
  * @param {Object} state
  */
 export const renderStepLimits = (panel, state) => {
-    const structure = state.courseStructure || [];
-
-    const maxInput = panel.querySelector('[name="maxsections"]');
-    // advcheckbox renders a hidden "unchecked" companion input sharing the
-    // same name before the real checkbox — [type="checkbox"] is required to
-    // land on the actual toggle, not its always-present hidden sibling.
-    const allowAddCb = panel.querySelector('input[type="checkbox"][name="allowaddsections"]');
-    // maxsections is the number of EXTRA sections the teacher may add on top
-    // of the template's own — 0 (no extra sections) unless the
-    // allow-add-sections checkbox is ticked. nolimit is never set from this
-    // UI any more; it stays false in state and is only kept in the save
-    // payload for backward compatibility with existing rows.
-    const readMaxSections = () => {
-        if (!allowAddCb?.checked) {
-            return 0;
-        }
-        return parseInt(maxInput?.value, 10) || 0;
-    };
-    if (maxInput || allowAddCb) {
-        state.maxSections = readMaxSections();
-        state.noLimit = false;
-    }
-
-    maxInput?.addEventListener('change', () => {
-        state.maxSections = readMaxSections();
-    });
-
-    allowAddCb?.addEventListener('change', () => {
-        state.maxSections = readMaxSections();
-    });
-
-    // Section naming — real mform elements now (select[name="namingpattern"],
-    // text[name="custompattern"], select[name="namingstart"], see
-    // classes/form/template_config_form.php::definition_naming_pattern()).
-    // The custom-pattern field's own show/hide is the form's native hideIf()
-    // rule — nothing to do here for that — this only tracks state.
-    const patternSelect = panel.querySelector('select[name="namingpattern"]');
-    const customInput = panel.querySelector('input[name="custompattern"]');
-
-    const readNamingPattern = () => {
-        if (patternSelect?.value === '__custom__') {
-            return customInput?.value || '{nombre}';
-        }
-        return patternSelect?.value || state.namingPattern;
-    };
-
-    if (patternSelect) {
-        state.namingPattern = readNamingPattern();
-    }
-
-    patternSelect?.addEventListener('change', () => {
-        state.namingPattern = readNamingPattern();
-        updatePreview(panel, state, structure);
-    });
-
-    customInput?.addEventListener('input', () => {
-        state.namingPattern = readNamingPattern();
-        updatePreview(panel, state, structure);
-    });
-
-    const startSelect = panel.querySelector('select[name="namingstart"]');
-    if (startSelect) {
-        state.namingStart = parseInt(startSelect.value, 10);
-    }
-    startSelect?.addEventListener('change', (e) => {
-        state.namingStart = parseInt(e.target.value, 10);
-        updatePreview(panel, state, structure);
-    });
-
-    updatePreview(panel, state, structure);
-};
-
-/**
- * Update the naming preview.
- *
- * @param {HTMLElement} panel
- * @param {Object} state
- * @param {Array} structure
- */
-const updatePreview = (panel, state, structure) => {
-    const c = panel.querySelector('[data-region="naming-preview"]');
-    if (!c) {
-        return;
-    }
-    let html = '<small class="text-muted d-block mb-1">Preview:</small>';
-    structure.forEach((sec, i) => {
-        const n = state.namingStart + i;
-        const rendered = state.namingPattern.replace(/\{N\}/g, n).replace(/\{nombre\}/g, sec.name);
-        html += '<small class="d-block">' + rendered + '</small>';
-    });
-    c.innerHTML = html;
+    const ctx = buildContext(panel, state);
+    bindMaxSections(ctx);
+    bindNamingPattern(ctx);
+    bindNamingStart(ctx);
+    updatePreview(ctx);
 };
