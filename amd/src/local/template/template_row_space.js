@@ -41,9 +41,6 @@ export const applySpaceVisual = (row, isspace, cmid, state) => {
     row.classList.toggle('tpl-row-space', isspace);
     const tag = row.querySelector('[data-region="space-tag"]');
     const instructionEl = row.querySelector('[data-region="space-row-instruction"]');
-    if (!tag || !instructionEl) {
-        return;
-    }
     tag.classList.toggle('d-none', !isspace);
     const space = state.activitySpace[cmid] || {required: true, instruction: ''};
     if (isspace) {

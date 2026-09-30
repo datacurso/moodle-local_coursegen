@@ -59,7 +59,7 @@ const readChoice = (modal) => {
     const instructionField = root.querySelector('#template-space-instruction');
     const instruction = instructionField.value.trim();
     return {
-        required: !checked || checked.value === '1',
+        required: checked.value === '1',
         instruction,
     };
 };

@@ -100,12 +100,12 @@ const buildActivityPayload = (state, activity) => {
     const id = activity.id;
     return {
         cmid: id,
-        action: state.activityAction[id] || 'keep',
-        useasreference: state.activityRef[id] !== false,
-        prompt: state.activityPrompt[id] || '',
-        templatescope: state.activityScope[id] || 'course',
-        spacerequired: state.activitySpace[id]?.required !== false,
-        spaceinstruction: state.activitySpace[id]?.instruction || '',
+        action: state.activityAction[id],
+        useasreference: state.activityRef[id],
+        prompt: state.activityPrompt[id],
+        templatescope: state.activityScope[id],
+        spacerequired: state.activitySpace[id].required,
+        spaceinstruction: state.activitySpace[id].instruction,
     };
 };
 
@@ -139,7 +139,7 @@ const buildSectionPayload = (state, root, section) => {
     return {
         sectionid: section.id,
         sectionnum: section.num,
-        behavior: state.sectionBehavior[section.id] || 'aimodify',
+        behavior: state.sectionBehavior[section.id],
         instances: virtualRows.instances,
         spaces: virtualRows.spaces,
         activities,

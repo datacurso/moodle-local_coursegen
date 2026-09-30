@@ -65,11 +65,9 @@ class template_persistence_service {
         $sec->set('behavior', $sectiondata['behavior']);
         $sec->create();
 
-        $instances = $sectiondata['instances'] ?? [];
-        $spaces = $sectiondata['spaces'] ?? [];
         self::save_activities($templateid, $sectiondata['sectionid'], $sectiondata['activities']);
-        self::save_instances($templateid, $sectiondata['sectionid'], $instances);
-        self::save_spaces($templateid, $sectiondata['sectionid'], $spaces);
+        self::save_instances($templateid, $sectiondata['sectionid'], $sectiondata['instances']);
+        self::save_spaces($templateid, $sectiondata['sectionid'], $sectiondata['spaces']);
     }
 
     /**
@@ -150,14 +148,11 @@ class template_persistence_service {
         $act->set('cmid', $actdata['cmid']);
         $act->set('action', $actdata['action']);
         $act->set('useasreference', (int) $actdata['useasreference']);
-        $scope = $actdata['templatescope'] ?? 'course';
-        $templatescope = self::normalise_scope($scope);
+        $templatescope = self::normalise_scope($actdata['templatescope']);
         $act->set('templatescope', $templatescope);
         $act->set('prompt', $actdata['prompt']);
-        $required = $actdata['spacerequired'] ?? 1;
-        $act->set('spacerequired', (int) $required);
-        $rawinstruction = $actdata['spaceinstruction'] ?? '';
-        $instruction = self::space_instruction($rawinstruction);
+        $act->set('spacerequired', (int) $actdata['spacerequired']);
+        $instruction = self::space_instruction($actdata['spaceinstruction']);
         $act->set('spaceinstruction', $instruction);
         $act->create();
     }
@@ -171,13 +166,10 @@ class template_persistence_service {
      */
     private static function create_instance(int $templateid, int $sectionid, array $instdata): void {
         $uid = \core\uuid::generate();
-        $modname = $instdata['modname'] ?? '';
+        $modname = $instdata['modname'];
         if (empty($modname)) {
             $modname = null;
         }
-        $prompt = $instdata['prompt'] ?? '';
-        $aftercmid = $instdata['aftercmid'] ?? 0;
-        $sortorder = $instdata['sortorder'] ?? 0;
         $instance = new template_instance(0);
         $instance->set('uid', $uid);
         $instance->set('templateid', $templateid);
@@ -187,9 +179,9 @@ class template_persistence_service {
         $instance->set('name', $instdata['name']);
         $instance->set('typelabel', $instdata['typelabel']);
         $instance->set('modname', $modname);
-        $instance->set('prompt', $prompt);
-        $instance->set('aftercmid', $aftercmid);
-        $instance->set('sortorder', $sortorder);
+        $instance->set('prompt', $instdata['prompt']);
+        $instance->set('aftercmid', $instdata['aftercmid']);
+        $instance->set('sortorder', $instdata['sortorder']);
         $instance->create();
     }
 
@@ -205,20 +197,16 @@ class template_persistence_service {
             throw new \invalid_parameter_exception('Not an activity type: ' . $spacedata['modname']);
         }
         $uid = \core\uuid::generate();
-        $required = $spacedata['required'] ?? 1;
-        $rawinstruction = $spacedata['instruction'] ?? '';
-        $instruction = self::space_instruction($rawinstruction);
-        $aftercmid = $spacedata['aftercmid'] ?? 0;
-        $sortorder = $spacedata['sortorder'] ?? 0;
+        $instruction = self::space_instruction($spacedata['instruction']);
         $space = new template_space(0);
         $space->set('uid', $uid);
         $space->set('templateid', $templateid);
         $space->set('sectionid', $sectionid);
         $space->set('modname', $spacedata['modname']);
-        $space->set('required', (int) $required);
+        $space->set('required', (int) $spacedata['required']);
         $space->set('instruction', $instruction);
-        $space->set('aftercmid', $aftercmid);
-        $space->set('sortorder', $sortorder);
+        $space->set('aftercmid', $spacedata['aftercmid']);
+        $space->set('sortorder', $spacedata['sortorder']);
         $space->create();
     }
 
