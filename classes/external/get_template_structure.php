@@ -64,7 +64,8 @@ class get_template_structure extends external_api {
     public static function execute($templateid) {
         global $OUTPUT;
 
-        $params = self::validate_parameters(self::execute_parameters(), ['templateid' => $templateid]);
+        $parameterdescription = self::execute_parameters();
+        $params = self::validate_parameters($parameterdescription, ['templateid' => $templateid]);
 
         $context = context_system::instance();
         self::validate_context($context);
@@ -75,7 +76,8 @@ class get_template_structure extends external_api {
             throw new \moodle_exception('invalidtemplate', 'local_coursegen');
         }
 
-        $course  = get_course($template->get('courseid'));
+        $courseid = $template->get('courseid');
+        $course  = get_course($courseid);
         $modinfo = get_fast_modinfo($course);
 
         $sectionsettings = self::section_settings($template);
@@ -95,7 +97,8 @@ class get_template_structure extends external_api {
             $remaining = max(0, $maxsections);
         }
 
-        $allowedactivities = self::allowed_activities(supported_activity_types::installed(), $OUTPUT);
+        $installedtypes = supported_activity_types::installed();
+        $allowedactivities = self::allowed_activities($installedtypes, $OUTPUT);
 
         return [
             'nolimit' => $nolimit,

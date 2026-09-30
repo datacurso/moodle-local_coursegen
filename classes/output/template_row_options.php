@@ -116,11 +116,13 @@ class template_row_options {
 
         $items = [];
         foreach ($keys as $key) {
+            $label = get_string('template_activity_' . $key, 'local_coursegen');
+            $tip = get_string('template_activity_' . $key . '_tip', 'local_coursegen');
             $items[] = [
                 'value' => $key,
                 'cmid' => $cmid,
-                'label' => get_string('template_activity_' . $key, 'local_coursegen'),
-                'tip' => get_string('template_activity_' . $key . '_tip', 'local_coursegen'),
+                'label' => $label,
+                'tip' => $tip,
                 'active' => $key === $default,
             ];
         }
@@ -242,15 +244,17 @@ class template_row_options {
         $required = (bool) $space->get('required');
         $instruction = (string) $space->get('instruction');
         $typename = self::module_type_name($modname);
+        $iconurl = self::instance_icon_url($modname);
+        $badge = self::space_badge_label($required);
         return [
             'spaceid' => (int) $space->get('id'),
             'name' => $typename,
             'typelabel' => $typename,
             'modname' => $modname,
-            'iconurl' => self::instance_icon_url($modname),
+            'iconurl' => $iconurl,
             'required' => $required,
             'requiredvalue' => (int) $required,
-            'badge' => self::space_badge_label($required),
+            'badge' => $badge,
             'instruction' => $instruction,
             'hasinstruction' => $instruction !== '',
         ];
