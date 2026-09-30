@@ -153,6 +153,61 @@ export const removeInstanceRow = (instanceRow) => {
 };
 
 /**
+ * Read one space row back into the shape save_template expects.
+ *
+ * @param {HTMLElement} row The space row (data-for="spacerow").
+ * @param {number} aftercmid The real cmid the row sits immediately after.
+ * @param {number} sortorder The row's position among the virtual rows.
+ * @returns {Object} {modname, required, instruction, aftercmid, sortorder}
+ */
+const spaceEntryOf = (row, aftercmid, sortorder) => {
+    const instructionEl = row.querySelector('[data-region="space-instruction"]');
+    const instruction = instructionEl.textContent.trim();
+    return {
+        modname: row.dataset.modname,
+        required: row.dataset.required === '1',
+        instruction,
+        aftercmid,
+        sortorder,
+    };
+};
+
+/**
+ * Read one template instance row back into the shape save_template expects.
+ *
+ * @param {HTMLElement} sectionEl The section card (data-for="section").
+ * @param {HTMLElement} row The instance row (data-for="instancerow").
+ * @param {number} aftercmid The real cmid the row sits immediately after.
+ * @param {number} sortorder The row's position among the virtual rows.
+ * @returns {Object} {sourcecmid, sourcename, modname, name, typelabel,
+ *     prompt, aftercmid, sortorder}
+ */
+const instanceEntryOf = (sectionEl, row, aftercmid, sortorder) => {
+    const instanceid = row.dataset.instanceId;
+    const promptSelector = '[data-for="instanceprompt"][data-instance-id="' + instanceid + '"] textarea';
+    const promptEl = sectionEl.querySelector(promptSelector);
+    let promptValue = '';
+    if (promptEl) {
+        promptValue = promptEl.value;
+    }
+    const nameEl = row.querySelector('[data-region="instance-name-editable"]');
+    const name = currentName(nameEl);
+    const typeCell = row.querySelector('td.text-muted');
+    const typelabel = typeCell.textContent.trim();
+    const sourcecmid = parseInt(row.dataset.sourceCmid, 10);
+    return {
+        sourcecmid,
+        sourcename: row.dataset.sourceName,
+        modname: row.dataset.modname || '',
+        name,
+        typelabel,
+        prompt: promptValue,
+        aftercmid,
+        sortorder,
+    };
+};
+
+/**
  * Scrape every virtual row currently rendered in one section (template
  * instances and spaces), in DOM order, resolving each one's position as
  * "immediately after this real cmid" (0 for the section start) plus a
@@ -177,33 +232,14 @@ export const collectVirtualRowsForSection = (sectionEl) => {
             return;
         }
         if (row.dataset.for === 'spacerow') {
-            spaces.push({
-                modname: row.dataset.modname,
-                required: row.dataset.required === '1',
-                instruction: row.querySelector('[data-region="space-instruction"]').textContent.trim(),
-                aftercmid,
-                sortorder: sortorder++,
-            });
+            const spaceEntry = spaceEntryOf(row, aftercmid, sortorder);
+            spaces.push(spaceEntry);
+            sortorder++;
             return;
         }
-        const instanceid = row.dataset.instanceId;
-        const promptEl = sectionEl.querySelector(
-            '[data-for="instanceprompt"][data-instance-id="' + instanceid + '"] textarea'
-        );
-        let promptValue = '';
-        if (promptEl) {
-            promptValue = promptEl.value;
-        }
-        instances.push({
-            sourcecmid: parseInt(row.dataset.sourceCmid, 10),
-            sourcename: row.dataset.sourceName,
-            modname: row.dataset.modname || '',
-            name: currentName(row.querySelector('[data-region="instance-name-editable"]')),
-            typelabel: row.querySelector('td.text-muted').textContent.trim(),
-            prompt: promptValue,
-            aftercmid,
-            sortorder: sortorder++,
-        });
+        const instanceEntry = instanceEntryOf(sectionEl, row, aftercmid, sortorder);
+        instances.push(instanceEntry);
+        sortorder++;
     });
     return {instances, spaces};
 };

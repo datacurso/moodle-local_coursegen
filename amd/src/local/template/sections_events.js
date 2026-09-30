@@ -124,85 +124,128 @@ const applicableAction = (action, modname) => {
 };
 
 /**
+ * Keep the visual of a row in step with an action applied in bulk. The bulk
+ * bar never sets "space", so whatever it applies to a row also clears that
+ * row's space visual.
+ *
+ * @param {HTMLElement} row The row the bulk action was applied to.
+ * @param {boolean} istemplate Whether the row is now a template mold.
+ * @param {number} cmid The row's course module id.
+ * @param {Object} rowstate The live wizard state from init.js.
+ */
+const applyRowVisual = (row, istemplate, cmid, rowstate) => {
+    applyTemplateVisual(row, istemplate, cmid, rowstate);
+    applySpaceVisual(row, false, cmid, rowstate);
+};
+
+/**
+ * Seed one row's action from its server-rendered select, then track changes.
+ *
+ * Changing TO "template" opens the scope modal instead of applying the action
+ * inline; the row's tag and highlight only ever reflect an already-resolved
+ * decision.
+ *
+ * @param {HTMLElement} container The rendered course sections review.
+ * @param {HTMLSelectElement} select The row's action select.
+ * @param {Object} state The live wizard state from init.js.
+ */
+const bindActivityActionSelect = (container, select, state) => {
+    const cmid = parseInt(select.dataset.id);
+    if (!cmid) {
+        return;
+    }
+    const row = select.closest('[data-for="cmitem"]');
+    let prioraction = select.value;
+    state.activityAction[cmid] = select.value;
+    if (row) {
+        applyTemplateVisual(row, select.value === 'template', cmid, state);
+        applySpaceVisual(row, select.value === 'space', cmid, state);
+    }
+    select.addEventListener('change', () => {
+        const action = select.value;
+        const before = prioraction;
+        state.activityAction[cmid] = action;
+        if (!row) {
+            prioraction = action;
+            markDirty();
+            return;
+        }
+        if (action === 'template') {
+            openScopeModalForNewSelection(row, select, cmid, prioraction, state, (finalaction) => {
+                prioraction = finalaction;
+            });
+        } else {
+            confirmUnmarkTemplate(container, row, select, action, prioraction, cmid, state, (finalaction) => {
+                prioraction = finalaction;
+                if (finalaction === 'space') {
+                    openSpaceModalForNewSelection(row, select, cmid, before, state, (finalspace) => {
+                        prioraction = finalspace;
+                        applyTemplateVisual(row, finalspace === 'template', cmid, state);
+                    });
+                    return;
+                }
+                applySpaceVisual(row, false, cmid, state);
+            });
+        }
+        markDirty();
+    });
+};
+
+/**
+ * Bind every row action select of the review.
+ *
+ * @param {HTMLElement} container The rendered course sections review.
+ * @param {Object} state The live wizard state from init.js.
+ */
+const bindActivityActionSelects = (container, state) => {
+    const selects = container.querySelectorAll('select[data-region="activity-action"]');
+    selects.forEach(select => bindActivityActionSelect(container, select, state));
+};
+
+/**
+ * Seed one section's behavior from its server-rendered select — the saved
+ * behavior in edit mode — then keep it in sync on change.
+ *
+ * @param {HTMLSelectElement} select The section's behavior select.
+ * @param {Object} state The live wizard state from init.js.
+ */
+const bindSectionBehaviorSelect = (select, state) => {
+    const sid = parseInt(select.dataset.sid);
+    if (!sid) {
+        return;
+    }
+    state.sectionBehavior[sid] = select.value;
+    select.addEventListener('change', () => {
+        state.sectionBehavior[sid] = select.value;
+        markDirty();
+    });
+};
+
+/**
+ * Bind every section behavior select (custom/keep/exclude) of the review.
+ *
+ * @param {HTMLElement} container The rendered course sections review.
+ * @param {Object} state The live wizard state from init.js.
+ */
+const bindSectionBehaviorSelects = (container, state) => {
+    const selects = container.querySelectorAll('select[data-region="section-behavior"]');
+    selects.forEach(select => bindSectionBehaviorSelect(select, state));
+};
+
+/**
  * Bind events on the server-rendered review controls (no DOM injection).
  *
  * @param {HTMLElement} container The rendered course sections review.
  * @param {Object} state The live wizard state from init.js.
  */
 export const bindServerRenderedControls = (container, state) => {
-    // Row action selects: seed state from the server-rendered default, then
-    // track every change. Changing TO "template" opens the scope modal
-    // instead of applying the action inline; the row's tag and highlight
-    // only ever reflect an already-resolved decision.
-    container.querySelectorAll('select[data-region="activity-action"]').forEach(select => {
-        const cmid = parseInt(select.dataset.id);
-        if (!cmid) {
-            return;
-        }
-        const row = select.closest('[data-for="cmitem"]');
-        let prioraction = select.value;
-        state.activityAction[cmid] = select.value;
-        if (row) {
-            applyTemplateVisual(row, select.value === 'template', cmid, state);
-            applySpaceVisual(row, select.value === 'space', cmid, state);
-        }
-        select.addEventListener('change', () => {
-            const action = select.value;
-            const before = prioraction;
-            state.activityAction[cmid] = action;
-            if (!row) {
-                prioraction = action;
-                markDirty();
-                return;
-            }
-            if (action === 'template') {
-                openScopeModalForNewSelection(row, select, cmid, prioraction, state, (finalaction) => {
-                    prioraction = finalaction;
-                });
-            } else {
-                confirmUnmarkTemplate(container, row, select, action, prioraction, cmid, state, (finalaction) => {
-                    prioraction = finalaction;
-                    if (finalaction === 'space') {
-                        openSpaceModalForNewSelection(row, select, cmid, before, state, (finalspace) => {
-                            prioraction = finalspace;
-                            applyTemplateVisual(row, finalspace === 'template', cmid, state);
-                        });
-                        return;
-                    }
-                    applySpaceVisual(row, false, cmid, state);
-                });
-            }
-            markDirty();
-        });
-    });
-
+    bindActivityActionSelects(container, state);
     bindTemplateTagClicks(container, state, markDirty);
     bindSpaceTagClicks(container, state, markDirty);
     bindInstanceInserts(container, state, markDirty);
     bindNameEditing(container, markDirty);
-
     // Row selection checkboxes (three synced tiers) and the single global
     // bulk action bar — see selection_bulk.js.
-    // The bulk bar never sets "space", so whatever it applies to a row also
-    // clears that row's space visual.
-    const applyRowVisual = (row, istemplate, cmid, rowstate) => {
-        applyTemplateVisual(row, istemplate, cmid, rowstate);
-        applySpaceVisual(row, false, cmid, rowstate);
-    };
     bindSelectionAndBulk(container, state, {applicableAction, applyTemplateVisual: applyRowVisual, markDirty});
-
-    // Section behavior selects (custom/keep/exclude): seed state from the
-    // server-rendered value — the saved behavior in edit mode — then keep
-    // it in sync on change, the same pattern as the row action selects.
-    container.querySelectorAll('select[data-region="section-behavior"]').forEach(select => {
-        const sid = parseInt(select.dataset.sid);
-        if (!sid) {
-            return;
-        }
-        state.sectionBehavior[sid] = select.value;
-        select.addEventListener('change', () => {
-            state.sectionBehavior[sid] = select.value;
-            markDirty();
-        });
-    });
+    bindSectionBehaviorSelects(container, state);
 };

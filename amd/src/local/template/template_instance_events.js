@@ -95,17 +95,19 @@ const showTemplatePicker = async(container, trigger, state) => {
  * @param {Function} markDirty Marks the wizard as having unsaved changes.
  */
 const handleMenuAction = async(item, container, state, markDirty) => {
-    const trigger = item.closest('.dropdown').querySelector('[data-instance-menu-trigger]');
-    switch (item.dataset.menuAction) {
-        case 'from-template':
-            await showTemplatePicker(container, trigger, state);
-            break;
-        case 'back':
-            await showAddMenu(trigger);
-            break;
-        case 'add-space':
-            await addSpace(item, state, markDirty);
-            break;
+    const dropdown = item.closest('.dropdown');
+    const trigger = dropdown.querySelector('[data-instance-menu-trigger]');
+    const action = item.dataset.menuAction;
+    if (action === 'from-template') {
+        await showTemplatePicker(container, trigger, state);
+        return;
+    }
+    if (action === 'back') {
+        await showAddMenu(trigger);
+        return;
+    }
+    if (action === 'add-space') {
+        await addSpace(item, state, markDirty);
     }
 };
 
@@ -182,7 +184,8 @@ export const bindInstanceInserts = (container, state, markDirty) => {
             // stopping it here always wins regardless of how many times this
             // trigger has already been opened before.
             e.stopPropagation();
-            openMenuForTrigger(trigger).catch(Notification.exception);
+            const opening = openMenuForTrigger(trigger);
+            opening.catch(Notification.exception);
             return;
         }
 
@@ -193,7 +196,8 @@ export const bindInstanceInserts = (container, state, markDirty) => {
         const menuItem = e.target.closest('[data-menu-action]');
         if (menuItem) {
             e.stopPropagation();
-            handleMenuAction(menuItem, container, state, markDirty).catch(Notification.exception);
+            const handling = handleMenuAction(menuItem, container, state, markDirty);
+            handling.catch(Notification.exception);
             return;
         }
 
@@ -210,7 +214,8 @@ export const bindInstanceInserts = (container, state, markDirty) => {
 
         const removeBtn = e.target.closest('[data-region="instance-remove"]');
         if (removeBtn) {
-            removeInstanceRow(removeBtn.closest('[data-for="instancerow"]'));
+            const instanceRow = removeBtn.closest('[data-for="instancerow"]');
+            removeInstanceRow(instanceRow);
             markDirty();
             return;
         }

@@ -80,29 +80,54 @@ const collectSectionVirtualRows = (root, sectionid) => {
 };
 
 /**
+ * Build the payload of one activity from current state.
+ *
+ * @param {Object} state The live wizard state from init.js.
+ * @param {Object} activity An activity of the loaded course structure.
+ * @returns {Object}
+ */
+const buildActivityPayload = (state, activity) => {
+    const id = activity.id;
+    return {
+        cmid: id,
+        action: state.activityAction[id] || 'keep',
+        useasreference: state.activityRef[id] !== false,
+        prompt: state.activityPrompt[id] || '',
+        templatescope: state.activityScope[id] || 'course',
+        spacerequired: state.activitySpace[id]?.required !== false,
+        spaceinstruction: state.activitySpace[id]?.instruction || '',
+    };
+};
+
+/**
+ * Build the payload of one section from current state.
+ *
+ * @param {Object} state The live wizard state from init.js.
+ * @param {HTMLElement} root The wizard root element.
+ * @param {Object} section A section of the loaded course structure.
+ * @returns {Object}
+ */
+const buildSectionPayload = (state, root, section) => {
+    const virtualRows = collectSectionVirtualRows(root, section.id);
+    const activities = section.activities.map(activity => buildActivityPayload(state, activity));
+    return {
+        sectionid: section.id,
+        sectionnum: section.num,
+        behavior: state.sectionBehavior[section.id] || 'aimodify',
+        instances: virtualRows.instances,
+        spaces: virtualRows.spaces,
+        activities,
+    };
+};
+
+/**
  * Build the section payload from current state.
  *
  * @param {Object} state The live wizard state from init.js.
  * @param {HTMLElement} root The wizard root element.
  * @returns {Array}
  */
-const buildSections = (state, root) => state.courseStructure.map(s => {
-    const virtualRows = collectSectionVirtualRows(root, s.id);
-    return {
-        sectionid: s.id, sectionnum: s.num,
-        behavior: state.sectionBehavior[s.id] || 'aimodify',
-        instances: virtualRows.instances,
-        spaces: virtualRows.spaces,
-        activities: s.activities.map(a => ({
-            cmid: a.id, action: state.activityAction[a.id] || 'keep',
-            useasreference: state.activityRef[a.id] !== false,
-            prompt: state.activityPrompt[a.id] || '',
-            templatescope: state.activityScope[a.id] || 'course',
-            spacerequired: state.activitySpace[a.id]?.required !== false,
-            spaceinstruction: state.activitySpace[a.id]?.instruction || '',
-        })),
-    };
-});
+const buildSections = (state, root) => state.courseStructure.map(section => buildSectionPayload(state, root, section));
 
 /**
  * Save the template via the repository, then redirect back to the manage

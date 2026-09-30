@@ -47,10 +47,48 @@ export const applySpaceVisual = (row, isspace, cmid, state) => {
     tag.classList.toggle('d-none', !isspace);
     const space = state.activitySpace[cmid] || {required: true, instruction: ''};
     if (isspace) {
-        tag.textContent = space.required ? tag.dataset.badgeRequired : tag.dataset.badgeOptional;
+        let badgeLabel = tag.dataset.badgeOptional;
+        if (space.required) {
+            badgeLabel = tag.dataset.badgeRequired;
+        }
+        tag.textContent = badgeLabel;
         instructionEl.textContent = space.instruction;
     }
     instructionEl.classList.toggle('d-none', !isspace || space.instruction === '');
+};
+
+/**
+ * Store the space chosen for a row whose action select was just changed TO
+ * "space", and mark the row.
+ *
+ * @param {HTMLElement} row The activity row (data-for="cmitem").
+ * @param {number} cmid The row's course module id.
+ * @param {Object} state The live wizard state from init.js.
+ * @param {Function} onResolved (finalAction) => void, called once the modal closes.
+ * @param {Object} choice The {required, instruction} the admin saved.
+ */
+const saveSpaceForNewSelection = (row, cmid, state, onResolved, choice) => {
+    state.activitySpace[cmid] = choice;
+    state.activityAction[cmid] = 'space';
+    applySpaceVisual(row, true, cmid, state);
+    onResolved('space');
+};
+
+/**
+ * Revert a row to the action it had before it was changed TO "space".
+ *
+ * @param {HTMLElement} row The activity row (data-for="cmitem").
+ * @param {HTMLSelectElement} select The row's action select.
+ * @param {number} cmid The row's course module id.
+ * @param {string} prioraction The action selected immediately before this change.
+ * @param {Object} state The live wizard state from init.js.
+ * @param {Function} onResolved (finalAction) => void, called once the modal closes.
+ */
+const cancelSpaceForNewSelection = (row, select, cmid, prioraction, state, onResolved) => {
+    select.value = prioraction;
+    state.activityAction[cmid] = prioraction;
+    applySpaceVisual(row, false, cmid, state);
+    onResolved(prioraction);
 };
 
 /**
@@ -68,23 +106,28 @@ export const applySpaceVisual = (row, isspace, cmid, state) => {
 export const openSpaceModalForNewSelection = (row, select, cmid, prioraction, state, onResolved) => {
     const tag = row.querySelector('[data-region="space-tag"]');
     const current = state.activitySpace[cmid] || {required: true, instruction: ''};
-    openSpaceModal({
-        subject: tag ? tag.dataset.name : '',
-        required: current.required,
-        instruction: current.instruction,
-        onSave: (choice) => {
-            state.activitySpace[cmid] = choice;
-            state.activityAction[cmid] = 'space';
-            applySpaceVisual(row, true, cmid, state);
-            onResolved('space');
-        },
-        onCancel: () => {
-            select.value = prioraction;
-            state.activityAction[cmid] = prioraction;
-            applySpaceVisual(row, false, cmid, state);
-            onResolved(prioraction);
-        },
-    });
+    let subject = '';
+    if (tag) {
+        subject = tag.dataset.name;
+    }
+    const onSave = saveSpaceForNewSelection.bind(null, row, cmid, state, onResolved);
+    const onCancel = cancelSpaceForNewSelection.bind(null, row, select, cmid, prioraction, state, onResolved);
+    openSpaceModal({subject, required: current.required, instruction: current.instruction, onSave, onCancel});
+};
+
+/**
+ * Store a space re-edited from a row's badge and repaint the row.
+ *
+ * @param {HTMLElement} row The activity row (data-for="cmitem").
+ * @param {number} cmid The row's course module id.
+ * @param {Object} state The live wizard state from init.js.
+ * @param {Function} markDirty Marks the wizard as having unsaved changes.
+ * @param {Object} choice The {required, instruction} the admin saved.
+ */
+const saveSpaceFromTag = (row, cmid, state, markDirty, choice) => {
+    state.activitySpace[cmid] = choice;
+    applySpaceVisual(row, true, cmid, state);
+    markDirty();
 };
 
 /**
@@ -108,15 +151,7 @@ export const bindSpaceTagClicks = (container, state, markDirty) => {
             return;
         }
         const current = state.activitySpace[cmid] || {required: true, instruction: ''};
-        openSpaceModal({
-            subject: tag.dataset.name,
-            required: current.required,
-            instruction: current.instruction,
-            onSave: (choice) => {
-                state.activitySpace[cmid] = choice;
-                applySpaceVisual(row, true, cmid, state);
-                markDirty();
-            },
-        });
+        const onSave = saveSpaceFromTag.bind(null, row, cmid, state, markDirty);
+        openSpaceModal({subject: tag.dataset.name, required: current.required, instruction: current.instruction, onSave});
     });
 };

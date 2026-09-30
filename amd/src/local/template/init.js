@@ -156,28 +156,43 @@ const initSectionState = () => {
     state.activityScope = {};
     state.activitySpace = {};
 
-    state.courseStructure.forEach(s => {
-        state.sectionBehavior[s.id] = state.savedSections[s.id] || 'aimodify';
-        s.activities.forEach(a => {
-            const saved = state.savedActivities[a.id];
-            state.activityAction[a.id] = saved?.action || defaultActionForModname(a.modname);
-            let useasreference = true;
-            if (saved) {
-                useasreference = saved.useasreference !== false;
-            }
-            state.activityRef[a.id] = useasreference;
-            state.activityPrompt[a.id] = saved?.prompt || '';
-            state.activityScope[a.id] = saved?.templatescope || 'course';
-            state.activitySpace[a.id] = {
-                required: saved?.spacerequired !== false,
-                instruction: saved?.spaceinstruction || '',
-            };
-        });
-    });
+    state.courseStructure.forEach(seedSection);
     // maxSections counts EXTRA sections the teacher may add on top of the
     // template's own — 0 until the allow-add-sections checkbox is ticked
     // (see step_limits.js), never the base course's own section count.
     state.maxSections = 0;
+};
+
+/**
+ * Seed the behaviour of one section and the state of each of its activities.
+ *
+ * @param {Object} section A section of the loaded course structure.
+ */
+const seedSection = (section) => {
+    state.sectionBehavior[section.id] = state.savedSections[section.id] || 'aimodify';
+    section.activities.forEach(seedActivity);
+};
+
+/**
+ * Seed the action, reference flag, prompt, scope and space of one activity,
+ * preferring what the template already saved for it.
+ *
+ * @param {Object} activity An activity of the loaded course structure.
+ */
+const seedActivity = (activity) => {
+    const saved = state.savedActivities[activity.id];
+    state.activityAction[activity.id] = saved?.action || defaultActionForModname(activity.modname);
+    let useasreference = true;
+    if (saved) {
+        useasreference = saved.useasreference !== false;
+    }
+    state.activityRef[activity.id] = useasreference;
+    state.activityPrompt[activity.id] = saved?.prompt || '';
+    state.activityScope[activity.id] = saved?.templatescope || 'course';
+    state.activitySpace[activity.id] = {
+        required: saved?.spacerequired !== false,
+        instruction: saved?.spaceinstruction || '',
+    };
 };
 
 /**
@@ -210,10 +225,8 @@ export const init = (config) => {
         configFormIsFreshFromPageLoad = true;
     }
 
-    configForm = new DynamicForm(
-        root.querySelector('[data-region="config-form"]'),
-        'local_coursegen\\form\\template_config_form'
-    );
+    const configRegion = root.querySelector('[data-region="config-form"]');
+    configForm = new DynamicForm(configRegion, 'local_coursegen\\form\\template_config_form');
     // This form has no submit button — its fields feed the template-wide
     // Save action instead (see saveTemplate()) — but DynamicForm still
     // intercepts a native form submit (e.g. pressing Enter in a text field)
@@ -222,8 +235,10 @@ export const init = (config) => {
     // rendered fields out from under the admin.
     configForm.addEventListener(configForm.events.FORM_SUBMITTED, e => e.preventDefault());
 
-    root.querySelector('[data-action="save"]').addEventListener('click', () => saveTemplate(state, root));
-    bindCoursePicker(root.querySelector('[data-region="step-panel"][data-step="1"]'), state, setState);
+    const saveButton = root.querySelector('[data-action="save"]');
+    saveButton.addEventListener('click', () => saveTemplate(state, root));
+    const coursePickerPanel = root.querySelector('[data-region="step-panel"][data-step="1"]');
+    bindCoursePicker(coursePickerPanel, state, setState);
 
     renderConfigRegion();
 };

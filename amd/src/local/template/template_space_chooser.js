@@ -37,6 +37,26 @@ const ARCHETYPE_ACTIVITY = 0;
 const ARCHETYPE_RESOURCE = 1;
 
 /**
+ * Whether a content item is an activity or resource module this plugin supports.
+ *
+ * @param {string[]} supportedTypes Module names a space can be made for.
+ * @param {Object} item A content item from the course chooser web service.
+ * @returns {boolean}
+ */
+const isSupportedItem = (supportedTypes, item) => {
+    const isModule = item.componentname.startsWith('mod_');
+    return isModule && supportedTypes.includes(item.name);
+};
+
+/**
+ * Flag items as legacy so no favourite star is drawn for them.
+ *
+ * @param {Array} items Content items.
+ * @returns {Array}
+ */
+const withoutFavouriteStars = (items) => items.map(item => ({...item, legacyitem: true}));
+
+/**
  * The chooser items this plugin supports, as the course page lists them.
  *
  * @param {number} courseId The base course (the chooser is permission-aware per course).
@@ -45,10 +65,18 @@ const ARCHETYPE_RESOURCE = 1;
  */
 const fetchSupportedItems = async(courseId, supportedTypes) => {
     const data = await Repository.activityModules(courseId, 0);
-    return data.content_items
-        .filter(item => item.componentname.startsWith('mod_') && supportedTypes.includes(item.name))
-        .map(item => ({...item, legacyitem: true}));
+    const supported = data.content_items.filter(item => isSupportedItem(supportedTypes, item));
+    return withoutFavouriteStars(supported);
 };
+
+/**
+ * The items of one archetype.
+ *
+ * @param {Array} items Content items.
+ * @param {number} archetype ARCHETYPE_ACTIVITY or ARCHETYPE_RESOURCE.
+ * @returns {Array}
+ */
+const itemsOfArchetype = (items, archetype) => items.filter(item => item.archetype === archetype);
 
 /**
  * The data core's own chooser template expects, for the All / Activities /
@@ -57,21 +85,25 @@ const fetchSupportedItems = async(courseId, supportedTypes) => {
  * @param {Array} items
  * @returns {Object}
  */
-const templateData = (items) => ({
-    'default': items,
-    showAll: true,
-    activities: items.filter(item => item.archetype === ARCHETYPE_ACTIVITY),
-    showActivities: true,
-    activitiesFirst: false,
-    resources: items.filter(item => item.archetype === ARCHETYPE_RESOURCE),
-    showResources: true,
-    favourites: [],
-    recommended: [],
-    recommendedFirst: false,
-    recommendedBeginning: false,
-    favouritesFirst: false,
-    fallback: true,
-});
+const templateData = (items) => {
+    const activities = itemsOfArchetype(items, ARCHETYPE_ACTIVITY);
+    const resources = itemsOfArchetype(items, ARCHETYPE_RESOURCE);
+    return {
+        'default': items,
+        showAll: true,
+        activities,
+        showActivities: true,
+        activitiesFirst: false,
+        resources,
+        showResources: true,
+        favourites: [],
+        recommended: [],
+        recommendedFirst: false,
+        recommendedBeginning: false,
+        favouritesFirst: false,
+        fallback: true,
+    };
+};
 
 /**
  * The icon URL inside a content item's icon markup.
@@ -82,7 +114,142 @@ const templateData = (items) => ({
 const iconUrlOf = (iconHtml) => {
     const holder = document.createElement('div');
     holder.innerHTML = iconHtml;
-    return holder.querySelector('img')?.getAttribute('src') || '';
+    const img = holder.querySelector('img');
+    const src = img?.getAttribute('src');
+    return src || '';
+};
+
+/**
+ * A promise together with the function that resolves it.
+ *
+ * @returns {{promise: Promise, resolve: Function}}
+ */
+const createDeferred = () => {
+    const deferred = {};
+    deferred.promise = new Promise(resolve => {
+        deferred.resolve = resolve;
+    });
+    return deferred;
+};
+
+/**
+ * The outcome of one chooser session: settles exactly once, with the picked
+ * type or with null when the modal is closed without a pick.
+ */
+class ChooserSelection {
+    constructor() {
+        this.settled = false;
+        this.deferred = createDeferred();
+    }
+
+    /**
+     * @returns {Promise} Resolves with the picked type, or null.
+     */
+    get promise() {
+        return this.deferred.promise;
+    }
+
+    /**
+     * Settle the session; any settle after the first is ignored.
+     *
+     * @param {Object|null} value The picked type, or null.
+     */
+    settle(value) {
+        if (this.settled) {
+            return;
+        }
+        this.settled = true;
+        this.deferred.resolve(value);
+    }
+}
+
+/**
+ * Favourites are not offered here, so the chooser is given a manager that
+ * has nothing to update.
+ *
+ * @returns {Promise<null>}
+ */
+const keepFavouritesUnchanged = async() => null;
+
+/**
+ * Create the chooser modal, whose body is filled in once the items are loaded.
+ *
+ * @param {Promise<string>} bodyPromise Resolves with the rendered chooser body.
+ * @returns {Promise<Object>} The modal instance.
+ */
+const createChooserModal = (bodyPromise) => {
+    const title = getString('template_add_space', 'local_coursegen');
+    return Modal.create({
+        title,
+        body: bodyPromise,
+        large: true,
+        scrollable: false,
+        templateContext: {classes: 'modchooser'},
+        show: true,
+    });
+};
+
+/**
+ * Settle the session with the activity type behind a clicked chooser link.
+ *
+ * @param {Object} modal The chooser modal.
+ * @param {Array} items The content items offered.
+ * @param {ChooserSelection} selection The session to settle.
+ * @param {MouseEvent} e The click.
+ */
+const pickFromClick = (modal, items, selection, e) => {
+    const link = e.target.closest('a[data-action="add-chooser-option"]');
+    if (!link) {
+        return;
+    }
+    e.preventDefault();
+    e.stopPropagation();
+    const url = new URL(link.href, window.location.href);
+    const modname = url.searchParams.get('add');
+    const item = items.find(candidate => candidate.name === modname);
+    if (!item) {
+        return;
+    }
+    const iconurl = iconUrlOf(item.icon);
+    selection.settle({modname, name: item.title, iconurl});
+    modal.hide();
+};
+
+/**
+ * Make a click on a chooser link pick its type, and closing the modal
+ * without a pick settle the session with null.
+ *
+ * @param {Object} modal The chooser modal.
+ * @param {Array} items The content items offered.
+ * @param {ChooserSelection} selection The session to settle.
+ */
+const bindPick = (modal, items, selection) => {
+    const rootList = modal.getRoot();
+    const root = rootList[0];
+    const onClick = pickFromClick.bind(null, modal, items, selection);
+    root.addEventListener('click', onClick, true);
+    const onHidden = selection.settle.bind(selection, null);
+    rootList.on(ModalEvents.hidden, onHidden);
+};
+
+/**
+ * Load the supported items into the chooser modal and wire up the pick.
+ *
+ * @param {Object} params
+ * @param {number} params.courseId The base course.
+ * @param {string[]} params.supportedTypes Module names a space can be made for.
+ * @param {Promise<Object>} params.modalPromise The chooser modal being created.
+ * @param {{resolve: Function}} params.body Resolves the modal body.
+ * @param {ChooserSelection} params.selection The session to settle.
+ */
+const populateChooser = async({courseId, supportedTypes, modalPromise, body, selection}) => {
+    const items = await fetchSupportedItems(courseId, supportedTypes);
+    ChooserDialogue.displayChooser(modalPromise, items, keepFavouritesUnchanged, {footer: false});
+    const data = templateData(items);
+    const rendered = await Templates.render('core_course/activitychooser', data);
+    body.resolve(rendered);
+    const modal = await modalPromise;
+    bindPick(modal, items, selection);
 };
 
 /**
@@ -94,55 +261,16 @@ const iconUrlOf = (iconHtml) => {
  * @returns {Promise<{modname: string, name: string, iconurl: string}|null>}
  *     Null when the modal is closed without picking anything.
  */
-export const chooseActivityType = ({courseId, supportedTypes}) => new Promise((resolve, reject) => {
-    let bodyResolver;
-    const bodyPromise = new Promise(res => {
-        bodyResolver = res;
-    });
-    const modalPromise = Modal.create({
-        title: getString('template_add_space', 'local_coursegen'),
-        body: bodyPromise,
-        large: true,
-        scrollable: false,
-        templateContext: {classes: 'modchooser'},
-        show: true,
-    });
-
-    let settled = false;
-    const settle = (value) => {
-        if (!settled) {
-            settled = true;
-            resolve(value);
-        }
-    };
-
-    fetchSupportedItems(courseId, supportedTypes).then(async(items) => {
-        // Favourites are not offered here, so the chooser is given a manager
-        // that has nothing to update.
-        ChooserDialogue.displayChooser(modalPromise, items, async() => null, {footer: false});
-        bodyResolver(await Templates.render('core_course/activitychooser', templateData(items)));
-
-        const modal = await modalPromise;
-        modal.getRoot()[0].addEventListener('click', (e) => {
-            const link = e.target.closest('a[data-action="add-chooser-option"]');
-            if (!link) {
-                return;
-            }
-            e.preventDefault();
-            e.stopPropagation();
-            const modname = new URL(link.href, window.location.href).searchParams.get('add');
-            const item = items.find(candidate => candidate.name === modname);
-            if (!item) {
-                return;
-            }
-            settle({modname, name: item.title, iconurl: iconUrlOf(item.icon)});
-            modal.hide();
-        }, true);
-        modal.getRoot().on(ModalEvents.hidden, () => settle(null));
-        return null;
-    }).catch(async(error) => {
+export const chooseActivityType = async({courseId, supportedTypes}) => {
+    const body = createDeferred();
+    const modalPromise = createChooserModal(body.promise);
+    const selection = new ChooserSelection();
+    try {
+        await populateChooser({courseId, supportedTypes, modalPromise, body, selection});
+    } catch (error) {
         const modal = await modalPromise;
         modal.destroy();
-        reject(error);
-    });
-});
+        throw error;
+    }
+    return selection.promise;
+};

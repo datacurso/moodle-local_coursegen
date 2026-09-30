@@ -40,10 +40,8 @@ let modalPromise = null;
  */
 const getModal = () => {
     if (!modalPromise) {
-        modalPromise = ModalSaveCancel.create({
-            title: getString('template_space_modal_title', 'local_coursegen'),
-            removeOnClose: false,
-        });
+        const title = getString('template_space_modal_title', 'local_coursegen');
+        modalPromise = ModalSaveCancel.create({title, removeOnClose: false});
     }
     return modalPromise;
 };
@@ -55,11 +53,14 @@ const getModal = () => {
  * @returns {{required: boolean, instruction: string}}
  */
 const readChoice = (modal) => {
-    const root = modal.getRoot()[0];
+    const rootList = modal.getRoot();
+    const root = rootList[0];
     const checked = root.querySelector('input[name="template-space-required-choice"]:checked');
+    const instructionField = root.querySelector('#template-space-instruction');
+    const instruction = instructionField.value.trim();
     return {
         required: !checked || checked.value === '1',
-        instruction: root.querySelector('#template-space-instruction').value.trim(),
+        instruction,
     };
 };
 
@@ -90,19 +91,23 @@ export const openSpaceModal = async({subject, required, instruction, onSave, onC
 
     let resolved = false;
     const root = modal.getRoot();
-    root.off(ModalEvents.save).on(ModalEvents.save, () => {
+    root.off(ModalEvents.save);
+    root.on(ModalEvents.save, () => {
         resolved = true;
-        onSave(readChoice(modal));
+        const choice = readChoice(modal);
+        onSave(choice);
         modal.hide();
     });
-    root.off(ModalEvents.cancel).on(ModalEvents.cancel, () => {
+    root.off(ModalEvents.cancel);
+    root.on(ModalEvents.cancel, () => {
         resolved = true;
         if (onCancel) {
             onCancel();
         }
         modal.hide();
     });
-    root.off(ModalEvents.hidden).on(ModalEvents.hidden, () => {
+    root.off(ModalEvents.hidden);
+    root.on(ModalEvents.hidden, () => {
         if (!resolved && onCancel) {
             onCancel();
         }

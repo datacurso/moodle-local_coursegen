@@ -73,7 +73,10 @@ export const beginMenuOpen = (triggerEl) => {
  * @param {HTMLElement} triggerEl The "+" button.
  * @returns {HTMLElement}
  */
-const menuOf = (triggerEl) => triggerEl.closest('.dropdown').querySelector('.dropdown-menu');
+const menuOf = (triggerEl) => {
+    const dropdown = triggerEl.closest('.dropdown');
+    return dropdown.querySelector('.dropdown-menu');
+};
 
 /**
  * Render the add menu (activity from a template / space for an activity)
@@ -94,8 +97,10 @@ export const openAddMenu = async({triggerEl, token}) => {
     if (latestOpenToken.get(triggerEl) !== token) {
         return;
     }
-    Templates.replaceNodeContents(menuOf(triggerEl), rendered, '');
-    jQuery(triggerEl).dropdown('toggle');
+    const menu = menuOf(triggerEl);
+    Templates.replaceNodeContents(menu, rendered, '');
+    const trigger = jQuery(triggerEl);
+    trigger.dropdown('toggle');
 };
 
 /**
@@ -106,8 +111,10 @@ export const openAddMenu = async({triggerEl, token}) => {
  */
 export const showAddMenu = async(triggerEl) => {
     const rendered = await Templates.render('local_coursegen/template_add_menu', {});
-    Templates.replaceNodeContents(menuOf(triggerEl), rendered, '');
-    jQuery(triggerEl).dropdown('update');
+    const menu = menuOf(triggerEl);
+    Templates.replaceNodeContents(menu, rendered, '');
+    const trigger = jQuery(triggerEl);
+    trigger.dropdown('update');
 };
 
 /**
@@ -124,8 +131,10 @@ export const showTemplateList = async({triggerEl, options}) => {
         hasoptions: options.length > 0,
         options,
     });
-    Templates.replaceNodeContents(menuOf(triggerEl), rendered, '');
-    jQuery(triggerEl).dropdown('update');
+    const menu = menuOf(triggerEl);
+    Templates.replaceNodeContents(menu, rendered, '');
+    const trigger = jQuery(triggerEl);
+    trigger.dropdown('update');
 };
 
 /**
