@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026093004
+
+### Fixed
+- The section-naming presets of the template configuration (Unit, Module, Topic, Week) and the default pattern were written in Spanish whatever the site language, so an English site offered "Unidad 1 — …" and named the generated sections that way by default. The words now come from the language pack; the `{N}` and `{nombre}` tokens stay identical in every language, since they are what the course builder and the preview substitute. A pattern saved in another language keeps working and is restored through the Custom option.
+- The wizard no longer starts with a hardcoded naming pattern: its initial value comes from the server together with the rest of the page configuration.
+- The placeholder of the custom naming pattern field, and the "Unidad" examples in the English help texts of the naming pattern and start number, are now proper language strings.
+
 ## [2.0.10] - 2026093003
 
 ### Added
