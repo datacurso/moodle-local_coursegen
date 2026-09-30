@@ -54,6 +54,25 @@ export const SCOPE = {
     SECTION: 'section',
 };
 
+/** @type {Object} CSS classes the scripts add or remove to change how a row looks (never used to find elements). */
+export const CLASS = {
+    HIDDEN: 'd-none',
+    ROW_SPACE: 'tpl-row-space',
+};
+
+/** @type {Object} Tag names the scripts look up on an ancestor. */
+export const TAG = {
+    TABLE: 'table',
+    TABLE_BODY: 'tbody',
+};
+
+/** @type {Object} Dropdown commands sent to the Bootstrap dropdown plugin. */
+export const DROPDOWN_COMMAND = {
+    UPDATE: 'update',
+    TOGGLE: 'toggle',
+    HIDE: 'hide',
+};
+
 /** @type {Object} DOM event names the screen listens to. */
 export const EVENT = {
     CHANGE: 'change',

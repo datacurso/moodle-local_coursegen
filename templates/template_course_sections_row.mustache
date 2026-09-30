@@ -33,7 +33,7 @@
                aria-label="{{name}}">
     </td>
     <td class="align-middle">
-        <img src="{{iconurl}}" class="icon activityicon mr-2" alt="">{{!
+        <img src="{{iconurl}}" class="icon activityicon mr-2" alt="" data-region="local_coursegen/template/activity-icon">{{!
         }}{{#viewurl}}<a href="{{viewurl}}" target="_blank" rel="noopener">{{name}}</a>{{/viewurl}}{{!
         }}{{^viewurl}}<span>{{name}}</span>{{/viewurl}}{{!
         }}<button type="button"
@@ -45,12 +45,12 @@
         </button>{{!
         }}<button type="button"
                 class="tpl-badge tpl-badge-space tpl-space-tag ml-2{{^isspace}} d-none{{/isspace}}"
-                data-region="space-tag" data-id="{{cmid}}" data-name="{{name}}"
+                data-region="local_coursegen/template/space-tag" data-id="{{cmid}}" data-name="{{name}}"
                 data-badge-required="{{spacebadgerequired}}" data-badge-optional="{{spacebadgeoptional}}">{{spacebadge}}</button>
         <div class="tpl-space-instruction text-muted small{{^hasspaceinstruction}} d-none{{/hasspaceinstruction}}"
-             data-region="space-row-instruction" data-id="{{cmid}}">{{spaceinstruction}}</div>
+             data-region="local_coursegen/template/space-row-instruction" data-id="{{cmid}}">{{spaceinstruction}}</div>
     </td>
-    <td class="align-middle text-muted">{{typelabel}}</td>
+    <td class="align-middle text-muted" data-region="local_coursegen/template/type-label">{{typelabel}}</td>
     <td class="align-middle text-right">
         <select class="custom-select custom-select-sm tpl-activity-action"
                 data-region="activity-action" data-id="{{cmid}}"

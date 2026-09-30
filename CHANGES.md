@@ -2,11 +2,14 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
-## [2.0.10] - 2026093011
+## [2.0.10] - 2026093012
 
 ### Changed
 - The token of a section naming pattern that stands for the original section's name is now `{name}` instead of a word of another language, in the presets, the name-only option, the custom-pattern help and the live preview. `{N}` is unchanged and there is no support for both spellings at once. Stored patterns are not rewritten: a pattern saved with the old token keeps it as plain text, shown in the Custom field, and has to be edited by hand.
 - The template editor scripts take the action, behaviour and scope names, the event names, the language string keys they share and the selectors and classes they share from two small constants modules instead of repeating them. The form now tells the script the custom-pattern value and both tokens, so the script holds no copy of them.
+- Every selector the template editor scripts use now lives in one selectors module, and the scripts find their elements only through `data-action`, `data-region` and `data-form` hooks, never through ids or CSS classes. The hooks added with the spaces work and the naming preview are namespaced (`local_coursegen/template/...`); the ones that already existed keep their original attribute. The name and description fields, the extra sections and naming fields of the configuration form, the dropdown wrappers, the type cells and the icons of the rows carry the new hooks, and the modal ids are unique per render.
+- The add menu items of the template editor are told apart by their own `data-action` instead of a value in `data-menu-action`, and the picked-template click no longer chains a promise.
+- The naming preview box is rendered from its own template instead of being built in the form class.
 - The save payload, the persistence service and the row options no longer fall back to defaults that can never apply, and the action, behaviour, scope and row-kind names are constants of the classes that own them.
 
 ### Fixed

@@ -24,11 +24,12 @@
     same markup either way.
 
     Data attributes required for JS:
-    * data-for="spacerow" data-space-id data-modname data-required on the row,
+    * data-region="local_coursegen/template/space-row" data-space-id data-modname data-required on the row,
       read back by collectSpacesForSection() (the save payload).
-    * data-region="space-instruction" on the instruction subtitle.
-    * data-region="space-badge" on the clickable badge (reopens the settings).
-    * data-region="space-edit" / "space-remove" on the row's two icons.
+    * data-region="local_coursegen/template/space-instruction" on the instruction subtitle.
+    * data-region="local_coursegen/template/space-badge" and data-action="local_coursegen/template/space-edit" on the clickable badge (reopens the settings).
+    * data-region="local_coursegen/template/type-label" on the type cell.
+    * data-action="local_coursegen/template/space-edit" / "local_coursegen/template/space-remove" on the row's two icons.
 
     Context variables:
     * spaceid string        - Unique within the page (a saved id, or a
@@ -56,25 +57,25 @@
         "hasinstruction": true
     }
 }}
-<tr class="tpl-row-space" data-for="spacerow" data-space-id="{{spaceid}}"
+<tr class="tpl-row-space" data-region="local_coursegen/template/space-row" data-space-id="{{spaceid}}"
     data-modname="{{modname}}" data-required="{{requiredvalue}}">
     <td class="align-middle tpl-select-col"></td>
     <td class="align-middle">
         {{! The icon is markup built by Moodle core for the chooser (core_course_get_course_content_items), which core itself prints with triple braces. }}
         <span class="mr-2">{{{icon}}}</span><span>{{name}}</span>
-        <button type="button" class="tpl-badge tpl-badge-space tpl-space-tag ml-2" data-region="space-badge"
+        <button type="button" class="tpl-badge tpl-badge-space tpl-space-tag ml-2" data-region="local_coursegen/template/space-badge" data-action="local_coursegen/template/space-edit"
                 title="{{#str}} template_space_edit, local_coursegen {{/str}}">{{badge}}</button>
         <div class="tpl-space-instruction text-muted small{{^hasinstruction}} d-none{{/hasinstruction}}"
-             data-region="space-instruction">{{instruction}}</div>
+             data-region="local_coursegen/template/space-instruction">{{instruction}}</div>
     </td>
-    <td class="align-middle text-muted">{{typelabel}}</td>
+    <td class="align-middle text-muted" data-region="local_coursegen/template/type-label">{{typelabel}}</td>
     <td class="align-middle text-right">
         <div class="tpl-instance-actions">
-            <button type="button" class="tpl-instance-icon-btn" data-region="space-edit"
+            <button type="button" class="tpl-instance-icon-btn" data-action="local_coursegen/template/space-edit"
                     title="{{#str}} template_space_edit, local_coursegen {{/str}}">
                 {{#pix}} t/edit, core {{/pix}}
             </button>
-            <button type="button" class="tpl-instance-icon-btn tpl-instance-icon-danger" data-region="space-remove"
+            <button type="button" class="tpl-instance-icon-btn tpl-instance-icon-danger" data-action="local_coursegen/template/space-remove"
                     title="{{#str}} template_space_remove, local_coursegen {{/str}}">
                 {{#pix}} t/delete, core {{/pix}}
             </button>

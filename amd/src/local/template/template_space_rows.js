@@ -36,8 +36,8 @@ import {chooseActivityType} from 'local_coursegen/local/template/template_space_
 import {closeInstanceMenu} from 'local_coursegen/local/template/template_instance_menu';
 import {get_string as getString} from 'core/str';
 import {prefetchStrings} from 'core/prefetch';
-import {COMPONENT, EVENT, NEW_ROW_PREFIX, REQUIRED_VALUE, STRING} from 'local_coursegen/local/template/constants';
-import {CLASS, SELECTOR, TAG} from 'local_coursegen/local/template/dom_constants';
+import Selectors from 'local_coursegen/local/template/selectors';
+import {CLASS, COMPONENT, EVENT, NEW_ROW_PREFIX, REQUIRED_VALUE, STRING, TAG} from 'local_coursegen/local/template/constants';
 
 /** @type {number} Client-only counter for unique data-space-id values on unsaved rows. */
 let nextTempId = 1;
@@ -91,7 +91,7 @@ const hasLeadingGap = (beforeEl) => {
     if (!previous) {
         return false;
     }
-    return previous.classList.contains(CLASS.ROW_GAP);
+    return previous.matches(Selectors.regions.rowGap);
 };
 
 /**
@@ -124,7 +124,7 @@ export const insertSpaceRow = async(tbody, beforeEl, space) => {
         hasinstruction: space.instruction !== '',
     };
     const fragment = await renderRowFragment('local_coursegen/template_space_row', context);
-    const row = fragment.querySelector(SELECTOR.SPACE_ROW);
+    const row = fragment.querySelector(Selectors.regions.spaceRow);
     tbody.insertBefore(fragment, beforeEl);
     const trailingGap = await buildGapRow();
     tbody.insertBefore(trailingGap, beforeEl);
@@ -135,15 +135,15 @@ export const insertSpaceRow = async(tbody, beforeEl, space) => {
 /**
  * Paint a new requirement and instruction onto an existing space row.
  *
- * @param {HTMLElement} row The row (data-for="spacerow").
+ * @param {HTMLElement} row The row (a space row).
  * @param {{required: boolean, instruction: string}} choice
  */
 const applyChoiceToRow = async(row, choice) => {
     const flag = requiredFlagOf(choice.required);
     row.dataset.required = String(flag);
-    const badgeEl = row.querySelector('[data-region="space-badge"]');
+    const badgeEl = row.querySelector(Selectors.regions.spaceBadge);
     badgeEl.textContent = await spaceBadgeText(choice.required);
-    const instructionEl = row.querySelector(SELECTOR.SPACE_INSTRUCTION);
+    const instructionEl = row.querySelector(Selectors.regions.spaceInstruction);
     instructionEl.textContent = choice.instruction;
     instructionEl.classList.toggle(CLASS.HIDDEN, choice.instruction === '');
 };
@@ -172,10 +172,10 @@ const saveNewSpace = async(tbody, beforeEl, picked, markDirty, choice) => {
  * @param {Function} markDirty Marks the wizard as having unsaved changes.
  */
 export const addSpace = async(item, state, markDirty) => {
-    const beforeEl = item.closest(SELECTOR.GAP_OR_ADD);
+    const beforeEl = item.closest(Selectors.regions.gapOrAddInstance);
     const table = beforeEl.closest(TAG.TABLE);
     const tbody = table.querySelector(TAG.TABLE_BODY);
-    const triggerEl = beforeEl.querySelector(SELECTOR.INSTANCE_MENU_TRIGGER);
+    const triggerEl = beforeEl.querySelector(Selectors.actions.instanceTrigger);
     closeInstanceMenu(triggerEl);
 
     const picked = await chooseActivityType({
@@ -192,7 +192,7 @@ export const addSpace = async(item, state, markDirty) => {
 /**
  * Apply the choice saved for an existing space row.
  *
- * @param {HTMLElement} row The row (data-for="spacerow").
+ * @param {HTMLElement} row The row (a space row).
  * @param {Function} markDirty Marks the wizard as having unsaved changes.
  * @param {{required: boolean, instruction: string}} choice What the modal saved.
  */
@@ -204,13 +204,13 @@ const saveEditedSpace = async(row, markDirty, choice) => {
 /**
  * Reopen the shared modal for one existing space row.
  *
- * @param {HTMLElement} row The row (data-for="spacerow").
+ * @param {HTMLElement} row The row (a space row).
  * @param {Function} markDirty Marks the wizard as having unsaved changes.
  */
 const editSpaceRow = (row, markDirty) => {
-    const nameCell = row.querySelector('td:nth-child(3)');
+    const nameCell = row.querySelector(Selectors.regions.typeLabel);
     const subject = nameCell.textContent.trim();
-    const instructionEl = row.querySelector(SELECTOR.SPACE_INSTRUCTION);
+    const instructionEl = row.querySelector(Selectors.regions.spaceInstruction);
     const instruction = instructionEl.textContent.trim();
     const onSave = saveEditedSpace.bind(null, row, markDirty);
     openSpaceModal({subject, required: row.dataset.required === REQUIRED_VALUE, instruction, onSave});
@@ -224,16 +224,16 @@ const editSpaceRow = (row, markDirty) => {
  * @param {MouseEvent} e The click.
  */
 const handleSpaceRowClick = (markDirty, e) => {
-    const row = e.target.closest(SELECTOR.SPACE_ROW);
+    const row = e.target.closest(Selectors.regions.spaceRow);
     if (!row) {
         return;
     }
-    if (e.target.closest('[data-region="space-remove"]')) {
+    if (e.target.closest(Selectors.actions.spaceRemove)) {
         removeInstanceRow(row);
         markDirty();
         return;
     }
-    if (e.target.closest('[data-region="space-badge"], [data-region="space-edit"]')) {
+    if (e.target.closest(Selectors.actions.spaceEdit)) {
         editSpaceRow(row, markDirty);
     }
 };

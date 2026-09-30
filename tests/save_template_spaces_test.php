@@ -133,7 +133,7 @@ final class save_template_spaces_test extends \advanced_testcase {
         $saved = $this->save_with_instances((int) $course->id, $sectionid, 1, $activities, [$instance], 0, [$space]);
 
         $html = $this->render_review($course, (int) $saved['id']);
-        $spaceposition = strpos($html, 'data-for="spacerow"');
+        $spaceposition = strpos($html, 'data-region="local_coursegen/template/space-row"');
         $instanceposition = strpos($html, 'data-for="instancerow"');
         $this->assertNotFalse($spaceposition);
         $this->assertNotFalse($instanceposition);
@@ -363,7 +363,7 @@ final class save_template_spaces_test extends \advanced_testcase {
      * @return string
      */
     private function extract_space_tag(string $html, int $cmid): string {
-        $marker = 'data-region="space-tag" data-id="' . $cmid . '"';
+        $marker = 'data-region="local_coursegen/template/space-tag" data-id="' . $cmid . '"';
         $markerpos = strpos($html, $marker);
         $this->assertNotFalse($markerpos, 'No space tag rendered matching: ' . $marker);
         $before = substr($html, 0, $markerpos);

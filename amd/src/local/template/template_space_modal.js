@@ -29,6 +29,7 @@ import ModalSaveCancel from 'core/modal_save_cancel';
 import ModalEvents from 'core/modal_events';
 import Templates from 'core/templates';
 import {get_string as getString} from 'core/str';
+import Selectors from 'local_coursegen/local/template/selectors';
 import {COMPONENT, REQUIRED_VALUE, STRING} from 'local_coursegen/local/template/constants';
 
 /** @type {Promise<Object>|null} The lazily-created shared modal instance. */
@@ -56,8 +57,8 @@ const getModal = () => {
 const readChoice = (modal) => {
     const rootList = modal.getRoot();
     const root = rootList[0];
-    const checked = root.querySelector('input[name="template-space-required-choice"]:checked');
-    const instructionField = root.querySelector('#template-space-instruction');
+    const checked = root.querySelector(Selectors.regions.spaceRequiredChoice);
+    const instructionField = root.querySelector(Selectors.regions.spaceInstructionField);
     const instruction = instructionField.value.trim();
     return {
         required: checked.value === REQUIRED_VALUE,

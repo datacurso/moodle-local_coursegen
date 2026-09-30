@@ -56,6 +56,21 @@ class template_config_form extends dynamic_form {
     /** Token of a naming pattern that stands for the original section's name. */
     const NAMING_TOKEN_NAME = '{name}';
 
+    /** The data-region hook of the naming pattern select, read by the template editor script. */
+    const HOOK_NAMING_PATTERN = 'local_coursegen/template/naming-pattern';
+
+    /** The data-region hook of the custom pattern field. */
+    const HOOK_CUSTOM_PATTERN = 'local_coursegen/template/custom-pattern';
+
+    /** The data-region hook of the first section number select. */
+    const HOOK_NAMING_START = 'local_coursegen/template/naming-start';
+
+    /** The data-region hook of the extra sections field. */
+    const HOOK_MAX_SECTIONS = 'local_coursegen/template/max-sections';
+
+    /** The data-region hook of the allow-extra-sections checkbox. */
+    const HOOK_ALLOW_ADD_SECTIONS = 'local_coursegen/template/allow-add-sections';
+
 
     /**
      * Form definition.
@@ -145,7 +160,8 @@ class template_config_form extends dynamic_form {
         // EXTRA sections on top of the template's own. Unchecked by default:
         // the template's own sections are always available regardless.
         $allowlabel = get_string('template_allow_add_sections', 'local_coursegen');
-        $mform->addElement('advcheckbox', 'allowaddsections', '', $allowlabel);
+        $allowattributes = ['data-region' => self::HOOK_ALLOW_ADD_SECTIONS];
+        $mform->addElement('advcheckbox', 'allowaddsections', '', $allowlabel, $allowattributes);
         $mform->setType('allowaddsections', PARAM_BOOL);
         if ($template) {
             // Checked iff the saved template allows extra sections — either a
@@ -161,7 +177,8 @@ class template_config_form extends dynamic_form {
         // stable — only the meaning of the number changed (extra allowance,
         // no longer a total cap).
         $extralabel = get_string('template_extra_sections', 'local_coursegen');
-        $mform->addElement('text', 'maxsections', $extralabel, ['size' => 5]);
+        $maxattributes = ['size' => 5, 'data-region' => self::HOOK_MAX_SECTIONS];
+        $mform->addElement('text', 'maxsections', $extralabel, $maxattributes);
         $mform->setType('maxsections', PARAM_INT);
         $maxsectionsdefault = self::default_extra_sections($template);
         $mform->setDefault('maxsections', $maxsectionsdefault);
@@ -269,6 +286,8 @@ class template_config_form extends dynamic_form {
      *     mode), null for the fresh defaults.
      */
     private function definition_naming_pattern(?template $template): void {
+        global $OUTPUT;
+
         $mform = $this->_form;
 
         $headertitle = get_string('template_naming_pattern', 'local_coursegen');
@@ -278,21 +297,24 @@ class template_config_form extends dynamic_form {
         $patterns = self::naming_options();
         [$patterndefault, $customdefault] = self::naming_defaults($template, $patterns);
 
-        $mform->addElement('select', 'namingpattern', $headertitle, $patterns);
+        $patternattributes = ['data-region' => self::HOOK_NAMING_PATTERN];
+        $mform->addElement('select', 'namingpattern', $headertitle, $patterns, $patternattributes);
         $mform->setType('namingpattern', PARAM_RAW);
         $mform->setDefault('namingpattern', $patterndefault);
         $mform->addHelpButton('namingpattern', 'template_naming_pattern', 'local_coursegen');
 
         $customlabel = get_string('template_naming_custom', 'local_coursegen');
         $placeholder = get_string('template_naming_custom_placeholder', 'local_coursegen');
-        $mform->addElement('text', 'custompattern', $customlabel, ['placeholder' => $placeholder]);
+        $customattributes = ['placeholder' => $placeholder, 'data-region' => self::HOOK_CUSTOM_PATTERN];
+        $mform->addElement('text', 'custompattern', $customlabel, $customattributes);
         $mform->setType('custompattern', PARAM_TEXT);
         $mform->setDefault('custompattern', $customdefault);
         $mform->hideIf('custompattern', 'namingpattern', 'neq', self::NAMING_CUSTOM);
         $mform->addHelpButton('custompattern', 'template_naming_custom', 'local_coursegen');
 
         $startlabel = get_string('template_naming_start', 'local_coursegen');
-        $mform->addElement('select', 'namingstart', $startlabel, [1 => '1', 0 => '0']);
+        $startattributes = ['data-region' => self::HOOK_NAMING_START];
+        $mform->addElement('select', 'namingstart', $startlabel, [1 => '1', 0 => '0'], $startattributes);
         $mform->setType('namingstart', PARAM_INT);
         $startdefault = 1;
         if ($template) {
@@ -301,7 +323,7 @@ class template_config_form extends dynamic_form {
         $mform->setDefault('namingstart', $startdefault);
         $mform->addHelpButton('namingstart', 'template_naming_start', 'local_coursegen');
 
-        $previewbox = \html_writer::div('', 'bg-light rounded p-2', ['data-region' => 'naming-preview']);
+        $previewbox = $OUTPUT->render_from_template('local_coursegen/template_naming_preview_box', []);
         $mform->addElement('static', 'namingpreviewwrap', '', $previewbox);
     }
 

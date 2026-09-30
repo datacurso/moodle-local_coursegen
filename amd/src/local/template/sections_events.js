@@ -29,7 +29,7 @@
  *   "template" clears the row's visual signal with no modal involved.
  * - Changing a row's action TO "space" opens the shared space modal
  *   (template_row_space.js): required or optional, and what the professor has
- *   to provide. Its clickable badge (data-region="space-tag") reopens it.
+ *   to provide. Its clickable badge (data-region="local_coursegen/template/space-tag") reopens it.
  * - Per-row clickable "Template" tag (data-region="template-tag"): visible
  *   only while the row's action is "template", reopens the same modal to
  *   change an already-set scope.
@@ -65,8 +65,8 @@ import {
 } from 'local_coursegen/local/template/template_row_space';
 import {bindInstanceInserts} from 'local_coursegen/local/template/template_instance_events';
 import {bindNameEditing} from 'local_coursegen/local/template/template_instance_name_edit';
+import Selectors from 'local_coursegen/local/template/selectors';
 import {ACTION, EVENT} from 'local_coursegen/local/template/constants';
-import {SELECTOR} from 'local_coursegen/local/template/dom_constants';
 
 /** @type {boolean} Whether any config has been modified. */
 let dirty = false;
@@ -240,7 +240,7 @@ const bindActivityActionSelect = (container, select, state) => {
     if (!cmid) {
         return;
     }
-    const row = select.closest(SELECTOR.ACTIVITY_ROW);
+    const row = select.closest(Selectors.rows.activity);
     const ctx = {container, select, state, cmid, row, prioraction: select.value};
     state.activityAction[cmid] = select.value;
     if (row) {
@@ -258,7 +258,7 @@ const bindActivityActionSelect = (container, select, state) => {
  * @param {Object} state The live wizard state from init.js.
  */
 const bindActivityActionSelects = (container, state) => {
-    const selects = container.querySelectorAll('select[data-region="activity-action"]');
+    const selects = container.querySelectorAll(Selectors.regions.activityActionSelect);
     for (const select of selects) {
         bindActivityActionSelect(container, select, state);
     }
@@ -299,7 +299,7 @@ const bindSectionBehaviorSelect = (select, state) => {
  * @param {Object} state The live wizard state from init.js.
  */
 const bindSectionBehaviorSelects = (container, state) => {
-    const selects = container.querySelectorAll('select[data-region="section-behavior"]');
+    const selects = container.querySelectorAll(Selectors.regions.sectionBehaviorSelect);
     for (const select of selects) {
         bindSectionBehaviorSelect(select, state);
     }

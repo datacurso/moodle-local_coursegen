@@ -62,8 +62,9 @@
       insertion point), and data-region="add-instance" on that persistent trailing
       "Add activity from a template" row — each trigger carries
       data-toggle="dropdown" (so Bootstrap's own outside-click/Escape
-      handling can close it) and sits inside its own ".dropdown" wrapper
-      next to an empty ".dropdown-menu" sibling
+      handling can close it) and sits inside its own dropdown wrapper
+      (data-region="local_coursegen/template/instance-dropdown") next to an
+      empty menu sibling (data-region="local_coursegen/template/instance-dropdown-menu")
       (local/template/template_instance_menu.js renders the picker body into
       that sibling and opens it as a native Bootstrap dropdown); picking an
       item inserts that template's instance immediately before the element
@@ -72,9 +73,10 @@
     Each "rows" entry is rendered by the local_coursegen/template_course_sections_row
     partial (its own row plus the hover-reveal gap after it) — split out to
     keep this file under the project's 250-line cap.
-    * data-region="space-tag" data-id on each real row's clickable space badge
-      (hidden unless the row's action is "space"), and data-for="spacerow" on
-      each virtual space row (see template_space_row.mustache)
+    * data-region="local_coursegen/template/space-tag" data-id on each real
+      row's clickable space badge (hidden unless the row's action is
+      "space"), and data-region="local_coursegen/template/space-row" on each
+      virtual space row (see template_space_row.mustache)
     * data-region="instance-name" data-id on each instance row's editable
       name input
     * data-region="instance-prompt-toggle" data-id on each instance row's
@@ -186,14 +188,14 @@
                     {{/rows}}
                     <tr class="tpl-row-add" data-region="add-instance">
                         <td colspan="4">
-                            <div class="dropdown tpl-instance-dropdown">
+                            <div class="dropdown tpl-instance-dropdown" data-region="local_coursegen/template/instance-dropdown">
                                 <button type="button" class="tpl-add-instance-btn" data-instance-menu-trigger
                                         data-toggle="dropdown"
                                         aria-haspopup="true" aria-expanded="false">
                                     <span>&#65291;</span>
                                     <span>{{#str}} template_add_menu, local_coursegen {{/str}}</span>
                                 </button>
-                                <div class="dropdown-menu tpl-instance-menu" role="menu"></div>
+                                <div class="dropdown-menu tpl-instance-menu" role="menu" data-region="local_coursegen/template/instance-dropdown-menu"></div>
                             </div>
                         </td>
                     </tr>

@@ -26,8 +26,8 @@
  */
 
 import {openSpaceModal} from 'local_coursegen/local/template/template_space_modal';
-import {ACTION, EVENT} from 'local_coursegen/local/template/constants';
-import {CLASS, SELECTOR} from 'local_coursegen/local/template/dom_constants';
+import Selectors from 'local_coursegen/local/template/selectors';
+import {ACTION, CLASS, EVENT} from 'local_coursegen/local/template/constants';
 
 /**
  * Reflect a row's space status in the DOM: the row highlight, the badge's
@@ -40,9 +40,9 @@ import {CLASS, SELECTOR} from 'local_coursegen/local/template/dom_constants';
  * @param {Object} state The live wizard state from init.js.
  */
 export const applySpaceVisual = (row, isspace, cmid, state) => {
-    row.classList.toggle('tpl-row-space', isspace);
-    const tag = row.querySelector(SELECTOR.SPACE_TAG);
-    const instructionEl = row.querySelector('[data-region="space-row-instruction"]');
+    row.classList.toggle(CLASS.ROW_SPACE, isspace);
+    const tag = row.querySelector(Selectors.regions.spaceTag);
+    const instructionEl = row.querySelector(Selectors.regions.spaceRowInstruction);
     tag.classList.toggle(CLASS.HIDDEN, !isspace);
     const space = state.activitySpace[cmid] || {required: true, instruction: ''};
     if (isspace) {
@@ -103,7 +103,7 @@ const cancelSpaceForNewSelection = (row, select, cmid, prioraction, state, onRes
  * @param {Function} onResolved (finalAction) => void, called once the modal closes.
  */
 export const openSpaceModalForNewSelection = (row, select, cmid, prioraction, state, onResolved) => {
-    const tag = row.querySelector(SELECTOR.SPACE_TAG);
+    const tag = row.querySelector(Selectors.regions.spaceTag);
     const current = state.activitySpace[cmid] || {required: true, instruction: ''};
     let subject = '';
     if (tag) {
@@ -138,12 +138,12 @@ const saveSpaceFromTag = (row, cmid, state, markDirty, choice) => {
  * @param {MouseEvent} e The click.
  */
 const handleSpaceTagClick = (ctx, e) => {
-    const tag = e.target.closest(SELECTOR.SPACE_TAG);
+    const tag = e.target.closest(Selectors.regions.spaceTag);
     if (!tag) {
         return;
     }
     const cmid = parseInt(tag.dataset.id);
-    const row = tag.closest(SELECTOR.ACTIVITY_ROW);
+    const row = tag.closest(Selectors.rows.activity);
     if (!cmid || !row) {
         return;
     }

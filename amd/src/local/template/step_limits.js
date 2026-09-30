@@ -44,8 +44,8 @@
  */
 
 import Templates from 'core/templates';
+import Selectors from 'local_coursegen/local/template/selectors';
 import {EVENT} from 'local_coursegen/local/template/constants';
-import {SELECTOR} from 'local_coursegen/local/template/dom_constants';
 
 /**
  * Add a listener to an element, when the form rendered it.
@@ -137,7 +137,7 @@ const buildPreviewLine = (ctx, sectionName, index) => {
  * @param {Object} ctx The limits context (see buildContext()).
  */
 const updatePreview = async(ctx) => {
-    const container = ctx.panel.querySelector(SELECTOR.NAMING_PREVIEW);
+    const container = ctx.panel.querySelector(Selectors.regions.namingPreview);
     const lines = [];
     let index = 0;
     for (const section of ctx.structure) {
@@ -194,14 +194,14 @@ const handleStartChange = (ctx, e) => {
  */
 const buildContext = (panel, state) => {
     const structure = state.courseStructure;
-    const maxInput = panel.querySelector('[name="maxsections"]');
+    const maxInput = panel.querySelector(Selectors.regions.maxSections);
     // advcheckbox renders a hidden "unchecked" companion input sharing the
     // same name before the real checkbox — [type="checkbox"] is required to
     // land on the actual toggle, not its always-present hidden sibling.
-    const allowAddCb = panel.querySelector('input[type="checkbox"][name="allowaddsections"]');
-    const patternSelect = panel.querySelector('select[name="namingpattern"]');
-    const customInput = panel.querySelector('input[name="custompattern"]');
-    const startSelect = panel.querySelector('select[name="namingstart"]');
+    const allowAddCb = panel.querySelector(Selectors.regions.allowAddSections);
+    const patternSelect = panel.querySelector(Selectors.regions.namingPattern);
+    const customInput = panel.querySelector(Selectors.regions.customPattern);
+    const startSelect = panel.querySelector(Selectors.regions.namingStart);
     return {panel, state, structure, maxInput, allowAddCb, patternSelect, customInput, startSelect};
 };
 

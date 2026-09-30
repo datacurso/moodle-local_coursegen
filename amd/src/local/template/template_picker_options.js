@@ -29,15 +29,15 @@
  */
 
 import {getStrings} from 'core/str';
-import {COMPONENT, SCOPE, STRING} from 'local_coursegen/local/template/constants';
-import {SELECTOR} from 'local_coursegen/local/template/dom_constants';
+import Selectors from 'local_coursegen/local/template/selectors';
+import {ACTION, COMPONENT, SCOPE, STRING} from 'local_coursegen/local/template/constants';
 
 /**
- * Build one marked row's own picker option, or null if the row is missing
- * something it needs (no cmid, or no section ancestor to check eligibility
- * against) — a single malformed row must never take the whole list down.
+ * Build one marked row's own picker option, or null if the row is not
+ * marked "Use as template" or is missing something it needs (no cmid, or no
+ * section ancestor to check eligibility against) — a single malformed row must never take the whole list down.
  *
- * @param {HTMLElement} row A row carrying the "tpl-row-template" class.
+ * @param {HTMLElement} row An activity row of the review.
  * @param {number} targetsectionid The section the "+" was triggered from.
  * @param {Object} state The live wizard state from init.js.
  * @param {Object} hints {samesectionhint, coursehint, tooltip} pre-fetched strings.
@@ -45,7 +45,10 @@ import {SELECTOR} from 'local_coursegen/local/template/dom_constants';
  */
 const buildOneOption = (row, targetsectionid, state, hints) => {
     const cmid = parseInt(row.dataset.id, 10);
-    const sectionEl = row.closest(SELECTOR.SECTION);
+    if (state.activityAction[cmid] !== ACTION.TEMPLATE) {
+        return null;
+    }
+    const sectionEl = row.closest(Selectors.rows.section);
     if (!cmid || !sectionEl) {
         return null;
     }
@@ -63,12 +66,14 @@ const buildOneOption = (row, targetsectionid, state, hints) => {
         itemtooltip = hints.tooltip;
     }
 
+    const templateTag = row.querySelector(Selectors.regions.templateTag);
+    const icon = row.querySelector(Selectors.regions.activityIcon);
     return {
         sourcecmid: cmid,
-        name: row.querySelector('.tpl-template-tag')?.dataset.name || '',
+        name: templateTag.dataset.name,
         typelabel: row.dataset.typelabel || '',
         modname: row.dataset.modname || '',
-        iconurl: row.querySelector('img.activityicon')?.src || '',
+        iconurl: icon.src,
         disabled: !eligible,
         scopehint,
         tooltip: itemtooltip,
@@ -93,7 +98,7 @@ export const buildAvailableTemplates = async(container, targetsectionid, state) 
     ]);
     const hints = {samesectionhint, coursehint, tooltip};
 
-    const templaterows = container.querySelectorAll('.tpl-row-template[data-for="cmitem"]');
+    const templaterows = container.querySelectorAll(Selectors.rows.activity);
     const options = [];
     for (const row of templaterows) {
         const option = buildOneOption(row, targetsectionid, state, hints);

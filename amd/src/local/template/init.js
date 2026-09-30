@@ -35,8 +35,8 @@ import {bindCoursePicker, updateSelectedBanner} from 'local_coursegen/local/temp
 import * as Repository from 'local_coursegen/local/template/repository';
 import DynamicForm from 'core_form/dynamicform';
 import Notification from 'core/notification';
-import {BEHAVIOR, EVENT, SCOPE} from 'local_coursegen/local/template/constants';
-import {CLASS} from 'local_coursegen/local/template/dom_constants';
+import Selectors from 'local_coursegen/local/template/selectors';
+import {BEHAVIOR, CLASS, EVENT, SCOPE} from 'local_coursegen/local/template/constants';
 
 /** @type {Object} Wizard state. */
 const state = {
@@ -89,7 +89,7 @@ export const getRoot = () => root;
  * that changes what's on screen — there is no step/page navigation.
  */
 const renderConfigRegion = async() => {
-    const region = root.querySelector('[data-region="config"]');
+    const region = root.querySelector(Selectors.regions.config);
     if (!state.selectedCourseId) {
         region.classList.add(CLASS.HIDDEN);
         return;
@@ -126,7 +126,7 @@ const renderConfigRegion = async() => {
     // just did for its own container, for the structure panel's own
     // container instead of inferring it from whatever markup happens to
     // already be sitting there (which a course switch would get wrong).
-    const structurePanel = region.querySelector('[data-region="structure"]');
+    const structurePanel = region.querySelector(Selectors.regions.structure);
     await renderStepSections(structurePanel, state, isFreshFromPageLoad);
 
     // Limits and the naming pattern all live inside the
@@ -219,7 +219,7 @@ const handleSaveClick = () => {
  * @param {Array} config.courses List of available courses.
  */
 export const init = (config) => {
-    root = document.getElementById('local-coursegen-template-wizard');
+    root = document.querySelector(Selectors.regions.wizard);
     if (!root) {
         return;
     }
@@ -244,7 +244,7 @@ export const init = (config) => {
         configFormIsFreshFromPageLoad = true;
     }
 
-    const configRegion = root.querySelector('[data-region="config-form"]');
+    const configRegion = root.querySelector(Selectors.regions.configForm);
     configForm = new DynamicForm(configRegion, 'local_coursegen\\form\\template_config_form');
     // This form has no submit button — its fields feed the template-wide
     // Save action instead (see saveTemplate()) — but DynamicForm still
@@ -254,9 +254,9 @@ export const init = (config) => {
     // rendered fields out from under the admin.
     configForm.addEventListener(configForm.events.FORM_SUBMITTED, keepFormContent);
 
-    const saveButton = root.querySelector('[data-action="save"]');
+    const saveButton = root.querySelector(Selectors.actions.save);
     saveButton.addEventListener(EVENT.CLICK, handleSaveClick);
-    const coursePickerPanel = root.querySelector('[data-region="step-panel"][data-step="1"]');
+    const coursePickerPanel = root.querySelector(Selectors.regions.coursePickerPanel);
     bindCoursePicker(coursePickerPanel, state, setState);
 
     renderConfigRegion();

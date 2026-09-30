@@ -37,8 +37,8 @@
 
 import Templates from 'core/templates';
 import {startNameEdit, currentName} from 'local_coursegen/local/template/template_instance_name_edit';
-import {NEW_ROW_PREFIX, REQUIRED_VALUE} from 'local_coursegen/local/template/constants';
-import {CLASS, SELECTOR, TAG} from 'local_coursegen/local/template/dom_constants';
+import Selectors from 'local_coursegen/local/template/selectors';
+import {NEW_ROW_PREFIX, REQUIRED_VALUE, TAG} from 'local_coursegen/local/template/constants';
 
 /** @type {number} Client-only counter for unique data-instance-id values on unsaved rows. */
 let nextTempId = 1;
@@ -96,9 +96,9 @@ const buildInstanceRowFragment = (data, instanceid) => renderRowFragment('local_
  * @param {HTMLElement} tbody The section's table body.
  */
 export const dropGapBeforeAddRow = (tbody) => {
-    const addRow = tbody.querySelector('[data-region="add-instance"]');
+    const addRow = tbody.querySelector(Selectors.regions.addInstance);
     const priorRow = addRow?.previousElementSibling;
-    if (priorRow && priorRow.classList.contains(CLASS.ROW_GAP)) {
+    if (priorRow && priorRow.matches(Selectors.regions.rowGap)) {
         priorRow.remove();
     }
 };
@@ -117,7 +117,7 @@ export const dropGapBeforeAddRow = (tbody) => {
 export const insertInstanceRow = async(tbody, beforeEl, picked) => {
     const previous = beforeEl.previousElementSibling;
     let needsLeadingGap = true;
-    if (previous && previous.classList.contains(CLASS.ROW_GAP)) {
+    if (previous && previous.matches(Selectors.regions.rowGap)) {
         needsLeadingGap = false;
     }
     if (needsLeadingGap) {
@@ -128,13 +128,13 @@ export const insertInstanceRow = async(tbody, beforeEl, picked) => {
     const tempId = nextTempId++;
     const instanceid = NEW_ROW_PREFIX + tempId;
     const instanceFragment = await buildInstanceRowFragment(picked, instanceid);
-    const instanceRow = instanceFragment.querySelector(SELECTOR.INSTANCE_ROW);
+    const instanceRow = instanceFragment.querySelector(Selectors.rows.instance);
     tbody.insertBefore(instanceFragment, beforeEl);
     const trailingGap = await buildGapRow();
     tbody.insertBefore(trailingGap, beforeEl);
     dropGapBeforeAddRow(tbody);
 
-    const nameEl = instanceRow.querySelector(SELECTOR.INSTANCE_NAME_EDITABLE);
+    const nameEl = instanceRow.querySelector(Selectors.regions.instanceNameEditable);
     startNameEdit(nameEl);
     return instanceRow;
 };
@@ -149,7 +149,7 @@ export const removeInstanceRow = (instanceRow) => {
     const tbody = instanceRow.closest(TAG.TABLE_BODY);
     const promptRow = instanceRow.nextElementSibling;
     let hasPromptRow = false;
-    if (promptRow && promptRow.classList.contains('tpl-instance-prompt-row')) {
+    if (promptRow && promptRow.matches(Selectors.rows.instancePrompt)) {
         hasPromptRow = true;
     }
     let gapRow = instanceRow.nextElementSibling;
@@ -159,7 +159,7 @@ export const removeInstanceRow = (instanceRow) => {
     if (hasPromptRow) {
         promptRow.remove();
     }
-    if (gapRow && gapRow.classList.contains(CLASS.ROW_GAP)) {
+    if (gapRow && gapRow.matches(Selectors.regions.rowGap)) {
         gapRow.remove();
     }
     instanceRow.remove();
@@ -169,13 +169,13 @@ export const removeInstanceRow = (instanceRow) => {
 /**
  * Read one space row back into the shape save_template expects.
  *
- * @param {HTMLElement} row The space row (data-for="spacerow").
+ * @param {HTMLElement} row The space row (a space row).
  * @param {number} aftercmid The real cmid the row sits immediately after.
  * @param {number} sortorder The row's position among the virtual rows.
  * @returns {Object} {modname, required, instruction, aftercmid, sortorder}
  */
 const spaceEntryOf = (row, aftercmid, sortorder) => {
-    const instructionEl = row.querySelector(SELECTOR.SPACE_INSTRUCTION);
+    const instructionEl = row.querySelector(Selectors.regions.spaceInstruction);
     const instruction = instructionEl.textContent.trim();
     return {
         modname: row.dataset.modname,
@@ -198,15 +198,15 @@ const spaceEntryOf = (row, aftercmid, sortorder) => {
  */
 const instanceEntryOf = (sectionEl, row, aftercmid, sortorder) => {
     const instanceid = row.dataset.instanceId;
-    const promptSelector = '[data-for="instanceprompt"][data-instance-id="' + instanceid + '"] textarea';
+    const promptSelector = Selectors.rows.promptFieldOf(instanceid);
     const promptEl = sectionEl.querySelector(promptSelector);
     let promptValue = '';
     if (promptEl) {
         promptValue = promptEl.value;
     }
-    const nameEl = row.querySelector(SELECTOR.INSTANCE_NAME_EDITABLE);
+    const nameEl = row.querySelector(Selectors.regions.instanceNameEditable);
     const name = currentName(nameEl);
-    const typeCell = row.querySelector('td.text-muted');
+    const typeCell = row.querySelector(Selectors.regions.typeLabel);
     const typelabel = typeCell.textContent.trim();
     const sourcecmid = parseInt(row.dataset.sourceCmid, 10);
     return {
@@ -239,13 +239,13 @@ export const collectVirtualRowsForSection = (sectionEl) => {
     const spaces = [];
     let aftercmid = 0;
     let sortorder = 0;
-    const rows = sectionEl.querySelectorAll('[data-for="cmitem"], [data-for="instancerow"], [data-for="spacerow"]');
+    const rows = sectionEl.querySelectorAll(Selectors.rows.anyRow);
     for (const row of rows) {
-        if (row.dataset.for === 'cmitem') {
+        if (row.matches(Selectors.rows.activity)) {
             aftercmid = parseInt(row.dataset.id, 10);
             continue;
         }
-        if (row.dataset.for === 'spacerow') {
+        if (row.matches(Selectors.regions.spaceRow)) {
             const spaceEntry = spaceEntryOf(row, aftercmid, sortorder);
             spaces.push(spaceEntry);
             sortorder++;

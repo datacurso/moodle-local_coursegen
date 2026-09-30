@@ -31,8 +31,8 @@ import Notification from 'core/notification';
 import {get_string as getString} from 'core/str';
 import {resetAllFormDirtyStates} from 'core_form/changechecker';
 import {notifyFormSubmittedByJavascript, eventTypes} from 'core_form/events';
+import Selectors from 'local_coursegen/local/template/selectors';
 import {COMPONENT} from 'local_coursegen/local/template/constants';
-import {SELECTOR} from 'local_coursegen/local/template/dom_constants';
 
 /**
  * Remember that the name form reported an invalid field.
@@ -63,11 +63,7 @@ const recordFieldError = (result, e) => {
  * @returns {boolean} False when the form reported at least one invalid field.
  */
 const nameFormIsValid = (root) => {
-    const nameField = root.querySelector(SELECTOR.TEMPLATE_NAME_FIELD);
-    const form = nameField?.closest('form');
-    if (!form) {
-        return true;
-    }
+    const form = root.querySelector(Selectors.forms.nameForm);
     const result = {hasError: false};
     const onFieldError = recordFieldError.bind(null, result);
     form.addEventListener(eventTypes.formFieldValidationFailed, onFieldError);
@@ -84,7 +80,8 @@ const nameFormIsValid = (root) => {
  * @returns {Object} {instances, spaces}
  */
 const collectSectionVirtualRows = (root, sectionid) => {
-    const sectionEl = root.querySelector('[data-for="section"][data-id="' + sectionid + '"]');
+    const sectionSelector = Selectors.rows.sectionById(sectionid);
+    const sectionEl = root.querySelector(sectionSelector);
     if (!sectionEl) {
         return {instances: [], spaces: []};
     }
@@ -181,8 +178,10 @@ export const saveTemplate = async(state, root) => {
         return;
     }
     try {
-        const nameVal = root.querySelector(SELECTOR.TEMPLATE_NAME_FIELD)?.value || state.templateName;
-        const descVal = root.querySelector('#id_templatedesc')?.value || state.templateDesc;
+        const nameField = root.querySelector(Selectors.regions.templateName);
+        const descField = root.querySelector(Selectors.regions.templateDescription);
+        const nameVal = nameField.value || state.templateName;
+        const descVal = descField.value || state.templateDesc;
         state.templateName = nameVal;
         state.templateDesc = descVal;
         const sections = buildSections(state, root);

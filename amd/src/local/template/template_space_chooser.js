@@ -30,6 +30,7 @@ import Templates from 'core/templates';
 import {get_string as getString} from 'core/str';
 import * as Repository from 'core_course/local/activitychooser/repository';
 import * as ChooserDialogue from 'core_course/local/activitychooser/dialogue';
+import Selectors from 'local_coursegen/local/template/selectors';
 import {COMPONENT, EVENT, STRING} from 'local_coursegen/local/template/constants';
 
 /** @type {number} The archetype the web service reports for an activity. */
@@ -242,7 +243,7 @@ const findItemByName = (items, modname) => {
  * @param {MouseEvent} e The click.
  */
 const pickFromClick = (modal, items, selection, e) => {
-    const link = e.target.closest('a[data-action="add-chooser-option"]');
+    const link = e.target.closest(Selectors.actions.coreChooserOption);
     if (!link) {
         return;
     }

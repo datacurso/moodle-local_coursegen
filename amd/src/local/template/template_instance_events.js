@@ -42,8 +42,8 @@ import {addSpace, bindSpaceRows} from 'local_coursegen/local/template/template_s
 import {buildAvailableTemplates} from 'local_coursegen/local/template/template_picker_options';
 import Notification from 'core/notification';
 import {prefetchStrings} from 'core/prefetch';
-import {COMPONENT, EVENT, STRING} from 'local_coursegen/local/template/constants';
-import {CLASS, SELECTOR, TAG} from 'local_coursegen/local/template/dom_constants';
+import Selectors from 'local_coursegen/local/template/selectors';
+import {CLASS, COMPONENT, EVENT, STRING, TAG} from 'local_coursegen/local/template/constants';
 
 /**
  * Toggle one instance row's prompt drawer open/closed.
@@ -52,10 +52,9 @@ import {CLASS, SELECTOR, TAG} from 'local_coursegen/local/template/dom_constants
  * @param {string} instanceid
  */
 const togglePromptDrawer = (container, instanceid) => {
-    const drawer = container.querySelector(
-        '[data-for="instanceprompt"][data-instance-id="' + instanceid + '"]'
-    );
-    drawer?.classList.toggle(CLASS.HIDDEN);
+    const drawerSelector = Selectors.rows.promptDrawerOf(instanceid);
+    const drawer = container.querySelector(drawerSelector);
+    drawer.classList.toggle(CLASS.HIDDEN);
 };
 
 /**
@@ -82,7 +81,7 @@ const openMenuForTrigger = async(trigger) => {
  * @param {Object} state The live wizard state from init.js.
  */
 const showTemplatePicker = async(container, trigger, state) => {
-    const sectionEl = trigger.closest(SELECTOR.SECTION);
+    const sectionEl = trigger.closest(Selectors.rows.section);
     const sectionid = parseInt(sectionEl.dataset.id, 10);
     const options = await buildAvailableTemplates(container, sectionid, state);
     await showTemplateList({triggerEl: trigger, options});
@@ -91,26 +90,23 @@ const showTemplatePicker = async(container, trigger, state) => {
 /**
  * Handle a click on one of the add menu's own items.
  *
- * @param {HTMLElement} item The clicked item (data-menu-action).
+ * @param {HTMLElement} item The clicked item (one of the add menu's own actions).
  * @param {HTMLElement} container The rendered course sections review.
  * @param {Object} state The live wizard state from init.js.
  * @param {Function} markDirty Marks the wizard as having unsaved changes.
  */
 const handleMenuAction = async(item, container, state, markDirty) => {
-    const dropdown = item.closest(SELECTOR.DROPDOWN);
-    const trigger = dropdown.querySelector(SELECTOR.INSTANCE_MENU_TRIGGER);
-    const action = item.dataset.menuAction;
-    if (action === 'from-template') {
+    const dropdown = item.closest(Selectors.regions.instanceDropdown);
+    const trigger = dropdown.querySelector(Selectors.actions.instanceTrigger);
+    if (item.matches(Selectors.actions.menuFromTemplate)) {
         await showTemplatePicker(container, trigger, state);
         return;
     }
-    if (action === 'back') {
+    if (item.matches(Selectors.actions.menuBack)) {
         await showAddMenu(trigger);
         return;
     }
-    if (action === 'add-space') {
-        await addSpace(item, state, markDirty);
-    }
+    await addSpace(item, state, markDirty);
 };
 
 /**
@@ -122,11 +118,11 @@ const handleMenuAction = async(item, container, state, markDirty) => {
  * @param {HTMLElement} item The clicked picker item (data-source-cmid).
  * @param {Function} markDirty Marks the wizard as having unsaved changes.
  */
-const pickTemplate = (item, markDirty) => {
-    const beforeEl = item.closest(SELECTOR.GAP_OR_ADD);
+const pickTemplate = async(item, markDirty) => {
+    const beforeEl = item.closest(Selectors.regions.gapOrAddInstance);
     const table = beforeEl.closest(TAG.TABLE);
     const tbody = table.querySelector(TAG.TABLE_BODY);
-    const triggerEl = beforeEl.querySelector(SELECTOR.INSTANCE_MENU_TRIGGER);
+    const triggerEl = beforeEl.querySelector(Selectors.actions.instanceTrigger);
     const sourcecmid = parseInt(item.dataset.sourceCmid, 10);
     const picked = {
         sourcecmid,
@@ -136,8 +132,8 @@ const pickTemplate = (item, markDirty) => {
         iconurl: item.dataset.iconUrl,
     };
     closeInstanceMenu(triggerEl);
-    const inserting = insertInstanceRow(tbody, beforeEl, picked);
-    inserting.then(markDirty);
+    await insertInstanceRow(tbody, beforeEl, picked);
+    markDirty();
 };
 
 /**
@@ -149,7 +145,7 @@ const pickTemplate = (item, markDirty) => {
  * @param {MouseEvent} e The click.
  */
 const handleContainerClick = (ctx, e) => {
-    const trigger = e.target.closest(SELECTOR.INSTANCE_MENU_TRIGGER);
+    const trigger = e.target.closest(Selectors.actions.instanceTrigger);
     if (trigger) {
         // Bound on the CAPTURE phase (see bindInstanceInserts()), not bubble:
         // openMenuForTrigger()'s own dropdown('toggle')
@@ -177,7 +173,7 @@ const handleContainerClick = (ctx, e) => {
     // picker replaces its content in place), so the click must not reach
     // Bootstrap's document-level handler that closes a dropdown on any
     // click inside it. "add a space" closes it explicitly.
-    const menuItem = e.target.closest('[data-menu-action]');
+    const menuItem = e.target.closest(Selectors.actions.menuAny);
     if (menuItem) {
         e.stopPropagation();
         const handling = handleMenuAction(menuItem, ctx.container, ctx.state, ctx.markDirty);
@@ -185,26 +181,27 @@ const handleContainerClick = (ctx, e) => {
         return;
     }
 
-    // Scoped to the menu item's own class, not just [data-source-cmid]:
+    // Scoped to the menu item's own action, not just [data-source-cmid]:
     // every instance row's own <tr> also carries that same attribute
     // (read back by confirmUnmarkTemplate/collectInstancesForSection),
     // so the bare attribute selector matched a click ANYWHERE inside an
     // already-inserted row too, mistaking it for a fresh pick.
-    const pickedItem = e.target.closest('.tpl-instance-menu-item[data-source-cmid]');
+    const pickedItem = e.target.closest(Selectors.actions.pickTemplateSource);
     if (pickedItem) {
-        pickTemplate(pickedItem, ctx.markDirty);
+        const picking = pickTemplate(pickedItem, ctx.markDirty);
+        picking.catch(Notification.exception);
         return;
     }
 
-    const removeBtn = e.target.closest('[data-region="instance-remove"]');
+    const removeBtn = e.target.closest(Selectors.regions.instanceRemove);
     if (removeBtn) {
-        const instanceRow = removeBtn.closest(SELECTOR.INSTANCE_ROW);
+        const instanceRow = removeBtn.closest(Selectors.rows.instance);
         removeInstanceRow(instanceRow);
         ctx.markDirty();
         return;
     }
 
-    const promptToggle = e.target.closest('[data-region="instance-prompt-toggle"]');
+    const promptToggle = e.target.closest(Selectors.regions.instancePromptToggle);
     if (promptToggle) {
         togglePromptDrawer(ctx.container, promptToggle.dataset.id);
     }
@@ -217,7 +214,7 @@ const handleContainerClick = (ctx, e) => {
  * @param {InputEvent} e The input event.
  */
 const handlePromptInput = (markDirty, e) => {
-    if (e.target.matches('[data-region="instance-prompt"]')) {
+    if (e.target.matches(Selectors.regions.instancePrompt)) {
         markDirty();
     }
 };

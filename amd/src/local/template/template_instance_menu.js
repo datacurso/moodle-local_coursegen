@@ -37,7 +37,8 @@
 
 import Templates from 'core/templates';
 import jQuery from 'jquery';
-import {DROPDOWN_COMMAND, SELECTOR} from 'local_coursegen/local/template/dom_constants';
+import Selectors from 'local_coursegen/local/template/selectors';
+import {DROPDOWN_COMMAND} from 'local_coursegen/local/template/constants';
 
 /**
  * @type {WeakMap<HTMLElement, symbol>} Trigger -> the token of its most
@@ -75,8 +76,8 @@ export const beginMenuOpen = (triggerEl) => {
  * @returns {HTMLElement}
  */
 const menuOf = (triggerEl) => {
-    const dropdown = triggerEl.closest(SELECTOR.DROPDOWN);
-    return dropdown.querySelector('.dropdown-menu');
+    const dropdown = triggerEl.closest(Selectors.regions.instanceDropdown);
+    return dropdown.querySelector(Selectors.regions.instanceDropdownMenu);
 };
 
 /**

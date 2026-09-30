@@ -22,6 +22,11 @@
     names are escaped by the double braces, so a name holding markup is shown
     as text.
 
+    Data attributes required for JS:
+    * none; step_limits.js renders it into the box that carries
+      data-region="local_coursegen/template/naming-preview"
+      (see local_coursegen/template_naming_preview_box).
+
     Context variables:
     * lines array   - One entry per section.
         * text string - The section's name after applying the pattern.
