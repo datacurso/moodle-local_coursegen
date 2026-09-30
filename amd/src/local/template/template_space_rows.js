@@ -100,7 +100,7 @@ const hasLeadingGap = (beforeEl) => {
  *
  * @param {HTMLElement} tbody The section's table body.
  * @param {HTMLElement} beforeEl The row-gap or add-row the trigger belongs to.
- * @param {Object} space {modname, name, iconurl, required, instruction}
+ * @param {Object} space {modname, name, icon, required, instruction}
  * @returns {Promise<HTMLElement>} The new space row.
  */
 export const insertSpaceRow = async(tbody, beforeEl, space) => {
@@ -117,7 +117,7 @@ export const insertSpaceRow = async(tbody, beforeEl, space) => {
         name: space.name,
         typelabel: space.name,
         modname: space.modname,
-        iconurl: space.iconurl,
+        icon: space.icon,
         requiredvalue,
         badge,
         instruction: space.instruction,
@@ -153,7 +153,7 @@ const applyChoiceToRow = async(row, choice) => {
  *
  * @param {HTMLElement} tbody The section's table body.
  * @param {HTMLElement} beforeEl The row-gap or add-row the menu opened from.
- * @param {Object} picked {modname, name, iconurl} of the picked type.
+ * @param {Object} picked {modname, name, icon} of the picked type.
  * @param {Function} markDirty Marks the wizard as having unsaved changes.
  * @param {{required: boolean, instruction: string}} choice What the modal saved.
  */

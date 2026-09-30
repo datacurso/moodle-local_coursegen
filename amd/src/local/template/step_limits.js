@@ -43,9 +43,9 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {get_string as getString} from 'core/str';
-import {COMPONENT, EVENT} from 'local_coursegen/local/template/constants';
-import {CLASS, SELECTOR, TAG} from 'local_coursegen/local/template/dom_constants';
+import Templates from 'core/templates';
+import {EVENT} from 'local_coursegen/local/template/constants';
+import {SELECTOR} from 'local_coursegen/local/template/dom_constants';
 
 /**
  * Add a listener to an element, when the form rendered it.
@@ -118,33 +118,17 @@ const applyTokens = (pattern, contract, number, sectionName) => {
 };
 
 /**
- * The preview line of one section.
+ * The preview line of one section, as the template's context expects it.
  *
  * @param {Object} ctx The limits context (see buildContext()).
  * @param {string} sectionName
  * @param {number} index The section's position.
- * @returns {HTMLElement}
+ * @returns {{text: string}}
  */
 const buildPreviewLine = (ctx, sectionName, index) => {
     const number = ctx.state.namingStart + index;
     const text = applyTokens(ctx.state.namingPattern, ctx.state.namingContract, number, sectionName);
-    const line = document.createElement(TAG.SMALL);
-    line.classList.add(CLASS.NAMING_LINE);
-    line.textContent = text;
-    return line;
-};
-
-/**
- * The label that heads the preview.
- *
- * @param {Object} ctx The limits context (see buildContext()).
- * @returns {HTMLElement}
- */
-const buildPreviewLabel = (ctx) => {
-    const label = document.createElement(TAG.SMALL);
-    label.classList.add(...CLASS.NAMING_LABEL);
-    label.textContent = ctx.previewLabel;
-    return label;
+    return {text};
 };
 
 /**
@@ -152,17 +136,17 @@ const buildPreviewLabel = (ctx) => {
  *
  * @param {Object} ctx The limits context (see buildContext()).
  */
-const updatePreview = (ctx) => {
+const updatePreview = async(ctx) => {
     const container = ctx.panel.querySelector(SELECTOR.NAMING_PREVIEW);
-    const label = buildPreviewLabel(ctx);
-    const nodes = [label];
+    const lines = [];
     let index = 0;
     for (const section of ctx.structure) {
         const line = buildPreviewLine(ctx, section.name, index);
-        nodes.push(line);
+        lines.push(line);
         index++;
     }
-    container.replaceChildren(...nodes);
+    const rendered = await Templates.render('local_coursegen/template_naming_preview', {lines});
+    Templates.replaceNodeContents(container, rendered, '');
 };
 
 /**
@@ -206,10 +190,9 @@ const handleStartChange = (ctx, e) => {
  *
  * @param {HTMLElement} panel The config region (config-form markup).
  * @param {Object} state
- * @param {string} previewLabel The label that heads the naming preview.
  * @returns {Object}
  */
-const buildContext = (panel, state, previewLabel) => {
+const buildContext = (panel, state) => {
     const structure = state.courseStructure;
     const maxInput = panel.querySelector('[name="maxsections"]');
     // advcheckbox renders a hidden "unchecked" companion input sharing the
@@ -219,7 +202,7 @@ const buildContext = (panel, state, previewLabel) => {
     const patternSelect = panel.querySelector('select[name="namingpattern"]');
     const customInput = panel.querySelector('input[name="custompattern"]');
     const startSelect = panel.querySelector('select[name="namingstart"]');
-    return {panel, state, structure, previewLabel, maxInput, allowAddCb, patternSelect, customInput, startSelect};
+    return {panel, state, structure, maxInput, allowAddCb, patternSelect, customInput, startSelect};
 };
 
 /**
@@ -270,8 +253,7 @@ const bindNamingStart = (ctx) => {
  * @returns {Promise}
  */
 export const renderStepLimits = async(panel, state) => {
-    const previewLabel = await getString('template_naming_preview', COMPONENT);
-    const ctx = buildContext(panel, state, previewLabel);
+    const ctx = buildContext(panel, state);
     bindMaxSections(ctx);
     bindNamingPattern(ctx);
     bindNamingStart(ctx);

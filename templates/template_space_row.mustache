@@ -36,7 +36,8 @@
     * name string           - The activity type's display name.
     * typelabel string      - The same, for the Type column.
     * modname string        - The activity type's module name (e.g. "resource").
-    * iconurl string        - The type's icon.
+    * icon string           - The type's icon, as the markup Moodle's own activity chooser
+                              returns for it (an image tag); printed unescaped on purpose.
     * requiredvalue int     - 1 when required, 0 when optional.
     * badge string          - "Space · Required" / "Space · Optional".
     * instruction string    - What the professor has to provide; may be empty.
@@ -48,7 +49,7 @@
         "name": "File",
         "typelabel": "File",
         "modname": "resource",
-        "iconurl": "https://example.com/resource.svg",
+        "icon": "<img src='https://example.com/resource.svg' class='icon activityicon' alt=''>",
         "requiredvalue": 1,
         "badge": "Space · Required",
         "instruction": "Upload the weekly guide as a PDF.",
@@ -59,7 +60,8 @@
     data-modname="{{modname}}" data-required="{{requiredvalue}}">
     <td class="align-middle tpl-select-col"></td>
     <td class="align-middle">
-        <img src="{{iconurl}}" class="icon activityicon mr-2" alt=""><span>{{name}}</span>
+        {{! The icon is markup built by Moodle core for the chooser (core_course_get_course_content_items), which core itself prints with triple braces. }}
+        <span class="mr-2">{{{icon}}}</span><span>{{name}}</span>
         <button type="button" class="tpl-badge tpl-badge-space tpl-space-tag ml-2" data-region="space-badge"
                 title="{{#str}} template_space_edit, local_coursegen {{/str}}">{{badge}}</button>
         <div class="tpl-space-instruction text-muted small{{^hasinstruction}} d-none{{/hasinstruction}}"

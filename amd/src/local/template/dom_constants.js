@@ -28,15 +28,12 @@
 export const CLASS = {
     HIDDEN: 'd-none',
     ROW_GAP: 'tpl-row-gap',
-    NAMING_LINE: 'd-block',
-    NAMING_LABEL: ['text-muted', 'd-block', 'mb-1'],
 };
 
 /** @type {Object} Tag names the screen looks up. */
 export const TAG = {
     TABLE: 'table',
     TABLE_BODY: 'tbody',
-    SMALL: 'small',
 };
 
 /** @type {Object} Selectors shared by more than one module. */

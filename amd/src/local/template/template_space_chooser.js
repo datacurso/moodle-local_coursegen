@@ -139,25 +139,6 @@ const templateData = (items) => {
 };
 
 /**
- * The icon URL inside a content item's icon markup.
- *
- * @param {string} iconHtml
- * @returns {string}
- */
-const iconUrlOf = (iconHtml) => {
-    // Parsed into an inert document: nothing in the markup is rendered or
-    // executed, only the address of its image is read.
-    const parser = new DOMParser();
-    const doc = parser.parseFromString(iconHtml, 'text/html');
-    const img = doc.querySelector('img');
-    // Not every activity icon is an image (a plugin may offer a font icon).
-    if (!img) {
-        return '';
-    }
-    return img.getAttribute('src');
-};
-
-/**
  * Keep the resolver a promise executor receives.
  *
  * @param {Object} deferred The object that will expose the resolver.
@@ -273,8 +254,7 @@ const pickFromClick = (modal, items, selection, e) => {
     if (!item) {
         return;
     }
-    const iconurl = iconUrlOf(item.icon);
-    selection.settle({modname, name: item.title, iconurl});
+    selection.settle({modname, name: item.title, icon: item.icon});
     modal.hide();
 };
 
@@ -321,7 +301,7 @@ const populateChooser = async({courseId, supportedTypes, modalPromise, body, sel
  * @param {Object} options
  * @param {number} options.courseId The base course.
  * @param {string[]} options.supportedTypes Module names a space can be made for.
- * @returns {Promise<{modname: string, name: string, iconurl: string}|null>}
+ * @returns {Promise<{modname: string, name: string, icon: string}|null>}
  *     Null when the modal is closed without picking anything.
  */
 export const chooseActivityType = async({courseId, supportedTypes}) => {

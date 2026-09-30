@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
-## [2.0.10] - 2026093010
+## [2.0.10] - 2026093011
 
 ### Changed
 - The token of a section naming pattern that stands for the original section's name is now `{name}` instead of a word of another language, in the presets, the name-only option, the custom-pattern help and the live preview. `{N}` is unchanged and there is no support for both spellings at once. Stored patterns are not rewritten: a pattern saved with the old token keeps it as plain text, shown in the Custom field, and has to be edited by hand.
@@ -10,7 +10,7 @@ All notable changes to this project will be documented in this file. Each change
 - The save payload, the persistence service and the row options no longer fall back to defaults that can never apply, and the action, behaviour, scope and row-kind names are constants of the classes that own them.
 
 ### Fixed
-- The live naming preview built its lines as HTML from the section names of the base course, so a section called with markup would have been interpreted as markup in the page of the professor who edits the template. The preview is now built with DOM nodes and plain text, its label comes from the language pack, and the icon address of the activity chooser is read from an inert parsed document instead of a live element.
+- The live naming preview built its lines as HTML from the section names of the base course, so a section called with markup would have been interpreted as markup in the page of the professor who edits the template. The preview is now rendered from a template that escapes the names, with its label coming from the language pack, and the space rows added in the editor print the activity icon through the template instead of a script extracting its address from markup.
 
 ## [2.0.10] - 2026093008
 
