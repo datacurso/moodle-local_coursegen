@@ -50,7 +50,8 @@ final class template_editor_hooks_test extends \advanced_testcase {
         $namespace = preg_quote(self::NAMESPACE, '~');
         $pattern = '~"(' . $namespace . '[a-z-]+)"~';
         preg_match_all($pattern, $source, $matches);
-        return array_values(array_unique($matches[1]));
+        $unique = array_unique($matches[1]);
+        return array_values($unique);
     }
 
     /**
