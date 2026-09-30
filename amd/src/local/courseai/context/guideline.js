@@ -40,7 +40,7 @@ const TEMPLATES = {
 };
 
 /**
- * Delegated click targets inside the main guideline list.
+ * Delegated click targets inside the main guideline list wrapper.
  *
  * @type {{selectButton: string, previewButton: string}}
  */
@@ -69,7 +69,7 @@ const SELECTORS = {
 export const createGuidelineHandlers = (
     {state, elements, texts, refreshGuidelineChip, refreshChipsRow, refreshCompactChipsRow}
 ) => {
-    const {guidelineList} = elements;
+    const {guidelineListWrap, guidelineListCompactWrap} = elements;
 
     // Render sequence counters: a render that finishes after a newer one was
     // requested (e.g. while the user types in the search box) is dropped.
@@ -115,12 +115,12 @@ export const createGuidelineHandlers = (
     };
 
     /**
-     * Render the main guideline list inside the popover.
+     * Render the main guideline listbox into its wrapper region inside the popover.
      *
      * @returns {Promise<void>}
      */
     const renderGuidelineList = async() => {
-        if (!guidelineList) {
+        if (!guidelineListWrap) {
             return;
         }
 
@@ -132,6 +132,7 @@ export const createGuidelineHandlers = (
         );
 
         const context = {
+            listlabel: texts.courseai_guidelines_list_label,
             hasitems: filtered.length > 0,
             items: filtered.map((g) => ({
                 id: g.id,
@@ -148,7 +149,7 @@ export const createGuidelineHandlers = (
             if (seq !== listRenderSeq) {
                 return;
             }
-            Templates.replaceNodeContents(guidelineList, html, js);
+            Templates.replaceNodeContents(guidelineListWrap, html, js);
         } catch (error) {
             Notification.exception(error);
         }
@@ -171,13 +172,12 @@ export const createGuidelineHandlers = (
     };
 
     /**
-     * Render the compact toolbar guideline list.
+     * Render the compact toolbar guideline listbox into its wrapper region.
      *
      * @returns {Promise<void>}
      */
     const renderCompactGuidelineList = async() => {
-        const compactGuidelineList = document.getElementById('guidelineListCompact');
-        if (!compactGuidelineList) {
+        if (!guidelineListCompactWrap) {
             return;
         }
 
@@ -188,6 +188,7 @@ export const createGuidelineHandlers = (
         );
 
         const context = {
+            listlabel: texts.courseai_guidelines_list_label,
             items: filtered.map((g) => ({
                 id: g.id,
                 name: g.name,
@@ -200,7 +201,7 @@ export const createGuidelineHandlers = (
             if (seq !== compactRenderSeq) {
                 return;
             }
-            Templates.replaceNodeContents(compactGuidelineList, html, js);
+            Templates.replaceNodeContents(guidelineListCompactWrap, html, js);
         } catch (error) {
             Notification.exception(error);
         }
@@ -211,19 +212,19 @@ export const createGuidelineHandlers = (
         void refreshCompactChipsRow;
     };
 
-    // Delegate clicks on the list container once, so re-rendering the items
-    // (which happens asynchronously) never needs to re-bind per-item handlers.
-    if (guidelineList) {
-        guidelineList.addEventListener('click', (e) => {
+    // Delegate clicks on the wrapper region once: the whole <ul> is replaced on
+    // every (asynchronous) render, so listeners bound to it would be lost.
+    if (guidelineListWrap) {
+        guidelineListWrap.addEventListener('click', (e) => {
             const previewBtn = e.target.closest(SELECTORS.previewButton);
-            if (previewBtn && guidelineList.contains(previewBtn)) {
+            if (previewBtn && guidelineListWrap.contains(previewBtn)) {
                 e.stopPropagation();
                 showGuidelinePreview(previewBtn.getAttribute('data-preview'));
                 return;
             }
 
             const selectBtn = e.target.closest(SELECTORS.selectButton);
-            if (selectBtn && guidelineList.contains(selectBtn)) {
+            if (selectBtn && guidelineListWrap.contains(selectBtn)) {
                 selectGuideline(selectBtn.getAttribute('data-select'));
             }
         });

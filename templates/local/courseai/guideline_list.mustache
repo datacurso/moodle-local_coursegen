@@ -17,10 +17,12 @@
 {{!
     @template local_coursegen/local/courseai/guideline_list
 
-    Items of the institutional guidelines popover list on the course AI
-    creation page. Rendered from JavaScript into the existing
-    <ul class="pop-list" id="guidelineList"> container, so this template
-    outputs only <li> elements. Visible strings are passed in as context.
+    Institutional guidelines popover list on the course AI creation page.
+    Renders the whole <ul class="pop-list" id="guidelineList"> listbox so the
+    template is a valid document fragment on its own. It is rendered once from
+    the page template (empty) and re-rendered from JavaScript into the
+    [data-region="guideline-list"] wrapper, replacing the <ul> each time.
+    Visible strings are passed in as context.
 
     Classes required for JS:
     * pop-item on each list item (kept for CSS and Behat)
@@ -28,17 +30,19 @@
     Data attributes required for JS:
     * data-id on each item, data-select on the select button and
       data-preview on the eye button, all holding the guideline id;
-      click handling is delegated on the list container.
+      click handling is delegated on the wrapper region.
 
     Context variables required for this template:
-    * hasitems bool   - True when items is non-empty
-    * items array     - Guidelines, each with: id string, name string,
-                        category string, selected bool
+    * listlabel string - Accessible name (aria-label) of the listbox
+    * hasitems bool    - True when items is non-empty
+    * items array      - Guidelines, each with: id string, name string,
+                         category string, selected bool
     * viewtitle string - Title attribute of the preview (eye) button
     * emptytext string - Message shown when there are no items
 
     Example context (json):
     {
+        "listlabel": "Guidelines list",
         "hasitems": true,
         "items": [
             {"id": "7", "name": "Quality policy", "category": "General", "selected": true},
@@ -48,6 +52,7 @@
         "emptytext": "No results"
     }
 }}
+<ul class="pop-list" id="guidelineList" role="listbox" aria-label="{{listlabel}}">
 {{#hasitems}}
 {{#items}}
 <li class="pop-item{{#selected}} selected{{/selected}}" data-id="{{id}}">
@@ -69,5 +74,6 @@
 {{/items}}
 {{/hasitems}}
 {{^hasitems}}
-<li class="pop-empty">{{emptytext}}</li>
+<li class="pop-empty" role="presentation">{{emptytext}}</li>
 {{/hasitems}}
+</ul>

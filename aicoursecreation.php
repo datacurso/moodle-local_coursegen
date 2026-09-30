@@ -127,6 +127,13 @@ $templatecontext = [
     'allsessions' => $allsessionsdata,
     'isresuming' => $resumesessionid > 0,
     'subsectionsenabled' => $subsectionsenabled,
+    // Initial (empty) guideline listboxes; JavaScript re-renders them from the same templates.
+    'guidelinelist' => [
+        'listlabel' => get_string('courseai_guidelines_list_label', 'local_coursegen'),
+        'emptytext' => get_string('courseai_no_results', 'local_coursegen'),
+        'hasitems' => false,
+        'items' => [],
+    ],
 ];
 
 echo $OUTPUT->header();

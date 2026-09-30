@@ -50,6 +50,7 @@ final class guideline_templates_test extends \advanced_testcase {
      */
     private function list_context(): array {
         return [
+            'listlabel' => 'Guidelines list',
             'hasitems' => true,
             'items' => [
                 ['id' => '7', 'name' => 'Quality policy', 'category' => 'General', 'selected' => true],
@@ -58,6 +59,40 @@ final class guideline_templates_test extends \advanced_testcase {
             'viewtitle' => 'View guideline',
             'emptytext' => 'No results',
         ];
+    }
+
+    /**
+     * Context for a representative compact guideline list.
+     *
+     * @return array
+     */
+    private function compact_list_context(): array {
+        return [
+            'listlabel' => 'Guidelines list',
+            'items' => [
+                ['id' => '7', 'name' => 'Quality policy', 'selected' => true],
+                ['id' => '9', 'name' => 'Tone & "voice"', 'selected' => false],
+            ],
+        ];
+    }
+
+    /**
+     * Assert that the rendered HTML is a single, self-contained list element.
+     *
+     * The lists are rendered by JavaScript into a wrapper region and the whole
+     * <ul> is replaced on every render, so the template must own the <ul>
+     * (a bare <li> is not valid as a document fragment root).
+     *
+     * @param string $html Rendered HTML.
+     * @param string $id Expected id of the list.
+     * @param string $label Expected (already escaped) aria-label.
+     */
+    private function assert_listbox_wrapper(string $html, string $id, string $label): void {
+        $open = '<ul class="pop-list" id="' . $id . '" role="listbox" aria-label="' . $label . '">';
+        $this->assertStringStartsWith($open, trim($html));
+        $this->assertStringEndsWith('</ul>', trim($html));
+        $this->assertSame(1, substr_count($html, '<ul'));
+        $this->assertSame(1, substr_count($html, '</ul>'));
     }
 
     /**
@@ -108,6 +143,7 @@ final class guideline_templates_test extends \advanced_testcase {
 
         $html = $this->render('guideline_list', $this->list_context());
 
+        $this->assert_listbox_wrapper($html, 'guidelineList', 'Guidelines list');
         $this->assertSame(2, substr_count($html, '<li class="pop-item'));
         $this->assertStringContainsString('<li class="pop-item selected" data-id="7">', $html);
         $this->assertStringContainsString('<li class="pop-item" data-id="9">', $html);
@@ -127,11 +163,13 @@ final class guideline_templates_test extends \advanced_testcase {
         $this->resetAfterTest();
 
         $context = $this->list_context();
+        $context['listlabel'] = 'A & "B"';
         $context['items'][0]['name'] = '<b>Bold</b>';
         $context['items'][0]['id'] = '1" onclick="x';
 
         $html = $this->render('guideline_list', $context);
 
+        $this->assert_listbox_wrapper($html, 'guidelineList', 'A &amp; &quot;B&quot;');
         $this->assertStringNotContainsString('<b>Bold</b>', $html);
         $this->assertStringContainsString('&lt;b&gt;Bold&lt;/b&gt;', $html);
         $this->assertStringNotContainsString('data-id="1" onclick', $html);
@@ -145,13 +183,15 @@ final class guideline_templates_test extends \advanced_testcase {
         $this->resetAfterTest();
 
         $html = $this->render('guideline_list', [
+            'listlabel' => 'Guidelines list',
             'hasitems' => false,
             'items' => [],
             'viewtitle' => 'View guideline',
             'emptytext' => 'No <results>',
         ]);
 
-        $this->assertStringContainsString('<li class="pop-empty">No &lt;results&gt;</li>', $html);
+        $this->assert_listbox_wrapper($html, 'guidelineList', 'Guidelines list');
+        $this->assertStringContainsString('<li class="pop-empty" role="presentation">No &lt;results&gt;</li>', $html);
         $this->assertStringNotContainsString('pop-item', $html);
     }
 
@@ -161,13 +201,9 @@ final class guideline_templates_test extends \advanced_testcase {
     public function test_compact_list_renders_items_and_active_marker(): void {
         $this->resetAfterTest();
 
-        $html = $this->render('guideline_list_compact', [
-            'items' => [
-                ['id' => '7', 'name' => 'Quality policy', 'selected' => true],
-                ['id' => '9', 'name' => 'Tone & "voice"', 'selected' => false],
-            ],
-        ]);
+        $html = $this->render('guideline_list_compact', $this->compact_list_context());
 
+        $this->assert_listbox_wrapper($html, 'guidelineListCompact', 'Guidelines list');
         $this->assertSame(2, substr_count($html, '<li class="pop-item'));
         $this->assertStringContainsString('<li class="pop-item active" role="option" data-id="7" tabindex="-1">', $html);
         $this->assertStringContainsString('<li class="pop-item" role="option" data-id="9" tabindex="-1">', $html);
@@ -183,12 +219,30 @@ final class guideline_templates_test extends \advanced_testcase {
         $this->resetAfterTest();
 
         $html = $this->render('guideline_list_compact', [
+            'listlabel' => 'A & "B"',
             'items' => [
                 ['id' => '7', 'name' => '<img src=x onerror=alert(1)>', 'selected' => false],
             ],
         ]);
 
+        $this->assert_listbox_wrapper($html, 'guidelineListCompact', 'A &amp; &quot;B&quot;');
         $this->assertStringNotContainsString('<img', $html);
         $this->assertStringContainsString('&lt;img src=x onerror=alert(1)&gt;', $html);
+    }
+
+    /**
+     * With no items the compact list is an empty listbox, not a bare fragment.
+     */
+    public function test_compact_list_renders_empty_listbox_without_items(): void {
+        $this->resetAfterTest();
+
+        $html = $this->render('guideline_list_compact', [
+            'listlabel' => 'Guidelines list',
+            'items' => [],
+        ]);
+
+        $this->assert_listbox_wrapper($html, 'guidelineListCompact', 'Guidelines list');
+        $this->assertStringNotContainsString('<li', $html);
+        $this->assertMatchesRegularExpression('~<ul[^>]*>\s*</ul>~', $html);
     }
 }

@@ -17,28 +17,33 @@
 {{!
     @template local_coursegen/local/courseai/guideline_list_compact
 
-    Items of the compact toolbar guidelines list on the course AI creation
-    page. Rendered from JavaScript into the existing
-    <ul class="pop-list" id="guidelineListCompact"> container, so this
-    template outputs only <li> elements. An empty list renders nothing.
+    Compact toolbar guidelines list on the course AI creation page. Renders
+    the whole <ul class="pop-list" id="guidelineListCompact"> listbox so the
+    template is a valid document fragment on its own. It is rendered once from
+    the page template (empty) and re-rendered from JavaScript into the
+    [data-region="guideline-list-compact"] wrapper, replacing the <ul> each
+    time. An empty items array renders an empty listbox.
 
     Classes required for JS:
-    * pop-item on each list item (click handling is delegated on the container)
+    * pop-item on each list item (click handling is delegated on the wrapper region)
 
     Data attributes required for JS:
     * data-id on each item, holding the guideline id
 
     Context variables required for this template:
-    * items array - Guidelines, each with: id string, name string, selected bool
+    * listlabel string - Accessible name (aria-label) of the listbox
+    * items array      - Guidelines, each with: id string, name string, selected bool
 
     Example context (json):
     {
+        "listlabel": "Guidelines list",
         "items": [
             {"id": "7", "name": "Quality policy", "selected": true},
             {"id": "9", "name": "Tone of voice", "selected": false}
         ]
     }
 }}
+<ul class="pop-list" id="guidelineListCompact" role="listbox" aria-label="{{listlabel}}">
 {{#items}}
 <li class="pop-item{{#selected}} active{{/selected}}" role="option" data-id="{{id}}" tabindex="-1">
     <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor"
@@ -50,3 +55,4 @@
     {{#selected}}<span class="pop-item-check">✓</span>{{/selected}}
 </li>
 {{/items}}
+</ul>
