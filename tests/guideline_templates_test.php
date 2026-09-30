@@ -149,7 +149,7 @@ final class guideline_templates_test extends \advanced_testcase {
         $this->assertStringContainsString('<li class="pop-item" data-id="9">', $html);
         $this->assertStringContainsString('class="pop-select-btn" data-select="7" type="button"', $html);
         $this->assertStringContainsString('class="pop-eye-btn" data-preview="7" type="button" title="View guideline"', $html);
-        $this->assertStringContainsString('<div class="pop-radio"><div class="pop-dot"></div></div>', $html);
+        $this->assertStringContainsString('<span class="pop-radio"><span class="pop-dot"></span></span>', $html);
         $this->assertStringContainsString('<span class="pop-item-name">Quality policy</span>', $html);
         $this->assertStringContainsString('<span class="pop-item-cat">Style</span>', $html);
         $this->assertStringContainsString('<svg', $html);

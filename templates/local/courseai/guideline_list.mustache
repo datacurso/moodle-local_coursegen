@@ -57,11 +57,11 @@
 {{#items}}
 <li class="pop-item{{#selected}} selected{{/selected}}" data-id="{{id}}">
     <button class="pop-select-btn" data-select="{{id}}" type="button">
-        <div class="pop-radio"><div class="pop-dot"></div></div>
-        <div class="pop-item-text">
+        <span class="pop-radio"><span class="pop-dot"></span></span>
+        <span class="pop-item-text">
             <span class="pop-item-name">{{name}}</span>
             <span class="pop-item-cat">{{category}}</span>
-        </div>
+        </span>
     </button>
     <button class="pop-eye-btn" data-preview="{{id}}" type="button" title="{{viewtitle}}">
         <svg width="15" height="15" viewBox="0 0 24 24" fill="none"
