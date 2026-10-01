@@ -23,8 +23,8 @@ use external_function_parameters;
 use external_single_structure;
 use external_value;
 use local_coursegen\event\external_transfer_initiated;
-use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\ai_course_api_service;
+use local_coursegen\local\service\course_session_service;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -58,7 +58,7 @@ class courseai_syllabus_upload extends external_api {
      * @return array Result with success status and filename
      */
     public static function execute(int $sessionid, int $draftitemid): array {
-        global $DB, $USER;
+        global $USER;
 
         // Validate parameters.
         $params = self::validate_parameters(self::execute_parameters(), [
@@ -66,24 +66,16 @@ class courseai_syllabus_upload extends external_api {
             'draftitemid' => $draftitemid,
         ]);
 
-        // Check permissions.
+        // Check permissions, like the sibling planning endpoints.
         $context = context_system::instance();
+        self::validate_context($context);
         require_capability('moodle/course:create', $context);
         require_capability('local/coursegen:createcoursewithai', $context);
 
+        // The session must exist and belong to the current user.
+        $session = course_session_service::get_user_session($params['sessionid'], $USER->id);
+
         try {
-            // Get session record.
-            $session = new course_session($params['sessionid']);
-
-            // Verify session belongs to current user.
-            if ($session->get('userid') != $USER->id) {
-                return [
-                    'success' => false,
-                    'filename' => '',
-                    'message' => get_string('error_not_your_session', 'local_coursegen'),
-                ];
-            }
-
             $threadid = $session->get('session_id');
             if (empty($threadid)) {
                 return [

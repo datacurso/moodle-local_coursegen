@@ -72,8 +72,22 @@ abstract class base_parameters {
         }
 
         return [
-            'endpoint' => '/files/download?path=' . rawurlencode($filepath),
+            'endpoint' => self::build_download_endpoint($filepath),
             'filename' => $cleanname,
         ];
+    }
+
+    /**
+     * Build the service download endpoint for a remote file path.
+     *
+     * The path travels as a single query value, so it is percent-encoded
+     * (RFC 3986): reserved characters such as '&', '#' or spaces cannot alter
+     * the request, and the service decodes it back to the original path.
+     *
+     * @param string $path Remote file path as returned by the AI service.
+     * @return string Endpoint path with the encoded query value.
+     */
+    protected static function build_download_endpoint(string $path): string {
+        return '/files/download?path=' . rawurlencode($path);
     }
 }

@@ -46,7 +46,9 @@ final class privacy_provider_test extends provider_testcase {
     }
 
     /**
-     * The metadata declares the four plugin tables, the coursedata field and the external service link.
+     * The metadata declares every install.xml table and field, the external
+     * service link with the data actually sent, the file storage link, and
+     * every language string those declarations reference.
      *
      * @covers \local_coursegen\privacy\provider::get_metadata
      */
@@ -56,30 +58,66 @@ final class privacy_provider_test extends provider_testcase {
 
         $tables = [];
         $links = [];
+        $subsystems = [];
+        $strings = [];
         foreach ($items as $item) {
+            $strings[] = $item->get_summary();
             if ($item instanceof \core_privacy\local\metadata\types\database_table) {
                 $tables[$item->get_name()] = $item;
+                $strings = array_merge($strings, array_values($item->get_privacy_fields()));
             } else if ($item instanceof \core_privacy\local\metadata\types\external_location) {
                 $links[$item->get_name()] = $item;
+                $strings = array_merge($strings, array_values($item->get_privacy_fields()));
+            } else if ($item instanceof \core_privacy\local\metadata\types\subsystem_link) {
+                $subsystems[$item->get_name()] = $item;
             }
         }
 
-        $this->assertArrayHasKey('local_coursegen_system_instruction', $tables);
-        $this->assertArrayHasKey('local_coursegen_course_context', $tables);
-        $this->assertArrayHasKey('local_coursegen_course_sessions', $tables);
-        $this->assertArrayHasKey('local_coursegen_module_jobs', $tables);
+        // Every table and every non-id field of install.xml is declared.
+        $schema = simplexml_load_file(__DIR__ . '/../db/install.xml');
+        $schematables = [];
+        foreach ($schema->TABLES->TABLE as $table) {
+            $tablename = (string)$table['NAME'];
+            $schematables[] = $tablename;
+            $this->assertArrayHasKey($tablename, $tables, "Table $tablename must be declared.");
+            $fields = $tables[$tablename]->get_privacy_fields();
+            foreach ($table->FIELDS->FIELD as $field) {
+                $fieldname = (string)$field['NAME'];
+                if ($fieldname === 'id') {
+                    continue;
+                }
+                $this->assertArrayHasKey($fieldname, $fields, "Field $tablename.$fieldname must be declared.");
+            }
+        }
+        $this->assertCount(4, $schematables);
+        $this->assertCount(4, $tables);
+        $this->assertContains('local_coursegen_system_instruction', $schematables);
 
         // The free-form prompt stored in the session must be declared.
         $sessionfields = $tables['local_coursegen_course_sessions']->get_privacy_fields();
         $this->assertArrayHasKey('coursedata', $sessionfields);
 
-        // The external Datacurso course service link must declare the data actually sent.
+        // The external Datacurso course service link must declare the data actually sent:
+        // the request context, the planning prompt and syllabus, plus the feedback text,
+        // uploaded files and job/session identifier sent while adjusting a generation.
         $this->assertArrayHasKey('datacurso_course_service', $links);
         $linkfields = $links['datacurso_course_service']->get_privacy_fields();
         $expected = ['prompt', 'instructions', 'syllabus_file', 'lang', 'with_images', 'userid', 'site_id', 'site_url',
-            'timezone'];
+            'timezone', 'thread_id', 'feedback', 'activity_file'];
         foreach ($expected as $field) {
             $this->assertArrayHasKey($field, $linkfields);
+        }
+
+        // Uploaded syllabus and activity files live in the file storage subsystem.
+        $this->assertArrayHasKey('core_files', $subsystems);
+
+        // Every referenced string exists in the English pack.
+        $stringmanager = get_string_manager();
+        foreach (array_unique($strings) as $identifier) {
+            $this->assertTrue(
+                $stringmanager->string_exists($identifier, 'local_coursegen'),
+                "Missing language string $identifier"
+            );
         }
     }
 

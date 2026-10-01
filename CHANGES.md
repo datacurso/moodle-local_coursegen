@@ -4,8 +4,29 @@
 
 **Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.2**.
 
+## Security
+
+- **Syllabus upload validates its context and resolves the session like its siblings**  
+  The syllabus upload endpoint skipped `validate_context()` and checked session ownership by hand, answering a soft "not your session" reply. It now validates the system context before the capability checks (so a logged-out caller is rejected like in every other planning endpoint) and loads the session through `course_session_service::get_user_session()`, so a missing or foreign session raises the same `error_no_session_found` exception as the planning feedback endpoint.
+- **Activity feedback checks permissions in the course it validates**  
+  The activity feedback endpoint validated the system context but checked the generation capabilities in the course context. Like `create_mod` and `create_mod_stream`, it now validates the course context and requires `moodle/course:manageactivities` and `local/coursegen:createactivitywithai` in it, so a user who cannot access the course is rejected by the login check.
+- **Download paths are percent-encoded in every endpoint**  
+  Folder documents were requested with the remote path appended raw to the query string, and generated images used `urlencode()` (spaces as `+`). Package and folder downloads now build their endpoint through `base_parameters::build_download_endpoint()`, generated-image downloads use `rawurlencode()` as well, and folder file names are reduced to valid Moodle file names like the single-package downloads already were.
+- **Markdown fallback never inserts raw HTML**  
+  When DOMPurify is unavailable, the planning transcript renderer returned the Markdown source, which callers insert as HTML. It now returns the source escaped (`amd/build` must be rebuilt).
+
 ## Fixed
 
+- **Legacy `model_name` column reconciled on upgrade**  
+  The 2025092401 upgrade step created `local_coursegen_module_jobs.model_name` while `install.xml` and the job service use `system_instruction_name`, and no step renamed it, so upgraded sites failed to store the guideline name. A new savepoint (2026100100) renames the column when only the legacy one exists, or copies its values into `system_instruction_name` (reporting conflicting rows through `debugging()`) and drops it when both exist.
+- **Web service capability metadata matches the enforced checks**  
+  `db/services.php` declared `moodle/course:update` for the activity endpoints (never checked) instead of `local/coursegen:createactivitywithai`, and `moodle/site:config` for image generation management instead of `local/coursegen:manageimagegeneration`. The metadata now lists the capabilities each external class requires; a test checks that every declared capability exists and matches the documented list.
+- **Technical details travel as exception debug information**  
+  The planning feedback, activity feedback and activity file upload endpoints passed the underlying exception message as the `$a` placeholder of strings that have none, so the detail was silently lost. It is now passed as `debuginfo`, where `get_exception_info()` and developer debugging expect it.
+- **Invalid parameters are not reported as generation failures**  
+  `create_mod_stream` validated its parameters inside the error handler, so a malformed request produced a generic failure reply and a false `generation_failed` event. Parameter validation now runs before the handler and `invalid_parameter_exception` propagates, as in `create_mod`.
+- **Privacy metadata covers everything sent to the AI service**  
+  The external service location now also declares the feedback text, the files uploaded to activity generation jobs and the session/job identifier, the file storage subsystem is linked for uploaded files, and the provider test checks every `install.xml` table and field, and every referenced language string.
 - **"Create with AI" button missing on My courses in Moodle 5.2**  
   Moodle 5.2 moved the "Manage courses" and "Create course" buttons from the My courses page header into the Course overview block, so the plugin no longer found the header container it injected its button into and the button silently disappeared for users with enrolled courses. The button is now spliced server side into the page HTML by a `before_http_headers` hook, which starts the output buffer once the page URL, context and login are known (the previous `after_config` buffering ran before any of them were set). It is placed next to core's course action buttons in the page header (Moodle 4.5/5.0), right after the "Create course" form inside the Course overview block (Moodle 5.2) or in the empty-state action bar (all versions), so it is part of the initial page response and does not depend on JavaScript.
 - **Bootstrap 5 compatibility on Moodle 5.0+**  

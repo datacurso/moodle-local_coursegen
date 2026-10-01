@@ -51,7 +51,10 @@ class course_planning_feedback extends external_api {
         return new external_function_parameters([
             'recordid' => new external_value(PARAM_INT, 'ID from local_coursegen_course_sessions'),
             'pending_action' => new external_single_structure([
-                'action' => new external_value(PARAM_ALPHANUMEXT, 'Action to run, e.g. accept, feedback, delete_section, discard_image'),
+                'action' => new external_value(
+                    PARAM_ALPHANUMEXT,
+                    'Action to run, e.g. accept, feedback, delete_section, discard_image'
+                ),
                 'target_ids' => new external_multiple_structure(
                     new external_value(PARAM_RAW, 'Target UUID (section, activity, or image suggestion)'),
                     'UUIDs the action targets',
@@ -60,8 +63,19 @@ class course_planning_feedback extends external_api {
                 ),
                 'parent_section_id' => new external_value(PARAM_RAW, 'Parent section UUID', VALUE_DEFAULT, null, NULL_ALLOWED),
                 'position' => new external_value(PARAM_INT, 'Insertion position', VALUE_DEFAULT, null, NULL_ALLOWED),
-                'moved_id' => new external_value(PARAM_RAW, 'UUID of the item dragged in a reorder', VALUE_DEFAULT, null, NULL_ALLOWED),
-                'proposal_custom' => new external_value(PARAM_BOOL, 'Feedback typed into the proposals card "other" option', VALUE_DEFAULT, false),
+                'moved_id' => new external_value(
+                    PARAM_RAW,
+                    'UUID of the item dragged in a reorder',
+                    VALUE_DEFAULT,
+                    null,
+                    NULL_ALLOWED
+                ),
+                'proposal_custom' => new external_value(
+                    PARAM_BOOL,
+                    'Feedback typed into the proposals card "other" option',
+                    VALUE_DEFAULT,
+                    false
+                ),
                 'instruction' => new external_value(PARAM_TEXT, "User's free-text instruction", VALUE_DEFAULT, ''),
             ]),
         ]);
@@ -109,7 +123,8 @@ class course_planning_feedback extends external_api {
         try {
             $apiservice->send_planning_feedback($sessionid, $pendingaction);
         } catch (\moodle_exception $e) {
-            throw new \moodle_exception('error_sending_feedback', 'local_coursegen', '', $e->getMessage());
+            // The string has no placeholder: the technical detail is debug information.
+            throw new \moodle_exception('error_sending_feedback', 'local_coursegen', '', null, $e->getMessage());
         }
 
         return [

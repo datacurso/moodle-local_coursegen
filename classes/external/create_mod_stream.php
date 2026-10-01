@@ -85,16 +85,18 @@ class create_mod_stream extends external_api {
     ) {
         global $CFG, $DB, $USER;
 
-        try {
-            $params = self::validate_parameters(self::execute_parameters(), [
-                'courseid' => $courseid,
-                'sectionnum' => $sectionnum,
-                'prompt' => $prompt,
-                'generateimages' => $generateimages,
-                'beforemod' => $beforemod,
-                'lang' => $lang,
-            ]);
+        // A caller error propagates as invalid_parameter_exception (as in
+        // create_mod); it is not a generation failure to log or report.
+        $params = self::validate_parameters(self::execute_parameters(), [
+            'courseid' => $courseid,
+            'sectionnum' => $sectionnum,
+            'prompt' => $prompt,
+            'generateimages' => $generateimages,
+            'beforemod' => $beforemod,
+            'lang' => $lang,
+        ]);
 
+        try {
             $courseid = $params['courseid'];
             $sectionnum = $params['sectionnum'] ?? null;
             $prompt = $params['prompt'];

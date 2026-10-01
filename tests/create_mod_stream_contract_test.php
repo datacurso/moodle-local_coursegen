@@ -515,4 +515,34 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
         $this->assertSame(0, $DB->count_records('course_modules', ['course' => $course->id]));
         $this->assertSame(0, $DB->count_records('h5pactivity'));
     }
+
+    /**
+     * Invalid parameters are a caller error: the invalid_parameter_exception
+     * must propagate (as in create_mod) instead of being swallowed into a
+     * generic failure reply that also records a false generation_failed event.
+     */
+    public function test_invalid_parameters_propagate_without_failure_event(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $captured = null;
+        $this->inject_api_service($captured);
+
+        $sink = $this->redirectEvents();
+        try {
+            // The language code is PARAM_ALPHANUMEXT: spaces and punctuation are invalid.
+            testable_create_mod_stream::execute($course->id, 1, 'Create a page about rocks', 0, null, 'not a lang!');
+            $this->fail('An invalid language code must raise invalid_parameter_exception.');
+        } catch (\invalid_parameter_exception $e) {
+            $this->assertNull($captured, 'No request must reach the AI service.');
+        }
+        $this->resetDebugging();
+
+        $failed = array_filter($sink->get_events(), static function (\core\event\base $event): bool {
+            return $event instanceof \local_coursegen\event\generation_failed;
+        });
+        $sink->close();
+        $this->assertCount(0, $failed, 'A caller error must not be recorded as a generation failure.');
+    }
 }

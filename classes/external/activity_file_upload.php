@@ -118,7 +118,8 @@ class activity_file_upload extends external_api {
             $apiservice->upload_activity_file($threadid, $file);
         } catch (\moodle_exception $e) {
             $details = $e->debuginfo ?: $e->getMessage();
-            throw new \moodle_exception('error_sending_activity_file', 'local_coursegen', '', $details);
+            // The string has no placeholder: the technical detail is debug information.
+            throw new \moodle_exception('error_sending_activity_file', 'local_coursegen', '', null, $details);
         }
 
         return [

@@ -79,12 +79,16 @@ class provider implements
         }
 
         // Data sent to the external Datacurso course generation service
-        // (planning prompts, activity instructions, syllabus files and the
+        // (planning prompts, activity instructions, syllabus files, the
+        // feedback and files sent while adjusting a generation, and the
         // request context composed by the provider layer).
         $collection->add_external_location_link('datacurso_course_service', [
             'prompt' => 'privacy:metadata:datacurso_course_service:prompt',
             'instructions' => 'privacy:metadata:datacurso_course_service:instructions',
             'syllabus_file' => 'privacy:metadata:datacurso_course_service:syllabus_file',
+            'feedback' => 'privacy:metadata:datacurso_course_service:feedback',
+            'activity_file' => 'privacy:metadata:datacurso_course_service:activity_file',
+            'thread_id' => 'privacy:metadata:datacurso_course_service:thread_id',
             'lang' => 'privacy:metadata:datacurso_course_service:lang',
             'with_images' => 'privacy:metadata:datacurso_course_service:with_images',
             'userid' => 'privacy:metadata:datacurso_course_service:userid',
@@ -92,6 +96,9 @@ class provider implements
             'site_url' => 'privacy:metadata:datacurso_course_service:site_url',
             'timezone' => 'privacy:metadata:datacurso_course_service:timezone',
         ], 'privacy:metadata:datacurso_course_service');
+
+        // Uploaded syllabus and activity files are kept in the file storage.
+        $collection->add_subsystem_link('core_files', [], 'privacy:metadata:core_files');
 
         return $collection;
     }

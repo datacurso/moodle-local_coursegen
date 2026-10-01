@@ -25,7 +25,7 @@
 
 namespace local_coursegen\external;
 
-use context_system;
+use context_course;
 use external_api;
 use external_function_parameters;
 use external_single_structure;
@@ -79,15 +79,14 @@ class activity_feedback extends external_api {
         $approvalstatus = $params['approvalstatus'];
         $instruction = $params['instruction'];
 
-        $context = context_system::instance();
+        $context = context_course::instance($courseid);
         self::validate_context($context);
 
         // Same flow, same credits: gate this step of the AI generation behind
         // the same capabilities as create_mod_stream/create_mod, checked on
         // the course the activity is being generated in.
-        $coursecontext = \context_course::instance($courseid);
-        require_capability('moodle/course:manageactivities', $coursecontext);
-        require_capability('local/coursegen:createactivitywithai', $coursecontext);
+        require_capability('moodle/course:manageactivities', $context);
+        require_capability('local/coursegen:createactivitywithai', $context);
 
         $job = module_job_service::get_user_job($jobid, $courseid, $USER->id);
         $threadid = $job->get('job_id');
@@ -101,7 +100,8 @@ class activity_feedback extends external_api {
         try {
             $result = $apiservice->send_activity_feedback($threadid, $approvalstatus, $instruction);
         } catch (\moodle_exception $e) {
-            throw new \moodle_exception('error_sending_feedback', 'local_coursegen', '', $e->getMessage());
+            // The string has no placeholder: the technical detail is debug information.
+            throw new \moodle_exception('error_sending_feedback', 'local_coursegen', '', null, $e->getMessage());
         }
 
         $action = $result['action'] ?? null;

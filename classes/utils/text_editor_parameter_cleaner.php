@@ -25,6 +25,7 @@
 namespace local_coursegen\utils;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
+use local_coursegen\local\api_client_factory;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -246,7 +247,8 @@ class text_editor_parameter_cleaner {
         }
 
         $filename = self::extract_filename_from_source($source);
-        $endpoint = '/files/download?path=' . urlencode($source);
+        // Percent-encode (RFC 3986) like the other download endpoints: a space is %20, not '+'.
+        $endpoint = '/files/download?path=' . rawurlencode($source);
 
         try {
             $file = $client->download_file($endpoint, $filename, ['itemid' => $itemid]);
@@ -322,7 +324,7 @@ class text_editor_parameter_cleaner {
         try {
             $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
             $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
-            $client = new ai_course_api(null, $baseurl, $baseurleu);
+            $client = api_client_factory::ai_course_api($baseurl, $baseurleu);
         } catch (\Throwable $exception) {
             debugging('Could not initialize AI file client: ' . $exception->getMessage(), DEBUG_DEVELOPER);
             $client = null;

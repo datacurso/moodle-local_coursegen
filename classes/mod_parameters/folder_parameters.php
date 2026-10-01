@@ -16,7 +16,7 @@
 
 namespace local_coursegen\mod_parameters;
 
-use aiprovider_datacurso\httpclient\ai_course_api;
+use local_coursegen\local\api_client_factory;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -52,7 +52,7 @@ class folder_parameters extends base_parameters {
 
         $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
         $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
-        $client = new ai_course_api(null, $baseurl, $baseurleu);
+        $client = api_client_factory::ai_course_api($baseurl, $baseurleu);
 
         $draftid = file_get_unused_draft_itemid();
         $fs = get_file_storage();
@@ -62,20 +62,27 @@ class folder_parameters extends base_parameters {
             if (!is_array($file) || empty($file['file_path']) || empty($file['file_name'])) {
                 continue;
             }
+            // Same rules as the single-package downloads: the file name is reduced to a
+            // valid Moodle file name and the remote path travels percent-encoded.
+            $filename = clean_param(basename((string)$file['file_name']), PARAM_FILE);
+            if ($filename === '') {
+                debugging('local_coursegen: skipped folder file with an invalid name.', DEBUG_DEVELOPER);
+                continue;
+            }
             $filepath = self::normalize_filepath($file['folder_path'] ?? '');
             // A single bad file must not abort the whole folder (this runs before creation).
             try {
                 if ($filepath !== '/') {
                     $fs->create_directory($context->id, 'user', 'draft', $draftid, $filepath);
                 }
-                $endpoint = '/files/download?path=' . $file['file_path'];
-                $client->download_file($endpoint, $file['file_name'], [
+                $endpoint = self::build_download_endpoint((string)$file['file_path']);
+                $client->download_file($endpoint, $filename, [
                     'itemid' => $draftid,
                     'filepath' => $filepath,
                 ]);
             } catch (\Throwable $e) {
                 debugging(
-                    'local_coursegen: skipped folder file "' . $file['file_name'] . '": ' . $e->getMessage(),
+                    'local_coursegen: skipped folder file "' . $filename . '": ' . $e->getMessage(),
                     DEBUG_DEVELOPER
                 );
             }
