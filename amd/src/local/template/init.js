@@ -29,14 +29,13 @@
 
 import {renderStepSections, resetSectionsRender} from 'local_coursegen/local/template/step_sections';
 import {renderStepLimits} from 'local_coursegen/local/template/step_limits';
-import {defaultActionForModname} from 'local_coursegen/local/template/type_action_sync';
 import {saveTemplate} from 'local_coursegen/local/template/save_payload';
 import {bindCoursePicker, updateSelectedBanner} from 'local_coursegen/local/template/course_picker_binding';
 import * as Repository from 'local_coursegen/local/template/repository';
 import DynamicForm from 'core_form/dynamicform';
 import Notification from 'core/notification';
 import Selectors from 'local_coursegen/local/template/selectors';
-import {BEHAVIOR, CLASS, EVENT, SCOPE} from 'local_coursegen/local/template/constants';
+import {ACTION, BEHAVIOR, CLASS, EVENT, SCOPE} from 'local_coursegen/local/template/constants';
 
 /** @type {Object} Wizard state. */
 const state = {
@@ -138,11 +137,8 @@ const renderConfigRegion = async() => {
 /**
  * Seed section/activity state from a freshly loaded course structure.
  *
- * Each activity's initial action comes from its type's sensible default
- * (see type_action_sync.js) instead of hardcoding "modify" for everything —
- * an admin reviewing a real ~28-activity course should see mostly-correct
- * defaults already applied, not "modify" everywhere regardless of whether
- * the generator can even produce that type of content.
+ * Each activity's initial action is "keep", the same default the server
+ * renders.
  *
  * When editing an existing template, its saved configuration wins over the
  * type defaults for every section/activity it still has a row for —
@@ -183,7 +179,7 @@ const seedSection = (section) => {
  */
 const seedActivity = (activity) => {
     const saved = state.savedActivities[activity.id];
-    state.activityAction[activity.id] = saved?.action || defaultActionForModname(activity.modname);
+    state.activityAction[activity.id] = saved?.action || ACTION.KEEP;
     let useasreference = true;
     if (saved) {
         useasreference = saved.useasreference !== false;

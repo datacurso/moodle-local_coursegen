@@ -2,6 +2,17 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026093030
+
+### Changed
+- The template instances created with "Add activity or space" are sent to the AI service with their own action, "instance", instead of the action "modify". The AI service must be updated to the same contract before this build is used with it.
+- A new activity of a template is saved with the action "keep" by default, and the template editor starts every activity with it, instead of starting some types with "modify".
+- The action of a saved activity of a template is checked by the model: only "template", "keep", "reference", "exclude" and "space" are accepted.
+
+### Removed
+- The activity action "modify" from the plugin: the persistent model, the template editor and the answer of the AI service no longer know it. Rows saved with it are not converted and are invalid.
+- The unused strings of the old bulk "Modify all" action and of the old warning about activities marked as "Modify" without a prompt.
+
 ## [2.0.10] - 2026093029
 
 ### Changed

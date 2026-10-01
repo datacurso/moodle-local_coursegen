@@ -14,25 +14,13 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Sensible default action per activity TYPE, applied automatically when a
- * course's structure loads.
+ * Default action of every activity, applied automatically when a course's
+ * structure loads.
  *
- * A real template repeats the same handful of component types over and over
- * (a welcome/section banner, an informational page, a discussion forum, a
- * file attachment, a graded activity, a closing survey, a multi-page
- * lesson) — dozens of times across a real course. Reviewing every single
- * activity one by one from a neutral starting point does not scale (a real
- * template reviewed this session has ~28 activities), so each activity is
- * seeded with the sensible default for its own type the moment the course
- * structure loads; the admin only has to touch the rare exception via the
- * per-activity dropdown in the section/activity review below.
- *
- * This module previously also rendered a bulk "change every activity of
- * this type at once" panel (a real mform in
- * classes/form/template_config_form.php, bound here) — removed per explicit
- * client feedback: they didn't want it as a visible, separate control. Only
- * the automatic per-activity seeding stays; the per-activity dropdown below
- * remains the only place to change anything.
+ * A real template has dozens of activities, so each one is seeded with the
+ * same neutral default ("keep") the moment the course structure loads, the
+ * same default the server renders; the admin only has to touch the
+ * exceptions via the per-activity dropdown in the section/activity review.
  *
  * @module     local_coursegen/local/template/type_action_sync
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -40,57 +28,43 @@
  */
 
 import {MODNAMES} from 'local_coursegen/ai_activity_types';
-
-/**
- * Sensible default action per recognised component type — mirrors
- * template_config_form::TYPE_META (PHP).
- *
- * @type {Object<string, string>}
- */
-const DEFAULT_ACTION = {
-    label: 'modify',
-    page: 'modify',
-    forum: 'keep',
-    resource: 'keep',
-    assign: 'modify',
-    feedback: 'keep',
-    lesson: 'keep',
-};
+import {ACTION} from 'local_coursegen/local/template/constants';
+import Selectors from 'local_coursegen/local/template/selectors';
 
 /**
  * @param {string} modname
- * @returns {boolean} Whether "Modify" is a safe option for this module type today: every type the
+ * @returns {boolean} Whether "Template" is a safe option for this module type today: every type the
  *     AI service has a content contract for (see ai_activity_types.js) offers it.
  */
-export const typeSupportsModify = (modname) => MODNAMES.includes(modname);
+export const typeSupportsTemplate = (modname) => MODNAMES.includes(modname);
 
 /**
- * @param {string} modname
- * @returns {string} The sensible default action for this module type.
+ * Seed one rendered activity with the default action, unless it already has
+ * an explicit value, which is never overwritten.
+ *
+ * @param {HTMLElement} cmitem The rendered activity.
+ * @param {Object} state
  */
-export const defaultActionForModname = (modname) => {
-    const wanted = DEFAULT_ACTION[modname] || 'keep';
-    // Never default a type the generator can't handle to "modify" — even if
-    // DEFAULT_ACTION said so, an unsupported type must default to "keep".
-    return (wanted === 'modify' && !typeSupportsModify(modname)) ? 'keep' : wanted;
+const seedActivityDefault = (cmitem, state) => {
+    const cmid = parseInt(cmitem.dataset.id);
+    if (!cmid || state.activityAction[cmid] !== undefined) {
+        return;
+    }
+    state.activityAction[cmid] = ACTION.KEEP;
+    state.activityRef[cmid] = true;
 };
 
 /**
- * Seed state.activityAction with the per-type default for every activity
- * that doesn't already have an explicit value — never overwrites a value
- * the admin (or a previous render) already set.
+ * Seed state.activityAction with the default for every activity that
+ * doesn't already have an explicit value — never overwrites a value the
+ * admin (or a previous render) already set.
  *
- * @param {HTMLElement} container The rendered course structure, to read real modnames from.
+ * @param {HTMLElement} container The rendered course structure.
  * @param {Object} state
  */
 export const applyTypeDefaultsToState = (container, state) => {
-    container.querySelectorAll('[data-for="cmitem"][data-modname]').forEach(cmitem => {
-        const cmid = parseInt(cmitem.dataset.id);
-        const modname = cmitem.dataset.modname;
-        if (!cmid || state.activityAction[cmid] !== undefined) {
-            return;
-        }
-        state.activityAction[cmid] = defaultActionForModname(modname);
-        state.activityRef[cmid] = true;
-    });
+    const cmitems = container.querySelectorAll(Selectors.rows.activity);
+    for (const cmitem of cmitems) {
+        seedActivityDefault(cmitem, state);
+    }
 };

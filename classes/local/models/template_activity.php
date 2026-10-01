@@ -32,9 +32,6 @@ class template_activity extends persistent {
     /** Action: the activity is copied into the new course as it is. */
     const ACTION_KEEP = 'keep';
 
-    /** Action: the AI service rewrites the activity. */
-    const ACTION_MODIFY = 'modify';
-
     /** Action: the activity is only context for the AI service. */
     const ACTION_REFERENCE = 'reference';
 
@@ -46,6 +43,15 @@ class template_activity extends persistent {
 
     /** Action: the professor provides this activity instead. */
     const ACTION_SPACE = 'space';
+
+    /** The actions an activity can be saved with. */
+    const ACTIONS = [
+        self::ACTION_KEEP,
+        self::ACTION_REFERENCE,
+        self::ACTION_EXCLUDE,
+        self::ACTION_TEMPLATE,
+        self::ACTION_SPACE,
+    ];
 
     /** Template scope: the mold serves the whole course. */
     const SCOPE_COURSE = 'course';
@@ -78,15 +84,16 @@ class template_activity extends persistent {
             'action' => [
                 'type' => PARAM_ALPHA,
                 'null' => NULL_NOT_ALLOWED,
-                'default' => self::ACTION_MODIFY,
+                'default' => self::ACTION_KEEP,
+                'choices' => self::ACTIONS,
             ],
             'useasreference' => [
                 'type' => PARAM_INT,
                 'default' => 1,
             ],
             // Only meaningful when action=template: whether this molde may be
-            // used by "modify" activities anywhere in the course, or only by
-            // ones in this same section. Ignored for every other action.
+            // used by the instances built from it anywhere in the course, or
+            // only by the ones in this same section. Ignored for every other action.
             'templatescope' => [
                 'type' => PARAM_ALPHA,
                 'null' => NULL_NOT_ALLOWED,

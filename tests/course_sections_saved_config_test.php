@@ -90,10 +90,9 @@ final class course_sections_saved_config_test extends \advanced_testcase {
 
         $pageselect = $this->extract_action_select($html, (int) $page->cmid);
         $this->assertMatchesRegularExpression('/<option value="exclude"[^>]*\sselected/', $pageselect);
-        $this->assertStringNotContainsString('<option value="modify"', $pageselect);
 
         // Forum has no saved row, so it falls back to the unconditional "keep"
-        // default — never "modify", which is not offered any more.
+        // default.
         $forumselect = $this->extract_action_select($html, (int) $forum->cmid);
         $this->assertMatchesRegularExpression('/<option value="keep"[^>]*\sselected/', $forumselect);
 
@@ -113,41 +112,6 @@ final class course_sections_saved_config_test extends \advanced_testcase {
         $result = get_course_preview::execute((int) $course->id, $templateid);
         $ajaxpageselect = $this->extract_action_select($result['html'], (int) $page->cmid);
         $this->assertMatchesRegularExpression('/<option value="exclude"[^>]*\sselected/', $ajaxpageselect);
-    }
-
-    /**
-     * A legacy saved "modify" action (persisted before that action was
-     * removed from the offered options) degrades to "keep" when rendered,
-     * for an AI-supported module type — the hydration guard finds "modify"
-     * is no longer in the offered keys and falls through to the default,
-     * instead of rendering an option the row's own select does not offer.
-     */
-    public function test_render_degrades_legacy_saved_modify_action_to_keep(): void {
-        $this->resetAfterTest();
-        $this->setAdminUser();
-
-        [$course, $page] = $this->create_course_fixture();
-        $modinfo = get_fast_modinfo($course);
-        $section1 = $modinfo->get_section_info(1);
-
-        // Bypass the external function (which never persists "modify" any
-        // more) to simulate a stale row saved before this action was removed.
-        $templateid = 54321;
-        $act = new template_activity(0);
-        $act->set('templateid', $templateid);
-        $act->set('sectionid', (int) $section1->id);
-        $act->set('cmid', (int) $page->cmid);
-        $act->set('action', 'modify');
-        $act->set('useasreference', 1);
-        $act->set('templatescope', 'course');
-        $act->set('prompt', '');
-        $act->create();
-
-        $html = sections_config::render($modinfo, $templateid);
-
-        $pageselect = $this->extract_action_select($html, (int) $page->cmid);
-        $this->assertMatchesRegularExpression('/<option value="keep"[^>]*\sselected/', $pageselect);
-        $this->assertStringNotContainsString('<option value="modify"', $pageselect);
     }
 
     /**

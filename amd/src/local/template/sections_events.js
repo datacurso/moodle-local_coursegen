@@ -50,7 +50,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {typeSupportsModify} from 'local_coursegen/local/template/type_action_sync';
+import {typeSupportsTemplate} from 'local_coursegen/local/template/type_action_sync';
 import {bindSelectionAndBulk} from 'local_coursegen/local/template/selection_bulk';
 import {
     applyTemplateVisual,
@@ -110,16 +110,15 @@ export const resetSectionsDirtyState = () => {
 
 /**
  * Resolve the action a row may actually take: types the generator cannot
- * produce content for degrade modify/template to keep (their selects do not
- * even offer those options — same rule as the server-side defaults).
+ * produce content for degrade template to keep (their selects do not
+ * even offer that option — same rule as the server-side defaults).
  *
  * @param {string} action Requested action.
  * @param {string} modname The row's module type.
  * @returns {string} The action to apply.
  */
 const applicableAction = (action, modname) => {
-    const requestsmodify = action === ACTION.MODIFY || action === ACTION.TEMPLATE;
-    if (requestsmodify && !typeSupportsModify(modname)) {
+    if (action === ACTION.TEMPLATE && !typeSupportsTemplate(modname)) {
         return ACTION.KEEP;
     }
     return action;
