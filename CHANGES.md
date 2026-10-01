@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026093024
+
+### Changed
+- The scope hint and the tooltip of each option of the template picker are computed with two independent conditions instead of conditions nested in one another. The options the picker shows are exactly the same.
+
 ## [2.0.10] - 2026093022
 
 ### Removed

@@ -57,12 +57,11 @@ const buildOneOption = (row, targetsectionid, state, hints) => {
     const eligible = scope === SCOPE.COURSE || sectionid === targetsectionid;
 
     let scopehint = hints.samesectionhint;
+    if (scope === SCOPE.COURSE) {
+        scopehint = hints.coursehint;
+    }
     let itemtooltip = '';
-    if (eligible) {
-        if (scope === SCOPE.COURSE) {
-            scopehint = hints.coursehint;
-        }
-    } else {
+    if (!eligible) {
         itemtooltip = hints.tooltip;
     }
 
