@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026093022
+
+### Removed
+- The `regenerate_detailed_item` external function. It was not declared as a web service, called a method of the AI client that no longer exists, and the AI service no longer has the endpoint it used; regenerating a part of the plan goes through the planning feedback.
+- The unused `can_create_course` check of the chat hook. Nothing called it since the button to create a course with AI moved to the My courses page, which has its own check.
+
 ## [2.0.10] - 2026093021
 
 ### Added

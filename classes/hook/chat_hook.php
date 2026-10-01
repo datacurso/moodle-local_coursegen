@@ -163,26 +163,4 @@ class chat_hook {
             'local/coursegen:createactivitywithai',
         ], $context);
     }
-
-    /**
-     * Check if user can create a course
-     */
-    private static function can_create_course(): bool {
-        global $PAGE;
-
-        // Show only on personal area pages (e.g. My courses).
-        $path = $PAGE->url->get_path();
-        $ispersonalarea = strpos($path, '/my/') === 0;
-        if (!$ispersonalarea) {
-            return false;
-        }
-
-        $systemcontext = \context_system::instance();
-
-        if (!has_capability('moodle/course:create', $systemcontext)) {
-            return false;
-        }
-        $creationmodes = ['local/coursegen:createfreecoursewithai', 'local/coursegen:createtemplatecoursewithai'];
-        return has_any_capability($creationmodes, $systemcontext);
-    }
 }
