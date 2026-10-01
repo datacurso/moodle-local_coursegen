@@ -37,6 +37,8 @@
 
 import Templates from 'core/templates';
 import jQuery from 'jquery';
+import Selectors from 'local_coursegen/local/template/selectors';
+import {DROPDOWN_COMMAND} from 'local_coursegen/local/template/constants';
 
 /**
  * @type {WeakMap<HTMLElement, symbol>} Trigger -> the token of its most
@@ -73,7 +75,10 @@ export const beginMenuOpen = (triggerEl) => {
  * @param {HTMLElement} triggerEl The "+" button.
  * @returns {HTMLElement}
  */
-const menuOf = (triggerEl) => triggerEl.closest('.dropdown').querySelector('.dropdown-menu');
+const menuOf = (triggerEl) => {
+    const dropdown = triggerEl.closest(Selectors.regions.instanceDropdown);
+    return dropdown.querySelector(Selectors.regions.instanceDropdownMenu);
+};
 
 /**
  * Render the add menu (activity from a template / space for an activity)
@@ -94,8 +99,10 @@ export const openAddMenu = async({triggerEl, token}) => {
     if (latestOpenToken.get(triggerEl) !== token) {
         return;
     }
-    Templates.replaceNodeContents(menuOf(triggerEl), rendered, '');
-    jQuery(triggerEl).dropdown('toggle');
+    const menu = menuOf(triggerEl);
+    Templates.replaceNodeContents(menu, rendered, '');
+    const trigger = jQuery(triggerEl);
+    trigger.dropdown(DROPDOWN_COMMAND.TOGGLE);
 };
 
 /**
@@ -106,8 +113,10 @@ export const openAddMenu = async({triggerEl, token}) => {
  */
 export const showAddMenu = async(triggerEl) => {
     const rendered = await Templates.render('local_coursegen/template_add_menu', {});
-    Templates.replaceNodeContents(menuOf(triggerEl), rendered, '');
-    jQuery(triggerEl).dropdown('update');
+    const menu = menuOf(triggerEl);
+    Templates.replaceNodeContents(menu, rendered, '');
+    const trigger = jQuery(triggerEl);
+    trigger.dropdown(DROPDOWN_COMMAND.UPDATE);
 };
 
 /**
@@ -124,8 +133,10 @@ export const showTemplateList = async({triggerEl, options}) => {
         hasoptions: options.length > 0,
         options,
     });
-    Templates.replaceNodeContents(menuOf(triggerEl), rendered, '');
-    jQuery(triggerEl).dropdown('update');
+    const menu = menuOf(triggerEl);
+    Templates.replaceNodeContents(menu, rendered, '');
+    const trigger = jQuery(triggerEl);
+    trigger.dropdown(DROPDOWN_COMMAND.UPDATE);
 };
 
 /**
@@ -136,5 +147,6 @@ export const showTemplateList = async({triggerEl, options}) => {
  * @param {HTMLElement} triggerEl The "+" button whose dropdown should close.
  */
 export const closeInstanceMenu = (triggerEl) => {
-    jQuery(triggerEl).dropdown('hide');
+    const trigger = jQuery(triggerEl);
+    trigger.dropdown(DROPDOWN_COMMAND.HIDE);
 };

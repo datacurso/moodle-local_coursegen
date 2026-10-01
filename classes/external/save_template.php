@@ -155,7 +155,8 @@ class save_template extends external_api {
         $namingstart,
         $sections
     ) {
-        $params = self::validate_parameters(self::execute_parameters(), [
+        $parameterdescription = self::execute_parameters();
+        $params = self::validate_parameters($parameterdescription, [
             'id'            => $id,
             'name'          => $name,
             'description'   => $description,
@@ -210,9 +211,10 @@ class save_template extends external_api {
 
         template_persistence_service::save_sections($templateid, $params['sections']);
 
+        $savedname = $tpl->get('name');
         return [
             'id'   => $templateid,
-            'name' => $tpl->get('name'),
+            'name' => $savedname,
         ];
     }
 

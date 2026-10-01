@@ -35,6 +35,8 @@ import {bindCoursePicker, updateSelectedBanner} from 'local_coursegen/local/temp
 import * as Repository from 'local_coursegen/local/template/repository';
 import DynamicForm from 'core_form/dynamicform';
 import Notification from 'core/notification';
+import Selectors from 'local_coursegen/local/template/selectors';
+import {BEHAVIOR, CLASS, EVENT, SCOPE} from 'local_coursegen/local/template/constants';
 
 /** @type {Object} Wizard state. */
 const state = {
@@ -48,7 +50,7 @@ const state = {
     // server-side.
     savedSections: {}, savedActivities: {},
     maxSections: 0, noLimit: false, supportedTypes: [], activitySpace: {},
-    namingPattern: '', namingStart: 1, categories: [],
+    namingPattern: '', namingContract: null, namingStart: 1, categories: [],
 };
 /** @type {HTMLElement} Root element. */
 let root = null;
@@ -87,12 +89,12 @@ export const getRoot = () => root;
  * that changes what's on screen — there is no step/page navigation.
  */
 const renderConfigRegion = async() => {
-    const region = root.querySelector('[data-region="config"]');
+    const region = root.querySelector(Selectors.regions.config);
     if (!state.selectedCourseId) {
-        region.classList.add('d-none');
+        region.classList.add(CLASS.HIDDEN);
         return;
     }
-    region.classList.remove('d-none');
+    region.classList.remove(CLASS.HIDDEN);
 
     try {
         if (!state.courseStructure) {
@@ -124,13 +126,13 @@ const renderConfigRegion = async() => {
     // just did for its own container, for the structure panel's own
     // container instead of inferring it from whatever markup happens to
     // already be sitting there (which a course switch would get wrong).
-    const structurePanel = region.querySelector('[data-region="structure"]');
+    const structurePanel = region.querySelector(Selectors.regions.structure);
     await renderStepSections(structurePanel, state, isFreshFromPageLoad);
 
     // Limits and the naming pattern all live inside the
     // config form's own container now (see template_config_form.php) —
     // scope directly to it instead of the whole region.
-    renderStepLimits(configForm.container, state);
+    await renderStepLimits(configForm.container, state);
 };
 
 /**
@@ -156,28 +158,59 @@ const initSectionState = () => {
     state.activityScope = {};
     state.activitySpace = {};
 
-    state.courseStructure.forEach(s => {
-        state.sectionBehavior[s.id] = state.savedSections[s.id] || 'aimodify';
-        s.activities.forEach(a => {
-            const saved = state.savedActivities[a.id];
-            state.activityAction[a.id] = saved?.action || defaultActionForModname(a.modname);
-            let useasreference = true;
-            if (saved) {
-                useasreference = saved.useasreference !== false;
-            }
-            state.activityRef[a.id] = useasreference;
-            state.activityPrompt[a.id] = saved?.prompt || '';
-            state.activityScope[a.id] = saved?.templatescope || 'course';
-            state.activitySpace[a.id] = {
-                required: saved?.spacerequired !== false,
-                instruction: saved?.spaceinstruction || '',
-            };
-        });
-    });
+    state.courseStructure.forEach(seedSection);
     // maxSections counts EXTRA sections the teacher may add on top of the
     // template's own — 0 until the allow-add-sections checkbox is ticked
     // (see step_limits.js), never the base course's own section count.
     state.maxSections = 0;
+};
+
+/**
+ * Seed the behaviour of one section and the state of each of its activities.
+ *
+ * @param {Object} section A section of the loaded course structure.
+ */
+const seedSection = (section) => {
+    state.sectionBehavior[section.id] = state.savedSections[section.id] || BEHAVIOR.AI_MODIFY;
+    section.activities.forEach(seedActivity);
+};
+
+/**
+ * Seed the action, reference flag, prompt, scope and space of one activity,
+ * preferring what the template already saved for it.
+ *
+ * @param {Object} activity An activity of the loaded course structure.
+ */
+const seedActivity = (activity) => {
+    const saved = state.savedActivities[activity.id];
+    state.activityAction[activity.id] = saved?.action || defaultActionForModname(activity.modname);
+    let useasreference = true;
+    if (saved) {
+        useasreference = saved.useasreference !== false;
+    }
+    state.activityRef[activity.id] = useasreference;
+    state.activityPrompt[activity.id] = saved?.prompt || '';
+    state.activityScope[activity.id] = saved?.templatescope || SCOPE.COURSE;
+    state.activitySpace[activity.id] = {
+        required: saved?.spacerequired !== false,
+        instruction: saved?.spaceinstruction || '',
+    };
+};
+
+/**
+ * Stop the dynamic form from emptying its container after a native submit.
+ *
+ * @param {Event} e The form-submitted event.
+ */
+const keepFormContent = (e) => {
+    e.preventDefault();
+};
+
+/**
+ * Save the template when the Save button is clicked.
+ */
+const handleSaveClick = () => {
+    saveTemplate(state, root);
 };
 
 /**
@@ -186,7 +219,7 @@ const initSectionState = () => {
  * @param {Array} config.courses List of available courses.
  */
 export const init = (config) => {
-    root = document.getElementById('local-coursegen-template-wizard');
+    root = document.querySelector(Selectors.regions.wizard);
     if (!root) {
         return;
     }
@@ -197,6 +230,7 @@ export const init = (config) => {
     state.savedActivities = config.savedactivities || {};
     state.supportedTypes = config.supportedtypes || [];
     state.namingPattern = config.defaultnamingpattern || '';
+    state.namingContract = config.namingcontract;
 
     const initialCourseId = config.initialcourseid || 0;
     const initialCourseName = config.initialcoursename || '';
@@ -210,20 +244,20 @@ export const init = (config) => {
         configFormIsFreshFromPageLoad = true;
     }
 
-    configForm = new DynamicForm(
-        root.querySelector('[data-region="config-form"]'),
-        'local_coursegen\\form\\template_config_form'
-    );
+    const configRegion = root.querySelector(Selectors.regions.configForm);
+    configForm = new DynamicForm(configRegion, 'local_coursegen\\form\\template_config_form');
     // This form has no submit button — its fields feed the template-wide
     // Save action instead (see saveTemplate()) — but DynamicForm still
     // intercepts a native form submit (e.g. pressing Enter in a text field)
     // and, by default, empties the container once process_dynamic_submission()
     // returns. Prevent that: an accidental Enter keypress must not wipe the
     // rendered fields out from under the admin.
-    configForm.addEventListener(configForm.events.FORM_SUBMITTED, e => e.preventDefault());
+    configForm.addEventListener(configForm.events.FORM_SUBMITTED, keepFormContent);
 
-    root.querySelector('[data-action="save"]').addEventListener('click', () => saveTemplate(state, root));
-    bindCoursePicker(root.querySelector('[data-region="step-panel"][data-step="1"]'), state, setState);
+    const saveButton = root.querySelector(Selectors.actions.save);
+    saveButton.addEventListener(EVENT.CLICK, handleSaveClick);
+    const coursePickerPanel = root.querySelector(Selectors.regions.coursePickerPanel);
+    bindCoursePicker(coursePickerPanel, state, setState);
 
     renderConfigRegion();
 };

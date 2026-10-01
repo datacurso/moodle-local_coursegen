@@ -20,7 +20,6 @@ use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_instance;
 use local_coursegen\local\models\template_section;
 use local_coursegen\local\models\template_space;
-use local_coursegen\output\template_row_options;
 
 /**
  * Replaces a template's saved section/activity/instance configuration.
@@ -66,8 +65,8 @@ class template_persistence_service {
         $sec->create();
 
         self::save_activities($templateid, $sectiondata['sectionid'], $sectiondata['activities']);
-        self::save_instances($templateid, $sectiondata['sectionid'], $sectiondata['instances'] ?? []);
-        self::save_spaces($templateid, $sectiondata['sectionid'], $sectiondata['spaces'] ?? []);
+        self::save_instances($templateid, $sectiondata['sectionid'], $sectiondata['instances']);
+        self::save_spaces($templateid, $sectiondata['sectionid'], $sectiondata['spaces']);
     }
 
     /**
@@ -128,7 +127,8 @@ class template_persistence_service {
      * @param int $templateid
      */
     private static function delete_records(string $modelclass, int $templateid): void {
-        foreach ($modelclass::get_records(['templateid' => $templateid]) as $record) {
+        $records = $modelclass::get_records(['templateid' => $templateid]);
+        foreach ($records as $record) {
             $record->delete();
         }
     }
@@ -147,10 +147,12 @@ class template_persistence_service {
         $act->set('cmid', $actdata['cmid']);
         $act->set('action', $actdata['action']);
         $act->set('useasreference', (int) $actdata['useasreference']);
-        $act->set('templatescope', self::normalise_scope($actdata['templatescope'] ?? 'course'));
+        $templatescope = self::normalise_scope($actdata['templatescope']);
+        $act->set('templatescope', $templatescope);
         $act->set('prompt', $actdata['prompt']);
-        $act->set('spacerequired', (int) ($actdata['spacerequired'] ?? 1));
-        $act->set('spaceinstruction', self::space_instruction($actdata['spaceinstruction'] ?? ''));
+        $act->set('spacerequired', (int) $actdata['spacerequired']);
+        $instruction = self::space_instruction($actdata['spaceinstruction']);
+        $act->set('spaceinstruction', $instruction);
         $act->create();
     }
 
@@ -162,22 +164,23 @@ class template_persistence_service {
      * @param array $instdata
      */
     private static function create_instance(int $templateid, int $sectionid, array $instdata): void {
+        $uid = \core\uuid::generate();
+        $modname = $instdata['modname'];
+        if (empty($modname)) {
+            $modname = null;
+        }
         $instance = new template_instance(0);
-        $instance->set('uid', \core\uuid::generate());
+        $instance->set('uid', $uid);
         $instance->set('templateid', $templateid);
         $instance->set('sectionid', $sectionid);
         $instance->set('sourcecmid', $instdata['sourcecmid']);
         $instance->set('sourcename', $instdata['sourcename']);
         $instance->set('name', $instdata['name']);
         $instance->set('typelabel', $instdata['typelabel']);
-        $modname = $instdata['modname'] ?? '';
-        if (empty($modname)) {
-            $modname = null;
-        }
         $instance->set('modname', $modname);
-        $instance->set('prompt', $instdata['prompt'] ?? '');
-        $instance->set('aftercmid', $instdata['aftercmid'] ?? 0);
-        $instance->set('sortorder', $instdata['sortorder'] ?? 0);
+        $instance->set('prompt', $instdata['prompt']);
+        $instance->set('aftercmid', $instdata['aftercmid']);
+        $instance->set('sortorder', $instdata['sortorder']);
         $instance->create();
     }
 
@@ -192,15 +195,17 @@ class template_persistence_service {
         if (!\core_component::is_valid_plugin_name('mod', $spacedata['modname'])) {
             throw new \invalid_parameter_exception('Not an activity type: ' . $spacedata['modname']);
         }
+        $uid = \core\uuid::generate();
+        $instruction = self::space_instruction($spacedata['instruction']);
         $space = new template_space(0);
-        $space->set('uid', \core\uuid::generate());
+        $space->set('uid', $uid);
         $space->set('templateid', $templateid);
         $space->set('sectionid', $sectionid);
         $space->set('modname', $spacedata['modname']);
-        $space->set('required', (int) ($spacedata['required'] ?? 1));
-        $space->set('instruction', self::space_instruction($spacedata['instruction'] ?? ''));
-        $space->set('aftercmid', $spacedata['aftercmid'] ?? 0);
-        $space->set('sortorder', $spacedata['sortorder'] ?? 0);
+        $space->set('required', (int) $spacedata['required']);
+        $space->set('instruction', $instruction);
+        $space->set('aftercmid', $spacedata['aftercmid']);
+        $space->set('sortorder', $spacedata['sortorder']);
         $space->create();
     }
 
@@ -228,9 +233,9 @@ class template_persistence_service {
      * @return string
      */
     private static function normalise_scope(string $scope): string {
-        if (in_array($scope, template_row_options::SCOPE_VALUES, true)) {
+        if (in_array($scope, template_activity::SCOPES, true)) {
             return $scope;
         }
-        return 'course';
+        return template_activity::SCOPE_COURSE;
     }
 }

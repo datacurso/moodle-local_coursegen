@@ -57,10 +57,8 @@ class sections_config {
     public static function render(\course_modinfo $modinfo, int $templateid = 0): string {
         global $OUTPUT;
 
-        return $OUTPUT->render_from_template(
-            'local_coursegen/template_course_sections',
-            self::export_for_template($modinfo, $templateid)
-        );
+        $context = self::export_for_template($modinfo, $templateid);
+        return $OUTPUT->render_from_template('local_coursegen/template_course_sections', $context);
     }
 
     /**
@@ -80,84 +78,176 @@ class sections_config {
      */
     public static function export_for_template(\course_modinfo $modinfo, int $templateid = 0): array {
         $course = $modinfo->get_course();
-
-        $savedbehaviors = [];
-        $savedactions = [];
-        $savedscopes = [];
-        $savedspaces = [];
-        $savedinstances = [];
-        if ($templateid > 0) {
-            foreach (template_section::get_records(['templateid' => $templateid]) as $record) {
-                $savedbehaviors[(int) $record->get('sectionid')] = $record->get('behavior');
-            }
-            foreach (template_activity::get_records(['templateid' => $templateid]) as $record) {
-                $savedactions[(int) $record->get('cmid')] = $record->get('action');
-                $savedscopes[(int) $record->get('cmid')] = $record->get('templatescope');
-                $savedspaces[(int) $record->get('cmid')] = [
-                    'required' => (bool) $record->get('spacerequired'),
-                    'instruction' => (string) $record->get('spaceinstruction'),
-                ];
-            }
-            $virtualrows = array_merge(
-                template_instance::get_records(['templateid' => $templateid]),
-                template_space::get_records(['templateid' => $templateid])
-            );
-            foreach ($virtualrows as $record) {
-                $savedinstances[(int) $record->get('sectionid')][] = $record;
-            }
-        }
+        $saved = self::saved_configuration($templateid);
 
         $sections = [];
-        foreach ($modinfo->get_section_info_all() as $sectioninfo) {
-            $sectionid = (int) $sectioninfo->id;
-            $activitiesbycmid = [];
-            $realcmids = [];
-            if (!empty($modinfo->sections[$sectioninfo->section])) {
-                foreach ($modinfo->sections[$sectioninfo->section] as $cmid) {
-                    $cm = $modinfo->get_cm($cmid);
-                    if ($cm->deletioninprogress) {
-                        continue;
-                    }
-                    $cmid = (int) $cm->id;
-                    $realcmids[] = $cmid;
-                    $activitiesbycmid[$cmid] = self::real_row_context($cm, $cmid, $savedactions, $savedscopes, $savedspaces);
-                }
-            }
-
-            $rows = template_instance_layout::ordered_rows($realcmids, $savedinstances[$sectionid] ?? []);
-            $rows = self::render_rows($rows, $activitiesbycmid);
-
-            $sections[] = [
-                'id' => $sectionid,
-                'num' => (int) $sectioninfo->section,
-                'name' => get_section_name($course, $sectioninfo),
-                'activitycount' => count($rows),
-                'hasactivities' => !empty($rows),
-                'rows' => $rows,
-                'actions' => template_row_options::section_actions($sectionid, $savedbehaviors[$sectionid] ?? 'aimodify'),
-            ];
+        $sectioninfos = $modinfo->get_section_info_all();
+        foreach ($sectioninfos as $sectioninfo) {
+            $sections[] = self::section_context($modinfo, $course, $sectioninfo, $saved);
         }
+
+        $courseid = (int) $course->id;
+        $scopelabelcourse = get_string('template_activity_scope_course', 'local_coursegen');
+        $scopelabelsection = get_string('template_activity_scope_section', 'local_coursegen');
+        $spacebadgerequired = template_row_options::space_badge_label(true);
+        $spacebadgeoptional = template_row_options::space_badge_label(false);
 
         return [
             // The collapse ids are built from course id + section id: they
             // must be deterministic AND valid CSS identifiers ({{uniqid}}
             // output can start with a digit, which silently breaks the
             // Bootstrap 4 data-target="#..." selector).
-            'courseid' => (int) $course->id,
+            'courseid' => $courseid,
             'sections' => $sections,
             'hassections' => !empty($sections),
             // Both scope labels, composed once here rather than per activity:
             // each row's "Template" tag carries both as data attributes so
             // template_scope_modal.js can swap its text after a scope change
             // without an extra string lookup.
-            'scopelabelcourse' => get_string('template_activity_scope_course', 'local_coursegen'),
-            'scopelabelsection' => get_string('template_activity_scope_section', 'local_coursegen'),
+            'scopelabelcourse' => $scopelabelcourse,
+            'scopelabelsection' => $scopelabelsection,
             // Both space badge labels, for the same reason: the row's badge
             // swaps between them after a requirement change without a string
             // lookup.
-            'spacebadgerequired' => template_row_options::space_badge_label(true),
-            'spacebadgeoptional' => template_row_options::space_badge_label(false),
+            'spacebadgerequired' => $spacebadgerequired,
+            'spacebadgeoptional' => $spacebadgeoptional,
         ];
+    }
+
+    /**
+     * Everything a template already saved, keyed for the lookups the render
+     * makes: empty for a new template (id 0).
+     *
+     * @param int $templateid Existing template id, 0 for a new template.
+     * @return array {behaviors, actions, scopes, spaces, instances}
+     */
+    private static function saved_configuration(int $templateid): array {
+        $saved = ['behaviors' => [], 'actions' => [], 'scopes' => [], 'spaces' => [], 'instances' => []];
+        if ($templateid <= 0) {
+            return $saved;
+        }
+        $saved['behaviors'] = self::saved_behaviors($templateid);
+        $activitysettings = self::saved_activity_settings($templateid);
+        $saved = array_merge($saved, $activitysettings);
+        $saved['instances'] = self::saved_virtual_rows($templateid);
+        return $saved;
+    }
+
+    /**
+     * The saved behavior of each section, keyed by section id.
+     *
+     * @param int $templateid
+     * @return array
+     */
+    private static function saved_behaviors(int $templateid): array {
+        $records = template_section::get_records(['templateid' => $templateid]);
+        $behaviors = [];
+        foreach ($records as $record) {
+            $sectionid = (int) $record->get('sectionid');
+            $behaviors[$sectionid] = $record->get('behavior');
+        }
+        return $behaviors;
+    }
+
+    /**
+     * The saved action, template scope and space settings of each activity,
+     * keyed by cmid.
+     *
+     * @param int $templateid
+     * @return array {actions, scopes, spaces}
+     */
+    private static function saved_activity_settings(int $templateid): array {
+        $records = template_activity::get_records(['templateid' => $templateid]);
+        $actions = [];
+        $scopes = [];
+        $spaces = [];
+        foreach ($records as $record) {
+            $cmid = (int) $record->get('cmid');
+            $actions[$cmid] = $record->get('action');
+            $scopes[$cmid] = $record->get('templatescope');
+            $required = (bool) $record->get('spacerequired');
+            $instruction = (string) $record->get('spaceinstruction');
+            $spaces[$cmid] = ['required' => $required, 'instruction' => $instruction];
+        }
+        return ['actions' => $actions, 'scopes' => $scopes, 'spaces' => $spaces];
+    }
+
+    /**
+     * The saved template instances and spaces, grouped by section id.
+     *
+     * @param int $templateid
+     * @return array
+     */
+    private static function saved_virtual_rows(int $templateid): array {
+        $instances = template_instance::get_records(['templateid' => $templateid]);
+        $spaces = template_space::get_records(['templateid' => $templateid]);
+        $virtualrows = array_merge($instances, $spaces);
+        $bysection = [];
+        foreach ($virtualrows as $record) {
+            $sectionid = (int) $record->get('sectionid');
+            $bysection[$sectionid][] = $record;
+        }
+        return $bysection;
+    }
+
+    /**
+     * Build one section's card context.
+     *
+     * @param \course_modinfo $modinfo The base course modinfo.
+     * @param \stdClass $course The base course.
+     * @param \section_info $sectioninfo The section.
+     * @param array $saved The saved configuration (see saved_configuration()).
+     * @return array
+     */
+    private static function section_context(
+        \course_modinfo $modinfo,
+        \stdClass $course,
+        \section_info $sectioninfo,
+        array $saved
+    ): array {
+        $sectionid = (int) $sectioninfo->id;
+        $activitiesbycmid = self::real_rows_of_section($modinfo, $sectioninfo, $saved);
+        $realcmids = array_keys($activitiesbycmid);
+        $virtualrows = $saved['instances'][$sectionid] ?? [];
+        $orderedrows = template_instance_layout::ordered_rows($realcmids, $virtualrows);
+        $rows = self::render_rows($orderedrows, $activitiesbycmid);
+        $behavior = $saved['behaviors'][$sectionid] ?? template_section::BEHAVIOR_AI_MODIFY;
+        $name = get_section_name($course, $sectioninfo);
+        $actions = template_row_options::section_actions($sectionid, $behavior);
+        $activitycount = count($rows);
+
+        return [
+            'id' => $sectionid,
+            'num' => (int) $sectioninfo->section,
+            'name' => $name,
+            'activitycount' => $activitycount,
+            'hasactivities' => !empty($rows),
+            'rows' => $rows,
+            'actions' => $actions,
+        ];
+    }
+
+    /**
+     * Build the row context of every real activity of a section, keyed by
+     * cmid, in course order and without activities being deleted.
+     *
+     * @param \course_modinfo $modinfo The base course modinfo.
+     * @param \section_info $sectioninfo The section.
+     * @param array $saved The saved configuration (see saved_configuration()).
+     * @return array
+     */
+    private static function real_rows_of_section(\course_modinfo $modinfo, \section_info $sectioninfo, array $saved): array {
+        $rows = [];
+        $cmids = $modinfo->sections[$sectioninfo->section] ?? [];
+        foreach ($cmids as $cmid) {
+            $cm = $modinfo->get_cm($cmid);
+            if ($cm->deletioninprogress) {
+                continue;
+            }
+            $realcmid = (int) $cm->id;
+            $rows[$realcmid] = self::real_row_context($cm, $realcmid, $saved);
+        }
+        return $rows;
     }
 
     /**
@@ -165,23 +255,19 @@ class sections_config {
      *
      * @param \cm_info $cm
      * @param int $cmid
-     * @param array $savedactions Saved action per cmid.
-     * @param array $savedscopes Saved templatescope per cmid.
-     * @param array $savedspaces Saved space settings (required, instruction) per cmid.
+     * @param array $saved The saved configuration (see saved_configuration()).
      * @return array
      */
-    private static function real_row_context(
-        \cm_info $cm,
-        int $cmid,
-        array $savedactions,
-        array $savedscopes,
-        array $savedspaces
-    ): array {
-        $actionoptions = template_row_options::activity_actions($cmid, $cm->modname, $savedactions[$cmid] ?? null);
-        $istemplate = template_row_options::active_action($actionoptions) === 'template';
-        $scopeoptions = template_row_options::template_scope_options($cmid, $savedscopes[$cmid] ?? 'course');
-        $isspace = template_row_options::active_action($actionoptions) === 'space';
-        $space = $savedspaces[$cmid] ?? ['required' => true, 'instruction' => ''];
+    private static function real_row_context(\cm_info $cm, int $cmid, array $saved): array {
+        $savedaction = $saved['actions'][$cmid] ?? null;
+        $actionoptions = template_row_options::activity_actions($cmid, $cm->modname, $savedaction);
+        $activeaction = template_row_options::active_action($actionoptions);
+        $savedscope = $saved['scopes'][$cmid] ?? template_activity::SCOPE_COURSE;
+        $scopeoptions = template_row_options::template_scope_options($cmid, $savedscope);
+        $scopelabel = template_row_options::active_scope_label($scopeoptions);
+        $space = $saved['spaces'][$cmid] ?? ['required' => true, 'instruction' => ''];
+        $isspace = $activeaction === template_activity::ACTION_SPACE;
+        $spacebadge = template_row_options::space_badge_label($space['required']);
 
         // Link to the real activity in the base course; null for modules
         // with no view page of their own (label), whose names stay plain text.
@@ -189,23 +275,27 @@ class sections_config {
         if ($cm->url) {
             $viewurl = $cm->url->out(false);
         }
+        $icon = $cm->get_icon_url();
+        $iconurl = $icon->out(false);
+        $name = $cm->get_formatted_name();
+        $typelabel = $cm->get_module_type_name();
 
         return [
             'isreal' => true,
             'isinstance' => false,
             'cmid' => $cmid,
-            'name' => $cm->get_formatted_name(),
+            'name' => $name,
             'viewurl' => $viewurl,
             'modname' => $cm->modname,
-            'typelabel' => $cm->get_module_type_name(),
-            'iconurl' => $cm->get_icon_url()->out(false),
+            'typelabel' => $typelabel,
+            'iconurl' => $iconurl,
             'actions' => $actionoptions,
             // Drives the clickable "Template" tag's visibility and initial
             // label — kept in sync with the action select, and with scope
             // changes made through local/template/template_scope_modal.js,
             // by sections_events.js.
-            'istemplate' => $istemplate,
-            'scopelabel' => template_row_options::active_scope_label($scopeoptions),
+            'istemplate' => $activeaction === template_activity::ACTION_TEMPLATE,
+            'scopelabel' => $scopelabel,
             // Drives the clickable "Space" badge the same way: hidden unless
             // the row's action is "space", reopening the space settings.
             'isspace' => $isspace,
@@ -213,7 +303,7 @@ class sections_config {
             'spacerequiredvalue' => (int) $space['required'],
             'spaceinstruction' => $space['instruction'],
             'hasspaceinstruction' => $isspace && $space['instruction'] !== '',
-            'spacebadge' => template_row_options::space_badge_label($space['required']),
+            'spacebadge' => $spacebadge,
         ];
     }
 
@@ -233,11 +323,10 @@ class sections_config {
     private static function render_rows(array $orderedrows, array $activitiesbycmid): array {
         $rows = [];
         $lastindex = count($orderedrows) - 1;
-        $index = 0;
-        foreach ($orderedrows as $entry) {
-            if ($entry['type'] === 'real') {
+        foreach ($orderedrows as $index => $entry) {
+            if ($entry['type'] === template_instance_layout::TYPE_REAL) {
                 $context = $activitiesbycmid[$entry['cmid']];
-            } else if ($entry['type'] === 'space') {
+            } else if ($entry['type'] === template_instance_layout::TYPE_SPACE) {
                 $context = ['isreal' => false, 'isinstance' => false, 'isvirtualspace' => true]
                     + template_row_options::space_row_context($entry['record']);
             } else {
@@ -246,7 +335,6 @@ class sections_config {
             }
             $context['islast'] = ($index === $lastindex);
             $rows[] = $context;
-            $index++;
         }
         return $rows;
     }

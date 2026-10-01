@@ -61,7 +61,8 @@ class delete_template extends external_api {
      * @return array Success flag.
      */
     public static function execute($id) {
-        $params = self::validate_parameters(self::execute_parameters(), ['id' => $id]);
+        $parameterdescription = self::execute_parameters();
+        $params = self::validate_parameters($parameterdescription, ['id' => $id]);
 
         $context = context_system::instance();
         self::validate_context($context);
@@ -69,27 +70,32 @@ class delete_template extends external_api {
 
         // Delete child activity records first.
         $activities = template_activity::get_records(['templateid' => $params['id']]);
-        foreach ($activities as $activity) {
-            $activity->delete();
-        }
+        self::delete_all($activities);
 
         // Delete child space records.
         $spaces = template_space::get_records(['templateid' => $params['id']]);
-        foreach ($spaces as $space) {
-            $space->delete();
-        }
+        self::delete_all($spaces);
 
         // Delete child section records.
         $sections = template_section::get_records(['templateid' => $params['id']]);
-        foreach ($sections as $section) {
-            $section->delete();
-        }
+        self::delete_all($sections);
 
         // Delete the template itself.
         $tpl = new template($params['id']);
         $tpl->delete();
 
         return ['success' => true];
+    }
+
+    /**
+     * Delete every given record.
+     *
+     * @param \core\persistent[] $records Records to delete.
+     */
+    private static function delete_all(array $records): void {
+        foreach ($records as $record) {
+            $record->delete();
+        }
     }
 
     /**

@@ -23,7 +23,7 @@
     local/template/template_instance_menu.js.
 
     Data attributes required for JS:
-    * data-menu-action="from-template" | "add-space" on each item.
+    * data-action="local_coursegen/template/menu-from-template" | "local_coursegen/template/menu-add-space" on each item.
 
     Context variables:
     * none
@@ -32,12 +32,12 @@
     {}
 }}
 <button type="button" class="dropdown-item d-flex align-items-center tpl-add-menu-item" role="menuitem"
-        data-menu-action="from-template">
+        data-action="local_coursegen/template/menu-from-template">
     <span class="tpl-add-menu-icon mr-2" aria-hidden="true">{{#pix}} t/copy, core {{/pix}}</span>
     <span>{{#str}} template_add_instance, local_coursegen {{/str}}</span>
 </button>
 <button type="button" class="dropdown-item d-flex align-items-center tpl-add-menu-item" role="menuitem"
-        data-menu-action="add-space">
+        data-action="local_coursegen/template/menu-add-space">
     <span class="tpl-add-menu-icon mr-2" aria-hidden="true">{{#pix}} t/add, core {{/pix}}</span>
     <span>{{#str}} template_add_space, local_coursegen {{/str}}</span>
 </button>

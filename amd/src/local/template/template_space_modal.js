@@ -29,6 +29,8 @@ import ModalSaveCancel from 'core/modal_save_cancel';
 import ModalEvents from 'core/modal_events';
 import Templates from 'core/templates';
 import {get_string as getString} from 'core/str';
+import Selectors from 'local_coursegen/local/template/selectors';
+import {COMPONENT, REQUIRED_VALUE, STRING} from 'local_coursegen/local/template/constants';
 
 /** @type {Promise<Object>|null} The lazily-created shared modal instance. */
 let modalPromise = null;
@@ -40,10 +42,8 @@ let modalPromise = null;
  */
 const getModal = () => {
     if (!modalPromise) {
-        modalPromise = ModalSaveCancel.create({
-            title: getString('template_space_modal_title', 'local_coursegen'),
-            removeOnClose: false,
-        });
+        const title = getString(STRING.SPACE_MODAL_TITLE, COMPONENT);
+        modalPromise = ModalSaveCancel.create({title, removeOnClose: false});
     }
     return modalPromise;
 };
@@ -55,12 +55,52 @@ const getModal = () => {
  * @returns {{required: boolean, instruction: string}}
  */
 const readChoice = (modal) => {
-    const root = modal.getRoot()[0];
-    const checked = root.querySelector('input[name="template-space-required-choice"]:checked');
+    const rootList = modal.getRoot();
+    const root = rootList[0];
+    const checked = root.querySelector(Selectors.regions.spaceRequiredChoice);
+    const instructionField = root.querySelector(Selectors.regions.spaceInstructionField);
+    const instruction = instructionField.value.trim();
     return {
-        required: !checked || checked.value === '1',
-        instruction: root.querySelector('#template-space-instruction').value.trim(),
+        required: checked.value === REQUIRED_VALUE,
+        instruction,
     };
+};
+
+/**
+ * The admin saved: hand the choice to the caller and close the modal.
+ *
+ * @param {Object} ctx {modal, onSave, onCancel, resolved} of this open.
+ */
+const handleSave = (ctx) => {
+    ctx.resolved = true;
+    const choice = readChoice(ctx.modal);
+    ctx.onSave(choice);
+    ctx.modal.hide();
+};
+
+/**
+ * The admin cancelled: tell the caller and close the modal.
+ *
+ * @param {Object} ctx {modal, onSave, onCancel, resolved} of this open.
+ */
+const handleCancel = (ctx) => {
+    ctx.resolved = true;
+    if (ctx.onCancel) {
+        ctx.onCancel();
+    }
+    ctx.modal.hide();
+};
+
+/**
+ * The modal closed: any close that was not a save or a cancel counts as one.
+ *
+ * @param {Object} ctx {modal, onSave, onCancel, resolved} of this open.
+ */
+const handleHidden = (ctx) => {
+    if (!ctx.resolved && ctx.onCancel) {
+        ctx.onCancel();
+    }
+    ctx.resolved = true;
 };
 
 /**
@@ -88,26 +128,17 @@ export const openSpaceModal = async({subject, required, instruction, onSave, onC
     });
     await modal.setBody(body);
 
-    let resolved = false;
+    const ctx = {modal, onSave, onCancel, resolved: false};
+    const saveHandler = handleSave.bind(null, ctx);
+    const cancelHandler = handleCancel.bind(null, ctx);
+    const hiddenHandler = handleHidden.bind(null, ctx);
     const root = modal.getRoot();
-    root.off(ModalEvents.save).on(ModalEvents.save, () => {
-        resolved = true;
-        onSave(readChoice(modal));
-        modal.hide();
-    });
-    root.off(ModalEvents.cancel).on(ModalEvents.cancel, () => {
-        resolved = true;
-        if (onCancel) {
-            onCancel();
-        }
-        modal.hide();
-    });
-    root.off(ModalEvents.hidden).on(ModalEvents.hidden, () => {
-        if (!resolved && onCancel) {
-            onCancel();
-        }
-        resolved = true;
-    });
+    root.off(ModalEvents.save);
+    root.on(ModalEvents.save, saveHandler);
+    root.off(ModalEvents.cancel);
+    root.on(ModalEvents.cancel, cancelHandler);
+    root.off(ModalEvents.hidden);
+    root.on(ModalEvents.hidden, hiddenHandler);
 
     modal.show();
 };

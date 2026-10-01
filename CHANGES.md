@@ -2,10 +2,76 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026093015
+
+### Changed
+- The list of installed, AI-supported activity types is read straight from the supported list in one pass, instead of intersecting, sorting and re-indexing arrays: the supported list is already alphabetical, so the result is the same without the extra array calls.
+
+### Added
+- PHPUnit coverage that the supported list stays alphabetical, that the installed list has no repeats and that a hidden module is left out.
+
+## [2.0.10] - 2026093014
+
+### Changed
+- The activity catalog of the template editor is sorted with Moodle's own collator instead of a byte comparison of the names, so the order follows the site language and an accented initial sits with the entries of its base letter. The two comparison helpers it needed are gone.
+
+### Added
+- PHPUnit coverage of the catalog the template editor receives: the types it lists, the shape of each entry, that it is a zero-indexed list and that it follows the collation order.
+
+## [2.0.10] - 2026093013
+
+### Changed
+- The token of a section naming pattern that stands for the original section's name is now `{name}` instead of a word of another language, in the presets, the name-only option, the custom-pattern help and the live preview. `{N}` is unchanged and there is no support for both spellings at once. Stored patterns are not rewritten: a pattern saved with the old token keeps it as plain text, shown in the Custom field, and has to be edited by hand.
+- The template editor scripts take the action, behaviour and scope names, the event names, the language string keys they share and the selectors and classes they share from two small constants modules instead of repeating them. The form now tells the script the custom-pattern value and both tokens, so the script holds no copy of them.
+- Every selector the template editor scripts use now lives in one selectors module, and the scripts find their elements only through `data-action`, `data-region` and `data-form` hooks, never through ids or CSS classes. The hooks added with the spaces work and the naming preview are namespaced (`local_coursegen/template/...`); the ones that already existed keep their original attribute. The name and description fields, the extra sections and naming fields of the configuration form, the dropdown wrappers, the type cells and the icons of the rows carry the new hooks, and the modal ids are unique per render.
+- The add menu items of the template editor are told apart by their own `data-action` instead of a value in `data-menu-action`, and the picked-template click no longer chains a promise.
+- The loops of the naming preview, the virtual rows scrape and the rows of the sections review no longer keep a hand-maintained counter: the position comes from the loop itself or from the lists being built.
+- The naming preview box is rendered from its own template instead of being built in the form class.
+- The save payload, the persistence service and the row options no longer fall back to defaults that can never apply, and the action, behaviour, scope and row-kind names are constants of the classes that own them.
+
+### Fixed
+- The live naming preview built its lines as HTML from the section names of the base course, so a section called with markup would have been interpreted as markup in the page of the professor who edits the template. The preview is now rendered from a template that escapes the names, with its label coming from the language pack, and the space rows added in the editor print the activity icon through the template instead of a script extracting its address from markup.
+
+## [2.0.10] - 2026093008
+
+### Changed
+- The rest of the template editor code follows the same code-quality rules as the spaces work: the row scripts, the structure rows for the professor, the row options, the layout ordering, the export and persistence services, the configuration form and the sections review no longer hide calls inside other calls' arguments, array literals or loop iterables, no longer use a ternary or an inline closure, and keep one non-nested loop per function. The layout ordering and the catalog sorting use small named comparison methods instead of inline closures.
+- The tests of the template editor read every inner call into a named variable first and use small helpers instead of inline closures. Every assertion, data provider and fixture value is unchanged.
+- The name validation of the save button collects its result through a named handler instead of a function defined inside another.
+
+### Removed
+- The summary step script of the old configuration wizard. Nothing in the plugin loads it any more.
+
+## [2.0.10] - 2026093007
+
+### Changed
+- The limits step of the template editor (extra sections allowance, section naming pattern, first section number and the live naming preview) and the summary step are rewritten as small module-level functions that share one explicit context, with no function defined inside another and no nested or repeated loop. The functions these steps lost when the "Allowed activity types" block was removed were edited by that change, so they now follow the code-quality rules too. Behaviour is unchanged.
+- The save payload reads the sections into a variable before building the request, and the save endpoint reads its parameter description and its saved name into variables first.
+
+## [2.0.10] - 2026093006
+
+### Changed
+- The template editor scripts no longer define any function inside another function. Event handlers, callbacks, loop callbacks and promise executors are now named module-level functions that receive their state through an explicit context, or are bound to it, instead of closing over local variables. This covers the wizard start-up, the save payload, the row action and section behavior handlers, the add-from-template click and input handlers, the space modal, the space rows and the activity chooser.
+- The callback chain of a row action change (scope modal, unmark confirmation, space modal) is now a flat sequence of named functions driven by a shared context. The action a row falls back to when a modal is cancelled is tracked in that context.
+- Every loop over a list in those scripts is a plain `for...of` inside its own small function, and there is no nested or repeated loop left in any function the spaces work touched.
+- The template layout and its tests build their row lists with a `foreach` instead of an inline closure. No behaviour changes.
+
+## [2.0.10] - 2026093005
+
+### Changed
+- The code of the template editor and of the spaces for the professor now follows the project's code-quality rules that had been skipped: no loop inside another loop, one loop per function, no ternaries, no `switch`, no named function inside another function, no function call inside another call's arguments, an array or a loop's iterable, and no `??` fallback mixed into a larger expression. No behaviour changes.
+- The template wizard state (`init.js`) seeds each section and each activity through their own small functions instead of a loop inside a loop. The rows, events, payload, menu, space modal and activity chooser modules were split the same way; the chooser now keeps its outcome in a small class instead of a function defined inside another.
+- The section review (`sections_config`) reads the saved configuration through one helper per kind of record and builds each section and each real row through its own method, instead of a single method with five loops, one of them nested.
+- The configuration form builds its limits and its naming fields in separate methods, and the pure pieces (extra sections default, naming options, naming defaults) are public and covered by tests.
+- The tests of the editor and of the spaces read their inner calls into named variables first, and the spaces test got small helpers for the section id, the review render and the badge text.
+
+### Fixed
+- A test of the spaces (an activity marked as a space) called the fixture with one argument too few and would have stopped with an error instead of checking anything.
+
 ## [2.0.10] - 2026093004
 
 ### Fixed
-- The section-naming presets of the template configuration (Unit, Module, Topic, Week) and the default pattern were written in Spanish whatever the site language, so an English site offered "Unidad 1 — …" and named the generated sections that way by default. The words now come from the language pack; the `{N}` and `{nombre}` tokens stay identical in every language, since they are what the course builder and the preview substitute. A pattern saved in another language keeps working and is restored through the Custom option.
+- The section-naming presets of the template configuration (Unit, Module, Topic, Week) and the default pattern were written in Spanish whatever the site language, so an English site offered "Unidad 1 — …" and named the generated sections that way by default. The words now come from the language pack; the number and section-name tokens stay identical in every language, since they are what the course builder and the preview substitute (the section-name token is now `{name}`). A pattern saved in another language keeps working and is restored through the Custom option.
 - The wizard no longer starts with a hardcoded naming pattern: its initial value comes from the server together with the rest of the page configuration.
 - The placeholder of the custom naming pattern field, and the "Unidad" examples in the English help texts of the naming pattern and start number, are now proper language strings.
 

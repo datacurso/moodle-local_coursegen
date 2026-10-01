@@ -29,6 +29,33 @@ class template_activity extends persistent {
     /** Table name for the persistent. */
     const TABLE = 'local_coursegen_tpl_activity';
 
+    /** Action: the activity is copied into the new course as it is. */
+    const ACTION_KEEP = 'keep';
+
+    /** Action: the AI service rewrites the activity. */
+    const ACTION_MODIFY = 'modify';
+
+    /** Action: the activity is only context for the AI service. */
+    const ACTION_REFERENCE = 'reference';
+
+    /** Action: the activity is left out of the new course. */
+    const ACTION_EXCLUDE = 'exclude';
+
+    /** Action: the activity is a mold other activities are generated from. */
+    const ACTION_TEMPLATE = 'template';
+
+    /** Action: the professor provides this activity instead. */
+    const ACTION_SPACE = 'space';
+
+    /** Template scope: the mold serves the whole course. */
+    const SCOPE_COURSE = 'course';
+
+    /** Template scope: the mold serves only its own section. */
+    const SCOPE_SECTION = 'section';
+
+    /** The template scopes a mold can have. */
+    const SCOPES = [self::SCOPE_COURSE, self::SCOPE_SECTION];
+
     /**
      * Return the definition of the properties of this model.
      *
@@ -51,7 +78,7 @@ class template_activity extends persistent {
             'action' => [
                 'type' => PARAM_ALPHA,
                 'null' => NULL_NOT_ALLOWED,
-                'default' => 'modify',
+                'default' => self::ACTION_MODIFY,
             ],
             'useasreference' => [
                 'type' => PARAM_INT,
@@ -63,7 +90,7 @@ class template_activity extends persistent {
             'templatescope' => [
                 'type' => PARAM_ALPHA,
                 'null' => NULL_NOT_ALLOWED,
-                'default' => 'course',
+                'default' => self::SCOPE_COURSE,
             ],
             'prompt' => [
                 'type' => PARAM_RAW,

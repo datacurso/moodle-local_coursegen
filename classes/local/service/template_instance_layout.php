@@ -35,6 +35,18 @@ use local_coursegen\local\models\template_space;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class template_instance_layout {
+    /** Row type: a real activity of the base course. */
+    const TYPE_REAL = 'real';
+
+    /** Row type: a virtual instance created from a template activity. */
+    const TYPE_INSTANCE = 'instance';
+
+    /** Row type: a virtual space the professor fills. */
+    const TYPE_SPACE = 'space';
+
+    /** Group key of the virtual rows whose anchor activity no longer exists. */
+    const ANCHOR_ORPHAN = 'orphan';
+
     /**
      * Build the final row order for one section.
      *
@@ -49,14 +61,28 @@ class template_instance_layout {
     public static function ordered_rows(array $realcmids, array $instances): array {
         $groups = self::group_by_anchor($instances, $realcmids);
 
-        $rows = self::instance_rows($groups[0] ?? []);
+        $rows = self::group_rows($groups, 0);
         foreach ($realcmids as $cmid) {
-            $rows[] = ['type' => 'real', 'cmid' => $cmid];
-            $rows = array_merge($rows, self::instance_rows($groups[$cmid] ?? []));
+            $rows[] = ['type' => self::TYPE_REAL, 'cmid' => $cmid];
+            $anchored = self::group_rows($groups, $cmid);
+            $rows = array_merge($rows, $anchored);
         }
-        $rows = array_merge($rows, self::instance_rows($groups['orphan'] ?? []));
+        $orphans = self::group_rows($groups, self::ANCHOR_ORPHAN);
+        $rows = array_merge($rows, $orphans);
 
         return $rows;
+    }
+
+    /**
+     * The row entries of one anchor group, none when the group does not exist.
+     *
+     * @param array $groups Groups keyed by aftercmid, 0, or "orphan".
+     * @param int|string $key The group to wrap.
+     * @return array
+     */
+    private static function group_rows(array $groups, $key): array {
+        $group = $groups[$key] ?? [];
+        return self::instance_rows($group);
     }
 
     /**
@@ -73,17 +99,50 @@ class template_instance_layout {
         $groups = [];
         foreach ($instances as $instance) {
             $anchor = (int) $instance->get('aftercmid');
-            $key = 'orphan';
+            $key = self::ANCHOR_ORPHAN;
             if ($anchor === 0 || isset($validanchors[$anchor])) {
                 $key = $anchor;
             }
             $groups[$key][] = $instance;
         }
+        return self::sort_groups($groups);
+    }
+
+    /**
+     * Order the rows inside every anchor group by their shared sortorder.
+     *
+     * @param array $groups Groups keyed by aftercmid, 0, or "orphan".
+     * @return array The same groups, each one sorted.
+     */
+    private static function sort_groups(array $groups): array {
         foreach ($groups as $key => $group) {
-            usort($group, fn($a, $b) => $a->get('sortorder') <=> $b->get('sortorder'));
-            $groups[$key] = $group;
+            $groups[$key] = self::sort_group($group);
         }
         return $groups;
+    }
+
+    /**
+     * Order one group of rows by their sortorder.
+     *
+     * @param array $group Instances and spaces.
+     * @return array
+     */
+    private static function sort_group(array $group): array {
+        usort($group, [self::class, 'compare_by_sortorder']);
+        return $group;
+    }
+
+    /**
+     * Compare two virtual rows by their sortorder.
+     *
+     * @param template_instance|template_space $first
+     * @param template_instance|template_space $second
+     * @return int
+     */
+    private static function compare_by_sortorder($first, $second): int {
+        $firstorder = $first->get('sortorder');
+        $secondorder = $second->get('sortorder');
+        return $firstorder <=> $secondorder;
     }
 
     /**
@@ -93,12 +152,24 @@ class template_instance_layout {
      * @return array
      */
     private static function instance_rows(array $group): array {
-        return array_map(function ($record) {
-            $type = 'instance';
-            if ($record instanceof template_space) {
-                $type = 'space';
-            }
-            return ['type' => $type, 'record' => $record];
-        }, $group);
+        $rows = [];
+        foreach ($group as $key => $record) {
+            $rows[$key] = self::row_entry($record);
+        }
+        return $rows;
+    }
+
+    /**
+     * Wrap one virtual row into its row entry.
+     *
+     * @param template_instance|template_space $record
+     * @return array {type: 'instance'|'space', record}
+     */
+    private static function row_entry($record): array {
+        $type = self::TYPE_INSTANCE;
+        if ($record instanceof template_space) {
+            $type = self::TYPE_SPACE;
+        }
+        return ['type' => $type, 'record' => $record];
     }
 }

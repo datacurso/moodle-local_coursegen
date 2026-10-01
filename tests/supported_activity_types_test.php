@@ -44,7 +44,8 @@ final class supported_activity_types_test extends \advanced_testcase {
         $installed = supported_activity_types::installed();
 
         $this->assertNotEmpty($installed);
-        $this->assertSame([], array_diff($installed, template_content_generator::AI_SUPPORTED_TYPES));
+        $unsupported = array_diff($installed, template_content_generator::AI_SUPPORTED_TYPES);
+        $this->assertSame([], $unsupported);
         $this->assertContains('page', $installed);
         $this->assertContains('forum', $installed);
     }
@@ -55,9 +56,13 @@ final class supported_activity_types_test extends \advanced_testcase {
     public function test_a_module_without_an_ai_contract_is_not_supported(): void {
         $this->resetAfterTest();
 
-        $this->assertNotContains('lti', supported_activity_types::installed());
-        $this->assertFalse(supported_activity_types::is_supported('lti'));
-        $this->assertTrue(supported_activity_types::is_supported('page'));
+        $installed = supported_activity_types::installed();
+        $ltisupported = supported_activity_types::is_supported('lti');
+        $pagesupported = supported_activity_types::is_supported('page');
+
+        $this->assertNotContains('lti', $installed);
+        $this->assertFalse($ltisupported);
+        $this->assertTrue($pagesupported);
     }
 
     /**
@@ -74,6 +79,46 @@ final class supported_activity_types_test extends \advanced_testcase {
     }
 
     /**
+     * The supported list is written in alphabetical order, because the
+     * installed list follows it instead of sorting again.
+     */
+    public function test_the_supported_list_is_kept_alphabetical(): void {
+        $supported = template_content_generator::AI_SUPPORTED_TYPES;
+        $sorted = $supported;
+        sort($sorted);
+
+        $this->assertSame($sorted, $supported);
+    }
+
+    /**
+     * Every supported module is listed once, and only once.
+     */
+    public function test_installed_lists_each_module_once(): void {
+        $this->resetAfterTest();
+
+        $installed = supported_activity_types::installed();
+
+        $this->assertSame(array_values(array_unique($installed)), $installed);
+    }
+
+    /**
+     * A module an administrator has hidden is not available on the site, so
+     * it is not listed even though the AI service supports it.
+     */
+    public function test_a_hidden_module_is_not_installed(): void {
+        global $CFG, $DB;
+        require_once($CFG->dirroot . '/course/lib.php');
+        $this->resetAfterTest();
+
+        $DB->set_field('modules', 'visible', 0, ['name' => 'wiki']);
+        get_module_types_names(false, true);
+        $installed = supported_activity_types::installed();
+
+        $this->assertNotContains('wiki', $installed);
+        $this->assertContains('page', $installed);
+    }
+
+    /**
      * The professor-side catalog offers every supported type, even for a
      * template row saved by an older version with a narrower list.
      */
@@ -81,7 +126,8 @@ final class supported_activity_types_test extends \advanced_testcase {
         $this->resetAfterTest();
         $this->setAdminUser();
 
-        $course = $this->getDataGenerator()->create_course();
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
         $template = new template(0, (object) [
             'name' => 'Legacy list',
             'courseid' => $course->id,
@@ -93,6 +139,7 @@ final class supported_activity_types_test extends \advanced_testcase {
 
         $modnames = array_column($result['allowedactivities'], 'modname');
         sort($modnames);
-        $this->assertSame(supported_activity_types::installed(), $modnames);
+        $installed = supported_activity_types::installed();
+        $this->assertSame($installed, $modnames);
     }
 }

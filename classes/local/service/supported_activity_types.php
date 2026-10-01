@@ -16,8 +16,6 @@
 
 namespace local_coursegen\local\service;
 
-defined('MOODLE_INTERNAL') || die();
-
 /**
  * The activity types a template can work with on this site.
  *
@@ -34,16 +32,23 @@ class supported_activity_types {
     /**
      * Module names that are both AI-supported and available on this site.
      *
-     * @return string[] Sorted module names, e.g. ['book', 'forum', ...].
+     * Follows the order of template_content_generator::AI_SUPPORTED_TYPES,
+     * which is alphabetical.
+     *
+     * @return string[] Module names, e.g. ['book', 'forum', ...].
      */
     public static function installed(): array {
         global $CFG;
         require_once($CFG->dirroot . '/course/lib.php');
 
-        $available = array_keys(get_module_types_names());
-        $supported = array_intersect($available, template_content_generator::AI_SUPPORTED_TYPES);
-        sort($supported);
-        return array_values($supported);
+        $typenames = get_module_types_names();
+        $installed = [];
+        foreach (template_content_generator::AI_SUPPORTED_TYPES as $modname) {
+            if (isset($typenames[$modname])) {
+                $installed[] = $modname;
+            }
+        }
+        return $installed;
     }
 
     /**
@@ -53,6 +58,7 @@ class supported_activity_types {
      * @return bool
      */
     public static function is_supported(string $modname): bool {
-        return in_array($modname, self::installed(), true);
+        $installed = self::installed();
+        return in_array($modname, $installed, true);
     }
 }

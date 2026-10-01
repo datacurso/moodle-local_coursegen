@@ -40,11 +40,13 @@ final class template_export_service_test extends \advanced_testcase {
         $this->resetAfterTest(true);
         $this->setAdminUser();
 
-        $course = $this->getDataGenerator()->create_course();
-        $page = $this->getDataGenerator()->create_module('page', ['course' => $course->id]);
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $page = $generator->create_module('page', ['course' => $course->id]);
         $template = $this->create_template($course->id);
+        $templateid = $template->get('id');
 
-        $payload = template_export_service::build_init_payload($template->get('id'));
+        $payload = template_export_service::build_init_payload($templateid);
         $entry = $this->find_activity($payload, (int) $page->cmid);
 
         $this->assertNotNull($entry);
@@ -60,12 +62,14 @@ final class template_export_service_test extends \advanced_testcase {
         $this->resetAfterTest(true);
         $this->setAdminUser();
 
-        $course = $this->getDataGenerator()->create_course();
-        $page = $this->getDataGenerator()->create_module('page', ['course' => $course->id]);
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $page = $generator->create_module('page', ['course' => $course->id]);
         $template = $this->create_template($course->id);
-        $this->mark_excluded($template->get('id'), (int) $page->cmid);
+        $templateid = $template->get('id');
+        $this->mark_excluded($templateid, (int) $page->cmid);
 
-        $payload = template_export_service::build_init_payload($template->get('id'));
+        $payload = template_export_service::build_init_payload($templateid);
         $entry = $this->find_activity($payload, (int) $page->cmid);
 
         $this->assertNull($entry);
@@ -80,16 +84,20 @@ final class template_export_service_test extends \advanced_testcase {
         $this->resetAfterTest(true);
         $this->setAdminUser();
 
-        $course = $this->getDataGenerator()->create_course();
-        $page = $this->getDataGenerator()->create_module('page', ['course' => $course->id]);
-        $forum = $this->getDataGenerator()->create_module('forum', ['course' => $course->id]);
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $page = $generator->create_module('page', ['course' => $course->id]);
+        $forum = $generator->create_module('forum', ['course' => $course->id]);
         $template = $this->create_template($course->id);
-        $this->mark_with_action($template->get('id'), (int) $page->cmid, 'space');
+        $templateid = $template->get('id');
+        $this->mark_with_action($templateid, (int) $page->cmid, 'space');
 
-        $payload = template_export_service::build_init_payload($template->get('id'));
+        $payload = template_export_service::build_init_payload($templateid);
 
-        $this->assertNull($this->find_activity($payload, (int) $page->cmid));
-        $this->assertNotNull($this->find_activity($payload, (int) $forum->cmid));
+        $pageentry = $this->find_activity($payload, (int) $page->cmid);
+        $forumentry = $this->find_activity($payload, (int) $forum->cmid);
+        $this->assertNull($pageentry);
+        $this->assertNotNull($forumentry);
     }
 
     /**
@@ -100,18 +108,22 @@ final class template_export_service_test extends \advanced_testcase {
         $this->resetAfterTest(true);
         $this->setAdminUser();
 
-        $course = $this->getDataGenerator()->create_course(['numsections' => 2]);
-        $this->getDataGenerator()->create_module('page', ['course' => $course->id]);
-        $this->getDataGenerator()->create_module('forum', ['course' => $course->id]);
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['numsections' => 2]);
+        $generator->create_module('page', ['course' => $course->id]);
+        $generator->create_module('forum', ['course' => $course->id]);
         $template = $this->create_template($course->id);
+        $templateid = $template->get('id');
 
-        $payload = template_export_service::build_init_payload($template->get('id'));
+        $payload = template_export_service::build_init_payload($templateid);
 
         $activityuids = array_column($payload['activities'], 'uid');
         $sectionuids = array_column($payload['sections_info'], 'uid');
         $uids = array_merge($activityuids, $sectionuids);
 
-        $this->assertCount(count($uids), array_unique($uids));
+        $uniqueuids = array_unique($uids);
+        $expectedcount = count($uids);
+        $this->assertCount($expectedcount, $uniqueuids);
     }
 
     /**
