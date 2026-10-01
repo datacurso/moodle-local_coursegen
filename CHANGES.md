@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026093030
+
+### Changed
+- The download of generated images moved out of the text editor cleaner into its own class, so the cleaner stays under the file size limit. Their behaviour is the same.
+
 ## [2.0.10] - 2026093029
 
 ### Changed
