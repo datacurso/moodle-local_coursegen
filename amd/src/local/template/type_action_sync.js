@@ -39,26 +39,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-/**
- * Every module type the real AI service has a content contract for — every
- * one of these must offer "Modify", regardless of whether the
- * implementation currently answering generate() has caught up to all of
- * them yet.
- *
- * Mirrors template_content_generator::AI_SUPPORTED_TYPES (PHP) — kept in
- * sync manually since a JS module cannot read a PHP class constant
- * directly. This copy matters for seeding each activity's initial
- * per-activity action as soon as a course's structure loads, before the
- * config form has necessarily rendered yet (see applyTypeDefaultsToState,
- * called from init.js::initSectionState).
- *
- * @type {string[]}
- */
-const AI_SUPPORTED = [
-    'assign', 'book', 'choice', 'data', 'feedback', 'folder', 'forum',
-    'glossary', 'h5pactivity', 'imscp', 'label', 'lesson', 'page', 'quiz',
-    'resource', 'scorm', 'url', 'wiki', 'workshop',
-];
+import {MODNAMES} from 'local_coursegen/local/ai_activity_types';
 
 /**
  * Sensible default action per recognised component type — mirrors
@@ -78,9 +59,10 @@ const DEFAULT_ACTION = {
 
 /**
  * @param {string} modname
- * @returns {boolean} Whether "Modify" is a safe option for this module type today.
+ * @returns {boolean} Whether "Modify" is a safe option for this module type today: every type the
+ *     AI service has a content contract for (see ai_activity_types.js) offers it.
  */
-export const typeSupportsModify = (modname) => AI_SUPPORTED.includes(modname);
+export const typeSupportsModify = (modname) => MODNAMES.includes(modname);
 
 /**
  * @param {string} modname

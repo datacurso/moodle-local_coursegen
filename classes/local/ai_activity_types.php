@@ -14,26 +14,43 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_coursegen\local\service;
+namespace local_coursegen\local;
 
 /**
- * The activity types a template can work with on this site.
+ * The activity types the AI content service can write content for.
  *
- * A type is supported when the AI content service has a content contract
- * for it (template_content_generator::AI_SUPPORTED_TYPES) and the module is
- * installed and enabled here. Every template allows all of them: the admin no
- * longer narrows the list per template.
+ * A type is supported when the service has a content contract for it and the
+ * module is installed and enabled on this site. Every template allows all of
+ * them: the admin does not narrow the list per template.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class supported_activity_types {
+class ai_activity_types {
+    /**
+     * Every activity type the AI content service has a content contract for.
+     *
+     * Mirrors the ActivityPromptRegistry of the course_ai service, which has
+     * one prompt file per modname in app/agents/activity_prompts/, and must be
+     * kept in sync with it. It decides which types offer "Modify with AI" on an
+     * activity a template already contains, which can be marked as a mold, and
+     * which a professor may add as new activities: never everything installed on
+     * the site, since the service can only be asked for content of a type it has
+     * a contract for.
+     *
+     * @var string[] Module names, alphabetical.
+     */
+    public const MODNAMES = [
+        'assign', 'book', 'choice', 'data', 'feedback', 'folder', 'forum',
+        'glossary', 'h5pactivity', 'imscp', 'label', 'lesson', 'page', 'quiz',
+        'resource', 'scorm', 'url', 'wiki', 'workshop',
+    ];
+
     /**
      * Module names that are both AI-supported and available on this site.
      *
-     * Follows the order of template_content_generator::AI_SUPPORTED_TYPES,
-     * which is alphabetical.
+     * Follows the order of MODNAMES, which is alphabetical.
      *
      * @return string[] Module names, e.g. ['book', 'forum', ...].
      */
@@ -43,22 +60,11 @@ class supported_activity_types {
 
         $typenames = get_module_types_names();
         $installed = [];
-        foreach (template_content_generator::AI_SUPPORTED_TYPES as $modname) {
+        foreach (self::MODNAMES as $modname) {
             if (isset($typenames[$modname])) {
                 $installed[] = $modname;
             }
         }
         return $installed;
-    }
-
-    /**
-     * Whether a module name is one of the installed, AI-supported types.
-     *
-     * @param string $modname
-     * @return bool
-     */
-    public static function is_supported(string $modname): bool {
-        $installed = self::installed();
-        return in_array($modname, $installed, true);
     }
 }

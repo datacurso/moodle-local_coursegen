@@ -35,7 +35,7 @@ trait sections_config_fixture_trait {
      * Create a 2-section course with a page in section 1 and a forum plus an
      * LTI external tool in section 2.
      *
-     * Page and forum are both in template_content_generator::AI_SUPPORTED_TYPES;
+     * Page and forum are both in ai_activity_types::MODNAMES;
      * lti is NOT — it is the "unsupported type" fixture for the rows that
      * must not offer (nor default to) the "template" action.
      *

@@ -22,11 +22,9 @@ use local_coursegen\local\service\generated_activities_filter;
  * Unit tests for generated_activities_filter::only_ai_written().
  *
  * This is the exact check finish_template_generation.php runs on every
- * finished generation. A previous version of it compared an activity's cmid
- * against template_export_service::INSTANCE_CMID_BASE - a constant that no
- * longer exists on that class since template_export_service switched to
- * template_export_uids::instance_cmid() - so every real generation crashed
- * on it with an "Undefined constant" fatal. These tests exercise only the
+ * finished generation. An earlier version of it compared an activity's cmid
+ * against a base number that stood for virtual instances, which crashed every
+ * real generation once that number was gone. These tests exercise only the
  * action field, never a cmid's numeric shape.
  *
  * @package    local_coursegen
