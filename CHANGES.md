@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026093029
+
+### Changed
+- The preview of a course in the template editor and the configuration form of the editor ask for the capability of what the user is doing: to create a template when it is new and to edit it when it already exists, instead of accepting either one of them.
+
 ## [2.0.10] - 2026093028
 
 ### Changed
