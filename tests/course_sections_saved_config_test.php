@@ -152,7 +152,7 @@ final class course_sections_saved_config_test extends \advanced_testcase {
 
     /**
      * A saved "template" action on a type the generator cannot handle
-     * (lti, not in AI_SUPPORTED_TYPES) degrades to "keep" when rendered —
+     * (lti, not in ai_activity_types::MODNAMES) degrades to "keep" when rendered —
      * instead of rendering an option the row's own select does not even
      * offer.
      */

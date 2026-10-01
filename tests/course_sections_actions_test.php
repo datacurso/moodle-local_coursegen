@@ -31,7 +31,7 @@ use local_coursegen\output\sections_config;
  *
  * "Use as template" marks an activity as a structural mold: it is the only
  * action gated to module types in
- * template_content_generator::AI_SUPPORTED_TYPES, and renders a visible
+ * ai_activity_types::MODNAMES, and renders a visible
  * "Template" tag next to the activity name. Its scope (course-wide or
  * section-only) is set through local/template/template_scope_modal.js, not
  * a select rendered in the row — the tag just carries both possible labels

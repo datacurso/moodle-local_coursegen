@@ -86,7 +86,7 @@ final class template_row_options_test extends \advanced_testcase {
     /**
      * activity_actions() never offers "modify" any more, for either an
      * AI-supported type or an unsupported one — "template" is the only
-     * action still gated to AI_SUPPORTED_TYPES, and "space" is offered for
+     * action still gated to ai_activity_types::MODNAMES, and "space" is offered for
      * every type.
      */
     public function test_activity_actions_never_offers_modify(): void {

@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026093028
+
+### Changed
+- The list of activity types the AI service can write content for lives in one small neutral class on the server, next to the other helpers of the plugin, and in one small neutral module in the template editor script, instead of in a constant of an interface and a hand-copied array. A test keeps the two lists equal.
+
+### Removed
+- The interface that only held that list, with no implementation and no user.
+- The check that told whether a module name was one of the installed supported types, which nothing called.
+- The helper and the base number of the old scheme that gave virtual instances a synthetic course module id, which nothing called either.
+
 ## [2.0.10] - 2026093026
 
 ### Changed

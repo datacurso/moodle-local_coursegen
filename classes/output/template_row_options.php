@@ -28,11 +28,11 @@
 
 namespace local_coursegen\output;
 
+use local_coursegen\local\ai_activity_types;
 use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_instance;
 use local_coursegen\local\models\template_section;
 use local_coursegen\local\models\template_space;
-use local_coursegen\local\service\template_content_generator;
 
 /**
  * Builds the per-row select options for sections_config.
@@ -86,9 +86,9 @@ class template_row_options {
      * every type: it asks nothing of the AI service.
      *
      * Template is the only other action gated to a module type in
-     * template_content_generator::AI_SUPPORTED_TYPES — the real AI service's
-     * full content contract, never a constant scoped to whichever
-     * implementation currently satisfies it. Anything NOT in that contract
+     * ai_activity_types::MODNAMES — the real AI service's full content
+     * contract, never a constant scoped to whichever implementation currently
+     * satisfies it. Anything NOT in that contract
      * only offers Keep / Reference / Exclude. Every row's default is Keep.
      *
      * When editing an existing template, the activity's SAVED action wins
@@ -110,7 +110,7 @@ class template_row_options {
             template_activity::ACTION_REFERENCE,
             template_activity::ACTION_EXCLUDE,
         ];
-        $cansupporttemplate = in_array($modname, template_content_generator::AI_SUPPORTED_TYPES, true);
+        $cansupporttemplate = in_array($modname, ai_activity_types::MODNAMES, true);
         if (!$cansupporttemplate) {
             $keys = [
                 template_activity::ACTION_KEEP,

@@ -18,8 +18,7 @@ namespace local_coursegen;
 
 use local_coursegen\external\get_template_structure;
 use local_coursegen\local\models\template;
-use local_coursegen\local\service\supported_activity_types;
-use local_coursegen\local\service\template_content_generator;
+use local_coursegen\local\ai_activity_types;
 
 /**
  * The activity types a template works with: every AI-supported module that is
@@ -29,40 +28,25 @@ use local_coursegen\local\service\template_content_generator;
  * @category   test
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers     \local_coursegen\local\service\supported_activity_types
+ * @covers     \local_coursegen\local\ai_activity_types
  * @covers     \local_coursegen\external\get_template_structure
  *
  * @runTestsInSeparateProcesses
  */
-final class supported_activity_types_test extends \advanced_testcase {
+final class ai_activity_types_test extends \advanced_testcase {
     /**
      * Only modules the AI service has a contract for are listed.
      */
     public function test_installed_lists_only_ai_supported_modules(): void {
         $this->resetAfterTest();
 
-        $installed = supported_activity_types::installed();
+        $installed = ai_activity_types::installed();
 
         $this->assertNotEmpty($installed);
-        $unsupported = array_diff($installed, template_content_generator::AI_SUPPORTED_TYPES);
+        $unsupported = array_diff($installed, ai_activity_types::MODNAMES);
         $this->assertSame([], $unsupported);
         $this->assertContains('page', $installed);
         $this->assertContains('forum', $installed);
-    }
-
-    /**
-     * A module with no AI content contract is never a supported type.
-     */
-    public function test_a_module_without_an_ai_contract_is_not_supported(): void {
-        $this->resetAfterTest();
-
-        $installed = supported_activity_types::installed();
-        $ltisupported = supported_activity_types::is_supported('lti');
-        $pagesupported = supported_activity_types::is_supported('page');
-
-        $this->assertNotContains('lti', $installed);
-        $this->assertFalse($ltisupported);
-        $this->assertTrue($pagesupported);
     }
 
     /**
@@ -71,7 +55,7 @@ final class supported_activity_types_test extends \advanced_testcase {
     public function test_installed_is_sorted(): void {
         $this->resetAfterTest();
 
-        $installed = supported_activity_types::installed();
+        $installed = ai_activity_types::installed();
         $sorted = $installed;
         sort($sorted);
 
@@ -83,7 +67,7 @@ final class supported_activity_types_test extends \advanced_testcase {
      * installed list follows it instead of sorting again.
      */
     public function test_the_supported_list_is_kept_alphabetical(): void {
-        $supported = template_content_generator::AI_SUPPORTED_TYPES;
+        $supported = ai_activity_types::MODNAMES;
         $sorted = $supported;
         sort($sorted);
 
@@ -96,9 +80,11 @@ final class supported_activity_types_test extends \advanced_testcase {
     public function test_installed_lists_each_module_once(): void {
         $this->resetAfterTest();
 
-        $installed = supported_activity_types::installed();
+        $installed = ai_activity_types::installed();
 
-        $this->assertSame(array_values(array_unique($installed)), $installed);
+        $unique = array_unique($installed);
+        $expected = array_values($unique);
+        $this->assertSame($expected, $installed);
     }
 
     /**
@@ -112,7 +98,7 @@ final class supported_activity_types_test extends \advanced_testcase {
 
         $DB->set_field('modules', 'visible', 0, ['name' => 'wiki']);
         get_module_types_names(false, true);
-        $installed = supported_activity_types::installed();
+        $installed = ai_activity_types::installed();
 
         $this->assertNotContains('wiki', $installed);
         $this->assertContains('page', $installed);
@@ -139,7 +125,7 @@ final class supported_activity_types_test extends \advanced_testcase {
 
         $modnames = array_column($result['allowedactivities'], 'modname');
         sort($modnames);
-        $installed = supported_activity_types::installed();
+        $installed = ai_activity_types::installed();
         $this->assertSame($installed, $modnames);
     }
 }

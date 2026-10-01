@@ -18,7 +18,7 @@ namespace local_coursegen;
 
 use local_coursegen\external\get_template_structure;
 use local_coursegen\local\models\template;
-use local_coursegen\local\service\supported_activity_types;
+use local_coursegen\local\ai_activity_types;
 
 /**
  * The activity catalog that get_template_structure returns to the template
@@ -60,7 +60,7 @@ final class get_template_structure_catalog_test extends \advanced_testcase {
         $catalog = $this->fetch_catalog();
 
         $listed = array_column($catalog, 'modname');
-        $installed = supported_activity_types::installed();
+        $installed = ai_activity_types::installed();
         sort($listed);
         sort($installed);
         $this->assertSame($installed, $listed);
