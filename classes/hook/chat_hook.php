@@ -89,11 +89,14 @@ class chat_hook {
         global $PAGE, $COURSE;
         if (self::can_create_activity()) {
             $languageoptions = self::get_supported_language_options();
+            $coursecontext = \context_course::instance($COURSE->id);
+            $canimages = has_capability('local/coursegen:generateactivityimages', $coursecontext);
             $PAGE->requires->js_call_amd('local_coursegen/activityai', 'init', [
                 $COURSE->id,
                 self::is_moodle_45(),
                 $languageoptions,
                 self::get_default_language_code($languageoptions),
+                $canimages,
             ]);
         }
     }
@@ -176,9 +179,10 @@ class chat_hook {
 
         $systemcontext = \context_system::instance();
 
-        return has_all_capabilities([
-            'moodle/course:create',
-            'local/coursegen:createcoursewithai',
-        ], $systemcontext);
+        if (!has_capability('moodle/course:create', $systemcontext)) {
+            return false;
+        }
+        $creationmodes = ['local/coursegen:createfreecoursewithai', 'local/coursegen:createtemplatecoursewithai'];
+        return has_any_capability($creationmodes, $systemcontext);
     }
 }

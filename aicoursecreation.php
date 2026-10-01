@@ -22,6 +22,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use local_coursegen\local\service\access_guard;
+
 require('../../config.php');
 require_once($CFG->libdir . '/filelib.php');
 
@@ -30,7 +32,8 @@ require_login();
 // Check permissions.
 $systemcontext = context_system::instance();
 require_capability('moodle/course:create', $systemcontext);
-require_capability('local/coursegen:createcoursewithai', $systemcontext);
+$creationmodes = ['local/coursegen:createfreecoursewithai', 'local/coursegen:createtemplatecoursewithai'];
+access_guard::require_any($creationmodes, $systemcontext);
 
 // Set up the page.
 $url = new moodle_url('/local/coursegen/aicoursecreation.php');
@@ -59,6 +62,17 @@ $resumesessionid = optional_param('sessionid', 0, PARAM_INT);
 $showsessionsview = optional_param('view', '', PARAM_ALPHA) === 'courses';
 $templatemodeactive = optional_param('mode', 'free', PARAM_ALPHA) === 'template';
 
+// Each way of creating a course is its own capability. A user who has only one of
+// them is taken to that mode and is not offered the other.
+$canfree = has_capability('local/coursegen:createfreecoursewithai', $systemcontext);
+$cantemplate = has_capability('local/coursegen:createtemplatecoursewithai', $systemcontext);
+if (!$canfree) {
+    $templatemodeactive = true;
+}
+if (!$cantemplate) {
+    $templatemodeactive = false;
+}
+
 // Load system instructions (directrices institucionales).
 $systeminstructions = [];
 $records = $DB->get_records('local_coursegen_system_instruction', ['deleted' => 0], 'name ASC');
@@ -73,7 +87,10 @@ foreach ($records as $record) {
 
 // Load available course templates.
 $coursetemplates = [];
-$tplrecords = \local_coursegen\local\models\template::get_records([], 'name', 'ASC');
+$tplrecords = [];
+if ($cantemplate) {
+    $tplrecords = \local_coursegen\local\models\template::get_records([], 'name', 'ASC');
+}
 foreach ($tplrecords as $tpl) {
     $tplcourse = $DB->get_record('course', ['id' => $tpl->get('courseid')], 'id, fullname', IGNORE_MISSING);
     $tplcoursefullname = '';
@@ -178,6 +195,9 @@ $templatecontext = [
     'isresuming' => $resumesessionid > 0,
     'showsessionsview' => $showsessionsview,
     'templatemodeactive' => $templatemodeactive,
+    'hasbothmodes' => $canfree && $cantemplate,
+    'canuploadsyllabus' => has_capability('local/coursegen:uploadcoursesyllabus', $systemcontext),
+    'cangeneratecourseimages' => has_capability('local/coursegen:generatecourseimages', $systemcontext),
     'subsectionsenabled' => $subsectionsenabled,
     'closeurl' => (new moodle_url('/my/courses.php'))->out(false),
     'sidebarclosed' => !$sidebarpinned,

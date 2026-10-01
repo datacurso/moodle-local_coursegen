@@ -85,10 +85,11 @@ class mycourses_header_hook {
     private static function user_can_see_button(): bool {
         $systemcontext = \context_system::instance();
 
-        return has_all_capabilities([
-            'moodle/course:create',
-            'local/coursegen:createcoursewithai',
-        ], $systemcontext);
+        if (!has_capability('moodle/course:create', $systemcontext)) {
+            return false;
+        }
+        $creationmodes = ['local/coursegen:createfreecoursewithai', 'local/coursegen:createtemplatecoursewithai'];
+        return has_any_capability($creationmodes, $systemcontext);
     }
 
     /**
