@@ -16,6 +16,7 @@
 
 namespace local_coursegen\local\service;
 
+use core\exception\moodle_exception;
 use local_coursegen\local\models\system_instruction;
 
 /**
@@ -37,7 +38,7 @@ class system_instruction_service {
         global $USER;
 
         if (!self::validate_unique_name($name)) {
-            throw new \moodle_exception('systeminstructionnameexists', 'local_coursegen');
+            throw new moodle_exception('systeminstructionnameexists', 'local_coursegen');
         }
 
         $now = time();
@@ -70,11 +71,11 @@ class system_instruction_service {
 
         $instruction = self::get_by_id($id);
         if (!$instruction) {
-            throw new \moodle_exception('invalidrecord', 'error');
+            throw new moodle_exception('invalidrecord', 'error');
         }
 
         if (!self::validate_unique_name($name, $id)) {
-            throw new \moodle_exception('systeminstructionnameexists', 'local_coursegen');
+            throw new moodle_exception('systeminstructionnameexists', 'local_coursegen');
         }
 
         $now = time();

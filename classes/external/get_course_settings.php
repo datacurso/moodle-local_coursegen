@@ -24,19 +24,16 @@
 
 namespace local_coursegen\external;
 
-use external_api;
-use external_function_parameters;
-use external_multiple_structure;
-use external_value;
-use external_single_structure;
+use core\context\system;
+use core\exception\required_capability_exception;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_multiple_structure;
+use core_external\external_single_structure;
+use core_external\external_value;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
-use context_system;
-
-defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/externallib.php');
 
 /**
  * External API for fetching the AI-generated course settings for final review.
@@ -66,7 +63,7 @@ class get_course_settings extends external_api {
             'recordid' => $recordid,
         ]);
 
-        $context = context_system::instance();
+        $context = system::instance();
         self::validate_context($context);
         require_capability('local/coursegen:createcoursewithai', $context);
 
@@ -74,7 +71,7 @@ class get_course_settings extends external_api {
         // moodle/course:create at system level or in at least one category.
         $catlist = \core_course_category::make_categories_list('moodle/course:create');
         if (empty($catlist) && !has_capability('moodle/course:create', $context)) {
-            throw new \required_capability_exception($context, 'moodle/course:create', 'nopermissions', '');
+            throw new required_capability_exception($context, 'moodle/course:create', 'nopermissions', '');
         }
 
         $recordid = (int)$params['recordid'];

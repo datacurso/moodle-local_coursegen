@@ -24,6 +24,7 @@ namespace local_coursegen\mod_settings;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers \local_coursegen\mod_settings\workshop_settings
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\mod_settings\workshop_settings::class)]
 final class workshop_settings_test extends \advanced_testcase {
     /**
      * Create a workshop activity and return a cm-like object shaped as create_mod_service passes it.
@@ -83,6 +84,7 @@ final class workshop_settings_test extends \advanced_testcase {
      * @param string $token Phase token from the AI payload.
      * @param int $expected Expected workshop phase code.
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('valid_phase_provider')]
     public function test_initial_phase_switches_workshop(string $token, int $expected): void {
         $this->resetAfterTest();
 
@@ -120,6 +122,7 @@ final class workshop_settings_test extends \advanced_testcase {
      * @dataProvider noop_phase_provider
      * @param array $modsettings The mod_settings payload.
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('noop_phase_provider')]
     public function test_initial_phase_setup_absent_or_null_keeps_default(array $modsettings): void {
         $this->resetAfterTest();
 
@@ -150,6 +153,7 @@ final class workshop_settings_test extends \advanced_testcase {
      * @dataProvider invalid_phase_provider
      * @param string $token Invalid phase token.
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('invalid_phase_provider')]
     public function test_initial_phase_invalid_token_keeps_setup_and_debugs(string $token): void {
         $this->resetAfterTest();
 

@@ -27,9 +27,7 @@ use local_coursegen\local\service\module_job_service;
  * client response; only localized messages do, while the technical text is
  * kept in developer debugging output.
  *
- * The AI service is mocked, so no network request is ever performed. The
- * testable subclass fixture and the external classes load lib/externallib.php,
- * which requires each test to run in an isolated process.
+ * The AI service is mocked, so no network request is ever performed.
  *
  * @package    local_coursegen
  * @category   test
@@ -37,15 +35,15 @@ use local_coursegen\local\service\module_job_service;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_coursegen\external\create_mod
  * @covers     \local_coursegen\external\start_course_planning
- *
- * @runTestsInSeparateProcesses
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\external\create_mod::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\external\start_course_planning::class)]
 final class error_message_disclosure_test extends \advanced_testcase {
     /** @var string Technical marker that must never surface in a client response. */
     private const TECHNICALDETAIL = 'TECH-SECRET curl error 500 at https://internal-api.invalid/course/init';
 
     /**
-     * Load the testable subclass in the isolated process.
+     * Load the testable subclass fixture.
      */
     protected function setUp(): void {
         parent::setUp();

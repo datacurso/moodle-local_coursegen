@@ -16,9 +16,9 @@
 
 namespace local_coursegen;
 
-use context_course;
-use context_system;
-use context_user;
+use core\context\course;
+use core\context\system;
+use core\context\user;
 use core_privacy\local\metadata\collection;
 use core_privacy\local\request\approved_contextlist;
 use core_privacy\local\request\userlist;
@@ -35,6 +35,13 @@ use stdClass;
  * @copyright  2025 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+#[\PHPUnit\Framework\Attributes\CoversMethod(\local_coursegen\privacy\provider::class, 'get_metadata')]
+#[\PHPUnit\Framework\Attributes\CoversMethod(\local_coursegen\privacy\provider::class, 'get_contexts_for_userid')]
+#[\PHPUnit\Framework\Attributes\CoversMethod(\local_coursegen\privacy\provider::class, 'get_users_in_context')]
+#[\PHPUnit\Framework\Attributes\CoversMethod(\local_coursegen\privacy\provider::class, 'export_user_data')]
+#[\PHPUnit\Framework\Attributes\CoversMethod(\local_coursegen\privacy\provider::class, 'delete_data_for_all_users_in_context')]
+#[\PHPUnit\Framework\Attributes\CoversMethod(\local_coursegen\privacy\provider::class, 'delete_data_for_user')]
+#[\PHPUnit\Framework\Attributes\CoversMethod(\local_coursegen\privacy\provider::class, 'delete_data_for_users')]
 final class privacy_provider_test extends provider_testcase {
     /**
      * Tests set up.
@@ -136,8 +143,8 @@ final class privacy_provider_test extends provider_testcase {
         $contextlist = provider::get_contexts_for_userid($user->id);
         $this->assertCount(2, $contextlist);
 
-        $usercontext = context_user::instance($user->id);
-        $coursecontext = context_course::instance($records['local_coursegen_course_sessions']->courseid);
+        $usercontext = user::instance($user->id);
+        $coursecontext = course::instance($records['local_coursegen_course_sessions']->courseid);
         $this->assertContainsEquals($usercontext->id, $contextlist->get_contextids());
         $this->assertContainsEquals($coursecontext->id, $contextlist->get_contextids());
     }
@@ -150,7 +157,7 @@ final class privacy_provider_test extends provider_testcase {
     public function test_get_users_in_context(): void {
         $component = 'local_coursegen';
         $user = $this->getDataGenerator()->create_user();
-        $usercontext = context_user::instance($user->id);
+        $usercontext = user::instance($user->id);
 
         $userlist = new userlist($usercontext, $component);
         provider::get_users_in_context($userlist);
@@ -166,7 +173,7 @@ final class privacy_provider_test extends provider_testcase {
         $this->assertEquals($expected, $actual);
 
         // The list of users for system context should not return any users.
-        $userlist = new userlist(context_system::instance(), $component);
+        $userlist = new userlist(system::instance(), $component);
         provider::get_users_in_context($userlist);
         $this->assertCount(0, $userlist);
     }
@@ -180,7 +187,7 @@ final class privacy_provider_test extends provider_testcase {
         $user = $this->getDataGenerator()->create_user();
         $userrecords = $this->create_userdata($user->id);
 
-        $usercontext = context_user::instance($user->id);
+        $usercontext = user::instance($user->id);
         $writer = writer::with_context($usercontext);
         $this->assertFalse($writer->has_any_data());
 
@@ -209,7 +216,7 @@ final class privacy_provider_test extends provider_testcase {
 
         $user1 = $this->getDataGenerator()->create_user();
         $records1 = $this->create_userdata($user1->id);
-        $user1context = context_user::instance($user1->id);
+        $user1context = user::instance($user1->id);
 
         $user2 = $this->getDataGenerator()->create_user();
         $records2 = $this->create_userdata($user2->id);
@@ -268,7 +275,7 @@ final class privacy_provider_test extends provider_testcase {
 
         $user1 = $this->getDataGenerator()->create_user();
         $records1 = $this->create_userdata($user1->id);
-        $user1context = context_user::instance($user1->id);
+        $user1context = user::instance($user1->id);
 
         $user2 = $this->getDataGenerator()->create_user();
         $records2 = $this->create_userdata($user2->id);
@@ -329,11 +336,11 @@ final class privacy_provider_test extends provider_testcase {
         // Create user 1 and user 2 with data.
         $user1 = $this->getDataGenerator()->create_user();
         $this->create_userdata($user1->id);
-        $usercontext1 = context_user::instance($user1->id);
+        $usercontext1 = user::instance($user1->id);
 
         $user2 = $this->getDataGenerator()->create_user();
         $this->create_userdata($user2->id);
-        $usercontext2 = context_user::instance($user2->id);
+        $usercontext2 = user::instance($user2->id);
 
         // Verify userlist for each context has the correct user.
         $userlist1 = new userlist($usercontext1, $component);
@@ -356,7 +363,7 @@ final class privacy_provider_test extends provider_testcase {
         $this->assertCount(0, $userlist1);
 
         // System context should not affect user2.
-        $systemcontext = context_system::instance();
+        $systemcontext = system::instance();
         $approvedlist = new \core_privacy\local\request\approved_userlist($systemcontext, $component, $userlist2->get_userids());
         provider::delete_data_for_users($approvedlist);
 
@@ -376,7 +383,7 @@ final class privacy_provider_test extends provider_testcase {
         $user = $this->getDataGenerator()->create_user();
         $other = $this->getDataGenerator()->create_user();
         $records = $this->create_userdata($user->id);
-        $coursecontext = context_course::instance($records['local_coursegen_course_sessions']->courseid);
+        $coursecontext = course::instance($records['local_coursegen_course_sessions']->courseid);
 
         $userlist = new userlist($coursecontext, $component);
         provider::get_users_in_context($userlist);
@@ -397,7 +404,7 @@ final class privacy_provider_test extends provider_testcase {
         $sessionid = (int)$records['local_coursegen_course_sessions']->id;
         $this->create_syllabus_file($sessionid);
 
-        $usercontext = context_user::instance($user->id);
+        $usercontext = user::instance($user->id);
         $approvedlist = new approved_contextlist($user, 'local_coursegen', [$usercontext->id]);
         provider::export_user_data($approvedlist);
 
@@ -417,7 +424,7 @@ final class privacy_provider_test extends provider_testcase {
     public function test_export_user_data_for_course_context(): void {
         $user = $this->getDataGenerator()->create_user();
         $records = $this->create_userdata($user->id);
-        $coursecontext = context_course::instance($records['local_coursegen_course_sessions']->courseid);
+        $coursecontext = course::instance($records['local_coursegen_course_sessions']->courseid);
 
         $approvedlist = new approved_contextlist($user, 'local_coursegen', [$coursecontext->id]);
         provider::export_user_data($approvedlist);
@@ -438,10 +445,10 @@ final class privacy_provider_test extends provider_testcase {
         $this->create_syllabus_file($sessionid);
 
         $fs = get_file_storage();
-        $syscontextid = context_system::instance()->id;
+        $syscontextid = system::instance()->id;
         $this->assertNotEmpty($fs->get_area_files($syscontextid, 'local_coursegen', 'syllabus', $sessionid, 'id', false));
 
-        provider::delete_data_for_all_users_in_context(context_user::instance($user->id));
+        provider::delete_data_for_all_users_in_context(user::instance($user->id));
 
         $this->assertEmpty($fs->get_area_files($syscontextid, 'local_coursegen', 'syllabus', $sessionid, 'id', false));
     }
@@ -468,14 +475,14 @@ final class privacy_provider_test extends provider_testcase {
         $user3 = $this->getDataGenerator()->create_user();
         $records3 = $this->create_userdata($user3->id);
 
-        provider::delete_data_for_all_users_in_context(context_course::instance($courseid));
+        provider::delete_data_for_all_users_in_context(course::instance($courseid));
 
         $this->assertCount(0, $DB->get_records('local_coursegen_course_sessions', ['courseid' => $courseid]));
         $this->assertCount(0, $DB->get_records('local_coursegen_module_jobs', ['courseid' => $courseid]));
 
         // The syllabus file of the deleted session is gone.
         $fs = get_file_storage();
-        $syscontextid = context_system::instance()->id;
+        $syscontextid = system::instance()->id;
         $this->assertEmpty(
             $fs->get_area_files($syscontextid, 'local_coursegen', 'syllabus', (int)$session2->id, 'id', false)
         );
@@ -511,7 +518,7 @@ final class privacy_provider_test extends provider_testcase {
         $this->create_course_session($courseid, $user2->id);
         $this->create_module_job($courseid, $user2->id);
 
-        $coursecontext = context_course::instance($courseid);
+        $coursecontext = course::instance($courseid);
         $approvedlist = new \core_privacy\local\request\approved_userlist($coursecontext, 'local_coursegen', [$user1->id]);
         provider::delete_data_for_users($approvedlist);
 
@@ -631,7 +638,7 @@ final class privacy_provider_test extends provider_testcase {
     private function create_syllabus_file(int $sessionid, string $filename = 'syllabus.pdf'): \stored_file {
         $fs = get_file_storage();
         return $fs->create_file_from_string((object) [
-            'contextid' => context_system::instance()->id,
+            'contextid' => system::instance()->id,
             'component' => 'local_coursegen',
             'filearea' => 'syllabus',
             'itemid' => $sessionid,

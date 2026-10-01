@@ -29,6 +29,7 @@ namespace local_coursegen;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @coversNothing
  */
+#[\PHPUnit\Framework\Attributes\CoversNothing]
 final class services_capabilities_test extends \advanced_testcase {
     /**
      * Load the function declarations from db/services.php.
@@ -65,6 +66,7 @@ final class services_capabilities_test extends \advanced_testcase {
      * @param string $function Web service function name.
      * @param string $expected Comma-separated capabilities enforced by the class.
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('enforced_capabilities_provider')]
     public function test_declared_capabilities_match_enforced_ones(string $function, string $expected): void {
         $functions = self::load_functions();
 

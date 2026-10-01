@@ -23,6 +23,9 @@
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use core\context\system;
+use core\url;
+
 defined('MOODLE_INTERNAL') || die();
 
 if ($hassiteconfig) {
@@ -30,11 +33,11 @@ if ($hassiteconfig) {
     // both too: admin_externalpage ORs the capabilities it is given and cannot
     // express that, which showed the entry to users the page then rejected.
     $coursegencapabilities = ['moodle/course:create', 'local/coursegen:createcoursewithai'];
-    if (has_all_capabilities($coursegencapabilities, context_system::instance())) {
+    if (has_all_capabilities($coursegencapabilities, system::instance())) {
         $ADMIN->add('courses', new admin_externalpage(
             'local_coursegen_addnewcourseai',
             get_string('courseai_admin_addnewcourse', 'local_coursegen'),
-            new moodle_url('/local/coursegen/aicoursecreation.php'),
+            new url('/local/coursegen/aicoursecreation.php'),
             'local/coursegen:createcoursewithai'
         ), 'restorecourse');
     }
@@ -91,20 +94,20 @@ if ($hassiteconfig) {
     $ADMIN->add($pluginname, new admin_externalpage(
         'local_coursegen_manage_system_instructions',
         get_string('managesysteminstructions', 'local_coursegen'),
-        new moodle_url('/local/coursegen/manage_system_instructions.php')
+        new url('/local/coursegen/manage_system_instructions.php')
     ));
 
     $ADMIN->add($pluginname, new admin_externalpage(
         'local_coursegen_manage_image_generation',
         get_string('manage_image_generation', 'local_coursegen'),
-        new moodle_url('/local/coursegen/manage_image_generation.php'),
+        new url('/local/coursegen/manage_image_generation.php'),
         'local/coursegen:manageimagegeneration'
     ));
 
     $ADMIN->add($pluginname, new admin_externalpage(
         'local_coursegen_edit_system_instruction',
         get_string('editsysteminstruction', 'local_coursegen'),
-        new moodle_url('/local/coursegen/edit_system_instruction.php'),
+        new url('/local/coursegen/edit_system_instruction.php'),
         'moodle/site:config',
         true
     ));

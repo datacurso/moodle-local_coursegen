@@ -16,6 +16,8 @@
 
 namespace local_coursegen;
 
+use core\context\system;
+use core\exception\required_capability_exception;
 use local_coursegen\external\manage_image_generation;
 
 /**
@@ -30,8 +32,8 @@ use local_coursegen\external\manage_image_generation;
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_coursegen\external\manage_image_generation
- * @runTestsInSeparateProcesses
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\external\manage_image_generation::class)]
 final class manage_image_generation_permissions_test extends \advanced_testcase {
     /**
      * A minimal valid payload for the service.
@@ -54,7 +56,7 @@ final class manage_image_generation_permissions_test extends \advanced_testcase 
         $this->resetAfterTest();
 
         $user = $this->getDataGenerator()->create_user();
-        $context = \context_system::instance();
+        $context = system::instance();
         $roleid = $this->getDataGenerator()->create_role(['shortname' => 'imgmanager']);
         assign_capability('local/coursegen:manageimagegeneration', CAP_ALLOW, $roleid, $context->id);
         role_assign($roleid, $user->id, $context->id);
@@ -81,7 +83,7 @@ final class manage_image_generation_permissions_test extends \advanced_testcase 
         $user = $this->getDataGenerator()->create_user();
         $this->setUser($user);
 
-        $this->expectException(\required_capability_exception::class);
+        $this->expectException(required_capability_exception::class);
         $payload = $this->minimal_payload();
         manage_image_generation::execute(
             $payload['overridecourse'],

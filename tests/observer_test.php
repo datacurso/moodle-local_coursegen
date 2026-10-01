@@ -16,7 +16,7 @@
 
 namespace local_coursegen;
 
-use context_system;
+use core\context\system;
 use stdClass;
 
 /**
@@ -28,6 +28,7 @@ use stdClass;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_coursegen\observer
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\observer::class)]
 final class observer_test extends \advanced_testcase {
     /**
      * Deleting a course removes its coursegen rows and syllabus files, keeping other courses intact.
@@ -59,7 +60,7 @@ final class observer_test extends \advanced_testcase {
         $this->assertSame(0, $DB->count_records('local_coursegen_course_context', ['courseid' => $course->id]));
 
         $fs = get_file_storage();
-        $syscontextid = context_system::instance()->id;
+        $syscontextid = system::instance()->id;
         $this->assertEmpty($fs->get_area_files($syscontextid, 'local_coursegen', 'syllabus', $sessionid, 'id', false));
 
         // The other course keeps its rows and files.
@@ -137,7 +138,7 @@ final class observer_test extends \advanced_testcase {
     private function create_syllabus_file(int $sessionid): void {
         $fs = get_file_storage();
         $fs->create_file_from_string((object) [
-            'contextid' => context_system::instance()->id,
+            'contextid' => system::instance()->id,
             'component' => 'local_coursegen',
             'filearea' => 'syllabus',
             'itemid' => $sessionid,

@@ -16,11 +16,13 @@
 
 namespace local_coursegen\external;
 
-use context_course;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_value;
+use core\context\course;
+use core\context\system;
+use core\exception\required_capability_exception;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
 use local_coursegen\event\generation_denied;
 use local_coursegen\event\generation_failed;
 use local_coursegen\event\generation_job_started;
@@ -28,12 +30,8 @@ use local_coursegen\local\h5p_core_api;
 use local_coursegen\local\image_generation\image_policy_builder;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_context_service;
-use local_coursegen\local\service\course_planning_service;
 use local_coursegen\local\service\filetype_catalog_service;
 use local_coursegen\local\service\module_job_service;
-
-defined('MOODLE_INTERNAL') || die();
-require_once($CFG->libdir . '/externallib.php');
 
 /**
  * Start streaming job to create module with AI and store job/thread id.
@@ -104,7 +102,7 @@ class create_mod_stream extends external_api {
             $lang = $params['lang'] ?? null;
 
             $course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
-            $context = context_course::instance($course->id);
+            $context = course::instance($course->id);
             self::validate_context($context);
 
             // Gate the paid AI generation behind the same capabilities as the UI
@@ -213,13 +211,13 @@ class create_mod_stream extends external_api {
                 'message' => $result['message'] ?? get_string('course_planning_started', 'local_coursegen'),
                 'streamingurl' => $streamingurl,
             ];
-        } catch (\required_capability_exception $e) {
+        } catch (required_capability_exception $e) {
             // Permission errors are already localized and safe to show verbatim.
             debugging('Permission error while starting resource generation (stream): ' . $e->getMessage());
             // The exception carries the localized capability name in ->a; the
             // raw capability string is not stored on it.
             generation_denied::create([
-                'context' => isset($context) ? $context : \context_system::instance(),
+                'context' => isset($context) ? $context : system::instance(),
                 'other' => ['capability' => is_string($e->a ?? null) ? $e->a : ''],
             ])->trigger();
             return [
@@ -231,7 +229,7 @@ class create_mod_stream extends external_api {
             // receives a localized message without internal information.
             debugging('Unexpected error while starting resource generation (stream): ' . $e->getMessage());
             generation_failed::create([
-                'context' => isset($context) ? $context : \context_system::instance(),
+                'context' => isset($context) ? $context : system::instance(),
                 'other' => ['reason' => get_class($e)],
             ])->trigger();
             return [

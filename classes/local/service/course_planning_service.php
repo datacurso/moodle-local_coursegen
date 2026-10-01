@@ -16,6 +16,7 @@
 
 namespace local_coursegen\local\service;
 
+use core\context\system;
 use local_coursegen\event\generation_job_started;
 use local_coursegen\local\h5p_core_api;
 use local_coursegen\local\image_generation\activities;
@@ -141,7 +142,7 @@ class course_planning_service {
         $session->create();
 
         generation_job_started::create([
-            'context' => \context_system::instance(),
+            'context' => system::instance(),
             'other' => [
                 'session_id' => (int)$session->get('id'),
                 'generate_images' => $withimages ? 1 : 0,

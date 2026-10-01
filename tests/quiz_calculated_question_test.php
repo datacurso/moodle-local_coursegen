@@ -16,6 +16,7 @@
 
 namespace local_coursegen;
 
+use core\context\module;
 use local_coursegen\mod_settings\quiz_settings;
 
 defined('MOODLE_INTERNAL') || die();
@@ -34,6 +35,7 @@ require_once($CFG->dirroot . '/question/type/numerical/questiontype.php');
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_coursegen\mod_settings\quiz_settings
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\mod_settings\quiz_settings::class)]
 final class quiz_calculated_question_test extends \advanced_testcase {
     /**
      * Create a course + quiz and return the cm object quiz_settings expects.
@@ -175,7 +177,7 @@ final class quiz_calculated_question_test extends \advanced_testcase {
         $this->setAdminUser();
 
         $cm = $this->create_quiz_cm();
-        $context = \context_module::instance($cm->coursemodule);
+        $context = module::instance($cm->coursemodule);
 
         $settings = new quiz_settings($cm, ['questions' => [$this->calculated_question_payload()]]);
         $settings->add_settings();

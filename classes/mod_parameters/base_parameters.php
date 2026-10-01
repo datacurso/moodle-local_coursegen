@@ -16,6 +16,8 @@
 
 namespace local_coursegen\mod_parameters;
 
+use core\exception\moodle_exception;
+
 /**
  * Class base_parameters
  *
@@ -54,7 +56,7 @@ abstract class base_parameters {
      * to a valid Moodle file name.
      *
      * @return array Array with 'endpoint' and 'filename' keys.
-     * @throws \moodle_exception When file_path or file_name is missing, or the
+     * @throws moodle_exception When file_path or file_name is missing, or the
      *                           file name cleans down to an empty string.
      */
     protected function get_package_download_info(): array {
@@ -63,12 +65,12 @@ abstract class base_parameters {
         $filepath = $modsettings['file_path'] ?? '';
         $filename = $modsettings['file_name'] ?? '';
         if (!is_string($filepath) || trim($filepath) === '' || !is_string($filename) || trim($filename) === '') {
-            throw new \moodle_exception('error_missing_package_info', 'local_coursegen');
+            throw new moodle_exception('error_missing_package_info', 'local_coursegen');
         }
 
         $cleanname = clean_param(basename($filename), PARAM_FILE);
         if ($cleanname === '') {
-            throw new \moodle_exception('error_invalid_package', 'local_coursegen', '', $filename);
+            throw new moodle_exception('error_invalid_package', 'local_coursegen', '', $filename);
         }
 
         return [

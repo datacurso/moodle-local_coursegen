@@ -30,8 +30,10 @@
 
 ## Changed
 
+- **Core classes referenced through their namespaced names**  
+  The external functions extend `core_external\external_api` and declare their parameters with the `core_external` structure classes instead of loading `lib/externallib.php`; contexts, URLs, exceptions and `html_writer` are referenced as `core\context\*`, `core\url`, `core\exception\*` and `core\output\html_writer`. Every test declares PHPUnit 11 attributes (`CoversClass`, `CoversFunction`, `CoversMethod`, `CoversNothing`, `DataProvider`, `RunTestsInSeparateProcesses`) next to the existing annotations, which Moodle 4.5 (PHPUnit 9.6) still reads. The web service tests no longer run in separate processes, because nothing loads `lib/externallib.php` any more; only the editor cleaner test keeps the isolation its static client cache requires.
 - **Dead code removed**  
-  Removed the unused `ai_context` class, the unregistered `regenerate_detailed_item` web service, the `aicoursecreation_page` and `add_activity_ai_label` templates, unused private helpers in the chat hook and the planning/session services, the editor-cleaner `clean_editor_parameters()` helper, unused DOM selector keys and exports in `amd/src`, orphaned CSS rules (`styles.css`, `styles/*.css`), about seventy unused language strings in every language pack, the PHPUnit provider stub (the provider is a hard dependency), an unreferenced test PDF and screenshot, and the TODO / UI refactor planning notes. The backend `string_id` catalog those notes carried now lives in `_docs/backend_string_catalog.md`. `amd/build` must be rebuilt.
+  Removed the unused `ai_context` class, the unregistered `regenerate_detailed_item` web service, the `aicoursecreation_page` and `add_activity_ai_label` templates, unused private helpers in the chat hook and the planning/session services, the editor-cleaner `clean_editor_parameters()` helper, unused DOM selector keys and exports in `amd/src`, orphaned CSS rules (`styles.css`, `styles/*.css`), about seventy unused language strings in every language pack, the PHPUnit provider stub (the provider is a hard dependency), an unreferenced test PDF and screenshot, and the TODO / UI refactor planning notes. The backend `string_id` catalog those notes carried now lives in `_docs/backend_string_catalog.md`.
 
 ## 2.0.6
 

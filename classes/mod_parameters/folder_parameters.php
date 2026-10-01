@@ -16,6 +16,7 @@
 
 namespace local_coursegen\mod_parameters;
 
+use core\context\user;
 use local_coursegen\local\api_client_factory;
 
 defined('MOODLE_INTERNAL') || die();
@@ -56,7 +57,7 @@ class folder_parameters extends base_parameters {
 
         $draftid = file_get_unused_draft_itemid();
         $fs = get_file_storage();
-        $context = \context_user::instance($USER->id);
+        $context = user::instance($USER->id);
 
         foreach ($files as $file) {
             if (!is_array($file) || empty($file['file_path']) || empty($file['file_name'])) {

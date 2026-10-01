@@ -25,15 +25,14 @@
 
 namespace local_coursegen\external;
 
-use context_system;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_value;
+use core\context\system;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir . '/externallib.php');
 require_once($CFG->dirroot . '/repository/lib.php');
 
 /**
@@ -59,7 +58,7 @@ class courseai_filepicker_init extends external_api {
 
         $params = self::validate_parameters(self::execute_parameters(), []);
 
-        $context = context_system::instance();
+        $context = system::instance();
         self::validate_context($context);
 
         // Check permissions.

@@ -16,6 +16,8 @@
 
 namespace local_coursegen;
 
+use core\exception\moodle_exception;
+use core\exception\require_login_exception;
 use local_coursegen\local\models\course_session;
 
 /**
@@ -27,20 +29,16 @@ use local_coursegen\local\models\course_session;
  * owned by someone else or a missing one raise the same exception as the
  * other session-bound endpoints instead of a soft "success: false" reply.
  *
- * The testable subclass fixture loads lib/externallib.php, which requires
- * each test to run in an isolated process.
- *
  * @package    local_coursegen
  * @category   test
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_coursegen\external\courseai_syllabus_upload
- *
- * @runTestsInSeparateProcesses
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\external\courseai_syllabus_upload::class)]
 final class courseai_syllabus_upload_test extends \advanced_testcase {
     /**
-     * Load the testable subclass in the isolated process.
+     * Load the testable subclass fixture.
      */
     protected function setUp(): void {
         parent::setUp();
@@ -77,12 +75,12 @@ final class courseai_syllabus_upload_test extends \advanced_testcase {
      * Run the endpoint and return the raised moodle_exception.
      *
      * @param int $sessionid Session record id.
-     * @return \moodle_exception
+     * @return moodle_exception
      */
-    private function execute_expecting_exception(int $sessionid): \moodle_exception {
+    private function execute_expecting_exception(int $sessionid): moodle_exception {
         try {
             testable_courseai_syllabus_upload::execute($sessionid, file_get_unused_draft_itemid());
-        } catch (\moodle_exception $e) {
+        } catch (moodle_exception $e) {
             return $e;
         }
 
@@ -98,7 +96,7 @@ final class courseai_syllabus_upload_test extends \advanced_testcase {
         $session = $this->create_session(get_admin()->id);
         $this->setUser(null);
 
-        $this->expectException(\require_login_exception::class);
+        $this->expectException(require_login_exception::class);
         testable_courseai_syllabus_upload::execute((int)$session->get('id'), file_get_unused_draft_itemid());
     }
 

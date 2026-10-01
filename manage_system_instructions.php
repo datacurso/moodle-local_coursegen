@@ -22,6 +22,9 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use core\context\system;
+use core\output\html_writer;
+use core\url;
 use local_coursegen\local\models\system_instruction;
 use local_coursegen\local\service\system_instruction_service;
 
@@ -34,7 +37,7 @@ $action = optional_param('action', '', PARAM_ALPHA);
 $id = optional_param('id', 0, PARAM_INT);
 $confirm = optional_param('confirm', 0, PARAM_INT);
 
-$context = context_system::instance();
+$context = system::instance();
 require_capability('local/coursegen:managesysteminstructions', $context);
 
 $PAGE->set_url('/local/coursegen/manage_system_instructions.php');
@@ -61,7 +64,7 @@ if ($action === 'delete' && $id > 0) {
         echo $OUTPUT->header();
         echo $OUTPUT->heading(get_string('deletesysteminstruction', 'local_coursegen'));
 
-        $confirmurl = new moodle_url(
+        $confirmurl = new url(
             $PAGE->url,
             ['action' => 'delete', 'id' => $id, 'confirm' => 1, 'sesskey' => sesskey()]
         );
@@ -82,7 +85,7 @@ if ($action === 'delete' && $id > 0) {
 echo $OUTPUT->header();
 
 // Add system instruction button.
-$addurl = new moodle_url('/local/coursegen/edit_system_instruction.php');
+$addurl = new url('/local/coursegen/edit_system_instruction.php');
 echo html_writer::div(
     $OUTPUT->single_button($addurl, get_string('addsysteminstruction', 'local_coursegen'), 'get'),
     'mb-3'
@@ -108,8 +111,8 @@ if (empty($instructions)) {
     );
 } else {
     foreach ($instructions as $instruction) {
-        $editurl = new moodle_url('/local/coursegen/edit_system_instruction.php', ['id' => $instruction->get('id')]);
-        $deleteurl = new moodle_url($PAGE->url, ['action' => 'delete', 'id' => $instruction->get('id')]);
+        $editurl = new url('/local/coursegen/edit_system_instruction.php', ['id' => $instruction->get('id')]);
+        $deleteurl = new url($PAGE->url, ['action' => 'delete', 'id' => $instruction->get('id')]);
 
         $editicon = $OUTPUT->pix_icon('t/edit', get_string('edit', 'local_coursegen'));
         $deleteicon = $OUTPUT->pix_icon('t/delete', get_string('delete', 'local_coursegen'));

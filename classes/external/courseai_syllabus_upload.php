@@ -16,19 +16,15 @@
 
 namespace local_coursegen\external;
 
-use context_system;
-use context_user;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_value;
+use core\context\system;
+use core\context\user;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
 use local_coursegen\event\external_transfer_initiated;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
-
-defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/externallib.php');
 
 /**
  * External function to upload syllabus for courseai session.
@@ -67,7 +63,7 @@ class courseai_syllabus_upload extends external_api {
         ]);
 
         // Check permissions, like the sibling planning endpoints.
-        $context = context_system::instance();
+        $context = system::instance();
         self::validate_context($context);
         require_capability('moodle/course:create', $context);
         require_capability('local/coursegen:createcoursewithai', $context);
@@ -87,8 +83,8 @@ class courseai_syllabus_upload extends external_api {
 
             // Save file from draft area to permanent storage.
             $fs = get_file_storage();
-            $syscontext = context_system::instance();
-            $usercontext = context_user::instance($USER->id);
+            $syscontext = system::instance();
+            $usercontext = user::instance($USER->id);
 
             // Prepare draft area.
             $draftfiles = $fs->get_area_files(

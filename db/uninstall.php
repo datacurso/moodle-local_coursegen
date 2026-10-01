@@ -23,13 +23,15 @@
  * @license     https://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use core\context\system;
+
 /**
  * Custom uninstallation procedure.
  */
 function xmldb_local_coursegen_uninstall() {
     // Purge every syllabus file the plugin stored in the system context.
     $fs = get_file_storage();
-    $fs->delete_area_files(context_system::instance()->id, 'local_coursegen', 'syllabus');
+    $fs->delete_area_files(system::instance()->id, 'local_coursegen', 'syllabus');
 
     return true;
 }

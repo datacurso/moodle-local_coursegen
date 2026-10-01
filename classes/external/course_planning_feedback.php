@@ -25,18 +25,15 @@
 
 namespace local_coursegen\external;
 
-use context_system;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_value;
-use external_multiple_structure;
+use core\context\system;
+use core\exception\moodle_exception;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_multiple_structure;
+use core_external\external_single_structure;
+use core_external\external_value;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
-
-defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/externallib.php');
 
 /**
  * External API to send human feedback for AI course planning sessions.
@@ -102,7 +99,7 @@ class course_planning_feedback extends external_api {
         $recordid = $params['recordid'];
         $pendingaction = $params['pending_action'];
 
-        $context = context_system::instance();
+        $context = system::instance();
         self::validate_context($context);
 
         $session = course_session_service::get_user_session($recordid, $USER->id);
@@ -115,16 +112,16 @@ class course_planning_feedback extends external_api {
         $sessionid = $session->get('session_id');
 
         if (!$sessionid) {
-            throw new \moodle_exception('error_no_session_found', 'local_coursegen');
+            throw new moodle_exception('error_no_session_found', 'local_coursegen');
         }
 
         $apiservice = new ai_course_api_service();
 
         try {
             $apiservice->send_planning_feedback($sessionid, $pendingaction);
-        } catch (\moodle_exception $e) {
+        } catch (moodle_exception $e) {
             // The string has no placeholder: the technical detail is debug information.
-            throw new \moodle_exception('error_sending_feedback', 'local_coursegen', '', null, $e->getMessage());
+            throw new moodle_exception('error_sending_feedback', 'local_coursegen', '', null, $e->getMessage());
         }
 
         return [

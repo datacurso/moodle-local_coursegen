@@ -16,6 +16,10 @@
 
 namespace local_coursegen;
 
+use core\context\coursecat;
+use core\context\system;
+use core\exception\moodle_exception;
+use core\exception\required_capability_exception;
 use local_coursegen\external\course_planning_feedback;
 use local_coursegen\external\create_course;
 use local_coursegen\external\get_course_session_state;
@@ -27,9 +31,7 @@ use local_coursegen\local\service\create_course_service;
  * Capability gate tests for the full-course confirmation flow web services.
  *
  * The AI service is mocked (or never reached, because the gates fire first),
- * so no network request is ever performed. The testable subclass fixture and
- * the external classes load lib/externallib.php, which requires each test to
- * run in an isolated process.
+ * so no network request is ever performed.
  *
  * @package    local_coursegen
  * @category   test
@@ -40,12 +42,15 @@ use local_coursegen\local\service\create_course_service;
  * @covers     \local_coursegen\external\course_planning_feedback
  * @covers     \local_coursegen\external\get_course_session_state
  * @covers     \local_coursegen\local\service\create_course_service
- *
- * @runTestsInSeparateProcesses
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\external\create_course::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\external\get_course_settings::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\external\course_planning_feedback::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\external\get_course_session_state::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\local\service\create_course_service::class)]
 final class course_confirmation_permissions_test extends \advanced_testcase {
     /**
-     * Load the testable subclass in the isolated process.
+     * Load the testable subclass fixture.
      */
     protected function setUp(): void {
         parent::setUp();
@@ -87,7 +92,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
      * @return void
      */
     private function allow_createcoursewithai_at_system(int $userid): void {
-        $systemcontext = \context_system::instance();
+        $systemcontext = system::instance();
         $roleid = create_role('AI course creator', 'aicoursecreator', '');
         assign_capability('local/coursegen:createcoursewithai', CAP_ALLOW, $roleid, $systemcontext->id, true);
         role_assign($roleid, $userid, $systemcontext->id);
@@ -101,7 +106,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
      * @return void
      */
     private function allow_course_create_in_category(int $userid, \core_course_category $category): void {
-        $categorycontext = \context_coursecat::instance($category->id);
+        $categorycontext = coursecat::instance($category->id);
         $roleid = create_role('Category course creator', 'catcoursecreator', '');
         assign_capability('moodle/course:create', CAP_ALLOW, $roleid, $categorycontext->id, true);
         role_assign($roleid, $userid, $categorycontext->id);
@@ -121,8 +126,8 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
         try {
             $callback();
             $this->fail($label . ' must throw required_capability_exception for a user without the capabilities.');
-        } catch (\required_capability_exception $e) {
-            $this->assertInstanceOf(\required_capability_exception::class, $e);
+        } catch (required_capability_exception $e) {
+            $this->assertInstanceOf(required_capability_exception::class, $e);
         }
         $this->resetDebugging();
     }
@@ -296,8 +301,8 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
         try {
             create_course_service::create_course($session, [], ['category' => (int) $catb->id]);
             $this->fail('Creating into a category without moodle/course:create must throw.');
-        } catch (\required_capability_exception $e) {
-            $this->assertInstanceOf(\required_capability_exception::class, $e);
+        } catch (required_capability_exception $e) {
+            $this->assertInstanceOf(required_capability_exception::class, $e);
         }
 
         // No residue: no course was created anywhere.
@@ -331,9 +336,9 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
             try {
                 $call();
                 $this->fail($label . ' must reject a foreign session.');
-            } catch (\required_capability_exception $e) {
+            } catch (required_capability_exception $e) {
                 $this->fail($label . ' must keep the session-not-found error for foreign sessions.');
-            } catch (\moodle_exception $e) {
+            } catch (moodle_exception $e) {
                 $this->assertStringContainsString($expected, $e->getMessage(), $label);
             }
             $this->resetDebugging();

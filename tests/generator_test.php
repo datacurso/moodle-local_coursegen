@@ -16,6 +16,8 @@
 
 namespace local_coursegen;
 
+use core\exception\coding_exception;
+
 /**
  * Tests for the local_coursegen data generator.
  *
@@ -25,6 +27,7 @@ namespace local_coursegen;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_coursegen_generator
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen_generator::class)]
 final class generator_test extends \advanced_testcase {
     /**
      * A seeded system instruction is stored as a visible guideline row.
@@ -55,7 +58,7 @@ final class generator_test extends \advanced_testcase {
     public function test_create_system_instruction_requires_name(): void {
         $this->resetAfterTest();
 
-        $this->expectException(\coding_exception::class);
+        $this->expectException(coding_exception::class);
         $this->getDataGenerator()->get_plugin_generator('local_coursegen')->create_system_instruction([]);
     }
 }

@@ -37,6 +37,7 @@ require_once(__DIR__ . '/../db/upgrade.php');
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     ::xmldb_local_coursegen_upgrade
  */
+#[\PHPUnit\Framework\Attributes\CoversFunction('xmldb_local_coursegen_upgrade')]
 final class upgrade_test extends \advanced_testcase {
     /** @var int Savepoint that reconciles the module_jobs column name. */
     private const SAVEPOINT = 2026100100;

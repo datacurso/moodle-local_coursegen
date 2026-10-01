@@ -24,19 +24,15 @@
 
 namespace local_coursegen\external;
 
-use external_api;
-use external_function_parameters;
-use external_value;
-use external_single_structure;
+use core\context\system;
+use core\exception\moodle_exception;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
-use moodle_exception;
-use context_system;
-
-defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/externallib.php');
 
 /**
  * External API for creating courses with AI assistance.
@@ -79,7 +75,7 @@ class create_course extends external_api {
             'category' => $category,
         ]);
 
-        $context = context_system::instance();
+        $context = system::instance();
         self::validate_context($context);
         require_capability('moodle/course:create', $context);
         require_capability('local/coursegen:createcoursewithai', $context);

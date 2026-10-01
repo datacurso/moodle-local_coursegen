@@ -16,6 +16,7 @@
 
 namespace local_coursegen\mod_parameters;
 
+use core\exception\moodle_exception;
 use local_coursegen\local\api_client_factory;
 
 defined('MOODLE_INTERNAL') || die();
@@ -59,15 +60,15 @@ class h5pactivity_parameters extends base_parameters {
      * @param \stored_file $file Downloaded package file.
      * @param string $filename Clean package file name.
      * @return void
-     * @throws \moodle_exception When the package is not a valid .h5p file.
+     * @throws moodle_exception When the package is not a valid .h5p file.
      */
     private function validate_package(\stored_file $file, string $filename): void {
         if (\core_text::strtolower(pathinfo($filename, PATHINFO_EXTENSION)) !== 'h5p') {
-            throw new \moodle_exception('error_invalid_package', 'local_coursegen', '', $filename);
+            throw new moodle_exception('error_invalid_package', 'local_coursegen', '', $filename);
         }
 
         if ((int) $file->get_filesize() === 0) {
-            throw new \moodle_exception('error_invalid_package', 'local_coursegen', '', $filename);
+            throw new moodle_exception('error_invalid_package', 'local_coursegen', '', $filename);
         }
 
         $temppath = $file->copy_content_to_temp();
@@ -80,7 +81,7 @@ class h5pactivity_parameters extends base_parameters {
                 $zip->close();
             }
             if ($opened !== true || !$hasmanifest) {
-                throw new \moodle_exception('error_invalid_package', 'local_coursegen', '', $filename);
+                throw new moodle_exception('error_invalid_package', 'local_coursegen', '', $filename);
             }
         } finally {
             @unlink($temppath);

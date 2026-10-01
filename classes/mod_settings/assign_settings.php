@@ -16,6 +16,8 @@
 
 namespace local_coursegen\mod_settings;
 
+use core\context\module;
+
 /**
  * Class assign_settings
  *
@@ -44,7 +46,7 @@ class assign_settings extends base_settings {
 
         require_once($CFG->dirroot . '/grade/grading/lib.php');
 
-        $context = \context_module::instance($this->cm->coursemodule);
+        $context = module::instance($this->cm->coursemodule);
         $manager = get_grading_manager($context, 'mod_assign', 'submissions');
 
         // A rubric WAS requested, so add_moduleinfo already activated the rubric

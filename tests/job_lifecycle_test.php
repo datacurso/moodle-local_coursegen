@@ -17,6 +17,8 @@
 namespace local_coursegen;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
+use core\context\user;
+use core\exception\moodle_exception;
 use local_coursegen\local\api_client_factory;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\module_job_service;
@@ -25,9 +27,7 @@ use local_coursegen\local\service\module_job_service;
  * Job lifecycle tests: a generation job is single-use.
  *
  * The AI service and the download HTTP client are both mocked, so no network
- * request is ever performed. The testable subclass fixture loads
- * lib/externallib.php (through create_mod), which requires each test to run
- * in an isolated process.
+ * request is ever performed.
  *
  * @package    local_coursegen
  * @category   test
@@ -35,12 +35,12 @@ use local_coursegen\local\service\module_job_service;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_coursegen\external\create_mod
  * @covers     \local_coursegen\local\service\module_job_service
- *
- * @runTestsInSeparateProcesses
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\external\create_mod::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\local\service\module_job_service::class)]
 final class job_lifecycle_test extends \advanced_testcase {
     /**
-     * Load the testable subclass in the isolated process.
+     * Load the testable subclass fixture.
      */
     protected function setUp(): void {
         parent::setUp();
@@ -91,7 +91,7 @@ final class job_lifecycle_test extends \advanced_testcase {
         try {
             testable_create_mod::execute($course->id, 1, 'job-once');
             $this->fail('A moodle_exception was expected for the replayed job.');
-        } catch (\moodle_exception $e) {
+        } catch (moodle_exception $e) {
             $this->assertSame('error_job_already_used', $e->errorcode);
             $this->assertStringContainsString(
                 get_string('error_job_already_used', 'local_coursegen'),
@@ -157,7 +157,7 @@ final class job_lifecycle_test extends \advanced_testcase {
 
                 $fs = get_file_storage();
                 $record = (object) [
-                    'contextid' => \context_user::instance($USER->id)->id,
+                    'contextid' => user::instance($USER->id)->id,
                     'component' => 'user',
                     'filearea' => 'draft',
                     'itemid' => file_get_unused_draft_itemid(),

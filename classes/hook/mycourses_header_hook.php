@@ -16,7 +16,10 @@
 
 namespace local_coursegen\hook;
 
+use core\context\system;
 use core\hook\output\before_http_headers;
+use core\output\html_writer;
+use core\url;
 
 /**
  * Hook to add the "Create with AI" button to the My courses page.
@@ -71,7 +74,7 @@ class mycourses_header_hook {
         }
 
         $buttonhtmlfragment = $hook->renderer->render_from_template('local_coursegen/add_ai_course_button', [
-            'url' => (new \moodle_url('/local/coursegen/aicoursecreation.php'))->out(false),
+            'url' => (new url('/local/coursegen/aicoursecreation.php'))->out(false),
         ]);
 
         ob_start(function (string $htmlbuffer) use ($buttonhtmlfragment): string {
@@ -123,7 +126,7 @@ class mycourses_header_hook {
         // singlebutton to keep it inline with core's button.
         $emptystatebarstart = self::find_empty_state_action_bar_start($htmlbuffer);
         if ($emptystatebarstart !== null) {
-            $wrappedbutton = \html_writer::div($buttonhtmlfragment, 'singlebutton');
+            $wrappedbutton = html_writer::div($buttonhtmlfragment, 'singlebutton');
             return self::insert_into_buffer($htmlbuffer, $wrappedbutton, $emptystatebarstart);
         }
 
@@ -151,7 +154,7 @@ class mycourses_header_hook {
      * @return bool
      */
     private static function user_can_see_button(): bool {
-        $systemcontext = \context_system::instance();
+        $systemcontext = system::instance();
 
         return has_all_capabilities([
             'moodle/course:create',

@@ -16,6 +16,8 @@
 
 namespace local_coursegen\local\service;
 
+use core\context\system;
+use core\exception\moodle_exception;
 use local_coursegen\local\models\course_session;
 
 /**
@@ -54,7 +56,7 @@ class course_session_service {
         ]);
 
         if (!$session) {
-            throw new \moodle_exception('error_no_session_found', 'local_coursegen');
+            throw new moodle_exception('error_no_session_found', 'local_coursegen');
         }
 
         return $session;
@@ -80,7 +82,7 @@ class course_session_service {
             return true;
         }
 
-        return has_capability('local/coursegen:view_syllabus', \context_system::instance(), $userid);
+        return has_capability('local/coursegen:view_syllabus', system::instance(), $userid);
     }
 
     /**

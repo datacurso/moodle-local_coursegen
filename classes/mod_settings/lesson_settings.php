@@ -16,7 +16,7 @@
 
 namespace local_coursegen\mod_settings;
 
-use context_module;
+use core\context\module;
 use lesson;
 use lesson_page;
 use stdClass;
@@ -53,7 +53,7 @@ class lesson_settings extends base_settings {
         }
 
         $lesson = lesson::load($this->cm->instance);
-        $context = context_module::instance($this->cm->coursemodule);
+        $context = module::instance($this->cm->coursemodule);
 
         $previouspageid = 0;
         foreach ($pages as $page) {

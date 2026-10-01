@@ -17,6 +17,7 @@
 namespace local_coursegen\local;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
+use core\exception\coding_exception;
 
 /**
  * Factory for Datacurso AI API clients.
@@ -61,11 +62,11 @@ class api_client_factory {
      *
      * @param object|null $client Test double (mock of ai_course_api) or null to reset.
      * @return void
-     * @throws \coding_exception When called outside a PHPUnit run.
+     * @throws coding_exception When called outside a PHPUnit run.
      */
     public static function set_test_client(?object $client): void {
         if (!(defined('PHPUNIT_TEST') && PHPUNIT_TEST)) {
-            throw new \coding_exception('api_client_factory::set_test_client() can only be used in PHPUnit tests.');
+            throw new coding_exception('api_client_factory::set_test_client() can only be used in PHPUnit tests.');
         }
 
         self::$testclient = $client;
@@ -78,11 +79,11 @@ class api_client_factory {
      * Return the base URLs received by the last ai_course_api() call. PHPUnit only.
      *
      * @return array|null Array with 'baseurl' and 'baseurleu' keys, or null when no call was made.
-     * @throws \coding_exception When called outside a PHPUnit run.
+     * @throws coding_exception When called outside a PHPUnit run.
      */
     public static function get_last_urls(): ?array {
         if (!(defined('PHPUNIT_TEST') && PHPUNIT_TEST)) {
-            throw new \coding_exception('api_client_factory::get_last_urls() can only be used in PHPUnit tests.');
+            throw new coding_exception('api_client_factory::get_last_urls() can only be used in PHPUnit tests.');
         }
 
         return self::$lasturls;

@@ -17,6 +17,7 @@
 namespace local_coursegen;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
+use core\context\user;
 use local_coursegen\local\api_client_factory;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\module_job_service;
@@ -25,21 +26,18 @@ use local_coursegen\local\service\module_job_service;
  * Permission tests for creating the H5P activity through the generator.
  *
  * The AI service and the download HTTP client are both mocked, so no network
- * request is ever performed. The testable subclass fixture loads
- * lib/externallib.php (through create_mod), which requires each test to run
- * in an isolated process.
+ * request is ever performed.
  *
  * @package    local_coursegen
  * @category   test
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_coursegen\external\create_mod
- *
- * @runTestsInSeparateProcesses
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\external\create_mod::class)]
 final class create_mod_permissions_test extends \advanced_testcase {
     /**
-     * Load the testable subclass in the isolated process.
+     * Load the testable subclass fixture.
      */
     protected function setUp(): void {
         parent::setUp();
@@ -80,7 +78,7 @@ final class create_mod_permissions_test extends \advanced_testcase {
 
                 $fs = get_file_storage();
                 $record = (object) [
-                    'contextid' => \context_user::instance($USER->id)->id,
+                    'contextid' => user::instance($USER->id)->id,
                     'component' => 'user',
                     'filearea' => 'draft',
                     'itemid' => file_get_unused_draft_itemid(),

@@ -17,6 +17,7 @@
 namespace local_coursegen\utils;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
+use core\context\user;
 use local_coursegen\local\api_client_factory;
 
 /**
@@ -34,6 +35,8 @@ use local_coursegen\local\api_client_factory;
  *
  * @runTestsInSeparateProcesses
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\utils\text_editor_parameter_cleaner::class)]
+#[\PHPUnit\Framework\Attributes\RunTestsInSeparateProcesses]
 final class text_editor_parameter_cleaner_test extends \advanced_testcase {
     /**
      * Reset the injected double between tests.
@@ -63,7 +66,7 @@ final class text_editor_parameter_cleaner_test extends \advanced_testcase {
                 $fs = get_file_storage();
 
                 return $fs->create_file_from_string((object) [
-                    'contextid' => \context_user::instance($USER->id)->id,
+                    'contextid' => user::instance($USER->id)->id,
                     'component' => 'user',
                     'filearea' => 'draft',
                     'itemid' => $filerecord['itemid'],

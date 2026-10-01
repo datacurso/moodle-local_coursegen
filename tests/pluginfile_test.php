@@ -16,8 +16,8 @@
 
 namespace local_coursegen;
 
-use context_course;
-use context_system;
+use core\context\course;
+use core\context\system;
 use local_coursegen\local\service\course_session_service;
 use stdClass;
 
@@ -35,6 +35,8 @@ use stdClass;
  * @covers     ::local_coursegen_pluginfile
  * @covers     \local_coursegen\local\service\course_session_service::can_view_syllabus
  */
+#[\PHPUnit\Framework\Attributes\CoversFunction('local_coursegen_pluginfile')]
+#[\PHPUnit\Framework\Attributes\CoversMethod(\local_coursegen\local\service\course_session_service::class, 'can_view_syllabus')]
 final class pluginfile_test extends \advanced_testcase {
     /**
      * Load lib.php in each test process.
@@ -60,7 +62,7 @@ final class pluginfile_test extends \advanced_testcase {
         $result = local_coursegen_pluginfile(
             $course,
             null,
-            context_course::instance($course->id),
+            course::instance($course->id),
             'syllabus',
             [$sessionid, 'syllabus.pdf'],
             false,
@@ -82,7 +84,7 @@ final class pluginfile_test extends \advanced_testcase {
         $result = local_coursegen_pluginfile(
             $course,
             null,
-            context_system::instance(),
+            system::instance(),
             'somethingelse',
             [$sessionid, 'syllabus.pdf'],
             false,
@@ -101,7 +103,7 @@ final class pluginfile_test extends \advanced_testcase {
         $result = local_coursegen_pluginfile(
             get_site(),
             null,
-            context_system::instance(),
+            system::instance(),
             'syllabus',
             [999999, 'syllabus.pdf'],
             false,
@@ -125,7 +127,7 @@ final class pluginfile_test extends \advanced_testcase {
         $result = local_coursegen_pluginfile(
             get_site(),
             null,
-            context_system::instance(),
+            system::instance(),
             'syllabus',
             [$sessionid, 'syllabus.pdf'],
             false,
@@ -159,7 +161,7 @@ final class pluginfile_test extends \advanced_testcase {
         $sessionid = $this->insert_session($course->id, $owner->id);
 
         $roleid = create_role('Syllabus reviewer', 'syllabusreviewer', '');
-        $systemcontext = context_system::instance();
+        $systemcontext = system::instance();
         assign_capability('local/coursegen:view_syllabus', CAP_ALLOW, $roleid, $systemcontext->id);
         role_assign($roleid, $reviewer->id, $systemcontext->id);
 
@@ -208,7 +210,7 @@ final class pluginfile_test extends \advanced_testcase {
     private function create_syllabus_file(int $sessionid): void {
         $fs = get_file_storage();
         $fs->create_file_from_string((object) [
-            'contextid' => context_system::instance()->id,
+            'contextid' => system::instance()->id,
             'component' => 'local_coursegen',
             'filearea' => 'syllabus',
             'itemid' => $sessionid,

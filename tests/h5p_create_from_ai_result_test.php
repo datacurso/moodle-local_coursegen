@@ -17,6 +17,10 @@
 namespace local_coursegen;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
+use core\context\module;
+use core\context\user;
+use core\exception\coding_exception;
+use core\exception\moodle_exception;
 use local_coursegen\local\api_client_factory;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\create_course_service;
@@ -41,6 +45,7 @@ require_once(__DIR__ . '/fixtures/h5p_package_fixture.php');
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_coursegen\local\service\create_mod_service
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\local\service\create_mod_service::class)]
 final class h5p_create_from_ai_result_test extends \advanced_testcase {
     /**
      * Always remove the injected factory test double between tests.
@@ -79,7 +84,7 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
 
         $fs = get_file_storage();
         $record = (object) [
-            'contextid' => \context_user::instance($USER->id)->id,
+            'contextid' => user::instance($USER->id)->id,
             'component' => 'user',
             'filearea' => 'draft',
             'itemid' => file_get_unused_draft_itemid(),
@@ -171,7 +176,7 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
         $this->assertSame('h5pactivity', $newcm->modulename);
 
         // The handler ran: the downloaded package is attached to the module.
-        $context = \context_module::instance($newcm->coursemodule);
+        $context = module::instance($newcm->coursemodule);
         $files = get_file_storage()->get_area_files($context->id, 'mod_h5pactivity', 'package', 0, 'id', false);
         $this->assertCount(1, $files);
     }
@@ -235,7 +240,7 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
         try {
             create_mod_service::create_from_ai_result($resultinfo, $course, 1);
             $this->fail('A diagnostic exception was expected when the parameters handler does not resolve.');
-        } catch (\coding_exception $e) {
+        } catch (coding_exception $e) {
             $this->assertStringContainsString('page_parameters', $e->getMessage());
         }
 
@@ -280,7 +285,7 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
         );
 
         // The file is stored by the Moodle File API in the module package area.
-        $context = \context_module::instance($newcm->coursemodule);
+        $context = module::instance($newcm->coursemodule);
         $files = get_file_storage()->get_area_files($context->id, 'mod_h5pactivity', 'package', 0, 'id', false);
         $this->assertCount(1, $files);
         $file = reset($files);
@@ -371,7 +376,7 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
             try {
                 create_mod_service::create_from_ai_result($resultinfo, $course, 1);
                 $this->fail('An exception was expected for a result without ' . $missingfield . '.');
-            } catch (\moodle_exception $e) {
+            } catch (moodle_exception $e) {
                 $this->assertStringContainsString(
                     get_string('error_missing_package_info', 'local_coursegen'),
                     $e->getMessage(),
@@ -406,7 +411,7 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
         try {
             create_mod_service::create_from_ai_result($this->h5p_resultinfo(), $course, 1);
             $this->fail('An exception was expected for a corrupt package.');
-        } catch (\moodle_exception $e) {
+        } catch (moodle_exception $e) {
             $this->assertStringContainsString(
                 get_string('error_invalid_package', 'local_coursegen', 'sample-activity.h5p'),
                 $e->getMessage()
@@ -418,7 +423,7 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
         try {
             create_mod_service::create_from_ai_result($this->h5p_resultinfo(), $course, 1);
             $this->fail('An exception was expected for a zip without h5p.json.');
-        } catch (\moodle_exception $e) {
+        } catch (moodle_exception $e) {
             $this->assertStringContainsString(
                 get_string('error_invalid_package', 'local_coursegen', 'sample-activity.h5p'),
                 $e->getMessage()
@@ -434,7 +439,7 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
         try {
             create_mod_service::create_from_ai_result($resultinfo, $course, 1);
             $this->fail('An exception was expected for a package without the .h5p extension.');
-        } catch (\moodle_exception $e) {
+        } catch (moodle_exception $e) {
             $this->assertStringContainsString(
                 get_string('error_invalid_package', 'local_coursegen', 'sample-activity.zip'),
                 $e->getMessage()
@@ -464,14 +469,14 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
             ->onlyMethods(['download_file'])
             ->getMock();
         $mock->method('download_file')->willThrowException(
-            new \moodle_exception('curlerror', 'aiprovider_datacurso', '', 'Connection refused')
+            new moodle_exception('curlerror', 'aiprovider_datacurso', '', 'Connection refused')
         );
         api_client_factory::set_test_client($mock);
 
         try {
             create_mod_service::create_from_ai_result($this->h5p_resultinfo(), $course, 1);
             $this->fail('An exception was expected when the package download fails.');
-        } catch (\moodle_exception $e) {
+        } catch (moodle_exception $e) {
             $this->assertStringContainsString('Connection refused', $e->getMessage());
         }
 
@@ -500,7 +505,7 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
             function (string $endpoint, string $filename) use (&$calls): \stored_file {
                 $calls++;
                 if ($calls === 1) {
-                    throw new \moodle_exception('curlerror', 'aiprovider_datacurso', '', 'Connection refused');
+                    throw new moodle_exception('curlerror', 'aiprovider_datacurso', '', 'Connection refused');
                 }
                 return $this->create_draft_package_file($filename);
             }
@@ -595,7 +600,7 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
         try {
             create_mod_service::create_from_ai_result($this->h5p_resultinfo(), $course, 1);
             $this->fail('An exception was expected for a disabled module type.');
-        } catch (\moodle_exception $e) {
+        } catch (moodle_exception $e) {
             $this->assertStringContainsString(
                 get_string('error_module_disabled', 'local_coursegen', 'h5pactivity'),
                 $e->getMessage()

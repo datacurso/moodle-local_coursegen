@@ -17,6 +17,7 @@
 namespace local_coursegen;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
+use core\context\user;
 use local_coursegen\local\api_client_factory;
 use local_coursegen\local\service\create_mod_service;
 
@@ -39,6 +40,7 @@ require_once(__DIR__ . '/fixtures/h5p_package_fixture.php');
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_coursegen\local\api_client_factory
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\local\api_client_factory::class)]
 final class h5pactivity_download_config_test extends \advanced_testcase {
     /**
      * Always remove the injected factory test double between tests.
@@ -81,7 +83,7 @@ final class h5pactivity_download_config_test extends \advanced_testcase {
 
                 $fs = get_file_storage();
                 $record = (object) [
-                    'contextid' => \context_user::instance($USER->id)->id,
+                    'contextid' => user::instance($USER->id)->id,
                     'component' => 'user',
                     'filearea' => 'draft',
                     'itemid' => file_get_unused_draft_itemid(),

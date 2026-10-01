@@ -16,6 +16,8 @@
 
 namespace local_coursegen\local\service;
 
+use core\exception\coding_exception;
+use core\exception\moodle_exception;
 use local_coursegen\mod_settings\base_settings;
 use local_coursegen\utils\text_editor_parameter_cleaner;
 
@@ -108,7 +110,7 @@ class create_mod_service {
      * @param string $modname Module plugin name.
      * @return void
      * @throws \Exception If the mod_form file is not found or the module is not installed.
-     * @throws \moodle_exception If the module is disabled by the administrator.
+     * @throws moodle_exception If the module is disabled by the administrator.
      */
     private static function validate_mod_existence($modname) {
         global $DB;
@@ -126,7 +128,7 @@ class create_mod_service {
             throw new \Exception(\get_string('error_invalid_resource_type', 'local_coursegen', $modname));
         }
         if ((int) $module->visible !== 1) {
-            throw new \moodle_exception('error_module_disabled', 'local_coursegen', '', $modname);
+            throw new moodle_exception('error_module_disabled', 'local_coursegen', '', $modname);
         }
     }
 
@@ -185,7 +187,7 @@ class create_mod_service {
             // fail with an internal diagnostic instead (typical cause: stale
             // class map after deployment; purge the site caches).
             if (self::has_package_contract($parameters)) {
-                throw new \coding_exception(
+                throw new coding_exception(
                     'Parameters handler ' . $paramclass . ' does not resolve for a package-type '
                     . 'result (mod_settings contains file_path/file_name). Refusing to create a '
                     . 'contentless activity; purge the site caches after deployment.'

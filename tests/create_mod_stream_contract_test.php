@@ -17,6 +17,10 @@
 namespace local_coursegen;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
+use core\context\module;
+use core\context\user;
+use core\exception\invalid_parameter_exception;
+use core\exception\moodle_exception;
 use local_coursegen\local\api_client_factory;
 use local_coursegen\local\models\module_job;
 use local_coursegen\local\service\ai_course_api_service;
@@ -42,12 +46,11 @@ use local_coursegen\local\service\create_mod_service;
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_coursegen\external\create_mod_stream
- *
- * @runTestsInSeparateProcesses
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\external\create_mod_stream::class)]
 final class create_mod_stream_contract_test extends \advanced_testcase {
     /**
-     * Load the testable subclass in the isolated process.
+     * Load the testable subclass fixture.
      */
     protected function setUp(): void {
         parent::setUp();
@@ -411,7 +414,7 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
 
                 $fs = get_file_storage();
                 $record = (object) [
-                    'contextid' => \context_user::instance($USER->id)->id,
+                    'contextid' => user::instance($USER->id)->id,
                     'component' => 'user',
                     'filearea' => 'draft',
                     'itemid' => file_get_unused_draft_itemid(),
@@ -457,7 +460,7 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
         $record = $DB->get_record('h5pactivity', ['id' => $newcm->instance], '*', MUST_EXIST);
         $this->assertSame('Tolerant H5P', $record->name);
 
-        $context = \context_module::instance($newcm->coursemodule);
+        $context = module::instance($newcm->coursemodule);
         $files = get_file_storage()->get_area_files($context->id, 'mod_h5pactivity', 'package', 0, 'id', false);
         $this->assertCount(1, $files);
         $this->assertSame('tolerant.h5p', reset($files)->get_filename());
@@ -499,7 +502,7 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
         try {
             create_mod_service::create_from_ai_result($resultinfo, $course, 1);
             $this->fail('An exception was expected for a result without file_path.');
-        } catch (\moodle_exception $e) {
+        } catch (moodle_exception $e) {
             $this->assertStringContainsString(
                 get_string('error_missing_package_info', 'local_coursegen'),
                 $e->getMessage()
@@ -529,7 +532,7 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
             // The language code is PARAM_ALPHANUMEXT: spaces and punctuation are invalid.
             testable_create_mod_stream::execute($course->id, 1, 'Create a page about rocks', 0, null, 'not a lang!');
             $this->fail('An invalid language code must raise invalid_parameter_exception.');
-        } catch (\invalid_parameter_exception $e) {
+        } catch (invalid_parameter_exception $e) {
             $this->assertNull($captured, 'No request must reach the AI service.');
         }
         $this->resetDebugging();

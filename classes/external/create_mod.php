@@ -16,11 +16,15 @@
 
 namespace local_coursegen\external;
 
-use context_course;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_value;
+use core\context\course;
+use core\context\system;
+use core\exception\moodle_exception;
+use core\exception\required_capability_exception;
+use core\url;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
 use local_coursegen\event\generation_denied;
 use local_coursegen\event\generation_failed;
 use local_coursegen\event\generation_result_applied;
@@ -29,7 +33,6 @@ use local_coursegen\local\service\create_mod_service;
 use local_coursegen\local\service\module_job_service;
 
 defined('MOODLE_INTERNAL') || die();
-require_once($CFG->libdir . '/externallib.php');
 require_once($CFG->dirroot . '/course/modlib.php');
 
 /**
@@ -80,7 +83,7 @@ class create_mod extends external_api {
             $jobid = $params['jobid'];
 
             $course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
-            $context = context_course::instance($course->id);
+            $context = course::instance($course->id);
             self::validate_context($context);
 
             // Gate module creation behind the same capabilities as the UI entry
@@ -100,7 +103,7 @@ class create_mod extends external_api {
             // A job is single-use: once its result has been applied it can
             // never create another module (replay protection).
             if ($job->get('status') === module_job_service::STATUS_CONSUMED) {
-                throw new \moodle_exception('error_job_already_used', 'local_coursegen');
+                throw new moodle_exception('error_job_already_used', 'local_coursegen');
             }
 
             $sectionnum = $job->get('sectionnum') ?? $sectionnum;
@@ -122,7 +125,7 @@ class create_mod extends external_api {
                 ],
             ])->trigger();
 
-            $url = new \moodle_url("/mod/$newcm->modulename/view.php", ["id" => $newcm->coursemodule]);
+            $url = new url("/mod/$newcm->modulename/view.php", ["id" => $newcm->coursemodule]);
 
             return [
                 'ok' => true,
@@ -133,13 +136,13 @@ class create_mod extends external_api {
                     'modname' => $newcm->modulename,
                 ],
             ];
-        } catch (\required_capability_exception $e) {
+        } catch (required_capability_exception $e) {
             // Permission errors are already localized and safe to show verbatim.
             debugging("Permission error while creating resource: " . $e->getMessage());
             // The exception carries the localized capability name in ->a; the
             // raw capability string is not stored on it.
             generation_denied::create([
-                'context' => isset($context) ? $context : \context_system::instance(),
+                'context' => isset($context) ? $context : system::instance(),
                 'other' => ['capability' => is_string($e->a ?? null) ? $e->a : ''],
             ])->trigger();
             return [
@@ -148,14 +151,14 @@ class create_mod extends external_api {
             ];
         } catch (\Exception $e) {
             // A replayed job surfaces its own localized error to the caller.
-            if ($e instanceof \moodle_exception && $e->errorcode === 'error_job_already_used') {
+            if ($e instanceof moodle_exception && $e->errorcode === 'error_job_already_used') {
                 throw $e;
             }
             // Keep the technical detail in developer debugging only: the client
             // receives a localized message without internal information.
             debugging("Unexpected error while creating resource: " . $e->getMessage());
             generation_failed::create([
-                'context' => isset($context) ? $context : \context_system::instance(),
+                'context' => isset($context) ? $context : system::instance(),
                 'other' => ['reason' => get_class($e)],
             ])->trigger();
             return [

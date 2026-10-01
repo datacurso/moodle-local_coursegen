@@ -22,9 +22,6 @@ use local_coursegen\local\service\ai_course_api_service;
  * Testable create_mod that lets tests inject a mock API service through the
  * protected factory seam (late static binding).
  *
- * Loading this fixture pulls in lib/externallib.php (through create_mod), so
- * any test using it must run in an isolated process.
- *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later

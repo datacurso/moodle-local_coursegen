@@ -17,9 +17,9 @@
 namespace local_coursegen;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
-use context_course;
-use context_system;
-use context_user;
+use core\context\course;
+use core\context\system;
+use core\context\user;
 use local_coursegen\local\api_client_factory;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\ai_course_api_service;
@@ -29,8 +29,7 @@ use local_coursegen\local\service\module_job_service;
  * Audit event tests for the AI generation lifecycle.
  *
  * The AI service is mocked through the testable fixtures, so no network
- * request is ever performed. The fixtures load lib/externallib.php, which
- * requires each test to run in an isolated process.
+ * request is ever performed.
  *
  * @package    local_coursegen
  * @category   test
@@ -41,12 +40,15 @@ use local_coursegen\local\service\module_job_service;
  * @covers     \local_coursegen\event\generation_failed
  * @covers     \local_coursegen\event\generation_denied
  * @covers     \local_coursegen\event\external_transfer_initiated
- *
- * @runTestsInSeparateProcesses
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\event\generation_job_started::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\event\generation_result_applied::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\event\generation_failed::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\event\generation_denied::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\event\external_transfer_initiated::class)]
 final class events_test extends \advanced_testcase {
     /**
-     * Load the testable subclasses in the isolated process.
+     * Load the testable subclass fixtures.
      */
     protected function setUp(): void {
         parent::setUp();
@@ -99,7 +101,7 @@ final class events_test extends \advanced_testcase {
         $events = $this->events_of_class($sink, event\generation_job_started::class);
         $this->assertCount(1, $events);
         $event = reset($events);
-        $this->assertEquals(context_course::instance($course->id)->id, $event->get_context()->id);
+        $this->assertEquals(course::instance($course->id)->id, $event->get_context()->id);
         $this->assertSame('job-1', $event->other['job_id']);
         $this->assertEquals(1, $event->other['generate_images']);
         // No personal content may travel in the event.
@@ -127,7 +129,7 @@ final class events_test extends \advanced_testcase {
         $events = $this->events_of_class($sink, event\generation_result_applied::class);
         $this->assertCount(1, $events);
         $event = reset($events);
-        $this->assertEquals(context_course::instance($course->id)->id, $event->get_context()->id);
+        $this->assertEquals(course::instance($course->id)->id, $event->get_context()->id);
         $this->assertSame('job-ok', $event->other['jobid']);
 
         // The cmid in the event is the created course module of this course.
@@ -217,7 +219,7 @@ final class events_test extends \advanced_testcase {
         $fs = get_file_storage();
         $draftitemid = file_get_unused_draft_itemid();
         $fs->create_file_from_string((object) [
-            'contextid' => context_user::instance($USER->id)->id,
+            'contextid' => user::instance($USER->id)->id,
             'component' => 'user',
             'filearea' => 'draft',
             'itemid' => $draftitemid,
@@ -240,7 +242,7 @@ final class events_test extends \advanced_testcase {
         $events = $this->events_of_class($sink, event\external_transfer_initiated::class);
         $this->assertCount(1, $events);
         $event = reset($events);
-        $this->assertEquals(context_system::instance()->id, $event->get_context()->id);
+        $this->assertEquals(system::instance()->id, $event->get_context()->id);
         $this->assertSame('syllabus.pdf', $event->other['filename']);
         $this->assertGreaterThan(0, $event->other['filesize']);
         $this->assertStringNotContainsString('syllabus body', json_encode($event->other));
@@ -292,7 +294,7 @@ final class events_test extends \advanced_testcase {
 
                 $fs = get_file_storage();
                 $record = (object) [
-                    'contextid' => context_user::instance($USER->id)->id,
+                    'contextid' => user::instance($USER->id)->id,
                     'component' => 'user',
                     'filearea' => 'draft',
                     'itemid' => file_get_unused_draft_itemid(),

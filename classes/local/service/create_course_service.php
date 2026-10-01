@@ -16,6 +16,9 @@
 
 namespace local_coursegen\local\service;
 
+use core\context\course;
+use core\context\coursecat;
+use core\context\system;
 use core_course_category;
 use local_coursegen\event\generation_failed;
 use local_coursegen\event\generation_result_applied;
@@ -53,7 +56,7 @@ class create_course_service {
         // creation work happens. Thrown (not returned) so callers surface it as a
         // proper permission error.
         $effectivecategoryid = self::resolve_effective_category($resultdata, $overrides);
-        require_capability('moodle/course:create', \context_coursecat::instance($effectivecategoryid));
+        require_capability('moodle/course:create', coursecat::instance($effectivecategoryid));
 
         try {
             // This request may take a long time depending on the complexity of the prompt that the AI has to resolve.
@@ -85,7 +88,7 @@ class create_course_service {
             $course = create_course($coursedata);
 
             generation_result_applied::create([
-                'context' => \context_course::instance($course->id),
+                'context' => course::instance($course->id),
                 'other' => ['courseid' => (int)$course->id],
             ])->trigger();
 
@@ -186,7 +189,7 @@ class create_course_service {
             debugging('local_coursegen: course creation failed. ' . $e->getMessage());
 
             generation_failed::create([
-                'context' => \context_system::instance(),
+                'context' => system::instance(),
                 'other' => ['reason' => get_class($e)],
             ])->trigger();
 

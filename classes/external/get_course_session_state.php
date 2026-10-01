@@ -25,18 +25,15 @@
 
 namespace local_coursegen\external;
 
-use context_system;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_value;
+use core\context\system;
+use core\exception\moodle_exception;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
-
-defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/externallib.php');
 
 /**
  * External API to retrieve resumable state for an AI course session.
@@ -66,7 +63,7 @@ class get_course_session_state extends external_api {
             'recordid' => $recordid,
         ]);
 
-        $context = context_system::instance();
+        $context = system::instance();
         self::validate_context($context);
 
         $session = course_session_service::get_user_session((int)$params['recordid'], (int)$USER->id);
@@ -78,7 +75,7 @@ class get_course_session_state extends external_api {
 
         $sessionid = (string)$session->get('session_id');
         if ($sessionid === '') {
-            throw new \moodle_exception('error_no_session_found', 'local_coursegen');
+            throw new moodle_exception('error_no_session_found', 'local_coursegen');
         }
 
         $apiservice = new ai_course_api_service();

@@ -16,6 +16,7 @@
 
 namespace local_coursegen\hook;
 
+use core\context\course;
 use core\hook\output\before_footer_html_generation;
 
 /**
@@ -152,7 +153,7 @@ class chat_hook {
             return false;
         }
 
-        $context = \context_course::instance($COURSE->id);
+        $context = course::instance($COURSE->id);
 
         return has_all_capabilities([
             'moodle/course:update',

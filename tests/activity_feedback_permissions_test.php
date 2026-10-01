@@ -17,6 +17,10 @@
 namespace local_coursegen;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
+use core\context\course;
+use core\exception\moodle_exception;
+use core\exception\require_login_exception;
+use core\exception\required_capability_exception;
 use local_coursegen\external\activity_feedback;
 use local_coursegen\local\api_client_factory;
 use local_coursegen\local\service\module_job_service;
@@ -31,17 +35,15 @@ use local_coursegen\local\service\module_job_service;
  * debug information, never as the $a placeholder of a string that has none.
  *
  * The AI HTTP client is mocked through api_client_factory, so no network
- * request is ever performed. The external class loads lib/externallib.php,
- * which requires each test to run in an isolated process.
+ * request is ever performed.
  *
  * @package    local_coursegen
  * @category   test
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_coursegen\external\activity_feedback
- *
- * @runTestsInSeparateProcesses
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\external\activity_feedback::class)]
 final class activity_feedback_permissions_test extends \advanced_testcase {
     /** @var string Technical marker that must stay in the debug information. */
     private const TECHNICALDETAIL = 'TECH-SECRET curl error 500 at https://internal-api.invalid/activity/feedback';
@@ -81,7 +83,7 @@ final class activity_feedback_permissions_test extends \advanced_testcase {
         $this->setUser($outsider);
         module_job_service::create_job($course->id, $outsider->id, 'job-outsider', 0, null, null, 1, null, 'completed');
 
-        $this->expectException(\require_login_exception::class);
+        $this->expectException(require_login_exception::class);
         activity_feedback::execute($course->id, 'job-outsider', 'accept');
     }
 
@@ -98,7 +100,7 @@ final class activity_feedback_permissions_test extends \advanced_testcase {
         $this->setUser($student);
         module_job_service::create_job($course->id, $student->id, 'job-student', 0, null, null, 1, null, 'completed');
 
-        $this->expectException(\required_capability_exception::class);
+        $this->expectException(required_capability_exception::class);
         activity_feedback::execute($course->id, 'job-student', 'accept');
     }
 
@@ -127,7 +129,7 @@ final class activity_feedback_permissions_test extends \advanced_testcase {
 
         $this->assertTrue($result['success']);
         $this->assertSame('adjust', $result['action']);
-        $this->assertSame(\context_course::instance($course->id)->id, $PAGE->context->id);
+        $this->assertSame(course::instance($course->id)->id, $PAGE->context->id);
         $this->assertSame('POST', $captured['method']);
         $this->assertSame('/activity/feedback', $captured['path']);
         $this->assertSame('job-teacher', $captured['body']['thread_id']);
@@ -149,13 +151,13 @@ final class activity_feedback_permissions_test extends \advanced_testcase {
         $course = $this->getDataGenerator()->create_course();
         module_job_service::create_job($course->id, get_admin()->id, 'job-fail', 0, null, null, 1, null, 'completed');
         $this->inject_client(function (): array {
-            throw new \moodle_exception('generalexceptionmessage', 'error', '', self::TECHNICALDETAIL);
+            throw new moodle_exception('generalexceptionmessage', 'error', '', self::TECHNICALDETAIL);
         });
 
         try {
             activity_feedback::execute($course->id, 'job-fail', 'accept');
             $this->fail('A service failure must raise a moodle_exception.');
-        } catch (\moodle_exception $e) {
+        } catch (moodle_exception $e) {
             $this->assertSame('error_sending_feedback', $e->errorcode);
             $this->assertNull($e->a, 'The technical detail must not be passed as the $a placeholder.');
             $this->assertStringContainsString(self::TECHNICALDETAIL, (string)$e->debuginfo);

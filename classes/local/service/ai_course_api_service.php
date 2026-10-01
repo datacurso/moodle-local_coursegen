@@ -17,9 +17,9 @@
 namespace local_coursegen\local\service;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
+use core\exception\moodle_exception;
 use local_coursegen\local\api_client_factory;
 use stored_file;
-use stdClass;
 
 /**
  * Service wrapper for the Datacurso AI course API.
@@ -61,7 +61,7 @@ class ai_course_api_service {
         $result = $this->client->request('POST', '/course/init', $payload);
 
         if (!is_array($result) || empty($result['thread_id'])) {
-            throw new \moodle_exception('error_starting_course_planning', 'local_coursegen');
+            throw new moodle_exception('error_starting_course_planning', 'local_coursegen');
         }
 
         return $result;
@@ -97,7 +97,7 @@ class ai_course_api_service {
         $result = $this->client->request('POST', '/activity/init', $payload);
 
         if (!is_array($result) || empty($result['thread_id'])) {
-            throw new \moodle_exception('error_generating_resource', 'local_coursegen');
+            throw new moodle_exception('error_generating_resource', 'local_coursegen');
         }
 
         return $result;

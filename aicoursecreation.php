@@ -22,18 +22,23 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use core\context\system;
+use core\url;
+use local_coursegen\local\models\course_session;
+use local_coursegen\local\service\course_session_service;
+
 require('../../config.php');
 require_once($CFG->libdir . '/filelib.php');
 
 require_login();
 
 // Check permissions.
-$systemcontext = context_system::instance();
+$systemcontext = system::instance();
 require_capability('moodle/course:create', $systemcontext);
 require_capability('local/coursegen:createcoursewithai', $systemcontext);
 
 // Set up the page.
-$url = new moodle_url('/local/coursegen/aicoursecreation.php');
+$url = new url('/local/coursegen/aicoursecreation.php');
 $PAGE->set_url($url);
 $PAGE->set_context($systemcontext);
 $PAGE->set_pagelayout('popup');
@@ -43,12 +48,9 @@ $PAGE->set_title(get_string('createwithai', 'local_coursegen'));
 // from Moodle's cache pipeline, so browsers keep stale copies across plugin
 // upgrades — bust them with the plugin version.
 $cssrev = get_config('local_coursegen', 'version');
-$PAGE->requires->css(new moodle_url('/local/coursegen/styles/aicoursecreation.css', ['v' => $cssrev]));
-$PAGE->requires->css(new moodle_url('/local/coursegen/styles/chatui.css', ['v' => $cssrev]));
-$PAGE->requires->css(new moodle_url('/local/coursegen/styles/sidebar.css', ['v' => $cssrev]));
-
-use local_coursegen\local\models\course_session;
-use local_coursegen\local\service\course_session_service;
+$PAGE->requires->css(new url('/local/coursegen/styles/aicoursecreation.css', ['v' => $cssrev]));
+$PAGE->requires->css(new url('/local/coursegen/styles/chatui.css', ['v' => $cssrev]));
+$PAGE->requires->css(new url('/local/coursegen/styles/sidebar.css', ['v' => $cssrev]));
 
 $resumesessionid = optional_param('sessionid', 0, PARAM_INT);
 
@@ -111,7 +113,7 @@ foreach ($allrecords as $session) {
 }
 
 // Get logo URL.
-$logourl = new moodle_url('/local/coursegen/pix/logo.png');
+$logourl = new url('/local/coursegen/pix/logo.png');
 
 // Subsections toggle only renders when the feature is enabled and mod_subsection is available.
 $subsectionsenabled = \local_coursegen\local\service\course_planning_service::subsections_available();
@@ -142,7 +144,7 @@ echo $OUTPUT->header();
 $navbarcontext = [
     'title' => get_string('createwithai', 'local_coursegen'),
     'logourl' => $logourl->out(),
-    'closeurl' => (new moodle_url('/my/courses.php'))->out(false),
+    'closeurl' => (new url('/my/courses.php'))->out(false),
 ];
 echo $OUTPUT->render_from_template('local_coursegen/editor_navbar', $navbarcontext);
 

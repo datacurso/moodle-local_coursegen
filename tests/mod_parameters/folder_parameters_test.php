@@ -30,6 +30,7 @@ use local_coursegen\local\api_client_factory;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers \local_coursegen\mod_parameters\folder_parameters
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\mod_parameters\folder_parameters::class)]
 final class folder_parameters_test extends \advanced_testcase {
     /**
      * Reset the injected double between tests.
@@ -67,6 +68,7 @@ final class folder_parameters_test extends \advanced_testcase {
      * @param string $input
      * @param string $expected
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('filepath_provider')]
     public function test_normalize_filepath(string $input, string $expected): void {
         $this->assertSame($expected, folder_parameters::normalize_filepath($input));
     }
