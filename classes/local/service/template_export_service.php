@@ -172,8 +172,8 @@ class template_export_service {
     private static function real_activity_entry($cm, string $action): array {
         $cmid = (int) $cm->id;
         $uid = template_export_uids::random_uid();
-        $asmold = $action === template_activity::ACTION_TEMPLATE;
-        $parameters = template_activity_export::parameters_for($cm, $asmold);
+        $assource = $action === template_activity::ACTION_TEMPLATE;
+        $parameters = template_activity_export::parameters_for($cm, $assource);
         return [
             'resource_type' => $cm->modname,
             'uid' => $uid,

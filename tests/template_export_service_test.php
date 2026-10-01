@@ -101,7 +101,7 @@ final class template_export_service_test extends \advanced_testcase {
     }
 
     /**
-     * A mold travels also as its module's own edit form holds it, under
+     * A template source travels also as its module's own edit form holds it, under
      * "form", next to the structure that stays as it was.
      */
     public function test_template_activity_carries_the_values_of_its_edit_form(): void {
@@ -129,7 +129,7 @@ final class template_export_service_test extends \advanced_testcase {
     }
 
     /**
-     * An activity that is not a mold carries no "form".
+     * An activity that is not a template source carries no "form".
      */
     public function test_kept_activity_carries_no_form_values(): void {
         $this->resetAfterTest(true);

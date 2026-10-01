@@ -21,7 +21,7 @@ use cm_info;
 /**
  * The values a module's own edit form holds for one activity.
  *
- * A mold's backup tree speaks the vocabulary of the database columns, while the
+ * The backup tree of a template source speaks the vocabulary of the database columns, while the
  * code that creates an activity (add_moduleinfo) speaks the one of the edit
  * form. Instead of translating between them with a table that would have to be
  * kept by hand, the values travel also as the activity's own form holds them,
@@ -36,7 +36,7 @@ use cm_info;
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class mold_form_values {
+class template_source_form_values {
     /**
      * Read the values the edit form of an activity holds.
      *
@@ -56,7 +56,7 @@ class mold_form_values {
         } catch (\Throwable $error) {
             $reason = $error->getMessage();
             $a = (object) ['activity' => $cm->name, 'module' => $cm->modname];
-            throw new \moodle_exception('mold_form_unreadable', 'local_coursegen', '', $a, $reason);
+            throw new \moodle_exception('template_source_form_unreadable', 'local_coursegen', '', $a, $reason);
         }
     }
 
@@ -66,7 +66,7 @@ class mold_form_values {
      * The edit form changes the page it is built on: its course, its activity
      * and, once something touches it, its theme, which can no longer change
      * afterwards. The page of the request that exports is left as it was, so
-     * that every mold of an export reads its form on a clean one.
+     * that every template source of an export reads its form on a clean one.
      *
      * @param cm_info $cm
      * @return array

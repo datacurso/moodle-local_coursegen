@@ -47,19 +47,19 @@ class template_activity_export {
      * content: they are where it sits in the course, which is what the answer
      * needs to place what it writes.
      *
-     * A mold also travels as its own module's edit form holds it, under
+     * A template source also travels as its own module's edit form holds it, under
      * 'form', because the code that creates an activity speaks that
-     * vocabulary and not the one of the backup tree. See mold_form_values.
+     * vocabulary and not the one of the backup tree. See template_source_form_values.
      *
      * @param cm_info $cm
-     * @param bool $asmold Whether the activity is exported as a mold.
+     * @param bool $assource Whether the activity is exported as a template source.
      * @return array
      */
-    public static function parameters_for(cm_info $cm, bool $asmold = false): array {
+    public static function parameters_for(cm_info $cm, bool $assource = false): array {
         $read = activity_reader::read_with_sources($cm);
         $files = self::files_of($cm);
         $questions = self::questions_of($cm);
-        $form = self::form_of($cm, $asmold);
+        $form = self::form_of($cm, $assource);
         return [
             'name' => $cm->name,
             'section' => (int) $cm->sectionnum,
@@ -78,17 +78,17 @@ class template_activity_export {
     }
 
     /**
-     * The values the module's own edit form holds, for a mold only.
+     * The values the module's own edit form holds, for a template source only.
      *
      * @param cm_info $cm
-     * @param bool $asmold
-     * @return array Empty unless the activity is exported as a mold.
+     * @param bool $assource
+     * @return array Empty unless the activity is exported as a template source.
      */
-    private static function form_of(cm_info $cm, bool $asmold): array {
-        if (!$asmold) {
+    private static function form_of(cm_info $cm, bool $assource): array {
+        if (!$assource) {
             return [];
         }
-        $values = mold_form_values::read($cm);
+        $values = template_source_form_values::read($cm);
         return ['form' => $values];
     }
 

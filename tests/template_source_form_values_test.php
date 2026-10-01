@@ -16,20 +16,20 @@
 
 namespace local_coursegen;
 
-use local_coursegen\local\service\mold_form_values;
+use local_coursegen\local\service\template_source_form_values;
 
 /**
- * Unit tests for mold_form_values.
+ * Unit tests for template_source_form_values.
  *
  * @package    local_coursegen
  * @category   test
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers     \local_coursegen\local\service\mold_form_values
+ * @covers     \local_coursegen\local\service\template_source_form_values
  *
  * @runTestsInSeparateProcesses
  */
-final class mold_form_values_test extends \advanced_testcase {
+final class template_source_form_values_test extends \advanced_testcase {
     /**
      * Module names whose own edit form is read.
      *
@@ -56,7 +56,7 @@ final class mold_form_values_test extends \advanced_testcase {
         $this->setAdminUser();
         $cm = $this->create_cm($modname);
 
-        $values = mold_form_values::read($cm);
+        $values = template_source_form_values::read($cm);
 
         $this->assertArrayHasKey('name', $values);
         $this->assertArrayHasKey('introeditor', $values);
@@ -79,7 +79,7 @@ final class mold_form_values_test extends \advanced_testcase {
         ]);
         $cm = get_fast_modinfo($course)->get_cm($page->cmid);
 
-        $values = mold_form_values::read($cm);
+        $values = template_source_form_values::read($cm);
 
         $this->assertSame('<p>Body [[title]]</p>', $values['page']['text']);
         $this->assertArrayHasKey('format', $values['page']);
@@ -97,7 +97,7 @@ final class mold_form_values_test extends \advanced_testcase {
         $this->setAdminUser();
         $cm = $this->create_cm('assign');
 
-        $values = mold_form_values::read($cm);
+        $values = template_source_form_values::read($cm);
 
         $this->assertArrayHasKey('activityeditor', $values);
         $this->assertArrayHasKey('text', $values['activityeditor']);
@@ -109,8 +109,8 @@ final class mold_form_values_test extends \advanced_testcase {
     public function test_url_and_forum_keep_their_own_settings(): void {
         $this->resetAfterTest(true);
         $this->setAdminUser();
-        $urlvalues = mold_form_values::read($this->create_cm('url'));
-        $forumvalues = mold_form_values::read($this->create_cm('forum'));
+        $urlvalues = template_source_form_values::read($this->create_cm('url'));
+        $forumvalues = template_source_form_values::read($this->create_cm('forum'));
 
         $this->assertArrayHasKey('externalurl', $urlvalues);
         $this->assertArrayHasKey('type', $forumvalues);
@@ -128,7 +128,7 @@ final class mold_form_values_test extends \advanced_testcase {
         $this->setAdminUser();
         $cm = $this->create_cm($modname);
 
-        $values = mold_form_values::read($cm);
+        $values = template_source_form_values::read($cm);
 
         $identity = ['id', 'course', 'coursemodule', 'instance', 'module', 'modulename', 'section', 'add', 'update',
             'return', 'sr', 'sesskey', '_qf__mod_' . $modname . '_mod_form', 'timemodified'];
@@ -145,7 +145,7 @@ final class mold_form_values_test extends \advanced_testcase {
         $this->setAdminUser();
         $cm = $this->create_cm('page');
 
-        $values = mold_form_values::read($cm);
+        $values = template_source_form_values::read($cm);
 
         $this->assertArrayHasKey('display', $values);
         $this->assertArrayHasKey('revision', $values);
@@ -159,7 +159,7 @@ final class mold_form_values_test extends \advanced_testcase {
         $this->setAdminUser();
         $cm = $this->create_cm('assign');
 
-        $values = mold_form_values::read($cm);
+        $values = template_source_form_values::read($cm);
 
         $keys = array_keys($values);
         $state = preg_grep('/^mform_(isexpanded|showmore)_/', $keys);
@@ -180,7 +180,7 @@ final class mold_form_values_test extends \advanced_testcase {
         $page = $generator->create_module('page', ['course' => $course->id]);
         $cm = get_fast_modinfo($course)->get_cm($page->cmid);
 
-        $values = mold_form_values::read($cm);
+        $values = template_source_form_values::read($cm);
 
         $this->assertArrayHasKey('completionview', $values);
         $this->assertEmpty($values['completionview']);
@@ -198,7 +198,7 @@ final class mold_form_values_test extends \advanced_testcase {
         $this->setAdminUser();
         $cm = $this->create_cm($modname);
 
-        $values = mold_form_values::read($cm);
+        $values = template_source_form_values::read($cm);
 
         $json = json_encode($values);
         $this->assertNotFalse($json);
@@ -221,8 +221,8 @@ final class mold_form_values_test extends \advanced_testcase {
         $conditions = ['contextid' => $usercontext->id, 'component' => 'user', 'filearea' => 'draft'];
         $before = $DB->count_records('files', $conditions);
 
-        mold_form_values::read($cm);
-        mold_form_values::read($cm);
+        template_source_form_values::read($cm);
+        template_source_form_values::read($cm);
 
         $after = $DB->count_records('files', $conditions);
         $this->assertSame($before, $after);
@@ -241,10 +241,10 @@ final class mold_form_values_test extends \advanced_testcase {
         $cm = get_fast_modinfo($course)->get_cm($page->cmid);
 
         try {
-            mold_form_values::read($cm);
+            template_source_form_values::read($cm);
             $this->fail('A form that cannot be read must fail the export.');
         } catch (\moodle_exception $exception) {
-            $this->assertSame('mold_form_unreadable', $exception->errorcode);
+            $this->assertSame('template_source_form_unreadable', $exception->errorcode);
             $this->assertStringContainsString('Glossary page', $exception->getMessage());
             $this->assertStringContainsString('page', $exception->getMessage());
         }
