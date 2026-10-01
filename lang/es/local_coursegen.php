@@ -626,6 +626,7 @@ $string['mode_disabled'] = 'Deshabilitado';
 $string['mode_disabled_desc'] = 'El AI no generará ninguna imagen para las actividades en este modo.';
 $string['mode_manual'] = 'Manual';
 $string['mode_manual_desc'] = 'Configura manualmente, por tipo de actividad, dónde se generarán las imágenes y cuántas para cada parte.';
+$string['mold_form_unreadable'] = 'No se pudieron leer los ajustes de la actividad "{$a->activity}" (módulo "{$a->module}") desde su formulario de edición, por lo que no se puede exportar la plantilla.';
 $string['module_creation_subtitle'] = 'Espere mientras se genera el contenido.';
 $string['module_creation_title'] = 'Creando módulo...';
 $string['module_streaming_add_error'] = 'No se pudo agregar la actividad al curso.';

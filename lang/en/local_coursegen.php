@@ -656,6 +656,7 @@ $string['mode_disabled'] = 'Disabled';
 $string['mode_disabled_desc'] = 'The AI will not generate any images for activities in this mode.';
 $string['mode_manual'] = 'Manual';
 $string['mode_manual_desc'] = 'Configure manually, per activity type, where images will be generated and how many for each part.';
+$string['mold_form_unreadable'] = 'The settings of the activity "{$a->activity}" (module "{$a->module}") could not be read from its edit form, so the template cannot be exported.';
 $string['module_creation_subtitle'] = 'Please wait while the content is generated';
 $string['module_creation_title'] = 'Creating module...';
 $string['module_streaming_add_error'] = 'Could not add the activity to the course.';
