@@ -28,6 +28,7 @@
 
 import {openTemplateScopeModal} from 'local_coursegen/local/template/template_scope_modal';
 import {get_string as getString} from 'core/str';
+import {isTemplateAllowed} from 'local_coursegen/local/template/template_placeholder_check';
 
 /**
  * Bind the three selection tiers per section (card-header select-all,
@@ -106,9 +107,71 @@ const applyActionToRow = (row, action, state, applicableAction, applyTemplateVis
 };
 
 /**
+ * The rows the server lets be marked as a template. Each refused row shows
+ * the server's message and keeps the action it had.
+ *
+ * @param {HTMLElement[]} rows The rows to check.
+ * @returns {Promise<HTMLElement[]>} The rows with a placeholder.
+ */
+const rowsWithPlaceholder = async(rows) => {
+    const allowedrows = [];
+    for (const row of rows) {
+        const cmid = parseInt(row.dataset.id);
+        const allowed = await isTemplateAllowed(cmid);
+        if (allowed) {
+            allowedrows.push(row);
+        }
+    }
+    return allowedrows;
+};
+
+/**
+ * The rows whose type can be a template. The others degrade to "keep"
+ * immediately, as a single row change would.
+ *
+ * @param {HTMLElement[]} rows The checked rows.
+ * @param {Object} state The live wizard state from init.js.
+ * @param {Function} applicableAction (action, modname) => string.
+ * @param {Function} applyTemplateVisual (row, istemplate, cmid, state) => void.
+ * @returns {HTMLElement[]} The rows that stay candidates for "template".
+ */
+const splitTemplateCandidates = (rows, state, applicableAction, applyTemplateVisual) => {
+    const candidates = [];
+    for (const row of rows) {
+        const applicable = applicableAction('template', row.dataset.modname);
+        if (applicable === 'template') {
+            candidates.push(row);
+        } else {
+            applyActionToRow(row, 'template', state, applicableAction, applyTemplateVisual);
+        }
+    }
+    return candidates;
+};
+
+/**
+ * Mark every row as a template with the scope the admin picked in the modal.
+ *
+ * @param {HTMLElement[]} rows The rows to mark.
+ * @param {Object} state The live wizard state from init.js.
+ * @param {Function} applicableAction (action, modname) => string.
+ * @param {Function} applyTemplateVisual (row, istemplate, cmid, state) => void.
+ * @param {Function} markDirty Marks the wizard as having unsaved changes.
+ * @param {string} scope The scope picked in the modal.
+ */
+const markRowsAsTemplate = (rows, state, applicableAction, applyTemplateVisual, markDirty, scope) => {
+    for (const row of rows) {
+        const cmid = parseInt(row.dataset.id);
+        state.activityScope[cmid] = scope;
+        applyActionToRow(row, 'template', state, applicableAction, applyTemplateVisual);
+    }
+    markDirty();
+};
+
+/**
  * Bulk-apply "template": rows whose type cannot support it degrade to
- * "keep" immediately; the rest share ONE scope modal instead of one per
- * row, and all take the single scope the admin picks there.
+ * "keep" immediately; the rest are checked for a placeholder, and the ones
+ * that have one share ONE scope modal instead of one per row, and all take
+ * the single scope the admin picks there.
  *
  * @param {HTMLElement[]} rows The checked rows.
  * @param {Object} state The live wizard state from init.js.
@@ -117,30 +180,15 @@ const applyActionToRow = (row, action, state, applicableAction, applyTemplateVis
  * @param {Function} markDirty Marks the wizard as having unsaved changes.
  */
 const applyBulkTemplate = async(rows, state, applicableAction, applyTemplateVisual, markDirty) => {
-    const templaterows = [];
-    rows.forEach(row => {
-        if (applicableAction('template', row.dataset.modname) === 'template') {
-            templaterows.push(row);
-        } else {
-            applyActionToRow(row, 'template', state, applicableAction, applyTemplateVisual);
-        }
-    });
+    const candidates = splitTemplateCandidates(rows, state, applicableAction, applyTemplateVisual);
     markDirty();
-    if (!templaterows.length) {
+    const allowedrows = await rowsWithPlaceholder(candidates);
+    if (!allowedrows.length) {
         return;
     }
-    const subject = await getString('template_activities_count', 'local_coursegen', templaterows.length);
-    openTemplateScopeModal({
-        subject,
-        scope: 'course',
-        onSave: (scope) => {
-            templaterows.forEach(row => {
-                state.activityScope[parseInt(row.dataset.id)] = scope;
-                applyActionToRow(row, 'template', state, applicableAction, applyTemplateVisual);
-            });
-            markDirty();
-        },
-    });
+    const subject = await getString('template_activities_count', 'local_coursegen', allowedrows.length);
+    const onSave = markRowsAsTemplate.bind(null, allowedrows, state, applicableAction, applyTemplateVisual, markDirty);
+    openTemplateScopeModal({subject, scope: 'course', onSave});
 };
 
 /**

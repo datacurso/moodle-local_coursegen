@@ -63,6 +63,7 @@ import {
     openSpaceModalForNewSelection,
     bindSpaceTagClicks,
 } from 'local_coursegen/local/template/template_row_space';
+import {isTemplateAllowed} from 'local_coursegen/local/template/template_placeholder_check';
 import {bindInstanceInserts} from 'local_coursegen/local/template/template_instance_events';
 import {bindNameEditing} from 'local_coursegen/local/template/template_instance_name_edit';
 import Selectors from 'local_coursegen/local/template/selectors';
@@ -180,11 +181,29 @@ const continueAfterUnmark = (ctx, before, finalaction) => {
 };
 
 /**
- * Changing a row TO "template" opens the scope modal.
+ * Put a row back to the action it had before the change the server refused.
  *
  * @param {Object} ctx The row's binding context (see bindActivityActionSelect()).
  */
-const startTemplateFlow = (ctx) => {
+const revertRefusedTemplate = (ctx) => {
+    ctx.select.value = ctx.prioraction;
+    ctx.state.activityAction[ctx.cmid] = ctx.prioraction;
+    applyTemplateVisual(ctx.row, false, ctx.cmid, ctx.state);
+};
+
+/**
+ * Changing a row TO "template" first asks the server whether the activity has
+ * a placeholder, and only then opens the scope modal. When the server refuses,
+ * its message is shown and the row goes back to its previous action.
+ *
+ * @param {Object} ctx The row's binding context (see bindActivityActionSelect()).
+ */
+const startTemplateFlow = async(ctx) => {
+    const allowed = await isTemplateAllowed(ctx.cmid);
+    if (!allowed) {
+        revertRefusedTemplate(ctx);
+        return;
+    }
     const onResolved = rememberResolvedAction.bind(null, ctx);
     openScopeModalForNewSelection(ctx.row, ctx.select, ctx.cmid, ctx.prioraction, ctx.state, onResolved);
 };

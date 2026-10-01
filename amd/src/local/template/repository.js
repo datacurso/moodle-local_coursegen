@@ -87,3 +87,16 @@ export const saveTemplate = (data) => Ajax.call([{
     methodname: 'local_coursegen_save_template',
     args: data,
 }])[0];
+
+/**
+ * Ask whether an activity has a placeholder, so it may be marked as a template.
+ *
+ * Rejects with the server's own message when it has none.
+ *
+ * @param {number} cmid Course module id of the activity.
+ * @returns {Promise<Object>} Resolves with {allowed: true}.
+ */
+export const checkTemplateActivity = (cmid) => Ajax.call([{
+    methodname: 'local_coursegen_check_template_activity',
+    args: {cmid},
+}])[0];
