@@ -34,7 +34,7 @@ require_once($CFG->libdir . '/adminlib.php');
 admin_externalpage_setup('local_coursegen_manage_templates');
 
 $context = context_system::instance();
-require_capability('local/coursegen:managetemplates', $context);
+require_capability('local/coursegen:viewtemplates', $context);
 
 $action = optional_param('action', '', PARAM_ALPHA);
 $id = optional_param('id', 0, PARAM_INT);
@@ -46,6 +46,7 @@ $PAGE->set_heading(get_string('managetemplates', 'local_coursegen'));
 
 // Handle delete action.
 if ($action === 'delete' && $id > 0) {
+    require_capability('local/coursegen:deletetemplates', $context);
     if ($confirm && confirm_sesskey()) {
         $activities = template_activity::get_records(['templateid' => $id]);
         foreach ($activities as $a) {
@@ -80,11 +81,13 @@ if ($action === 'delete' && $id > 0) {
 echo $OUTPUT->header();
 
 // Create template button.
-$addurl = new moodle_url('/local/coursegen/edit_template.php');
-echo html_writer::div(
-    $OUTPUT->single_button($addurl, get_string('template_create', 'local_coursegen'), 'get'),
-    'mb-3'
-);
+if (has_capability('local/coursegen:createtemplates', $context)) {
+    $addurl = new moodle_url('/local/coursegen/edit_template.php');
+    echo html_writer::div(
+        $OUTPUT->single_button($addurl, get_string('template_create', 'local_coursegen'), 'get'),
+        'mb-3'
+    );
+}
 
 // System report.
 $report = system_report_factory::create(templates::class, $context);

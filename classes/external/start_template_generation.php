@@ -73,7 +73,10 @@ class start_template_generation extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
-        require_capability('local/coursegen:createcoursewithai', $context);
+        require_capability('local/coursegen:createtemplatecoursewithai', $context);
+        if ($params['draftitemid'] > 0) {
+            require_capability('local/coursegen:uploadcoursesyllabus', $context);
+        }
 
         $payload = template_export_service::build_init_payload($params['templateid'], $params['prompt']);
 

@@ -64,7 +64,7 @@ class courseai_filepicker_init extends external_api {
 
         // Check permissions.
         require_capability('moodle/course:create', $context);
-        require_capability('local/coursegen:createcoursewithai', $context);
+        require_capability('local/coursegen:uploadcoursesyllabus', $context);
 
         $draftitemid = file_get_unused_draft_itemid();
         $clientid = uniqid('local_coursegen_courseai_syllabus_');

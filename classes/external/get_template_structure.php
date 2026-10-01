@@ -72,7 +72,7 @@ class get_template_structure extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
-        require_capability('local/coursegen:createcoursewithai', $context);
+        require_capability('local/coursegen:createtemplatecoursewithai', $context);
 
         $template = template::get_record(['id' => $params['templateid']]);
         if (!$template) {

@@ -22,8 +22,13 @@
     Template for the chat interface that appears in the modal footer.
     Contains form for activity AI generation with image options.
 
+    Context variables required for this template:
+    * languages array - The languages to choose from: code, name, selected.
+    * canimages bool  - The user may generate images: the images radios are rendered.
+
     Example context (json):
     {
+        "canimages": true,
         "languages": [
             {
                 "code": "es",
@@ -44,6 +49,7 @@
         
         <!-- Radios arriba -->
         <div style="gap: .8rem;" class="mb-2 d-flex align-items-center flex-wrap">
+            {{#canimages}}
             <label style="gap: .3rem;" class="mb-0 d-flex align-items-center">
                 <input type="radio" name="generate_images" value="0" checked>
                 {{#str}} noimages, local_coursegen {{/str}}
@@ -52,6 +58,7 @@
                 <input type="radio" name="generate_images" value="1">
                 {{#str}} yesimages, local_coursegen {{/str}}
             </label>
+            {{/canimages}}
             <label class="mb-0 d-flex align-items-center" style="gap: .4rem;">
                 <select class="custom-select custom-select-sm" data-region="local_coursegen/activity/lang" style="width: auto; min-width: 170px;">
                     {{#languages}}

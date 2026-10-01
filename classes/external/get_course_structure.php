@@ -30,6 +30,7 @@ use external_multiple_structure;
 use external_single_structure;
 use external_value;
 use context_system;
+use local_coursegen\local\service\access_guard;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -62,7 +63,10 @@ class get_course_structure extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
-        require_capability('local/coursegen:managetemplates', $context);
+        access_guard::require_any(
+            ['local/coursegen:createtemplates', 'local/coursegen:edittemplates'],
+            $context
+        );
 
         $course  = get_course($params['courseid']);
         $modinfo = get_fast_modinfo($course);

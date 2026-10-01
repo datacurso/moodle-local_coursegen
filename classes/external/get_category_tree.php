@@ -33,6 +33,7 @@ use external_function_parameters;
 use external_multiple_structure;
 use external_single_structure;
 use external_value;
+use local_coursegen\local\service\access_guard;
 
 /**
  * External function to get the category tree.
@@ -56,7 +57,10 @@ class get_category_tree extends external_api {
     public static function execute(): array {
         $context = \context_system::instance();
         self::validate_context($context);
-        require_capability('local/coursegen:managetemplates', $context);
+        access_guard::require_any(
+            ['local/coursegen:createtemplates', 'local/coursegen:edittemplates'],
+            $context
+        );
 
         $categories = \core_course_category::get_all();
         $result = [];

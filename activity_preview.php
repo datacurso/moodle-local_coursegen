@@ -155,7 +155,7 @@ $page = optional_param('page', 0, PARAM_INT);
 
 require_login();
 $context = context_system::instance();
-require_capability('local/coursegen:createcoursewithai', $context);
+require_capability('local/coursegen:createtemplatecoursewithai', $context);
 
 $session = new course_session($sessionid);
 if ((int) $session->get('userid') !== (int) $USER->id) {

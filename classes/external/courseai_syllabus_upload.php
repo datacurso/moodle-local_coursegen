@@ -68,7 +68,7 @@ class courseai_syllabus_upload extends external_api {
         // Check permissions.
         $context = context_system::instance();
         require_capability('moodle/course:create', $context);
-        require_capability('local/coursegen:createcoursewithai', $context);
+        require_capability('local/coursegen:uploadcoursesyllabus', $context);
 
         try {
             // Get session record.

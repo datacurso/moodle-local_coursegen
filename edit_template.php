@@ -28,7 +28,7 @@ require_once($CFG->libdir . '/adminlib.php');
 $id = optional_param('id', 0, PARAM_INT);
 $courseid = optional_param('courseid', 0, PARAM_INT);
 
-admin_externalpage_setup('local_coursegen_manage_templates');
+admin_externalpage_setup('local_coursegen_edit_template');
 
 // The template wizard's stylesheet is NOT the plugin's root styles.css (the
 // only sheet Moodle auto-loads through the theme pipeline) — a styles/
@@ -87,7 +87,11 @@ if ($courseid > 0) {
 }
 
 $context = context_system::instance();
-require_capability('local/coursegen:managetemplates', $context);
+$capability = 'local/coursegen:createtemplates';
+if ($id > 0) {
+    $capability = 'local/coursegen:edittemplates';
+}
+require_capability($capability, $context);
 
 $pagetitle = $id > 0
     ? get_string('template_edit', 'local_coursegen')
