@@ -63,6 +63,7 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
             'isresuming' => false,
             'showsessionsview' => false,
             'templatemodeactive' => $templatemode,
+            'freemodeactive' => !$templatemode,
             'subsectionsenabled' => false,
             'closeurl' => (new \moodle_url('/my/courses.php'))->out(false),
         ]);

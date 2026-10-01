@@ -20,13 +20,19 @@
     AI Course Creation Wizard - Step 1: Context
 
     Capability flags (the server decides them; the page only renders what they allow):
-    * hasbothmodes bool           - The user can create in both modes, so the mode switch is rendered.
+    * startchooser bool           - A fresh visit with both modes available: the workspace shows the two cards instead of a path.
+    * freemodeactive bool         - The free creation path is the one showing (not the cards, not the template path).
+    * showstartcrumb bool         - The user can create in both modes, so the top bar names the path and leads back to the cards.
+    * startcrumblocked bool       - Planning already started, so the crumb only names the path.
     * canuploadsyllabus bool      - The syllabus attach controls are rendered.
     * cangeneratecourseimages bool - The generate-images controls are rendered.
 
     Example context (json):
     {
-        "hasbothmodes": true,
+        "startchooser": false,
+        "freemodeactive": true,
+        "showstartcrumb": true,
+        "startcrumblocked": false,
         "canuploadsyllabus": true,
         "cangeneratecourseimages": true,
         "guidelines": "[{\"id\":\"si_1\",\"name\":\"Example\",\"category\":\"General\",\"description\":\"...\"}]",
@@ -69,6 +75,26 @@
     </div>
   </div>
   <div class="courseai-topbar-main">
+    {{! The starting point, once chosen: a quiet crumb that names the path and
+        leads back to the cards. Locked (no chevron, no action) once planning
+        has started. Not rendered on the cards themselves, nor for a user who
+        can only create one way. }}
+    {{#showstartcrumb}}
+    <button class="courseai-topbar-path{{#startcrumblocked}} is-locked{{/startcrumblocked}}" type="button"
+            data-region="local_coursegen/start/path-back"
+            data-url="aicoursecreation.php"
+            data-title-unlocked="{{#str}}courseai_start_back, local_coursegen{{/str}}"
+            data-title-locked="{{#str}}courseai_start_locked, local_coursegen{{/str}}"
+            {{#startcrumblocked}}disabled{{/startcrumblocked}}
+            title="{{#startcrumblocked}}{{#str}}courseai_start_locked, local_coursegen{{/str}}{{/startcrumblocked}}{{^startcrumblocked}}{{#str}}courseai_start_back, local_coursegen{{/str}}{{/startcrumblocked}}">
+      <svg class="courseai-topbar-path-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M15 6l-6 6 6 6"/>
+      </svg>
+      <span class="courseai-topbar-path-crumb">{{#str}}createwithai, local_coursegen{{/str}}</span>
+      <span class="courseai-topbar-path-sep" aria-hidden="true">/</span>
+      <b class="courseai-topbar-path-name">{{#templatemodeactive}}{{#str}}courseai_mode_template, local_coursegen{{/str}}{{/templatemodeactive}}{{^templatemodeactive}}{{#str}}courseai_mode_free, local_coursegen{{/str}}{{/templatemodeactive}}</b>
+    </button>
+    {{/showstartcrumb}}
     <span class="courseai-topbar-spacer"></span>
     {{! The popup layout has no Moodle navbar: this is the only exit back to My courses. }}
     <a class="courseai-topbar-exit" id="courseaiCloseBtn" href="{{closeurl}}"
@@ -90,13 +116,21 @@
 <!-- ══════════════════════ MAIN ════════════════════════════════════════ -->
 <main class="app-main aicoursecreation-main" style="position:relative">
   <div class="container"{{#showsessionsview}} style="display:none"{{/showsessionsview}}>
-    <div class="courseai-workspace{{#isresuming}} is-planning{{/isresuming}}{{#templatemodeactive}} is-template{{/templatemodeactive}}" id="courseaiWorkspace">
+    <div class="courseai-workspace{{#isresuming}} is-planning{{/isresuming}}{{#startchooser}} is-choosing{{/startchooser}}{{#templatemodeactive}} is-template{{/templatemodeactive}}" id="courseaiWorkspace"
+         data-region="local_coursegen/start/workspace">
+
+    {{! Step one: how do you want to start? Each card is a link that opens its
+        own path, so the page renders one path at a time. }}
+    {{#startchooser}}
+    {{> local_coursegen/start_chooser }}
+    {{/startchooser}}
 
     <!-- Context step form (in planning mode the editor is hidden by CSS and the
          left chat column shows instead — so on reload the real chrome renders and
          only the service-driven content areas show skeletons). Server-rendered
-         only in free mode: template mode never receives this markup at all. -->
-    {{^templatemodeactive}}
+         only in free mode: neither the cards nor template mode ever receive this
+         markup. -->
+    {{#freemodeactive}}
     <div class="context-wrap" id="contextView">
 
       <div class="courseai-context-editor" id="courseaiContextEditor">
@@ -325,7 +359,6 @@
                 <ul class="pop-list" id="templateList" role="listbox" aria-label="{{#str}}courseai_templates_list_label, local_coursegen{{/str}}"></ul>
               </div>
             </div>
-            {{> local_coursegen/mode_switch }}
 
             {{#canuploadsyllabus}}
 <!-- Hidden file manager container for Moodle file picker -->
@@ -669,7 +702,7 @@
       </div>
 
     </div><!-- .context-wrap -->
-    {{/templatemodeactive}}
+    {{/freemodeactive}}
 
     <!-- ══════════ TEMPLATE MODE VIEW ════════════════════════════════════ -->
     <!-- Server-rendered only in template mode: free mode never receives this
@@ -810,7 +843,6 @@
               <input type="checkbox" id="tplWithImages" class="hidden" aria-label="{{#str}}courseai_images_arialabel, local_coursegen{{/str}}">
             </div>
             {{/cangeneratecourseimages}}
-            {{> local_coursegen/mode_switch }}
 
             {{! Language select — options populated by JS from the same
                 languages array as free mode (page context / courseai-data) }}
