@@ -66,7 +66,7 @@ class delete_template extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
-        require_capability('local/coursegen:managetemplates', $context);
+        require_capability('local/coursegen:deletetemplates', $context);
 
         // Delete child activity records first.
         $activities = template_activity::get_records(['templateid' => $params['id']]);

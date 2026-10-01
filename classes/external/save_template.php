@@ -170,7 +170,11 @@ class save_template extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
-        require_capability('local/coursegen:managetemplates', $context);
+        $capability = 'local/coursegen:createtemplates';
+        if ($params['id'] > 0) {
+            $capability = 'local/coursegen:edittemplates';
+        }
+        require_capability($capability, $context);
 
         if (trim($params['name']) === '') {
             // The wizard's own name field only ever gets this far via a
