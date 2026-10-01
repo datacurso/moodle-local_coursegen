@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026093031
+
+### Added
+- A web service, `local_coursegen_check_template_activity`, that tells the template editor whether an activity can be marked as a template. The editor asks it as soon as the user picks the "Use as template" action, one activity at a time or in bulk, and shows the server's own message in an error toast when the answer is no. The activity keeps the action it had.
+- A template activity must have at least one placeholder: a `coursegen:aiprompt:` marker with an instruction, or a `coursegen:repeat:` block with an instruction and its closing, written between double brackets or between the angle brackets. Text between double brackets without the `coursegen:` prefix does not count, and neither does a marker with an empty instruction. In the pages of a wiki, the templates of a database and the text of a gap select question, where double brackets are the module's own syntax, only the angle brackets count. The text that is checked is the content the template export already sends to the AI service as the mold.
+
+### Changed
+- Saving a template with an activity marked as a template that has no placeholder is refused with a message that asks the user to add at least one `[[coursegen:aiprompt: ...]]` placeholder to the activity first. Nothing is written when a save is refused, so the saved template stays as it was. The message exists in English and Spanish.
+- Generating a course from a template that was saved before this rule, and that still has a template activity with no placeholder, stops while the payload is being built, before the AI service is called, with the same message naming the activity. There is no fallback to free generation.
+
 ## [2.0.10] - 2026093029
 
 ### Changed
