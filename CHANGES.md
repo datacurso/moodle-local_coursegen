@@ -30,6 +30,9 @@
 
 ## Changed
 
+- **Language packs completed**  
+  The German, French, Indonesian, Portuguese (Brazil) and Russian packs now carry every string of the English pack (253 strings each were missing, mostly the course assistant, image policy help and AI service status messages). Five error strings that still appended a `{$a}` the English pack no longer uses were aligned in every pack.
+
 - **Core classes referenced through their namespaced names**  
   The external functions extend `core_external\external_api` and declare their parameters with the `core_external` structure classes instead of loading `lib/externallib.php`; contexts, URLs, exceptions and `html_writer` are referenced as `core\context\*`, `core\url`, `core\exception\*` and `core\output\html_writer`. Every test declares PHPUnit 11 attributes (`CoversClass`, `CoversFunction`, `CoversMethod`, `CoversNothing`, `DataProvider`, `RunTestsInSeparateProcesses`) next to the existing annotations, which Moodle 4.5 (PHPUnit 9.6) still reads. The web service tests no longer run in separate processes, because nothing loads `lib/externallib.php` any more; only the editor cleaner test keeps the isolation its static client cache requires.
 - **Dead code removed**  
