@@ -25,7 +25,10 @@
     from.
 
     Data attributes required for JS:
-    * data-source-cmid + data-source-name + data-type-label + data-modname +
+    * data-action="local_coursegen/template/menu-back" on the first item, which returns to the add menu
+      (template_add_menu.mustache).
+    * data-action="local_coursegen/template/pick-template-source" +
+      data-source-cmid + data-source-name + data-type-label + data-modname +
       data-icon-url on each enabled item, read when the admin picks it.
 
     Context variables required for this template:
@@ -44,11 +47,14 @@
         ]
     }
 }}
+<button type="button" class="dropdown-item tpl-add-menu-back" role="menuitem" data-action="local_coursegen/template/menu-back">
+    &larr; {{#str}} back, core {{/str}}
+</button>
 {{#hasoptions}}
 <p class="tpl-instance-menu-hint">{{#str}} template_instance_menu_hint, local_coursegen {{/str}}</p>
 {{#options}}
 <button type="button" class="tpl-instance-menu-item dropdown-item" role="menuitem"{{#disabled}} disabled title="{{tooltip}}"{{/disabled}}
-        {{^disabled}}data-source-cmid="{{sourcecmid}}" data-source-name="{{name}}" data-type-label="{{typelabel}}"
+        {{^disabled}}data-action="local_coursegen/template/pick-template-source" data-source-cmid="{{sourcecmid}}" data-source-name="{{name}}" data-type-label="{{typelabel}}"
         data-modname="{{modname}}" data-icon-url="{{iconurl}}"{{/disabled}}>
     <span>{{name}}</span>
     <span class="tpl-instance-menu-scope-hint">{{scopehint}}</span>

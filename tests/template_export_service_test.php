@@ -40,11 +40,13 @@ final class template_export_service_test extends \advanced_testcase {
         $this->resetAfterTest(true);
         $this->setAdminUser();
 
-        $course = $this->getDataGenerator()->create_course();
-        $page = $this->getDataGenerator()->create_module('page', ['course' => $course->id]);
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $page = $generator->create_module('page', ['course' => $course->id]);
         $template = $this->create_template($course->id);
+        $templateid = $template->get('id');
 
-        $payload = template_export_service::build_init_payload($template->get('id'));
+        $payload = template_export_service::build_init_payload($templateid);
         $entry = $this->find_activity($payload, (int) $page->cmid);
 
         $this->assertNotNull($entry);
@@ -60,15 +62,42 @@ final class template_export_service_test extends \advanced_testcase {
         $this->resetAfterTest(true);
         $this->setAdminUser();
 
-        $course = $this->getDataGenerator()->create_course();
-        $page = $this->getDataGenerator()->create_module('page', ['course' => $course->id]);
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $page = $generator->create_module('page', ['course' => $course->id]);
         $template = $this->create_template($course->id);
-        $this->mark_excluded($template->get('id'), (int) $page->cmid);
+        $templateid = $template->get('id');
+        $this->mark_excluded($templateid, (int) $page->cmid);
 
-        $payload = template_export_service::build_init_payload($template->get('id'));
+        $payload = template_export_service::build_init_payload($templateid);
         $entry = $this->find_activity($payload, (int) $page->cmid);
 
         $this->assertNull($entry);
+    }
+
+    /**
+     * An activity saved with action "space" is for the professor to provide,
+     * so it never reaches the payload the AI service is asked about, while
+     * a neighbouring activity that is kept still does.
+     */
+    public function test_space_activity_is_left_out_of_the_payload(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $page = $generator->create_module('page', ['course' => $course->id]);
+        $forum = $generator->create_module('forum', ['course' => $course->id]);
+        $template = $this->create_template($course->id);
+        $templateid = $template->get('id');
+        $this->mark_with_action($templateid, (int) $page->cmid, 'space');
+
+        $payload = template_export_service::build_init_payload($templateid);
+
+        $pageentry = $this->find_activity($payload, (int) $page->cmid);
+        $forumentry = $this->find_activity($payload, (int) $forum->cmid);
+        $this->assertNull($pageentry);
+        $this->assertNotNull($forumentry);
     }
 
     /**
@@ -79,18 +108,22 @@ final class template_export_service_test extends \advanced_testcase {
         $this->resetAfterTest(true);
         $this->setAdminUser();
 
-        $course = $this->getDataGenerator()->create_course(['numsections' => 2]);
-        $this->getDataGenerator()->create_module('page', ['course' => $course->id]);
-        $this->getDataGenerator()->create_module('forum', ['course' => $course->id]);
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['numsections' => 2]);
+        $generator->create_module('page', ['course' => $course->id]);
+        $generator->create_module('forum', ['course' => $course->id]);
         $template = $this->create_template($course->id);
+        $templateid = $template->get('id');
 
-        $payload = template_export_service::build_init_payload($template->get('id'));
+        $payload = template_export_service::build_init_payload($templateid);
 
         $activityuids = array_column($payload['activities'], 'uid');
         $sectionuids = array_column($payload['sections_info'], 'uid');
         $uids = array_merge($activityuids, $sectionuids);
 
-        $this->assertCount(count($uids), array_unique($uids));
+        $uniqueuids = array_unique($uids);
+        $expectedcount = count($uids);
+        $this->assertCount($expectedcount, $uniqueuids);
     }
 
     /**
@@ -116,11 +149,22 @@ final class template_export_service_test extends \advanced_testcase {
      * @param int $cmid
      */
     private function mark_excluded(int $templateid, int $cmid): void {
+        $this->mark_with_action($templateid, $cmid, 'exclude');
+    }
+
+    /**
+     * Save an action for one cmid of this template.
+     *
+     * @param int $templateid
+     * @param int $cmid
+     * @param string $action
+     */
+    private function mark_with_action(int $templateid, int $cmid, string $action): void {
         $activity = new template_activity(0, (object) [
             'templateid' => $templateid,
             'sectionid' => 0,
             'cmid' => $cmid,
-            'action' => 'exclude',
+            'action' => $action,
         ]);
         $activity->create();
     }

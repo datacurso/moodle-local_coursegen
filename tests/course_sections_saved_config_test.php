@@ -67,7 +67,7 @@ final class course_sections_saved_config_test extends \advanced_testcase {
         $section1 = $modinfo->get_section_info(1);
         $section2 = $modinfo->get_section_info(2);
 
-        $saved = save_template::execute(0, 'Edit me', '', (int) $course->id, 0, false, '[]', '', 1, [
+        $saved = save_template::execute(0, 'Edit me', '', (int) $course->id, 0, false, '', 1, [
             [
                 'sectionid' => (int) $section1->id,
                 'sectionnum' => 1,
@@ -102,7 +102,8 @@ final class course_sections_saved_config_test extends \advanced_testcase {
         $this->assertStringNotContainsString('<option value="exclude"', $section1select);
 
         $section2select = $this->extract_behavior_select($html, (int) $section2->id);
-        $this->assertSame(3, substr_count($section2select, '<option'));
+        $section2options = substr_count($section2select, '<option');
+        $this->assertSame(3, $section2options);
         $this->assertMatchesRegularExpression('/<option value="exclude"[^>]*\sselected/', $section2select);
 
         $section0 = $modinfo->get_section_info(0);

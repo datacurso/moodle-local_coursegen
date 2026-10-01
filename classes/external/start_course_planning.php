@@ -85,7 +85,10 @@ class start_course_planning extends external_api {
         $context = context_system::instance();
         self::validate_context($context);
         require_capability('moodle/course:create', $context);
-        require_capability('local/coursegen:createcoursewithai', $context);
+        require_capability('local/coursegen:createfreecoursewithai', $context);
+        if ($params['withimages']) {
+            require_capability('local/coursegen:generatecourseimages', $context);
+        }
 
         try {
             return course_planning_service::start_course_planning(

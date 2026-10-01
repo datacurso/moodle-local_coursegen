@@ -73,7 +73,7 @@ class finish_template_generation extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
-        require_capability('local/coursegen:createcoursewithai', $context);
+        require_capability('local/coursegen:createtemplatecoursewithai', $context);
 
         $session = new course_session($params['sessionid']);
         if ((int) $session->get('userid') !== (int) $USER->id) {

@@ -66,11 +66,12 @@ final class template_instance_menu_markup_test extends \advanced_testcase {
         $this->assertStringContainsString('class="dropdown tpl-instance-dropdown"', $gapmarkup);
         $this->assertStringContainsString('aria-haspopup="true"', $gapmarkup);
         $this->assertStringContainsString('aria-expanded="false"', $gapmarkup);
-        $this->assertMatchesRegularExpression('/<div class="dropdown-menu tpl-instance-menu" role="menu">\s*<\/div>/', $gapmarkup);
+        $menupattern = '/<div class="dropdown-menu tpl-instance-menu" role="menu" data-region="local_coursegen\/template\/instance-dropdown-menu">\s*<\/div>/';
+        $this->assertMatchesRegularExpression($menupattern, $gapmarkup);
     }
 
     /**
-     * The section's persistent "Add activity from a template" row follows
+     * The section's persistent "Add activity or space" row follows
      * the exact same native-dropdown shape as every row-gap trigger.
      */
     public function test_persistent_add_trigger_renders_as_a_native_dropdown(): void {
@@ -90,7 +91,8 @@ final class template_instance_menu_markup_test extends \advanced_testcase {
         $this->assertStringContainsString('class="dropdown tpl-instance-dropdown"', $addmarkup);
         $this->assertStringContainsString('aria-haspopup="true"', $addmarkup);
         $this->assertStringContainsString('aria-expanded="false"', $addmarkup);
-        $this->assertMatchesRegularExpression('/<div class="dropdown-menu tpl-instance-menu" role="menu">\s*<\/div>/', $addmarkup);
+        $menupattern = '/<div class="dropdown-menu tpl-instance-menu" role="menu" data-region="local_coursegen\/template\/instance-dropdown-menu">\s*<\/div>/';
+        $this->assertMatchesRegularExpression($menupattern, $addmarkup);
     }
 
     /**

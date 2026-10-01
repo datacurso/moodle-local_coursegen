@@ -60,7 +60,8 @@ class templates extends system_report {
      * @return bool
      */
     protected function can_view(): bool {
-        return has_capability('local/coursegen:managetemplates', $this->get_context());
+        $context = $this->get_context();
+        return has_capability('local/coursegen:viewtemplates', $context);
     }
 
     /**
@@ -84,24 +85,40 @@ class templates extends system_report {
      * Add row actions.
      */
     protected function add_actions(): void {
-        $this->add_action((new action(
-            new moodle_url('/local/coursegen/edit_template.php', ['id' => ':id']),
-            new pix_icon('t/edit', ''),
-            [],
-            false,
-            new lang_string('edit')
-        )));
+        $context = $this->get_context();
+        if (has_capability('local/coursegen:edittemplates', $context)) {
+            $this->add_edit_action();
+        }
+        if (has_capability('local/coursegen:deletetemplates', $context)) {
+            $this->add_delete_action();
+        }
+    }
 
-        $this->add_action((new action(
-            new moodle_url('/local/coursegen/manage_templates.php', [
-                'action' => 'delete',
-                'id' => ':id',
-                'sesskey' => sesskey(),
-            ]),
-            new pix_icon('t/delete', ''),
-            [],
-            false,
-            new lang_string('delete')
-        )));
+    /**
+     * Add the edit row action.
+     */
+    private function add_edit_action(): void {
+        $url = new moodle_url('/local/coursegen/edit_template.php', ['id' => ':id']);
+        $icon = new pix_icon('t/edit', '');
+        $title = new lang_string('edit');
+        $action = new action($url, $icon, [], false, $title);
+        $this->add_action($action);
+    }
+
+    /**
+     * Add the delete row action.
+     */
+    private function add_delete_action(): void {
+        $sesskey = sesskey();
+        $urlparams = [
+            'action' => 'delete',
+            'id' => ':id',
+            'sesskey' => $sesskey,
+        ];
+        $url = new moodle_url('/local/coursegen/manage_templates.php', $urlparams);
+        $icon = new pix_icon('t/delete', '');
+        $title = new lang_string('delete');
+        $action = new action($url, $icon, [], false, $title);
+        $this->add_action($action);
     }
 }

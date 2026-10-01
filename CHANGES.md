@@ -2,6 +2,116 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026093024
+
+### Changed
+- The scope hint and the tooltip of each option of the template picker are computed with two independent conditions instead of conditions nested in one another. The options the picker shows are exactly the same.
+
+## [2.0.10] - 2026093022
+
+### Removed
+- The `regenerate_detailed_item` external function. It was not declared as a web service, called a method of the AI client that no longer exists, and the AI service no longer has the endpoint it used; regenerating a part of the plan goes through the planning feedback.
+- The unused `can_create_course` check of the chat hook. Nothing called it since the button to create a course with AI moved to the My courses page, which has its own check.
+
+## [2.0.10] - 2026093021
+
+### Added
+- One capability per operation, replacing the broad ones. Course templates: `viewtemplates`, `createtemplates`, `edittemplates` and `deletetemplates`. System instructions: `viewsysteminstructions`, `createsysteminstructions`, `editsysteminstructions` and `deletesysteminstructions`. Image generation settings: `viewimagegenerationsettings` and `editimagegenerationsettings`. Creating a course with AI: `createfreecoursewithai` and `createtemplatecoursewithai`, one per mode, plus `uploadcoursesyllabus` and `generatecourseimages`. Creating an activity with AI keeps `createactivitywithai` and gains `generateactivityimages`.
+- On upgrade every new capability copies the permission of the capability it comes from, in every role and every context where that one was set, including prevent and prohibit and the overrides in courses, categories and activities, so no role gains or loses anything. On a new install it starts with the same roles. `managetemplates`, `managesysteminstructions`, `manageimagegeneration` and `createcoursewithai` stay defined only as that source: no code checks them any more, so changing them after this upgrade has no effect, and they can be removed in a later release.
+
+### Changed
+- Every page and web service of those areas checks its own capability. Saving a template needs `createtemplates` for a new one and `edittemplates` for an existing one, nothing more, and the services the editor uses to build a template are open to who can create or edit. The services that create a course are checked by mode, the ones both modes use by either mode, and a user with neither mode gets the permission error on the course creation page.
+- A request that asks for images needs `generatecourseimages` or `generateactivityimages`, and a template generation that carries a syllabus needs `uploadcoursesyllabus`; they are refused with a permission error instead of being ignored.
+- The interface shows only what the user can do: the create, edit and delete controls of the template and system instruction lists, the mode switch (and only the mode the user can use), the syllabus controls, the generate-images controls of the course and activity windows. The image settings page is read-only without the save button for who can view but not change it. The creation page no longer sends the list of templates to a user who cannot use that mode.
+- Creating a course and reading its final settings, answering its plan and resuming a session now check their capability; before, they only checked that the session belonged to the user.
+- Saving the image generation settings keeps requiring the site configuration capability and also requires `editimagegenerationsettings`.
+
+## [2.0.10] - 2026093015
+
+### Changed
+- The list of installed, AI-supported activity types is read straight from the supported list in one pass, instead of intersecting, sorting and re-indexing arrays: the supported list is already alphabetical, so the result is the same without the extra array calls.
+
+### Added
+- PHPUnit coverage that the supported list stays alphabetical, that the installed list has no repeats and that a hidden module is left out.
+
+## [2.0.10] - 2026093014
+
+### Changed
+- The activity catalog of the template editor is sorted with Moodle's own collator instead of a byte comparison of the names, so the order follows the site language and an accented initial sits with the entries of its base letter. The two comparison helpers it needed are gone.
+
+### Added
+- PHPUnit coverage of the catalog the template editor receives: the types it lists, the shape of each entry, that it is a zero-indexed list and that it follows the collation order.
+
+## [2.0.10] - 2026093013
+
+### Changed
+- The token of a section naming pattern that stands for the original section's name is now `{name}` instead of a word of another language, in the presets, the name-only option, the custom-pattern help and the live preview. `{N}` is unchanged and there is no support for both spellings at once. Stored patterns are not rewritten: a pattern saved with the old token keeps it as plain text, shown in the Custom field, and has to be edited by hand.
+- The template editor scripts take the action, behaviour and scope names, the event names, the language string keys they share and the selectors and classes they share from two small constants modules instead of repeating them. The form now tells the script the custom-pattern value and both tokens, so the script holds no copy of them.
+- Every selector the template editor scripts use now lives in one selectors module, and the scripts find their elements only through `data-action`, `data-region` and `data-form` hooks, never through ids or CSS classes. The hooks added with the spaces work and the naming preview are namespaced (`local_coursegen/template/...`); the ones that already existed keep their original attribute. The name and description fields, the extra sections and naming fields of the configuration form, the dropdown wrappers, the type cells and the icons of the rows carry the new hooks, and the modal ids are unique per render.
+- The add menu items of the template editor are told apart by their own `data-action` instead of a value in `data-menu-action`, and the picked-template click no longer chains a promise.
+- The loops of the naming preview, the virtual rows scrape and the rows of the sections review no longer keep a hand-maintained counter: the position comes from the loop itself or from the lists being built.
+- The naming preview box is rendered from its own template instead of being built in the form class.
+- The save payload, the persistence service and the row options no longer fall back to defaults that can never apply, and the action, behaviour, scope and row-kind names are constants of the classes that own them.
+
+### Fixed
+- The live naming preview built its lines as HTML from the section names of the base course, so a section called with markup would have been interpreted as markup in the page of the professor who edits the template. The preview is now rendered from a template that escapes the names, with its label coming from the language pack, and the space rows added in the editor print the activity icon through the template instead of a script extracting its address from markup.
+
+## [2.0.10] - 2026093008
+
+### Changed
+- The rest of the template editor code follows the same code-quality rules as the spaces work: the row scripts, the structure rows for the professor, the row options, the layout ordering, the export and persistence services, the configuration form and the sections review no longer hide calls inside other calls' arguments, array literals or loop iterables, no longer use a ternary or an inline closure, and keep one non-nested loop per function. The layout ordering and the catalog sorting use small named comparison methods instead of inline closures.
+- The tests of the template editor read every inner call into a named variable first and use small helpers instead of inline closures. Every assertion, data provider and fixture value is unchanged.
+- The name validation of the save button collects its result through a named handler instead of a function defined inside another.
+
+### Removed
+- The summary step script of the old configuration wizard. Nothing in the plugin loads it any more.
+
+## [2.0.10] - 2026093007
+
+### Changed
+- The limits step of the template editor (extra sections allowance, section naming pattern, first section number and the live naming preview) and the summary step are rewritten as small module-level functions that share one explicit context, with no function defined inside another and no nested or repeated loop. The functions these steps lost when the "Allowed activity types" block was removed were edited by that change, so they now follow the code-quality rules too. Behaviour is unchanged.
+- The save payload reads the sections into a variable before building the request, and the save endpoint reads its parameter description and its saved name into variables first.
+
+## [2.0.10] - 2026093006
+
+### Changed
+- The template editor scripts no longer define any function inside another function. Event handlers, callbacks, loop callbacks and promise executors are now named module-level functions that receive their state through an explicit context, or are bound to it, instead of closing over local variables. This covers the wizard start-up, the save payload, the row action and section behavior handlers, the add-from-template click and input handlers, the space modal, the space rows and the activity chooser.
+- The callback chain of a row action change (scope modal, unmark confirmation, space modal) is now a flat sequence of named functions driven by a shared context. The action a row falls back to when a modal is cancelled is tracked in that context.
+- Every loop over a list in those scripts is a plain `for...of` inside its own small function, and there is no nested or repeated loop left in any function the spaces work touched.
+- The template layout and its tests build their row lists with a `foreach` instead of an inline closure. No behaviour changes.
+
+## [2.0.10] - 2026093005
+
+### Changed
+- The code of the template editor and of the spaces for the professor now follows the project's code-quality rules that had been skipped: no loop inside another loop, one loop per function, no ternaries, no `switch`, no named function inside another function, no function call inside another call's arguments, an array or a loop's iterable, and no `??` fallback mixed into a larger expression. No behaviour changes.
+- The template wizard state (`init.js`) seeds each section and each activity through their own small functions instead of a loop inside a loop. The rows, events, payload, menu, space modal and activity chooser modules were split the same way; the chooser now keeps its outcome in a small class instead of a function defined inside another.
+- The section review (`sections_config`) reads the saved configuration through one helper per kind of record and builds each section and each real row through its own method, instead of a single method with five loops, one of them nested.
+- The configuration form builds its limits and its naming fields in separate methods, and the pure pieces (extra sections default, naming options, naming defaults) are public and covered by tests.
+- The tests of the editor and of the spaces read their inner calls into named variables first, and the spaces test got small helpers for the section id, the review render and the badge text.
+
+### Fixed
+- A test of the spaces (an activity marked as a space) called the fixture with one argument too few and would have stopped with an error instead of checking anything.
+
+## [2.0.10] - 2026093004
+
+### Fixed
+- The section-naming presets of the template configuration (Unit, Module, Topic, Week) and the default pattern were written in Spanish whatever the site language, so an English site offered "Unidad 1 — …" and named the generated sections that way by default. The words now come from the language pack; the number and section-name tokens stay identical in every language, since they are what the course builder and the preview substitute (the section-name token is now `{name}`). A pattern saved in another language keeps working and is restored through the Custom option.
+- The wizard no longer starts with a hardcoded naming pattern: its initial value comes from the server together with the rest of the page configuration.
+- The placeholder of the custom naming pattern field, and the "Unidad" examples in the English help texts of the naming pattern and start number, are now proper language strings.
+
+## [2.0.10] - 2026093003
+
+### Added
+- Spaces for the professor in the template editor, put back for review after the revert of build 2026093002. A space marks a place where the professor must, or may, provide an activity of their own when creating a course from the template. It is either a new entry (pick the activity type from Moodle's own activity chooser, limited to the types the plugin supports, then say whether it is required or optional and what the professor has to provide), or an existing activity set to the new "Space for the professor" action. A space is never copied into the new course nor written by the AI: it is left out of what is sent to the AI service. Making the professor provide it, and blocking the start while a required one is empty, comes in a later step.
+- New table `local_coursegen_tpl_space` for the entries, and two fields on the template activity (`spacerequired`, `spaceinstruction`) for the marked activities. The upgrade step creates them only when they are missing, so it is safe on databases that already have them from build 2026093001.
+
+### Changed
+- The "+" between rows and the "Add" row at the end of each section open a menu with two options: add an activity from a template (the same list as before, with a Back item) or add a space for an activity.
+- The professor's activity chooser offers every supported and installed activity type for every template.
+
+### Removed
+- The "Allowed activity types" setting of the template editor, with its "Select all" / "Select none" buttons and its summary line. The saved value is no longer read or written; the column stays so no schema change is needed. `save_template` no longer takes the `allowedtypes` parameter.
+
 ## [2.0.10] - 2026093002
 
 ### Reverted

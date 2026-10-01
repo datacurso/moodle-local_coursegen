@@ -33,6 +33,7 @@ use external_function_parameters;
 use external_multiple_structure;
 use external_single_structure;
 use external_value;
+use local_coursegen\local\service\access_guard;
 
 /**
  * External function to get courses by category.
@@ -76,7 +77,10 @@ class get_courses_by_category extends external_api {
 
         $context = \context_system::instance();
         self::validate_context($context);
-        require_capability('local/coursegen:managetemplates', $context);
+        access_guard::require_any(
+            ['local/coursegen:createtemplates', 'local/coursegen:edittemplates'],
+            $context
+        );
 
         // Collect category IDs.
         $catids = [$params['categoryid']];

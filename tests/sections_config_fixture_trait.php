@@ -42,13 +42,14 @@ trait sections_config_fixture_trait {
      * @return array{0:\stdClass,1:\stdClass,2:\stdClass,3:\stdClass,4:\stdClass} Course, page, forum, lti and label records.
      */
     private function create_course_fixture(): array {
-        $course = $this->getDataGenerator()->create_course(['numsections' => 2]);
-        $page = $this->getDataGenerator()->create_module('page', ['course' => $course->id, 'section' => 1]);
-        $forum = $this->getDataGenerator()->create_module('forum', ['course' => $course->id, 'section' => 2]);
-        $lti = $this->getDataGenerator()->create_module('lti', ['course' => $course->id, 'section' => 2]);
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['numsections' => 2]);
+        $page = $generator->create_module('page', ['course' => $course->id, 'section' => 1]);
+        $forum = $generator->create_module('forum', ['course' => $course->id, 'section' => 2]);
+        $lti = $generator->create_module('lti', ['course' => $course->id, 'section' => 2]);
         // A label has no view URL of its own — the "name renders as plain
         // text, never a dead link" fixture.
-        $label = $this->getDataGenerator()->create_module('label', ['course' => $course->id, 'section' => 2]);
+        $label = $generator->create_module('label', ['course' => $course->id, 'section' => 2]);
         return [$course, $page, $forum, $lti, $label];
     }
 
@@ -78,7 +79,8 @@ trait sections_config_fixture_trait {
         $marker = 'data-region="template-tag" data-id="' . $cmid . '"';
         $markerpos = strpos($html, $marker);
         $this->assertNotFalse($markerpos, 'No template tag rendered matching: ' . $marker);
-        $tagstart = strrpos(substr($html, 0, $markerpos), '<button');
+        $before = substr($html, 0, $markerpos);
+        $tagstart = strrpos($before, '<button');
         $this->assertNotFalse($tagstart, 'Unopened template tag matching: ' . $marker);
         $tagend = strpos($html, '</button>', $tagstart);
         $this->assertNotFalse($tagend, 'Unterminated template tag matching: ' . $marker);
@@ -153,6 +155,7 @@ trait sections_config_fixture_trait {
      * @param array $activities
      * @param array $instances
      * @param int $templateid Existing template to re-save, 0 to create a new one.
+     * @param array $spaces Virtual professor-provided spaces placed in the section.
      * @return array \local_coursegen\external\save_template::execute()'s return value.
      */
     private function save_with_instances(
@@ -161,7 +164,8 @@ trait sections_config_fixture_trait {
         int $sectionnum,
         array $activities,
         array $instances,
-        int $templateid = 0
+        int $templateid = 0,
+        array $spaces = []
     ): array {
         return \local_coursegen\external\save_template::execute(
             $templateid,
@@ -170,7 +174,6 @@ trait sections_config_fixture_trait {
             $courseid,
             0,
             false,
-            '[]',
             '',
             1,
             [
@@ -180,6 +183,7 @@ trait sections_config_fixture_trait {
                     'behavior' => 'aimodify',
                     'activities' => $activities,
                     'instances' => $instances,
+                    'spaces' => $spaces,
                 ],
             ]
         );

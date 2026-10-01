@@ -56,7 +56,10 @@ class template_export_service {
      * @return int|null The template_instance id, or null for a real cmid.
      */
     public static function instance_id_of(int $cmid): ?int {
-        return $cmid >= self::INSTANCE_CMID_BASE ? $cmid - self::INSTANCE_CMID_BASE : null;
+        if ($cmid >= self::INSTANCE_CMID_BASE) {
+            return $cmid - self::INSTANCE_CMID_BASE;
+        }
+        return null;
     }
 
     /**
@@ -158,7 +161,9 @@ class template_export_service {
     }
 
     /**
-     * The base course's own activities, excluding the ones marked "exclude".
+     * The base course's own activities, excluding the ones marked "exclude"
+     * and the ones marked "space": those are for the professor to provide,
+     * so the AI service is never asked about them.
      *
      * @param \course_modinfo $modinfo
      * @param array $actions
@@ -171,8 +176,8 @@ class template_export_service {
             if (!$cm->uservisible) {
                 continue;
             }
-            $action = $actions[$cm->id] ?? 'keep';
-            if ($action === 'exclude') {
+            $action = $actions[$cm->id] ?? template_activity::ACTION_KEEP;
+            if ($action === template_activity::ACTION_EXCLUDE || $action === template_activity::ACTION_SPACE) {
                 continue;
             }
             $activities[] = self::real_activity_entry($cm, $action);
@@ -273,7 +278,7 @@ class template_export_service {
                 'section' => $section,
             ],
             'template_behavior' => [
-                'action' => 'modify',
+                'action' => template_activity::ACTION_MODIFY,
                 'useasreference' => true,
                 'prompt' => $prompt,
                 'template_source_cmid' => $sourcecmid,

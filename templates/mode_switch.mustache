@@ -25,12 +25,15 @@
 
     Context variables required for this template:
     * templatemodeactive bool - whether the page is in template mode.
+    * hasbothmodes bool       - the user can create in both modes; with only one mode there is nothing to switch.
 
     Example context (json):
     {
-        "templatemodeactive": false
+        "templatemodeactive": false,
+        "hasbothmodes": true
     }
 }}
+{{#hasbothmodes}}
 <nav class="courseai-mode-seg" aria-label="{{#str}}courseai_mode_switch, local_coursegen{{/str}}">
   <a class="courseai-mode-seg-item{{^templatemodeactive}} is-active{{/templatemodeactive}}"
      href="aicoursecreation.php"{{^templatemodeactive}} aria-current="page"{{/templatemodeactive}}>
@@ -48,3 +51,4 @@
     <span>{{#str}}courseai_mode_template, local_coursegen{{/str}}</span>
   </a>
 </nav>
+{{/hasbothmodes}}

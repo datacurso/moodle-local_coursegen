@@ -32,6 +32,14 @@ require_once($CFG->libdir . '/formslib.php');
  * Form for naming a course template.
  */
 class template_name_form extends \moodleform {
+    /** The data-form hook of this form, read by the template editor script. */
+    const HOOK_FORM = 'local_coursegen/template/name-form';
+
+    /** The data-region hook of the name field. */
+    const HOOK_NAME = 'local_coursegen/template/template-name';
+
+    /** The data-region hook of the description field. */
+    const HOOK_DESCRIPTION = 'local_coursegen/template/template-description';
 
     /**
      * Form definition.
@@ -42,15 +50,19 @@ class template_name_form extends \moodleform {
         // Change tracking stays ENABLED (Moodle's default) — see the
         // matching note on course_picker_form::definition() for why.
 
-        $mform->addElement('text', 'templatename',
-            get_string('template_name', 'local_coursegen'), ['size' => 60]);
+        $mform->updateAttributes(['data-form' => self::HOOK_FORM]);
+
+        $nameattributes = ['size' => 60, 'data-region' => self::HOOK_NAME];
+        $namelabel = get_string('template_name', 'local_coursegen');
+        $mform->addElement('text', 'templatename', $namelabel, $nameattributes);
         $mform->setType('templatename', PARAM_TEXT);
-        $mform->addRule('templatename', get_string('required'), 'required', null, 'client');
+        $requiredmessage = get_string('required');
+        $mform->addRule('templatename', $requiredmessage, 'required', null, 'client');
         $mform->addHelpButton('templatename', 'template_name', 'local_coursegen');
 
-        $mform->addElement('textarea', 'templatedesc',
-            get_string('template_description', 'local_coursegen'),
-            ['rows' => 3, 'cols' => 60]);
+        $descattributes = ['rows' => 3, 'cols' => 60, 'data-region' => self::HOOK_DESCRIPTION];
+        $desclabel = get_string('template_description', 'local_coursegen');
+        $mform->addElement('textarea', 'templatedesc', $desclabel, $descattributes);
         $mform->setType('templatedesc', PARAM_TEXT);
     }
 }

@@ -90,6 +90,7 @@ class course_planning_feedback extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
+        require_capability('local/coursegen:createfreecoursewithai', $context);
 
         $session = course_session_service::get_user_session($recordid, $USER->id);
         $sessionid = $session->get('session_id');

@@ -42,7 +42,9 @@ trait get_template_structure_rows {
      */
     private static function section_settings(template $template): array {
         $sectionsettings = [];
-        foreach (template_section::get_records(['templateid' => $template->get('id')]) as $s) {
+        $templateid = $template->get('id');
+        $records = template_section::get_records(['templateid' => $templateid]);
+        foreach ($records as $s) {
             $sectionid = $s->get('sectionid');
             $behavior = $s->get('behavior');
             $sectionsettings[$sectionid] = $behavior;
@@ -58,7 +60,9 @@ trait get_template_structure_rows {
      */
     private static function activity_settings(template $template): array {
         $activitysettings = [];
-        foreach (template_activity::get_records(['templateid' => $template->get('id')]) as $a) {
+        $templateid = $template->get('id');
+        $records = template_activity::get_records(['templateid' => $templateid]);
+        foreach ($records as $a) {
             $cmid = $a->get('cmid');
             $action = $a->get('action');
             $activitysettings[$cmid] = $action;
@@ -74,7 +78,9 @@ trait get_template_structure_rows {
      */
     private static function instances_by_section(template $template): array {
         $instancesbysection = [];
-        foreach (template_instance::get_records(['templateid' => $template->get('id')]) as $instance) {
+        $templateid = $template->get('id');
+        $records = template_instance::get_records(['templateid' => $templateid]);
+        foreach ($records as $instance) {
             $sectionid = $instance->get('sectionid');
             $instancesbysection[$sectionid][] = $instance;
         }
@@ -101,18 +107,20 @@ trait get_template_structure_rows {
         $output
     ): array {
         $sections = [];
-        foreach ($modinfo->get_section_info_all() as $section) {
-            $behavior = $sectionsettings[$section->id] ?? 'aimodify';
-            if ($behavior === 'exclude') {
+        $sectioninfos = $modinfo->get_section_info_all();
+        foreach ($sectioninfos as $section) {
+            $behavior = $sectionsettings[$section->id] ?? template_section::BEHAVIOR_AI_MODIFY;
+            if ($behavior === template_section::BEHAVIOR_EXCLUDE) {
                 continue;
             }
             $activities = self::section_activities($modinfo, $section, $activitysettings, $instancesbysection, $output);
+            $name = get_section_name($course, $section);
             $sections[] = [
                 'id'         => (int) $section->id,
                 'num'        => (int) $section->section,
-                'name'       => get_section_name($course, $section),
+                'name'       => $name,
                 'behavior'   => $behavior,
-                'locked'     => ($behavior === 'keep'),
+                'locked'     => ($behavior === template_section::BEHAVIOR_KEEP),
                 'activities' => $activities,
             ];
         }
@@ -170,7 +178,7 @@ trait get_template_structure_rows {
      * @return array|null
      */
     private static function section_activity_row(array $row, $modinfo, array $activitysettings, $output): ?array {
-        if ($row['type'] === 'instance') {
+        if ($row['type'] === template_instance_layout::TYPE_INSTANCE) {
             return self::instance_row($row['record']);
         }
         $cm = $modinfo->cms[$row['cmid']];
@@ -181,11 +189,11 @@ trait get_template_structure_rows {
         // keep, and a legacy saved "modify" normalising to keep) stays
         // visible and locked; reference, template (mold) and exclude rows
         // never reach the professor at all.
-        $action = $activitysettings[$cm->id] ?? 'keep';
-        if ($action === 'modify') {
-            $action = 'keep';
+        $action = $activitysettings[$cm->id] ?? template_activity::ACTION_KEEP;
+        if ($action === template_activity::ACTION_MODIFY) {
+            $action = template_activity::ACTION_KEEP;
         }
-        if ($action !== 'keep') {
+        if ($action !== template_activity::ACTION_KEEP) {
             return null;
         }
         $purpose = self::get_purpose($cm->modname);
@@ -227,8 +235,9 @@ trait get_template_structure_rows {
      * @return array
      */
     private static function instance_row(template_instance $instance): array {
-        $modname = (string) $instance->get('modname');
-        $iconurl = template_row_options::instance_icon_url($instance->get('modname'));
+        $rawmodname = $instance->get('modname');
+        $modname = (string) $rawmodname;
+        $iconurl = template_row_options::instance_icon_url($rawmodname);
         $iconhtml = '';
         if ($iconurl !== '') {
             $iconhtml = \html_writer::empty_tag('img', ['src' => $iconurl, 'class' => 'icon activityicon', 'alt' => '']);
@@ -238,12 +247,16 @@ trait get_template_structure_rows {
         if ($modname !== '') {
             $purpose = self::get_purpose($modname);
         }
+        $rawname = $instance->get('name');
+        $name = format_string($rawname);
+        $rawtypelabel = $instance->get('typelabel');
+        $typelabel = format_string($rawtypelabel);
         return [
             'id'      => $uid,
-            'name'    => format_string($instance->get('name')),
+            'name'    => $name,
             'modname' => $modname,
             'purpose' => $purpose,
-            'typelabel' => format_string($instance->get('typelabel')),
+            'typelabel' => $typelabel,
             'iconhtml' => $iconhtml,
             'locked'  => true,
             'action'  => '',
@@ -272,26 +285,8 @@ trait get_template_structure_rows {
     }
 
     /**
-     * The template's own allowed-type list, decoded from storage.
-     *
-     * @param template $template
-     * @return array
-     */
-    private static function allowed_types(template $template): array {
-        $raw = $template->get('allowedtypes');
-        if (empty($raw)) {
-            return [];
-        }
-        $decoded = json_decode($raw, true);
-        if (!is_array($decoded)) {
-            return [];
-        }
-        return $decoded;
-    }
-
-    /**
      * The allowed-type catalog, each with its display name, purpose and
-     * icon, sorted by display name.
+     * icon, sorted by display name in the site language's collation.
      *
      * @param array $allowedtypes
      * @param \renderer_base $output
@@ -305,8 +300,8 @@ trait get_template_structure_rows {
                 $allowedactivities[] = $activity;
             }
         }
-        usort($allowedactivities, fn($a, $b) => strcasecmp($a['displayname'], $b['displayname']));
-        return $allowedactivities;
+        \core_collator::asort_array_of_arrays_by_key($allowedactivities, self::CATALOG_NAME_FIELD);
+        return array_values($allowedactivities);
     }
 
     /**
@@ -325,10 +320,10 @@ trait get_template_structure_rows {
         $purpose = self::get_purpose($modname);
         $iconhtml = $output->image_icon('monologo', $modname, 'mod_' . $modname, ['class' => 'icon activityicon']);
         return [
-            'modname'     => $modname,
-            'displayname' => $displayname,
-            'purpose'     => $purpose,
-            'iconhtml'    => $iconhtml,
+            'modname' => $modname,
+            self::CATALOG_NAME_FIELD => $displayname,
+            'purpose' => $purpose,
+            'iconhtml' => $iconhtml,
         ];
     }
 }

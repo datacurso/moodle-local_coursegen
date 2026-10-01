@@ -1,0 +1,45 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/template_naming_preview
+
+    Live preview of the section names the naming pattern would give, one line
+    per section of the base course. Rendered by step_limits.js. The section
+    names are escaped by the double braces, so a name holding markup is shown
+    as text.
+
+    Data attributes required for JS:
+    * none; step_limits.js renders it into the box that carries
+      data-region="local_coursegen/template/naming-preview"
+      (see local_coursegen/template_naming_preview_box).
+
+    Context variables:
+    * lines array   - One entry per section.
+        * text string - The section's name after applying the pattern.
+
+    Example context (json):
+    {
+        "lines": [
+            {"text": "Unit 1: Welcome"},
+            {"text": "Unit 2: Fundamentals"}
+        ]
+    }
+}}
+<small class="text-muted d-block mb-1">{{#str}} template_naming_preview, local_coursegen {{/str}}</small>
+{{#lines}}
+<small class="d-block">{{text}}</small>
+{{/lines}}

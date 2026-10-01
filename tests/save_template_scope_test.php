@@ -58,7 +58,7 @@ final class save_template_scope_test extends \advanced_testcase {
         $modinfo = get_fast_modinfo($course);
         $section1 = $modinfo->get_section_info(1);
 
-        $saved = save_template::execute(0, 'Mold template', '', (int) $course->id, 0, false, '[]', '', 1, [
+        $saved = save_template::execute(0, 'Mold template', '', (int) $course->id, 0, false, '', 1, [
             [
                 'sectionid' => (int) $section1->id,
                 'sectionnum' => 1,
@@ -78,8 +78,10 @@ final class save_template_scope_test extends \advanced_testcase {
 
         $record = template_activity::get_record(['templateid' => $templateid, 'cmid' => (int) $page->cmid]);
         $this->assertNotFalse($record);
-        $this->assertSame('template', $record->get('action'));
-        $this->assertSame('section', $record->get('templatescope'));
+        $action = $record->get('action');
+        $scope = $record->get('templatescope');
+        $this->assertSame('template', $action);
+        $this->assertSame('section', $scope);
 
         $html = sections_config::render($modinfo, $templateid);
 
@@ -89,8 +91,10 @@ final class save_template_scope_test extends \advanced_testcase {
         // The tag is now visible (no d-none) and shows the saved "section" scope.
         $tag = $this->extract_template_tag($html, (int) $page->cmid);
         $tagopenend = strpos($tag, '>');
-        $this->assertStringNotContainsString('d-none', substr($tag, 0, $tagopenend));
-        $this->assertStringContainsString(get_string('template_activity_scope_section', 'local_coursegen'), $tag);
+        $tagopening = substr($tag, 0, $tagopenend);
+        $scopelabel = get_string('template_activity_scope_section', 'local_coursegen');
+        $this->assertStringNotContainsString('d-none', $tagopening);
+        $this->assertStringContainsString($scopelabel, $tag);
     }
 
     /**
@@ -105,7 +109,7 @@ final class save_template_scope_test extends \advanced_testcase {
         $modinfo = get_fast_modinfo($course);
         $section1 = $modinfo->get_section_info(1);
 
-        $saved = save_template::execute(0, 'No scope given', '', (int) $course->id, 0, false, '[]', '', 1, [
+        $saved = save_template::execute(0, 'No scope given', '', (int) $course->id, 0, false, '', 1, [
             [
                 'sectionid' => (int) $section1->id,
                 'sectionnum' => 1,
@@ -117,7 +121,8 @@ final class save_template_scope_test extends \advanced_testcase {
         ]);
 
         $record = template_activity::get_record(['templateid' => (int) $saved['id'], 'cmid' => (int) $page->cmid]);
-        $this->assertSame('course', $record->get('templatescope'));
+        $scope = $record->get('templatescope');
+        $this->assertSame('course', $scope);
     }
 
     /**
@@ -134,7 +139,7 @@ final class save_template_scope_test extends \advanced_testcase {
         $modinfo = get_fast_modinfo($course);
         $section1 = $modinfo->get_section_info(1);
 
-        $saved = save_template::execute(0, 'Bogus scope', '', (int) $course->id, 0, false, '[]', '', 1, [
+        $saved = save_template::execute(0, 'Bogus scope', '', (int) $course->id, 0, false, '', 1, [
             [
                 'sectionid' => (int) $section1->id,
                 'sectionnum' => 1,
@@ -152,7 +157,8 @@ final class save_template_scope_test extends \advanced_testcase {
         ]);
 
         $record = template_activity::get_record(['templateid' => (int) $saved['id'], 'cmid' => (int) $page->cmid]);
-        $this->assertSame('course', $record->get('templatescope'));
+        $scope = $record->get('templatescope');
+        $this->assertSame('course', $scope);
     }
 
     /**
@@ -168,7 +174,7 @@ final class save_template_scope_test extends \advanced_testcase {
         $modinfo = get_fast_modinfo($course);
         $section1 = $modinfo->get_section_info(1);
 
-        $saved = save_template::execute(0, 'Keep with scope', '', (int) $course->id, 0, false, '[]', '', 1, [
+        $saved = save_template::execute(0, 'Keep with scope', '', (int) $course->id, 0, false, '', 1, [
             [
                 'sectionid' => (int) $section1->id,
                 'sectionnum' => 1,
@@ -186,7 +192,9 @@ final class save_template_scope_test extends \advanced_testcase {
         ]);
 
         $record = template_activity::get_record(['templateid' => (int) $saved['id'], 'cmid' => (int) $page->cmid]);
-        $this->assertSame('keep', $record->get('action'));
-        $this->assertSame('section', $record->get('templatescope'));
+        $action = $record->get('action');
+        $scope = $record->get('templatescope');
+        $this->assertSame('keep', $action);
+        $this->assertSame('section', $scope);
     }
 }

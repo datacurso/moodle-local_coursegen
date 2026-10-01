@@ -17,6 +17,7 @@
 namespace local_coursegen;
 
 use local_coursegen\local\models\template_instance;
+use local_coursegen\local\models\template_space;
 use local_coursegen\local\service\template_instance_layout;
 
 /**
@@ -54,16 +55,56 @@ final class template_instance_layout_test extends \advanced_testcase {
     }
 
     /**
+     * Build an in-memory template_space persistent (never saved to the DB)
+     * with the given aftercmid/sortorder, for pure ordering tests.
+     *
+     * @param int $aftercmid
+     * @param int $sortorder
+     * @param string $label Identifies the space in assertions (stored as its instruction).
+     * @return template_space
+     */
+    private function fake_space(int $aftercmid, int $sortorder, string $label): template_space {
+        $space = new template_space(0);
+        $space->set('templateid', 1);
+        $space->set('sectionid', 1);
+        $space->set('modname', 'resource');
+        $space->set('instruction', $label);
+        $space->set('aftercmid', $aftercmid);
+        $space->set('sortorder', $sortorder);
+        return $space;
+    }
+
+    /**
+     * Reduce ordered rows to short tokens, so assertions read as a list.
+     *
      * @param array $rows
-     * @return array Each entry simplified to a short token: "real:<cmid>" or "inst:<name>".
+     * @return array Each entry simplified to a short token: "real:<cmid>",
+     *     "inst:<name>" or "space:<instruction>".
      */
     private function tokens(array $rows): array {
-        return array_map(function($row) {
-            if ($row['type'] === 'real') {
-                return 'real:' . $row['cmid'];
-            }
-            return 'inst:' . $row['record']->get('name');
-        }, $rows);
+        $tokens = [];
+        foreach ($rows as $key => $row) {
+            $tokens[$key] = $this->token_of($row);
+        }
+        return $tokens;
+    }
+
+    /**
+     * Reduce one ordered row to its short token.
+     *
+     * @param array $row A row entry of template_instance_layout::ordered_rows().
+     * @return string "real:<cmid>", "inst:<name>" or "space:<instruction>".
+     */
+    private function token_of(array $row): string {
+        if ($row['type'] === 'real') {
+            return 'real:' . $row['cmid'];
+        }
+        if ($row['type'] === 'space') {
+            $instruction = $row['record']->get('instruction');
+            return 'space:' . $instruction;
+        }
+        $name = $row['record']->get('name');
+        return 'inst:' . $name;
     }
 
     /**
@@ -71,7 +112,8 @@ final class template_instance_layout_test extends \advanced_testcase {
      */
     public function test_no_instances_returns_only_real_rows_in_order(): void {
         $rows = template_instance_layout::ordered_rows([10, 20, 30], []);
-        $this->assertSame(['real:10', 'real:20', 'real:30'], $this->tokens($rows));
+        $tokens = $this->tokens($rows);
+        $this->assertSame(['real:10', 'real:20', 'real:30'], $tokens);
     }
 
     /**
@@ -80,7 +122,8 @@ final class template_instance_layout_test extends \advanced_testcase {
     public function test_instance_renders_immediately_after_its_anchor(): void {
         $instance = $this->fake_instance(10, 0, 'A');
         $rows = template_instance_layout::ordered_rows([10, 20], [$instance]);
-        $this->assertSame(['real:10', 'inst:A', 'real:20'], $this->tokens($rows));
+        $tokens = $this->tokens($rows);
+        $this->assertSame(['real:10', 'inst:A', 'real:20'], $tokens);
     }
 
     /**
@@ -89,7 +132,8 @@ final class template_instance_layout_test extends \advanced_testcase {
     public function test_anchor_zero_renders_before_the_first_real_row(): void {
         $instance = $this->fake_instance(0, 0, 'A');
         $rows = template_instance_layout::ordered_rows([10, 20], [$instance]);
-        $this->assertSame(['inst:A', 'real:10', 'real:20'], $this->tokens($rows));
+        $tokens = $this->tokens($rows);
+        $this->assertSame(['inst:A', 'real:10', 'real:20'], $tokens);
     }
 
     /**
@@ -99,7 +143,8 @@ final class template_instance_layout_test extends \advanced_testcase {
         $second = $this->fake_instance(10, 2, 'Second');
         $first = $this->fake_instance(10, 1, 'First');
         $rows = template_instance_layout::ordered_rows([10, 20], [$second, $first]);
-        $this->assertSame(['real:10', 'inst:First', 'inst:Second', 'real:20'], $this->tokens($rows));
+        $tokens = $this->tokens($rows);
+        $this->assertSame(['real:10', 'inst:First', 'inst:Second', 'real:20'], $tokens);
     }
 
     /**
@@ -108,7 +153,8 @@ final class template_instance_layout_test extends \advanced_testcase {
     public function test_instance_anchored_at_the_last_real_row_renders_at_the_end(): void {
         $instance = $this->fake_instance(20, 0, 'A');
         $rows = template_instance_layout::ordered_rows([10, 20], [$instance]);
-        $this->assertSame(['real:10', 'real:20', 'inst:A'], $this->tokens($rows));
+        $tokens = $this->tokens($rows);
+        $this->assertSame(['real:10', 'real:20', 'inst:A'], $tokens);
     }
 
     /**
@@ -119,7 +165,8 @@ final class template_instance_layout_test extends \advanced_testcase {
     public function test_instance_with_an_invalid_anchor_is_appended_at_the_end(): void {
         $instance = $this->fake_instance(999, 0, 'Orphan');
         $rows = template_instance_layout::ordered_rows([10, 20], [$instance]);
-        $this->assertSame(['real:10', 'real:20', 'inst:Orphan'], $this->tokens($rows));
+        $tokens = $this->tokens($rows);
+        $this->assertSame(['real:10', 'real:20', 'inst:Orphan'], $tokens);
     }
 
     /**
@@ -130,7 +177,8 @@ final class template_instance_layout_test extends \advanced_testcase {
         $second = $this->fake_instance(888, 2, 'Second');
         $first = $this->fake_instance(999, 1, 'First');
         $rows = template_instance_layout::ordered_rows([10], [$second, $first]);
-        $this->assertSame(['real:10', 'inst:First', 'inst:Second'], $this->tokens($rows));
+        $tokens = $this->tokens($rows);
+        $this->assertSame(['real:10', 'inst:First', 'inst:Second'], $tokens);
     }
 
     /**
@@ -140,13 +188,49 @@ final class template_instance_layout_test extends \advanced_testcase {
     public function test_empty_section_with_one_instance_renders_just_that_instance(): void {
         $instance = $this->fake_instance(0, 0, 'Only');
         $rows = template_instance_layout::ordered_rows([], [$instance]);
-        $this->assertSame(['inst:Only'], $this->tokens($rows));
+        $tokens = $this->tokens($rows);
+        $this->assertSame(['inst:Only'], $tokens);
     }
 
     /**
      * An entirely empty section with no instances returns an empty list.
      */
     public function test_empty_section_with_no_instances_returns_empty_array(): void {
-        $this->assertSame([], template_instance_layout::ordered_rows([], []));
+        $rows = template_instance_layout::ordered_rows([], []);
+        $this->assertSame([], $rows);
+    }
+
+    /**
+     * A space is emitted as its own kind of row, placed by the same anchor
+     * rule as an instance.
+     */
+    public function test_space_renders_after_its_anchor_as_a_space_row(): void {
+        $space = $this->fake_space(10, 0, 'Upload the guide');
+        $rows = template_instance_layout::ordered_rows([10, 20], [$space]);
+        $tokens = $this->tokens($rows);
+        $this->assertSame(['real:10', 'space:Upload the guide', 'real:20'], $tokens);
+    }
+
+    /**
+     * Spaces and instances that share an anchor order by their shared
+     * sortorder, whichever kind they are.
+     */
+    public function test_space_and_instance_sharing_an_anchor_order_by_sortorder(): void {
+        $instance = $this->fake_instance(10, 1, 'Second');
+        $space = $this->fake_space(10, 0, 'First');
+        $rows = template_instance_layout::ordered_rows([10], [$instance, $space]);
+        $tokens = $this->tokens($rows);
+        $this->assertSame(['real:10', 'space:First', 'inst:Second'], $tokens);
+    }
+
+    /**
+     * A space whose anchor no longer exists is appended at the end instead
+     * of being dropped.
+     */
+    public function test_space_with_a_missing_anchor_is_appended_at_the_end(): void {
+        $space = $this->fake_space(999, 0, 'Orphan');
+        $rows = template_instance_layout::ordered_rows([10], [$space]);
+        $tokens = $this->tokens($rows);
+        $this->assertSame(['real:10', 'space:Orphan'], $tokens);
     }
 }

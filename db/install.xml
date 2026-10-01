@@ -126,10 +126,12 @@
                 <FIELD NAME="templateid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="sectionid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="cmid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
-                <FIELD NAME="action" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="modify" SEQUENCE="false" COMMENT="modify, keep, reference, exclude, or template" />
+                <FIELD NAME="action" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="modify" SEQUENCE="false" COMMENT="modify, keep, reference, exclude, template, or space" />
                 <FIELD NAME="useasreference" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1" SEQUENCE="false" />
                 <FIELD NAME="templatescope" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="course" SEQUENCE="false" COMMENT="course or section; only meaningful when action=template" />
                 <FIELD NAME="prompt" TYPE="text" NOTNULL="false" SEQUENCE="false" />
+                <FIELD NAME="spacerequired" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1" SEQUENCE="false" COMMENT="Only meaningful when action=space: 1 when the professor must provide this activity, 0 when it is optional" />
+                <FIELD NAME="spaceinstruction" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Only meaningful when action=space: what the professor has to provide" />
                 <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
             </FIELDS>
@@ -161,6 +163,26 @@
                 <KEY NAME="primary" TYPE="primary" FIELDS="id" />
                 <KEY NAME="templateid" TYPE="foreign" FIELDS="templateid" REFTABLE="local_coursegen_template" REFFIELDS="id" />
                 <KEY NAME="sourcecmid" TYPE="foreign" FIELDS="sourcecmid" REFTABLE="course_modules" REFFIELDS="id" />
+            </KEYS>
+        </TABLE>
+
+        <TABLE NAME="local_coursegen_tpl_space" COMMENT="Spaces the professor must or may fill with an activity of their own, saved with a template">
+            <FIELDS>
+                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
+                <FIELD NAME="uid" TYPE="char" LENGTH="36" NOTNULL="true" DEFAULT="" SEQUENCE="false" COMMENT="UUID v4 naming this space; a space has no course module, so this is the only id it has" />
+                <FIELD NAME="templateid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="sectionid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="modname" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false" COMMENT="Module type of the activity the professor provides (e.g. resource)" />
+                <FIELD NAME="required" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1" SEQUENCE="false" COMMENT="1 when the professor must provide it, 0 when it is optional" />
+                <FIELD NAME="instruction" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="What the professor has to provide in this space" />
+                <FIELD NAME="aftercmid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="cmid this space renders after within its section; 0 = section start" />
+                <FIELD NAME="sortorder" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" />
+                <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+            </FIELDS>
+            <KEYS>
+                <KEY NAME="primary" TYPE="primary" FIELDS="id" />
+                <KEY NAME="templateid" TYPE="foreign" FIELDS="templateid" REFTABLE="local_coursegen_template" REFFIELDS="id" />
             </KEYS>
         </TABLE>
     </TABLES>

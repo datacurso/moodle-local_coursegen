@@ -19,8 +19,16 @@
 
     AI Course Creation Wizard - Step 1: Context
 
+    Capability flags (the server decides them; the page only renders what they allow):
+    * hasbothmodes bool           - The user can create in both modes, so the mode switch is rendered.
+    * canuploadsyllabus bool      - The syllabus attach controls are rendered.
+    * cangeneratecourseimages bool - The generate-images controls are rendered.
+
     Example context (json):
     {
+        "hasbothmodes": true,
+        "canuploadsyllabus": true,
+        "cangeneratecourseimages": true,
         "guidelines": "[{\"id\":\"si_1\",\"name\":\"Example\",\"category\":\"General\",\"description\":\"...\"}]",
         "languages": "[{\"code\":\"es\",\"name\":\"Español (es)\"}]",
         "defaultlang": "es"
@@ -113,7 +121,8 @@
         <!-- Selected chips (syllabus + guideline) -->
         <div class="chips-row" id="chipsRow" style="display:none">
 
-          <!-- Syllabus chip (shown after file attach) -->
+          {{#canuploadsyllabus}}
+<!-- Syllabus chip (shown after file attach) -->
           <span class="chip chip-syllabus hidden" id="chipSyllabus">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/>
@@ -128,6 +137,7 @@
               </svg>
             </button>
           </span>
+          {{/canuploadsyllabus}}
 
           <!-- Guideline chip (shown after selecting a guideline) -->
           <span class="chip chip-guideline hidden" id="chipGuideline">
@@ -189,13 +199,15 @@
                   <span class="template-badge hidden" id="templateBadge"></span>
                 </button>
 
-                <!-- Sílabo (original button, restyled as menu item) -->
+                {{#canuploadsyllabus}}
+<!-- Sílabo (original button, restyled as menu item) -->
                 <button class="plus-menu-item" id="btnSyllabus" title="{{#str}}courseai_btn_syllabus_title, local_coursegen{{/str}}" type="button" role="menuitem">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
                   </svg>
                   <span class="plus-menu-item__label">{{#str}}courseai_btn_syllabus, local_coursegen{{/str}}</span>
                 </button>
+                {{/canuploadsyllabus}}
 
                 <!-- Directrices (original button, restyled as menu item) -->
                 <button class="plus-menu-item" id="btnDirectrices" title="{{#str}}courseai_btn_guidelines_title, local_coursegen{{/str}}" type="button" role="menuitem" aria-haspopup="dialog" aria-expanded="false" aria-controls="guidelinesPopover">
@@ -222,7 +234,8 @@
                   </svg>
                 </button>
 
-                <!-- With images toggle switch -->
+                {{#cangeneratecourseimages}}
+<!-- With images toggle switch -->
                 <div class="tbar-toggle-wrap plus-menu-item plus-menu-item--toggle" title="{{#str}}courseai_images_title, local_coursegen{{/str}}" role="menuitemcheckbox" aria-checked="false" tabindex="0">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0">
                     <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
@@ -234,6 +247,7 @@
                   </div>
                   <input type="checkbox" id="btnWithImages" class="hidden" aria-label="{{#str}}courseai_images_arialabel, local_coursegen{{/str}}">
                 </div>
+                {{/cangeneratecourseimages}}
 
                 {{#subsectionsenabled}}
                 <!-- With subsections toggle switch -->
@@ -313,8 +327,10 @@
             </div>
             {{> local_coursegen/mode_switch }}
 
-            <!-- Hidden file manager container for Moodle file picker -->
+            {{#canuploadsyllabus}}
+<!-- Hidden file manager container for Moodle file picker -->
             <div class="hidden" id="syllabusFilemanager"></div>
+            {{/canuploadsyllabus}}
 
             <!-- Hidden language select: still the single source of truth for state/lang -->
             <select class="tbar-select hidden" id="langSelect" title="{{#str}}courseai_lang_title, local_coursegen{{/str}}" aria-label="{{#str}}courseai_lang_arialabel, local_coursegen{{/str}}">
@@ -428,7 +444,8 @@
 
           <!-- Chips row (same as main card) -->
           <div class="chips-row" id="compactChipsRow" style="display:none">
-            <span class="chip chip-syllabus hidden" id="compactChipSyllabus">
+            {{#canuploadsyllabus}}
+<span class="chip chip-syllabus hidden" id="compactChipSyllabus">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/>
                 <polyline points="14 2 14 8 20 8"/>
@@ -442,6 +459,7 @@
                 </svg>
               </button>
             </span>
+            {{/canuploadsyllabus}}
 
             <span class="chip chip-guideline hidden" id="compactChipGuideline">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -500,12 +518,14 @@
                     <span class="template-badge hidden" id="templateBadgeCompact"></span>
                   </button>
 
-                  <button class="plus-menu-item" id="btnCompactSyllabus" title="{{#str}}courseai_btn_syllabus_title, local_coursegen{{/str}}" type="button" role="menuitem">
+                  {{#canuploadsyllabus}}
+<button class="plus-menu-item" id="btnCompactSyllabus" title="{{#str}}courseai_btn_syllabus_title, local_coursegen{{/str}}" type="button" role="menuitem">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                       <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
                     </svg>
                     <span class="plus-menu-item__label">{{#str}}courseai_btn_syllabus, local_coursegen{{/str}}</span>
                   </button>
+                  {{/canuploadsyllabus}}
 
                   <button class="plus-menu-item" id="btnCompactDirectrices" title="{{#str}}courseai_btn_guidelines_title, local_coursegen{{/str}}" type="button" role="menuitem" aria-haspopup="dialog" aria-expanded="false" aria-controls="guidelinesPopoverCompact">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -530,6 +550,7 @@
                     </svg>
                   </button>
 
+                  {{#cangeneratecourseimages}}
                   <div class="tbar-toggle-wrap plus-menu-item plus-menu-item--toggle" title="{{#str}}courseai_images_title, local_coursegen{{/str}}" role="menuitemcheckbox" aria-checked="false" tabindex="0">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0">
                       <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
@@ -541,6 +562,7 @@
                     </div>
                     <input type="checkbox" id="btnCompactWithImages" class="hidden" aria-label="{{#str}}courseai_images_arialabel, local_coursegen{{/str}}">
                   </div>
+                  {{/cangeneratecourseimages}}
 
                   {{#subsectionsenabled}}
                   <div class="tbar-toggle-wrap plus-menu-item plus-menu-item--toggle" title="{{#str}}courseai_subsections_title, local_coursegen{{/str}}" role="menuitemcheckbox" aria-checked="false" tabindex="0">
@@ -743,7 +765,8 @@
         ></textarea>
 
         <div class="chips-row" id="tplChipsRow" style="display:none">
-          {{! Syllabus chip (shown after file attach) — same pattern as free mode }}
+          {{#canuploadsyllabus}}
+{{! Syllabus chip (shown after file attach) — same pattern as free mode }}
           <span class="chip chip-syllabus hidden" id="tplChipSyllabus">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/>
@@ -758,11 +781,13 @@
               </svg>
             </button>
           </span>
+          {{/canuploadsyllabus}}
         </div>
 
         <div class="card-toolbar">
           <div class="tbar-left">
-            {{! Syllabus / study-programme attach — same no-course filepicker
+            {{#canuploadsyllabus}}
+{{! Syllabus / study-programme attach — same no-course filepicker
                 mechanics as free mode's btnSyllabus (context/filepicker.js) }}
             <button class="plus-menu-btn" id="tplBtnSyllabus" type="button"
                     title="{{#str}}courseai_btn_syllabus_title, local_coursegen{{/str}}"
@@ -771,8 +796,10 @@
                 <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
               </svg>
             </button>
+            {{/canuploadsyllabus}}
 
-            {{! Generate-images toggle — same toggle-track/thumb pattern as the
+            {{#cangeneratecourseimages}}
+{{! Generate-images toggle — same toggle-track/thumb pattern as the
                 free-mode plus-menu images row }}
             <div class="tbar-toggle-wrap" id="tplImgToggleWrap" role="switch" aria-checked="false" tabindex="0"
                  title="{{#str}}courseai_images_title, local_coursegen{{/str}}">
@@ -782,6 +809,7 @@
               </div>
               <input type="checkbox" id="tplWithImages" class="hidden" aria-label="{{#str}}courseai_images_arialabel, local_coursegen{{/str}}">
             </div>
+            {{/cangeneratecourseimages}}
             {{> local_coursegen/mode_switch }}
 
             {{! Language select — options populated by JS from the same
@@ -1165,7 +1193,8 @@
               </span>
             </div>
 
-            <div style="gap: .8rem;" class="mb-2 d-flex align-items-center flex-wrap">
+            {{#cangeneratecourseimages}}
+<div style="gap: .8rem;" class="mb-2 d-flex align-items-center flex-wrap">
               <label style="gap: .3rem;" class="mb-0 d-flex align-items-center">
                 <input type="radio" name="tpl_generate_images" value="0" checked
                        data-region="local_coursegen/template/chooser-generateimages">
@@ -1177,6 +1206,7 @@
                 {{#str}} yesimages, local_coursegen {{/str}}
               </label>
             </div>
+            {{/cangeneratecourseimages}}
 
             <div class="mb-2" data-region="local_coursegen/template/chooser-selectedfile" style="display: none;">
               <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-light" style="gap: .5rem;">

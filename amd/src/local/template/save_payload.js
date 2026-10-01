@@ -24,13 +24,31 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {collectInstancesForSection} from 'local_coursegen/local/template/template_instance_rows';
+import {collectVirtualRowsForSection} from 'local_coursegen/local/template/template_instance_rows';
 import {resetSectionsDirtyState} from 'local_coursegen/local/template/sections_events';
 import * as Repository from 'local_coursegen/local/template/repository';
 import Notification from 'core/notification';
 import {get_string as getString} from 'core/str';
 import {resetAllFormDirtyStates} from 'core_form/changechecker';
 import {notifyFormSubmittedByJavascript, eventTypes} from 'core_form/events';
+import Selectors from 'local_coursegen/local/template/selectors';
+import {COMPONENT} from 'local_coursegen/local/template/constants';
+
+/**
+ * Remember that the name form reported an invalid field.
+ *
+ * qf_errorHandler (lib/formslib.php) fires the event for every checked
+ * field regardless of outcome, with an empty message on success — only a
+ * non-empty one is an actual failure.
+ *
+ * @param {{hasError: boolean}} result Where the failure is recorded.
+ * @param {CustomEvent} e The field validation event.
+ */
+const recordFieldError = (result, e) => {
+    if (e.detail?.message) {
+        result.hasError = true;
+    }
+};
 
 /**
  * Run the name form's own client-side validation (classes/form/
@@ -45,38 +63,86 @@ import {notifyFormSubmittedByJavascript, eventTypes} from 'core_form/events';
  * @returns {boolean} False when the form reported at least one invalid field.
  */
 const nameFormIsValid = (root) => {
-    const form = root.querySelector('#id_templatename')?.closest('form');
-    if (!form) {
-        return true;
-    }
-    let hasError = false;
-    const onFieldError = (e) => {
-        // qf_errorHandler (lib/formslib.php) fires this for every checked
-        // field regardless of outcome, with an empty message on success —
-        // only a non-empty one is an actual failure.
-        if (e.detail?.message) {
-            hasError = true;
-        }
-    };
+    const form = root.querySelector(Selectors.forms.nameForm);
+    const result = {hasError: false};
+    const onFieldError = recordFieldError.bind(null, result);
     form.addEventListener(eventTypes.formFieldValidationFailed, onFieldError);
     notifyFormSubmittedByJavascript(form);
     form.removeEventListener(eventTypes.formFieldValidationFailed, onFieldError);
-    return !hasError;
+    return !result.hasError;
 };
 
 /**
- * Scrape one section's currently rendered virtual instances.
+ * Scrape one section's currently rendered virtual rows.
  *
  * @param {HTMLElement} root The wizard root element.
  * @param {number} sectionid
+ * @returns {Object} {instances, spaces}
+ */
+const collectSectionVirtualRows = (root, sectionid) => {
+    const sectionSelector = Selectors.rows.sectionById(sectionid);
+    const sectionEl = root.querySelector(sectionSelector);
+    if (!sectionEl) {
+        return {instances: [], spaces: []};
+    }
+    return collectVirtualRowsForSection(sectionEl);
+};
+
+/**
+ * Build the payload of one activity from current state.
+ *
+ * @param {Object} state The live wizard state from init.js.
+ * @param {Object} activity An activity of the loaded course structure.
+ * @returns {Object}
+ */
+const buildActivityPayload = (state, activity) => {
+    const id = activity.id;
+    return {
+        cmid: id,
+        action: state.activityAction[id],
+        useasreference: state.activityRef[id],
+        prompt: state.activityPrompt[id],
+        templatescope: state.activityScope[id],
+        spacerequired: state.activitySpace[id].required,
+        spaceinstruction: state.activitySpace[id].instruction,
+    };
+};
+
+/**
+ * Build the payload of every activity of a section from current state.
+ *
+ * @param {Object} state The live wizard state from init.js.
+ * @param {Array} activities The activities of a section of the loaded course structure.
  * @returns {Array}
  */
-const collectSectionInstances = (root, sectionid) => {
-    const sectionEl = root.querySelector('[data-for="section"][data-id="' + sectionid + '"]');
-    if (!sectionEl) {
-        return [];
+const buildActivityPayloads = (state, activities) => {
+    const payloads = [];
+    for (const activity of activities) {
+        const payload = buildActivityPayload(state, activity);
+        payloads.push(payload);
     }
-    return collectInstancesForSection(sectionEl);
+    return payloads;
+};
+
+/**
+ * Build the payload of one section from current state.
+ *
+ * @param {Object} state The live wizard state from init.js.
+ * @param {HTMLElement} root The wizard root element.
+ * @param {Object} section A section of the loaded course structure.
+ * @returns {Object}
+ */
+const buildSectionPayload = (state, root, section) => {
+    const virtualRows = collectSectionVirtualRows(root, section.id);
+    const activities = buildActivityPayloads(state, section.activities);
+    return {
+        sectionid: section.id,
+        sectionnum: section.num,
+        behavior: state.sectionBehavior[section.id],
+        instances: virtualRows.instances,
+        spaces: virtualRows.spaces,
+        activities,
+    };
 };
 
 /**
@@ -86,17 +152,14 @@ const collectSectionInstances = (root, sectionid) => {
  * @param {HTMLElement} root The wizard root element.
  * @returns {Array}
  */
-const buildSections = (state, root) => state.courseStructure.map(s => ({
-    sectionid: s.id, sectionnum: s.num,
-    behavior: state.sectionBehavior[s.id] || 'aimodify',
-    instances: collectSectionInstances(root, s.id),
-    activities: s.activities.map(a => ({
-        cmid: a.id, action: state.activityAction[a.id] || 'keep',
-        useasreference: state.activityRef[a.id] !== false,
-        prompt: state.activityPrompt[a.id] || '',
-        templatescope: state.activityScope[a.id] || 'course',
-    })),
-}));
+const buildSections = (state, root) => {
+    const sections = [];
+    for (const section of state.courseStructure) {
+        const payload = buildSectionPayload(state, root, section);
+        sections.push(payload);
+    }
+    return sections;
+};
 
 /**
  * Save the template via the repository, then redirect back to the manage
@@ -107,7 +170,7 @@ const buildSections = (state, root) => state.courseStructure.map(s => ({
  */
 export const saveTemplate = async(state, root) => {
     if (!state.selectedCourseId || !state.courseStructure) {
-        const msg = await getString('template_select_course_first', 'local_coursegen');
+        const msg = await getString('template_select_course_first', COMPONENT);
         Notification.addNotification({message: msg, type: 'warning'});
         return;
     }
@@ -115,17 +178,19 @@ export const saveTemplate = async(state, root) => {
         return;
     }
     try {
-        const nameVal = root.querySelector('#id_templatename')?.value || state.templateName;
-        const descVal = root.querySelector('#id_templatedesc')?.value || state.templateDesc;
+        const nameField = root.querySelector(Selectors.regions.templateName);
+        const descField = root.querySelector(Selectors.regions.templateDescription);
+        const nameVal = nameField.value || state.templateName;
+        const descVal = descField.value || state.templateDesc;
         state.templateName = nameVal;
         state.templateDesc = descVal;
+        const sections = buildSections(state, root);
         await Repository.saveTemplate({
             id: state.templateId, name: nameVal,
             description: descVal, courseid: state.selectedCourseId,
             maxsections: state.maxSections, nolimit: state.noLimit,
-            allowedtypes: JSON.stringify(state.allowedTypes),
             namingpattern: state.namingPattern, namingstart: state.namingStart,
-            sections: buildSections(state, root),
+            sections,
         });
         // A real, successful save — the course picker, config form and name
         // form all stay watched for changes (see their own definition()),

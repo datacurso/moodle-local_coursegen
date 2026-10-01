@@ -41,13 +41,37 @@ use context;
 use context_system;
 use core_form\dynamic_form;
 use local_coursegen\local\models\template;
-use local_coursegen\local\service\template_content_generator;
+use local_coursegen\local\service\access_guard;
 use moodle_url;
 
 /**
- * Dynamic form for the limits / allowed-types part of the config screen.
+ * Dynamic form for the limits part of the config screen.
  */
 class template_config_form extends dynamic_form {
+    /** Value of the naming select that means "use the pattern typed in the custom field". */
+    const NAMING_CUSTOM = '__custom__';
+
+    /** Token of a naming pattern that stands for the section's number. */
+    const NAMING_TOKEN_NUMBER = '{N}';
+
+    /** Token of a naming pattern that stands for the original section's name. */
+    const NAMING_TOKEN_NAME = '{name}';
+
+    /** The data-region hook of the naming pattern select, read by the template editor script. */
+    const HOOK_NAMING_PATTERN = 'local_coursegen/template/naming-pattern';
+
+    /** The data-region hook of the custom pattern field. */
+    const HOOK_CUSTOM_PATTERN = 'local_coursegen/template/custom-pattern';
+
+    /** The data-region hook of the first section number select. */
+    const HOOK_NAMING_START = 'local_coursegen/template/naming-start';
+
+    /** The data-region hook of the extra sections field. */
+    const HOOK_MAX_SECTIONS = 'local_coursegen/template/max-sections';
+
+    /** The data-region hook of the allow-extra-sections checkbox. */
+    const HOOK_ALLOW_ADD_SECTIONS = 'local_coursegen/template/allow-add-sections';
+
 
     /**
      * Form definition.
@@ -63,8 +87,6 @@ class template_config_form extends dynamic_form {
      * default below is then overridden with the template's saved values.
      */
     public function definition() {
-        $mform = $this->_form;
-
         // Change tracking stays ENABLED (Moodle's default). This form is
         // reloaded wholesale via DynamicForm.load() whenever the selected
         // course changes, and is never itself submitted (its fields feed
@@ -76,31 +98,71 @@ class template_config_form extends dynamic_form {
         if ($courseid <= 0) {
             return;
         }
-        $modinfo = get_fast_modinfo($courseid);
+        $template = $this->saved_template();
+        $this->definition_limits($template);
+        $this->definition_naming_pattern($template);
+    }
 
-        // Edit mode: the saved template's values override every fresh-course
-        // default below. A stale/unknown id just falls back to the defaults.
-        $template = null;
+    /**
+     * The template being edited, or null for a fresh one.
+     *
+     * The saved template's values override every fresh-course default below.
+     * A stale/unknown id just falls back to the defaults.
+     *
+     * @return template|null
+     */
+    private function saved_template(): ?template {
         $templateid = $this->optional_param('templateid', 0, PARAM_INT);
-        if ($templateid > 0) {
-            $template = template::get_record(['id' => $templateid]) ?: null;
+        if ($templateid <= 0) {
+            return null;
         }
-
-        $presentmodnames = [];
-        foreach ($modinfo->get_cms() as $cm) {
-            $presentmodnames[$cm->modname] = true;
+        $template = template::get_record(['id' => $templateid]);
+        if (!$template) {
+            return null;
         }
-        $presentmodnames = array_keys($presentmodnames);
-        sort($presentmodnames);
+        return $template;
+    }
 
-        $mform->addElement('header', 'limitshdr', get_string('template_limits_title', 'local_coursegen'));
+    /**
+     * How many extra sections a template starts with: its saved allowance
+     * when it has one, otherwise 1.
+     *
+     * @param template|null $template Saved template, null for a fresh one.
+     * @return int
+     */
+    public static function default_extra_sections(?template $template): int {
+        if (!$template) {
+            return 1;
+        }
+        $saved = (int) $template->get('maxsections');
+        if ($saved > 0) {
+            return $saved;
+        }
+        return 1;
+    }
+
+    /**
+     * Section-limit fields: whether the teacher may add extra sections, and
+     * how many.
+     *
+     * @param template|null $template Saved template to prefill from (edit
+     *     mode), null for the fresh defaults.
+     */
+    private function definition_limits(?template $template): void {
+        $mform = $this->_form;
+
+        $limitstitle = get_string('template_limits_title', 'local_coursegen');
+        $limitsdesc = get_string('template_limits_desc', 'local_coursegen');
+        $mform->addElement('header', 'limitshdr', $limitstitle);
         $mform->setExpanded('limitshdr');
-        $mform->addElement('static', 'limitsdesc', '', get_string('template_limits_desc', 'local_coursegen'));
+        $mform->addElement('static', 'limitsdesc', '', $limitsdesc);
 
         // Whether the teacher creating a course from this template may add
         // EXTRA sections on top of the template's own. Unchecked by default:
         // the template's own sections are always available regardless.
-        $mform->addElement('advcheckbox', 'allowaddsections', '', get_string('template_allow_add_sections', 'local_coursegen'));
+        $allowlabel = get_string('template_allow_add_sections', 'local_coursegen');
+        $allowattributes = ['data-region' => self::HOOK_ALLOW_ADD_SECTIONS];
+        $mform->addElement('advcheckbox', 'allowaddsections', '', $allowlabel, $allowattributes);
         $mform->setType('allowaddsections', PARAM_BOOL);
         if ($template) {
             // Checked iff the saved template allows extra sections — either a
@@ -115,85 +177,100 @@ class template_config_form extends dynamic_form {
         // payload, external function signature and stored column all stay
         // stable — only the meaning of the number changed (extra allowance,
         // no longer a total cap).
-        $mform->addElement(
-            'text',
-            'maxsections',
-            get_string('template_extra_sections', 'local_coursegen'),
-            ['size' => 5]
-        );
+        $extralabel = get_string('template_extra_sections', 'local_coursegen');
+        $maxattributes = ['size' => 5, 'data-region' => self::HOOK_MAX_SECTIONS];
+        $mform->addElement('text', 'maxsections', $extralabel, $maxattributes);
         $mform->setType('maxsections', PARAM_INT);
-        $maxsectionsdefault = $template && $template->get('maxsections') > 0 ? (int) $template->get('maxsections') : 1;
+        $maxsectionsdefault = self::default_extra_sections($template);
         $mform->setDefault('maxsections', $maxsectionsdefault);
         $mform->addHelpButton('maxsections', 'template_extra_sections', 'local_coursegen');
         // Only meaningful while the checkbox above is ticked — this is
         // exactly what hideIf is for, no hand-wired JS needed.
         $mform->hideIf('maxsections', 'allowaddsections', 'notchecked');
+    }
 
-        // Only ever offer types the AI service actually has a content
-        // contract for (see template_content_generator::AI_SUPPORTED_TYPES'
-        // own docblock) — never everything installed on the site. On a real
-        // site that can mean dozens of installed module types; restricting
-        // to the AI-supported set both keeps this list scannable and
-        // guarantees an admin can never allow a type here that would just
-        // silently fail (or need manual authoring) when a course is
-        // generated.
-        $modtypes = [];
-        foreach (get_module_types_names() as $modname => $displayname) {
-            if (in_array($modname, template_content_generator::AI_SUPPORTED_TYPES, true)) {
-                $modtypes[$modname] = $displayname;
-            }
+    /**
+     * The numbered section-naming presets, worded in the current language.
+     *
+     * The number and name tokens are the substitution contract shared with
+     * the client-side preview, so they are identical in every language; only
+     * the surrounding word comes from the language pack.
+     * A preset's value is the pattern itself, so a pattern saved in another
+     * language simply round-trips through the Custom option.
+     *
+     * @return string[] Pattern => label, both the same text.
+     */
+    public static function naming_presets(): array {
+        $presets = [];
+        foreach (['unit', 'module', 'topic', 'week'] as $kind) {
+            $pattern = get_string('template_naming_preset_' . $kind, 'local_coursegen');
+            $presets[$pattern] = $pattern;
         }
-        if (!empty($modtypes)) {
-            $mform->addElement('header', 'allowedtypeshdr', get_string('template_allowed_types', 'local_coursegen'));
-            $mform->setExpanded('allowedtypeshdr');
-            $mform->addElement('static', 'allowedtypesdesc', '',
-                get_string('template_allowed_types_desc', 'local_coursegen'));
+        return $presets;
+    }
 
-            // Picking every AI-supported type one at a time through the
-            // search-and-click multi-select below is tedious once there are
-            // more than a handful — these two buttons are a JS-only
-            // convenience (see amd/src/local/template/step_limits.js) that
-            // select or clear all of them in one click; they carry no name
-            // and are never submitted themselves, only the allowedtypes
-            // field they act on is. Rendered from templates/allowed_types_
-            // actions.mustache — each button's hover explanation is a plain
-            // native title attribute, the everyday browser tooltip.
-            global $OUTPUT;
-            $mform->addElement('static', 'allowedtypesactions', '',
-                $OUTPUT->render_from_template('local_coursegen/allowed_types_actions', [
-                    'selectalllabel' => get_string('template_select_all', 'local_coursegen'),
-                    'selectalltooltip' => get_string('template_select_all_tooltip', 'local_coursegen'),
-                    'selectnonelabel' => get_string('template_select_none', 'local_coursegen'),
-                    'selectnonetooltip' => get_string('template_select_none_tooltip', 'local_coursegen'),
-                ])
-            );
+    /**
+     * The pattern a fresh template starts with: the first preset.
+     *
+     * @return string
+     */
+    public static function default_naming_pattern(): string {
+        $presets = self::naming_presets();
+        $first = array_key_first($presets);
+        return (string) $first;
+    }
 
-            // A single searchable multi-select (Moodle's own standard
-            // building block for "pick several from a moderate list", the
-            // same autocomplete element already used for the base-course
-            // picker in course_picker_form.php) replaces what used to be one
-            // checkbox row per installed type — with dozens of installed
-            // types that list became a long wall to scan; typing to filter
-            // and seeing selections as chips is far more scannable, and no
-            // AJAX transport is needed since the AI-supported list is short
-            // enough to send whole, exactly like the category field.
-            $mform->addElement('autocomplete', 'allowedtypes', '', $modtypes, [
-                'multiple' => true,
-                'noselectionstring' => get_string('template_allowed_types_none', 'local_coursegen'),
-            ]);
-            $mform->setType('allowedtypes', PARAM_ALPHANUMEXT);
-            $preselected = array_values(array_intersect($presentmodnames, array_keys($modtypes)));
-            if ($template && $template->get('allowedtypes') !== null && $template->get('allowedtypes') !== '') {
-                $savedtypes = json_decode($template->get('allowedtypes'), true);
-                if (is_array($savedtypes)) {
-                    $preselected = array_values(array_intersect($savedtypes, array_keys($modtypes)));
-                }
-            }
-            $mform->setDefault('allowedtypes', $preselected);
-            $mform->addHelpButton('allowedtypes', 'template_allowed_types', 'local_coursegen');
+    /**
+     * The pattern options the naming select offers: the language presets,
+     * the name alone, and the custom entry.
+     *
+     * @return string[] Pattern => label.
+     */
+    public static function naming_options(): array {
+        $nameonly = get_string('template_naming_name_only', 'local_coursegen');
+        $custom = get_string('template_naming_custom', 'local_coursegen');
+        $presets = self::naming_presets();
+        return $presets + [self::NAMING_TOKEN_NAME => $nameonly, self::NAMING_CUSTOM => $custom];
+    }
+
+    /**
+     * What the client-side preview needs to read the naming fields and to
+     * apply a pattern, so the page script holds none of these literals.
+     *
+     * @return string[] {customvalue, numbertoken, nametoken}
+     */
+    public static function naming_contract(): array {
+        return [
+            'customvalue' => self::NAMING_CUSTOM,
+            'numbertoken' => self::NAMING_TOKEN_NUMBER,
+            'nametoken' => self::NAMING_TOKEN_NAME,
+        ];
+    }
+
+    /**
+     * The naming select's value and the custom field's text for a template.
+     *
+     * A saved pattern that is one of the options selects that option; any
+     * other saved pattern round-trips through the Custom option with the
+     * pattern itself restored into the text field.
+     *
+     * @param template|null $template Saved template, null for the defaults.
+     * @param string[] $patterns The options of the naming select.
+     * @return string[] {select value, custom text}
+     */
+    public static function naming_defaults(?template $template, array $patterns): array {
+        $patterndefault = self::default_naming_pattern();
+        $savedpattern = '';
+        if ($template) {
+            $savedpattern = (string) $template->get('namingpattern');
         }
-
-        $this->definition_naming_pattern($template);
+        if ($savedpattern === '') {
+            return [$patterndefault, ''];
+        }
+        if (array_key_exists($savedpattern, $patterns)) {
+            return [$savedpattern, ''];
+        }
+        return [self::NAMING_CUSTOM, $savedpattern];
     }
 
     /**
@@ -210,57 +287,45 @@ class template_config_form extends dynamic_form {
      *     mode), null for the fresh defaults.
      */
     private function definition_naming_pattern(?template $template): void {
+        global $OUTPUT;
+
         $mform = $this->_form;
 
-        $mform->addElement('header', 'namingpatternhdr', get_string('template_naming_pattern', 'local_coursegen'));
+        $headertitle = get_string('template_naming_pattern', 'local_coursegen');
+        $mform->addElement('header', 'namingpatternhdr', $headertitle);
         $mform->setExpanded('namingpatternhdr');
 
-        $patterns = [
-            'Unidad {N} — {nombre}' => 'Unidad {N} — {nombre}',
-            'Módulo {N}: {nombre}' => 'Módulo {N}: {nombre}',
-            'Tema {N}: {nombre}' => 'Tema {N}: {nombre}',
-            'Semana {N}: {nombre}' => 'Semana {N}: {nombre}',
-            '{nombre}' => get_string('template_naming_name_only', 'local_coursegen'),
-            '__custom__' => get_string('template_naming_custom', 'local_coursegen'),
-        ];
+        $patterns = self::naming_options();
+        [$patterndefault, $customdefault] = self::naming_defaults($template, $patterns);
 
-        // A saved pattern that is one of the presets selects that preset; any
-        // other saved pattern round-trips through the Custom option with the
-        // pattern itself restored into the text field below.
-        $patterndefault = 'Unidad {N} — {nombre}';
-        $customdefault = '';
-        $savedpattern = $template ? (string) $template->get('namingpattern') : '';
-        if ($savedpattern !== '') {
-            if (array_key_exists($savedpattern, $patterns)) {
-                $patterndefault = $savedpattern;
-            } else {
-                $patterndefault = '__custom__';
-                $customdefault = $savedpattern;
-            }
-        }
-
-        $mform->addElement('select', 'namingpattern', get_string('template_naming_pattern', 'local_coursegen'), $patterns);
+        $patternattributes = ['data-region' => self::HOOK_NAMING_PATTERN];
+        $mform->addElement('select', 'namingpattern', $headertitle, $patterns, $patternattributes);
         $mform->setType('namingpattern', PARAM_RAW);
         $mform->setDefault('namingpattern', $patterndefault);
         $mform->addHelpButton('namingpattern', 'template_naming_pattern', 'local_coursegen');
 
-        $mform->addElement('text', 'custompattern', get_string('template_naming_custom', 'local_coursegen'),
-            ['placeholder' => 'E.g.: Chapter {N} - {nombre}']);
+        $customlabel = get_string('template_naming_custom', 'local_coursegen');
+        $placeholder = get_string('template_naming_custom_placeholder', 'local_coursegen');
+        $customattributes = ['placeholder' => $placeholder, 'data-region' => self::HOOK_CUSTOM_PATTERN];
+        $mform->addElement('text', 'custompattern', $customlabel, $customattributes);
         $mform->setType('custompattern', PARAM_TEXT);
         $mform->setDefault('custompattern', $customdefault);
-        $mform->hideIf('custompattern', 'namingpattern', 'neq', '__custom__');
+        $mform->hideIf('custompattern', 'namingpattern', 'neq', self::NAMING_CUSTOM);
         $mform->addHelpButton('custompattern', 'template_naming_custom', 'local_coursegen');
 
-        $mform->addElement('select', 'namingstart', get_string('template_naming_start', 'local_coursegen'), [
-            1 => '1',
-            0 => '0',
-        ]);
+        $startlabel = get_string('template_naming_start', 'local_coursegen');
+        $startattributes = ['data-region' => self::HOOK_NAMING_START];
+        $mform->addElement('select', 'namingstart', $startlabel, [1 => '1', 0 => '0'], $startattributes);
         $mform->setType('namingstart', PARAM_INT);
-        $mform->setDefault('namingstart', $template ? (int) $template->get('namingstart') : 1);
+        $startdefault = 1;
+        if ($template) {
+            $startdefault = (int) $template->get('namingstart');
+        }
+        $mform->setDefault('namingstart', $startdefault);
         $mform->addHelpButton('namingstart', 'template_naming_start', 'local_coursegen');
 
-        $mform->addElement('static', 'namingpreviewwrap', '',
-            \html_writer::div('', 'bg-light rounded p-2', ['data-region' => 'naming-preview']));
+        $previewbox = $OUTPUT->render_from_template('local_coursegen/template_naming_preview_box', []);
+        $mform->addElement('static', 'namingpreviewwrap', '', $previewbox);
     }
 
     /**
@@ -276,7 +341,8 @@ class template_config_form extends dynamic_form {
      * Checks if current user has access to this form, otherwise throws exception.
      */
     protected function check_access_for_dynamic_submission(): void {
-        require_capability('local/coursegen:managetemplates', $this->get_context_for_dynamic_submission());
+        $context = $this->get_context_for_dynamic_submission();
+        access_guard::require_any(['local/coursegen:createtemplates', 'local/coursegen:edittemplates'], $context);
     }
 
     /**

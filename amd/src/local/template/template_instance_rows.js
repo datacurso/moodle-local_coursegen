@@ -14,7 +14,8 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * DOM shape of a virtual template-instance row: creating one (mirroring
+ * DOM shape of a virtual template-instance row (and the shared row helpers
+ * spaces reuse): creating one (mirroring
  * exactly what sections_config.php/template_course_sections.mustache
  * render server-side, so a freshly inserted row is indistinguishable from
  * one loaded from a saved template), removing one, and scraping every
@@ -36,6 +37,8 @@
 
 import Templates from 'core/templates';
 import {startNameEdit, currentName} from 'local_coursegen/local/template/template_instance_name_edit';
+import Selectors from 'local_coursegen/local/template/selectors';
+import {NEW_ROW_PREFIX, REQUIRED_VALUE, TAG} from 'local_coursegen/local/template/constants';
 
 /** @type {number} Client-only counter for unique data-instance-id values on unsaved rows. */
 let nextTempId = 1;
@@ -50,9 +53,9 @@ let nextTempId = 1;
  * @param {Object} context Template context.
  * @returns {Promise<DocumentFragment>}
  */
-const renderRowFragment = async(templatename, context) => {
+export const renderRowFragment = async(templatename, context) => {
     const rendered = await Templates.render(templatename, context);
-    const holder = document.createElement('tbody');
+    const holder = document.createElement(TAG.TABLE_BODY);
     Templates.replaceNodeContents(holder, rendered, '');
     const fragment = document.createDocumentFragment();
     while (holder.firstChild) {
@@ -66,7 +69,7 @@ const renderRowFragment = async(templatename, context) => {
  *     — the trigger's own tooltip renders straight from a language string,
  *     the same as every other gap row.
  */
-const buildGapRow = () => renderRowFragment('local_coursegen/template_row_gap', {});
+export const buildGapRow = () => renderRowFragment('local_coursegen/template_row_gap', {});
 
 /**
  * @param {Object} data {sourcecmid, sourcename, typelabel, modname, iconurl}
@@ -92,10 +95,10 @@ const buildInstanceRowFragment = (data, instanceid) => renderRowFragment('local_
  *
  * @param {HTMLElement} tbody The section's table body.
  */
-const dropGapBeforeAddRow = (tbody) => {
-    const addRow = tbody.querySelector('[data-region="add-instance"]');
+export const dropGapBeforeAddRow = (tbody) => {
+    const addRow = tbody.querySelector(Selectors.regions.addInstance);
     const priorRow = addRow?.previousElementSibling;
-    if (priorRow && priorRow.classList.contains('tpl-row-gap')) {
+    if (priorRow && priorRow.matches(Selectors.regions.rowGap)) {
         priorRow.remove();
     }
 };
@@ -112,20 +115,27 @@ const dropGapBeforeAddRow = (tbody) => {
  * @returns {Promise<HTMLElement>} The new instance row, once inserted and focused.
  */
 export const insertInstanceRow = async(tbody, beforeEl, picked) => {
-    const needsLeadingGap = !(beforeEl.previousElementSibling
-        && beforeEl.previousElementSibling.classList.contains('tpl-row-gap'));
+    const previous = beforeEl.previousElementSibling;
+    let needsLeadingGap = true;
+    if (previous && previous.matches(Selectors.regions.rowGap)) {
+        needsLeadingGap = false;
+    }
     if (needsLeadingGap) {
-        tbody.insertBefore(await buildGapRow(), beforeEl);
+        const leadingGap = await buildGapRow();
+        tbody.insertBefore(leadingGap, beforeEl);
     }
 
-    const instanceid = 'new-' + (nextTempId++);
+    const tempId = nextTempId++;
+    const instanceid = NEW_ROW_PREFIX + tempId;
     const instanceFragment = await buildInstanceRowFragment(picked, instanceid);
-    const instanceRow = instanceFragment.querySelector('[data-for="instancerow"]');
+    const instanceRow = instanceFragment.querySelector(Selectors.rows.instance);
     tbody.insertBefore(instanceFragment, beforeEl);
-    tbody.insertBefore(await buildGapRow(), beforeEl);
+    const trailingGap = await buildGapRow();
+    tbody.insertBefore(trailingGap, beforeEl);
     dropGapBeforeAddRow(tbody);
 
-    startNameEdit(instanceRow.querySelector('[data-region="instance-name-editable"]'));
+    const nameEl = instanceRow.querySelector(Selectors.regions.instanceNameEditable);
+    startNameEdit(nameEl);
     return instanceRow;
 };
 
@@ -136,15 +146,20 @@ export const insertInstanceRow = async(tbody, beforeEl, picked) => {
  * @param {HTMLElement} instanceRow The row (data-for="instancerow").
  */
 export const removeInstanceRow = (instanceRow) => {
-    const tbody = instanceRow.closest('tbody');
+    const tbody = instanceRow.closest(TAG.TABLE_BODY);
     const promptRow = instanceRow.nextElementSibling;
-    const gapRow = promptRow && promptRow.classList.contains('tpl-instance-prompt-row')
-        ? promptRow.nextElementSibling
-        : instanceRow.nextElementSibling;
-    if (promptRow && promptRow.classList.contains('tpl-instance-prompt-row')) {
+    let hasPromptRow = false;
+    if (promptRow && promptRow.matches(Selectors.rows.instancePrompt)) {
+        hasPromptRow = true;
+    }
+    let gapRow = instanceRow.nextElementSibling;
+    if (hasPromptRow) {
+        gapRow = promptRow.nextElementSibling;
+    }
+    if (hasPromptRow) {
         promptRow.remove();
     }
-    if (gapRow && gapRow.classList.contains('tpl-row-gap')) {
+    if (gapRow && gapRow.matches(Selectors.regions.rowGap)) {
         gapRow.remove();
     }
     instanceRow.remove();
@@ -152,41 +167,90 @@ export const removeInstanceRow = (instanceRow) => {
 };
 
 /**
- * Scrape every instance currently rendered in one section, in DOM order,
- * resolving each one's position as "immediately after this real cmid" (0
- * for the section start) plus a monotonically increasing sortorder — the
- * exact shape save_template expects.
+ * Read one space row back into the shape save_template expects.
+ *
+ * @param {HTMLElement} row The space row (a space row).
+ * @param {number} aftercmid The real cmid the row sits immediately after.
+ * @param {number} sortorder The row's position among the virtual rows.
+ * @returns {Object} {modname, required, instruction, aftercmid, sortorder}
+ */
+const spaceEntryOf = (row, aftercmid, sortorder) => {
+    const instructionEl = row.querySelector(Selectors.regions.spaceInstruction);
+    const instruction = instructionEl.textContent.trim();
+    return {
+        modname: row.dataset.modname,
+        required: row.dataset.required === REQUIRED_VALUE,
+        instruction,
+        aftercmid,
+        sortorder,
+    };
+};
+
+/**
+ * Read one template instance row back into the shape save_template expects.
  *
  * @param {HTMLElement} sectionEl The section card (data-for="section").
- * @returns {Array} {sourcecmid, sourcename, name, typelabel, prompt, aftercmid, sortorder}
+ * @param {HTMLElement} row The instance row (data-for="instancerow").
+ * @param {number} aftercmid The real cmid the row sits immediately after.
+ * @param {number} sortorder The row's position among the virtual rows.
+ * @returns {Object} {sourcecmid, sourcename, modname, name, typelabel,
+ *     prompt, aftercmid, sortorder}
  */
-export const collectInstancesForSection = (sectionEl) => {
+const instanceEntryOf = (sectionEl, row, aftercmid, sortorder) => {
+    const instanceid = row.dataset.instanceId;
+    const promptSelector = Selectors.rows.promptFieldOf(instanceid);
+    const promptEl = sectionEl.querySelector(promptSelector);
+    let promptValue = '';
+    if (promptEl) {
+        promptValue = promptEl.value;
+    }
+    const nameEl = row.querySelector(Selectors.regions.instanceNameEditable);
+    const name = currentName(nameEl);
+    const typeCell = row.querySelector(Selectors.regions.typeLabel);
+    const typelabel = typeCell.textContent.trim();
+    const sourcecmid = parseInt(row.dataset.sourceCmid, 10);
+    return {
+        sourcecmid,
+        sourcename: row.dataset.sourceName,
+        modname: row.dataset.modname || '',
+        name,
+        typelabel,
+        prompt: promptValue,
+        aftercmid,
+        sortorder,
+    };
+};
+
+/**
+ * Scrape every virtual row currently rendered in one section (template
+ * instances and spaces), in DOM order, resolving each one's position as
+ * "immediately after this real cmid" (0 for the section start) plus a
+ * monotonically increasing sortorder shared by both kinds — the exact shape
+ * save_template expects, and what keeps an instance and a space that sit
+ * next to each other in the order they were placed in.
+ *
+ * @param {HTMLElement} sectionEl The section card (data-for="section").
+ * @returns {Object} {instances, spaces}: instances are {sourcecmid,
+ *     sourcename, modname, name, typelabel, prompt, aftercmid, sortorder};
+ *     spaces are {modname, required, instruction, aftercmid, sortorder}.
+ */
+export const collectVirtualRowsForSection = (sectionEl) => {
     const instances = [];
+    const spaces = [];
     let aftercmid = 0;
-    let sortorder = 0;
-    sectionEl.querySelectorAll('[data-for="cmitem"], [data-for="instancerow"]').forEach(row => {
-        if (row.dataset.for === 'cmitem') {
+    const rows = sectionEl.querySelectorAll(Selectors.rows.anyRow);
+    for (const row of rows) {
+        if (row.matches(Selectors.rows.activity)) {
             aftercmid = parseInt(row.dataset.id, 10);
-            return;
+            continue;
         }
-        const instanceid = row.dataset.instanceId;
-        const promptEl = sectionEl.querySelector(
-            '[data-for="instanceprompt"][data-instance-id="' + instanceid + '"] textarea'
-        );
-        let promptValue = '';
-        if (promptEl) {
-            promptValue = promptEl.value;
+        if (row.matches(Selectors.regions.spaceRow)) {
+            const spaceEntry = spaceEntryOf(row, aftercmid, instances.length + spaces.length);
+            spaces.push(spaceEntry);
+            continue;
         }
-        instances.push({
-            sourcecmid: parseInt(row.dataset.sourceCmid, 10),
-            sourcename: row.dataset.sourceName,
-            modname: row.dataset.modname || '',
-            name: currentName(row.querySelector('[data-region="instance-name-editable"]')),
-            typelabel: row.querySelector('td.text-muted').textContent.trim(),
-            prompt: promptValue,
-            aftercmid,
-            sortorder: sortorder++,
-        });
-    });
-    return instances;
+        const instanceEntry = instanceEntryOf(sectionEl, row, aftercmid, instances.length + spaces.length);
+        instances.push(instanceEntry);
+    }
+    return {instances, spaces};
 };

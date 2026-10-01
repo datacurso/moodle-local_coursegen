@@ -50,7 +50,7 @@ $functions = [
         'description' => 'Create course with AI assistance',
         'type' => 'write',
         'ajax' => true,
-        'capabilities' => 'moodle/course:create',
+        'capabilities' => 'moodle/course:create,local/coursegen:createfreecoursewithai',
     ],
     'local_coursegen_get_course_settings' => [
         'classname' => 'local_coursegen\external\get_course_settings',
@@ -58,7 +58,7 @@ $functions = [
         'description' => 'Get final AI-generated course settings (fullname, shortname, category) for review',
         'type' => 'read',
         'ajax' => true,
-        'capabilities' => 'moodle/course:create',
+        'capabilities' => 'moodle/course:create,local/coursegen:createfreecoursewithai',
     ],
     'local_coursegen_course_planning_feedback' => [
         'classname' => 'local_coursegen\external\course_planning_feedback',
@@ -67,6 +67,7 @@ $functions = [
         'type' => 'write',
         'ajax' => true,
         'loginrequired' => true,
+        'capabilities' => 'local/coursegen:createfreecoursewithai',
     ],
     'local_coursegen_activity_feedback' => [
         'classname' => 'local_coursegen\\external\\activity_feedback',
@@ -100,7 +101,7 @@ $functions = [
         'description' => 'Save image generation settings for course and activity creation',
         'type' => 'write',
         'ajax' => true,
-        'capabilities' => 'moodle/site:config',
+        'capabilities' => 'moodle/site:config,local/coursegen:editimagegenerationsettings',
         'loginrequired' => true,
     ],
     'local_coursegen_start_course_planning' => [
@@ -109,7 +110,7 @@ $functions = [
         'description' => 'Start AI course planning session',
         'type' => 'write',
         'ajax' => true,
-        'capabilities' => 'moodle/course:create,local/coursegen:createcoursewithai',
+        'capabilities' => 'moodle/course:create,local/coursegen:createfreecoursewithai',
         'loginrequired' => true,
     ],
     'local_coursegen_courseai_syllabus_upload' => [
@@ -118,7 +119,7 @@ $functions = [
         'description' => 'Upload syllabus file for courseai session',
         'type' => 'write',
         'ajax' => true,
-        'capabilities' => 'moodle/course:create,local/coursegen:createcoursewithai',
+        'capabilities' => 'moodle/course:create,local/coursegen:uploadcoursesyllabus',
         'loginrequired' => true,
     ],
     'local_coursegen_courseai_filepicker_init' => [
@@ -127,7 +128,7 @@ $functions = [
         'description' => 'Initialise filepicker draft area for courseai syllabus upload',
         'type' => 'read',
         'ajax' => true,
-        'capabilities' => 'moodle/course:create,local/coursegen:createcoursewithai',
+        'capabilities' => 'moodle/course:create,local/coursegen:uploadcoursesyllabus',
         'loginrequired' => true,
     ],
     'local_coursegen_get_course_session_state' => [
@@ -136,7 +137,7 @@ $functions = [
         'description' => 'Get resumable state for an AI course session',
         'type' => 'read',
         'ajax' => true,
-        'capabilities' => 'moodle/course:create,local/coursegen:createcoursewithai',
+        'capabilities' => 'moodle/course:create,local/coursegen:createfreecoursewithai,local/coursegen:createtemplatecoursewithai',
         'loginrequired' => true,
     ],
     'local_coursegen_get_templates' => [
@@ -145,7 +146,7 @@ $functions = [
         'description' => 'Get all course templates',
         'type' => 'read',
         'ajax' => true,
-        'capabilities' => 'local/coursegen:managetemplates',
+        'capabilities' => 'local/coursegen:viewtemplates',
         'loginrequired' => true,
     ],
     'local_coursegen_delete_template' => [
@@ -154,7 +155,7 @@ $functions = [
         'description' => 'Delete a course template',
         'type' => 'write',
         'ajax' => true,
-        'capabilities' => 'local/coursegen:managetemplates',
+        'capabilities' => 'local/coursegen:deletetemplates',
         'loginrequired' => true,
     ],
     'local_coursegen_get_course_structure' => [
@@ -163,7 +164,7 @@ $functions = [
         'description' => 'Get course sections and activities structure',
         'type' => 'read',
         'ajax' => true,
-        'capabilities' => 'local/coursegen:managetemplates',
+        'capabilities' => 'local/coursegen:createtemplates,local/coursegen:edittemplates',
         'loginrequired' => true,
     ],
     'local_coursegen_get_category_tree' => [
@@ -172,7 +173,7 @@ $functions = [
         'description' => 'Get category tree for template wizard',
         'type' => 'read',
         'ajax' => true,
-        'capabilities' => 'local/coursegen:managetemplates',
+        'capabilities' => 'local/coursegen:createtemplates,local/coursegen:edittemplates',
         'loginrequired' => true,
     ],
     'local_coursegen_get_courses_by_category' => [
@@ -181,7 +182,7 @@ $functions = [
         'description' => 'Get courses in a category and its subcategories',
         'type' => 'read',
         'ajax' => true,
-        'capabilities' => 'local/coursegen:managetemplates',
+        'capabilities' => 'local/coursegen:createtemplates,local/coursegen:edittemplates',
         'loginrequired' => true,
     ],
     'local_coursegen_get_template_structure' => [
@@ -190,7 +191,7 @@ $functions = [
         'description' => 'Get a template\'s guided-form structure (locked sections/activities, limits, allowed activity catalog)',
         'type' => 'read',
         'ajax' => true,
-        'capabilities' => 'local/coursegen:createcoursewithai',
+        'capabilities' => 'local/coursegen:createtemplatecoursewithai',
         'loginrequired' => true,
     ],
     'local_coursegen_get_course_preview' => [
@@ -199,7 +200,7 @@ $functions = [
         'description' => 'Render course preview using native format renderer',
         'type' => 'read',
         'ajax' => true,
-        'capabilities' => 'local/coursegen:managetemplates',
+        'capabilities' => 'local/coursegen:createtemplates,local/coursegen:edittemplates',
         'loginrequired' => true,
     ],
     'local_coursegen_save_template' => [
@@ -208,7 +209,7 @@ $functions = [
         'description' => 'Save a course template with section and activity configuration',
         'type' => 'write',
         'ajax' => true,
-        'capabilities' => 'local/coursegen:managetemplates',
+        'capabilities' => 'local/coursegen:createtemplates,local/coursegen:edittemplates',
         'loginrequired' => true,
     ],
     'local_coursegen_start_template_generation' => [
@@ -217,7 +218,7 @@ $functions = [
         'description' => 'Start generating a course from a saved template',
         'type' => 'write',
         'ajax' => true,
-        'capabilities' => 'local/coursegen:createcoursewithai',
+        'capabilities' => 'local/coursegen:createtemplatecoursewithai',
         'loginrequired' => true,
     ],
     'local_coursegen_template_planning_feedback' => [
@@ -226,7 +227,7 @@ $functions = [
         'description' => 'Answer the plan review of a paused template generation',
         'type' => 'write',
         'ajax' => true,
-        'capabilities' => 'local/coursegen:createcoursewithai',
+        'capabilities' => 'local/coursegen:createtemplatecoursewithai',
         'loginrequired' => true,
     ],
     'local_coursegen_finish_template_generation' => [
@@ -235,7 +236,7 @@ $functions = [
         'description' => 'Create the course from a finished template generation',
         'type' => 'write',
         'ajax' => true,
-        'capabilities' => 'local/coursegen:createcoursewithai',
+        'capabilities' => 'local/coursegen:createtemplatecoursewithai',
         'loginrequired' => true,
     ],
 ];

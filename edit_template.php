@@ -28,7 +28,7 @@ require_once($CFG->libdir . '/adminlib.php');
 $id = optional_param('id', 0, PARAM_INT);
 $courseid = optional_param('courseid', 0, PARAM_INT);
 
-admin_externalpage_setup('local_coursegen_manage_templates');
+admin_externalpage_setup('local_coursegen_edit_template');
 
 // The template wizard's stylesheet is NOT the plugin's root styles.css (the
 // only sheet Moodle auto-loads through the theme pipeline) — a styles/
@@ -40,6 +40,7 @@ $cssrev = get_config('local_coursegen', 'version');
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/templates.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/templates-widgets.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/templates-instances.css', ['v' => $cssrev]));
+$PAGE->requires->css(new moodle_url('/local/coursegen/styles/templates-spaces.css', ['v' => $cssrev]));
 
 // Edit mode: the whole saved configuration hydrates the page — the base
 // course comes from the template itself (no courseid param needed), the
@@ -63,6 +64,8 @@ if ($id > 0) {
             'useasreference' => (bool) $record->get('useasreference'),
             'prompt' => (string) $record->get('prompt'),
             'templatescope' => (string) $record->get('templatescope'),
+            'spacerequired' => (bool) $record->get('spacerequired'),
+            'spaceinstruction' => (string) $record->get('spaceinstruction'),
         ];
     }
 }
@@ -84,7 +87,11 @@ if ($courseid > 0) {
 }
 
 $context = context_system::instance();
-require_capability('local/coursegen:managetemplates', $context);
+$capability = 'local/coursegen:createtemplates';
+if ($id > 0) {
+    $capability = 'local/coursegen:edittemplates';
+}
+require_capability($capability, $context);
 
 $pagetitle = $id > 0
     ? get_string('template_edit', 'local_coursegen')
@@ -159,6 +166,13 @@ $templatecontext = [
     // have no controls, so they must round-trip through the JS state.
     'savedsections' => $savedsections,
     'savedactivities' => $savedactivities,
+    // The activity types a space can be made for: the AI-supported ones that
+    // are installed on this site.
+    'supportedtypes' => \local_coursegen\local\service\supported_activity_types::installed(),
+    // The naming pattern a fresh template starts with, worded in the admin's language.
+    'defaultnamingpattern' => \local_coursegen\form\template_config_form::default_naming_pattern(),
+    // The select value that means "custom pattern" and the two tokens a pattern can use.
+    'namingcontract' => \local_coursegen\form\template_config_form::naming_contract(),
 ];
 
 echo $OUTPUT->header();

@@ -36,7 +36,7 @@ final class template_row_options_test extends \advanced_testcase {
         $options = template_row_options::template_scope_options(42, 'nonsense');
 
         $this->assertCount(2, $options);
-        $active = array_values(array_filter($options, fn($o) => $o['active']));
+        $active = $this->active_options($options);
         $this->assertCount(1, $active);
         $this->assertSame('course', $active[0]['value']);
     }
@@ -47,7 +47,7 @@ final class template_row_options_test extends \advanced_testcase {
     public function test_template_scope_options_falls_back_to_course_on_empty_value(): void {
         $options = template_row_options::template_scope_options(42, '');
 
-        $active = array_values(array_filter($options, fn($o) => $o['active']));
+        $active = $this->active_options($options);
         $this->assertSame('course', $active[0]['value']);
     }
 
@@ -58,7 +58,7 @@ final class template_row_options_test extends \advanced_testcase {
     public function test_template_scope_options_preserves_section_scope(): void {
         $options = template_row_options::template_scope_options(42, 'section');
 
-        $active = array_values(array_filter($options, fn($o) => $o['active']));
+        $active = $this->active_options($options);
         $this->assertSame('section', $active[0]['value']);
     }
 
@@ -67,37 +67,36 @@ final class template_row_options_test extends \advanced_testcase {
      * "keep" if somehow none of the options carry that flag.
      */
     public function test_active_action_returns_the_flagged_value(): void {
-        $this->assertSame(
-            'template',
-            template_row_options::active_action([
-                ['value' => 'keep', 'active' => false],
-                ['value' => 'template', 'active' => true],
-            ])
-        );
-        $this->assertSame(
-            'keep',
-            template_row_options::active_action([
-                ['value' => 'keep', 'active' => false],
-                ['value' => 'template', 'active' => false],
-            ])
-        );
-        $this->assertSame('keep', template_row_options::active_action([]));
+        $flagged = template_row_options::active_action([
+            ['value' => 'keep', 'active' => false],
+            ['value' => 'template', 'active' => true],
+        ]);
+        $this->assertSame('template', $flagged);
+
+        $none = template_row_options::active_action([
+            ['value' => 'keep', 'active' => false],
+            ['value' => 'template', 'active' => false],
+        ]);
+        $this->assertSame('keep', $none);
+
+        $empty = template_row_options::active_action([]);
+        $this->assertSame('keep', $empty);
     }
 
     /**
      * activity_actions() never offers "modify" any more, for either an
      * AI-supported type or an unsupported one — "template" is the only
-     * action still gated to AI_SUPPORTED_TYPES.
+     * action still gated to AI_SUPPORTED_TYPES, and "space" is offered for
+     * every type.
      */
     public function test_activity_actions_never_offers_modify(): void {
         $supported = template_row_options::activity_actions(1, 'page');
-        $this->assertSame(
-            ['template', 'keep', 'reference', 'exclude'],
-            array_column($supported, 'value')
-        );
+        $supportedvalues = array_column($supported, 'value');
+        $this->assertSame(['template', 'keep', 'reference', 'exclude', 'space'], $supportedvalues);
 
         $unsupported = template_row_options::activity_actions(1, 'lti');
-        $this->assertSame(['keep', 'reference', 'exclude'], array_column($unsupported, 'value'));
+        $unsupportedvalues = array_column($unsupported, 'value');
+        $this->assertSame(['keep', 'reference', 'exclude', 'space'], $unsupportedvalues);
     }
 
     /**
@@ -106,10 +105,12 @@ final class template_row_options_test extends \advanced_testcase {
      */
     public function test_activity_actions_defaults_to_keep_regardless_of_ai_support(): void {
         $supported = template_row_options::activity_actions(1, 'page');
-        $this->assertSame('keep', template_row_options::active_action($supported));
+        $supportedaction = template_row_options::active_action($supported);
+        $this->assertSame('keep', $supportedaction);
 
         $unsupported = template_row_options::activity_actions(1, 'lti');
-        $this->assertSame('keep', template_row_options::active_action($unsupported));
+        $unsupportedaction = template_row_options::active_action($unsupported);
+        $this->assertSame('keep', $unsupportedaction);
     }
 
     /**
@@ -117,7 +118,8 @@ final class template_row_options_test extends \advanced_testcase {
      */
     public function test_activity_actions_degrades_saved_template_on_unsupported_type(): void {
         $options = template_row_options::activity_actions(1, 'lti', 'template');
-        $this->assertSame('keep', template_row_options::active_action($options));
+        $action = template_row_options::active_action($options);
+        $this->assertSame('keep', $action);
     }
 
     /**
@@ -129,10 +131,12 @@ final class template_row_options_test extends \advanced_testcase {
      */
     public function test_activity_actions_degrades_legacy_saved_modify_to_keep(): void {
         $supported = template_row_options::activity_actions(1, 'page', 'modify');
-        $this->assertSame('keep', template_row_options::active_action($supported));
+        $supportedaction = template_row_options::active_action($supported);
+        $this->assertSame('keep', $supportedaction);
 
         $unsupported = template_row_options::activity_actions(1, 'lti', 'modify');
-        $this->assertSame('keep', template_row_options::active_action($unsupported));
+        $unsupportedaction = template_row_options::active_action($unsupported);
+        $this->assertSame('keep', $unsupportedaction);
     }
 
     /**
@@ -141,10 +145,9 @@ final class template_row_options_test extends \advanced_testcase {
      */
     public function test_active_scope_label_returns_the_flagged_options_label(): void {
         $options = template_row_options::template_scope_options(1, 'section');
-        $this->assertSame(
-            get_string('template_activity_scope_section', 'local_coursegen'),
-            template_row_options::active_scope_label($options)
-        );
+        $expected = get_string('template_activity_scope_section', 'local_coursegen');
+        $label = template_row_options::active_scope_label($options);
+        $this->assertSame($expected, $label);
     }
 
     /**
@@ -153,9 +156,24 @@ final class template_row_options_test extends \advanced_testcase {
      * nothing.
      */
     public function test_active_scope_label_falls_back_to_course_when_none_flagged(): void {
-        $this->assertSame(
-            get_string('template_activity_scope_course', 'local_coursegen'),
-            template_row_options::active_scope_label([])
-        );
+        $expected = get_string('template_activity_scope_course', 'local_coursegen');
+        $label = template_row_options::active_scope_label([]);
+        $this->assertSame($expected, $label);
+    }
+
+    /**
+     * The options flagged active, in their original order.
+     *
+     * @param array $options Select option contexts.
+     * @return array
+     */
+    private function active_options(array $options): array {
+        $active = [];
+        foreach ($options as $option) {
+            if ($option['active']) {
+                $active[] = $option;
+            }
+        }
+        return $active;
     }
 }

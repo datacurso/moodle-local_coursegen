@@ -42,6 +42,8 @@ final class save_template_name_validation_test extends \advanced_testcase {
     use sections_config_fixture_trait;
 
     /**
+     * A template cannot be saved without a name.
+     *
      * @dataProvider blank_name_provider
      * @param string $name
      */
@@ -51,12 +53,15 @@ final class save_template_name_validation_test extends \advanced_testcase {
         [$course] = $this->create_course_fixture();
 
         $this->expectException(\moodle_exception::class);
-        $this->expectExceptionMessage(get_string('template_name_required', 'local_coursegen'));
+        $expectedmessage = get_string('template_name_required', 'local_coursegen');
+        $this->expectExceptionMessage($expectedmessage);
 
-        save_template::execute(0, $name, '', (int) $course->id, 0, true, '[]', '', 1, []);
+        save_template::execute(0, $name, '', (int) $course->id, 0, true, '', 1, []);
     }
 
     /**
+     * Names that count as blank.
+     *
      * @return array
      */
     public static function blank_name_provider(): array {
@@ -75,7 +80,7 @@ final class save_template_name_validation_test extends \advanced_testcase {
         $this->setAdminUser();
         [$course] = $this->create_course_fixture();
 
-        $saved = save_template::execute(0, 'A real template name', '', (int) $course->id, 0, true, '[]', '', 1, []);
+        $saved = save_template::execute(0, 'A real template name', '', (int) $course->id, 0, true, '', 1, []);
 
         $this->assertSame('A real template name', $saved['name']);
     }
