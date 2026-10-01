@@ -16,20 +16,19 @@
 
 namespace local_coursegen;
 
-use aiprovider_datacurso\httpclient\ai_course_api;
 use core\context\course;
 use core\context\system;
-use core\context\user;
-use local_coursegen\local\api_client_factory;
-use local_coursegen\local\models\course_session;
-use local_coursegen\local\service\ai_course_api_service;
+use local_coursegen\external\courseai_syllabus_upload;
+use local_coursegen\external\create_mod;
+use local_coursegen\external\create_mod_stream;
 use local_coursegen\local\service\module_job_service;
+use local_coursegen\tests\api_testcase;
 
 /**
  * Audit event tests for the AI generation lifecycle.
  *
- * The AI service is mocked through the testable fixtures, so no network
- * request is ever performed.
+ * The AI service is mocked through the factory seam, so no network request
+ * is ever performed.
  *
  * @package    local_coursegen
  * @category   test
@@ -46,32 +45,17 @@ use local_coursegen\local\service\module_job_service;
 #[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\event\generation_failed::class)]
 #[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\event\generation_denied::class)]
 #[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\event\external_transfer_initiated::class)]
-final class events_test extends \advanced_testcase {
+final class events_test extends api_testcase {
     /**
-     * Load the testable subclass fixtures.
+     * Give the front page real section rows.
      */
     protected function setUp(): void {
         parent::setUp();
-        require_once(__DIR__ . '/fixtures/testable_create_mod.php');
-        require_once(__DIR__ . '/fixtures/testable_create_mod_stream.php');
-        require_once(__DIR__ . '/fixtures/testable_courseai_syllabus_upload.php');
-        require_once(__DIR__ . '/fixtures/h5p_package_fixture.php');
 
         // See create_mod_permissions_test: give the front page real section rows.
         global $CFG;
         require_once($CFG->dirroot . '/course/lib.php');
         course_create_sections_if_missing(get_site(), [0, 1]);
-    }
-
-    /**
-     * Reset the injected doubles between tests.
-     */
-    protected function tearDown(): void {
-        testable_create_mod::$mockservice = null;
-        testable_create_mod_stream::$mockservice = null;
-        testable_courseai_syllabus_upload::$mockservice = null;
-        api_client_factory::set_test_client(null);
-        parent::tearDown();
     }
 
     /**
@@ -83,18 +67,13 @@ final class events_test extends \advanced_testcase {
 
         $course = $this->getDataGenerator()->create_course();
 
-        $service = $this->getMockBuilder(ai_course_api_service::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['start_activity', 'get_mod_streaming_url_for_job'])
-            ->getMock();
-        $service->method('start_activity')
-            ->willReturn(['thread_id' => 'job-1', 'status' => 'queued']);
-        $service->method('get_mod_streaming_url_for_job')
-            ->willReturn('https://ai.example.com/api/v1/activity/stream/job-1');
-        testable_create_mod_stream::$mockservice = $service;
+        $this->inject_api_service([
+            'start_activity' => ['thread_id' => 'job-1', 'status' => 'queued'],
+            'get_mod_streaming_url_for_job' => 'https://ai.example.com/api/v1/activity/stream/job-1',
+        ]);
 
         $sink = $this->redirectEvents();
-        $result = testable_create_mod_stream::execute($course->id, 1, 'A very personal prompt', 1, null, 'en');
+        $result = create_mod_stream::execute($course->id, 1, 'A very personal prompt', 1, null, 'en');
         $this->resetDebugging();
 
         $this->assertTrue($result['ok']);
@@ -118,11 +97,11 @@ final class events_test extends \advanced_testcase {
         global $USER;
         $course = $this->getDataGenerator()->create_course();
         module_job_service::create_job($course->id, $USER->id, 'job-ok', 0, null, null, 1, null, 'completed');
-        $this->inject_api_service($this->h5p_activity_result());
+        $this->inject_api_service(['get_activity_result' => $this->h5p_activity_result()]);
         $this->inject_download_client();
 
         $sink = $this->redirectEvents();
-        $result = testable_create_mod::execute($course->id, 1, 'job-ok');
+        $result = create_mod::execute($course->id, 1, 'job-ok');
         $this->resetDebugging();
 
         $this->assertTrue($result['ok'], 'Creation must succeed: ' . ($result['message'] ?? ''));
@@ -150,16 +129,10 @@ final class events_test extends \advanced_testcase {
         $course = $this->getDataGenerator()->create_course();
         module_job_service::create_job($course->id, $USER->id, 'job-fail', 0, null, null, 1, null, 'completed');
 
-        $service = $this->getMockBuilder(ai_course_api_service::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['get_activity_result'])
-            ->getMock();
-        $service->method('get_activity_result')
-            ->willThrowException(new \RuntimeException('secret internal detail'));
-        testable_create_mod::$mockservice = $service;
+        $this->inject_api_service(['get_activity_result' => new \RuntimeException('secret internal detail')]);
 
         $sink = $this->redirectEvents();
-        $result = testable_create_mod::execute($course->id, 1, 'job-fail');
+        $result = create_mod::execute($course->id, 1, 'job-fail');
         $this->resetDebugging();
 
         $this->assertFalse($result['ok']);
@@ -184,10 +157,10 @@ final class events_test extends \advanced_testcase {
         $this->setUser($student);
 
         module_job_service::create_job($course->id, $student->id, 'job-denied', 0, null, null, 1, null, 'completed');
-        $this->inject_api_service($this->h5p_activity_result());
+        $this->inject_api_service(['get_activity_result' => $this->h5p_activity_result()]);
 
         $sink = $this->redirectEvents();
-        $result = testable_create_mod::execute($course->id, 1, 'job-denied');
+        $result = create_mod::execute($course->id, 1, 'job-denied');
         $this->resetDebugging();
 
         $this->assertFalse($result['ok']);
@@ -207,35 +180,20 @@ final class events_test extends \advanced_testcase {
         $this->resetAfterTest();
         $this->setAdminUser();
 
-        $session = new course_session(0, (object) [
+        $session = $this->getDataGenerator()->get_plugin_generator('local_coursegen')->create_course_session([
             'userid' => (int)$USER->id,
             'session_id' => 'thread-1',
-            'status' => course_session::STATUS_PENDING,
-            'coursedata' => json_encode(['local_coursegen_context_type' => 'customprompt']),
+            'coursedata' => ['local_coursegen_context_type' => 'customprompt'],
         ]);
-        $session->create();
 
         // Put a PDF into the user draft area.
-        $fs = get_file_storage();
         $draftitemid = file_get_unused_draft_itemid();
-        $fs->create_file_from_string((object) [
-            'contextid' => user::instance($USER->id)->id,
-            'component' => 'user',
-            'filearea' => 'draft',
-            'itemid' => $draftitemid,
-            'filepath' => '/',
-            'filename' => 'syllabus.pdf',
-        ], '%PDF-1.4 syllabus body');
+        $this->create_draft_file('syllabus.pdf', '%PDF-1.4 syllabus body', $draftitemid);
 
-        $service = $this->getMockBuilder(ai_course_api_service::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['upload_syllabus'])
-            ->getMock();
-        $service->method('upload_syllabus')->willReturn(['ok' => true]);
-        testable_courseai_syllabus_upload::$mockservice = $service;
+        $this->inject_api_service(['upload_syllabus' => ['ok' => true]]);
 
         $sink = $this->redirectEvents();
-        $result = testable_courseai_syllabus_upload::execute((int)$session->get('id'), $draftitemid);
+        $result = courseai_syllabus_upload::execute((int)$session->get('id'), $draftitemid);
         $this->resetDebugging();
 
         $this->assertTrue($result['success'], 'Upload must succeed: ' . ($result['message'] ?? ''));
@@ -259,80 +217,5 @@ final class events_test extends \advanced_testcase {
         return array_values(array_filter($sink->get_events(), static function ($event) use ($classname): bool {
             return $event instanceof $classname;
         }));
-    }
-
-    /**
-     * Inject an ai_course_api_service mock returning the given activity result.
-     *
-     * @param array $result Activity result payload returned by get_activity_result().
-     * @return void
-     */
-    private function inject_api_service(array $result): void {
-        $service = $this->getMockBuilder(ai_course_api_service::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['get_activity_result'])
-            ->getMock();
-        $service->method('get_activity_result')->willReturn($result);
-
-        testable_create_mod::$mockservice = $service;
-    }
-
-    /**
-     * Inject an ai_course_api mock whose download_file() returns a real draft file.
-     *
-     * @return void
-     */
-    private function inject_download_client(): void {
-        $mock = $this->getMockBuilder(ai_course_api::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['download_file'])
-            ->getMock();
-
-        $mock->method('download_file')->willReturnCallback(
-            function (string $endpoint, string $filename): \stored_file {
-                global $USER;
-
-                $fs = get_file_storage();
-                $record = (object) [
-                    'contextid' => user::instance($USER->id)->id,
-                    'component' => 'user',
-                    'filearea' => 'draft',
-                    'itemid' => file_get_unused_draft_itemid(),
-                    'filepath' => '/',
-                    'filename' => $filename,
-                ];
-
-                return $fs->create_file_from_string($record, h5p_package_fixture::bytes());
-            }
-        );
-
-        api_client_factory::set_test_client($mock);
-    }
-
-    /**
-     * Build an AI activity result payload for an H5P activity.
-     *
-     * @return array
-     */
-    private function h5p_activity_result(): array {
-        return [
-            'resource_type' => 'h5pactivity',
-            'parameters' => [
-                'modulename' => 'h5pactivity',
-                'name' => 'AI generated H5P',
-                'introeditor' => ['text' => '<p>AI generated intro</p>', 'format' => FORMAT_HTML, 'itemid' => 0],
-                'visible' => 1,
-                'cmidnumber' => '',
-                'grade' => 100,
-                'grademethod' => 1,
-                'gradepass' => 70,
-                'enabletracking' => 1,
-                'reviewmode' => 1,
-                'mod_settings' => [
-                    'file_path' => 'generated/packages/sample-activity.h5p',
-                    'file_name' => 'sample-activity.h5p',
-                ],
-            ],
-        ];
     }
 }

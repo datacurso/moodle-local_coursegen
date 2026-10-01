@@ -18,7 +18,9 @@ namespace local_coursegen;
 
 use core\exception\moodle_exception;
 use core\exception\require_login_exception;
+use local_coursegen\external\courseai_syllabus_upload;
 use local_coursegen\local\models\course_session;
+use local_coursegen\tests\api_testcase;
 
 /**
  * Access contract of the syllabus upload web service.
@@ -36,23 +38,7 @@ use local_coursegen\local\models\course_session;
  * @covers     \local_coursegen\external\courseai_syllabus_upload
  */
 #[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\external\courseai_syllabus_upload::class)]
-final class courseai_syllabus_upload_test extends \advanced_testcase {
-    /**
-     * Load the testable subclass fixture.
-     */
-    protected function setUp(): void {
-        parent::setUp();
-        require_once(__DIR__ . '/fixtures/testable_courseai_syllabus_upload.php');
-    }
-
-    /**
-     * Reset the injected doubles between tests.
-     */
-    protected function tearDown(): void {
-        testable_courseai_syllabus_upload::$mockservice = null;
-        parent::tearDown();
-    }
-
+final class courseai_syllabus_upload_test extends api_testcase {
     /**
      * Create a planning session owned by the given user.
      *
@@ -60,15 +46,11 @@ final class courseai_syllabus_upload_test extends \advanced_testcase {
      * @return course_session
      */
     private function create_session(int $userid): course_session {
-        $session = new course_session(0, (object) [
+        return $this->getDataGenerator()->get_plugin_generator('local_coursegen')->create_course_session([
             'userid' => $userid,
             'session_id' => 'thread-1',
-            'status' => course_session::STATUS_PENDING,
-            'coursedata' => json_encode(['local_coursegen_context_type' => 'customprompt']),
+            'coursedata' => ['local_coursegen_context_type' => 'customprompt'],
         ]);
-        $session->create();
-
-        return $session;
     }
 
     /**
@@ -79,7 +61,7 @@ final class courseai_syllabus_upload_test extends \advanced_testcase {
      */
     private function execute_expecting_exception(int $sessionid): moodle_exception {
         try {
-            testable_courseai_syllabus_upload::execute($sessionid, file_get_unused_draft_itemid());
+            courseai_syllabus_upload::execute($sessionid, file_get_unused_draft_itemid());
         } catch (moodle_exception $e) {
             return $e;
         }
@@ -97,7 +79,7 @@ final class courseai_syllabus_upload_test extends \advanced_testcase {
         $this->setUser(null);
 
         $this->expectException(require_login_exception::class);
-        testable_courseai_syllabus_upload::execute((int)$session->get('id'), file_get_unused_draft_itemid());
+        courseai_syllabus_upload::execute((int)$session->get('id'), file_get_unused_draft_itemid());
     }
 
     /**

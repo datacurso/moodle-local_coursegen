@@ -18,6 +18,7 @@ namespace local_coursegen\local\service;
 
 use core\context\system;
 use local_coursegen\event\generation_job_started;
+use local_coursegen\local\api_client_factory;
 use local_coursegen\local\h5p_core_api;
 use local_coursegen\local\image_generation\activities;
 use local_coursegen\local\image_generation\image_policy_builder;
@@ -78,7 +79,7 @@ class course_planning_service {
         // and mod_subsection is available, whatever the client sent.
         $withsubsections = $withsubsections && $available;
 
-        $apiservice = new ai_course_api_service();
+        $apiservice = api_client_factory::ai_course_api_service();
 
         $payload = [
             'prompt' => $prompt,

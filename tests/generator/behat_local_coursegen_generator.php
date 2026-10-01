@@ -35,6 +35,18 @@ class behat_local_coursegen_generator extends behat_generator_base {
                 'datagenerator' => 'system_instruction',
                 'required' => ['name'],
             ],
+            'course sessions' => [
+                'singular' => 'course session',
+                'datagenerator' => 'course_session',
+                'required' => ['user'],
+                'switchids' => ['user' => 'userid', 'course' => 'courseid'],
+            ],
+            'module jobs' => [
+                'singular' => 'module job',
+                'datagenerator' => 'module_job',
+                'required' => ['user', 'course'],
+                'switchids' => ['user' => 'userid', 'course' => 'courseid'],
+            ],
         ];
     }
 }

@@ -23,7 +23,7 @@ use core_external\external_function_parameters;
 use core_external\external_single_structure;
 use core_external\external_value;
 use local_coursegen\event\external_transfer_initiated;
-use local_coursegen\local\service\ai_course_api_service;
+use local_coursegen\local\api_client_factory;
 use local_coursegen\local\service\course_session_service;
 
 /**
@@ -136,7 +136,7 @@ class courseai_syllabus_upload extends external_api {
             $filename = $file->get_filename();
 
             // Upload to Datacurso API.
-            $apiservice = static::get_api_service();
+            $apiservice = api_client_factory::ai_course_api_service();
             $response = $apiservice->upload_syllabus($threadid, $file);
 
             // Audit the external transfer: file name and size only, no content.
@@ -169,18 +169,6 @@ class courseai_syllabus_upload extends external_api {
                 'message' => get_string('error_upload_failed', 'local_coursegen'),
             ];
         }
-    }
-
-    /**
-     * Build the AI course API service used by this endpoint.
-     *
-     * Extracted as a protected factory so PHPUnit tests can override it
-     * through a testable subclass (late static binding).
-     *
-     * @return ai_course_api_service
-     */
-    protected static function get_api_service(): ai_course_api_service {
-        return new ai_course_api_service();
     }
 
     /**

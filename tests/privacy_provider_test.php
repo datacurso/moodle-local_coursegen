@@ -24,6 +24,8 @@ use core_privacy\local\request\approved_contextlist;
 use core_privacy\local\request\userlist;
 use core_privacy\local\request\writer;
 use core_privacy\tests\provider_testcase;
+use local_coursegen\local\models\course_context;
+use local_coursegen\local\models\course_session;
 use local_coursegen\privacy\provider;
 use stdClass;
 
@@ -568,22 +570,26 @@ final class privacy_provider_test extends provider_testcase {
     }
 
     /**
+     * Get the plugin data generator.
+     *
+     * @return \local_coursegen_generator
+     */
+    private function plugin_generator(): \local_coursegen_generator {
+        return $this->getDataGenerator()->get_plugin_generator('local_coursegen');
+    }
+
+    /**
      * Create a system instruction (local_coursegen_system_instruction) for a user.
      *
      * @param int $userid
      * @return stdClass
      */
     private function create_system_instruction(int $userid): stdClass {
-        global $DB;
-        $record = new stdClass();
-        $record->name = 'Test system instruction';
-        $record->content = 'System instruction content';
-        $record->deleted = 0;
-        $record->timecreated = time();
-        $record->timemodified = time();
-        $record->usermodified = $userid;
-        $record->id = $DB->insert_record('local_coursegen_system_instruction', $record);
-        return $record;
+        return $this->plugin_generator()->create_system_instruction([
+            'name' => 'Test system instruction',
+            'content' => 'System instruction content',
+            'usermodified' => $userid,
+        ]);
     }
 
     /**
@@ -592,19 +598,17 @@ final class privacy_provider_test extends provider_testcase {
      * @param int $courseid
      * @param int $systeminstructionid
      * @param int $userid
-     * @return stdClass
+     * @return stdClass The stored table row.
      */
     private function create_course_context(int $courseid, int $systeminstructionid, int $userid): stdClass {
         global $DB;
-        $record = new stdClass();
-        $record->courseid = $courseid;
-        $record->context_type = 'system_instruction';
-        $record->system_instruction_id = $systeminstructionid;
-        $record->timecreated = time();
-        $record->timemodified = time();
-        $record->usermodified = $userid;
-        $record->id = $DB->insert_record('local_coursegen_course_context', $record);
-        return $record;
+        $context = $this->plugin_generator()->create_course_context([
+            'courseid' => $courseid,
+            'context_type' => course_context::CONTEXT_TYPE_CUSTOM_PROMPT,
+            'system_instruction_id' => $systeminstructionid,
+            'usermodified' => $userid,
+        ]);
+        return $DB->get_record('local_coursegen_course_context', ['id' => $context->get('id')], '*', MUST_EXIST);
     }
 
     /**
@@ -612,20 +616,16 @@ final class privacy_provider_test extends provider_testcase {
      *
      * @param int $courseid
      * @param int $userid
-     * @return stdClass
+     * @return stdClass The stored table row.
      */
     private function create_course_session(int $courseid, int $userid): stdClass {
         global $DB;
-        $record = new stdClass();
-        $record->courseid = $courseid;
-        $record->userid = $userid;
-        $record->session_id = 'sess_' . bin2hex(random_bytes(4));
-        $record->status = 1;
-        $record->coursedata = json_encode(['local_coursegen_custom_prompt' => 'Create a course about privacy']);
-        $record->timecreated = time();
-        $record->timemodified = time();
-        $record->id = $DB->insert_record('local_coursegen_course_sessions', $record);
-        return $record;
+        $session = $this->plugin_generator()->create_course_session([
+            'courseid' => $courseid,
+            'userid' => $userid,
+            'coursedata' => ['local_coursegen_custom_prompt' => 'Create a course about privacy'],
+        ]);
+        return $DB->get_record('local_coursegen_course_sessions', ['id' => $session->get('id')], '*', MUST_EXIST);
     }
 
     /**
@@ -636,15 +636,7 @@ final class privacy_provider_test extends provider_testcase {
      * @return \stored_file
      */
     private function create_syllabus_file(int $sessionid, string $filename = 'syllabus.pdf'): \stored_file {
-        $fs = get_file_storage();
-        return $fs->create_file_from_string((object) [
-            'contextid' => system::instance()->id,
-            'component' => 'local_coursegen',
-            'filearea' => 'syllabus',
-            'itemid' => $sessionid,
-            'filepath' => '/',
-            'filename' => $filename,
-        ], '%PDF-1.4 test syllabus');
+        return $this->plugin_generator()->create_syllabus_file(new course_session($sessionid), $filename);
     }
 
     /**
@@ -652,23 +644,17 @@ final class privacy_provider_test extends provider_testcase {
      *
      * @param int $courseid
      * @param int $userid
-     * @return stdClass
+     * @return stdClass The stored table row.
      */
     private function create_module_job(int $courseid, int $userid): stdClass {
         global $DB;
-        $record = new stdClass();
-        $record->courseid = $courseid;
-        $record->userid = $userid;
-        $record->job_id = 'job_' . bin2hex(random_bytes(4));
-        $record->status = 'execution_started';
-        $record->generate_images = 0;
-        $record->context_type = 'system_instruction';
-        $record->system_instruction_name = 'Test system instruction';
-        $record->sectionnum = 1;
-        $record->beforemod = null;
-        $record->timecreated = time();
-        $record->timemodified = time();
-        $record->id = $DB->insert_record('local_coursegen_module_jobs', $record);
-        return $record;
+        $job = $this->plugin_generator()->create_module_job([
+            'courseid' => $courseid,
+            'userid' => $userid,
+            'context_type' => course_context::CONTEXT_TYPE_CUSTOM_PROMPT,
+            'system_instruction_name' => 'Test system instruction',
+            'sectionnum' => 1,
+        ]);
+        return $DB->get_record('local_coursegen_module_jobs', ['id' => $job->get('id')], '*', MUST_EXIST);
     }
 }

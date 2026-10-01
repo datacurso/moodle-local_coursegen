@@ -23,9 +23,10 @@ use core\exception\required_capability_exception;
 use local_coursegen\external\course_planning_feedback;
 use local_coursegen\external\create_course;
 use local_coursegen\external\get_course_session_state;
+use local_coursegen\external\get_course_settings;
 use local_coursegen\local\models\course_session;
-use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\create_course_service;
+use local_coursegen\tests\api_testcase;
 
 /**
  * Capability gate tests for the full-course confirmation flow web services.
@@ -48,24 +49,13 @@ use local_coursegen\local\service\create_course_service;
 #[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\external\course_planning_feedback::class)]
 #[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\external\get_course_session_state::class)]
 #[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\local\service\create_course_service::class)]
-final class course_confirmation_permissions_test extends \advanced_testcase {
+final class course_confirmation_permissions_test extends api_testcase {
     /**
-     * Load the testable subclass fixture.
+     * Make any accidental real API call fail fast instead of reaching the network.
      */
     protected function setUp(): void {
         parent::setUp();
-        require_once(__DIR__ . '/fixtures/testable_get_course_settings.php');
-
-        // Any accidental real API call must fail fast instead of reaching the network.
         set_config('datacurso_service_url', 'https://invalid.invalid', 'local_coursegen');
-    }
-
-    /**
-     * Reset the injected doubles between tests.
-     */
-    protected function tearDown(): void {
-        testable_get_course_settings::$mockservice = null;
-        parent::tearDown();
     }
 
     /**
@@ -75,14 +65,11 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
      * @return course_session
      */
     private function create_session(int $userid): course_session {
-        $session = new course_session();
-        $session->set('userid', $userid);
-        $session->set('session_id', 'thread-test-1');
-        $session->set('status', course_session::STATUS_PENDING);
-        $session->set('coursedata', json_encode(['fullname' => 'Planned course']));
-        $session->create();
-
-        return $session;
+        return $this->getDataGenerator()->get_plugin_generator('local_coursegen')->create_course_session([
+            'userid' => $userid,
+            'session_id' => 'thread-test-1',
+            'coursedata' => ['fullname' => 'Planned course'],
+        ]);
     }
 
     /**
@@ -158,7 +145,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
         $session = $this->create_session($user->id);
 
         $this->assert_requires_capability(static function () use ($session): void {
-            testable_get_course_settings::execute((int) $session->get('id'));
+            get_course_settings::execute((int) $session->get('id'));
         }, 'get_course_settings');
     }
 
@@ -175,7 +162,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
         $session = $this->create_session($user->id);
 
         $this->assert_requires_capability(static function () use ($session): void {
-            testable_get_course_settings::execute((int) $session->get('id'));
+            get_course_settings::execute((int) $session->get('id'));
         }, 'get_course_settings without course:create');
     }
 
@@ -232,22 +219,19 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
 
         $session = $this->create_session($user->id);
 
-        $service = $this->getMockBuilder(ai_course_api_service::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['get_course_result'])
-            ->getMock();
-        $service->method('get_course_result')->willReturn([
-            'result' => [
-                'course_configuration' => [
-                    'fullname' => 'AI planned course',
-                    'shortname' => 'aiplanned',
-                    'category' => (int) $cata->id,
+        $this->inject_api_service([
+            'get_course_result' => [
+                'result' => [
+                    'course_configuration' => [
+                        'fullname' => 'AI planned course',
+                        'shortname' => 'aiplanned',
+                        'category' => (int) $cata->id,
+                    ],
                 ],
             ],
         ]);
-        testable_get_course_settings::$mockservice = $service;
 
-        $result = testable_get_course_settings::execute((int) $session->get('id'));
+        $result = get_course_settings::execute((int) $session->get('id'));
 
         $this->assertSame('AI planned course', $result['fullname']);
         $offeredids = array_column($result['categories'], 'id');

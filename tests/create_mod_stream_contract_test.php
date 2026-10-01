@@ -16,15 +16,14 @@
 
 namespace local_coursegen;
 
-use aiprovider_datacurso\httpclient\ai_course_api;
 use core\context\module;
-use core\context\user;
 use core\exception\invalid_parameter_exception;
 use core\exception\moodle_exception;
-use local_coursegen\local\api_client_factory;
+use local_coursegen\external\create_mod_stream;
+use local_coursegen\local\models\course_context;
 use local_coursegen\local\models\module_job;
-use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\create_mod_service;
+use local_coursegen\tests\api_testcase;
 
 /**
  * Contract tests for the individual activity generation request and result.
@@ -48,63 +47,21 @@ use local_coursegen\local\service\create_mod_service;
  * @covers     \local_coursegen\external\create_mod_stream
  */
 #[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\external\create_mod_stream::class)]
-final class create_mod_stream_contract_test extends \advanced_testcase {
-    /**
-     * Load the testable subclass fixture.
-     */
-    protected function setUp(): void {
-        parent::setUp();
-        require_once(__DIR__ . '/fixtures/testable_create_mod_stream.php');
-        require_once(__DIR__ . '/fixtures/h5p_package_fixture.php');
-    }
-
-    /**
-     * Reset the injected doubles between tests.
-     */
-    protected function tearDown(): void {
-        testable_create_mod_stream::$mockservice = null;
-        api_client_factory::set_test_client(null);
-        parent::tearDown();
-    }
-
-    /**
-     * Make the given course the current one.
-     *
-     * The module edit form resolves section info through the global $COURSE.
-     * In a web request require_login() binds the page (and $COURSE) to the
-     * course; without it, the theme initialisation triggered by the form
-     * falls back to the site course and the target section cannot resolve.
-     *
-     * @param \stdClass $course Course record.
-     * @return void
-     */
-    private function set_current_course(\stdClass $course): void {
-        global $PAGE;
-        $PAGE->set_course($course);
-    }
-
+final class create_mod_stream_contract_test extends api_testcase {
     /**
      * Inject an ai_course_api_service mock that captures the start_activity payload.
      *
      * @param array|null $captured Reference that receives the payload handed to start_activity().
      * @return void
      */
-    private function inject_api_service(?array &$captured = null): void {
-        $service = $this->getMockBuilder(ai_course_api_service::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['start_activity', 'get_mod_streaming_url_for_job'])
-            ->getMock();
-
-        $service->method('start_activity')->willReturnCallback(
-            function (array $payload) use (&$captured): array {
+    private function inject_start_activity_service(?array &$captured = null): void {
+        $this->inject_api_service([
+            'start_activity' => function (array $payload) use (&$captured): array {
                 $captured = $payload;
                 return ['thread_id' => 'job-1', 'status' => 'queued', 'message' => 'Job started'];
-            }
-        );
-        $service->method('get_mod_streaming_url_for_job')
-            ->willReturn('https://ai.example.com/api/v1/activity/stream/job-1');
-
-        testable_create_mod_stream::$mockservice = $service;
+            },
+            'get_mod_streaming_url_for_job' => 'https://ai.example.com/api/v1/activity/stream/job-1',
+        ]);
     }
 
     /**
@@ -113,41 +70,35 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
      * system_instruction_name, not name).
      */
     public function test_course_context_reaches_the_stored_job(): void {
-        global $DB, $USER;
+        global $DB;
 
         $this->resetAfterTest();
         $this->setAdminUser();
 
         $course = $this->getDataGenerator()->create_course();
         $captured = null;
-        $this->inject_api_service($captured);
+        $this->inject_start_activity_service($captured);
 
-        $now = time();
-        $instructionid = $DB->insert_record('local_coursegen_system_instruction', (object)[
+        /** @var \local_coursegen_generator $plugingenerator */
+        $plugingenerator = $this->getDataGenerator()->get_plugin_generator('local_coursegen');
+        $instruction = $plugingenerator->create_system_instruction([
             'name' => 'Institutional guideline',
             'content' => 'Follow the style guide.',
-            'deleted' => 0,
-            'timecreated' => $now,
-            'timemodified' => $now,
-            'usermodified' => $USER->id,
         ]);
-        $DB->insert_record('local_coursegen_course_context', (object)[
+        $plugingenerator->create_course_context([
             'courseid' => $course->id,
-            'context_type' => 'system_instruction',
-            'system_instruction_id' => $instructionid,
+            'context_type' => course_context::CONTEXT_TYPE_CUSTOM_PROMPT,
+            'system_instruction_id' => $instruction->id,
             'lang' => 'en',
             'prompt_text' => '',
-            'timecreated' => $now,
-            'timemodified' => $now,
-            'usermodified' => $USER->id,
         ]);
 
-        $result = testable_create_mod_stream::execute($course->id, 1, 'Create a page about photosynthesis', 0, null, 'en');
+        $result = create_mod_stream::execute($course->id, 1, 'Create a page about photosynthesis', 0, null, 'en');
         $this->resetDebugging();
         $this->assertTrue($result['ok'], 'Start must succeed: ' . ($result['message'] ?? ''));
 
         $job = $DB->get_record('local_coursegen_module_jobs', ['job_id' => 'job-1'], '*', MUST_EXIST);
-        $this->assertSame('system_instruction', $job->context_type);
+        $this->assertSame(course_context::CONTEXT_TYPE_CUSTOM_PROMPT, $job->context_type);
         $this->assertSame(
             'Institutional guideline',
             $job->system_instruction_name,
@@ -166,12 +117,12 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
 
         $course = $this->getDataGenerator()->create_course();
         $captured = null;
-        $this->inject_api_service($captured);
+        $this->inject_start_activity_service($captured);
 
         // A configured (non-disabled) admin image mode must travel with the request.
         set_config('generationmode', \local_coursegen\local\image_generation\activities::MODE_MANUAL, 'local_coursegen');
 
-        $result = testable_create_mod_stream::execute($course->id, 1, 'Create an H5P quiz about volcanoes', 1, null, 'es');
+        $result = create_mod_stream::execute($course->id, 1, 'Create an H5P quiz about volcanoes', 1, null, 'es');
         // One pre-existing developer notice: execute_parameters() declares
         // top-level VALUE_OPTIONAL values instead of VALUE_DEFAULT.
         $this->assertDebuggingCalledCount(1);
@@ -218,10 +169,10 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
 
         $course = $this->getDataGenerator()->create_course();
         $captured = null;
-        $this->inject_api_service($captured);
+        $this->inject_start_activity_service($captured);
 
         // The generationmode setting is deliberately NOT configured: defaults to disabled.
-        $result = testable_create_mod_stream::execute($course->id, 1, 'Create an H5P accordion about rocks', 1, null, 'en');
+        $result = create_mod_stream::execute($course->id, 1, 'Create an H5P accordion about rocks', 1, null, 'en');
         $this->assertDebuggingCalledCount(1);
 
         $this->assertTrue($result['ok'], 'Start must succeed: ' . ($result['message'] ?? ''));
@@ -264,16 +215,13 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
 
         $course = $this->getDataGenerator()->create_course();
 
-        $service = $this->getMockBuilder(ai_course_api_service::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['start_activity', 'get_mod_streaming_url_for_job'])
-            ->getMock();
         // No thread_id: the response is invalid. It carries a marker that must never be logged.
-        $service->method('start_activity')
-            ->willReturn(['status' => 'error', 'detail' => 'SENSITIVE-RESPONSE-BODY']);
-        testable_create_mod_stream::$mockservice = $service;
+        $this->inject_api_service([
+            'start_activity' => ['status' => 'error', 'detail' => 'SENSITIVE-RESPONSE-BODY'],
+            'get_mod_streaming_url_for_job' => '',
+        ]);
 
-        $result = testable_create_mod_stream::execute($course->id, 1, 'Create a page', 0, null, 'en');
+        $result = create_mod_stream::execute($course->id, 1, 'Create a page', 0, null, 'en');
 
         $this->assertFalse($result['ok']);
         $debuggings = $this->getDebuggingMessages();
@@ -294,14 +242,14 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
 
         $course = $this->getDataGenerator()->create_course();
         $captured = null;
-        $this->inject_api_service($captured);
+        $this->inject_start_activity_service($captured);
 
         // Resolve the expected version the same way production code does.
         (new \core_h5p\factory())->get_core();
         $coreapi = \core_h5p\core::$coreApi; // phpcs:ignore moodle.NamingConventions.ValidVariableName
         $expected = $coreapi['majorVersion'] . '.' . $coreapi['minorVersion'];
 
-        $result = testable_create_mod_stream::execute($course->id, 1, 'Create an H5P activity', 0, null, 'en');
+        $result = create_mod_stream::execute($course->id, 1, 'Create an H5P activity', 0, null, 'en');
         // Pre-existing developer notice from execute_parameters().
         $this->assertDebuggingCalledCount(1);
 
@@ -327,7 +275,7 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
 
         $course = $this->getDataGenerator()->create_course();
         $captured = null;
-        $this->inject_api_service($captured);
+        $this->inject_start_activity_service($captured);
 
         // Simulate an unresolvable framework version. The property is public
         // static on the H5P library class, so no reflection is needed.
@@ -336,7 +284,7 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
 
         try {
             \core_h5p\core::$coreApi = []; // phpcs:ignore moodle.NamingConventions.ValidVariableName
-            $result = testable_create_mod_stream::execute($course->id, 1, 'Create an H5P activity', 0, null, 'en');
+            $result = create_mod_stream::execute($course->id, 1, 'Create an H5P activity', 0, null, 'en');
         } finally {
             \core_h5p\core::$coreApi = $original; // phpcs:ignore moodle.NamingConventions.ValidVariableName
         }
@@ -374,9 +322,9 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
         $this->setUser($student);
 
         $captured = null;
-        $this->inject_api_service($captured);
+        $this->inject_start_activity_service($captured);
 
-        $result = testable_create_mod_stream::execute($course->id, 1, 'Create an H5P activity', 0, null, 'en');
+        $result = create_mod_stream::execute($course->id, 1, 'Create an H5P activity', 0, null, 'en');
         // Consume the pre-existing developer notice from execute_parameters()
         // so the capability assertion below fails cleanly on its own.
         $this->resetDebugging();
@@ -403,29 +351,7 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
 
         $course = $this->getDataGenerator()->create_course();
         $this->set_current_course($course);
-
-        $client = $this->getMockBuilder(ai_course_api::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['download_file'])
-            ->getMock();
-        $client->method('download_file')->willReturnCallback(
-            function (string $endpoint, string $filename): \stored_file {
-                global $USER;
-
-                $fs = get_file_storage();
-                $record = (object) [
-                    'contextid' => user::instance($USER->id)->id,
-                    'component' => 'user',
-                    'filearea' => 'draft',
-                    'itemid' => file_get_unused_draft_itemid(),
-                    'filepath' => '/',
-                    'filename' => $filename,
-                ];
-
-                return $fs->create_file_from_string($record, h5p_package_fixture::bytes());
-            }
-        );
-        api_client_factory::set_test_client($client);
+        $this->inject_download_client();
 
         // Result with unknown additive fields at every level the plugin reads.
         $resultinfo = [
@@ -525,12 +451,12 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
 
         $course = $this->getDataGenerator()->create_course();
         $captured = null;
-        $this->inject_api_service($captured);
+        $this->inject_start_activity_service($captured);
 
         $sink = $this->redirectEvents();
         try {
             // The language code is PARAM_ALPHANUMEXT: spaces and punctuation are invalid.
-            testable_create_mod_stream::execute($course->id, 1, 'Create a page about rocks', 0, null, 'not a lang!');
+            create_mod_stream::execute($course->id, 1, 'Create a page about rocks', 0, null, 'not a lang!');
             $this->fail('An invalid language code must raise invalid_parameter_exception.');
         } catch (invalid_parameter_exception $e) {
             $this->assertNull($captured, 'No request must reach the AI service.');

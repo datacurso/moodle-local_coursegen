@@ -16,8 +16,7 @@
 
 namespace local_coursegen\mod_parameters;
 
-use aiprovider_datacurso\httpclient\ai_course_api;
-use local_coursegen\local\api_client_factory;
+use local_coursegen\tests\api_testcase;
 
 /**
  * Unit tests for folder_parameters — filepath normalisation, the empty-files no-op and the
@@ -26,41 +25,13 @@ use local_coursegen\local\api_client_factory;
  * The AI HTTP client is injected through api_client_factory, so no network request is performed.
  *
  * @package    local_coursegen
+ * @category   test
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers \local_coursegen\mod_parameters\folder_parameters
  */
 #[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\mod_parameters\folder_parameters::class)]
-final class folder_parameters_test extends \advanced_testcase {
-    /**
-     * Reset the injected double between tests.
-     */
-    protected function tearDown(): void {
-        api_client_factory::set_test_client(null);
-        parent::tearDown();
-    }
-
-    /**
-     * Inject an ai_course_api mock whose download_file() records every call.
-     *
-     * @param array $calls Reference receiving one ['endpoint', 'filename', 'filerecord'] entry per call.
-     * @return void
-     */
-    private function inject_download_client(array &$calls): void {
-        $mock = $this->getMockBuilder(ai_course_api::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['download_file'])
-            ->getMock();
-        $mock->method('download_file')->willReturnCallback(
-            function (string $endpoint, string $filename, array $filerecord = []) use (&$calls): ?\stored_file {
-                $calls[] = ['endpoint' => $endpoint, 'filename' => $filename, 'filerecord' => $filerecord];
-                return null;
-            }
-        );
-
-        api_client_factory::set_test_client($mock);
-    }
-
+final class folder_parameters_test extends api_testcase {
     /**
      * An AI folder_path is normalised to a Moodle filearea filepath.
      *
@@ -113,7 +84,7 @@ final class folder_parameters_test extends \advanced_testcase {
         $this->setAdminUser();
 
         $calls = [];
-        $this->inject_download_client($calls);
+        $this->inject_download_client($calls, null, false);
 
         $params = (object) ['mod_settings' => ['files' => [
             [
@@ -141,7 +112,7 @@ final class folder_parameters_test extends \advanced_testcase {
         $this->setAdminUser();
 
         $calls = [];
-        $this->inject_download_client($calls);
+        $this->inject_download_client($calls, null, false);
 
         $params = (object) ['mod_settings' => ['files' => [
             ['file_path' => '/tmp/out/first.pdf', 'file_name' => '..'],

@@ -31,8 +31,8 @@ use core_external\external_api;
 use core_external\external_function_parameters;
 use core_external\external_single_structure;
 use core_external\external_value;
+use local_coursegen\local\api_client_factory;
 use local_coursegen\local\models\course_session;
-use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
 
 /**
@@ -78,7 +78,7 @@ class get_course_session_state extends external_api {
             throw new moodle_exception('error_no_session_found', 'local_coursegen');
         }
 
-        $apiservice = new ai_course_api_service();
+        $apiservice = api_client_factory::ai_course_api_service();
         $snapshot = $apiservice->get_course_state($sessionid);
         $streamingurl = $apiservice->get_course_streaming_url($sessionid);
 

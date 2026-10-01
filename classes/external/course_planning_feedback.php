@@ -32,7 +32,7 @@ use core_external\external_function_parameters;
 use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
-use local_coursegen\local\service\ai_course_api_service;
+use local_coursegen\local\api_client_factory;
 use local_coursegen\local\service\course_session_service;
 
 /**
@@ -115,7 +115,7 @@ class course_planning_feedback extends external_api {
             throw new moodle_exception('error_no_session_found', 'local_coursegen');
         }
 
-        $apiservice = new ai_course_api_service();
+        $apiservice = api_client_factory::ai_course_api_service();
 
         try {
             $apiservice->send_planning_feedback($sessionid, $pendingaction);

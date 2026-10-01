@@ -18,13 +18,12 @@ namespace local_coursegen;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
 use core\context\module;
-use core\context\user;
 use core\exception\coding_exception;
 use core\exception\moodle_exception;
 use local_coursegen\local\api_client_factory;
-use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\create_course_service;
 use local_coursegen\local\service\create_mod_service;
+use local_coursegen\tests\api_testcase;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -46,119 +45,7 @@ require_once(__DIR__ . '/fixtures/h5p_package_fixture.php');
  * @covers     \local_coursegen\local\service\create_mod_service
  */
 #[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\local\service\create_mod_service::class)]
-final class h5p_create_from_ai_result_test extends \advanced_testcase {
-    /**
-     * Always remove the injected factory test double between tests.
-     */
-    protected function tearDown(): void {
-        api_client_factory::set_test_client(null);
-        parent::tearDown();
-    }
-
-    /**
-     * Make the given course the current one.
-     *
-     * The module edit form resolves section info through the global $COURSE.
-     * In a web request require_login() binds the page (and $COURSE) to the
-     * course; without it, the theme initialisation triggered by the form
-     * falls back to the site course and the target section cannot resolve.
-     *
-     * @param \stdClass $course Course record.
-     * @return void
-     */
-    private function set_current_course(\stdClass $course): void {
-        global $PAGE;
-        $PAGE->set_course($course);
-    }
-
-    /**
-     * Create a real stored_file in the current user's draft area, as the real
-     * ai_course_api::download_file() does.
-     *
-     * @param string $filename Package file name.
-     * @param string|null $content Package bytes; a structurally valid .h5p by default.
-     * @return \stored_file
-     */
-    private function create_draft_package_file(string $filename, ?string $content = null): \stored_file {
-        global $USER;
-
-        $fs = get_file_storage();
-        $record = (object) [
-            'contextid' => user::instance($USER->id)->id,
-            'component' => 'user',
-            'filearea' => 'draft',
-            'itemid' => file_get_unused_draft_itemid(),
-            'filepath' => '/',
-            'filename' => $filename,
-        ];
-
-        return $fs->create_file_from_string($record, $content ?? h5p_package_fixture::bytes());
-    }
-
-    /**
-     * Inject an ai_course_api mock whose download_file() returns a real draft file.
-     *
-     * @param string|null $capturedendpoint Reference that receives the endpoint passed to download_file().
-     * @param string|null $capturedfilename Reference that receives the file name passed to download_file().
-     * @param string|null $content Package bytes; a structurally valid .h5p by default.
-     * @return \PHPUnit\Framework\MockObject\MockObject
-     */
-    private function inject_download_client(
-        ?string &$capturedendpoint = null,
-        ?string &$capturedfilename = null,
-        ?string $content = null
-    ): \PHPUnit\Framework\MockObject\MockObject {
-        $mock = $this->getMockBuilder(ai_course_api::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['download_file'])
-            ->getMock();
-
-        $mock->method('download_file')->willReturnCallback(
-            function (string $endpoint, string $filename) use (&$capturedendpoint, &$capturedfilename, $content): \stored_file {
-                $capturedendpoint = $endpoint;
-                $capturedfilename = $filename;
-                return $this->create_draft_package_file($filename, $content);
-            }
-        );
-
-        api_client_factory::set_test_client($mock);
-
-        return $mock;
-    }
-
-    /**
-     * Build an AI result payload for an H5P activity, as returned by the service.
-     *
-     * @param array $paramoverrides Overrides merged into the parameters section.
-     * @param array $modsettingsoverrides Overrides merged into mod_settings.
-     * @return array Result info payload.
-     */
-    private function h5p_resultinfo(array $paramoverrides = [], array $modsettingsoverrides = []): array {
-        $modsettings = array_merge([
-            'file_path' => 'generated/packages/sample-activity.h5p',
-            'file_name' => 'sample-activity.h5p',
-        ], $modsettingsoverrides);
-
-        $parameters = array_merge([
-            'modulename' => 'h5pactivity',
-            'name' => 'AI generated H5P',
-            'introeditor' => ['text' => '<p>AI generated intro</p>', 'format' => FORMAT_HTML, 'itemid' => 0],
-            'visible' => 1,
-            'cmidnumber' => '',
-            'grade' => 100,
-            'grademethod' => 1,
-            'gradepass' => 70,
-            'enabletracking' => 1,
-            'reviewmode' => 1,
-            'mod_settings' => $modsettings,
-        ], $paramoverrides);
-
-        return [
-            'resource_type' => 'h5pactivity',
-            'parameters' => $parameters,
-        ];
-    }
-
+final class h5p_create_from_ai_result_test extends api_testcase {
     /**
      * MDL-UNIT-001: The canonical H5P resource type resolves to the parameters
      * handler that downloads and attaches the package.
@@ -171,7 +58,7 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
         $this->set_current_course($course);
         $this->inject_download_client();
 
-        $newcm = create_mod_service::create_from_ai_result($this->h5p_resultinfo(), $course, 1);
+        $newcm = create_mod_service::create_from_ai_result($this->h5p_activity_result(), $course, 1);
 
         $this->assertSame('h5pactivity', $newcm->modulename);
 
@@ -195,7 +82,7 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
         $course = $this->getDataGenerator()->create_course();
         $this->inject_download_client();
 
-        $resultinfo = $this->h5p_resultinfo(['modulename' => 'h5p']);
+        $resultinfo = $this->h5p_activity_result(['modulename' => 'h5p']);
         $resultinfo['resource_type'] = 'h5p';
 
         try {
@@ -234,7 +121,7 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
         $this->set_current_course($course);
         $this->inject_download_client();
 
-        $resultinfo = $this->h5p_resultinfo(['modulename' => 'page']);
+        $resultinfo = $this->h5p_activity_result(['modulename' => 'page']);
         $resultinfo['resource_type'] = 'page';
 
         try {
@@ -262,10 +149,10 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
 
         $course = $this->getDataGenerator()->create_course(['numsections' => 3]);
         $this->set_current_course($course);
-        $capturedendpoint = null;
-        $this->inject_download_client($capturedendpoint);
+        $calls = [];
+        $this->inject_download_client($calls);
 
-        $newcm = create_mod_service::create_from_ai_result($this->h5p_resultinfo(), $course, 2);
+        $newcm = create_mod_service::create_from_ai_result($this->h5p_activity_result(), $course, 2);
 
         // Activity record exists with the requested title and description.
         $record = $DB->get_record('h5pactivity', ['id' => $newcm->instance], '*', MUST_EXIST);
@@ -279,9 +166,10 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
 
         // The download used the remote path sent by the service, URL-encoded
         // as a single query value (see MDL-INT-002).
+        $this->assertCount(1, $calls);
         $this->assertSame(
             '/files/download?path=' . rawurlencode('generated/packages/sample-activity.h5p'),
-            $capturedendpoint
+            $calls[0]['endpoint']
         );
 
         // The file is stored by the Moodle File API in the module package area.
@@ -306,9 +194,9 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
         $this->set_current_course($course);
         $this->inject_download_client();
 
-        $first = create_mod_service::create_from_ai_result($this->h5p_resultinfo(['name' => 'First']), $course, 1);
+        $first = create_mod_service::create_from_ai_result($this->h5p_activity_result(['name' => 'First']), $course, 1);
         $second = create_mod_service::create_from_ai_result(
-            $this->h5p_resultinfo(['name' => 'Second']),
+            $this->h5p_activity_result(['name' => 'Second']),
             $course,
             1,
             $first->coursemodule
@@ -328,11 +216,10 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
 
         $course = $this->getDataGenerator()->create_course();
         $this->set_current_course($course);
-        $capturedendpoint = null;
-        $capturedfilename = null;
-        $this->inject_download_client($capturedendpoint, $capturedfilename);
+        $calls = [];
+        $this->inject_download_client($calls);
 
-        $resultinfo = $this->h5p_resultinfo([], [
+        $resultinfo = $this->h5p_activity_result([], [
             'file_path' => 'generated/packages/mi actividad (v2).h5p',
             'file_name' => '../sub/mi actividad: "final".h5p',
         ]);
@@ -340,14 +227,15 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
         create_mod_service::create_from_ai_result($resultinfo, $course, 1);
 
         // The remote path travels URL-encoded as a single query value.
+        $this->assertCount(1, $calls);
         $this->assertSame(
             '/files/download?path=' . rawurlencode('generated/packages/mi actividad (v2).h5p'),
-            $capturedendpoint
+            $calls[0]['endpoint']
         );
 
         // The file name is reduced to a valid Moodle file name: no directory
         // components and no characters invalid in a Moodle file name.
-        $this->assertSame('mi actividad final.h5p', $capturedfilename);
+        $this->assertSame('mi actividad final.h5p', $calls[0]['filename']);
     }
 
     /**
@@ -362,12 +250,12 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
 
         $course = $this->getDataGenerator()->create_course();
         $this->set_current_course($course);
-        $capturedendpoint = null;
-        $this->inject_download_client($capturedendpoint);
+        $calls = [];
+        $this->inject_download_client($calls);
 
         $missingcases = [
-            'file_path' => $this->h5p_resultinfo(),
-            'file_name' => $this->h5p_resultinfo(),
+            'file_path' => $this->h5p_activity_result(),
+            'file_name' => $this->h5p_activity_result(),
         ];
         unset($missingcases['file_path']['parameters']['mod_settings']['file_path']);
         unset($missingcases['file_name']['parameters']['mod_settings']['file_name']);
@@ -386,7 +274,7 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
         }
 
         // No download was attempted and nothing was created.
-        $this->assertNull($capturedendpoint);
+        $this->assertSame([], $calls);
         $this->assertSame(0, $DB->count_records('course_modules', ['course' => $course->id]));
         $this->assertSame(0, $DB->count_records('h5pactivity'));
     }
@@ -405,11 +293,10 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
         $this->set_current_course($course);
 
         // Corrupt content: not a readable zip archive.
-        $endpoint = null;
-        $filename = null;
-        $this->inject_download_client($endpoint, $filename, 'corrupt bytes, not a zip archive');
+        $calls = [];
+        $this->inject_download_client($calls, 'corrupt bytes, not a zip archive');
         try {
-            create_mod_service::create_from_ai_result($this->h5p_resultinfo(), $course, 1);
+            create_mod_service::create_from_ai_result($this->h5p_activity_result(), $course, 1);
             $this->fail('An exception was expected for a corrupt package.');
         } catch (moodle_exception $e) {
             $this->assertStringContainsString(
@@ -419,9 +306,9 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
         }
 
         // Readable zip, but without the h5p.json manifest of an H5P package.
-        $this->inject_download_client($endpoint, $filename, h5p_package_fixture::bytes_without_manifest());
+        $this->inject_download_client($calls, h5p_package_fixture::bytes_without_manifest());
         try {
-            create_mod_service::create_from_ai_result($this->h5p_resultinfo(), $course, 1);
+            create_mod_service::create_from_ai_result($this->h5p_activity_result(), $course, 1);
             $this->fail('An exception was expected for a zip without h5p.json.');
         } catch (moodle_exception $e) {
             $this->assertStringContainsString(
@@ -432,7 +319,7 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
 
         // Wrong extension: the package must be a .h5p file.
         $this->inject_download_client();
-        $resultinfo = $this->h5p_resultinfo([], [
+        $resultinfo = $this->h5p_activity_result([], [
             'file_path' => 'generated/packages/sample-activity.zip',
             'file_name' => 'sample-activity.zip',
         ]);
@@ -474,7 +361,7 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
         api_client_factory::set_test_client($mock);
 
         try {
-            create_mod_service::create_from_ai_result($this->h5p_resultinfo(), $course, 1);
+            create_mod_service::create_from_ai_result($this->h5p_activity_result(), $course, 1);
             $this->fail('An exception was expected when the package download fails.');
         } catch (moodle_exception $e) {
             $this->assertStringContainsString('Connection refused', $e->getMessage());
@@ -490,7 +377,7 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
      * an error and the rest of the course keeps being created.
      */
     public function test_course_flow_continues_after_h5p_download_failure(): void {
-        global $DB, $USER;
+        global $DB;
 
         $this->resetAfterTest();
         $this->setAdminUser();
@@ -507,7 +394,7 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
                 if ($calls === 1) {
                     throw new moodle_exception('curlerror', 'aiprovider_datacurso', '', 'Connection refused');
                 }
-                return $this->create_draft_package_file($filename);
+                return $this->create_draft_file($filename);
             }
         );
         api_client_factory::set_test_client($mock);
@@ -517,14 +404,9 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
         // so any current course with a section 0 satisfies the form.
         $this->set_current_course($this->getDataGenerator()->create_course());
 
-        $session = new course_session(0, (object) [
-            'userid' => $USER->id,
+        $session = $this->getDataGenerator()->get_plugin_generator('local_coursegen')->create_course_session([
             'session_id' => 'sess-int004',
-            'status' => course_session::STATUS_PENDING,
-            'timecreated' => time(),
-            'timemodified' => time(),
         ]);
-        $session->create();
 
         $resultdata = [
             'course_configuration' => [
@@ -532,8 +414,8 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
                 'shortname' => 'aicourse-int004',
             ],
             'generated_activities' => [
-                $this->h5p_resultinfo(['name' => 'Failing H5P']),
-                $this->h5p_resultinfo(['name' => 'Surviving H5P']),
+                $this->h5p_activity_result(['name' => 'Failing H5P']),
+                $this->h5p_activity_result(['name' => 'Surviving H5P']),
             ],
         ];
 
@@ -566,7 +448,7 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
         $course = $this->getDataGenerator()->create_course();
         $this->inject_download_client();
 
-        $resultinfo = $this->h5p_resultinfo(['modulename' => 'fakemodule']);
+        $resultinfo = $this->h5p_activity_result(['modulename' => 'fakemodule']);
         $resultinfo['resource_type'] = 'fakemodule';
 
         try {
@@ -598,7 +480,7 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
         $DB->set_field('modules', 'visible', 0, ['name' => 'h5pactivity']);
 
         try {
-            create_mod_service::create_from_ai_result($this->h5p_resultinfo(), $course, 1);
+            create_mod_service::create_from_ai_result($this->h5p_activity_result(), $course, 1);
             $this->fail('An exception was expected for a disabled module type.');
         } catch (moodle_exception $e) {
             $this->assertStringContainsString(
@@ -626,7 +508,7 @@ final class h5p_create_from_ai_result_test extends \advanced_testcase {
         $this->set_current_course($course);
         $this->inject_download_client();
 
-        $resultinfo = $this->h5p_resultinfo(['gradepass' => 80]);
+        $resultinfo = $this->h5p_activity_result(['gradepass' => 80]);
         $newcm = create_mod_service::create_from_ai_result($resultinfo, $course, 1);
 
         $record = $DB->get_record('h5pactivity', ['id' => $newcm->instance], '*', MUST_EXIST);

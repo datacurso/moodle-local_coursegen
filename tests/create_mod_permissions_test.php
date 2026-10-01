@@ -16,11 +16,9 @@
 
 namespace local_coursegen;
 
-use aiprovider_datacurso\httpclient\ai_course_api;
-use core\context\user;
-use local_coursegen\local\api_client_factory;
-use local_coursegen\local\service\ai_course_api_service;
+use local_coursegen\external\create_mod;
 use local_coursegen\local\service\module_job_service;
+use local_coursegen\tests\api_testcase;
 
 /**
  * Permission tests for creating the H5P activity through the generator.
@@ -35,105 +33,19 @@ use local_coursegen\local\service\module_job_service;
  * @covers     \local_coursegen\external\create_mod
  */
 #[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\external\create_mod::class)]
-final class create_mod_permissions_test extends \advanced_testcase {
+final class create_mod_permissions_test extends api_testcase {
     /**
-     * Load the testable subclass fixture.
+     * Give the front page real section rows.
      */
     protected function setUp(): void {
         parent::setUp();
-        require_once(__DIR__ . '/fixtures/testable_create_mod.php');
-        require_once(__DIR__ . '/fixtures/h5p_package_fixture.php');
 
-        // Note: external_api::validate_context() resets the page to the site course,
-        // so the module edit form resolves section info against the front page.
-        // Give the front page the section rows a real site has.
+        // The module edit form resolves section info through the global $COURSE,
+        // which is the site course here. Give the front page the section rows a
+        // real site has.
         global $CFG;
         require_once($CFG->dirroot . '/course/lib.php');
         course_create_sections_if_missing(get_site(), [0, 1]);
-    }
-
-    /**
-     * Reset the injected doubles between tests.
-     */
-    protected function tearDown(): void {
-        testable_create_mod::$mockservice = null;
-        api_client_factory::set_test_client(null);
-        parent::tearDown();
-    }
-
-    /**
-     * Inject an ai_course_api mock whose download_file() returns a real draft file.
-     *
-     * @return void
-     */
-    private function inject_download_client(): void {
-        $mock = $this->getMockBuilder(ai_course_api::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['download_file'])
-            ->getMock();
-
-        $mock->method('download_file')->willReturnCallback(
-            function (string $endpoint, string $filename): \stored_file {
-                global $USER;
-
-                $fs = get_file_storage();
-                $record = (object) [
-                    'contextid' => user::instance($USER->id)->id,
-                    'component' => 'user',
-                    'filearea' => 'draft',
-                    'itemid' => file_get_unused_draft_itemid(),
-                    'filepath' => '/',
-                    'filename' => $filename,
-                ];
-
-                return $fs->create_file_from_string($record, h5p_package_fixture::bytes());
-            }
-        );
-
-        api_client_factory::set_test_client($mock);
-    }
-
-    /**
-     * Inject an ai_course_api_service mock returning the given activity result.
-     *
-     * @param array $result Activity result payload returned by get_activity_result().
-     * @return void
-     */
-    private function inject_api_service(array $result): void {
-        $service = $this->getMockBuilder(ai_course_api_service::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['get_activity_result'])
-            ->getMock();
-        $service->method('get_activity_result')->willReturn($result);
-
-        testable_create_mod::$mockservice = $service;
-    }
-
-    /**
-     * Build an AI activity result payload for an H5P activity.
-     *
-     * @return array
-     */
-    private function h5p_activity_result(): array {
-        return [
-            'resource_type' => 'h5pactivity',
-            'parameters' => [
-                'modulename' => 'h5pactivity',
-                'name' => 'AI generated H5P',
-                'introeditor' => ['text' => '<p>AI generated intro</p>', 'format' => FORMAT_HTML, 'itemid' => 0],
-                'visible' => 1,
-                'cmidnumber' => '',
-                'grade' => 100,
-                'grademethod' => 1,
-                'gradepass' => 70,
-                'enabletracking' => 1,
-                'reviewmode' => 1,
-                'mod_settings' => [
-                    'file_path' => 'generated/packages/sample-activity.h5p',
-                    'file_name' => 'sample-activity.h5p',
-                ],
-            ],
-        ];
     }
 
     /**
@@ -152,10 +64,10 @@ final class create_mod_permissions_test extends \advanced_testcase {
         $this->setUser($teacher);
 
         module_job_service::create_job($course->id, $teacher->id, 'job-ok', 0, null, null, 1, null, 'completed');
-        $this->inject_api_service($this->h5p_activity_result());
+        $this->inject_api_service(['get_activity_result' => $this->h5p_activity_result()]);
         $this->inject_download_client();
 
-        $result = testable_create_mod::execute($course->id, 1, 'job-ok');
+        $result = create_mod::execute($course->id, 1, 'job-ok');
         // One pre-existing developer notice: execute_parameters() declares
         // top-level VALUE_OPTIONAL values instead of VALUE_DEFAULT.
         $this->assertDebuggingCalledCount(1);
@@ -184,10 +96,10 @@ final class create_mod_permissions_test extends \advanced_testcase {
         $this->setUser($student);
 
         module_job_service::create_job($course->id, $student->id, 'job-denied', 0, null, null, 1, null, 'completed');
-        $this->inject_api_service($this->h5p_activity_result());
+        $this->inject_api_service(['get_activity_result' => $this->h5p_activity_result()]);
         $this->inject_download_client();
 
-        $result = testable_create_mod::execute($course->id, 1, 'job-denied');
+        $result = create_mod::execute($course->id, 1, 'job-denied');
         // One pre-existing developer notice from execute_parameters() plus the
         // debugging call from the permission failure handler.
         $this->assertDebuggingCalledCount(2);

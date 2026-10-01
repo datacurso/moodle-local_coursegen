@@ -26,9 +26,9 @@ use core_external\external_value;
 use local_coursegen\event\generation_denied;
 use local_coursegen\event\generation_failed;
 use local_coursegen\event\generation_job_started;
+use local_coursegen\local\api_client_factory;
 use local_coursegen\local\h5p_core_api;
 use local_coursegen\local\image_generation\image_policy_builder;
-use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_context_service;
 use local_coursegen\local\service\filetype_catalog_service;
 use local_coursegen\local\service\module_job_service;
@@ -159,7 +159,7 @@ class create_mod_stream extends external_api {
                 $payload['h5p_core_api'] = $h5pcoreapi;
             }
 
-            $apiservice = static::get_api_service();
+            $apiservice = api_client_factory::ai_course_api_service();
             $result = $apiservice->start_activity($payload);
 
             if (!isset($result['thread_id'])) {
@@ -237,18 +237,6 @@ class create_mod_stream extends external_api {
                 'message' => get_string('error_generating_resource', 'local_coursegen'),
             ];
         }
-    }
-
-    /**
-     * Build the AI course API service used by this endpoint.
-     *
-     * Extracted as a protected factory so PHPUnit tests can override it
-     * through a testable subclass (late static binding).
-     *
-     * @return ai_course_api_service
-     */
-    protected static function get_api_service(): ai_course_api_service {
-        return new ai_course_api_service();
     }
 
     /**

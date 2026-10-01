@@ -30,7 +30,7 @@ use core_external\external_api;
 use core_external\external_function_parameters;
 use core_external\external_single_structure;
 use core_external\external_value;
-use local_coursegen\local\service\ai_course_api_service;
+use local_coursegen\local\api_client_factory;
 use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
 
@@ -86,7 +86,7 @@ class create_course extends external_api {
         $session = course_session_service::get_user_session($recordid, $USER->id);
 
         // Fetch the AI-generated result data from the Datacurso API.
-        $apiservice = new ai_course_api_service();
+        $apiservice = api_client_factory::ai_course_api_service();
         $result = $apiservice->get_course_result((string)$session->get('session_id'));
         $resultdata = $result['result'] ?? [];
 
