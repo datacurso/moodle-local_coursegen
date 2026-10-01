@@ -165,14 +165,22 @@ class template_export_service {
     /**
      * One real activity's own entry.
      *
+     * A template saved before a mold needed a placeholder can still hold a
+     * mold with none, and the AI service rejects it, so it stops the build
+     * here, before anything is sent.
+     *
      * @param \cm_info $cm
      * @param string $action
      * @return array
+     * @throws \moodle_exception When the activity is a template with no placeholder.
      */
     private static function real_activity_entry($cm, string $action): array {
         $cmid = (int) $cm->id;
         $uid = template_export_uids::random_uid();
         $parameters = template_activity_export::parameters_for($cm);
+        if ($action === template_activity::ACTION_TEMPLATE) {
+            template_placeholder_guard::assert_parameters($cm, $parameters);
+        }
         return [
             'resource_type' => $cm->modname,
             'uid' => $uid,
