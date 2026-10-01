@@ -27,31 +27,6 @@ use local_coursegen\local\models\course_session;
  */
 class course_session_service {
     /**
-     * Create a new course session from the given course form data.
-     *
-     * @param \stdClass $data Validated course form data.
-     * @param int $userid User ID owning the session.
-     * @param string $sessionid External session identifier.
-     * @return course_session
-     */
-    public static function create_from_form_data(\stdClass $data, int $userid, string $sessionid): course_session {
-        $courseid = !empty($data->id) ? (int)$data->id : null;
-
-        $record = (object) [
-            'courseid' => $courseid,
-            'userid' => $userid,
-            'session_id' => $sessionid,
-            'status' => course_session::STATUS_PENDING,
-            'coursedata' => json_encode($data, JSON_UNESCAPED_UNICODE),
-        ];
-
-        $session = new course_session(0, $record);
-        $session->create();
-
-        return $session;
-    }
-
-    /**
      * Update the status of a course session.
      *
      * @param int $id Session record ID.

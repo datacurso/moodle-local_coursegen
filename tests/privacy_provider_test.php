@@ -591,7 +591,7 @@ final class privacy_provider_test extends provider_testcase {
         global $DB;
         $record = new stdClass();
         $record->courseid = $courseid;
-        $record->context_type = ai_context::CONTEXT_TYPE_SYSTEM_INSTRUCTION;
+        $record->context_type = 'system_instruction';
         $record->system_instruction_id = $systeminstructionid;
         $record->timecreated = time();
         $record->timemodified = time();
@@ -655,7 +655,7 @@ final class privacy_provider_test extends provider_testcase {
         $record->job_id = 'job_' . bin2hex(random_bytes(4));
         $record->status = 'execution_started';
         $record->generate_images = 0;
-        $record->context_type = ai_context::CONTEXT_TYPE_SYSTEM_INSTRUCTION;
+        $record->context_type = 'system_instruction';
         $record->system_instruction_name = 'Test system instruction';
         $record->sectionnum = 1;
         $record->beforemod = null;

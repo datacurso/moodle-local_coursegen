@@ -156,40 +156,4 @@ class course_planning_service {
             'message' => get_string('courseai_init_success', 'local_coursegen'),
         ];
     }
-
-    /**
-     * Build a user-friendly course title from a free-form prompt.
-     *
-     * @param string $prompt Free-form prompt from the courseai.
-     * @param string $lang Language code from request context.
-     * @return string
-     */
-    private static function build_course_title_from_prompt(string $prompt, string $lang = 'es'): string {
-        $normalized = trim((string)preg_replace('/\s+/u', ' ', $prompt));
-
-        if ($normalized === '') {
-            return get_string('createwithai', 'local_coursegen');
-        }
-
-        $topic = trim((string)\core_text::substr($normalized, 0, 180));
-
-        if ($lang === 'en') {
-            return 'Course: ' . $topic;
-        }
-
-        return 'Curso: ' . $topic;
-    }
-
-    /**
-     * Build a temporary shortname for the session payload.
-     *
-     * Final semantic shortname is provided by `course_configuration` and
-     * normalized at course creation time.
-     *
-     * @param int $userid Current user id.
-     * @return string
-     */
-    private static function build_initial_shortname(int $userid): string {
-        return 'courseai-' . $userid . '-' . time();
-    }
 }

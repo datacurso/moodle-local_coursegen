@@ -19,10 +19,6 @@ namespace local_coursegen\mod_parameters;
 use aiprovider_datacurso\httpclient\ai_course_api;
 use local_coursegen\local\api_client_factory;
 
-defined('MOODLE_INTERNAL') || die();
-
-require_once(__DIR__ . '/../fixtures/aiprovider_datacurso_stub.php');
-
 /**
  * Unit tests for folder_parameters — filepath normalisation, the empty-files no-op and the
  * download request built for each generated file.

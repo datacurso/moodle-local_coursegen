@@ -20,12 +20,12 @@ body { background: var(--bg); color: var(--fg); }
   --success:      hsl(142, 70%, 40%);
   --success-fg:   hsl(0, 0%, 100%);
   --radius:       0.75rem;
-  /* Semantic tokens (ui-refactor §7) */
+  /* Semantic tokens */
   --danger:        hsl(10 81% 48%);   --danger-soft:   hsl(10 81% 48% / .10);
   --info:          hsl(212 90% 50%); --info-soft:     hsl(212 90% 50% / .10);
   --success-strong: hsl(142 70% 40%); --success-soft: hsl(142 70% 40% / .14);
   --warn:          hsl(38 92% 50%);  --warn-soft:     hsl(38 92% 50% / .14);
-  /* Motion tokens (ui-refactor §8) */
+  /* Motion tokens */
   --t-fast:   120ms;
   --t-base:   200ms;
   --t-slow:   320ms;
@@ -346,32 +346,6 @@ svg { display: block; flex-shrink: 0; }
   display: flex;
   align-items: center;
   gap: 2px;
-}
-
-.tbar-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 0 10px;
-  height: 32px;
-  border-radius: 7px;
-  border: none;
-  background: transparent;
-  font-size: 13px;
-  color: var(--muted-fg);
-  cursor: pointer;
-  font-family: inherit;
-  transition: background .12s, color .12s;
-  line-height: 1;
-}
-.tbar-btn:hover { background: hsl(215, 25%, 90%); color: var(--fg); }
-
-.tbar-sep {
-  width: 1px;
-  height: 18px;
-  background: var(--border);
-  margin: 0 2px;
-  flex-shrink: 0;
 }
 
 /* Language select */
@@ -889,15 +863,6 @@ svg { display: block; flex-shrink: 0; }
   text-align: center;
 }
 
-.planning-loading-spinner {
-  width: 40px;
-  height: 40px;
-  border: 3.5px solid hsl(215, 20%, 88%);
-  border-top-color: var(--primary);
-  border-radius: 50%;
-  animation: spin 0.8s linear infinite;
-}
-
 .planning-loading-text {
   font-size: 15px;
   font-weight: 600;
@@ -997,45 +962,10 @@ svg { display: block; flex-shrink: 0; }
   opacity: .7;
 }
 
-/* Reload overlay — spans the two-column workspace */
-.cg-resume-skeleton {
-  display: grid;
-  grid-template-columns: clamp(280px, 440px, 620px) 10px minmax(0, 1fr);
-  gap: 0;
-  padding: 24px 0;
-  width: 100%;
-}
-
-.cg-resume-skeleton__side {
-  display: flex;
-  flex-direction: column;
-  padding: 8px 24px 8px 4px;
-  border-right: 1px solid var(--border, hsl(215 20% 88%));
-}
-
-.cg-resume-skeleton__main {
-  grid-column: 3;
-  padding: 8px 4px 8px 24px;
-}
-
 /* First-generation center skeleton — a left-aligned card stack in the center
    column, shown while the first instruction streams. */
 .cg-center-skeleton {
   padding: 8px 2px;
-}
-
-@media (max-width: 900px) {
-  .cg-resume-skeleton {
-    grid-template-columns: 1fr;
-  }
-  .cg-resume-skeleton__side {
-    border-right: 0;
-    border-bottom: 1px solid var(--border, hsl(215 20% 88%));
-  }
-  .cg-resume-skeleton__main {
-    grid-column: 1;
-    padding-left: 4px;
-  }
 }
 
 .planning-stream-content {
@@ -1413,109 +1343,6 @@ svg { display: block; flex-shrink: 0; }
   transition: background .2s ease, border-color .2s ease, opacity .2s ease;
 }
 
-@keyframes ps-skeleton-shimmer {
-  0% { background-position: 200% 0; }
-  100% { background-position: -200% 0; }
-}
-
-.ps-skeleton-line {
-  display: block;
-  border-radius: 4px;
-  background: linear-gradient(90deg, hsl(210 15% 88%) 25%, hsl(210 20% 94%) 50%, hsl(210 15% 88%) 75%);
-  background-size: 200% 100%;
-  animation: ps-skeleton-shimmer 2.4s linear infinite;
-}
-
-.ps-skeleton-line--section {
-  width: clamp(160px, 45%, 340px);
-  height: 16px;
-}
-
-.ps-skeleton-line--activity {
-  width: 100%;
-  height: 14px;
-}
-
-.ps-activity--pending {
-  background: hsl(210 20% 95%);
-  border-color: hsl(210 20% 90%);
-  opacity: .9;
-}
-
-.ps-activity--pending .ps-badge {
-  display: none;
-}
-
-.ps-activity--pending .ps-badge-text {
-  visibility: hidden;
-}
-
-.ps-activity--pending .ps-activity-name {
-  color: transparent;
-  display: block;
-  width: 100%;
-  height: 14px;
-  text-indent: -9999px;
-  overflow: hidden;
-  border-radius: 4px;
-  background: linear-gradient(90deg, hsl(210 15% 88%) 25%, hsl(210 20% 94%) 50%, hsl(210 15% 88%) 75%);
-  background-size: 200% 100%;
-  animation: ps-skeleton-shimmer 2.4s linear infinite;
-}
-
-.ps-section--pending .ps-section-name {
-  color: transparent;
-}
-
-.ps-activity--in_progress {
-  background: var(--muted);
-  border-color: transparent;
-}
-
-.ps-activity--done {
-  background: var(--muted);
-  border-color: transparent;
-}
-
-.ps-status-indicator {
-  flex: 0 0 18px;
-  width: 18px;
-  height: 18px;
-  border-radius: 50%;
-  border: 2px solid var(--border);
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  flex-shrink: 0;
-  margin-top: 4px;
-}
-
-.ps-status-indicator svg {
-  width: 10px;
-  height: 10px;
-  fill: none;
-  display: none;
-}
-
-.ps-status-indicator .check-icon {
-  stroke: var(--fg);
-  stroke-width: 3;
-}
-
-.ps-status-indicator .spinner-icon {
-  stroke: var(--muted-fg);
-  stroke-width: 2.5;
-  animation: courseai-spin .8s linear infinite;
-}
-
-.ps-status-indicator--in_progress svg.spinner-icon {
-  display: block;
-}
-
-.ps-status-indicator--done svg.check-icon {
-  display: block;
-}
-
 .ps-activity-info {
   display: flex;
   align-items: center;
@@ -1532,22 +1359,6 @@ svg { display: block; flex-shrink: 0; }
   font-weight: 600;
   color: var(--fg);
   line-height: 1.3;
-}
-
-.ps-image-progress {
-  display: inline-flex;
-  align-items: center;
-  width: fit-content;
-  margin-top: 0;
-  margin-left: 8px;
-  flex-shrink: 0;
-  white-space: nowrap;
-  padding: 1px 7px;
-  border-radius: 999px;
-  font-size: 11px;
-  font-weight: 600;
-  color: hsl(215 26% 32%);
-  background: hsl(215 24% 88%);
 }
 
 .ps-activity-desc {
@@ -1591,12 +1402,6 @@ svg { display: block; flex-shrink: 0; }
   line-height: 1;
   color: var(--muted-fg, hsl(215 16% 42%));
 }
-
-/* Soft per-purpose tint on the icon chip only (Moodle-like, calm). */
-.dp-purpose-content .ps-badge-icon       { background: hsl(170 55% 90%); }
-.dp-purpose-assessment .ps-badge-icon    { background: hsl(10 81% 92%); }
-.dp-purpose-collaboration .ps-badge-icon { background: hsl(142 50% 90%); }
-.dp-purpose-communication .ps-badge-icon { background: hsl(38 80% 90%); }
 
 /* ─────────────────────────────────────────────────────────────
    §3  Preview panel — Moodle topics-format course view
@@ -1838,12 +1643,6 @@ svg { display: block; flex-shrink: 0; }
   line-height: 1.5;
 }
 
-.prv-section-meta-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-}
-
 .prv-chevron {
   flex-shrink: 0;
   color: var(--muted-fg);
@@ -1883,15 +1682,6 @@ svg { display: block; flex-shrink: 0; }
 .prv-activity-item:focus-visible {
   outline: none;
   box-shadow: none;
-}
-
-.prv-activity-item--pending {
-  opacity: .32;
-}
-
-.prv-activity-item--done {
-  opacity: 1;
-  animation: fade-in-up .22s ease both;
 }
 
 .prv-activity-text {
@@ -2696,16 +2486,6 @@ svg { display: block; flex-shrink: 0; }
   margin-bottom: 12px;
 }
 
-.courseai-chat-history-label {
-  display: block;
-  font-size: 10px;
-  font-weight: 700;
-  letter-spacing: .06em;
-  text-transform: uppercase;
-  color: var(--muted-fg);
-  margin-bottom: 6px;
-}
-
 /* User message bubble — calm neutral, not pink */
 .courseai-chat-message--user {
   background: var(--muted);
@@ -2732,11 +2512,6 @@ svg { display: block; flex-shrink: 0; }
 /* Checklist items */
 .courseai-checklist {
   margin-top: 10px;
-}
-/* The uppercase "COURSE SECTIONS" label is gone in §7.1; if any legacy round
-   checklist still emits one, keep it hidden so the thread stays label-free. */
-.courseai-checklist-label {
-  display: none;
 }
 .courseai-checklist-list {
   list-style: none;
@@ -2831,7 +2606,7 @@ svg { display: block; flex-shrink: 0; }
 }
 body.cg-execution-stopped .btn-compact-regenerate { display: none; }
 
-/* ─── Reduced-motion override (ui-refactor §8) ────────────────────────── */
+/* ─── Reduced-motion override ───────────────────────────────────────── */
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after {
     animation-duration: .01ms !important;
@@ -2840,7 +2615,7 @@ body.cg-execution-stopped .btn-compact-regenerate { display: none; }
   }
 }
 
-/* ─── Mark animations (ui-refactor §7 / §8) ──────────────────────────── */
+/* ─── Mark animations ──────────────────────────────────────────────── */
 
 /* danger flash: pulse outline + soft background, holds for --hold-mark */
 @keyframes cg-flash-danger {

@@ -32,9 +32,9 @@ namespace local_coursegen\mod_settings;
 class workshop_settings extends base_settings {
     /** @var int[] Map of AI phase tokens to workshop phase constants (setup is the default, closed unsupported). */
     private const PHASE_MAP = [
-        'submission' => 20, // \workshop::PHASE_SUBMISSION.
-        'assessment' => 30, // \workshop::PHASE_ASSESSMENT.
-        'evaluation' => 40, // \workshop::PHASE_EVALUATION.
+        'submission' => 20, // Value of \workshop::PHASE_SUBMISSION.
+        'assessment' => 30, // Value of \workshop::PHASE_ASSESSMENT.
+        'evaluation' => 40, // Value of \workshop::PHASE_EVALUATION.
     ];
 
     /**

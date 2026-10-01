@@ -20,7 +20,6 @@ use local_coursegen\mod_settings\base_settings;
 use local_coursegen\utils\text_editor_parameter_cleaner;
 
 defined('MOODLE_INTERNAL') || die();
-require_once($CFG->dirroot . '/course/externallib.php');
 require_once($CFG->dirroot . '/course/modlib.php');
 
 /**

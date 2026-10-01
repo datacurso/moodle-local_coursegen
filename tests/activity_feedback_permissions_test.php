@@ -21,10 +21,6 @@ use local_coursegen\external\activity_feedback;
 use local_coursegen\local\api_client_factory;
 use local_coursegen\local\service\module_job_service;
 
-defined('MOODLE_INTERNAL') || die();
-
-require_once(__DIR__ . '/fixtures/aiprovider_datacurso_stub.php');
-
 /**
  * Permission and error contract of the activity feedback web service.
  *

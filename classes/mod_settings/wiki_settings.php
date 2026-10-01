@@ -70,7 +70,7 @@ class wiki_settings extends base_settings {
         $firstpagecontent = '';
         foreach ($pages as $page) {
             $title = $page['title'];
-            // [[Title]] is the wiki-link syntax in all formats; only wrap in <p> for HTML.
+            // The [[Title]] form is the wiki-link syntax in all formats; only wrap in <p> for HTML.
             if ($this->wikiformat === 'html') {
                 $firstpagecontent .= "<p>[[{$title}]]</p>\n";
             } else {

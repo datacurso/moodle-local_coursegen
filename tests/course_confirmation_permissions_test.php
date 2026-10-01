@@ -19,10 +19,8 @@ namespace local_coursegen;
 use local_coursegen\external\course_planning_feedback;
 use local_coursegen\external\create_course;
 use local_coursegen\external\get_course_session_state;
-use local_coursegen\external\regenerate_detailed_item;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\ai_course_api_service;
-use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
 
 /**
@@ -41,7 +39,6 @@ use local_coursegen\local\service\create_course_service;
  * @covers     \local_coursegen\external\get_course_settings
  * @covers     \local_coursegen\external\course_planning_feedback
  * @covers     \local_coursegen\external\get_course_session_state
- * @covers     \local_coursegen\external\regenerate_detailed_item
  * @covers     \local_coursegen\local\service\create_course_service
  *
  * @runTestsInSeparateProcesses
@@ -73,11 +70,14 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
      * @return course_session
      */
     private function create_session(int $userid): course_session {
-        return course_session_service::create_from_form_data(
-            (object) ['fullname' => 'Planned course'],
-            $userid,
-            'thread-test-1'
-        );
+        $session = new course_session();
+        $session->set('userid', $userid);
+        $session->set('session_id', 'thread-test-1');
+        $session->set('status', course_session::STATUS_PENDING);
+        $session->set('coursedata', json_encode(['fullname' => 'Planned course']));
+        $session->create();
+
+        return $session;
     }
 
     /**
@@ -210,22 +210,6 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
     }
 
     /**
-     * A user without the capabilities is rejected by regenerate_detailed_item
-     * even for a session they own.
-     */
-    public function test_regenerate_detailed_item_rejects_user_without_capabilities(): void {
-        $this->resetAfterTest();
-
-        $user = $this->getDataGenerator()->create_user();
-        $this->setUser($user);
-        $session = $this->create_session($user->id);
-
-        $this->assert_requires_capability(static function () use ($session): void {
-            regenerate_detailed_item::execute((int) $session->get('id'), 'section', 0);
-        }, 'regenerate_detailed_item');
-    }
-
-    /**
      * A user holding course:create in one category only is offered exactly that
      * category by get_course_settings.
      */
@@ -340,9 +324,6 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
             },
             'get_course_session_state' => static function () use ($recordid): void {
                 get_course_session_state::execute($recordid);
-            },
-            'regenerate_detailed_item' => static function () use ($recordid): void {
-                regenerate_detailed_item::execute($recordid, 'section', 0);
             },
         ];
 

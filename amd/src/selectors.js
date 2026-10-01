@@ -22,29 +22,15 @@
  */
 
 export const regions = {
-    root: "[data-region='local_coursegen/aicoursecreation/root']",
-    status: "[data-region='local_coursegen/aicoursecreation/status']",
     output: "[data-region='local_coursegen/aicoursecreation/output']",
-    threadId: "[data-region='local_coursegen/aicoursecreation/threadid']",
-    chat: "[data-region='local_coursegen/aicoursecreation/chat']",
-    feedbackPanel: "[data-region='local_coursegen/aicoursecreation/feedbackpanel']",
-    feedbackText: "[data-region='local_coursegen/aicoursecreation/feedbacktext']",
-    btnAccept: "[data-region='local_coursegen/aicoursecreation/btnaccept']",
-    btnRevise: "[data-region='local_coursegen/aicoursecreation/btnrevise']",
-    btnFetchResult: "[data-region='local_coursegen/aicoursecreation/fetchresult']",
 };
 
 export const activityRegions = {
     root: "[data-region='local_coursegen/activity/root']",
     userMessages: "[data-region='local_coursegen/activity/user_messages']",
     streamingSection: "[data-region='local_coursegen/activity/streaming']",
-    form: "[data-region='local_coursegen/activity/form']",
-    promptTextarea: "[data-region='local_coursegen/activity/prompt']",
-    uploadButton: "[data-region='local_coursegen/activity/upload']",
     selectedFile: "[data-region='local_coursegen/activity/selectedfile']",
     selectedFileName: "[data-region='local_coursegen/activity/selectedfile_name']",
-    removeSelectedFileButton: "[data-region='local_coursegen/activity/selectedfile_remove']",
-    sendButton: "[data-region='local_coursegen/activity/send']",
 };
 
 export const imageGenerationRegions = {

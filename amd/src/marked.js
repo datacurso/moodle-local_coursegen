@@ -1,3 +1,4 @@
+/*! marked v17.0.3 - https://github.com/markedjs/marked */
 // This file is part of Moodle - http://moodle.org/
 //
 // Moodle is free software: you can redistribute it and/or modify

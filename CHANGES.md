@@ -1,4 +1,4 @@
-## 2.0.6
+## 2.0.7
 
 **Released on:** Unreleased
 
@@ -27,6 +27,20 @@
   `create_mod_stream` validated its parameters inside the error handler, so a malformed request produced a generic failure reply and a false `generation_failed` event. Parameter validation now runs before the handler and `invalid_parameter_exception` propagates, as in `create_mod`.
 - **Privacy metadata covers everything sent to the AI service**  
   The external service location now also declares the feedback text, the files uploaded to activity generation jobs and the session/job identifier, the file storage subsystem is linked for uploaded files, and the provider test checks every `install.xml` table and field, and every referenced language string.
+
+## Changed
+
+- **Dead code removed**  
+  Removed the unused `ai_context` class, the unregistered `regenerate_detailed_item` web service, the `aicoursecreation_page` and `add_activity_ai_label` templates, unused private helpers in the chat hook and the planning/session services, the editor-cleaner `clean_editor_parameters()` helper, unused DOM selector keys and exports in `amd/src`, orphaned CSS rules (`styles.css`, `styles/*.css`), about seventy unused language strings in every language pack, the PHPUnit provider stub (the provider is a hard dependency), an unreferenced test PDF and screenshot, and the TODO / UI refactor planning notes. The backend `string_id` catalog those notes carried now lives in `_docs/backend_string_catalog.md`. `amd/build` must be rebuilt.
+
+## 2.0.6
+
+**Released on:** 2026-09-30
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.2**.
+
+## Fixed
+
 - **"Create with AI" button missing on My courses in Moodle 5.2**  
   Moodle 5.2 moved the "Manage courses" and "Create course" buttons from the My courses page header into the Course overview block, so the plugin no longer found the header container it injected its button into and the button silently disappeared for users with enrolled courses. The button is now spliced server side into the page HTML by a `before_http_headers` hook, which starts the output buffer once the page URL, context and login are known (the previous `after_config` buffering ran before any of them were set). It is placed next to core's course action buttons in the page header (Moodle 4.5/5.0), right after the "Create course" form inside the Course overview block (Moodle 5.2) or in the empty-state action bar (all versions), so it is part of the initial page response and does not depend on JavaScript.
 - **Bootstrap 5 compatibility on Moodle 5.0+**  

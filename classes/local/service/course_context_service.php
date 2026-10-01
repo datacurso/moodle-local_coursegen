@@ -27,8 +27,7 @@ class course_context_service {
     /**
      * Get AI course context info from database for the given course.
      *
-     * This mirrors the information previously obtained via ai_context::get_course_context_info
-     * but using the persistent model/service layer.
+     * Reads the row through the persistent model/service layer.
      *
      * @param int $courseid Course ID.
      * @return \stdClass|null Object with context_type, lang and name (system instruction name) when available.

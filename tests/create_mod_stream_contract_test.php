@@ -22,10 +22,6 @@ use local_coursegen\local\models\module_job;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\create_mod_service;
 
-defined('MOODLE_INTERNAL') || die();
-
-require_once(__DIR__ . '/fixtures/aiprovider_datacurso_stub.php');
-
 /**
  * Contract tests for the individual activity generation request and result.
  *
@@ -110,9 +106,8 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
 
     /**
      * When a course context row exists, its type and system instruction name
-     * must reach the persisted module job (the name normalisation was lost in
-     * the migration from the legacy ai_context class: the service aliases the
-     * column as system_instruction_name, not name).
+     * must reach the persisted module job (the service aliases the column as
+     * system_instruction_name, not name).
      */
     public function test_course_context_reaches_the_stored_job(): void {
         global $DB, $USER;

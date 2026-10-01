@@ -8,3 +8,10 @@
 *.svg text eol=lf
 *.pdf binary
 *.zip binary
+
+# Development-only paths excluded from release archives (git archive).
+.github export-ignore
+.gitattributes export-ignore
+.gitignore export-ignore
+Jenkinsfile.moodleplugin export-ignore
+_docs export-ignore

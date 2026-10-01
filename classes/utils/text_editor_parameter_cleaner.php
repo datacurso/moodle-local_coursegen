@@ -353,24 +353,4 @@ class text_editor_parameter_cleaner {
 
         return $cleaned;
     }
-
-    /**
-     * Clean text editor parameters for a list of activities.
-     *
-     * @param array $activities Array of activities with parameters to clean
-     * @return array Activities with cleaned text editor parameters
-     */
-    public static function clean_editor_parameters($activities) {
-        if (!is_array($activities)) {
-            return $activities;
-        }
-
-        foreach ($activities as $index => $activity) {
-            if (isset($activity['parameters']) && is_array($activity['parameters'])) {
-                $activities[$index]['parameters'] = self::clean_text_editor_objects($activity['parameters']);
-            }
-        }
-
-        return $activities;
-    }
 }

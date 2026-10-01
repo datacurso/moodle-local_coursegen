@@ -19,10 +19,6 @@ namespace local_coursegen\utils;
 use aiprovider_datacurso\httpclient\ai_course_api;
 use local_coursegen\local\api_client_factory;
 
-defined('MOODLE_INTERNAL') || die();
-
-require_once(__DIR__ . '/../fixtures/aiprovider_datacurso_stub.php');
-
 /**
  * Tests for the generated image download performed while cleaning editor text.
  *

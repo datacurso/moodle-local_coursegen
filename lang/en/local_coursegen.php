@@ -26,7 +26,6 @@
 defined('MOODLE_INTERNAL') || die();
 
 $string['accept_planning_create_activity'] = 'Accept and create activity';
-$string['accept_planning_create_course'] = 'Accept and create course';
 $string['actions'] = 'Actions';
 $string['activities_deleted'] = 'Deleted {$a->count} activity(ies) from the plan.';
 $string['activities_reordered'] = 'Activities reordered.';
@@ -42,8 +41,6 @@ $string['activity_completed'] = 'Activity generated successfully.';
 $string['activity_data'] = 'Database';
 $string['activity_data_part_intro'] = 'Generate images for the database activity introduction.';
 $string['activity_failed'] = 'Activity generation failed.';
-
-// HTTP errors.
 $string['activity_feedback'] = 'Feedback';
 $string['activity_feedback_part_intro'] = 'Generate images for the feedback activity introduction.';
 $string['activity_feedback_part_label'] = 'Generate images for label items in the feedback activity.';
@@ -93,55 +90,32 @@ $string['activityai_status_plan_accepted_generating'] = 'Plan accepted. Generati
 $string['activityai_status_retrying'] = 'Retrying...';
 $string['activityai_status_waiting_review'] = 'Waiting for your review.';
 $string['addactivityai_arialabel'] = 'AI assistant to create resources/activities';
-$string['addactivityai_done'] = 'Done! The resource/activity was created.';
-$string['addactivityai_error'] = 'An error occurred while creating the resource. Please try again or modify the prompt.';
-$string['addactivityai_faildefault'] = 'It was not possible to create the resource.';
 $string['addactivityai_label'] = 'Describe what you need';
 $string['addactivityai_modaltitle'] = 'Create resource/activity with AI';
 $string['addactivityai_placeholder'] = 'Describe what resource or activity you want to create';
 $string['addactivityai_welcome'] = 'Hi! Tell me what resource or activity you need and I will create it in your course. 😊';
 $string['addactivitywithia'] = 'Add activity or resource with AI';
-$string['addcourseai_arialabel'] = 'AI assistant to create courses';
-$string['addcourseai_done'] = 'Done! The course was created successfully.';
-$string['addcourseai_modaltitle'] = 'Create course with AI';
 $string['addsysteminstruction'] = 'Add system instruction';
 $string['adjust_course_planning'] = 'Adjust course planning';
-$string['adjust_planning_title'] = 'Adjust course planning';
 $string['ai_course_configuration'] = 'Course: {$a->fullname}';
 $string['ai_planned_structure'] = 'Here is the structure I planned for your course';
 $string['analyzing_activity_plan'] = 'Analyzing activity plan structure...';
-
-// Generation errors.
 $string['analyzing_feedback'] = 'Analyzing your feedback…';
 $string['assembling_feedback'] = 'Assembling final Feedback package...';
 $string['assembling_quiz'] = 'Assembling final Quiz package...';
 $string['assembling_workshop_assessment'] = 'Assembling the peer-assessment settings...';
-
-// Content generators — errors.
 $string['book_config_ready'] = 'Book configuration ready. Generating {$a->total} chapters...';
 $string['clarification'] = '{$a->question}';
 $string['clarification_fallback'] = 'Could you point at the exact section or activity you mean, and what you would like to change?';
-
-// Run lifecycle.
-$string['click_to_view_details'] = 'Click to view details';
 $string['close'] = 'Close';
 $string['closebuttontitle'] = 'Close course creator';
 $string['config_permissions'] = 'Configuration permissions';
 $string['config_permissions_desc'] = 'Define whether global image generation rules can be overridden at course or activity level. When overrides are disabled, users will see the global behaviour as read-only in course and activity settings.';
 $string['confirmdeletesysteminstruction'] = 'Are you sure you want to delete this system instruction?';
-$string['context_type_system_instruction'] = 'System instruction';
-$string['course_ai_language'] = 'AI response language';
-$string['course_ai_language_help'] = 'Select the language in which the AI will respond and generate the course content.';
 $string['course_completed'] = 'Course generated successfully.';
-$string['course_created_success'] = 'Course created successfully!';
-$string['course_created_success_simple'] = '✅ Course created successfully';
 $string['course_creating_subtitle'] = 'Generating course content...';
-$string['course_creating_title'] = 'Creating the course';
 $string['course_failed'] = 'Course generation failed.';
 $string['course_planning_started'] = 'Course planning session started successfully.';
-$string['course_streaming_loading'] = 'Loading...';
-$string['course_streaming_planning_subtitle'] = 'Generating course content...';
-$string['course_streaming_planning_title'] = 'Planning course creation';
 $string['courseai_activities_count'] = 'activities';
 $string['courseai_activity_assign'] = 'Assignment';
 $string['courseai_activity_book'] = 'Book';
@@ -187,7 +161,6 @@ $string['courseai_btn_syllabus'] = 'Syllabus';
 $string['courseai_btn_syllabus_title'] = 'Attach syllabus (PDF, DOCX, TXT)';
 $string['courseai_category_general'] = 'General';
 $string['courseai_chapters_label'] = 'chapters';
-$string['courseai_checklist_label'] = 'Course sections';
 $string['courseai_checklist_section_count'] = '{$a} sections';
 $string['courseai_chip_remove_guideline'] = 'Remove guideline';
 $string['courseai_chip_remove_syllabus'] = 'Remove syllabus';
@@ -205,11 +178,6 @@ $string['courseai_course_creating'] = 'Plan completed. Creating the course in Mo
 $string['courseai_course_creating_subtitle'] = 'Generating course content...';
 $string['courseai_decision_accept'] = 'Accept';
 $string['courseai_decision_adjust'] = 'Adjust';
-
-// Server-side thread log (single source of truth). These string_ids match the
-// service Message names (lowercased) carried in snapshot.thread[].content.string_id
-// and are localized by string_id + string_args. AI-output blocks (ai_planned_structure)
-// show content.string (the full pre-rendered plan text), so the label here is secondary.
 $string['courseai_decision_still_accept'] = 'Changed your mind? You can still accept the current plan.';
 $string['courseai_decision_subtitle'] = 'Your plan is ready. Accept it to generate the course, or adjust it to refine the structure.';
 $string['courseai_decision_title'] = 'Review your course plan';
@@ -245,11 +213,9 @@ $string['courseai_image_count_many'] = '{count} images';
 $string['courseai_image_count_one'] = '{count} image';
 $string['courseai_images_arialabel'] = 'Include images';
 $string['courseai_images_label'] = 'Images';
-$string['courseai_images_select_all'] = 'Select all images';
 $string['courseai_images_suggested_label'] = 'suggested images';
 $string['courseai_images_title'] = 'Include image suggestions in the course';
 $string['courseai_init_success'] = 'Course creation session started successfully';
-$string['courseai_initial_prompt_label'] = 'Initial message';
 $string['courseai_lang_arialabel'] = 'Language';
 $string['courseai_lang_menu_label'] = 'Language';
 $string['courseai_lang_search_placeholder'] = 'Search language…';
@@ -267,7 +233,6 @@ $string['courseai_log_ai_planned_structure'] = 'Here is the structure I planned 
 $string['courseai_log_ai_proposals_ready'] = 'I prepared a few suggestions for you. Review them and choose how you want to continue.';
 $string['courseai_log_ai_review_ready'] = 'I finished planning your course. Take a look at the plan and tell me if you want any changes.';
 $string['courseai_log_ai_review_updated'] = 'I applied your changes. Take a look and tell me if you want anything else.';
-$string['courseai_log_ai_section'] = 'AI planned section';
 $string['courseai_log_ai_thinking'] = 'Analyzing your request...';
 $string['courseai_log_ai_working'] = 'The assistant is working...';
 $string['courseai_log_deleted_activity'] = 'You deleted activity: {$a}';
@@ -279,8 +244,6 @@ $string['courseai_log_moved_activity'] = 'You moved "{$a->title}" to position {$
 $string['courseai_log_moved_section'] = 'You moved section "{$a->name}" to position {$a->position}';
 $string['courseai_log_proposal_applied'] = 'You applied';
 $string['courseai_log_proposals_dismissed'] = 'You dismissed suggestions';
-// Chat-thread completeness sweep (TODO-v2 §7.3 d): every server milestone and
-// user action surfaces as a turn; transient progress uses one live indicator.
 $string['courseai_log_regenerated_activity'] = 'You regenerated activity';
 $string['courseai_log_regenerated_section'] = 'You regenerated section: {$a}';
 $string['courseai_log_reordered_activities'] = 'You reordered the activities in: {$a}';
@@ -319,8 +282,6 @@ $string['courseai_prompt_arialabel'] = 'Course description';
 $string['courseai_prompt_placeholder'] = 'Example: Create an introductory Python course for first-year engineering, 8 weeks, focused on computational thinking and weekly practical exercises...';
 $string['courseai_proposals_clarification_label'] = 'I need a bit more detail';
 $string['courseai_proposals_destructive_badge'] = 'Deletes content';
-
-// Planning controls — add and drag-and-drop reorder (§7).
 $string['courseai_proposals_fallen_label'] = 'No longer possible';
 $string['courseai_proposals_other_label'] = 'Something else';
 $string['courseai_proposals_other_placeholder'] = 'Describe what you want instead…';
@@ -329,21 +290,10 @@ $string['courseai_prv_live_note'] = 'Showing real-time detailed planning progres
 $string['courseai_prv_sub_init'] = 'Starting…';
 $string['courseai_questions_label'] = 'questions';
 $string['courseai_resize_panels'] = 'Resize panels';
-
-// Decision log (§4).
 $string['courseai_review_cancel'] = 'Cancel';
 $string['courseai_review_category_label'] = 'Category';
 $string['courseai_review_category_loading'] = 'Loading categories...';
 $string['courseai_review_confirm'] = 'Create course';
-
-// =====================================================================
-// Backend message catalog — mirrors the service i18n catalog 1:1.
-// The backend streams { string_id, string, string_args }; the client
-// localizes by string_id and falls back to the sent `string`.
-// `string_args` keys map to the {$a->...} placeholders below.
-// =====================================================================
-
-// Interpreted-feedback proposals (single-choice summaries).
 $string['courseai_review_fullname_label'] = 'Course name';
 $string['courseai_review_fullname_placeholder'] = 'Enter the course full name';
 $string['courseai_review_shortname_label'] = 'Short name';
@@ -355,7 +305,6 @@ $string['courseai_review_title'] = 'Review course details';
 $string['courseai_section_label'] = 'Section {section}: {name}';
 $string['courseai_section_progress_no_total'] = 'Activities · {description}';
 $string['courseai_section_progress_with_total'] = '{done}/{total} activities · {description}';
-$string['courseai_sessions_backbtn'] = 'Back';
 $string['courseai_sessions_continuebtn'] = 'Continue';
 $string['courseai_sessions_empty'] = 'You have no courses yet.';
 $string['courseai_sessions_newbtn'] = 'New course';
@@ -402,7 +351,6 @@ $string['coursegen:managesysteminstructions'] = 'Manage system instructions';
 $string['coursegen:view_syllabus'] = 'View syllabus';
 $string['createwithai'] = 'Create with AI';
 $string['creating_activity'] = 'Creating a new activity…';
-$string['creating_course'] = 'Creating Course...';
 $string['creating_section'] = 'Creating a new section…';
 $string['datacurso_service_url'] = 'DataCurso service URL';
 $string['datacurso_service_url_desc'] = 'Default URL for the DataCurso AI service (standard region).';
@@ -453,51 +401,33 @@ $string['enabled'] = 'Enabled';
 $string['enablesubsections'] = 'Enable subsections';
 $string['enablesubsections_desc'] = 'Allow the AI course creator to organise course sections into subsections (requires the Subsection activity module to be enabled).';
 $string['enablesubsections_error_moddisabled'] = 'The AI subsections feature cannot be enabled because the Subsection activity module (mod_subsection) is disabled on this site. Enable it in Site administration > Plugins > Activity modules > Manage activities and try again.';
-$string['enter_message'] = 'Enter your message';
 $string['error'] = 'Error';
 $string['error_activity_creation_failed'] = 'This activity could not be created.';
 $string['error_api_response'] = 'Invalid response from AI service';
-$string['error_context_type_required'] = 'Please select a context type to continue (Syllabus or Custom prompt).';
 $string['error_course_creation_failed'] = 'The course could not be created. Please try again later.';
-$string['error_creating_course'] = '❌ Error creating course';
-$string['error_executing_plan'] = 'Error executing the course plan';
 $string['error_file_save_failed'] = 'The file could not be saved';
 $string['error_generating_chapter'] = 'Error generating Chapter {$a->step}: {$a->error}. Skipping.';
 $string['error_generating_feedback_question'] = 'Error generating question {$a->step}. Skipping.';
 $string['error_generating_quiz_question'] = 'Error generating Q{$a->step}. Skipping.';
 $string['error_generating_resource'] = 'There was a problem generating the requested resource. Please try again later.';
 $string['error_https_required'] = 'The service URL must use HTTPS. Plain HTTP is only allowed for localhost or 127.0.0.1 while developer debugging is enabled.';
-$string['error_invalid_coursedata'] = 'Stored course data for this planning session is invalid.';
 $string['error_invalid_package'] = 'The generated package is not valid: {$a}. Please try generating the resource again.';
 $string['error_invalid_resource_type'] = 'Could not find a valid resource type from AI response: {$a}. Please try again.';
 $string['error_invalid_session'] = 'Invalid session';
 $string['error_job_already_used'] = 'This generation job has already been used to create an activity. Start a new generation to create another one.';
-$string['error_label'] = 'Error';
-$string['error_missing_category'] = 'The course category is missing from the stored course data.';
 $string['error_missing_package_info'] = 'The AI response does not include the package file information (file_path/file_name) required to create this resource. Please try again.';
 $string['error_missing_parameters'] = 'Could not get parameters to create the module from the AI response. Please try again.';
 $string['error_missing_resource_type'] = 'Could not get the resource type from the AI response. Please try again.';
 $string['error_module_disabled'] = 'The activity type "{$a}" is disabled on this site. Ask the administrator to enable it before generating this resource.';
-$string['error_no_course_id'] = 'Could not get course ID';
-$string['error_no_coursedata_found'] = 'No stored course data was found for this planning session.';
 $string['error_no_file_uploaded'] = 'No file was uploaded';
 $string['error_no_module_job_found'] = 'No module generation job was found for this course and user.';
 $string['error_no_session_found'] = 'No planning session found for this course and user.';
-$string['error_no_system_instructions_configured'] = 'There are no system instructions configured. Please create system instructions first in the Manage system instructions page.';
 $string['error_not_your_session'] = 'This session does not belong to you';
 $string['error_planning_activity'] = 'Error planning {$a->type} \'{$a->title}\': {$a->error}';
-
-// Review interrupts and clarification.
 $string['error_processing_activity'] = 'Major error processing activity \'{$a->title}\': {$a->error}';
-$string['error_processing_request'] = 'Error processing your request';
-$string['error_prompt_required'] = 'You must provide a prompt when the context type is "Custom prompt".';
-$string['error_saving_session'] = 'Failed to save the planning session. Please try again.';
 $string['error_sending_activity_file'] = 'Error uploading file to AI activity session';
 $string['error_sending_feedback'] = 'Error sending feedback to AI planning session';
-$string['error_sending_message'] = 'Error sending message';
 $string['error_starting_course_planning'] = 'There was an error starting the course planning. Please try again';
-$string['error_syllabus_pdf_required'] = 'You must upload a Syllabus PDF when the context type is "Syllabus".';
-$string['error_system_instruction_required'] = 'Please select a system instruction when the "Use system instruction" option is enabled.';
 $string['error_upload_failed'] = 'Failed to upload syllabus';
 $string['error_upload_failed_system_instruction'] = 'Failed to upload system instruction';
 $string['event_external_transfer_initiated'] = 'File sent to external AI service';
@@ -505,10 +435,6 @@ $string['event_generation_denied'] = 'AI generation denied';
 $string['event_generation_failed'] = 'AI generation failed';
 $string['event_generation_job_started'] = 'AI generation job started';
 $string['event_generation_result_applied'] = 'AI generation result applied';
-$string['execution_activity_done'] = '✅ Activity completed ({$a->done}/{$a->total}) — {$a->percent}%';
-$string['execution_activity_start'] = '🧩 Starting activity #{$a->index} (section {$a->section}): {$a->title}';
-$string['execution_error_activity'] = '❌ Error in an activity';
-$string['execution_progress'] = '📈 Progress: {$a->done}/{$a->total} ({$a->percent}%)';
 $string['failed_assignment_params'] = 'Failed to generate Assignment parameters';
 $string['failed_book_params'] = 'Failed to generate Book parameters';
 $string['failed_choice_params'] = 'Failed to generate Choice parameters: {$a->error}';
@@ -525,8 +451,6 @@ $string['failed_resource_params'] = 'Failed to generate Resource parameters';
 $string['failed_url_params'] = 'Failed to generate URL parameters';
 $string['failed_wiki_structure'] = 'Failed to plan Wiki structure';
 $string['failed_workshop_params'] = 'Failed to generate Workshop parameters';
-
-// Proposals UI — free-text feedback interpretation.
 $string['feedback_blueprint_ready'] = 'Feedback blueprint ready. Generating {$a->total} questions...';
 $string['folder_ready'] = 'Folder ready: \'{$a->name}\'';
 $string['forum_ready'] = 'Forum ready: \'{$a->name}\'';
@@ -542,8 +466,6 @@ $string['generating_images'] = 'Generating images...';
 $string['generating_initial_structure'] = 'Generating initial course structure…';
 $string['generating_quiz_question'] = 'Generating Q{$a->step}/{$a->total} ({$a->type}): \'{$a->question}\'...';
 $string['generating_workshop'] = 'Generating Workshop (Taller) content for: {$a->title}...';
-
-// Content generators — progress / ready.
 $string['generation_rules'] = 'Generation rules';
 $string['generation_rules_desc'] = 'Enable or disable automatic image generation for each supported activity type and define their prompts.';
 $string['global_ai_policies_desc'] = 'Configure when and how AI-generated images are created for course content.';
@@ -595,11 +517,7 @@ $string['help_maximages_wiki_pages'] = 'Wiki pages images';
 $string['help_maximages_wiki_pages_help'] = 'Maximum number of AI-generated images allowed across ALL wiki pages. If set to 0, the AI will not generate any images here.';
 $string['help_maximages_workshop_intro'] = 'Workshop intro images';
 $string['help_maximages_workshop_intro_help'] = 'Maximum number of AI-generated images allowed for the workshop introduction. If set to 0, the AI will not generate any images in this section.';
-$string['help_part_maximages'] = 'Maximum images per part';
-$string['help_part_maximages_help'] = 'Controls the maximum number of AI images for this activity part. Set to 0 for no images.';
 $string['images_generated'] = 'Images generated';
-
-// Activity-graph status.
 $string['intent_requires_parent'] = 'action \'{$a->action}\' requires a valid parent_section_id';
 $string['intent_requires_targets'] = 'action \'{$a->action}\' requires target_ids';
 $string['intent_single_target'] = 'action \'{$a->action}\' accepts at most one target';
@@ -643,35 +561,15 @@ $string['mode_disabled'] = 'Disabled';
 $string['mode_disabled_desc'] = 'The AI will not generate any images for activities in this mode.';
 $string['mode_manual'] = 'Manual';
 $string['mode_manual_desc'] = 'Configure manually, per activity type, where images will be generated and how many for each part.';
-$string['module_creation_subtitle'] = 'Please wait while the content is generated';
-$string['module_creation_title'] = 'Creating module...';
-$string['module_streaming_add_error'] = 'Could not add the activity to the course.';
-$string['module_streaming_add_problem'] = 'There was a problem adding the activity';
-$string['module_streaming_added_success'] = '✅ Activity added to course correctly!';
-$string['module_streaming_complete'] = '🎉 Your activity has been created successfully!';
-$string['module_streaming_creation_error'] = '⚠️ An error occurred during activity creation';
-$string['module_streaming_images_done'] = '✅ Images generated correctly';
-$string['module_streaming_images_start'] = '🎨 Creating custom images...';
-$string['module_streaming_output_start'] = '⚙️ Finalizing and preparing activity...';
-$string['module_streaming_parameters_done'] = '✅ Configuration applied';
-$string['module_streaming_parameters_start'] = '🔧 Applying activity configuration...';
-$string['module_streaming_schema_done'] = '✅ Content structure ready';
-$string['module_streaming_schema_start'] = '📋 Designing content structure...';
-$string['module_streaming_start'] = '🚀 Starting activity creation...';
 $string['noimages'] = 'Do not generate images';
 $string['nosysteminstructions'] = 'No system instructions found';
 $string['override_activity'] = 'Allow activity override';
-$string['override_activity_desc'] = 'Allow activity settings to override course defaults.';
 $string['override_course'] = 'Allow course override';
-$string['override_course_desc'] = 'Allow course settings to override global image generation defaults.';
 $string['page_ready'] = 'Page ready: \'{$a->name}\'';
 $string['planning_activity'] = 'Planning {$a->type} \'{$a->title}\'…';
-$string['planning_chat_placeholder'] = 'Describe the adjustments you want to make to the course planning...';
-$string['planning_completed'] = 'Planning completed';
 $string['planning_wiki'] = 'Planning Wiki: {$a->title}...';
 $string['pluginname'] = 'Course Creator AI';
 $string['poweredby'] = 'Powered by';
-$string['poweredby_datacurso_arialabel'] = 'Powered by Data Curso LLC';
 $string['privacy:metadata:core_files'] = 'Syllabus files uploaded for course planning and files attached to activity generation jobs are kept in the file storage.';
 $string['privacy:metadata:datacurso_course_service'] = 'Data sent to the external Datacurso course generation service to produce courses and activities.';
 $string['privacy:metadata:datacurso_course_service:activity_file'] = 'Files uploaded by the user to give an activity generation job additional context.';
@@ -743,15 +641,11 @@ $string['proposal_add_activity'] = 'Add an activity to section «{$a->section}»
 $string['proposal_add_section'] = 'Add a section {$a->position}';
 $string['proposal_add_subsection'] = 'Add a subsection to section «{$a->section}» {$a->position}';
 $string['proposal_adjust_all_details'] = 'Regenerate every activity\'s content, keeping the sections';
-
-// Planning pipeline status.
 $string['proposal_delete_activity'] = 'Delete activity(ies): {$a->names}';
 $string['proposal_delete_section'] = 'Delete section(s): {$a->names}';
 $string['proposal_full_regeneration'] = 'Rebuild the WHOLE course structure (previous adjustments are lost)';
 $string['proposal_move_activity'] = 'Move {$a->names} to «{$a->section}» {$a->position}';
 $string['proposal_not_executable'] = 'The chosen proposal is no longer executable: {$a->reason}';
-
-// Content generators — intros.
 $string['proposal_not_found'] = 'unknown or expired proposal: {$a->proposal_id}';
 $string['proposal_reorder_activities'] = 'Reorder the activities to: {$a->names}';
 $string['proposal_reorder_sections'] = 'Reorder the sections to: {$a->names}';
@@ -764,8 +658,6 @@ $string['replanning_activities'] = 'Replanning activity(ies)…';
 $string['replanning_sections'] = 'Replanning section(s)…';
 $string['resource_created'] = 'Resource {$a} created successfully.';
 $string['result_not_ready'] = 'Result not generated yet';
-
-// Validation errors (InvalidIntent → 422).
 $string['retry_exhausted'] = 'The AI service is still busy after {$a->max} attempts. Please retry.';
 $string['retrying'] = 'The AI service is busy — retrying (attempt {$a->attempt} of {$a->max})…';
 $string['review_plan_activity'] = 'Approve this plan or send adjustments.';
@@ -776,11 +668,8 @@ $string['send'] = 'Send';
 $string['session_not_found'] = 'Session not found';
 $string['setting'] = 'Setting';
 $string['settings_error'] = 'An error occurred while saving settings.';
-$string['settings_saved'] = 'Settings saved.';
 $string['status_creating'] = 'Creating';
 $string['status_failed'] = 'Failed';
-
-// Review modal strings.
 $string['status_pending'] = 'Planning';
 $string['subsections_decision_available'] = 'Your request asks for subsections, but the subsections option is off for this course. How do you want to proceed?';
 $string['subsections_decision_unavailable'] = 'Your request asks for subsections, but subsections are not available on this site. How do you want to proceed?';
@@ -814,9 +703,6 @@ $string['tooltip_enable_workshop'] = 'Enable images for workshop introduction an
 $string['tooltip_override_activity'] = 'Enable activity-level overrides.';
 $string['tooltip_override_course'] = 'Enable course-level overrides.';
 $string['transforming_document'] = 'Transforming document into requested file format...';
-$string['unauthorized'] = 'Unauthorized access';
 $string['wiki_ready'] = 'Wiki ready: \'{$a->name}\' with {$a->count} pages.';
 $string['writing_workshop_instructions'] = 'Writing the Workshop instructions and context...';
 $string['yesimages'] = 'Generate images';
-
-// Wizard UI strings.

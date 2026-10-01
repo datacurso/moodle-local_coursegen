@@ -22,8 +22,6 @@ use local_coursegen\local\service\create_mod_service;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once(__DIR__ . '/fixtures/aiprovider_datacurso_stub.php');
-
 require_once(__DIR__ . '/fixtures/h5p_package_fixture.php');
 
 /**
@@ -170,18 +168,5 @@ final class h5pactivity_download_config_test extends \advanced_testcase {
         $this->assertNotNull($urls, 'The download must build its client through the factory.');
         $this->assertNull($urls['baseurl']);
         $this->assertNull($urls['baseurleu']);
-    }
-
-    /**
-     * MDL-INT-009: After deploying a plugin version with new classes, H5P
-     * activity creation works once the site caches are purged.
-     *
-     * Manual deployment procedure (not a pending feature): purging caches
-     * cannot be automated from PHPUnit. With a stale class map the symptom is
-     * now a clear diagnostic error that blocks the package-less creation
-     * (see MDL-UNIT-001, fixed 14/08/2026).
-     */
-    public function test_class_map_purge_after_deployment(): void {
-        $this->markTestSkipped('Procedimiento manual de despliegue: purga de caches');
     }
 }

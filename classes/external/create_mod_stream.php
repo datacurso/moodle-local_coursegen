@@ -34,7 +34,6 @@ use local_coursegen\local\service\module_job_service;
 
 defined('MOODLE_INTERNAL') || die();
 require_once($CFG->libdir . '/externallib.php');
-require_once($CFG->dirroot . '/course/externallib.php');
 
 /**
  * Start streaming job to create module with AI and store job/thread id.
