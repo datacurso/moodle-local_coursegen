@@ -34,21 +34,21 @@ class h5p_core_api {
      *
      * When the version cannot be resolved, null is returned and the request
      * simply travels without the field: the service falls back to its
-     * most-compatible library set and the generation continues.
+     * most-compatible library set and the generation continues. The failure
+     * is recorded as a generation warning (see warning_collector).
      *
      * @return string|null Version as "major.minor", or null when unresolvable.
      */
     public static function resolve(): ?string {
-        try {
+        $version = null;
+        warning_collector::attempt(function () use (&$version): void {
             (new \core_h5p\factory())->get_core(); // Ensures the active H5P handler is autoloaded.
             $coreapi = \core_h5p\core::$coreApi; // phpcs:ignore moodle.NamingConventions.ValidVariableName
             if (!empty($coreapi['majorVersion'])) {
-                return $coreapi['majorVersion'] . '.' . $coreapi['minorVersion'];
+                $version = $coreapi['majorVersion'] . '.' . $coreapi['minorVersion'];
             }
-        } catch (\Throwable $e) {
-            debugging('local_coursegen: could not resolve H5P core API: ' . $e->getMessage(), DEBUG_DEVELOPER);
-        }
+        }, warning_collector::STEP_H5P_VERSION);
 
-        return null;
+        return $version;
     }
 }

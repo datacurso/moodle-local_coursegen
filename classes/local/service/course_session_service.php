@@ -43,15 +43,20 @@ class course_session_service {
     }
 
     /**
-     * Get a course planning session for the given user.
+     * Load a planning session the given user owns, or fail as "not found".
      *
-     * @param int $id Session record ID.
-     * @param int $userid User ID.
+     * Ownership is the only access rule for a session: a foreign session is
+     * indistinguishable from a missing one, even for an administrator, so its
+     * existence is never disclosed.
+     *
+     * @param int $recordid Session record ID.
+     * @param int $userid User ID that must own the session.
      * @return course_session
+     * @throws moodle_exception error_no_session_found when the session is missing or owned by someone else.
      */
-    public static function get_user_session(int $id, int $userid): course_session {
+    public static function require_owned_session(int $recordid, int $userid): course_session {
         $session = course_session::get_record([
-            'id' => $id,
+            'id' => $recordid,
             'userid' => $userid,
         ]);
 
@@ -60,6 +65,19 @@ class course_session_service {
         }
 
         return $session;
+    }
+
+    /**
+     * Get a course planning session for the given user.
+     *
+     * Alias of require_owned_session() kept for existing callers.
+     *
+     * @param int $id Session record ID.
+     * @param int $userid User ID.
+     * @return course_session
+     */
+    public static function get_user_session(int $id, int $userid): course_session {
+        return self::require_owned_session($id, $userid);
     }
 
     /**

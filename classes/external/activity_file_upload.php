@@ -32,6 +32,7 @@ use core_external\external_api;
 use core_external\external_function_parameters;
 use core_external\external_single_structure;
 use core_external\external_value;
+use local_coursegen\local\access;
 use local_coursegen\local\api_client_factory;
 use local_coursegen\local\service\module_job_service;
 
@@ -78,8 +79,7 @@ class activity_file_upload extends external_api {
 
         // Same flow, same credits: gate this step of the AI generation behind
         // the same capabilities as create_mod_stream/create_mod.
-        require_capability('moodle/course:manageactivities', $context);
-        require_capability('local/coursegen:createactivitywithai', $context);
+        access::require_activity_creation($context);
 
         $job = module_job_service::get_user_job($jobid, $courseid, $USER->id);
         $threadid = $job->get('job_id');

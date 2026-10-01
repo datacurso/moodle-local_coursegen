@@ -22,6 +22,7 @@ use core_external\external_function_parameters;
 use core_external\external_single_structure;
 use core_external\external_value;
 use local_coursegen\event\generation_failed;
+use local_coursegen\local\access;
 use local_coursegen\local\service\course_planning_service;
 
 /**
@@ -81,8 +82,7 @@ class start_course_planning extends external_api {
 
         $context = system::instance();
         self::validate_context($context);
-        require_capability('moodle/course:create', $context);
-        require_capability('local/coursegen:createcoursewithai', $context);
+        access::require_course_creation($context);
 
         try {
             return course_planning_service::start_course_planning(

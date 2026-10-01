@@ -87,6 +87,50 @@ final class course_session_service_test extends \advanced_testcase {
     }
 
     /**
+     * require_owned_session() returns the owner's session and is what get_user_session() delegates to.
+     */
+    public function test_require_owned_session_returns_own_session(): void {
+        $this->resetAfterTest();
+
+        $owner = $this->getDataGenerator()->create_user();
+        $session = $this->create_session(['userid' => $owner->id, 'session_id' => 'thread-owned']);
+
+        $found = course_session_service::require_owned_session((int)$session->get('id'), (int)$owner->id);
+
+        $this->assertEquals($session->get('id'), $found->get('id'));
+        $this->assertSame('thread-owned', $found->get('session_id'));
+    }
+
+    /**
+     * A foreign session is reported as not found by require_owned_session(), even to an admin.
+     */
+    public function test_require_owned_session_rejects_foreign_session(): void {
+        $this->resetAfterTest();
+
+        $owner = $this->getDataGenerator()->create_user();
+        $session = $this->create_session(['userid' => $owner->id]);
+
+        try {
+            course_session_service::require_owned_session((int)$session->get('id'), (int)get_admin()->id);
+            $this->fail('A foreign session must not be returned.');
+        } catch (moodle_exception $e) {
+            $this->assertSame('error_no_session_found', $e->errorcode);
+            $this->assertSame('local_coursegen', $e->module);
+        }
+    }
+
+    /**
+     * A missing session id raises the same error from require_owned_session().
+     */
+    public function test_require_owned_session_rejects_missing_session(): void {
+        $this->resetAfterTest();
+
+        $this->expectException(moodle_exception::class);
+        $this->expectExceptionMessage(get_string('error_no_session_found', 'local_coursegen'));
+        course_session_service::require_owned_session(999999, (int)get_admin()->id);
+    }
+
+    /**
      * update_status() stores the new status and bumps timemodified.
      */
     public function test_update_status(): void {

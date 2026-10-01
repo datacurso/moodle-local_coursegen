@@ -19,6 +19,7 @@ namespace local_coursegen\local\service;
 use core\context\course;
 use core\context\coursecat;
 use core\context\system;
+use core\exception\moodle_exception;
 use core_course_category;
 use local_coursegen\event\generation_failed;
 use local_coursegen\event\generation_result_applied;
@@ -142,7 +143,7 @@ class create_course_service {
             }
 
             if ($remainingorphans > 0 || $missingmodinfocms > 0) {
-                throw new \Exception('Course structure is inconsistent after module creation.');
+                throw new moodle_exception('error_course_structure_inconsistent', 'local_coursegen');
             }
 
             // Update session status to created.

@@ -16,8 +16,11 @@
 
 namespace local_coursegen\local\service;
 
-use core\exception\coding_exception;
+use core\context\course;
+use core\context\system;
 use core\exception\moodle_exception;
+use local_coursegen\event\generation_warning;
+use local_coursegen\local\warning_collector;
 use local_coursegen\mod_settings\base_settings;
 use local_coursegen\utils\text_editor_parameter_cleaner;
 
@@ -43,26 +46,87 @@ class create_mod_service {
      * @return object New course module.
      */
     public static function create_from_ai_result($resultinfo, $course, $sectionnum, $beforemod = null) {
+        return self::create_from_ai_result_with_warnings($resultinfo, $course, $sectionnum, $beforemod)['cm'];
+    }
 
-        self::validate_resultinfo($resultinfo);
+    /**
+     * Create module from response of AI service and report the non-fatal warnings.
+     *
+     * Steps that fail without invalidating the module (a file that could not be
+     * downloaded, a question that could not be created, ...) are recorded as
+     * warnings: each one triggers a generation_warning event in the course
+     * context and is returned as a short string for the client.
+     *
+     * @param array $resultinfo Result info from response of AI service
+     * @param object $course Course object
+     * @param int $sectionnum Section number where the module will be created
+     * @param int|null $beforemod Before module id where the module will be created
+     *
+     * @return array Array with 'cm' (the new course module) and 'warnings' (string[]).
+     */
+    public static function create_from_ai_result_with_warnings($resultinfo, $course, $sectionnum, $beforemod = null): array {
+        // Warnings are request-scoped: forget anything left by a previous activity.
+        warning_collector::reset();
 
-        $modname = $resultinfo['resource_type'];
+        $modname = is_array($resultinfo) && is_string($resultinfo['resource_type'] ?? null) ? $resultinfo['resource_type'] : '';
+        $settings = null;
+        $warnings = [];
+        try {
+            self::validate_resultinfo($resultinfo);
 
-        self::validate_mod_existence($modname);
+            self::validate_mod_existence($modname);
 
-        [ $module, $context, $cw, $cm, $data ] = prepare_new_moduleinfo_data($course, $modname, $sectionnum);
+            [ $module, $context, $cw, $cm, $data ] = prepare_new_moduleinfo_data($course, $modname, $sectionnum);
 
-        $mform = self::create_mod_form_instance($modname, $data, $cw, $cm, $course);
+            $mform = self::create_mod_form_instance($modname, $data, $cw, $cm, $course);
 
-        $parameters = self::prepare_parameters($modname, $resultinfo['parameters'], $sectionnum, $beforemod, $module->id);
+            $parameters = self::prepare_parameters($modname, $resultinfo['parameters'], $sectionnum, $beforemod, $module->id);
 
-        $newcm = add_moduleinfo($parameters, $course, $mform);
+            $newcm = add_moduleinfo($parameters, $course, $mform);
 
-        $modsettings = $parameters->mod_settings;
+            // Modules without extra settings may omit mod_settings altogether.
+            $modsettings = (array) ($parameters->mod_settings ?? []);
 
-        self::apply_mod_settings($modname, $newcm, $modsettings);
+            // The handler is kept at hand so its warnings are audited even if a later step throws.
+            $settings = self::settings_handler($modname, $newcm, $modsettings);
+            if ($settings !== null) {
+                $settings->add_settings();
+            }
+        } finally {
+            // Whatever happened, the warnings collected so far are audited; when the
+            // creation threw, the exception keeps propagating after the audit.
+            $warnings = array_merge(warning_collector::drain(), $settings !== null ? $settings->get_warnings() : []);
+            self::audit_warnings($course, $modname, $warnings);
+        }
 
-        return $newcm;
+        return [
+            'cm' => $newcm,
+            'warnings' => warning_collector::to_messages($warnings),
+        ];
+    }
+
+    /**
+     * Fire one generation_warning per collected warning in the course context.
+     *
+     * Auditing never masks the generation outcome: a failure here is reported
+     * through debugging() only.
+     *
+     * @param object $course Course object.
+     * @param string $modname Module plugin name ('' when unknown).
+     * @param array $warnings Warning entries.
+     * @return void
+     */
+    private static function audit_warnings($course, string $modname, array $warnings): void {
+        if (empty($warnings)) {
+            return;
+        }
+        try {
+            $context = course::instance((int) $course->id);
+        } catch (\Throwable $e) {
+            debugging('local_coursegen: could not resolve the course context to audit warnings: ' . $e->getMessage());
+            $context = system::instance();
+        }
+        generation_warning::trigger_all($context, $modname, $warnings);
     }
 
     /**
@@ -70,15 +134,15 @@ class create_mod_service {
      *
      * @param array $resultinfo Response payload from the AI service.
      * @return void
-     * @throws \Exception If resource_type or parameters are missing.
+     * @throws moodle_exception If resource_type or parameters are missing.
      */
     private static function validate_resultinfo($resultinfo) {
         if (!isset($resultinfo['resource_type'])) {
-            throw new \Exception(\get_string('error_missing_resource_type', 'local_coursegen'));
+            throw new moodle_exception('error_missing_resource_type', 'local_coursegen');
         }
 
         if (!isset($resultinfo['parameters'])) {
-            throw new \Exception(\get_string('error_missing_parameters', 'local_coursegen'));
+            throw new moodle_exception('error_missing_parameters', 'local_coursegen');
         }
     }
 
@@ -109,15 +173,15 @@ class create_mod_service {
      *
      * @param string $modname Module plugin name.
      * @return void
-     * @throws \Exception If the mod_form file is not found or the module is not installed.
-     * @throws moodle_exception If the module is disabled by the administrator.
+     * @throws moodle_exception If the mod_form file is not found, the module is not installed
+     *                          or it is disabled by the administrator.
      */
     private static function validate_mod_existence($modname) {
         global $DB;
 
         $modmoodleform = self::get_mod_form_file_path($modname);
         if (!file_exists($modmoodleform)) {
-            throw new \Exception(\get_string('error_invalid_resource_type', 'local_coursegen', $modname));
+            throw new moodle_exception('error_invalid_resource_type', 'local_coursegen', '', $modname);
         }
 
         // Existing on disk is not enough: the module must be installed on the
@@ -125,7 +189,7 @@ class create_mod_service {
         // fail halfway (or succeed into an unusable, hidden activity type).
         $module = $DB->get_record('modules', ['name' => $modname]);
         if (!$module) {
-            throw new \Exception(\get_string('error_invalid_resource_type', 'local_coursegen', $modname));
+            throw new moodle_exception('error_invalid_resource_type', 'local_coursegen', '', $modname);
         }
         if ((int) $module->visible !== 1) {
             throw new moodle_exception('error_module_disabled', 'local_coursegen', '', $modname);
@@ -184,14 +248,10 @@ class create_mod_service {
             // A package-type contract (mod_settings carrying file_path/file_name)
             // requires a parameters handler to download and attach the package.
             // Falling through silently would create a contentless activity, so
-            // fail with an internal diagnostic instead (typical cause: stale
-            // class map after deployment; purge the site caches).
+            // fail with a diagnostic instead (typical cause: stale class map
+            // after deployment; purge the site caches).
             if (self::has_package_contract($parameters)) {
-                throw new coding_exception(
-                    'Parameters handler ' . $paramclass . ' does not resolve for a package-type '
-                    . 'result (mod_settings contains file_path/file_name). Refusing to create a '
-                    . 'contentless activity; purge the site caches after deployment.'
-                );
+                throw new moodle_exception('error_parameters_handler_unresolved', 'local_coursegen', '', $paramclass);
             }
             return $parameters;
         }
@@ -250,16 +310,19 @@ class create_mod_service {
     }
 
     /**
-     * Apply post-creation settings via the module settings class, if any.
+     * Build the post-creation settings handler of the module, if any.
+     *
+     * The caller runs add_settings() on the returned instance and reads its
+     * warnings afterwards (also when a later step fails).
      *
      * @param string $modname Module plugin name.
      * @param object $newcm Newly created course module.
-     * @param array|null $modsettings Settings to apply.
-     * @return void
+     * @param array $modsettings Settings to apply.
+     * @return base_settings|null The handler, or null when there is nothing to apply.
      */
-    private static function apply_mod_settings(string $modname, $newcm, ?array $modsettings): void {
+    private static function settings_handler(string $modname, $newcm, array $modsettings): ?base_settings {
         if (empty($modsettings)) {
-            return;
+            return null;
         }
 
         $classpath = self::get_settings_class($modname);
@@ -268,12 +331,10 @@ class create_mod_service {
                 "local_coursegen: mod_settings received for '{$modname}' but no {$classpath} handler exists; settings discarded.",
                 DEBUG_DEVELOPER
             );
-            return;
+            return null;
         }
 
-        /** @var base_settings $modsettingsinstance */
-        $modsettingsinstance = new $classpath($newcm, $modsettings);
-        $modsettingsinstance->add_settings();
+        return new $classpath($newcm, $modsettings);
     }
 
     /**

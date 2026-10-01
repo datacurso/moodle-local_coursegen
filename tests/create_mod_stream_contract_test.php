@@ -16,13 +16,16 @@
 
 namespace local_coursegen;
 
+use core\context\course;
 use core\context\module;
 use core\exception\invalid_parameter_exception;
 use core\exception\moodle_exception;
+use local_coursegen\event\generation_warning;
 use local_coursegen\external\create_mod_stream;
 use local_coursegen\local\models\course_context;
 use local_coursegen\local\models\module_job;
 use local_coursegen\local\service\create_mod_service;
+use local_coursegen\local\warning_collector;
 use local_coursegen\tests\api_testcase;
 
 /**
@@ -468,5 +471,88 @@ final class create_mod_stream_contract_test extends api_testcase {
         });
         $sink->close();
         $this->assertCount(0, $failed, 'A caller error must not be recorded as a generation failure.');
+    }
+
+    /**
+     * A clean start reports an empty warnings list.
+     */
+    public function test_successful_start_reports_no_warnings(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $this->inject_start_activity_service();
+
+        $result = create_mod_stream::execute($course->id, 1, 'Create a page about rocks', 0, null, 'en');
+        $this->resetDebugging();
+
+        $this->assertTrue($result['ok'], 'Start must succeed: ' . ($result['message'] ?? ''));
+        $this->assertSame([], $result['warnings']);
+    }
+
+    /**
+     * A lookup that falls back to a default while building the payload is returned as a localized
+     * warning and audited with generation_warning in the course context (no module name yet).
+     */
+    public function test_payload_fallback_is_reported_and_audited(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $captured = null;
+        $this->inject_start_activity_service($captured);
+        warning_collector::set_test_failure(warning_collector::STEP_H5P_VERSION, new \RuntimeException('no h5p'));
+
+        $sink = $this->redirectEvents();
+        $result = create_mod_stream::execute($course->id, 1, 'Create an H5P activity', 0, null, 'en');
+        // The pre-existing execute_parameters() notice plus the warning.
+        $this->assertDebuggingCalledCount(2);
+
+        $this->assertTrue($result['ok'], 'Start must succeed: ' . ($result['message'] ?? ''));
+        $this->assertArrayNotHasKey('h5p_core_api', $captured);
+        $this->assertSame([get_string('generationwarning_h5p_version', 'local_coursegen')], $result['warnings']);
+        $this->assertStringNotContainsString('no h5p', json_encode($result));
+
+        $events = array_values(array_filter($sink->get_events(), static function (\core\event\base $event): bool {
+            return $event instanceof generation_warning;
+        }));
+        $sink->close();
+        $this->assertCount(1, $events);
+        $this->assertEquals(course::instance($course->id)->id, $events[0]->get_context()->id);
+        $this->assertSame('', $events[0]->other['modname']);
+        $this->assertSame(warning_collector::STEP_H5P_VERSION, $events[0]->other['step']);
+        $this->assertSame('no h5p', $events[0]->other['reason']);
+    }
+
+    /**
+     * Warnings collected before the service call fails are still audited next to the failure.
+     */
+    public function test_warnings_are_audited_when_the_start_fails(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $this->inject_api_service(['start_activity' => new \RuntimeException('service down')]);
+        warning_collector::set_test_failure(warning_collector::STEP_FILETYPE_CATALOG, new \RuntimeException('no groups'));
+
+        $sink = $this->redirectEvents();
+        $result = create_mod_stream::execute($course->id, 1, 'Create a page about rocks', 0, null, 'en');
+        $this->resetDebugging();
+
+        $this->assertFalse($result['ok']);
+        $this->assertArrayNotHasKey('warnings', $result);
+
+        $events = $sink->get_events();
+        $sink->close();
+        $warnings = array_values(array_filter($events, static function (\core\event\base $event): bool {
+            return $event instanceof generation_warning;
+        }));
+        $failures = array_values(array_filter($events, static function (\core\event\base $event): bool {
+            return $event instanceof \local_coursegen\event\generation_failed;
+        }));
+        $this->assertCount(1, $warnings);
+        $this->assertSame(warning_collector::STEP_FILETYPE_CATALOG, $warnings[0]->other['step']);
+        $this->assertCount(1, $failures);
+        $this->assertSame('RuntimeException', $failures[0]->other['reason']);
     }
 }

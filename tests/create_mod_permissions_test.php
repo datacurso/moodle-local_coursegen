@@ -74,6 +74,8 @@ final class create_mod_permissions_test extends api_testcase {
 
         $this->assertTrue($result['ok'], 'Creation must succeed: ' . ($result['message'] ?? ''));
         $this->assertSame('h5pactivity', $result['data']['modname']);
+        // A clean creation reports no warning (the key is always present on success).
+        $this->assertSame([], $result['warnings']);
 
         $records = $DB->get_records('h5pactivity', ['course' => $course->id]);
         $this->assertCount(1, $records);

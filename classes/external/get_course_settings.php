@@ -65,10 +65,14 @@ class get_course_settings extends external_api {
 
         $context = system::instance();
         self::validate_context($context);
+
+        // This endpoint deliberately does not use access::require_course_creation():
+        // the plugin capability is required at system level, but moodle/course:create
+        // is accepted at system level OR in at least one category, because category
+        // level course creators must be offered their categories (the final course
+        // creation then checks moodle/course:create in the chosen category).
         require_capability('local/coursegen:createcoursewithai', $context);
 
-        // Category-level course creators are accepted: the user must hold
-        // moodle/course:create at system level or in at least one category.
         $catlist = \core_course_category::make_categories_list('moodle/course:create');
         if (empty($catlist) && !has_capability('moodle/course:create', $context)) {
             throw new required_capability_exception($context, 'moodle/course:create', 'nopermissions', '');
@@ -77,7 +81,7 @@ class get_course_settings extends external_api {
         $recordid = (int)$params['recordid'];
 
         // Load session (validates ownership).
-        $session = course_session_service::get_user_session($recordid, $USER->id);
+        $session = course_session_service::require_owned_session($recordid, $USER->id);
 
         // Fetch the AI-generated result data from the Datacurso API.
         $apiservice = api_client_factory::ai_course_api_service();

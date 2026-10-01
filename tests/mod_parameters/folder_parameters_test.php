@@ -16,6 +16,10 @@
 
 namespace local_coursegen\mod_parameters;
 
+use aiprovider_datacurso\httpclient\ai_course_api;
+use core\exception\moodle_exception;
+use local_coursegen\local\api_client_factory;
+use local_coursegen\local\warning_collector;
 use local_coursegen\tests\api_testcase;
 
 /**
@@ -84,7 +88,7 @@ final class folder_parameters_test extends api_testcase {
         $this->setAdminUser();
 
         $calls = [];
-        $this->inject_download_client($calls, null, false);
+        $this->inject_download_client($calls, 'pdf bytes');
 
         $params = (object) ['mod_settings' => ['files' => [
             [
@@ -95,6 +99,7 @@ final class folder_parameters_test extends api_testcase {
         ]]];
 
         $out = (new folder_parameters($params))->get_parameters();
+        $this->assertDebuggingNotCalled();
 
         $this->assertCount(1, $calls);
         $this->assertSame('/files/download?path=%2Ftmp%2Fout%2Freport%20v1%26final%232.pdf', $calls[0]['endpoint']);
@@ -105,6 +110,80 @@ final class folder_parameters_test extends api_testcase {
     }
 
     /**
+     * A file that cannot be downloaded is skipped with a warning (debugging at the normal level
+     * and an entry in the warning collector) and the remaining files are still downloaded.
+     */
+    public function test_download_failure_is_recorded_as_warning(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        warning_collector::reset();
+
+        $calls = 0;
+        $mock = $this->getMockBuilder(ai_course_api::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['download_file'])
+            ->getMock();
+        $mock->method('download_file')->willReturnCallback(
+            function (string $endpoint, string $filename, array $filerecord = []) use (&$calls): ?\stored_file {
+                $calls++;
+                if ($calls === 1) {
+                    throw new moodle_exception('curlerror', 'aiprovider_datacurso', '', 'Connection refused');
+                }
+                return $this->create_draft_file($filename, 'pdf bytes', (int) ($filerecord['itemid'] ?? 0));
+            }
+        );
+        api_client_factory::set_test_client($mock);
+
+        $params = (object) ['mod_settings' => ['files' => [
+            ['file_path' => '/tmp/out/first.pdf', 'file_name' => 'first.pdf'],
+            ['file_path' => '/tmp/out/second.pdf', 'file_name' => 'second.pdf'],
+        ]]];
+
+        $out = (new folder_parameters($params))->get_parameters();
+        $this->assertDebuggingCalled(null, DEBUG_NORMAL);
+
+        $this->assertSame(2, $calls);
+        $this->assertGreaterThan(0, $out->files);
+
+        $warnings = warning_collector::drain();
+        $this->assertCount(1, $warnings);
+        $this->assertSame(warning_collector::STEP_FOLDER_FILE, $warnings[0]['step']);
+        $this->assertSame('first.pdf', $warnings[0]['subject']);
+        $this->assertStringContainsString('Connection refused', $warnings[0]['reason']);
+    }
+
+    /**
+     * A download that returns no file is not a silent skip: it is recorded as a warning too.
+     */
+    public function test_download_without_file_is_recorded_as_warning(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        warning_collector::reset();
+
+        $calls = [];
+        $this->inject_download_client($calls, null, false);
+
+        $params = (object) ['mod_settings' => ['files' => [
+            ['file_path' => '/tmp/out/missing.pdf', 'file_name' => 'missing.pdf'],
+        ]]];
+
+        $out = (new folder_parameters($params))->get_parameters();
+        $this->assertDebuggingCalled(null, DEBUG_NORMAL);
+
+        $this->assertCount(1, $calls);
+        $this->assertGreaterThan(0, $out->files);
+
+        $warnings = warning_collector::drain();
+        $this->assertCount(1, $warnings);
+        $this->assertSame(warning_collector::STEP_FOLDER_FILE, $warnings[0]['step']);
+        $this->assertSame('missing.pdf', $warnings[0]['subject']);
+        $this->assertSame(
+            [get_string('generationwarning_folder_file', 'local_coursegen', 'missing.pdf')],
+            warning_collector::to_messages($warnings)
+        );
+    }
+
+    /**
      * A file whose name cleans down to nothing is skipped without aborting the folder.
      */
     public function test_file_with_invalid_name_is_skipped(): void {
@@ -112,7 +191,7 @@ final class folder_parameters_test extends api_testcase {
         $this->setAdminUser();
 
         $calls = [];
-        $this->inject_download_client($calls, null, false);
+        $this->inject_download_client($calls, 'pdf bytes');
 
         $params = (object) ['mod_settings' => ['files' => [
             ['file_path' => '/tmp/out/first.pdf', 'file_name' => '..'],

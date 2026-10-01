@@ -26,6 +26,7 @@ namespace local_coursegen\utils;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
 use local_coursegen\local\api_client_factory;
+use local_coursegen\local\warning_collector;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -250,19 +251,16 @@ class text_editor_parameter_cleaner {
         // Percent-encode (RFC 3986) like the other download endpoints: a space is %20, not '+'.
         $endpoint = '/files/download?path=' . rawurlencode($source);
 
-        try {
+        // A missing image must not abort the activity: the failure is recorded as a
+        // generation warning and the original reference is left in the text.
+        $stored = null;
+        warning_collector::attempt(function () use ($client, $endpoint, $filename, $itemid, &$stored): void {
             $file = $client->download_file($endpoint, $filename, ['itemid' => $itemid]);
-            if (!$file) {
-                $downloadcache[$cachekey] = null;
-                return null;
-            }
-            $downloadcache[$cachekey] = $file->get_filename();
-            return $downloadcache[$cachekey];
-        } catch (\Throwable $exception) {
-            debugging('Could not download generated image: ' . $exception->getMessage(), DEBUG_DEVELOPER);
-            $downloadcache[$cachekey] = null;
-            return null;
-        }
+            $stored = $file ? $file->get_filename() : null;
+        }, warning_collector::STEP_IMAGE_DOWNLOAD, $filename);
+
+        $downloadcache[$cachekey] = $stored;
+        return $stored;
     }
 
     /**
@@ -314,21 +312,17 @@ class text_editor_parameter_cleaner {
      */
     private static function get_ai_course_client(): ?ai_course_api {
         static $client = null;
-        static $initialized = false;
 
-        if ($initialized) {
+        if ($client !== null) {
             return $client;
         }
 
-        $initialized = true;
-        try {
-            $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
-            $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
-            $client = api_client_factory::ai_course_api($baseurl, $baseurleu);
-        } catch (\Throwable $exception) {
-            debugging('Could not initialize AI file client: ' . $exception->getMessage(), DEBUG_DEVELOPER);
-            $client = null;
-        }
+        // Only a built client is cached: a failed initialisation is retried (and
+        // reported as a warning) on every image, so a later activity of the same
+        // course flow does not silently skip its images because of an earlier failure.
+        warning_collector::attempt(function () use (&$client): void {
+            $client = api_client_factory::default_client();
+        }, warning_collector::STEP_CLIENT_INIT);
 
         return $client;
     }

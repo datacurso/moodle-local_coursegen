@@ -73,6 +73,23 @@ class api_client_factory {
     }
 
     /**
+     * Build the AI course API client configured for this site.
+     *
+     * Reads the development override URLs from the plugin configuration
+     * (datacurso_service_url / datacurso_service_url_eu) and delegates to
+     * ai_course_api(), so every caller shares one configuration read and the
+     * same PHPUnit seam.
+     *
+     * @return ai_course_api
+     */
+    public static function default_client(): ai_course_api {
+        $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
+        $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
+
+        return self::ai_course_api($baseurl, $baseurleu);
+    }
+
+    /**
      * Build (or return the injected test double for) the AI course API client.
      *
      * @param string|null $baseurl Optional standard-region base URL override.

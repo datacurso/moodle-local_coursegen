@@ -18,7 +18,6 @@ namespace local_coursegen;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
 use core\context\module;
-use core\exception\coding_exception;
 use core\exception\moodle_exception;
 use local_coursegen\local\api_client_factory;
 use local_coursegen\local\service\create_course_service;
@@ -127,7 +126,8 @@ final class h5p_create_from_ai_result_test extends api_testcase {
         try {
             create_mod_service::create_from_ai_result($resultinfo, $course, 1);
             $this->fail('A diagnostic exception was expected when the parameters handler does not resolve.');
-        } catch (coding_exception $e) {
+        } catch (moodle_exception $e) {
+            $this->assertSame('error_parameters_handler_unresolved', $e->errorcode);
             $this->assertStringContainsString('page_parameters', $e->getMessage());
         }
 

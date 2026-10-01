@@ -23,6 +23,7 @@ use core_external\external_function_parameters;
 use core_external\external_single_structure;
 use core_external\external_value;
 use local_coursegen\event\external_transfer_initiated;
+use local_coursegen\local\access;
 use local_coursegen\local\api_client_factory;
 use local_coursegen\local\service\course_session_service;
 
@@ -65,11 +66,10 @@ class courseai_syllabus_upload extends external_api {
         // Check permissions, like the sibling planning endpoints.
         $context = system::instance();
         self::validate_context($context);
-        require_capability('moodle/course:create', $context);
-        require_capability('local/coursegen:createcoursewithai', $context);
+        access::require_course_creation($context);
 
         // The session must exist and belong to the current user.
-        $session = course_session_service::get_user_session($params['sessionid'], $USER->id);
+        $session = course_session_service::require_owned_session($params['sessionid'], $USER->id);
 
         try {
             $threadid = $session->get('session_id');

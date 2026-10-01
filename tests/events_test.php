@@ -21,7 +21,9 @@ use core\context\system;
 use local_coursegen\external\courseai_syllabus_upload;
 use local_coursegen\external\create_mod;
 use local_coursegen\external\create_mod_stream;
+use local_coursegen\external\start_course_planning;
 use local_coursegen\local\service\module_job_service;
+use local_coursegen\local\warning_collector;
 use local_coursegen\tests\api_testcase;
 
 /**
@@ -38,12 +40,14 @@ use local_coursegen\tests\api_testcase;
  * @covers     \local_coursegen\event\generation_result_applied
  * @covers     \local_coursegen\event\generation_failed
  * @covers     \local_coursegen\event\generation_denied
+ * @covers     \local_coursegen\event\generation_warning
  * @covers     \local_coursegen\event\external_transfer_initiated
  */
 #[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\event\generation_job_started::class)]
 #[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\event\generation_result_applied::class)]
 #[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\event\generation_failed::class)]
 #[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\event\generation_denied::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\event\generation_warning::class)]
 #[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\event\external_transfer_initiated::class)]
 final class events_test extends api_testcase {
     /**
@@ -169,6 +173,98 @@ final class events_test extends api_testcase {
         $event = reset($events);
         // The event carries the localized name of the missing capability.
         $this->assertSame(get_capability_string('moodle/course:manageactivities'), $event->other['capability']);
+    }
+
+    /**
+     * A non-fatal step failure while applying the result fires generation_warning in the course
+     * context and the warning is returned to the client next to the created activity.
+     */
+    public function test_generation_warning_event_on_create_mod(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        global $USER;
+        $course = $this->getDataGenerator()->create_course();
+        $this->set_current_course($course);
+        module_job_service::create_job($course->id, $USER->id, 'job-warn', 0, null, null, 1, null, 'completed');
+
+        $this->inject_api_service(['get_activity_result' => [
+            'resource_type' => 'data',
+            'parameters' => [
+                'modulename' => 'data',
+                'name' => 'Reviews',
+                'introeditor' => ['text' => '<p>Reviews</p>', 'format' => FORMAT_HTML, 'itemid' => 0],
+                'timeavailablefrom' => 0,
+                'timeavailableto' => 0,
+                'timeviewfrom' => 0,
+                'timeviewto' => 0,
+                'assessed' => 0,
+                'scale' => 0,
+                'visible' => 1,
+                'cmidnumber' => '',
+                'mod_settings' => ['fields' => [['type' => 'bogustype', 'name' => 'Odd']]],
+            ],
+        ]]);
+
+        $sink = $this->redirectEvents();
+        $result = create_mod::execute($course->id, 1, 'job-warn');
+        $this->resetDebugging();
+
+        $this->assertTrue($result['ok'], 'Creation must succeed: ' . ($result['message'] ?? ''));
+        $this->assertSame(
+            [get_string('generationwarning_data_field', 'local_coursegen', 'Odd')],
+            $result['warnings']
+        );
+
+        $events = $this->events_of_class($sink, event\generation_warning::class);
+        $this->assertCount(1, $events);
+        $event = reset($events);
+        $this->assertEquals(course::instance($course->id)->id, $event->get_context()->id);
+        $this->assertSame('data', $event->other['modname']);
+        $this->assertSame(warning_collector::STEP_DATA_FIELD, $event->other['step']);
+        $this->assertSame('Odd', $event->other['subject']);
+        $this->assertLessThanOrEqual(warning_collector::REASON_MAX_LENGTH, \core_text::strlen($event->other['reason']));
+        // The activity itself was still created and reported.
+        $this->assertCount(1, $this->events_of_class($sink, event\generation_result_applied::class));
+    }
+
+    /**
+     * A lookup that falls back to a default while preparing the course planning payload fires
+     * generation_warning in the system context (no module yet), and the planning still starts.
+     */
+    public function test_generation_warning_event_on_course_planning_fallback(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        warning_collector::set_test_failure(
+            warning_collector::STEP_FILETYPE_CATALOG,
+            new \RuntimeException('filetypes unavailable')
+        );
+        $captured = null;
+        $this->inject_api_service([
+            'start_course_planning' => function (array $payload) use (&$captured): array {
+                $captured = $payload;
+                return ['thread_id' => 'thread-plan'];
+            },
+            'get_course_streaming_url' => 'https://ai.example.com/api/v1/course/stream/thread-plan',
+        ]);
+
+        $sink = $this->redirectEvents();
+        $result = start_course_planning::execute('Create a short course about volcanoes', 'en');
+        $this->assertDebuggingCalled(null, DEBUG_NORMAL);
+
+        $this->assertTrue($result['success'], 'Planning must start: ' . ($result['message'] ?? ''));
+        $this->assertIsArray($captured);
+        $this->assertArrayNotHasKey('filetype_groups', $captured);
+
+        $events = $this->events_of_class($sink, event\generation_warning::class);
+        $this->assertCount(1, $events);
+        $event = reset($events);
+        $this->assertEquals(system::instance()->id, $event->get_context()->id);
+        $this->assertSame('', $event->other['modname']);
+        $this->assertSame(warning_collector::STEP_FILETYPE_CATALOG, $event->other['step']);
+        $this->assertSame('filetypes unavailable', $event->other['reason']);
+        $this->assertCount(1, $this->events_of_class($sink, event\generation_job_started::class));
     }
 
     /**

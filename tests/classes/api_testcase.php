@@ -21,6 +21,7 @@ use core\context\user;
 use local_coursegen\h5p_package_fixture;
 use local_coursegen\local\api_client_factory;
 use local_coursegen\local\service\ai_course_api_service;
+use local_coursegen\local\warning_collector;
 use PHPUnit\Framework\MockObject\MockObject;
 
 defined('MOODLE_INTERNAL') || die();
@@ -47,6 +48,8 @@ abstract class api_testcase extends \advanced_testcase {
     protected function tearDown(): void {
         api_client_factory::set_test_service(null);
         api_client_factory::set_test_client(null);
+        warning_collector::reset();
+        warning_collector::clear_test_failures();
         parent::tearDown();
     }
 

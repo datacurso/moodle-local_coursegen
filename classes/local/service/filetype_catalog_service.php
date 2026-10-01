@@ -16,6 +16,8 @@
 
 namespace local_coursegen\local\service;
 
+use local_coursegen\local\warning_collector;
+
 /**
  * Builds the site's file-type group catalog for the AI service payloads.
  *
@@ -30,23 +32,22 @@ class filetype_catalog_service {
      * Built from core's filetypes utility so custom file types and groups defined
      * by the site admin are included. Lets the AI service infer and validate the
      * accepted file types of generated activities against groups that actually
-     * exist on this site. Returns null on failure or when there are no groups,
-     * so callers simply omit the payload field and the service falls back to the
-     * stock Moodle catalog.
+     * exist on this site. Returns null on failure (recorded as a generation
+     * warning, see warning_collector) or when there are no groups, so callers
+     * simply omit the payload field and the service falls back to the stock
+     * Moodle catalog.
      *
      * @return array|null Map of group key to extension list, or null when unavailable.
      */
     public static function get_groups(): ?array {
-        try {
-            $filetypegroups = [];
+        $filetypegroups = [];
+        warning_collector::attempt(function () use (&$filetypegroups): void {
             foreach ((new \core_form\filetypes_util())->get_groups_info() as $groupkey => $groupinfo) {
                 // Already a flat list of dot-prefixed extensions (see filetypes_util::get_groups_info()).
                 $filetypegroups[$groupkey] = $groupinfo->extensions;
             }
-            return !empty($filetypegroups) ? $filetypegroups : null;
-        } catch (\Throwable $e) {
-            debugging('local_coursegen: could not resolve file-type groups: ' . $e->getMessage(), DEBUG_DEVELOPER);
-            return null;
-        }
+        }, warning_collector::STEP_FILETYPE_CATALOG);
+
+        return !empty($filetypegroups) ? $filetypegroups : null;
     }
 }

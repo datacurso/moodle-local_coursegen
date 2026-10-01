@@ -16,6 +16,8 @@
 
 namespace local_coursegen\mod_settings;
 
+use local_coursegen\local\warning_collector;
+
 /**
  * Class workshop_settings
  *
@@ -85,9 +87,10 @@ class workshop_settings extends base_settings {
      * Switch the workshop to the initial phase requested by the AI service.
      *
      * The Moodle default (setup) is kept when the token is absent, null or
-     * 'setup'. Unknown tokens and any runtime failure while switching are
-     * reported via debugging() and ignored so the module creation never fails
-     * because of phase handling.
+     * 'setup'. An unknown token and any runtime failure while switching are
+     * recorded as a generation warning (see base_settings::attempt()) and the
+     * setup phase is kept, so the module creation never fails because of
+     * phase handling.
      */
     private function apply_initial_phase(): void {
         global $CFG, $DB;
@@ -97,31 +100,22 @@ class workshop_settings extends base_settings {
             return;
         }
 
-        if (!is_string($token) || !isset(self::PHASE_MAP[$token])) {
-            $tokenlabel = is_string($token) ? $token : gettype($token);
-            debugging(
-                "local_coursegen: unknown workshop initial_phase '{$tokenlabel}'; keeping the setup phase.",
-                DEBUG_DEVELOPER
-            );
-            return;
-        }
-        $targetphase = self::PHASE_MAP[$token];
+        $tokenlabel = is_string($token) ? $token : gettype($token);
+        $this->attempt(function () use ($CFG, $DB, $token, $tokenlabel): void {
+            if (!is_string($token) || !isset(self::PHASE_MAP[$token])) {
+                throw new \RuntimeException("unknown initial_phase '{$tokenlabel}'; keeping the setup phase");
+            }
+            $targetphase = self::PHASE_MAP[$token];
 
-        require_once($CFG->dirroot . '/mod/workshop/locallib.php');
+            require_once($CFG->dirroot . '/mod/workshop/locallib.php');
 
-        try {
             $record = $DB->get_record('workshop', ['id' => $this->cm->instance], '*', MUST_EXIST);
             [$course, $cm] = get_course_and_cm_from_cmid($this->cm->coursemodule, 'workshop');
 
             $workshop = new \workshop($record, $cm, $course);
             if (!$workshop->switch_phase($targetphase)) {
-                debugging(
-                    "local_coursegen: could not switch workshop {$record->id} to phase '{$token}'.",
-                    DEBUG_DEVELOPER
-                );
+                throw new \RuntimeException("could not switch workshop {$record->id} to phase '{$token}'");
             }
-        } catch (\Throwable $e) {
-            debugging('local_coursegen: failed to switch workshop phase: ' . $e->getMessage(), DEBUG_DEVELOPER);
-        }
+        }, warning_collector::STEP_WORKSHOP_PHASE, $tokenlabel);
     }
 }

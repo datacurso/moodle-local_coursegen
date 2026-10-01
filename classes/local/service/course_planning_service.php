@@ -18,11 +18,13 @@ namespace local_coursegen\local\service;
 
 use core\context\system;
 use local_coursegen\event\generation_job_started;
+use local_coursegen\event\generation_warning;
 use local_coursegen\local\api_client_factory;
 use local_coursegen\local\h5p_core_api;
 use local_coursegen\local\image_generation\activities;
 use local_coursegen\local\image_generation\image_policy_builder;
 use local_coursegen\local\models\course_session;
+use local_coursegen\local\warning_collector;
 
 /**
  * Service for AI course planning session orchestration.
@@ -66,6 +68,35 @@ class course_planning_service {
         int $systeminstructionid,
         int $userid,
         bool $withsubsections = false
+    ): array {
+        // The payload builders record non-fatal lookup failures as warnings; they
+        // are audited in the system context whatever the outcome.
+        warning_collector::reset();
+        try {
+            return self::start($prompt, $lang, $withimages, $systeminstructionid, $userid, $withsubsections);
+        } finally {
+            generation_warning::trigger_all(system::instance(), '', warning_collector::drain());
+        }
+    }
+
+    /**
+     * Build the planning payload, start the session on the service and persist it.
+     *
+     * @param string $prompt Course prompt.
+     * @param string $lang Course language.
+     * @param bool $withimages Include image suggestions.
+     * @param int $systeminstructionid System instruction ID (0 for none).
+     * @param int $userid User ID.
+     * @param bool $withsubsections Organise sections into subsections.
+     * @return array
+     */
+    private static function start(
+        string $prompt,
+        string $lang,
+        bool $withimages,
+        int $systeminstructionid,
+        int $userid,
+        bool $withsubsections
     ): array {
         $instructions = null;
         if ($systeminstructionid > 0) {

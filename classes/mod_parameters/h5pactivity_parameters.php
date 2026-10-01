@@ -17,14 +17,12 @@
 namespace local_coursegen\mod_parameters;
 
 use core\exception\moodle_exception;
-use local_coursegen\local\api_client_factory;
-
-defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/filelib.php');
 
 /**
  * Class h5pactivity_parameters
+ *
+ * Downloads the generated .h5p package into the 'packagefile' form field and
+ * validates it cheaply before the activity is created.
  *
  * @package    local_coursegen
  * @copyright  2025 Wilber Narvaez <https://datacurso.com>
@@ -37,14 +35,8 @@ class h5pactivity_parameters extends base_parameters {
      * @return object Adjusted parameters for the module h5pactivity.
      */
     public function get_parameters() {
-        $downloadinfo = $this->get_package_download_info();
-        $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
-        $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
-
-        $client = api_client_factory::ai_course_api($baseurl, $baseurleu);
-        $file = $client->download_file($downloadinfo['endpoint'], $downloadinfo['filename']);
-        $this->validate_package($file, $downloadinfo['filename']);
-        $this->parameters->packagefile = $file->get_itemid();
+        $file = $this->download_package_into('packagefile');
+        $this->validate_package($file, $file->get_filename());
         return $this->parameters;
     }
 

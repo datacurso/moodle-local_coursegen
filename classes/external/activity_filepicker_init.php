@@ -30,6 +30,7 @@ use core_external\external_api;
 use core_external\external_function_parameters;
 use core_external\external_single_structure;
 use core_external\external_value;
+use local_coursegen\local\access;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -70,8 +71,7 @@ class activity_filepicker_init extends external_api {
 
         // Same flow, same credits: gate this step of the AI generation behind
         // the same capabilities as create_mod_stream/create_mod.
-        require_capability('moodle/course:manageactivities', $context);
-        require_capability('local/coursegen:createactivitywithai', $context);
+        access::require_activity_creation($context);
 
         $draftitemid = file_get_unused_draft_itemid();
         $clientid = uniqid('local_coursegen_activity_upload_');

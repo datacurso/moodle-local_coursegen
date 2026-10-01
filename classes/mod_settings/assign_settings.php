@@ -17,6 +17,7 @@
 namespace local_coursegen\mod_settings;
 
 use core\context\module;
+use local_coursegen\local\warning_collector;
 
 /**
  * Class assign_settings
@@ -64,10 +65,10 @@ class assign_settings extends base_settings {
             return;
         }
 
-        try {
-            // Create the definition BEFORE activating the method: if the definition
-            // fails, the method is deactivated below and the assignment degrades to
-            // simple direct grading instead of an ungradeable "rubric not defined".
+        // Create the definition BEFORE activating the method: if the definition
+        // fails, the method is deactivated below and the assignment degrades to
+        // simple direct grading instead of an ungradeable "rubric not defined".
+        $created = $this->attempt(function () use ($manager, $rubric, $criteria): void {
             $controller = $manager->get_controller('rubric');
 
             $name = trim((string) ($rubric['name'] ?? ''));
@@ -83,11 +84,9 @@ class assign_settings extends base_settings {
             $controller->update_definition($definition);
 
             $manager->set_active_method('rubric');
-        } catch (\Throwable $exception) {
-            debugging(
-                'coursegen: could not create the assignment rubric: ' . $exception->getMessage(),
-                DEBUG_DEVELOPER
-            );
+        }, warning_collector::STEP_RUBRIC);
+
+        if (!$created) {
             $this->reset_grading_method($manager);
         }
     }
@@ -102,14 +101,9 @@ class assign_settings extends base_settings {
      * @param \grading_manager $manager Grading manager for the module context.
      */
     private function reset_grading_method(\grading_manager $manager): void {
-        try {
+        $this->attempt(function () use ($manager): void {
             $manager->set_active_method('');
-        } catch (\Throwable $exception) {
-            debugging(
-                'coursegen: could not reset the grading method: ' . $exception->getMessage(),
-                DEBUG_DEVELOPER
-            );
-        }
+        }, warning_collector::STEP_GRADING_METHOD);
     }
 
     /**

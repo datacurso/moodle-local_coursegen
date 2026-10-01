@@ -16,6 +16,9 @@
 
 namespace local_coursegen\utils;
 
+use aiprovider_datacurso\httpclient\ai_course_api;
+use local_coursegen\local\api_client_factory;
+use local_coursegen\local\warning_collector;
 use local_coursegen\tests\api_testcase;
 
 /**
@@ -64,5 +67,75 @@ final class text_editor_parameter_cleaner_test extends api_testcase {
         );
         $this->assertStringContainsString('src="@@PLUGINFILE@@/my image~1.png"', $cleaned['introeditor']['text']);
         $this->assertGreaterThan(0, $cleaned['introeditor']['itemid']);
+        $this->assertSame([], warning_collector::drain());
+    }
+
+    /**
+     * A failed download leaves the reference untouched and records an image_download warning
+     * naming the file.
+     */
+    public function test_failed_image_download_is_recorded_as_warning(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $mock = $this->getMockBuilder(ai_course_api::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['download_file'])
+            ->getMock();
+        $mock->method('download_file')->willThrowException(new \RuntimeException('curl error at https://internal.invalid'));
+        api_client_factory::set_test_client($mock);
+
+        $parameters = ['introeditor' => [
+            'text' => '<p><img src="/tmp/generated_images/diagram.png" alt="Diagram"></p>',
+            'format' => FORMAT_HTML,
+            'itemid' => 0,
+        ]];
+
+        $cleaned = text_editor_parameter_cleaner::clean_text_editor_objects($parameters);
+        $this->assertDebuggingCalled(null, DEBUG_NORMAL);
+
+        $this->assertStringContainsString('src="/tmp/generated_images/diagram.png"', $cleaned['introeditor']['text']);
+        $warnings = warning_collector::drain();
+        $this->assertCount(1, $warnings);
+        $this->assertSame(warning_collector::STEP_IMAGE_DOWNLOAD, $warnings[0]['step']);
+        $this->assertSame('diagram.png', $warnings[0]['subject']);
+        $messages = warning_collector::to_messages($warnings);
+        $this->assertSame([get_string('generationwarning_image_download', 'local_coursegen', 'diagram.png')], $messages);
+        $this->assertStringNotContainsString('internal.invalid', $messages[0]);
+    }
+
+    /**
+     * A failed client initialisation is not cached: every image reports the client_init warning,
+     * and once the client can be built the images are downloaded again.
+     */
+    public function test_failed_client_initialisation_is_not_cached(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $calls = [];
+        $this->inject_download_client($calls, 'png bytes');
+        warning_collector::set_test_failure(warning_collector::STEP_CLIENT_INIT, new \RuntimeException('no client'));
+
+        $parameters = ['introeditor' => [
+            'text' => '<p><img src="/tmp/generated_images/one.png"><img src="/tmp/generated_images/two.png"></p>',
+            'format' => FORMAT_HTML,
+            'itemid' => 0,
+        ]];
+
+        $cleaned = text_editor_parameter_cleaner::clean_text_editor_objects($parameters);
+        $this->assertDebuggingCalledCount(2);
+
+        $this->assertCount(0, $calls, 'Without a client nothing is downloaded.');
+        $this->assertStringContainsString('/tmp/generated_images/one.png', $cleaned['introeditor']['text']);
+        $steps = array_column(warning_collector::drain(), 'step');
+        $this->assertSame([warning_collector::STEP_CLIENT_INIT, warning_collector::STEP_CLIENT_INIT], $steps);
+
+        // The failure was not cached: once the client can be built, images are downloaded.
+        warning_collector::clear_test_failures();
+        $cleaned = text_editor_parameter_cleaner::clean_text_editor_objects($parameters);
+        $this->assertDebuggingNotCalled();
+        $this->assertCount(2, $calls);
+        $this->assertStringContainsString('@@PLUGINFILE@@/one.png', $cleaned['introeditor']['text']);
+        $this->assertSame([], warning_collector::drain());
     }
 }

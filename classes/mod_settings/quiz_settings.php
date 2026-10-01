@@ -18,7 +18,8 @@ namespace local_coursegen\mod_settings;
 
 use core\context;
 use core\context\module;
-use core\exception\coding_exception;
+use core\exception\moodle_exception;
+use local_coursegen\local\warning_collector;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -85,16 +86,13 @@ class quiz_settings extends base_settings {
         $categoryinfo = $this->get_default_question_category($context);
 
         if (in_array($aiquestiondata['qtype'], self::CALCULATED_QTYPES, true)) {
-            try {
+            // A bad formula raises inside Moodle's validation; skip this question
+            // (the transaction already rolled back) without failing the whole quiz.
+            $question = null;
+            $created = $this->attempt(function () use (&$question, $aiquestiondata, $categoryinfo, $context): void {
                 $question = $this->add_calculated_question($aiquestiondata, $categoryinfo, $context);
-            } catch (\Throwable $exception) {
-                // A bad formula raises inside Moodle's validation; skip this question
-                // (the transaction already rolled back) without failing the whole quiz.
-                debugging(
-                    'coursegen: could not create ' . $aiquestiondata['qtype'] . ' question "'
-                        . ($aiquestiondata['name'] ?? '') . '": ' . $exception->getMessage(),
-                    DEBUG_DEVELOPER
-                );
+            }, warning_collector::STEP_QUIZ_QUESTION, (string) ($aiquestiondata['name'] ?? ''));
+            if (!$created) {
                 return;
             }
         } else {
@@ -164,8 +162,12 @@ class quiz_settings extends base_settings {
             if (count($items) === 0) {
                 // Without items the question always fails at attempt time
                 // ('cannotgetdsfordependent'); better to skip it whole.
-                throw new coding_exception('Dataset "' . ($datasetdata['name'] ?? '?')
-                    . '" has no items; the calculated question cannot work.');
+                throw new moodle_exception(
+                    'error_dataset_without_items',
+                    'local_coursegen',
+                    '',
+                    (string) ($datasetdata['name'] ?? '?')
+                );
             }
             // Function import_datasets() only inserts items when status is exactly
             // 'private' or 'shared', and the attempt runtime picks the variant
