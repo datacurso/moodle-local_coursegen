@@ -17,6 +17,7 @@
 namespace local_coursegen\local\preview;
 
 use html_writer;
+use local_coursegen\local\service\template_export_service;
 use moodle_url;
 
 /**
@@ -201,7 +202,7 @@ class course_from_payload {
         $name = (string) $name;
         $templatebehavior = $activity['template_behavior'] ?? [];
         $action = $templatebehavior['action'] ?? '';
-        $writing = ($action === 'modify');
+        $writing = ($action === template_export_service::WIRE_ACTION_INSTANCE);
 
         $url = new moodle_url('/local/coursegen/activity_preview.php', [
             'sessionid' => $sessionid,
@@ -217,8 +218,9 @@ class course_from_payload {
         if ($writing) {
             // An activity the run is going to write says so, because that is
             // what the teacher is deciding about.
+            $badgecontent = get_string('courseai_template_instance_badge', 'local_coursegen');
             $activitybadge = [
-                'badgecontent' => get_string('courseai_template_instance_badge', 'local_coursegen'),
+                'badgecontent' => $badgecontent,
                 'badgestyle' => 'badge-none border',
             ];
         }

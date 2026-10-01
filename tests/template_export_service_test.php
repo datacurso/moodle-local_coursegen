@@ -18,6 +18,7 @@ namespace local_coursegen;
 
 use local_coursegen\local\models\template;
 use local_coursegen\local\models\template_activity;
+use local_coursegen\local\models\template_instance;
 use local_coursegen\local\service\template_export_service;
 
 /**
@@ -124,6 +125,109 @@ final class template_export_service_test extends \advanced_testcase {
         $uniqueuids = array_unique($uids);
         $expectedcount = count($uids);
         $this->assertCount($expectedcount, $uniqueuids);
+    }
+
+    /**
+     * The wire action of a template instance is the literal the AI service
+     * contracts on. Pinned here so a rename of the constant cannot change
+     * what travels.
+     */
+    public function test_instance_wire_action_is_the_literal_of_the_service_contract(): void {
+        $this->assertSame('instance', template_export_service::WIRE_ACTION_INSTANCE);
+    }
+
+    /**
+     * A virtual instance travels in the payload with the instance wire
+     * action, driven by the mold it was created from, and never with the
+     * action the service no longer knows.
+     */
+    public function test_instance_entry_carries_the_instance_wire_action(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $page = $generator->create_module('page', ['course' => $course->id]);
+        $template = $this->create_template($course->id);
+        $templateid = $template->get('id');
+        $this->mark_with_action($templateid, (int) $page->cmid, 'template');
+        $instance = new template_instance(0, (object) [
+            'uid' => 'instance-uid',
+            'templateid' => $templateid,
+            'sectionid' => 0,
+            'sourcecmid' => (int) $page->cmid,
+            'sourcename' => 'Page mold',
+            'name' => 'Generated page',
+            'typelabel' => 'Page',
+            'modname' => 'page',
+        ]);
+        $instance->create();
+
+        $payload = template_export_service::build_init_payload($templateid);
+
+        $entry = $this->find_entry_by_uid($payload, 'instance-uid');
+        $this->assertNotNull($entry);
+        $behavior = $entry['template_behavior'];
+        $this->assertSame('instance', $behavior['action']);
+        $this->assertNotSame('modify', $behavior['action']);
+        $this->assertSame((int) $page->cmid, $behavior['template_source_cmid']);
+    }
+
+    /**
+     * No real activity ever travels with the instance wire action, whatever
+     * action the user saved for it.
+     *
+     * @dataProvider saved_action_provider
+     * @param string $action
+     */
+    public function test_real_activity_never_carries_the_instance_wire_action(string $action): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $page = $generator->create_module('page', ['course' => $course->id]);
+        $template = $this->create_template($course->id);
+        $templateid = $template->get('id');
+        $this->mark_with_action($templateid, (int) $page->cmid, $action);
+
+        $payload = template_export_service::build_init_payload($templateid);
+
+        $entry = $this->find_activity($payload, (int) $page->cmid);
+        $this->assertNotNull($entry);
+        $this->assertSame($action, $entry['template_behavior']['action']);
+        $this->assertNotSame('instance', $entry['template_behavior']['action']);
+    }
+
+    /**
+     * The actions a real activity can be sent with.
+     *
+     * @return array
+     */
+    public static function saved_action_provider(): array {
+        return [
+            'keep' => ['keep'],
+            'reference' => ['reference'],
+            'template' => ['template'],
+        ];
+    }
+
+    /**
+     * The payload's own entry for one uid, or null if it is not there.
+     *
+     * @param array $payload
+     * @param string $uid
+     * @return array|null
+     */
+    private function find_entry_by_uid(array $payload, string $uid): ?array {
+        $activities = $payload['activities'] ?? [];
+        foreach ($activities as $activity) {
+            $activityuid = $activity['uid'] ?? '';
+            if ($activityuid === $uid) {
+                return $activity;
+            }
+        }
+        return null;
     }
 
     /**

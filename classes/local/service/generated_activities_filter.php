@@ -42,7 +42,7 @@ class generated_activities_filter {
         foreach ($activities as $activity) {
             $behavior = $activity['template_behavior'] ?? [];
             $action = $behavior['action'] ?? '';
-            if ($action === 'modify') {
+            if ($action === template_export_service::WIRE_ACTION_INSTANCE) {
                 $written[] = $activity;
             }
         }

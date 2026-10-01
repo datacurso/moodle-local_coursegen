@@ -27,7 +27,7 @@ use local_coursegen\local\models\template_section;
  * Two kinds of entry travel in "activities": the base course's own real
  * activities (carrying the admin's saved action - keep/reference/template),
  * and the template's virtual instances, which have no course module of their
- * own and are submitted as action="modify" driven by the mold they were
+ * own and are submitted with the instance wire action driven by the mold they were
  * created from (template_source_cmid).
  *
  * How every element is named stably across requests lives in
@@ -39,6 +39,15 @@ use local_coursegen\local\models\template_section;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class template_export_service {
+    /**
+     * The action a template instance travels with, in both directions of the
+     * exchange with the AI service: the init payload submits every instance
+     * with it and the answer brings it back on each activity the service
+     * wrote. It is the name of that action in the service contract; it is
+     * not one of the actions a user can pick in the template editor.
+     */
+    const WIRE_ACTION_INSTANCE = 'instance';
+
     /**
      * Build the full init payload.
      *
@@ -183,7 +192,7 @@ class template_export_service {
     }
 
     /**
-     * The template's virtual instances, as "modify" activities driven by their mold.
+     * The template's virtual instances, as instance activities driven by their mold.
      *
      * @param int $templateid
      * @param \course_modinfo $modinfo
@@ -216,7 +225,7 @@ class template_export_service {
     }
 
     /**
-     * One template instance's own entry, as a "modify" activity driven by its mold.
+     * One template instance's own entry, as an instance activity driven by its mold.
      *
      * @param \local_coursegen\local\models\template_instance $instance
      * @param array $sectionnums Section id => section number.
@@ -255,7 +264,7 @@ class template_export_service {
                 'section' => $section,
             ],
             'template_behavior' => [
-                'action' => template_activity::ACTION_MODIFY,
+                'action' => self::WIRE_ACTION_INSTANCE,
                 'useasreference' => true,
                 'prompt' => $prompt,
                 'template_source_cmid' => $sourcecmid,
