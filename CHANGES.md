@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100101
+
+### Fixed
+- The built script of the generated-course block reload was missing from the repository, so the course creation page could not load its scripts on a clean install; it is now included.
+
 ## [2.0.10] - 2026100100
 
 ### Added
