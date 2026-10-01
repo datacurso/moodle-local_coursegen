@@ -16,7 +16,7 @@
 /**
  * The activity types the AI content service can write content for.
  *
- * @module     local_coursegen/local/ai_activity_types
+ * @module     local_coursegen/ai_activity_types
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */

@@ -39,7 +39,7 @@ final class ai_activity_types_script_test extends \basic_testcase {
     private function script_modnames(): array {
         global $CFG;
 
-        $path = $CFG->dirroot . '/local/coursegen/amd/src/local/ai_activity_types.js';
+        $path = $CFG->dirroot . '/local/coursegen/amd/src/ai_activity_types.js';
         $source = file_get_contents($path);
         preg_match('/export const MODNAMES = \[(.*?)\];/s', $source, $array);
         preg_match_all("/'([a-z0-9_]+)'/", $array[1], $names);

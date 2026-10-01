@@ -39,7 +39,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {MODNAMES} from 'local_coursegen/local/ai_activity_types';
+import {MODNAMES} from 'local_coursegen/ai_activity_types';
 
 /**
  * Sensible default action per recognised component type — mirrors
