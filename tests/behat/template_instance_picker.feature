@@ -16,9 +16,10 @@ Feature: Reopening the "Add activity from a template" picker from the add menu
       | user     | course | role           |
       | teacher1 | C1     | editingteacher |
     And the following "activities" exist:
-      | activity | course | idnumber | name       | section |
-      | lesson   | C1     | lesson1  | Lesson one | 1       |
-      | lesson   | C1     | lesson2  | Lesson two | 1       |
+      | activity | course | idnumber | name       | section | intro                                    |
+      | lesson   | C1     | lesson1  | Lesson one | 1       | [[coursegen:aiprompt: write the lesson]] |
+      | lesson   | C1     | lesson2  | Lesson two | 1       | [[coursegen:aiprompt: write the lesson]] |
+      | lesson   | C1     | lesson3  | Lesson three | 1     | Plain introduction                       |
     And I log in as "teacher1"
     And I visit "/local/coursegen/edit_template.php?courseid=2"
 
@@ -57,3 +58,9 @@ Feature: Reopening the "Add activity from a template" picker from the add menu
     And I click on "Add activity from a template" "button" in the ".tpl-section-card[data-number='1'] .dropdown-menu.show" "css_element"
     Then I should see "Lesson one" in the ".tpl-section-card[data-number='1'] .dropdown-menu.show" "css_element"
     And I should see "Lesson two" in the ".tpl-section-card[data-number='1'] .dropdown-menu.show" "css_element"
+
+  @SYS-E2E-TEMPLATE-REQUIRES-PLACEHOLDER
+  Scenario: An activity without a placeholder cannot be marked as a template
+    When I set the field "Actions" to "Use as template" in the "Lesson three" "table_row"
+    Then I should see "Add at least one [[coursegen:aiprompt: ...]] placeholder to the activity first."
+    And "Configure template" "dialogue" should not exist
