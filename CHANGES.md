@@ -2,6 +2,19 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026093021
+
+### Added
+- One capability per operation, replacing the broad ones. Course templates: `viewtemplates`, `createtemplates`, `edittemplates` and `deletetemplates`. System instructions: `viewsysteminstructions`, `createsysteminstructions`, `editsysteminstructions` and `deletesysteminstructions`. Image generation settings: `viewimagegenerationsettings` and `editimagegenerationsettings`. Creating a course with AI: `createfreecoursewithai` and `createtemplatecoursewithai`, one per mode, plus `uploadcoursesyllabus` and `generatecourseimages`. Creating an activity with AI keeps `createactivitywithai` and gains `generateactivityimages`.
+- On upgrade every new capability copies the permission of the capability it comes from, in every role and every context where that one was set, including prevent and prohibit and the overrides in courses, categories and activities, so no role gains or loses anything. On a new install it starts with the same roles. `managetemplates`, `managesysteminstructions`, `manageimagegeneration` and `createcoursewithai` stay defined only as that source: no code checks them any more, so changing them after this upgrade has no effect, and they can be removed in a later release.
+
+### Changed
+- Every page and web service of those areas checks its own capability. Saving a template needs `createtemplates` for a new one and `edittemplates` for an existing one, nothing more, and the services the editor uses to build a template are open to who can create or edit. The services that create a course are checked by mode, the ones both modes use by either mode, and a user with neither mode gets the permission error on the course creation page.
+- A request that asks for images needs `generatecourseimages` or `generateactivityimages`, and a template generation that carries a syllabus needs `uploadcoursesyllabus`; they are refused with a permission error instead of being ignored.
+- The interface shows only what the user can do: the create, edit and delete controls of the template and system instruction lists, the mode switch (and only the mode the user can use), the syllabus controls, the generate-images controls of the course and activity windows. The image settings page is read-only without the save button for who can view but not change it. The creation page no longer sends the list of templates to a user who cannot use that mode.
+- Creating a course and reading its final settings, answering its plan and resuming a session now check their capability; before, they only checked that the session belonged to the user.
+- Saving the image generation settings keeps requiring the site configuration capability and also requires `editimagegenerationsettings`.
+
 ## [2.0.10] - 2026093015
 
 ### Changed
