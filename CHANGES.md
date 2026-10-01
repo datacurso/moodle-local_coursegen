@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026093026
+
+### Changed
+- The English strings of the space for the teacher say "teacher", the term Moodle uses for the role, instead of "professor": the action in the activity selector, its tip and the labels, descriptions and placeholder of the modal.
+
 ## [2.0.10] - 2026093024
 
 ### Changed
