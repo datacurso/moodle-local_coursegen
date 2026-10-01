@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026093031
+
+### Changed
+- The tip of the structural mold and the message of an activity with nothing to plan explain exactly two markers: aiprompt, which says what the AI writes in a place, and the repeat block, which wraps what the AI repeats. The alias with mathematical brackets is documented for the fields where double brackets cannot be typed
+
 ## [2.0.10] - 2026093030
 
 ### Changed
