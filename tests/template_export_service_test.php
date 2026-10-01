@@ -101,6 +101,53 @@ final class template_export_service_test extends \advanced_testcase {
     }
 
     /**
+     * A mold travels also as its module's own edit form holds it, under
+     * "form", next to the structure that stays as it was.
+     */
+    public function test_template_activity_carries_the_values_of_its_edit_form(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $page = $generator->create_module('page', ['course' => $course->id]);
+        $template = $this->create_template($course->id);
+        $templateid = $template->get('id');
+        $this->mark_with_action($templateid, (int) $page->cmid, 'template');
+
+        $payload = template_export_service::build_init_payload($templateid);
+        $entry = $this->find_activity($payload, (int) $page->cmid);
+
+        $parameters = $entry['parameters'];
+        $this->assertArrayHasKey('form', $parameters);
+        $this->assertArrayHasKey('introeditor', $parameters['form']);
+        $this->assertArrayHasKey('page', $parameters['form']);
+        $this->assertArrayHasKey('structure', $parameters);
+        $this->assertArrayHasKey('structure_tables', $parameters);
+        $this->assertArrayHasKey('structure_aliases', $parameters);
+        $this->assertArrayHasKey('files', $parameters);
+    }
+
+    /**
+     * An activity that is not a mold carries no "form".
+     */
+    public function test_kept_activity_carries_no_form_values(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $page = $generator->create_module('page', ['course' => $course->id]);
+        $template = $this->create_template($course->id);
+        $templateid = $template->get('id');
+
+        $payload = template_export_service::build_init_payload($templateid);
+        $entry = $this->find_activity($payload, (int) $page->cmid);
+
+        $this->assertArrayNotHasKey('form', $entry['parameters']);
+    }
+
+    /**
      * No two entries of the same payload - activities or sections - ever
      * share a uid.
      */

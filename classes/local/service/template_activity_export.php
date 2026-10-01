@@ -47,13 +47,19 @@ class template_activity_export {
      * content: they are where it sits in the course, which is what the answer
      * needs to place what it writes.
      *
+     * A mold also travels as its own module's edit form holds it, under
+     * 'form', because the code that creates an activity speaks that
+     * vocabulary and not the one of the backup tree. See mold_form_values.
+     *
      * @param cm_info $cm
+     * @param bool $asmold Whether the activity is exported as a mold.
      * @return array
      */
-    public static function parameters_for(cm_info $cm): array {
+    public static function parameters_for(cm_info $cm, bool $asmold = false): array {
         $read = activity_reader::read_with_sources($cm);
         $files = self::files_of($cm);
         $questions = self::questions_of($cm);
+        $form = self::form_of($cm, $asmold);
         return [
             'name' => $cm->name,
             'section' => (int) $cm->sectionnum,
@@ -68,7 +74,22 @@ class template_activity_export {
             // The files the activity keeps, which its tree only points at: a
             // folder is its files, a file resource is one of them.
             'files' => $files,
-        ] + $questions;
+        ] + $questions + $form;
+    }
+
+    /**
+     * The values the module's own edit form holds, for a mold only.
+     *
+     * @param cm_info $cm
+     * @param bool $asmold
+     * @return array Empty unless the activity is exported as a mold.
+     */
+    private static function form_of(cm_info $cm, bool $asmold): array {
+        if (!$asmold) {
+            return [];
+        }
+        $values = mold_form_values::read($cm);
+        return ['form' => $values];
     }
 
     /**
