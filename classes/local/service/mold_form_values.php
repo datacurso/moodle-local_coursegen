@@ -40,9 +40,11 @@ class mold_form_values {
     /**
      * Read the values the edit form of an activity holds.
      *
-     * The elements the form declares hidden carry the identity of the
-     * activity and the plumbing of the submission, not its settings, so they
-     * are left out, together with every column that is not a form element.
+     * The hidden elements Moodle adds to every activity form carry the
+     * identity of the activity and the plumbing of the submission, not its
+     * settings, so they are left out, together with every column that is not
+     * a form element. The hidden elements a module declares itself are
+     * settings and stay.
      *
      * @param cm_info $cm
      * @return array Form element name => value; editors as text, format and itemid.
@@ -93,13 +95,62 @@ class mold_form_values {
     private static function read_from_form(cm_info $cm): array {
         $mform = self::prepared_form($cm);
         $quickform = self::quickform_of($mform);
-        $values = $quickform->exportValues();
+        $values = self::form_values($quickform);
         $draftitemids = self::draft_itemids($quickform, $values);
         try {
-            return self::without_hidden($quickform, $values);
+            return self::without_identity($mform, $quickform, $values);
         } finally {
             self::release_drafts($draftitemids);
         }
+    }
+
+    /**
+     * Every value the form holds for its elements.
+     *
+     * The form exports the values of the elements that have one, but leaves
+     * out an unchecked checkbox and an empty value, which are values too. They
+     * are completed from the defaults the form holds after being filled, for
+     * every element the form has.
+     *
+     * @param \MoodleQuickForm $quickform
+     * @return array
+     */
+    private static function form_values(\MoodleQuickForm $quickform): array {
+        $exported = $quickform->exportValues();
+        $names = self::element_names($quickform->_elements);
+        $namekeys = array_flip($names);
+        $held = array_intersect_key($quickform->_defaultValues, $namekeys);
+        return $exported + $held;
+    }
+
+    /**
+     * The names of the elements, those inside groups included.
+     *
+     * @param array $elements
+     * @return string[]
+     */
+    private static function element_names(array $elements): array {
+        $names = [];
+        foreach ($elements as $element) {
+            $names[] = $element->getName();
+            $children = self::group_children($element);
+            $names = array_merge($names, $children);
+        }
+        return $names;
+    }
+
+    /**
+     * The names of the elements a group holds.
+     *
+     * @param \HTML_QuickForm_element $element
+     * @return string[]
+     */
+    private static function group_children($element): array {
+        if ($element->getType() !== 'group') {
+            return [];
+        }
+        $inside = $element->getElements();
+        return self::element_names($inside);
     }
 
     /**
@@ -151,27 +202,103 @@ class mold_form_values {
     }
 
     /**
-     * The values without the elements the form declares hidden.
+     * The values without the hidden elements that carry the identity of the
+     * activity and the plumbing of the submission.
      *
+     * A module can declare hidden elements of its own, and those are
+     * settings: they stay.
+     *
+     * @param \moodleform_mod $mform
      * @param \MoodleQuickForm $quickform
      * @param array $values
      * @return array
      */
-    private static function without_hidden(\MoodleQuickForm $quickform, array $values): array {
-        $hidden = self::hidden_names($quickform);
-        $hiddenkeys = array_flip($hidden);
-        return array_diff_key($values, $hiddenkeys);
+    private static function without_identity(\moodleform_mod $mform, \MoodleQuickForm $quickform, array $values): array {
+        $standard = self::standard_hidden_names($mform, $quickform);
+        $plumbing = self::plumbing_names($quickform);
+        $state = self::state_names($quickform);
+        $identity = array_merge($standard, $plumbing, $state);
+        $identitykeys = array_flip($identity);
+        return array_diff_key($values, $identitykeys);
     }
 
     /**
-     * The names of the elements the form declares hidden.
+     * The names of the hidden elements every activity form gets from Moodle.
+     *
+     * Moodle adds them in one method, so they are recorded by running that
+     * method and looking at what it added to the form.
+     *
+     * @param \moodleform_mod $mform
+     * @param \MoodleQuickForm $quickform
+     * @return string[]
+     */
+    private static function standard_hidden_names(\moodleform_mod $mform, \MoodleQuickForm $quickform): array {
+        $before = count($quickform->_elements);
+        $mform->standard_hidden_coursemodule_elements();
+        $added = array_slice($quickform->_elements, $before);
+        return self::hidden_names($added);
+    }
+
+    /**
+     * The names of the hidden elements every form gets from the form library:
+     * the session key and the marker of the submission.
+     *
+     * A form with nothing of its own holds exactly those, and the marker is
+     * named after the form, so its name is carried over to this one.
      *
      * @param \MoodleQuickForm $quickform
      * @return string[]
      */
-    private static function hidden_names(\MoodleQuickForm $quickform): array {
+    private static function plumbing_names(\MoodleQuickForm $quickform): array {
+        $bare = new bare_moodleform();
+        $barequickform = self::quickform_of($bare);
+        $barehidden = self::hidden_names($barequickform->_elements);
+        return self::renamed($barehidden, $barequickform->_formName, $quickform->_formName);
+    }
+
+    /**
+     * The names of the hidden elements that keep the state of the page: which
+     * header is expanded, which advanced settings are shown.
+     *
+     * The form sets those as constants, while a setting a module declares
+     * hidden has a default, so a hidden element with a constant is not one.
+     *
+     * @param \MoodleQuickForm $quickform
+     * @return string[]
+     */
+    private static function state_names(\MoodleQuickForm $quickform): array {
+        $hidden = self::hidden_names($quickform->_elements);
+        $hiddenkeys = array_flip($hidden);
+        $constants = array_intersect_key($quickform->_constantValues, $hiddenkeys);
+        return array_keys($constants);
+    }
+
+    /**
+     * The names with one part of them replaced.
+     *
+     * @param string[] $names
+     * @param string $from
+     * @param string $to
+     * @return string[]
+     */
+    private static function renamed(array $names, string $from, string $to): array {
+        $renamed = [];
+        foreach ($names as $name) {
+            $newname = str_replace($from, $to, $name);
+            $renamed[] = $newname;
+        }
+        return $renamed;
+    }
+
+    /**
+     * The names of the hidden elements among some elements.
+     *
+     * @param array $elements
+     * @return string[]
+     */
+    private static function hidden_names(array $elements): array {
         $names = [];
-        foreach ($quickform->_elements as $element) {
+        foreach ($elements as $element) {
             $type = $element->getType();
             if ($type === 'hidden') {
                 $names[] = $element->getName();

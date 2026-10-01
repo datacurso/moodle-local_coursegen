@@ -138,6 +138,56 @@ final class mold_form_values_test extends \advanced_testcase {
     }
 
     /**
+     * A hidden element the module declares itself is a setting, and stays.
+     */
+    public function test_hidden_settings_declared_by_the_module_are_kept(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+        $cm = $this->create_cm('page');
+
+        $values = mold_form_values::read($cm);
+
+        $this->assertArrayHasKey('display', $values);
+        $this->assertArrayHasKey('revision', $values);
+    }
+
+    /**
+     * The state of the page the form keeps in hidden elements is not a setting.
+     */
+    public function test_state_of_the_page_is_not_exported(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+        $cm = $this->create_cm('assign');
+
+        $values = mold_form_values::read($cm);
+
+        $keys = array_keys($values);
+        $state = preg_grep('/^mform_(isexpanded|showmore)_/', $keys);
+        $this->assertSame([], array_values($state));
+    }
+
+    /**
+     * An unchecked checkbox and an empty setting are values of the form too.
+     */
+    public function test_unchecked_and_empty_elements_are_kept(): void {
+        global $CFG;
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+        $CFG->enablecompletion = 1;
+        $CFG->enableavailability = 1;
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course(['enablecompletion' => 1]);
+        $page = $generator->create_module('page', ['course' => $course->id]);
+        $cm = get_fast_modinfo($course)->get_cm($page->cmid);
+
+        $values = mold_form_values::read($cm);
+
+        $this->assertArrayHasKey('completionview', $values);
+        $this->assertEmpty($values['completionview']);
+        $this->assertArrayHasKey('availabilityconditionsjson', $values);
+    }
+
+    /**
      * The values can be sent as JSON.
      *
      * @dataProvider modules_provider
