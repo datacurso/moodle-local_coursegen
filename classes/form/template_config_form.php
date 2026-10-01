@@ -41,7 +41,6 @@ use context;
 use context_system;
 use core_form\dynamic_form;
 use local_coursegen\local\models\template;
-use local_coursegen\local\service\access_guard;
 use moodle_url;
 
 /**
@@ -342,7 +341,12 @@ class template_config_form extends dynamic_form {
      */
     protected function check_access_for_dynamic_submission(): void {
         $context = $this->get_context_for_dynamic_submission();
-        access_guard::require_any(['local/coursegen:createtemplates', 'local/coursegen:edittemplates'], $context);
+        $templateid = $this->optional_param('templateid', 0, PARAM_INT);
+        $capability = 'local/coursegen:createtemplates';
+        if ($templateid > 0) {
+            $capability = 'local/coursegen:edittemplates';
+        }
+        require_capability($capability, $context);
     }
 
     /**

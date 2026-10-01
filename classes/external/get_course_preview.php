@@ -32,7 +32,6 @@ use external_api;
 use external_function_parameters;
 use external_single_structure;
 use external_value;
-use local_coursegen\local\service\access_guard;
 use local_coursegen\output\sections_config;
 
 /**
@@ -74,10 +73,11 @@ class get_course_preview extends external_api {
 
         $context = \context_system::instance();
         self::validate_context($context);
-        access_guard::require_any(
-            ['local/coursegen:createtemplates', 'local/coursegen:edittemplates'],
-            $context
-        );
+        $capability = 'local/coursegen:createtemplates';
+        if ($params['templateid'] > 0) {
+            $capability = 'local/coursegen:edittemplates';
+        }
+        require_capability($capability, $context);
 
         $course = get_course($params['courseid']);
         $coursecontext = \context_course::instance($course->id);
