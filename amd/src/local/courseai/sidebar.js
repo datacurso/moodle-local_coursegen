@@ -40,8 +40,8 @@ export const initSidebar = () => {
     wireSidebarLayout(sidebar);
 
     // ─── New course button ───────────────────────────────────────────
-    // A clean page, no query string: the creation mode is chosen in the
-    // composer (mode_switch partial), so nothing from the current page
+    // A clean page, no query string: the creation mode is chosen on the
+    // first screen (start_chooser partial), so nothing from the current page
     // carries over. No closeSidebar() here: the page navigates away at
     // once, so collapsing first only flashes the close animation.
     const btnNew = document.getElementById('courseaiBtnNew');

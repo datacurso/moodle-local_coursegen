@@ -54,16 +54,22 @@ $PAGE->requires->css(new moodle_url('/local/coursegen/styles/aicoursecreation.cs
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/chatui.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/sidebar.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_mode_prompt.css', ['v' => $cssrev]));
+$PAGE->requires->css(new moodle_url('/local/coursegen/styles/start_chooser.css', ['v' => $cssrev]));
 
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\course_session_service;
 
 $resumesessionid = optional_param('sessionid', 0, PARAM_INT);
 $showsessionsview = optional_param('view', '', PARAM_ALPHA) === 'courses';
-$templatemodeactive = optional_param('mode', 'free', PARAM_ALPHA) === 'template';
+// A fresh visit opens on the choice of starting point: the parameter being
+// absent is what means "nothing chosen yet", so a card writes its own value
+// (free or template) and the old ?mode=template link keeps landing straight
+// on the template column.
+$modeparam = optional_param('mode', null, PARAM_ALPHA);
+$templatemodeactive = $modeparam === 'template';
 
 // Each way of creating a course is its own capability. A user who has only one of
-// them is taken to that mode and is not offered the other.
+// them is taken to that mode and is not offered the other, nor the choice.
 $canfree = has_capability('local/coursegen:createfreecoursewithai', $systemcontext);
 $cantemplate = has_capability('local/coursegen:createtemplatecoursewithai', $systemcontext);
 if (!$canfree) {
@@ -72,6 +78,10 @@ if (!$canfree) {
 if (!$cantemplate) {
     $templatemodeactive = false;
 }
+$hasbothmodes = $canfree && $cantemplate;
+
+// A resumed session skips the choice, as it was already made.
+$startchooser = $hasbothmodes && !$resumesessionid && $modeparam === null;
 
 // Load system instructions (directrices institucionales).
 $systeminstructions = [];
@@ -195,7 +205,10 @@ $templatecontext = [
     'isresuming' => $resumesessionid > 0,
     'showsessionsview' => $showsessionsview,
     'templatemodeactive' => $templatemodeactive,
-    'hasbothmodes' => $canfree && $cantemplate,
+    'startchooser' => $startchooser,
+    'freemodeactive' => !$startchooser && !$templatemodeactive,
+    'showstartcrumb' => $hasbothmodes && !$startchooser,
+    'startcrumblocked' => $resumesessionid > 0,
     'canuploadsyllabus' => has_capability('local/coursegen:uploadcoursesyllabus', $systemcontext),
     'cangeneratecourseimages' => has_capability('local/coursegen:generatecourseimages', $systemcontext),
     'subsectionsenabled' => $subsectionsenabled,
@@ -207,7 +220,8 @@ echo $OUTPUT->header();
 
 echo $OUTPUT->render_from_template('local_coursegen/courseai_page', $templatecontext);
 
-// Initialize JavaScript module.
+// Initialize JavaScript modules.
+$PAGE->requires->js_call_amd('local_coursegen/local/courseai/start_path', 'init');
 $PAGE->requires->js_call_amd('local_coursegen/courseai', 'init', [
     [
         'guidelines' => $systeminstructions,

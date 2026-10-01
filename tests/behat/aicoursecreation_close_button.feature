@@ -8,7 +8,7 @@ Feature: Close button on the AI course creation page
     Given I log in as "admin"
 
   Scenario: The close button returns to My courses from the free creation view
-    Given I visit "/local/coursegen/aicoursecreation.php"
+    Given I visit "/local/coursegen/aicoursecreation.php?mode=free"
     When I click on "#courseaiCloseBtn" "css_element"
     Then I should see "My courses"
 
