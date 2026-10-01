@@ -943,6 +943,7 @@ $string['template_activity_scope_course'] = 'Whole course';
 $string['template_activity_scope_course_tip'] = 'Any activity set to "Allow AI modification" anywhere in the course can use this template.';
 $string['template_activity_scope_section'] = 'This section only';
 $string['template_activity_scope_section_tip'] = 'Only activities set to "Allow AI modification" within this same section can use this template.';
+$string['template_activity_placeholder_required'] = 'The activity "{$a}" cannot be used as a template yet because it has no placeholder. Add at least one [[coursegen:aiprompt: ...]] placeholder to the activity first.';
 $string['template_scope_modal_title'] = 'Configure template';
 $string['template_scope_modal_subtitle'] = '{$a} — where can this template be used?';
 $string['template_add_instance'] = 'Add activity from a template';

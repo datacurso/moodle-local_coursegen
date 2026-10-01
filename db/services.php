@@ -158,6 +158,15 @@ $functions = [
         'capabilities' => 'local/coursegen:deletetemplates',
         'loginrequired' => true,
     ],
+    'local_coursegen_check_template_activity' => [
+        'classname' => 'local_coursegen\\external\\check_template_activity',
+        'methodname' => 'execute',
+        'description' => 'Check that an activity has a placeholder, so it may be marked as a template',
+        'type' => 'read',
+        'ajax' => true,
+        'capabilities' => 'local/coursegen:createtemplates,local/coursegen:edittemplates',
+        'loginrequired' => true,
+    ],
     'local_coursegen_get_course_structure' => [
         'classname' => 'local_coursegen\\external\\get_course_structure',
         'methodname' => 'execute',

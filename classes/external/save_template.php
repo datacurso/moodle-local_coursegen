@@ -31,6 +31,7 @@ use external_single_structure;
 use external_value;
 use local_coursegen\local\models\template;
 use local_coursegen\local\service\template_persistence_service;
+use local_coursegen\local\service\template_placeholder_guard;
 use context_system;
 
 defined('MOODLE_INTERNAL') || die();
@@ -176,7 +177,8 @@ class save_template extends external_api {
         }
         require_capability($capability, $context);
 
-        if (trim($params['name']) === '') {
+        $trimmedname = trim($params['name']);
+        if ($trimmedname === '') {
             // The wizard's own name field only ever gets this far via a
             // direct save_template() call, never a real mform submission
             // (classes/form/template_name_form.php's "required" rule is
@@ -184,6 +186,10 @@ class save_template extends external_api {
             // a blank name is ever really rejected.
             throw new \moodle_exception('template_name_required', 'local_coursegen');
         }
+
+        // Nothing is written until every template row is known to have a
+        // placeholder: a refused save must leave the saved template as it was.
+        template_placeholder_guard::assert_sections($params['sections']);
 
         // Create or load existing template.
         $existingid = 0;
@@ -211,7 +217,8 @@ class save_template extends external_api {
             $tpl->create();
         }
 
-        $templateid = (int) $tpl->get('id');
+        $savedid = $tpl->get('id');
+        $templateid = (int) $savedid;
 
         template_persistence_service::save_sections($templateid, $params['sections']);
 

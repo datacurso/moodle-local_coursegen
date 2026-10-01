@@ -32,7 +32,8 @@ namespace local_coursegen;
  */
 trait sections_config_fixture_trait {
     /**
-     * Create a 2-section course with a page in section 1 and a forum plus an
+     * Create a 2-section course with a page in section 1 (it holds a valid
+     * placeholder, so it can be saved as a template) and a forum plus an
      * LTI external tool in section 2.
      *
      * Page and forum are both in ai_activity_types::MODNAMES;
@@ -44,13 +45,32 @@ trait sections_config_fixture_trait {
     private function create_course_fixture(): array {
         $generator = $this->getDataGenerator();
         $course = $generator->create_course(['numsections' => 2]);
-        $page = $generator->create_module('page', ['course' => $course->id, 'section' => 1]);
+        $page = $generator->create_module('page', [
+            'course' => $course->id,
+            'section' => 1,
+            'content' => '<p>[[coursegen:aiprompt: write the lesson]]</p>',
+        ]);
         $forum = $generator->create_module('forum', ['course' => $course->id, 'section' => 2]);
         $lti = $generator->create_module('lti', ['course' => $course->id, 'section' => 2]);
         // A label has no view URL of its own — the "name renders as plain
         // text, never a dead link" fixture.
         $label = $generator->create_module('label', ['course' => $course->id, 'section' => 2]);
         return [$course, $page, $forum, $lti, $label];
+    }
+
+    /**
+     * Create a page that has no placeholder, so it cannot be saved as a template.
+     *
+     * @param \stdClass $course The course to create the page in.
+     * @return \stdClass The page record.
+     */
+    private function create_page_without_placeholder(\stdClass $course): \stdClass {
+        $generator = $this->getDataGenerator();
+        return $generator->create_module('page', [
+            'course' => $course->id,
+            'section' => 1,
+            'content' => '<p>Plain lesson text.</p>',
+        ]);
     }
 
     /**

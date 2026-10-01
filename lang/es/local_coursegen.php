@@ -904,6 +904,7 @@ $string['template_activity_scope_course'] = 'Todo el curso';
 $string['template_activity_scope_course_tip'] = 'Cualquier actividad marcada como "Permitir modificación con IA" en el curso puede usar esta plantilla.';
 $string['template_activity_scope_section'] = 'Solo esta sección';
 $string['template_activity_scope_section_tip'] = 'Solo las actividades marcadas como "Permitir modificación con IA" dentro de esta misma sección pueden usar esta plantilla.';
+$string['template_activity_placeholder_required'] = 'La actividad "{$a}" todavía no puede usarse como plantilla porque no tiene ningún marcador. Añade primero al menos un marcador [[coursegen:aiprompt: ...]] a la actividad.';
 $string['template_scope_modal_title'] = 'Configurar plantilla';
 $string['template_scope_modal_subtitle'] = '{$a} — ¿dónde se puede usar esta plantilla?';
 $string['template_add_instance'] = 'Agregar actividad desde una plantilla';
