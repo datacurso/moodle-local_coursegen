@@ -193,6 +193,10 @@ class mold_form_values {
     /**
      * The QuickForm a moodleform builds its elements in.
      *
+     * The property is protected and moodleform has no getter for it, nor any
+     * public method that gives the elements or the values of a form that has
+     * not been submitted, so this is the only access to it.
+     *
      * @param \moodleform $mform
      * @return \MoodleQuickForm
      */
@@ -202,8 +206,8 @@ class mold_form_values {
     }
 
     /**
-     * The values without the hidden elements that carry the identity of the
-     * activity and the plumbing of the submission.
+     * The values without the identity of the activity and the plumbing of
+     * the form.
      *
      * A module can declare hidden elements of its own, and those are
      * settings: they stay.
@@ -214,12 +218,10 @@ class mold_form_values {
      * @return array
      */
     private static function without_identity(\moodleform_mod $mform, \MoodleQuickForm $quickform, array $values): array {
-        $standard = self::standard_hidden_names($mform, $quickform);
-        $plumbing = self::plumbing_names($quickform);
-        $state = self::state_names($quickform);
-        $identity = array_merge($standard, $plumbing, $state);
+        $identity = self::standard_hidden_names($mform, $quickform);
         $identitykeys = array_flip($identity);
-        return array_diff_key($values, $identitykeys);
+        $withoutidentity = array_diff_key($values, $identitykeys);
+        return self::without_library_plumbing($withoutidentity);
     }
 
     /**
@@ -240,54 +242,31 @@ class mold_form_values {
     }
 
     /**
-     * The names of the hidden elements every form gets from the form library:
-     * the session key and the marker of the submission.
+     * The values without what the form library adds to every form.
      *
-     * A form with nothing of its own holds exactly those, and the marker is
-     * named after the form, so its name is carried over to this one.
+     * These are the library's own naming conventions, not knowledge about any
+     * activity module: the session key, the marker of the submission
+     * (`_qf__` and the name of the form) and the state of the page, which
+     * headers are expanded (`mform_isexpanded_`) and which advanced settings
+     * are shown (`mform_showmore_`).
      *
-     * @param \MoodleQuickForm $quickform
-     * @return string[]
+     * @param array $values
+     * @return array
      */
-    private static function plumbing_names(\MoodleQuickForm $quickform): array {
-        $bare = new bare_moodleform();
-        $barequickform = self::quickform_of($bare);
-        $barehidden = self::hidden_names($barequickform->_elements);
-        return self::renamed($barehidden, $barequickform->_formName, $quickform->_formName);
-    }
-
-    /**
-     * The names of the hidden elements that keep the state of the page: which
-     * header is expanded, which advanced settings are shown.
-     *
-     * The form sets those as constants, while a setting a module declares
-     * hidden has a default, so a hidden element with a constant is not one.
-     *
-     * @param \MoodleQuickForm $quickform
-     * @return string[]
-     */
-    private static function state_names(\MoodleQuickForm $quickform): array {
-        $hidden = self::hidden_names($quickform->_elements);
-        $hiddenkeys = array_flip($hidden);
-        $constants = array_intersect_key($quickform->_constantValues, $hiddenkeys);
-        return array_keys($constants);
-    }
-
-    /**
-     * The names with one part of them replaced.
-     *
-     * @param string[] $names
-     * @param string $from
-     * @param string $to
-     * @return string[]
-     */
-    private static function renamed(array $names, string $from, string $to): array {
-        $renamed = [];
-        foreach ($names as $name) {
-            $newname = str_replace($from, $to, $name);
-            $renamed[] = $newname;
+    private static function without_library_plumbing(array $values): array {
+        $kept = [];
+        foreach ($values as $name => $value) {
+            $name = (string) $name;
+            $issesskey = $name === 'sesskey';
+            $ismarker = str_starts_with($name, '_qf__');
+            $isexpanded = str_starts_with($name, 'mform_isexpanded_');
+            $isshowmore = str_starts_with($name, 'mform_showmore_');
+            if ($issesskey || $ismarker || $isexpanded || $isshowmore) {
+                continue;
+            }
+            $kept[$name] = $value;
         }
-        return $renamed;
+        return $kept;
     }
 
     /**
