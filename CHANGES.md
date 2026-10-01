@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100100
+
+### Added
+- The course creation page opens on a start screen with two cards, free creation and from a template, and each card opens its own workspace. A bar at the top names the chosen path and leads back to the cards until planning starts, when it stays as the name of the path. Only users who can create in both ways see the cards and the bar.
+
+### Removed
+- The switch between free creation and from a template that sat inside the prompt box, which the start screen replaces.
+
 ## [2.0.10] - 2026093029
 
 ### Changed
