@@ -49,6 +49,11 @@
                 data-badge-required="{{spacebadgerequired}}" data-badge-optional="{{spacebadgeoptional}}">{{spacebadge}}</button>
         <div class="tpl-space-instruction text-muted small{{^hasspaceinstruction}} d-none{{/hasspaceinstruction}}"
              data-region="local_coursegen/template/space-row-instruction" data-id="{{cmid}}">{{spaceinstruction}}</div>
+        {{#legacyspace}}
+        <div class="tpl-space-legacy-warning text-warning small" data-region="local_coursegen/template/space-legacy-warning" data-id="{{cmid}}">
+            {{#str}} template_space_legacy_warning, local_coursegen {{/str}}
+        </div>
+        {{/legacyspace}}
     </td>
     <td class="align-middle text-muted" data-region="local_coursegen/template/type-label">{{typelabel}}</td>
     <td class="align-middle text-right">
