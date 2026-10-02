@@ -37,16 +37,17 @@ final class file_sources implements file_source {
     }
 
     /**
-     * The sources of a new activity: the template's and the teacher's files, the AI service's files and its images.
+     * The sources of a new activity: the teacher's files, the template's, the AI service's files and its images.
      *
      * @param int|null $sourcecourseid The template's base course, or null.
      * @return self
      */
     public static function for_new_activity(?int $sourcecourseid): self {
+        $spaces = new space_file_source();
         $addresses = new pluginfile_url_source($sourcecourseid);
         $generated = new generated_file_source();
         $images = new generated_image_source();
-        return new self([$addresses, $generated, $images]);
+        return new self([$spaces, $addresses, $generated, $images]);
     }
 
     #[\Override]

@@ -17,7 +17,6 @@
 namespace local_coursegen\utils;
 
 use context;
-use local_coursegen\local\reference\reference_file_storage;
 use stored_file;
 
 /**
@@ -72,30 +71,65 @@ class mold_file_copier {
             return null;
         }
 
+        return self::file_at($contextid, $component, $filearea, $segments, $filename);
+    }
+
+    /**
+     * The file at an address, reading the segments between the area and the name in each way Moodle writes them.
+     *
+     * The segments may start with the item id, or with a revision (a number that only defeats the browser cache and
+     * is not stored: the file has item id 0), or hold only the folders of the file.
+     *
+     * @param int $contextid
+     * @param string $component
+     * @param string $filearea
+     * @param string[] $segments What lies between the file area and the file name.
+     * @param string $filename
+     * @return stored_file|null
+     */
+    private static function file_at(
+        int $contextid,
+        string $component,
+        string $filearea,
+        array $segments,
+        string $filename
+    ): ?stored_file {
         $fs = get_file_storage();
-        // With an item id.
-        if (!empty($segments) && ctype_digit($segments[0])) {
-            $itemid = (int) $segments[0];
-            $filepath = '/' . implode('/', array_slice($segments, 1));
-            $filepath = rtrim($filepath, '/') . '/';
-            $file = $fs->get_file($contextid, $component, $filearea, $itemid, $filepath, $filename);
-            if ($file) {
-                return $file;
+        $numbered = !empty($segments) && ctype_digit($segments[0]);
+        if ($numbered) {
+            $folders = array_slice($segments, 1);
+            $withitem = $fs->get_file($contextid, $component, $filearea, (int) $segments[0], self::folder_path($folders), $filename);
+            if ($withitem) {
+                return $withitem;
+            }
+            $withrevision = $fs->get_file($contextid, $component, $filearea, 0, self::folder_path($folders), $filename);
+            if ($withrevision) {
+                return $withrevision;
             }
         }
-        // Without an item id (intro-like areas).
-        $filepath = '/' . implode('/', $segments);
-        $filepath = rtrim($filepath, '/') . '/';
-        $file = $fs->get_file($contextid, $component, $filearea, 0, $filepath, $filename);
-        return $file ?: null;
+        $withoutitem = $fs->get_file($contextid, $component, $filearea, 0, self::folder_path($segments), $filename);
+        if ($withoutitem) {
+            return $withoutitem;
+        }
+        return null;
+    }
+
+    /**
+     * The path of a file for a list of folders.
+     *
+     * @param string[] $folders
+     * @return string
+     */
+    private static function folder_path(array $folders): string {
+        $path = '/' . implode('/', $folders);
+        return rtrim($path, '/') . '/';
     }
 
     /**
      * Whether the current user may copy this file.
      *
-     * A file the current user brought is theirs to copy. Any other must sit in
-     * a course or module context, in a course the current user can manage
-     * activities in; with a source course given, it must additionally be that
+     * The file must sit in a course or module context, in a course the current
+     * user can manage activities in; with a source course given, it must additionally be that
      * exact course, so a template flow can never be pointed at a different
      * course's files by a crafted URL in the AI service's response.
      *
@@ -104,11 +138,6 @@ class mold_file_copier {
      * @return bool
      */
     public static function can_copy(stored_file $file, ?int $sourcecourseid = null): bool {
-        global $USER;
-
-        if (reference_file_storage::is_session_file_of($file, (int) $USER->id)) {
-            return true;
-        }
         $context = context::instance_by_id($file->get_contextid(), IGNORE_MISSING);
         if (!$context) {
             return false;
