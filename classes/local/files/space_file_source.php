@@ -16,45 +16,34 @@
 
 namespace local_coursegen\local\files;
 
+use local_coursegen\local\space\space_scope;
 use local_coursegen\utils\mold_file_copier;
 
 /**
- * The files of the template's course, named by their pluginfile.php address.
+ * The file the teacher brought, for an address that names the template's file of a space.
  *
- * An address says exactly which file it is (context, component, area, item and
- * name), so no guessing is involved; what is checked is that the current user
- * may copy that file (see mold_file_copier::can_copy).
+ * A template points at a file resource from anywhere in the course by the address of its file. In the new course that
+ * address means the teacher's file, so asking for the template's file gets the teacher's. An address that is not
+ * the file of a space, or a space the teacher brought nothing for, is none of this source's business.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class pluginfile_url_source implements file_source {
-    /** @var int|null The only course whose files may be copied; null allows any course the user can manage. */
-    private ?int $sourcecourseid;
-
-    /**
-     * Constructor.
-     *
-     * @param int|null $sourcecourseid The template's base course, or null.
-     */
-    public function __construct(?int $sourcecourseid = null) {
-        $this->sourcecourseid = $sourcecourseid;
-    }
-
+final class space_file_source implements file_source {
     #[\Override]
     public function find(file_reference $reference): ?\stored_file {
         if ($reference->kind !== file_reference::KIND_URL) {
+            return null;
+        }
+        $selection = space_scope::current();
+        if ($selection === null) {
             return null;
         }
         $file = mold_file_copier::resolve_url($reference->value);
         if ($file === null) {
             return null;
         }
-        $allowed = mold_file_copier::can_copy($file, $this->sourcecourseid);
-        if (!$allowed) {
-            return null;
-        }
-        return $file;
+        return $selection->teacher_file_for($file);
     }
 }
