@@ -47,6 +47,8 @@ use moodle_url;
  * Dynamic form for the limits part of the config screen.
  */
 class template_config_form extends dynamic_form {
+    use template_config_form_markers;
+
     /** Value of the naming select that means "use the pattern typed in the custom field". */
     const NAMING_CUSTOM = '__custom__';
 
@@ -100,6 +102,7 @@ class template_config_form extends dynamic_form {
         $template = $this->saved_template();
         $this->definition_limits($template);
         $this->definition_naming_pattern($template);
+        $this->definition_markers();
     }
 
     /**

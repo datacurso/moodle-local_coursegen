@@ -30,6 +30,8 @@ use external_function_parameters;
 use external_single_structure;
 use external_value;
 use local_coursegen\local\models\course_session;
+use local_coursegen\local\reference\reference_file_storage;
+use local_coursegen\local\reference\reference_payload_keys;
 use local_coursegen\local\service\template_ai_api_service;
 use local_coursegen\local\service\template_export_service;
 use local_coursegen\local\service\template_reference_uploads;
@@ -80,6 +82,7 @@ class start_template_generation extends external_api {
         }
 
         $payload = template_export_service::build_init_payload($params['templateid'], $params['prompt']);
+        $payload = self::with_reference_files($payload, (int) $USER->id, $params['templateid']);
 
         // Read first: a reference marker with no usable target is refused before a session exists.
         $referenceuploads = template_reference_uploads::plan($payload);
@@ -107,6 +110,8 @@ class start_template_generation extends external_api {
             'coursedata' => json_encode($coursedata),
         ]);
         $session->create();
+        $sessionid = (int) $session->get('id');
+        reference_file_storage::adopt((int) $USER->id, $params['templateid'], $sessionid);
 
         // Nothing has run yet: consuming the stream is what drives the
         // generation, so the caller opens this URL and watches it happen,
@@ -116,6 +121,23 @@ class start_template_generation extends external_api {
             'sessionid' => (int) $session->get('id'),
             'streamurl' => $api->stream_url($threadid),
         ];
+    }
+
+    /**
+     * The payload telling the service which places of the template have a file of the teacher.
+     *
+     * Only the names travel, never the files. They are set before the reference files to send are planned,
+     * because a place the teacher brought a file for needs no file from the template.
+     *
+     * @param array $payload
+     * @param int $userid
+     * @param int $templateid
+     * @return array
+     */
+    private static function with_reference_files(array $payload, int $userid, int $templateid): array {
+        $stagedkeys = reference_file_storage::staged_keys($userid, $templateid);
+        $payload[reference_payload_keys::PAYLOAD_KEY] = reference_payload_keys::for_payload($payload, $stagedkeys);
+        return $payload;
     }
 
     /**

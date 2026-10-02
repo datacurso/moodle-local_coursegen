@@ -104,6 +104,15 @@ $functions = [
         'capabilities' => 'moodle/site:config,local/coursegen:editimagegenerationsettings',
         'loginrequired' => true,
     ],
+    'local_coursegen_get_template_reference_slots' => [
+        'classname' => 'local_coursegen\\external\\get_template_reference_slots',
+        'methodname' => 'execute',
+        'description' => 'List the places of a template where the teacher may bring a file',
+        'type' => 'read',
+        'ajax' => true,
+        'capabilities' => 'local/coursegen:createtemplatecoursewithai',
+        'loginrequired' => true,
+    ],
     'local_coursegen_start_course_planning' => [
         'classname' => 'local_coursegen\\external\\start_course_planning',
         'methodname' => 'execute',

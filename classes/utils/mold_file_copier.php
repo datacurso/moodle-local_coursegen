@@ -18,6 +18,7 @@ namespace local_coursegen\utils;
 
 use context;
 use context_user;
+use local_coursegen\local\reference\reference_file_storage;
 use stored_file;
 
 /**
@@ -59,7 +60,7 @@ class mold_file_copier {
         }
 
         $prefix = preg_quote($CFG->wwwroot . '/pluginfile.php/', '#');
-        $pattern = '#\b(src|href)\s*=\s*(["\'])(' . $prefix . '[^"\']+)\2#iu';
+        $pattern = '#\b(src|href|data|poster)\s*=\s*(["\'])(' . $prefix . '[^"\']+)\2#iu';
 
         return preg_replace_callback(
             $pattern,
@@ -194,6 +195,11 @@ class mold_file_copier {
      * @return bool
      */
     public static function is_allowed_source(stored_file $file, ?int $sourcecourseid = null): bool {
+        global $USER;
+
+        if (reference_file_storage::is_session_file_of($file, (int) $USER->id)) {
+            return true;
+        }
         if (!self::is_allowed_area($file->get_component(), $file->get_filearea())) {
             return false;
         }

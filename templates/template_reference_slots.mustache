@@ -1,0 +1,91 @@
+{{!
+    This file is part of Moodle - https://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/template_reference_slots
+
+    The "Course files" section of the template screen: one optional single-file
+    input for every place of the selected template that takes a file of the
+    teacher's own.
+
+    Classes required for JS:
+    * none
+
+    Data attributes required for JS:
+    * data-action="local_coursegen/template/upload-reference" on each file input (data-slot-key)
+    * data-action="local_coursegen/template/remove-reference" on each remove button (data-slot-key)
+
+    Context variables required for this template:
+    * hasslots bool - Whether the template has any place for a file
+    * slots array - key string, activityname string, instruction string (may be empty),
+      accept string (extensions with their dot, comma separated), filename string (may be empty),
+      hasfile bool
+
+    Example context (json):
+    {
+        "hasslots": true,
+        "slots": [
+            {
+                "key": "12.1",
+                "activityname": "Unit one",
+                "instruction": "Didactic guide in PDF",
+                "accept": ".pdf,.docx",
+                "filename": "guide.pdf",
+                "hasfile": true
+            },
+            {
+                "key": "12.2",
+                "activityname": "Unit one",
+                "instruction": "",
+                "accept": ".png,.jpg",
+                "filename": "",
+                "hasfile": false
+            }
+        ]
+    }
+}}
+{{#hasslots}}
+<div class="local_coursegen-template_reference_slots card mb-3">
+    <div class="card-body">
+        <h3 class="h5 mb-1">{{#str}} courseai_reference_title, local_coursegen {{/str}}</h3>
+        <p class="text-muted small mb-2">{{#str}} courseai_reference_intro, local_coursegen {{/str}}</p>
+        <ul class="list-unstyled mb-0">
+            {{#slots}}
+            <li class="border-top py-2" data-region="local_coursegen/template/reference-slot">
+                <label class="d-block fw-bold mb-0" for="{{uniqid}}-{{key}}">
+                    {{#instruction}}{{instruction}}{{/instruction}}{{^instruction}}{{activityname}}{{/instruction}}
+                </label>
+                <span class="d-block text-muted small mb-1">{{#str}} courseai_reference_in_activity, local_coursegen, {{activityname}} {{/str}}</span>
+                <input type="file" class="form-control form-control-sm" id="{{uniqid}}-{{key}}" accept="{{accept}}"
+                       data-action="local_coursegen/template/upload-reference" data-slot-key="{{key}}">
+                {{#hasfile}}
+                <div class="d-flex align-items-center mt-1">
+                    <span class="small me-2">{{#str}} courseai_reference_current, local_coursegen, {{filename}} {{/str}}</span>
+                    <button type="button" class="btn btn-link btn-sm p-0"
+                            data-action="local_coursegen/template/remove-reference" data-slot-key="{{key}}">
+                        {{#str}} courseai_reference_remove, local_coursegen {{/str}}
+                    </button>
+                </div>
+                {{/hasfile}}
+                {{^hasfile}}
+                <span class="d-block text-muted small mt-1">{{#str}} courseai_reference_hint, local_coursegen {{/str}}</span>
+                {{/hasfile}}
+            </li>
+            {{/slots}}
+        </ul>
+    </div>
+</div>
+{{/hasslots}}

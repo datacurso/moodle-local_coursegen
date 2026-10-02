@@ -186,7 +186,26 @@ $string['courseai_chip_remove_guideline'] = 'Eliminar directriz';
 $string['courseai_chip_remove_syllabus'] = 'Eliminar programa de estudios';
 $string['courseai_chip_view_guideline'] = 'Ver directriz';
 $string['courseai_close_view'] = 'Cerrar y volver a Mis cursos';
+$string['courseai_reference_current'] = 'Archivo actual: {$a}';
+$string['courseai_reference_hint'] = 'Sin archivo: se generará uno nuevo a partir de la referencia, o se omitirá si no se puede generar';
+$string['courseai_reference_in_activity'] = 'En {$a}';
+$string['courseai_reference_intro'] = 'Aporta tu propio archivo para cualquiera de estos apartados. Todos son opcionales.';
+$string['courseai_reference_remove'] = 'Quitar archivo';
+$string['courseai_reference_title'] = 'Archivos del curso';
 $string['courseai_topbar_close'] = 'Cerrar';
+$string['referencefileempty'] = 'El archivo está vacío.';
+$string['referencefilename'] = 'El archivo no tiene un nombre utilizable.';
+$string['referencefiletoolarge'] = 'El archivo supera los {$a} que permite este sitio.';
+$string['referencefiletype'] = 'Este apartado no admite archivos de ese tipo.';
+$string['referencefileupload'] = 'No se pudo subir el archivo (error {$a}).';
+$string['referenceslotunknown'] = 'La plantilla no tiene un apartado para ese archivo.';
+$string['task_purge_reference_files'] = 'Eliminar los archivos que los docentes aportaron para una generación que no los usó';
+$string['template_markers_title'] = 'Marcadores';
+$string['template_reference_marker'] = 'Archivo que aporta el docente';
+$string['template_reference_marker_example'] = '[[coursegen:reference: lo que aporta el docente]]';
+$string['template_reference_marker_help'] = 'Escribe `[[coursegen:reference: lo que aporta el docente]]` como texto simple justo encima del elemento de una actividad que contiene un archivo, como el visor de un PDF, una imagen, un video o un enlace a un documento. El marcador se aplica al elemento siguiente, sea cual sea, y ese elemento debe contener exactamente un archivo de esta actividad.
+
+Cuando se crea un curso a partir de la plantilla, el docente ve un apartado con el nombre que escribiste y puede aportar su propio archivo antes de generar el curso. Sin archivo, se genera una imagen nueva a partir de la referencia cuando el elemento es una imagen, y cualquier otro elemento se omite del curso. El marcador se lee en las actividades guardadas con la acción "plantilla", y nunca aparece en el curso.';
 $string['courseai_compact_prompt_placeholder'] = 'Ejemplo: Regenerar el curso en solo 3 secciones';
 $string['courseai_completion_btn_create_another'] = 'Crear otro curso';
 $string['courseai_completion_btn_open_course'] = 'Abrir curso en Moodle';

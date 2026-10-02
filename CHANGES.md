@@ -2,6 +2,48 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100214
+
+### Added
+- **The template editor explains the reference marker**  
+  A new collapsed "Markers" section of the template configuration holds a help button that explains how to type `[[coursegen:reference: what the teacher brings]]` above the element that holds a file, what the teacher sees for it, and what happens when they bring nothing.
+
+## [2.0.10] - 2026100213
+
+### Added
+- **The preview of a generated activity shows the file the teacher brought, never a token**  
+  Where a place of the template has a file of the teacher, the preview of the activity that holds it shows that file, served only to the teacher who brought it. A token with no file stops the preview with the name of the activity instead of showing it.
+
+## [2.0.10] - 2026100212
+
+### Added
+- **The files a teacher brings are carried into the course made from a template**  
+  Starting a generation now tells the service, by name only, which places of the template have a file of the teacher, and hands those files to the generation; the reference files the service has to look at are planned after that, so a place with a file of the teacher sends none. When the course is built, the token `$@COURSEGENFILE*<uid>.<n>@$` the service leaves as the file of an element is replaced by the teacher's file, and the file is copied into the new activity the way the template's own files are, for the src, href, data and poster of an element. After the course is built the plugin checks that no activity of a searched module still holds a token or points at the temporary file, stops with the name of the activity if one does, and otherwise deletes the temporary files. A token with no file stops the generation with the name of the activity and the place.
+
+## [2.0.10] - 2026100211
+
+### Added
+- **A "Course files" section on the template screen lets the teacher bring their own files before generating**  
+  Once a template is chosen, a section lists every place of the template that takes a file, labelled with what the marker asks for and the activity it belongs to. Each place has one optional file input that accepts only the kinds of file the place holds, shows the file already brought with a link to remove it, and says what happens with no file: a new one is generated from the reference, or the place is left out when one cannot be generated. Uploading again replaces the file. The section disappears with the template and for templates with no place for a file.
+
+## [2.0.10] - 2026100210
+
+### Added
+- **The template screen can list the places of a template and take the file a teacher brings**  
+  A new web service, local_coursegen_get_template_reference_slots, lists the places of a template that take a file with what each asks for, the activity it belongs to, the kinds of file it accepts and the file the teacher already brought. A new page, reference_file.php, takes the upload itself, a real file in a multipart request, or empties a place. Both check the session key and the capability to create a course from a template, and the page only accepts a place the template really has.
+
+## [2.0.10] - 2026100209
+
+### Added
+- **Files a teacher brings for a course are kept apart from their drafts, checked, and cleaned up**  
+  A file uploaded for a place of a template is kept in a private area of the plugin, in the teacher's own context, one file per place, a new upload replacing the old one. The site's upload limit applies, the name is made safe, and a place only takes the kind of file its element holds; anything the site would serve as a page or run as a script is refused. Only the teacher who brought a file can open it. When a generation starts its files are handed to it and deleted once the course is built; a daily task deletes the ones that waited more than a week, and a teacher's files go with their data when it is erased.
+
+## [2.0.10] - 2026100208
+
+### Added
+- **The places of a template where the teacher may bring a file are found**  
+  The activities saved as a template are searched with the same reference scanner the AI service run uses, so a place is numbered exactly as the run numbers it. Each place is named after its activity and its order, kept apart from the uid the payload gives the activity at each export, and takes the kind of file of the one the template holds: an image place takes images, a video place videos, any other place documents, and nothing the site would serve as a page or run as a script. A marker with no usable element below it stops the search with the name of the marker. Nothing is shown to the teacher yet.
+
 ## [2.0.10] - 2026100207
 
 ### Added
