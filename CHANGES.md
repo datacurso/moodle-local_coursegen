@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100207
+
+### Added
+- **A template can ask the AI for a new image coherent with the new course, using the image already in the template as the reference**  
+  The new image takes the original's place in every course made from the template; nothing of the original course is left in it. It works in any text of any activity and does not depend on the images switch. The files travel to the AI service and back as files, the review preview shows the new images, and a file of a kind the AI cannot make anything from (a document, a video) is removed together with its block so nothing of the original course leaks. Both services must be released together.
+
 ## [2.0.10] - 2026100206
 
 ### Added
