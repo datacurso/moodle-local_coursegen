@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100206
+
+### Added
+- **A template can mark an image to be replaced by a new one made for the new course: the markers are read and the files they point at are sent to the AI service**  
+  Write `[[coursegen:reference: your instruction]]` right above the image (or the block that holds it) in the activity used as template. Before the generation starts, every marker is checked (it needs an element below it holding exactly one file of the template activity) and the images are sent to the AI service as files, except those the teacher provides. A marker that cannot be used is reported before anything is sent.
+
 ## [2.0.10] - 2026100205
 
 ### Fixed
