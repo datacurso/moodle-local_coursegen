@@ -109,7 +109,7 @@ trait glossary_tab_tools {
 
         if (count($options) > 1) {
             $urloptions = array_flip($options);
-            $select = new url_select($urloptions, $active, null);
+            $select = new \url_select($urloptions, $active, null);
             $selectlabel = get_string('explainalphabet', 'glossary');
             $select->set_label($selectlabel, ['class' => 'sr-only']);
             return $select->export_for_template($output);
