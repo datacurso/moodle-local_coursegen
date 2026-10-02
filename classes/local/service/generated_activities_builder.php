@@ -172,7 +172,8 @@ class generated_activities_builder {
      * @param array $activities Generated activities from API.
      * @param array $subsections Declared subsections index, mutated as they materialize.
      * @param array $generatedcms Filled with payload cmid => created cmid for every activity
-     *     that carries a cmid and was created.
+     *     that carries a cmid and was created. A virtual template instance travels under
+     *     a negative cmid, which is tracked like any other.
      * @param int|null $sourcecourseid Course whose files the payload may reference (template base course).
      * @return array Activity creation errors.
      */
@@ -226,7 +227,7 @@ class generated_activities_builder {
             try {
                 $newcm = create_mod_service::create_from_ai_result($activity, $course, $sectionnum, null, $sourcecourseid);
                 $payloadcmid = (int) ($activity['cmid'] ?? 0);
-                if ($payloadcmid > 0) {
+                if ($payloadcmid !== 0) {
                     $generatedcms[$payloadcmid] = (int) $newcm->coursemodule;
                 }
             } catch (\Throwable $e) {

@@ -43,7 +43,7 @@ class create_course_service {
      * @param array $overrides Optional user overrides for course fields.
      *     Supported keys: fullname (string), shortname (string), category (int).
      * @return array Result of the course content application. On success it also
-     *     carries 'generatedcms' (payload cmid => created cmid), which is internal
+     *     carries 'generatedcms' (payload cmid, negative for a virtual instance => created cmid), which is internal
      *     and must not be returned through a web service.
      */
     public static function create_course(course_session $session, array $resultdata, array $overrides = []): array {
