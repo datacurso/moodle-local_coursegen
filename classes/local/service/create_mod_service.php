@@ -16,12 +16,15 @@
 
 namespace local_coursegen\local\service;
 
+use local_coursegen\local\files\activity_file_pass;
+use local_coursegen\local\files\file_copy_exception;
 use local_coursegen\mod_settings\base_settings;
 use local_coursegen\utils\generated_files_scope;
 use local_coursegen\utils\text_editor_parameter_cleaner;
 
 defined('MOODLE_INTERNAL') || die();
 require_once($CFG->dirroot . '/course/externallib.php');
+require_once($CFG->dirroot . '/course/lib.php');
 require_once($CFG->dirroot . '/course/modlib.php');
 
 /**
@@ -39,7 +42,7 @@ class create_mod_service {
      * @param object $course Course object
      * @param int $sectionnum Section number where the module will be created
      * @param int|null $beforemod Before module id where the module will be created
-     * @param int|null $sourcecourseid Course whose files the payload's rich text may
+     * @param int|null $sourcecourseid Course whose files the payload's texts may
      *     reference by pluginfile URL (the template's base course); null lets any
      *     course the current user can access through.
      *
@@ -90,17 +93,48 @@ class create_mod_service {
             $resultinfo['parameters'],
             $sectionnum,
             $beforemod,
-            $module->id,
-            $sourcecourseid
+            $module->id
         );
 
         $newcm = add_moduleinfo($parameters, $course, $mform);
 
         $modsettings = $parameters->mod_settings;
 
-        self::apply_mod_settings($modname, $newcm, $modsettings, $sourcecourseid);
+        self::apply_mod_settings($modname, $newcm, $modsettings);
+
+        self::give_files($modname, $newcm, (string) ($parameters->name ?? ''), $sourcecourseid);
 
         return $newcm;
+    }
+
+    /**
+     * Give the new activity every file its texts reference.
+     *
+     * Runs once the activity and everything its settings create exist, so the
+     * rows of every text are real whatever the module is. When a file cannot be
+     * given, the activity is removed again and the error is raised.
+     *
+     * @param string $modname Module plugin name.
+     * @param object $newcm Newly created course module.
+     * @param string $name The activity's name, for the error.
+     * @param int|null $sourcecourseid Course whose files the texts may reference.
+     * @return void
+     */
+    private static function give_files(string $modname, $newcm, string $name, ?int $sourcecourseid): void {
+        $activity = (object) [
+            'id' => (int) $newcm->coursemodule,
+            'instance' => (int) $newcm->instance,
+            'modname' => $modname,
+            'course' => (int) $newcm->course,
+        ];
+        $pass = activity_file_pass::for_new_activity($sourcecourseid);
+        try {
+            $pass->run($activity, $name);
+        } catch (file_copy_exception $exception) {
+            // An activity whose files are missing would stay in the course half made.
+            course_delete_module($activity->id);
+            throw $exception;
+        }
     }
 
     /**
@@ -191,7 +225,6 @@ class create_mod_service {
      * @param int $sectionnum Target section number.
      * @param int|null $beforemod Optional cm id to insert before.
      * @param int $moduleid Module id from 'modules' table.
-     * @param int|null $sourcecourseid Course whose files may be copied into the editors' drafts.
      * @return object Parameters ready for add_moduleinfo().
      */
     private static function prepare_parameters(
@@ -199,10 +232,9 @@ class create_mod_service {
         $rawparameters,
         $sectionnum,
         $beforemod,
-        $moduleid,
-        ?int $sourcecourseid = null
+        $moduleid
     ) {
-        $cleanedparameters = text_editor_parameter_cleaner::clean_text_editor_objects($rawparameters, $sourcecourseid);
+        $cleanedparameters = text_editor_parameter_cleaner::clean_text_editor_objects($rawparameters);
         $parameters = (object)$cleanedparameters;
         $parameters->section = $sectionnum;
         $parameters->beforemod = $beforemod;
@@ -301,14 +333,12 @@ class create_mod_service {
      * @param string $modname Module plugin name.
      * @param object $newcm Newly created course module.
      * @param array|null $modsettings Settings to apply.
-     * @param int|null $sourcecourseid Course whose files the settings' rich text may reference.
      * @return void
      */
     private static function apply_mod_settings(
         string $modname,
         $newcm,
-        ?array $modsettings,
-        ?int $sourcecourseid = null
+        ?array $modsettings
     ): void {
         if (empty($modsettings)) {
             return;
@@ -324,7 +354,7 @@ class create_mod_service {
         }
 
         /** @var base_settings $modsettingsinstance */
-        $modsettingsinstance = new $classpath($newcm, $modsettings, $sourcecourseid);
+        $modsettingsinstance = new $classpath($newcm, $modsettings);
         $modsettingsinstance->add_settings();
     }
 
