@@ -21,8 +21,7 @@ use local_coursegen\local\preview\h5pactivity\view;
 /**
  * An H5P activity, drawn by mod_h5pactivity's own view code run against the payload.
  *
- * The package is the mould's: an answer writes the description of an H5P
- * activity, not its content, so what plays is what the template carries.
+ * The package is the one the activity's own result lists among its files.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -36,38 +35,6 @@ class h5pactivity_preview extends preview_base {
      */
     protected function modname(): string {
         return 'h5pactivity';
-    }
-
-    /**
-     * A draft's description replaces the mould's.
-     *
-     * @param json_store $store
-     */
-    protected function overlay(json_store $store): void {
-        $rows = $store->get_records('h5pactivity');
-        if (!$rows) {
-            return;
-        }
-        $row = reset($rows);
-        $value = $this->parameters['introeditor'] ?? $this->parameters['intro'] ?? null;
-
-        if (is_array($value)) {
-            $text = (string) ($value['text'] ?? '');
-        } else {
-            $text = (string) ($value ?? '');
-        }
-
-        if (trim($text) === '') {
-            return;
-        }
-
-        $introformat = FORMAT_HTML;
-        if (is_array($value)) {
-            $introformat = (int) ($value['format'] ?? FORMAT_HTML);
-        }
-
-        $store->set('h5pactivity', $row->id, 'intro', $text);
-        $store->set('h5pactivity', $row->id, 'introformat', $introformat);
     }
 
     /**

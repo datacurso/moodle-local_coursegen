@@ -21,8 +21,8 @@ use local_coursegen\local\preview\folder\view;
 /**
  * A folder, drawn by mod_folder's own view code run against the payload.
  *
- * The files are the template's, listed in the payload; a draft cannot add
- * files, so a planned folder shows the mould's.
+ * The files are the ones the activity's own result lists, each with the address
+ * it is served from.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -36,26 +36,6 @@ class folder_preview extends preview_base {
      */
     protected function modname(): string {
         return 'folder';
-    }
-
-    /**
-     * A draft replaces the description.
-     *
-     * @param json_store $store
-     */
-    protected function overlay(json_store $store): void {
-        $rows = $store->get_records('folder');
-        if (!$rows) {
-            return;
-        }
-        $row = reset($rows);
-        $intro = $this->parameters['introeditor'] ?? null;
-        if (is_array($intro)) {
-            $intro = $intro['text'] ?? null;
-        }
-        if (is_string($intro) && trim($intro) !== '') {
-            $store->set('folder', $row->id, 'intro', $intro);
-        }
     }
 
     /**
