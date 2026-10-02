@@ -37,6 +37,10 @@ final class template_reference_marker_strings_test extends \advanced_testcase {
             ['template_reference_marker'],
             ['template_reference_marker_example'],
             ['template_reference_marker_help'],
+            ['template_video_marker'],
+            ['template_video_marker_example'],
+            ['template_video_marker_help'],
+            ['courseai_template_video_missing'],
             ['courseai_reference_title'],
             ['courseai_reference_intro'],
             ['courseai_reference_hint'],
@@ -74,6 +78,34 @@ final class template_reference_marker_strings_test extends \advanced_testcase {
 
         $this->assertStringContainsString('[[coursegen:reference:', $english);
         $this->assertStringContainsString('[[coursegen:reference:', $spanish);
+    }
+
+    /**
+     * The help names the video slot the way an author types it, and the rule that tells it from a link, in both languages.
+     */
+    public function test_the_video_help_names_the_syntax_and_the_rule_by_tag(): void {
+        $manager = get_string_manager();
+
+        foreach (['en', 'es'] as $lang) {
+            $help = $manager->get_string('template_video_marker_help', 'local_coursegen', null, $lang);
+
+            $this->assertStringContainsString('[[coursegen:aiprompt:', $help);
+            $this->assertStringContainsString('<iframe>', $help);
+            $this->assertStringContainsString('`href`', $help);
+        }
+    }
+
+    /**
+     * The notice of a missing video names the video the teacher asked for, in both languages.
+     */
+    public function test_the_missing_video_notice_carries_the_instruction(): void {
+        $manager = get_string_manager();
+
+        foreach (['en', 'es'] as $lang) {
+            $notice = $manager->get_string('courseai_template_video_missing', 'local_coursegen', 'un video corto', $lang);
+
+            $this->assertStringContainsString('un video corto', $notice);
+        }
     }
 
     /**

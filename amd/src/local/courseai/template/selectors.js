@@ -39,6 +39,7 @@ export default {
         removeReference: '[data-action="local_coursegen/template/remove-reference"]',
     },
     regions: {
+        generationNotices: '[data-region="local_coursegen/template/generation-notices"]',
         referenceFiles: '[data-region="local_coursegen/template/reference-files"]',
         chooserPanel: '[data-region="local_coursegen/template/chooser-panel"]',
         chooserSelectedIcon: '[data-region="local_coursegen/template/chooser-selected-icon"]',
