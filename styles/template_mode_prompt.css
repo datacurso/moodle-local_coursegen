@@ -23,9 +23,12 @@
 /* The generation view hides every edit control of the rows. Once the course is
    generated the review needs two of them back: the preview of the activity and
    the request for a change to it. Both stay hidden (the hidden attribute)
-   until the review opens, so only the generated activities show them. */
+   until the review opens, so only the generated activities show them. A
+   template's activities are locked, which switches off the pointer events of
+   the whole card, so the two buttons switch them back on. */
 body.cg-generating #tplModeStructure .cg-item-actions :is(.cg-preview-btn, .cg-adjust-btn):not([hidden]) {
     display: inline-flex !important;
+    pointer-events: auto;
 }
 
 /* The preview is a real course page, so it needs no styles of its own. This
