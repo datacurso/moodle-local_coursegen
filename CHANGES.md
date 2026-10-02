@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file. Each change
 ## [2.0.10] - 2026100204
 
 ### Fixed
+- **The Spanish review texts no longer use regional forms**  
+  The review form and the instance prompt placeholder asked the teacher to "previsualizá", "ajustá", "ingresá" or "describí" and said "si lo dejás vacío". They now use the neutral forms the rest of the Spanish texts use.
 - **The review of a course made from a template did not look or behave like the review of free creation**  
   After the course was generated, the review card could be left without a visible Accept button, the send button of the composer turned into a clipped text button, and the status kept spinning while the system was only waiting for the teacher. The review now uses the same decision card as free creation, with Accept and Adjust. Choosing Adjust brings the composer back with the usual round send button and the slim bar that keeps Accept reachable. While the course waits for the review, the spinner gives way to a check in both columns and no working indicator is shown.
 - **The preview of an activity the template keeps now shows its real content**  
