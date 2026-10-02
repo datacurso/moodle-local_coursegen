@@ -105,8 +105,7 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
         $inputbarpos = strpos($html, 'data-region="tpl-input-bar"');
         $this->assertNotFalse($inputbarpos, 'Input bar region missing');
 
-        foreach (
-            [
+        foreach ([
                 'id="tplPromptInput"',
                 'id="tplBtnSyllabus"',
                 'id="tplWithImages"',
@@ -114,8 +113,7 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
                 'id="tplLangSelect"',
                 'id="tplModeGenerate"',
                 'id="tplChipSyllabus"',
-            ] as $needle
-        ) {
+            ] as $needle) {
             $pos = strpos($html, $needle);
             $this->assertNotFalse($pos, "Control {$needle} missing");
             $this->assertGreaterThan($inputbarpos, $pos, "Control {$needle} must render inside the input bar");
@@ -164,15 +162,13 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
         $this->assertNotFalse($maincolpos, 'Main column region missing');
 
         // Structure containers plus the pre-pick empty state live in the main column.
-        foreach (
-            [
+        foreach ([
                 self::EMPTY_SENTINEL,
                 'id="tplModeLimits"',
                 'id="tplModeLimitsBadge"',
                 'id="tplModeStats"',
                 'id="tplModeStructure"',
-            ] as $needle
-        ) {
+            ] as $needle) {
             $pos = strpos($html, $needle);
             $this->assertNotFalse($pos, "Main column content {$needle} missing");
             $this->assertGreaterThan($maincolpos, $pos, "{$needle} must render inside the main column");
