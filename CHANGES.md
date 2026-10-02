@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100103
+
+### Added
+- **Links between the activities of a course generated from a template**  
+  The AI service can now write a link to another activity of the course. Once every activity of the new course exists, the generated activities and the kept ones that were copied, each link is replaced by the address of the activity it names, in the content of the generated pages and in the pages of the generated lessons. A link is only replaced when it is the whole value of a link or image address, and any other text between dollar and at signs is left as it is. If a link names an activity that is not in the course, nothing is rewritten, the generation is marked as failed and the error names the activity and the link, so a broken link is never left in the content. This must be released together with the matching change of the AI service.
+
+### Fixed
+- **The virtual activities of a template were missing from the map of created activities**  
+  The activities generated from a template source were not recorded under their identifier when the course was built, so nothing could be traced back to them. They are recorded now.
+
 ## [2.0.10] - 2026100102
 
 ### Changed
