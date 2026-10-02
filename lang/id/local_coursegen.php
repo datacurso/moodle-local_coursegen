@@ -478,6 +478,7 @@ $string['generationwarning_data_entry'] = 'Entri contoh basis data tidak dapat d
 $string['generationwarning_data_field'] = 'Bidang basis data "{$a}" tidak dapat dibuat dan dilewati.';
 $string['generationwarning_filetype_catalog'] = 'Grup jenis berkas situs tidak dapat ditentukan; katalog standar Moodle digunakan.';
 $string['generationwarning_folder_file'] = 'Berkas folder "{$a}" tidak dapat diunduh dan dilewati.';
+$string['generationwarning_forum_discussion'] = 'Diskusi forum "{$a}" tidak dapat dibuat dan dilewati.';
 $string['generationwarning_generic'] = 'Salah satu langkah pembuatan AI tidak dapat diselesaikan ({$a}).';
 $string['generationwarning_grading_method'] = 'Metode penilaian tugas tidak dapat diatur ulang setelah rubrik gagal.';
 $string['generationwarning_h5p_version'] = 'Versi kerangka kerja H5P tidak dapat ditentukan; set pustaka bawaan layanan digunakan.';

@@ -116,6 +116,62 @@ final class system_instruction_service_test extends \advanced_testcase {
     }
 
     /**
+     * get_all() can list the active instructions alphabetically, as the course AI page shows them.
+     */
+    public function test_get_all_can_list_by_name(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        /** @var \local_coursegen_generator $generator */
+        $generator = $this->getDataGenerator()->get_plugin_generator('local_coursegen');
+        $generator->create_system_instruction(['name' => 'Quality policy', 'timecreated' => 100]);
+        $generator->create_system_instruction(['name' => 'Deleted', 'deleted' => 1, 'timecreated' => 200]);
+        $generator->create_system_instruction(['name' => 'Accessibility', 'timecreated' => 300]);
+        $generator->create_system_instruction(['name' => 'Branding', 'timecreated' => 400]);
+
+        $names = array_map(
+            static fn(system_instruction $instruction): string => $instruction->get('name'),
+            array_values(system_instruction_service::get_all('name', 'ASC'))
+        );
+
+        $this->assertSame(['Accessibility', 'Branding', 'Quality policy'], $names);
+    }
+
+    /**
+     * get_all() accepts the sort direction in any case and rejects unknown fields and directions.
+     */
+    public function test_get_all_rejects_unknown_sort_field_and_direction(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        /** @var \local_coursegen_generator $generator */
+        $generator = $this->getDataGenerator()->get_plugin_generator('local_coursegen');
+        $generator->create_system_instruction(['name' => 'B', 'timecreated' => 100, 'timemodified' => 300]);
+        $generator->create_system_instruction(['name' => 'A', 'timecreated' => 200, 'timemodified' => 100]);
+
+        $names = static fn(array $instructions): array => array_map(
+            static fn(system_instruction $instruction): string => $instruction->get('name'),
+            array_values($instructions)
+        );
+        $this->assertSame(['A', 'B'], $names(system_instruction_service::get_all('name', 'asc')));
+        $this->assertSame(['A', 'B'], $names(system_instruction_service::get_all('timemodified', 'ASC')));
+
+        try {
+            system_instruction_service::get_all('content');
+            $this->fail('An unknown sort field must be rejected.');
+        } catch (\core\exception\coding_exception $e) {
+            $this->assertStringContainsString('content', $e->getMessage());
+        }
+
+        try {
+            system_instruction_service::get_all('name', 'RANDOM');
+            $this->fail('An unknown sort direction must be rejected.');
+        } catch (\core\exception\coding_exception $e) {
+            $this->assertStringContainsString('RANDOM', $e->getMessage());
+        }
+    }
+
+    /**
      * get_by_id() returns active instructions only.
      */
     public function test_get_by_id(): void {
@@ -210,11 +266,16 @@ final class system_instruction_service_test extends \advanced_testcase {
         $instruction = system_instruction_service::create('Quality policy', 'Content');
         $id = (int)$instruction->get('id');
 
+        $modifier = $this->getDataGenerator()->create_user();
+        $this->setUser($modifier);
         $this->assertTrue(system_instruction_service::delete($id));
 
         $record = $DB->get_record(system_instruction::TABLE, ['id' => $id], '*', MUST_EXIST);
         $this->assertEquals(1, $record->deleted);
         $this->assertSame('Quality policy', $record->name);
+        // The deletion is recorded like any other modification.
+        $this->assertEquals($modifier->id, $record->usermodified);
+        $this->assertGreaterThanOrEqual($record->timecreated, $record->timemodified);
         $this->assertNull(system_instruction_service::get_by_id($id));
         $this->assertSame([], system_instruction_service::get_all());
         $this->assertSame('', system_instruction_service::get_instruction_content($id));

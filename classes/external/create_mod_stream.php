@@ -31,6 +31,7 @@ use local_coursegen\local\api_client_factory;
 use local_coursegen\local\generation_error_handler;
 use local_coursegen\local\h5p_core_api;
 use local_coursegen\local\image_generation\image_policy_builder;
+use local_coursegen\local\language_options;
 use local_coursegen\local\service\course_context_service;
 use local_coursegen\local\service\filetype_catalog_service;
 use local_coursegen\local\service\module_job_service;
@@ -172,7 +173,9 @@ class create_mod_stream extends external_api {
         // Release the session so other tabs in the same session are not blocked.
         \core\session\manager::write_close();
 
-        $lang = self::resolve_request_language($lang, $coursecontext);
+        // Language priority: explicit request language, stored course context
+        // language, current Moodle language; unsupported codes fall through.
+        $lang = language_options::resolve([$lang, $coursecontext->lang ?? '', \current_language()]);
 
         $payload = [
             'instructions' => $prompt,
@@ -269,33 +272,6 @@ class create_mod_stream extends external_api {
             'streamingurl' => $streamingurl,
             'warnings' => warning_collector::to_messages($warnings),
         ];
-    }
-
-    /**
-     * Resolve language to send to the AI service.
-     *
-     * Priority order:
-     * 1) Explicit request language from modal.
-     * 2) Stored course context language.
-     * 3) Current Moodle language.
-     * 4) English fallback.
-     *
-     * @param string|null $requestlang
-     * @param \stdClass|null $coursecontext
-     * @return string
-     */
-    private static function resolve_request_language(?string $requestlang, ?\stdClass $coursecontext): string {
-        $candidates = [$requestlang, $coursecontext->lang ?? '', \current_language()];
-
-        foreach ($candidates as $candidate) {
-            $candidate = str_replace('-', '_', \core_text::strtolower(trim((string)$candidate)));
-            $lang = explode('_', $candidate)[0];
-            if ($lang !== '') {
-                return $lang;
-            }
-        }
-
-        return 'en';
     }
 
     /**

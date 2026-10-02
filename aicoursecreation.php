@@ -24,8 +24,10 @@
 
 use core\context\system;
 use core\url;
+use local_coursegen\local\language_options;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\course_session_service;
+use local_coursegen\local\service\system_instruction_service;
 
 require('../../config.php');
 require_once($CFG->libdir . '/filelib.php');
@@ -54,31 +56,19 @@ $PAGE->requires->css(new url('/local/coursegen/styles/sidebar.css', ['v' => $css
 
 $resumesessionid = optional_param('sessionid', 0, PARAM_INT);
 
-// Load system instructions (directrices institucionales).
+// Load the institutional guidelines (system instructions), alphabetically.
 $systeminstructions = [];
-$records = $DB->get_records('local_coursegen_system_instruction', ['deleted' => 0], 'name ASC');
-foreach ($records as $record) {
+foreach (system_instruction_service::get_all('name', 'ASC') as $instruction) {
     $systeminstructions[] = [
-        'id' => 'si_' . $record->id,
-        'name' => $record->name,
+        'id' => 'si_' . $instruction->get('id'),
+        'name' => $instruction->get('name'),
         'category' => 'General', // The table doesn't have a category field, using default.
-        'description' => $record->content ?? '',
+        'description' => $instruction->get('content') ?? '',
     ];
 }
 
 // Get available languages (only those supported by the plugin).
-$supportedlangs = ['es', 'en', 'de', 'ru', 'pt', 'fr', 'id'];
-$alllanguages = get_string_manager()->get_list_of_languages(null, 'iso6391');
-
-$languageoptions = [];
-foreach ($supportedlangs as $code) {
-    if (isset($alllanguages[$code])) {
-        $languageoptions[] = [
-            'code' => $code,
-            'name' => $alllanguages[$code] . ' (' . strtoupper($code) . ')',
-        ];
-    }
-}
+$languageoptions = language_options::options();
 
 // Helper to build session data array.
 $buildsessiondata = function ($session, $maxtitle = 50) {

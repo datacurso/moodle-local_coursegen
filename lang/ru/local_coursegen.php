@@ -478,6 +478,7 @@ $string['generationwarning_data_entry'] = 'Не удалось создать п
 $string['generationwarning_data_field'] = 'Не удалось создать поле базы данных «{$a}»; поле пропущено.';
 $string['generationwarning_filetype_catalog'] = 'Не удалось определить группы типов файлов сайта; используется стандартный каталог Moodle.';
 $string['generationwarning_folder_file'] = 'Не удалось загрузить файл папки «{$a}»; файл пропущен.';
+$string['generationwarning_forum_discussion'] = 'Не удалось создать обсуждение форума «{$a}»; оно пропущено.';
 $string['generationwarning_generic'] = 'Не удалось выполнить один из шагов генерации AI ({$a}).';
 $string['generationwarning_grading_method'] = 'Не удалось сбросить метод оценивания задания после сбоя рубрики.';
 $string['generationwarning_h5p_version'] = 'Не удалось определить версию фреймворка H5P; используется набор библиотек сервиса по умолчанию.';

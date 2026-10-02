@@ -74,6 +74,9 @@ final class warning_collector {
     /** @var string A quiz question could not be created (subject: question name). */
     public const STEP_QUIZ_QUESTION = 'quiz_question';
 
+    /** @var string A forum discussion could not be created (subject: discussion subject). */
+    public const STEP_FORUM_DISCUSSION = 'forum_discussion';
+
     /** @var string The H5P framework version could not be resolved. */
     public const STEP_H5P_VERSION = 'h5p_version';
 
@@ -91,6 +94,7 @@ final class warning_collector {
         self::STEP_DATA_ENTRY,
         self::STEP_WORKSHOP_PHASE,
         self::STEP_QUIZ_QUESTION,
+        self::STEP_FORUM_DISCUSSION,
         self::STEP_H5P_VERSION,
         self::STEP_FILETYPE_CATALOG,
     ];

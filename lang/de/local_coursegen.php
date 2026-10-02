@@ -478,6 +478,7 @@ $string['generationwarning_data_entry'] = 'Ein Beispieleintrag der Datenbank kon
 $string['generationwarning_data_field'] = 'Das Datenbankfeld "{$a}" konnte nicht erstellt werden und wurde übersprungen.';
 $string['generationwarning_filetype_catalog'] = 'Die Dateitypgruppen der Website konnten nicht ermittelt werden; der Standardkatalog von Moodle wird verwendet.';
 $string['generationwarning_folder_file'] = 'Die Verzeichnisdatei "{$a}" konnte nicht heruntergeladen werden und wurde übersprungen.';
+$string['generationwarning_forum_discussion'] = 'Die Forumsdiskussion "{$a}" konnte nicht erstellt werden und wurde übersprungen.';
 $string['generationwarning_generic'] = 'Ein Schritt der AI-Generierung konnte nicht abgeschlossen werden ({$a}).';
 $string['generationwarning_grading_method'] = 'Die Bewertungsmethode der Aufgabe konnte nach dem Fehlschlag der Rubrik nicht zurückgesetzt werden.';
 $string['generationwarning_h5p_version'] = 'Die H5P-Framework-Version konnte nicht ermittelt werden; der Standard-Bibliothekssatz des Dienstes wird verwendet.';

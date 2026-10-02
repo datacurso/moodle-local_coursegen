@@ -110,6 +110,54 @@ final class create_mod_stream_contract_test extends api_testcase {
     }
 
     /**
+     * An explicit language the AI service does not support falls through to the stored
+     * course context language.
+     */
+    public function test_unsupported_request_language_falls_back_to_course_context_language(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $captured = null;
+        $this->inject_start_activity_service($captured);
+        $this->getDataGenerator()->get_plugin_generator('local_coursegen')->create_course_context([
+            'courseid' => $course->id,
+            'context_type' => course_context::CONTEXT_TYPE_CUSTOM_PROMPT,
+            'lang' => 'fr',
+            'prompt_text' => '',
+        ]);
+
+        $result = create_mod_stream::execute($course->id, 1, 'Create a page about rocks', 0, null, 'ja');
+        $this->resetDebugging();
+
+        $this->assertTrue($result['ok'], 'Start must succeed: ' . ($result['message'] ?? ''));
+        $this->assertSame('fr', $captured['lang']);
+    }
+
+    /**
+     * Without an explicit language and without a course context, the current Moodle
+     * language is sent when the AI service supports it.
+     */
+    public function test_current_language_is_sent_when_nothing_else_is_given(): void {
+        global $SESSION;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $captured = null;
+        $this->inject_start_activity_service($captured);
+        $SESSION->lang = 'de';
+        $this->assertSame('de', current_language());
+
+        $result = create_mod_stream::execute($course->id, 1, 'Create a page about rocks', 0, null, null);
+        $this->resetDebugging();
+
+        $this->assertTrue($result['ok'], 'Start must succeed: ' . ($result['message'] ?? ''));
+        $this->assertSame('de', $captured['lang']);
+    }
+
+    /**
      * MDL-CTR-001: The individual creation request includes the data the service
      * requires at the plugin level: instructions, language and the images option.
      * The H5P framework version travels as an optional field.

@@ -478,6 +478,7 @@ $string['generationwarning_data_entry'] = 'Une entrée d\'exemple de la base de 
 $string['generationwarning_data_field'] = 'Le champ « {$a} » de la base de données n\'a pas pu être créé et a été ignoré.';
 $string['generationwarning_filetype_catalog'] = 'Les groupes de types de fichiers du site n\'ont pas pu être déterminés ; le catalogue standard de Moodle est utilisé.';
 $string['generationwarning_folder_file'] = 'Le fichier « {$a} » du dossier n\'a pas pu être téléchargé et a été ignoré.';
+$string['generationwarning_forum_discussion'] = 'La discussion « {$a} » du forum n\'a pas pu être créée et a été ignorée.';
 $string['generationwarning_generic'] = 'Une étape de la génération AI n\'a pas pu être terminée ({$a}).';
 $string['generationwarning_grading_method'] = 'La méthode d\'évaluation du devoir n\'a pas pu être réinitialisée après l\'échec de la grille.';
 $string['generationwarning_h5p_version'] = 'La version du cadre H5P n\'a pas pu être déterminée ; le jeu de bibliothèques par défaut du service est utilisé.';

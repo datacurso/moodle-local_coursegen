@@ -477,6 +477,7 @@ $string['generationwarning_data_entry'] = 'A database example entry could not be
 $string['generationwarning_data_field'] = 'The database field "{$a}" could not be created and was skipped.';
 $string['generationwarning_filetype_catalog'] = 'The site file-type groups could not be resolved; the standard Moodle catalog is used.';
 $string['generationwarning_folder_file'] = 'The folder file "{$a}" could not be downloaded and was skipped.';
+$string['generationwarning_forum_discussion'] = 'The forum discussion "{$a}" could not be created and was skipped.';
 $string['generationwarning_generic'] = 'A step of the AI generation could not be completed ({$a}).';
 $string['generationwarning_grading_method'] = 'The assignment grading method could not be reset after the rubric failed.';
 $string['generationwarning_h5p_version'] = 'The H5P framework version could not be resolved; the service default library set is used.';

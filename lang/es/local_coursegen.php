@@ -477,6 +477,7 @@ $string['generationwarning_data_entry'] = 'No se pudo crear una entrada de ejemp
 $string['generationwarning_data_field'] = 'No se pudo crear el campo "{$a}" de la base de datos y se omitió.';
 $string['generationwarning_filetype_catalog'] = 'No se pudieron resolver los grupos de tipos de archivo del sitio; se usa el catálogo estándar de Moodle.';
 $string['generationwarning_folder_file'] = 'No se pudo descargar el archivo "{$a}" de la carpeta y se omitió.';
+$string['generationwarning_forum_discussion'] = 'No se pudo crear el debate "{$a}" del foro y se omitió.';
 $string['generationwarning_generic'] = 'No se pudo completar un paso de la generación con AI ({$a}).';
 $string['generationwarning_grading_method'] = 'No se pudo restablecer el método de calificación de la tarea después del fallo de la rúbrica.';
 $string['generationwarning_h5p_version'] = 'No se pudo resolver la versión del marco H5P; se usa el conjunto de bibliotecas predeterminado del servicio.';

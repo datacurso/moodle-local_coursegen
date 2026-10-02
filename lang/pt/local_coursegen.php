@@ -478,6 +478,7 @@ $string['generationwarning_data_entry'] = 'Uma entrada de exemplo da base de dad
 $string['generationwarning_data_field'] = 'O campo "{$a}" da base de dados não pôde ser criado e foi ignorado.';
 $string['generationwarning_filetype_catalog'] = 'Os grupos de tipos de arquivo do site não puderam ser resolvidos; o catálogo padrão do Moodle é usado.';
 $string['generationwarning_folder_file'] = 'O arquivo "{$a}" da pasta não pôde ser baixado e foi ignorado.';
+$string['generationwarning_forum_discussion'] = 'O tópico "{$a}" do fórum não pôde ser criado e foi ignorado.';
 $string['generationwarning_generic'] = 'Uma etapa da geração com AI não pôde ser concluída ({$a}).';
 $string['generationwarning_grading_method'] = 'O método de avaliação da tarefa não pôde ser redefinido após a falha da rubrica.';
 $string['generationwarning_h5p_version'] = 'A versão do framework H5P não pôde ser resolvida; o conjunto de bibliotecas padrão do serviço é usado.';

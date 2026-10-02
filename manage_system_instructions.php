@@ -25,7 +25,6 @@
 use core\context\system;
 use core\output\html_writer;
 use core\url;
-use local_coursegen\local\models\system_instruction;
 use local_coursegen\local\service\system_instruction_service;
 
 require_once('../../config.php');
@@ -48,9 +47,9 @@ $PAGE->set_heading(get_string('managesysteminstructions', 'local_coursegen'));
 if ($action === 'delete' && $id > 0) {
     if ($confirm && confirm_sesskey()) {
         // Soft delete the system instruction.
-        $model = new system_instruction($id);
-        $model->set('deleted', 1);
-        $model->update();
+        if (!system_instruction_service::delete($id)) {
+            throw new \core\exception\moodle_exception('invalidrecord', 'error');
+        }
         redirect(
             $PAGE->url,
             get_string('systeminstructiondeleted', 'local_coursegen'),
@@ -59,7 +58,10 @@ if ($action === 'delete' && $id > 0) {
         );
     } else {
         // Show confirmation dialog.
-        $model = system_instruction::get_record(['id' => $id, 'deleted' => 0]);
+        $model = system_instruction_service::get_by_id($id);
+        if ($model === null) {
+            throw new \core\exception\moodle_exception('invalidrecord', 'error');
+        }
 
         echo $OUTPUT->header();
         echo $OUTPUT->heading(get_string('deletesysteminstruction', 'local_coursegen'));

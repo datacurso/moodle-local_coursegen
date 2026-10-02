@@ -538,6 +538,163 @@ final class create_course_service_test extends api_testcase {
     }
 
     /**
+     * Run a callback once the module named $marker is created, before the course
+     * structure is finalised.
+     *
+     * The callback receives the course module id and the course id. It runs from a
+     * course_module_created observer, so it is the only seam between the activity
+     * creation and the structure check of create_course().
+     *
+     * @param string $marker Name of the activity whose creation triggers the callback.
+     * @param callable $callback function (int $cmid, int $courseid): void
+     * @return void
+     */
+    private function on_module_created(string $marker, callable $callback): void {
+        \core\event\manager::phpunit_replace_observers([
+            [
+                'eventname' => '\core\event\course_module_created',
+                'callback' => function (\core\event\course_module_created $event) use ($marker, $callback): void {
+                    if ((string)($event->other['name'] ?? '') === $marker) {
+                        $callback((int)$event->objectid, (int)$event->courseid);
+                    }
+                },
+            ],
+        ]);
+    }
+
+    /**
+     * A result with two sections and three page/label activities, the last one named "Exercise".
+     *
+     * @param string $shortname Course shortname.
+     * @return array
+     */
+    private function result_with_activities(string $shortname): array {
+        return [
+            'course_configuration' => ['fullname' => 'Course ' . $shortname, 'shortname' => $shortname],
+            'sections_info' => [
+                ['section' => 1, 'name' => 'Theory'],
+                ['section' => 2, 'name' => 'Practice'],
+            ],
+            'generated_activities' => [
+                $this->page_activity('Reading', 1),
+                $this->label_activity('Practice intro', 2),
+                $this->page_activity('Exercise', 2),
+            ],
+        ];
+    }
+
+    /**
+     * A module id that does not exist, left in a section sequence, is removed before the
+     * course is handed back, and the repair is reported to developers.
+     */
+    public function test_orphaned_sequence_reference_is_removed(): void {
+        global $DB;
+
+        $session = $this->prepare();
+        $this->on_module_created('Exercise', static function (int $cmid, int $courseid) use ($DB): void {
+            $sectionid = $DB->get_field('course_modules', 'section', ['id' => $cmid], MUST_EXIST);
+            $sequence = $DB->get_field('course_sections', 'sequence', ['id' => $sectionid], MUST_EXIST);
+            $DB->set_field('course_sections', 'sequence', $sequence . ',999999', ['id' => $sectionid]);
+        });
+
+        $result = create_course_service::create_course($session, $this->result_with_activities('orphanref'));
+        $this->assertDebuggingCalled(
+            'local_coursegen: repaired the course structure while creating course ' . $result['courseid'] . '. Repairs: 1'
+        );
+
+        $this->assertTrue($result['success'], $result['message']);
+        $this->assertFalse($result['partial']);
+        $courseid = (int)$result['courseid'];
+        $modules = $this->modules_by_name($courseid);
+        $this->assertSame(
+            $modules['Practice intro']->id . ',' . $modules['Exercise']->id,
+            $this->sections($courseid)[2]->sequence
+        );
+        $this->assert_sequences_consistent($courseid);
+    }
+
+    /**
+     * A module dropped from every section sequence is put back into the section its
+     * course_modules row points to.
+     */
+    public function test_module_missing_from_sequences_is_restored(): void {
+        global $DB;
+
+        $session = $this->prepare();
+        $this->on_module_created('Exercise', static function (int $cmid, int $courseid) use ($DB): void {
+            $sectionid = $DB->get_field('course_modules', 'section', ['id' => $cmid], MUST_EXIST);
+            $sequence = $DB->get_field('course_sections', 'sequence', ['id' => $sectionid], MUST_EXIST);
+            $ids = array_diff(explode(',', $sequence), [(string)$cmid]);
+            $DB->set_field('course_sections', 'sequence', implode(',', $ids), ['id' => $sectionid]);
+        });
+
+        $result = create_course_service::create_course($session, $this->result_with_activities('missingref'));
+        $this->assertDebuggingCalled(
+            'local_coursegen: repaired the course structure while creating course ' . $result['courseid'] . '. Repairs: 1'
+        );
+
+        $this->assertTrue($result['success'], $result['message']);
+        $courseid = (int)$result['courseid'];
+        $modules = $this->modules_by_name($courseid);
+        $this->assertEquals(2, $modules['Exercise']->sectionnum);
+        $this->assertSame(
+            $modules['Practice intro']->id . ',' . $modules['Exercise']->id,
+            $this->sections($courseid)[2]->sequence
+        );
+        $this->assert_sequences_consistent($courseid);
+    }
+
+    /**
+     * A module whose course_modules.section points to another section than the one listing
+     * it is re-pointed to the section of its sequence.
+     */
+    public function test_module_section_column_is_realigned_with_sequence(): void {
+        global $DB;
+
+        $session = $this->prepare();
+        $this->on_module_created('Exercise', static function (int $cmid, int $courseid) use ($DB): void {
+            $wrongsection = $DB->get_field('course_sections', 'id', ['course' => $courseid, 'section' => 1], MUST_EXIST);
+            $DB->set_field('course_modules', 'section', $wrongsection, ['id' => $cmid]);
+        });
+
+        $result = create_course_service::create_course($session, $this->result_with_activities('wrongsection'));
+        // The column is realigned by the integrity check that rebuild_course_cache() runs after the
+        // module creation, which reports it as a developer notice; the service-side check then has
+        // nothing left to repair. Only the outcome is asserted here.
+        $this->resetDebugging();
+
+        $this->assertTrue($result['success'], $result['message']);
+        $courseid = (int)$result['courseid'];
+        $sections = $this->sections($courseid);
+        $modules = $this->modules_by_name($courseid);
+        $this->assertEquals($sections[2]->id, $modules['Exercise']->section);
+        $this->assertEquals($sections[2]->id, $DB->get_field('course_modules', 'section', ['id' => $modules['Exercise']->id]));
+        $this->assert_sequences_consistent($courseid);
+    }
+
+    /**
+     * When a listed module cannot be resolved by modinfo even after the integrity repair
+     * (its module type was disabled meanwhile), the creation fails and the session is marked failed.
+     */
+    public function test_unresolvable_module_fails_the_creation(): void {
+        global $DB;
+
+        $session = $this->prepare();
+        $this->on_module_created('Exercise', static function (int $cmid, int $courseid) use ($DB): void {
+            $DB->set_field('modules', 'visible', 0, ['name' => 'page']);
+            \core_plugin_manager::reset_caches(true);
+        });
+
+        $result = create_course_service::create_course($session, $this->result_with_activities('unresolvable'));
+        $this->resetDebugging();
+
+        $this->assertFalse($result['success']);
+        $this->assertSame(0, $result['courseid']);
+        $this->assertSame(get_string('error_course_creation_failed', 'local_coursegen'), $result['message']);
+        $this->assertEquals(course_session::STATUS_FAILED, (new course_session($session->get('id')))->get('status'));
+    }
+
+    /**
      * Assert that every section sequence of the course references existing modules of that
      * section only, and that modinfo resolves each of them.
      *
