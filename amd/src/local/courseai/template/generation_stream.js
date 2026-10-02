@@ -22,8 +22,8 @@
  * its SSE endpoint. So this module is not a progress decoration on top of a
  * background job - it is the job.
  *
- * The run is planned first, stops so the professor can read and approve the
- * plan, and only generates once it is approved; asking for changes plans
+ * The run generates at once and then stops so the professor can read the
+ * result and approve it; asking for changes generates the activities named
  * again and stops again, which is why runGenerationStream loops. Watching one
  * pass of the SSE connection lives in generation_watch.js; turning a decoded
  * event into a DOM update lives in generation_events.js. This module owns the
@@ -43,7 +43,7 @@
  */
 
 import {getStrings} from 'core/str';
-import {askForDecision, clearPlans} from 'local_coursegen/local/courseai/template/plan_review';
+import {askForDecision} from 'local_coursegen/local/courseai/template/generation_review';
 import {
     announceTemplate,
     milestone,
@@ -52,7 +52,7 @@ import {
     turn,
 } from 'local_coursegen/local/courseai/template/thread';
 import {refreshPreviewLinks} from 'local_coursegen/local/courseai/template/preview';
-import {sendTemplatePlanningFeedback} from 'local_coursegen/local/courseai/template/repository';
+import {sendTemplateReviewFeedback} from 'local_coursegen/local/courseai/template/repository';
 import {hideWorkingIndicator, showWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
 import {ALL_STATUS_CLASSES, STATUS_CLASS, applyEvent} from 'local_coursegen/local/courseai/template/generation_events';
 import {watchOnce} from 'local_coursegen/local/courseai/template/generation_watch';
@@ -60,7 +60,6 @@ import {hideHeader, markHeaderDone, showGeneratingHeader} from 'local_coursegen/
 
 /** Phase keys the service reports, plus the two this module owns. */
 const STAGE_STRINGS = {
-    planning: 'courseai_template_stage_planning',
     reviewing: 'courseai_template_stage_reviewing',
     style: 'courseai_template_stage_style',
     activities: 'courseai_template_stage_activities',
@@ -154,7 +153,7 @@ const openView = async(context) => {
     resetThread();
     await announceTemplate(context.templateName);
     turn('user', 'user', String(context.prompt || '').trim());
-    milestone('courseai_template_log_planning');
+    milestone('courseai_template_log_starting');
     generatedRows().forEach((row) => {
         row.classList.remove(...ALL_STATUS_CLASSES);
         row.classList.add(STATUS_CLASS.pending);
@@ -195,7 +194,6 @@ const closeView = (message) => {
  */
 export const runGenerationStream = async(streamUrl, buildCourse, sessionId, context) => {
     await openView(context);
-    clearPlans();
     await paintStage('connecting');
 
     const progress = {total: 0, done: 0};
@@ -220,22 +218,21 @@ export const runGenerationStream = async(streamUrl, buildCourse, sessionId, cont
         }
 
         await paintStage('reviewing');
-        milestone('courseai_template_log_plan_ready');
+        milestone('courseai_template_log_review_ready');
         // eslint-disable-next-line no-await-in-loop
-        const decision = await askForDecision(data.template_plan || []);
+        const decision = await askForDecision(data.generated_activities || []);
 
         if (decision.action === 'accept') {
             milestone('courseai_template_log_approved', 'user', 'success');
-            milestone('courseai_template_log_generating');
-            await paintStage('style');
+            await paintStage('saving');
         } else {
             turn('user', 'user', decision.instruction);
             milestone('courseai_template_log_adjusting');
-            await paintStage('planning');
+            await paintStage('activities');
         }
 
         // eslint-disable-next-line no-await-in-loop
-        await sendTemplatePlanningFeedback(
+        await sendTemplateReviewFeedback(
             sessionId,
             decision.action,
             decision.targetIds,

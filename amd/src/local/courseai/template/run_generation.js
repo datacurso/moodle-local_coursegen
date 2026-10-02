@@ -47,6 +47,11 @@ export const runGeneration = async(tplState, tplSelect, genBtn, state, host) => 
     if (!templateId) {
         return;
     }
+    // The button doubles as the send button of the review's change request, so
+    // a click while a run is on screen belongs to that review, not to a new run.
+    if (document.body.classList.contains('cg-generating')) {
+        return;
+    }
     genBtn.disabled = true;
     try {
         const started = await startTemplateGeneration(

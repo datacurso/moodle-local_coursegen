@@ -43,35 +43,6 @@ use local_coursegen\local\models\course_session;
 use local_coursegen\local\models\template;
 use local_coursegen\local\preview\course_from_payload;
 use local_coursegen\local\preview\grid_from_payload;
-use local_coursegen\local\service\template_ai_api_service;
-
-/**
- * What the answer says each activity will contain, keyed by uid. A run still
- * under review has no result, so the plan is what there is to show of its
- * intent; a run the service no longer knows has no plan either, and shows
- * none.
- *
- * @param string $threadid
- * @return array
- */
-function local_coursegen_course_preview_plan_summaries(string $threadid): array {
-    $summaries = [];
-    try {
-        $api = new template_ai_api_service();
-        $planresult = $api->get_plan($threadid);
-        $plan = $planresult['template_plan'] ?? [];
-        foreach ($plan as $entry) {
-            $uid = $entry['uid'] ?? '';
-            $uid = (string) $uid;
-            $summary = $entry['summary'] ?? '';
-            $summary = (string) $summary;
-            $summaries[$uid] = $summary;
-        }
-    } catch (moodle_exception $exception) {
-        $summaries = [];
-    }
-    return $summaries;
-}
 
 /**
  * A course page marks no entry of the primary navigation as where the reader
@@ -114,10 +85,6 @@ if ($templateid <= 0) {
 // the preview and the run can never be describing different things - even
 // once the template's own course has moved on since the run started.
 $payload = $coursedata['payload'] ?? [];
-
-$threadid = $session->get('session_id');
-$threadid = (string) $threadid;
-$summaries = local_coursegen_course_preview_plan_summaries($threadid);
 
 $configuration = $payload['course_configuration'] ?? [];
 $coursename = $configuration['fullname'] ?? '';
@@ -173,7 +140,7 @@ echo $OUTPUT->notification($noticemessage, \core\output\notification::NOTIFY_INF
 // The course is drawn by its own format's template when it has one, so the
 // preview is laid out the way the template's course is: the same tiles, the
 // same pictures, the same settings, all of them read from what was sent.
-$content = course_from_payload::content($payload, $summaries, $sessionid, $section);
+$content = course_from_payload::content($payload, $sessionid, $section);
 $template = 'core_courseformat/local/content';
 if ($section === null && grid_from_payload::should_render_grid_preview($payload)) {
     $content = grid_from_payload::content($content, $payload, $sessionid);

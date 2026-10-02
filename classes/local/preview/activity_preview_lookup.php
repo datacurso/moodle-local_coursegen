@@ -21,9 +21,8 @@ use local_coursegen\local\service\template_ai_api_service;
 
 /**
  * Which activity activity_preview.php is being asked for, and what to draw
- * it from: the finished result when there is one, the plan's draft while
- * there is not, or the payload's own copy for an activity the run keeps
- * rather than writes. Kept apart from the page itself, which is everything
+ * it from: the finished result when there is one, or the payload's own
+ * copy for an activity the run keeps rather than writes. Kept apart from the page itself, which is everything
  * that happens once this is known.
  *
  * @package    local_coursegen
@@ -45,9 +44,6 @@ class activity_preview_lookup {
         $threadid = (string) $threadid;
 
         $found = self::from_result($api, $threadid, $uid, $payload);
-        if (!$found['parameters']) {
-            $found = self::from_plan($api, $threadid, $uid, $session, $payload);
-        }
         if (!$found['parameters']) {
             $found = self::from_payload($payload, $uid);
         }
@@ -119,61 +115,7 @@ class activity_preview_lookup {
                 ];
             }
         } catch (\moodle_exception $exception) {
-            // No result yet - fall through to the plan.
-        }
-        return ['modname' => '', 'parameters' => [], 'source' => []];
-    }
-
-    /**
-     * The plan's draft, laid over the mould it is built into. A run the
-     * service no longer knows, or one that never reached it, has no plan to
-     * ask for either; its kept activities are still in the payload.
-     *
-     * @param template_ai_api_service $api
-     * @param string $threadid
-     * @param string $uid
-     * @param course_session $session
-     * @param array $payload
-     * @return array {modname: string, parameters: array, source: array}
-     */
-    private static function from_plan(
-        template_ai_api_service $api,
-        string $threadid,
-        string $uid,
-        course_session $session,
-        array $payload
-    ): array {
-        try {
-            $planresult = $api->get_plan($threadid);
-            $plan = $planresult['template_plan'] ?? [];
-        } catch (\moodle_exception $exception) {
-            $plan = [];
-        }
-        foreach ($plan as $entry) {
-            $entryuid = $entry['uid'] ?? '';
-            $entryuid = (string) $entryuid;
-            if ($entryuid !== $uid) {
-                continue;
-            }
-            $modname = $entry['resource_type'] ?? '';
-            $modname = (string) $modname;
-
-            $sourcecmid = $entry['source_cmid'] ?? 0;
-            $sourcecmid = (int) $sourcecmid;
-
-            $parameters = plan_activity::to_parameters((array) $entry);
-            // A plan describes the pieces the mould offered to fill, and a
-            // mould also holds pieces it offers to nobody, which carry through
-            // to the delivered activity as they are. So the mould is what is
-            // shown, with the plan laid over it.
-            $parameters = plan_activity::over_mould($parameters, $modname, $sourcecmid, $session);
-
-            $source = self::activity_by_cmid($payload, $sourcecmid);
-            return [
-                'modname' => $modname,
-                'parameters' => $parameters,
-                'source' => $source,
-            ];
+            // No result yet - fall through to the payload.
         }
         return ['modname' => '', 'parameters' => [], 'source' => []];
     }

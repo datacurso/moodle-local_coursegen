@@ -87,7 +87,7 @@ class template_ai_api_service {
     }
 
     /**
-     * Answer the review a paused run is waiting on.
+     * Answer the review of the generated course that a paused run is waiting on.
      *
      * The run stops inside its approval step until this lands. Writing the
      * answer is all this does; reopening the stream is what resumes it.
@@ -115,19 +115,6 @@ class template_ai_api_service {
      */
     public function stream_url(string $threadid): string {
         return streaming_url_builder::course_template_stream($this->client->get_base_url(), $threadid);
-    }
-
-    /**
-     * The plan a run has produced, while it is still only a plan.
-     *
-     * Read from outside the stream that already carries it: a preview opened
-     * in its own tab cannot reach into the tab that is watching the run.
-     *
-     * @param string $threadid
-     * @return array
-     */
-    public function get_plan(string $threadid): array {
-        return (array) $this->client->request('GET', '/course-template/plan/' . $threadid);
     }
 
     /**

@@ -20,13 +20,15 @@
    #tplModeStructure alongside #prvSections. A second set of rules here is
    exactly how the two modes drifted apart in the first place. */
 
-/* The row's planned-content line. Everything else the plan says lives in the
-   thread on the left, where free mode keeps its own detail, folded behind the
-   same "Show more" control. Only the indent is set here: the text itself is
-   free mode's own .cg-activity-desc. */
-
-.cg-tpl-plan {
-    margin-left: 3.25rem;
+/* The generation view hides every edit control of the rows. Once the course is
+   generated the review needs two of them back: the preview of the activity and
+   the request for a change to it. Both stay hidden (the hidden attribute)
+   until the review opens, so only the generated activities show them. A
+   template's activities are locked, which switches off the pointer events of
+   the whole card, so the two buttons switch them back on. */
+body.cg-generating #tplModeStructure .cg-item-actions :is(.cg-preview-btn, .cg-adjust-btn):not([hidden]) {
+    display: inline-flex !important;
+    pointer-events: auto;
 }
 
 /* The preview is a real course page, so it needs no styles of its own. This

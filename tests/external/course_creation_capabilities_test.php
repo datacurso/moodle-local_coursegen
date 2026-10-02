@@ -29,7 +29,7 @@ use local_coursegen\external\get_template_structure;
 use local_coursegen\external\manage_image_generation;
 use local_coursegen\external\start_course_planning;
 use local_coursegen\external\start_template_generation;
-use local_coursegen\external\template_planning_feedback;
+use local_coursegen\external\template_review_feedback;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -53,7 +53,7 @@ require_once(__DIR__ . '/../capability_user_trait.php');
  * @covers     \local_coursegen\external\get_template_course_settings
  * @covers     \local_coursegen\external\get_template_structure
  * @covers     \local_coursegen\external\start_template_generation
- * @covers     \local_coursegen\external\template_planning_feedback
+ * @covers     \local_coursegen\external\template_review_feedback
  * @covers     \local_coursegen\external\finish_template_generation
  * @covers     \local_coursegen\external\courseai_filepicker_init
  * @covers     \local_coursegen\external\courseai_syllabus_upload
@@ -122,7 +122,7 @@ final class course_creation_capabilities_test extends \advanced_testcase {
             'settings' => [get_course_settings::class, [1], $free, []],
             'structure' => [get_template_structure::class, [1], $template, []],
             'templatestart' => [start_template_generation::class, [1], $template, []],
-            'templatefeedback' => [template_planning_feedback::class, [1, 'accept'], $template, []],
+            'templatefeedback' => [template_review_feedback::class, [1, 'accept'], $template, []],
             'templatesettings' => [get_template_course_settings::class, [1], $template, []],
             'templatefinish' => [finish_template_generation::class, [1], $template, []],
             'filepicker' => [courseai_filepicker_init::class, [], $syllabus, $createcourse],

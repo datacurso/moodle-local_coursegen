@@ -15,8 +15,7 @@
 
 /**
  * Turns one decoded template-generation stream event into a DOM update:
- * which activity row lights up, which checklist row fills in, which phase
- * label shows. generation_watch.js decodes the stream and calls this for
+ * which activity row lights up and which phase label shows. generation_watch.js decodes the stream and calls this for
  * each event; generation_stream.js owns the phase label itself and passes
  * `paintStage` in rather than this module importing it, so the two never
  * import each other.
@@ -25,15 +24,6 @@
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
-import {renderActivityPlan} from 'local_coursegen/local/courseai/template/plan_review';
-import {
-    addPlanPart,
-    addPlanSummary,
-    finishChecklistRow,
-    openChecklist,
-    startPlanEntry,
-} from 'local_coursegen/local/courseai/template/thread_checklist';
 
 /** The status classes the shared generation stylesheet reacts to. */
 export const STATUS_CLASS = {
@@ -94,35 +84,6 @@ const finishActivity = (data, progress, paintStage) => {
 const EVENT_HANDLERS = {
     template_stage: (data, progress, paintStage) => {
         paintStage(data.stage);
-        return '';
-    },
-    plan_progress_init: (data, progress, paintStage) => {
-        resetProgress(progress, data);
-        paintStage('planning');
-        openChecklist(data.sections);
-        return '';
-    },
-    plan_progress_start: (data) => {
-        markRow(data.uid, 'running');
-        startPlanEntry(data);
-        return '';
-    },
-    plan_progress_summary: (data) => {
-        addPlanSummary(data);
-        return '';
-    },
-    plan_progress_part: (data) => {
-        addPlanPart(data);
-        return '';
-    },
-    plan_progress_done: (data, progress) => {
-        markRow(data.uid, 'done');
-        progress.done += 1;
-        finishChecklistRow(data.plan || {});
-        // Each activity's plan appears under its own row the moment it is
-        // ready, so the review is already half read by the time the whole
-        // plan lands.
-        renderActivityPlan(data.plan || {});
         return '';
     },
     review_needed: () => 'review',

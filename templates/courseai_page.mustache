@@ -732,24 +732,6 @@
             log and working-indicator modules find them by id, and the two blocks
             are mutually exclusive, so the ids never collide. }}
         <div class="cg-log cg-thread-feed" id="cgLog" aria-live="polite"></div>
-
-        {{! One row per activity the AI is planning, exactly the checklist free
-            mode builds while it plans its own sections: the same group head,
-            the same spinner that becomes a check, and the same detail slot
-            underneath, which here holds that activity's plan. }}
-        <div class="courseai-checklist cg-thread-checklist hidden" id="courseaiChecklist">
-          <div class="cg-group-head" role="button" tabindex="0" aria-expanded="true">
-            <span class="cg-group-chevron" aria-hidden="true">⌄</span>
-            <span class="cg-group-avatar" aria-hidden="true"></span>
-            <span class="cg-group-title">{{#str}}courseai_template_log_planned, local_coursegen{{/str}}</span>
-            <span class="cg-group-count"></span>
-          </div>
-          <ul class="courseai-checklist-list" id="courseaiChecklistList"></ul>
-        </div>
-
-        {{! Everything said after the plan settles, which is where free mode
-            puts its own post-plan turns too. }}
-        <div class="cg-log cg-thread-feed" id="cgLogAfter" aria-live="polite"></div>
       </div>
 
       {{! Bottom slot — free mode pins its live "working" indicator here whenever

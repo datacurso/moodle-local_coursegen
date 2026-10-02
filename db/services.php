@@ -221,10 +221,10 @@ $functions = [
         'capabilities' => 'local/coursegen:createtemplatecoursewithai',
         'loginrequired' => true,
     ],
-    'local_coursegen_template_planning_feedback' => [
-        'classname' => 'local_coursegen\\external\\template_planning_feedback',
+    'local_coursegen_template_review_feedback' => [
+        'classname' => 'local_coursegen\\external\\template_review_feedback',
         'methodname' => 'execute',
-        'description' => 'Answer the plan review of a paused template generation',
+        'description' => 'Answer the review of a generated course made from a template',
         'type' => 'write',
         'ajax' => true,
         'capabilities' => 'local/coursegen:createtemplatecoursewithai',
