@@ -16,28 +16,28 @@
 
 namespace local_coursegen\task;
 
-use local_coursegen\local\reference\reference_file_storage;
+use local_coursegen\local\space\space_file_storage;
 
 /**
- * Deletes the files a teacher brought that no generation used in time.
+ * Deletes the files a teacher brought for a space that no generation used in time.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class purge_reference_files extends \core\task\scheduled_task {
+final class purge_space_files extends \core\task\scheduled_task {
     /** @var int How long a file may wait for its generation, in seconds. */
     public const KEEP_FOR = 7 * DAYSECS;
 
     #[\Override]
     public function get_name() {
-        return get_string('task_purge_reference_files', 'local_coursegen');
+        return get_string('task_purge_space_files', 'local_coursegen');
     }
 
     #[\Override]
     public function execute() {
         $before = time() - self::KEEP_FOR;
-        $deleted = reference_file_storage::purge_older_than($before);
-        mtrace("Deleted $deleted stale reference files.");
+        $deleted = space_file_storage::purge_older_than($before);
+        mtrace("Deleted $deleted stale space files.");
     }
 }

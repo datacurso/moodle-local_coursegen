@@ -414,5 +414,19 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026093003, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026100221) {
+        // The files a teacher brought for the places of a template are no longer kept: a space takes one file
+        // and keeps it under its own area.
+        $fs = get_file_storage();
+        $files = $DB->get_records_select(
+            'files',
+            "component = 'local_coursegen' AND filearea IN ('referencestaged', 'referencefile') AND filename <> '.'"
+        );
+        foreach ($files as $record) {
+            $fs->get_file_instance($record)->delete();
+        }
+        upgrade_plugin_savepoint(true, 2026100221, 'local', 'coursegen');
+    }
+
     return true;
 }

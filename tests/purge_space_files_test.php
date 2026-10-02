@@ -16,7 +16,7 @@
 
 namespace local_coursegen\task;
 
-use local_coursegen\local\reference\reference_file_storage;
+use local_coursegen\local\space\space_file_storage;
 
 /**
  * The task that deletes the files no generation used.
@@ -25,9 +25,26 @@ use local_coursegen\local\reference\reference_file_storage;
  * @category   test
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers     \local_coursegen\task\purge_reference_files
+ * @covers     \local_coursegen\task\purge_space_files
  */
-final class purge_reference_files_test extends \advanced_testcase {
+final class purge_space_files_test extends \advanced_testcase {
+    /**
+     * A draft area holding one file.
+     *
+     * @param int $userid
+     * @param string $name
+     * @return int The draft item id.
+     */
+    private function draft_with(int $userid, string $name): int {
+        $draftid = file_get_unused_draft_itemid();
+        $context = \context_user::instance($userid);
+        get_file_storage()->create_file_from_string([
+            'contextid' => $context->id, 'component' => 'user', 'filearea' => 'draft', 'itemid' => $draftid,
+            'filepath' => '/', 'filename' => $name,
+        ], 'A');
+        return $draftid;
+    }
+
     /**
      * A file past the time limit is deleted and a recent one stays.
      */
@@ -36,31 +53,27 @@ final class purge_reference_files_test extends \advanced_testcase {
         $this->resetAfterTest(true);
         $user = $this->getDataGenerator()->create_user();
         $userid = (int) $user->id;
-        $directory = make_request_directory();
-        $path = $directory . '/upload.tmp';
-        file_put_contents($path, 'A');
-        reference_file_storage::stage($userid, 7, '12.1', 'stale.pdf', $path);
-        reference_file_storage::stage($userid, 8, '13.1', 'recent.pdf', $path);
-        $stale = time() - purge_reference_files::KEEP_FOR - HOURSECS;
-        $select = "component = 'local_coursegen' AND filearea = 'referencestaged' AND itemid = 7";
-        $DB->set_field_select('files', 'timecreated', $stale, $select);
+        $this->setUser($user);
+        space_file_storage::store_draft($userid, 7, 12, $this->draft_with($userid, 'stale.pdf'));
+        space_file_storage::store_draft($userid, 8, 13, $this->draft_with($userid, 'recent.pdf'));
+        $stale = time() - purge_space_files::KEEP_FOR - HOURSECS;
+        $select = "component = 'local_coursegen' AND filearea = :area AND itemid = 7";
+        $DB->set_field_select('files', 'timecreated', $stale, $select, ['area' => space_file_storage::AREA]);
 
-        $task = new purge_reference_files();
+        $task = new purge_space_files();
         ob_start();
         $task->execute();
         ob_end_clean();
-        $stalekeys = reference_file_storage::staged_keys($userid, 7);
-        $recentkeys = reference_file_storage::staged_keys($userid, 8);
 
-        $this->assertSame([], $stalekeys);
-        $this->assertSame(['13.1'], $recentkeys);
+        $this->assertSame([], space_file_storage::files_of_session($userid, 7));
+        $this->assertSame([13], array_keys(space_file_storage::files_of_session($userid, 8)));
     }
 
     /**
      * The task has a readable name.
      */
     public function test_the_task_has_a_name(): void {
-        $task = new purge_reference_files();
+        $task = new purge_space_files();
 
         $name = $task->get_name();
 

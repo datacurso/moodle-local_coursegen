@@ -27,12 +27,12 @@ namespace local_coursegen\external;
 use context_system;
 use external_api;
 use external_function_parameters;
+use external_multiple_structure;
 use external_single_structure;
 use external_value;
 use local_coursegen\local\models\course_session;
-use local_coursegen\local\reference\reference_file_storage;
-use local_coursegen\local\reference\reference_payload_keys;
 use local_coursegen\local\service\template_ai_api_service;
+use local_coursegen\local\space\space_files_request;
 use local_coursegen\local\service\template_export_service;
 use local_coursegen\local\service\template_reference_uploads;
 
@@ -54,6 +54,15 @@ class start_template_generation extends external_api {
             'templateid' => new external_value(PARAM_INT, 'Template ID'),
             'prompt' => new external_value(PARAM_RAW, 'The professor\'s general instruction', VALUE_DEFAULT, ''),
             'draftitemid' => new external_value(PARAM_INT, 'Draft item id of the syllabus, 0 for none', VALUE_DEFAULT, 0),
+            'spacefiles' => new external_multiple_structure(
+                new external_single_structure([
+                    'cmid' => new external_value(PARAM_INT, 'Course module id of the space in the template course'),
+                    'draftitemid' => new external_value(PARAM_INT, 'Draft item id of the file the teacher brought'),
+                ]),
+                'The files the teacher brought for the spaces of the template',
+                VALUE_DEFAULT,
+                []
+            ),
         ]);
     }
 
@@ -63,26 +72,29 @@ class start_template_generation extends external_api {
      * @param int $templateid
      * @param string $prompt
      * @param int $draftitemid
+     * @param array $spacefiles Each: cmid, draftitemid.
      * @return array
      */
-    public static function execute($templateid, $prompt = '', $draftitemid = 0) {
+    public static function execute($templateid, $prompt = '', $draftitemid = 0, $spacefiles = []) {
         global $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'templateid' => $templateid,
             'prompt' => $prompt,
             'draftitemid' => $draftitemid,
+            'spacefiles' => $spacefiles,
         ]);
 
         $context = context_system::instance();
         self::validate_context($context);
         require_capability('local/coursegen:createtemplatecoursewithai', $context);
-        if ($params['draftitemid'] > 0) {
+        if ($params['draftitemid'] > 0 || !empty($params['spacefiles'])) {
             require_capability('local/coursegen:uploadcoursesyllabus', $context);
         }
+        // Refused before anything is sent: a space that is not the template's, or a required one with no file.
+        $spaces = space_files_request::validated($params['templateid'], (int) $USER->id, $params['spacefiles']);
 
         $payload = template_export_service::build_init_payload($params['templateid'], $params['prompt']);
-        $payload = self::with_reference_files($payload, (int) $USER->id, $params['templateid']);
 
         // Read first: a reference marker with no usable target is refused before a session exists.
         $referenceuploads = template_reference_uploads::plan($payload);
@@ -111,7 +123,7 @@ class start_template_generation extends external_api {
         ]);
         $session->create();
         $sessionid = (int) $session->get('id');
-        reference_file_storage::adopt((int) $USER->id, $params['templateid'], $sessionid);
+        space_files_request::store($spaces, (int) $USER->id, $sessionid);
 
         // Nothing has run yet: consuming the stream is what drives the
         // generation, so the caller opens this URL and watches it happen,
@@ -121,23 +133,6 @@ class start_template_generation extends external_api {
             'sessionid' => (int) $session->get('id'),
             'streamurl' => $api->stream_url($threadid),
         ];
-    }
-
-    /**
-     * The payload telling the service which places of the template have a file of the teacher.
-     *
-     * Only the names travel, never the files. They are set before the reference files to send are planned,
-     * because a place the teacher brought a file for needs no file from the template.
-     *
-     * @param array $payload
-     * @param int $userid
-     * @param int $templateid
-     * @return array
-     */
-    private static function with_reference_files(array $payload, int $userid, int $templateid): array {
-        $stagedkeys = reference_file_storage::staged_keys($userid, $templateid);
-        $payload[reference_payload_keys::PAYLOAD_KEY] = reference_payload_keys::for_payload($payload, $stagedkeys);
-        return $payload;
     }
 
     /**
