@@ -868,6 +868,7 @@ $string['courseai_preview_course'] = 'Preview the course';
 $string['courseai_preview_course_notice'] = 'Preview: this course does not exist yet. Open an activity to see what it will contain.';
 $string['courseai_preview_course_title'] = 'Course preview';
 $string['courseai_preview_not_found'] = 'That activity is not part of this generation.';
+$string['courseai_preview_record_without_row'] = 'A record of the activity "{$a->activity}" refers to "{$a->record}", which the result holds but without saying which table it belongs to, so it cannot be shown. The result is incomplete: regenerate the course.';
 $string['courseai_preview_record_unknown'] = 'A record of the activity "{$a->activity}" refers to "{$a->record}", which the result does not contain. The result is inconsistent: regenerate the course.';
 $string['courseai_preview_result_outdated'] = 'The activity "{$a->activity}" was generated before its records carried the id of the template record they came from, so it cannot be previewed. Regenerate the course to see it.';
 $string['courseai_preview_notice'] = 'Preview: this activity does not exist yet. Nothing here can be used or changed.';

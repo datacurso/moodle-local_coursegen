@@ -824,6 +824,7 @@ $string['courseai_preview_course'] = 'Previsualizar el curso';
 $string['courseai_preview_course_notice'] = 'Vista previa: este curso todavía no existe. Abra una actividad para ver qué va a contener.';
 $string['courseai_preview_course_title'] = 'Vista previa del curso';
 $string['courseai_preview_not_found'] = 'Esa actividad no forma parte de esta generación.';
+$string['courseai_preview_record_without_row'] = 'Un registro de la actividad "{$a->activity}" se refiere a "{$a->record}", que el resultado contiene pero sin indicar a qué tabla pertenece, por lo que no se puede mostrar. El resultado está incompleto: genere de nuevo el curso.';
 $string['courseai_preview_record_unknown'] = 'Un registro de la actividad "{$a->activity}" se refiere a "{$a->record}", que el resultado no contiene. El resultado es inconsistente: genere de nuevo el curso.';
 $string['courseai_preview_result_outdated'] = 'La actividad "{$a->activity}" se generó antes de que sus registros llevaran el identificador del registro de la plantilla del que provienen, por lo que no se puede previsualizar. Genere de nuevo el curso para verla.';
 $string['courseai_preview_notice'] = 'Vista previa: esta actividad todavía no existe. Nada de lo que se muestra aquí se puede usar ni modificar.';

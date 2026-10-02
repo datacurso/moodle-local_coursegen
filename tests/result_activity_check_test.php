@@ -43,7 +43,9 @@ final class result_activity_check_test extends \basic_testcase {
                 'structure' => ['lesson' => [['id' => '5', 'pages' => [['page' => [
                     ['id' => '11', 'title' => 'Intro'],
                     ['id' => '12', 'title' => 'Intro'],
+                    ['id' => 'new-1', 'title' => 'Added'],
                 ]]]]]],
+                'structure_tables' => ['lesson' => 'lesson', 'page' => 'lesson_pages'],
                 'mod_settings' => ['pages' => $pages],
             ],
         ];
@@ -54,9 +56,9 @@ final class result_activity_check_test extends \basic_testcase {
      */
     public function test_a_result_with_its_tree_and_record_ids_passes(): void {
         $activity = $this->lesson([
-            ['source_id' => '11', 'title' => 'Intro'],
-            ['source_id' => '12', 'title' => 'Intro'],
-            ['source_id' => null, 'title' => 'Added by the AI'],
+            ['source_id' => '11', 'record_id' => '11', 'title' => 'Intro'],
+            ['source_id' => '12', 'record_id' => '12', 'title' => 'Intro'],
+            ['source_id' => null, 'record_id' => 'new-1', 'title' => 'Added by the AI'],
         ]);
 
         result_activity_check::assert_current($activity);
@@ -125,7 +127,7 @@ final class result_activity_check_test extends \basic_testcase {
                 'name' => 'Quiz',
                 'structure' => ['quiz' => [['id' => '3']]],
                 'questions' => [['slot' => 1, 'question' => ['id' => '77']]],
-                'mod_settings' => ['questions' => [['source_id' => '77', 'questiontext' => 'Q']]],
+                'mod_settings' => ['questions' => [['source_id' => '77', 'record_id' => '77', 'questiontext' => 'Q']]],
             ],
         ];
 
@@ -144,6 +146,74 @@ final class result_activity_check_test extends \basic_testcase {
         $exception = $this->refusal_of($activity);
 
         $this->assertSame('lesson-uid', $exception->a->activity);
+    }
+
+    /**
+     * A record the tree holds as an element that has no table to read it from cannot be shown.
+     */
+    public function test_a_record_in_the_tree_without_a_table_is_refused_with_its_activity_and_record(): void {
+        $activity = $this->lesson([['source_id' => null, 'record_id' => 'new-1', 'title' => 'Added']]);
+        unset($activity['parameters']['structure_tables']['page']);
+
+        $exception = $this->refusal_of($activity);
+
+        $this->assertSame('courseai_preview_record_without_row', $exception->errorcode);
+        $this->assertSame('Week 7', $exception->a->activity);
+        $this->assertSame('pages: new-1', $exception->a->record);
+    }
+
+    /**
+     * A record id that is not in the result at all is refused too, even when its source id is.
+     */
+    public function test_an_unknown_record_id_is_refused(): void {
+        $activity = $this->lesson([['source_id' => '11', 'record_id' => '404', 'title' => 'Intro']]);
+
+        $exception = $this->refusal_of($activity);
+
+        $this->assertSame('courseai_preview_record_unknown', $exception->errorcode);
+        $this->assertSame('pages: 404', $exception->a->record);
+    }
+
+    /**
+     * The ids that go beside a list of plain texts (a choice's options) are checked against the rows.
+     */
+    public function test_the_ids_beside_a_list_of_texts_are_checked(): void {
+        $activity = $this->lesson([]);
+        $activity['parameters']['option'] = ['One', 'Two'];
+        $activity['parameters']['option_source_ids'] = ['11', '12'];
+        $activity['parameters']['option_record_ids'] = ['11', '12'];
+
+        result_activity_check::assert_current($activity);
+        $activity['parameters']['option_record_ids'] = ['11', '404'];
+        $exception = $this->refusal_of($activity);
+
+        $this->assertSame('courseai_preview_record_unknown', $exception->errorcode);
+        $this->assertSame('option_record_ids: 404', $exception->a->record);
+    }
+
+    /**
+     * The file entries of a folder or a package are what its records name.
+     */
+    public function test_the_ids_of_the_file_entries_are_known(): void {
+        $activity = $this->lesson([]);
+        $activity['parameters']['files'] = [['id' => 141, 'filename' => 'a.pdf']];
+        $activity['parameters']['mod_settings']['files'] = [['source_id' => '141', 'record_id' => null, 'file_name' => 'a.pdf']];
+
+        result_activity_check::assert_current($activity);
+
+        $this->assertTrue(true);
+    }
+
+    /**
+     * A list of the service's own records (a package's key concepts) has no template record to name.
+     */
+    public function test_records_the_service_wrote_with_no_template_record_pass(): void {
+        $activity = $this->lesson([]);
+        $activity['parameters']['mod_settings']['key_concepts'] = [['source_id' => null, 'term' => 'A']];
+
+        result_activity_check::assert_current($activity);
+
+        $this->assertTrue(true);
     }
 
     /**
