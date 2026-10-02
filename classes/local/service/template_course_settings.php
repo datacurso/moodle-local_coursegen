@@ -82,17 +82,18 @@ class template_course_settings {
     /**
      * Set up the format of the new course the way the template's is.
      *
-     * Creating the course gives its format the defaults; the template's own
-     * values are written over them.
+     * Creating the course gives its format the defaults; the values the
+     * template's course stores are written over them. They are read from the
+     * template's course rather than from the payload, which carries them with
+     * the site's defaults already resolved for the preview, so an option the
+     * template leaves to the site stays left to the site.
      *
      * @param \stdClass $course The new course.
-     * @param array $config The payload's course_configuration.
+     * @param int $sourcecourseid The template's course.
      */
-    public static function apply_format_options(\stdClass $course, array $config): void {
-        $options = $config['format_options'] ?? [];
-        if (empty($options)) {
-            return;
-        }
+    public static function apply_format_options(\stdClass $course, int $sourcecourseid): void {
+        $sourcecourse = get_course($sourcecourseid);
+        $options = course_get_format($sourcecourse)->get_format_options();
         course_get_format($course)->update_course_format_options($options);
     }
 }

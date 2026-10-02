@@ -87,7 +87,7 @@ class create_course_service {
             // Create the Moodle course from stored form data.
             $course = create_course($coursedata);
             if ($sourcecourseid !== null) {
-                template_course_settings::apply_format_options($course, $courseconfiguration);
+                template_course_settings::apply_format_options($course, $sourcecourseid);
             }
 
             // Persist course id in the session record and mark as creating (2).
