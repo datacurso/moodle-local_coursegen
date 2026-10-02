@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100202
+
+### Fixed
+- **The preview of a generated activity shows the name the admin gave the instance in the template editor in its page heading**  
+  The page heading is printed from the course module the preview is built on, which carries the name of the template activity ("Molde - Lección estándar"), while the breadcrumb showed the generated one. The preview now gives that course module the generated name for the request, which is the instance name, so both agree. Nothing is saved.
+
 ## [2.0.10] - 2026100201
 
 ### Fixed

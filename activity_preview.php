@@ -224,6 +224,7 @@ $modinfo = get_fast_modinfo($PAGE->course);
 $courseformat = course_get_format($PAGE->course);
 if ($sourcecmid > 0 && isset($modinfo->cms[$sourcecmid]) && $courseformat->uses_course_index()) {
     $sourcecm = $modinfo->get_cm($sourcecmid);
+    $preview->name_course_module($sourcecm);
     $PAGE->set_cm($sourcecm);
     $record = $preview->activity_record();
     $recordid = $record->id ?? 0;
