@@ -34,15 +34,20 @@ class reader_task extends backup_activity_task {
     /** @var int The course the activity belongs to. */
     protected int $courseid;
 
+    /** @var bool Whether the people's contributions the module files as user data are read too. */
+    protected bool $withuserdata;
+
     /**
      * Constructor.
      *
      * @param string $name An identifier, used only in messages.
      * @param int $moduleid The course module being read.
      * @param int $courseid Its course.
+     * @param bool $withuserdata Read what the module files as user data (posts, entries, records) as well.
      */
-    public function __construct(string $name, int $moduleid, int $courseid) {
+    public function __construct(string $name, int $moduleid, int $courseid, bool $withuserdata = false) {
         $this->courseid = $courseid;
+        $this->withuserdata = $withuserdata;
         parent::__construct($name, $moduleid, null);
     }
 
@@ -59,7 +64,8 @@ class reader_task extends backup_activity_task {
     }
 
     /**
-     * Every setting is off, except that a module's own pages travel with it.
+     * Every setting is off, except that a module's own pages travel with it,
+     * and everything a person filed when user data is asked for.
      *
      * Backup files people's contributions - posts, entries, answers - only
      * when asked for user data, and a template carries none of that. A wiki's
@@ -70,7 +76,10 @@ class reader_task extends backup_activity_task {
      * @return bool
      */
     public function get_setting_value($name) {
-        return $name === 'userinfo' && in_array($this->get_modulename(), self::PAGES_ARE_THE_MODULE, true);
+        if ($name !== 'userinfo') {
+            return false;
+        }
+        return $this->withuserdata || in_array($this->get_modulename(), self::PAGES_ARE_THE_MODULE, true);
     }
 
     /**

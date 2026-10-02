@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100216
+
+### Changed
+- **The backup structure of an activity can now be walked by any reader**  
+  What the reader of an activity's backup structure does with each element is no longer fixed: the walk is a method of its own that takes any processor, and a walk can ask for what people filed in the module (posts, entries, records) as well. The tree sent to the AI service is read exactly as before.
+
 ## [2.0.10] - 2026100215
 
 ### Fixed
