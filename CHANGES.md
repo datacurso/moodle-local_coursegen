@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100210
+
+### Added
+- **The template screen can list the places of a template and take the file a teacher brings**  
+  A new web service, local_coursegen_get_template_reference_slots, lists the places of a template that take a file with what each asks for, the activity it belongs to, the kinds of file it accepts and the file the teacher already brought. A new page, reference_file.php, takes the upload itself, a real file in a multipart request, or empties a place. Both check the session key and the capability to create a course from a template, and the page only accepts a place the template really has.
+
 ## [2.0.10] - 2026100209
 
 ### Added
