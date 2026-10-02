@@ -20,7 +20,6 @@ use backup_nested_element;
 use base_attribute;
 use base_final_element;
 use base_nested_element;
-use base_processor;
 
 /**
  * Reads a backup structure into nested arrays instead of writing it as XML.
@@ -48,7 +47,7 @@ use base_processor;
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class structure_array_processor extends base_processor {
+class structure_array_processor extends backup_vars_processor {
     /**
      * @var array The element currently being filled, innermost last.
      *
@@ -60,9 +59,6 @@ class structure_array_processor extends base_processor {
 
     /** @var array The finished tree, once the outermost element closes. */
     protected array $result = [];
-
-    /** @var array backup::VAR_* => value, read by the sources of the structure. */
-    protected array $vars = [];
 
     /**
      * @var array Element name => the table it was read from.
@@ -83,30 +79,6 @@ class structure_array_processor extends base_processor {
      * column, so the way back is kept.
      */
     protected array $aliases = [];
-
-    /**
-     * Give one of the values a structure's sources are allowed to ask for.
-     *
-     * A source is written as "the rows of this table whose column matches the
-     * activity being backed up", and the activity is named by these rather
-     * than hardcoded, which is what lets one declaration serve every instance.
-     *
-     * @param int $key One of the backup::VAR_* constants.
-     * @param mixed $value
-     */
-    public function set_var($key, $value) {
-        $this->vars[$key] = $value;
-    }
-
-    /**
-     * Read one of those values back.
-     *
-     * @param int $key
-     * @return mixed
-     */
-    public function get_var($key) {
-        return $this->vars[$key] ?? null;
-    }
 
     /**
      * The tree, once the walk has finished.
