@@ -35,6 +35,7 @@ use local_coursegen\local\service\course_creation_guard;
 use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
 use local_coursegen\local\service\generated_activities_filter;
+use local_coursegen\local\service\kept_link_rewriter;
 use local_coursegen\local\service\template_ai_api_service;
 use local_coursegen\local\service\template_keep_copier;
 
@@ -107,9 +108,32 @@ class finish_template_generation extends external_api {
             template_keep_copier::copy_into($templateid, $courseid, $keptcms);
         }
         $generatedcms = $created['generatedcms'] ?? [];
+        self::arrange_course($templateid, $courseid, $generatedactivities, $generatedcms, $keptcms);
         self::resolve_activity_links($session, $courseid, $generatedactivities, $generatedcms, $keptcms);
 
         return self::created_response($courseid, $CFG->wwwroot);
+    }
+
+    /**
+     * Make the kept activities follow the template.
+     *
+     * @param int|null $templateid
+     * @param int $courseid
+     * @param array $payloadactivities Every activity entry of the result, kept ones included.
+     * @param array $generatedcms Payload cmid => created cmid, for the generated activities.
+     * @param array $keptcms Payload cmid => created cmid, for the copied kept activities.
+     */
+    private static function arrange_course(
+        ?int $templateid,
+        int $courseid,
+        array $payloadactivities,
+        array $generatedcms,
+        array $keptcms
+    ): void {
+        if ($courseid <= 0 || $templateid === null || $templateid <= 0) {
+            return;
+        }
+        kept_link_rewriter::rewrite_for_course($courseid, $payloadactivities, $generatedcms, $keptcms);
     }
 
     /**

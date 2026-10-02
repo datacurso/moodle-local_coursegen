@@ -94,6 +94,30 @@ final class activity_link_resolver_test extends \advanced_testcase {
     }
 
     /**
+     * Tokens in the content of a generated label become the URL of the target.
+     */
+    public function test_replaces_tokens_in_a_label_intro(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $target = $this->getDataGenerator()->create_module('page', ['course' => $course->id]);
+        $label = $this->getDataGenerator()->create_module('label', [
+            'course' => $course->id,
+            'intro' => '<p>' . $this->link('uid-page') . '</p>',
+        ]);
+
+        activity_link_resolver::resolve_for_course(
+            $course->id,
+            $this->payload(['uid-page' => -1]),
+            [-1 => (int) $target->cmid, -2 => (int) $label->cmid],
+            []
+        );
+
+        $intro = $DB->get_field('label', 'intro', ['id' => $label->id]);
+        $this->assertSame('<p><a href="' . $this->url('page', (int) $target->cmid) . '">Go</a></p>', $intro);
+    }
+
+    /**
      * Tokens in every page of a generated lesson are resolved.
      */
     public function test_replaces_tokens_in_every_lesson_page(): void {
