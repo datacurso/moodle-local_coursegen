@@ -21,12 +21,10 @@ use local_coursegen\local\preview\quiz\view;
 /**
  * A quiz, drawn by mod_quiz's own view code and the question engine, against the payload.
  *
- * A kept quiz brings its questions with it, each as the question bank loaded
- * it, and the engine draws them from that. A quiz the run writes brings the
- * questions the answer wrote, in the shape a question's editing form submits
- * them in, which is the shape the plugin creates them from; those are put into
- * the shape the engine builds a question from, and then drawn the same way.
- * The drawing is the engine's in both cases; only the data changes hands.
+ * Every quiz brings its questions with it, each as the question bank loads
+ * it, and the engine draws them from that. For a quiz the run writes, the
+ * questions are the template's with what the AI wrote laid into the rows of
+ * the question it came from.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -62,59 +60,20 @@ class quiz_preview extends preview_base {
     }
 
     /**
-     * The slots, each with its question's data, from whichever side wrote them.
+     * The slots, each with its question's data, as the result carries them.
+     *
+     * The questions are the ones in the result's own `questions`: the bank
+     * rows of every question, with what the AI wrote laid into the row of
+     * the question it came from. That is the one place a quiz's questions
+     * are read from; the same questions as the editing form takes them
+     * (mod_settings.questions) are what creates the quiz, not what shows it.
+     * A quiz's tree holds only its description, name and settings.
      *
      * @return array
      */
     protected function slots(): array {
-        $drafted = $this->parameters['mod_settings']['questions'] ?? null;
-        $sourceuid = $this->source['uid'] ?? '';
-        $sourceuid = (string) $sourceuid;
-        $requesteduid = $this->here->get_param('uid');
-        $requesteduid = (string) $requesteduid;
-        $ismould = $sourceuid === $requesteduid;
-        if (!$ismould && is_array($drafted) && $drafted) {
-            return $this->slots_from_draft($drafted);
-        }
-        $sourceparameters = $this->source['parameters'] ?? [];
-        $sourcequestions = $sourceparameters['questions'] ?? [];
-        return (array) $sourcequestions;
-    }
-
-    /**
-     * The answer's questions as slots, their data in the engine's shape.
-     *
-     * The answer writes a question the way its editing form submits it; the
-     * plugin creates the question from exactly that, through the question
-     * type's own save_question(). Here the same fields are laid out the way
-     * the bank loads a saved question back, which is what the engine builds a
-     * question from. Answers and hints are numbered from one, and the marks
-     * that decide which answers are right are the fractions the form carries.
-     *
-     * @param array $drafted
-     * @return array
-     */
-    protected function slots_from_draft(array $drafted): array {
-        $slots = [];
-        $slotnumber = 0;
-        $id = 1;
-        $context = $this->context();
-        $contextid = $context->id;
-        foreach ($drafted as $question) {
-            $question = (array) $question;
-            $slotnumber++;
-            $data = quiz_question_data::from_form($question, $id, $contextid);
-            $maxmark = $question['defaultmark'] ?? 1;
-            $maxmark = (float) $maxmark;
-            $slots[] = [
-                'slot' => $slotnumber,
-                'page' => $slotnumber,
-                'maxmark' => $maxmark,
-                'displaynumber' => null,
-                'question' => $data,
-            ];
-        }
-        return $slots;
+        $questions = $this->parameters['questions'] ?? [];
+        return (array) $questions;
     }
 
     /**

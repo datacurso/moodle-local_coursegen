@@ -36,26 +36,6 @@ class url_preview extends preview_base {
     }
 
     /**
-     * A draft may give the address and the description.
-     *
-     * @param json_store $store
-     */
-    protected function overlay(json_store $store): void {
-        $rows = $store->get_records('url');
-        if (!$rows) {
-            return;
-        }
-        $row = reset($rows);
-        if (!empty($this->parameters['externalurl'])) {
-            $store->set('url', $row->id, 'externalurl', (string) $this->parameters['externalurl']);
-        }
-        $intro = $this->parameters['introeditor'] ?? null;
-        if (is_array($intro) && !empty($intro['text'])) {
-            $store->set('url', $row->id, 'intro', (string) $intro['text']);
-        }
-    }
-
-    /**
      * The URL, as mod/url/view.php draws it for its display type.
      *
      * @return string

@@ -16,6 +16,8 @@
 
 namespace local_coursegen\local\preview\choice;
 
+use stdClass;
+
 /**
  * mod_choice's results display, built the same way view.php builds it: whether
  * results can be shown at all, and drawing them (as a table or as a chart,

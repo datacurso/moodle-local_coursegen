@@ -23,9 +23,14 @@ use local_coursegen\local\service\template_ai_api_service;
 
 /**
  * Which activity activity_preview.php is being asked for, and what to draw
- * it from: the finished result when there is one, or the payload's own
- * copy for an activity the run keeps rather than writes. Kept apart from the page itself, which is everything
- * that happens once this is known.
+ * it from: its own entry of the finished result, or the payload's own copy
+ * for an activity the run keeps or has not finished.
+ *
+ * A finished activity carries everything its preview is made of - the tree of
+ * rows with what the AI wrote laid in, the files, the scalar columns - so
+ * nothing else is read to complete it: not the template's activity in the
+ * payload, and not a row matched by title or by position. Kept apart from the
+ * page itself, which is everything that happens once this is known.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -38,138 +43,189 @@ class activity_preview_lookup {
      * @param string $uid
      * @param array $payload The full init payload the run was sent.
      * @param course_session $session
-     * @return array {modname: string, parameters: array, source: array}
+     * @return array {modname: string, parameters: array, cmid: int, generated_files: array}
+     * @throws \moodle_exception When the activity is not part of the run, or its result cannot be drawn.
      */
     public static function resolve(string $uid, array $payload, course_session $session): array {
-        $api = new template_ai_api_service();
-        $threadid = $session->get('session_id');
-        $threadid = (string) $threadid;
-
-        $found = self::from_result($api, $threadid, $uid, $payload);
-        if ($found['parameters']) {
-            $found['parameters'] = self::with_reference_files($found['parameters'], $uid, $session);
-        } else {
-            $found = self::from_payload($payload, $uid);
+        $answer = self::answer_of($session);
+        $found = self::from_answer($answer, $uid);
+        if ($found !== null) {
+            $found['parameters'] = self::with_files($found, $uid, $session);
+            return $found;
         }
-        if (!$found['parameters']) {
+        $found = self::from_payload($payload, $uid);
+        if ($found === null) {
             throw new \moodle_exception('courseai_preview_not_found', 'local_coursegen');
         }
         return $found;
     }
 
     /**
-     * The parameters of a finished activity with the files the teacher brought in place of its reference tokens.
+     * An activity the finished result describes, as its preview is drawn.
      *
-     * The preview never shows a token: a reference has the teacher's file, or
-     * the run would not have left a token for it.
+     * A written activity must be current, or it is refused rather than
+     * completed from somewhere else; a kept one is not checked, because it
+     * has no records the AI wrote.
      *
+     * @param array $answer The result of the run; empty while it has none.
+     * @param string $uid
+     * @return array|null {modname: string, parameters: array, cmid: int, generated_files: array};
+     *                    null when the result has no such activity to draw.
+     * @throws \moodle_exception When the activity predates record ids or a record names an unknown row.
+     */
+    public static function from_answer(array $answer, string $uid): ?array {
+        $activities = $answer['generated_activities'] ?? [];
+        $activity = self::listed($activities, $uid);
+        if ($activity === null) {
+            return null;
+        }
+        $templatebehavior = $activity['template_behavior'] ?? [];
+        $action = $templatebehavior['action'] ?? '';
+        if ($action !== 'keep') {
+            result_activity_check::assert_current($activity);
+        }
+
+        $modname = $activity['resource_type'] ?? '';
+        $sourcecmid = self::chrome_cmid($activity);
+        $parameters = $activity['parameters'] ?? [];
+        $generatedfiles = $activity['generated_files'] ?? [];
+        return [
+            'modname' => (string) $modname,
+            'parameters' => (array) $parameters,
+            'cmid' => $sourcecmid,
+            'generated_files' => (array) $generatedfiles,
+        ];
+    }
+
+    /**
+     * The payload's own copy of one activity, for an activity the run keeps or has not finished.
+     *
+     * Its parameters hold the same tree a finished activity's do. The payload
+     * describes every activity of the template completely, and names each one
+     * by the same uid.
+     *
+     * @param array $payload
+     * @param string $uid
+     * @return array|null {modname: string, parameters: array, cmid: int, generated_files: array}
+     */
+    public static function from_payload(array $payload, string $uid): ?array {
+        $activities = $payload['activities'] ?? [];
+        $activity = self::listed($activities, $uid);
+        if ($activity === null) {
+            return null;
+        }
+        $modname = $activity['resource_type'] ?? '';
+        $modname = (string) $modname;
+        $parameters = $activity['parameters'] ?? [];
+        return [
+            'modname' => $modname,
+            'parameters' => self::with_description($modname, (array) $parameters),
+            'cmid' => self::chrome_cmid($activity),
+            'generated_files' => [],
+        ];
+    }
+
+    /**
+     * The course module of the template course that the page of an activity is built on.
+     *
+     * A written activity names the template activity it was made from; a
+     * kept one is that activity.
+     *
+     * @param array $activity
+     * @return int
+     */
+    private static function chrome_cmid(array $activity): int {
+        $templatebehavior = $activity['template_behavior'] ?? [];
+        $sourcecmid = $templatebehavior['template_source_cmid'] ?? 0;
+        $sourcecmid = (int) $sourcecmid;
+        if ($sourcecmid > 0) {
+            return $sourcecmid;
+        }
+        $cmid = $activity['cmid'] ?? 0;
+        $cmid = (int) $cmid;
+        if ($cmid > 0) {
+            return $cmid;
+        }
+        return 0;
+    }
+
+    /**
+     * The result of the run, or nothing while it has none.
+     *
+     * A run under review has no result yet, and asking for one is how that is
+     * found out.
+     *
+     * @param course_session $session
+     * @return array
+     */
+    private static function answer_of(course_session $session): array {
+        $api = new template_ai_api_service();
+        $threadid = $session->get('session_id');
+        try {
+            return $api->get_result((string) $threadid);
+        } catch (\moodle_exception $exception) {
+            return [];
+        }
+    }
+
+    /**
+     * The entry of a list of activities that carries the uid.
+     *
+     * @param array $activities
+     * @param string $uid
+     * @return array|null
+     */
+    private static function listed(array $activities, string $uid): ?array {
+        foreach ($activities as $activity) {
+            $activityuid = $activity['uid'] ?? '';
+            if ((string) $activityuid === $uid) {
+                return $activity;
+            }
+        }
+        return null;
+    }
+
+    /**
+     * The parameters of a type without a preview of its own, with the description its tree holds.
+     *
+     * Such a type shows its description only, and a payload copy keeps that
+     * in its module row.
+     *
+     * @param string $modname
      * @param array $parameters
+     * @return array
+     */
+    private static function with_description(string $modname, array $parameters): array {
+        if (preview_factory::has_own_preview($modname)) {
+            return $parameters;
+        }
+        $structure = $parameters['structure'] ?? [];
+        $modstructure = $structure[$modname] ?? [];
+        $root = $modstructure[0] ?? [];
+        $intro = $root['intro'] ?? '';
+        $intro = (string) $intro;
+        $parameters['introeditor'] = ['text' => $intro, 'format' => FORMAT_HTML, 'itemid' => 0];
+        return $parameters;
+    }
+
+    /**
+     * The parameters of a finished activity with its files in place of their placeholders and tokens.
+     *
+     * The files the AI made are addressed where they are served from, and a
+     * reference has the teacher's file: the preview never shows a token.
+     *
+     * @param array $found What from_answer() found.
      * @param string $uid
      * @param course_session $session
      * @return array
      */
-    private static function with_reference_files(array $parameters, string $uid, course_session $session): array {
+    private static function with_files(array $found, string $uid, course_session $session): array {
+        $addressed = new generated_file_preview();
+        $parameters = $addressed->addressed($found['parameters'], $found['generated_files']);
+
         $urlbyslot = reference_file_urls::for_course_session($session);
-        $activity = generated_reference_files::apply_to_activity(['uid' => $uid, 'parameters' => $parameters], $urlbyslot);
-        return $activity['parameters'];
-    }
-
-    /**
-     * The payload's own copy of one activity, by its course module id.
-     *
-     * @param array $payload
-     * @param int $cmid
-     * @return array
-     */
-    private static function activity_by_cmid(array $payload, int $cmid): array {
-        $activities = $payload['activities'] ?? [];
-        foreach ($activities as $activity) {
-            $activitycmid = $activity['cmid'] ?? 0;
-            $activitycmid = (int) $activitycmid;
-            if ($activitycmid === $cmid) {
-                return $activity;
-            }
-        }
-        return [];
-    }
-
-    /**
-     * The finished activity when there is one. A run under review has no
-     * result yet, and asking for one is how that is found out.
-     *
-     * @param template_ai_api_service $api
-     * @param string $threadid
-     * @param string $uid
-     * @param array $payload
-     * @return array {modname: string, parameters: array, source: array}
-     */
-    private static function from_result(
-        template_ai_api_service $api,
-        string $threadid,
-        string $uid,
-        array $payload
-    ): array {
-        try {
-            $result = $api->get_result($threadid);
-            $activities = $result['generated_activities'] ?? [];
-            foreach ($activities as $activity) {
-                $activityuid = $activity['uid'] ?? '';
-                $activityuid = (string) $activityuid;
-                if ($activityuid !== $uid) {
-                    continue;
-                }
-                $modname = $activity['resource_type'] ?? '';
-                $modname = (string) $modname;
-
-                $parameters = $activity['parameters'] ?? [];
-                $parameters = (array) $parameters;
-                $generatedfiles = (array) ($activity['generated_files'] ?? []);
-                $parameters = (new generated_file_preview())->addressed($parameters, $generatedfiles);
-
-                $templatebehavior = $activity['template_behavior'] ?? [];
-                $sourcecmid = $templatebehavior['template_source_cmid'] ?? 0;
-                $sourcecmid = (int) $sourcecmid;
-                $source = self::activity_by_cmid($payload, $sourcecmid);
-
-                return [
-                    'modname' => $modname,
-                    'parameters' => $parameters,
-                    'source' => $source,
-                ];
-            }
-        } catch (\moodle_exception $exception) {
-            // No result yet - fall through to the payload.
-        }
-        return ['modname' => '', 'parameters' => [], 'source' => []];
-    }
-
-    /**
-     * The payload's own copy, for an activity the run keeps rather than
-     * writes: it is not in the answer at all, so it is read from what was
-     * sent. The payload describes every activity of the template completely,
-     * and names each one by the same uid.
-     *
-     * @param array $payload
-     * @param string $uid
-     * @return array {modname: string, parameters: array, source: array}
-     */
-    private static function from_payload(array $payload, string $uid): array {
-        $activities = $payload['activities'] ?? [];
-        foreach ($activities as $activity) {
-            $activityuid = $activity['uid'] ?? '';
-            $activityuid = (string) $activityuid;
-            if ($activityuid !== $uid) {
-                continue;
-            }
-            $modname = $activity['resource_type'] ?? '';
-            $modname = (string) $modname;
-            $parameters = kept_activity::to_parameters($activity);
-            return [
-                'modname' => $modname,
-                'parameters' => $parameters,
-                'source' => $activity,
-            ];
-        }
-        return ['modname' => '', 'parameters' => [], 'source' => []];
+        $activity = ['uid' => $uid, 'parameters' => $parameters];
+        $withreferences = generated_reference_files::apply_to_activity($activity, $urlbyslot);
+        return $withreferences['parameters'];
     }
 }

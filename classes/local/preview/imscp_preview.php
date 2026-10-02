@@ -21,8 +21,7 @@ use local_coursegen\local\preview\imscp\view;
 /**
  * An IMS content package, drawn by mod_imscp's own view code run against the payload.
  *
- * The package is the template's; a draft cannot upload one, so a planned
- * package shows the mould's table of contents.
+ * The table of contents is the one the activity's own tree carries.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -36,26 +35,6 @@ class imscp_preview extends preview_base {
      */
     protected function modname(): string {
         return 'imscp';
-    }
-
-    /**
-     * A draft replaces the description.
-     *
-     * @param json_store $store
-     */
-    protected function overlay(json_store $store): void {
-        $rows = $store->get_records('imscp');
-        if (!$rows) {
-            return;
-        }
-        $row = reset($rows);
-        $intro = $this->parameters['introeditor'] ?? null;
-        if (is_array($intro)) {
-            $intro = $intro['text'] ?? null;
-        }
-        if (is_string($intro) && trim($intro) !== '') {
-            $store->set('imscp', $row->id, 'intro', $intro);
-        }
     }
 
     /**

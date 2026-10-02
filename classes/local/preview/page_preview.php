@@ -41,32 +41,6 @@ class page_preview extends preview_base {
     }
 
     /**
-     * A draft replaces the page's body.
-     *
-     * A page is one piece, so a plan for it has one part, and the answer for
-     * it carries the body under the field its form submits.
-     *
-     * @param json_store $store
-     */
-    protected function overlay(json_store $store): void {
-        $rows = $store->get_records('page');
-        if (!$rows) {
-            return;
-        }
-        $row = reset($rows);
-        $body = $this->parameters['page'] ?? null;
-        if ($body === null) {
-            $body = $this->parameters['content'] ?? null;
-        }
-        if (is_array($body)) {
-            $body = $body['text'] ?? null;
-        }
-        if (is_string($body) && trim($body) !== '') {
-            $store->set('page', $row->id, 'content', $body);
-        }
-    }
-
-    /**
      * The page's saved display options, unserialized.
      *
      * @param stdClass $page

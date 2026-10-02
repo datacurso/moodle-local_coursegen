@@ -41,29 +41,6 @@ class label_preview extends preview_base {
     }
 
     /**
-     * A draft replaces the label's text.
-     *
-     * @param json_store $store
-     */
-    protected function overlay(json_store $store): void {
-        $rows = $store->get_records('label');
-        if (!$rows) {
-            return;
-        }
-        $row = reset($rows);
-        $intro = $this->parameters['introeditor'] ?? null;
-        if ($intro === null) {
-            $intro = $this->parameters['intro'] ?? null;
-        }
-        if (is_array($intro)) {
-            $intro = $intro['text'] ?? null;
-        }
-        if (is_string($intro) && trim($intro) !== '') {
-            $store->set('label', $row->id, 'intro', $intro);
-        }
-    }
-
-    /**
      * The label's content, as the course page shows it.
      *
      * @return string

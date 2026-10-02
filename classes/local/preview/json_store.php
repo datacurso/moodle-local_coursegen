@@ -48,14 +48,15 @@ class json_store {
     protected array $rows = [];
 
     /**
-     * Build the store from one activity of the payload.
+     * Build the store from the parameters of one activity.
      *
-     * @param array $activity The activity as the payload describes it.
+     * The parameters of a finished activity, and of an activity the payload
+     * describes, hold the same tree: the rows of the module with their ids.
+     *
+     * @param array $parameters The activity's own parameters.
      * @return self
      */
-    public static function from_activity(array $activity): self {
-        $parameters = $activity['parameters'] ?? [];
-
+    public static function from_parameters(array $parameters): self {
         $structure = $parameters['structure'] ?? [];
         $structure = (array) $structure;
 
@@ -68,6 +69,33 @@ class json_store {
         $store = new self();
         $store->rows = json_store_builder::build($structure, $tables, $aliases);
         return $store;
+    }
+
+    /**
+     * The id of every row the store holds, whatever its table.
+     *
+     * @return array Id (string) => true.
+     */
+    public function row_ids(): array {
+        $ids = [];
+        foreach ($this->rows as $rows) {
+            $this->add_ids_of($rows, $ids);
+        }
+        return $ids;
+    }
+
+    /**
+     * Add the ids of a table's rows to a lookup.
+     *
+     * @param stdClass[] $rows
+     * @param array $ids Accumulator: id (string) => true.
+     */
+    private function add_ids_of(array $rows, array &$ids): void {
+        foreach ($rows as $row) {
+            if (isset($row->id)) {
+                $ids[(string) $row->id] = true;
+            }
+        }
     }
 
     /**

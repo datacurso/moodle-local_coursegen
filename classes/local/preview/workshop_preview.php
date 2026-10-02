@@ -43,150 +43,25 @@ class workshop_preview extends preview_base {
     }
 
     /**
-     * What the answer writes replaces the mould's: the texts, the phase and the assessment form.
+     * The module's row, opened in the phase the result asks for.
      *
-     * The answer writes the description and the two sets of instructions,
-     * may name the phase the workshop opens in, and writes the criteria the
-     * plugin creates as accumulative dimensions; the criteria go into the
-     * store as the rows the plugin would insert, so the assessment form counts
-     * as defined the way it would on the created workshop.
+     * The phase is a setting of how the workshop starts, which the plugin
+     * applies when it creates it, so the result carries it as a token of its
+     * own rather than in the tree.
      *
-     * @param json_store $store
+     * @return \stdClass|null
      */
-    protected function overlay(json_store $store): void {
-        $rows = $store->get_records('workshop');
-        if (!$rows) {
-            return;
+    protected function instance(): ?\stdClass {
+        $row = parent::instance();
+        if ($row === null) {
+            return null;
         }
-        $workshop = reset($rows);
-        $this->overlay_text_fields($store, $workshop);
-
-        $rawsettings = $this->parameters['mod_settings'] ?? [];
-        $settings = (array) $rawsettings;
+        $settings = $this->parameters['mod_settings'] ?? [];
         $token = $settings['initial_phase'] ?? null;
         if (is_string($token) && isset(self::PHASE_MAP[$token])) {
-            $store->set('workshop', $workshop->id, 'phase', self::PHASE_MAP[$token]);
+            $row->phase = self::PHASE_MAP[$token];
         }
-
-        $criteria = $settings['criteria'] ?? [];
-        if (!is_array($criteria) || !$criteria) {
-            return;
-        }
-        $this->overlay_criteria($store, $workshop, $criteria);
-    }
-
-    /**
-     * The description and the two sets of instructions the answer writes,
-     * replacing the mould's; each may come as an editor array or a plain string.
-     *
-     * @param json_store $store
-     * @param \stdClass $workshop
-     */
-    protected function overlay_text_fields(json_store $store, \stdClass $workshop): void {
-        $fields = ['introeditor' => 'intro', 'instructauthors' => 'instructauthors',
-            'instructreviewers' => 'instructreviewers'];
-        foreach ($fields as $field => $column) {
-            $value = $this->field_value($field);
-            $text = $this->field_text($value);
-            if (trim($text) === '') {
-                continue;
-            }
-            $store->set('workshop', $workshop->id, $column, $text);
-            $store->set('workshop', $workshop->id, $column . 'format', $this->field_format($value));
-        }
-    }
-
-    /**
-     * The answer's own value for one field, from its editor key or its plain key.
-     *
-     * @param string $field
-     * @return mixed
-     */
-    protected function field_value(string $field) {
-        $value = $this->parameters[$field] ?? null;
-        if ($value !== null) {
-            return $value;
-        }
-        $editorvalue = $this->parameters[$field . 'editor'] ?? null;
-        return $editorvalue;
-    }
-
-    /**
-     * A field value's text, whichever shape it was written in.
-     *
-     * @param mixed $value
-     * @return string
-     */
-    protected function field_text($value): string {
-        if (!is_array($value)) {
-            $rawtext = $value ?? '';
-            $text = (string) $rawtext;
-            return $text;
-        }
-        $rawtext = $value['text'] ?? '';
-        $text = (string) $rawtext;
-        return $text;
-    }
-
-    /**
-     * A field value's format, whichever shape it was written in.
-     *
-     * @param mixed $value
-     * @return int
-     */
-    protected function field_format($value): int {
-        if (!is_array($value)) {
-            return FORMAT_HTML;
-        }
-        $rawformat = $value['format'] ?? FORMAT_HTML;
-        $format = (int) $rawformat;
-        return $format;
-    }
-
-    /**
-     * The accumulative-strategy criteria the answer writes, replacing the mould's.
-     *
-     * @param json_store $store
-     * @param \stdClass $workshop
-     * @param array $criteria
-     */
-    protected function overlay_criteria(json_store $store, \stdClass $workshop, array $criteria): void {
-        $store->delete_records('workshopform_accumulative', ['workshopid' => $workshop->id]);
-        $sort = 1;
-        foreach ($criteria as $criterion) {
-            $criterion = (array) $criterion;
-            $rawdescription = $criterion['description'] ?? '';
-            $description = trim((string) $rawdescription);
-            if ($description === '') {
-                continue;
-            }
-            $row = $this->criterion_row($workshop->id, $sort, $description, $criterion);
-            $store->add('workshopform_accumulative', $row);
-            $sort++;
-        }
-    }
-
-    /**
-     * One accumulative-dimension row, as the plugin would insert it.
-     *
-     * @param int $workshopid
-     * @param int $sort
-     * @param string $description
-     * @param array $criterion
-     * @return \stdClass
-     */
-    protected function criterion_row(int $workshopid, int $sort, string $description, array $criterion): \stdClass {
-        $rawgrade = $criterion['max_points'] ?? 10;
-        $grade = (int) $rawgrade;
-        return (object) [
-            'id' => $sort,
-            'workshopid' => $workshopid,
-            'sort' => $sort,
-            'description' => $description,
-            'descriptionformat' => FORMAT_HTML,
-            'grade' => $grade,
-            'weight' => 1,
-        ];
+        return $row;
     }
 
     /**

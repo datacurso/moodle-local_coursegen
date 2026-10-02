@@ -1,0 +1,1201 @@
+{
+ "generated_activities": [
+  {
+   "uid": "book-uid",
+   "resource_type": "book",
+   "cmid": -1,
+   "template_behavior": {
+    "action": "instance",
+    "template_source_cmid": 11067,
+    "prompt": "Teach it"
+   },
+   "parameters": {
+    "name": "Generado book",
+    "introeditor": {
+     "text": "<p>texto p1 [689d74]</p>",
+     "format": 0,
+     "itemid": 0
+    },
+    "showdescription": "0",
+    "numbering": "1",
+    "navstyle": "1",
+    "customtitles": "0",
+    "visible": 1,
+    "visibleoncoursepage": 1,
+    "cmidnumber": "",
+    "lang": "",
+    "availabilityconditionsjson": "{\"op\":\"&\",\"c\":[],\"showc\":[]}",
+    "completionunlocked": 1,
+    "completion": 0,
+    "completionexpected": 0,
+    "tags": [],
+    "course": 0,
+    "coursemodule": 0,
+    "section": 0,
+    "module": 3,
+    "modulename": "book",
+    "instance": 0,
+    "add": "book",
+    "update": 0,
+    "return": 0,
+    "sr": -1,
+    "beforemod": 0,
+    "showonly": "",
+    "competencies": [],
+    "competency_rule": "0",
+    "override_grade": 0,
+    "mod_settings": {
+     "chapters": [
+      {
+       "source_id": "2085",
+       "title": "Otro",
+       "subchapter": 0,
+       "content_editor": {
+        "text": "<p>texto p1 [19aad4]</p>",
+        "format": 1,
+        "itemid": 0
+       },
+       "record_id": "2085"
+      },
+      {
+       "source_id": "2084",
+       "title": "Capitulo",
+       "subchapter": 0,
+       "content_editor": {
+        "text": "<p>texto p1 [2b21ab]</p>",
+        "format": 1,
+        "itemid": 0
+       },
+       "record_id": "2084"
+      },
+      {
+       "source_id": "2083",
+       "title": "Capitulo",
+       "subchapter": 0,
+       "content_editor": {
+        "text": "<p>texto p1 [513266]</p>",
+        "format": 1,
+        "itemid": 0
+       },
+       "record_id": "2083"
+      }
+     ]
+    },
+    "structure": {
+     "id": "313",
+     "moduleid": 11067,
+     "modulename": "book",
+     "contextid": 13021,
+     "book": [
+      {
+       "id": "313",
+       "name": "Generado book",
+       "intro": "<p>texto p1 [689d74]</p>",
+       "introformat": "0",
+       "numbering": "1",
+       "navstyle": "1",
+       "customtitles": "0",
+       "timecreated": "1790972859",
+       "timemodified": "1790972859",
+       "chapters": [
+        {
+         "chapter": [
+          {
+           "id": "2085",
+           "pagenum": "1",
+           "subchapter": "0",
+           "title": "Otro",
+           "content": "<p>texto p1 [19aad4]</p>",
+           "contentformat": "1",
+           "hidden": "0",
+           "timemodified": "1790972859",
+           "importsrc": ""
+          },
+          {
+           "id": "2084",
+           "pagenum": "2",
+           "subchapter": "0",
+           "title": "Capitulo",
+           "content": "<p>texto p1 [2b21ab]</p>",
+           "contentformat": "1",
+           "hidden": "0",
+           "timemodified": "1790972859",
+           "importsrc": ""
+          },
+          {
+           "id": "2083",
+           "pagenum": "3",
+           "subchapter": "0",
+           "title": "Capitulo",
+           "content": "<p>texto p1 [513266]</p>",
+           "contentformat": "1",
+           "hidden": "0",
+           "timemodified": "1790972859",
+           "importsrc": ""
+          }
+         ]
+        }
+       ],
+       "chaptertags": [
+        []
+       ]
+      }
+     ]
+    },
+    "structure_tables": {
+     "chapter": "book_chapters",
+     "book": "book"
+    },
+    "structure_aliases": {},
+    "files": []
+   }
+  },
+  {
+   "uid": "glossary-uid",
+   "resource_type": "glossary",
+   "cmid": -1,
+   "template_behavior": {
+    "action": "instance",
+    "template_source_cmid": 11068,
+    "prompt": "Teach it"
+   },
+   "parameters": {
+    "name": "Generado glossary",
+    "introeditor": {
+     "text": "<p>texto p1 [52f6fe]</p>",
+     "format": 0,
+     "itemid": 0
+    },
+    "showdescription": "0",
+    "globalglossary": "0",
+    "mainglossary": "0",
+    "defaultapproval": "1",
+    "editalways": "0",
+    "allowduplicatedentries": "0",
+    "allowcomments": "0",
+    "usedynalink": "1",
+    "displayformat": "dictionary",
+    "approvaldisplayformat": "default",
+    "entbypage": 10,
+    "showalphabet": "1",
+    "showall": "1",
+    "showspecial": "1",
+    "allowprintview": "1",
+    "assessed": "0",
+    "scale": 0,
+    "visible": 1,
+    "visibleoncoursepage": 1,
+    "cmidnumber": "",
+    "lang": "",
+    "completionunlocked": 1,
+    "completion": 0,
+    "completionentries": 0,
+    "completionexpected": 0,
+    "course": 0,
+    "coursemodule": 0,
+    "section": 0,
+    "module": 10,
+    "modulename": "glossary",
+    "instance": 0,
+    "add": "glossary",
+    "update": 0,
+    "return": 0,
+    "sr": -1,
+    "beforemod": 0,
+    "showonly": "",
+    "mod_settings": {
+     "entries": []
+    },
+    "structure": {
+     "id": "53",
+     "moduleid": 11068,
+     "modulename": "glossary",
+     "contextid": 13022,
+     "glossary": [
+      {
+       "id": "53",
+       "name": "Generado glossary",
+       "intro": "<p>texto p1 [52f6fe]</p>",
+       "introformat": "0",
+       "allowduplicatedentries": "0",
+       "displayformat": "dictionary",
+       "mainglossary": "0",
+       "showspecial": "1",
+       "showalphabet": "1",
+       "showall": "1",
+       "allowcomments": "0",
+       "allowprintview": "1",
+       "usedynalink": "1",
+       "defaultapproval": "1",
+       "globalglossary": "0",
+       "entbypage": "10",
+       "editalways": "0",
+       "rsstype": "0",
+       "rssarticles": "0",
+       "assessed": "0",
+       "assesstimestart": "0",
+       "assesstimefinish": "0",
+       "scale": "0",
+       "timecreated": "1790972860",
+       "timemodified": "1790972860",
+       "completionentries": "0",
+       "entries": [
+        [],
+        {
+         "entry": []
+        }
+       ],
+       "entriestags": [
+        []
+       ],
+       "categories": [
+        []
+       ]
+      }
+     ]
+    },
+    "structure_tables": {
+     "entry": "glossary_entries",
+     "glossary": "glossary"
+    },
+    "structure_aliases": {},
+    "files": []
+   }
+  },
+  {
+   "uid": "wiki-uid",
+   "resource_type": "wiki",
+   "cmid": -1,
+   "template_behavior": {
+    "action": "instance",
+    "template_source_cmid": 11069,
+    "prompt": "Teach it"
+   },
+   "parameters": {
+    "name": "Generado wiki",
+    "introeditor": {
+     "text": "<p>texto p1 [8247c4]</p>",
+     "format": 0,
+     "itemid": 0
+    },
+    "firstpagetitle": "Inicio",
+    "showdescription": "0",
+    "wikimode": "collaborative",
+    "defaultformat": "html",
+    "forceformat": "0",
+    "visible": 1,
+    "visibleoncoursepage": 1,
+    "cmidnumber": "",
+    "lang": "",
+    "groupmode": "0",
+    "groupingid": "0",
+    "availabilityconditionsjson": "{\"op\":\"&\",\"c\":[],\"showc\":[]}",
+    "completionunlocked": 1,
+    "completion": 0,
+    "completionexpected": 0,
+    "tags": [],
+    "course": 0,
+    "coursemodule": 0,
+    "section": 0,
+    "module": 23,
+    "modulename": "wiki",
+    "instance": 0,
+    "add": "wiki",
+    "update": 0,
+    "return": 0,
+    "sr": -1,
+    "beforemod": 0,
+    "showonly": "",
+    "competencies": [],
+    "competency_rule": "0",
+    "override_grade": 0,
+    "mod_settings": {
+     "pages": [
+      {
+       "source_id": null,
+       "title": "Inicio",
+       "newcontent_editor": {
+        "text": "",
+        "format": "1",
+        "itemid": 0
+       },
+       "record_id": "new-2"
+      }
+     ]
+    },
+    "structure": {
+     "id": "67",
+     "moduleid": 11069,
+     "modulename": "wiki",
+     "contextid": 13023,
+     "wiki": [
+      {
+       "id": "67",
+       "name": "Generado wiki",
+       "intro": "<p>texto p1 [8247c4]</p>",
+       "introformat": "0",
+       "timecreated": "0",
+       "timemodified": "1790972860",
+       "firstpagetitle": "Inicio",
+       "wikimode": "collaborative",
+       "defaultformat": "html",
+       "forceformat": "0",
+       "editbegin": "0",
+       "editend": "0",
+       "subwikis": [
+        [],
+        {
+         "subwiki": [
+          {
+           "id": "new-1",
+           "groupid": "0",
+           "userid": "0",
+           "pages": [
+            {
+             "page": [
+              {
+               "id": "new-2",
+               "title": "Inicio",
+               "cachedcontent": "",
+               "versions": [
+                {
+                 "version": [
+                  {
+                   "id": "new-3",
+                   "version": "1",
+                   "contentformat": "html",
+                   "content": ""
+                  }
+                 ]
+                }
+               ]
+              }
+             ]
+            }
+           ]
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    },
+    "structure_tables": {
+     "subwiki": "wiki_subwikis",
+     "page": "wiki_pages",
+     "version": "wiki_versions",
+     "wiki": "wiki"
+    },
+    "structure_aliases": {},
+    "files": []
+   }
+  },
+  {
+   "uid": "choice-uid",
+   "resource_type": "choice",
+   "cmid": -1,
+   "template_behavior": {
+    "action": "instance",
+    "template_source_cmid": 11070,
+    "prompt": "Teach it"
+   },
+   "parameters": {
+    "name": "Generado choice",
+    "introeditor": {
+     "text": "<p>texto p1 [2d716c]</p>",
+     "format": 0,
+     "itemid": 0
+    },
+    "option": [
+     "texto p1 [59a2f9]",
+     "texto p1 [f69cd6]",
+     "texto p1 [5bd2e2]"
+    ],
+    "allowmultiple": 0,
+    "option_repeats": 3,
+    "timeopen": 0,
+    "timeclose": 0,
+    "showdescription": 0,
+    "display": 0,
+    "allowupdate": 0,
+    "limitanswers": 0,
+    "showavailable": 0,
+    "limit": [
+     "0",
+     "0",
+     "0"
+    ],
+    "optionid": [
+     0,
+     0,
+     0
+    ],
+    "option_source_ids": [
+     "139",
+     "140",
+     "141"
+    ],
+    "showpreview": 0,
+    "showresults": 1,
+    "publish": 0,
+    "showunanswered": 0,
+    "includeinactive": 1,
+    "visible": 1,
+    "visibleoncoursepage": 1,
+    "cmidnumber": "",
+    "lang": "",
+    "groupmode": 0,
+    "groupingid": 0,
+    "availabilityconditionsjson": "{\"op\":\"&\",\"c\":[],\"showc\":[]}",
+    "completionunlocked": 1,
+    "completion": 0,
+    "completionexpected": 0,
+    "tags": [],
+    "course": 2,
+    "coursemodule": 0,
+    "section": 0,
+    "module": 5,
+    "modulename": "choice",
+    "instance": 0,
+    "add": "choice",
+    "update": 0,
+    "return": 0,
+    "sr": -1,
+    "beforemod": 0,
+    "showonly": "",
+    "competencies": [],
+    "competency_rule": 0,
+    "override_grade": 0,
+    "completionsubmit": 0,
+    "option_record_ids": [
+     "139",
+     "140",
+     "141"
+    ],
+    "structure": {
+     "id": "44",
+     "moduleid": 11070,
+     "modulename": "choice",
+     "contextid": 13024,
+     "choice": [
+      {
+       "id": "44",
+       "name": "Generado choice",
+       "intro": "<p>texto p1 [2d716c]</p>",
+       "introformat": "0",
+       "publish": "0",
+       "showresults": "1",
+       "display": "0",
+       "allowupdate": "0",
+       "allowmultiple": "0",
+       "showunanswered": "0",
+       "limitanswers": "0",
+       "timeopen": "0",
+       "timeclose": "0",
+       "timemodified": "1790972860",
+       "completionsubmit": "0",
+       "showpreview": "0",
+       "includeinactive": "1",
+       "showavailable": "0",
+       "options": [
+        {
+         "option": [
+          {
+           "id": "139",
+           "text": "texto p1 [59a2f9]",
+           "maxanswers": "0",
+           "timemodified": "1790972860"
+          },
+          {
+           "id": "140",
+           "text": "texto p1 [f69cd6]",
+           "maxanswers": "0",
+           "timemodified": "1790972860"
+          },
+          {
+           "id": "141",
+           "text": "texto p1 [5bd2e2]",
+           "maxanswers": "0",
+           "timemodified": "1790972860"
+          }
+         ]
+        }
+       ],
+       "answers": [
+        []
+       ]
+      }
+     ]
+    },
+    "structure_tables": {
+     "option": "choice_options",
+     "choice": "choice"
+    },
+    "structure_aliases": {},
+    "files": []
+   }
+  },
+  {
+   "uid": "quiz-uid",
+   "resource_type": "quiz",
+   "cmid": -1,
+   "template_behavior": {
+    "action": "instance",
+    "template_source_cmid": 11071,
+    "prompt": "Teach it"
+   },
+   "parameters": {
+    "name": "Generado quiz",
+    "introeditor": {
+     "text": "<p>texto p1 [a962b2]</p>",
+     "format": 0,
+     "itemid": 0
+    },
+    "showdescription": "0",
+    "timeopen": 0,
+    "timeclose": 0,
+    "timelimit": 0,
+    "overduehandling": "autosubmit",
+    "graceperiod": 86400,
+    "gradecat": "0",
+    "gradepass": null,
+    "grade": 100,
+    "attempts": "0",
+    "grademethod": "1",
+    "questionsperpage": "1",
+    "navmethod": "free",
+    "shuffleanswers": "1",
+    "preferredbehaviour": "deferredfeedback",
+    "canredoquestions": "0",
+    "attemptonlast": "0",
+    "maxmarksduring": "1",
+    "correctnessduring": "1",
+    "marksduring": "1",
+    "specificfeedbackduring": "1",
+    "generalfeedbackduring": "1",
+    "rightanswerduring": "1",
+    "attemptimmediately": "1",
+    "correctnessimmediately": "1",
+    "maxmarksimmediately": "1",
+    "marksimmediately": "1",
+    "specificfeedbackimmediately": "1",
+    "generalfeedbackimmediately": "1",
+    "rightanswerimmediately": "1",
+    "overallfeedbackimmediately": "1",
+    "attemptopen": "1",
+    "correctnessopen": "1",
+    "maxmarksopen": "1",
+    "marksopen": "1",
+    "specificfeedbackopen": "1",
+    "generalfeedbackopen": "1",
+    "rightansweropen": "1",
+    "overallfeedbackopen": "1",
+    "attemptclosed": "1",
+    "correctnessclosed": "1",
+    "maxmarksclosed": "1",
+    "marksclosed": "1",
+    "specificfeedbackclosed": "1",
+    "generalfeedbackclosed": "1",
+    "rightanswerclosed": "1",
+    "overallfeedbackclosed": "1",
+    "showuserpicture": "0",
+    "decimalpoints": "2",
+    "questiondecimalpoints": "-1",
+    "showblocks": "0",
+    "seb_requiresafeexambrowser": "0",
+    "filemanager_sebconfigfile": 0,
+    "seb_showsebdownloadlink": "1",
+    "seb_linkquitseb": "",
+    "seb_userconfirmquit": "1",
+    "seb_allowuserquitseb": "1",
+    "seb_quitpassword": "",
+    "seb_allowreloadinexam": "1",
+    "seb_showsebtaskbar": "1",
+    "seb_showreloadbutton": "1",
+    "seb_showtime": "1",
+    "seb_showkeyboardlayout": "1",
+    "seb_showwificontrol": "0",
+    "seb_enableaudiocontrol": "0",
+    "seb_muteonstartup": "0",
+    "seb_allowspellchecking": "0",
+    "seb_activateurlfiltering": "0",
+    "seb_filterembeddedcontent": "0",
+    "seb_expressionsallowed": "",
+    "seb_regexallowed": "",
+    "seb_expressionsblocked": "",
+    "seb_regexblocked": "",
+    "seb_allowedbrowserexamkeys": "",
+    "quizpassword": "",
+    "subnet": "",
+    "delay1": 0,
+    "delay2": 0,
+    "browsersecurity": "",
+    "allowofflineattempts": 0,
+    "boundary_repeats": 1,
+    "feedbacktext": [
+     {
+      "text": "",
+      "format": 1,
+      "itemid": 0
+     }
+    ],
+    "feedbackboundaries": [],
+    "visible": 1,
+    "visibleoncoursepage": 1,
+    "cmidnumber": "",
+    "lang": "",
+    "groupmode": "0",
+    "groupingid": "0",
+    "availabilityconditionsjson": "{\"op\":\"&\",\"c\":[],\"showc\":[]}",
+    "completionunlocked": 1,
+    "completion": 0,
+    "completionminattempts": 0,
+    "completionpassgrade": 0,
+    "completionattemptsexhausted": 0,
+    "completionexpected": 0,
+    "tags": [],
+    "course": 0,
+    "coursemodule": 0,
+    "section": 0,
+    "module": 17,
+    "modulename": "quiz",
+    "instance": 0,
+    "add": "quiz",
+    "update": 0,
+    "return": 0,
+    "sr": -1,
+    "beforemod": 0,
+    "showonly": "",
+    "competencies": [],
+    "competency_rule": "0",
+    "override_grade": 0,
+    "mod_settings": {
+     "questions": [
+      {
+       "source_id": "3610",
+       "qtype": "multichoice",
+       "name": "Pregunta",
+       "questiontext": {
+        "text": "texto p1 [04c7e0]",
+        "format": 1,
+        "itemid": 0
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": 1,
+        "itemid": 0
+       },
+       "defaultmark": 1.0,
+       "penalty": 0.3333333,
+       "hint": [],
+       "answer": [
+        {
+         "text": "texto p1 [f7bb3d]",
+         "format": 1,
+         "itemid": 0
+        },
+        {
+         "text": "texto p1 [6f14d4]",
+         "format": 1,
+         "itemid": 0
+        }
+       ],
+       "fraction": [
+        1,
+        0
+       ],
+       "feedback": [
+        {
+         "text": "",
+         "format": 1,
+         "itemid": 0
+        },
+        {
+         "text": "",
+         "format": 1,
+         "itemid": 0
+        }
+       ],
+       "single": "1",
+       "shuffleanswers": "1",
+       "answernumbering": "abc",
+       "shownumcorrect": "0",
+       "showstandardinstruction": "0",
+       "correctfeedback": {
+        "text": "",
+        "format": 1,
+        "itemid": 0
+       },
+       "partiallycorrectfeedback": {
+        "text": "",
+        "format": 1,
+        "itemid": 0
+       },
+       "incorrectfeedback": {
+        "text": "",
+        "format": 1,
+        "itemid": 0
+       },
+       "page": 1,
+       "maxmark": 1,
+       "displaynumber": null,
+       "requireprevious": 0,
+       "record_id": "3610"
+      },
+      {
+       "source_id": "3608",
+       "qtype": "truefalse",
+       "name": "Pregunta",
+       "questiontext": {
+        "text": "texto p1 [bad357]",
+        "format": 1,
+        "itemid": 0
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": 1,
+        "itemid": 0
+       },
+       "defaultmark": 1.0,
+       "penalty": 1.0,
+       "hint": [],
+       "correctanswer": 1,
+       "feedbacktrue": {
+        "text": "Bien",
+        "format": 1,
+        "itemid": 0
+       },
+       "feedbackfalse": {
+        "text": "Mal",
+        "format": 1,
+        "itemid": 0
+       },
+       "page": 2,
+       "maxmark": 1,
+       "displaynumber": null,
+       "requireprevious": 0,
+       "record_id": "3608"
+      },
+      {
+       "source_id": "3609",
+       "qtype": "truefalse",
+       "name": "Pregunta",
+       "questiontext": {
+        "text": "texto p1 [46f28b]",
+        "format": 1,
+        "itemid": 0
+       },
+       "generalfeedback": {
+        "text": "",
+        "format": 1,
+        "itemid": 0
+       },
+       "defaultmark": 1.0,
+       "penalty": 1.0,
+       "hint": [],
+       "correctanswer": 1,
+       "feedbacktrue": {
+        "text": "Bien",
+        "format": 1,
+        "itemid": 0
+       },
+       "feedbackfalse": {
+        "text": "Mal",
+        "format": 1,
+        "itemid": 0
+       },
+       "page": 3,
+       "maxmark": 1,
+       "displaynumber": null,
+       "requireprevious": 0,
+       "record_id": "3609"
+      }
+     ]
+    },
+    "structure": {
+     "id": "355",
+     "moduleid": 11071,
+     "modulename": "quiz",
+     "contextid": 13025,
+     "quiz": [
+      {
+       "id": "355",
+       "name": "Generado quiz",
+       "intro": "<p>texto p1 [a962b2]</p>",
+       "introformat": "0",
+       "timeopen": "0",
+       "timeclose": "0",
+       "timelimit": "0",
+       "overduehandling": "autosubmit",
+       "graceperiod": "86400",
+       "preferredbehaviour": "deferredfeedback",
+       "canredoquestions": "0",
+       "attempts_number": "0",
+       "attemptonlast": "0",
+       "grademethod": "1",
+       "decimalpoints": "2",
+       "questiondecimalpoints": "-1",
+       "reviewattempt": "69904",
+       "reviewcorrectness": "69904",
+       "reviewmaxmarks": "69904",
+       "reviewmarks": "69904",
+       "reviewspecificfeedback": "69904",
+       "reviewgeneralfeedback": "69904",
+       "reviewrightanswer": "69904",
+       "reviewoverallfeedback": "4368",
+       "questionsperpage": "1",
+       "navmethod": "free",
+       "shuffleanswers": "1",
+       "sumgrades": "0.00000",
+       "grade": "100.00000",
+       "timecreated": "1790972860",
+       "timemodified": "1790972860",
+       "password": "",
+       "subnet": "",
+       "browsersecurity": "",
+       "delay1": "0",
+       "delay2": "0",
+       "showuserpicture": "0",
+       "showblocks": "0",
+       "completionattemptsexhausted": "0",
+       "completionminattempts": "0",
+       "allowofflineattempts": "0",
+       "subplugin_quizaccess_seb_quiz": [
+        []
+       ],
+       "quiz_grade_items": [
+        []
+       ],
+       "question_instances": [
+        {
+         "question_instance": [
+          {
+           "id": "1623",
+           "quizid": "355",
+           "slot": "1",
+           "page": "1",
+           "displaynumber": null,
+           "requireprevious": "0",
+           "maxmark": "1.0000000",
+           "quizgradeitemid": null,
+           "question_reference": [
+            {
+             "id": "1623",
+             "usingcontextid": "13025",
+             "component": "mod_quiz",
+             "questionarea": "slot",
+             "questionbankentryid": "3559",
+             "version": null
+            }
+           ]
+          },
+          {
+           "id": "1624",
+           "quizid": "355",
+           "slot": "2",
+           "page": "2",
+           "displaynumber": null,
+           "requireprevious": "0",
+           "maxmark": "1.0000000",
+           "quizgradeitemid": null,
+           "question_reference": [
+            {
+             "id": "1624",
+             "usingcontextid": "13025",
+             "component": "mod_quiz",
+             "questionarea": "slot",
+             "questionbankentryid": "3557",
+             "version": null
+            }
+           ]
+          },
+          {
+           "id": "1625",
+           "quizid": "355",
+           "slot": "3",
+           "page": "3",
+           "displaynumber": null,
+           "requireprevious": "0",
+           "maxmark": "1.0000000",
+           "quizgradeitemid": null,
+           "question_reference": [
+            {
+             "id": "1625",
+             "usingcontextid": "13025",
+             "component": "mod_quiz",
+             "questionarea": "slot",
+             "questionbankentryid": "3558",
+             "version": null
+            }
+           ]
+          }
+         ]
+        }
+       ],
+       "sections": [
+        {
+         "section": [
+          {
+           "id": "355",
+           "firstslot": "1",
+           "heading": "",
+           "shufflequestions": "0"
+          }
+         ]
+        }
+       ],
+       "feedbacks": [
+        []
+       ],
+       "overrides": [
+        []
+       ],
+       "grades": [
+        []
+       ],
+       "attempts": [
+        []
+       ]
+      }
+     ]
+    },
+    "structure_tables": {
+     "quiz": "quiz",
+     "question_instance": "quiz_slots",
+     "question_reference": "question_references",
+     "section": "quiz_sections"
+    },
+    "structure_aliases": {
+     "quiz": {
+      "attempts_number": "attempts"
+     }
+    },
+    "files": [],
+    "questions": [
+     {
+      "slot": 1,
+      "page": 1,
+      "maxmark": 1,
+      "displaynumber": null,
+      "requireprevious": 0,
+      "question": {
+       "id": "3610",
+       "category": "1129",
+       "parent": "0",
+       "name": "Pregunta",
+       "questiontext": "texto p1 [04c7e0]",
+       "questiontextformat": "1",
+       "generalfeedback": "",
+       "generalfeedbackformat": "1",
+       "defaultmark": 1,
+       "penalty": 0.3333333,
+       "qtype": "multichoice",
+       "length": "1",
+       "stamp": "unknownhost+261002202740+ujdpsk",
+       "timecreated": "1790972860",
+       "timemodified": "1790972860",
+       "createdby": "2",
+       "modifiedby": "2",
+       "idnumber": null,
+       "contextid": "13019",
+       "status": "ready",
+       "versionid": "3610",
+       "version": "1",
+       "questionbankentryid": "3559",
+       "categoryobject": {
+        "id": "1129",
+        "name": "Default for rid_scratch_1790972859",
+        "contextid": "13019",
+        "info": "The default category for questions shared in context 'rid_scratch_1790972859'.",
+        "infoformat": "0",
+        "stamp": "unknownhost+261002202740+czcRp1",
+        "parent": "1128",
+        "sortorder": "999",
+        "idnumber": null
+       },
+       "options": {
+        "id": "2251",
+        "questionid": "3610",
+        "layout": "0",
+        "single": "1",
+        "shuffleanswers": "1",
+        "correctfeedback": "",
+        "correctfeedbackformat": "1",
+        "partiallycorrectfeedback": "",
+        "partiallycorrectfeedbackformat": "1",
+        "incorrectfeedback": "",
+        "incorrectfeedbackformat": "1",
+        "answernumbering": "abc",
+        "shownumcorrect": "0",
+        "showstandardinstruction": "0",
+        "answers": {
+         "10099": {
+          "id": "10099",
+          "question": "3610",
+          "answer": "texto p1 [f7bb3d]",
+          "answerformat": "1",
+          "fraction": 1,
+          "feedback": "",
+          "feedbackformat": "1"
+         },
+         "10100": {
+          "id": "10100",
+          "question": "3610",
+          "answer": "texto p1 [6f14d4]",
+          "answerformat": "1",
+          "fraction": 0,
+          "feedback": "",
+          "feedbackformat": "1"
+         }
+        }
+       },
+       "hints": []
+      }
+     },
+     {
+      "slot": 2,
+      "page": 2,
+      "maxmark": 1,
+      "displaynumber": null,
+      "requireprevious": 0,
+      "question": {
+       "id": "3608",
+       "category": "1129",
+       "parent": "0",
+       "name": "Pregunta",
+       "questiontext": "texto p1 [bad357]",
+       "questiontextformat": "1",
+       "generalfeedback": "",
+       "generalfeedbackformat": "1",
+       "defaultmark": 1,
+       "penalty": 1,
+       "qtype": "truefalse",
+       "length": "1",
+       "stamp": "unknownhost+261002202740+cj4ldE",
+       "timecreated": "1790972860",
+       "timemodified": "1790972860",
+       "createdby": "2",
+       "modifiedby": "2",
+       "idnumber": null,
+       "contextid": "13019",
+       "status": "ready",
+       "versionid": "3608",
+       "version": "1",
+       "questionbankentryid": "3557",
+       "categoryobject": {
+        "id": "1129",
+        "name": "Default for rid_scratch_1790972859",
+        "contextid": "13019",
+        "info": "The default category for questions shared in context 'rid_scratch_1790972859'.",
+        "infoformat": "0",
+        "stamp": "unknownhost+261002202740+czcRp1",
+        "parent": "1128",
+        "sortorder": "999",
+        "idnumber": null
+       },
+       "options": {
+        "id": "935",
+        "question": "3608",
+        "trueanswer": "10095",
+        "falseanswer": "10096",
+        "showstandardinstruction": "0",
+        "answers": {
+         "10095": {
+          "id": "10095",
+          "question": "3608",
+          "answer": "True",
+          "answerformat": "0",
+          "fraction": "1.0000000",
+          "feedback": "Bien",
+          "feedbackformat": "1"
+         },
+         "10096": {
+          "id": "10096",
+          "question": "3608",
+          "answer": "False",
+          "answerformat": "0",
+          "fraction": "0.0000000",
+          "feedback": "Mal",
+          "feedbackformat": "1"
+         }
+        }
+       },
+       "hints": []
+      }
+     },
+     {
+      "slot": 3,
+      "page": 3,
+      "maxmark": 1,
+      "displaynumber": null,
+      "requireprevious": 0,
+      "question": {
+       "id": "3609",
+       "category": "1129",
+       "parent": "0",
+       "name": "Pregunta",
+       "questiontext": "texto p1 [46f28b]",
+       "questiontextformat": "1",
+       "generalfeedback": "",
+       "generalfeedbackformat": "1",
+       "defaultmark": 1,
+       "penalty": 1,
+       "qtype": "truefalse",
+       "length": "1",
+       "stamp": "unknownhost+261002202740+dizg8A",
+       "timecreated": "1790972860",
+       "timemodified": "1790972860",
+       "createdby": "2",
+       "modifiedby": "2",
+       "idnumber": null,
+       "contextid": "13019",
+       "status": "ready",
+       "versionid": "3609",
+       "version": "1",
+       "questionbankentryid": "3558",
+       "categoryobject": {
+        "id": "1129",
+        "name": "Default for rid_scratch_1790972859",
+        "contextid": "13019",
+        "info": "The default category for questions shared in context 'rid_scratch_1790972859'.",
+        "infoformat": "0",
+        "stamp": "unknownhost+261002202740+czcRp1",
+        "parent": "1128",
+        "sortorder": "999",
+        "idnumber": null
+       },
+       "options": {
+        "id": "936",
+        "question": "3609",
+        "trueanswer": "10097",
+        "falseanswer": "10098",
+        "showstandardinstruction": "0",
+        "answers": {
+         "10097": {
+          "id": "10097",
+          "question": "3609",
+          "answer": "True",
+          "answerformat": "0",
+          "fraction": "1.0000000",
+          "feedback": "Bien",
+          "feedbackformat": "1"
+         },
+         "10098": {
+          "id": "10098",
+          "question": "3609",
+          "answer": "False",
+          "answerformat": "0",
+          "fraction": "0.0000000",
+          "feedback": "Mal",
+          "feedbackformat": "1"
+         }
+        }
+       },
+       "hints": []
+      }
+     }
+    ]
+   }
+  }
+ ]
+}

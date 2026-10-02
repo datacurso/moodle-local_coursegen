@@ -32,7 +32,8 @@ use stdClass;
  * stay inside the preview.
  *
  * Every preview that runs a module's own view code against the payload
- * extends this.
+ * extends this. What it is handed is the activity's own parameters: the tree
+ * of rows travels in them, so nothing else is read to complete them.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -41,22 +42,8 @@ use stdClass;
 abstract class preview_base extends activity_preview {
     use preview_base_module_intro;
 
-    /** @var array The activity as the payload describes it: the mould or the kept one. */
-    protected array $source;
-
     /** @var json_store|null The activity's rows, once built. */
     protected ?json_store $store = null;
-
-    /**
-     * Constructor.
-     *
-     * @param array $parameters The draft or the answer.
-     * @param array $source The activity as the payload describes it.
-     */
-    public function __construct(array $parameters, array $source = []) {
-        parent::__construct($parameters, $source);
-        $this->source = $source;
-    }
 
     /**
      * The module's short name, for tables and components.
@@ -66,54 +53,24 @@ abstract class preview_base extends activity_preview {
     abstract protected function modname(): string;
 
     /**
-     * The activity's rows, with whatever the plan intends laid over them.
+     * The activity's rows, read from its own tree.
      *
-     * @return json_store|null Null when the payload holds no such activity.
+     * @return json_store
      */
-    protected function store(): ?json_store {
-        if ($this->store !== null) {
-            return $this->store;
-        }
-        if (!$this->source) {
-            return null;
-        }
-        $this->store = json_store::from_activity($this->source);
-
-        // The plan is laid over the mould only when what is shown is not the
-        // mould itself. A kept activity is shown as it is, and the parameters
-        // built for it describe it a second time, less exactly than its rows.
-        $sourceuid = $this->source['uid'] ?? '';
-        $sourceuid = (string) $sourceuid;
-        $hereuid = $this->here->get_param('uid');
-        $hereuid = (string) $hereuid;
-        if ($sourceuid !== $hereuid) {
-            $this->overlay($this->store);
+    protected function store(): json_store {
+        if ($this->store === null) {
+            $this->store = json_store::from_parameters($this->parameters);
         }
         return $this->store;
     }
 
     /**
-     * Lay what the plan intends to write over the mould's rows.
-     *
-     * Nothing by default. A module whose pieces the plan fills one by one
-     * says how a drafted piece finds its row.
-     *
-     * @param json_store $store
-     */
-    protected function overlay(json_store $store): void {
-        return;
-    }
-
-    /**
      * The module's own row.
      *
-     * @return stdClass|null
+     * @return stdClass|null Null when the result holds no row of the module.
      */
     protected function instance(): ?stdClass {
         $store = $this->store();
-        if ($store === null) {
-            return null;
-        }
         $modname = $this->modname();
         $rows = $store->get_records($modname);
         if (!$rows) {
@@ -149,9 +106,6 @@ abstract class preview_base extends activity_preview {
     protected function cm(): stdClass {
         $instance = $this->instance();
 
-        $cmid = $this->source['cmid'] ?? 0;
-        $cmid = (int) $cmid;
-
         $courseid = $instance->course ?? 0;
         $courseid = (int) $courseid;
 
@@ -167,7 +121,7 @@ abstract class preview_base extends activity_preview {
         $modname = $this->modname();
 
         return (object) [
-            'id' => $cmid,
+            'id' => $this->cmid,
             'course' => $courseid,
             'instance' => $instanceid,
             'name' => $name,
@@ -196,8 +150,7 @@ abstract class preview_base extends activity_preview {
      */
     protected function context(): context {
         global $PAGE;
-        $sourceparameters = $this->source['parameters'] ?? [];
-        $structure = $sourceparameters['structure'] ?? [];
+        $structure = $this->parameters['structure'] ?? [];
         if (!empty($structure['contextid'])) {
             $contextid = (int) $structure['contextid'];
             $context = context::instance_by_id($contextid, IGNORE_MISSING);
@@ -251,8 +204,7 @@ abstract class preview_base extends activity_preview {
      * @return json_file_storage
      */
     protected function files(): json_file_storage {
-        $sourceparameters = $this->source['parameters'] ?? [];
-        $files = $sourceparameters['files'] ?? [];
+        $files = $this->parameters['files'] ?? [];
         $files = (array) $files;
         return new json_file_storage($files);
     }
