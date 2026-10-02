@@ -207,6 +207,12 @@ $string['referencefiletype'] = 'This place does not accept files of that type.';
 $string['referencefileupload'] = 'The file could not be uploaded (error {$a}).';
 $string['referenceslotunknown'] = 'This template has no place for that file.';
 $string['task_purge_reference_files'] = 'Delete the files teachers brought for a generation that never used them';
+$string['template_markers_title'] = 'Markers';
+$string['template_reference_marker'] = 'File the teacher brings';
+$string['template_reference_marker_example'] = '[[coursegen:reference: what the teacher brings]]';
+$string['template_reference_marker_help'] = 'Type `[[coursegen:reference: what the teacher brings]]` as plain text right above the element of an activity that holds a file, such as the viewer of a PDF, an image, a video or a link to a document. The marker applies to the next element, whatever it is, and that element must hold exactly one file of this activity.
+
+When a course is made from the template, the teacher sees a place labelled with what you wrote and may bring their own file for it, before the course is generated. With no file, a new image is generated from the reference when the element is an image, and any other element is left out of the course. The marker is read in the activities saved with the action "template", and it never appears in the course.';
 $string['courseai_compact_prompt_placeholder'] = 'Example: Regenerate the course in just 3 sections';
 $string['courseai_completion_btn_create_another'] = 'Create another course';
 $string['courseai_completion_btn_open_course'] = 'Open course';
