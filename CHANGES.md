@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100200
+
+### Fixed
+- **The preview of a lesson failed to open**  
+  Opening the preview of a lesson in the review of a course generated from a template stopped with an error about a callable argument. The lesson now receives its page and exit links in a form it can call, so the lesson and each of its pages open as expected.
+
 ## [2.0.10] - 2026100103
 
 ### Added
