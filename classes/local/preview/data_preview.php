@@ -21,8 +21,8 @@ use local_coursegen\local\preview\data\view;
 /**
  * A database, drawn by mod_data's own view code run against the payload.
  *
- * A planned database carries the fields the plan intends, which become its
- * rows; entries are the readers' and there are none yet.
+ * The fields of the database are rows of its own tree, the ones the AI wrote
+ * included; entries are the readers' and there are none yet.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -39,49 +39,6 @@ class data_preview extends preview_base {
     }
 
     /**
-     * The plan's fields replace the mould's.
-     *
-     * @param json_store $store
-     */
-    protected function overlay(json_store $store): void {
-        $rows = $store->get_records('data');
-        if (!$rows) {
-            return;
-        }
-        $data = reset($rows);
-        $intro = $this->parameters['introeditor'] ?? null;
-        if (is_array($intro)) {
-            $intro = $intro['text'] ?? null;
-        }
-        if (is_string($intro) && trim($intro) !== '') {
-            $store->set('data', $data->id, 'intro', $intro);
-        }
-        $fields = $this->parameters['mod_settings']['fields'] ?? [];
-        if (!is_array($fields) || !$fields) {
-            return;
-        }
-        $store->delete_records('data_fields', ['dataid' => $data->id]);
-        $id = 1;
-        foreach ($fields as $field) {
-            if (!is_array($field) || trim((string) ($field['name'] ?? '')) === '') {
-                continue;
-            }
-            $required = 0;
-            if (!empty($field['required'])) {
-                $required = 1;
-            }
-            $store->add('data_fields', [
-                'id' => $id++,
-                'dataid' => $data->id,
-                'type' => (string) ($field['type'] ?? 'text'),
-                'name' => (string) $field['name'],
-                'description' => (string) ($field['description'] ?? ''),
-                'required' => $required,
-            ]);
-        }
-    }
-
-    /**
      * The database page, as mod/data/view.php draws it.
      *
      * @return string
@@ -92,7 +49,7 @@ class data_preview extends preview_base {
             return $this->nothing_yet();
         }
         $course = $this->course();
-        $cmid = (int) ($this->source['cmid'] ?? 0);
+        $cmid = $this->cmid;
         $modinfo = get_fast_modinfo($course);
         if (!$cmid || !isset($modinfo->cms[$cmid])) {
             return $this->nothing_yet();

@@ -41,47 +41,6 @@ class book_preview extends preview_base {
     }
 
     /**
-     * A draft's chapters replace the mould's, matched by id.
-     *
-     * A plan names each piece by the id its module gave it; an answer that
-     * arrives without ids is matched by title in book order, a title seen
-     * again taking the next chapter that has it.
-     *
-     * @param json_store $store
-     */
-    protected function overlay(json_store $store): void {
-        $rows = $store->get_records('book_chapters', [], 'pagenum');
-        $drafts = $this->parameters['mod_settings']['chapters'] ?? [];
-        $matched = drafted_row_matcher::match_ordered(array_values($rows), $drafts);
-        foreach ($matched as $id => $chapter) {
-            $this->overlay_chapter($store, $chapter, $id);
-        }
-    }
-
-    /**
-     * Lay one drafted chapter over the mould's row it fills.
-     *
-     * @param json_store $store
-     * @param array $chapter
-     * @param int $id The mould's row the chapter fills.
-     */
-    private function overlay_chapter(json_store $store, array $chapter, int $id): void {
-        if (isset($chapter['title'])) {
-            $store->set('book_chapters', $id, 'title', (string) $chapter['title']);
-        }
-        $content = $chapter['content_editor'] ?? null;
-        if ($content === null) {
-            $content = $chapter['content'] ?? null;
-        }
-        if (is_array($content)) {
-            $content = $content['text'] ?? null;
-        }
-        if (is_string($content)) {
-            $store->set('book_chapters', $id, 'content', $content);
-        }
-    }
-
-    /**
      * The chapters, prepared the way mod_book prepares them.
      *
      * @return array
@@ -91,10 +50,9 @@ class book_preview extends preview_base {
             return $this->chapters;
         }
         $book = $this->instance();
-        $store = $this->store();
         $this->chapters = [];
-        if ($book !== null && $store !== null) {
-            $this->chapters = view::book_preload_chapters($book, $store);
+        if ($book !== null) {
+            $this->chapters = view::book_preload_chapters($book, $this->store());
         }
         return $this->chapters;
     }

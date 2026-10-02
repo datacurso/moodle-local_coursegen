@@ -62,23 +62,21 @@ class quiz_preview extends preview_base {
     }
 
     /**
-     * The slots, each with its question's data, from whichever side wrote them.
+     * The slots, each with its question's data.
+     *
+     * A finished quiz holds the questions the AI wrote, as its result carries
+     * them; a quiz the payload describes holds its own questions, already as
+     * slots.
      *
      * @return array
      */
     protected function slots(): array {
         $drafted = $this->parameters['mod_settings']['questions'] ?? null;
-        $sourceuid = $this->source['uid'] ?? '';
-        $sourceuid = (string) $sourceuid;
-        $requesteduid = $this->here->get_param('uid');
-        $requesteduid = (string) $requesteduid;
-        $ismould = $sourceuid === $requesteduid;
-        if (!$ismould && is_array($drafted) && $drafted) {
+        if (is_array($drafted) && $drafted) {
             return $this->slots_from_draft($drafted);
         }
-        $sourceparameters = $this->source['parameters'] ?? [];
-        $sourcequestions = $sourceparameters['questions'] ?? [];
-        return (array) $sourcequestions;
+        $questions = $this->parameters['questions'] ?? [];
+        return (array) $questions;
     }
 
     /**

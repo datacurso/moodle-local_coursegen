@@ -176,7 +176,7 @@ $payload = $coursedata['payload'] ?? [];
 $found = activity_preview_lookup::resolve($uid, $payload, $session);
 $modname = $found['modname'];
 $parameters = $found['parameters'];
-$source = $found['source'];
+$templatecmid = $found['cmid'];
 
 // The activity is read in its course's language, which is the language its
 // content is in and the one it will be read in once it exists.
@@ -184,7 +184,7 @@ if (!empty($payload['lang'])) {
     force_current_language((string) $payload['lang']);
 }
 
-$preview = preview_factory::for_activity($modname, $parameters, $source);
+$preview = preview_factory::for_activity($modname, $parameters, $templatecmid);
 // A preview told which page to open is opened at that page; one that was not
 // opens where the module would open, which is not always its first page.
 $hereparams = ['sessionid' => $sessionid, 'uid' => $uid];
@@ -218,13 +218,11 @@ $PAGE->set_show_course_index(false);
 // navigation at the foot, which would lead to the template's real modules, is
 // not drawn on a course whose format has a course index, which is where this
 // page's formats keep it.
-$sourcecmid = $source['cmid'] ?? 0;
-$sourcecmid = (int) $sourcecmid;
 $modinfo = get_fast_modinfo($PAGE->course);
 $courseformat = course_get_format($PAGE->course);
-if ($sourcecmid > 0 && isset($modinfo->cms[$sourcecmid]) && $courseformat->uses_course_index()) {
-    $sourcecm = $modinfo->get_cm($sourcecmid);
-    $PAGE->set_cm($sourcecm);
+if ($templatecmid > 0 && isset($modinfo->cms[$templatecmid]) && $courseformat->uses_course_index()) {
+    $templatecm = $modinfo->get_cm($templatecmid);
+    $PAGE->set_cm($templatecm);
     $record = $preview->activity_record();
     $recordid = $record->id ?? 0;
     $recordid = (int) $recordid;

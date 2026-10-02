@@ -48,14 +48,15 @@ class json_store {
     protected array $rows = [];
 
     /**
-     * Build the store from one activity of the payload.
+     * Build the store from the parameters of one activity.
      *
-     * @param array $activity The activity as the payload describes it.
+     * The parameters of a finished activity, and of an activity the payload
+     * describes, hold the same tree: the rows of the module with their ids.
+     *
+     * @param array $parameters The activity's own parameters.
      * @return self
      */
-    public static function from_activity(array $activity): self {
-        $parameters = $activity['parameters'] ?? [];
-
+    public static function from_parameters(array $parameters): self {
         $structure = $parameters['structure'] ?? [];
         $structure = (array) $structure;
 
