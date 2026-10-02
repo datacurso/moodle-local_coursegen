@@ -44,38 +44,18 @@ class book_preview extends preview_base {
      * A draft's chapters replace the mould's, matched by id.
      *
      * A plan names each piece by the id its module gave it; an answer that
-     * arrives without ids is matched by title, the way the generator that
-     * wrote it matched the mould's chapters.
+     * arrives without ids is matched by title in book order, a title seen
+     * again taking the next chapter that has it.
      *
      * @param json_store $store
      */
     protected function overlay(json_store $store): void {
-        $rows = $store->get_records('book_chapters');
-        $idbytitle = self::chapter_ids_by_title($rows);
+        $rows = $store->get_records('book_chapters', [], 'pagenum');
         $drafts = $this->parameters['mod_settings']['chapters'] ?? [];
-        foreach ($drafts as $chapter) {
-            $this->overlay_chapter($store, $chapter, $idbytitle);
+        $matched = drafted_row_matcher::match_ordered(array_values($rows), $drafts);
+        foreach ($matched as $id => $chapter) {
+            $this->overlay_chapter($store, $chapter, $id);
         }
-    }
-
-    /**
-     * A mould's own chapter id, keyed by its title, for a draft that arrives
-     * without ids.
-     *
-     * @param \stdClass[] $rows
-     * @return array
-     */
-    private static function chapter_ids_by_title(array $rows): array {
-        $idbytitle = [];
-        foreach ($rows as $row) {
-            $title = $row->title ?? '';
-            $title = (string) $title;
-            $title = trim($title);
-            if (!isset($idbytitle[$title])) {
-                $idbytitle[$title] = $row->id;
-            }
-        }
-        return $idbytitle;
     }
 
     /**
@@ -83,19 +63,9 @@ class book_preview extends preview_base {
      *
      * @param json_store $store
      * @param array $chapter
-     * @param array $idbytitle
+     * @param int $id The mould's row the chapter fills.
      */
-    private function overlay_chapter(json_store $store, array $chapter, array $idbytitle): void {
-        $id = $chapter['id'] ?? null;
-        if ($id === null) {
-            $title = $chapter['title'] ?? '';
-            $title = (string) $title;
-            $title = trim($title);
-            $id = $idbytitle[$title] ?? null;
-        }
-        if ($id === null) {
-            return;
-        }
+    private function overlay_chapter(json_store $store, array $chapter, int $id): void {
         if (isset($chapter['title'])) {
             $store->set('book_chapters', $id, 'title', (string) $chapter['title']);
         }

@@ -48,22 +48,17 @@ class lesson_preview extends preview_base {
 
     /**
      * A draft names the page it fills by id. A finished answer does not,
-     * because the generator that wrote it matched pages by title, so the
-     * same match is made here for the pages that arrive without one.
+     * because the generator that wrote it matched pages by title, so each
+     * page that arrives without one is matched to the row of its title, a
+     * title seen again taking the next row that has it.
      *
      * @param json_store $store
      */
     protected function overlay(json_store $store): void {
-        $idbytitle = $this->ids_by_title($store);
+        $rows = $store->get_records('lesson_pages');
         $pages = $this->parameters['mod_settings']['pages'] ?? [];
-        foreach ($pages as $page) {
-            $rawtitle = $page['title'] ?? '';
-            $title = trim((string) $rawtitle);
-            $fallbackid = $idbytitle[$title] ?? null;
-            $id = $page['id'] ?? $fallbackid;
-            if ($id === null) {
-                continue;
-            }
+        $matched = lesson_page_matcher::match(array_values($rows), $pages);
+        foreach ($matched as $id => $page) {
             if (isset($page['title'])) {
                 $store->set('lesson_pages', $id, 'title', (string) $page['title']);
             }
@@ -71,25 +66,6 @@ class lesson_preview extends preview_base {
                 $store->set('lesson_pages', $id, 'contents', (string) $page['content_html']);
             }
         }
-    }
-
-    /**
-     * Every lesson page's own row id, keyed by its title, for the pages a
-     * draft names by title rather than by id.
-     *
-     * @param json_store $store
-     * @return array
-     */
-    protected function ids_by_title(json_store $store): array {
-        $idbytitle = [];
-        foreach ($store->get_records('lesson_pages') as $row) {
-            $rawtitle = $row->title ?? '';
-            $title = trim((string) $rawtitle);
-            if (!isset($idbytitle[$title])) {
-                $idbytitle[$title] = $row->id;
-            }
-        }
-        return $idbytitle;
     }
 
     /**
