@@ -27,7 +27,6 @@ use local_coursegen\local\service\create_course_service;
  * @category   test
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers     \local_coursegen\local\service\generated_activities_builder
  * @covers     \local_coursegen\local\service\create_course_service
  *
  * @runTestsInSeparateProcesses
