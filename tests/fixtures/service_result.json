@@ -143,8 +143,8 @@
      ]
     },
     "structure_tables": {
-     "book": "book",
-     "chapter": "book_chapters"
+     "chapter": "book_chapters",
+     "book": "book"
     },
     "structure_aliases": {},
     "files": []
@@ -255,6 +255,7 @@
      ]
     },
     "structure_tables": {
+     "entry": "glossary_entries",
      "glossary": "glossary"
     },
     "structure_aliases": {},
@@ -380,6 +381,9 @@
      ]
     },
     "structure_tables": {
+     "subwiki": "wiki_subwikis",
+     "page": "wiki_pages",
+     "version": "wiki_versions",
      "wiki": "wiki"
     },
     "structure_aliases": {},
@@ -524,8 +528,8 @@
      ]
     },
     "structure_tables": {
-     "choice": "choice",
-     "option": "choice_options"
+     "option": "choice_options",
+     "choice": "choice"
     },
     "structure_aliases": {},
     "files": []
