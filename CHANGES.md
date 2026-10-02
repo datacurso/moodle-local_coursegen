@@ -8,6 +8,10 @@ All notable changes to this project will be documented in this file. Each change
 - **A template can ask for a real video, and the review says when none was found**  
   An iframe whose `src` is entirely one `[[coursegen:aiprompt: ...]]` marker is now a video slot: when the course is generated a real video that can be embedded is searched for it and only its address is written into the iframe, which keeps the rest of its attributes and styles. The "Markers" section of the template configuration explains the rule and tells it apart from a link to another activity. When no suitable video is found the iframe is left out of the activity and the review shows a small notice on that activity with the video that was asked for.
 
+### Changed
+- **The backup structure of an activity can now be walked by any reader**  
+  What the reader of an activity's backup structure does with each element is no longer fixed: the walk is a method of its own that takes any processor, and a walk can ask for what people filed in the module (posts, entries, records) as well. The tree sent to the AI service is read exactly as before.
+
 ## [2.0.10] - 2026100215
 
 ### Fixed
