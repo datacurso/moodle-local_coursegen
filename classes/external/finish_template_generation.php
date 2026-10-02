@@ -31,6 +31,8 @@ use external_single_structure;
 use external_value;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\course_creation_guard;
+use local_coursegen\local\service\activity_link_resolver;
+use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
 use local_coursegen\local\service\generated_activities_filter;
 use local_coursegen\local\service\template_ai_api_service;
@@ -100,11 +102,44 @@ class finish_template_generation extends external_api {
         course_creation_guard::ensure_created($created);
         $courseid = $created['courseid'] ?? 0;
         $courseid = (int) $courseid;
+        $keptcms = [];
         if ($courseid > 0 && $templateid !== null && $templateid > 0) {
-            template_keep_copier::copy_into($templateid, $courseid);
+            template_keep_copier::copy_into($templateid, $courseid, $keptcms);
         }
+        $generatedcms = $created['generatedcms'] ?? [];
+        self::resolve_activity_links($session, $courseid, $generatedactivities, $generatedcms, $keptcms);
 
         return self::created_response($courseid, $CFG->wwwroot);
+    }
+
+    /**
+     * Turn the link tokens of the generated activities into real URLs.
+     *
+     * Runs once every activity exists, the copied kept ones included, since a
+     * token may name any of them. When one cannot be resolved the generation
+     * is marked failed, so a retry is not answered as if it had finished, and
+     * the error reaches the caller.
+     *
+     * @param course_session $session
+     * @param int $courseid
+     * @param array $payloadactivities Every activity entry of the result, kept ones included.
+     * @param array $generatedcms Payload cmid => created cmid, for the generated activities.
+     * @param array $keptcms Payload cmid => created cmid, for the copied kept activities.
+     */
+    private static function resolve_activity_links(
+        course_session $session,
+        int $courseid,
+        array $payloadactivities,
+        array $generatedcms,
+        array $keptcms
+    ): void {
+        try {
+            activity_link_resolver::resolve_for_course($courseid, $payloadactivities, $generatedcms, $keptcms);
+        } catch (\Throwable $exception) {
+            $sessionid = (int) $session->get('id');
+            course_session_service::update_status($sessionid, course_session::STATUS_FAILED);
+            throw $exception;
+        }
     }
 
     /**
