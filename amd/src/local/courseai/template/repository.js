@@ -69,12 +69,30 @@ export const sendTemplatePlanningFeedback = (sessionId, action, targetIds, instr
 }])[0];
 
 /**
- * Build the course, once the stream has reported the generation complete.
+ * The course settings the generation proposes, for the teacher to review before the course exists.
  *
  * @param {number} sessionId
- * @returns {Promise<Object>} {status, courseid, courseurl}
+ * @returns {Promise<Object>} {fullname, shortname, category, categories}
  */
-export const finishTemplateGeneration = (sessionId) => fetchMany([{
+export const getTemplateCourseSettings = (sessionId) => fetchMany([{
+    methodname: 'local_coursegen_get_template_course_settings',
+    args: {recordid: sessionId},
+}])[0];
+
+/**
+ * Build the course, once the stream has reported the generation complete and the
+ * teacher has reviewed its name.
+ *
+ * @param {number} sessionId
+ * @param {Object} overrides What the teacher chose at the review: {fullname, shortname, category}, each optional.
+ * @returns {Promise<Object>} {success, courseid, fullname, shortname, message, courseurl}
+ */
+export const finishTemplateGeneration = (sessionId, overrides) => fetchMany([{
     methodname: 'local_coursegen_finish_template_generation',
-    args: {sessionid: sessionId},
+    args: {
+        sessionid: sessionId,
+        fullname: overrides.fullname || '',
+        shortname: overrides.shortname || '',
+        category: overrides.category || 0,
+    },
 }])[0];

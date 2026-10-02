@@ -131,7 +131,10 @@ export const init = async(params) => {
         // `await loadCourseaiStrings()` network round-trip used to leave
         // them dead until it resolved (a dynamic import() here made it
         // worse still, adding a second network wait on top).
-        wireTemplateMode(state);
+        // The page's actions do not exist yet; the template's finish step
+        // reads them from here once the generation is over.
+        const templateHost = {actions: null};
+        wireTemplateMode(state, templateHost);
 
         const texts = await loadCourseaiStrings();
         const elements = getCourseaiElements();
@@ -255,6 +258,7 @@ export const init = async(params) => {
             emitLog,
         });
 
+        templateHost.actions = actions;
         actions.bindEvents();
 
         const executionControls = createExecutionControls({state, elements, streamManager, texts, emitLog});

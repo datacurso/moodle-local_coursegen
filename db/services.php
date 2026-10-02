@@ -230,6 +230,15 @@ $functions = [
         'capabilities' => 'local/coursegen:createtemplatecoursewithai',
         'loginrequired' => true,
     ],
+    'local_coursegen_get_template_course_settings' => [
+        'classname' => 'local_coursegen\\external\\get_template_course_settings',
+        'methodname' => 'execute',
+        'description' => 'Get the proposed course settings of a finished template generation',
+        'type' => 'read',
+        'ajax' => true,
+        'capabilities' => 'local/coursegen:createtemplatecoursewithai',
+        'loginrequired' => true,
+    ],
     'local_coursegen_finish_template_generation' => [
         'classname' => 'local_coursegen\\external\\finish_template_generation',
         'methodname' => 'execute',
