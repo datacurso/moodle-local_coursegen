@@ -63,13 +63,14 @@ final class course_sections_actions_test extends \advanced_testcase {
 
         $this->assertStringNotContainsString('data-act-val=', $html);
 
-        // AI-supported type (page): template/keep/reference/exclude/space, keep preselected.
+        // AI-supported type (page): template/keep/reference/exclude, keep preselected; no space.
         $pageselect = $this->extract_action_select($html, (int) $page->cmid);
         $pageoptions = substr_count($pageselect, '<option');
-        $this->assertSame(5, $pageoptions);
-        foreach (['template', 'keep', 'reference', 'exclude', 'space'] as $action) {
+        $this->assertSame(4, $pageoptions);
+        foreach (['template', 'keep', 'reference', 'exclude'] as $action) {
             $this->assertStringContainsString('<option value="' . $action . '"', $pageselect);
         }
+        $this->assertStringNotContainsString('<option value="space"', $pageselect);
         $this->assertStringNotContainsString('<option value="instance"', $pageselect);
         $this->assertMatchesRegularExpression('/<option value="keep"[^>]*\sselected/', $pageselect);
         $templatelabel = get_string('template_activity_template', 'local_coursegen');
@@ -77,15 +78,33 @@ final class course_sections_actions_test extends \advanced_testcase {
         $this->assertStringContainsString($templatelabel, $pageselect);
         $this->assertStringContainsString($referencelabel, $pageselect);
 
-        // Unsupported type (lti): instance AND template omitted, keep preselected;
-        // a space is still offered, since the professor provides it.
+        // Unsupported type (lti): instance, template and space omitted, keep preselected.
         $ltiselect = $this->extract_action_select($html, (int) $lti->cmid);
         $ltioptions = substr_count($ltiselect, '<option');
-        $this->assertSame(4, $ltioptions);
-        $this->assertStringContainsString('<option value="space"', $ltiselect);
+        $this->assertSame(3, $ltioptions);
+        $this->assertStringNotContainsString('<option value="space"', $ltiselect);
         $this->assertStringNotContainsString('<option value="instance"', $ltiselect);
         $this->assertStringNotContainsString('<option value="template"', $ltiselect);
         $this->assertMatchesRegularExpression('/<option value="keep"[^>]*\sselected/', $ltiselect);
+    }
+
+    /**
+     * A file resource is the only row that offers the space action.
+     */
+    public function test_render_offers_space_only_for_a_file_resource(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, , $forum] = $this->create_course_fixture();
+        $resource = $this->getDataGenerator()->create_module('resource', ['course' => $course->id, 'section' => 1]);
+
+        $modinfo = get_fast_modinfo($course);
+        $html = sections_config::render($modinfo);
+
+        $resourceselect = $this->extract_action_select($html, (int) $resource->cmid);
+        $this->assertStringContainsString('<option value="space"', $resourceselect);
+        $forumselect = $this->extract_action_select($html, (int) $forum->cmid);
+        $this->assertStringNotContainsString('<option value="space"', $forumselect);
     }
 
     /**

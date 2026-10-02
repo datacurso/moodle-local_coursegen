@@ -33,6 +33,7 @@ use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_instance;
 use local_coursegen\local\models\template_section;
 use local_coursegen\local\models\template_space;
+use local_coursegen\local\space\space_rules;
 
 /**
  * Builds the per-row select options for sections_config.
@@ -82,8 +83,9 @@ class template_row_options {
     /**
      * Build the per-activity action select options.
      *
-     * "Space" (the professor provides this activity instead) is offered for
-     * every type: it asks nothing of the AI service.
+     * "Space" (the professor brings a file for this activity) is offered only
+     * for a file resource, see space_rules. A space saved on any other type
+     * is read as exclude.
      *
      * Template is the only other action gated to a module type in
      * ai_activity_types::MODNAMES — the real AI service's full content
@@ -117,8 +119,13 @@ class template_row_options {
                 template_activity::ACTION_EXCLUDE,
             ];
         }
-        $keys[] = template_activity::ACTION_SPACE;
+        if (space_rules::allows($modname)) {
+            $keys[] = template_activity::ACTION_SPACE;
+        }
         $default = template_activity::ACTION_KEEP;
+        if ($savedaction !== null) {
+            $savedaction = space_rules::effective_action($savedaction, $modname);
+        }
         if ($savedaction !== null && in_array($savedaction, $keys, true)) {
             $default = $savedaction;
         }

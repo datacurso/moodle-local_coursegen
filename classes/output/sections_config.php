@@ -29,6 +29,7 @@ use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_instance;
 use local_coursegen\local\models\template_section;
 use local_coursegen\local\models\template_space;
+use local_coursegen\local\space\space_rules;
 use local_coursegen\local\service\template_instance_layout;
 
 /**
@@ -267,6 +268,7 @@ class sections_config {
         $scopelabel = template_row_options::active_scope_label($scopeoptions);
         $space = $saved['spaces'][$cmid] ?? ['required' => true, 'instruction' => ''];
         $isspace = $activeaction === template_activity::ACTION_SPACE;
+        $legacyspace = $savedaction === template_activity::ACTION_SPACE && !space_rules::allows($cm->modname);
         $spacebadge = template_row_options::space_badge_label($space['required']);
 
         // Link to the real activity in the base course; null for modules
@@ -304,6 +306,8 @@ class sections_config {
             'spaceinstruction' => $space['instruction'],
             'hasspaceinstruction' => $isspace && $space['instruction'] !== '',
             'spacebadge' => $spacebadge,
+            // A space saved before only a file resource could be one: shown as exclude, with a warning.
+            'legacyspace' => $legacyspace,
         ];
     }
 
