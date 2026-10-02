@@ -125,17 +125,35 @@ abstract class activity_preview {
     }
 
     /**
-     * What the activity header prints as the title.
+     * What the module puts in the activity header in place of its name, if anything.
      *
-     * The activity's own name, as the result carries it: the theme would
-     * otherwise print the name of the template activity the page is built
-     * on. A module that sets the header's title itself - a workshop puts its
-     * name beside a help icon - overrides this.
+     * Most modules leave the header to the theme, which prints the name. A
+     * module that sets the header's title itself - a workshop puts its name
+     * beside a help icon - says so here; an empty string leaves it to the
+     * theme.
      *
      * @return string
      */
     public function header_title(): string {
-        return format_string($this->name());
+        return '';
+    }
+
+    /**
+     * Give the course module the page is built on this activity's name.
+     *
+     * The page heading and the activity header are printed from the course
+     * module, which is the template activity the generated one is built into
+     * and carries its name. The change lasts for this request only; nothing
+     * is saved.
+     *
+     * @param \cm_info $cm
+     */
+    public function name_course_module(\cm_info $cm): void {
+        $name = $this->name();
+        if ($name === '') {
+            return;
+        }
+        $cm->set_name($name);
     }
 
     /**

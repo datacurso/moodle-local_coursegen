@@ -12,7 +12,7 @@ All notable changes to this project will be documented in this file. Each change
 
 ### Fixed
 - **The preview of a generated activity shows the name the admin gave the instance in the template editor in its page heading**  
-  The activity header printed the name of the template activity the page is built on ("Molde - Lección estándar") while the breadcrumb showed the generated one. The header now prints the name of the generated activity, which is the instance name, so both agree.
+  The page heading is printed from the course module the preview is built on, which carries the name of the template activity ("Molde - Lección estándar"), while the breadcrumb showed the generated one. The preview now gives that course module the generated name for the request, which is the instance name, so both agree. Nothing is saved.
 
 ## [2.0.10] - 2026100201
 

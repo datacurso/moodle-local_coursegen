@@ -19,30 +19,32 @@ namespace local_coursegen;
 use local_coursegen\local\preview\preview_factory;
 
 /**
- * Tests for the title the preview puts in the activity header.
+ * Tests for the name the preview gives the course module its page is built on.
  *
  * @package    local_coursegen
  * @category   test
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers     \local_coursegen\local\preview\activity_preview
+ * @covers     \local_coursegen\local\preview\activity_preview::name_course_module
  */
-final class activity_preview_header_title_test extends \advanced_testcase {
+final class activity_preview_cm_name_test extends \advanced_testcase {
     /**
-     * The header prints the name of the generated activity, never the template activity's.
+     * The page heading is printed from the course module: it carries the generated name.
      *
      * @dataProvider instance_names_provider
      * @param string $modname
      * @param string $name
      */
-    public function test_header_title_is_the_name_of_the_generated_activity(string $modname, string $name): void {
+    public function test_the_course_module_carries_the_generated_name(string $modname, string $name): void {
         $this->resetAfterTest(true);
-        $source = ['cmid' => 0, 'parameters' => ['name' => 'Molde - Lección estándar']];
+        $cm = $this->template_cm($modname);
+        $this->assertSame('Molde - Lección estándar', $cm->name);
 
-        $preview = preview_factory::for_activity($modname, ['name' => $name], $source);
+        $preview = preview_factory::for_activity($modname, ['name' => $name]);
+        $preview->name_course_module($cm);
 
-        $this->assertSame($name, $preview->header_title());
-        $this->assertSame($name, $preview->name());
+        $this->assertSame($name, $cm->name);
+        $this->assertSame(s($name), $cm->get_formatted_name());
     }
 
     /**
@@ -55,19 +57,35 @@ final class activity_preview_header_title_test extends \advanced_testcase {
             'lesson' => ['lesson', 'Lección 1'],
             'forum' => ['forum', 'Foro Formativo - Lección 3'],
             'page' => ['page', 'Evaluación: módulo ñandú 12 (final)'],
-            'assign' => ['assign', 'Tarea 2'],
-            'unknown type' => ['unknowntype', 'Lección 7'],
+            'assign' => ['assign', 'Tarea - Lección 2'],
         ];
     }
 
     /**
-     * An activity with no name leaves the header to the theme.
+     * An activity with no name leaves the course module's name alone.
      */
-    public function test_header_title_is_empty_without_a_name(): void {
+    public function test_an_unnamed_activity_leaves_the_course_module_name(): void {
         $this->resetAfterTest(true);
+        $cm = $this->template_cm('page');
 
         $preview = preview_factory::for_activity('page', []);
+        $preview->name_course_module($cm);
 
-        $this->assertSame('', $preview->header_title());
+        $this->assertSame('Molde - Lección estándar', $cm->name);
+    }
+
+    /**
+     * A course module of this type named like the template activity.
+     *
+     * @param string $modname
+     * @return \cm_info
+     */
+    private function template_cm(string $modname): \cm_info {
+        $course = $this->getDataGenerator()->create_course();
+        $module = $this->getDataGenerator()->create_module($modname, [
+            'course' => $course->id,
+            'name' => 'Molde - Lección estándar',
+        ]);
+        return get_fast_modinfo($course)->get_cm($module->cmid);
     }
 }
