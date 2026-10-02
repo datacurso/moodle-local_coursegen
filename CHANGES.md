@@ -2,6 +2,16 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100219
+
+### Fixed
+- **Every field of a new activity now receives the files it references, whatever the module**  
+  Once an activity exists, the rows its module declares are read, every text that points at a file is rewritten to the way Moodle stores it and the file is copied into the file area that field is served from, with the author and license it had. It covers the introduction of every module and the text of wiki pages, the questions of a quiz with their answers and feedback, the criteria of a workshop, the final page and the items of a feedback and the entries of a database, which no one had to remember to wire before. A file that cannot be found stops the creation, removes the half made activity and names the activity, the field and the file.
+
+### Changed
+- **The forum, glossary and lesson settings no longer carry their own file handling**  
+  The forum message, the glossary definition and the lesson page used to be prepared one by one so their files reached the new activity, and a field nobody wired lost its files. That preparation is gone, and so is the list of file areas a file of the template had to be in: the files of every field are given afterwards in one step for all modules. A link to a file that belongs to a place other than the one the text is stored in stays a link.
+
 ## [2.0.10] - 2026100218
 
 ### Added

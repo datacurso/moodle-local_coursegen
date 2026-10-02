@@ -24,8 +24,6 @@
 
 namespace local_coursegen\utils;
 
-use aiprovider_datacurso\httpclient\ai_course_api;
-
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir . '/filelib.php');
@@ -35,7 +33,9 @@ require_once($CFG->libdir . '/filelib.php');
  *
  * This class provides utilities to clean and normalize text editor parameters
  * received from API responses, ensuring they conform to Moodle's expected
- * format and structure for text editor objects.
+ * format and structure for text editor objects. The files a text references
+ * are not handled here: once the activity exists, activity_file_pass gives it
+ * every file its texts reference, whatever field they are in.
  */
 class text_editor_parameter_cleaner {
     /**
@@ -46,12 +46,9 @@ class text_editor_parameter_cleaner {
      * 'format' to 1, and assigning a new unused draft itemid.
      *
      * @param array $parameters Activity parameters to clean
-     * @param int|null $sourcecourseid Course whose files, referenced by pluginfile URL in the
-     *     text, may be copied into the editor's draft area (the template's base course);
-     *     null allows any course the current user can access.
      * @return array Cleaned parameters
      */
-    public static function clean_text_editor_objects($parameters, ?int $sourcecourseid = null) {
+    public static function clean_text_editor_objects($parameters) {
         if (!is_array($parameters)) {
             return $parameters;
         }
@@ -60,39 +57,18 @@ class text_editor_parameter_cleaner {
             if (is_array($value)) {
                 // Check if this is a text editor object (has 'text' key).
                 if (self::is_text_editor_object($value)) {
-                    $parameters[$key] = self::normalize_text_editor_object($value, $sourcecourseid);
+                    $parameters[$key] = self::normalize_text_editor_object($value);
                 } else if (self::is_array_of_text_editor_objects($value)) {
                     // Handle arrays of text editor objects (like feedbacktext).
-                    $parameters[$key] = self::clean_text_editor_array($value, $sourcecourseid);
+                    $parameters[$key] = self::clean_text_editor_array($value);
                 } else {
                     // Recursively clean nested arrays.
-                    $parameters[$key] = self::clean_text_editor_objects($value, $sourcecourseid);
+                    $parameters[$key] = self::clean_text_editor_objects($value);
                 }
             }
         }
 
         return $parameters;
-    }
-
-    /**
-     * Prepare one rich-text value for a draft-backed editor field.
-     *
-     * Downloads generated images, copies the mold files the text references
-     * into the draft area (rewriting them to @@PLUGINFILE@@), puts there the
-     * files the AI service made for the activity and strips the
-     * markers the AI service left unresolved.
-     *
-     * @param string $text Editor text.
-     * @param int $itemid Draft itemid of the field's editor.
-     * @param int|null $sourcecourseid Allowed source course for referenced files, or null.
-     * @return string
-     */
-    public static function prepare_editor_text(string $text, int $itemid, ?int $sourcecourseid = null): string {
-        $text = self::normalize_escaped_html_quotes($text);
-        $text = self::replace_generated_images_in_text($text, $itemid);
-        $text = mold_file_copier::copy_pluginfile_urls_to_draft($text, $itemid, $sourcecourseid);
-        $text = mold_file_copier::copy_generated_files_to_draft($text, $itemid);
-        return mold_file_copier::strip_image_markers($text);
     }
 
     /**
@@ -131,16 +107,15 @@ class text_editor_parameter_cleaner {
      * Normalize a single text editor object.
      *
      * @param array $editorobject Text editor object to normalize
-     * @param int|null $sourcecourseid Allowed source course for referenced files, or null.
      * @return array Normalized text editor object
      */
-    private static function normalize_text_editor_object($editorobject, ?int $sourcecourseid = null) {
+    private static function normalize_text_editor_object($editorobject) {
         $itemid = (int)($editorobject['itemid'] ?? 0);
         if ($itemid <= 0) {
             $itemid = file_get_unused_draft_itemid();
         }
 
-        $text = self::prepare_editor_text((string)($editorobject['text'] ?? ''), $itemid, $sourcecourseid);
+        $text = self::normalize_escaped_html_quotes((string)($editorobject['text'] ?? ''));
 
         return [
             'text' => $text,
@@ -160,245 +135,23 @@ class text_editor_parameter_cleaner {
     }
 
     /**
-     * Replace generated-image references with @@PLUGINFILE@@ URLs in draft area.
-     *
-     * @param string $text Editor text.
-     * @param int $itemid Draft itemid where files will be stored.
-     * @return string
-     */
-    private static function replace_generated_images_in_text(string $text, int $itemid): string {
-        if ($text === '') {
-            return $text;
-        }
-
-        $text = self::replace_html_images($text, $itemid);
-        $text = self::replace_markdown_images($text, $itemid);
-
-        // Remove unresolved placeholders to avoid showing raw template markers in the course content.
-        $text = preg_replace('/^\s*\{\{image:\s*.*?\s*\}\}\s*$/imu', '', $text);
-        $text = preg_replace('/\{\{image:\s*.*?\s*\}\}/iu', '', $text);
-
-        return $text;
-    }
-
-    /**
-     * Replace HTML <img> tags that reference generated files by local path.
-     *
-     * @param string $text Editor text.
-     * @param int $itemid Draft itemid.
-     * @return string
-     */
-    private static function replace_html_images(string $text, int $itemid): string {
-        return preg_replace_callback(
-            '/<img\b[^>]*>/iu',
-            static function (array $matches) use ($itemid): string {
-                $imgtag = $matches[0] ?? '';
-                if ($imgtag === '' || !preg_match('/\bsrc\s*=\s*(["\'])(.*?)\1/iu', $imgtag, $srcmatches)) {
-                    return $imgtag;
-                }
-
-                $source = html_entity_decode(trim((string)$srcmatches[2]), ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                $filename = self::download_generated_image_to_draft($source, $itemid);
-                if ($filename === null) {
-                    return $imgtag;
-                }
-
-                $pluginsrc = '@@PLUGINFILE@@/' . $filename;
-                return preg_replace(
-                    '/\bsrc\s*=\s*(["\']).*?\1/iu',
-                    'src="' . $pluginsrc . '"',
-                    $imgtag,
-                    1
-                ) ?: $imgtag;
-            },
-            $text
-        ) ?? $text;
-    }
-
-    /**
-     * Replace markdown images with HTML tags that point to @@PLUGINFILE@@ files.
-     *
-     * @param string $text Editor text.
-     * @param int $itemid Draft itemid.
-     * @return string
-     */
-    private static function replace_markdown_images(string $text, int $itemid): string {
-        return preg_replace_callback(
-            '/!\[([^\]]*)\]\(([^)\s]+)(?:\s+"[^"]*")?\)/u',
-            static function (array $matches) use ($itemid): string {
-                $alt = trim((string)($matches[1] ?? ''));
-                $source = trim((string)($matches[2] ?? ''), '<>');
-
-                $filename = self::download_generated_image_to_draft($source, $itemid);
-                if ($filename === null) {
-                    return $matches[0] ?? '';
-                }
-
-                $escapedalt = htmlspecialchars($alt, ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                return '<img src="@@PLUGINFILE@@/' . $filename
-                    . '" alt="' . $escapedalt . '" style="max-width:100%;height:auto;" />';
-            },
-            $text
-        ) ?? $text;
-    }
-
-    /**
-     * Download a generated image to the current draft item area.
-     *
-     * @param string $source Source path from the AI payload.
-     * @param int $itemid Draft itemid.
-     * @return string|null Stored filename when available.
-     */
-    private static function download_generated_image_to_draft(string $source, int $itemid): ?string {
-        static $downloadcache = [];
-
-        $source = trim($source);
-        if ($source === '' || !self::is_local_generated_image_source($source)) {
-            return null;
-        }
-
-        $cachekey = $itemid . '|' . $source;
-        if (array_key_exists($cachekey, $downloadcache)) {
-            return $downloadcache[$cachekey];
-        }
-
-        $client = self::get_ai_course_client();
-        if ($client === null) {
-            $downloadcache[$cachekey] = null;
-            return null;
-        }
-
-        $filename = self::extract_filename_from_source($source);
-        $endpoint = '/files/download?path=' . urlencode($source);
-
-        try {
-            $file = $client->download_file($endpoint, $filename, ['itemid' => $itemid]);
-            if (!$file) {
-                $downloadcache[$cachekey] = null;
-                return null;
-            }
-            $downloadcache[$cachekey] = $file->get_filename();
-            return $downloadcache[$cachekey];
-        } catch (\Throwable $exception) {
-            debugging('Could not download generated image: ' . $exception->getMessage(), DEBUG_DEVELOPER);
-            $downloadcache[$cachekey] = null;
-            return null;
-        }
-    }
-
-    /**
-     * Return whether the source refers to a local generated image path.
-     *
-     * @param string $source Source path candidate.
-     * @return bool
-     */
-    private static function is_local_generated_image_source(string $source): bool {
-        if ($source === '' || str_starts_with($source, '@@PLUGINFILE@@/')) {
-            return false;
-        }
-
-        $lower = \core_text::strtolower($source);
-        if (str_starts_with($lower, 'http://') || str_starts_with($lower, 'https://') || str_starts_with($lower, 'data:')) {
-            return false;
-        }
-
-        // Typical generated image paths are absolute filesystem paths under
-        // resource files. Only a strict character class is accepted and no
-        // path segment may climb (".."): the path is forwarded to the
-        // service's download endpoint verbatim.
-        if (preg_match('#(^|/)\.\.(/|$)#', $source)) {
-            return false;
-        }
-        if (preg_match('#^(/[A-Za-z0-9._-]+)*/generated_images/[A-Za-z0-9._/-]+$#', $source)) {
-            return true;
-        }
-
-        return (bool)preg_match('#^/(tmp|var|home|data)/[A-Za-z0-9._/-]+$#', $source);
-    }
-
-    /**
-     * Build a safe filename from an image source path.
-     *
-     * @param string $source Source path.
-     * @return string
-     */
-    private static function extract_filename_from_source(string $source): string {
-        $path = parse_url($source, PHP_URL_PATH) ?: $source;
-        $filename = clean_param((string)basename((string)$path), PARAM_FILE);
-        if ($filename === '' || $filename === '.') {
-            $filename = 'generated-image-' . time() . '.png';
-        }
-        if (!preg_match('/\.[a-z0-9]{2,5}$/i', $filename)) {
-            $filename .= '.png';
-        }
-        return $filename;
-    }
-
-    /**
-     * Build an AI client instance used to fetch generated files.
-     *
-     * @return ai_course_api|null
-     */
-    private static function get_ai_course_client(): ?ai_course_api {
-        static $client = null;
-        static $initialized = false;
-
-        if ($initialized) {
-            return $client;
-        }
-
-        $initialized = true;
-        try {
-            $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
-            $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
-            $client = new ai_course_api(null, $baseurl, $baseurleu);
-        } catch (\Throwable $exception) {
-            debugging('Could not initialize AI file client: ' . $exception->getMessage(), DEBUG_DEVELOPER);
-            $client = null;
-        }
-
-        return $client;
-    }
-
-    /**
      * Clean an array of text editor objects.
      *
      * @param array $editorarray Array of text editor objects
-     * @param int|null $sourcecourseid Allowed source course for referenced files, or null.
      * @return array Cleaned array of text editor objects
      */
-    private static function clean_text_editor_array($editorarray, ?int $sourcecourseid = null) {
+    private static function clean_text_editor_array($editorarray) {
         $cleaned = [];
 
         foreach ($editorarray as $editorobject) {
             if (self::is_text_editor_object($editorobject)) {
-                $cleaned[] = self::normalize_text_editor_object($editorobject, $sourcecourseid);
+                $cleaned[] = self::normalize_text_editor_object($editorobject);
             } else {
                 // If it's not a text editor object, keep it as is but recursively clean.
-                $cleaned[] = self::clean_text_editor_objects($editorobject, $sourcecourseid);
+                $cleaned[] = self::clean_text_editor_objects($editorobject);
             }
         }
 
         return $cleaned;
-    }
-
-    /**
-     * Clean text editor parameters for a list of activities.
-     *
-     * @param array $activities Array of activities with parameters to clean
-     * @return array Activities with cleaned text editor parameters
-     */
-    public static function clean_editor_parameters($activities) {
-        if (!is_array($activities)) {
-            return $activities;
-        }
-
-        foreach ($activities as $index => $activity) {
-            if (isset($activity['parameters']) && is_array($activity['parameters'])) {
-                $activities[$index]['parameters'] = self::clean_text_editor_objects($activity['parameters']);
-            }
-        }
-
-        return $activities;
     }
 }
