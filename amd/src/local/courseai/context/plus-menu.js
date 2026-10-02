@@ -27,15 +27,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-/**
- * Escape a string for safe interpolation into innerHTML.
- *
- * @param {string} value
- * @returns {string}
- */
-const escapeHtml = (value) => String(value ?? '').replace(/[&<>"']/g, (char) => ({
-    '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;',
-}[char]));
+import {escapeHtml} from 'local_coursegen/local/courseai/utils';
 
 /**
  * Wire one "+" options menu instance.

@@ -108,17 +108,25 @@ $logourl = new url('/local/coursegen/pix/logo.png');
 // Subsections toggle only renders when the feature is enabled and mod_subsection is available.
 $subsectionsenabled = \local_coursegen\local\service\course_planning_service::subsections_available();
 
+// The page default is always a supported code: the hidden language select and
+// the JavaScript state start from it, and the planning endpoint normalises the
+// same way (language_options::resolve), so an unsupported Moodle language
+// (e.g. "ja") or a regional one ("pt_br") never travels as is.
+$defaultlang = language_options::normalize(current_language());
+
 // Prepare template context.
 $templatecontext = [
     'guidelines' => json_encode($systeminstructions),
     'languages' => json_encode($languageoptions),
-    'defaultlang' => current_language(),
+    'defaultlang' => $defaultlang,
     'logourl' => $logourl->out(),
     'hassessions' => !empty($recent5),
     'sessions' => $recent5,
     'allsessions' => $allsessionsdata,
     'isresuming' => $resumesessionid > 0,
     'subsectionsenabled' => $subsectionsenabled,
+    // The compact composer renders the shared chips/toolbar partials in their compact variant.
+    'compactcomposer' => ['compact' => true],
     // Initial (empty) guideline listboxes; JavaScript re-renders them from the same templates.
     'guidelinelist' => [
         'listlabel' => get_string('courseai_guidelines_list_label', 'local_coursegen'),
@@ -145,7 +153,7 @@ $PAGE->requires->js_call_amd('local_coursegen/courseai', 'init', [
     [
         'guidelines' => $systeminstructions,
         'languages' => $languageoptions,
-        'defaultlang' => current_language(),
+        'defaultlang' => $defaultlang,
         'sessions' => $allsessionsdata,
         'resumesessionid' => $resumesessionid,
         'isresuming' => $resumesessionid > 0,

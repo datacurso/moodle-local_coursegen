@@ -1,0 +1,92 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/local/courseai/compact_composer
+
+    Compact composer shown at the bottom of the planning chat column, used to
+    send adjustments and regenerate the plan. It reuses the chips row and the
+    "+" options toolbar of the main composer (composer_chips and
+    composer_toolbar partials) rendered in their compact variant, so the
+    compact element ids come from the same source as the main ones.
+
+    The card starts hidden with an inline display style unless the page resumes
+    a session: the JavaScript toggles element.style.display on the card, the
+    chips row and the stop/resume buttons (migrated in a later step).
+
+    Classes required for JS:
+    * none (elements are addressed by id)
+
+    Data attributes required for JS:
+    * see local_coursegen/local/courseai/composer_chips and composer_toolbar
+
+    Context variables required for this template:
+    * isresuming bool - True when the page resumes an existing session
+    * compactcomposer object - Carries {"compact": true} so the shared chips and
+      toolbar partials render their compact instance ids
+    * subsectionsenabled bool - Render the "with subsections" toggle
+    * guidelinelist object - Context of local_coursegen/local/courseai/guideline_list_compact
+
+    Example context (json):
+    {
+        "isresuming": false,
+        "compactcomposer": {"compact": true},
+        "subsectionsenabled": true,
+        "guidelinelist": {
+            "listlabel": "Guidelines list",
+            "emptytext": "No results",
+            "hasitems": false,
+            "items": []
+        }
+    }
+}}
+<div class="compact-chat-card" id="compactChatCard"{{^isresuming}} style="display:none"{{/isresuming}}>
+  <textarea
+    id="compactPromptInput"
+    class="compact-prompt-textarea"
+    placeholder="{{#str}}courseai_compact_prompt_placeholder, local_coursegen{{/str}}"
+    rows="3"
+    aria-label="{{#str}}courseai_prompt_arialabel, local_coursegen{{/str}}"
+  ></textarea>
+
+  {{#compactcomposer}}{{> local_coursegen/local/courseai/composer_chips }}{{/compactcomposer}}
+
+  <div class="compact-chat-toolbar">
+    <div class="compact-toolbar-left" id="compactToolbarLeft">
+      {{#compactcomposer}}{{> local_coursegen/local/courseai/composer_toolbar }}{{/compactcomposer}}
+    </div>
+
+    <div class="compact-toolbar-right">
+      <button class="btn-compact-regenerate" id="btnCompactRegenerate" type="button" aria-label="{{#str}}courseai_btn_regenerate, local_coursegen{{/str}}" title="{{#str}}courseai_btn_regenerate, local_coursegen{{/str}}">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M12 19V5M5 12l7-7 7 7"/>
+        </svg>
+      </button>
+      <button class="btn-stop-resume btn-stop" id="btnStopExec" type="button"
+              style="display:none"
+              aria-label="{{#str}}courseai_btn_stop, local_coursegen{{/str}}"
+              title="{{#str}}courseai_btn_stop, local_coursegen{{/str}}">
+        {{#str}}courseai_btn_stop, local_coursegen{{/str}}
+      </button>
+      <button class="btn-stop-resume btn-resume" id="btnResumeExec" type="button"
+              style="display:none"
+              aria-label="{{#str}}courseai_btn_resume, local_coursegen{{/str}}"
+              title="{{#str}}courseai_btn_resume, local_coursegen{{/str}}">
+        {{#str}}courseai_btn_resume, local_coursegen{{/str}}
+      </button>
+    </div>
+  </div>
+</div>

@@ -21,7 +21,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import ajax from 'core/ajax';
+import {call} from 'local_coursegen/repository/base';
 
 /**
  * Save image generation settings.
@@ -34,18 +34,9 @@ import ajax from 'core/ajax';
  * }} payload
  * @return {Promise<{success: boolean}>} response
  */
-export async function saveImageGenerationSettings(payload) {
-    const args = {
-        overridecourse: payload.overridecourse,
-        overrideactivity: payload.overrideactivity,
-        generationmode: payload.generationmode,
-        activities: payload.activities || [],
-    };
-
-    return ajax.call([
-        {
-            methodname: 'local_coursegen_manage_image_generation',
-            args,
-        },
-    ])[0];
-}
+export const saveImageGenerationSettings = (payload) => call('local_coursegen_manage_image_generation', {
+    overridecourse: payload.overridecourse,
+    overrideactivity: payload.overrideactivity,
+    generationmode: payload.generationmode,
+    activities: payload.activities || [],
+});

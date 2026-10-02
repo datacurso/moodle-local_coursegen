@@ -26,7 +26,7 @@ import Notification from 'core/notification';
 
 import YUI from 'core/yui';
 
-import * as repository from 'local_coursegen/local/activityai/repository';
+import {initActivityFilepicker as initFilepicker} from 'local_coursegen/repository/activity';
 
 export default class extends BaseComponent {
     create() {
@@ -186,7 +186,7 @@ export default class extends BaseComponent {
         }
 
         try {
-            const pickerdata = await repository.initFilepicker({courseid: state.page.courseid});
+            const pickerdata = await initFilepicker({courseid: state.page.courseid});
             if (!pickerdata || !pickerdata.clientid || !pickerdata.draftitemid || !pickerdata.options) {
                 return;
             }

@@ -1,0 +1,85 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/local/courseai/composer_chips
+
+    Selected-context chips row (syllabus file + guideline) of a course AI
+    composer. Rendered twice on the page: once in the main composer and once in
+    the compact composer of the planning chat, from this single source. The
+    element ids differ per instance (compact=false: chipsRow, chipSyllabus,
+    chipSyllabusName, chipGuideline, chipGuidelineName, chipGuidelineEyeBtn;
+    compact=true: compactChipsRow, compactChipSyllabus, compactChipSyllabusName,
+    compactChipGuideline, compactChipGuidelineName, compactChipGuidelineEyeBtn)
+    because the JavaScript addresses each instance by id.
+
+    The row starts hidden with an inline display style: the JavaScript toggles
+    element.style.display on it (migrated in a later step).
+
+    Classes required for JS:
+    * chip, hidden - chips are shown/hidden by toggling the hidden class
+    * chip-name - text slot filled with the attached file / guideline name
+
+    Data attributes required for JS:
+    * data-action="local_coursegen/clear-syllabus" on the syllabus remove button
+    * data-action="local_coursegen/clear-guideline" on the guideline remove button
+
+    Context variables required for this template:
+    * compact bool - True to render the compact (planning chat) instance ids
+
+    Example context (json):
+    {
+        "compact": false
+    }
+}}
+<div class="chips-row" id="{{^compact}}chipsRow{{/compact}}{{#compact}}compactChipsRow{{/compact}}" style="display:none">
+
+  {{! Syllabus chip (shown after a file is attached) }}
+  <span class="chip chip-syllabus hidden" id="{{^compact}}chipSyllabus{{/compact}}{{#compact}}compactChipSyllabus{{/compact}}">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/>
+      <polyline points="14 2 14 8 20 8"/>
+      <line x1="16" y1="13" x2="8" y2="13"/>
+      <line x1="16" y1="17" x2="8" y2="17"/>
+    </svg>
+    <span class="chip-name" id="{{^compact}}chipSyllabusName{{/compact}}{{#compact}}compactChipSyllabusName{{/compact}}"></span>
+    <button class="chip-btn" data-action="local_coursegen/clear-syllabus" aria-label="{{#str}}courseai_chip_remove_syllabus, local_coursegen{{/str}}">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </span>
+
+  {{! Guideline chip (shown after a guideline is selected) }}
+  <span class="chip chip-guideline hidden" id="{{^compact}}chipGuideline{{/compact}}{{#compact}}compactChipGuideline{{/compact}}">
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+      <polyline points="9 12 11 14 15 10"/>
+    </svg>
+    <span class="chip-name" id="{{^compact}}chipGuidelineName{{/compact}}{{#compact}}compactChipGuidelineName{{/compact}}"></span>
+    <button class="chip-btn" id="{{^compact}}chipGuidelineEyeBtn{{/compact}}{{#compact}}compactChipGuidelineEyeBtn{{/compact}}" aria-label="{{#str}}courseai_chip_view_guideline, local_coursegen{{/str}}">
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M2 12s3-7 10-7 10 7 10 7-3 7-10 7-10-7-10-7z"/><circle cx="12" cy="12" r="3"/>
+      </svg>
+    </button>
+    <button class="chip-btn" data-action="local_coursegen/clear-guideline" aria-label="{{#str}}courseai_chip_remove_guideline, local_coursegen{{/str}}">
+      <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+    </button>
+  </span>
+
+</div>

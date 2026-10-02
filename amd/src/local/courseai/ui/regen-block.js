@@ -40,7 +40,8 @@
 
 import {renderMarkdown, formatActivityDetailMd, formatSectionMd} from 'local_coursegen/local/courseai/ui/markdown';
 import {clampDetail} from 'local_coursegen/local/courseai/ui/plan-transcript';
-import {getActivityIconUrl, escapeHtml} from 'local_coursegen/local/courseai/utils';
+import {getActivityIconUrl} from 'local_coursegen/local/courseai/utils';
+import {buildChecklistItem} from 'local_coursegen/local/courseai/ui/checklist-item';
 
 /** @type {HTMLElement|null} The list of the regen block currently streaming. */
 let activeList = null;
@@ -59,17 +60,6 @@ let activeDesc = new Map();
 let sectionEntries = new Map();
 
 /**
- * The spinner/check circle markup shared with the initial-planning checklist.
- *
- * @returns {string}
- */
-const checkMarkup = () => '<span class="courseai-checklist-check">'
-    + '<svg class="spinner-icon" viewBox="0 0 24 24">'
-    + '<path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg>'
-    + '<svg class="check-icon" viewBox="0 0 24 24">'
-    + '<polyline points="20 6 9 17 4 12"/></svg></span>';
-
-/**
  * Build one checklist item element (head + empty/filled detail).
  *
  * @param {Object} opts
@@ -81,19 +71,13 @@ const checkMarkup = () => '<span class="courseai-checklist-check">'
  * @returns {HTMLElement}
  */
 const buildItem = ({id, title, iconType, detailHtml = '', done = false}) => {
-    const item = document.createElement('li');
-    item.className = 'courseai-checklist-item ' + (done ? 'is-done' : 'is-loading');
+    const item = buildChecklistItem({
+        name: title,
+        state: done ? 'done' : 'loading',
+        iconUrl: iconType ? getActivityIconUrl(iconType) : '',
+        detailHtml,
+    });
     item.setAttribute('data-regen-id', String(id || ''));
-    const icon = iconType
-        ? '<img class="cg-activity-icon" src="' + escapeHtml(getActivityIconUrl(iconType))
-            + '" alt="" onerror="this.style.display=\'none\'">'
-        : '';
-    item.innerHTML = '<div class="courseai-checklist-head">'
-        + checkMarkup()
-        + icon
-        + '<span class="courseai-checklist-name">' + escapeHtml(String(title || '')) + '</span>'
-        + '</div>'
-        + '<div class="courseai-checklist-detail cg-log-md">' + detailHtml + '</div>';
     return item;
 };
 

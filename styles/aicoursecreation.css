@@ -843,6 +843,21 @@ svg { display: block; flex-shrink: 0; }
 }
 .btn-plan-approve:hover:not(:disabled) { background: hsl(10, 76%, 56%); }
 .btn-plan-approve:disabled { opacity: .45; cursor: not-allowed; }
+
+/* Course review panel (#courseReviewPanel, Bootstrap card shown before the course
+   is created): the tinted rounded icon tile next to the title, and its subtitle. */
+.courseai-review-icon {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  background: var(--primary-soft, #fef2f0);
+  color: var(--primary, #c2412e);
+  flex-shrink: 0;
+}
+
+.courseai-review-subtitle {
+  font-size: .875rem;
+}
 .planning-wrap {
   display: flex;
   flex-direction: column;
@@ -4175,6 +4190,11 @@ body.cg-generating #prvSections .dp-add-subsection-wrap {
 .plus-menu-item__chevron {
   flex-shrink: 0;
   color: var(--muted-fg, #6c757d);
+}
+
+/* Leading icon of a toggle row (images, subsections): never shrinks next to the label. */
+.plus-menu-item__icon {
+  flex-shrink: 0;
 }
 
 /* Toggle rows reuse the .tbar-toggle-wrap machinery inside a menu row. */

@@ -23,6 +23,7 @@ use core_external\external_single_structure;
 use core_external\external_value;
 use local_coursegen\event\generation_failed;
 use local_coursegen\local\access;
+use local_coursegen\local\language_options;
 use local_coursegen\local\service\course_planning_service;
 
 /**
@@ -41,7 +42,12 @@ class start_course_planning extends external_api {
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
             'prompt' => new external_value(PARAM_RAW, 'Course description prompt'),
-            'lang' => new external_value(PARAM_TEXT, 'Language code (es, en, etc.)', VALUE_DEFAULT, 'es'),
+            'lang' => new external_value(
+                PARAM_TEXT,
+                'Language code (es, en, etc.)',
+                VALUE_DEFAULT,
+                language_options::DEFAULT_CODE
+            ),
             'withimages' => new external_value(PARAM_BOOL, 'Include image suggestions', VALUE_DEFAULT, false),
             'systeminstructionid' => new external_value(
                 PARAM_INT,
@@ -57,7 +63,7 @@ class start_course_planning extends external_api {
      * Start courseai session and create course planning thread.
      *
      * @param string $prompt Course description.
-     * @param string $lang Language code.
+     * @param string $lang Language code; normalised to a supported code (see language_options::resolve()).
      * @param bool $withimages Include image suggestions.
      * @param int $systeminstructionid System instruction ID.
      * @param bool $withsubsections Organise sections into subsections.
@@ -65,7 +71,7 @@ class start_course_planning extends external_api {
      */
     public static function execute(
         string $prompt,
-        string $lang = 'es',
+        string $lang = language_options::DEFAULT_CODE,
         bool $withimages = false,
         int $systeminstructionid = 0,
         bool $withsubsections = false
@@ -84,10 +90,15 @@ class start_course_planning extends external_api {
         self::validate_context($context);
         access::require_course_creation($context);
 
+        // Like create_mod_stream: a regional code reduces to its base, an unsupported
+        // code falls back to the user's language and then to the default code, so the
+        // AI service and the stored session never receive an unsupported language.
+        $lang = language_options::resolve([$params['lang'], current_language()]);
+
         try {
             return course_planning_service::start_course_planning(
                 $params['prompt'],
-                $params['lang'],
+                $lang,
                 (bool)$params['withimages'],
                 (int)$params['systeminstructionid'],
                 (int)$USER->id,

@@ -21,6 +21,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {hideOnError} from 'local_coursegen/local/courseai/ui/dom';
+
 /**
  * Create a keyboard-accessible icon action button (span[role=button]).
  *
@@ -52,7 +54,8 @@ export const createActionControl = ({variant, iconUrl, iconSvg, label, onActivat
     } else {
         control.innerHTML =
             `<img src="${iconUrl}" class="dp-action-icon dp-action-icon--${variant}"` +
-            ` alt="" aria-hidden="true" onerror="this.style.display='none'">`;
+            ` alt="" aria-hidden="true">`;
+        hideOnError(control.querySelector('img'));
     }
 
     const activate = (event) => {

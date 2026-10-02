@@ -14,39 +14,30 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Repository for Activity AI.
+ * DOM helpers shared by the course AI UI modules.
  *
- * All write operations must be invoked from mutations.
- *
- * @module     local_coursegen/local/activityai/repository
+ * @module     local_coursegen/local/courseai/ui/dom
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {
-    createModStream,
-    createMod,
-    sendActivityFeedback,
-    initActivityFilepicker,
-    uploadActivityFile,
-} from 'local_coursegen/repository/activity';
-
-export const startSession = async(payload) => {
-    return createModStream(payload);
-};
-
-export const sendFeedback = async(payload) => {
-    return sendActivityFeedback(payload);
-};
-
-export const createActivity = async(payload) => {
-    return createMod(payload);
-};
-
-export const initFilepicker = async(payload) => {
-    return initActivityFilepicker(payload);
-};
-
-export const uploadFile = async(payload) => {
-    return uploadActivityFile(payload);
+/**
+ * Hide an image when it fails to load.
+ *
+ * Replaces the inline onerror="this.style.display='none'" attribute the
+ * markup builders used: attach it right after the image is inserted (the
+ * error event is dispatched asynchronously, so a listener added in the same
+ * task still catches it).
+ *
+ * @param {HTMLImageElement|null} img
+ * @returns {HTMLImageElement|null} The same element, for chaining.
+ */
+export const hideOnError = (img) => {
+    if (!img) {
+        return null;
+    }
+    img.addEventListener('error', () => {
+        img.style.display = 'none';
+    });
+    return img;
 };

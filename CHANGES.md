@@ -22,6 +22,8 @@
 
 ## Fixed
 
+- **Course planning language is normalised like activity generation**  
+  The course AI page handed the raw Moodle language (`pt_br`, `en_us`, `ja`) to the hidden language select and the JavaScript state, and `start_course_planning` passed the client value to the AI service and the stored session as received. The page default is now `language_options::normalize(current_language())` and the endpoint resolves `[lang, current_language()]` through `language_options::resolve()` (regional codes reduce to their base, unsupported ones fall back to the user's language and then to the default code), as `create_mod_stream` already did; the parameter default is `language_options::DEFAULT_CODE`.
 - **Legacy `model_name` column reconciled on upgrade**  
   The 2025092401 upgrade step created `local_coursegen_module_jobs.model_name` while `install.xml` and the job service use `system_instruction_name`, and no step renamed it, so upgraded sites failed to store the guideline name. A new savepoint (2026100100) renames the column when only the legacy one exists, or copies its values into `system_instruction_name` (reporting conflicting rows through `debugging()`) and drops it when both exist.
 - **Web service capability metadata matches the enforced checks**  
@@ -35,6 +37,8 @@
 
 ## Changed
 
+- **Course AI page split into partials and shared JavaScript primitives**  
+  `courseai_page.mustache` is now a layout that includes partials under `templates/local/courseai/` (composer, compact composer, context chat, planning view with progress/completion/review, sessions list); the chips row and the "+" options toolbar of the main and compact composers render from one source (`composer_chips`, `composer_toolbar`) parameterised by the `compact` flag. Inline `onclick` handlers on the chip remove buttons became `data-action` hooks served by one delegated listener (the `window.clearSyllabus`/`window.clearGuideline` globals are gone) and the `onerror` attributes of generated `<img>` tags became an `error` listener (`ui/dom.js`); 9 static inline styles (menu icons, review panel icon and subtitle, hidden data/proposals containers) moved to CSS classes, while the 28 inline `display`/`width` styles that the JavaScript toggles stay inline until the show/hide migration (F7b). One `escapeHtml` (`local/courseai/utils`) replaces the private copies, the checklist item markup has a single builder (`ui/checklist-item.js`), the repositories share `repository/base.js` and the `local/activityai/repository` pass-through was removed, and the default language comes from the page config instead of a hardcoded `'es'` (`amd/build` must be rebuilt).
 - **Language packs completed**  
   The German, French, Indonesian, Portuguese (Brazil) and Russian packs now carry every string of the English pack (253 strings each were missing, mostly the course assistant, image policy help and AI service status messages). Five error strings that still appended a `{$a}` the English pack no longer uses were aligned in every pack.
 

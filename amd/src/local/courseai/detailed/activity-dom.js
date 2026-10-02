@@ -29,6 +29,7 @@
 
 import {createActionControl} from './controls';
 import {iaSparklesSvg, getCoreIconUrl, activityPurpose} from './icons';
+import {hideOnError} from 'local_coursegen/local/courseai/ui/dom';
 
 /**
  * Build the activity-item content (icon + name + actions) in Moodle markup.
@@ -60,11 +61,12 @@ export const buildActivityItem = (ctx, activityType, activityTitle) => {
         `<div class="activity-icon activityiconcontainer smaller ${escapeHtml(purpose)} courseicon ` +
         'align-self-start me-2">' +
         `<img src="${escapeHtml(iconUrl)}" class="activityicon" alt="" data-region="activity-icon" ` +
-        `onerror="this.style.display='none'"></div>` +
+        '></div>' +
         '<div class="activity-name-area activity-instance d-flex flex-column me-2">' +
         `<div class="activitytitle modtype_${safeType} position-relative align-self-start">` +
         `<div class="activityname"><span class="instancename">${escapeHtml(activityTitle)}</span></div>` +
         '</div></div>';
+    hideOnError(grid.querySelector('[data-region="activity-icon"]'));
 
     // Description slot inside the grid (Moodle: .activity-altcontent.activity-description).
     // Holds the streamed activity description / skeleton — always visible once present.

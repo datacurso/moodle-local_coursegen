@@ -33,7 +33,7 @@
  */
 
 import {renderMarkdown, formatSectionMd} from 'local_coursegen/local/courseai/ui/markdown';
-import {escapeHtml} from 'local_coursegen/local/courseai/utils';
+import {buildChecklistItem} from 'local_coursegen/local/courseai/ui/checklist-item';
 import {get_string} from 'core/str';
 
 /** Collapsed max-height (px) before the detail fades + shows a "Show more" toggle. */
@@ -260,10 +260,6 @@ export const rebuildTranscriptFromPlan = (plan) => {
     }
     list.innerHTML = '';
     visible.forEach((section) => {
-        const item = document.createElement('li');
-        item.className = 'courseai-checklist-item is-done';
-        item.setAttribute('data-section-id', String(section.id || ''));
-        item.setAttribute('data-remaining', '0');
         const activities = (section.activities || [])
             .filter((a) => !a.deleted)
             .map((a) => ({
@@ -275,15 +271,9 @@ export const rebuildTranscriptFromPlan = (plan) => {
         const md = renderMarkdown(formatSectionMd({
             name: '', description: section.description || '', activities,
         }));
-        item.innerHTML = '<div class="courseai-checklist-head">'
-            + '<span class="courseai-checklist-check">'
-            + '<svg class="spinner-icon" viewBox="0 0 24 24">'
-            + '<path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg>'
-            + '<svg class="check-icon" viewBox="0 0 24 24">'
-            + '<polyline points="20 6 9 17 4 12"/></svg></span>'
-            + '<span class="courseai-checklist-name">' + escapeHtml(String(section.name || '')) + '</span>'
-            + '</div>'
-            + '<div class="courseai-checklist-detail cg-log-md">' + md + '</div>';
+        const item = buildChecklistItem({name: section.name, state: 'done', detailHtml: md});
+        item.setAttribute('data-section-id', String(section.id || ''));
+        item.setAttribute('data-remaining', '0');
         list.appendChild(item);
         const detail = item.querySelector('.courseai-checklist-detail');
         if (detail) {
