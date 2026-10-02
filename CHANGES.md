@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100203
+
+### Fixed
+- **A course made from a template now keeps the template's format, its settings and the look of each section**  
+  The new course was created with the site's default format and nothing else of the template: a template in the grid format came out as topics, without the format options, the section options, the summaries of the sections and their files, the pictures of the grid, or the language. Everything the template does not mark now carries over as it is: the format and how it is set up, the language, the course-wide settings (news items, grades and reports display, activity dates, completion conditions, upload size, groups and theme) and, for each section, its summary with its files, its format options and the picture the grid shows it with. The name, short name, description and category still come from the teacher, and the course is visible as a free one is.
+
 ## [2.0.10] - 2026100202
 
 ### Fixed
