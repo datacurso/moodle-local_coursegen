@@ -2,6 +2,11 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100102
+
+### Changed
+- The virtual activities of a template source are now sent to the AI service with the action `instance` instead of `modify`, and the course preview and the filter of the generated activities recognize that action. The `modify` action that regenerated a real activity no longer exists: the script of the template editor no longer defaults to it and a stored `modify` row is no longer shown to the professor. This must be released together with the matching change of the AI service.
+
 ## [2.0.10] - 2026100101
 
 ### Fixed

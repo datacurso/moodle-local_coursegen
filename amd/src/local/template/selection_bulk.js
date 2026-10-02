@@ -146,7 +146,7 @@ const applyBulkTemplate = async(rows, state, applicableAction, applyTemplateVisu
 /**
  * Bind the single global bulk action bar: disabled while nothing is checked
  * anywhere, applies the chosen action to every checked row across all
- * sections (degrading modify/template to keep for unsupported types), then
+ * sections (degrading template to keep for unsupported types), then
  * resets itself back to its placeholder.
  *
  * @param {HTMLElement} container The rendered course sections review.

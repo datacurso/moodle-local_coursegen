@@ -94,8 +94,7 @@ class template_row_options {
      * When editing an existing template, the activity's SAVED action wins
      * over the default — unless it is no longer offered for this row (a
      * saved "template" on a type the generator cannot handle degrades to
-     * "keep", the same rule a legacy saved "modify" from before that action
-     * existed already follows).
+     * "keep").
      *
      * @param int $cmid Course module id.
      * @param string $modname Module type name.

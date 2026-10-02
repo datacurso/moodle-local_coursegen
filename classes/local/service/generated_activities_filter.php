@@ -16,6 +16,8 @@
 
 namespace local_coursegen\local\service;
 
+use local_coursegen\local\models\template_activity;
+
 /**
  * Which of a finished run's answered activities are new, versus travelling
  * back only as context.
@@ -42,7 +44,7 @@ class generated_activities_filter {
         foreach ($activities as $activity) {
             $behavior = $activity['template_behavior'] ?? [];
             $action = $behavior['action'] ?? '';
-            if ($action === 'modify') {
+            if ($action === template_activity::ACTION_INSTANCE) {
                 $written[] = $activity;
             }
         }

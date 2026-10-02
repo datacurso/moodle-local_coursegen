@@ -139,10 +139,7 @@ const renderConfigRegion = async() => {
  * Seed section/activity state from a freshly loaded course structure.
  *
  * Each activity's initial action comes from its type's sensible default
- * (see type_action_sync.js) instead of hardcoding "modify" for everything —
- * an admin reviewing a real ~28-activity course should see mostly-correct
- * defaults already applied, not "modify" everywhere regardless of whether
- * the generator can even produce that type of content.
+ * (see type_action_sync.js) instead of hardcoding one action for everything.
  *
  * When editing an existing template, its saved configuration wins over the
  * type defaults for every section/activity it still has a row for —

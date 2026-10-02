@@ -32,7 +32,7 @@ require_once(__DIR__ . '/../sections_config_fixture_trait.php');
  * The professor-facing view of a saved template (get_template_structure)
  * must mirror the admin's configuration exactly:
  *
- * - action mapping: keep / unset / legacy "modify" are visible and locked;
+ * - action mapping: keep / unset are visible and locked;
  *   reference, template (mold) and exclude rows are not returned at all;
  * - virtual instances (local_coursegen_tpl_instance) are interleaved among
  *   the visible real activities at their saved anchor/sortorder positions,
@@ -187,10 +187,11 @@ final class get_template_structure_view_test extends \advanced_testcase {
     }
 
     /**
-     * A legacy saved "modify" and a row with no saved action both resolve
-     * to keep: visible, locked, and reported as action "keep".
+     * A row with no saved action resolves to keep: visible, locked, and
+     * reported as action "keep"; a row saved with the retired "modify"
+     * action is not one the professor sees.
      */
-    public function test_legacy_modify_and_unset_actions_are_visible_as_keep(): void {
+    public function test_unset_action_is_visible_as_keep_and_retired_modify_is_hidden(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -205,10 +206,7 @@ final class get_template_structure_view_test extends \advanced_testcase {
         $result = get_template_structure::execute($templateid);
 
         $pagerow = $this->section_by_id($result, (int) $section1->id)['activities'][0] ?? null;
-        $this->assertNotNull($pagerow, 'Legacy modify row must stay visible');
-        $this->assertSame(format_string($page->name), $pagerow['name']);
-        $this->assertSame('keep', $pagerow['action']);
-        $this->assertTrue($pagerow['locked']);
+        $this->assertNull($pagerow, 'A retired modify row must not reach the professor');
 
         $labelrow = null;
         foreach ($this->section_by_id($result, (int) $section2->id)['activities'] as $activity) {

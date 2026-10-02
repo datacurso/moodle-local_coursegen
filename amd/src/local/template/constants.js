@@ -34,7 +34,6 @@ export const COMPONENT = 'local_coursegen';
 /** @type {Object} What the generator does with an activity. */
 export const ACTION = {
     KEEP: 'keep',
-    MODIFY: 'modify',
     REFERENCE: 'reference',
     EXCLUDE: 'exclude',
     TEMPLATE: 'template',
