@@ -5,6 +5,12 @@ All notable changes to this project will be documented in this file. Each change
 ## [2.0.10] - 2026100213
 
 ### Added
+- **The template editor explains the reference marker**  
+  A new collapsed "Markers" section of the template configuration holds a help button that explains how to type `[[coursegen:reference: what the teacher brings]]` above the element that holds a file, what the teacher sees for it, and what happens when they bring nothing.
+
+## [2.0.10] - 2026100213
+
+### Added
 - **The preview of a generated activity shows the file the teacher brought, never a token**  
   Where a place of the template has a file of the teacher, the preview of the activity that holds it shows that file, served only to the teacher who brought it. A token with no file stops the preview with the name of the activity instead of showing it.
 
