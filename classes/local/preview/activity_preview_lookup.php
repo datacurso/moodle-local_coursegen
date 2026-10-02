@@ -17,6 +17,8 @@
 namespace local_coursegen\local\preview;
 
 use local_coursegen\local\models\course_session;
+use local_coursegen\local\reference\generated_reference_files;
+use local_coursegen\local\reference\reference_file_urls;
 use local_coursegen\local\service\template_ai_api_service;
 
 /**
@@ -44,7 +46,9 @@ class activity_preview_lookup {
         $threadid = (string) $threadid;
 
         $found = self::from_result($api, $threadid, $uid, $payload);
-        if (!$found['parameters']) {
+        if ($found['parameters']) {
+            $found['parameters'] = self::with_reference_files($found['parameters'], $uid, $session);
+        } else {
             $found = self::from_payload($payload, $uid);
         }
         if (!$found['parameters']) {
@@ -63,6 +67,23 @@ class activity_preview_lookup {
         $templatebehavior = $source['template_behavior'] ?? [];
         $action = $templatebehavior['action'] ?? '';
         return $action === 'keep';
+    }
+
+    /**
+     * The parameters of a finished activity with the files the teacher brought in place of its reference tokens.
+     *
+     * The preview never shows a token: a reference has the teacher's file, or
+     * the run would not have left a token for it.
+     *
+     * @param array $parameters
+     * @param string $uid
+     * @param course_session $session
+     * @return array
+     */
+    private static function with_reference_files(array $parameters, string $uid, course_session $session): array {
+        $urlbyslot = reference_file_urls::for_course_session($session);
+        $activity = generated_reference_files::apply_to_activity(['uid' => $uid, 'parameters' => $parameters], $urlbyslot);
+        return $activity['parameters'];
     }
 
     /**

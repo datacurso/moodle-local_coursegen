@@ -30,6 +30,10 @@ use external_function_parameters;
 use external_single_structure;
 use external_value;
 use local_coursegen\local\models\course_session;
+use local_coursegen\local\reference\generated_reference_files;
+use local_coursegen\local\reference\reference_file_storage;
+use local_coursegen\local\reference\reference_file_urls;
+use local_coursegen\local\reference\reference_leftover_guard;
 use local_coursegen\local\service\activity_link_resolver;
 use local_coursegen\local\service\course_creation_guard;
 use local_coursegen\local\service\course_review_service;
@@ -110,7 +114,8 @@ class finish_template_generation extends external_api {
         // the base course - they are copied below instead of being rebuilt
         // from a JSON description that could never carry all of that.
         $generatedactivities = $result['generated_activities'] ?? [];
-        $result['generated_activities'] = generated_activities_filter::only_ai_written($generatedactivities);
+        $writtenactivities = generated_activities_filter::only_ai_written($generatedactivities);
+        $result['generated_activities'] = self::with_reference_files($session, $writtenactivities);
 
         $overrides = course_review_service::overrides(
             (string) $params['fullname'],
@@ -128,6 +133,7 @@ class finish_template_generation extends external_api {
         $generatedcms = $created['generatedcms'] ?? [];
         self::arrange_course($templateid, $courseid, $generatedactivities, $generatedcms, $keptcms);
         self::resolve_activity_links($session, $courseid, $generatedactivities, $generatedcms, $keptcms);
+        self::settle_reference_files($session, $courseid, $generatedcms);
 
         return self::created_response($courseid, $CFG->wwwroot);
     }
@@ -183,6 +189,46 @@ class finish_template_generation extends external_api {
             course_session_service::update_status($sessionid, course_session::STATUS_FAILED);
             throw $exception;
         }
+    }
+
+    /**
+     * Put the files the teacher brought where the run left the token of each reference.
+     *
+     * Done before the activities are built, so the copy of the files a text
+     * refers to carries them into the new activities. Nothing of the template's
+     * own file is left in those texts: the service replaced it with the token.
+     *
+     * @param course_session $session
+     * @param array[] $activities The activity entries the run wrote.
+     * @return array[]
+     */
+    private static function with_reference_files(course_session $session, array $activities): array {
+        $urlbyslot = reference_file_urls::for_course_session($session);
+        return generated_reference_files::apply($activities, $urlbyslot);
+    }
+
+    /**
+     * Check that every reference was carried into the course, then delete the temporary files.
+     *
+     * When one was not, the generation is marked failed and the error reaches
+     * the caller, so no course is left pointing at a file about to disappear.
+     *
+     * @param course_session $session
+     * @param int $courseid
+     * @param array $generatedcms Payload cmid => created cmid, for the generated activities.
+     */
+    private static function settle_reference_files(course_session $session, int $courseid, array $generatedcms): void {
+        try {
+            $generatedcmids = array_values($generatedcms);
+            reference_leftover_guard::ensure_none_left($courseid, $generatedcmids);
+        } catch (\Throwable $exception) {
+            $sessionid = (int) $session->get('id');
+            course_session_service::update_status($sessionid, course_session::STATUS_FAILED);
+            throw $exception;
+        }
+        $userid = (int) $session->get('userid');
+        $sessionid = (int) $session->get('id');
+        reference_file_storage::delete_session($userid, $sessionid);
     }
 
     /**

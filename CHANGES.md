@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100213
+
+### Added
+- **The preview of a generated activity shows the file the teacher brought, never a token**  
+  Where a place of the template has a file of the teacher, the preview of the activity that holds it shows that file, served only to the teacher who brought it. A token with no file stops the preview with the name of the activity instead of showing it.
+
 ## [2.0.10] - 2026100212
 
 ### Added
