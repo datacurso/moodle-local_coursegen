@@ -16,8 +16,11 @@
 
 namespace local_coursegen\utils;
 
+use local_coursegen\local\files\file_reference;
+use local_coursegen\local\files\generated_file_source;
+
 /**
- * The files the AI service made for a template run: stored once, found in scope, copied into a draft.
+ * The files the AI service made for a template run: stored once and found in scope.
  *
  * @package    local_coursegen
  * @category   test
@@ -25,7 +28,7 @@ namespace local_coursegen\utils;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_coursegen\utils\generated_file_cache
  * @covers     \local_coursegen\utils\generated_files_scope
- * @covers     \local_coursegen\utils\mold_file_copier
+ * @covers     \local_coursegen\local\files\generated_file_source
  */
 final class generated_files_test extends \advanced_testcase {
     /** @var string A thread id. */
@@ -218,59 +221,56 @@ final class generated_files_test extends \advanced_testcase {
     }
 
     /**
-     * The text keeps its placeholder and the draft receives the generated file.
+     * The placeholder of a generated file finds the file of the activity being created.
      */
-    public function test_a_placeholder_of_a_generated_file_puts_the_file_in_the_draft(): void {
+    public function test_a_placeholder_of_a_generated_file_finds_the_file(): void {
         $this->resetAfterTest();
-        $this->setAdminUser();
         $calls = [];
         $cache = new generated_file_cache($this->downloader('PNGDATA', $calls));
-        $draftid = file_get_unused_draft_itemid();
-        $text = '<img src="@@PLUGINFILE@@/forum-1a2b3c4d-1.png" alt="x">';
+        $source = new generated_file_source();
+        $reference = new file_reference(file_reference::KIND_PLACEHOLDER, '/forum-1a2b3c4d-1.png');
 
-        $result = generated_files_scope::run([$this->entry()], static function () use ($text, $draftid) {
-            return mold_file_copier::copy_generated_files_to_draft($text, $draftid);
+        $found = generated_files_scope::run([$this->entry()], static function () use ($source, $reference) {
+            return $source->find($reference);
         }, $cache);
 
-        $this->assertSame($text, $result);
-        $files = get_file_storage()->get_area_files(
-            \context_user::instance(\core\session\manager::get_realuser()->id)->id,
-            'user',
-            'draft',
-            $draftid,
-            'filename',
-            false
-        );
-        $this->assertCount(1, $files);
-        $this->assertSame('PNGDATA', reset($files)->get_content());
+        $this->assertSame('PNGDATA', $found->get_content());
     }
 
     /**
-     * A placeholder that is not a generated file is left alone.
+     * A placeholder that is not a generated file finds nothing, and nothing is downloaded.
      */
-    public function test_other_placeholders_copy_nothing(): void {
+    public function test_other_placeholders_find_nothing(): void {
         $this->resetAfterTest();
-        $this->setAdminUser();
         $calls = [];
         $cache = new generated_file_cache($this->downloader('PNGDATA', $calls));
-        $draftid = file_get_unused_draft_itemid();
-        $text = '<img src="@@PLUGINFILE@@/other.png">';
+        $source = new generated_file_source();
+        $reference = new file_reference(file_reference::KIND_PLACEHOLDER, '/other.png');
 
-        generated_files_scope::run([$this->entry()], static function () use ($text, $draftid) {
-            return mold_file_copier::copy_generated_files_to_draft($text, $draftid);
+        $found = generated_files_scope::run([$this->entry()], static function () use ($source, $reference) {
+            return $source->find($reference);
         }, $cache);
 
+        $this->assertNull($found);
         $this->assertSame([], $calls);
     }
 
     /**
-     * Outside a scope the copier changes nothing.
+     * Outside a scope there is nothing to find.
      */
-    public function test_without_a_scope_the_text_is_returned_as_it_is(): void {
-        $this->resetAfterTest();
-        $text = '<img src="@@PLUGINFILE@@/forum-1a2b3c4d-1.png">';
+    public function test_without_a_scope_nothing_is_found(): void {
+        $source = new generated_file_source();
 
-        $this->assertSame($text, mold_file_copier::copy_generated_files_to_draft($text, 123));
+        $this->assertNull($source->find(new file_reference(file_reference::KIND_PLACEHOLDER, '/forum-1a2b3c4d-1.png')));
+    }
+
+    /**
+     * Only a placeholder is looked up here.
+     */
+    public function test_only_placeholders_are_looked_up(): void {
+        $source = new generated_file_source();
+
+        $this->assertNull($source->find(new file_reference(file_reference::KIND_URL, '/forum-1a2b3c4d-1.png')));
     }
 
     /**
@@ -278,16 +278,17 @@ final class generated_files_test extends \advanced_testcase {
      */
     public function test_an_encoded_name_is_matched_decoded(): void {
         $this->resetAfterTest();
-        $this->setAdminUser();
         $calls = [];
         $cache = new generated_file_cache($this->downloader('PNGDATA', $calls));
-        $draftid = file_get_unused_draft_itemid();
+        $source = new generated_file_source();
         $entry = $this->entry('PNGDATA', 'my pic.png');
+        $reference = new file_reference(file_reference::KIND_PLACEHOLDER, '/my%20pic.png');
 
-        generated_files_scope::run([$entry], static function () use ($draftid) {
-            return mold_file_copier::copy_generated_files_to_draft('<img src="@@PLUGINFILE@@/my%20pic.png">', $draftid);
+        $found = generated_files_scope::run([$entry], static function () use ($source, $reference) {
+            return $source->find($reference);
         }, $cache);
 
+        $this->assertSame('PNGDATA', $found->get_content());
         $this->assertCount(1, $calls);
     }
 }

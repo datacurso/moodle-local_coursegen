@@ -203,6 +203,28 @@ class mold_file_copier {
         if (!self::is_allowed_area($file->get_component(), $file->get_filearea())) {
             return false;
         }
+        return self::can_copy($file, $sourcecourseid);
+    }
+
+    /**
+     * Whether the current user may copy this file, whatever the area it is in.
+     *
+     * A file the current user brought is theirs to copy. Any other must sit in
+     * a course or module context, in a course the current user can manage
+     * activities in; with a source course given, it must additionally be that
+     * exact course, so a template flow can never be pointed at a different
+     * course's files by a crafted URL in the AI service's response.
+     *
+     * @param stored_file $file
+     * @param int|null $sourcecourseid
+     * @return bool
+     */
+    public static function can_copy(stored_file $file, ?int $sourcecourseid = null): bool {
+        global $USER;
+
+        if (reference_file_storage::is_session_file_of($file, (int) $USER->id)) {
+            return true;
+        }
         $context = context::instance_by_id($file->get_contextid(), IGNORE_MISSING);
         if (!$context) {
             return false;

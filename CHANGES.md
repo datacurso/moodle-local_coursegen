@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100218
+
+### Added
+- **A text can be read for the files it references, whichever way it names them**  
+  The absolute address of a file of the template or of the teacher, the placeholder of a file the service made and the path of an image the service made are all turned into the one reference Moodle stores, `@@PLUGINFILE@@/name`, and the file they name is found where it comes from. A reference that names no file, or one the user may not copy, stops the creation with the activity, the field and the file in the message. Two different files with the same name stay two files, and the markers the service left unresolved are removed.
+
 ## [2.0.10] - 2026100217
 
 ### Added
