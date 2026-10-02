@@ -31,6 +31,7 @@ use external_value;
 use external_single_structure;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
+use local_coursegen\local\service\course_review_service;
 use local_coursegen\local\service\create_course_service;
 use context_system;
 
@@ -82,15 +83,7 @@ class get_course_settings extends external_api {
 
         $settings = create_course_service::get_course_settings($session, $resultdata);
 
-        // Load categories with full paths using Moodle's built-in function.
-        $categories = [];
-        $catlist = \core_course_category::make_categories_list('moodle/category:manage');
-        foreach ($catlist as $id => $pathname) {
-            $categories[] = [
-                'id' => (int)$id,
-                'pathname' => $pathname,
-            ];
-        }
+        $categories = course_review_service::available_categories();
 
         return $settings + ['categories' => $categories];
     }
