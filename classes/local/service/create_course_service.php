@@ -58,8 +58,17 @@ class create_course_service {
 
             require_once($CFG->dirroot . '/course/lib.php');
 
+            // In template mode the new course is the template's course with other content in it,
+            // and the payload's rich text may reference files of that base course; only those may
+            // be copied over.
+            $sourcecourseid = self::template_course_id_of($session);
+
             // Build course data entirely from the API response.
             $coursedata = self::build_course_data_from_api($resultdata);
+            $courseconfiguration = $resultdata['course_configuration'] ?? [];
+            if ($sourcecourseid !== null) {
+                template_course_settings::apply_to_new_course($coursedata, $courseconfiguration);
+            }
 
             // Apply user overrides (from the review modal) on top of AI-generated data.
             // These take precedence over the API response values.
@@ -77,6 +86,9 @@ class create_course_service {
 
             // Create the Moodle course from stored form data.
             $course = create_course($coursedata);
+            if ($sourcecourseid !== null) {
+                template_course_settings::apply_format_options($course, $courseconfiguration);
+            }
 
             // Persist course id in the session record and mark as creating (2).
             $sessionid = (int)$session->get('id');
@@ -89,15 +101,14 @@ class create_course_service {
             // Process sections if provided in the response.
             if (!empty($resultdata['sections_info'])) {
                 self::process_course_sections($course->id, $resultdata['sections_info']);
+                if ($sourcecourseid !== null) {
+                    template_section_look::apply(get_course($course->id), $resultdata['sections_info'], $sourcecourseid);
+                }
             }
 
             // Index declared subsections (Moodle 4.5 delegated sections) so the
             // activity loop can materialize each one lazily, in presentation order.
             $subsections = self::index_declared_subsections($resultdata['subsections_info'] ?? []);
-
-            // In template mode the payload's rich text may reference files of
-            // the template's base course; only those may be copied over.
-            $sourcecourseid = self::template_course_id_of($session);
 
             // Process generated activities if provided in the response.
             $activityerrors = [];
