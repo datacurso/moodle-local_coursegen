@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100217
+
+### Added
+- **The rows of an activity can be listed with the file areas their module declares for each**  
+  Reading the structure the module itself declares for a backup, every row an activity is made of is listed with the file areas its texts may keep files in and the item they are stored under, so a module added tomorrow is covered without anybody describing it. The questions of a quiz, which a backup keeps apart from the quiz, are found through the question bank: their text, feedback, answers, hints and the options of their type.
+
 ## [2.0.10] - 2026100216
 
 ### Changed
