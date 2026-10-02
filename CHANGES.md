@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100210
+
+### Added
+- **Files a teacher brings for a course are kept apart from their drafts, checked, and cleaned up**  
+  A file uploaded for a place of a template is kept in a private area of the plugin, in the teacher's own context, one file per place, a new upload replacing the old one. The site's upload limit applies, the name is made safe, and a place only takes the kind of file its element holds; anything the site would serve as a page or run as a script is refused. Only the teacher who brought a file can open it. When a generation starts its files are handed to it and deleted once the course is built; a daily task deletes the ones that waited more than a week, and a teacher's files go with their data when it is erased.
+
 ## [2.0.10] - 2026100209
 
 ### Added
