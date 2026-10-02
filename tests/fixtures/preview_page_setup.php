@@ -51,6 +51,23 @@ trait preview_page_setup {
     }
 
     /**
+     * One activity of the result the service really produced for a template source (fixtures/service_result.json).
+     *
+     * @param string $modname
+     * @return array The generated activity: uid, template_behavior and parameters.
+     */
+    protected function service_activity(string $modname): array {
+        $json = file_get_contents(__DIR__ . '/service_result.json');
+        $result = json_decode($json, true);
+        foreach ($result['generated_activities'] as $activity) {
+            if ($activity['resource_type'] === $modname) {
+                return $activity;
+            }
+        }
+        $this->fail("The service result fixture holds no {$modname}");
+    }
+
+    /**
      * The visible text of a rendered preview, on one line.
      *
      * @param string $html
