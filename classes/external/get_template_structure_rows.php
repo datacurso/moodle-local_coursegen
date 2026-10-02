@@ -22,6 +22,7 @@ use local_coursegen\local\models\template_instance;
 use local_coursegen\local\models\template_section;
 use local_coursegen\local\service\template_export_uids;
 use local_coursegen\local\service\template_instance_layout;
+use local_coursegen\local\space\space_rules;
 use local_coursegen\output\template_row_options;
 
 /**
@@ -53,7 +54,7 @@ trait get_template_structure_rows {
     }
 
     /**
-     * cmid => saved action, for this template.
+     * cmid => saved action and space settings, for this template.
      *
      * @param template $template
      * @return array
@@ -64,8 +65,11 @@ trait get_template_structure_rows {
         $records = template_activity::get_records(['templateid' => $templateid]);
         foreach ($records as $a) {
             $cmid = $a->get('cmid');
-            $action = $a->get('action');
-            $activitysettings[$cmid] = $action;
+            $activitysettings[$cmid] = [
+                'action' => $a->get('action'),
+                'instruction' => (string) $a->get('spaceinstruction'),
+                'required' => (bool) $a->get('spacerequired'),
+            ];
         }
         return $activitysettings;
     }
@@ -93,7 +97,7 @@ trait get_template_structure_rows {
      * @param \stdClass $course
      * @param \course_modinfo $modinfo
      * @param array $sectionsettings sectionid => behavior.
-     * @param array $activitysettings cmid => action.
+     * @param array $activitysettings cmid => [action, instruction, required].
      * @param array $instancesbysection sectionid => instances.
      * @param \renderer_base $output
      * @return array
@@ -186,10 +190,13 @@ trait get_template_structure_rows {
             return null;
         }
         // Mirror the admin's action mapping: keep (with unset defaulting to
-        // keep) stays visible and locked; reference, template (mold) and exclude rows
-        // never reach the professor at all.
-        $action = $activitysettings[$cm->id] ?? template_activity::ACTION_KEEP;
-        if ($action !== template_activity::ACTION_KEEP) {
+        // keep) stays visible and locked, and so does a file resource the
+        // teacher brings a file for; reference, template (mold) and exclude
+        // rows never reach the professor at all.
+        $saved = $activitysettings[$cm->id] ?? ['action' => template_activity::ACTION_KEEP];
+        $action = space_rules::effective_action($saved['action'], $cm->modname);
+        $isspace = $action === template_activity::ACTION_SPACE;
+        if ($action !== template_activity::ACTION_KEEP && !$isspace) {
             return null;
         }
         $purpose = self::get_purpose($cm->modname);
@@ -207,7 +214,27 @@ trait get_template_structure_rows {
             'isinstance' => false,
             'aigenerated' => false,
             'generationuid' => '',
-        ];
+        ] + self::space_fields($isspace, $saved);
+    }
+
+    /**
+     * What a row says about being a space for the teacher.
+     *
+     * @param bool $isspace
+     * @param array $saved The row's saved settings: instruction and required.
+     * @return array
+     */
+    private static function space_fields(bool $isspace, array $saved = []): array {
+        $fields = ['isspace' => false, 'spaceinstruction' => '', 'spacerequired' => false];
+        if (!$isspace) {
+            return $fields;
+        }
+        $instruction = $saved['instruction'] ?? '';
+        $required = $saved['required'] ?? false;
+        $fields['isspace'] = true;
+        $fields['spaceinstruction'] = format_string($instruction);
+        $fields['spacerequired'] = (bool) $required;
+        return $fields;
     }
 
     /**
@@ -267,7 +294,7 @@ trait get_template_structure_rows {
             // not what the tree calls it), even though today they happen to
             // be the same string.
             'generationuid' => $uid,
-        ];
+        ] + self::space_fields(false);
     }
 
     /**
@@ -278,48 +305,5 @@ trait get_template_structure_rows {
      */
     private static function get_purpose(string $modname): string {
         return plugin_supports('mod', $modname, FEATURE_MOD_PURPOSE, MOD_PURPOSE_OTHER);
-    }
-
-    /**
-     * The allowed-type catalog, each with its display name, purpose and
-     * icon, sorted by display name in the site language's collation.
-     *
-     * @param array $allowedtypes
-     * @param \renderer_base $output
-     * @return array
-     */
-    private static function allowed_activities(array $allowedtypes, $output): array {
-        $allowedactivities = [];
-        foreach ($allowedtypes as $modname) {
-            $activity = self::allowed_activity($modname, $output);
-            if ($activity !== null) {
-                $allowedactivities[] = $activity;
-            }
-        }
-        \core_collator::asort_array_of_arrays_by_key($allowedactivities, self::CATALOG_NAME_FIELD);
-        return array_values($allowedactivities);
-    }
-
-    /**
-     * One allowed type's own catalog entry, or null when it names no real
-     * installed module.
-     *
-     * @param string $modname
-     * @param \renderer_base $output
-     * @return array|null
-     */
-    private static function allowed_activity(string $modname, $output): ?array {
-        if (!\core_component::is_valid_plugin_name('mod', $modname)) {
-            return null;
-        }
-        $displayname = get_string('pluginname', 'mod_' . $modname);
-        $purpose = self::get_purpose($modname);
-        $iconhtml = $output->image_icon('monologo', $modname, 'mod_' . $modname, ['class' => 'icon activityicon']);
-        return [
-            'modname' => $modname,
-            self::CATALOG_NAME_FIELD => $displayname,
-            'purpose' => $purpose,
-            'iconhtml' => $iconhtml,
-        ];
     }
 }

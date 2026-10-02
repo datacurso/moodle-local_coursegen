@@ -213,16 +213,15 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
     }
 
     /**
-     * Template mode holds the section for the files of the course, free mode does not.
+     * Template mode has no section for the files of the course and no picker of activities to add.
      */
-    public function test_template_mode_holds_the_course_files_region(): void {
+    public function test_template_mode_holds_no_course_files_region_nor_activity_picker(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
 
-        $templatehtml = $this->render_page(true);
-        $freehtml = $this->render_page(false);
+        $html = $this->render_page(true);
 
-        $this->assertStringContainsString('data-region="local_coursegen/template/reference-files"', $templatehtml);
-        $this->assertStringNotContainsString('local_coursegen/template/reference-files', $freehtml);
+        $this->assertStringNotContainsString('template/reference-files', $html);
+        $this->assertStringNotContainsString('tplActivityChooserModal', $html);
     }
 }

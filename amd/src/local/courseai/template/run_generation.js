@@ -23,13 +23,14 @@
 
 import Notification from 'core/notification';
 import {startTemplateGeneration} from './repository';
+import {pickedSpaceFiles} from './state';
 import {runGenerationStream} from './generation_stream';
 import {usePreviewSession} from './preview';
 import {reviewAndCreate} from './finish';
 
 /**
  * Generate the course from the picked template, with the input bar's own
- * values (prompt and syllabus), and watch it happen.
+ * values (prompt and syllabus) and the files of its spaces, and watch it happen.
  *
  * Nothing runs until the stream is opened: start_template_generation only
  * exports the template, attaches the syllabus and hands back the stream whose
@@ -57,7 +58,8 @@ export const runGeneration = async(tplState, tplSelect, genBtn, state, host) => 
         const started = await startTemplateGeneration(
             templateId,
             tplState.prompt || '',
-            parseInt(tplState.syllabusdraftitemid || 0, 10) || 0
+            parseInt(tplState.syllabusdraftitemid || 0, 10) || 0,
+            pickedSpaceFiles(tplState)
         );
         usePreviewSession(started.sessionid);
         await runGenerationStream(
