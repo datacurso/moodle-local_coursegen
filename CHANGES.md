@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100211
+
+### Added
+- **A "Course files" section on the template screen lets the teacher bring their own files before generating**  
+  Once a template is chosen, a section lists every place of the template that takes a file, labelled with what the marker asks for and the activity it belongs to. Each place has one optional file input that accepts only the kinds of file the place holds, shows the file already brought with a link to remove it, and says what happens with no file: a new one is generated from the reference, or the place is left out when one cannot be generated. Uploading again replaces the file. The section disappears with the template and for templates with no place for a file.
+
 ## [2.0.10] - 2026100210
 
 ### Added

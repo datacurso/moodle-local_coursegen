@@ -33,6 +33,8 @@ import {getTemplateStructure} from './template/repository';
 import {runGeneration} from './template/run_generation';
 import {wireInputBar} from './template/input_bar';
 import {refreshPreviewLinks} from './template/preview';
+import {loadReferenceFiles, clearReferenceFiles, wireReferenceFiles} from './template/reference_files';
+import Selectors from './template/selectors';
 import {
     createTemplateState,
     applyStructureResponse,
@@ -104,6 +106,12 @@ export const wireTemplateMode = (state, host) => {
     const tplState = createTemplateState({lang: state.defaultLang || ''});
 
     wireInputBar(tplState, state);
+
+    // The places of the template that take a file of the teacher's own.
+    const referenceRegion = document.querySelector(Selectors.regions.referenceFiles);
+    if (referenceRegion) {
+        wireReferenceFiles(referenceRegion);
+    }
 
     // Sequence guard: reselecting the template autocomplete before a previous
     // getTemplateStructure() fetch resolves must not let the slower, stale
@@ -268,6 +276,10 @@ const loadTemplateStructure = async(templateId, tplState, container, state, requ
         updateStats(tplState, statsTemplate);
         await renderChooserGrid(tplState.allowedActivities);
         await renderLimitsBanner(limitsEl, limitsBadge, tplState);
+        const referenceRegion = document.querySelector(Selectors.regions.referenceFiles);
+        if (referenceRegion) {
+            await loadReferenceFiles(referenceRegion, templateId);
+        }
 
         if (genBtn) {
             genBtn.disabled = false;
@@ -347,6 +359,10 @@ const clearStructure = (tplState, container, state) => {
     const statsEl = document.getElementById('tplModeStats');
     if (statsEl) {
         statsEl.textContent = '';
+    }
+    const referenceRegion = document.querySelector(Selectors.regions.referenceFiles);
+    if (referenceRegion) {
+        clearReferenceFiles(referenceRegion);
     }
     // Reset only the structure: the input-bar values (images/lang/syllabus)
     // belong to the professor's session and survive clearing the template.

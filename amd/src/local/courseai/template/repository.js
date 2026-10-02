@@ -22,6 +22,7 @@
  */
 
 import {call as fetchMany} from 'core/ajax';
+import Config from 'core/config';
 
 /**
  * Fetch a template's guided-form structure: locked sections/activities, section
@@ -96,3 +97,43 @@ export const finishTemplateGeneration = (sessionId, overrides) => fetchMany([{
         category: overrides.category || 0,
     },
 }])[0];
+
+/**
+ * The places of a template that take a file, with what the teacher already brought to each.
+ *
+ * @param {number} templateId
+ * @returns {Promise<Object>} {hasslots, slots}
+ */
+export const getTemplateReferenceSlots = (templateId) => fetchMany([{
+    methodname: 'local_coursegen_get_template_reference_slots',
+    args: {templateid: templateId},
+}])[0];
+
+/**
+ * Upload the file for one place of a template, or empty the place.
+ *
+ * A real file cannot travel through a web service call, so this posts a
+ * multipart form to the page that takes it.
+ *
+ * @param {number} templateId
+ * @param {string} slotKey
+ * @param {string} action 'upload' or 'remove'.
+ * @param {File|null} file The file to upload, null to remove.
+ * @returns {Promise<Object>} {filename}
+ */
+export const sendReferenceFile = async(templateId, slotKey, action, file) => {
+    const body = new FormData();
+    body.append('sesskey', Config.sesskey);
+    body.append('templateid', templateId);
+    body.append('slotkey', slotKey);
+    body.append('action', action);
+    if (file) {
+        body.append('file', file);
+    }
+    const response = await fetch(`${Config.wwwroot}/local/coursegen/reference_file.php`, {method: 'POST', body});
+    const answer = await response.json();
+    if (answer.error) {
+        throw new Error(answer.error);
+    }
+    return answer;
+};
