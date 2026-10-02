@@ -87,6 +87,38 @@ class template_ai_api_service {
     }
 
     /**
+     * Attach one file of a template source activity that a reference marker points at.
+     *
+     * The file travels as a multipart upload, never inside JSON.
+     *
+     * @param string $threadid
+     * @param string $uid The template source activity's uid in the payload.
+     * @param stored_file $file
+     * @return array Decoded response.
+     */
+    public function upload_template_reference_file(string $threadid, string $uid, stored_file $file): array {
+        return $this->client->upload_file(
+            '/course-template/reference-file/upload',
+            $file,
+            ['thread_id' => $threadid, 'uid' => $uid]
+        );
+    }
+
+    /**
+     * Download a file the run made for a reference marker, straight into a file record.
+     *
+     * @param string $threadid
+     * @param string $fileid The id the result gives the file.
+     * @param string $filename The name to store it under.
+     * @param array $filerecord Where to store it (context, component, file area, item, path).
+     * @return stored_file|null
+     */
+    public function download_generated_file(string $threadid, string $fileid, string $filename, array $filerecord): ?stored_file {
+        $endpoint = '/course-template/generated-file/' . rawurlencode($threadid) . '/' . rawurlencode($fileid);
+        return $this->client->download_file($endpoint, $filename, $filerecord);
+    }
+
+    /**
      * Answer the review of the generated course that a paused run is waiting on.
      *
      * The run stops inside its approval step until this lands. Writing the
