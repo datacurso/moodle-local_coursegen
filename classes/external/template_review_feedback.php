@@ -38,15 +38,15 @@ defined('MOODLE_INTERNAL') || die();
 require_once($CFG->libdir . '/externallib.php');
 
 /**
- * One answer to the review a generation is waiting on.
+ * One answer to the review of the generated course that a run is waiting on.
  *
  * A template fixes the structure of the course, so the professor is offered
- * two answers and no more: accept the plan as it stands, or ask for one or
- * more activities to be planned again. Adding, deleting or reordering, which
+ * two answers and no more: accept the generated course as it stands, or ask
+ * for one or more activities to be generated again. Adding, deleting or reordering, which
  * free course creation allows at this same point, would be undoing the
  * template.
  */
-class template_planning_feedback extends external_api {
+class template_review_feedback extends external_api {
     /**
      * Parameters.
      *

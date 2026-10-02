@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100106
+
+### Changed
+- **A course made from a template is generated as soon as the teacher clicks Generate**  
+  The AI no longer writes a plan of every activity first and waits for it to be approved: the generation starts at once, the progress of each activity is shown while it is written, and the teacher then reviews the finished course. The review opens each generated activity in the preview, and offers two answers: approve the course, which goes straight to the name form and builds it from what was already generated with no further AI work, or ask for changes, either for the whole course or for one activity from its own row, which generates again only what was named and returns to the same review.
+- **The review answer of a template generation is now called `local_coursegen_template_review_feedback`**  
+  It used to answer the plan review; it now answers the review of the generated course. The preview of an activity and of the course read the generated result only.
+
+### Removed
+- **The plan of every activity, with its lines under each row, its list in the left column and its preview over the template source**  
+  Nothing needs them any more, so their screens, their strings in English and Spanish and their tests are gone.
+
 ## [2.0.10] - 2026100105
 
 ### Changed

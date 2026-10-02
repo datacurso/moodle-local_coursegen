@@ -17,14 +17,9 @@
  * The conversation the professor reads while their course is built.
  *
  * Course creation without a template narrates itself in the left column: the
- * instruction as the opening turn, a checklist that fills in as the plan is
- * written, each row opening to its own detail, and a turn at every milestone.
- * That column is where the run is actually followed, so it is reproduced here
- * rather than approximated, reusing the same elements and the same classes.
- *
- * The checklist itself - one row per section, filled in as activities plan -
- * lives in thread_checklist.js; this module is the surrounding conversation
- * and the milestones announced in it.
+ * instruction as the opening turn and a turn at every milestone. That column
+ * is where the run is actually followed, so it is reproduced here rather than
+ * approximated, reusing the same elements and the same classes.
  *
  * @module     local_coursegen/local/courseai/template/thread
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -33,15 +28,13 @@
 
 import {getStrings} from 'core/str';
 import {createLog} from 'local_coursegen/local/courseai/ui/log';
-import {resetChecklist} from 'local_coursegen/local/courseai/template/thread_checklist';
 
 const STRING_KEYS = [
     'courseai_template_log_selected',
-    'courseai_template_log_planning',
-    'courseai_template_log_plan_ready',
+    'courseai_template_log_starting',
+    'courseai_template_log_review_ready',
     'courseai_template_log_approved',
     'courseai_template_log_adjusting',
-    'courseai_template_log_generating',
     'courseai_template_log_completed',
 ];
 
@@ -86,24 +79,13 @@ const getLabels = async() => {
 };
 
 /**
- * The feed, routed the way free mode routes its own.
- *
- * Turns land above the checklist until the plan exists and below it afterwards,
- * so the thread reads in the order things happened instead of piling every turn
- * at the top.
+ * The feed the run's turns are added to.
  *
  * @returns {Object} The log controller.
  */
 const getLog = () => {
     if (!log) {
-        log = createLog({
-            container: document.getElementById('cgLog'),
-            actionContainer: document.getElementById('cgLogAfter'),
-            isActionPhase: () => {
-                const list = document.getElementById('courseaiChecklistList');
-                return !!(list && list.children.length);
-            },
-        });
+        log = createLog({container: document.getElementById('cgLog')});
     }
     return log;
 };
@@ -166,15 +148,12 @@ export const restorePicker = () => {
 };
 
 /**
- * Empty the thread and the checklist, for a run that starts over.
+ * Empty the thread, for a run that starts over.
  */
 export const resetThread = () => {
     log = null;
-    ['cgLog', 'cgLogAfter'].forEach((id) => {
-        const node = document.getElementById(id);
-        if (node) {
-            node.innerHTML = '';
-        }
-    });
-    resetChecklist();
+    const node = document.getElementById('cgLog');
+    if (node) {
+        node.innerHTML = '';
+    }
 };

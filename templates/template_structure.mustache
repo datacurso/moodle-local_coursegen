@@ -161,6 +161,16 @@
                      title="{{#str}}courseai_preview_activity, local_coursegen{{/str}}">
                     {{#pix}} i/preview, core {{/pix}}
                   </a>
+                  {{! Asks for a change to this one activity once it is generated.
+                      Hidden until the review is open, because there is nothing
+                      to change before then; see template/generation_review.js. }}
+                  <span class="dp-action-btn cg-adjust-btn" role="button" tabindex="0" hidden
+                        data-action="local_coursegen/template/adjust-activity"
+                        data-generation-uid="{{generationuid}}"
+                        aria-label="{{#str}}courseai_template_adjust_activity, local_coursegen{{/str}}"
+                        title="{{#str}}courseai_template_adjust_activity, local_coursegen{{/str}}">
+                    {{#pix}} i/edit, core {{/pix}}
+                  </span>
                   {{/generationuid}}
                   {{^locked}}
                   <span class="dp-action-btn dp-action-btn--delete" role="button" tabindex="0"
