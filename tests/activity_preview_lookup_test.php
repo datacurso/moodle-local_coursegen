@@ -17,7 +17,6 @@
 namespace local_coursegen;
 
 use local_coursegen\local\preview\activity_preview_lookup;
-use local_coursegen\local\service\template_ai_api_service;
 
 /**
  * Unit tests for activity_preview_lookup.
@@ -28,9 +27,9 @@ use local_coursegen\local\service\template_ai_api_service;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_coursegen\local\preview\activity_preview_lookup
  */
-final class activity_preview_lookup_test extends \advanced_testcase {
+final class activity_preview_lookup_test extends \basic_testcase {
     /**
-     * The payload's kept label and a generated page, as the lookup reads them.
+     * The payload's kept label and a mould, as the lookup reads them.
      *
      * @return array
      */
@@ -52,39 +51,36 @@ final class activity_preview_lookup_test extends \advanced_testcase {
                     'uid' => 'written-uid',
                     'cmid' => 12,
                     'template_behavior' => ['action' => 'template'],
-                    'parameters' => ['name' => 'Mould'],
+                    'parameters' => ['name' => 'Mould', 'structure' => ['page' => [['content' => 'Mould text']]]],
+                ],
+                [
+                    'resource_type' => 'bigbluebuttonbn',
+                    'uid' => 'other-uid',
+                    'cmid' => 13,
+                    'template_behavior' => ['action' => 'keep'],
+                    'parameters' => [
+                        'name' => 'Meeting',
+                        'structure' => ['bigbluebuttonbn' => [['intro' => 'Join the meeting']]],
+                    ],
                 ],
             ],
         ];
     }
 
     /**
-     * Runs the lookup of the answer against a service that returns a fixed answer.
+     * A finished page, with the tree its own result carries.
      *
-     * @param array $answer
-     * @param string $uid
+     * @param array $parameters Replaces the parameters of the page.
      * @return array
      */
-    private function from_result(array $answer, string $uid): array {
-        $api = new class($answer) extends template_ai_api_service {
-            /** @var array The answer handed back. */
-            private array $answer;
-
-            /**
-             * @param array $answer
-             */
-            public function __construct(array $answer) {
-                $this->answer = $answer;
-            }
-
-            #[\Override]
-            public function get_result(string $threadid): array {
-                return $this->answer;
-            }
-        };
-        $method = new \ReflectionMethod(activity_preview_lookup::class, 'from_result');
-        $method->setAccessible(true);
-        return $method->invoke(null, $api, 'thread', $uid, $this->payload());
+    private function finished_page(array $parameters): array {
+        return [
+            'uid' => 'written-uid',
+            'resource_type' => 'page',
+            'cmid' => -4,
+            'template_behavior' => ['action' => 'instance', 'template_source_cmid' => 12],
+            'parameters' => $parameters,
+        ];
     }
 
     /**
@@ -107,32 +103,122 @@ final class activity_preview_lookup_test extends \advanced_testcase {
             'template_behavior' => ['action' => 'keep'],
             'parameters' => ['name' => 'Welcome', 'structure' => ['label' => [['intro' => 'x']]]],
         ]]];
-        $found = $this->from_result($answer, 'kept-uid');
-        $this->assertSame([], $found['parameters']);
-        $this->assertSame([], $found['source']);
+
+        $found = activity_preview_lookup::from_answer($answer, 'kept-uid');
+
+        $this->assertNull($found);
     }
 
     /**
-     * A written activity still comes from the answer, with its mould as source.
+     * A written activity is drawn from its own result, and from nothing else.
      */
-    public function test_a_written_activity_is_taken_from_the_answer(): void {
-        $answer = ['generated_activities' => [[
-            'uid' => 'written-uid',
-            'resource_type' => 'page',
-            'template_behavior' => ['action' => 'template', 'template_source_cmid' => 12],
-            'parameters' => ['name' => 'Drafted'],
-        ]]];
-        $found = $this->from_result($answer, 'written-uid');
+    public function test_a_written_activity_is_taken_from_the_answer_alone(): void {
+        $parameters = [
+            'name' => 'Drafted',
+            'structure' => ['page' => [['id' => '5', 'content' => 'Drafted text']]],
+            'structure_tables' => ['page' => 'page'],
+        ];
+        $answer = ['generated_activities' => [$this->finished_page($parameters)]];
+
+        $found = activity_preview_lookup::from_answer($answer, 'written-uid');
+
         $this->assertSame('page', $found['modname']);
-        $this->assertSame('Drafted', $found['parameters']['name']);
-        $this->assertSame(12, $found['source']['cmid']);
+        $this->assertSame($parameters, $found['parameters']);
+        $this->assertFalse($found['kept']);
+    }
+
+    /**
+     * The page chrome is the template's course module the result names, not the fake id of the new one.
+     */
+    public function test_the_page_is_built_on_the_template_course_module_the_result_names(): void {
+        $parameters = ['name' => 'Drafted', 'structure' => ['page' => [['id' => '5']]]];
+        $answer = ['generated_activities' => [$this->finished_page($parameters)]];
+
+        $found = activity_preview_lookup::from_answer($answer, 'written-uid');
+
+        $this->assertSame(12, $found['cmid']);
     }
 
     /**
      * An activity the answer does not list is not found there.
      */
     public function test_an_unlisted_activity_is_not_found_in_the_answer(): void {
-        $found = $this->from_result(['generated_activities' => []], 'kept-uid');
-        $this->assertSame('', $found['modname']);
+        $found = activity_preview_lookup::from_answer(['generated_activities' => []], 'kept-uid');
+
+        $this->assertNull($found);
+    }
+
+    /**
+     * A result written before the tree travelled with it is refused, never completed from the payload.
+     */
+    public function test_a_result_without_its_tree_is_refused_not_completed(): void {
+        $answer = ['generated_activities' => [$this->finished_page(['name' => 'Drafted', 'content' => 'text'])]];
+
+        try {
+            activity_preview_lookup::from_answer($answer, 'written-uid');
+            $this->fail('A result without its tree must be refused');
+        } catch (\moodle_exception $exception) {
+            $this->assertSame('courseai_preview_result_outdated', $exception->errorcode);
+        }
+    }
+
+    /**
+     * A record that names a row the tree does not hold is refused with its activity and record.
+     */
+    public function test_a_record_with_an_unknown_id_is_refused(): void {
+        $parameters = [
+            'name' => 'Drafted',
+            'structure' => ['page' => [['id' => '5']]],
+            'mod_settings' => ['sections' => [['source_id' => '404']]],
+        ];
+        $answer = ['generated_activities' => [$this->finished_page($parameters)]];
+
+        try {
+            activity_preview_lookup::from_answer($answer, 'written-uid');
+            $this->fail('An unknown id must be refused');
+        } catch (\moodle_exception $exception) {
+            $this->assertSame('courseai_preview_record_unknown', $exception->errorcode);
+        }
+    }
+
+    /**
+     * An activity of a run that has no result yet is the payload's own copy, as it was sent.
+     */
+    public function test_a_payload_activity_is_drawn_from_its_own_parameters(): void {
+        $found = activity_preview_lookup::from_payload($this->payload(), 'kept-uid');
+
+        $this->assertSame('label', $found['modname']);
+        $this->assertSame(11, $found['cmid']);
+        $this->assertTrue($found['kept']);
+        $this->assertSame('Welcome', $found['parameters']['name']);
+        $this->assertSame('<p>Real text</p>', $found['parameters']['structure']['label'][0]['intro']);
+    }
+
+    /**
+     * A mould is previewed as it is: it is the plan of an activity that has no result yet.
+     */
+    public function test_a_mould_in_the_payload_is_not_marked_kept(): void {
+        $found = activity_preview_lookup::from_payload($this->payload(), 'written-uid');
+
+        $this->assertFalse($found['kept']);
+        $this->assertSame(12, $found['cmid']);
+    }
+
+    /**
+     * A type with no preview of its own shows its description, which the payload copy carries in its tree.
+     */
+    public function test_a_type_without_its_own_preview_gets_its_description_from_the_tree(): void {
+        $found = activity_preview_lookup::from_payload($this->payload(), 'other-uid');
+
+        $this->assertSame('Join the meeting', $found['parameters']['introeditor']['text']);
+    }
+
+    /**
+     * A uid the payload does not hold is not found.
+     */
+    public function test_an_unknown_uid_is_not_found_in_the_payload(): void {
+        $found = activity_preview_lookup::from_payload($this->payload(), 'nothing');
+
+        $this->assertNull($found);
     }
 }

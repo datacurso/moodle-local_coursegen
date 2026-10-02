@@ -44,29 +44,6 @@ class forum_preview extends preview_base {
     }
 
     /**
-     * A draft replaces the description and the type.
-     *
-     * @param json_store $store
-     */
-    protected function overlay(json_store $store): void {
-        $rows = $store->get_records('forum');
-        if (!$rows) {
-            return;
-        }
-        $row = reset($rows);
-        $intro = $this->parameters['introeditor'] ?? null;
-        if (is_array($intro)) {
-            $intro = $intro['text'] ?? null;
-        }
-        if (is_string($intro) && trim($intro) !== '') {
-            $store->set('forum', $row->id, 'intro', $intro);
-        }
-        if (!empty($this->parameters['type'])) {
-            $store->set('forum', $row->id, 'type', (string) $this->parameters['type']);
-        }
-    }
-
-    /**
      * The module's view, built once.
      *
      * @return view|null
@@ -80,7 +57,7 @@ class forum_preview extends preview_base {
             return null;
         }
         $course = $this->course();
-        $cmid = (int) ($this->source['cmid'] ?? 0);
+        $cmid = $this->cmid;
         $modinfo = get_fast_modinfo($course);
         if (!$cmid || !isset($modinfo->cms[$cmid])) {
             return null;

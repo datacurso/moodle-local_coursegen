@@ -37,67 +37,6 @@ class feedback_preview extends preview_base {
     }
 
     /**
-     * The plan's questions replace the mould's items.
-     *
-     * @param json_store $store
-     */
-    protected function overlay(json_store $store): void {
-        $rows = $store->get_records('feedback');
-        if (!$rows) {
-            return;
-        }
-        $feedback = reset($rows);
-        $intro = $this->parameters['introeditor'] ?? null;
-        if (is_array($intro)) {
-            $intro = $intro['text'] ?? null;
-        }
-        if (is_string($intro) && trim($intro) !== '') {
-            $store->set('feedback', $feedback->id, 'intro', $intro);
-        }
-        $questions = $this->parameters['mod_settings']['questions'] ?? null;
-        if (!is_array($questions)) {
-            $questions = $this->parameters['mod_settings']['items'] ?? [];
-        }
-        if (!is_array($questions) || !$questions) {
-            return;
-        }
-        $store->delete_records('feedback_item', ['feedback' => $feedback->id]);
-        $position = 1;
-        foreach ($questions as $question) {
-            if (!is_array($question) || empty($question['typ'])) {
-                continue;
-            }
-            $typ = (string) $question['typ'];
-            // A label and a page break ask nothing; every other item does.
-            $asksnothing = in_array($typ, ['label', 'pagebreak'], true);
-            $hasvalue = 1;
-            if ($asksnothing) {
-                $hasvalue = 0;
-            }
-            $required = 0;
-            if (!empty($question['required'])) {
-                $required = 1;
-            }
-            $store->add('feedback_item', [
-                'id' => $position,
-                'feedback' => $feedback->id,
-                'template' => 0,
-                'name' => (string) ($question['name'] ?? ''),
-                'label' => (string) ($question['label'] ?? ''),
-                'presentation' => '',
-                'typ' => $typ,
-                'hasvalue' => $hasvalue,
-                'position' => $position,
-                'required' => $required,
-                'dependitem' => 0,
-                'dependvalue' => '',
-                'options' => '',
-            ]);
-            $position++;
-        }
-    }
-
-    /**
      * The feedback page, as mod/feedback/view.php draws it.
      *
      * @return string
@@ -108,7 +47,7 @@ class feedback_preview extends preview_base {
             return $this->nothing_yet();
         }
         $course = $this->course();
-        $cmid = (int) ($this->source['cmid'] ?? 0);
+        $cmid = $this->cmid;
         $modinfo = get_fast_modinfo($course);
         if (!$cmid || !isset($modinfo->cms[$cmid])) {
             return $this->nothing_yet();

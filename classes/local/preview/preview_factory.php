@@ -63,11 +63,12 @@ class preview_factory {
      *
      * @param string $modname The activity type.
      * @param array $parameters The activity's parameters, as the AI returned them.
+     * @param int $cmid The template's course module the page is built on, or 0.
      * @return activity_preview
      */
-    public static function for_activity(string $modname, array $parameters, array $source = []): activity_preview {
+    public static function for_activity(string $modname, array $parameters, int $cmid = 0): activity_preview {
         $class = self::PREVIEWS[$modname] ?? intro_preview::class;
-        return new $class($parameters, $source);
+        return new $class($parameters, $cmid);
     }
 
     /**
