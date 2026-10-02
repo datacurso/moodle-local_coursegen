@@ -48,19 +48,19 @@ import {MODNAMES} from 'local_coursegen/ai_activity_types';
  * @type {Object<string, string>}
  */
 const DEFAULT_ACTION = {
-    label: 'modify',
-    page: 'modify',
+    label: 'keep',
+    page: 'keep',
     forum: 'keep',
     resource: 'keep',
-    assign: 'modify',
+    assign: 'keep',
     feedback: 'keep',
     lesson: 'keep',
 };
 
 /**
  * @param {string} modname
- * @returns {boolean} Whether "Modify" is a safe option for this module type today: every type the
- *     AI service has a content contract for (see ai_activity_types.js) offers it.
+ * @returns {boolean} Whether "Use as template" is a safe option for this module type today: every
+ *     type the AI service has a content contract for (see ai_activity_types.js) offers it.
  */
 export const typeSupportsModify = (modname) => MODNAMES.includes(modname);
 
@@ -69,10 +69,7 @@ export const typeSupportsModify = (modname) => MODNAMES.includes(modname);
  * @returns {string} The sensible default action for this module type.
  */
 export const defaultActionForModname = (modname) => {
-    const wanted = DEFAULT_ACTION[modname] || 'keep';
-    // Never default a type the generator can't handle to "modify" — even if
-    // DEFAULT_ACTION said so, an unsupported type must default to "keep".
-    return (wanted === 'modify' && !typeSupportsModify(modname)) ? 'keep' : wanted;
+    return DEFAULT_ACTION[modname] || 'keep';
 };
 
 /**

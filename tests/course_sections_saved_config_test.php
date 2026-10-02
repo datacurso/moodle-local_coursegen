@@ -90,10 +90,10 @@ final class course_sections_saved_config_test extends \advanced_testcase {
 
         $pageselect = $this->extract_action_select($html, (int) $page->cmid);
         $this->assertMatchesRegularExpression('/<option value="exclude"[^>]*\sselected/', $pageselect);
-        $this->assertStringNotContainsString('<option value="modify"', $pageselect);
+        $this->assertStringNotContainsString('<option value="instance"', $pageselect);
 
         // Forum has no saved row, so it falls back to the unconditional "keep"
-        // default — never "modify", which is not offered any more.
+        // default — never "instance", which is not offered to the admin.
         $forumselect = $this->extract_action_select($html, (int) $forum->cmid);
         $this->assertMatchesRegularExpression('/<option value="keep"[^>]*\sselected/', $forumselect);
 
@@ -116,13 +116,13 @@ final class course_sections_saved_config_test extends \advanced_testcase {
     }
 
     /**
-     * A legacy saved "modify" action (persisted before that action was
-     * removed from the offered options) degrades to "keep" when rendered,
-     * for an AI-supported module type — the hydration guard finds "modify"
-     * is no longer in the offered keys and falls through to the default,
+     * A saved "instance" action (never offered for a real activity) degrades
+     * to "keep" when rendered, for an AI-supported module type — the
+     * hydration guard finds "instance" is not in the offered keys and falls
+     * through to the default,
      * instead of rendering an option the row's own select does not offer.
      */
-    public function test_render_degrades_legacy_saved_modify_action_to_keep(): void {
+    public function test_render_degrades_saved_instance_action_to_keep(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -130,14 +130,14 @@ final class course_sections_saved_config_test extends \advanced_testcase {
         $modinfo = get_fast_modinfo($course);
         $section1 = $modinfo->get_section_info(1);
 
-        // Bypass the external function (which never persists "modify" any
-        // more) to simulate a stale row saved before this action was removed.
+        // Bypass the external function to simulate a row saved with an
+        // action the admin is never offered.
         $templateid = 54321;
         $act = new template_activity(0);
         $act->set('templateid', $templateid);
         $act->set('sectionid', (int) $section1->id);
         $act->set('cmid', (int) $page->cmid);
-        $act->set('action', 'modify');
+        $act->set('action', 'instance');
         $act->set('useasreference', 1);
         $act->set('templatescope', 'course');
         $act->set('prompt', '');
@@ -147,7 +147,7 @@ final class course_sections_saved_config_test extends \advanced_testcase {
 
         $pageselect = $this->extract_action_select($html, (int) $page->cmid);
         $this->assertMatchesRegularExpression('/<option value="keep"[^>]*\sselected/', $pageselect);
-        $this->assertStringNotContainsString('<option value="modify"', $pageselect);
+        $this->assertStringNotContainsString('<option value="instance"', $pageselect);
     }
 
     /**

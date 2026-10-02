@@ -49,7 +49,7 @@ final class course_sections_actions_test extends \advanced_testcase {
 
     /**
      * Each activity row carries an action select preselected with the
-     * server-side default, "keep" unconditionally — "modify" is never
+     * server-side default, "keep" unconditionally — "instance" is never
      * offered any more, for either an AI-supported or an unsupported type.
      */
     public function test_render_activity_select_offers_the_actions(): void {
@@ -70,20 +70,20 @@ final class course_sections_actions_test extends \advanced_testcase {
         foreach (['template', 'keep', 'reference', 'exclude', 'space'] as $action) {
             $this->assertStringContainsString('<option value="' . $action . '"', $pageselect);
         }
-        $this->assertStringNotContainsString('<option value="modify"', $pageselect);
+        $this->assertStringNotContainsString('<option value="instance"', $pageselect);
         $this->assertMatchesRegularExpression('/<option value="keep"[^>]*\sselected/', $pageselect);
         $templatelabel = get_string('template_activity_template', 'local_coursegen');
         $referencelabel = get_string('template_activity_reference', 'local_coursegen');
         $this->assertStringContainsString($templatelabel, $pageselect);
         $this->assertStringContainsString($referencelabel, $pageselect);
 
-        // Unsupported type (lti): modify AND template omitted, keep preselected;
+        // Unsupported type (lti): instance AND template omitted, keep preselected;
         // a space is still offered, since the professor provides it.
         $ltiselect = $this->extract_action_select($html, (int) $lti->cmid);
         $ltioptions = substr_count($ltiselect, '<option');
         $this->assertSame(4, $ltioptions);
         $this->assertStringContainsString('<option value="space"', $ltiselect);
-        $this->assertStringNotContainsString('<option value="modify"', $ltiselect);
+        $this->assertStringNotContainsString('<option value="instance"', $ltiselect);
         $this->assertStringNotContainsString('<option value="template"', $ltiselect);
         $this->assertMatchesRegularExpression('/<option value="keep"[^>]*\sselected/', $ltiselect);
     }
@@ -138,7 +138,7 @@ final class course_sections_actions_test extends \advanced_testcase {
     /**
      * ONE global bulk action bar renders below all the section cards, with
      * a label, a select born disabled, a choosedots placeholder plus the
-     * four per-activity actions offered ("modify" is never one of them).
+     * four per-activity actions offered ("instance" is never one of them).
      */
     public function test_render_offers_a_single_global_bulk_bar(): void {
         $this->resetAfterTest();
@@ -165,7 +165,7 @@ final class course_sections_actions_test extends \advanced_testcase {
         $this->assertMatchesRegularExpression('/<option value=""[^>]*\sselected/', $bulkselect);
         $choosedots = get_string('choosedots');
         $this->assertStringContainsString($choosedots, $bulkselect);
-        $this->assertStringNotContainsString('<option value="modify"', $bulkselect);
+        $this->assertStringNotContainsString('<option value="instance"', $bulkselect);
         foreach (['template', 'keep', 'reference', 'exclude'] as $action) {
             $this->assertStringContainsString('<option value="' . $action . '"', $bulkselect);
         }

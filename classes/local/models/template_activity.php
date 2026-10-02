@@ -32,8 +32,8 @@ class template_activity extends persistent {
     /** Action: the activity is copied into the new course as it is. */
     const ACTION_KEEP = 'keep';
 
-    /** Action: the AI service rewrites the activity. */
-    const ACTION_MODIFY = 'modify';
+    /** Action: a virtual instance generated from a template source (never chosen by the admin). */
+    const ACTION_INSTANCE = 'instance';
 
     /** Action: the activity is only context for the AI service. */
     const ACTION_REFERENCE = 'reference';
@@ -78,14 +78,14 @@ class template_activity extends persistent {
             'action' => [
                 'type' => PARAM_ALPHA,
                 'null' => NULL_NOT_ALLOWED,
-                'default' => self::ACTION_MODIFY,
+                'default' => self::ACTION_KEEP,
             ],
             'useasreference' => [
                 'type' => PARAM_INT,
                 'default' => 1,
             ],
             // Only meaningful when action=template: whether this molde may be
-            // used by "modify" activities anywhere in the course, or only by
+            // used by "instance" activities anywhere in the course, or only by
             // ones in this same section. Ignored for every other action.
             'templatescope' => [
                 'type' => PARAM_ALPHA,

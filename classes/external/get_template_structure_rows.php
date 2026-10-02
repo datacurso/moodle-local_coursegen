@@ -186,13 +186,9 @@ trait get_template_structure_rows {
             return null;
         }
         // Mirror the admin's action mapping: keep (with unset defaulting to
-        // keep, and a legacy saved "modify" normalising to keep) stays
-        // visible and locked; reference, template (mold) and exclude rows
+        // keep) stays visible and locked; reference, template (mold) and exclude rows
         // never reach the professor at all.
         $action = $activitysettings[$cm->id] ?? template_activity::ACTION_KEEP;
-        if ($action === template_activity::ACTION_MODIFY) {
-            $action = template_activity::ACTION_KEEP;
-        }
         if ($action !== template_activity::ACTION_KEEP) {
             return null;
         }

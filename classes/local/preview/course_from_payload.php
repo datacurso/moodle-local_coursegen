@@ -17,6 +17,7 @@
 namespace local_coursegen\local\preview;
 
 use html_writer;
+use local_coursegen\local\models\template_activity;
 use moodle_url;
 
 /**
@@ -201,7 +202,7 @@ class course_from_payload {
         $name = (string) $name;
         $templatebehavior = $activity['template_behavior'] ?? [];
         $action = $templatebehavior['action'] ?? '';
-        $writing = ($action === 'modify');
+        $writing = ($action === template_activity::ACTION_INSTANCE);
 
         $url = new moodle_url('/local/coursegen/activity_preview.php', [
             'sessionid' => $sessionid,

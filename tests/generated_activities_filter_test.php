@@ -35,15 +35,26 @@ use local_coursegen\local\service\generated_activities_filter;
  */
 final class generated_activities_filter_test extends \basic_testcase {
     /**
-     * An activity submitted with action "modify" - the one a virtual
+     * An activity submitted with action "instance" - the one a virtual
      * instance is always submitted with - is kept.
      */
-    public function test_modify_activity_is_kept(): void {
-        $activities = [$this->activity('modify')];
+    public function test_instance_activity_is_kept(): void {
+        $activities = [$this->activity('instance')];
 
         $result = generated_activities_filter::only_ai_written($activities);
 
         $this->assertCount(1, $result);
+    }
+
+    /**
+     * The retired "modify" action is not an instance, so it is dropped.
+     */
+    public function test_retired_modify_activity_is_dropped(): void {
+        $activities = [$this->activity('modify')];
+
+        $result = generated_activities_filter::only_ai_written($activities);
+
+        $this->assertSame([], $result);
     }
 
     /**
@@ -72,7 +83,7 @@ final class generated_activities_filter_test extends \basic_testcase {
     /**
      * An activity with no template_behavior at all - malformed input, not
      * something the real payload ever sends - is dropped rather than
-     * crashing, since an absent action is never "modify".
+     * crashing, since an absent action is never "instance".
      */
     public function test_activity_with_no_template_behavior_is_dropped(): void {
         $activities = [['resource_type' => 'page', 'parameters' => []]];
@@ -83,16 +94,16 @@ final class generated_activities_filter_test extends \basic_testcase {
     }
 
     /**
-     * A mixed batch keeps only the modify entries, in their original order,
+     * A mixed batch keeps only the instance entries, in their original order,
      * regardless of the cmid each one carries - proving the filter never
      * reads a cmid's value or shape, only the action.
      */
-    public function test_mixed_batch_keeps_only_modify_entries_regardless_of_cmid(): void {
+    public function test_mixed_batch_keeps_only_instance_entries_regardless_of_cmid(): void {
         $activities = [
             $this->activity('keep', 5),
-            $this->activity('modify', -1),
+            $this->activity('instance', -1),
             $this->activity('reference', 12),
-            $this->activity('modify', 900007),
+            $this->activity('instance', 900007),
         ];
 
         $result = generated_activities_filter::only_ai_written($activities);

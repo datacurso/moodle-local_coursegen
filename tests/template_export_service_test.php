@@ -18,6 +18,7 @@ namespace local_coursegen;
 
 use local_coursegen\local\models\template;
 use local_coursegen\local\models\template_activity;
+use local_coursegen\local\models\template_instance;
 use local_coursegen\local\service\template_export_service;
 
 /**
@@ -127,6 +128,35 @@ final class template_export_service_test extends \advanced_testcase {
     }
 
     /**
+     * A template instance travels with action "instance", the cmid of the
+     * source it was made from and its own prompt, and never with the retired
+     * "modify" action.
+     */
+    public function test_instance_entry_carries_the_instance_action_and_its_source(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $page = $generator->create_module('page', ['course' => $course->id]);
+        $template = $this->create_template($course->id);
+        $templateid = $template->get('id');
+        $this->mark_with_action($templateid, (int) $page->cmid, 'template');
+        $instance = $this->create_instance($templateid, (int) $page->cmid);
+        $instanceuid = $instance->get('uid');
+
+        $payload = template_export_service::build_init_payload($templateid);
+
+        $entry = $this->find_activity_by_uid($payload, $instanceuid);
+        $this->assertNotNull($entry);
+        $this->assertSame('instance', $entry['template_behavior']['action']);
+        $this->assertSame((int) $page->cmid, $entry['template_behavior']['template_source_cmid']);
+        $this->assertSame('Write the intro', $entry['template_behavior']['prompt']);
+        $actions = array_column(array_column($payload['activities'], 'template_behavior'), 'action');
+        $this->assertNotContains('modify', $actions);
+    }
+
+    /**
      * A throwaway template pointing at the given course, with no saved
      * activity/section rows - every activity defaults to "keep".
      *
@@ -167,6 +197,46 @@ final class template_export_service_test extends \advanced_testcase {
             'action' => $action,
         ]);
         $activity->create();
+    }
+
+    /**
+     * Save one virtual instance of the given source for this template.
+     *
+     * @param int $templateid
+     * @param int $sourcecmid
+     * @return template_instance
+     */
+    private function create_instance(int $templateid, int $sourcecmid): template_instance {
+        $instance = new template_instance(0, (object) [
+            'uid' => 'instance-test-uid',
+            'templateid' => $templateid,
+            'sectionid' => 0,
+            'sourcecmid' => $sourcecmid,
+            'sourcename' => 'Source page',
+            'name' => 'Instance page',
+            'typelabel' => 'Page',
+            'modname' => 'page',
+            'prompt' => 'Write the intro',
+        ]);
+        $instance->create();
+        return $instance;
+    }
+
+    /**
+     * The payload's own entry for one uid, or null if it is not there.
+     *
+     * @param array $payload
+     * @param string $uid
+     * @return array|null
+     */
+    private function find_activity_by_uid(array $payload, string $uid): ?array {
+        $activities = $payload['activities'] ?? [];
+        foreach ($activities as $activity) {
+            if (($activity['uid'] ?? '') === $uid) {
+                return $activity;
+            }
+        }
+        return null;
     }
 
     /**

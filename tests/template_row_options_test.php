@@ -84,12 +84,12 @@ final class template_row_options_test extends \advanced_testcase {
     }
 
     /**
-     * activity_actions() never offers "modify" any more, for either an
+     * activity_actions() never offers "instance", for either an
      * AI-supported type or an unsupported one — "template" is the only
      * action still gated to ai_activity_types::MODNAMES, and "space" is offered for
      * every type.
      */
-    public function test_activity_actions_never_offers_modify(): void {
+    public function test_activity_actions_never_offers_instance(): void {
         $supported = template_row_options::activity_actions(1, 'page');
         $supportedvalues = array_column($supported, 'value');
         $this->assertSame(['template', 'keep', 'reference', 'exclude', 'space'], $supportedvalues);
@@ -123,18 +123,17 @@ final class template_row_options_test extends \advanced_testcase {
     }
 
     /**
-     * A legacy saved action of "modify" (persisted before this action was
-     * removed from the UI) degrades to "keep" on re-render, for both an
-     * AI-supported and an unsupported module type — the hydration guard
-     * simply finds "modify" is no longer in the offered keys and falls
-     * through to the default.
+     * A saved action of "instance" (never offered for a real activity)
+     * degrades to "keep" on re-render, for both an AI-supported and an
+     * unsupported module type — the hydration guard simply finds "instance"
+     * is not in the offered keys and falls through to the default.
      */
-    public function test_activity_actions_degrades_legacy_saved_modify_to_keep(): void {
-        $supported = template_row_options::activity_actions(1, 'page', 'modify');
+    public function test_activity_actions_degrades_saved_instance_to_keep(): void {
+        $supported = template_row_options::activity_actions(1, 'page', 'instance');
         $supportedaction = template_row_options::active_action($supported);
         $this->assertSame('keep', $supportedaction);
 
-        $unsupported = template_row_options::activity_actions(1, 'lti', 'modify');
+        $unsupported = template_row_options::activity_actions(1, 'lti', 'instance');
         $unsupportedaction = template_row_options::active_action($unsupported);
         $this->assertSame('keep', $unsupportedaction);
     }
