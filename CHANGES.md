@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100215
+
+### Fixed
+- **The files a forum message references now reach the discussion post**  
+  The message of a discussion created from a template is prepared like any other rich text: the template's own files, the teacher's files and the files the service made are copied into a draft area that the post saves into its own file area, so an image or a document placed above a reference marker in a discussion is no longer left as a broken address.
+
 ## [2.0.10] - 2026100214
 
 ### Added

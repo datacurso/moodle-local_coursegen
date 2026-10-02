@@ -16,6 +16,7 @@
 
 namespace local_coursegen\mod_settings;
 
+use local_coursegen\utils\text_editor_parameter_cleaner;
 use mod_forum_external;
 
 defined('MOODLE_INTERNAL') || die();
@@ -45,6 +46,15 @@ class forum_settings extends base_settings {
      * @param object $discussion Discussion data.
      */
     protected function add_discussion(object $discussion) {
-        mod_forum_external::add_discussion($this->cm->instance, $discussion->subject, $discussion->message, -1);
+        // The message may reference files (the template source's images, the teacher's files, the files the
+        // AI service made); they are copied into a draft area that the post saves into its own file area.
+        $draftitemid = file_get_unused_draft_itemid();
+        $message = text_editor_parameter_cleaner::prepare_editor_text(
+            (string) $discussion->message,
+            $draftitemid,
+            $this->sourcecourseid
+        );
+        $options = [['name' => 'inlineattachmentsid', 'value' => $draftitemid]];
+        mod_forum_external::add_discussion($this->cm->instance, $discussion->subject, $message, -1, $options);
     }
 }
