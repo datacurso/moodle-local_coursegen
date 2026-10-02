@@ -26,7 +26,7 @@ defined('MOODLE_INTERNAL') || die();
 
 $tasks = [
     [
-        'classname' => 'local_coursegen\task\purge_reference_files',
+        'classname' => 'local_coursegen\task\purge_space_files',
         'blocking' => 0,
         'minute' => '17',
         'hour' => '3',
