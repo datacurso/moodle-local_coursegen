@@ -20,6 +20,14 @@
    #tplModeStructure alongside #prvSections. A second set of rules here is
    exactly how the two modes drifted apart in the first place. */
 
+/* The generation view hides every edit control of the rows. Once the course is
+   generated the review needs two of them back: the preview of the activity and
+   the request for a change to it. Both stay hidden (the hidden attribute)
+   until the review opens, so only the generated activities show them. */
+body.cg-generating #tplModeStructure .cg-item-actions :is(.cg-preview-btn, .cg-adjust-btn):not([hidden]) {
+    display: inline-flex !important;
+}
+
 /* The preview is a real course page, so it needs no styles of its own. This
    only puts editing affordances beyond reach: the format renders what it always
    renders, and a preview must not offer a way to change any of it. */

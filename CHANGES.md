@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. Each change
 
 ### Changed
 - **A course made from a template is generated as soon as the teacher clicks Generate**  
-  The AI no longer writes a plan of every activity first and waits for it to be approved: the generation starts at once, the progress of each activity is shown while it is written, and the teacher then reviews the finished course. The review opens each generated activity in the preview, and offers two answers: approve the course, which goes straight to the name form and builds it from what was already generated with no further AI work, or ask for changes, either for the whole course or for one activity from its own row, which generates again only what was named and returns to the same review.
+  The AI no longer writes a plan of every activity first and waits for it to be approved: the generation starts at once, the progress of each activity is shown while it is written, and the teacher then reviews the finished course. The review opens each generated activity in the preview, and offers two answers: approve the course, which goes straight to the name form and builds it from what was already generated with no further AI work, or ask for changes, either for the whole course or for one activity from its own row, which generates again only what was named and returns to the same review. The preview and change buttons of the rows, which the generation view hides, are shown again during the review.
 - **The review answer of a template generation is now called `local_coursegen_template_review_feedback`**  
   It used to answer the plan review; it now answers the review of the generated course. The preview of an activity and of the course read the generated result only.
 
