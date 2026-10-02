@@ -103,7 +103,7 @@ class pluginfile_placeholder_resolver {
     private function add_areas(string $component, array $fileareas, int $fallbackcontextid): void {
         foreach ($fileareas as $filearea => $info) {
             $contextid = $this->context_of($info, $fallbackcontextid);
-            $itemid = $this->itemid_of($info);
+            $itemid = $this->itemid_of($info, (string) $filearea);
             $this->areas[] = [
                 'component' => $component,
                 'filearea' => (string) $filearea,
@@ -155,15 +155,24 @@ class pluginfile_placeholder_resolver {
     }
 
     /**
-     * The item id an annotation names, or null when it names none.
+     * The item id an address carries for this area.
+     *
+     * An annotation that names an element gives its value. One that names none
+     * leaves the item id out of the address only for "intro", which core serves
+     * without one; every other area is addressed with the item id its files are
+     * stored under, 0, the way moodle_url::make_pluginfile_url() writes it.
      *
      * @param \stdClass $info
+     * @param string $filearea
      * @return int|null
      */
-    private function itemid_of($info): ?int {
-        if (!isset($info->element) || $info->element === null) {
+    private function itemid_of($info, string $filearea): ?int {
+        if (isset($info->element) && $info->element !== null) {
+            return (int) $info->element->get_value();
+        }
+        if ($filearea === 'intro') {
             return null;
         }
-        return (int) $info->element->get_value();
+        return 0;
     }
 }
