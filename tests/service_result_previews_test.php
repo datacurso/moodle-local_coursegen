@@ -122,14 +122,30 @@ final class service_result_previews_test extends \advanced_testcase {
     }
 
     /**
-     * A wiki page the service wrote sits in the tree but its element has no table, so it is refused by name.
+     * A wiki page the service wrote is drawn from its own row of the tree.
+     */
+    public function test_the_wiki_page_the_service_wrote_is_drawn(): void {
+        $this->resetAfterTest(true);
+        $this->prepare_preview_page();
+        $page = $this->service_activity('wiki')['parameters']['mod_settings']['pages'][0];
+
+        $html = $this->drawn('wiki');
+
+        $this->assertStringContainsString($page['title'], $html);
+        $this->assertStringNotContainsString('coursegen:', $html);
+    }
+
+    /**
+     * A page whose element the result gives no table for is refused, naming the activity and the record.
      */
     public function test_a_wiki_page_without_a_table_is_refused_naming_the_record(): void {
         $this->resetAfterTest(true);
         $this->prepare_preview_page();
+        $answer = ['generated_activities' => [$this->service_activity('wiki')]];
+        unset($answer['generated_activities'][0]['parameters']['structure_tables']['page']);
 
         try {
-            $this->drawn('wiki');
+            activity_preview_lookup::from_answer($answer, $answer['generated_activities'][0]['uid']);
             $this->fail('A page the result cannot show must be refused');
         } catch (\moodle_exception $exception) {
             $this->assertSame('courseai_preview_record_without_row', $exception->errorcode);
