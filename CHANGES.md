@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100105
+
+### Changed
+- **A course made from a template is now named the way a free course is**  
+  When the generation finishes, the teacher is shown the same form used at the end of a free generation, with the course name and short name proposed by the AI, and can change them, and the category, before the course exists. The course is created with what the teacher confirms, and the same final screen is shown, with the buttons to create another course and to open the new one. Before, the course was created as soon as the generation finished and took the name of the template's course. This must be released together with the matching change of the AI service, which proposes the name once the plan is approved and gives it to every generator as the course title, so the generated texts stop using the name of the template's course as the title.
+
 ## [2.0.10] - 2026100104
 
 ### Fixed

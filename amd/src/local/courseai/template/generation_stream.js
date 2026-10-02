@@ -68,7 +68,6 @@ const STAGE_STRINGS = {
     section_images: 'courseai_template_stage_section_images',
     saving: 'courseai_template_stage_saving',
     connecting: 'courseai_template_stage_connecting',
-    building: 'courseai_template_stage_building',
 };
 const TITLE_STRING = 'courseai_template_generating_title';
 
@@ -213,7 +212,9 @@ export const runGenerationStream = async(streamUrl, buildCourse, sessionId, cont
             // The result payload stays server-side: the browser only reports
             // that the run finished, and Moodle fetches it to build the course.
             markHeaderDone();
-            paintStage('building');
+            // The working indicator gives way to the review: nothing is being
+            // built until the professor has confirmed the course's name.
+            hideWorkingIndicator();
             milestone('courseai_template_log_completed');
             return buildCourse();
         }

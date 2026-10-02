@@ -29,6 +29,7 @@ import { buildCompletionSummary } from './actions/summary';
 import { showCourseReviewPanel, createCourseFromSession } from './actions/course-create';
 import { sendFeedbackAction } from './actions/feedback';
 import { handleGenerate } from './actions/generate';
+import { showReviewState } from './actions/review-state';
 
 /**
  * Create courseai actions and event bindings.
@@ -278,7 +279,7 @@ export const createCourseaiActions = (deps) => {
         }
         if (btnCreateAnotherCourse) {
             btnCreateAnotherCourse.addEventListener('click', () => {
-                window.location.href = 'aicoursecreation.php';
+                window.location.href = state.createAnotherUrl;
             });
         }
         window.clearSyllabus = () => {
@@ -305,11 +306,12 @@ export const createCourseaiActions = (deps) => {
 
     return {
         showCompletionView,
-        showCourseReviewPanel: () => showCourseReviewPanel(
-            state, elements, texts, getCourseSettings, FormAutocomplete
+        showReviewState: () => showReviewState(elements, stepsUi, texts),
+        showCourseReviewPanel: (loadSettings = getCourseSettings) => showCourseReviewPanel(
+            state, elements, texts, loadSettings, FormAutocomplete
         ),
-        createCourseFromSession: (overrides = null) => createCourseFromSession(
-            state, elements, texts, stepsUi, Notification, createCourse, showCompletionView, overrides
+        createCourseFromSession: (overrides = null, create = createCourse) => createCourseFromSession(
+            state, elements, texts, stepsUi, Notification, create, showCompletionView, overrides
         ),
         handleGenerate: () => handleGenerate(genCtx()),
         sendFeedbackAction: (action) => sendFeedbackAction(action, fbCtx()),

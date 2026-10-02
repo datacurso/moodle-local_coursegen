@@ -29,6 +29,7 @@ use external_function_parameters;
 use external_value;
 use external_single_structure;
 use local_coursegen\local\service\ai_course_api_service;
+use local_coursegen\local\service\course_review_service;
 use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
 use moodle_exception;
@@ -93,20 +94,11 @@ class create_course extends external_api {
         $result = $apiservice->get_course_result((string)$session->get('session_id'));
         $resultdata = $result['result'] ?? [];
 
-        // Build overrides from user-provided params (non-empty values only).
-        $overrides = [];
-        $fullname = trim((string)$params['fullname']);
-        if ($fullname !== '') {
-            $overrides['fullname'] = $fullname;
-        }
-        $shortname = trim((string)$params['shortname']);
-        if ($shortname !== '') {
-            $overrides['shortname'] = $shortname;
-        }
-        $category = (int)$params['category'];
-        if ($category > 0) {
-            $overrides['category'] = $category;
-        }
+        $overrides = course_review_service::overrides(
+            (string)$params['fullname'],
+            (string)$params['shortname'],
+            (int)$params['category']
+        );
 
         $result = create_course_service::create_course($session, $resultdata, $overrides);
         // Internal bookkeeping for the template flow; not part of this contract.

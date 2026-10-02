@@ -28,17 +28,11 @@
  */
 
 import Notification from 'core/notification';
-import YUI from 'core/yui';
 import {getStrings} from 'core/str';
-import {initFilepicker} from '../../repository/courseai';
-import {bindToggleWrap, showFilePicker} from './context/filepicker';
-import {
-    getTemplateStructure,
-    startTemplateGeneration,
-    finishTemplateGeneration,
-} from './template/repository';
-import {runGenerationStream} from './template/generation_stream';
-import {refreshPreviewLinks, usePreviewSession} from './template/preview';
+import {getTemplateStructure} from './template/repository';
+import {runGeneration} from './template/run_generation';
+import {wireInputBar} from './template/input_bar';
+import {refreshPreviewLinks} from './template/preview';
 import {
     createTemplateState,
     applyStructureResponse,
@@ -69,48 +63,6 @@ const getLabels = () => {
 };
 
 /**
- * Generate the course from the picked template, with the input bar's own
- * values (prompt and syllabus), and watch it happen.
- *
- * Nothing runs until the stream is opened: start_template_generation only
- * exports the template, attaches the syllabus and hands back the stream whose
- * consumption drives the run. The professor therefore sees each activity being
- * generated as it happens, instead of a spinner over a job nobody can see.
- *
- * @param {Object} tplState
- * @param {HTMLSelectElement|null} tplSelect
- * @param {HTMLElement} genBtn
- */
-const runGeneration = async(tplState, tplSelect, genBtn) => {
-    const templateId = parseInt(tplSelect?.value || '0', 10);
-    if (!templateId) {
-        return;
-    }
-    genBtn.disabled = true;
-    try {
-        const started = await startTemplateGeneration(
-            templateId,
-            tplState.prompt || '',
-            parseInt(tplState.syllabusdraftitemid || 0, 10) || 0
-        );
-        usePreviewSession(started.sessionid);
-        const created = await runGenerationStream(
-            started.streamurl,
-            () => finishTemplateGeneration(started.sessionid),
-            started.sessionid,
-            {
-                prompt: tplState.prompt || '',
-                templateName: tplSelect?.options[tplSelect.selectedIndex]?.text || '',
-            }
-        );
-        window.location.href = created.courseurl;
-    } catch (e) {
-        genBtn.disabled = false;
-        Notification.exception(e);
-    }
-};
-
-/**
  * Update the "N sections · M activities" summary line in the toolbar.
  *
  * @param {Object} tplState
@@ -132,8 +84,9 @@ const updateStats = (tplState, statsTemplate) => {
  * Wire mode switching and template form.
  *
  * @param {Object} state
+ * @param {Object} host Holds the page's actions once they exist.
  */
-export const wireTemplateMode = (state) => {
+export const wireTemplateMode = (state, host) => {
     // Free/Template mode switching is plain <a href> navigation
     // (aicoursecreation.php / ?mode=template), server-rendered from the
     // mode param — no JS involved.
@@ -251,7 +204,7 @@ export const wireTemplateMode = (state) => {
     const genBtn = document.getElementById('tplModeGenerate');
     if (genBtn) {
         genBtn.addEventListener('click', () => {
-            runGeneration(tplState, tplSelect, genBtn);
+            runGeneration(tplState, tplSelect, genBtn, state, host);
         });
     }
 
@@ -273,107 +226,6 @@ export const wireTemplateMode = (state) => {
             } else {
                 clearStructure(tplState, container, state);
             }
-        });
-    }
-};
-
-/**
- * Show/refresh or hide the input bar's syllabus chip to match tplState.
- *
- * @param {Object} tplState
- */
-const refreshSyllabusChip = (tplState) => {
-    const hasFile = !!tplState.syllabusdraftitemid;
-    const chipsRow = document.getElementById('tplChipsRow');
-    const chip = document.getElementById('tplChipSyllabus');
-    const chipName = document.getElementById('tplChipSyllabusName');
-    if (chipName) {
-        chipName.textContent = tplState.syllabusfilename || '';
-    }
-    if (chip) {
-        chip.classList.toggle('hidden', !hasFile);
-    }
-    if (chipsRow) {
-        chipsRow.style.display = hasFile ? '' : 'none';
-    }
-};
-
-/**
- * Wire the reduced input bar pinned at the bottom of the left panel: syllabus
- * attach (same no-course filepicker mechanics as free mode), generate-images
- * toggle, and language select. Values live in tplState, ready for the future
- * generation payload — the Generate button itself stays a stub elsewhere.
- *
- * @param {Object} tplState
- * @param {Object} state - Page state (createInitialState) carrying languages/defaultLang.
- */
-const wireInputBar = (tplState, state) => {
-    // Adaptation prompt — composer textarea, value tracked in tplState.
-    const promptInput = document.getElementById('tplPromptInput');
-    if (promptInput) {
-        promptInput.addEventListener('input', () => {
-            tplState.prompt = promptInput.value;
-        });
-    }
-
-    // Language select — same options source as free mode (the page-context
-    // languages array parsed by courseai.js into state.languages).
-    const langSelect = document.getElementById('tplLangSelect');
-    if (langSelect) {
-        (state.languages || []).forEach((language) => {
-            const option = document.createElement('option');
-            option.value = language.code;
-            option.textContent = language.name;
-            langSelect.appendChild(option);
-        });
-        if (tplState.lang) {
-            langSelect.value = tplState.lang;
-        }
-        // If the default language isn't offered, track whatever the select
-        // actually shows so state and UI never disagree.
-        tplState.lang = langSelect.value || tplState.lang;
-        langSelect.addEventListener('change', () => {
-            tplState.lang = langSelect.value;
-        });
-    }
-
-    // Generate-images toggle — same toggle-track pattern as free mode.
-    const imgToggleWrap = document.getElementById('tplImgToggleWrap');
-    const imgCheckbox = document.getElementById('tplWithImages');
-    if (imgToggleWrap && imgCheckbox) {
-        bindToggleWrap(imgToggleWrap, imgCheckbox);
-        imgCheckbox.addEventListener('change', () => {
-            tplState.generateimages = imgCheckbox.checked ? 1 : 0;
-            imgToggleWrap.classList.toggle('on', imgCheckbox.checked);
-        });
-    }
-
-    // Syllabus attach — reuses the free-mode courseai_filepicker_init flow via
-    // showFilePicker's onPicked hook; the picked draft file lives in tplState.
-    const attachBtn = document.getElementById('tplBtnSyllabus');
-    if (attachBtn) {
-        attachBtn.addEventListener('click', async() => {
-            await showFilePicker({
-                state: {},
-                CourseaiRepository: {initFilepicker},
-                Notification,
-                YUI,
-                texts: {},
-                onPicked: (filename, draftitemid) => {
-                    tplState.syllabusfilename = filename;
-                    tplState.syllabusdraftitemid = draftitemid;
-                    refreshSyllabusChip(tplState);
-                },
-            });
-        });
-    }
-
-    const removeBtn = document.getElementById('tplChipSyllabusRemove');
-    if (removeBtn) {
-        removeBtn.addEventListener('click', () => {
-            tplState.syllabusfilename = '';
-            tplState.syllabusdraftitemid = 0;
-            refreshSyllabusChip(tplState);
         });
     }
 };

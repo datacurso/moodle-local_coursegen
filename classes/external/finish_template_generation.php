@@ -32,6 +32,7 @@ use external_value;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\activity_link_resolver;
 use local_coursegen\local\service\course_creation_guard;
+use local_coursegen\local\service\course_review_service;
 use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
 use local_coursegen\local\service\generated_activities_filter;
@@ -61,6 +62,9 @@ class finish_template_generation extends external_api {
     public static function execute_parameters() {
         return new external_function_parameters([
             'sessionid' => new external_value(PARAM_INT, 'Local session id'),
+            'fullname' => new external_value(PARAM_TEXT, 'Course fullname chosen at the review', VALUE_DEFAULT, ''),
+            'shortname' => new external_value(PARAM_TEXT, 'Course shortname chosen at the review', VALUE_DEFAULT, ''),
+            'category' => new external_value(PARAM_INT, 'Course category chosen at the review', VALUE_DEFAULT, 0),
         ]);
     }
 
@@ -68,12 +72,20 @@ class finish_template_generation extends external_api {
      * Build the course from the finished result.
      *
      * @param int $sessionid
+     * @param string $fullname Course fullname chosen at the review.
+     * @param string $shortname Course shortname chosen at the review.
+     * @param int $category Course category chosen at the review.
      * @return array
      */
-    public static function execute($sessionid) {
+    public static function execute($sessionid, $fullname = '', $shortname = '', $category = 0) {
         global $USER, $CFG;
 
-        $params = self::validate_parameters(self::execute_parameters(), ['sessionid' => $sessionid]);
+        $params = self::validate_parameters(self::execute_parameters(), [
+            'sessionid' => $sessionid,
+            'fullname' => $fullname,
+            'shortname' => $shortname,
+            'category' => $category,
+        ]);
 
         $context = context_system::instance();
         self::validate_context($context);
@@ -100,7 +112,12 @@ class finish_template_generation extends external_api {
         $generatedactivities = $result['generated_activities'] ?? [];
         $result['generated_activities'] = generated_activities_filter::only_ai_written($generatedactivities);
 
-        $created = create_course_service::create_course($session, $result);
+        $overrides = course_review_service::overrides(
+            (string) $params['fullname'],
+            (string) $params['shortname'],
+            (int) $params['category']
+        );
+        $created = create_course_service::create_course($session, $result, $overrides);
         course_creation_guard::ensure_created($created);
         $courseid = $created['courseid'] ?? 0;
         $courseid = (int) $courseid;
@@ -186,21 +203,21 @@ class finish_template_generation extends external_api {
     }
 
     /**
-     * The finished response shape.
+     * The finished response shape, the one creating a course without a template answers with.
      *
      * @param int $courseid
      * @param string $wwwroot
      * @return array
      */
     private static function created_response(int $courseid, string $wwwroot): array {
-        $courseurl = '';
-        if ($courseid > 0) {
-            $courseurl = $wwwroot . '/course/view.php?id=' . $courseid;
-        }
+        $course = get_course($courseid);
         return [
-            'status' => 'completed',
+            'success' => true,
             'courseid' => $courseid,
-            'courseurl' => $courseurl,
+            'fullname' => $course->fullname,
+            'shortname' => $course->shortname,
+            'message' => get_string('coursecreated', 'local_coursegen'),
+            'courseurl' => $wwwroot . '/course/view.php?id=' . $courseid,
         ];
     }
 
@@ -211,8 +228,11 @@ class finish_template_generation extends external_api {
      */
     public static function execute_returns() {
         return new external_single_structure([
-            'status' => new external_value(PARAM_ALPHA, 'Always "completed" once the course exists'),
+            'success' => new external_value(PARAM_BOOL, 'Always true once the course exists'),
             'courseid' => new external_value(PARAM_INT, 'Created course id'),
+            'fullname' => new external_value(PARAM_TEXT, 'Course fullname'),
+            'shortname' => new external_value(PARAM_TEXT, 'Course shortname'),
+            'message' => new external_value(PARAM_TEXT, 'Status message'),
             'courseurl' => new external_value(PARAM_RAW, 'Created course URL'),
         ]);
     }
