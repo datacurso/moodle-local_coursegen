@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100206
+
+### Fixed
+- **The preview shows the images of an activity the template keeps, whichever of its texts holds them**  
+  A kept activity that declares several file areas, such as a page with a description area and a content area, had every image of its text pointed at the first area, so the images stored in the other one showed as broken. Each image is now pointed at the area that really stores its file, for any module type and any of its texts. Nothing changes for an activity that declares a single area.
+
 ## [2.0.10] - 2026100205
 
 ### Fixed
