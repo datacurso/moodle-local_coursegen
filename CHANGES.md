@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100204
+
+### Fixed
+- **The preview of an activity the template keeps now shows its real content**  
+  Opening the preview of a text and media area, a file, a forum, a survey or any other activity the template keeps as it is showed only the banner and a message saying there was nothing to preview. It now shows the activity as the new course will contain it, and says it will be copied unchanged.
+
 ## [2.0.10] - 2026100203
 
 ### Fixed

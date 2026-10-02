@@ -54,6 +54,18 @@ class activity_preview_lookup {
     }
 
     /**
+     * Whether the template keeps this activity as it is.
+     *
+     * @param array $source The activity as the payload describes it.
+     * @return bool
+     */
+    public static function is_kept(array $source): bool {
+        $templatebehavior = $source['template_behavior'] ?? [];
+        $action = $templatebehavior['action'] ?? '';
+        return $action === 'keep';
+    }
+
+    /**
      * The payload's own copy of one activity, by its course module id.
      *
      * @param array $payload
@@ -96,6 +108,11 @@ class activity_preview_lookup {
                 $activityuid = (string) $activityuid;
                 if ($activityuid !== $uid) {
                     continue;
+                }
+                if (self::is_kept($activity)) {
+                    // The answer only echoes a kept activity, and without the
+                    // course module it came from: the payload holds it whole.
+                    break;
                 }
                 $modname = $activity['resource_type'] ?? '';
                 $modname = (string) $modname;
