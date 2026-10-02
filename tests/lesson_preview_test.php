@@ -16,6 +16,9 @@
 
 namespace local_coursegen;
 
+global $CFG;
+require_once($CFG->libdir . '/filelib.php');
+
 use local_coursegen\local\preview\lesson_preview;
 use moodle_url;
 
