@@ -19,7 +19,6 @@ namespace local_coursegen\mod_settings;
 use context_module;
 use lesson;
 use lesson_page;
-use local_coursegen\utils\text_editor_parameter_cleaner;
 use stdClass;
 
 /**
@@ -70,13 +69,6 @@ class lesson_settings extends base_settings {
     }
 
     /**
-     * Build the lesson_page::create() properties for one AI page.
-     *
-     * @param array $page AI page definition (page_type, title, content_html, ...).
-     * @param int $previouspageid Page id to insert after (0 for the first page).
-     * @return stdClass|null Properties object, or null when the page is invalid.
-     */
-    /**
      * A content page's navigation buttons, each with its own jump.
      *
      * A mold page carries its REAL set ("Anterior" → previous page,
@@ -109,6 +101,13 @@ class lesson_settings extends base_settings {
         return $buttontext === '' ? [] : [['text' => $buttontext, 'jumpto' => LESSON_NEXTPAGE]];
     }
 
+    /**
+     * Build the lesson_page::create() properties for one AI page.
+     *
+     * @param array $page AI page definition (page_type, title, content_html, ...).
+     * @param int $previouspageid Page id to insert after (0 for the first page).
+     * @return stdClass|null Properties object, or null when the page is invalid.
+     */
     protected function build_page_properties(array $page, int $previouspageid): ?stdClass {
         $title = trim((string) ($page['title'] ?? ''));
         $contenthtml = trim((string) ($page['content_html'] ?? ''));
@@ -118,16 +117,10 @@ class lesson_settings extends base_settings {
             return null;
         }
 
-        // The mold's page images arrive as absolute pluginfile URLs of the
-        // base course; they are copied into a draft area of this page's own
-        // so lesson_page::create() moves them into mod_lesson/page_contents.
-        // With itemid 0 the draft save never ran and header images vanished.
+        // The page text is saved from an editor draft area by lesson_page::create(),
+        // so it is given an (empty) one; the files the text references are
+        // placed by the pass that runs once the whole activity exists.
         $draftitemid = file_get_unused_draft_itemid();
-        $contenthtml = text_editor_parameter_cleaner::prepare_editor_text(
-            $contenthtml,
-            $draftitemid,
-            $this->sourcecourseid
-        );
 
         $properties = new stdClass();
         $properties->title = $title;

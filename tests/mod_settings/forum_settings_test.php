@@ -16,15 +16,13 @@
 
 namespace local_coursegen\mod_settings;
 
-use local_coursegen\local\reference\reference_file_storage;
-
 defined('MOODLE_INTERNAL') || die();
 
 global $CFG;
 require_once($CFG->dirroot . '/mod/forum/lib.php');
 
 /**
- * Unit tests for forum_settings - the files a discussion message references reach the post.
+ * Unit tests for forum_settings - the discussions are posted as written; their files are placed by activity_file_pass.
  *
  * @package    local_coursegen
  * @category   test
@@ -33,47 +31,6 @@ require_once($CFG->dirroot . '/mod/forum/lib.php');
  * @covers \local_coursegen\mod_settings\forum_settings
  */
 final class forum_settings_test extends \advanced_testcase {
-    /**
-     * Bring a file for place 3.1 of template 7 to session 55 of a user and give its address.
-     *
-     * @param \stdClass $user
-     * @param string $name
-     * @return string
-     */
-    private function brought_file_address(\stdClass $user, string $name): string {
-        $path = make_request_directory() . '/upload.tmp';
-        file_put_contents($path, 'BROUGHT');
-        reference_file_storage::stage((int) $user->id, 7, '3.1', $name, $path);
-        reference_file_storage::adopt((int) $user->id, 7, 55);
-        $file = reference_file_storage::session_file((int) $user->id, 55, '3.1');
-        return reference_file_storage::url_of($file)->out(false);
-    }
-
-    /**
-     * The file a message references is stored with the post, and the message names it as the post's own file.
-     */
-    public function test_a_file_the_message_references_is_stored_with_the_post(): void {
-        global $DB;
-
-        $this->resetAfterTest(true);
-        $this->setAdminUser();
-        $course = $this->getDataGenerator()->create_course();
-        $forum = $this->getDataGenerator()->create_module('forum', ['course' => $course->id]);
-        $cm = (object) ['coursemodule' => $forum->cmid, 'instance' => $forum->id];
-        $address = $this->brought_file_address(\core_user::get_user(get_admin()->id), 'Guide.pdf');
-        $message = '<p>Read it</p><a href="' . $address . '">Guide</a>';
-
-        $settings = new forum_settings($cm, ['discussions' => [['subject' => 'Debate', 'message' => $message]]], null);
-        $settings->add_settings();
-
-        $post = $DB->get_record('forum_posts', ['subject' => 'Debate'], '*', MUST_EXIST);
-        $this->assertStringContainsString('@@PLUGINFILE@@/Guide.pdf', $post->message);
-        $context = \context_module::instance($forum->cmid);
-        $files = get_file_storage()->get_area_files($context->id, 'mod_forum', 'post', $post->id, 'id', false);
-        $this->assertCount(1, $files);
-        $this->assertSame('BROUGHT', reset($files)->get_content());
-    }
-
     /**
      * A message without files is posted as it is.
      */
@@ -86,7 +43,7 @@ final class forum_settings_test extends \advanced_testcase {
         $forum = $this->getDataGenerator()->create_module('forum', ['course' => $course->id]);
         $cm = (object) ['coursemodule' => $forum->cmid, 'instance' => $forum->id];
 
-        $settings = new forum_settings($cm, ['discussions' => [['subject' => 'Plain', 'message' => '<p>Hello</p>']]], null);
+        $settings = new forum_settings($cm, ['discussions' => [['subject' => 'Plain', 'message' => '<p>Hello</p>']]]);
         $settings->add_settings();
 
         $post = $DB->get_record('forum_posts', ['subject' => 'Plain'], '*', MUST_EXIST);
