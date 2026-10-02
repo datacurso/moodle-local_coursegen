@@ -87,6 +87,9 @@ class template_export_service {
             // preview of it has to be drawn the same way.
             'format' => $course->format,
             'format_options' => $formatoptions,
+            // What the new course takes from the template's course as it is.
+            'enablecompletion' => (int) $course->enablecompletion,
+            'course_settings' => template_course_settings::export($course),
         ];
 
         return [
