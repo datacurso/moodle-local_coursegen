@@ -2,6 +2,14 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100104
+
+### Fixed
+- **The links of the kept activities pointed at the template's course**  
+  A kept activity is copied as it was written, so a label with buttons to the pages of the template's course sent the students of the new course to the template. Once the new course is built, the address of each activity that has a counterpart in it is changed to that counterpart: a kept activity to its copy, and a template source that produced a single activity to that activity. Labels, pages and lessons are read, and an address of any other activity is left as it is. A label that is generated from a template can now also carry links to other activities.
+- **The activities of a course generated from a template were not in the order of the template**  
+  The generated activities were created first and the copied kept ones were added after them, so the welcome label ended at the bottom of its section and each lesson was no longer followed by its forum. Each section of the new course now follows the order the template shows it in, and an activity the template does not account for stays after the ones it does.
+
 ## [2.0.10] - 2026100103
 
 ### Added
