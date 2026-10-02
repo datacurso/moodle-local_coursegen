@@ -8,6 +8,9 @@ All notable changes to this project will be documented in this file. Each change
 - **The preview of a lesson whose page titles carry a marker no longer shows the template's own marker**  
   A page whose title the template leaves to the AI (for example "Semana" followed by a number) no longer matches any row by title, so its text stayed the template's. A title that matches no row now takes the row no other title reached, in the order the template is walked, as long as those rows are as many as the pages left.
 
+- **The preview of a forum or an assignment no longer fails with a type error**  
+  The helper that formats the description of an activity declared its parameter as `stdClass` without importing it, so PHP looked for a class of the plugin's own namespace and every activity preview that draws a description stopped with an exception.
+
 ## [2.0.10] - 2026100200
 
 ### Fixed
