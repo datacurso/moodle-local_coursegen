@@ -126,6 +126,12 @@ const paintStage = async(key) => {
     if (stage) {
         stage.textContent = text;
     }
+    // Waiting for the professor is not work in progress: free mode shows no
+    // indicator then, only the decision card.
+    if (key === 'reviewing') {
+        hideWorkingIndicator();
+        return;
+    }
     // Free mode keeps both panels on the same sentence, updating one indicator
     // in place rather than stacking an entry per phase. showWorkingIndicator
     // does exactly that, and pins itself to the bottom slot while the composer
@@ -218,9 +224,11 @@ export const runGenerationStream = async(streamUrl, buildCourse, sessionId, cont
         }
 
         await paintStage('reviewing');
+        markHeaderDone();
         milestone('courseai_template_log_review_ready');
         // eslint-disable-next-line no-await-in-loop
         const decision = await askForDecision(data.generated_activities || []);
+        showGeneratingHeader((await getLabels()).title);
 
         if (decision.action === 'accept') {
             milestone('courseai_template_log_approved', 'user', 'success');

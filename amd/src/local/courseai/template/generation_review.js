@@ -37,11 +37,7 @@
 import {getStrings} from 'core/str';
 import {getDecisionOverlay} from 'local_coursegen/local/courseai/ui/decision-overlay';
 
-const STRING_KEYS = [
-    'courseai_template_review_summary',
-    'courseai_template_review_adjust',
-    'courseai_btn_generate',
-];
+const STRING_KEYS = ['courseai_template_review_placeholder'];
 
 const ADJUST_ROW_SELECTOR = '[data-action="local_coursegen/template/adjust-activity"]';
 
@@ -119,25 +115,46 @@ const hideAdjustButtons = () => {
  * Bring the composer back so the professor can type a change.
  *
  * Asking for a change means writing it, so the composer comes back for
- * exactly that, the way free mode's does. Its own button sends the change
- * instead of starting a second run.
+ * exactly that, the way free mode's does: with the slim bar above it that
+ * keeps Accept reachable, and the send button it always has. That button
+ * sends the change instead of starting a second run.
  *
  * @param {Object} elements {composer, input, send}
  * @param {Object} texts
  * @returns {void}
  */
 const openAdjustComposer = (elements, texts) => {
-    const {composer, input, send} = elements;
+    const {composer, input, send, acceptBar} = elements;
+    if (acceptBar) {
+        acceptBar.style.display = 'flex';
+    }
     if (composer) {
         composer.hidden = false;
     }
     if (input) {
         input.value = '';
+        input.placeholder = texts.courseai_template_review_placeholder;
         input.focus();
     }
     if (send) {
-        send.textContent = texts.courseai_template_review_adjust;
         send.disabled = false;
+    }
+};
+
+/**
+ * Put the composer back as the first screen leaves it, once the review is over.
+ *
+ * @param {Object} elements {acceptBar, input}
+ * @param {string} placeholder The composer's own placeholder.
+ * @returns {void}
+ */
+const closeAdjustComposer = (elements, placeholder) => {
+    const {acceptBar, input} = elements;
+    if (acceptBar) {
+        acceptBar.style.display = 'none';
+    }
+    if (input) {
+        input.placeholder = placeholder;
     }
 };
 
@@ -145,14 +162,13 @@ const openAdjustComposer = (elements, texts) => {
  * Validate the composer's instruction and, once it is not empty, settle the
  * review with a "regenerate" decision for the activities it is aimed at.
  *
- * @param {Object} elements {send, input, composer}
+ * @param {Object} elements {input, composer}
  * @param {Object} selected {ids}: the activity uids the change is aimed at; empty means all.
- * @param {Object} texts
  * @param {Function} settle
  * @returns {void}
  */
-const submitAdjustment = (elements, selected, texts, settle) => {
-    const {send, input, composer} = elements;
+const submitAdjustment = (elements, selected, settle) => {
+    const {input, composer} = elements;
     const instruction = ((input && input.value) || '').trim();
     if (!instruction) {
         if (input) {
@@ -163,7 +179,6 @@ const submitAdjustment = (elements, selected, texts, settle) => {
     if (composer) {
         composer.hidden = true;
     }
-    send.textContent = texts.courseai_btn_generate;
     settle({action: 'replan_activity', targetIds: selected.ids, instruction});
 };
 
@@ -182,7 +197,9 @@ const wireDecisionButtons = (overlay, texts, resolve) => {
         composer: document.getElementById('tplInputBar'),
         input: document.getElementById('tplPromptInput'),
         send: document.getElementById('tplModeGenerate'),
+        acceptBar: document.getElementById('cgAcceptBar'),
     };
+    const composerPlaceholder = elements.input ? elements.input.placeholder : '';
     const lifetime = new AbortController();
     const options = {signal: lifetime.signal};
     const selected = {ids: []};
@@ -190,6 +207,7 @@ const wireDecisionButtons = (overlay, texts, resolve) => {
     const settle = (answer) => {
         lifetime.abort();
         hideAdjustButtons();
+        closeAdjustComposer(elements, composerPlaceholder);
         overlay.hide();
         resolve(answer);
     };
@@ -199,11 +217,9 @@ const wireDecisionButtons = (overlay, texts, resolve) => {
         openAdjustComposer(elements, texts);
     };
 
-    document.getElementById('cgDecisionAccept').addEventListener(
-        'click',
-        () => settle({action: 'accept', targetIds: [], instruction: ''}),
-        options
-    );
+    const accept = () => settle({action: 'accept', targetIds: [], instruction: ''});
+    document.getElementById('cgDecisionAccept').addEventListener('click', accept, options);
+    document.getElementById('cgAcceptInline').addEventListener('click', accept, options);
     document.getElementById('cgDecisionAdjust').addEventListener('click', () => adjustTargets([]), options);
     adjustButtons().forEach((button) => {
         button.addEventListener('click', (event) => {
@@ -211,7 +227,7 @@ const wireDecisionButtons = (overlay, texts, resolve) => {
             adjustTargets([button.dataset.generationUid]);
         }, options);
     });
-    elements.send.addEventListener('click', () => submitAdjustment(elements, selected, texts, settle), options);
+    elements.send.addEventListener('click', () => submitAdjustment(elements, selected, settle), options);
 };
 
 /**
@@ -223,11 +239,6 @@ const wireDecisionButtons = (overlay, texts, resolve) => {
 export const askForDecision = async(generated) => {
     const texts = await getLabels();
     const overlay = getDecisionOverlay();
-    const body = overlay.getBody();
-    if (body) {
-        const count = (generated || []).length;
-        body.textContent = texts.courseai_template_review_summary.replace('{$a}', count);
-    }
     showAdjustButtons(generated);
     overlay.show();
 
