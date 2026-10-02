@@ -49,14 +49,13 @@ final class template_reference_scanner_test extends \basic_testcase {
     public function test_the_image_below_the_marker_is_the_reference(): void {
         $html = '<p>' . self::MARKER . '</p><p><img src="@@PLUGINFILE@@/Publicidad.jpg" alt="x"></p>';
 
-        $slots = template_reference_scanner::slots($this->parameters($html), 'mold-1', 'Forum');
+        $slots = template_reference_scanner::slots($this->parameters($html), 'mold-1');
 
         $this->assertCount(1, $slots);
         $this->assertSame('mold-1.1', $slots[0]['key']);
         $this->assertSame('a new picture', $slots[0]['instruction']);
         $this->assertSame('Publicidad.jpg', $slots[0]['filename']);
         $this->assertSame('image/jpeg', $slots[0]['mimetype']);
-        $this->assertSame('Forum', $slots[0]['activityname']);
     }
 
     /**

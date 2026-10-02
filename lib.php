@@ -52,10 +52,6 @@ function local_coursegen_pluginfile(
         return \local_coursegen\local\service\generated_file_server::serve($context, $args, $forcedownload, $options);
     }
 
-    if ($context->contextlevel == CONTEXT_USER) {
-        return local_coursegen_serve_reference_file($context, $filearea, $args, $forcedownload, $options);
-    }
-
     // Check the contextlevel is as expected - if your plugin is a block, this becomes CONTEXT_BLOCK, etc.
     if ($context->contextlevel != CONTEXT_COURSE) {
         return false;
@@ -94,37 +90,6 @@ function local_coursegen_pluginfile(
     }
 
     send_stored_file($file, 0, 0, $forcedownload, $options);
-}
-
-/**
- * Serve a file a teacher brought for a generation to the teacher who brought it.
- *
- * @param context $context The teacher's user context.
- * @param string $filearea
- * @param array $args The item id, then the path and the name.
- * @param bool $forcedownload
- * @param array $options
- * @return bool False when there is nothing to serve to this user.
- */
-function local_coursegen_serve_reference_file(
-    context $context,
-    string $filearea,
-    array $args,
-    bool $forcedownload,
-    array $options
-): bool {
-    global $USER;
-
-    $systemcontext = context_system::instance();
-    if (!has_capability('local/coursegen:createtemplatecoursewithai', $systemcontext)) {
-        return false;
-    }
-    $file = \local_coursegen\local\reference\reference_file_server::file_for($context, $filearea, $args, (int) $USER->id);
-    if ($file === null) {
-        return false;
-    }
-    send_stored_file($file, 0, 0, $forcedownload, $options);
-    return true;
 }
 
 /**
