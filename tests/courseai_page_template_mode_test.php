@@ -285,4 +285,18 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
         $this->assertStringNotContainsString('data-region="tpl-main-column"', $html);
         $this->assertStringNotContainsString('is-template', $html);
     }
+
+    /**
+     * Template mode holds the section for the files of the course, free mode does not.
+     */
+    public function test_template_mode_holds_the_course_files_region(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $templatehtml = $this->render_page(true);
+        $freehtml = $this->render_page(false);
+
+        $this->assertStringContainsString('data-region="local_coursegen/template/reference-files"', $templatehtml);
+        $this->assertStringNotContainsString('local_coursegen/template/reference-files', $freehtml);
+    }
 }

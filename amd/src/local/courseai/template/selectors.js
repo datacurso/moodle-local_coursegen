@@ -35,8 +35,11 @@ export default {
         removeActivity: '[data-action="local_coursegen/template/remove-activity"]',
         addSection: '[data-action="local_coursegen/template/add-section"]',
         chooserOption: '[data-action="local_coursegen/template/add-chooser-option"]',
+        uploadReference: '[data-action="local_coursegen/template/upload-reference"]',
+        removeReference: '[data-action="local_coursegen/template/remove-reference"]',
     },
     regions: {
+        referenceFiles: '[data-region="local_coursegen/template/reference-files"]',
         chooserPanel: '[data-region="local_coursegen/template/chooser-panel"]',
         chooserSelectedIcon: '[data-region="local_coursegen/template/chooser-selected-icon"]',
         chooserSelectedName: '[data-region="local_coursegen/template/chooser-selected-name"]',
