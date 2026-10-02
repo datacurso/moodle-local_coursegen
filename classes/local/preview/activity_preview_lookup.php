@@ -102,6 +102,8 @@ class activity_preview_lookup {
 
                 $parameters = $activity['parameters'] ?? [];
                 $parameters = (array) $parameters;
+                $generatedfiles = (array) ($activity['generated_files'] ?? []);
+                $parameters = (new generated_file_preview())->addressed($parameters, $generatedfiles);
 
                 $templatebehavior = $activity['template_behavior'] ?? [];
                 $sourcecmid = $templatebehavior['template_source_cmid'] ?? 0;

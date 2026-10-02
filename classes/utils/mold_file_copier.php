@@ -259,6 +259,31 @@ class mold_file_copier {
     }
 
     /**
+     * Put into the draft area every file the AI service made that a text names as "@@PLUGINFILE@@/name".
+     *
+     * The second source of files, next to the template activity's own (see copy_pluginfile_urls_to_draft): the
+     * generated files of the activity being created (see generated_files_scope). The text keeps its
+     * placeholders; the normal draft-to-module save carries the files to the new activity.
+     *
+     * @param string $text HTML text.
+     * @param int $draftitemid Draft area of the field's editor (current user).
+     * @return string The same text.
+     */
+    public static function copy_generated_files_to_draft(string $text, int $draftitemid): string {
+        if ($text === '' || $draftitemid <= 0 || !str_contains($text, '@@PLUGINFILE@@/')) {
+            return $text;
+        }
+        preg_match_all('~@@PLUGINFILE@@/([^"\'<>\s?#)]+)~u', $text, $found);
+        foreach (array_unique($found[1]) as $encoded) {
+            $entry = generated_files_scope::entry_named(rawurldecode($encoded));
+            if ($entry !== null) {
+                self::copy_to_draft(generated_files_scope::stored_file($entry), $draftitemid);
+            }
+        }
+        return $text;
+    }
+
+    /**
      * Remove image markers the AI service left unresolved.
      *
      * Both dialects are removed: the mathematical brackets and their ASCII
