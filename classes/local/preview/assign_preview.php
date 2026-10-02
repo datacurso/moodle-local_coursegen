@@ -36,31 +36,6 @@ class assign_preview extends preview_base {
     }
 
     /**
-     * A draft's description and instructions replace the mould's.
-     *
-     * The answer writes an assignment's description and, when it has them,
-     * the activity instructions; everything else about how it is set up is
-     * the mould's.
-     *
-     * @param json_store $store
-     */
-    protected function overlay(json_store $store): void {
-        $rows = $store->get_records('assign');
-        if (!$rows) {
-            return;
-        }
-        $assign = reset($rows);
-        foreach (['introeditor' => 'intro', 'activityeditor' => 'activity'] as $field => $column) {
-            $value = $this->parameters[$field] ?? null;
-            $text = self::editor_field_text($value);
-            if (trim($text) !== '') {
-                $store->set('assign', $assign->id, $column, $text);
-                $store->set('assign', $assign->id, $column . 'format', self::editor_field_format($value));
-            }
-        }
-    }
-
-    /**
      * The assignment page, as mod/assign/view.php draws it.
      *
      * @return string
