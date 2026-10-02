@@ -732,6 +732,20 @@
             log and working-indicator modules find them by id, and the two blocks
             are mutually exclusive, so the ids never collide. }}
         <div class="cg-log cg-thread-feed" id="cgLog" aria-live="polite"></div>
+
+        {{! One row per activity being generated, in the checklist markup free
+            mode uses for its own rows: the same group head and the same
+            spinner that becomes a check. Hidden until the generation reports
+            how many activities it will write; the rows come from
+            template_generation_item. }}
+        <div class="courseai-checklist cg-thread-checklist hidden" id="courseaiChecklist">
+          <div class="cg-group-head">
+            <span class="cg-group-avatar" aria-hidden="true"></span>
+            <span class="cg-group-title">{{#str}}courseai_template_progress_title, local_coursegen{{/str}}</span>
+            <span class="cg-group-count" id="courseaiChecklistCount"></span>
+          </div>
+          <ul class="courseai-checklist-list" id="courseaiChecklistList"></ul>
+        </div>
       </div>
 
       {{! Bottom slot — free mode pins its live "working" indicator here whenever
