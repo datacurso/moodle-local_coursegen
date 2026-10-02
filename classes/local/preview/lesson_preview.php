@@ -118,8 +118,8 @@ class lesson_preview extends preview_base {
             $row,
             $store,
             $this->cm(),
-            [$this, 'lesson_page_url'],
-            [$this, 'lesson_exit_url'],
+            fn(int $pageid): moodle_url => $this->lesson_page_url($pageid),
+            fn(): moodle_url => $this->lesson_exit_url(),
             $contextid
         );
         return $this->lesson;
