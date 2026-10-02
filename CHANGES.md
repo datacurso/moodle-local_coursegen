@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100222
+
+### Changed
+- **The space of the teacher screen is a card that asks for the teacher's file**  
+  It is no longer one more row of the list with a small badge and a grey button. It is a full-width card with a dashed border and a soft tint, in the same place of the same section, with the label "Your contribution", the badge "Required" or "Optional", the administrator's instruction as its main line and a clear "Upload file" button. A required space also says that the file has to be uploaded to generate the course. Once the file is added the card turns green and shows the file name with "Change" and "Remove file", and the button shows "Uploading…" while the file selector loads
+
 ## [2.0.10] - 2026100221
 
 ### Added
