@@ -213,6 +213,13 @@ $string['template_reference_marker_example'] = '[[coursegen:reference: what the 
 $string['template_reference_marker_help'] = 'Type `[[coursegen:reference: what the teacher brings]]` as plain text right above the element of an activity that holds a file, such as the viewer of a PDF, an image, a video or a link to a document. The marker applies to the next element, whatever it is, and that element must hold exactly one file of this activity.
 
 When a course is made from the template, the teacher sees a place labelled with what you wrote and may bring their own file for it, before the course is generated. With no file, a new image is generated from the reference when the element is an image, and any other element is left out of the course. The marker is read in the activities saved with the action "template", and it never appears in the course.';
+$string['template_video_marker'] = 'Video of an activity';
+$string['template_video_marker_example'] = 'src=&quot;[[coursegen:aiprompt: a video about the topic of the lesson]]&quot;';
+$string['template_video_marker_help'] = 'Type `[[coursegen:aiprompt: a video about the topic of the lesson]]` as the whole `src` of an `<iframe>` and keep the other attributes and styles of the iframe as they are. The text between the brackets describes the video you want; the topic is also taken from the course, the section and the text generated for the activity.
+
+When the course is generated a real video that can be embedded is searched for, and only its address is written into the `src`. A video is never shown twice in an activity and, when another one is available, not twice in the course. If no suitable video is found, the whole iframe is left out of the activity and the teacher is told in the review.
+
+The same marker as the whole value of other attributes means something else: as the `href` of a link, or the `src` of an image, it is a link to another activity of the course. Keep the description free of `:`, `[[`, `]]`, `{{` and `}}`.';
 $string['courseai_compact_prompt_placeholder'] = 'Example: Regenerate the course in just 3 sections';
 $string['courseai_completion_btn_create_another'] = 'Create another course';
 $string['courseai_completion_btn_open_course'] = 'Open course';
@@ -882,6 +889,7 @@ $string['courseai_template_review_approve'] = 'Approve';
 $string['courseai_template_review_hint'] = 'The template defines the structure, so it cannot be changed here. Read the generated activities, then approve the course or ask for changes.';
 $string['courseai_template_review_placeholder'] = 'What would you like to change?';
 $string['courseai_template_review_title'] = 'Review the generated course';
+$string['courseai_template_video_missing'] = 'No suitable video was found for "{$a}", so this activity was created without it.';
 $string['courseai_template_stage_reviewing'] = 'Waiting for your review…';
 $string['courseai_template_generating_title'] = 'Creating the course from the template';
 $string['courseai_template_stage_activities'] = 'Generating the course activities…';

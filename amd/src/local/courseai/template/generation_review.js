@@ -36,6 +36,7 @@
 
 import {getStrings} from 'core/str';
 import {getDecisionOverlay} from 'local_coursegen/local/courseai/ui/decision-overlay';
+import {showNotices} from 'local_coursegen/local/courseai/template/generation_notices';
 
 const STRING_KEYS = [
     'courseai_template_review_summary',
@@ -229,6 +230,7 @@ export const askForDecision = async(generated) => {
         body.textContent = texts.courseai_template_review_summary.replace('{$a}', count);
     }
     showAdjustButtons(generated);
+    await showNotices(generated);
     overlay.show();
 
     return new Promise((resolve) => wireDecisionButtons(overlay, texts, resolve));
