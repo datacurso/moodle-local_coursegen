@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100205
+
+### Fixed
+- **A course made from a template now shows the blocks of the template and its custom field values**  
+  The new course came out with the blocks the site gives every new course instead of the template's: the template's search in forums, upcoming events and recent activity were missing, and the site's rating block took their place. That rating block also stopped the section cards of the grid format from opening their window. The new course now shows the blocks of the template, each with its configuration, its files and its place on the page, and the values the template gives to the course custom fields.
+
 ## [2.0.10] - 2026100204
 
 ### Fixed
