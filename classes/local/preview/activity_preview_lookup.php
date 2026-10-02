@@ -17,8 +17,6 @@
 namespace local_coursegen\local\preview;
 
 use local_coursegen\local\models\course_session;
-use local_coursegen\local\reference\generated_reference_files;
-use local_coursegen\local\reference\reference_file_urls;
 use local_coursegen\local\service\template_ai_api_service;
 
 /**
@@ -50,7 +48,7 @@ class activity_preview_lookup {
         $answer = self::answer_of($session);
         $found = self::from_answer($answer, $uid);
         if ($found !== null) {
-            $found['parameters'] = self::with_files($found, $uid, $session);
+            $found['parameters'] = self::with_files($found);
             return $found;
         }
         $found = self::from_payload($payload, $uid);
@@ -197,23 +195,15 @@ class activity_preview_lookup {
     }
 
     /**
-     * The parameters of a finished activity with its files in place of their placeholders and tokens.
+     * The parameters of a finished activity with its files in place of their placeholders.
      *
-     * The files the AI made are addressed where they are served from, and a
-     * reference has the teacher's file: the preview never shows a token.
+     * The files the AI made are addressed where they are served from.
      *
      * @param array $found What from_answer() found.
-     * @param string $uid
-     * @param course_session $session
      * @return array
      */
-    private static function with_files(array $found, string $uid, course_session $session): array {
+    private static function with_files(array $found): array {
         $addressed = new generated_file_preview();
-        $parameters = $addressed->addressed($found['parameters'], $found['generated_files']);
-
-        $urlbyslot = reference_file_urls::for_course_session($session);
-        $activity = ['uid' => $uid, 'parameters' => $parameters];
-        $withreferences = generated_reference_files::apply_to_activity($activity, $urlbyslot);
-        return $withreferences['parameters'];
+        return $addressed->addressed($found['parameters'], $found['generated_files']);
     }
 }
