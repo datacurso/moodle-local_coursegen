@@ -57,6 +57,48 @@ final class template_export_service_test extends \advanced_testcase {
     }
 
     /**
+     * The payload carries the template course's format, its language and the
+     * course settings the new course takes as they are.
+     */
+    public function test_course_configuration_carries_the_format_and_settings(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course([
+            'format' => 'topics',
+            'lang' => 'es',
+            'newsitems' => 0,
+            'showreports' => 1,
+            'enablecompletion' => 1,
+        ]);
+        $template = $this->create_template($course->id);
+
+        $payload = template_export_service::build_init_payload($template->get('id'));
+        $configuration = $payload['course_configuration'];
+
+        $this->assertSame('topics', $configuration['format']);
+        $this->assertSame(1, $configuration['enablecompletion']);
+        $this->assertSame('es', $configuration['course_settings']['lang']);
+        $this->assertEquals(0, $configuration['course_settings']['newsitems']);
+        $this->assertEquals(1, $configuration['course_settings']['showreports']);
+    }
+
+    /**
+     * A language the template leaves open travels as open, not as the language of the person exporting.
+     */
+    public function test_course_settings_keep_an_open_language_open(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course(['lang' => '']);
+        $template = $this->create_template($course->id);
+
+        $payload = template_export_service::build_init_payload($template->get('id'));
+
+        $this->assertSame('', $payload['course_configuration']['course_settings']['lang']);
+    }
+
+    /**
      * An activity saved with action "exclude" never reaches the payload.
      */
     public function test_excluded_activity_is_left_out_of_the_payload(): void {
