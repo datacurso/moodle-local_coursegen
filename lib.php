@@ -47,6 +47,11 @@ function local_coursegen_pluginfile(
     // Make sure the user is logged.
     require_login(null, false);
 
+    // The files the AI service made for a template run, shown in the review preview.
+    if ($filearea === \local_coursegen\utils\generated_file_cache::FILEAREA) {
+        return \local_coursegen\local\service\generated_file_server::serve($context, $args, $forcedownload, $options);
+    }
+
     // Check the contextlevel is as expected - if your plugin is a block, this becomes CONTEXT_BLOCK, etc.
     if ($context->contextlevel != CONTEXT_COURSE) {
         return false;

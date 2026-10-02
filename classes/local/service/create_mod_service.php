@@ -17,6 +17,7 @@
 namespace local_coursegen\local\service;
 
 use local_coursegen\mod_settings\base_settings;
+use local_coursegen\utils\generated_files_scope;
 use local_coursegen\utils\text_editor_parameter_cleaner;
 
 defined('MOODLE_INTERNAL') || die();
@@ -51,6 +52,28 @@ class create_mod_service {
         $beforemod = null,
         ?int $sourcecourseid = null
     ) {
+        $generatedfiles = $resultinfo['generated_files'] ?? [];
+        if (!$generatedfiles) {
+            return self::create_module($resultinfo, $course, $sectionnum, $beforemod, $sourcecourseid);
+        }
+        // The files the AI service made for this activity are in scope while its texts are saved.
+        $creation = static function () use ($resultinfo, $course, $sectionnum, $beforemod, $sourcecourseid) {
+            return self::create_module($resultinfo, $course, $sectionnum, $beforemod, $sourcecourseid);
+        };
+        return generated_files_scope::run($generatedfiles, $creation);
+    }
+
+    /**
+     * Create the module once the files of its result are in scope.
+     *
+     * @param array $resultinfo Result info from response of AI service
+     * @param object $course Course object
+     * @param int $sectionnum Section number where the module will be created
+     * @param int|null $beforemod Before module id where the module will be created
+     * @param int|null $sourcecourseid Course whose files the payload's rich text may reference.
+     * @return object New course module.
+     */
+    private static function create_module($resultinfo, $course, $sectionnum, $beforemod, ?int $sourcecourseid) {
 
         self::validate_resultinfo($resultinfo);
 

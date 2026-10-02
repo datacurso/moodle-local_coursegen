@@ -78,7 +78,8 @@ class text_editor_parameter_cleaner {
      * Prepare one rich-text value for a draft-backed editor field.
      *
      * Downloads generated images, copies the mold files the text references
-     * into the draft area (rewriting them to @@PLUGINFILE@@) and strips the
+     * into the draft area (rewriting them to @@PLUGINFILE@@), puts there the
+     * files the AI service made for the activity and strips the
      * markers the AI service left unresolved.
      *
      * @param string $text Editor text.
@@ -90,6 +91,7 @@ class text_editor_parameter_cleaner {
         $text = self::normalize_escaped_html_quotes($text);
         $text = self::replace_generated_images_in_text($text, $itemid);
         $text = mold_file_copier::copy_pluginfile_urls_to_draft($text, $itemid, $sourcecourseid);
+        $text = mold_file_copier::copy_generated_files_to_draft($text, $itemid);
         return mold_file_copier::strip_image_markers($text);
     }
 
