@@ -5,6 +5,8 @@ All notable changes to this project will be documented in this file. Each change
 ## [2.0.10] - 2026100108
 
 ### Fixed
+- **The review card of a course made from a template read as if it were scolding the teacher**  
+  The card explained that the structure could not be changed here. It now simply invites the teacher to review the generated activities, accept the course, or press Adjust to change something. The Spanish texts of that review and its progress messages now address the teacher in the same friendly tone as free creation.
 - **The review of a course made from a template did not look or behave like the review of free creation**  
   After the course was generated, the review card could be left without a visible Accept button, the send button of the composer turned into a clipped text button, and the status kept spinning while the system was only waiting for the teacher. The review now uses the same decision card as free creation, with Accept and Adjust. Choosing Adjust brings the composer back with the usual round send button and the slim bar that keeps Accept reachable. While the course waits for the review, the spinner gives way to a check in both columns and no working indicator is shown.
 
