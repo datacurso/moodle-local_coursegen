@@ -34,8 +34,10 @@ export default {
     },
     classes: {
         generating: 'cg-generating',
+        busy: 'is-busy',
     },
     regions: {
         generationNotices: '[data-region="local_coursegen/template/generation-notices"]',
+        spaceButtonLabel: '[data-region="local_coursegen/template/space-button-label"]',
     },
 };

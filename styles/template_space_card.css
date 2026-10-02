@@ -1,0 +1,285 @@
+/* The space card of the teacher's template screen: the one place of the list the
+   teacher has to act on, so it is drawn as a call to action and never as one more
+   row. Coral is the plugin's primary tone (--primary); the text-bearing coral is
+   a deeper step of it so white text on it reaches 4.5:1. */
+.cg-space-card {
+    --cg-space-accent: hsl(10, 76%, 46%);
+    --cg-space-accent-hover: hsl(10, 76%, 40%);
+    --cg-space-accent-active: hsl(10, 76%, 34%);
+    --cg-space-ok: hsl(142, 55%, 30%);
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 1rem 1.25rem;
+    margin: 0.25rem 0;
+    padding: 1.25rem 1.5rem;
+    border: 2px dashed var(--primary);
+    border-radius: var(--radius);
+    background: var(--primary-soft);
+    color: var(--fg);
+    transition: background var(--t-base) var(--ease), border-color var(--t-base) var(--ease);
+}
+
+.cg-space-card--required {
+    border-left: 6px solid var(--cg-space-accent);
+}
+
+.cg-space-card--done {
+    border: 2px solid var(--cg-space-ok);
+    background: hsl(142, 60%, 96%);
+}
+
+.cg-space-card__icon {
+    display: inline-flex;
+    flex: 0 0 auto;
+    align-items: center;
+    justify-content: center;
+    width: 3rem;
+    height: 3rem;
+    border-radius: 50%;
+    background: var(--cg-space-accent);
+    color: var(--primary-fg);
+}
+
+.cg-space-card--done .cg-space-card__icon {
+    background: var(--cg-space-ok);
+}
+
+.cg-space-card__icon .icon,
+.cg-space-card__button-icon .icon {
+    width: auto;
+    height: auto;
+    margin: 0;
+    color: inherit;
+    font-size: 1.25rem;
+}
+
+.cg-space-card__body {
+    flex: 1 1 16rem;
+    min-width: 0;
+}
+
+.cg-space-card__body p {
+    margin: 0;
+    overflow-wrap: break-word;
+}
+
+.cg-space-card__eyebrow {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.75rem;
+    font-weight: 700;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--cg-space-accent-hover);
+}
+
+.cg-space-card--done .cg-space-card__eyebrow {
+    color: var(--cg-space-ok);
+}
+
+.cg-space-card__badge {
+    padding: 0.125rem 0.625rem;
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: hsl(215, 28%, 26%);
+    font-size: 0.6875rem;
+    letter-spacing: 0.04em;
+}
+
+.cg-space-card__badge--required {
+    background: var(--cg-space-accent);
+    color: var(--primary-fg);
+}
+
+.cg-space-card__body .cg-space-card__instruction {
+    margin-top: 0.375rem;
+    font-size: 1.1875rem;
+    font-weight: 700;
+    line-height: 1.3;
+}
+
+.cg-space-card__body .cg-space-card__target {
+    margin-top: 0.125rem;
+    font-size: 0.8125rem;
+    color: hsl(215, 16%, 38%);
+}
+
+.cg-space-card__status {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.25rem 0.75rem;
+    margin-top: 0.625rem;
+    font-size: 0.875rem;
+}
+
+.cg-space-card__hint {
+    color: hsl(215, 16%, 38%);
+}
+
+.cg-space-card__alert {
+    color: hsl(10, 76%, 36%);
+    font-weight: 600;
+}
+
+.cg-space-card__file {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+    max-width: 100%;
+    padding: 0.25rem 0.75rem;
+    border: 1px solid var(--cg-space-ok);
+    border-radius: 0.625rem;
+    background: var(--card);
+    color: var(--fg);
+    font-weight: 600;
+}
+
+.cg-space-card__file .icon {
+    margin: 0;
+    color: var(--cg-space-ok);
+}
+
+.cg-space-card__filename {
+    min-width: 0;
+    overflow-wrap: break-word;
+}
+
+.cg-space-card__actions {
+    display: flex;
+    flex: 0 0 auto;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.cg-space-card__button {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.5rem;
+    min-height: 2.75rem;
+    padding: 0 1.5rem;
+    border: 0;
+    border-radius: 0.5rem;
+    background: var(--cg-space-accent);
+    color: var(--primary-fg);
+    font: inherit;
+    font-size: 0.9375rem;
+    font-weight: 700;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 2px 6px hsl(10, 76%, 40%, 0.28);
+    transition: background var(--t-fast) var(--ease), transform var(--t-fast) var(--ease);
+}
+
+.cg-space-card__button:hover {
+    background: var(--cg-space-accent-hover);
+}
+
+.cg-space-card__button:active {
+    background: var(--cg-space-accent-active);
+    transform: translateY(1px);
+}
+
+.cg-space-card__button:focus-visible,
+.cg-space-card__link:focus-visible {
+    outline: 3px solid var(--fg);
+    outline-offset: 2px;
+}
+
+.cg-space-card__button:disabled {
+    background: var(--cg-space-accent-hover);
+    cursor: progress;
+    opacity: 0.85;
+}
+
+.cg-space-card__spinner {
+    display: none;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid hsl(0, 0%, 100%, 0.4);
+    border-top-color: var(--primary-fg);
+    border-radius: 50%;
+    animation: cgSpaceSpin 0.8s linear infinite;
+}
+
+.cg-space-card__button.is-busy .cg-space-card__spinner {
+    display: inline-block;
+}
+
+.cg-space-card__button.is-busy .cg-space-card__button-icon {
+    display: none;
+}
+
+.cg-space-card__link {
+    padding: 0.5rem 0.75rem;
+    border: 0;
+    border-radius: 0.375rem;
+    background: transparent;
+    color: var(--fg);
+    font: inherit;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-decoration: underline;
+    text-underline-offset: 3px;
+    cursor: pointer;
+}
+
+.cg-space-card__link:hover {
+    background: hsl(142, 40%, 90%);
+}
+
+.cg-space-card__link--danger {
+    color: hsl(10, 76%, 36%);
+}
+
+.cg-space-card__link--danger:hover {
+    background: var(--primary-soft);
+}
+
+.cg-space-card__link:disabled {
+    cursor: progress;
+    opacity: 0.6;
+}
+
+/* The space sits as its own card: no dashed row separator above it, and no row hover. */
+#tplModeStructure .course-section .section .cg-space-item {
+    border-top: 0;
+    margin-top: 12px;
+    padding-top: 0;
+}
+
+@media (max-width: 575.98px) {
+    .cg-space-card {
+        padding: 1rem;
+    }
+
+    .cg-space-card__actions {
+        flex: 1 1 100%;
+    }
+
+    .cg-space-card__button {
+        flex: 1 1 100%;
+    }
+}
+
+@keyframes cgSpaceSpin {
+    to {
+        transform: rotate(360deg);
+    }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .cg-space-card__spinner {
+        animation-duration: 2.4s;
+    }
+
+    .cg-space-card__button {
+        transition: none;
+    }
+}
