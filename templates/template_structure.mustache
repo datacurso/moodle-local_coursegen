@@ -148,6 +148,11 @@
                   {{#typelabel}}
                   <p class="cg-activity-desc mb-0">{{typelabel}}</p>
                   {{/typelabel}}
+                  {{#generationuid}}
+                  {{! Notices of the generation about this activity, such as a video it could not find;
+                      filled when the review opens, see template/generation_review.js. }}
+                  <div data-region="local_coursegen/template/generation-notices" data-notice-uid="{{generationuid}}"></div>
+                  {{/generationuid}}
                 </div>
                 <div class="activity-actions cg-item-actions align-self-start ms-sm-2">
                   {{#generationuid}}

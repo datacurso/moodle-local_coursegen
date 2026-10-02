@@ -36,6 +36,7 @@
 
 import {getStrings} from 'core/str';
 import {getDecisionOverlay} from 'local_coursegen/local/courseai/ui/decision-overlay';
+import {showNotices} from 'local_coursegen/local/courseai/template/generation_notices';
 
 const STRING_KEYS = ['courseai_template_review_placeholder'];
 
@@ -240,6 +241,7 @@ export const askForDecision = async(generated) => {
     const texts = await getLabels();
     const overlay = getDecisionOverlay();
     showAdjustButtons(generated);
+    await showNotices(generated);
     overlay.show();
 
     return new Promise((resolve) => wireDecisionButtons(overlay, texts, resolve));

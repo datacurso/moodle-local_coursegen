@@ -38,5 +38,10 @@ trait template_config_form_markers {
         $example = get_string('template_reference_marker_example', 'local_coursegen');
         $mform->addElement('static', 'referencemarker', $label, $example);
         $mform->addHelpButton('referencemarker', 'template_reference_marker', 'local_coursegen');
+
+        $label = get_string('template_video_marker', 'local_coursegen');
+        $example = get_string('template_video_marker_example', 'local_coursegen');
+        $mform->addElement('static', 'videomarker', $label, $example);
+        $mform->addHelpButton('videomarker', 'template_video_marker', 'local_coursegen');
     }
 }

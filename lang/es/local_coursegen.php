@@ -206,6 +206,13 @@ $string['template_reference_marker_example'] = '[[coursegen:reference: lo que ap
 $string['template_reference_marker_help'] = 'Escribe `[[coursegen:reference: lo que aporta el docente]]` como texto simple justo encima del elemento de una actividad que contiene un archivo, como el visor de un PDF, una imagen, un video o un enlace a un documento. El marcador se aplica al elemento siguiente, sea cual sea, y ese elemento debe contener exactamente un archivo de esta actividad.
 
 Cuando se crea un curso a partir de la plantilla, el docente ve un apartado con el nombre que escribiste y puede aportar su propio archivo antes de generar el curso. Sin archivo, se genera una imagen nueva a partir de la referencia cuando el elemento es una imagen, y cualquier otro elemento se omite del curso. El marcador se lee en las actividades guardadas con la acción "plantilla", y nunca aparece en el curso.';
+$string['template_video_marker'] = 'Video de una actividad';
+$string['template_video_marker_example'] = 'src=&quot;[[coursegen:aiprompt: un video sobre el tema de la lección]]&quot;';
+$string['template_video_marker_help'] = 'Escribe `[[coursegen:aiprompt: un video sobre el tema de la lección]]` como el `src` completo de un `<iframe>` y deja los demás atributos y estilos del iframe como están. El texto entre corchetes describe el video que quieres; el tema también se toma del curso, la sección y el texto generado para la actividad.
+
+Al generar el curso se busca un video real que se pueda insertar y solo su dirección se escribe en el `src`. Un video no se muestra dos veces en una actividad y, si hay otro disponible, tampoco dos veces en el curso. Si no se encuentra un video adecuado, el iframe completo se omite de la actividad y se avisa al docente en la revisión.
+
+El mismo marcador como valor completo de otros atributos significa otra cosa: como `href` de un enlace, o `src` de una imagen, es un enlace a otra actividad del curso. Mantén la descripción sin `:`, `[[`, `]]`, `{{` ni `}}`.';
 $string['courseai_compact_prompt_placeholder'] = 'Ejemplo: Regenerar el curso en solo 3 secciones';
 $string['courseai_completion_btn_create_another'] = 'Crear otro curso';
 $string['courseai_completion_btn_open_course'] = 'Abrir curso en Moodle';
@@ -836,6 +843,7 @@ $string['courseai_template_adjust_activity'] = 'Pedir cambios a esta actividad';
 $string['courseai_template_review_hint'] = 'Revisa las actividades generadas. Si todo está bien, acepta el curso; si quieres cambiar algo, pulsa Ajustar.';
 $string['courseai_template_review_placeholder'] = '¿Qué quieres cambiar?';
 $string['courseai_template_review_title'] = 'Revisa el curso generado';
+$string['courseai_template_video_missing'] = 'No se encontró un video adecuado para «{$a}», por lo que esta actividad se creó sin él.';
 $string['courseai_template_stage_reviewing'] = 'Esperando su revisión…';
 $string['courseai_template_generating_title'] = 'Creando el curso a partir de la plantilla';
 $string['courseai_template_stage_activities'] = 'Generando las actividades del curso…';
