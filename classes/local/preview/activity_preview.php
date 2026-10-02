@@ -139,6 +139,24 @@ abstract class activity_preview {
     }
 
     /**
+     * Give the course module the page is built on this activity's name.
+     *
+     * The page heading and the activity header are printed from the course
+     * module, which is the template activity the generated one is built into
+     * and carries its name. The change lasts for this request only; nothing
+     * is saved.
+     *
+     * @param \cm_info $cm
+     */
+    public function name_course_module(\cm_info $cm): void {
+        $name = $this->name();
+        if ($name === '') {
+            return;
+        }
+        $cm->set_name($name);
+    }
+
+    /**
      * What belongs in the activity header, under the name.
      *
      * Most modules put their description there, and a module that shows it
