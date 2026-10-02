@@ -134,6 +134,51 @@ final class template_keep_copier_test extends \advanced_testcase {
     }
 
     /**
+     * Every copied activity is reported under the cmid it has in the base
+     * course, mapped to the cmid of its copy in the target course, so a
+     * caller can tell where each kept activity ended up.
+     */
+    public function test_reports_the_created_cmid_of_every_kept_activity(): void {
+        $this->resetAfterTest(true);
+
+        $sourcecourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
+        $targetcourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
+        $first = $this->getDataGenerator()->create_module('page', ['course' => $sourcecourse->id, 'section' => 1]);
+        $second = $this->getDataGenerator()->create_module('page', ['course' => $sourcecourse->id, 'section' => 2]);
+        $template = $this->create_template($sourcecourse->id);
+
+        $createdcmids = [];
+        template_keep_copier::copy_into((int) $template->get('id'), $targetcourse->id, $createdcmids);
+
+        $targetmodinfo = get_fast_modinfo($targetcourse);
+        $targetcmids = array_keys($targetmodinfo->get_instances_of('page'));
+        $sourcecmids = [(int) $first->cmid, (int) $second->cmid];
+        $this->assertEqualsCanonicalizing($sourcecmids, array_keys($createdcmids));
+        $this->assertEqualsCanonicalizing($targetcmids, array_values($createdcmids));
+        $this->assertSame(
+            $targetmodinfo->get_cm($createdcmids[(int) $first->cmid])->sectionnum,
+            1
+        );
+    }
+
+    /**
+     * An activity that could not be copied has no entry in the map.
+     */
+    public function test_failed_copy_has_no_created_cmid(): void {
+        $this->resetAfterTest(true);
+
+        $sourcecourse = $this->getDataGenerator()->create_course(['numsections' => 3]);
+        $targetcourse = $this->getDataGenerator()->create_course(['numsections' => 1]);
+        $this->getDataGenerator()->create_module('page', ['course' => $sourcecourse->id, 'section' => 3]);
+        $template = $this->create_template($sourcecourse->id);
+
+        $createdcmids = [];
+        template_keep_copier::copy_into((int) $template->get('id'), $targetcourse->id, $createdcmids);
+
+        $this->assertSame([], $createdcmids);
+    }
+
+    /**
      * A template row pointing at the given course, with no saved
      * template_activity rows - every activity there defaults to "keep".
      *
