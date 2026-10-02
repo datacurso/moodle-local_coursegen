@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100107
+
+### Fixed
+- **The left column was empty while a course made from a template was being generated**  
+  Since the plan was removed, the left column only said that the template was being read and the activities were shown as spinners on the right, so the teacher could not tell what was being written. Each activity now appears in the left column as soon as its generation starts, with its name, type and section, in the same list free creation uses, and its spinner becomes a check when it is written. A counter in the heading shows how many are written out of how many there are, and the matching row on the right changes state at the same moment. Asking for changes starts a new list with only the activities named.
+
 ## [2.0.10] - 2026100106
 
 ### Changed

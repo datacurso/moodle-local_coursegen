@@ -198,6 +198,80 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
     }
 
     /**
+     * The left panel holds a hidden progress list under the feed, which the
+     * generation fills in one item per activity.
+     */
+    public function test_template_mode_renders_hidden_progress_list_under_the_feed(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $html = $this->render_page(true);
+
+        $feedpos = strpos($html, 'id="cgLog"');
+        $progresspos = strpos($html, 'id="courseaiChecklist"');
+        $this->assertNotFalse($progresspos, 'Progress list missing');
+        $this->assertGreaterThan($feedpos, $progresspos, 'Progress list must render below the feed');
+        $this->assertMatchesRegularExpression('/id="courseaiChecklist"[^>]*>/', $html);
+        $this->assertMatchesRegularExpression('/class="[^"]*\bhidden\b[^"]*"\s+id="courseaiChecklist"/', $html);
+        $this->assertStringContainsString('id="courseaiChecklistList"', $html);
+        $this->assertStringContainsString('id="courseaiChecklistCount"', $html);
+    }
+
+    /**
+     * Free mode never receives the progress list.
+     */
+    public function test_free_mode_renders_no_template_progress_list(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $html = $this->render_page(false);
+
+        $this->assertStringNotContainsString('id="courseaiChecklist"', $html);
+    }
+
+    /**
+     * One progress item shows the activity's name, type and section while it
+     * is in progress, carrying the uid the stream events answer to.
+     */
+    public function test_generation_item_renders_name_type_and_section_in_progress(): void {
+        global $OUTPUT;
+        $this->resetAfterTest();
+
+        $html = $OUTPUT->render_from_template('local_coursegen/template_generation_item', [
+            'uid' => 'inst-7',
+            'name' => 'Intro lesson',
+            'typelabel' => 'Lesson',
+            'sectionname' => 'Week 1',
+        ]);
+
+        $this->assertStringContainsString('data-progress-uid="inst-7"', $html);
+        $this->assertStringContainsString('courseai-checklist-item is-loading', $html);
+        $this->assertStringContainsString('Intro lesson', $html);
+        $this->assertStringContainsString('Lesson', $html);
+        $this->assertStringContainsString('Week 1', $html);
+        $this->assertStringContainsString('spinner-icon', $html);
+        $this->assertStringContainsString('check-icon', $html);
+    }
+
+    /**
+     * An item without type or section leaves its detail slot empty, which the
+     * stylesheet hides.
+     */
+    public function test_generation_item_without_type_or_section_has_an_empty_detail(): void {
+        global $OUTPUT;
+        $this->resetAfterTest();
+
+        $html = $OUTPUT->render_from_template('local_coursegen/template_generation_item', [
+            'uid' => 'inst-8',
+            'name' => 'Quiz',
+            'typelabel' => '',
+            'sectionname' => '',
+        ]);
+
+        $this->assertMatchesRegularExpression('/<div class="courseai-checklist-detail">\s*<\/div>/', $html);
+    }
+
+    /**
      * Free mode renders none of the template-mode layout regions.
      */
     public function test_free_mode_renders_no_template_layout_regions(): void {
