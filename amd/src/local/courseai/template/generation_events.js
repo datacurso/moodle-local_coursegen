@@ -15,8 +15,9 @@
 
 /**
  * Turns one decoded template-generation stream event into a DOM update:
- * which activity row lights up and which phase label shows. generation_watch.js decodes the stream and calls this for
- * each event; generation_stream.js owns the phase label itself and passes
+ * which activity row lights up, which item of the progress list is added or
+ * closed, and which phase label shows. generation_watch.js decodes the stream
+ * and calls this for each event; generation_stream.js owns the phase label itself and passes
  * `paintStage` in rather than this module importing it, so the two never
  * import each other.
  *
@@ -24,6 +25,8 @@
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+
+import {addActivity, closeActivity, openChecklist} from 'local_coursegen/local/courseai/template/generation_checklist';
 
 /** The status classes the shared generation stylesheet reacts to. */
 export const STATUS_CLASS = {
@@ -74,6 +77,7 @@ const finishActivity = (data, progress, paintStage) => {
     // professor is told about.
     markRow(data.uid, 'done');
     progress.done += 1;
+    closeActivity(data.uid, progress);
     if (progress.total > 0 && progress.done >= progress.total) {
         paintStage('saving');
     }
@@ -89,11 +93,13 @@ const EVENT_HANDLERS = {
     review_needed: () => 'review',
     activity_progress_init: (data, progress, paintStage) => {
         resetProgress(progress, data);
+        openChecklist(progress);
         paintStage('activities');
         return '';
     },
     activity_progress_start: (data) => {
         markRow(data.uid, 'running');
+        addActivity(data);
         return '';
     },
     activity_progress_done: finishActivity,

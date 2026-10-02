@@ -28,6 +28,7 @@
 
 import {getStrings} from 'core/str';
 import {createLog} from 'local_coursegen/local/courseai/ui/log';
+import {resetChecklist} from 'local_coursegen/local/courseai/template/generation_checklist';
 
 const STRING_KEYS = [
     'courseai_template_log_selected',
@@ -148,7 +149,7 @@ export const restorePicker = () => {
 };
 
 /**
- * Empty the thread, for a run that starts over.
+ * Empty the thread and the progress list, for a run that starts over.
  */
 export const resetThread = () => {
     log = null;
@@ -156,4 +157,5 @@ export const resetThread = () => {
     if (node) {
         node.innerHTML = '';
     }
+    resetChecklist();
 };
