@@ -2,7 +2,7 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
-## [2.0.10] - 2026100213
+## [2.0.10] - 2026100214
 
 ### Added
 - **The template editor explains the reference marker**  
