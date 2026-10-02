@@ -22,7 +22,10 @@ namespace local_coursegen\local\preview;
  * A finished answer does not name its pieces by id, it carries them in the order
  * the generator walked the mould, so a piece finds its row by title. Titles are
  * not unique inside an activity, so a title seen again takes the next row that has
- * it, in the order the rows are given, rather than the first one again.
+ * it, in the order the rows are given, rather than the first one again. A title that
+ * the mould wrote with a marker is written by the generator, so it matches no row;
+ * such pieces take the rows no title reached, in order, when they are as many as
+ * those rows.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -39,12 +42,42 @@ class drafted_row_matcher {
     public static function match_ordered(array $rows, array $drafts): array {
         $queues = self::ids_by_title($rows);
         $matched = [];
+        $strays = [];
         foreach ($drafts as $draft) {
             $id = self::row_id_of($draft, $queues);
             if ($id === null) {
+                if (trim((string) ($draft['title'] ?? '')) !== '') {
+                    $strays[] = $draft;
+                }
                 continue;
             }
             $matched[$id] = $draft;
+        }
+        return self::with_strays($matched, $strays, $rows);
+    }
+
+    /**
+     * The matched pieces plus the titled pieces no row matched, paired in order with the rows left over.
+     *
+     * Nothing is guessed unless the strays are exactly as many as the rows left.
+     *
+     * @param array $matched Row id => drafted piece.
+     * @param array $strays Titled pieces that found no row.
+     * @param \stdClass[] $rows The mould's rows, in the order they are read.
+     * @return array Row id => drafted piece.
+     */
+    private static function with_strays(array $matched, array $strays, array $rows): array {
+        $left = [];
+        foreach ($rows as $row) {
+            if (!isset($matched[(int) $row->id])) {
+                $left[] = (int) $row->id;
+            }
+        }
+        if (!$strays || count($strays) !== count($left)) {
+            return $matched;
+        }
+        foreach ($strays as $position => $stray) {
+            $matched[$left[$position]] = $stray;
         }
         return $matched;
     }

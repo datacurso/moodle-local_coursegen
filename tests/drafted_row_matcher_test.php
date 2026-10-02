@@ -49,4 +49,37 @@ final class drafted_row_matcher_test extends \basic_testcase {
 
         $this->assertSame([], drafted_row_matcher::match_ordered($rows, [['content' => 'x']]));
     }
+
+    /**
+     * A title the mould left to the generator matches no row and takes the row no other title reached.
+     */
+    public function test_a_title_the_generator_wrote_takes_the_row_no_title_reached(): void {
+        $rows = [
+            (object) ['id' => 7, 'title' => 'Semana [[coursegen:aiprompt: numero]]'],
+            (object) ['id' => 8, 'title' => 'Objetivos'],
+        ];
+        $drafts = [['title' => 'Semana 3', 'content' => 'a'], ['title' => 'Objetivos', 'content' => 'b']];
+
+        $matched = drafted_row_matcher::match_ordered($rows, $drafts);
+
+        $this->assertSame([7, 8], array_keys($matched));
+        $this->assertSame('Semana 3', $matched[7]['title']);
+        $this->assertSame('b', $matched[8]['content']);
+    }
+
+    /**
+     * A title that matches no row is not guessed when the rows left are not exactly as many.
+     */
+    public function test_strays_are_not_guessed_when_the_rows_left_differ_in_number(): void {
+        $rows = [
+            (object) ['id' => 1, 'title' => 'A'],
+            (object) ['id' => 2, 'title' => 'B'],
+            (object) ['id' => 3, 'title' => 'C'],
+        ];
+        $drafts = [['title' => 'B', 'content' => 'x'], ['title' => 'Z', 'content' => 'y']];
+
+        $matched = drafted_row_matcher::match_ordered($rows, $drafts);
+
+        $this->assertSame([2], array_keys($matched));
+    }
 }
