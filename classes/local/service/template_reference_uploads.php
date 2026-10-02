@@ -21,9 +21,8 @@ use stored_file;
 /**
  * Sends the AI service the files that reference markers point at, as files.
  *
- * Only the files the service has to look at are sent: the ones of reference markers whose slot the teacher gave
- * no file for, and whose type the service can make a new file from. The others are decided without the file
- * (the teacher's file is used, or the element is removed). The files travel as multipart uploads between /init and
+ * Only the files the service has to look at are sent: the ones of reference markers whose type the service can make
+ * a new file from. The others are decided without the file (the element is removed). The files travel as multipart uploads between /init and
  * the stream, the same way the syllabus does; the payload carries no bytes.
  *
  * @package    local_coursegen
@@ -44,14 +43,13 @@ class template_reference_uploads {
      * @throws \moodle_exception A marker has no usable target, or a file it points at is not stored.
      */
     public static function plan(array $payload): array {
-        $teacher = array_map('strval', (array) ($payload['reference_files'] ?? []));
         $plan = [];
         foreach ($payload['activities'] ?? [] as $activity) {
             $action = $activity['template_behavior']['action'] ?? '';
             if ($action !== 'template') {
                 continue;
             }
-            array_push($plan, ...self::plan_for($activity, $teacher));
+            array_push($plan, ...self::plan_for($activity));
         }
         return $plan;
     }
@@ -84,18 +82,16 @@ class template_reference_uploads {
      * The files to send for one template source activity.
      *
      * @param array $activity The payload's entry of the activity.
-     * @param string[] $teacher The slot keys the teacher gave a file for.
      * @return array[]
      */
-    private static function plan_for(array $activity, array $teacher): array {
+    private static function plan_for(array $activity): array {
         $uid = (string) ($activity['uid'] ?? '');
         $parameters = (array) ($activity['parameters'] ?? []);
-        $name = (string) ($parameters['name'] ?? '');
-        $slots = template_reference_scanner::slots($parameters, $uid, $name);
+        $slots = template_reference_scanner::slots($parameters, $uid);
 
         $files = [];
         foreach ($slots as $slot) {
-            $needed = !in_array($slot['key'], $teacher, true) && in_array($slot['mimetype'], self::UPLOADED_TYPES, true);
+            $needed = in_array($slot['mimetype'], self::UPLOADED_TYPES, true);
             if ($needed && !isset($files[$slot['filename']])) {
                 $files[$slot['filename']] = ['uid' => $uid, 'file' => self::stored_file($parameters, $slot['filename'])];
             }

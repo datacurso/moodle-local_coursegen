@@ -24,7 +24,8 @@ use local_coursegen\local\backup\activity_reader;
  * Run once the activity exists, so that every row and its id are real. The
  * rows come from the module's own backup structure (see text_carrier_collector),
  * the text columns from the database itself, and the files from the sources
- * of the activity (the template's course, the teacher, the AI service). Nothing
+ * of the activity (the template's course, the teacher, the AI service). A space the teacher brought nothing for loses
+ * the elements that point at its file before anything else is read. Nothing
  * here names a module: a text field added to any module tomorrow is covered
  * the moment it is in the module's backup structure.
  *
@@ -54,6 +55,9 @@ final class activity_file_pass {
     /** @var file_area_chooser */
     private file_area_chooser $chooser;
 
+    /** @var space_element_remover */
+    private space_element_remover $spaces;
+
     /** @var string[][] Table => its text columns. */
     private array $columns = [];
 
@@ -66,6 +70,7 @@ final class activity_file_pass {
         $this->sources = $sources;
         $this->rewriter = new text_file_rewriter($sources);
         $this->chooser = new file_area_chooser();
+        $this->spaces = new space_element_remover();
     }
 
     /**
@@ -157,20 +162,34 @@ final class activity_file_pass {
      * @param string $where
      */
     private function process_column(text_carrier $carrier, string $column, string $text, string $where): void {
-        global $DB;
-
         if (!$this->worth_reading($text)) {
             return;
         }
+        $stripped = $this->spaces->strip($text);
         if (!$this->chooser->holds_files($carrier->table, $column)) {
-            $this->refuse_placeholders($text, $where);
+            $this->refuse_placeholders($stripped, $where);
+            $this->store_if_changed($carrier, $column, $text, $stripped);
             return;
         }
-        $rewritten = $this->rewriter->rewrite($text, $where, $carrier->areas);
+        $rewritten = $this->rewriter->rewrite($stripped, $where, $carrier->areas);
         $paths = text_file_rewriter::placeholder_paths($rewritten->text);
         $this->place_files($carrier, $column, $paths, $rewritten, $where);
-        if ($rewritten->text !== $text) {
-            $DB->set_field($carrier->table, $column, $rewritten->text, ['id' => $carrier->id]);
+        $this->store_if_changed($carrier, $column, $text, $rewritten->text);
+    }
+
+    /**
+     * Save a text when the pass changed it.
+     *
+     * @param text_carrier $carrier
+     * @param string $column
+     * @param string $before
+     * @param string $after
+     */
+    private function store_if_changed(text_carrier $carrier, string $column, string $before, string $after): void {
+        global $DB;
+
+        if ($after !== $before) {
+            $DB->set_field($carrier->table, $column, $after, ['id' => $carrier->id]);
         }
     }
 

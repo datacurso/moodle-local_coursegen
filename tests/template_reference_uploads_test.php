@@ -61,13 +61,11 @@ final class template_reference_uploads_test extends \advanced_testcase {
      *
      * @param array $entry
      * @param string $html
-     * @param array $teacher Slot keys the teacher gave a file for.
      * @return array
      */
-    private function payload(array $entry, string $html, array $teacher = []): array {
+    private function payload(array $entry, string $html): array {
         unset($entry['stored']);
         return [
-            'reference_files' => $teacher,
             'activities' => [
                 [
                     'uid' => 'mold-1',
@@ -92,17 +90,6 @@ final class template_reference_uploads_test extends \advanced_testcase {
         $this->assertCount(1, $plan);
         $this->assertSame('mold-1', $plan[0]['uid']);
         $this->assertSame('Publicidad.jpg', $plan[0]['file']->get_filename());
-    }
-
-    /**
-     * A slot the teacher gave a file for sends nothing.
-     */
-    public function test_a_slot_with_a_teacher_file_is_not_planned(): void {
-        $this->resetAfterTest();
-        $entry = $this->stored_entry('image/jpeg');
-        $html = self::MARKER . '<img src="@@PLUGINFILE@@/Publicidad.jpg">';
-
-        $this->assertSame([], template_reference_uploads::plan($this->payload($entry, $html, ['mold-1.1'])));
     }
 
     /**

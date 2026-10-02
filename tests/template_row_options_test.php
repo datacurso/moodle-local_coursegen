@@ -28,6 +28,42 @@ namespace local_coursegen\output;
  */
 final class template_row_options_test extends \advanced_testcase {
     /**
+     * The space action is offered for a file resource only.
+     */
+    public function test_activity_actions_offer_space_only_for_a_resource(): void {
+        $resource = array_column(template_row_options::activity_actions(1, 'resource'), 'value');
+        $page = array_column(template_row_options::activity_actions(2, 'page'), 'value');
+        $forum = array_column(template_row_options::activity_actions(3, 'forum'), 'value');
+        $lti = array_column(template_row_options::activity_actions(4, 'lti'), 'value');
+
+        $this->assertContains('space', $resource);
+        $this->assertNotContains('space', $page);
+        $this->assertNotContains('space', $forum);
+        $this->assertNotContains('space', $lti);
+    }
+
+    /**
+     * A space saved on a type that cannot be one preselects exclude, not keep.
+     */
+    public function test_saved_space_on_another_type_preselects_exclude(): void {
+        $options = template_row_options::activity_actions(5, 'forum', 'space');
+
+        $active = $this->active_options($options);
+        $this->assertCount(1, $active);
+        $this->assertSame('exclude', $active[0]['value']);
+    }
+
+    /**
+     * A space saved on a resource stays preselected.
+     */
+    public function test_saved_space_on_a_resource_stays_preselected(): void {
+        $options = template_row_options::activity_actions(6, 'resource', 'space');
+
+        $active = $this->active_options($options);
+        $this->assertSame('space', $active[0]['value']);
+    }
+
+    /**
      * An unrecognised scope value (never persisted by save_template, but
      * this class must still be defensive on its own) falls back to
      * "course" rather than being echoed back as the active option.

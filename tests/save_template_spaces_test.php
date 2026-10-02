@@ -148,7 +148,8 @@ final class save_template_spaces_test extends \advanced_testcase {
         $this->resetAfterTest();
         $this->setAdminUser();
 
-        [$course, $page] = $this->create_course_fixture();
+        [$course] = $this->create_course_fixture();
+        $page = $this->getDataGenerator()->create_module('resource', ['course' => $course->id, 'section' => 1]);
         $sectionid = $this->first_section_id($course);
         $cmid = (int) $page->cmid;
         $activities = [[
@@ -181,6 +182,66 @@ final class save_template_spaces_test extends \advanced_testcase {
         $this->assertStringContainsString($badge, $tag);
         $this->assertStringNotContainsString('d-none', $opening);
         $this->assertStringContainsString('Replace this page with your own welcome.', $html);
+    }
+
+    /**
+     * Saving a space on an activity that is not a file resource is refused.
+     */
+    public function test_space_on_a_page_is_rejected(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, $page] = $this->create_course_fixture();
+        $sectionid = $this->first_section_id($course);
+        $activities = [[
+            'cmid' => (int) $page->cmid,
+            'action' => 'space',
+            'useasreference' => true,
+            'prompt' => '',
+            'spacerequired' => true,
+            'spaceinstruction' => '',
+        ]];
+
+        $this->expectException(\invalid_parameter_exception::class);
+        $this->save_with_instances((int) $course->id, $sectionid, 1, $activities, []);
+    }
+
+    /**
+     * A space saved before the rule existed, on a forum, shows exclude with a
+     * warning and no space badge; a resource row shows no warning.
+     */
+    public function test_legacy_space_on_a_forum_shows_exclude_and_a_warning(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        [$course, , $forum] = $this->create_course_fixture();
+        $resource = $this->getDataGenerator()->create_module('resource', ['course' => $course->id, 'section' => 1]);
+        $template = new \local_coursegen\local\models\template(0, (object) [
+            'name' => 'Legacy',
+            'courseid' => $course->id,
+        ]);
+        $template->create();
+        $templateid = (int) $template->get('id');
+        foreach ([$forum, $resource] as $module) {
+            $record = new template_activity(0, (object) [
+                'templateid' => $templateid,
+                'sectionid' => 0,
+                'cmid' => (int) $module->cmid,
+                'action' => 'space',
+            ]);
+            $record->create();
+        }
+
+        $html = $this->render_review($course, $templateid);
+
+        $forumselect = $this->extract_action_select($html, (int) $forum->cmid);
+        $this->assertMatchesRegularExpression('/<option value="exclude"[^>]*\sselected/', $forumselect);
+        $warning = get_string('template_space_legacy_warning', 'local_coursegen');
+        $this->assertSame(1, substr_count($html, $warning));
+        $forumtag = $this->opening_tag($this->extract_space_tag($html, (int) $forum->cmid));
+        $this->assertStringContainsString('d-none', $forumtag);
+        $resourceselect = $this->extract_action_select($html, (int) $resource->cmid);
+        $this->assertMatchesRegularExpression('/<option value="space"[^>]*\sselected/', $resourceselect);
     }
 
     /**

@@ -27,6 +27,31 @@ namespace local_coursegen\utils;
  */
 final class mold_file_copier_test extends \advanced_testcase {
     /**
+     * The number an address of a file resource carries before the file name is a revision, not an item id.
+     */
+    public function test_resolve_url_reads_a_revision_before_the_file_name(): void {
+        global $CFG;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course();
+        $resource = $this->getDataGenerator()->create_module('resource', ['course' => $course->id]);
+        $context = \context_module::instance($resource->cmid);
+        $file = get_file_storage()->create_file_from_string([
+            'contextid' => $context->id, 'component' => 'mod_resource', 'filearea' => 'content', 'itemid' => 0,
+            'filepath' => '/', 'filename' => 'GD Guide.pdf',
+        ], 'PDF');
+        $base = $CFG->wwwroot . '/pluginfile.php/' . $context->id . '/mod_resource/content/';
+
+        $withrevision = mold_file_copier::resolve_url($base . '1/GD%20Guide.pdf');
+        $otherrevision = mold_file_copier::resolve_url($base . '14/GD%20Guide.pdf');
+        $missing = mold_file_copier::resolve_url($base . '1/Other.pdf');
+
+        $this->assertSame($file->get_id(), $withrevision->get_id());
+        $this->assertSame($file->get_id(), $otherrevision->get_id());
+        $this->assertNull($missing);
+    }
+
+    /**
      * An address resolves to the file it names, with or without an item id.
      */
     public function test_resolve_url_finds_the_file_of_an_address(): void {

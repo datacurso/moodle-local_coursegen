@@ -65,16 +65,14 @@ trait get_template_structure_schema {
                                 'Whether AI will generate this activity in the new course (drives the badge)'),
                             'generationuid' => new external_value(PARAM_ALPHANUMEXT,
                                 'Id this row answers to in the generation progress events; empty when it is not generated'),
+                            'isspace' => new external_value(PARAM_BOOL,
+                                'Whether this is a file resource the teacher brings a file for'),
+                            'spaceinstruction' => new external_value(PARAM_TEXT,
+                                'What the space asks the teacher for; empty when none or not a space'),
+                            'spacerequired' => new external_value(PARAM_BOOL,
+                                'Whether the teacher must bring the file; false when not a space'),
                         ])
                     ),
-                ])
-            ),
-            'allowedactivities' => new external_multiple_structure(
-                new external_single_structure([
-                    'modname'     => new external_value(PARAM_ALPHANUMEXT, 'Module type name'),
-                    'displayname' => new external_value(PARAM_TEXT, 'Human-readable module name'),
-                    'purpose'     => new external_value(PARAM_ALPHA, 'Activity purpose category'),
-                    'iconhtml'    => new external_value(PARAM_RAW, 'Rendered module icon HTML'),
                 ])
             ),
         ]);

@@ -908,10 +908,6 @@
           </div>
         </div>
 
-        {{! The places of the template that take a file of the teacher's own —
-            populated by JS when a template is selected (local_coursegen/template_reference_slots) }}
-        <div data-region="local_coursegen/template/reference-files" hidden></div>
-
         {{! Dynamic structure — populated by JS when template is selected }}
         <div id="tplModeStructure"></div>
       </div>
@@ -1168,107 +1164,6 @@
 </main>
 </div><!-- .courseai-app-body -->
 </div><!-- .courseai-app-layout -->
-
-<!-- Template mode: activity picker (Bootstrap 4), filtered to the template's
-     allowedtypes. Structure mirrors core_course's real activity chooser
-     (course/templates/activitychooser.mustache + local/activitychooser/item.mustache)
-     so the already-loaded Boost theme CSS styles the grid/icons natively —
-     see .modchoosercontainer / .optionscontainer / .activityiconcontainer in
-     theme/boost/scss/moodle/{core,icons}.scss. -->
-<div class="modal fade" id="tplActivityChooserModal" tabindex="-1" role="dialog" aria-labelledby="tplActivityChooserLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered" role="document" style="max-width:900px">
-    <div class="modal-content modchooser">
-      <div class="modal-header">
-        <h5 class="modal-title" id="tplActivityChooserLabel">{{#str}}courseai_template_modal_title, local_coursegen{{/str}}</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="{{#str}}courseai_modal_close, local_coursegen{{/str}}">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body p-0">
-        <div class="modchoosercontainer d-flex flex-column">
-          <div class="alert alert-info m-3 mb-0 py-2 small">
-            {{#str}}courseai_template_modal_note, local_coursegen{{/str}}
-          </div>
-          <div class="searchcontainer p-3">
-            <input type="search" class="form-control" id="tplChooserSearch"
-                   placeholder="{{#str}}courseai_template_modal_search, local_coursegen{{/str}}">
-          </div>
-          <div class="chooser-container">
-            <div class="optionscontainer d-flex flex-wrap p-2" id="tplChooserGrid" role="menubar"></div>
-          </div>
-          <!-- Prompt panel: picking a type above only reveals/updates this panel
-               (see local/courseai/template/chooser.js); the confirm button is what
-               inserts the activity. Same UX as the "add activity with AI" chat
-               footer (activity_chat_footer.mustache): generate-images radios,
-               selected-file chip + upload button, rounded prompt textarea. -->
-          <div class="chooser-prompt-panel" id="tplChooserPromptPanel" hidden
-               data-region="local_coursegen/template/chooser-panel">
-            <div class="mb-2 d-flex align-items-center flex-wrap" style="gap: .5rem;">
-              <span class="small text-muted">{{#str}}courseai_template_selected_activity, local_coursegen{{/str}}</span>
-              <span class="chooser-selected-chip">
-                <span class="chooser-selected-chip-icon" data-region="local_coursegen/template/chooser-selected-icon"></span>
-                <span data-region="local_coursegen/template/chooser-selected-name"></span>
-              </span>
-            </div>
-
-            {{#cangeneratecourseimages}}
-<div style="gap: .8rem;" class="mb-2 d-flex align-items-center flex-wrap">
-              <label style="gap: .3rem;" class="mb-0 d-flex align-items-center">
-                <input type="radio" name="tpl_generate_images" value="0" checked
-                       data-region="local_coursegen/template/chooser-generateimages">
-                {{#str}} noimages, local_coursegen {{/str}}
-              </label>
-              <label style="gap: .3rem;" class="mb-0 d-flex align-items-center">
-                <input type="radio" name="tpl_generate_images" value="1"
-                       data-region="local_coursegen/template/chooser-generateimages">
-                {{#str}} yesimages, local_coursegen {{/str}}
-              </label>
-            </div>
-            {{/cangeneratecourseimages}}
-
-            <div class="mb-2" data-region="local_coursegen/template/chooser-selectedfile" style="display: none;">
-              <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-light" style="gap: .5rem;">
-                <div class="text-truncate" style="min-width: 0;">
-                  <i class="fa fa-paperclip mr-1" aria-hidden="true"></i>
-                  <span data-region="local_coursegen/template/chooser-selectedfile_name"></span>
-                </div>
-                <button type="button" class="btn btn-link p-0" data-region="local_coursegen/template/chooser-selectedfile_remove">
-                  <i class="fa fa-times" aria-hidden="true"></i>
-                </button>
-              </div>
-            </div>
-
-            <label class="sr-only" for="tplChooserPrompt">{{#str}} addactivityai_label, local_coursegen {{/str}}</label>
-            <div class="ai-prompt-container shadow-sm d-flex flex-column"
-                 style="background-color: var(--body-bg); border: 1px solid var(--border-color, #d1d5db); border-radius: 24px; padding: 10px; max-width: 100%;">
-
-              <textarea
-                  id="tplChooserPrompt"
-                  class="form-control ai-prompt-textarea"
-                  data-region="local_coursegen/template/chooser-prompt"
-                  placeholder="{{#str}} courseai_add_activity_placeholder, local_coursegen {{/str}}"
-                  rows="1"
-                  style="resize: none; border: none; box-shadow: none; padding: 0 10px; margin: 0; background: transparent; min-height: 24px; max-height: 6em; overflow-y: auto; line-height: 1.5; color: inherit; width: 100%;"></textarea>
-
-              <div class="d-flex justify-content-between align-items-center">
-                <button type="button" class="btn btn-light p-0 d-flex align-items-center justify-content-center rounded-circle"
-                    data-region="local_coursegen/template/chooser-upload"
-                    style="width: 34px; height: 34px; flex-shrink: 0;">
-                  <i class="fa fa-file text-primary" aria-hidden="true" style="font-size: 1.1rem;"></i>
-                </button>
-
-                <button type="button" class="btn btn-primary btn-sm chooser-confirm-btn"
-                    data-region="local_coursegen/template/chooser-confirm">
-                  {{#str}} courseai_template_add_activity, local_coursegen {{/str}}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
 
 <!-- Guideline preview modal (Bootstrap 4) -->
 <div class="modal fade" id="guidelinePreviewModal" tabindex="-1" role="dialog" aria-labelledby="previewModalLabel" aria-hidden="true">

@@ -44,11 +44,10 @@ class template_reference_scanner {
      *
      * @param array $parameters The "parameters" of the activity's export.
      * @param string $uid The activity's uid in the payload.
-     * @param string $activityname The activity's name, for the teacher's list.
-     * @return array[] Each: key, ordinal, instruction, filename, mimetype, activityname.
+     * @return array[] Each: key, ordinal, instruction, filename, mimetype.
      * @throws \moodle_exception A marker has no usable target element.
      */
-    public static function slots(array $parameters, string $uid, string $activityname = ''): array {
+    public static function slots(array $parameters, string $uid): array {
         $markers = [];
         self::collect($parameters, $markers);
 
@@ -62,7 +61,6 @@ class template_reference_scanner {
                 'instruction' => $marker['instruction'],
                 'filename' => $marker['filename'],
                 'mimetype' => $mimetypes[$marker['filename']] ?? '',
-                'activityname' => $activityname,
             ];
         }
         return $slots;

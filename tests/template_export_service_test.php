@@ -144,6 +144,29 @@ final class template_export_service_test extends \advanced_testcase {
     }
 
     /**
+     * A file resource marked "space" never reaches the payload either, and a
+     * space saved on any other type is read as exclude, so it stays out too.
+     */
+    public function test_space_on_a_resource_or_on_another_type_is_left_out_of_the_payload(): void {
+        $this->resetAfterTest(true);
+        $this->setAdminUser();
+
+        $generator = $this->getDataGenerator();
+        $course = $generator->create_course();
+        $resource = $generator->create_module('resource', ['course' => $course->id]);
+        $forum = $generator->create_module('forum', ['course' => $course->id]);
+        $template = $this->create_template($course->id);
+        $templateid = $template->get('id');
+        $this->mark_with_action($templateid, (int) $resource->cmid, 'space');
+        $this->mark_with_action($templateid, (int) $forum->cmid, 'space');
+
+        $payload = template_export_service::build_init_payload($templateid);
+
+        $this->assertNull($this->find_activity($payload, (int) $resource->cmid));
+        $this->assertNull($this->find_activity($payload, (int) $forum->cmid));
+    }
+
+    /**
      * No two entries of the same payload - activities or sections - ever
      * share a uid.
      */

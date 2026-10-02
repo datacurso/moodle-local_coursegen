@@ -16,7 +16,9 @@
 
 namespace local_coursegen\local\files;
 
-use local_coursegen\local\reference\reference_file_storage;
+use local_coursegen\local\space\file_space;
+use local_coursegen\local\space\space_scope;
+use local_coursegen\local\space\space_selection;
 use local_coursegen\local\service\create_mod_service;
 use local_coursegen\tests\fixtures\file_scenarios;
 use local_coursegen\utils\generated_file_cache;
@@ -39,6 +41,11 @@ require_once($CFG->libdir . '/testing/generator/lib.php');
  * @covers     \local_coursegen\local\files\file_copy_exception
  */
 final class activity_file_pass_edges_test extends \advanced_testcase {
+    protected function tearDown(): void {
+        space_scope::leave();
+        parent::tearDown();
+    }
+
     /**
      * The modules created from a package, with each source of files.
      *
@@ -81,12 +88,25 @@ final class activity_file_pass_edges_test extends \advanced_testcase {
             $reference = \moodle_url::make_pluginfile_url($sourcecontext->id, 'mod_' . $module, 'intro', 0, '/', 'pic.png');
             $address = $reference->out(false);
         } else if ($kind === 'teacher') {
-            $path = make_request_directory() . '/upload.tmp';
-            file_put_contents($path, 'PICTURE');
-            reference_file_storage::stage((int) $USER->id, 7, '1.1', 'pic.png', $path);
-            reference_file_storage::adopt((int) $USER->id, 7, 55);
-            $file = reference_file_storage::session_file((int) $USER->id, 55, '1.1');
-            $address = reference_file_storage::url_of($file)->out(false);
+            $resource = $this->getDataGenerator()->create_module('resource', ['course' => $sourcecourse->id]);
+            $resourcecontext = \context_module::instance($resource->cmid);
+            $fs = get_file_storage();
+            $fs->delete_area_files($resourcecontext->id, 'mod_resource', 'content');
+            $templatefile = $fs->create_file_from_string([
+                'contextid' => $resourcecontext->id, 'component' => 'mod_resource', 'filearea' => 'content', 'itemid' => 0,
+                'filepath' => '/', 'filename' => 'template.png',
+            ], 'TEMPLATE');
+            $usercontext = \context_user::instance($USER->id);
+            $teacherfile = $fs->create_file_from_string([
+                'contextid' => $usercontext->id, 'component' => 'local_coursegen', 'filearea' => 'spacefile', 'itemid' => 55,
+                'filepath' => '/' . $resource->cmid . '/', 'filename' => 'pic.png',
+            ], 'PICTURE');
+            space_scope::enter(new space_selection(
+                [new file_space((int) $resource->cmid, 'Guide', '', false, [$templatefile])],
+                [(int) $resource->cmid => $teacherfile]
+            ));
+            $reference = \moodle_url::make_pluginfile_url($resourcecontext->id, 'mod_resource', 'content', 1, '/', 'template.png');
+            $address = $reference->out(false);
         } else {
             $entry = ['filename' => 'pic.png', 'mimetype' => 'image/png', 'size' => 7, 'thread_id' => 't', 'file_id' => 'f.png'];
             get_file_storage()->create_file_from_string(generated_file_cache::file_record($entry), 'PICTURE');
@@ -102,6 +122,7 @@ final class activity_file_pass_edges_test extends \advanced_testcase {
         generated_files_scope::run($generated, static function () use ($pass, $activity) {
             $pass->run($activity, 'Intro');
         });
+        space_scope::leave();
 
         $context = \context_module::instance($dest->cmid);
         $stored = get_file_storage()->get_file($context->id, 'mod_' . $module, 'intro', 0, '/', 'pic.png');

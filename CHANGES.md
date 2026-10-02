@@ -2,6 +2,42 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100221
+
+### Added
+- **A file resource of the template can be a space for the teacher's file**  
+  In the template editor the action "Space for the teacher" is offered only for a file resource. The teacher sees a card with an "Add" button in the same place of the same section, and it opens the same file selection window as the syllabus. A space can be required, and then the course cannot be generated until the file is added
+- **The new course gets the teacher's file where the template had its own**  
+  The resource is created in the same section and position with the name and description of the template and the teacher's file. Any text of any activity that points at the template's file (a frame, a link, an image, an embedded object) points at a copy of the teacher's file that the activity keeps in its own files. When the teacher adds no file the resource is not created and only the elements that pointed at its file are removed from the texts
+
+### Changed
+- **A space saved on an activity that is not a file resource is read as excluded**  
+  The editor says so on the row and the space cannot be saved for those activities any more
+- **An address of a file resource that carries its revision is understood**  
+  The number between the file area and the file name of a resource address is read as a revision, not as an item id
+
+### Removed
+- **The "Course files" block, the "Add activity" and "Add section" controls of the teacher screen**  
+  The block that asked for a file at each reference marker, its web service, its upload page, the storage of those files and the file token the AI service handed back are gone. The reference marker stays only to make a new image from a file of the template. The files left by the old storage are deleted on upgrade
+
+## [2.0.10] - 2026100220
+
+### Changed
+- **The preview of a generated activity is drawn from its own result and from nothing else**  
+  The result of the run holds, for each activity written from a template, the template's own rows with what the AI wrote laid into the row it came from, and every record the AI wrote says which template record it came from (`source_id`) and which row of the result it is (`record_id`). The preview reads exactly that: it no longer looks up the template activity or matches the written pages, chapters, entries or options to the template's rows by title or by order, so two pages that share a title each show their own content and no `[[coursegen:` marker is shown
+- **A quiz is previewed from the questions its result carries**  
+  The result returns the questions of a quiz as the question bank rows with the AI's texts laid into the row of each question, beside the same questions in the form that creates them. The preview draws the first and no longer rebuilds a question from the form
+- **A generation made before the records carried their ids cannot be previewed, and says so**  
+  The preview of an activity whose result has no template rows, or whose record names a row the result does not hold or an element the result gives no table to read it from, stops with a message that names the activity and asks to generate the course again. Nothing is guessed from the title or the position. Sessions generated before this build need to be generated again to be previewed
+
+### Removed
+- **The title and order matching of the preview**  
+  The row matchers for lesson pages and book chapters, the translation of a kept activity into the shape of a plan, the conversion of a quiz form into engine rows and the per-module methods that laid a draft over the template rows are gone, with their tests
+
+### Fixed
+- **The preview of a glossary entry, a wiki page and the results of a choice no longer stop with a missing class**  
+  The classes that draw them named `stdClass`, `url_select` and `wiki_parser_proxy` without the namespace they live in
+
 ## [2.0.10] - 2026100219
 
 ### Fixed

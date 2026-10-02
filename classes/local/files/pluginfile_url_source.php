@@ -19,7 +19,7 @@ namespace local_coursegen\local\files;
 use local_coursegen\utils\mold_file_copier;
 
 /**
- * The files of the template's course and the ones a teacher brought, named by their pluginfile.php address.
+ * The files of the template's course, named by their pluginfile.php address.
  *
  * An address says exactly which file it is (context, component, area, item and
  * name), so no guessing is involved; what is checked is that the current user

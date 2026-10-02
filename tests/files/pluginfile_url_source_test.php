@@ -16,10 +16,8 @@
 
 namespace local_coursegen\local\files;
 
-use local_coursegen\local\reference\reference_file_storage;
-
 /**
- * The files of the template's course and the ones a teacher brought are found by their address.
+ * The files of the template's course are found by their address.
  *
  * @package    local_coursegen
  * @category   test
@@ -58,22 +56,6 @@ final class pluginfile_url_source_test extends \advanced_testcase {
     private function found(string $url, ?int $sourcecourseid = null): ?\stored_file {
         $source = new pluginfile_url_source($sourcecourseid);
         return $source->find(new file_reference(file_reference::KIND_URL, $url));
-    }
-
-    /**
-     * Bring a file for place 12.1 of template 7 to session 55 of a user and give its address.
-     *
-     * @param \stdClass $user
-     * @param string $name
-     * @return string
-     */
-    private function brought_file_address(\stdClass $user, string $name): string {
-        $path = make_request_directory() . '/upload.tmp';
-        file_put_contents($path, 'BROUGHT');
-        reference_file_storage::stage((int) $user->id, 7, '12.1', $name, $path);
-        reference_file_storage::adopt((int) $user->id, 7, 55);
-        $file = reference_file_storage::session_file((int) $user->id, 55, '12.1');
-        return reference_file_storage::url_of($file)->out(false);
     }
 
     /**
@@ -159,40 +141,26 @@ final class pluginfile_url_source_test extends \advanced_testcase {
     }
 
     /**
-     * The file a teacher brought is found, whatever the template course.
+     * A file a teacher brought for a space is not found by its own address: the space source hands it out.
      */
-    public function test_the_brought_file_is_found_and_not_bound_to_the_template_course(): void {
+    public function test_a_file_stored_for_a_space_is_not_found_by_address(): void {
         $this->resetAfterTest();
         $user = $this->getDataGenerator()->create_user();
         $this->setUser($user);
-        $address = $this->brought_file_address($user, 'My guide.pdf');
+        $context = \context_user::instance($user->id);
+        $file = get_file_storage()->create_file_from_string([
+            'contextid' => $context->id, 'component' => 'local_coursegen', 'filearea' => 'spacefile', 'itemid' => 55,
+            'filepath' => '/12/', 'filename' => 'guide.pdf',
+        ], 'BROUGHT');
+        $address = \moodle_url::make_pluginfile_url(
+            $file->get_contextid(),
+            $file->get_component(),
+            $file->get_filearea(),
+            $file->get_itemid(),
+            $file->get_filepath(),
+            $file->get_filename()
+        );
 
-        $this->assertSame('BROUGHT', $this->found($address, 12345)->get_content());
-    }
-
-    /**
-     * Another user's brought file is never found.
-     */
-    public function test_the_brought_file_of_another_teacher_is_not_found(): void {
-        $this->resetAfterTest();
-        $owner = $this->getDataGenerator()->create_user();
-        $address = $this->brought_file_address($owner, 'guide.pdf');
-        $this->setUser($this->getDataGenerator()->create_user());
-
-        $this->assertNull($this->found($address));
-    }
-
-    /**
-     * A file the teacher only staged is not a file a generation uses.
-     */
-    public function test_a_staged_file_is_not_found(): void {
-        $this->resetAfterTest();
-        $user = $this->getDataGenerator()->create_user();
-        $this->setUser($user);
-        $path = make_request_directory() . '/upload.tmp';
-        file_put_contents($path, 'STAGED');
-        $file = reference_file_storage::stage((int) $user->id, 7, '12.1', 'staged.pdf', $path);
-
-        $this->assertNull($this->found(reference_file_storage::url_of($file)->out(false)));
+        $this->assertNull($this->found($address->out(false)));
     }
 }
