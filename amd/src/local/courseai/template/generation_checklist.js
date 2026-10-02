@@ -163,7 +163,7 @@ export const closeActivity = (uid, progress) => {
     const done = progress.done;
     const total = progress.total;
     enqueue(async() => {
-        const item = document.querySelector(`#courseaiChecklistList [data-generation-uid="${uid}"]`);
+        const item = document.querySelector(`#courseaiChecklistList [data-progress-uid="${uid}"]`);
         if (item) {
             item.classList.remove('is-loading');
             item.classList.add('is-done');

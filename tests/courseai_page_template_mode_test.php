@@ -244,7 +244,7 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
             'sectionname' => 'Week 1',
         ]);
 
-        $this->assertStringContainsString('data-generation-uid="inst-7"', $html);
+        $this->assertStringContainsString('data-progress-uid="inst-7"', $html);
         $this->assertStringContainsString('courseai-checklist-item is-loading', $html);
         $this->assertStringContainsString('Intro lesson', $html);
         $this->assertStringContainsString('Lesson', $html);
