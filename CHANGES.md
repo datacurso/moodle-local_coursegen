@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100209
+
+### Added
+- **The places of a template where the teacher may bring a file are found**  
+  The activities saved as a template are searched with the same reference scanner the AI service run uses, so a place is numbered exactly as the run numbers it. Each place is named after its activity and its order, kept apart from the uid the payload gives the activity at each export, and takes the kind of file of the one the template holds: an image place takes images, a video place videos, any other place documents, and nothing the site would serve as a page or run as a script. A marker with no usable element below it stops the search with the name of the marker. Nothing is shown to the teacher yet.
+
 ## [2.0.10] - 2026100208
 
 ### Added
