@@ -286,5 +286,9 @@ local_coursegen_activity_preview_deactivate_primary_nav();
 echo $OUTPUT->header();
 $noticemessage = get_string('courseai_preview_notice', 'local_coursegen');
 echo $OUTPUT->notification($noticemessage, \core\output\notification::NOTIFY_INFO);
+if (activity_preview_lookup::is_kept($source)) {
+    $keptmessage = get_string('courseai_preview_kept', 'local_coursegen');
+    echo $OUTPUT->notification($keptmessage, \core\output\notification::NOTIFY_INFO);
+}
 echo $preview->render();
 echo $OUTPUT->footer();
