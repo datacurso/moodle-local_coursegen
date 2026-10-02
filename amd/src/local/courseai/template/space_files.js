@@ -40,30 +40,87 @@ import {setSpaceFile, clearSpaceFile, hasMissingRequiredSpace} from './state';
 const isGenerating = () => document.body.classList.contains(Selectors.classes.generating);
 
 /**
+ * The button of a space card that opens the file selector.
+ *
+ * @param {number} sectionIndex
+ * @param {number} activityIndex
+ * @returns {HTMLButtonElement|null}
+ */
+const findPickButton = (sectionIndex, activityIndex) => {
+    const position = `[data-section-index="${sectionIndex}"][data-activity-index="${activityIndex}"]`;
+    const selector = `${Selectors.actions.pickSpaceFile}${position}`;
+    return document.querySelector(selector);
+};
+
+/**
+ * Put focus back on the button of a card the structure has just drawn again.
+ *
+ * @param {number} sectionIndex
+ * @param {number} activityIndex
+ */
+const focusPickButton = (sectionIndex, activityIndex) => {
+    const button = findPickButton(sectionIndex, activityIndex);
+    if (button) {
+        button.focus();
+    }
+};
+
+/**
+ * Show or clear the uploading state of a button: disabled, spinning, with its busy label.
+ *
+ * @param {HTMLButtonElement|null} button
+ * @param {boolean} busy
+ */
+const setButtonBusy = (button, busy) => {
+    if (!button) {
+        return;
+    }
+    const label = button.querySelector(Selectors.regions.spaceButtonLabel);
+    button.disabled = busy;
+    button.classList.toggle(Selectors.classes.busy, busy);
+    if (busy) {
+        button.setAttribute('aria-busy', 'true');
+        button.dataset.labelIdle = label.textContent;
+        label.textContent = button.dataset.labelBusy;
+        return;
+    }
+    button.removeAttribute('aria-busy');
+    label.textContent = button.dataset.labelIdle || label.textContent;
+};
+
+/**
  * Open the file selector for one space and keep the file it returns.
  *
  * @param {Object} tplState
  * @param {number} sectionIndex
  * @param {number} activityIndex
- * @param {Function} onChange - Called after the row changed, to draw it again.
+ * @param {Function} onChange - Called after the row changed, to draw it again; may return a promise.
  * @returns {Promise<void>}
  */
 export const pickSpaceFile = async(tplState, sectionIndex, activityIndex, onChange) => {
     if (isGenerating()) {
         return;
     }
-    await showFilePicker({
-        state: {},
-        CourseaiRepository: {initFilepicker},
-        Notification,
-        YUI,
-        texts: {},
-        onPicked: (filename, draftitemid) => {
-            if (setSpaceFile(tplState, sectionIndex, activityIndex, filename, draftitemid)) {
-                onChange();
-            }
-        },
-    });
+    const onPicked = async(filename, draftitemid) => {
+        if (setSpaceFile(tplState, sectionIndex, activityIndex, filename, draftitemid)) {
+            await onChange();
+            focusPickButton(sectionIndex, activityIndex);
+        }
+    };
+    const button = findPickButton(sectionIndex, activityIndex);
+    setButtonBusy(button, true);
+    try {
+        await showFilePicker({
+            state: {},
+            CourseaiRepository: {initFilepicker},
+            Notification,
+            YUI,
+            texts: {},
+            onPicked,
+        });
+    } finally {
+        setButtonBusy(button, false);
+    }
 };
 
 /**
@@ -72,14 +129,16 @@ export const pickSpaceFile = async(tplState, sectionIndex, activityIndex, onChan
  * @param {Object} tplState
  * @param {number} sectionIndex
  * @param {number} activityIndex
- * @param {Function} onChange - Called after the row changed, to draw it again.
+ * @param {Function} onChange - Called after the row changed, to draw it again; may return a promise.
+ * @returns {Promise<void>}
  */
-export const removeSpaceFile = (tplState, sectionIndex, activityIndex, onChange) => {
+export const removeSpaceFile = async(tplState, sectionIndex, activityIndex, onChange) => {
     if (isGenerating()) {
         return;
     }
     if (clearSpaceFile(tplState, sectionIndex, activityIndex)) {
-        onChange();
+        await onChange();
+        focusPickButton(sectionIndex, activityIndex);
     }
 };
 
