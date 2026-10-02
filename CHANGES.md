@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100213
+
+### Added
+- **The preview of a generated activity shows the file the teacher brought, never a token**  
+  Where a place of the template has a file of the teacher, the preview of the activity that holds it shows that file, served only to the teacher who brought it. A token with no file stops the preview with the name of the activity instead of showing it.
+
+## [2.0.10] - 2026100212
+
+### Added
+- **The files a teacher brings are carried into the course made from a template**  
+  Starting a generation now tells the service, by name only, which places of the template have a file of the teacher, and hands those files to the generation; the reference files the service has to look at are planned after that, so a place with a file of the teacher sends none. When the course is built, the token `$@COURSEGENFILE*<uid>.<n>@$` the service leaves as the file of an element is replaced by the teacher's file, and the file is copied into the new activity the way the template's own files are, for the src, href, data and poster of an element. After the course is built the plugin checks that no activity of a searched module still holds a token or points at the temporary file, stops with the name of the activity if one does, and otherwise deletes the temporary files. A token with no file stops the generation with the name of the activity and the place.
+
 ## [2.0.10] - 2026100211
 
 ### Added
