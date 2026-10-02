@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100200
+
+### Fixed
+- **The preview of a lesson or a book no longer shows the template's own markers on a second page or chapter that shares a title with an earlier one**  
+  The generated texts were laid over the template's rows by title, so two pages of a lesson (or two chapters of a book) with the same title both landed on the first row and the second one was drawn straight from the template. Each now takes its own row, in the order the template is walked.
+
 ## [2.0.10] - 2026100106
 
 ### Changed
