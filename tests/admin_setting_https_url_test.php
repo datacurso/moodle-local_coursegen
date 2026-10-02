@@ -27,6 +27,7 @@ use local_coursegen\admin\setting_https_url;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_coursegen\admin\setting_https_url
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\admin\setting_https_url::class)]
 final class admin_setting_https_url_test extends \advanced_testcase {
     /**
      * Build the setting under test.

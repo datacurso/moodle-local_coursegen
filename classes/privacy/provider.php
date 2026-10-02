@@ -25,7 +25,10 @@
 
 namespace local_coursegen\privacy;
 
-use context;
+use core\context;
+use core\context\course;
+use core\context\system;
+use core\context\user;
 use core_privacy\local\metadata\collection;
 use core_privacy\local\request\approved_contextlist;
 use core_privacy\local\request\approved_userlist;
@@ -79,12 +82,16 @@ class provider implements
         }
 
         // Data sent to the external Datacurso course generation service
-        // (planning prompts, activity instructions, syllabus files and the
+        // (planning prompts, activity instructions, syllabus files, the
+        // feedback and files sent while adjusting a generation, and the
         // request context composed by the provider layer).
         $collection->add_external_location_link('datacurso_course_service', [
             'prompt' => 'privacy:metadata:datacurso_course_service:prompt',
             'instructions' => 'privacy:metadata:datacurso_course_service:instructions',
             'syllabus_file' => 'privacy:metadata:datacurso_course_service:syllabus_file',
+            'feedback' => 'privacy:metadata:datacurso_course_service:feedback',
+            'activity_file' => 'privacy:metadata:datacurso_course_service:activity_file',
+            'thread_id' => 'privacy:metadata:datacurso_course_service:thread_id',
             'lang' => 'privacy:metadata:datacurso_course_service:lang',
             'with_images' => 'privacy:metadata:datacurso_course_service:with_images',
             'userid' => 'privacy:metadata:datacurso_course_service:userid',
@@ -92,6 +99,9 @@ class provider implements
             'site_url' => 'privacy:metadata:datacurso_course_service:site_url',
             'timezone' => 'privacy:metadata:datacurso_course_service:timezone',
         ], 'privacy:metadata:datacurso_course_service');
+
+        // Uploaded syllabus and activity files are kept in the file storage.
+        $collection->add_subsystem_link('core_files', [], 'privacy:metadata:core_files');
 
         return $collection;
     }
@@ -138,14 +148,14 @@ class provider implements
     public static function get_users_in_context(userlist $userlist) {
         $context = $userlist->get_context();
 
-        if ($context instanceof \context_user) {
+        if ($context instanceof user) {
             if (self::user_has_coursegen_data($context->instanceid)) {
                 $userlist->add_user($context->instanceid);
             }
             return;
         }
 
-        if ($context instanceof \context_course) {
+        if ($context instanceof course) {
             $params = ['courseid' => $context->instanceid];
             $userlist->add_from_sql(
                 'userid',
@@ -169,9 +179,9 @@ class provider implements
         $user = $contextlist->get_user();
 
         foreach ($contextlist->get_contexts() as $context) {
-            if ($context instanceof \context_user && (int)$context->instanceid === (int)$user->id) {
+            if ($context instanceof user && (int)$context->instanceid === (int)$user->id) {
                 self::export_user_context_data($user);
-            } else if ($context instanceof \context_course) {
+            } else if ($context instanceof course) {
                 self::export_course_context_data($context, $user);
             }
         }
@@ -216,9 +226,9 @@ class provider implements
      */
     public static function delete_data_for_users(approved_userlist $userlist) {
         $context = $userlist->get_context();
-        if ($context instanceof \context_user) {
+        if ($context instanceof user) {
             self::delete_user_data($context->instanceid);
-        } else if ($context instanceof \context_course) {
+        } else if ($context instanceof course) {
             foreach ($userlist->get_userids() as $userid) {
                 self::delete_course_data((int)$context->instanceid, (int)$userid);
             }
@@ -233,7 +243,7 @@ class provider implements
     protected static function export_user_context_data(stdClass $user) {
         global $DB;
 
-        $context = \context_user::instance($user->id);
+        $context = user::instance($user->id);
         $tables = static::get_table_user_map($user);
 
         foreach ($tables as $table => $filterparams) {
@@ -249,7 +259,7 @@ class provider implements
 
         // Export the syllabus files stored for the user's planning sessions.
         $fs = get_file_storage();
-        $syscontextid = \context_system::instance()->id;
+        $syscontextid = system::instance()->id;
         $sessionids = $DB->get_fieldset_select('local_coursegen_course_sessions', 'id', 'userid = ?', [$user->id]);
         foreach ($sessionids as $sessionid) {
             $files = $fs->get_area_files($syscontextid, 'local_coursegen', 'syllabus', (int)$sessionid, 'id', false);
@@ -265,10 +275,10 @@ class provider implements
     /**
      * Export the course-scoped rows of a user under the course context.
      *
-     * @param \context_course $context Course context.
+     * @param course $context Course context.
      * @param stdClass $user The user being exported.
      */
-    protected static function export_course_context_data(\context_course $context, stdClass $user) {
+    protected static function export_course_context_data(course $context, stdClass $user) {
         global $DB;
 
         $tables = [
@@ -366,7 +376,7 @@ class provider implements
      */
     private static function delete_syllabus_files(array $sessionids) {
         $fs = get_file_storage();
-        $syscontextid = \context_system::instance()->id;
+        $syscontextid = system::instance()->id;
         foreach ($sessionids as $sessionid) {
             $fs->delete_area_files($syscontextid, 'local_coursegen', 'syllabus', (int)$sessionid);
         }

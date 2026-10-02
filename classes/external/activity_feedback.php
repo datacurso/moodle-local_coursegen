@@ -25,17 +25,15 @@
 
 namespace local_coursegen\external;
 
-use context_system;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_value;
-use local_coursegen\local\service\ai_course_api_service;
+use core\context\course;
+use core\exception\moodle_exception;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
+use local_coursegen\local\access;
+use local_coursegen\local\api_client_factory;
 use local_coursegen\local\service\module_job_service;
-
-defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/externallib.php');
 
 /**
  * External API to send human feedback for AI activity generation jobs.
@@ -79,29 +77,28 @@ class activity_feedback extends external_api {
         $approvalstatus = $params['approvalstatus'];
         $instruction = $params['instruction'];
 
-        $context = context_system::instance();
+        $context = course::instance($courseid);
         self::validate_context($context);
 
         // Same flow, same credits: gate this step of the AI generation behind
         // the same capabilities as create_mod_stream/create_mod, checked on
         // the course the activity is being generated in.
-        $coursecontext = \context_course::instance($courseid);
-        require_capability('moodle/course:manageactivities', $coursecontext);
-        require_capability('local/coursegen:createactivitywithai', $coursecontext);
+        access::require_activity_creation($context);
 
         $job = module_job_service::get_user_job($jobid, $courseid, $USER->id);
         $threadid = $job->get('job_id');
 
         if (!$threadid) {
-            throw new \moodle_exception('error_no_session_found', 'local_coursegen');
+            throw new moodle_exception('error_no_session_found', 'local_coursegen');
         }
 
-        $apiservice = new ai_course_api_service();
+        $apiservice = api_client_factory::ai_course_api_service();
 
         try {
             $result = $apiservice->send_activity_feedback($threadid, $approvalstatus, $instruction);
-        } catch (\moodle_exception $e) {
-            throw new \moodle_exception('error_sending_feedback', 'local_coursegen', '', $e->getMessage());
+        } catch (moodle_exception $e) {
+            // The string has no placeholder: the technical detail is debug information.
+            throw new moodle_exception('error_sending_feedback', 'local_coursegen', '', null, $e->getMessage());
         }
 
         $action = $result['action'] ?? null;

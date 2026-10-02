@@ -16,19 +16,16 @@
 
 namespace local_coursegen\external;
 
-use context_system;
-use context_user;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_value;
+use core\context\system;
+use core\context\user;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
 use local_coursegen\event\external_transfer_initiated;
-use local_coursegen\local\models\course_session;
-use local_coursegen\local\service\ai_course_api_service;
-
-defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/externallib.php');
+use local_coursegen\local\access;
+use local_coursegen\local\api_client_factory;
+use local_coursegen\local\service\course_session_service;
 
 /**
  * External function to upload syllabus for courseai session.
@@ -58,7 +55,7 @@ class courseai_syllabus_upload extends external_api {
      * @return array Result with success status and filename
      */
     public static function execute(int $sessionid, int $draftitemid): array {
-        global $DB, $USER;
+        global $USER;
 
         // Validate parameters.
         $params = self::validate_parameters(self::execute_parameters(), [
@@ -66,24 +63,15 @@ class courseai_syllabus_upload extends external_api {
             'draftitemid' => $draftitemid,
         ]);
 
-        // Check permissions.
-        $context = context_system::instance();
-        require_capability('moodle/course:create', $context);
-        require_capability('local/coursegen:createcoursewithai', $context);
+        // Check permissions, like the sibling planning endpoints.
+        $context = system::instance();
+        self::validate_context($context);
+        access::require_course_creation($context);
+
+        // The session must exist and belong to the current user.
+        $session = course_session_service::require_owned_session($params['sessionid'], $USER->id);
 
         try {
-            // Get session record.
-            $session = new course_session($params['sessionid']);
-
-            // Verify session belongs to current user.
-            if ($session->get('userid') != $USER->id) {
-                return [
-                    'success' => false,
-                    'filename' => '',
-                    'message' => get_string('error_not_your_session', 'local_coursegen'),
-                ];
-            }
-
             $threadid = $session->get('session_id');
             if (empty($threadid)) {
                 return [
@@ -95,8 +83,8 @@ class courseai_syllabus_upload extends external_api {
 
             // Save file from draft area to permanent storage.
             $fs = get_file_storage();
-            $syscontext = context_system::instance();
-            $usercontext = context_user::instance($USER->id);
+            $syscontext = system::instance();
+            $usercontext = user::instance($USER->id);
 
             // Prepare draft area.
             $draftfiles = $fs->get_area_files(
@@ -148,7 +136,7 @@ class courseai_syllabus_upload extends external_api {
             $filename = $file->get_filename();
 
             // Upload to Datacurso API.
-            $apiservice = static::get_api_service();
+            $apiservice = api_client_factory::ai_course_api_service();
             $response = $apiservice->upload_syllabus($threadid, $file);
 
             // Audit the external transfer: file name and size only, no content.
@@ -181,18 +169,6 @@ class courseai_syllabus_upload extends external_api {
                 'message' => get_string('error_upload_failed', 'local_coursegen'),
             ];
         }
-    }
-
-    /**
-     * Build the AI course API service used by this endpoint.
-     *
-     * Extracted as a protected factory so PHPUnit tests can override it
-     * through a testable subclass (late static binding).
-     *
-     * @return ai_course_api_service
-     */
-    protected static function get_api_service(): ai_course_api_service {
-        return new ai_course_api_service();
     }
 
     /**

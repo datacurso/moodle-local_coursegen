@@ -16,14 +16,16 @@
 
 namespace local_coursegen;
 
-use context_course;
-use context_system;
-use context_user;
+use core\context\course;
+use core\context\system;
+use core\context\user;
 use core_privacy\local\metadata\collection;
 use core_privacy\local\request\approved_contextlist;
 use core_privacy\local\request\userlist;
 use core_privacy\local\request\writer;
 use core_privacy\tests\provider_testcase;
+use local_coursegen\local\models\course_context;
+use local_coursegen\local\models\course_session;
 use local_coursegen\privacy\provider;
 use stdClass;
 
@@ -35,6 +37,13 @@ use stdClass;
  * @copyright  2025 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+#[\PHPUnit\Framework\Attributes\CoversMethod(\local_coursegen\privacy\provider::class, 'get_metadata')]
+#[\PHPUnit\Framework\Attributes\CoversMethod(\local_coursegen\privacy\provider::class, 'get_contexts_for_userid')]
+#[\PHPUnit\Framework\Attributes\CoversMethod(\local_coursegen\privacy\provider::class, 'get_users_in_context')]
+#[\PHPUnit\Framework\Attributes\CoversMethod(\local_coursegen\privacy\provider::class, 'export_user_data')]
+#[\PHPUnit\Framework\Attributes\CoversMethod(\local_coursegen\privacy\provider::class, 'delete_data_for_all_users_in_context')]
+#[\PHPUnit\Framework\Attributes\CoversMethod(\local_coursegen\privacy\provider::class, 'delete_data_for_user')]
+#[\PHPUnit\Framework\Attributes\CoversMethod(\local_coursegen\privacy\provider::class, 'delete_data_for_users')]
 final class privacy_provider_test extends provider_testcase {
     /**
      * Tests set up.
@@ -46,7 +55,9 @@ final class privacy_provider_test extends provider_testcase {
     }
 
     /**
-     * The metadata declares the four plugin tables, the coursedata field and the external service link.
+     * The metadata declares every install.xml table and field, the external
+     * service link with the data actually sent, the file storage link, and
+     * every language string those declarations reference.
      *
      * @covers \local_coursegen\privacy\provider::get_metadata
      */
@@ -56,30 +67,66 @@ final class privacy_provider_test extends provider_testcase {
 
         $tables = [];
         $links = [];
+        $subsystems = [];
+        $strings = [];
         foreach ($items as $item) {
+            $strings[] = $item->get_summary();
             if ($item instanceof \core_privacy\local\metadata\types\database_table) {
                 $tables[$item->get_name()] = $item;
+                $strings = array_merge($strings, array_values($item->get_privacy_fields()));
             } else if ($item instanceof \core_privacy\local\metadata\types\external_location) {
                 $links[$item->get_name()] = $item;
+                $strings = array_merge($strings, array_values($item->get_privacy_fields()));
+            } else if ($item instanceof \core_privacy\local\metadata\types\subsystem_link) {
+                $subsystems[$item->get_name()] = $item;
             }
         }
 
-        $this->assertArrayHasKey('local_coursegen_system_instruction', $tables);
-        $this->assertArrayHasKey('local_coursegen_course_context', $tables);
-        $this->assertArrayHasKey('local_coursegen_course_sessions', $tables);
-        $this->assertArrayHasKey('local_coursegen_module_jobs', $tables);
+        // Every table and every non-id field of install.xml is declared.
+        $schema = simplexml_load_file(__DIR__ . '/../db/install.xml');
+        $schematables = [];
+        foreach ($schema->TABLES->TABLE as $table) {
+            $tablename = (string)$table['NAME'];
+            $schematables[] = $tablename;
+            $this->assertArrayHasKey($tablename, $tables, "Table $tablename must be declared.");
+            $fields = $tables[$tablename]->get_privacy_fields();
+            foreach ($table->FIELDS->FIELD as $field) {
+                $fieldname = (string)$field['NAME'];
+                if ($fieldname === 'id') {
+                    continue;
+                }
+                $this->assertArrayHasKey($fieldname, $fields, "Field $tablename.$fieldname must be declared.");
+            }
+        }
+        $this->assertCount(4, $schematables);
+        $this->assertCount(4, $tables);
+        $this->assertContains('local_coursegen_system_instruction', $schematables);
 
         // The free-form prompt stored in the session must be declared.
         $sessionfields = $tables['local_coursegen_course_sessions']->get_privacy_fields();
         $this->assertArrayHasKey('coursedata', $sessionfields);
 
-        // The external Datacurso course service link must declare the data actually sent.
+        // The external Datacurso course service link must declare the data actually sent:
+        // the request context, the planning prompt and syllabus, plus the feedback text,
+        // uploaded files and job/session identifier sent while adjusting a generation.
         $this->assertArrayHasKey('datacurso_course_service', $links);
         $linkfields = $links['datacurso_course_service']->get_privacy_fields();
         $expected = ['prompt', 'instructions', 'syllabus_file', 'lang', 'with_images', 'userid', 'site_id', 'site_url',
-            'timezone'];
+            'timezone', 'thread_id', 'feedback', 'activity_file'];
         foreach ($expected as $field) {
             $this->assertArrayHasKey($field, $linkfields);
+        }
+
+        // Uploaded syllabus and activity files live in the file storage subsystem.
+        $this->assertArrayHasKey('core_files', $subsystems);
+
+        // Every referenced string exists in the English pack.
+        $stringmanager = get_string_manager();
+        foreach (array_unique($strings) as $identifier) {
+            $this->assertTrue(
+                $stringmanager->string_exists($identifier, 'local_coursegen'),
+                "Missing language string $identifier"
+            );
         }
     }
 
@@ -98,8 +145,8 @@ final class privacy_provider_test extends provider_testcase {
         $contextlist = provider::get_contexts_for_userid($user->id);
         $this->assertCount(2, $contextlist);
 
-        $usercontext = context_user::instance($user->id);
-        $coursecontext = context_course::instance($records['local_coursegen_course_sessions']->courseid);
+        $usercontext = user::instance($user->id);
+        $coursecontext = course::instance($records['local_coursegen_course_sessions']->courseid);
         $this->assertContainsEquals($usercontext->id, $contextlist->get_contextids());
         $this->assertContainsEquals($coursecontext->id, $contextlist->get_contextids());
     }
@@ -112,7 +159,7 @@ final class privacy_provider_test extends provider_testcase {
     public function test_get_users_in_context(): void {
         $component = 'local_coursegen';
         $user = $this->getDataGenerator()->create_user();
-        $usercontext = context_user::instance($user->id);
+        $usercontext = user::instance($user->id);
 
         $userlist = new userlist($usercontext, $component);
         provider::get_users_in_context($userlist);
@@ -128,7 +175,7 @@ final class privacy_provider_test extends provider_testcase {
         $this->assertEquals($expected, $actual);
 
         // The list of users for system context should not return any users.
-        $userlist = new userlist(context_system::instance(), $component);
+        $userlist = new userlist(system::instance(), $component);
         provider::get_users_in_context($userlist);
         $this->assertCount(0, $userlist);
     }
@@ -142,7 +189,7 @@ final class privacy_provider_test extends provider_testcase {
         $user = $this->getDataGenerator()->create_user();
         $userrecords = $this->create_userdata($user->id);
 
-        $usercontext = context_user::instance($user->id);
+        $usercontext = user::instance($user->id);
         $writer = writer::with_context($usercontext);
         $this->assertFalse($writer->has_any_data());
 
@@ -171,7 +218,7 @@ final class privacy_provider_test extends provider_testcase {
 
         $user1 = $this->getDataGenerator()->create_user();
         $records1 = $this->create_userdata($user1->id);
-        $user1context = context_user::instance($user1->id);
+        $user1context = user::instance($user1->id);
 
         $user2 = $this->getDataGenerator()->create_user();
         $records2 = $this->create_userdata($user2->id);
@@ -230,7 +277,7 @@ final class privacy_provider_test extends provider_testcase {
 
         $user1 = $this->getDataGenerator()->create_user();
         $records1 = $this->create_userdata($user1->id);
-        $user1context = context_user::instance($user1->id);
+        $user1context = user::instance($user1->id);
 
         $user2 = $this->getDataGenerator()->create_user();
         $records2 = $this->create_userdata($user2->id);
@@ -291,11 +338,11 @@ final class privacy_provider_test extends provider_testcase {
         // Create user 1 and user 2 with data.
         $user1 = $this->getDataGenerator()->create_user();
         $this->create_userdata($user1->id);
-        $usercontext1 = context_user::instance($user1->id);
+        $usercontext1 = user::instance($user1->id);
 
         $user2 = $this->getDataGenerator()->create_user();
         $this->create_userdata($user2->id);
-        $usercontext2 = context_user::instance($user2->id);
+        $usercontext2 = user::instance($user2->id);
 
         // Verify userlist for each context has the correct user.
         $userlist1 = new userlist($usercontext1, $component);
@@ -318,7 +365,7 @@ final class privacy_provider_test extends provider_testcase {
         $this->assertCount(0, $userlist1);
 
         // System context should not affect user2.
-        $systemcontext = context_system::instance();
+        $systemcontext = system::instance();
         $approvedlist = new \core_privacy\local\request\approved_userlist($systemcontext, $component, $userlist2->get_userids());
         provider::delete_data_for_users($approvedlist);
 
@@ -338,7 +385,7 @@ final class privacy_provider_test extends provider_testcase {
         $user = $this->getDataGenerator()->create_user();
         $other = $this->getDataGenerator()->create_user();
         $records = $this->create_userdata($user->id);
-        $coursecontext = context_course::instance($records['local_coursegen_course_sessions']->courseid);
+        $coursecontext = course::instance($records['local_coursegen_course_sessions']->courseid);
 
         $userlist = new userlist($coursecontext, $component);
         provider::get_users_in_context($userlist);
@@ -359,7 +406,7 @@ final class privacy_provider_test extends provider_testcase {
         $sessionid = (int)$records['local_coursegen_course_sessions']->id;
         $this->create_syllabus_file($sessionid);
 
-        $usercontext = context_user::instance($user->id);
+        $usercontext = user::instance($user->id);
         $approvedlist = new approved_contextlist($user, 'local_coursegen', [$usercontext->id]);
         provider::export_user_data($approvedlist);
 
@@ -379,7 +426,7 @@ final class privacy_provider_test extends provider_testcase {
     public function test_export_user_data_for_course_context(): void {
         $user = $this->getDataGenerator()->create_user();
         $records = $this->create_userdata($user->id);
-        $coursecontext = context_course::instance($records['local_coursegen_course_sessions']->courseid);
+        $coursecontext = course::instance($records['local_coursegen_course_sessions']->courseid);
 
         $approvedlist = new approved_contextlist($user, 'local_coursegen', [$coursecontext->id]);
         provider::export_user_data($approvedlist);
@@ -400,10 +447,10 @@ final class privacy_provider_test extends provider_testcase {
         $this->create_syllabus_file($sessionid);
 
         $fs = get_file_storage();
-        $syscontextid = context_system::instance()->id;
+        $syscontextid = system::instance()->id;
         $this->assertNotEmpty($fs->get_area_files($syscontextid, 'local_coursegen', 'syllabus', $sessionid, 'id', false));
 
-        provider::delete_data_for_all_users_in_context(context_user::instance($user->id));
+        provider::delete_data_for_all_users_in_context(user::instance($user->id));
 
         $this->assertEmpty($fs->get_area_files($syscontextid, 'local_coursegen', 'syllabus', $sessionid, 'id', false));
     }
@@ -430,14 +477,14 @@ final class privacy_provider_test extends provider_testcase {
         $user3 = $this->getDataGenerator()->create_user();
         $records3 = $this->create_userdata($user3->id);
 
-        provider::delete_data_for_all_users_in_context(context_course::instance($courseid));
+        provider::delete_data_for_all_users_in_context(course::instance($courseid));
 
         $this->assertCount(0, $DB->get_records('local_coursegen_course_sessions', ['courseid' => $courseid]));
         $this->assertCount(0, $DB->get_records('local_coursegen_module_jobs', ['courseid' => $courseid]));
 
         // The syllabus file of the deleted session is gone.
         $fs = get_file_storage();
-        $syscontextid = context_system::instance()->id;
+        $syscontextid = system::instance()->id;
         $this->assertEmpty(
             $fs->get_area_files($syscontextid, 'local_coursegen', 'syllabus', (int)$session2->id, 'id', false)
         );
@@ -473,7 +520,7 @@ final class privacy_provider_test extends provider_testcase {
         $this->create_course_session($courseid, $user2->id);
         $this->create_module_job($courseid, $user2->id);
 
-        $coursecontext = context_course::instance($courseid);
+        $coursecontext = course::instance($courseid);
         $approvedlist = new \core_privacy\local\request\approved_userlist($coursecontext, 'local_coursegen', [$user1->id]);
         provider::delete_data_for_users($approvedlist);
 
@@ -523,22 +570,26 @@ final class privacy_provider_test extends provider_testcase {
     }
 
     /**
+     * Get the plugin data generator.
+     *
+     * @return \local_coursegen_generator
+     */
+    private function plugin_generator(): \local_coursegen_generator {
+        return $this->getDataGenerator()->get_plugin_generator('local_coursegen');
+    }
+
+    /**
      * Create a system instruction (local_coursegen_system_instruction) for a user.
      *
      * @param int $userid
      * @return stdClass
      */
     private function create_system_instruction(int $userid): stdClass {
-        global $DB;
-        $record = new stdClass();
-        $record->name = 'Test system instruction';
-        $record->content = 'System instruction content';
-        $record->deleted = 0;
-        $record->timecreated = time();
-        $record->timemodified = time();
-        $record->usermodified = $userid;
-        $record->id = $DB->insert_record('local_coursegen_system_instruction', $record);
-        return $record;
+        return $this->plugin_generator()->create_system_instruction([
+            'name' => 'Test system instruction',
+            'content' => 'System instruction content',
+            'usermodified' => $userid,
+        ]);
     }
 
     /**
@@ -547,19 +598,17 @@ final class privacy_provider_test extends provider_testcase {
      * @param int $courseid
      * @param int $systeminstructionid
      * @param int $userid
-     * @return stdClass
+     * @return stdClass The stored table row.
      */
     private function create_course_context(int $courseid, int $systeminstructionid, int $userid): stdClass {
         global $DB;
-        $record = new stdClass();
-        $record->courseid = $courseid;
-        $record->context_type = ai_context::CONTEXT_TYPE_SYSTEM_INSTRUCTION;
-        $record->system_instruction_id = $systeminstructionid;
-        $record->timecreated = time();
-        $record->timemodified = time();
-        $record->usermodified = $userid;
-        $record->id = $DB->insert_record('local_coursegen_course_context', $record);
-        return $record;
+        $context = $this->plugin_generator()->create_course_context([
+            'courseid' => $courseid,
+            'context_type' => course_context::CONTEXT_TYPE_CUSTOM_PROMPT,
+            'system_instruction_id' => $systeminstructionid,
+            'usermodified' => $userid,
+        ]);
+        return $DB->get_record('local_coursegen_course_context', ['id' => $context->get('id')], '*', MUST_EXIST);
     }
 
     /**
@@ -567,20 +616,16 @@ final class privacy_provider_test extends provider_testcase {
      *
      * @param int $courseid
      * @param int $userid
-     * @return stdClass
+     * @return stdClass The stored table row.
      */
     private function create_course_session(int $courseid, int $userid): stdClass {
         global $DB;
-        $record = new stdClass();
-        $record->courseid = $courseid;
-        $record->userid = $userid;
-        $record->session_id = 'sess_' . bin2hex(random_bytes(4));
-        $record->status = 1;
-        $record->coursedata = json_encode(['local_coursegen_custom_prompt' => 'Create a course about privacy']);
-        $record->timecreated = time();
-        $record->timemodified = time();
-        $record->id = $DB->insert_record('local_coursegen_course_sessions', $record);
-        return $record;
+        $session = $this->plugin_generator()->create_course_session([
+            'courseid' => $courseid,
+            'userid' => $userid,
+            'coursedata' => ['local_coursegen_custom_prompt' => 'Create a course about privacy'],
+        ]);
+        return $DB->get_record('local_coursegen_course_sessions', ['id' => $session->get('id')], '*', MUST_EXIST);
     }
 
     /**
@@ -591,15 +636,7 @@ final class privacy_provider_test extends provider_testcase {
      * @return \stored_file
      */
     private function create_syllabus_file(int $sessionid, string $filename = 'syllabus.pdf'): \stored_file {
-        $fs = get_file_storage();
-        return $fs->create_file_from_string((object) [
-            'contextid' => context_system::instance()->id,
-            'component' => 'local_coursegen',
-            'filearea' => 'syllabus',
-            'itemid' => $sessionid,
-            'filepath' => '/',
-            'filename' => $filename,
-        ], '%PDF-1.4 test syllabus');
+        return $this->plugin_generator()->create_syllabus_file(new course_session($sessionid), $filename);
     }
 
     /**
@@ -607,23 +644,17 @@ final class privacy_provider_test extends provider_testcase {
      *
      * @param int $courseid
      * @param int $userid
-     * @return stdClass
+     * @return stdClass The stored table row.
      */
     private function create_module_job(int $courseid, int $userid): stdClass {
         global $DB;
-        $record = new stdClass();
-        $record->courseid = $courseid;
-        $record->userid = $userid;
-        $record->job_id = 'job_' . bin2hex(random_bytes(4));
-        $record->status = 'execution_started';
-        $record->generate_images = 0;
-        $record->context_type = ai_context::CONTEXT_TYPE_SYSTEM_INSTRUCTION;
-        $record->system_instruction_name = 'Test system instruction';
-        $record->sectionnum = 1;
-        $record->beforemod = null;
-        $record->timecreated = time();
-        $record->timemodified = time();
-        $record->id = $DB->insert_record('local_coursegen_module_jobs', $record);
-        return $record;
+        $job = $this->plugin_generator()->create_module_job([
+            'courseid' => $courseid,
+            'userid' => $userid,
+            'context_type' => course_context::CONTEXT_TYPE_CUSTOM_PROMPT,
+            'system_instruction_name' => 'Test system instruction',
+            'sectionnum' => 1,
+        ]);
+        return $DB->get_record('local_coursegen_module_jobs', ['id' => $job->get('id')], '*', MUST_EXIST);
     }
 }

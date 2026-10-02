@@ -30,6 +30,7 @@ namespace local_coursegen;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @coversNothing
  */
+#[\PHPUnit\Framework\Attributes\CoversNothing]
 final class guideline_templates_test extends \advanced_testcase {
     /**
      * Render one of the plugin's guideline templates.

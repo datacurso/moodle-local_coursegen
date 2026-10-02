@@ -16,6 +16,8 @@
 
 namespace local_coursegen\local\service;
 
+use core\context\system;
+use core\exception\moodle_exception;
 use local_coursegen\local\models\course_session;
 
 /**
@@ -26,31 +28,6 @@ use local_coursegen\local\models\course_session;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class course_session_service {
-    /**
-     * Create a new course session from the given course form data.
-     *
-     * @param \stdClass $data Validated course form data.
-     * @param int $userid User ID owning the session.
-     * @param string $sessionid External session identifier.
-     * @return course_session
-     */
-    public static function create_from_form_data(\stdClass $data, int $userid, string $sessionid): course_session {
-        $courseid = !empty($data->id) ? (int)$data->id : null;
-
-        $record = (object) [
-            'courseid' => $courseid,
-            'userid' => $userid,
-            'session_id' => $sessionid,
-            'status' => course_session::STATUS_PENDING,
-            'coursedata' => json_encode($data, JSON_UNESCAPED_UNICODE),
-        ];
-
-        $session = new course_session(0, $record);
-        $session->create();
-
-        return $session;
-    }
-
     /**
      * Update the status of a course session.
      *
@@ -66,23 +43,41 @@ class course_session_service {
     }
 
     /**
+     * Load a planning session the given user owns, or fail as "not found".
+     *
+     * Ownership is the only access rule for a session: a foreign session is
+     * indistinguishable from a missing one, even for an administrator, so its
+     * existence is never disclosed.
+     *
+     * @param int $recordid Session record ID.
+     * @param int $userid User ID that must own the session.
+     * @return course_session
+     * @throws moodle_exception error_no_session_found when the session is missing or owned by someone else.
+     */
+    public static function require_owned_session(int $recordid, int $userid): course_session {
+        $session = course_session::get_record([
+            'id' => $recordid,
+            'userid' => $userid,
+        ]);
+
+        if (!$session) {
+            throw new moodle_exception('error_no_session_found', 'local_coursegen');
+        }
+
+        return $session;
+    }
+
+    /**
      * Get a course planning session for the given user.
+     *
+     * Alias of require_owned_session() kept for existing callers.
      *
      * @param int $id Session record ID.
      * @param int $userid User ID.
      * @return course_session
      */
     public static function get_user_session(int $id, int $userid): course_session {
-        $session = course_session::get_record([
-            'id' => $id,
-            'userid' => $userid,
-        ]);
-
-        if (!$session) {
-            throw new \moodle_exception('error_no_session_found', 'local_coursegen');
-        }
-
-        return $session;
+        return self::require_owned_session($id, $userid);
     }
 
     /**
@@ -105,7 +100,7 @@ class course_session_service {
             return true;
         }
 
-        return has_capability('local/coursegen:view_syllabus', \context_system::instance(), $userid);
+        return has_capability('local/coursegen:view_syllabus', system::instance(), $userid);
     }
 
     /**

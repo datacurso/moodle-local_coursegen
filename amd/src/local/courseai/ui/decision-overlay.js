@@ -128,12 +128,3 @@ export const getDecisionOverlay = (texts) => {
     instance = {show, hide, getBody, isVisible};
     return instance;
 };
-
-/**
- * Reset the module-level singleton. Call during test teardown or full page resets.
- *
- * @returns {void}
- */
-export const resetDecisionOverlay = () => {
-    instance = null;
-};

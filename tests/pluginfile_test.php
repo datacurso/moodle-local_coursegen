@@ -16,10 +16,10 @@
 
 namespace local_coursegen;
 
-use context_course;
-use context_system;
+use core\context\course;
+use core\context\system;
+use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\course_session_service;
-use stdClass;
 
 /**
  * Access guard tests for local_coursegen_pluginfile (syllabus serving).
@@ -35,6 +35,8 @@ use stdClass;
  * @covers     ::local_coursegen_pluginfile
  * @covers     \local_coursegen\local\service\course_session_service::can_view_syllabus
  */
+#[\PHPUnit\Framework\Attributes\CoversFunction('local_coursegen_pluginfile')]
+#[\PHPUnit\Framework\Attributes\CoversMethod(\local_coursegen\local\service\course_session_service::class, 'can_view_syllabus')]
 final class pluginfile_test extends \advanced_testcase {
     /**
      * Load lib.php in each test process.
@@ -47,20 +49,45 @@ final class pluginfile_test extends \advanced_testcase {
     }
 
     /**
+     * Create a planning session for a course owned by the given user.
+     *
+     * @param int $courseid Course id.
+     * @param int $userid Owner user id.
+     * @return course_session
+     */
+    private function create_session(int $courseid, int $userid): course_session {
+        return $this->getDataGenerator()->get_plugin_generator('local_coursegen')->create_course_session([
+            'courseid' => $courseid,
+            'userid' => $userid,
+        ]);
+    }
+
+    /**
+     * Store a syllabus file for a planning session.
+     *
+     * @param course_session $session Planning session.
+     * @return void
+     */
+    private function create_syllabus_file(course_session $session): void {
+        $this->getDataGenerator()->get_plugin_generator('local_coursegen')->create_syllabus_file($session);
+    }
+
+    /**
      * Requests against a course context are rejected: files live in the system context.
      */
     public function test_course_context_is_rejected(): void {
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
         $owner = $generator->create_user();
-        $sessionid = $this->insert_session($course->id, $owner->id);
-        $this->create_syllabus_file($sessionid);
+        $session = $this->create_session($course->id, $owner->id);
+        $sessionid = (int)$session->get('id');
+        $this->create_syllabus_file($session);
         $this->setUser($owner);
 
         $result = local_coursegen_pluginfile(
             $course,
             null,
-            context_course::instance($course->id),
+            course::instance($course->id),
             'syllabus',
             [$sessionid, 'syllabus.pdf'],
             false,
@@ -76,13 +103,13 @@ final class pluginfile_test extends \advanced_testcase {
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
         $owner = $generator->create_user();
-        $sessionid = $this->insert_session($course->id, $owner->id);
+        $sessionid = (int)$this->create_session($course->id, $owner->id)->get('id');
         $this->setUser($owner);
 
         $result = local_coursegen_pluginfile(
             $course,
             null,
-            context_system::instance(),
+            system::instance(),
             'somethingelse',
             [$sessionid, 'syllabus.pdf'],
             false,
@@ -101,7 +128,7 @@ final class pluginfile_test extends \advanced_testcase {
         $result = local_coursegen_pluginfile(
             get_site(),
             null,
-            context_system::instance(),
+            system::instance(),
             'syllabus',
             [999999, 'syllabus.pdf'],
             false,
@@ -118,14 +145,15 @@ final class pluginfile_test extends \advanced_testcase {
         $course = $generator->create_course();
         $owner = $generator->create_user();
         $intruder = $generator->create_user();
-        $sessionid = $this->insert_session($course->id, $owner->id);
-        $this->create_syllabus_file($sessionid);
+        $session = $this->create_session($course->id, $owner->id);
+        $sessionid = (int)$session->get('id');
+        $this->create_syllabus_file($session);
         $this->setUser($intruder);
 
         $result = local_coursegen_pluginfile(
             get_site(),
             null,
-            context_system::instance(),
+            system::instance(),
             'syllabus',
             [$sessionid, 'syllabus.pdf'],
             false,
@@ -141,7 +169,7 @@ final class pluginfile_test extends \advanced_testcase {
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
         $owner = $generator->create_user();
-        $sessionid = $this->insert_session($course->id, $owner->id);
+        $sessionid = (int)$this->create_session($course->id, $owner->id)->get('id');
 
         $this->assertTrue(course_session_service::can_view_syllabus($sessionid, $owner->id));
     }
@@ -150,16 +178,14 @@ final class pluginfile_test extends \advanced_testcase {
      * A non-owner holding local/coursegen:view_syllabus in the system context may view the file.
      */
     public function test_capability_holder_can_view_syllabus(): void {
-        global $DB;
-
         $generator = $this->getDataGenerator();
         $course = $generator->create_course();
         $owner = $generator->create_user();
         $reviewer = $generator->create_user();
-        $sessionid = $this->insert_session($course->id, $owner->id);
+        $sessionid = (int)$this->create_session($course->id, $owner->id)->get('id');
 
         $roleid = create_role('Syllabus reviewer', 'syllabusreviewer', '');
-        $systemcontext = context_system::instance();
+        $systemcontext = system::instance();
         assign_capability('local/coursegen:view_syllabus', CAP_ALLOW, $roleid, $systemcontext->id);
         role_assign($roleid, $reviewer->id, $systemcontext->id);
 
@@ -174,46 +200,9 @@ final class pluginfile_test extends \advanced_testcase {
         $course = $generator->create_course();
         $owner = $generator->create_user();
         $intruder = $generator->create_user();
-        $sessionid = $this->insert_session($course->id, $owner->id);
+        $sessionid = (int)$this->create_session($course->id, $owner->id)->get('id');
 
         $this->assertFalse(course_session_service::can_view_syllabus($sessionid, $intruder->id));
         $this->assertFalse(course_session_service::can_view_syllabus(999999, $owner->id));
-    }
-
-    /**
-     * Insert a planning session row.
-     *
-     * @param int $courseid Course id.
-     * @param int $userid User id.
-     * @return int Session id.
-     */
-    private function insert_session(int $courseid, int $userid): int {
-        global $DB;
-        $record = new stdClass();
-        $record->courseid = $courseid;
-        $record->userid = $userid;
-        $record->session_id = 'sess_' . bin2hex(random_bytes(4));
-        $record->status = 1;
-        $record->timecreated = time();
-        $record->timemodified = time();
-        return (int)$DB->insert_record('local_coursegen_course_sessions', $record);
-    }
-
-    /**
-     * Store a syllabus file in the system context for a planning session.
-     *
-     * @param int $sessionid Session id used as file item id.
-     * @return void
-     */
-    private function create_syllabus_file(int $sessionid): void {
-        $fs = get_file_storage();
-        $fs->create_file_from_string((object) [
-            'contextid' => context_system::instance()->id,
-            'component' => 'local_coursegen',
-            'filearea' => 'syllabus',
-            'itemid' => $sessionid,
-            'filepath' => '/',
-            'filename' => 'syllabus.pdf',
-        ], '%PDF-1.4 test syllabus');
     }
 }

@@ -16,22 +16,23 @@
 
 namespace local_coursegen;
 
+use core\context\coursecat;
+use core\context\system;
+use core\exception\moodle_exception;
+use core\exception\required_capability_exception;
 use local_coursegen\external\course_planning_feedback;
 use local_coursegen\external\create_course;
 use local_coursegen\external\get_course_session_state;
-use local_coursegen\external\regenerate_detailed_item;
+use local_coursegen\external\get_course_settings;
 use local_coursegen\local\models\course_session;
-use local_coursegen\local\service\ai_course_api_service;
-use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
+use local_coursegen\tests\api_testcase;
 
 /**
  * Capability gate tests for the full-course confirmation flow web services.
  *
  * The AI service is mocked (or never reached, because the gates fire first),
- * so no network request is ever performed. The testable subclass fixture and
- * the external classes load lib/externallib.php, which requires each test to
- * run in an isolated process.
+ * so no network request is ever performed.
  *
  * @package    local_coursegen
  * @category   test
@@ -41,29 +42,20 @@ use local_coursegen\local\service\create_course_service;
  * @covers     \local_coursegen\external\get_course_settings
  * @covers     \local_coursegen\external\course_planning_feedback
  * @covers     \local_coursegen\external\get_course_session_state
- * @covers     \local_coursegen\external\regenerate_detailed_item
  * @covers     \local_coursegen\local\service\create_course_service
- *
- * @runTestsInSeparateProcesses
  */
-final class course_confirmation_permissions_test extends \advanced_testcase {
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\external\create_course::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\external\get_course_settings::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\external\course_planning_feedback::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\external\get_course_session_state::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\local\service\create_course_service::class)]
+final class course_confirmation_permissions_test extends api_testcase {
     /**
-     * Load the testable subclass in the isolated process.
+     * Make any accidental real API call fail fast instead of reaching the network.
      */
     protected function setUp(): void {
         parent::setUp();
-        require_once(__DIR__ . '/fixtures/testable_get_course_settings.php');
-
-        // Any accidental real API call must fail fast instead of reaching the network.
         set_config('datacurso_service_url', 'https://invalid.invalid', 'local_coursegen');
-    }
-
-    /**
-     * Reset the injected doubles between tests.
-     */
-    protected function tearDown(): void {
-        testable_get_course_settings::$mockservice = null;
-        parent::tearDown();
     }
 
     /**
@@ -73,11 +65,11 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
      * @return course_session
      */
     private function create_session(int $userid): course_session {
-        return course_session_service::create_from_form_data(
-            (object) ['fullname' => 'Planned course'],
-            $userid,
-            'thread-test-1'
-        );
+        return $this->getDataGenerator()->get_plugin_generator('local_coursegen')->create_course_session([
+            'userid' => $userid,
+            'session_id' => 'thread-test-1',
+            'coursedata' => ['fullname' => 'Planned course'],
+        ]);
     }
 
     /**
@@ -87,7 +79,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
      * @return void
      */
     private function allow_createcoursewithai_at_system(int $userid): void {
-        $systemcontext = \context_system::instance();
+        $systemcontext = system::instance();
         $roleid = create_role('AI course creator', 'aicoursecreator', '');
         assign_capability('local/coursegen:createcoursewithai', CAP_ALLOW, $roleid, $systemcontext->id, true);
         role_assign($roleid, $userid, $systemcontext->id);
@@ -101,7 +93,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
      * @return void
      */
     private function allow_course_create_in_category(int $userid, \core_course_category $category): void {
-        $categorycontext = \context_coursecat::instance($category->id);
+        $categorycontext = coursecat::instance($category->id);
         $roleid = create_role('Category course creator', 'catcoursecreator', '');
         assign_capability('moodle/course:create', CAP_ALLOW, $roleid, $categorycontext->id, true);
         role_assign($roleid, $userid, $categorycontext->id);
@@ -121,8 +113,8 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
         try {
             $callback();
             $this->fail($label . ' must throw required_capability_exception for a user without the capabilities.');
-        } catch (\required_capability_exception $e) {
-            $this->assertInstanceOf(\required_capability_exception::class, $e);
+        } catch (required_capability_exception $e) {
+            $this->assertInstanceOf(required_capability_exception::class, $e);
         }
         $this->resetDebugging();
     }
@@ -153,7 +145,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
         $session = $this->create_session($user->id);
 
         $this->assert_requires_capability(static function () use ($session): void {
-            testable_get_course_settings::execute((int) $session->get('id'));
+            get_course_settings::execute((int) $session->get('id'));
         }, 'get_course_settings');
     }
 
@@ -170,7 +162,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
         $session = $this->create_session($user->id);
 
         $this->assert_requires_capability(static function () use ($session): void {
-            testable_get_course_settings::execute((int) $session->get('id'));
+            get_course_settings::execute((int) $session->get('id'));
         }, 'get_course_settings without course:create');
     }
 
@@ -210,22 +202,6 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
     }
 
     /**
-     * A user without the capabilities is rejected by regenerate_detailed_item
-     * even for a session they own.
-     */
-    public function test_regenerate_detailed_item_rejects_user_without_capabilities(): void {
-        $this->resetAfterTest();
-
-        $user = $this->getDataGenerator()->create_user();
-        $this->setUser($user);
-        $session = $this->create_session($user->id);
-
-        $this->assert_requires_capability(static function () use ($session): void {
-            regenerate_detailed_item::execute((int) $session->get('id'), 'section', 0);
-        }, 'regenerate_detailed_item');
-    }
-
-    /**
      * A user holding course:create in one category only is offered exactly that
      * category by get_course_settings.
      */
@@ -243,22 +219,19 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
 
         $session = $this->create_session($user->id);
 
-        $service = $this->getMockBuilder(ai_course_api_service::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['get_course_result'])
-            ->getMock();
-        $service->method('get_course_result')->willReturn([
-            'result' => [
-                'course_configuration' => [
-                    'fullname' => 'AI planned course',
-                    'shortname' => 'aiplanned',
-                    'category' => (int) $cata->id,
+        $this->inject_api_service([
+            'get_course_result' => [
+                'result' => [
+                    'course_configuration' => [
+                        'fullname' => 'AI planned course',
+                        'shortname' => 'aiplanned',
+                        'category' => (int) $cata->id,
+                    ],
                 ],
             ],
         ]);
-        testable_get_course_settings::$mockservice = $service;
 
-        $result = testable_get_course_settings::execute((int) $session->get('id'));
+        $result = get_course_settings::execute((int) $session->get('id'));
 
         $this->assertSame('AI planned course', $result['fullname']);
         $offeredids = array_column($result['categories'], 'id');
@@ -312,8 +285,8 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
         try {
             create_course_service::create_course($session, [], ['category' => (int) $catb->id]);
             $this->fail('Creating into a category without moodle/course:create must throw.');
-        } catch (\required_capability_exception $e) {
-            $this->assertInstanceOf(\required_capability_exception::class, $e);
+        } catch (required_capability_exception $e) {
+            $this->assertInstanceOf(required_capability_exception::class, $e);
         }
 
         // No residue: no course was created anywhere.
@@ -341,18 +314,15 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
             'get_course_session_state' => static function () use ($recordid): void {
                 get_course_session_state::execute($recordid);
             },
-            'regenerate_detailed_item' => static function () use ($recordid): void {
-                regenerate_detailed_item::execute($recordid, 'section', 0);
-            },
         ];
 
         foreach ($calls as $label => $call) {
             try {
                 $call();
                 $this->fail($label . ' must reject a foreign session.');
-            } catch (\required_capability_exception $e) {
+            } catch (required_capability_exception $e) {
                 $this->fail($label . ' must keep the session-not-found error for foreign sessions.');
-            } catch (\moodle_exception $e) {
+            } catch (moodle_exception $e) {
                 $this->assertStringContainsString($expected, $e->getMessage(), $label);
             }
             $this->resetDebugging();

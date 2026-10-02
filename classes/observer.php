@@ -16,6 +16,8 @@
 
 namespace local_coursegen;
 
+use core\context\system;
+
 /**
  * Event observers for local_coursegen.
  *
@@ -39,7 +41,7 @@ class observer {
         $courseid = (int)$event->objectid;
 
         $fs = get_file_storage();
-        $syscontextid = \context_system::instance()->id;
+        $syscontextid = system::instance()->id;
         $sessionids = $DB->get_fieldset_select('local_coursegen_course_sessions', 'id', 'courseid = ?', [$courseid]);
         foreach ($sessionids as $sessionid) {
             $fs->delete_area_files($syscontextid, 'local_coursegen', 'syllabus', (int)$sessionid);

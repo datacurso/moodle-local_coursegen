@@ -16,7 +16,9 @@
 
 namespace local_coursegen\hook;
 
+use core\context\course;
 use core\hook\output\before_footer_html_generation;
+use local_coursegen\local\language_options;
 
 /**
  * Hook to load the floating chat
@@ -88,58 +90,13 @@ class chat_hook {
     private static function add_activity_ai_button(): void {
         global $PAGE, $COURSE;
         if (self::can_create_activity()) {
-            $languageoptions = self::get_supported_language_options();
             $PAGE->requires->js_call_amd('local_coursegen/activityai', 'init', [
                 $COURSE->id,
                 self::is_moodle_45(),
-                $languageoptions,
-                self::get_default_language_code($languageoptions),
+                language_options::options(),
+                language_options::normalize(\current_language()),
             ]);
         }
-    }
-
-    /**
-     * Get supported language options for Activity AI.
-     *
-     * @return array
-     */
-    private static function get_supported_language_options(): array {
-        $supportedlangs = ['es', 'en', 'de', 'ru', 'pt', 'fr', 'id'];
-        $alllanguages = \get_string_manager()->get_list_of_languages(null, 'iso6391');
-
-        $options = [];
-        foreach ($supportedlangs as $code) {
-            if (!isset($alllanguages[$code])) {
-                continue;
-            }
-
-            $options[] = [
-                'code' => $code,
-                'name' => $alllanguages[$code] . ' (' . strtoupper($code) . ')',
-            ];
-        }
-
-        return $options;
-    }
-
-    /**
-     * Resolve default language code using current Moodle language.
-     *
-     * @param array $languageoptions
-     * @return string
-     */
-    private static function get_default_language_code(array $languageoptions): string {
-        $currentlang = str_replace('-', '_', \core_text::strtolower(\current_language()));
-        $parts = explode('_', $currentlang);
-        $code = $parts[0] ?? '';
-
-        foreach ($languageoptions as $languageoption) {
-            if (($languageoption['code'] ?? '') === $code) {
-                return $code;
-            }
-        }
-
-        return $languageoptions[0]['code'] ?? 'en';
     }
 
     /**
@@ -152,33 +109,12 @@ class chat_hook {
             return false;
         }
 
-        $context = \context_course::instance($COURSE->id);
+        $context = course::instance($COURSE->id);
 
         return has_all_capabilities([
             'moodle/course:update',
             'moodle/course:manageactivities',
             'local/coursegen:createactivitywithai',
         ], $context);
-    }
-
-    /**
-     * Check if user can create a course
-     */
-    private static function can_create_course(): bool {
-        global $PAGE;
-
-        // Show only on personal area pages (e.g. My courses).
-        $path = $PAGE->url->get_path();
-        $ispersonalarea = strpos($path, '/my/') === 0;
-        if (!$ispersonalarea) {
-            return false;
-        }
-
-        $systemcontext = \context_system::instance();
-
-        return has_all_capabilities([
-            'moodle/course:create',
-            'local/coursegen:createcoursewithai',
-        ], $systemcontext);
     }
 }

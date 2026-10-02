@@ -25,18 +25,16 @@
 
 namespace local_coursegen\external;
 
-use context_system;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_value;
+use core\context\system;
+use core\exception\moodle_exception;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
+use local_coursegen\local\access;
+use local_coursegen\local\api_client_factory;
 use local_coursegen\local\models\course_session;
-use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
-
-defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/externallib.php');
 
 /**
  * External API to retrieve resumable state for an AI course session.
@@ -66,22 +64,21 @@ class get_course_session_state extends external_api {
             'recordid' => $recordid,
         ]);
 
-        $context = context_system::instance();
+        $context = system::instance();
         self::validate_context($context);
-
-        $session = course_session_service::get_user_session((int)$params['recordid'], (int)$USER->id);
 
         // Owning the session is not enough: resuming exposes planning data and
         // backend state, so require the same capabilities as start_course_planning.
-        require_capability('moodle/course:create', $context);
-        require_capability('local/coursegen:createcoursewithai', $context);
+        access::require_course_creation($context);
+
+        $session = course_session_service::require_owned_session((int)$params['recordid'], (int)$USER->id);
 
         $sessionid = (string)$session->get('session_id');
         if ($sessionid === '') {
-            throw new \moodle_exception('error_no_session_found', 'local_coursegen');
+            throw new moodle_exception('error_no_session_found', 'local_coursegen');
         }
 
-        $apiservice = new ai_course_api_service();
+        $apiservice = api_client_factory::ai_course_api_service();
         $snapshot = $apiservice->get_course_state($sessionid);
         $streamingurl = $apiservice->get_course_streaming_url($sessionid);
 

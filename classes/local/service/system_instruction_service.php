@@ -16,6 +16,8 @@
 
 namespace local_coursegen\local\service;
 
+use core\exception\coding_exception;
+use core\exception\moodle_exception;
 use local_coursegen\local\models\system_instruction;
 
 /**
@@ -37,7 +39,7 @@ class system_instruction_service {
         global $USER;
 
         if (!self::validate_unique_name($name)) {
-            throw new \moodle_exception('systeminstructionnameexists', 'local_coursegen');
+            throw new moodle_exception('systeminstructionnameexists', 'local_coursegen');
         }
 
         $now = time();
@@ -70,11 +72,11 @@ class system_instruction_service {
 
         $instruction = self::get_by_id($id);
         if (!$instruction) {
-            throw new \moodle_exception('invalidrecord', 'error');
+            throw new moodle_exception('invalidrecord', 'error');
         }
 
         if (!self::validate_unique_name($name, $id)) {
-            throw new \moodle_exception('systeminstructionnameexists', 'local_coursegen');
+            throw new moodle_exception('systeminstructionnameexists', 'local_coursegen');
         }
 
         $now = time();
@@ -92,28 +94,44 @@ class system_instruction_service {
     /**
      * Soft delete a system instruction.
      *
+     * The row stays, flagged as deleted, and records the deletion as a
+     * modification (timemodified, usermodified).
+     *
      * @param int $id Instruction ID
-     * @return bool
+     * @return bool True when an active instruction was deleted, false when there was none.
      */
     public static function delete(int $id): bool {
-        global $DB;
-
         $instruction = self::get_by_id($id);
         if (!$instruction) {
             return false;
         }
 
-        $DB->set_field(system_instruction::TABLE, 'deleted', 1, ['id' => $id]);
+        $instruction->set('deleted', 1);
+        $instruction->update();
         return true;
     }
+
+    /** @var string[] Fields get_all() can sort by. */
+    private const SORT_FIELDS = ['timecreated', 'timemodified', 'name'];
 
     /**
      * Get all active (non deleted) system instructions.
      *
+     * @param string $sort Field to sort by: timecreated (default), timemodified or name.
+     * @param string $order Sort direction, ASC or DESC (newest first by default).
      * @return system_instruction[]
+     * @throws coding_exception When the sort field or direction is not allowed.
      */
-    public static function get_all(): array {
-        return system_instruction::get_records(['deleted' => 0], 'timecreated', 'DESC');
+    public static function get_all(string $sort = 'timecreated', string $order = 'DESC'): array {
+        if (!in_array($sort, self::SORT_FIELDS, true)) {
+            throw new coding_exception('Invalid sort field for system instructions: ' . $sort);
+        }
+        $order = strtoupper($order);
+        if ($order !== 'ASC' && $order !== 'DESC') {
+            throw new coding_exception('Invalid sort direction for system instructions: ' . $order);
+        }
+
+        return system_instruction::get_records(['deleted' => 0], $sort, $order);
     }
 
     /**

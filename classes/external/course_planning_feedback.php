@@ -25,18 +25,16 @@
 
 namespace local_coursegen\external;
 
-use context_system;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_value;
-use external_multiple_structure;
-use local_coursegen\local\service\ai_course_api_service;
+use core\context\system;
+use core\exception\moodle_exception;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_multiple_structure;
+use core_external\external_single_structure;
+use core_external\external_value;
+use local_coursegen\local\access;
+use local_coursegen\local\api_client_factory;
 use local_coursegen\local\service\course_session_service;
-
-defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/externallib.php');
 
 /**
  * External API to send human feedback for AI course planning sessions.
@@ -51,7 +49,10 @@ class course_planning_feedback extends external_api {
         return new external_function_parameters([
             'recordid' => new external_value(PARAM_INT, 'ID from local_coursegen_course_sessions'),
             'pending_action' => new external_single_structure([
-                'action' => new external_value(PARAM_ALPHANUMEXT, 'Action to run, e.g. accept, feedback, delete_section, discard_image'),
+                'action' => new external_value(
+                    PARAM_ALPHANUMEXT,
+                    'Action to run, e.g. accept, feedback, delete_section, discard_image'
+                ),
                 'target_ids' => new external_multiple_structure(
                     new external_value(PARAM_RAW, 'Target UUID (section, activity, or image suggestion)'),
                     'UUIDs the action targets',
@@ -60,8 +61,19 @@ class course_planning_feedback extends external_api {
                 ),
                 'parent_section_id' => new external_value(PARAM_RAW, 'Parent section UUID', VALUE_DEFAULT, null, NULL_ALLOWED),
                 'position' => new external_value(PARAM_INT, 'Insertion position', VALUE_DEFAULT, null, NULL_ALLOWED),
-                'moved_id' => new external_value(PARAM_RAW, 'UUID of the item dragged in a reorder', VALUE_DEFAULT, null, NULL_ALLOWED),
-                'proposal_custom' => new external_value(PARAM_BOOL, 'Feedback typed into the proposals card "other" option', VALUE_DEFAULT, false),
+                'moved_id' => new external_value(
+                    PARAM_RAW,
+                    'UUID of the item dragged in a reorder',
+                    VALUE_DEFAULT,
+                    null,
+                    NULL_ALLOWED
+                ),
+                'proposal_custom' => new external_value(
+                    PARAM_BOOL,
+                    'Feedback typed into the proposals card "other" option',
+                    VALUE_DEFAULT,
+                    false
+                ),
                 'instruction' => new external_value(PARAM_TEXT, "User's free-text instruction", VALUE_DEFAULT, ''),
             ]),
         ]);
@@ -88,28 +100,28 @@ class course_planning_feedback extends external_api {
         $recordid = $params['recordid'];
         $pendingaction = $params['pending_action'];
 
-        $context = context_system::instance();
+        $context = system::instance();
         self::validate_context($context);
-
-        $session = course_session_service::get_user_session($recordid, $USER->id);
 
         // Owning the session is not enough: adjusting a plan consumes paid AI
         // credits, so require the same capabilities as start_course_planning.
-        require_capability('moodle/course:create', $context);
-        require_capability('local/coursegen:createcoursewithai', $context);
+        access::require_course_creation($context);
+
+        $session = course_session_service::require_owned_session($recordid, $USER->id);
 
         $sessionid = $session->get('session_id');
 
         if (!$sessionid) {
-            throw new \moodle_exception('error_no_session_found', 'local_coursegen');
+            throw new moodle_exception('error_no_session_found', 'local_coursegen');
         }
 
-        $apiservice = new ai_course_api_service();
+        $apiservice = api_client_factory::ai_course_api_service();
 
         try {
             $apiservice->send_planning_feedback($sessionid, $pendingaction);
-        } catch (\moodle_exception $e) {
-            throw new \moodle_exception('error_sending_feedback', 'local_coursegen', '', $e->getMessage());
+        } catch (moodle_exception $e) {
+            // The string has no placeholder: the technical detail is debug information.
+            throw new moodle_exception('error_sending_feedback', 'local_coursegen', '', null, $e->getMessage());
         }
 
         return [

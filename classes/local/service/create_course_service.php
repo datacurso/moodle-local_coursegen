@@ -16,6 +16,10 @@
 
 namespace local_coursegen\local\service;
 
+use core\context\course;
+use core\context\coursecat;
+use core\context\system;
+use core\exception\moodle_exception;
 use core_course_category;
 use local_coursegen\event\generation_failed;
 use local_coursegen\event\generation_result_applied;
@@ -53,7 +57,7 @@ class create_course_service {
         // creation work happens. Thrown (not returned) so callers surface it as a
         // proper permission error.
         $effectivecategoryid = self::resolve_effective_category($resultdata, $overrides);
-        require_capability('moodle/course:create', \context_coursecat::instance($effectivecategoryid));
+        require_capability('moodle/course:create', coursecat::instance($effectivecategoryid));
 
         try {
             // This request may take a long time depending on the complexity of the prompt that the AI has to resolve.
@@ -64,143 +68,183 @@ class create_course_service {
 
             require_once($CFG->dirroot . '/course/lib.php');
 
-            // Build course data entirely from the API response.
-            $coursedata = self::build_course_data_from_api($resultdata);
+            $coursedata = self::resolve_course_data($resultdata, $overrides);
+            $course = self::create_shell_course($session, $coursedata);
+            $activityerrors = self::populate_structure($course, $resultdata);
+            $repairs = self::ensure_course_structure_consistent((int)$course->id);
 
-            // Apply user overrides (from the review modal) on top of AI-generated data.
-            // These take precedence over the API response values.
-            if (!empty($overrides['fullname'])) {
-                $coursedata->fullname = (string)\core_text::substr($overrides['fullname'], 0, 255);
-            }
-            if (!empty($overrides['shortname'])) {
-                $coursedata->shortname = (string)\core_text::substr(trim($overrides['shortname']), 0, 100);
-            }
-            if (!empty($overrides['category'])) {
-                $coursedata->category = (int)$overrides['category'];
-            }
-
-            $coursedata = self::ensure_unique_course_fields($coursedata);
-
-            // Create the Moodle course from stored form data.
-            $course = create_course($coursedata);
-
-            generation_result_applied::create([
-                'context' => \context_course::instance($course->id),
-                'other' => ['courseid' => (int)$course->id],
-            ])->trigger();
-
-            // Persist course id in the session record and mark as creating (2).
-            $sessionid = (int)$session->get('id');
-            $sessionpersistent = new course_session($sessionid);
-            $sessionpersistent->set('courseid', $course->id);
-            $sessionpersistent->set('timemodified', time());
-            $sessionpersistent->update();
-            course_session_service::update_status($sessionid, course_session::STATUS_CREATING);
-
-            // Process sections if provided in the response.
-            if (!empty($resultdata['sections_info'])) {
-                self::process_course_sections($course->id, $resultdata['sections_info']);
-            }
-
-            // Index declared subsections (Moodle 4.5 delegated sections) so the
-            // activity loop can materialize each one lazily, in presentation order.
-            $subsections = self::index_declared_subsections($resultdata['subsections_info'] ?? []);
-
-            // Process generated activities if provided in the response.
-            $activityerrors = [];
-            if (!empty($resultdata['generated_activities'])) {
-                $activityerrors = self::process_generated_activities(
-                    $course->id,
-                    $resultdata['generated_activities'],
-                    $subsections
-                );
-            }
-
-            // Subsections declared without activities materialize at the end of
-            // their parent section.
-            self::materialize_remaining_subsections($course->id, $subsections, $activityerrors);
-
-            // Ensure section sequences only contain valid course module ids.
-            $removedreferences = self::repair_course_section_sequences($course->id);
-            self::stabilize_course_structure_cache($course->id);
-
-            $remainingorphans = self::count_orphaned_course_module_references($course->id);
-            if ($remainingorphans > 0) {
-                $removedreferences += self::repair_course_section_sequences($course->id);
-                self::stabilize_course_structure_cache($course->id);
-                $remainingorphans = self::count_orphaned_course_module_references($course->id);
-            }
-
-            $missingmodinfocms = self::count_unresolved_modinfo_sequence_references($course->id);
-            if ($missingmodinfocms > 0) {
-                $removedreferences += self::repair_course_section_sequences($course->id);
-                self::stabilize_course_structure_cache($course->id);
-                $missingmodinfocms = self::count_unresolved_modinfo_sequence_references($course->id);
-            }
-
-            if ($remainingorphans > 0 || $missingmodinfocms > 0) {
-                throw new \Exception('Course structure is inconsistent after module creation.');
-            }
-
-            // Update session status to created.
-            course_session_service::update_status($sessionid, course_session::STATUS_CREATED);
-
-            if (!empty($activityerrors)) {
-                debugging(
-                    'local_coursegen: created course with module errors. Session ' . $sessionid
-                    . '. Errors: ' . json_encode($activityerrors, JSON_UNESCAPED_UNICODE)
-                );
-            }
-
-            if ($removedreferences > 0) {
-                debugging(
-                    'local_coursegen: removed orphaned course module references while creating course '
-                    . $course->id . '. Removed: ' . $removedreferences
-                );
-            }
-
-            // Return success response.
-            $message = get_string('coursecreated', 'local_coursegen');
-            if (!empty($activityerrors)) {
-                $message .= ' ' . get_string('coursecreated_partial', 'local_coursegen');
-            }
-
-            return [
-                'success' => true,
-                'courseid' => $course->id,
-                'shortname' => $course->shortname,
-                'fullname' => $course->fullname,
-                'message' => $message,
-                'courseurl' => course_get_url($course->id)->out(),
-                'partial' => !empty($activityerrors),
-                'haswarnings' => !empty($activityerrors),
-                'warningscount' => count($activityerrors),
-                'activityerrors' => $activityerrors,
-            ];
+            return self::finalise_session($session, $course, $activityerrors, $repairs);
         } catch (\Throwable $e) {
-            // Update session status to failed if session exists.
-            course_session_service::update_status((int)$session->get('id'), course_session::STATUS_FAILED);
-
-            // Keep the technical detail in developer debugging only: the client
-            // receives a localized message without internal information.
-            debugging('local_coursegen: course creation failed. ' . $e->getMessage());
-
-            generation_failed::create([
-                'context' => \context_system::instance(),
-                'other' => ['reason' => get_class($e)],
-            ])->trigger();
-
-            return [
-                'success' => false,
-                'courseid' => 0,
-                'shortname' => '',
-                'fullname' => '',
-                'message' => get_string('error_course_creation_failed', 'local_coursegen'),
-                'partial' => false,
-                'haswarnings' => false,
-                'warningscount' => 0,
-            ];
+            return self::fail_session($session, $e);
         }
+    }
+
+    /**
+     * Build the course identity from the AI result, apply the user overrides and make
+     * the unique fields unique.
+     *
+     * Overrides (from the review modal) take precedence over the API response values.
+     *
+     * @param array $resultdata Result data from the Datacurso API.
+     * @param array $overrides Optional user overrides: fullname, shortname, category.
+     * @return \stdClass Course data ready for create_course().
+     */
+    private static function resolve_course_data(array $resultdata, array $overrides): \stdClass {
+        $coursedata = self::build_course_data_from_api($resultdata);
+
+        if (!empty($overrides['fullname'])) {
+            $coursedata->fullname = (string)\core_text::substr($overrides['fullname'], 0, 255);
+        }
+        if (!empty($overrides['shortname'])) {
+            $coursedata->shortname = (string)\core_text::substr(trim($overrides['shortname']), 0, 100);
+        }
+        if (!empty($overrides['category'])) {
+            $coursedata->category = (int)$overrides['category'];
+        }
+
+        return self::ensure_unique_course_fields($coursedata);
+    }
+
+    /**
+     * Create the Moodle course, audit it and bind the planning session to it.
+     *
+     * The session is marked as creating until the structure is complete.
+     *
+     * @param course_session $session Planning session persistent.
+     * @param \stdClass $coursedata Course data from resolve_course_data().
+     * @return \stdClass The created course record.
+     */
+    private static function create_shell_course(course_session $session, \stdClass $coursedata): \stdClass {
+        $course = create_course($coursedata);
+
+        generation_result_applied::create([
+            'context' => course::instance($course->id),
+            'other' => ['courseid' => (int)$course->id],
+        ])->trigger();
+
+        $sessionid = (int)$session->get('id');
+        $sessionpersistent = new course_session($sessionid);
+        $sessionpersistent->set('courseid', $course->id);
+        $sessionpersistent->set('timemodified', time());
+        $sessionpersistent->update();
+        course_session_service::update_status($sessionid, course_session::STATUS_CREATING);
+
+        return $course;
+    }
+
+    /**
+     * Create the sections, subsections and activities of the result inside the course.
+     *
+     * @param \stdClass $course Course record.
+     * @param array $resultdata Result data from the Datacurso API.
+     * @return array Activity creation errors (resource_type, section, message, title).
+     */
+    private static function populate_structure(\stdClass $course, array $resultdata): array {
+        if (!empty($resultdata['sections_info'])) {
+            self::process_course_sections($course->id, $resultdata['sections_info']);
+        }
+
+        // Index declared subsections (Moodle 4.5 delegated sections) so the
+        // activity loop can materialize each one lazily, in presentation order.
+        $subsections = self::index_declared_subsections($resultdata['subsections_info'] ?? []);
+
+        $activityerrors = [];
+        if (!empty($resultdata['generated_activities'])) {
+            $activityerrors = self::process_generated_activities(
+                $course->id,
+                $resultdata['generated_activities'],
+                $subsections
+            );
+        }
+
+        // Subsections declared without activities materialize at the end of
+        // their parent section.
+        self::materialize_remaining_subsections($course->id, $subsections, $activityerrors);
+
+        return $activityerrors;
+    }
+
+    /**
+     * Mark the session created, report the degradations and build the success response.
+     *
+     * @param course_session $session Planning session persistent.
+     * @param \stdClass $course Created course record.
+     * @param array $activityerrors Activity creation errors from populate_structure().
+     * @param int $repairs Number of structure repairs made by ensure_course_structure_consistent().
+     * @return array Success response.
+     */
+    private static function finalise_session(
+        course_session $session,
+        \stdClass $course,
+        array $activityerrors,
+        int $repairs
+    ): array {
+        $sessionid = (int)$session->get('id');
+        course_session_service::update_status($sessionid, course_session::STATUS_CREATED);
+
+        if (!empty($activityerrors)) {
+            debugging(
+                'local_coursegen: created course with module errors. Session ' . $sessionid
+                . '. Errors: ' . json_encode($activityerrors, JSON_UNESCAPED_UNICODE)
+            );
+        }
+
+        if ($repairs > 0) {
+            debugging(
+                'local_coursegen: repaired the course structure while creating course '
+                . $course->id . '. Repairs: ' . $repairs
+            );
+        }
+
+        $message = get_string('coursecreated', 'local_coursegen');
+        if (!empty($activityerrors)) {
+            $message .= ' ' . get_string('coursecreated_partial', 'local_coursegen');
+        }
+
+        return [
+            'success' => true,
+            'courseid' => $course->id,
+            'shortname' => $course->shortname,
+            'fullname' => $course->fullname,
+            'message' => $message,
+            'courseurl' => course_get_url($course->id)->out(),
+            'partial' => !empty($activityerrors),
+            'haswarnings' => !empty($activityerrors),
+            'warningscount' => count($activityerrors),
+            'activityerrors' => $activityerrors,
+        ];
+    }
+
+    /**
+     * Mark the session failed, audit the failure and build the failure response.
+     *
+     * The technical detail stays in developer debugging: the client receives a
+     * localized message without internal information.
+     *
+     * @param course_session $session Planning session persistent.
+     * @param \Throwable $e The failure.
+     * @return array Failure response.
+     */
+    private static function fail_session(course_session $session, \Throwable $e): array {
+        course_session_service::update_status((int)$session->get('id'), course_session::STATUS_FAILED);
+
+        debugging('local_coursegen: course creation failed. ' . $e->getMessage());
+
+        generation_failed::create([
+            'context' => system::instance(),
+            'other' => ['reason' => get_class($e)],
+        ])->trigger();
+
+        return [
+            'success' => false,
+            'courseid' => 0,
+            'shortname' => '',
+            'fullname' => '',
+            'message' => get_string('error_course_creation_failed', 'local_coursegen'),
+            'partial' => false,
+            'haswarnings' => false,
+            'warningscount' => 0,
+        ];
     }
 
     /**
@@ -648,158 +692,65 @@ class create_course_service {
     }
 
     /**
-     * Remove invalid course module ids from all section sequences.
+     * Repair the course structure with core's integrity check and make sure modinfo
+     * resolves every listed module.
+     *
+     * course_integrity_check() in full-check mode removes module ids that do not exist
+     * from the section sequences, lists modules missing from every sequence in the
+     * section their course_modules row points to, drops duplicates and re-points
+     * course_modules.section to the section whose sequence lists the module. A check-only
+     * pass afterwards and a fresh modinfo confirm the result; when a listed module still
+     * cannot be resolved the creation fails.
      *
      * @param int $courseid Course ID.
-     * @return int Number of removed references.
+     * @return int Number of repairs made.
+     * @throws moodle_exception When the structure is still inconsistent after the repair.
      */
-    private static function repair_course_section_sequences(int $courseid): int {
-        global $DB;
+    private static function ensure_course_structure_consistent(int $courseid): int {
+        // Full check ($fullcheck = true): repairs the sequences and course_modules.section in the DB.
+        $repairs = course_integrity_check($courseid, null, null, true);
+        $repairs = is_array($repairs) ? count($repairs) : 0;
 
-        $validcmids = self::get_valid_course_module_ids($courseid);
-        $sections = $DB->get_records('course_sections', ['course' => $courseid]);
-        $removed = 0;
-
-        foreach ($sections as $section) {
-            $rawsequence = trim((string)($section->sequence ?? ''));
-            if ($rawsequence === '') {
-                continue;
-            }
-
-            $sequenceids = self::parse_sequence_ids($rawsequence);
-            if (empty($sequenceids)) {
-                if ($rawsequence !== '') {
-                    $DB->set_field('course_sections', 'sequence', '', ['id' => $section->id]);
-                    $removed++;
-                }
-                continue;
-            }
-
-            $filteredids = [];
-            foreach ($sequenceids as $cmid) {
-                if (isset($validcmids[$cmid])) {
-                    $filteredids[] = $cmid;
-                } else {
-                    $removed++;
-                }
-            }
-
-            $newsequence = implode(',', $filteredids);
-            if ($newsequence !== $rawsequence) {
-                $DB->set_field('course_sections', 'sequence', $newsequence, ['id' => $section->id]);
-            }
-        }
-
-        if ($removed > 0) {
-            rebuild_course_cache($courseid, true);
-        }
-
-        return $removed;
-    }
-
-    /**
-     * Count orphaned course module references in section sequences.
-     *
-     * @param int $courseid Course ID.
-     * @return int Number of orphaned references.
-     */
-    private static function count_orphaned_course_module_references(int $courseid): int {
-        global $DB;
-
-        $validcmids = self::get_valid_course_module_ids($courseid);
-        $sections = $DB->get_records('course_sections', ['course' => $courseid], '', 'id,sequence');
-        $orphans = 0;
-
-        foreach ($sections as $section) {
-            $sequenceids = self::parse_sequence_ids((string)($section->sequence ?? ''));
-            foreach ($sequenceids as $cmid) {
-                if (!isset($validcmids[$cmid])) {
-                    $orphans++;
-                }
-            }
-        }
-
-        return $orphans;
-    }
-
-    /**
-     * Parse a Moodle section sequence string into positive module ids.
-     *
-     * @param string $sequence Comma-separated module ids.
-     * @return int[]
-     */
-    private static function parse_sequence_ids(string $sequence): array {
-        if (trim($sequence) === '') {
-            return [];
-        }
-
-        $ids = [];
-        foreach (explode(',', $sequence) as $rawid) {
-            $cmid = (int)trim($rawid);
-            if ($cmid > 0) {
-                $ids[] = $cmid;
-            }
-        }
-
-        return $ids;
-    }
-
-    /**
-     * Get valid course module ids for a course as a lookup map.
-     *
-     * @param int $courseid Course ID.
-     * @return array<int,bool>
-     */
-    private static function get_valid_course_module_ids(int $courseid): array {
-        global $DB;
-
-        $records = $DB->get_records('course_modules', ['course' => $courseid], '', 'id');
-        $lookup = [];
-        foreach ($records as $record) {
-            $lookup[(int)$record->id] = true;
-        }
-
-        return $lookup;
-    }
-
-    /**
-     * Stabilize cache state for course structure/navigation checks.
-     *
-     * @param int $courseid Course ID.
-     * @return void
-     */
-    private static function stabilize_course_structure_cache(int $courseid): void {
-        \course_modinfo::clear_instance_cache($courseid);
         rebuild_course_cache($courseid, true);
-        rebuild_course_cache($courseid, false);
-        \course_modinfo::clear_instance_cache($courseid);
+        get_fast_modinfo($courseid, 0, true);
+        $modinfo = get_fast_modinfo($courseid);
+
+        // Full check in check-only mode ($checkonly = true): reports what is still wrong, writes nothing.
+        $remaining = course_integrity_check($courseid, null, null, true, true);
+        if (!empty($remaining) || !self::modinfo_resolves_sequences($modinfo)) {
+            throw new moodle_exception('error_course_structure_inconsistent', 'local_coursegen');
+        }
+
+        return $repairs;
     }
 
     /**
-     * Count section sequence module ids that cannot be resolved by modinfo.
+     * Whether every module id listed in the section sequences is a module of the modinfo.
      *
-     * @param int $courseid Course ID.
-     * @return int Number of unresolved references.
+     * A module whose type was disabled meanwhile stays in the sequence but is not part
+     * of the modinfo, so the course page could not render it.
+     *
+     * @param \course_modinfo $modinfo Fresh modinfo of the course.
+     * @return bool
      */
-    private static function count_unresolved_modinfo_sequence_references(int $courseid): int {
+    private static function modinfo_resolves_sequences(\course_modinfo $modinfo): bool {
         global $DB;
 
-        $course = get_course($courseid);
-        $modinfo = get_fast_modinfo($course);
         $cms = $modinfo->get_cms();
-
-        $sections = $DB->get_records('course_sections', ['course' => $courseid], '', 'id,sequence');
-        $missing = 0;
+        $sections = $DB->get_records('course_sections', ['course' => $modinfo->get_course_id()], '', 'id,sequence');
 
         foreach ($sections as $section) {
-            $sequenceids = self::parse_sequence_ids((string)($section->sequence ?? ''));
-            foreach ($sequenceids as $cmid) {
-                if (!isset($cms[$cmid])) {
-                    $missing++;
+            $sequence = trim((string)($section->sequence ?? ''));
+            if ($sequence === '') {
+                continue;
+            }
+            foreach (explode(',', $sequence) as $cmid) {
+                if (!isset($cms[(int)$cmid])) {
+                    return false;
                 }
             }
         }
 
-        return $missing;
+        return true;
     }
 }

@@ -17,23 +17,18 @@
 namespace local_coursegen;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
+use local_coursegen\external\create_mod;
 use local_coursegen\external\start_course_planning;
 use local_coursegen\local\api_client_factory;
-use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\module_job_service;
-
-defined('MOODLE_INTERNAL') || die();
-
-require_once(__DIR__ . '/fixtures/aiprovider_datacurso_stub.php');
+use local_coursegen\tests\api_testcase;
 
 /**
  * Error disclosure tests: technical exception details must never reach the
  * client response; only localized messages do, while the technical text is
  * kept in developer debugging output.
  *
- * The AI service is mocked, so no network request is ever performed. The
- * testable subclass fixture and the external classes load lib/externallib.php,
- * which requires each test to run in an isolated process.
+ * The AI service is mocked, so no network request is ever performed.
  *
  * @package    local_coursegen
  * @category   test
@@ -41,31 +36,19 @@ require_once(__DIR__ . '/fixtures/aiprovider_datacurso_stub.php');
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_coursegen\external\create_mod
  * @covers     \local_coursegen\external\start_course_planning
- *
- * @runTestsInSeparateProcesses
  */
-final class error_message_disclosure_test extends \advanced_testcase {
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\external\create_mod::class)]
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\external\start_course_planning::class)]
+final class error_message_disclosure_test extends api_testcase {
     /** @var string Technical marker that must never surface in a client response. */
     private const TECHNICALDETAIL = 'TECH-SECRET curl error 500 at https://internal-api.invalid/course/init';
 
     /**
-     * Load the testable subclass in the isolated process.
+     * Make any accidental real API call fail fast instead of reaching the network.
      */
     protected function setUp(): void {
         parent::setUp();
-        require_once(__DIR__ . '/fixtures/testable_create_mod.php');
-
-        // Any accidental real API call must fail fast instead of reaching the network.
         set_config('datacurso_service_url', 'https://invalid.invalid', 'local_coursegen');
-    }
-
-    /**
-     * Reset the injected doubles between tests.
-     */
-    protected function tearDown(): void {
-        testable_create_mod::$mockservice = null;
-        api_client_factory::set_test_client(null);
-        parent::tearDown();
     }
 
     /**
@@ -99,15 +82,9 @@ final class error_message_disclosure_test extends \advanced_testcase {
         $this->setUser($teacher);
 
         module_job_service::create_job($course->id, $teacher->id, 'job-fail', 0, null, null, 1, null, 'completed');
+        $this->inject_api_service(['get_activity_result' => new \Exception(self::TECHNICALDETAIL)]);
 
-        $service = $this->getMockBuilder(ai_course_api_service::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['get_activity_result'])
-            ->getMock();
-        $service->method('get_activity_result')->willThrowException(new \Exception(self::TECHNICALDETAIL));
-        testable_create_mod::$mockservice = $service;
-
-        $result = testable_create_mod::execute($course->id, 1, 'job-fail');
+        $result = create_mod::execute($course->id, 1, 'job-fail');
 
         $this->assertFalse($result['ok']);
         $this->assertSame(get_string('error_generating_resource', 'local_coursegen'), $result['message']);
@@ -130,7 +107,7 @@ final class error_message_disclosure_test extends \advanced_testcase {
 
         module_job_service::create_job($course->id, $student->id, 'job-denied', 0, null, null, 1, null, 'completed');
 
-        $result = testable_create_mod::execute($course->id, 1, 'job-denied');
+        $result = create_mod::execute($course->id, 1, 'job-denied');
         $this->resetDebugging();
 
         $this->assertFalse($result['ok']);

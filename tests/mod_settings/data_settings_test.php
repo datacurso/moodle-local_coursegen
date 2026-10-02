@@ -24,6 +24,7 @@ namespace local_coursegen\mod_settings;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers \local_coursegen\mod_settings\data_settings
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\mod_settings\data_settings::class)]
 final class data_settings_test extends \advanced_testcase {
     /**
      * Create a database activity and return a cm-like object shaped as create_mod_service passes it.

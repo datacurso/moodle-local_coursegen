@@ -22,18 +22,25 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use core\context\system;
+use core\url;
+use local_coursegen\local\language_options;
+use local_coursegen\local\models\course_session;
+use local_coursegen\local\service\course_session_service;
+use local_coursegen\local\service\system_instruction_service;
+
 require('../../config.php');
 require_once($CFG->libdir . '/filelib.php');
 
 require_login();
 
 // Check permissions.
-$systemcontext = context_system::instance();
+$systemcontext = system::instance();
 require_capability('moodle/course:create', $systemcontext);
 require_capability('local/coursegen:createcoursewithai', $systemcontext);
 
 // Set up the page.
-$url = new moodle_url('/local/coursegen/aicoursecreation.php');
+$url = new url('/local/coursegen/aicoursecreation.php');
 $PAGE->set_url($url);
 $PAGE->set_context($systemcontext);
 $PAGE->set_pagelayout('popup');
@@ -43,40 +50,25 @@ $PAGE->set_title(get_string('createwithai', 'local_coursegen'));
 // from Moodle's cache pipeline, so browsers keep stale copies across plugin
 // upgrades — bust them with the plugin version.
 $cssrev = get_config('local_coursegen', 'version');
-$PAGE->requires->css(new moodle_url('/local/coursegen/styles/aicoursecreation.css', ['v' => $cssrev]));
-$PAGE->requires->css(new moodle_url('/local/coursegen/styles/chatui.css', ['v' => $cssrev]));
-$PAGE->requires->css(new moodle_url('/local/coursegen/styles/sidebar.css', ['v' => $cssrev]));
-
-use local_coursegen\local\models\course_session;
-use local_coursegen\local\service\course_session_service;
+$PAGE->requires->css(new url('/local/coursegen/styles/aicoursecreation.css', ['v' => $cssrev]));
+$PAGE->requires->css(new url('/local/coursegen/styles/chatui.css', ['v' => $cssrev]));
+$PAGE->requires->css(new url('/local/coursegen/styles/sidebar.css', ['v' => $cssrev]));
 
 $resumesessionid = optional_param('sessionid', 0, PARAM_INT);
 
-// Load system instructions (directrices institucionales).
+// Load the institutional guidelines (system instructions), alphabetically.
 $systeminstructions = [];
-$records = $DB->get_records('local_coursegen_system_instruction', ['deleted' => 0], 'name ASC');
-foreach ($records as $record) {
+foreach (system_instruction_service::get_all('name', 'ASC') as $instruction) {
     $systeminstructions[] = [
-        'id' => 'si_' . $record->id,
-        'name' => $record->name,
+        'id' => 'si_' . $instruction->get('id'),
+        'name' => $instruction->get('name'),
         'category' => 'General', // The table doesn't have a category field, using default.
-        'description' => $record->content ?? '',
+        'description' => $instruction->get('content') ?? '',
     ];
 }
 
 // Get available languages (only those supported by the plugin).
-$supportedlangs = ['es', 'en', 'de', 'ru', 'pt', 'fr', 'id'];
-$alllanguages = get_string_manager()->get_list_of_languages(null, 'iso6391');
-
-$languageoptions = [];
-foreach ($supportedlangs as $code) {
-    if (isset($alllanguages[$code])) {
-        $languageoptions[] = [
-            'code' => $code,
-            'name' => $alllanguages[$code] . ' (' . strtoupper($code) . ')',
-        ];
-    }
-}
+$languageoptions = language_options::options();
 
 // Helper to build session data array.
 $buildsessiondata = function ($session, $maxtitle = 50) {
@@ -111,22 +103,30 @@ foreach ($allrecords as $session) {
 }
 
 // Get logo URL.
-$logourl = new moodle_url('/local/coursegen/pix/logo.png');
+$logourl = new url('/local/coursegen/pix/logo.png');
 
 // Subsections toggle only renders when the feature is enabled and mod_subsection is available.
 $subsectionsenabled = \local_coursegen\local\service\course_planning_service::subsections_available();
+
+// The page default is always a supported code: the hidden language select and
+// the JavaScript state start from it, and the planning endpoint normalises the
+// same way (language_options::resolve), so an unsupported Moodle language
+// (e.g. "ja") or a regional one ("pt_br") never travels as is.
+$defaultlang = language_options::normalize(current_language());
 
 // Prepare template context.
 $templatecontext = [
     'guidelines' => json_encode($systeminstructions),
     'languages' => json_encode($languageoptions),
-    'defaultlang' => current_language(),
+    'defaultlang' => $defaultlang,
     'logourl' => $logourl->out(),
     'hassessions' => !empty($recent5),
     'sessions' => $recent5,
     'allsessions' => $allsessionsdata,
     'isresuming' => $resumesessionid > 0,
     'subsectionsenabled' => $subsectionsenabled,
+    // The compact composer renders the shared chips/toolbar partials in their compact variant.
+    'compactcomposer' => ['compact' => true],
     // Initial (empty) guideline listboxes; JavaScript re-renders them from the same templates.
     'guidelinelist' => [
         'listlabel' => get_string('courseai_guidelines_list_label', 'local_coursegen'),
@@ -142,7 +142,7 @@ echo $OUTPUT->header();
 $navbarcontext = [
     'title' => get_string('createwithai', 'local_coursegen'),
     'logourl' => $logourl->out(),
-    'closeurl' => (new moodle_url('/my/courses.php'))->out(false),
+    'closeurl' => (new url('/my/courses.php'))->out(false),
 ];
 echo $OUTPUT->render_from_template('local_coursegen/editor_navbar', $navbarcontext);
 
@@ -153,7 +153,7 @@ $PAGE->requires->js_call_amd('local_coursegen/courseai', 'init', [
     [
         'guidelines' => $systeminstructions,
         'languages' => $languageoptions,
-        'defaultlang' => current_language(),
+        'defaultlang' => $defaultlang,
         'sessions' => $allsessionsdata,
         'resumesessionid' => $resumesessionid,
         'isresuming' => $resumesessionid > 0,

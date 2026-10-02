@@ -16,6 +16,8 @@
 
 namespace local_coursegen;
 
+use core\context\module;
+use local_coursegen\local\warning_collector;
 use local_coursegen\mod_settings\quiz_settings;
 
 defined('MOODLE_INTERNAL') || die();
@@ -34,6 +36,7 @@ require_once($CFG->dirroot . '/question/type/numerical/questiontype.php');
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_coursegen\mod_settings\quiz_settings
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\mod_settings\quiz_settings::class)]
 final class quiz_calculated_question_test extends \advanced_testcase {
     /**
      * Create a course + quiz and return the cm object quiz_settings expects.
@@ -146,7 +149,8 @@ final class quiz_calculated_question_test extends \advanced_testcase {
 
     /**
      * A dataset without items can never produce a working question: the whole
-     * question must be skipped (with a debugging notice), not half-created.
+     * question must be skipped (recorded as a warning, with a debugging notice),
+     * not half-created.
      */
     public function test_skips_question_when_dataset_has_no_items(): void {
         global $DB;
@@ -162,6 +166,21 @@ final class quiz_calculated_question_test extends \advanced_testcase {
         $this->assertDebuggingCalledCount(1);
 
         $this->assertFalse($DB->record_exists('question', ['name' => 'AI calculated sum']));
+
+        // The skipped question is reported as a warning carrying the localized reason.
+        $warnings = $settings->get_warnings();
+        $this->assertCount(1, $warnings);
+        $this->assertSame(warning_collector::STEP_QUIZ_QUESTION, $warnings[0]['step']);
+        $this->assertSame('AI calculated sum', $warnings[0]['subject']);
+        $this->assertStringContainsString(
+            get_string('error_dataset_without_items', 'local_coursegen', 'a'),
+            $warnings[0]['reason']
+        );
+        // The client message names the question but never carries the reason.
+        $this->assertSame(
+            [get_string('generationwarning_quiz_question', 'local_coursegen', 'AI calculated sum')],
+            warning_collector::to_messages($warnings)
+        );
     }
 
     /**
@@ -175,7 +194,7 @@ final class quiz_calculated_question_test extends \advanced_testcase {
         $this->setAdminUser();
 
         $cm = $this->create_quiz_cm();
-        $context = \context_module::instance($cm->coursemodule);
+        $context = module::instance($cm->coursemodule);
 
         $settings = new quiz_settings($cm, ['questions' => [$this->calculated_question_payload()]]);
         $settings->add_settings();

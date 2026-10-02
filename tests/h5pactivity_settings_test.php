@@ -37,6 +37,7 @@ require_once($CFG->libdir . '/gradelib.php');
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_coursegen\mod_settings\h5pactivity_settings
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\mod_settings\h5pactivity_settings::class)]
 final class h5pactivity_settings_test extends \advanced_testcase {
     /**
      * Create an H5P activity and return the course module object the settings

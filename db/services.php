@@ -34,7 +34,7 @@ $functions = [
         'description' => 'Create module for ask question to chatbot based in that information',
         'type' => 'write',
         'ajax' => true,
-        'capabilities' => 'moodle/course:manageactivities,moodle/course:update',
+        'capabilities' => 'moodle/course:manageactivities,local/coursegen:createactivitywithai',
     ],
     'local_coursegen_create_mod_stream' => [
         'classname' => 'local_coursegen\external\create_mod_stream',
@@ -42,7 +42,7 @@ $functions = [
         'description' => 'Start streaming job to create module with AI and store job_id',
         'type' => 'write',
         'ajax' => true,
-        'capabilities' => 'moodle/course:manageactivities,moodle/course:update',
+        'capabilities' => 'moodle/course:manageactivities,local/coursegen:createactivitywithai',
     ],
     'local_coursegen_create_course' => [
         'classname' => 'local_coursegen\external\create_course',
@@ -84,7 +84,7 @@ $functions = [
         'description' => 'Initialise filepicker draft area for AI activity file uploads',
         'type' => 'read',
         'ajax' => true,
-        'capabilities' => 'moodle/course:manageactivities,moodle/course:update',
+        'capabilities' => 'moodle/course:manageactivities,local/coursegen:createactivitywithai',
         'loginrequired' => true,
     ],
     'local_coursegen_activity_file_upload' => [
@@ -93,7 +93,7 @@ $functions = [
         'description' => 'Upload a file for an AI activity generation thread',
         'type' => 'write',
         'ajax' => true,
-        'capabilities' => 'moodle/course:manageactivities,moodle/course:update',
+        'capabilities' => 'moodle/course:manageactivities,local/coursegen:createactivitywithai',
         'loginrequired' => true,
     ],
     'local_coursegen_manage_image_generation' => [
@@ -102,7 +102,7 @@ $functions = [
         'description' => 'Save image generation settings for course and activity creation',
         'type' => 'write',
         'ajax' => true,
-        'capabilities' => 'moodle/site:config',
+        'capabilities' => 'local/coursegen:manageimagegeneration',
         'loginrequired' => true,
     ],
     'local_coursegen_start_course_planning' => [

@@ -16,11 +16,15 @@
 
 namespace local_coursegen\local\service;
 
+use core\context\system;
 use local_coursegen\event\generation_job_started;
+use local_coursegen\event\generation_warning;
+use local_coursegen\local\api_client_factory;
 use local_coursegen\local\h5p_core_api;
 use local_coursegen\local\image_generation\activities;
 use local_coursegen\local\image_generation\image_policy_builder;
 use local_coursegen\local\models\course_session;
+use local_coursegen\local\warning_collector;
 
 /**
  * Service for AI course planning session orchestration.
@@ -65,6 +69,35 @@ class course_planning_service {
         int $userid,
         bool $withsubsections = false
     ): array {
+        // The payload builders record non-fatal lookup failures as warnings; they
+        // are audited in the system context whatever the outcome.
+        warning_collector::reset();
+        try {
+            return self::start($prompt, $lang, $withimages, $systeminstructionid, $userid, $withsubsections);
+        } finally {
+            generation_warning::trigger_all(system::instance(), '', warning_collector::drain());
+        }
+    }
+
+    /**
+     * Build the planning payload, start the session on the service and persist it.
+     *
+     * @param string $prompt Course prompt.
+     * @param string $lang Course language.
+     * @param bool $withimages Include image suggestions.
+     * @param int $systeminstructionid System instruction ID (0 for none).
+     * @param int $userid User ID.
+     * @param bool $withsubsections Organise sections into subsections.
+     * @return array
+     */
+    private static function start(
+        string $prompt,
+        string $lang,
+        bool $withimages,
+        int $systeminstructionid,
+        int $userid,
+        bool $withsubsections
+    ): array {
         $instructions = null;
         if ($systeminstructionid > 0) {
             $content = system_instruction_service::get_instruction_content($systeminstructionid);
@@ -77,7 +110,7 @@ class course_planning_service {
         // and mod_subsection is available, whatever the client sent.
         $withsubsections = $withsubsections && $available;
 
-        $apiservice = new ai_course_api_service();
+        $apiservice = api_client_factory::ai_course_api_service();
 
         $payload = [
             'prompt' => $prompt,
@@ -141,7 +174,7 @@ class course_planning_service {
         $session->create();
 
         generation_job_started::create([
-            'context' => \context_system::instance(),
+            'context' => system::instance(),
             'other' => [
                 'session_id' => (int)$session->get('id'),
                 'generate_images' => $withimages ? 1 : 0,
@@ -155,41 +188,5 @@ class course_planning_service {
             'streamingurl' => $streamingurl,
             'message' => get_string('courseai_init_success', 'local_coursegen'),
         ];
-    }
-
-    /**
-     * Build a user-friendly course title from a free-form prompt.
-     *
-     * @param string $prompt Free-form prompt from the courseai.
-     * @param string $lang Language code from request context.
-     * @return string
-     */
-    private static function build_course_title_from_prompt(string $prompt, string $lang = 'es'): string {
-        $normalized = trim((string)preg_replace('/\s+/u', ' ', $prompt));
-
-        if ($normalized === '') {
-            return get_string('createwithai', 'local_coursegen');
-        }
-
-        $topic = trim((string)\core_text::substr($normalized, 0, 180));
-
-        if ($lang === 'en') {
-            return 'Course: ' . $topic;
-        }
-
-        return 'Curso: ' . $topic;
-    }
-
-    /**
-     * Build a temporary shortname for the session payload.
-     *
-     * Final semantic shortname is provided by `course_configuration` and
-     * normalized at course creation time.
-     *
-     * @param int $userid Current user id.
-     * @return string
-     */
-    private static function build_initial_shortname(int $userid): string {
-        return 'courseai-' . $userid . '-' . time();
     }
 }

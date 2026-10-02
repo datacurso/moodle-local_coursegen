@@ -116,16 +116,6 @@
   padding: 0;
 }
 
-.courseai-chat-history-label {
-  display: block;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: .05em;
-  text-transform: uppercase;
-  color: var(--muted-fg);
-  margin-bottom: 8px;
-}
-
 .courseai-chat-message {
   display: inline-block;
   max-width: 100%;
@@ -153,11 +143,6 @@
   border-radius: 0;
   padding: 4px 0;
   font-size: 13px;
-}
-
-/* Legacy uppercase label hidden in favour of .cg-group-head (§7.1 redesign). */
-.courseai-checklist-label {
-  display: none;
 }
 
 .courseai-checklist-list {
@@ -482,26 +467,13 @@ body.cg-plan-reviewed .courseai-checklist-item.is-loading .courseai-checklist-ch
   flex: 0 0 auto;
 }
 
-.compact-chat-toolbar .tbar-btn,
 .compact-chat-toolbar .tbar-select,
-.compact-chat-toolbar .tbar-toggle-wrap,
-.compact-chat-toolbar .tbar-sep {
+.compact-chat-toolbar .tbar-toggle-wrap {
   flex: 0 0 auto;
-}
-
-.compact-chat-toolbar .tbar-btn {
-  width: 32px;
-  height: 32px;
-  padding: 0;
-  justify-content: center;
 }
 
 .compact-chat-toolbar .popover-wrap {
   flex-shrink: 0;
-}
-
-.compact-chat-toolbar .tbar-sep {
-  display: none;
 }
 
 .compact-chat-toolbar .tbar-select {

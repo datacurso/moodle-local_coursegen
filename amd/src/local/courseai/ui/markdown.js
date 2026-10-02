@@ -32,6 +32,7 @@
 
 import * as markedModule from 'local_coursegen/marked';
 import DOMPurify from 'local_coursegen/purify';
+import {escapeHtml} from 'local_coursegen/local/courseai/utils';
 
 /**
  * What the plan text is allowed to contain once rendered.
@@ -66,8 +67,10 @@ const sanitize = (parse, md) => {
     const html = parse(String(md || ''));
     const purify = DOMPurify.sanitize ? DOMPurify : (DOMPurify.default || null);
     if (!purify || typeof purify.sanitize !== 'function') {
-        // Sanitizing is not optional: show the text rather than raw HTML.
-        return String(md || '');
+        // Sanitizing is not optional: without DOMPurify the Markdown source is
+        // shown as escaped text. Callers insert the result as HTML, so returning
+        // the raw source would let any markup the model wrote reach the DOM.
+        return escapeHtml(md);
     }
     return purify.sanitize(html, {ALLOWED_TAGS, ALLOWED_ATTR});
 };

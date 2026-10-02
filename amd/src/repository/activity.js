@@ -21,7 +21,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import ajax from 'core/ajax';
+import {call} from 'local_coursegen/repository/base';
 
 /**
  * Start streaming job to create a module with AI.
@@ -30,7 +30,7 @@ import ajax from 'core/ajax';
  *     prompt: string, generateimages: number, lang: string}} payload
  * @return {Promise<Object>} response
  */
-export async function createModStream({courseid, sectionnum, beforemod, prompt, generateimages, lang}) {
+export const createModStream = ({courseid, sectionnum, beforemod, prompt, generateimages, lang}) => {
     const args = {
         courseid: Number(courseid) || 0,
         sectionnum: typeof sectionnum === 'number' ? sectionnum : null,
@@ -44,13 +44,8 @@ export async function createModStream({courseid, sectionnum, beforemod, prompt, 
         args.lang = language;
     }
 
-    return ajax.call([
-        {
-            methodname: 'local_coursegen_create_mod_stream',
-            args,
-        },
-    ])[0];
-}
+    return call('local_coursegen_create_mod_stream', args);
+};
 
 /**
  * Create the actual activity in Moodle from a finished AI job.
@@ -58,21 +53,12 @@ export async function createModStream({courseid, sectionnum, beforemod, prompt, 
  * @param {{courseid: number, sectionnum: (number|null), jobid: string, beforemod: (number|null)}} payload
  * @return {Promise<Object>} response
  */
-export async function createMod({courseid, sectionnum, jobid, beforemod}) {
-    const args = {
-        courseid: Number(courseid) || 0,
-        sectionnum: typeof sectionnum === 'number' ? sectionnum : 0,
-        jobid,
-        beforemod: typeof beforemod === 'number' ? beforemod : null,
-    };
-
-    return ajax.call([
-        {
-            methodname: 'local_coursegen_create_mod',
-            args,
-        },
-    ])[0];
-}
+export const createMod = ({courseid, sectionnum, jobid, beforemod}) => call('local_coursegen_create_mod', {
+    courseid: Number(courseid) || 0,
+    sectionnum: typeof sectionnum === 'number' ? sectionnum : 0,
+    jobid,
+    beforemod: typeof beforemod === 'number' ? beforemod : null,
+});
 
 /**
  * Send human feedback for an existing AI activity generation job.
@@ -80,21 +66,15 @@ export async function createMod({courseid, sectionnum, jobid, beforemod}) {
  * @param {{courseid: number, jobid: string, approvalstatus: string, instruction: string}} payload
  * @return {Promise<Object>} response
  */
-export async function sendActivityFeedback({courseid, jobid, approvalstatus, instruction}) {
-    const args = {
+export const sendActivityFeedback = ({courseid, jobid, approvalstatus, instruction}) => call(
+    'local_coursegen_activity_feedback',
+    {
         courseid: Number(courseid) || 0,
         jobid,
         approvalstatus,
         instruction,
-    };
-
-    return ajax.call([
-        {
-            methodname: 'local_coursegen_activity_feedback',
-            args,
-        },
-    ])[0];
-}
+    }
+);
 
 /**
  * Initialise a filepicker draft area for activity uploads.
@@ -102,18 +82,9 @@ export async function sendActivityFeedback({courseid, jobid, approvalstatus, ins
  * @param {{courseid: number}} payload
  * @return {Promise<Object>} response
  */
-export async function initActivityFilepicker({courseid}) {
-    const args = {
-        courseid: Number(courseid) || 0,
-    };
-
-    return ajax.call([
-        {
-            methodname: 'local_coursegen_activity_filepicker_init',
-            args,
-        },
-    ])[0];
-}
+export const initActivityFilepicker = ({courseid}) => call('local_coursegen_activity_filepicker_init', {
+    courseid: Number(courseid) || 0,
+});
 
 /**
  * Upload a draft file to the AI activity thread.
@@ -121,17 +92,8 @@ export async function initActivityFilepicker({courseid}) {
  * @param {{courseid: number, jobid: string, draftitemid: number}} payload
  * @return {Promise<Object>} response
  */
-export async function uploadActivityFile({courseid, jobid, draftitemid}) {
-    const args = {
-        courseid: Number(courseid) || 0,
-        jobid,
-        draftitemid: Number(draftitemid) || 0,
-    };
-
-    return ajax.call([
-        {
-            methodname: 'local_coursegen_activity_file_upload',
-            args,
-        },
-    ])[0];
-}
+export const uploadActivityFile = ({courseid, jobid, draftitemid}) => call('local_coursegen_activity_file_upload', {
+    courseid: Number(courseid) || 0,
+    jobid,
+    draftitemid: Number(draftitemid) || 0,
+});

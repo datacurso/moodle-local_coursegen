@@ -30,10 +30,9 @@
 export const parseCourseaiData = (params) => {
     let guidelines = params?.guidelines || [];
     let languages = params?.languages || [];
-    const defaultLang = params?.defaultlang || 'es';
+    const dataEl = document.getElementById('courseai-data');
 
     if (guidelines.length === 0 || languages.length === 0) {
-        const dataEl = document.getElementById('courseai-data');
         if (dataEl) {
             try {
                 const guidelinesData = dataEl.getAttribute('data-guidelines');
@@ -50,6 +49,14 @@ export const parseCourseaiData = (params) => {
             }
         }
     }
+
+    // The page config (js_call_amd) carries the default language normalised by
+    // PHP; the inline data element repeats it, and the first available language
+    // option is the last resort, so the default is never a hardcoded literal.
+    const defaultLang = params?.defaultlang
+        || dataEl?.getAttribute('data-defaultlang')
+        || languages[0]?.code
+        || '';
 
     return {guidelines, languages, defaultLang};
 };

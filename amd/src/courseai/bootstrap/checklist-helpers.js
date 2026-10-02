@@ -22,6 +22,7 @@
  */
 
 import {restoreAdjustmentHistory as doRestoreAdjustmentHistory} from 'local_coursegen/courseai/bootstrap/adjustment-history';
+import {buildChecklistItem as buildChecklistItemElement} from 'local_coursegen/local/courseai/ui/checklist-item';
 
 /**
  * Create checklist and adjustment-history helper functions.
@@ -107,11 +108,11 @@ export const makeChecklistHelpers = ({state, elements, texts}) => {
      * @returns {HTMLElement}
      */
     const buildChecklistItem = (section, options = {}) => {
-        const item = document.createElement('li');
         const total = Number(section?.total ?? 0);
         const done = Number(section?.done ?? 0);
         const complete = options.forceComplete === true || (total > 0 && done >= total);
-        item.className = 'courseai-checklist-item' + (complete ? ' is-done' : ' is-loading');
+        // Flat layout (check + name as direct children) as this checklist always rendered.
+        const item = buildChecklistItemElement({name: section.name, state: complete ? 'done' : 'loading', flat: true});
         item.setAttribute('data-section-index', String(section.section_index || 0));
         // Carry the attributes the live stream handler (handleDetailedPlanActivity)
         // uses, so a reload mid-planning lets the continuing stream mark each
@@ -122,20 +123,6 @@ export const makeChecklistHelpers = ({state, elements, texts}) => {
         }
         item.setAttribute('data-round', String(state.generationRound || 0));
         item.setAttribute('data-remaining', String(complete ? 0 : Math.max(0, total - done)));
-
-        const check = document.createElement('span');
-        check.className = 'courseai-checklist-check';
-        check.innerHTML = '<svg class="spinner-icon" viewBox="0 0 24 24">'
-            + '<path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"></path></svg>'
-            + '<svg class="check-icon" viewBox="0 0 24 24">'
-            + '<polyline points="20 6 9 17 4 12"></polyline></svg>';
-
-        const name = document.createElement('span');
-        name.className = 'courseai-checklist-name';
-        name.textContent = String(section.name || '');
-
-        item.appendChild(check);
-        item.appendChild(name);
 
         return item;
     };

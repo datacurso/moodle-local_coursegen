@@ -1,0 +1,46 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/local/courseai/planning_view
+
+    Step 2 of the AI course creation page: the planning view, made of the
+    progress area, the completion card and the review area (partials
+    planning_progress, planning_completion and planning_review).
+
+    The view is shown with an inline display style when the page resumes a
+    session, hidden otherwise; the JavaScript toggles element.style.display on
+    it (migrated in a later step).
+
+    Classes required for JS:
+    * none (elements are addressed by id)
+
+    Data attributes required for JS:
+    * none
+
+    Context variables required for this template:
+    * isresuming bool - True when the page resumes an existing session
+
+    Example context (json):
+    {
+        "isresuming": false
+    }
+}}
+<div class="planning-wrap" id="planningView" style="display:{{#isresuming}}flex{{/isresuming}}{{^isresuming}}none{{/isresuming}}">
+  {{> local_coursegen/local/courseai/planning_progress }}
+  {{> local_coursegen/local/courseai/planning_completion }}
+  {{> local_coursegen/local/courseai/planning_review }}
+</div>

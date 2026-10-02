@@ -16,7 +16,9 @@
 
 namespace local_coursegen\mod_parameters;
 
-use aiprovider_datacurso\httpclient\ai_course_api;
+use core\context\user;
+use local_coursegen\local\api_client_factory;
+use local_coursegen\local\warning_collector;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -50,35 +52,40 @@ class folder_parameters extends base_parameters {
             return $this->parameters;
         }
 
-        $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
-        $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
-        $client = new ai_course_api(null, $baseurl, $baseurleu);
+        $apiservice = api_client_factory::ai_course_api_service();
 
         $draftid = file_get_unused_draft_itemid();
         $fs = get_file_storage();
-        $context = \context_user::instance($USER->id);
+        $context = user::instance($USER->id);
 
         foreach ($files as $file) {
             if (!is_array($file) || empty($file['file_path']) || empty($file['file_name'])) {
                 continue;
             }
+            // Same rules as the single-package downloads: the file name is reduced to a
+            // valid Moodle file name and the remote path travels percent-encoded.
+            $filename = clean_param(basename((string)$file['file_name']), PARAM_FILE);
+            if ($filename === '') {
+                debugging('local_coursegen: skipped folder file with an invalid name.', DEBUG_DEVELOPER);
+                continue;
+            }
             $filepath = self::normalize_filepath($file['folder_path'] ?? '');
-            // A single bad file must not abort the whole folder (this runs before creation).
-            try {
+            // A single bad file must not abort the whole folder (this runs before creation):
+            // the failure is recorded as a generation warning and the next file is tried.
+            warning_collector::attempt(function () use ($fs, $context, $draftid, $filepath, $file, $filename, $apiservice): void {
                 if ($filepath !== '/') {
                     $fs->create_directory($context->id, 'user', 'draft', $draftid, $filepath);
                 }
-                $endpoint = '/files/download?path=' . $file['file_path'];
-                $client->download_file($endpoint, $file['file_name'], [
+                $endpoint = self::build_download_endpoint((string)$file['file_path']);
+                $stored = $apiservice->download_file($endpoint, $filename, [
                     'itemid' => $draftid,
                     'filepath' => $filepath,
                 ]);
-            } catch (\Throwable $e) {
-                debugging(
-                    'local_coursegen: skipped folder file "' . $file['file_name'] . '": ' . $e->getMessage(),
-                    DEBUG_DEVELOPER
-                );
-            }
+                if ($stored === null) {
+                    // The service answered without a file: a silent skip would hide a missing document.
+                    throw new \RuntimeException('the service returned no file');
+                }
+            }, warning_collector::STEP_FOLDER_FILE, $filename);
         }
 
         $this->parameters->files = $draftid;

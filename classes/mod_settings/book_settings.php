@@ -16,6 +16,8 @@
 
 namespace local_coursegen\mod_settings;
 
+use core\context\module;
+
 defined('MOODLE_INTERNAL') || die();
 
 require_once("$CFG->libdir/filelib.php");
@@ -46,7 +48,7 @@ class book_settings extends base_settings {
         global $DB;
 
         $cm = $this->cm;
-        $context = \context_module::instance($cm->coursemodule);
+        $context = module::instance($cm->coursemodule);
 
         $book = $DB->get_record('book', ['id' => $cm->instance], '*', MUST_EXIST);
 

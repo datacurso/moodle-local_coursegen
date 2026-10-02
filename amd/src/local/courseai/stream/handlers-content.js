@@ -37,7 +37,7 @@ import {
     regenOnSectionActivity,
     regenOnSectionActivityDetail,
 } from 'local_coursegen/local/courseai/ui/regen-block';
-import {escapeHtml} from 'local_coursegen/local/courseai/utils';
+import {buildChecklistItem} from 'local_coursegen/local/courseai/ui/checklist-item';
 
 /**
  * Whether the current stream is ADDING or REGENERATING a whole section. Those
@@ -206,20 +206,10 @@ export const handleSection = (data, ctx) => {
         // when all its activities are detailed (data-remaining → 0, see
         // handleDetailedPlanActivity). Below the name sits an (initially empty)
         // Markdown detail filled in real time by the transcript accumulator.
-        const item = document.createElement('li');
-        item.className = 'courseai-checklist-item is-loading';
+        const item = buildChecklistItem({name: data.name, state: 'loading'});
         item.setAttribute('data-section-id', data.id);
         item.setAttribute('data-round', state.generationRound || 0);
         item.setAttribute('data-remaining', 0);
-        item.innerHTML = '<div class="courseai-checklist-head">'
-            + '<span class="courseai-checklist-check">'
-            + '<svg class="spinner-icon" viewBox="0 0 24 24">'
-            + '<path d="M12 2a10 10 0 0 1 10 10" stroke-linecap="round"/></svg>'
-            + '<svg class="check-icon" viewBox="0 0 24 24">'
-            + '<polyline points="20 6 9 17 4 12"/></svg></span>'
-            + '<span class="courseai-checklist-name">' + escapeHtml(String(data.name || '')) + '</span>'
-            + '</div>'
-            + '<div class="courseai-checklist-detail cg-log-md"></div>';
         targetList.appendChild(item);
         const listParent = targetList.closest('.courseai-checklist');
         if (listParent) {

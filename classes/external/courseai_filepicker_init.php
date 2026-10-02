@@ -25,15 +25,15 @@
 
 namespace local_coursegen\external;
 
-use context_system;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_value;
+use core\context\system;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
+use local_coursegen\local\access;
 
 defined('MOODLE_INTERNAL') || die();
 
-require_once($CFG->libdir . '/externallib.php');
 require_once($CFG->dirroot . '/repository/lib.php');
 
 /**
@@ -59,12 +59,11 @@ class courseai_filepicker_init extends external_api {
 
         $params = self::validate_parameters(self::execute_parameters(), []);
 
-        $context = context_system::instance();
+        $context = system::instance();
         self::validate_context($context);
 
         // Check permissions.
-        require_capability('moodle/course:create', $context);
-        require_capability('local/coursegen:createcoursewithai', $context);
+        access::require_course_creation($context);
 
         $draftitemid = file_get_unused_draft_itemid();
         $clientid = uniqid('local_coursegen_courseai_syllabus_');

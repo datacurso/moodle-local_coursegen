@@ -23,12 +23,13 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import { setCompactChatState } from './ui-planning';
+import {setCompactChatState} from 'local_coursegen/local/courseai/ui-planning';
 import FormAutocomplete from 'core/form-autocomplete';
-import { buildCompletionSummary } from './actions/summary';
-import { showCourseReviewPanel, createCourseFromSession } from './actions/course-create';
-import { sendFeedbackAction } from './actions/feedback';
-import { handleGenerate } from './actions/generate';
+import {buildCompletionSummary} from 'local_coursegen/local/courseai/actions/summary';
+import {showCourseReviewPanel, createCourseFromSession} from 'local_coursegen/local/courseai/actions/course-create';
+import {sendFeedbackAction} from 'local_coursegen/local/courseai/actions/feedback';
+import {handleGenerate} from 'local_coursegen/local/courseai/actions/generate';
+import {actionSelectors} from 'local_coursegen/local/courseai/selectors';
 
 /**
  * Create courseai actions and event bindings.
@@ -139,15 +140,27 @@ export const createCourseaiActions = (deps) => {
         if (completionSummary) {
             completionSummary.textContent = buildCompletionSummary(state, texts, formatTemplate);
         }
-        if (planningProgressCard) { planningProgressCard.style.display = 'none'; }
-        if (elements.planReviewCard) { elements.planReviewCard.style.display = 'none'; }
-        if (planActions) { planActions.style.display = 'none'; }
+        if (planningProgressCard) {
+            planningProgressCard.style.display = 'none';
+        }
+        if (elements.planReviewCard) {
+            elements.planReviewCard.style.display = 'none';
+        }
+        if (planActions) {
+            planActions.style.display = 'none';
+        }
         // Generation is over: drop the live progress view (the plan cards) so only the
         // success panel shows, and clear the generation styling.
         document.body.classList.remove('cg-generating');
-        if (elements.planDetailedView) { elements.planDetailedView.style.display = 'none'; }
-        if (completionView) { completionView.style.display = 'flex'; }
-        if (btnOpenMoodleCourse) { btnOpenMoodleCourse.disabled = !state.createdCourseUrl; }
+        if (elements.planDetailedView) {
+            elements.planDetailedView.style.display = 'none';
+        }
+        if (completionView) {
+            completionView.style.display = 'flex';
+        }
+        if (btnOpenMoodleCourse) {
+            btnOpenMoodleCourse.disabled = !state.createdCourseUrl;
+        }
         stepsUi.setStepState('planning', 'done');
         stepsUi.setStepState('generating', 'done');
         stepsUi.updateFlowNav();
@@ -155,7 +168,9 @@ export const createCourseaiActions = (deps) => {
         // Accept). Generation is over, so it must not sit in the bottom slot beside the
         // success view.
         const workingEntry = document.getElementById('cgFeedbackThinking');
-        if (workingEntry) { workingEntry.remove(); }
+        if (workingEntry) {
+            workingEntry.remove();
+        }
         // Pin the left thread to the bottom so the final "Your course is ready" turn is
         // comfortably visible. Without this the newest turns sit below the fold and the
         // user has to scroll down to see the completion message. Deferred to the next
@@ -190,16 +205,32 @@ export const createCourseaiActions = (deps) => {
         state.createdCourseUrl = '';
         state.createdCourseResult = null;
         state.initialPrompt = '';
-        if (promptInput) { promptInput.value = ''; }
-        if (langSelect) { langSelect.value = state.lang; }
-        if (btnWithImages) { btnWithImages.checked = false; }
-        if (imgToggleWrap) { imgToggleWrap.classList.remove('on'); }
-        if (btnWithSubsections) { btnWithSubsections.checked = false; }
-        if (subToggleWrap) { subToggleWrap.classList.remove('on'); }
+        if (promptInput) {
+            promptInput.value = '';
+        }
+        if (langSelect) {
+            langSelect.value = state.lang;
+        }
+        if (btnWithImages) {
+            btnWithImages.checked = false;
+        }
+        if (imgToggleWrap) {
+            imgToggleWrap.classList.remove('on');
+        }
+        if (btnWithSubsections) {
+            btnWithSubsections.checked = false;
+        }
+        if (subToggleWrap) {
+            subToggleWrap.classList.remove('on');
+        }
         const chipSyllabus = document.getElementById('chipSyllabus');
-        if (chipSyllabus) { chipSyllabus.classList.add('hidden'); }
+        if (chipSyllabus) {
+            chipSyllabus.classList.add('hidden');
+        }
         const chipSyllabusName = document.getElementById('chipSyllabusName');
-        if (chipSyllabusName) { chipSyllabusName.textContent = ''; }
+        if (chipSyllabusName) {
+            chipSyllabusName.textContent = '';
+        }
         refreshGuidelineChip();
         refreshChipsRow();
         renderInitialPromptHistory('');
@@ -252,10 +283,14 @@ export const createCourseaiActions = (deps) => {
         }
         if (btnCompactRegenerate) {
             btnCompactRegenerate.addEventListener('click', () => {
-                if (state.isStreaming) { return; }
+                if (state.isStreaming) {
+                    return;
+                }
                 const instruction = compactPromptInput ? compactPromptInput.value.trim() : '';
                 if (instruction.length < 10) {
-                    if (compactPromptInput) { compactPromptInput.focus(); }
+                    if (compactPromptInput) {
+                        compactPromptInput.focus();
+                    }
                     return;
                 }
                 sendFeedbackAction('adjust', fbCtx());
@@ -272,7 +307,9 @@ export const createCourseaiActions = (deps) => {
         }
         if (btnOpenMoodleCourse) {
             btnOpenMoodleCourse.addEventListener('click', () => {
-                if (!state.createdCourseUrl) { return; }
+                if (!state.createdCourseUrl) {
+                    return;
+                }
                 window.open(state.createdCourseUrl, '_blank', 'noopener,noreferrer');
             });
         }
@@ -281,15 +318,19 @@ export const createCourseaiActions = (deps) => {
                 window.location.href = 'aicoursecreation.php';
             });
         }
-        window.clearSyllabus = () => {
+        const clearSyllabus = () => {
             state.syllabusFile = null;
             state.syllabusFilename = null;
             state.draftitemid = null;
             const chipSyllabus = document.getElementById('chipSyllabus');
-            if (chipSyllabus) { chipSyllabus.classList.add('hidden'); }
+            if (chipSyllabus) {
+                chipSyllabus.classList.add('hidden');
+            }
             refreshChipsRow();
             const compactChipSyllabus = document.getElementById('compactChipSyllabus');
-            if (compactChipSyllabus) { compactChipSyllabus.classList.add('hidden'); }
+            if (compactChipSyllabus) {
+                compactChipSyllabus.classList.add('hidden');
+            }
             const compactChipsRow = document.getElementById('compactChipsRow');
             const compactChipGuideline = document.getElementById('compactChipGuideline');
             if (compactChipsRow) {
@@ -297,10 +338,29 @@ export const createCourseaiActions = (deps) => {
                 compactChipsRow.style.display = hasGuideline ? 'flex' : 'none';
             }
         };
-        window.clearGuideline = () => {
+        const clearGuideline = () => {
             state.selectedGuidelineId = null;
             refreshGuidelineChip();
         };
+        // The chip remove buttons exist in both the main and the compact composer
+        // (rendered from the same partial), so one delegated listener serves both.
+        document.addEventListener('click', (event) => {
+            if (!(event.target instanceof Element)) {
+                return;
+            }
+            const trigger = event.target.closest(
+                `${actionSelectors.clearSyllabus}, ${actionSelectors.clearGuideline}`
+            );
+            if (!trigger) {
+                return;
+            }
+            event.preventDefault();
+            if (trigger.matches(actionSelectors.clearSyllabus)) {
+                clearSyllabus();
+            } else {
+                clearGuideline();
+            }
+        });
     };
 
     return {

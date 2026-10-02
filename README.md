@@ -39,7 +39,7 @@ All plugins in this suite are powered by the **Datacurso AI Provider**.
 
 ## Pre-requisites
 
-1. Moodle 4.5
+1. Moodle 4.5 to 5.2
 2. Install the Moodle AI provider **DataCurso AI Provider**. Download it for free from [https://moodle.org/plugins/aiprovider_datacurso/versions](https://moodle.org/plugins/aiprovider_datacurso/versions).
 3. In the DataCurso AI Provider settings, configure a valid license key as documented at [https://docs.datacurso.com/index.php?title=Datacurso_AI_Provider#Getting_license_keys](https://docs.datacurso.com/index.php?title=Datacurso_AI_Provider#Getting_license_keys).
 
@@ -253,7 +253,7 @@ Once the Datacurso context is set at the course level, it will be automatically 
     ![Activity prompt](./_docs/images/local_coursegen_activity_prompt.png)
 
 ### Optional: Images in the activity
-- Use the combobox to choose whether the activity should include images. By default this is set to **No not generate images**.
+- Use the combobox to choose whether the activity should include images. By default this is set to **Do not generate images**.
 
     ![Images in the activity](./_docs/images/local_coursegen_images_in_the_activity.png)
  

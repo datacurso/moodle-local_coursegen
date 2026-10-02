@@ -25,18 +25,16 @@
 
 namespace local_coursegen\external;
 
-use context_course;
-use context_user;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_value;
-use local_coursegen\local\service\ai_course_api_service;
+use core\context\course;
+use core\context\user;
+use core\exception\moodle_exception;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
+use local_coursegen\local\access;
+use local_coursegen\local\api_client_factory;
 use local_coursegen\local\service\module_job_service;
-
-defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/externallib.php');
 
 /**
  * External API to upload files for AI activity generation jobs.
@@ -76,23 +74,22 @@ class activity_file_upload extends external_api {
         $jobid = $params['jobid'];
         $draftitemid = $params['draftitemid'];
 
-        $context = context_course::instance($courseid);
+        $context = course::instance($courseid);
         self::validate_context($context);
 
         // Same flow, same credits: gate this step of the AI generation behind
         // the same capabilities as create_mod_stream/create_mod.
-        require_capability('moodle/course:manageactivities', $context);
-        require_capability('local/coursegen:createactivitywithai', $context);
+        access::require_activity_creation($context);
 
         $job = module_job_service::get_user_job($jobid, $courseid, $USER->id);
         $threadid = $job->get('job_id');
 
         if (!$threadid) {
-            throw new \moodle_exception('error_no_session_found', 'local_coursegen');
+            throw new moodle_exception('error_no_session_found', 'local_coursegen');
         }
 
         $fs = get_file_storage();
-        $usercontext = context_user::instance($USER->id);
+        $usercontext = user::instance($USER->id);
 
         $files = $fs->get_area_files(
             $usercontext->id,
@@ -104,21 +101,22 @@ class activity_file_upload extends external_api {
         );
 
         if (empty($files)) {
-            throw new \moodle_exception('nofile', 'error');
+            throw new moodle_exception('nofile', 'error');
         }
 
         $file = reset($files);
         if (!$file instanceof \stored_file) {
-            throw new \moodle_exception('nofile', 'error');
+            throw new moodle_exception('nofile', 'error');
         }
 
-        $apiservice = new ai_course_api_service();
+        $apiservice = api_client_factory::ai_course_api_service();
 
         try {
             $apiservice->upload_activity_file($threadid, $file);
-        } catch (\moodle_exception $e) {
+        } catch (moodle_exception $e) {
             $details = $e->debuginfo ?: $e->getMessage();
-            throw new \moodle_exception('error_sending_activity_file', 'local_coursegen', '', $details);
+            // The string has no placeholder: the technical detail is debug information.
+            throw new moodle_exception('error_sending_activity_file', 'local_coursegen', '', null, $details);
         }
 
         return [

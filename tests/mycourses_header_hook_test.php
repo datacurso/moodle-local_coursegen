@@ -16,8 +16,10 @@
 
 namespace local_coursegen;
 
+use core\context\system;
 use core\hook\output\before_footer_html_generation;
 use core\hook\output\before_http_headers;
+use core\url;
 use local_coursegen\hook\mycourses_header_hook;
 
 /**
@@ -35,6 +37,7 @@ use local_coursegen\hook\mycourses_header_hook;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_coursegen\hook\mycourses_header_hook
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\hook\mycourses_header_hook::class)]
 final class mycourses_header_hook_test extends \advanced_testcase {
     /** @var string Button fragment used by the splice tests; carries the template's form id. */
     private const FRAGMENT = '<form action="/local/coursegen/aicoursecreation.php" method="get" '
@@ -111,7 +114,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
     private function set_page_url(string $path): void {
         global $PAGE;
 
-        $PAGE->set_context(\context_system::instance());
+        $PAGE->set_context(system::instance());
         $PAGE->set_url($path);
     }
 
@@ -123,7 +126,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
      */
     private function create_user_with_capabilities(array $capabilities): \stdClass {
         $generator = $this->getDataGenerator();
-        $systemcontext = \context_system::instance();
+        $systemcontext = system::instance();
 
         $user = $generator->create_user();
         $roleid = $generator->create_role();
@@ -232,7 +235,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
     public function test_button_template_renders_form_with_expected_id_and_url(): void {
         global $OUTPUT;
 
-        $url = (new \moodle_url('/local/coursegen/aicoursecreation.php'))->out(false);
+        $url = (new url('/local/coursegen/aicoursecreation.php'))->out(false);
         $html = $OUTPUT->render_from_template('local_coursegen/add_ai_course_button', ['url' => $url]);
 
         $this->assertStringContainsString('id="local_coursegen_aicourseform"', $html);
@@ -332,7 +335,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
         $this->setAdminUser();
 
         $page = new \moodle_page();
-        $page->set_context(\context_system::instance());
+        $page->set_context(system::instance());
 
         $this->assertFalse(mycourses_header_hook::should_inject($page));
     }

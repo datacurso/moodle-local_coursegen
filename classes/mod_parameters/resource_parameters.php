@@ -16,14 +16,10 @@
 
 namespace local_coursegen\mod_parameters;
 
-use aiprovider_datacurso\httpclient\ai_course_api;
-
-defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/filelib.php');
-
 /**
  * Class resource_parameters
+ *
+ * Downloads the generated package into the 'files' form field of the resource module.
  *
  * @package    local_coursegen
  * @copyright  2025 Wilber Narvaez <https://datacurso.com>
@@ -36,13 +32,7 @@ class resource_parameters extends base_parameters {
      * @return object Adjusted parameters for the module resource.
      */
     public function get_parameters() {
-        $downloadinfo = $this->get_package_download_info();
-        $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
-        $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
-
-        $client = new ai_course_api(null, $baseurl, $baseurleu);
-        $file = $client->download_file($downloadinfo['endpoint'], $downloadinfo['filename']);
-        $this->parameters->files = $file->get_itemid();
+        $this->download_package_into('files');
         return $this->parameters;
     }
 }

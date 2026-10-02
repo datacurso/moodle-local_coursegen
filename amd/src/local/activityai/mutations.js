@@ -22,7 +22,12 @@
  */
 
 import notification from 'core/notification';
-import * as repository from 'local_coursegen/local/activityai/repository';
+import {
+    createModStream as startSession,
+    createMod as createActivity,
+    sendActivityFeedback as sendFeedback,
+    uploadActivityFile as uploadFile,
+} from 'local_coursegen/repository/activity';
 import {loadActivityaiStrings} from 'local_coursegen/local/activityai/i18n';
 
 let eventSource = null;
@@ -195,7 +200,7 @@ class Mutations {
 
         try {
             if (!state.session.jobid) {
-                const response = await repository.startSession({
+                const response = await startSession({
                     courseid,
                     sectionnum,
                     beforemod,
@@ -213,7 +218,7 @@ class Mutations {
 
                 if (state.upload.draftitemid) {
                     try {
-                        await repository.uploadFile({
+                        await uploadFile({
                             courseid,
                             jobid,
                             draftitemid: state.upload.draftitemid,
@@ -234,7 +239,7 @@ class Mutations {
                 stateManager.setReadOnly(true);
 
             } else {
-                await repository.sendFeedback({
+                await sendFeedback({
                     courseid,
                     jobid: state.session.jobid,
                     approvalstatus: 'adjust',
@@ -292,7 +297,7 @@ class Mutations {
         });
         stateManager.setReadOnly(true);
 
-        await repository.sendFeedback({
+        await sendFeedback({
             courseid,
             jobid: state.session.jobid,
             approvalstatus: 'accept',
@@ -575,7 +580,7 @@ class Mutations {
         const beforemod = state.session.beforemod;
 
         try {
-            const result = await repository.createActivity({
+            const result = await createActivity({
                 courseid,
                 sectionnum,
                 jobid,

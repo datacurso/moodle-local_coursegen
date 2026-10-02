@@ -1,24 +1,4 @@
 
-.local_coursegen_p {
-    font-size: 14px;
-    margin: 0;
-    word-wrap: break-word;
-    overflow-wrap: break-word;
-    white-space: normal;
-}
-
-/* Plugin Loading */
-
-@keyframes lds-ring {
-    0% {
-        transform: rotate(0deg);
-    }
-
-    100% {
-        transform: rotate(360deg);
-    }
-}
-
 span.local_coursegen-sparkles-icon {
     display: inline-block;
 }
@@ -52,23 +32,6 @@ span.local_coursegen-sparkles-icon.white {
 /* Messages area */
 
 /* Bubbles */
-
-/* “Typing…” */
-
-@keyframes local_coursegen_ai_blink {
-
-    0%,
-    80%,
-    100% {
-        opacity: .2;
-        transform: translateY(0);
-    }
-
-    40% {
-        opacity: 1;
-        transform: translateY(-2px);
-    }
-}
 
 /* Form */
 

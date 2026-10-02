@@ -17,13 +17,16 @@
 namespace local_coursegen\local;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
+use core\exception\coding_exception;
+use local_coursegen\local\service\ai_course_api_service;
 
 /**
- * Factory for Datacurso AI API clients.
+ * Factory for Datacurso AI API clients and the service wrapping them.
  *
- * Centralizes client construction so PHPUnit tests can inject a test double
- * instead of a real HTTP client. Production behavior is unchanged: outside
- * of PHPUnit runs this factory always builds a real client.
+ * Centralizes client and service construction so PHPUnit tests can inject a
+ * test double instead of a real HTTP client or service. Production behavior
+ * is unchanged: outside of PHPUnit runs this factory always builds the real
+ * objects.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -33,8 +36,58 @@ class api_client_factory {
     /** @var object|null Test double injected from PHPUnit, if any. */
     private static ?object $testclient = null;
 
+    /** @var ai_course_api_service|null Service test double injected from PHPUnit, if any. */
+    private static ?ai_course_api_service $testservice = null;
+
     /** @var array|null Last base URLs passed to ai_course_api() (recorded in PHPUnit runs only). */
     private static ?array $lasturls = null;
+
+    /**
+     * Build (or return the injected test double for) the AI course API service.
+     *
+     * @return ai_course_api_service
+     */
+    public static function ai_course_api_service(): ai_course_api_service {
+        if (defined('PHPUNIT_TEST') && PHPUNIT_TEST && self::$testservice !== null) {
+            return self::$testservice;
+        }
+
+        return new ai_course_api_service();
+    }
+
+    /**
+     * Inject a test double to be returned by ai_course_api_service(). PHPUnit only.
+     *
+     * Pass null to remove the injected double and restore real construction.
+     *
+     * @param ai_course_api_service|null $service Test double (mock of ai_course_api_service) or null to reset.
+     * @return void
+     * @throws coding_exception When called outside a PHPUnit run.
+     */
+    public static function set_test_service(?ai_course_api_service $service): void {
+        if (!(defined('PHPUNIT_TEST') && PHPUNIT_TEST)) {
+            throw new coding_exception('api_client_factory::set_test_service() can only be used in PHPUnit tests.');
+        }
+
+        self::$testservice = $service;
+    }
+
+    /**
+     * Build the AI course API client configured for this site.
+     *
+     * Reads the development override URLs from the plugin configuration
+     * (datacurso_service_url / datacurso_service_url_eu) and delegates to
+     * ai_course_api(), so every caller shares one configuration read and the
+     * same PHPUnit seam.
+     *
+     * @return ai_course_api
+     */
+    public static function default_client(): ai_course_api {
+        $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
+        $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
+
+        return self::ai_course_api($baseurl, $baseurleu);
+    }
 
     /**
      * Build (or return the injected test double for) the AI course API client.
@@ -61,11 +114,11 @@ class api_client_factory {
      *
      * @param object|null $client Test double (mock of ai_course_api) or null to reset.
      * @return void
-     * @throws \coding_exception When called outside a PHPUnit run.
+     * @throws coding_exception When called outside a PHPUnit run.
      */
     public static function set_test_client(?object $client): void {
         if (!(defined('PHPUNIT_TEST') && PHPUNIT_TEST)) {
-            throw new \coding_exception('api_client_factory::set_test_client() can only be used in PHPUnit tests.');
+            throw new coding_exception('api_client_factory::set_test_client() can only be used in PHPUnit tests.');
         }
 
         self::$testclient = $client;
@@ -78,11 +131,11 @@ class api_client_factory {
      * Return the base URLs received by the last ai_course_api() call. PHPUnit only.
      *
      * @return array|null Array with 'baseurl' and 'baseurleu' keys, or null when no call was made.
-     * @throws \coding_exception When called outside a PHPUnit run.
+     * @throws coding_exception When called outside a PHPUnit run.
      */
     public static function get_last_urls(): ?array {
         if (!(defined('PHPUNIT_TEST') && PHPUNIT_TEST)) {
-            throw new \coding_exception('api_client_factory::get_last_urls() can only be used in PHPUnit tests.');
+            throw new coding_exception('api_client_factory::get_last_urls() can only be used in PHPUnit tests.');
         }
 
         return self::$lasturls;

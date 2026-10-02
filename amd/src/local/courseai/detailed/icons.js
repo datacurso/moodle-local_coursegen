@@ -48,16 +48,6 @@ export const getCoreIconUrl = (iconkey) => {
     return M.cfg.wwwroot + '/pix/' + iconkey + '.svg';
 };
 
-/** SVG grip icon for drag handles (six dots, 10×14 px). */
-export const gripSvg = [
-    '<svg width="10" height="14" viewBox="0 0 10 14" fill="currentColor"',
-    'aria-hidden="true">',
-    '<circle cx="2" cy="2" r="1.5"/><circle cx="8" cy="2" r="1.5"/>',
-    '<circle cx="2" cy="7" r="1.5"/><circle cx="8" cy="7" r="1.5"/>',
-    '<circle cx="2" cy="12" r="1.5"/><circle cx="8" cy="12" r="1.5"/>',
-    '</svg>'
-].join(' ');
-
 /** Maps activity type → Moodle purpose tint class for the mod-icon chip. */
 export const activityPurpose = {
     page: 'content', book: 'content', resource: 'content',

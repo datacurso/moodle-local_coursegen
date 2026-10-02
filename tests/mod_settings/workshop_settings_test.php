@@ -16,6 +16,8 @@
 
 namespace local_coursegen\mod_settings;
 
+use local_coursegen\local\warning_collector;
+
 /**
  * Unit tests for workshop_settings — assessment criteria and initial phase handling.
  *
@@ -24,6 +26,7 @@ namespace local_coursegen\mod_settings;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers \local_coursegen\mod_settings\workshop_settings
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\mod_settings\workshop_settings::class)]
 final class workshop_settings_test extends \advanced_testcase {
     /**
      * Create a workshop activity and return a cm-like object shaped as create_mod_service passes it.
@@ -83,6 +86,7 @@ final class workshop_settings_test extends \advanced_testcase {
      * @param string $token Phase token from the AI payload.
      * @param int $expected Expected workshop phase code.
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('valid_phase_provider')]
     public function test_initial_phase_switches_workshop(string $token, int $expected): void {
         $this->resetAfterTest();
 
@@ -120,6 +124,7 @@ final class workshop_settings_test extends \advanced_testcase {
      * @dataProvider noop_phase_provider
      * @param array $modsettings The mod_settings payload.
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('noop_phase_provider')]
     public function test_initial_phase_setup_absent_or_null_keeps_default(array $modsettings): void {
         $this->resetAfterTest();
 
@@ -150,15 +155,24 @@ final class workshop_settings_test extends \advanced_testcase {
      * @dataProvider invalid_phase_provider
      * @param string $token Invalid phase token.
      */
+    #[\PHPUnit\Framework\Attributes\DataProvider('invalid_phase_provider')]
     public function test_initial_phase_invalid_token_keeps_setup_and_debugs(string $token): void {
         $this->resetAfterTest();
 
         $cm = $this->make_workshop_cm();
 
-        (new workshop_settings($cm, ['initial_phase' => $token]))->add_settings();
+        $settings = new workshop_settings($cm, ['initial_phase' => $token]);
+        $settings->add_settings();
 
         $this->assertSame(10, $this->get_phase($cm->instance));
         $this->assertDebuggingCalled();
+
+        // The ignored token is reported as a warning so the teacher learns the phase was kept.
+        $warnings = $settings->get_warnings();
+        $this->assertCount(1, $warnings);
+        $this->assertSame(warning_collector::STEP_WORKSHOP_PHASE, $warnings[0]['step']);
+        $this->assertSame($token, $warnings[0]['subject']);
+        $this->assertStringContainsString($token, $warnings[0]['reason']);
     }
 
     /**
@@ -175,7 +189,8 @@ final class workshop_settings_test extends \advanced_testcase {
 
     /**
      * Phase handling never throws even when the phase switch fails at runtime:
-     * a workshop whose instance record is gone triggers debugging, not an exception.
+     * a workshop whose instance record is gone records a warning (with its
+     * debugging notice), not an exception, so the module creation completes.
      */
     public function test_initial_phase_switch_failure_never_throws(): void {
         $this->resetAfterTest();
@@ -186,9 +201,31 @@ final class workshop_settings_test extends \advanced_testcase {
         // so the internal MUST_EXIST fetch fails during the phase switch.
         $DB->delete_records('workshop', ['id' => $cm->instance]);
 
-        (new workshop_settings($cm, ['initial_phase' => 'submission']))->add_settings();
+        $settings = new workshop_settings($cm, ['initial_phase' => 'submission']);
+        $settings->add_settings();
 
         $this->assertDebuggingCalled();
+
+        $warnings = $settings->get_warnings();
+        $this->assertCount(1, $warnings);
+        $this->assertSame(warning_collector::STEP_WORKSHOP_PHASE, $warnings[0]['step']);
+        $this->assertSame('submission', $warnings[0]['subject']);
+        $this->assertNotSame('', $warnings[0]['reason']);
+    }
+
+    /**
+     * Settings applied without incident leave no warning behind.
+     */
+    public function test_successful_settings_record_no_warnings(): void {
+        $this->resetAfterTest();
+
+        $cm = $this->make_workshop_cm();
+        $settings = new workshop_settings($cm, ['initial_phase' => 'submission']);
+        $settings->add_settings();
+
+        $this->assertSame(20, $this->get_phase($cm->instance));
+        $this->assertSame([], $settings->get_warnings());
+        $this->assertDebuggingNotCalled();
     }
 
     /**

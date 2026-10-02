@@ -21,7 +21,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import ajax from 'core/ajax';
+import {call} from 'local_coursegen/repository/base';
 
 /**
  * Send a plan action (ActionIntent) for a planning session.
@@ -30,17 +30,10 @@ import ajax from 'core/ajax';
  *     ActionIntent: {action, target_ids?, parent_section_id?, position?, instruction?}.
  * @return {Promise<Object>} response
  */
-export async function sendPlanningFeedback({recordid, pendingAction}) {
-    return ajax.call([
-        {
-            methodname: 'local_coursegen_course_planning_feedback',
-            args: {
-                recordid: Number(recordid) || 0,
-                pending_action: pendingAction,
-            },
-        },
-    ])[0];
-}
+export const sendPlanningFeedback = ({recordid, pendingAction}) => call('local_coursegen_course_planning_feedback', {
+    recordid: Number(recordid) || 0,
+    pending_action: pendingAction,
+});
 
 /**
  * Get the final AI-generated course settings (fullname, shortname, category) for review.
@@ -48,14 +41,9 @@ export async function sendPlanningFeedback({recordid, pendingAction}) {
  * @param {number} recordid The planning session record ID.
  * @return {Promise<{fullname: string, shortname: string, category: number, categories: Array}>}
  */
-export async function getCourseSettings(recordid) {
-    return ajax.call([
-        {
-            methodname: 'local_coursegen_get_course_settings',
-            args: {recordid: Number(recordid) || 0},
-        },
-    ])[0];
-}
+export const getCourseSettings = (recordid) => call('local_coursegen_get_course_settings', {
+    recordid: Number(recordid) || 0,
+});
 
 /**
  * Create a course from a stored planning session and apply AI-generated content.
@@ -72,7 +60,7 @@ export async function getCourseSettings(recordid) {
  * - category: Optional override for course category ID
  * @return {Promise<Object>} response
  */
-export async function createCourse({recordid, fullname, shortname, category}) {
+export const createCourse = ({recordid, fullname, shortname, category}) => {
     const args = {
         recordid: Number(recordid) || 0,
     };
@@ -85,10 +73,5 @@ export async function createCourse({recordid, fullname, shortname, category}) {
     if (typeof category === 'number' && category > 0) {
         args.category = category;
     }
-    return ajax.call([
-        {
-            methodname: "local_coursegen_create_course",
-            args,
-        },
-    ])[0];
-}
+    return call('local_coursegen_create_course', args);
+};

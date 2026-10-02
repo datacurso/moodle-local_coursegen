@@ -16,6 +16,7 @@
 
 namespace local_coursegen\local\service;
 
+use core\exception\moodle_exception;
 use local_coursegen\local\models\module_job;
 
 /**
@@ -92,7 +93,7 @@ class module_job_service {
         ]);
 
         if (!$job) {
-            throw new \moodle_exception('error_no_module_job_found', 'local_coursegen');
+            throw new moodle_exception('error_no_module_job_found', 'local_coursegen');
         }
 
         return $job;

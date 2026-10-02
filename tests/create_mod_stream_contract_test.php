@@ -16,15 +16,17 @@
 
 namespace local_coursegen;
 
-use aiprovider_datacurso\httpclient\ai_course_api;
-use local_coursegen\local\api_client_factory;
+use core\context\course;
+use core\context\module;
+use core\exception\invalid_parameter_exception;
+use core\exception\moodle_exception;
+use local_coursegen\event\generation_warning;
+use local_coursegen\external\create_mod_stream;
+use local_coursegen\local\models\course_context;
 use local_coursegen\local\models\module_job;
-use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\create_mod_service;
-
-defined('MOODLE_INTERNAL') || die();
-
-require_once(__DIR__ . '/fixtures/aiprovider_datacurso_stub.php');
+use local_coursegen\local\warning_collector;
+use local_coursegen\tests\api_testcase;
 
 /**
  * Contract tests for the individual activity generation request and result.
@@ -46,115 +48,113 @@ require_once(__DIR__ . '/fixtures/aiprovider_datacurso_stub.php');
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_coursegen\external\create_mod_stream
- *
- * @runTestsInSeparateProcesses
  */
-final class create_mod_stream_contract_test extends \advanced_testcase {
-    /**
-     * Load the testable subclass in the isolated process.
-     */
-    protected function setUp(): void {
-        parent::setUp();
-        require_once(__DIR__ . '/fixtures/testable_create_mod_stream.php');
-        require_once(__DIR__ . '/fixtures/h5p_package_fixture.php');
-    }
-
-    /**
-     * Reset the injected doubles between tests.
-     */
-    protected function tearDown(): void {
-        testable_create_mod_stream::$mockservice = null;
-        api_client_factory::set_test_client(null);
-        parent::tearDown();
-    }
-
-    /**
-     * Make the given course the current one.
-     *
-     * The module edit form resolves section info through the global $COURSE.
-     * In a web request require_login() binds the page (and $COURSE) to the
-     * course; without it, the theme initialisation triggered by the form
-     * falls back to the site course and the target section cannot resolve.
-     *
-     * @param \stdClass $course Course record.
-     * @return void
-     */
-    private function set_current_course(\stdClass $course): void {
-        global $PAGE;
-        $PAGE->set_course($course);
-    }
-
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\external\create_mod_stream::class)]
+final class create_mod_stream_contract_test extends api_testcase {
     /**
      * Inject an ai_course_api_service mock that captures the start_activity payload.
      *
      * @param array|null $captured Reference that receives the payload handed to start_activity().
      * @return void
      */
-    private function inject_api_service(?array &$captured = null): void {
-        $service = $this->getMockBuilder(ai_course_api_service::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['start_activity', 'get_mod_streaming_url_for_job'])
-            ->getMock();
-
-        $service->method('start_activity')->willReturnCallback(
-            function (array $payload) use (&$captured): array {
+    private function inject_start_activity_service(?array &$captured = null): void {
+        $this->inject_api_service([
+            'start_activity' => function (array $payload) use (&$captured): array {
                 $captured = $payload;
                 return ['thread_id' => 'job-1', 'status' => 'queued', 'message' => 'Job started'];
-            }
-        );
-        $service->method('get_mod_streaming_url_for_job')
-            ->willReturn('https://ai.example.com/api/v1/activity/stream/job-1');
-
-        testable_create_mod_stream::$mockservice = $service;
+            },
+            'get_mod_streaming_url_for_job' => 'https://ai.example.com/api/v1/activity/stream/job-1',
+        ]);
     }
 
     /**
      * When a course context row exists, its type and system instruction name
-     * must reach the persisted module job (the name normalisation was lost in
-     * the migration from the legacy ai_context class: the service aliases the
-     * column as system_instruction_name, not name).
+     * must reach the persisted module job (the service aliases the column as
+     * system_instruction_name, not name).
      */
     public function test_course_context_reaches_the_stored_job(): void {
-        global $DB, $USER;
+        global $DB;
 
         $this->resetAfterTest();
         $this->setAdminUser();
 
         $course = $this->getDataGenerator()->create_course();
         $captured = null;
-        $this->inject_api_service($captured);
+        $this->inject_start_activity_service($captured);
 
-        $now = time();
-        $instructionid = $DB->insert_record('local_coursegen_system_instruction', (object)[
+        /** @var \local_coursegen_generator $plugingenerator */
+        $plugingenerator = $this->getDataGenerator()->get_plugin_generator('local_coursegen');
+        $instruction = $plugingenerator->create_system_instruction([
             'name' => 'Institutional guideline',
             'content' => 'Follow the style guide.',
-            'deleted' => 0,
-            'timecreated' => $now,
-            'timemodified' => $now,
-            'usermodified' => $USER->id,
         ]);
-        $DB->insert_record('local_coursegen_course_context', (object)[
+        $plugingenerator->create_course_context([
             'courseid' => $course->id,
-            'context_type' => 'system_instruction',
-            'system_instruction_id' => $instructionid,
+            'context_type' => course_context::CONTEXT_TYPE_CUSTOM_PROMPT,
+            'system_instruction_id' => $instruction->id,
             'lang' => 'en',
             'prompt_text' => '',
-            'timecreated' => $now,
-            'timemodified' => $now,
-            'usermodified' => $USER->id,
         ]);
 
-        $result = testable_create_mod_stream::execute($course->id, 1, 'Create a page about photosynthesis', 0, null, 'en');
+        $result = create_mod_stream::execute($course->id, 1, 'Create a page about photosynthesis', 0, null, 'en');
         $this->resetDebugging();
         $this->assertTrue($result['ok'], 'Start must succeed: ' . ($result['message'] ?? ''));
 
         $job = $DB->get_record('local_coursegen_module_jobs', ['job_id' => 'job-1'], '*', MUST_EXIST);
-        $this->assertSame('system_instruction', $job->context_type);
+        $this->assertSame(course_context::CONTEXT_TYPE_CUSTOM_PROMPT, $job->context_type);
         $this->assertSame(
             'Institutional guideline',
             $job->system_instruction_name,
             'The stored job must carry the system instruction name resolved from the course context.'
         );
+    }
+
+    /**
+     * An explicit language the AI service does not support falls through to the stored
+     * course context language.
+     */
+    public function test_unsupported_request_language_falls_back_to_course_context_language(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $captured = null;
+        $this->inject_start_activity_service($captured);
+        $this->getDataGenerator()->get_plugin_generator('local_coursegen')->create_course_context([
+            'courseid' => $course->id,
+            'context_type' => course_context::CONTEXT_TYPE_CUSTOM_PROMPT,
+            'lang' => 'fr',
+            'prompt_text' => '',
+        ]);
+
+        $result = create_mod_stream::execute($course->id, 1, 'Create a page about rocks', 0, null, 'ja');
+        $this->resetDebugging();
+
+        $this->assertTrue($result['ok'], 'Start must succeed: ' . ($result['message'] ?? ''));
+        $this->assertSame('fr', $captured['lang']);
+    }
+
+    /**
+     * Without an explicit language and without a course context, the current Moodle
+     * language is sent when the AI service supports it.
+     */
+    public function test_current_language_is_sent_when_nothing_else_is_given(): void {
+        global $SESSION;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $captured = null;
+        $this->inject_start_activity_service($captured);
+        $SESSION->lang = 'de';
+        $this->assertSame('de', current_language());
+
+        $result = create_mod_stream::execute($course->id, 1, 'Create a page about rocks', 0, null, null);
+        $this->resetDebugging();
+
+        $this->assertTrue($result['ok'], 'Start must succeed: ' . ($result['message'] ?? ''));
+        $this->assertSame('de', $captured['lang']);
     }
 
     /**
@@ -168,12 +168,12 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
 
         $course = $this->getDataGenerator()->create_course();
         $captured = null;
-        $this->inject_api_service($captured);
+        $this->inject_start_activity_service($captured);
 
         // A configured (non-disabled) admin image mode must travel with the request.
         set_config('generationmode', \local_coursegen\local\image_generation\activities::MODE_MANUAL, 'local_coursegen');
 
-        $result = testable_create_mod_stream::execute($course->id, 1, 'Create an H5P quiz about volcanoes', 1, null, 'es');
+        $result = create_mod_stream::execute($course->id, 1, 'Create an H5P quiz about volcanoes', 1, null, 'es');
         // One pre-existing developer notice: execute_parameters() declares
         // top-level VALUE_OPTIONAL values instead of VALUE_DEFAULT.
         $this->assertDebuggingCalledCount(1);
@@ -220,10 +220,10 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
 
         $course = $this->getDataGenerator()->create_course();
         $captured = null;
-        $this->inject_api_service($captured);
+        $this->inject_start_activity_service($captured);
 
         // The generationmode setting is deliberately NOT configured: defaults to disabled.
-        $result = testable_create_mod_stream::execute($course->id, 1, 'Create an H5P accordion about rocks', 1, null, 'en');
+        $result = create_mod_stream::execute($course->id, 1, 'Create an H5P accordion about rocks', 1, null, 'en');
         $this->assertDebuggingCalledCount(1);
 
         $this->assertTrue($result['ok'], 'Start must succeed: ' . ($result['message'] ?? ''));
@@ -266,16 +266,13 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
 
         $course = $this->getDataGenerator()->create_course();
 
-        $service = $this->getMockBuilder(ai_course_api_service::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['start_activity', 'get_mod_streaming_url_for_job'])
-            ->getMock();
         // No thread_id: the response is invalid. It carries a marker that must never be logged.
-        $service->method('start_activity')
-            ->willReturn(['status' => 'error', 'detail' => 'SENSITIVE-RESPONSE-BODY']);
-        testable_create_mod_stream::$mockservice = $service;
+        $this->inject_api_service([
+            'start_activity' => ['status' => 'error', 'detail' => 'SENSITIVE-RESPONSE-BODY'],
+            'get_mod_streaming_url_for_job' => '',
+        ]);
 
-        $result = testable_create_mod_stream::execute($course->id, 1, 'Create a page', 0, null, 'en');
+        $result = create_mod_stream::execute($course->id, 1, 'Create a page', 0, null, 'en');
 
         $this->assertFalse($result['ok']);
         $debuggings = $this->getDebuggingMessages();
@@ -296,14 +293,14 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
 
         $course = $this->getDataGenerator()->create_course();
         $captured = null;
-        $this->inject_api_service($captured);
+        $this->inject_start_activity_service($captured);
 
         // Resolve the expected version the same way production code does.
         (new \core_h5p\factory())->get_core();
         $coreapi = \core_h5p\core::$coreApi; // phpcs:ignore moodle.NamingConventions.ValidVariableName
         $expected = $coreapi['majorVersion'] . '.' . $coreapi['minorVersion'];
 
-        $result = testable_create_mod_stream::execute($course->id, 1, 'Create an H5P activity', 0, null, 'en');
+        $result = create_mod_stream::execute($course->id, 1, 'Create an H5P activity', 0, null, 'en');
         // Pre-existing developer notice from execute_parameters().
         $this->assertDebuggingCalledCount(1);
 
@@ -329,7 +326,7 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
 
         $course = $this->getDataGenerator()->create_course();
         $captured = null;
-        $this->inject_api_service($captured);
+        $this->inject_start_activity_service($captured);
 
         // Simulate an unresolvable framework version. The property is public
         // static on the H5P library class, so no reflection is needed.
@@ -338,7 +335,7 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
 
         try {
             \core_h5p\core::$coreApi = []; // phpcs:ignore moodle.NamingConventions.ValidVariableName
-            $result = testable_create_mod_stream::execute($course->id, 1, 'Create an H5P activity', 0, null, 'en');
+            $result = create_mod_stream::execute($course->id, 1, 'Create an H5P activity', 0, null, 'en');
         } finally {
             \core_h5p\core::$coreApi = $original; // phpcs:ignore moodle.NamingConventions.ValidVariableName
         }
@@ -376,9 +373,9 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
         $this->setUser($student);
 
         $captured = null;
-        $this->inject_api_service($captured);
+        $this->inject_start_activity_service($captured);
 
-        $result = testable_create_mod_stream::execute($course->id, 1, 'Create an H5P activity', 0, null, 'en');
+        $result = create_mod_stream::execute($course->id, 1, 'Create an H5P activity', 0, null, 'en');
         // Consume the pre-existing developer notice from execute_parameters()
         // so the capability assertion below fails cleanly on its own.
         $this->resetDebugging();
@@ -405,29 +402,7 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
 
         $course = $this->getDataGenerator()->create_course();
         $this->set_current_course($course);
-
-        $client = $this->getMockBuilder(ai_course_api::class)
-            ->disableOriginalConstructor()
-            ->onlyMethods(['download_file'])
-            ->getMock();
-        $client->method('download_file')->willReturnCallback(
-            function (string $endpoint, string $filename): \stored_file {
-                global $USER;
-
-                $fs = get_file_storage();
-                $record = (object) [
-                    'contextid' => \context_user::instance($USER->id)->id,
-                    'component' => 'user',
-                    'filearea' => 'draft',
-                    'itemid' => file_get_unused_draft_itemid(),
-                    'filepath' => '/',
-                    'filename' => $filename,
-                ];
-
-                return $fs->create_file_from_string($record, h5p_package_fixture::bytes());
-            }
-        );
-        api_client_factory::set_test_client($client);
+        $this->inject_download_client();
 
         // Result with unknown additive fields at every level the plugin reads.
         $resultinfo = [
@@ -462,7 +437,7 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
         $record = $DB->get_record('h5pactivity', ['id' => $newcm->instance], '*', MUST_EXIST);
         $this->assertSame('Tolerant H5P', $record->name);
 
-        $context = \context_module::instance($newcm->coursemodule);
+        $context = module::instance($newcm->coursemodule);
         $files = get_file_storage()->get_area_files($context->id, 'mod_h5pactivity', 'package', 0, 'id', false);
         $this->assertCount(1, $files);
         $this->assertSame('tolerant.h5p', reset($files)->get_filename());
@@ -504,7 +479,7 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
         try {
             create_mod_service::create_from_ai_result($resultinfo, $course, 1);
             $this->fail('An exception was expected for a result without file_path.');
-        } catch (\moodle_exception $e) {
+        } catch (moodle_exception $e) {
             $this->assertStringContainsString(
                 get_string('error_missing_package_info', 'local_coursegen'),
                 $e->getMessage()
@@ -514,5 +489,118 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
         // Nothing was created.
         $this->assertSame(0, $DB->count_records('course_modules', ['course' => $course->id]));
         $this->assertSame(0, $DB->count_records('h5pactivity'));
+    }
+
+    /**
+     * Invalid parameters are a caller error: the invalid_parameter_exception
+     * must propagate (as in create_mod) instead of being swallowed into a
+     * generic failure reply that also records a false generation_failed event.
+     */
+    public function test_invalid_parameters_propagate_without_failure_event(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $captured = null;
+        $this->inject_start_activity_service($captured);
+
+        $sink = $this->redirectEvents();
+        try {
+            // The language code is PARAM_ALPHANUMEXT: spaces and punctuation are invalid.
+            create_mod_stream::execute($course->id, 1, 'Create a page about rocks', 0, null, 'not a lang!');
+            $this->fail('An invalid language code must raise invalid_parameter_exception.');
+        } catch (invalid_parameter_exception $e) {
+            $this->assertNull($captured, 'No request must reach the AI service.');
+        }
+        $this->resetDebugging();
+
+        $failed = array_filter($sink->get_events(), static function (\core\event\base $event): bool {
+            return $event instanceof \local_coursegen\event\generation_failed;
+        });
+        $sink->close();
+        $this->assertCount(0, $failed, 'A caller error must not be recorded as a generation failure.');
+    }
+
+    /**
+     * A clean start reports an empty warnings list.
+     */
+    public function test_successful_start_reports_no_warnings(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $this->inject_start_activity_service();
+
+        $result = create_mod_stream::execute($course->id, 1, 'Create a page about rocks', 0, null, 'en');
+        $this->resetDebugging();
+
+        $this->assertTrue($result['ok'], 'Start must succeed: ' . ($result['message'] ?? ''));
+        $this->assertSame([], $result['warnings']);
+    }
+
+    /**
+     * A lookup that falls back to a default while building the payload is returned as a localized
+     * warning and audited with generation_warning in the course context (no module name yet).
+     */
+    public function test_payload_fallback_is_reported_and_audited(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $captured = null;
+        $this->inject_start_activity_service($captured);
+        warning_collector::set_test_failure(warning_collector::STEP_H5P_VERSION, new \RuntimeException('no h5p'));
+
+        $sink = $this->redirectEvents();
+        $result = create_mod_stream::execute($course->id, 1, 'Create an H5P activity', 0, null, 'en');
+        // The pre-existing execute_parameters() notice plus the warning.
+        $this->assertDebuggingCalledCount(2);
+
+        $this->assertTrue($result['ok'], 'Start must succeed: ' . ($result['message'] ?? ''));
+        $this->assertArrayNotHasKey('h5p_core_api', $captured);
+        $this->assertSame([get_string('generationwarning_h5p_version', 'local_coursegen')], $result['warnings']);
+        $this->assertStringNotContainsString('no h5p', json_encode($result));
+
+        $events = array_values(array_filter($sink->get_events(), static function (\core\event\base $event): bool {
+            return $event instanceof generation_warning;
+        }));
+        $sink->close();
+        $this->assertCount(1, $events);
+        $this->assertEquals(course::instance($course->id)->id, $events[0]->get_context()->id);
+        $this->assertSame('', $events[0]->other['modname']);
+        $this->assertSame(warning_collector::STEP_H5P_VERSION, $events[0]->other['step']);
+        $this->assertSame('no h5p', $events[0]->other['reason']);
+    }
+
+    /**
+     * Warnings collected before the service call fails are still audited next to the failure.
+     */
+    public function test_warnings_are_audited_when_the_start_fails(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        $this->inject_api_service(['start_activity' => new \RuntimeException('service down')]);
+        warning_collector::set_test_failure(warning_collector::STEP_FILETYPE_CATALOG, new \RuntimeException('no groups'));
+
+        $sink = $this->redirectEvents();
+        $result = create_mod_stream::execute($course->id, 1, 'Create a page about rocks', 0, null, 'en');
+        $this->resetDebugging();
+
+        $this->assertFalse($result['ok']);
+        $this->assertArrayNotHasKey('warnings', $result);
+
+        $events = $sink->get_events();
+        $sink->close();
+        $warnings = array_values(array_filter($events, static function (\core\event\base $event): bool {
+            return $event instanceof generation_warning;
+        }));
+        $failures = array_values(array_filter($events, static function (\core\event\base $event): bool {
+            return $event instanceof \local_coursegen\event\generation_failed;
+        }));
+        $this->assertCount(1, $warnings);
+        $this->assertSame(warning_collector::STEP_FILETYPE_CATALOG, $warnings[0]->other['step']);
+        $this->assertCount(1, $failures);
+        $this->assertSame('RuntimeException', $failures[0]->other['reason']);
     }
 }

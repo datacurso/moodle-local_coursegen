@@ -1,0 +1,122 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/local/courseai/context_chat
+
+    Planning chat column of the AI course creation page: the decision card, the
+    conversation thread (log, section checklist, adjustment history), the
+    inline accept bar, the pinned working-status slot and the compact composer.
+
+    Several blocks start hidden with an inline display style because the
+    JavaScript toggles element.style.display on them (migrated in a later step).
+
+    Classes required for JS:
+    * hidden - toggled on the checklist, the typing cursor and the adjustment history
+    * cg-group-head - collapsible checklist header (click/keyboard delegated)
+
+    Data attributes required for JS:
+    * data-round on the conversation round wrapper
+    * see local_coursegen/local/courseai/compact_composer
+
+    Context variables required for this template:
+    * isresuming bool - True when the page resumes an existing session
+    * compactcomposer object - Carries {"compact": true} for the compact composer
+    * subsectionsenabled bool - Render the "with subsections" toggle
+    * guidelinelist object - Context of local_coursegen/local/courseai/guideline_list_compact
+
+    Example context (json):
+    {
+        "isresuming": false,
+        "compactcomposer": {"compact": true},
+        "subsectionsenabled": true,
+        "guidelinelist": {
+            "listlabel": "Guidelines list",
+            "emptytext": "No results",
+            "hasitems": false,
+            "items": []
+        }
+    }
+}}
+<div class="courseai-context-chat" id="courseaiContextChat">
+
+  {{! Decision card: on review_needed it takes the composer's slot at the bottom of
+      the chat column, the message thread above stays visible. CSS order:10 pins it
+      last; decision-overlay.js toggles display. }}
+  <div class="cg-decision-overlay" id="cgDecisionOverlay" style="display:none" role="group"
+       aria-label="{{#str}}courseai_decision_title, local_coursegen{{/str}}">
+    <div class="cg-decision-card">
+      <p class="cg-decision-title">{{#str}}courseai_decision_title, local_coursegen{{/str}}</p>
+      <p class="cg-decision-subtitle">{{#str}}courseai_decision_subtitle, local_coursegen{{/str}}</p>
+      <div class="cg-decision-body" id="cgDecisionBody"></div>
+      <div class="cg-decision-actions">
+        <button class="cg-decision-btn cg-decision-btn--accept" id="cgDecisionAccept" type="button">
+          {{#str}}courseai_decision_accept, local_coursegen{{/str}}
+        </button>
+        <button class="cg-decision-btn cg-decision-btn--adjust" id="cgDecisionAdjust" type="button">
+          {{#str}}courseai_decision_adjust, local_coursegen{{/str}}
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <div class="courseai-chat-scroll cg-thread" id="courseaiChatScroll">
+    <div class="courseai-round" data-round="0">
+      {{! Conversation thread: one continuous chronological feed. The initial prompt
+          is the first user turn (emitted via emitLog), followed by AI planning turns. }}
+      <div class="cg-log cg-thread-feed" id="cgLog" role="log" aria-live="polite"
+           aria-label="{{#str}}courseai_log_label, local_coursegen{{/str}}"></div>
+
+      {{! Left loading skeleton: previews the checklist shape while the first
+          instruction streams (hidden once a section arrives). }}
+      <div class="cg-sk-checks-wrap" id="cgLeftSkeleton" style="display:none">{{> local_coursegen/courseai_skeleton_checks }}</div>
+
+      {{! Section checklist: a compact result card inside the AI planning turn. The
+          data hooks (data-section-id/data-round/data-remaining on each <li>) are
+          consumed by the streaming handlers. }}
+      <div class="courseai-checklist cg-thread-checklist hidden" id="courseaiChecklist">
+        <div class="cg-group-head" role="button" tabindex="0" aria-expanded="true">
+          <span class="cg-group-chevron" aria-hidden="true">⌄</span>
+          <span class="cg-group-avatar" aria-hidden="true"></span>
+          <span class="cg-group-title">{{#str}}courseai_log_ai_planned_structure, local_coursegen{{/str}}</span>
+          <span class="cg-group-count"></span>
+        </div>
+        <ul class="courseai-checklist-list" id="courseaiChecklistList"></ul>
+      </div>
+
+      {{! Continuation of the thread: once the plan settles, user actions and their
+          results flow chronologically below the checklist. }}
+      <div class="cg-log cg-thread-feed" id="cgLogAfter" aria-live="polite"></div>
+    </div>
+
+    {{! Adjustment message history (shown after the user sends adjustments) }}
+    <div class="courseai-adjustment-history hidden" id="courseaiAdjustmentHistory"></div>
+  </div>
+
+  {{! After "Adjust", the decision card is replaced by the composer; this slim bar
+      (a separate element above the composer) keeps Accept reachable. }}
+  <div class="cg-accept-bar" id="cgAcceptBar" style="display:none">
+    <span class="cg-accept-bar-text">{{#str}}courseai_decision_still_accept, local_coursegen{{/str}}</span>
+    <button class="cg-accept-bar-btn" id="cgAcceptInline" type="button">{{#str}}courseai_decision_accept, local_coursegen{{/str}}</button>
+  </div>
+
+  {{! Pinned working-status slot: during an action re-stream the composer is hidden,
+      so the "assistant is working" feedback is shown here, in the bottom slot.
+      Empty (display:none via :empty) otherwise. }}
+  <div class="cg-working-slot" id="cgWorkingSlot" aria-live="polite"></div>
+
+  {{> local_coursegen/local/courseai/compact_composer }}
+</div>

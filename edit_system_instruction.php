@@ -25,6 +25,9 @@
 require_once('../../config.php');
 require_once($CFG->libdir . '/adminlib.php');
 
+use core\context\system;
+use core\exception\moodle_exception;
+use core\url;
 use local_coursegen\form\system_instruction_form;
 use local_coursegen\local\service\system_instruction_service;
 
@@ -34,12 +37,12 @@ admin_externalpage_setup('local_coursegen_edit_system_instruction');
 $id = optional_param('id', 0, PARAM_INT);
 
 
-$context = context_system::instance();
+$context = system::instance();
 require_capability('local/coursegen:managesysteminstructions', $context);
 
 $PAGE->set_url('/local/coursegen/edit_system_instruction.php', ['id' => $id]);
 $PAGE->set_pagelayout('admin');
-$PAGE->navigation->override_active_url(new moodle_url('/local/coursegen/manage_system_instructions.php'));
+$PAGE->navigation->override_active_url(new url('/local/coursegen/manage_system_instructions.php'));
 
 /** @var \local_coursegen\local\models\system_instruction|null $instruction */
 $instruction = null;
@@ -71,7 +74,7 @@ if ($instruction && $instruction->get('id')) {
 }
 
 if ($form->is_cancelled()) {
-    redirect(new moodle_url('/local/coursegen/manage_system_instructions.php'));
+    redirect(new url('/local/coursegen/manage_system_instructions.php'));
 }
 
 if ($data = $form->get_data()) {
@@ -85,7 +88,7 @@ if ($data = $form->get_data()) {
     }
 
     redirect(
-        new moodle_url('/local/coursegen/manage_system_instructions.php'),
+        new url('/local/coursegen/manage_system_instructions.php'),
         get_string('systeminstructionsaved', 'local_coursegen'),
         null,
         \core\output\notification::NOTIFY_SUCCESS

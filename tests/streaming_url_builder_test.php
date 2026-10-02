@@ -27,6 +27,7 @@ use local_coursegen\local\service\streaming_url_builder;
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_coursegen\local\service\streaming_url_builder
  */
+#[\PHPUnit\Framework\Attributes\CoversClass(\local_coursegen\local\service\streaming_url_builder::class)]
 final class streaming_url_builder_test extends \basic_testcase {
     /**
      * Course planning stream URL is built from the base URL and session id.

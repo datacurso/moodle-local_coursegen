@@ -16,6 +16,7 @@
 
 namespace local_coursegen\mod_settings;
 
+use local_coursegen\local\warning_collector;
 use stdClass;
 
 /**
@@ -126,7 +127,7 @@ class data_settings extends base_settings {
             if (empty($values) || !is_array($values)) {
                 continue;
             }
-            try {
+            $this->attempt(function () use ($datainstance, $values, $byname, $USER): void {
                 $recordid = data_add_record($datainstance, 0, $USER->id, true);
                 foreach ($values as $pair) {
                     if (!is_array($pair)) {
@@ -137,9 +138,7 @@ class data_settings extends base_settings {
                         $this->insert_content($recordid, $field, (string) ($pair['value'] ?? ''));
                     }
                 }
-            } catch (\Throwable $e) {
-                debugging('local_coursegen: skipped example entry: ' . $e->getMessage(), DEBUG_DEVELOPER);
-            }
+            }, warning_collector::STEP_DATA_ENTRY);
         }
     }
 
@@ -293,26 +292,23 @@ class data_settings extends base_settings {
         // A single problematic field (unknown/disabled type, a DB error, an over-long name, ...)
         // must never abort the activity creation or the remaining fields: this runs after the
         // module already exists, so a thrown error would leave a half-built database.
-        try {
+        $created = null;
+        $this->attempt(function () use (&$created, $type, $name, $datainstance, $formdata): void {
             $field = data_get_field_new($type, $datainstance);
             $field->define_field($formdata);
             $field->insert_field();
             $options = in_array($type, self::CHOICE_TYPES, true)
                 ? explode("\n", (string) $formdata->param1)
                 : [];
-            return (object) [
+            $created = (object) [
                 'id' => (int) $field->field->id,
                 'type' => $type,
                 'name' => $name,
                 'options' => $options,
             ];
-        } catch (\Throwable $e) {
-            debugging(
-                'local_coursegen: skipped data field "' . $name . '": ' . $e->getMessage(),
-                DEBUG_DEVELOPER
-            );
-            return null;
-        }
+        }, warning_collector::STEP_DATA_FIELD, $name);
+
+        return $created;
     }
 
     /**

@@ -21,6 +21,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {hideOnError} from 'local_coursegen/local/courseai/ui/dom';
+
 /**
  * Append a new plan section card to the phase-2 planning list.
  *
@@ -80,8 +82,7 @@ export const addPlanSection = (section, ctx) => {
                     <span class="ps-badge ps-badge--${escapeHtml(activityType)}">
                         <img src="${escapeHtml(iconUrl)}"
                              class="ps-badge-icon"
-                             alt=""
-                             onerror="this.style.display='none'">
+                             alt="">
                         <span class="ps-badge-text">
                             ${escapeHtml(activityLabels[activityType] || activityType || texts.courseai_activity_default)}
                         </span>
@@ -95,6 +96,7 @@ export const addPlanSection = (section, ctx) => {
             }).join('')}
         </ul>
     `;
+    sectionEl.querySelectorAll('img.ps-badge-icon').forEach(hideOnError);
     planSectionsList.appendChild(sectionEl);
 };
 
@@ -145,8 +147,7 @@ export const addActivityToSection = (data, ctx) => {
         <span class="ps-badge ps-badge--${escapeHtml(activityType)}">
             <img src="${escapeHtml(iconUrl)}"
                  class="ps-badge-icon"
-                 alt=""
-                 onerror="this.style.display='none'">
+                 alt="">
             <span class="ps-badge-text">
                 ${escapeHtml(activityLabels[activityType] || activityType)}
             </span>
@@ -156,6 +157,7 @@ export const addActivityToSection = (data, ctx) => {
             <p class="prv-activity-desc">${escapeHtml(data.description || '')}</p>
         </div>
     `;
+    hideOnError(activityItem.querySelector('img.ps-badge-icon'));
     sectionEntry.bodyEl.appendChild(activityItem);
 
     if (prvHeaderSub) {

@@ -24,6 +24,7 @@
 import {BaseComponent} from 'core/reactive';
 
 import {renderMarkdown} from 'local_coursegen/local/courseai/ui/markdown';
+import {escapeHtml} from 'local_coursegen/local/courseai/utils';
 import {regions, activityRegions} from 'local_coursegen/selectors';
 import {loadActivityaiStrings} from 'local_coursegen/local/activityai/i18n';
 
@@ -116,15 +117,6 @@ export default class extends BaseComponent {
             output.appendChild(wrapper);
         }
 
-        const safeText = (value) => {
-            return String(value || '')
-                .replaceAll('&', '&amp;')
-                .replaceAll('<', '&lt;')
-                .replaceAll('>', '&gt;')
-                .replaceAll('"', '&quot;')
-                .replaceAll("'", '&#039;');
-        };
-
         const previousHistory = this.statusHistoryByRunId.get(runId) || [];
         const statusText = String(element.status || '');
         if (statusText && previousHistory[previousHistory.length - 1] !== statusText) {
@@ -164,7 +156,7 @@ export default class extends BaseComponent {
             const line = '' +
                 '<div class="d-flex align-items-center text-muted my-2 small font-weight-bold text-uppercase tracking-wide">' +
                     '<span>' + icon + '</span>' +
-                    '<span>' + safeText(text) + '</span>' +
+                    '<span>' + escapeHtml(text) + '</span>' +
                 '</div>';
 
             // Cuando el run ya está en modo review, el último estado ("Waiting for your review.")
@@ -186,7 +178,7 @@ export default class extends BaseComponent {
                         'style="font-size: 1rem; line-height: 1.4; font-weight: normal; max-width: 100%; ' +
                         'white-space: normal; word-break: break-word; text-align: left; display: inline-block;">' +
                         '<i class="fa fa-user mr-1"></i> '
-                         + safeText(this.texts.activityai_prompt_prefix) + ' ' + safeText(element.prompt) +
+                         + escapeHtml(this.texts.activityai_prompt_prefix) + ' ' + escapeHtml(element.prompt) +
                     '</span>' +
                 '</div>'
             : '';
@@ -205,9 +197,9 @@ export default class extends BaseComponent {
             const alertClass = retriable ? 'alert-warning' : 'alert-danger';
             const retryButtonHtml = retriable
                 ? '<button type="button" class="btn btn-primary btn-sm mt-2" ' +
-                    'data-action="local_coursegen/activity/retry-run" data-run-id="' + safeText(runId) + '">' +
+                    'data-action="local_coursegen/activity/retry-run" data-run-id="' + escapeHtml(runId) + '">' +
                     '<i class="fa fa-refresh mr-1" aria-hidden="true"></i>' +
-                    safeText(this.texts.activityai_retry_action) +
+                    escapeHtml(this.texts.activityai_retry_action) +
                   '</button>'
                 : '';
             errorHtml = '' +
@@ -216,9 +208,9 @@ export default class extends BaseComponent {
                     '<div class="d-flex align-items-start">' +
                         '<i class="fa fa-exclamation-triangle mr-2 mt-1" aria-hidden="true"></i>' +
                         '<div>' +
-                            '<div class="font-weight-bold">' + safeText(headline) + '</div>' +
+                            '<div class="font-weight-bold">' + escapeHtml(headline) + '</div>' +
                             (showDetail
-                                ? '<div class="small mt-1">' + safeText(detail) + '</div>'
+                                ? '<div class="small mt-1">' + escapeHtml(detail) + '</div>'
                                 : '') +
                             retryButtonHtml +
                         '</div>' +

@@ -22,6 +22,16 @@
  */
 
 /**
+ * Delegated action hooks (data-action) of the course AI page.
+ *
+ * @type {{clearSyllabus: string, clearGuideline: string}}
+ */
+export const actionSelectors = {
+    clearSyllabus: '[data-action="local_coursegen/clear-syllabus"]',
+    clearGuideline: '[data-action="local_coursegen/clear-guideline"]',
+};
+
+/**
  * Return all courseai DOM elements.
  *
  * @returns {Object}
@@ -96,7 +106,6 @@ export const getCourseaiElements = () => {
         planActions: document.getElementById('planActions'),
         planActionsHint: document.getElementById('planActionsHint'),
         btnApprove: document.getElementById('btnApprove'),
-        contextChat: document.getElementById('courseaiContextChat'),
         chatScroll: document.getElementById('courseaiChatScroll'),
         compactChatCard: document.getElementById('compactChatCard'),
         compactPromptInput: document.getElementById('compactPromptInput'),

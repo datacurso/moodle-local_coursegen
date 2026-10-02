@@ -19,38 +19,6 @@
   --courseai-sidebar-w: 240px;
 }
 
-/* Toggle button – inside sidebar, only visible when open */
-.courseai-sidebar-toggle {
-  position: absolute;
-  top: 14px;
-  right: -14px;
-  width: 28px;
-  height: 28px;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 5;
-  color: var(--fg);
-  padding: 0;
-  line-height: 1;
-  box-shadow: 0 1px 4px hsl(0, 0%, 0%, 0.08);
-  transition: opacity .2s;
-}
-
-.courseai-sidebar-toggle:hover {
-  background: var(--muted);
-}
-
-/* When sidebar is collapsed, toggle button is hidden too */
-.courseai-sidebar.collapsed .courseai-sidebar-toggle {
-  opacity: 0;
-  pointer-events: none;
-}
-
 /* Sidebar panel – covers everything including navbar */
 .courseai-sidebar {
   position: fixed;

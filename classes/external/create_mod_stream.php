@@ -16,25 +16,26 @@
 
 namespace local_coursegen\external;
 
-use context_course;
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_value;
-use local_coursegen\event\generation_denied;
-use local_coursegen\event\generation_failed;
+use core\context\course;
+use core\context\system;
+use core\exception\required_capability_exception;
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_multiple_structure;
+use core_external\external_single_structure;
+use core_external\external_value;
 use local_coursegen\event\generation_job_started;
+use local_coursegen\event\generation_warning;
+use local_coursegen\local\access;
+use local_coursegen\local\api_client_factory;
+use local_coursegen\local\generation_error_handler;
 use local_coursegen\local\h5p_core_api;
 use local_coursegen\local\image_generation\image_policy_builder;
-use local_coursegen\local\service\ai_course_api_service;
+use local_coursegen\local\language_options;
 use local_coursegen\local\service\course_context_service;
-use local_coursegen\local\service\course_planning_service;
 use local_coursegen\local\service\filetype_catalog_service;
 use local_coursegen\local\service\module_job_service;
-
-defined('MOODLE_INTERNAL') || die();
-require_once($CFG->libdir . '/externallib.php');
-require_once($CFG->dirroot . '/course/externallib.php');
+use local_coursegen\local\warning_collector;
 
 /**
  * Start streaming job to create module with AI and store job/thread id.
@@ -85,16 +86,18 @@ class create_mod_stream extends external_api {
     ) {
         global $CFG, $DB, $USER;
 
-        try {
-            $params = self::validate_parameters(self::execute_parameters(), [
-                'courseid' => $courseid,
-                'sectionnum' => $sectionnum,
-                'prompt' => $prompt,
-                'generateimages' => $generateimages,
-                'beforemod' => $beforemod,
-                'lang' => $lang,
-            ]);
+        // A caller error propagates as invalid_parameter_exception (as in
+        // create_mod); it is not a generation failure to log or report.
+        $params = self::validate_parameters(self::execute_parameters(), [
+            'courseid' => $courseid,
+            'sectionnum' => $sectionnum,
+            'prompt' => $prompt,
+            'generateimages' => $generateimages,
+            'beforemod' => $beforemod,
+            'lang' => $lang,
+        ]);
 
+        try {
             $courseid = $params['courseid'];
             $sectionnum = $params['sectionnum'] ?? null;
             $prompt = $params['prompt'];
@@ -103,180 +106,172 @@ class create_mod_stream extends external_api {
             $lang = $params['lang'] ?? null;
 
             $course = $DB->get_record('course', ['id' => $courseid], '*', MUST_EXIST);
-            $context = context_course::instance($course->id);
+            $context = course::instance($course->id);
             self::validate_context($context);
 
             // Gate the paid AI generation behind the same capabilities as the UI
             // entry point (see \local_coursegen\hook\chat_hook): being enrolled
             // must not be enough to launch jobs that consume service credits.
-            require_capability('moodle/course:manageactivities', $context);
-            require_capability('local/coursegen:createactivitywithai', $context);
+            access::require_activity_creation($context);
 
-            $coursecontext = course_context_service::get_course_context($courseid);
-
-            // This request may take a long time depending on the complexity of the prompt that the AI has to resolve.
-            \core_php_time_limit::raise();
-            raise_memory_limit(MEMORY_EXTRA);
-            // Release the session so other tabs in the same session are not blocked.
-            \core\session\manager::write_close();
-
-            $lang = self::resolve_request_language($lang, $coursecontext);
-
-            $payload = [
-                'instructions' => $prompt,
-                'lang' => $lang,
-                'with_images' => $generateimages == 1,
-            ];
-
-            // A disabled (or never configured) policy is omitted: it must not
-            // override the teacher's explicit image toggle by suppressing the
-            // activity description image (regression guard: see
-            // test_disabled_image_mode_is_not_sent_with_images_enabled).
-            if ($generateimages == 1) {
-                $imagepolicy = image_policy_builder::build();
-                if (($imagepolicy['mode'] ?? '') !== \local_coursegen\local\image_generation\activities::MODE_DISABLED) {
-                    $payload['image_policy'] = $imagepolicy;
-                }
+            // The payload builders below record non-fatal lookup failures as warnings;
+            // they are audited whatever the outcome (see the finally block).
+            warning_collector::reset();
+            $warnings = [];
+            try {
+                return self::start($context, $courseid, $sectionnum, $prompt, $generateimages, $beforemod, $lang, $warnings);
+            } finally {
+                generation_warning::trigger_all($context, '', array_merge($warnings, warning_collector::drain()));
             }
-
-            if (!empty($coursecontext) && !empty($coursecontext->context_type)) {
-                $payload['context_type'] = $coursecontext->context_type;
-            }
-
-            // Send this instance's file-type group catalog (group key => extensions) so the service
-            // can infer and validate accepted file types against the site's real groups, custom
-            // types included, instead of assuming the stock Moodle catalog.
-            $filetypegroups = filetype_catalog_service::get_groups();
-            if ($filetypegroups !== null) {
-                $payload['filetype_groups'] = $filetypegroups;
-            }
-
-            // Tell the service which H5P framework (core API) this Moodle runs, so it packages the
-            // generated .h5p with libraries compatible with that version (v127 vs v128 library set).
-            // When unresolvable the field is omitted and the service falls back
-            // to its most-compatible library set.
-            $h5pcoreapi = h5p_core_api::resolve();
-            if ($h5pcoreapi !== null) {
-                $payload['h5p_core_api'] = $h5pcoreapi;
-            }
-
-            $apiservice = static::get_api_service();
-            $result = $apiservice->start_activity($payload);
-
-            if (!isset($result['thread_id'])) {
-                // Log only the shape of the response (key names + status), never
-                // its content: the body may embed prompts or generated material.
-                debugging(
-                    'Invalid response from AI service (activity init). Keys: '
-                    . implode(',', array_keys($result))
-                    . '; status: ' . (string)($result['status'] ?? '')
-                );
-                return [
-                    'ok' => false,
-                    'message' => get_string('error_generating_resource', 'local_coursegen'),
-                ];
-            }
-
-            $jobid = $result['thread_id'];
-            $status = $result['status'] ?? null;
-            $contexttype = $coursecontext ? $coursecontext->context_type : null;
-            $systeminstructionname = $coursecontext->system_instruction_name ?? null;
-
-            // Store job info in module jobs table using persistent model.
-            module_job_service::create_job(
-                $courseid,
-                $USER->id,
-                $jobid,
-                $generateimages,
-                $contexttype,
-                $systeminstructionname,
-                $sectionnum,
-                $beforemod,
-                $status
+        } catch (required_capability_exception $e) {
+            return generation_error_handler::handle_denied(
+                $e,
+                isset($context) ? $context : system::instance(),
+                [],
+                'starting resource generation (stream)'
             );
+        } catch (\Throwable $e) {
+            return generation_error_handler::handle_failure(
+                $e,
+                isset($context) ? $context : system::instance(),
+                [],
+                'starting resource generation (stream)'
+            );
+        }
+    }
 
-            generation_job_started::create([
-                'context' => $context,
-                'other' => [
-                    'job_id' => $jobid,
-                    'generate_images' => (int)$generateimages,
-                ],
-            ])->trigger();
+    /**
+     * Build the payload, start the job and persist it.
+     *
+     * @param course $context Course context (already validated and gated).
+     * @param int $courseid Course id.
+     * @param int|null $sectionnum Section number where the module will be created.
+     * @param string $prompt Prompt to create module.
+     * @param int $generateimages 1 to generate images.
+     * @param int|null $beforemod Before module id.
+     * @param string|null $lang Requested language code.
+     * @param array $warnings Receives the warnings collected while building the payload.
+     * @return array Response for the client.
+     */
+    private static function start(
+        course $context,
+        int $courseid,
+        ?int $sectionnum,
+        string $prompt,
+        int $generateimages,
+        ?int $beforemod,
+        ?string $lang,
+        array &$warnings
+    ): array {
+        global $USER;
 
-            $streamingurl = $apiservice->get_mod_streaming_url_for_job($jobid);
+        $coursecontext = course_context_service::get_course_context($courseid);
 
-            return [
-                'ok' => true,
-                'job_id' => $jobid,
-                'status' => $status,
-                'message' => $result['message'] ?? get_string('course_planning_started', 'local_coursegen'),
-                'streamingurl' => $streamingurl,
-            ];
-        } catch (\required_capability_exception $e) {
-            // Permission errors are already localized and safe to show verbatim.
-            debugging('Permission error while starting resource generation (stream): ' . $e->getMessage());
-            // The exception carries the localized capability name in ->a; the
-            // raw capability string is not stored on it.
-            generation_denied::create([
-                'context' => isset($context) ? $context : \context_system::instance(),
-                'other' => ['capability' => is_string($e->a ?? null) ? $e->a : ''],
-            ])->trigger();
-            return [
-                'ok' => false,
-                'message' => $e->getMessage(),
-            ];
-        } catch (\Exception $e) {
-            // Keep the technical detail in developer debugging only: the client
-            // receives a localized message without internal information.
-            debugging('Unexpected error while starting resource generation (stream): ' . $e->getMessage());
-            generation_failed::create([
-                'context' => isset($context) ? $context : \context_system::instance(),
-                'other' => ['reason' => get_class($e)],
-            ])->trigger();
+        // This request may take a long time depending on the complexity of the prompt that the AI has to resolve.
+        \core_php_time_limit::raise();
+        raise_memory_limit(MEMORY_EXTRA);
+        // Release the session so other tabs in the same session are not blocked.
+        \core\session\manager::write_close();
+
+        // Language priority: explicit request language, stored course context
+        // language, current Moodle language; unsupported codes fall through.
+        $lang = language_options::resolve([$lang, $coursecontext->lang ?? '', \current_language()]);
+
+        $payload = [
+            'instructions' => $prompt,
+            'lang' => $lang,
+            'with_images' => $generateimages == 1,
+        ];
+
+        // A disabled (or never configured) policy is omitted: it must not
+        // override the teacher's explicit image toggle by suppressing the
+        // activity description image (regression guard: see
+        // test_disabled_image_mode_is_not_sent_with_images_enabled).
+        if ($generateimages == 1) {
+            $imagepolicy = image_policy_builder::build();
+            if (($imagepolicy['mode'] ?? '') !== \local_coursegen\local\image_generation\activities::MODE_DISABLED) {
+                $payload['image_policy'] = $imagepolicy;
+            }
+        }
+
+        if (!empty($coursecontext) && !empty($coursecontext->context_type)) {
+            $payload['context_type'] = $coursecontext->context_type;
+        }
+
+        // Send this instance's file-type group catalog (group key => extensions) so the service
+        // can infer and validate accepted file types against the site's real groups, custom
+        // types included, instead of assuming the stock Moodle catalog.
+        $filetypegroups = filetype_catalog_service::get_groups();
+        if ($filetypegroups !== null) {
+            $payload['filetype_groups'] = $filetypegroups;
+        }
+
+        // Tell the service which H5P framework (core API) this Moodle runs, so it packages the
+        // generated .h5p with libraries compatible with that version (v127 vs v128 library set).
+        // When unresolvable the field is omitted and the service falls back
+        // to its most-compatible library set.
+        $h5pcoreapi = h5p_core_api::resolve();
+        if ($h5pcoreapi !== null) {
+            $payload['h5p_core_api'] = $h5pcoreapi;
+        }
+
+        $apiservice = api_client_factory::ai_course_api_service();
+        $result = $apiservice->start_activity($payload);
+
+        if (!isset($result['thread_id'])) {
+            // Log only the shape of the response (key names + status), never
+            // its content: the body may embed prompts or generated material.
+            debugging(
+                'Invalid response from AI service (activity init). Keys: '
+                . implode(',', array_keys($result))
+                . '; status: ' . (string)($result['status'] ?? '')
+            );
             return [
                 'ok' => false,
                 'message' => get_string('error_generating_resource', 'local_coursegen'),
             ];
         }
-    }
 
-    /**
-     * Build the AI course API service used by this endpoint.
-     *
-     * Extracted as a protected factory so PHPUnit tests can override it
-     * through a testable subclass (late static binding).
-     *
-     * @return ai_course_api_service
-     */
-    protected static function get_api_service(): ai_course_api_service {
-        return new ai_course_api_service();
-    }
+        $jobid = $result['thread_id'];
+        $status = $result['status'] ?? null;
+        $contexttype = $coursecontext ? $coursecontext->context_type : null;
+        $systeminstructionname = $coursecontext->system_instruction_name ?? null;
 
-    /**
-     * Resolve language to send to the AI service.
-     *
-     * Priority order:
-     * 1) Explicit request language from modal.
-     * 2) Stored course context language.
-     * 3) Current Moodle language.
-     * 4) English fallback.
-     *
-     * @param string|null $requestlang
-     * @param \stdClass|null $coursecontext
-     * @return string
-     */
-    private static function resolve_request_language(?string $requestlang, ?\stdClass $coursecontext): string {
-        $candidates = [$requestlang, $coursecontext->lang ?? '', \current_language()];
+        // Store job info in module jobs table using persistent model.
+        module_job_service::create_job(
+            $courseid,
+            $USER->id,
+            $jobid,
+            $generateimages,
+            $contexttype,
+            $systeminstructionname,
+            $sectionnum,
+            $beforemod,
+            $status
+        );
 
-        foreach ($candidates as $candidate) {
-            $candidate = str_replace('-', '_', \core_text::strtolower(trim((string)$candidate)));
-            $lang = explode('_', $candidate)[0];
-            if ($lang !== '') {
-                return $lang;
-            }
-        }
+        generation_job_started::create([
+            'context' => $context,
+            'other' => [
+                'job_id' => $jobid,
+                'generate_images' => (int)$generateimages,
+            ],
+        ])->trigger();
 
-        return 'en';
+        $streamingurl = $apiservice->get_mod_streaming_url_for_job($jobid);
+
+        // Report the lookups that fell back to a default (H5P core API version,
+        // file-type groups); the caller audits them once the request completes.
+        $warnings = warning_collector::drain();
+
+        return [
+            'ok' => true,
+            'job_id' => $jobid,
+            'status' => $status,
+            'message' => $result['message'] ?? get_string('course_planning_started', 'local_coursegen'),
+            'streamingurl' => $streamingurl,
+            'warnings' => warning_collector::to_messages($warnings),
+        ];
     }
 
     /**
@@ -291,6 +286,11 @@ class create_mod_stream extends external_api {
             'status' => new external_value(PARAM_RAW, 'Job status from AI service', VALUE_OPTIONAL),
             'message' => new external_value(PARAM_TEXT, 'Response message from server', VALUE_OPTIONAL),
             'streamingurl' => new external_value(PARAM_RAW, 'Streaming URL to connect to the activity stream', VALUE_OPTIONAL),
+            'warnings' => new external_multiple_structure(
+                new external_value(PARAM_TEXT, 'Step that failed and why'),
+                'Non-fatal warnings recorded while preparing the generation',
+                VALUE_OPTIONAL
+            ),
         ]);
     }
 }
