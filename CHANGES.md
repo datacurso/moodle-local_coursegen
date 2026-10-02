@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100201
+
+### Fixed
+- **The preview of a lesson whose page titles carry a marker no longer shows the template's own marker**  
+  A page whose title the template leaves to the AI (for example "Semana" followed by a number) no longer matches any row by title, so its text stayed the template's. A title that matches no row now takes the row no other title reached, in the order the template is walked, as long as those rows are as many as the pages left.
+
 ## [2.0.10] - 2026100200
 
 ### Fixed
