@@ -450,13 +450,7 @@
           <div class="courseai-adjustment-history hidden" id="courseaiAdjustmentHistory"></div>
         </div>
 
-        <!-- After "Adjust", the decision card is replaced by the composer; this slim
-             bar (a SEPARATE element above the composer, with a gap) keeps Accept
-             reachable so the user can always change their mind. -->
-        <div class="cg-accept-bar" id="cgAcceptBar" style="display:none">
-          <span class="cg-accept-bar-text">{{#str}}courseai_decision_still_accept, local_coursegen{{/str}}</span>
-          <button class="cg-accept-bar-btn" id="cgAcceptInline" type="button">{{#str}}courseai_decision_accept, local_coursegen{{/str}}</button>
-        </div>
+        {{> local_coursegen/courseai_accept_bar }}
 
         <!-- Pinned working-status slot: during an ACTION re-stream (reorder, replan,
              add, delete, adjust) the composer is hidden, so the "assistant is working"
@@ -768,14 +762,16 @@
           <div class="cg-decision-body" id="cgDecisionBody"></div>
           <div class="cg-decision-actions">
             <button class="cg-decision-btn cg-decision-btn--accept" id="cgDecisionAccept" type="button">
-              {{#str}}courseai_template_review_approve, local_coursegen{{/str}}
+              {{#str}}courseai_decision_accept, local_coursegen{{/str}}
             </button>
             <button class="cg-decision-btn cg-decision-btn--adjust" id="cgDecisionAdjust" type="button">
-              {{#str}}courseai_template_review_adjust, local_coursegen{{/str}}
+              {{#str}}courseai_decision_adjust, local_coursegen{{/str}}
             </button>
           </div>
         </div>
       </div>
+
+      {{> local_coursegen/courseai_accept_bar }}
 
       {{! Reduced input bar — chat-composer style, pinned at the panel bottom.
           Only syllabus attach, generate-images toggle, language select and the
