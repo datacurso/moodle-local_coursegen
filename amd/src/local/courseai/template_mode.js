@@ -18,9 +18,8 @@
  *
  * This entrypoint only wires DOM events; the guided-form structure (sections
  * and activities, replicating core_courseformat's card/row look) is rendered
- * server-side by local/template/render.js from local_coursegen/template_structure,
- * and the activity-type picker grid by local/template/chooser.js from
- * local_coursegen/template_activity_chooser. Nothing here builds HTML by hand.
+ * server-side by local/template/render.js from local_coursegen/template_structure.
+ * Nothing here builds HTML by hand.
  *
  * @module     local_coursegen/local/courseai/template_mode
  * @copyright  2025 Wilber Narvaez <https://datacurso.com>
@@ -28,40 +27,29 @@
  */
 
 import Notification from 'core/notification';
-import {getStrings} from 'core/str';
+import {getString, getStrings} from 'core/str';
 import {getTemplateStructure} from './template/repository';
 import {runGeneration} from './template/run_generation';
 import {wireInputBar} from './template/input_bar';
 import {refreshPreviewLinks} from './template/preview';
-import {loadReferenceFiles, clearReferenceFiles, wireReferenceFiles} from './template/reference_files';
-import Selectors from './template/selectors';
 import {
     createTemplateState,
     applyStructureResponse,
-    addSection,
-    insertActivity,
-    removeActivity,
     toggleSectionCollapsed,
 } from './template/state';
 import {renderStructure, wireStructureEvents} from './template/render';
-import {renderChooserGrid, openActivityChooser, wireChooserModal} from './template/chooser';
+import {pickSpaceFile, removeSpaceFile, refreshGenerateState} from './template/space_files';
 import {formatTemplate} from './utils';
 
-// Localised labels used while mutating the structure (add-section button text,
-// generic "Section" word for naming new sections, and the "N sections · M
-// activities" stats template). Fetched once and cached — wireTemplateMode runs
-// before the page's own translated strings are loaded (see courseai.js), so
-// this module fetches only the couple of strings it needs.
-let labelsPromise = null;
-const getLabels = () => {
-    if (!labelsPromise) {
-        labelsPromise = getStrings([
-            {key: 'courseai_template_add_section', component: 'local_coursegen'},
-            {key: 'section', component: 'moodle'},
-            {key: 'courseai_plan_sections_counter', component: 'local_coursegen'},
-        ]).then(([addSectionLabel, sectionWord, statsTemplate]) => ({addSectionLabel, sectionWord, statsTemplate}));
+// The "N sections · M activities" stats template. Fetched once and cached —
+// wireTemplateMode runs before the page's own translated strings are loaded
+// (see courseai.js), so this module fetches only the string it needs.
+let statsTemplatePromise = null;
+const getStatsTemplate = () => {
+    if (!statsTemplatePromise) {
+        statsTemplatePromise = getString('courseai_plan_sections_counter', 'local_coursegen');
     }
-    return labelsPromise;
+    return statsTemplatePromise;
 };
 
 /**
@@ -107,12 +95,6 @@ export const wireTemplateMode = (state, host) => {
 
     wireInputBar(tplState, state);
 
-    // The places of the template that take a file of the teacher's own.
-    const referenceRegion = document.querySelector(Selectors.regions.referenceFiles);
-    if (referenceRegion) {
-        wireReferenceFiles(referenceRegion);
-    }
-
     // Sequence guard: reselecting the template autocomplete before a previous
     // getTemplateStructure() fetch resolves must not let the slower, stale
     // response overwrite the structure of the template picked afterwards.
@@ -120,13 +102,15 @@ export const wireTemplateMode = (state, host) => {
     // was launched with and discards its response if it no longer matches.
     const requestTracker = {id: 0};
 
-    // Single source of truth for re-rendering: always resolves the localised
-    // label first so the "+ Add section" button never flashes untranslated text.
+    // Single source of truth for re-rendering: the structure, the stats line
+    // and the Generate button all follow the in-memory model.
+    const genBtn = document.getElementById('tplModeGenerate');
     const rerenderStructure = async() => {
-        const {addSectionLabel, statsTemplate} = await getLabels();
-        await renderStructure(container, tplState, {addSection: addSectionLabel});
+        const statsTemplate = await getStatsTemplate();
+        await renderStructure(container, tplState);
         refreshPreviewLinks();
         updateStats(tplState, statsTemplate);
+        refreshGenerateState(tplState, genBtn);
     };
 
     wireStructureEvents(container, {
@@ -140,76 +124,15 @@ export const wireTemplateMode = (state, host) => {
                 Notification.exception(e);
             }
         },
-        onOpenChooser: (sectionIndex, position) => {
-            openActivityChooser(sectionIndex, position);
+        onPickSpaceFile: (sectionIndex, activityIndex) => {
+            pickSpaceFile(tplState, sectionIndex, activityIndex, rerenderStructure);
         },
-        onRemoveActivity: async(sectionIndex, activityIndex) => {
-            const section = tplState.sections[sectionIndex];
-            const removedActivity = section ? section.activities[activityIndex] : null;
-            if (removeActivity(tplState, sectionIndex, activityIndex)) {
-                try {
-                    await rerenderStructure();
-                } catch (e) {
-                    // Put the removed row back so state matches the still-rendered DOM.
-                    if (section && removedActivity) {
-                        section.activities.splice(activityIndex, 0, removedActivity);
-                    }
-                    Notification.exception(e);
-                }
-            }
-        },
-        onAddSection: async() => {
-            const {sectionWord} = await getLabels();
-            const section = addSection(tplState, sectionWord);
-            if (section) {
-                try {
-                    await rerenderStructure();
-                } catch (e) {
-                    // Undo the append so state matches the still-rendered DOM.
-                    const idx = tplState.sections.indexOf(section);
-                    if (idx !== -1) {
-                        tplState.sections.splice(idx, 1);
-                        if (!tplState.nolimit) {
-                            tplState.remainingSections += 1;
-                        }
-                    }
-                    Notification.exception(e);
-                }
-            }
+        onRemoveSpaceFile: (sectionIndex, activityIndex) => {
+            removeSpaceFile(tplState, sectionIndex, activityIndex, rerenderStructure);
         },
     });
 
-    wireChooserModal(async(sectionIndex, position, modname, extras) => {
-        const activity = tplState.allowedActivities.find((a) => a.modname === modname);
-        if (!activity) {
-            return;
-        }
-        const inserted = insertActivity(tplState, sectionIndex, position, {...activity, ...(extras || {})});
-        if (inserted) {
-            try {
-                await rerenderStructure();
-            } catch (e) {
-                // Undo the insertion so state matches the still-rendered DOM.
-                const section = tplState.sections[sectionIndex];
-                let idx = -1;
-                if (section) {
-                    idx = section.activities.indexOf(inserted);
-                }
-                if (idx !== -1) {
-                    section.activities.splice(idx, 1);
-                }
-                Notification.exception(e);
-            }
-        }
-    });
-
-    // The real course-creation backend for this button (create_course_from_template
-    // webservice / template_course_builder_service) was removed - it shipped the
-    // old backup/restore + mock-AI design, already superseded elsewhere. Rather
-    // than leave the button silently do nothing when other code re-enables it
-    // (limits/loading logic still toggles genBtn.disabled below), tell the
-    // professor plainly instead of failing silently.
-    const genBtn = document.getElementById('tplModeGenerate');
+    // Generate: the button is only on while a template is loaded and every required space has its file.
     if (genBtn) {
         genBtn.addEventListener('click', () => {
             runGeneration(tplState, tplSelect, genBtn, state, host);
@@ -239,8 +162,8 @@ export const wireTemplateMode = (state, host) => {
 };
 
 /**
- * Load a template's guided-form structure (locked sections/activities, section
- * limits, and the admin-allowed activity catalog) and render it.
+ * Load a template's guided-form structure (sections, activities, spaces and
+ * section limits) and render it.
  *
  * @param {number} templateId
  * @param {Object} tplState
@@ -270,20 +193,14 @@ const loadTemplateStructure = async(templateId, tplState, container, state, requ
             detailsEl.style.display = '';
         }
 
-        const {addSectionLabel, statsTemplate} = await getLabels();
-        await renderStructure(container, tplState, {addSection: addSectionLabel});
+        const statsTemplate = await getStatsTemplate();
+        await renderStructure(container, tplState);
         refreshPreviewLinks();
         updateStats(tplState, statsTemplate);
-        await renderChooserGrid(tplState.allowedActivities);
         await renderLimitsBanner(limitsEl, limitsBadge, tplState);
-        const referenceRegion = document.querySelector(Selectors.regions.referenceFiles);
-        if (referenceRegion) {
-            await loadReferenceFiles(referenceRegion, templateId);
-        }
 
-        if (genBtn) {
-            genBtn.disabled = false;
-        }
+        // A required space keeps the button off until its file is picked.
+        refreshGenerateState(tplState, genBtn);
         state.templateStructureLoaded = true;
     } catch (e) {
         if (requestTracker.id !== requestId) {
@@ -359,10 +276,6 @@ const clearStructure = (tplState, container, state) => {
     const statsEl = document.getElementById('tplModeStats');
     if (statsEl) {
         statsEl.textContent = '';
-    }
-    const referenceRegion = document.querySelector(Selectors.regions.referenceFiles);
-    if (referenceRegion) {
-        clearReferenceFiles(referenceRegion);
     }
     // Reset only the structure: the input-bar values (images/lang/syllabus)
     // belong to the professor's session and survive clearing the template.

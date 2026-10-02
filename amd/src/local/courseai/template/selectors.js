@@ -14,14 +14,12 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Selectors for the template-mode guided form (structure view + activity chooser).
+ * Selectors for the template-mode guided form (structure view).
  *
- * All JS hooks in the server-rendered structure/chooser markup are data-action
+ * All JS hooks in the server-rendered structure markup are data-action
  * (behaviour) or data-region (static panel elements) attributes — never CSS
  * classes — so re-renders never desync from the JS that wires them (see
- * local_coursegen/template_structure.mustache,
- * local_coursegen/template_activity_chooser.mustache and the chooser prompt
- * panel in local_coursegen/courseai_page.mustache).
+ * local_coursegen/template_structure.mustache).
  *
  * @module     local_coursegen/local/courseai/template/selectors
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -31,25 +29,13 @@
 export default {
     actions: {
         toggleSection: '[data-action="local_coursegen/template/toggle-section"]',
-        openChooser: '[data-action="local_coursegen/template/open-chooser"]',
-        removeActivity: '[data-action="local_coursegen/template/remove-activity"]',
-        addSection: '[data-action="local_coursegen/template/add-section"]',
-        chooserOption: '[data-action="local_coursegen/template/add-chooser-option"]',
-        uploadReference: '[data-action="local_coursegen/template/upload-reference"]',
-        removeReference: '[data-action="local_coursegen/template/remove-reference"]',
+        pickSpaceFile: '[data-action="local_coursegen/template/pick-space-file"]',
+        removeSpaceFile: '[data-action="local_coursegen/template/remove-space-file"]',
+    },
+    classes: {
+        generating: 'cg-generating',
     },
     regions: {
         generationNotices: '[data-region="local_coursegen/template/generation-notices"]',
-        referenceFiles: '[data-region="local_coursegen/template/reference-files"]',
-        chooserPanel: '[data-region="local_coursegen/template/chooser-panel"]',
-        chooserSelectedIcon: '[data-region="local_coursegen/template/chooser-selected-icon"]',
-        chooserSelectedName: '[data-region="local_coursegen/template/chooser-selected-name"]',
-        chooserGenerateImages: '[data-region="local_coursegen/template/chooser-generateimages"]',
-        chooserSelectedFile: '[data-region="local_coursegen/template/chooser-selectedfile"]',
-        chooserSelectedFileName: '[data-region="local_coursegen/template/chooser-selectedfile_name"]',
-        chooserSelectedFileRemove: '[data-region="local_coursegen/template/chooser-selectedfile_remove"]',
-        chooserPrompt: '[data-region="local_coursegen/template/chooser-prompt"]',
-        chooserUpload: '[data-region="local_coursegen/template/chooser-upload"]',
-        chooserConfirm: '[data-region="local_coursegen/template/chooser-confirm"]',
     },
 };

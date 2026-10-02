@@ -16,8 +16,8 @@
 
 /**
  * External API for the professor-facing template guided form: the template's
- * section/activity structure (with the admin-defined lock state applied) and
- * the catalog of activity types the professor may add.
+ * section/activity structure (with the admin-defined lock state applied), the
+ * file resources the professor brings a file for included.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -31,7 +31,6 @@ use external_function_parameters;
 use external_value;
 use context_system;
 use local_coursegen\local\models\template;
-use local_coursegen\local\ai_activity_types;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -43,9 +42,6 @@ require_once($CFG->libdir . '/externallib.php');
 class get_template_structure extends external_api {
     use get_template_structure_rows;
     use get_template_structure_schema;
-
-    /** @var string The catalog entry field holding a module's display name, which the catalog is sorted by. */
-    private const CATALOG_NAME_FIELD = 'displayname';
 
     /**
      * Returns description of method parameters.
@@ -59,7 +55,7 @@ class get_template_structure extends external_api {
     }
 
     /**
-     * Return the template's structure, locked/reference state and allowed activity catalog.
+     * Return the template's structure, locked state and spaces.
      *
      * @param int $templateid Template ID.
      * @return array
@@ -100,15 +96,11 @@ class get_template_structure extends external_api {
             $remaining = max(0, $maxsections);
         }
 
-        $installedtypes = ai_activity_types::installed();
-        $allowedactivities = self::allowed_activities($installedtypes, $OUTPUT);
-
         return [
             'nolimit' => $nolimit,
             'maxsections' => $maxsections,
             'remainingsections' => $remaining,
             'sections' => $sections,
-            'allowedactivities' => $allowedactivities,
         ];
     }
 }

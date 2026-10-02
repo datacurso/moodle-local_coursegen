@@ -30,11 +30,10 @@
 import Templates from 'core/templates';
 import {getStrings} from 'core/str';
 import Selectors from './selectors';
-import {canAddSection} from './state';
 
 /**
  * Resolve a human-readable label per distinct modname present in the state
- * (locked sections' activities), used as the small grey subtitle under each
+ * (the activities of the template), used as the small grey subtitle under each
  * activity's title (Image 1's "description" line). Cached on state.typeLabels
  * so this only round-trips once per template load, not on every re-render.
  *
@@ -62,74 +61,88 @@ const ensureTypeLabels = async(state) => {
 };
 
 /**
+ * The Mustache fields of one activity row.
+ *
+ * @param {Object} activity
+ * @param {Object} state
+ * @param {number} sectionindex
+ * @param {number} index
+ * @returns {Object}
+ */
+const buildActivityContext = (activity, state, sectionindex, index) => ({
+    name: activity.name,
+    modname: activity.modname,
+    purpose: activity.purpose,
+    iconhtml: activity.iconhtml,
+    locked: activity.locked,
+    isinstance: !!activity.isinstance,
+    aigenerated: !!activity.aigenerated,
+    // Only an AI-generated row ever receives progress events, so the
+    // attribute is omitted entirely on the rest rather than rendered
+    // as a meaningless empty one.
+    generationuid: activity.generationuid || '',
+    sectionindex,
+    index,
+    typelabel: activity.typelabel || state.typeLabels[activity.modname] || '',
+    isspace: !!activity.isspace,
+    spaceinstruction: activity.spaceinstruction || '',
+    hasspaceinstruction: !!activity.spaceinstruction,
+    spacerequired: !!activity.spacerequired,
+    spacemissing: !!activity.isspace && !!activity.spacerequired && !activity.spacefile,
+    hasspacefile: !!activity.spacefile,
+    spacefilename: activity.spacefile?.filename || '',
+});
+
+/**
  * Build the Mustache context for local_coursegen/template_structure from state.
  *
  * @param {Object} state
- * @param {Object} labels - {addSection}
  * @returns {Object}
  */
-const buildContext = (state, labels) => ({
+const buildContext = (state) => ({
     sections: state.sections.map((section, sectionindex) => ({
         // Every place a click needs to find its way back to this section
-        // (collapse toggle, add-activity, remove-activity) addresses it by
-        // this render-time position, never by section.id: a section the
-        // professor just added has no id at all (see state.js addSection),
-        // and a real section's id has nothing to do with routing a click.
+        // (collapse toggle, space file) addresses it by this render-time
+        // position, never by section.id.
         index: sectionindex,
         name: section.name,
         locked: section.locked,
         collapsed: !!section.collapsed,
         activitiescount: section.activities.length,
-        showaddactivity: !section.locked,
-        activities: section.activities.map((activity, index) => ({
-            name: activity.name,
-            modname: activity.modname,
-            purpose: activity.purpose,
-            iconhtml: activity.iconhtml,
-            locked: activity.locked,
-            isinstance: !!activity.isinstance,
-            aigenerated: !!activity.aigenerated,
-            // Only an AI-generated row ever receives progress events, so the
-            // attribute is omitted entirely on the rest rather than rendered
-            // as a meaningless empty one.
-            generationuid: activity.generationuid || '',
-            sectionindex,
-            index,
-            typelabel: activity.typelabel || state.typeLabels[activity.modname] || '',
-            // The insert-between-rows "+" divider is a planning affordance: it never
-            // shows in a locked section (nothing may be added there at all), but it
-            // DOES show above a locked activity inside an unlocked section — the
-            // professor can still insert a new activity next to a reference one.
-            showinsertzone: !section.locked,
-        })),
+        activities: section.activities.map((activity, index) => buildActivityContext(activity, state, sectionindex, index)),
     })),
-    showaddsection: true,
-    addsectiondisabled: !canAddSection(state),
-    addsectionlabel: state.nolimit
-        ? labels.addSection
-        : `${labels.addSection} (${state.remainingSections})`,
 });
 
 /**
- * Render (or re-render) the structure into the container, then update the
- * dependent stats line. Re-renders always replace the container's contents —
- * delegated listeners on the container itself (wired once by wireStructureEvents)
- * survive every re-render, so nothing needs to be re-wired here.
+ * Render (or re-render) the structure into the container.
+ * Re-renders always replace the container's contents — delegated listeners on
+ * the container itself (wired once by wireStructureEvents) survive every
+ * re-render, so nothing needs to be re-wired here.
  *
  * @param {HTMLElement} container
  * @param {Object} state
- * @param {Object} labels - {addSection}
  * @returns {Promise<void>}
  */
-export const renderStructure = async(container, state, labels) => {
+export const renderStructure = async(container, state) => {
     if (!container) {
         return;
     }
     await ensureTypeLabels(state);
-    const context = buildContext(state, labels);
+    const context = buildContext(state);
     const {html, js} = await Templates.renderForPromise('local_coursegen/template_structure', context);
     Templates.replaceNodeContents(container, html, js);
 };
+
+/**
+ * The section and row positions a control carries.
+ *
+ * @param {HTMLElement} control
+ * @returns {number[]} [sectionIndex, activityIndex]
+ */
+const positionOf = (control) => [
+    parseInt(control.dataset.sectionIndex, 10),
+    parseInt(control.dataset.activityIndex, 10),
+];
 
 /**
  * Wire delegated click handling on the structure container. Called ONCE per
@@ -139,33 +152,13 @@ export const renderStructure = async(container, state, labels) => {
  * @param {HTMLElement} container
  * @param {Object} handlers
  * @param {Function} handlers.onToggleSection - (sectionIndex) => void
- * @param {Function} handlers.onOpenChooser - (sectionIndex, position|null) => void
- * @param {Function} handlers.onRemoveActivity - (sectionIndex, activityIndex) => void
- * @param {Function} handlers.onAddSection - () => void
+ * @param {Function} handlers.onPickSpaceFile - (sectionIndex, activityIndex) => void
+ * @param {Function} handlers.onRemoveSpaceFile - (sectionIndex, activityIndex) => void
  */
 export const wireStructureEvents = (container, handlers) => {
     if (!container) {
         return;
     }
-
-    // Guards against a fast double click/double Enter firing a second removal
-    // before the first one's re-render (which shifts every later DOM index)
-    // has finished — that race would otherwise delete the wrong row.
-    let removalPending = false;
-    const handleRemoveActivity = async(removeEl) => {
-        if (removalPending) {
-            return;
-        }
-        removalPending = true;
-        try {
-            await handlers.onRemoveActivity(
-                parseInt(removeEl.dataset.sectionIndex, 10),
-                parseInt(removeEl.dataset.activityIndex, 10)
-            );
-        } finally {
-            removalPending = false;
-        }
-    };
 
     container.addEventListener('click', (event) => {
         const toggleEl = event.target.closest(Selectors.actions.toggleSection);
@@ -175,40 +168,17 @@ export const wireStructureEvents = (container, handlers) => {
             return;
         }
 
-        const chooserEl = event.target.closest(Selectors.actions.openChooser);
-        if (chooserEl) {
+        const pickEl = event.target.closest(Selectors.actions.pickSpaceFile);
+        if (pickEl) {
             event.preventDefault();
-            const sectionIndex = parseInt(chooserEl.dataset.sectionIndex, 10);
-            const position = 'position' in chooserEl.dataset ? parseInt(chooserEl.dataset.position, 10) : null;
-            handlers.onOpenChooser(sectionIndex, position);
+            handlers.onPickSpaceFile(...positionOf(pickEl));
             return;
         }
 
-        const removeEl = event.target.closest(Selectors.actions.removeActivity);
+        const removeEl = event.target.closest(Selectors.actions.removeSpaceFile);
         if (removeEl) {
             event.preventDefault();
-            handleRemoveActivity(removeEl);
-            return;
-        }
-
-        const addSectionEl = event.target.closest(Selectors.actions.addSection);
-        if (addSectionEl && !addSectionEl.disabled) {
-            event.preventDefault();
-            handlers.onAddSection();
-        }
-    });
-
-    // The delete control is a span[role="button"] (matches the detailed-plan
-    // action controls' markup) so it needs an explicit Enter/Space activation —
-    // unlike the <a>/<button> triggers above, it is not natively keyboard-activatable.
-    container.addEventListener('keydown', (event) => {
-        if (event.key !== 'Enter' && event.key !== ' ') {
-            return;
-        }
-        const removeEl = event.target.closest(Selectors.actions.removeActivity);
-        if (removeEl) {
-            event.preventDefault();
-            handleRemoveActivity(removeEl);
+            handlers.onRemoveSpaceFile(...positionOf(removeEl));
         }
     });
 };
