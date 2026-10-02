@@ -118,7 +118,7 @@ final class reference_file_policy_test extends \advanced_testcase {
      * @param string $filename
      * @param string $expected
      */
-    public function test_the_kind_follows_the_type_of_the_template_file(string $mimetype, string $filename, string $expected): void {
+    public function test_the_kind_follows_the_template_file(string $mimetype, string $filename, string $expected): void {
         $kind = reference_file_policy::kind_of($mimetype, $filename);
 
         $this->assertSame($expected, $kind);
