@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100223
+
+### Changed
+- **The space card of the teacher screen is smaller and uses an informative blue**  
+  The card asked for the teacher's file in red, a colour that reads as an error, and its icon, type and button were larger than the rows around it. It is now drawn in the blue of an informative notice, with a smaller icon, text and button and less padding, so it stands out without shouting. The required state keeps a stronger left border and a filled badge, the file state keeps its green, and the remove action is no longer red.
+
 ## [2.0.10] - 2026100222
 
 ### Changed
