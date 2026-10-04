@@ -96,16 +96,16 @@ class stream_relay {
      *
      * Checks happen first, and fail as ordinary errors, before anything is streamed.
      *
-     * @param string $kind Stream kind, one of the stream_kind constants.
-     * @param string $id External thread identifier.
+     * @param string $streamtype Stream type, one of the stream_type constants.
+     * @param string $threadid External thread identifier.
      * @throws \moodle_exception When the stream cannot be read by this user or is already being read.
      */
-    public function run(string $kind, string $id): void {
-        $this->authorizer->authorize($kind, $id);
-        $url = $this->service->get_upstream_stream_url($kind, $id);
+    public function run(string $streamtype, string $threadid): void {
+        $this->authorizer->authorize($streamtype, $threadid);
+        $url = $this->service->get_upstream_stream_url($streamtype, $threadid);
         $licensekey = $this->service->get_license_key();
 
-        $lock = $this->acquire_lock($kind, $id);
+        $lock = $this->acquire_lock($streamtype, $threadid);
 
         try {
             $this->prepare_output();
@@ -144,14 +144,14 @@ class stream_relay {
     /**
      * Take the lock of a thread, so a single relay reads it.
      *
-     * @param string $kind Stream kind.
-     * @param string $id External thread identifier.
+     * @param string $streamtype Stream type.
+     * @param string $threadid External thread identifier.
      * @return \core\lock\lock
      * @throws \moodle_exception When another relay keeps the thread.
      */
-    private function acquire_lock(string $kind, string $id): \core\lock\lock {
+    private function acquire_lock(string $streamtype, string $threadid): \core\lock\lock {
         $factory = \core\lock\lock_config::get_lock_factory('local_coursegen_stream');
-        $resource = 'stream_' . $kind . '_' . sha1($id);
+        $resource = 'stream_' . $streamtype . '_' . sha1($threadid);
         $lock = $factory->get_lock($resource, $this->lockwait, self::MAX_SECONDS + 300);
         if (!$lock) {
             throw new \moodle_exception('error_stream_in_use', 'local_coursegen');
