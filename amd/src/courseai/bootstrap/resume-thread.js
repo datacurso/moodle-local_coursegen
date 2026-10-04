@@ -45,7 +45,10 @@ export const makeRebuildThread = ({state, emitLog, texts, replayThread}) => {
      * @returns {Array<string>} the user turns, oldest first
      */
     const readUserTurns = (snapshot, initialPrompt) => {
-        const messages = Array.isArray(snapshot?.messages) ? snapshot.messages : [];
+        let messages = [];
+        if (Array.isArray(snapshot?.messages)) {
+            messages = snapshot.messages;
+        }
         const turns = [];
         messages.forEach((message) => {
             if (!message || message.type !== 'human') {
@@ -135,12 +138,15 @@ export const makeRebuildThread = ({state, emitLog, texts, replayThread}) => {
         // re-opened and emits the pending reply itself, so the newest turn is
         // left open here instead of being answered twice.
         const settled = status === 'WAITING_APPROVAL' || status === 'PLANNING_ADJUST' || status === 'COMPLETED';
-        const answered = settled ? turns.length : Math.max(0, turns.length - 1);
+        let answered = Math.max(0, turns.length - 1);
+        if (settled) {
+            answered = turns.length;
+        }
 
         turns.forEach((turn, index) => {
             emitLog({actor: 'user', kind: 'user', message: turn});
             if (index === 0 && hasPlan) {
-                // rebuildTranscriptFromPlan fills the checklist items AND un-hides
+                // The rebuildTranscriptFromPlan call fills the checklist items AND un-hides
                 // the card — one call, no empty card.
                 rebuildTranscriptFromPlan(sections);
                 state.threadBelowPlan = true;
@@ -170,7 +176,10 @@ export const makeRebuildThread = ({state, emitLog, texts, replayThread}) => {
      * @returns {Promise<void>}
      */
     const rebuildThread = async(sections, snapshot, initialPrompt, status) => {
-        const thread = Array.isArray(snapshot?.thread) ? snapshot.thread : [];
+        let thread = [];
+        if (Array.isArray(snapshot?.thread)) {
+            thread = snapshot.thread;
+        }
         if (thread.length > 0 && typeof replayThread === 'function') {
             // The thread carries each AI output block in full, which replaces the
             // names-only checklist card as the history of the plan; the centre
