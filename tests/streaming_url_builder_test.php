@@ -103,7 +103,7 @@ final class streaming_url_builder_test extends \basic_testcase {
     public function test_relay_url_encodes_the_identifier(): void {
         $url = streaming_url_builder::relay(stream_type::COURSE, 'a b&c');
 
-        $this->assertStringContainsString('id=a+b%26c', $url);
+        $this->assertStringContainsString('threadid=a%20b%26c', $url);
     }
 
     /**
