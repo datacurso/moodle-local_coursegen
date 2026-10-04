@@ -117,7 +117,7 @@ final class sse_parser_test extends \basic_testcase {
     }
 
     /**
-     * Comment lines such as keepalive pings never produce an event.
+     * Comment lines such as the pings of the service never produce an event.
      */
     public function test_comment_lines_are_ignored(): void {
         $parser = new sse_parser();

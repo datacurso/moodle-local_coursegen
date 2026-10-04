@@ -151,8 +151,8 @@ export const openConnection = (streamUrl, retryAttempt, ctx, openSSEStream) => {
     });
 
     state.sseSource.onerror = () => {
-        // The relay source never reconnects by itself: the relay keeps the connection
-        // alive with heartbeats, and a lost connection is a failure the user retries.
+        // The relay source never reconnects by itself: a lost connection is a failure
+        // the user retries.
         // Only a source that is still CONNECTING is ignored, which is not a failure.
         if (state.sseSource && state.sseSource.readyState === RelaySource.CONNECTING) {
             return;

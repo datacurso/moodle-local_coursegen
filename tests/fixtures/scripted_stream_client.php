@@ -21,8 +21,8 @@ use local_coursegen\local\streaming\upstream_stream_client;
 /**
  * Upstream client that replays a script instead of opening a connection.
  *
- * Each step of the script is either an event array with the keys 'event' and 'data', the string 'tick'
- * to run the tick callback, or a number of seconds to move the recording output clock forward.
+ * Each step of the script is either an event array with the keys 'event' and 'data', or the string 'tick'
+ * to run the tick callback.
  *
  * @package    local_coursegen
  * @category   test
@@ -38,9 +38,6 @@ class scripted_stream_client extends upstream_stream_client {
 
     /** @var array Url and license key of each stream() call. */
     public array $calls = [];
-
-    /** @var recording_browser_output|null Output whose clock the numeric steps move. */
-    public ?recording_browser_output $output = null;
 
     /** @var callable|null Event callback registered by listen(). */
     private $eventcallback = null;
@@ -72,7 +69,7 @@ class scripted_stream_client extends upstream_stream_client {
     /**
      * Play one step of the script.
      *
-     * @param mixed $step Event array, 'tick' or seconds to advance.
+     * @param mixed $step Event array or 'tick'.
      * @return bool Whether the tick callback asked to stop.
      */
     private function play($step): bool {
@@ -81,11 +78,6 @@ class scripted_stream_client extends upstream_stream_client {
             return false;
         }
 
-        if ($step === 'tick') {
-            return (bool) ($this->tickcallback)();
-        }
-
-        $this->output->clock += (int) $step;
-        return false;
+        return (bool) ($this->tickcallback)();
     }
 }

@@ -60,7 +60,6 @@ final class stream_relay_test extends \advanced_testcase {
 
         $this->output = new recording_browser_output();
         $this->client = new scripted_stream_client();
-        $this->client->output = $this->output;
         $this->authorizer = $this->createMock(stream_authorizer::class);
     }
 
@@ -74,7 +73,7 @@ final class stream_relay_test extends \advanced_testcase {
         $service->method('get_upstream_stream_url')->willReturnCallback([$this, 'upstream_url']);
         $service->method('get_license_key')->willReturn('license-123');
 
-        return new stream_relay($this->authorizer, $service, $this->client, $this->output, 1);
+        return new stream_relay($this->authorizer, $service, $this->client, $this->output);
     }
 
     /**
@@ -230,64 +229,52 @@ final class stream_relay_test extends \advanced_testcase {
     }
 
     /**
-     * A comment is written while the service stays silent for longer than the heartbeat interval.
+     * The relay writes only what the service sent, even when it stays silent between events.
      */
-    public function test_heartbeat_is_written_while_the_service_is_silent(): void {
+    public function test_a_silent_service_writes_nothing_to_the_browser(): void {
         $this->client->script = [
             ['event' => 'message', 'data' => '{"type":"status"}'],
-            11,
+            'tick',
             'tick',
             ['event' => 'done', 'data' => ''],
         ];
 
         $this->relay()->run(stream_type::COURSE, 'thread-1');
 
-        $this->assertSame(": keepalive\n\n", $this->output->written[1]);
-        $this->assertCount(3, $this->output->written);
+        $this->assertSame([
+            "event: message\ndata: {\"type\":\"status\"}\n\n",
+            "event: done\ndata: \n\n",
+        ], $this->output->written);
     }
 
     /**
-     * No comment is written when the service speaks often enough.
+     * A failed event of the service passes through like any other event, whatever its code.
      */
-    public function test_no_heartbeat_when_the_service_is_active(): void {
+    public function test_a_failed_event_of_the_service_is_forwarded_like_any_other(): void {
+        $failed = '{"type":"failed","retryable":true,"code":"stream_error","message":"x","result":[]}';
         $this->client->script = [
-            3,
-            'tick',
-            ['event' => 'message', 'data' => '{"type":"status"}'],
-            3,
-            'tick',
+            ['event' => 'message', 'data' => $failed],
             ['event' => 'done', 'data' => ''],
         ];
 
         $this->relay()->run(stream_type::COURSE, 'thread-1');
 
-        $this->assertCount(2, $this->output->written);
+        $this->assertSame([
+            "event: message\ndata: " . $failed . "\n\n",
+            "event: done\ndata: \n\n",
+        ], $this->output->written);
     }
 
     /**
-     * The thread is free for another relay once the first one ends.
+     * The same relay can carry one stream after another.
      */
-    public function test_lock_is_released_after_a_normal_run(): void {
+    public function test_the_relay_can_run_again_after_a_stream_ended(): void {
         $this->client->script = [['event' => 'done', 'data' => '']];
         $relay = $this->relay();
 
         $relay->run(stream_type::COURSE, 'thread-1');
         $relay->run(stream_type::COURSE, 'thread-1');
 
-        $this->assertCount(2, $this->client->calls);
-    }
-
-    /**
-     * The thread is free for another relay once the first one failed.
-     */
-    public function test_lock_is_released_after_a_failure(): void {
-        $this->client->failure = new \RuntimeException('boom');
-        $relay = $this->relay();
-
-        $relay->run(stream_type::COURSE, 'thread-1');
-        $relay->run(stream_type::COURSE, 'thread-1');
-
-        $this->assertDebuggingCalledCount(2);
         $this->assertCount(2, $this->client->calls);
     }
 

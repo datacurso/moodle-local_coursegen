@@ -47,17 +47,6 @@ class sse_formatter {
     }
 
     /**
-     * Build a comment block, which clients ignore and proxies see as traffic.
-     *
-     * @param string $text Comment text.
-     * @return string Block that ends in a blank line.
-     */
-    public static function comment(string $text): string {
-        $clean = self::without_line_breaks($text);
-        return ': ' . $clean . "\n\n";
-    }
-
-    /**
      * Remove CR and LF from a single-line value.
      *
      * @param string $value Value to clean.
