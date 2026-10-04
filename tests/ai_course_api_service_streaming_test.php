@@ -43,6 +43,30 @@ final class ai_course_api_service_streaming_test extends \advanced_testcase {
     }
 
     /**
+     * The browser gets the relay of the plugin for a course session, not the service URL.
+     */
+    public function test_course_streaming_url_is_the_relay(): void {
+        global $CFG;
+
+        $url = $this->service()->get_course_streaming_url('thread-1');
+
+        $this->assertSame($CFG->wwwroot . '/local/coursegen/stream.php?kind=course&id=thread-1', $url);
+        $this->assertStringNotContainsString('ai.example.com', $url);
+    }
+
+    /**
+     * The browser gets the relay of the plugin for an activity job, not the service URL.
+     */
+    public function test_activity_streaming_url_is_the_relay(): void {
+        global $CFG;
+
+        $url = $this->service()->get_mod_streaming_url_for_job('job-1');
+
+        $this->assertSame($CFG->wwwroot . '/local/coursegen/stream.php?kind=activity&id=job-1', $url);
+        $this->assertStringNotContainsString('ai.example.com', $url);
+    }
+
+    /**
      * The relay reads the course stream from the service.
      */
     public function test_upstream_url_of_a_course_stream(): void {
