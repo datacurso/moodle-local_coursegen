@@ -231,6 +231,7 @@ export const init = async(params) => {
             proposalsUi,
             streamManager,
             actions,
+            createCourseFromSession,
             parseJsonField,
             normalizeSnapshotStatus,
             buildSectionsFromDetailedPlan,

@@ -10,7 +10,7 @@ globalThis.document = {
 const EVENTS = [{type: 'status', message: 'x'}, {type: 'section', id: 's1', name: 'One'}];
 
 const build = (snapshot, resumeExtra = {}) => {
-    const calls = {open: [], hydrate: 0, review: 0, thread: []};
+    const calls = {open: [], hydrate: 0, review: 0, thread: [], logs: [], completion: [], createCourse: 0, controls: 0};
     const state = {defaultLang: 'en'};
     const resume = {
         success: true, recordid: 5, sessionid: 'thread-1', streamingurl: 'relay-url',
@@ -25,10 +25,15 @@ const build = (snapshot, resumeExtra = {}) => {
         planningUi: {syncCompactChatState() {}, showReviewActions() {
             calls.review++;
         }},
-        detailedUi: {enableAllActionControls() {}},
+        detailedUi: {enableAllActionControls() {
+            calls.controls++;
+        }},
         proposalsUi: {renderProposals() {}},
         streamManager: {openSSEStream: (...args) => calls.open.push(args)},
-        actions: {showCompletionView() {}},
+        actions: {showCompletionView: (args) => calls.completion.push(args)},
+        createCourseFromSession: async() => {
+            calls.createCourse++;
+        },
         parseJsonField: (value, fallback) => {
             try {
                 return JSON.parse(value);
@@ -46,8 +51,8 @@ const build = (snapshot, resumeExtra = {}) => {
         },
         resumeSessionId: 5,
         replayThread: async(thread, opts) => calls.thread.push([thread.length, opts]),
-        emitLog() {},
-        texts: {},
+        emitLog: (entry) => calls.logs.push(entry),
+        texts: {courseai_error_generic: 'Generation failed'},
     });
     return {run, calls, state};
 };
@@ -98,4 +103,44 @@ test('an adjustment without events keeps showing the review', async() => {
     assert.equal(await run(), true);
     assert.deepEqual(calls.open, []);
     assert.equal(calls.review, 1);
+});
+
+test('a finished generation whose course is not created yet asks for the course details again', async() => {
+    const {run, calls, state} = build({status: 'COMPLETED', detailed_plan_sections: SECTIONS, thread: THREAD});
+    assert.equal(await run(), true);
+    assert.equal(calls.createCourse, 1);
+    assert.equal(calls.review, 0);
+    assert.deepEqual(calls.open, []);
+    assert.equal(state.planApproved, true);
+    assert.equal(state.currentStage, 'generating');
+});
+
+test('a finished generation whose course exists shows the completion view and does not ask again', async() => {
+    const {run, calls} = build(
+        {status: 'COMPLETED', detailed_plan_sections: SECTIONS, thread: THREAD},
+        {courseid: 9, iscreated: true}
+    );
+    assert.equal(await run(), true);
+    assert.equal(calls.createCourse, 0);
+    assert.equal(calls.completion.length, 1);
+    assert.equal(calls.completion[0].courseid, 9);
+});
+
+test('a failed generation draws the conversation, tells what failed and opens no stream', async() => {
+    const {run, calls, state} = build({status: 'FAILED', detailed_plan_sections: SECTIONS, thread: THREAD});
+    assert.equal(await run(), true);
+    assert.equal(calls.hydrate, 1);
+    assert.equal(calls.thread.length, 1);
+    assert.deepEqual(calls.open, []);
+    assert.equal(calls.review, 0);
+    assert.equal(calls.controls, 1);
+    assert.equal(state.currentStage, 'failed');
+    assert.deepEqual(calls.logs, [{actor: 'ai', kind: 'danger', message: 'Generation failed'}]);
+});
+
+test('a failed generation without a plan still tells what failed', async() => {
+    const {run, calls} = build({status: 'FAILED', thread: THREAD});
+    assert.equal(await run(), true);
+    assert.equal(calls.hydrate, 0);
+    assert.deepEqual(calls.logs, [{actor: 'ai', kind: 'danger', message: 'Generation failed'}]);
 });

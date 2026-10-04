@@ -24,6 +24,7 @@
 import {renderSubsectionsDecision} from 'local_coursegen/local/courseai/ui/subsections-decision';
 import {makeRebuildThread} from 'local_coursegen/courseai/bootstrap/resume-thread';
 import {eventsToReplay} from 'local_coursegen/courseai/bootstrap/resume-replay';
+import {askForCourseDetails, showFailure} from 'local_coursegen/courseai/bootstrap/resume-end-states';
 
 /**
  * Build the resumeFromSnapshot async function.
@@ -38,6 +39,7 @@ import {eventsToReplay} from 'local_coursegen/courseai/bootstrap/resume-replay';
  * @param {Object} params.proposalsUi
  * @param {Object} params.streamManager
  * @param {Object} params.actions
+ * @param {Function} params.createCourseFromSession - opens the course details form and creates the course
  * @param {Function} params.parseJsonField
  * @param {Function} params.normalizeSnapshotStatus
  * @param {Function} params.buildSectionsFromDetailedPlan
@@ -61,6 +63,7 @@ export const makeResumeFromSnapshot = ({
     proposalsUi,
     streamManager,
     actions,
+    createCourseFromSession,
     parseJsonField,
     normalizeSnapshotStatus,
     buildSectionsFromDetailedPlan,
@@ -318,12 +321,25 @@ export const makeResumeFromSnapshot = ({
             if (typeof detailedUi.enableAllActionControls === 'function') {
                 detailedUi.enableAllActionControls();
             }
-            planningUi.showReviewActions('detailed');
+            // The generation is done but the course is not created yet: the user still has to confirm
+            // its details, so the page asks for them again, as the live stream does when it completes.
             stepsUi.setStepState('planning', 'done');
-            stepsUi.setStepState('generating', 'done');
-            state.currentStage = 'completed';
-            stepsUi.setProgress(100);
+            stepsUi.setStepState('generating', 'active');
+            state.currentStage = 'generating';
             stepsUi.updateFlowNav();
+            askForCourseDetails({createCourseFromSession, emitLog, texts});
+            return true;
+        }
+
+        if (status === 'FAILED') {
+            stepsUi.transitionToPlanning();
+            setPlanningStreamVisible();
+            applyCourseTitleToHeader();
+            if (sectionsForUi.length > 0) {
+                await hydrateDetailedPlanFromSnapshot(detailedSections);
+                await rebuildThread(detailedSections, snapshot, initialPrompt, status);
+            }
+            showFailure({state, stepsUi, detailedUi, emitLog, texts});
             return true;
         }
 
