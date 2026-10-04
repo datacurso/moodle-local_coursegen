@@ -143,15 +143,32 @@ const captureDrafts = (root) => {
 };
 
 /**
- * Read the state of the page that only the user changes: what is open, where each panel is scrolled
- * and what was typed and not sent.
+ * Read the modes the user put the page in. Choosing Adjust at the review shows the chat input and the
+ * accept bar next to it, in place of the review card.
+ *
+ * @param {Object} root Where the accept bar is looked up, normally the document.
+ * @returns {{adjusting: boolean}}
+ */
+const captureModes = (root) => {
+    const acceptBar = root.getElementById('cgAcceptBar');
+    let adjusting = false;
+    if (acceptBar) {
+        adjusting = acceptBar.style.display === 'flex';
+    }
+    return {adjusting};
+};
+
+/**
+ * Read the state of the page that only the user changes: what is open, where each panel is scrolled,
+ * what was typed and not sent, and the mode of the review.
  *
  * @param {Object} root Where the page elements are looked up, normally the document.
- * @returns {{toggles: Object, scroll: Object, drafts: Object}} The state, ready to be saved as JSON.
+ * @returns {{toggles: Object, scroll: Object, drafts: Object, modes: Object}} The state, ready to be saved as JSON.
  */
 export const captureUiState = (root) => {
     const toggles = captureToggles(root);
     const scroll = captureScroll(root);
     const drafts = captureDrafts(root);
-    return {toggles, scroll, drafts};
+    const modes = captureModes(root);
+    return {toggles, scroll, drafts, modes};
 };

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {captureUiState, TOGGLE_KINDS} from '../../amd/src/courseai/bootstrap/ui-state-capture.js';
-import {page, scroller, textField, toggle} from './support/fake-page.mjs';
+import {page, scroller, shown, textField, toggle} from './support/fake-page.mjs';
 
 const lists = (overrides = {}) => {
     const result = {};
@@ -64,4 +64,15 @@ test('an empty draft is not kept', () => {
 
 test('a page without the field has no draft', () => {
     assert.deepEqual(captureUiState(page({lists: lists()})).drafts, {});
+});
+
+test('adjusting is read from the accept bar the Adjust button shows next to the chat input', () => {
+    const adjusting = page({lists: lists(), scrollers: {cgAcceptBar: shown('flex')}});
+    const reviewing = page({lists: lists(), scrollers: {cgAcceptBar: shown('none')}});
+    assert.equal(captureUiState(adjusting).modes.adjusting, true);
+    assert.equal(captureUiState(reviewing).modes.adjusting, false);
+});
+
+test('a page without the accept bar is not adjusting', () => {
+    assert.equal(captureUiState(page({lists: lists()})).modes.adjusting, false);
 });

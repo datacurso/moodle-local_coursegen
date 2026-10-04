@@ -44,3 +44,12 @@ export const textField = (value = '') => ({
         return true;
     },
 });
+
+export const shown = (display, onClick = () => undefined) => ({
+    style: {display},
+    clicks: 0,
+    click() {
+        this.clicks++;
+        onClick(this);
+    },
+});

@@ -137,7 +137,28 @@ const applyDrafts = (root, saved) => {
 };
 
 /**
- * Put the page back as the user left it: what was open first, then where each panel was scrolled.
+ * Take the user back to the chat input if the user was adjusting, which only applies while the page
+ * shows the review card the Adjust button belongs to.
+ *
+ * @param {Object} root Where the review card and its button are looked up, normally the document.
+ * @param {Object} saved The saved modes.
+ * @returns {void}
+ */
+const applyModes = (root, saved) => {
+    if (saved.adjusting !== true) {
+        return;
+    }
+    const overlay = root.getElementById('cgDecisionOverlay');
+    const adjust = root.getElementById('cgDecisionAdjust');
+    if (!overlay || !adjust || overlay.style.display === 'none') {
+        return;
+    }
+    adjust.click();
+};
+
+/**
+ * Put the page back as the user left it: the mode of the review first, then what was open, then where
+ * each panel was scrolled and the text that was typed.
  *
  * @param {Object} root Where the page elements are looked up, normally the document.
  * @param {Object|null} saved What captureUiState read.
@@ -149,6 +170,10 @@ const applyDrafts = (root, saved) => {
 export const restoreUiState = async(root, saved, {wait = () => pause(TOGGLE_SETTLE_MS), shouldStop = () => false} = {}) => {
     if (!saved || typeof saved !== 'object' || shouldStop()) {
         return;
+    }
+
+    if (saved.modes && typeof saved.modes === 'object') {
+        applyModes(root, saved.modes);
     }
 
     if (saved.toggles && typeof saved.toggles === 'object') {

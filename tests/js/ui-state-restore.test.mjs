@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {TOGGLE_KINDS} from '../../amd/src/courseai/bootstrap/ui-state-capture.js';
 import {restoreUiState} from '../../amd/src/courseai/bootstrap/ui-state-restore.js';
-import {page, scroller, textField, toggle} from './support/fake-page.mjs';
+import {page, scroller, shown, textField, toggle} from './support/fake-page.mjs';
 
 const lists = (overrides = {}) => {
     const result = {};
@@ -127,4 +127,43 @@ test('drafts that are not text, or whose field is not on the page, are ignored',
     const withField = page({lists: lists(), scrollers: {compactPromptInput: field}});
     await restoreUiState(withField, {toggles: {}, drafts: {compact: 42}}, {wait: noWait});
     assert.equal(field.value, '');
+});
+
+test('a user who was adjusting is taken back to the chat input when the page shows the review card', async() => {
+    const adjust = shown('');
+    const root = page({lists: lists(), scrollers: {cgDecisionOverlay: shown('flex'), cgDecisionAdjust: adjust}});
+
+    await restoreUiState(root, {toggles: {}, modes: {adjusting: true}}, {wait: noWait});
+
+    assert.equal(adjust.clicks, 1);
+});
+
+test('adjusting is not restored when the review card is not showing', async() => {
+    const adjust = shown('');
+    const root = page({lists: lists(), scrollers: {cgDecisionOverlay: shown('none'), cgDecisionAdjust: adjust}});
+
+    await restoreUiState(root, {toggles: {}, modes: {adjusting: true}}, {wait: noWait});
+
+    assert.equal(adjust.clicks, 0);
+});
+
+test('a user who was not adjusting is left at the review card', async() => {
+    const adjust = shown('');
+    const root = page({lists: lists(), scrollers: {cgDecisionOverlay: shown('flex'), cgDecisionAdjust: adjust}});
+
+    await restoreUiState(root, {toggles: {}, modes: {adjusting: false}}, {wait: noWait});
+
+    assert.equal(adjust.clicks, 0);
+});
+
+test('the chat input is back before the draft is, so the draft has a field to go in', async() => {
+    const order = [];
+    const adjust = shown('', () => order.push('adjust'));
+    const field = textField('');
+    field.dispatchEvent = () => order.push('draft');
+    const root = page({lists: lists(), scrollers: {cgDecisionOverlay: shown('flex'), cgDecisionAdjust: adjust, compactPromptInput: field}});
+
+    await restoreUiState(root, {toggles: {}, modes: {adjusting: true}, drafts: {compact: 'text'}}, {wait: noWait});
+
+    assert.deepEqual(order, ['adjust', 'draft']);
 });
