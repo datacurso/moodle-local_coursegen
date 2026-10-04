@@ -24,20 +24,10 @@
 import notification from 'core/notification';
 import * as repository from 'local_coursegen/local/activityai/repository';
 import {loadActivityaiStrings} from 'local_coursegen/local/activityai/i18n';
-
-let eventSource = null;
+import {closeStream, connectStream} from 'local_coursegen/local/activityai/stream-session';
+import {createActivityFromJob} from 'local_coursegen/local/activityai/activity-creation';
 
 let uiTexts = {};
-
-const formatTemplate = (template, data = {}) => {
-    if (!template) {
-        return '';
-    }
-
-    return String(template).replace(/\{(\w+)\}/g, (match, key) => {
-        return Object.prototype.hasOwnProperty.call(data, key) ? String(data[key]) : match;
-    });
-};
 
 const ensureUiTexts = async() => {
     if (!Object.keys(uiTexts).length) {
@@ -45,28 +35,6 @@ const ensureUiTexts = async() => {
     }
 
     return uiTexts;
-};
-
-const safeJsonParse = (text) => {
-    try {
-        return JSON.parse(text);
-    } catch (e) {
-        return null;
-    }
-};
-
-const closeStream = () => {
-    if (!eventSource) {
-        return;
-    }
-
-    try {
-        eventSource.close();
-    } catch (e) {
-        // Ignore.
-    }
-
-    eventSource = null;
 };
 
 class Mutations {
@@ -303,7 +271,7 @@ class Mutations {
     }
 
     /**
-     * Connect to SSE stream and update state for the provided run.
+     * Connect to the generation stream and update state for the provided run.
      *
      * This mutation will keep pending until the stream ends.
      *
@@ -314,163 +282,10 @@ class Mutations {
     async connectStream(stateManager, payload) {
         await ensureUiTexts();
 
-        const state = stateManager.state;
         const runid = Number(payload.runid) || 0;
-        const run = state.runs.get(runid);
-        const streamUrl = String(state.session.streamingurl || '').trim();
-
-        if (!run || !streamUrl) {
-            return;
-        }
-
-        closeStream();
-
-        await new Promise((resolve) => {
-            eventSource = new EventSource(streamUrl);
-
-            const markDone = () => {
-                stateManager.setReadOnly(false);
-                state.session.locked = false;
-                state.session.phase = 'review';
-                stateManager.setReadOnly(true);
-                closeStream();
-                resolve();
-            };
-
-            eventSource.onmessage = (event) => {
-                const data = safeJsonParse(event.data);
-
-                stateManager.setReadOnly(false);
-
-                const currentRun = state.runs.get(runid);
-                if (!currentRun) {
-                    stateManager.setReadOnly(true);
-                    return;
-                }
-
-                if (data && data.type === 'token') {
-                    currentRun.status = uiTexts.activityai_status_generating_content;
-                    currentRun.markdown += data.text || '';
-                } else if (data && data.type === 'status') {
-                    currentRun.status = String(data.text || '');
-                } else if (data && data.type === 'image_progress_init') {
-                    const totalImages = Number(data.total_images || 0);
-                    if (totalImages > 0) {
-                        currentRun.status = formatTemplate(uiTexts.activityai_status_generating_images_progress, {
-                            done: 0,
-                            total: totalImages,
-                        });
-                    } else {
-                        currentRun.status = uiTexts.activityai_status_generating_images_simple;
-                    }
-                } else if (data && data.type === 'image_progress_tick') {
-                    const done = Math.max(0, Number(data.done || 0));
-                    const total = Math.max(done, Number(data.total || 0));
-                    currentRun.status = formatTemplate(uiTexts.activityai_status_generating_images_progress, {
-                        done,
-                        total,
-                    });
-                } else if (data && data.type === 'image_progress_done') {
-                    currentRun.status = uiTexts.activityai_status_images_generated;
-                } else if (data && data.type === 'done') {
-                    // Ignore.
-                } else if (data && data.type === 'review_needed') {
-                    currentRun.reviewneeded = true;
-                    currentRun.status = uiTexts.activityai_status_waiting_review;
-                    state.session.locked = false;
-                    state.session.phase = 'review';
-                    stateManager.setReadOnly(true);
-                    closeStream();
-                    resolve();
-                    return;
-                } else if (data && data.type === 'completed') {
-                    const result = data.result || {};
-                    const hasResult = Boolean(result && (result.resource_type || Object.keys(result).length));
-
-                    // A "completed" without content means the generation did not actually
-                    // produce anything (stale terminal state): surface it as a failure
-                    // instead of trying to create an empty activity (404 on /result).
-                    if (currentRun.phase === 'generation' && !hasResult) {
-                        currentRun.error = String(uiTexts.activityai_error_unknown);
-                        currentRun.errorCode = 'generation_failed';
-                        currentRun.retriable = true;
-                        currentRun.status = '';
-                        currentRun.reviewneeded = false;
-                        currentRun.completed = false;
-
-                        state.session.locked = false;
-                        state.session.phase = 'idle';
-
-                        stateManager.setReadOnly(true);
-                        closeStream();
-                        resolve();
-                        return;
-                    }
-
-                    currentRun.completed = true;
-                    currentRun.status = uiTexts.activityai_status_completed;
-
-                    const shouldCreateActivity = currentRun.phase === 'generation';
-
-                    state.session.locked = false;
-                    state.session.phase = 'review';
-
-                    stateManager.setReadOnly(true);
-                    closeStream();
-
-                    // Only create the Moodle activity when generation is complete.
-                    if (shouldCreateActivity) {
-                        (async() => {
-                            await this._createActivityFromJob(stateManager);
-                            resolve();
-                        })();
-                        return;
-                    }
-
-                    resolve();
-                    return;
-                } else if (data && data.type === 'failed') {
-                    currentRun.error = String(
-                        data.message || uiTexts.activityai_error_unknown
-                    );
-                    currentRun.errorCode = String(data.code || 'stream_error');
-                    currentRun.retriable = Boolean(data.retriable);
-                    currentRun.status = '';
-                    currentRun.reviewneeded = false;
-                    currentRun.completed = false;
-
-                    state.session.locked = false;
-                    state.session.phase = 'idle';
-
-                    stateManager.setReadOnly(true);
-                    closeStream();
-                    resolve();
-                    return;
-                } else {
-                    currentRun.markdown += event ? event.data || '' : '';
-                }
-
-                stateManager.setReadOnly(true);
-            };
-
-            eventSource.addEventListener('done', () => {
-                markDone();
-            });
-
-            eventSource.onerror = () => {
-                stateManager.setReadOnly(false);
-                const currentRun = state.runs.get(runid);
-                if (currentRun) {
-                    currentRun.error = uiTexts.activityai_error_disconnected;
-                    currentRun.errorCode = 'stream_error';
-                    currentRun.retriable = false;
-                }
-                state.session.locked = false;
-                state.session.phase = 'review';
-                stateManager.setReadOnly(true);
-                closeStream();
-                resolve();
-            };
+        await connectStream(stateManager, runid, {
+            uiTexts,
+            createActivity: createActivityFromJob,
         });
     }
 
@@ -554,48 +369,6 @@ class Mutations {
         }
 
         await this.submitPrompt(stateManager, {prompt: run.prompt || ''});
-    }
-
-    /**
-     * Create Moodle activity from job id.
-     *
-     * @param {StateManager} stateManager
-     * @returns {Promise<void>}
-     */
-    async _createActivityFromJob(stateManager) {
-        const state = stateManager.state;
-        const courseid = Number(state.page.courseid) || 0;
-        const jobid = String(state.session.jobid || '');
-
-        if (!courseid || !jobid) {
-            return;
-        }
-
-        const sectionnum = state.session.sectionnum;
-        const beforemod = state.session.beforemod;
-
-        try {
-            const result = await repository.createActivity({
-                courseid,
-                sectionnum,
-                jobid,
-                beforemod,
-            });
-
-            if (!result || !result.ok) {
-                notification.alert('', result?.message || uiTexts.activityai_error_create_activity, 'close');
-                return;
-            }
-
-            const activityUrl = result?.data?.activityurl || null;
-            if (activityUrl) {
-                window.location.href = activityUrl;
-            } else {
-                window.location.reload();
-            }
-        } catch (error) {
-            notification.exception(error);
-        }
     }
 }
 

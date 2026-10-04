@@ -69,23 +69,27 @@ class ai_course_api_service {
     }
 
     /**
-     * Get the streaming URL for a given activity generation thread/job.
+     * Get the URL the browser reads the stream of an activity generation job from.
+     *
+     * It is the relay of this plugin, never the service URL.
      *
      * @param string $jobid External job/thread identifier.
-     * @return string Streaming URL.
+     * @return string Relay URL.
      */
     public function get_mod_streaming_url_for_job(string $jobid): string {
-        return streaming_url_builder::mod_stream($this->client->get_base_url(), $jobid);
+        return streaming_url_builder::relay(stream_kind::ACTIVITY, $jobid);
     }
 
     /**
-     * Get the streaming URL for a given course planning session.
+     * Get the URL the browser reads the stream of a course planning session from.
+     *
+     * It is the relay of this plugin, never the service URL.
      *
      * @param string $sessionid External planning thread identifier.
-     * @return string Streaming URL.
+     * @return string Relay URL.
      */
     public function get_course_streaming_url(string $sessionid): string {
-        return streaming_url_builder::course_stream($this->client->get_base_url(), $sessionid);
+        return streaming_url_builder::relay(stream_kind::COURSE, $sessionid);
     }
 
     /**
