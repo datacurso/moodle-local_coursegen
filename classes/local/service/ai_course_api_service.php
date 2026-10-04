@@ -18,7 +18,7 @@ namespace local_coursegen\local\service;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
 use local_coursegen\local\api_client_factory;
-use local_coursegen\local\streaming\stream_kind;
+use local_coursegen\local\streaming\stream_type;
 use stored_file;
 use stdClass;
 
@@ -77,7 +77,7 @@ class ai_course_api_service {
      * @return string Relay URL.
      */
     public function get_mod_streaming_url_for_job(string $jobid): string {
-        return streaming_url_builder::relay(stream_kind::ACTIVITY, $jobid);
+        return streaming_url_builder::relay(stream_type::ACTIVITY, $jobid);
     }
 
     /**
@@ -89,27 +89,27 @@ class ai_course_api_service {
      * @return string Relay URL.
      */
     public function get_course_streaming_url(string $sessionid): string {
-        return streaming_url_builder::relay(stream_kind::COURSE, $sessionid);
+        return streaming_url_builder::relay(stream_type::COURSE, $sessionid);
     }
 
     /**
      * Get the service URL of a stream, which only the server side relay opens.
      *
-     * @param string $kind Stream kind, one of the stream_kind constants.
-     * @param string $id External thread identifier.
+     * @param string $streamtype Stream type, one of the stream_type constants.
+     * @param string $threadid External thread identifier.
      * @return string Service stream URL.
-     * @throws \coding_exception When the kind is unknown.
+     * @throws \coding_exception When the stream type is unknown.
      */
-    public function get_upstream_stream_url(string $kind, string $id): string {
+    public function get_upstream_stream_url(string $streamtype, string $threadid): string {
         $baseurl = $this->client->get_base_url();
-        if ($kind === stream_kind::COURSE) {
-            return streaming_url_builder::course_stream($baseurl, $id);
+        if ($streamtype === stream_type::COURSE) {
+            return streaming_url_builder::course_stream($baseurl, $threadid);
         }
-        if ($kind === stream_kind::ACTIVITY) {
-            return streaming_url_builder::mod_stream($baseurl, $id);
+        if ($streamtype === stream_type::ACTIVITY) {
+            return streaming_url_builder::mod_stream($baseurl, $threadid);
         }
 
-        throw new \coding_exception('Unknown stream kind: ' . $kind);
+        throw new \coding_exception('Unknown stream type: ' . $streamtype);
     }
 
     /**

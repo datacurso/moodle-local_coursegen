@@ -23,7 +23,7 @@ namespace local_coursegen\local\streaming;
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-final class stream_kind {
+final class stream_type {
     /** @var string Course planning and generation stream. */
     public const COURSE = 'course';
 
@@ -33,10 +33,10 @@ final class stream_kind {
     /**
      * Whether a value names a relayable stream.
      *
-     * @param string $kind Value to check.
+     * @param string $streamtype Value to check.
      * @return bool
      */
-    public static function is_valid(string $kind): bool {
-        return $kind === self::COURSE || $kind === self::ACTIVITY;
+    public static function is_valid(string $streamtype): bool {
+        return $streamtype === self::COURSE || $streamtype === self::ACTIVITY;
     }
 }

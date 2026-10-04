@@ -19,7 +19,7 @@ namespace local_coursegen;
 use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\module_job_service;
 use local_coursegen\local\streaming\stream_authorizer;
-use local_coursegen\local\streaming\stream_kind;
+use local_coursegen\local\streaming\stream_type;
 
 /**
  * Unit tests for the ownership and capability check of the streams.
@@ -41,7 +41,7 @@ final class stream_authorizer_test extends \advanced_testcase {
         $this->create_planning_session($user, 'thread-1');
         $this->setUser($user);
 
-        (new stream_authorizer())->authorize(stream_kind::COURSE, 'thread-1');
+        (new stream_authorizer())->authorize(stream_type::COURSE, 'thread-1');
 
         $this->assertTrue(true);
     }
@@ -60,7 +60,7 @@ final class stream_authorizer_test extends \advanced_testcase {
         $this->expectException(\moodle_exception::class);
         $this->expectExceptionMessage(get_string('error_no_session_found', 'local_coursegen'));
 
-        (new stream_authorizer())->authorize(stream_kind::COURSE, 'thread-1');
+        (new stream_authorizer())->authorize(stream_type::COURSE, 'thread-1');
     }
 
     /**
@@ -74,7 +74,7 @@ final class stream_authorizer_test extends \advanced_testcase {
 
         $this->expectException(\moodle_exception::class);
 
-        (new stream_authorizer())->authorize(stream_kind::COURSE, 'missing');
+        (new stream_authorizer())->authorize(stream_type::COURSE, 'missing');
     }
 
     /**
@@ -88,7 +88,7 @@ final class stream_authorizer_test extends \advanced_testcase {
 
         $this->expectException(\required_capability_exception::class);
 
-        (new stream_authorizer())->authorize(stream_kind::COURSE, 'thread-1');
+        (new stream_authorizer())->authorize(stream_type::COURSE, 'thread-1');
     }
 
     /**
@@ -101,7 +101,7 @@ final class stream_authorizer_test extends \advanced_testcase {
         module_job_service::create_job($course->id, $teacher->id, 'job-1', 0, null, null, null, null);
         $this->setUser($teacher);
 
-        (new stream_authorizer())->authorize(stream_kind::ACTIVITY, 'job-1');
+        (new stream_authorizer())->authorize(stream_type::ACTIVITY, 'job-1');
 
         $this->assertTrue(true);
     }
@@ -120,7 +120,7 @@ final class stream_authorizer_test extends \advanced_testcase {
         $this->expectException(\moodle_exception::class);
         $this->expectExceptionMessage(get_string('error_no_module_job_found', 'local_coursegen'));
 
-        (new stream_authorizer())->authorize(stream_kind::ACTIVITY, 'job-1');
+        (new stream_authorizer())->authorize(stream_type::ACTIVITY, 'job-1');
     }
 
     /**
@@ -135,7 +135,7 @@ final class stream_authorizer_test extends \advanced_testcase {
 
         $this->expectException(\required_capability_exception::class);
 
-        (new stream_authorizer())->authorize(stream_kind::ACTIVITY, 'job-1');
+        (new stream_authorizer())->authorize(stream_type::ACTIVITY, 'job-1');
     }
 
     /**
@@ -150,18 +150,18 @@ final class stream_authorizer_test extends \advanced_testcase {
 
         $this->expectException(\moodle_exception::class);
 
-        (new stream_authorizer())->authorize(stream_kind::ACTIVITY, 'job-1');
+        (new stream_authorizer())->authorize(stream_type::ACTIVITY, 'job-1');
     }
 
     /**
-     * A stream kind that does not exist is refused.
+     * A stream type that does not exist is refused.
      */
-    public function test_unknown_kind_is_refused(): void {
+    public function test_unknown_stream_type_is_refused(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
 
         $this->expectException(\moodle_exception::class);
-        $this->expectExceptionMessage(get_string('error_stream_unknown_kind', 'local_coursegen'));
+        $this->expectExceptionMessage(get_string('error_stream_unknown_type', 'local_coursegen'));
 
         (new stream_authorizer())->authorize('template', 'thread-1');
     }

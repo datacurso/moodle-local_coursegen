@@ -33,34 +33,34 @@ class stream_authorizer {
     /**
      * Check that the current user owns the stream and may run the generation behind it.
      *
-     * @param string $kind Stream kind, one of the stream_kind constants.
-     * @param string $id External thread identifier.
-     * @throws \moodle_exception When the kind is unknown or the user has no such thread.
+     * @param string $streamtype Stream type, one of the stream_type constants.
+     * @param string $threadid External thread identifier.
+     * @throws \moodle_exception When the stream type is unknown or the user has no such thread.
      * @throws \required_capability_exception When the user lacks a capability.
      */
-    public function authorize(string $kind, string $id): void {
-        if ($kind === stream_kind::COURSE) {
-            $this->authorize_course($id);
+    public function authorize(string $streamtype, string $threadid): void {
+        if ($streamtype === stream_type::COURSE) {
+            $this->authorize_course($threadid);
             return;
         }
 
-        if ($kind === stream_kind::ACTIVITY) {
-            $this->authorize_activity($id);
+        if ($streamtype === stream_type::ACTIVITY) {
+            $this->authorize_activity($threadid);
             return;
         }
 
-        throw new \moodle_exception('error_stream_unknown_kind', 'local_coursegen');
+        throw new \moodle_exception('error_stream_unknown_type', 'local_coursegen');
     }
 
     /**
      * Course planning streams belong to the planning session of the user.
      *
-     * @param string $id External planning session identifier.
+     * @param string $threadid External planning session identifier.
      */
-    private function authorize_course(string $id): void {
+    private function authorize_course(string $threadid): void {
         global $USER;
 
-        course_session_service::get_user_session_by_external_id($id, (int) $USER->id);
+        course_session_service::get_user_session_by_external_id($threadid, (int) $USER->id);
 
         $context = \context_system::instance();
         require_capability('moodle/course:create', $context);
@@ -70,12 +70,12 @@ class stream_authorizer {
     /**
      * Activity streams belong to a generation job of the user, in a course the user can still edit.
      *
-     * @param string $id External job identifier.
+     * @param string $threadid External job identifier.
      */
-    private function authorize_activity(string $id): void {
+    private function authorize_activity(string $threadid): void {
         global $USER;
 
-        $job = module_job_service::get_user_job_by_external_id($id, (int) $USER->id);
+        $job = module_job_service::get_user_job_by_external_id($threadid, (int) $USER->id);
         $jobcourseid = $job->get('courseid');
         $courseid = (int) $jobcourseid;
         $course = get_course($courseid);

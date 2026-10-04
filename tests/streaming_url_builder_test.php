@@ -17,7 +17,7 @@
 namespace local_coursegen;
 
 use local_coursegen\local\service\streaming_url_builder;
-use local_coursegen\local\streaming\stream_kind;
+use local_coursegen\local\streaming\stream_type;
 
 /**
  * Unit tests for the streaming URL builder.
@@ -66,32 +66,32 @@ final class streaming_url_builder_test extends \basic_testcase {
     }
 
     /**
-     * The relay URL points to the plugin page with the kind and the thread.
+     * The relay URL points to the plugin page with the stream type and the thread.
      */
     public function test_relay_url_points_to_the_plugin_page(): void {
         global $CFG;
 
-        $url = streaming_url_builder::relay(stream_kind::COURSE, 'thread-1');
+        $url = streaming_url_builder::relay(stream_type::COURSE, 'thread-1');
 
-        $this->assertSame($CFG->wwwroot . '/local/coursegen/stream.php?kind=course&id=thread-1', $url);
+        $this->assertSame($CFG->wwwroot . '/local/coursegen/stream.php?streamtype=course&threadid=thread-1', $url);
     }
 
     /**
-     * The relay URL of an activity job carries the activity kind.
+     * The relay URL of an activity job carries the activity stream type.
      */
     public function test_relay_url_for_an_activity_job(): void {
         global $CFG;
 
-        $url = streaming_url_builder::relay(stream_kind::ACTIVITY, 'job-9');
+        $url = streaming_url_builder::relay(stream_type::ACTIVITY, 'job-9');
 
-        $this->assertSame($CFG->wwwroot . '/local/coursegen/stream.php?kind=activity&id=job-9', $url);
+        $this->assertSame($CFG->wwwroot . '/local/coursegen/stream.php?streamtype=activity&threadid=job-9', $url);
     }
 
     /**
      * The relay URL never exposes a service URL.
      */
     public function test_relay_url_does_not_expose_the_service(): void {
-        $url = streaming_url_builder::relay(stream_kind::COURSE, 'thread-1');
+        $url = streaming_url_builder::relay(stream_type::COURSE, 'thread-1');
 
         $this->assertStringNotContainsString('/api/v1/', $url);
         $this->assertStringNotContainsString('/course/stream/', $url);
@@ -101,15 +101,15 @@ final class streaming_url_builder_test extends \basic_testcase {
      * Special characters of the identifier are encoded in the query string.
      */
     public function test_relay_url_encodes_the_identifier(): void {
-        $url = streaming_url_builder::relay(stream_kind::COURSE, 'a b&c');
+        $url = streaming_url_builder::relay(stream_type::COURSE, 'a b&c');
 
         $this->assertStringContainsString('id=a+b%26c', $url);
     }
 
     /**
-     * A kind that does not exist cannot be turned into a URL.
+     * A stream type that does not exist cannot be turned into a URL.
      */
-    public function test_relay_url_rejects_an_unknown_kind(): void {
+    public function test_relay_url_rejects_an_unknown_stream_type(): void {
         $this->expectException(\coding_exception::class);
 
         streaming_url_builder::relay('template', 'thread-1');

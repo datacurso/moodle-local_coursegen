@@ -18,7 +18,7 @@ namespace local_coursegen;
 
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\streaming\stream_authorizer;
-use local_coursegen\local\streaming\stream_kind;
+use local_coursegen\local\streaming\stream_type;
 use local_coursegen\local\streaming\stream_relay;
 use local_coursegen\tests\fixtures\recording_browser_output;
 use local_coursegen\tests\fixtures\scripted_stream_client;
@@ -80,12 +80,12 @@ final class stream_relay_test extends \advanced_testcase {
     /**
      * Service double that builds a recognizable upstream URL.
      *
-     * @param string $kind Stream kind.
-     * @param string $id Thread identifier.
+     * @param string $streamtype Stream type.
+     * @param string $threadid Thread identifier.
      * @return string
      */
-    public function upstream_url(string $kind, string $id): string {
-        return 'https://ai.example.com/' . $kind . '/stream/' . $id;
+    public function upstream_url(string $streamtype, string $threadid): string {
+        return 'https://ai.example.com/' . $streamtype . '/stream/' . $threadid;
     }
 
     /**
@@ -98,7 +98,7 @@ final class stream_relay_test extends \advanced_testcase {
             ['event' => 'done', 'data' => ''],
         ];
 
-        $this->relay()->run(stream_kind::COURSE, 'thread-1');
+        $this->relay()->run(stream_type::COURSE, 'thread-1');
 
         $this->assertSame([
             "event: message\ndata: {\"type\":\"status\",\"text\":\"a\"}\n\n",
@@ -108,12 +108,12 @@ final class stream_relay_test extends \advanced_testcase {
     }
 
     /**
-     * The service URL and license key of the stream kind reach the client.
+     * The service URL and license key of the stream type reach the client.
      */
-    public function test_client_gets_the_url_and_license_key_of_the_kind(): void {
+    public function test_client_gets_the_url_and_license_key_of_the_stream_type(): void {
         $this->client->script = [['event' => 'done', 'data' => '']];
 
-        $this->relay()->run(stream_kind::ACTIVITY, 'job-7');
+        $this->relay()->run(stream_type::ACTIVITY, 'job-7');
 
         $this->assertSame([
             ['url' => 'https://ai.example.com/activity/stream/job-7', 'licensekey' => 'license-123'],
@@ -121,13 +121,13 @@ final class stream_relay_test extends \advanced_testcase {
     }
 
     /**
-     * The authorizer decides first, with the kind and thread asked for.
+     * The authorizer decides first, with the stream type and thread asked for.
      */
-    public function test_authorizer_is_asked_with_the_kind_and_thread(): void {
+    public function test_authorizer_is_asked_with_the_stream_type_and_thread(): void {
         $this->client->script = [['event' => 'done', 'data' => '']];
-        $this->authorizer->expects($this->once())->method('authorize')->with(stream_kind::COURSE, 'thread-1');
+        $this->authorizer->expects($this->once())->method('authorize')->with(stream_type::COURSE, 'thread-1');
 
-        $this->relay()->run(stream_kind::COURSE, 'thread-1');
+        $this->relay()->run(stream_type::COURSE, 'thread-1');
     }
 
     /**
@@ -139,7 +139,7 @@ final class stream_relay_test extends \advanced_testcase {
         );
 
         try {
-            $this->relay()->run(stream_kind::COURSE, 'thread-1');
+            $this->relay()->run(stream_type::COURSE, 'thread-1');
             $this->fail('The refusal must reach the caller.');
         } catch (\moodle_exception $e) {
             $this->assertSame('error_no_session_found', $e->errorcode);
@@ -155,7 +155,7 @@ final class stream_relay_test extends \advanced_testcase {
     public function test_stream_ending_without_done_is_reported_as_retryable(): void {
         $this->client->script = [['event' => 'message', 'data' => '{"type":"status"}']];
 
-        $this->relay()->run(stream_kind::COURSE, 'thread-1');
+        $this->relay()->run(stream_type::COURSE, 'thread-1');
 
         $this->assertCount(3, $this->output->written);
         $failure = $this->decode_failure($this->output->written[1]);
@@ -170,7 +170,7 @@ final class stream_relay_test extends \advanced_testcase {
     public function test_client_failure_is_reported_to_the_browser(): void {
         $this->client->failure = new \moodle_exception('error_stream_unreachable', 'local_coursegen');
 
-        $this->relay()->run(stream_kind::COURSE, 'thread-1');
+        $this->relay()->run(stream_type::COURSE, 'thread-1');
 
         $this->assertDebuggingCalled();
         $this->assertCount(2, $this->output->written);
@@ -186,7 +186,7 @@ final class stream_relay_test extends \advanced_testcase {
     public function test_failure_message_hides_internal_errors(): void {
         $this->client->failure = new \RuntimeException('cURL error 7 at http://internal-host:8000');
 
-        $this->relay()->run(stream_kind::COURSE, 'thread-1');
+        $this->relay()->run(stream_type::COURSE, 'thread-1');
 
         $this->assertDebuggingCalled();
         $this->assertStringNotContainsString('internal-host', implode('', $this->output->written));
@@ -199,7 +199,7 @@ final class stream_relay_test extends \advanced_testcase {
         $this->output->aborted = true;
         $this->client->script = ['tick'];
 
-        $this->relay()->run(stream_kind::COURSE, 'thread-1');
+        $this->relay()->run(stream_type::COURSE, 'thread-1');
 
         $this->assertSame([], $this->output->written);
     }
@@ -211,7 +211,7 @@ final class stream_relay_test extends \advanced_testcase {
         $this->output->aborted = true;
         $this->client->failure = new \RuntimeException('connection reset');
 
-        $this->relay()->run(stream_kind::COURSE, 'thread-1');
+        $this->relay()->run(stream_type::COURSE, 'thread-1');
 
         $this->assertDebuggingCalled();
         $this->assertSame([], $this->output->written);
@@ -240,7 +240,7 @@ final class stream_relay_test extends \advanced_testcase {
             ['event' => 'done', 'data' => ''],
         ];
 
-        $this->relay()->run(stream_kind::COURSE, 'thread-1');
+        $this->relay()->run(stream_type::COURSE, 'thread-1');
 
         $this->assertSame(": keepalive\n\n", $this->output->written[1]);
         $this->assertCount(3, $this->output->written);
@@ -259,7 +259,7 @@ final class stream_relay_test extends \advanced_testcase {
             ['event' => 'done', 'data' => ''],
         ];
 
-        $this->relay()->run(stream_kind::COURSE, 'thread-1');
+        $this->relay()->run(stream_type::COURSE, 'thread-1');
 
         $this->assertCount(2, $this->output->written);
     }
@@ -271,8 +271,8 @@ final class stream_relay_test extends \advanced_testcase {
         $this->client->script = [['event' => 'done', 'data' => '']];
         $relay = $this->relay();
 
-        $relay->run(stream_kind::COURSE, 'thread-1');
-        $relay->run(stream_kind::COURSE, 'thread-1');
+        $relay->run(stream_type::COURSE, 'thread-1');
+        $relay->run(stream_type::COURSE, 'thread-1');
 
         $this->assertCount(2, $this->client->calls);
     }
@@ -284,8 +284,8 @@ final class stream_relay_test extends \advanced_testcase {
         $this->client->failure = new \RuntimeException('boom');
         $relay = $this->relay();
 
-        $relay->run(stream_kind::COURSE, 'thread-1');
-        $relay->run(stream_kind::COURSE, 'thread-1');
+        $relay->run(stream_type::COURSE, 'thread-1');
+        $relay->run(stream_type::COURSE, 'thread-1');
 
         $this->assertDebuggingCalledCount(2);
         $this->assertCount(2, $this->client->calls);

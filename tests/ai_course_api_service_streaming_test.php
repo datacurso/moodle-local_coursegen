@@ -18,7 +18,7 @@ namespace local_coursegen;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
 use local_coursegen\local\service\ai_course_api_service;
-use local_coursegen\local\streaming\stream_kind;
+use local_coursegen\local\streaming\stream_type;
 
 /**
  * Unit tests for the stream URLs given by the AI course API service.
@@ -50,7 +50,7 @@ final class ai_course_api_service_streaming_test extends \advanced_testcase {
 
         $url = $this->service()->get_course_streaming_url('thread-1');
 
-        $this->assertSame($CFG->wwwroot . '/local/coursegen/stream.php?kind=course&id=thread-1', $url);
+        $this->assertSame($CFG->wwwroot . '/local/coursegen/stream.php?streamtype=course&threadid=thread-1', $url);
         $this->assertStringNotContainsString('ai.example.com', $url);
     }
 
@@ -62,7 +62,7 @@ final class ai_course_api_service_streaming_test extends \advanced_testcase {
 
         $url = $this->service()->get_mod_streaming_url_for_job('job-1');
 
-        $this->assertSame($CFG->wwwroot . '/local/coursegen/stream.php?kind=activity&id=job-1', $url);
+        $this->assertSame($CFG->wwwroot . '/local/coursegen/stream.php?streamtype=activity&threadid=job-1', $url);
         $this->assertStringNotContainsString('ai.example.com', $url);
     }
 
@@ -70,7 +70,7 @@ final class ai_course_api_service_streaming_test extends \advanced_testcase {
      * The relay reads the course stream from the service.
      */
     public function test_upstream_url_of_a_course_stream(): void {
-        $url = $this->service()->get_upstream_stream_url(stream_kind::COURSE, 'thread-1');
+        $url = $this->service()->get_upstream_stream_url(stream_type::COURSE, 'thread-1');
 
         $this->assertSame('https://ai.example.com/api/v1/course/stream/thread-1', $url);
     }
@@ -79,15 +79,15 @@ final class ai_course_api_service_streaming_test extends \advanced_testcase {
      * The relay reads the activity stream from the service.
      */
     public function test_upstream_url_of_an_activity_stream(): void {
-        $url = $this->service()->get_upstream_stream_url(stream_kind::ACTIVITY, 'job-1');
+        $url = $this->service()->get_upstream_stream_url(stream_type::ACTIVITY, 'job-1');
 
         $this->assertSame('https://ai.example.com/api/v1/activity/stream/job-1', $url);
     }
 
     /**
-     * A kind that does not exist has no service URL.
+     * A stream type that does not exist has no service URL.
      */
-    public function test_upstream_url_rejects_an_unknown_kind(): void {
+    public function test_upstream_url_rejects_an_unknown_stream_type(): void {
         $this->expectException(\coding_exception::class);
 
         $this->service()->get_upstream_stream_url('template', 'thread-1');

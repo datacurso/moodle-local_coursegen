@@ -16,7 +16,7 @@
 
 namespace local_coursegen\local\service;
 
-use local_coursegen\local\streaming\stream_kind;
+use local_coursegen\local\streaming\stream_type;
 use moodle_url;
 
 /**
@@ -61,17 +61,17 @@ class streaming_url_builder {
      *
      * The relay is called with the Moodle session key, which the caller adds.
      *
-     * @param string $kind Stream kind, one of the stream_kind constants.
-     * @param string $id External thread identifier.
+     * @param string $streamtype Stream type, one of the stream_type constants.
+     * @param string $threadid External thread identifier.
      * @return string Relay URL.
-     * @throws \coding_exception When the kind is unknown.
+     * @throws \coding_exception When the stream type is unknown.
      */
-    public static function relay(string $kind, string $id): string {
-        if (!stream_kind::is_valid($kind)) {
-            throw new \coding_exception('Unknown stream kind: ' . $kind);
+    public static function relay(string $streamtype, string $threadid): string {
+        if (!stream_type::is_valid($streamtype)) {
+            throw new \coding_exception('Unknown stream type: ' . $streamtype);
         }
 
-        $url = new moodle_url('/local/coursegen/stream.php', ['kind' => $kind, 'id' => $id]);
+        $url = new moodle_url('/local/coursegen/stream.php', ['streamtype' => $streamtype, 'threadid' => $threadid]);
         return $url->out(false);
     }
 }
