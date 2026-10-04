@@ -25,6 +25,7 @@
 
 import {routeEvent} from './handlers';
 import RelaySource from './relay-source';
+import {replayInto} from './replay';
 import {
     hideWorkingIndicator,
     showWorkingIndicator,
@@ -79,6 +80,18 @@ export const openConnection = (streamUrl, retryAttempt, ctx, openSSEStream) => {
     // handleReviewNeeded had already cleared it, leaving it stuck. Chaining each
     // routeEvent on the previous keeps ordering and fixes that class of races.
     let eventQueue = Promise.resolve();
+
+    // A reloaded page first replays what the phase already emitted, ahead of the live events, so
+    // it is drawn the way the live stream drew it.
+    let replay = [];
+    if (Array.isArray(ctx.replayEvents)) {
+        replay = ctx.replayEvents;
+    }
+    if (replay.length > 0) {
+        ctx.flags.contentReceived = true;
+    }
+    eventQueue = replayInto(eventQueue, replay, (data) => routeEvent(data, ctx));
+
     state.sseSource.addEventListener('message', (event) => {
         let data = null;
         try {
