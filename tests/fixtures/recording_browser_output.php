@@ -19,7 +19,7 @@ namespace local_coursegen\tests\fixtures;
 use local_coursegen\local\streaming\browser_output;
 
 /**
- * Browser output that records what is written and lets a test move the clock and close the connection.
+ * Browser output that records what is written and lets a test close the connection.
  *
  * @package    local_coursegen
  * @category   test
@@ -29,9 +29,6 @@ use local_coursegen\local\streaming\browser_output;
 class recording_browser_output extends browser_output {
     /** @var string[] Blocks written, in order. */
     public array $written = [];
-
-    /** @var int Time the output believes it is. */
-    public int $clock = 1000;
 
     /** @var bool Whether the browser has left. */
     public bool $aborted = false;
@@ -44,10 +41,5 @@ class recording_browser_output extends browser_output {
     #[\Override]
     protected function write(string $chunk): void {
         $this->written[] = $chunk;
-    }
-
-    #[\Override]
-    protected function now(): int {
-        return $this->clock;
     }
 }

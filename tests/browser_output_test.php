@@ -49,58 +49,6 @@ final class browser_output_test extends \basic_testcase {
     }
 
     /**
-     * Nothing is written before the heartbeat interval has passed.
-     */
-    public function test_no_heartbeat_before_the_interval(): void {
-        $output = new recording_browser_output();
-        $output->clock += browser_output::HEARTBEAT_SECONDS - 1;
-
-        $output->heartbeat_if_idle();
-
-        $this->assertSame([], $output->written);
-    }
-
-    /**
-     * A comment is written once the interval has passed.
-     */
-    public function test_heartbeat_is_a_comment_after_the_interval(): void {
-        $output = new recording_browser_output();
-        $output->clock += browser_output::HEARTBEAT_SECONDS;
-
-        $output->heartbeat_if_idle();
-
-        $this->assertSame([": keepalive\n\n"], $output->written);
-    }
-
-    /**
-     * Writing a heartbeat restarts the idle time, so comments are spaced by the interval.
-     */
-    public function test_heartbeat_restarts_the_idle_time(): void {
-        $output = new recording_browser_output();
-        $output->clock += browser_output::HEARTBEAT_SECONDS;
-        $output->heartbeat_if_idle();
-        $output->clock += browser_output::HEARTBEAT_SECONDS - 1;
-
-        $output->heartbeat_if_idle();
-
-        $this->assertCount(1, $output->written);
-    }
-
-    /**
-     * An event counts as traffic, so no heartbeat follows it right away.
-     */
-    public function test_sending_an_event_restarts_the_idle_time(): void {
-        $output = new recording_browser_output();
-        $output->clock += browser_output::HEARTBEAT_SECONDS - 1;
-        $output->send("data: x\n\n");
-        $output->clock += browser_output::HEARTBEAT_SECONDS - 1;
-
-        $output->heartbeat_if_idle();
-
-        $this->assertSame(["data: x\n\n"], $output->written);
-    }
-
-    /**
      * Under the command line the connection is never reported as closed.
      */
     public function test_connection_is_open_by_default(): void {

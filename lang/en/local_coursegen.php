@@ -496,7 +496,6 @@ $string['error_sending_activity_file'] = 'Error uploading file to AI activity se
 $string['error_sending_feedback'] = 'Error sending feedback to AI planning session';
 $string['error_sending_message'] = 'Error sending message';
 $string['error_starting_course_planning'] = 'There was an error starting the course planning. Please try again';
-$string['error_stream_in_use'] = 'This generation is already being followed in another window. Close it and try again.';
 $string['error_stream_unknown_type'] = 'Unknown generation stream.';
 $string['error_stream_unreachable'] = 'The connection with the AI service was interrupted. Please try again.';
 $string['error_stream_upstream_status'] = 'The AI service refused the stream (status {$a}).';

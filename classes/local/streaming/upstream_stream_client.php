@@ -31,7 +31,7 @@ class upstream_stream_client {
     /** @var int Seconds to wait for the connection to open. */
     public const CONNECT_TIMEOUT_SECONDS = 10;
 
-    /** @var int Seconds without any byte after which the transfer is dropped. */
+    /** @var int Seconds without any byte after which the transfer is dropped. The service pings every 15 seconds. */
     public const IDLE_TIMEOUT_SECONDS = 300;
 
     /** @var sse_parser Parser of the bytes received. */

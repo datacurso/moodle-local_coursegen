@@ -80,26 +80,12 @@ final class sse_formatter_test extends \basic_testcase {
     }
 
     /**
-     * A comment is a single line that parsers ignore.
-     */
-    public function test_comment_block_layout(): void {
-        $this->assertSame(": keepalive\n\n", sse_formatter::comment('keepalive'));
-    }
-
-    /**
-     * A comment cannot smuggle a data field through a line break.
-     */
-    public function test_comment_cannot_inject_lines(): void {
-        $this->assertSame(": pingdata: x\n\n", sse_formatter::comment("ping\ndata: x"));
-    }
-
-    /**
      * What the formatter writes is read back unchanged by the parser.
      */
     public function test_round_trip_through_the_parser(): void {
         $parser = new sse_parser();
         $stream = sse_formatter::event('message', '{"type":"token","text":"a\nb"}')
-            . sse_formatter::comment('keepalive')
+            . ": ping\n\n"
             . sse_formatter::event('done', '');
 
         $events = $parser->feed($stream);

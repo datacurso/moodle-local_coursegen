@@ -469,7 +469,6 @@ $string['error_sending_activity_file'] = 'Error al cargar el archivo a la sesió
 $string['error_sending_feedback'] = 'Error al enviar comentarios a la sesión de planificación AI: {$a}';
 $string['error_sending_message'] = 'Error al enviar mensaje';
 $string['error_starting_course_planning'] = 'Se produjo un error al iniciar la planificación del curso. Por favor inténtalo de nuevo';
-$string['error_stream_in_use'] = 'Esta generación ya se está siguiendo en otra ventana. Ciérrala e inténtalo de nuevo.';
 $string['error_stream_unknown_type'] = 'Flujo de generación desconocido.';
 $string['error_stream_unreachable'] = 'Se interrumpió la conexión con el servicio de IA. Por favor, inténtalo de nuevo.';
 $string['error_stream_upstream_status'] = 'El servicio de IA rechazó el flujo (estado {$a}).';
