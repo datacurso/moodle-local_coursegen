@@ -130,6 +130,31 @@ class course_session_service {
     }
 
     /**
+     * Name of the syllabus file uploaded for a planning session.
+     *
+     * The upload stores the file in the system context with the session record id as item id.
+     *
+     * @param int $recordid Session record ID.
+     * @return string The file name, or an empty string when the session has no syllabus.
+     */
+    public static function get_syllabus_filename(int $recordid): string {
+        $files = get_file_storage()->get_area_files(
+            \context_system::instance()->id,
+            'local_coursegen',
+            'syllabus',
+            $recordid,
+            'id',
+            false
+        );
+        if (empty($files)) {
+            return '';
+        }
+
+        $file = reset($files);
+        return (string)$file->get_filename();
+    }
+
+    /**
      * Get in-progress course sessions for a user.
      *
      * @param int $userid User ID.

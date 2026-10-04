@@ -98,6 +98,7 @@ class get_course_session_state extends external_api {
             'sessionstatus' => (int)$session->get('status'),
             'courseid' => (int)($session->get('courseid') ?? 0),
             'iscreated' => (int)$session->get('status') === course_session::STATUS_CREATED,
+            'syllabusname' => course_session_service::get_syllabus_filename((int)$session->get('id')),
             'coursedatajson' => json_encode($coursedata, JSON_UNESCAPED_UNICODE),
             'snapshotjson' => json_encode($snapshot, JSON_UNESCAPED_UNICODE),
         ];
@@ -117,6 +118,7 @@ class get_course_session_state extends external_api {
             'sessionstatus' => new external_value(PARAM_INT, 'Local session status'),
             'courseid' => new external_value(PARAM_INT, 'Created course id if available'),
             'iscreated' => new external_value(PARAM_BOOL, 'Whether local session is marked as created'),
+            'syllabusname' => new external_value(PARAM_TEXT, 'File name of the uploaded syllabus, empty when there is none'),
             'coursedatajson' => new external_value(PARAM_RAW, 'Serialized local course data'),
             'snapshotjson' => new external_value(PARAM_RAW, 'Serialized backend state snapshot'),
         ]);
