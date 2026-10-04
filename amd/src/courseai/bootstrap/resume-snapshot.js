@@ -25,6 +25,9 @@ import {renderSubsectionsDecision} from 'local_coursegen/local/courseai/ui/subse
 import {makeRebuildThread} from 'local_coursegen/courseai/bootstrap/resume-thread';
 import {eventsToReplay} from 'local_coursegen/courseai/bootstrap/resume-replay';
 import {askForCourseDetails, showFailure} from 'local_coursegen/courseai/bootstrap/resume-end-states';
+import {showSyllabusChip} from 'local_coursegen/courseai/bootstrap/resume-syllabus-chip';
+import {hideSkeletons, isWaitingForFirstSection} from 'local_coursegen/courseai/bootstrap/resume-skeleton';
+import {showApprovedPlan, showGeneratedPlan} from 'local_coursegen/courseai/bootstrap/resume-generated-plan';
 
 /**
  * Build the resumeFromSnapshot async function.
@@ -93,15 +96,6 @@ export const makeResumeFromSnapshot = ({
             return false;
         }
 
-        // The snapshot arrived and real content is about to render — drop the
-        // in-place boot skeletons now so they never overlap the hydrated plan.
-        ['cgLeftSkeleton', 'cgCenterSkeleton'].forEach((id) => {
-            const skeleton = document.getElementById(id);
-            if (skeleton) {
-                skeleton.style.display = 'none';
-            }
-        });
-
         const coursedata = parseJsonField(resume.coursedatajson, {});
         const snapshot = parseJsonField(resume.snapshotjson, {});
         const status = normalizeSnapshotStatus(snapshot.status);
@@ -149,12 +143,20 @@ export const makeResumeFromSnapshot = ({
             elements.subToggleWrap.classList.toggle('on', state.withSubsections);
         }
 
+        showSyllabusChip(document, resume.syllabusname);
         planningUi.syncCompactChatState();
 
         const detailedSections = Array.isArray(snapshot.detailed_plan_sections)
             ? snapshot.detailed_plan_sections
             : [];
         const sectionsForUi = buildSectionsFromDetailedPlan(detailedSections);
+
+        // Real content is about to render: drop the in-place boot skeletons so they never overlap the
+        // hydrated plan, unless the run has not drawn its first section yet and the live stream
+        // would still be showing them.
+        if (!isWaitingForFirstSection(status, sectionsForUi, replay)) {
+            hideSkeletons(document);
+        }
 
         if (sectionsForUi.length > 0) {
             state.latestInitialSections = sectionsForUi;
@@ -249,6 +251,7 @@ export const makeResumeFromSnapshot = ({
                 await hydrateDetailedPlanFromSnapshot(detailedSections);
                 await rebuildThread(detailedSections, snapshot, initialPrompt, status);
             }
+            showApprovedPlan({root: document, detailedUi});
             stepsUi.setStepState('planning', 'done');
             stepsUi.setStepState('generating', 'active');
             state.currentStage = 'generating';
@@ -318,6 +321,8 @@ export const makeResumeFromSnapshot = ({
                 await hydrateDetailedPlanFromSnapshot(detailedSections);
                 await rebuildThread(detailedSections, snapshot, initialPrompt, status);
             }
+            // The plan stays as the live stream leaves it when it completes, not as an editable plan.
+            showGeneratedPlan({state, texts, root: document});
             if (typeof detailedUi.enableAllActionControls === 'function') {
                 detailedUi.enableAllActionControls();
             }

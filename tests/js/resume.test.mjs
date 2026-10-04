@@ -144,3 +144,67 @@ test('a failed generation without a plan still tells what failed', async() => {
     assert.equal(calls.hydrate, 0);
     assert.deepEqual(calls.logs, [{actor: 'ai', kind: 'danger', message: 'Generation failed'}]);
 });
+
+test('the syllabus chip of the chat input comes back with the name the session stores', async() => {
+    const nodes = {
+        compactChipSyllabus: {classList: {remove() {}, contains: () => true}},
+        compactChipSyllabusName: {textContent: ''},
+        compactChipsRow: {style: {}},
+    };
+    const previous = globalThis.document;
+    globalThis.document = {...previous, getElementById: (id) => nodes[id] || null};
+    try {
+        const {run} = build({status: 'WAITING_APPROVAL', detailed_plan_sections: SECTIONS, thread: THREAD}, {syllabusname: 'Marketing.pdf'});
+        await run();
+    } finally {
+        globalThis.document = previous;
+    }
+    assert.equal(nodes.compactChipSyllabusName.textContent, 'Marketing.pdf');
+    assert.equal(nodes.compactChipsRow.style.display, 'flex');
+});
+
+const withSkeletons = async(snapshot) => {
+    const skeletons = {cgLeftSkeleton: {style: {display: ''}}, cgCenterSkeleton: {style: {display: ''}}};
+    const previous = globalThis.document;
+    globalThis.document = {...previous, getElementById: (id) => skeletons[id] || null};
+    try {
+        const {run} = build(snapshot);
+        await run();
+    } finally {
+        globalThis.document = previous;
+    }
+    return skeletons;
+};
+
+test('the skeletons stay while a run has not drawn its first section', async() => {
+    const skeletons = await withSkeletons({status: 'PLANNING', progress_events: EVENTS.slice(0, 1), thread: THREAD});
+    assert.equal(skeletons.cgCenterSkeleton.style.display, '');
+    assert.equal(skeletons.cgLeftSkeleton.style.display, '');
+});
+
+test('the skeletons go once a section was drawn', async() => {
+    const skeletons = await withSkeletons({status: 'PLANNING', progress_events: EVENTS, detailed_plan_sections: SECTIONS, thread: THREAD});
+    assert.equal(skeletons.cgCenterSkeleton.style.display, 'none');
+    assert.equal(skeletons.cgLeftSkeleton.style.display, 'none');
+});
+
+test('the skeletons go at a review, which always has a plan', async() => {
+    const skeletons = await withSkeletons({status: 'WAITING_APPROVAL', detailed_plan_sections: SECTIONS, thread: THREAD});
+    assert.equal(skeletons.cgCenterSkeleton.style.display, 'none');
+});
+
+test('a finished generation is drawn as the live stream leaves it: generated, with the controls enabled but hidden', async() => {
+    const {run, calls, state} = build({status: 'COMPLETED', detailed_plan_sections: SECTIONS, thread: THREAD});
+    state.latestInitialSections = SECTIONS;
+    await run();
+    assert.equal(calls.controls, 1);
+    assert.ok(state.generationTracker);
+    assert.equal(calls.createCourse, 1);
+});
+
+test('a generation still running is drawn with its controls enabled, then followed live', async() => {
+    const {run, calls} = build({status: 'GENERATING', detailed_plan_sections: SECTIONS, thread: THREAD});
+    await run();
+    assert.equal(calls.controls, 1);
+    assert.equal(calls.open.length, 1);
+});
