@@ -17,6 +17,7 @@
 namespace local_coursegen;
 
 use local_coursegen\local\service\streaming_url_builder;
+use local_coursegen\local\streaming\stream_kind;
 
 /**
  * Unit tests for the streaming URL builder.
@@ -62,5 +63,55 @@ final class streaming_url_builder_test extends \basic_testcase {
         $url = streaming_url_builder::mod_stream('https://ai.example.com/api/v1/', 'job/9 x');
 
         $this->assertSame('https://ai.example.com/api/v1/activity/stream/job%2F9+x', $url);
+    }
+
+    /**
+     * The relay URL points to the plugin page with the kind and the thread.
+     */
+    public function test_relay_url_points_to_the_plugin_page(): void {
+        global $CFG;
+
+        $url = streaming_url_builder::relay(stream_kind::COURSE, 'thread-1');
+
+        $this->assertSame($CFG->wwwroot . '/local/coursegen/stream.php?kind=course&id=thread-1', $url);
+    }
+
+    /**
+     * The relay URL of an activity job carries the activity kind.
+     */
+    public function test_relay_url_for_an_activity_job(): void {
+        global $CFG;
+
+        $url = streaming_url_builder::relay(stream_kind::ACTIVITY, 'job-9');
+
+        $this->assertSame($CFG->wwwroot . '/local/coursegen/stream.php?kind=activity&id=job-9', $url);
+    }
+
+    /**
+     * The relay URL never exposes a service URL.
+     */
+    public function test_relay_url_does_not_expose_the_service(): void {
+        $url = streaming_url_builder::relay(stream_kind::COURSE, 'thread-1');
+
+        $this->assertStringNotContainsString('/api/v1/', $url);
+        $this->assertStringNotContainsString('/course/stream/', $url);
+    }
+
+    /**
+     * Special characters of the identifier are encoded in the query string.
+     */
+    public function test_relay_url_encodes_the_identifier(): void {
+        $url = streaming_url_builder::relay(stream_kind::COURSE, 'a b&c');
+
+        $this->assertStringContainsString('id=a+b%26c', $url);
+    }
+
+    /**
+     * A kind that does not exist cannot be turned into a URL.
+     */
+    public function test_relay_url_rejects_an_unknown_kind(): void {
+        $this->expectException(\coding_exception::class);
+
+        streaming_url_builder::relay('template', 'thread-1');
     }
 }

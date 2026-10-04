@@ -18,6 +18,7 @@ namespace local_coursegen\local\service;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
 use local_coursegen\local\api_client_factory;
+use local_coursegen\local\streaming\stream_kind;
 use stored_file;
 use stdClass;
 
@@ -85,6 +86,35 @@ class ai_course_api_service {
      */
     public function get_course_streaming_url(string $sessionid): string {
         return streaming_url_builder::course_stream($this->client->get_base_url(), $sessionid);
+    }
+
+    /**
+     * Get the service URL of a stream, which only the server side relay opens.
+     *
+     * @param string $kind Stream kind, one of the stream_kind constants.
+     * @param string $id External thread identifier.
+     * @return string Service stream URL.
+     * @throws \coding_exception When the kind is unknown.
+     */
+    public function get_upstream_stream_url(string $kind, string $id): string {
+        $baseurl = $this->client->get_base_url();
+        if ($kind === stream_kind::COURSE) {
+            return streaming_url_builder::course_stream($baseurl, $id);
+        }
+        if ($kind === stream_kind::ACTIVITY) {
+            return streaming_url_builder::mod_stream($baseurl, $id);
+        }
+
+        throw new \coding_exception('Unknown stream kind: ' . $kind);
+    }
+
+    /**
+     * Get the license key the service calls are authenticated with.
+     *
+     * @return string License key, empty when none is configured.
+     */
+    public function get_license_key(): string {
+        return (string) get_config('aiprovider_datacurso', 'licensekey');
     }
 
     /**

@@ -86,6 +86,27 @@ class course_session_service {
     }
 
     /**
+     * Get a course planning session by its external session identifier for the given user.
+     *
+     * @param string $sessionid External session (thread) identifier.
+     * @param int $userid User ID.
+     * @return course_session
+     * @throws \moodle_exception When the user has no session with that identifier.
+     */
+    public static function get_user_session_by_external_id(string $sessionid, int $userid): course_session {
+        $session = course_session::get_record([
+            'session_id' => $sessionid,
+            'userid' => $userid,
+        ]);
+
+        if (!$session) {
+            throw new \moodle_exception('error_no_session_found', 'local_coursegen');
+        }
+
+        return $session;
+    }
+
+    /**
      * Whether a user may view the stored syllabus file of a planning session.
      *
      * Allowed for the session owner, or for holders of the
