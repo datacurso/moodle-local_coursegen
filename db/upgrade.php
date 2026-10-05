@@ -272,5 +272,45 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026090900, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026100500) {
+        // Define table local_coursegen_template to be created.
+        $table = new xmldb_table('local_coursegen_template');
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('courseid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('name', XMLDB_TYPE_CHAR, '255', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('description', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('timecreated', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('usermodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('courseid', XMLDB_KEY_FOREIGN, ['courseid'], 'course', ['id']);
+        $table->add_key('usermodified', XMLDB_KEY_FOREIGN, ['usermodified'], 'user', ['id']);
+
+        // Conditionally launch create table for local_coursegen_template.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Define table local_coursegen_tpl_item to be created.
+        $table = new xmldb_table('local_coursegen_tpl_item');
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('templateid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('cmid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('action', XMLDB_TYPE_CHAR, '10', null, XMLDB_NOTNULL, null, 'keep');
+        $table->add_field('instruction', XMLDB_TYPE_TEXT, null, null, null, null, null);
+        $table->add_field('timemodified', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, null);
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('templateid', XMLDB_KEY_FOREIGN, ['templateid'], 'local_coursegen_template', ['id']);
+        $table->add_key('templateid_cmid', XMLDB_KEY_UNIQUE, ['templateid', 'cmid']);
+
+        // Conditionally launch create table for local_coursegen_tpl_item.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Coursegen savepoint reached.
+        upgrade_plugin_savepoint(true, 2026100500, 'local', 'coursegen');
+    }
+
     return true;
 }

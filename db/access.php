@@ -46,6 +46,15 @@ $capabilities = [
         ],
     ],
 
+    'local/coursegen:managetemplates' => [
+        'riskbitmask' => RISK_CONFIG,
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_SYSTEM,
+        'archetypes' => [
+            'manager' => CAP_ALLOW,
+        ],
+    ],
+
     'local/coursegen:createcoursewithai' => [
         'riskbitmask' => RISK_XSS,
         'captype' => 'write',

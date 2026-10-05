@@ -84,5 +84,38 @@
                 <INDEX NAME="job_id" UNIQUE="true" FIELDS="job_id" />
             </INDEXES>
         </TABLE>
+
+        <TABLE NAME="local_coursegen_template" COMMENT="Course templates the AI can generate new courses from">
+            <FIELDS>
+                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
+                <FIELD NAME="courseid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Course whose structure is the template" />
+                <FIELD NAME="name" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="description" TYPE="text" NOTNULL="false" SEQUENCE="false" />
+                <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="usermodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+            </FIELDS>
+            <KEYS>
+                <KEY NAME="primary" TYPE="primary" FIELDS="id" />
+                <KEY NAME="courseid" TYPE="foreign" FIELDS="courseid" REFTABLE="course" REFFIELDS="id" />
+                <KEY NAME="usermodified" TYPE="foreign" FIELDS="usermodified" REFTABLE="user" REFFIELDS="id" />
+            </KEYS>
+        </TABLE>
+
+        <TABLE NAME="local_coursegen_tpl_item" COMMENT="What the AI does with each activity of a template: keep it or modify it">
+            <FIELDS>
+                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
+                <FIELD NAME="templateid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="cmid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" COMMENT="Course module of the template course" />
+                <FIELD NAME="action" TYPE="char" LENGTH="10" NOTNULL="true" DEFAULT="keep" SEQUENCE="false" COMMENT="keep or ai" />
+                <FIELD NAME="instruction" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Optional free text telling the AI how to act on the activity" />
+                <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+            </FIELDS>
+            <KEYS>
+                <KEY NAME="primary" TYPE="primary" FIELDS="id" />
+                <KEY NAME="templateid" TYPE="foreign" FIELDS="templateid" REFTABLE="local_coursegen_template" REFFIELDS="id" />
+                <KEY NAME="templateid_cmid" TYPE="unique" FIELDS="templateid, cmid" />
+            </KEYS>
+        </TABLE>
     </TABLES>
 </XMLDB>
