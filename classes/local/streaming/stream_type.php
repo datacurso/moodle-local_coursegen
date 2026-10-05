@@ -30,6 +30,9 @@ final class stream_type {
     /** @var string Activity generation stream. */
     public const ACTIVITY = 'activity';
 
+    /** @var string Course-from-template generation stream. */
+    public const TEMPLATE = 'template';
+
     /**
      * Whether a value names a relayable stream.
      *
@@ -37,6 +40,6 @@ final class stream_type {
      * @return bool
      */
     public static function is_valid(string $streamtype): bool {
-        return $streamtype === self::COURSE || $streamtype === self::ACTIVITY;
+        return $streamtype === self::COURSE || $streamtype === self::ACTIVITY || $streamtype === self::TEMPLATE;
     }
 }

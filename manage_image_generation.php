@@ -29,6 +29,10 @@ use local_coursegen\local\image_generation\activities;
 
 admin_externalpage_setup('local_coursegen_manage_image_generation');
 
+$systemcontext = context_system::instance();
+require_capability('local/coursegen:viewimagegenerationsettings', $systemcontext);
+$canedit = has_capability('local/coursegen:editimagegenerationsettings', $systemcontext);
+
 // Show a standard success notification if coming back from a save redirect.
 if (optional_param('saved', 0, PARAM_BOOL)) {
     \core\notification::success(get_string('changessaved'));
@@ -90,6 +94,7 @@ foreach ($activitydefinitions as $definition) {
 }
 
 $context = [
+    'canedit' => $canedit,
     'overridecourse'   => (bool) get_config('local_coursegen', 'overridecourse'),
     'overrideactivity' => (bool) get_config('local_coursegen', 'overrideactivity'),
 

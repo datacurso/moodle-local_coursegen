@@ -48,6 +48,15 @@ final class streaming_url_builder_test extends \basic_testcase {
     }
 
     /**
+     * Course-from-template stream URL is built from the base URL and thread id.
+     */
+    public function test_course_template_stream_url(): void {
+        $url = streaming_url_builder::course_template_stream('https://ai.example.com/api/v1/', 'thread-7');
+
+        $this->assertSame('https://ai.example.com/api/v1/course-template/stream/thread-7', $url);
+    }
+
+    /**
      * A base URL without a trailing slash produces the same result.
      */
     public function test_base_url_without_trailing_slash(): void {
@@ -88,6 +97,18 @@ final class streaming_url_builder_test extends \basic_testcase {
     }
 
     /**
+     * The template stream is read through the relay too, with its own stream type.
+     */
+    public function test_relay_url_of_a_template_stream(): void {
+        global $CFG;
+
+        $url = streaming_url_builder::relay(stream_type::TEMPLATE, 'thread-3');
+
+        $this->assertSame($CFG->wwwroot . '/local/coursegen/stream.php?streamtype=template&threadid=thread-3', $url);
+        $this->assertStringNotContainsString('/course-template/stream/', $url);
+    }
+
+    /**
      * The relay URL never exposes a service URL.
      */
     public function test_relay_url_does_not_expose_the_service(): void {
@@ -112,6 +133,6 @@ final class streaming_url_builder_test extends \basic_testcase {
     public function test_relay_url_rejects_an_unknown_stream_type(): void {
         $this->expectException(\coding_exception::class);
 
-        streaming_url_builder::relay('template', 'thread-1');
+        streaming_url_builder::relay('unknown', 'thread-1');
     }
 }

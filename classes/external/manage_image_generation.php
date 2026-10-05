@@ -86,7 +86,8 @@ class manage_image_generation extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
-        require_capability('local/coursegen:manageimagegeneration', $context);
+        require_capability('moodle/site:config', $context);
+        require_capability('local/coursegen:editimagegenerationsettings', $context);
 
         set_config('overridecourse', $overridecourse, 'local_coursegen');
         set_config('overrideactivity', $overrideactivity, 'local_coursegen');

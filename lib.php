@@ -55,6 +55,11 @@ function local_coursegen_pluginfile(
     // Make sure the user is logged.
     require_login(null, false);
 
+    // The files the AI service made for a template run, shown in the review preview.
+    if ($filearea === \local_coursegen\utils\generated_file_cache::FILEAREA) {
+        return \local_coursegen\local\service\generated_file_server::serve($context, $args, $forcedownload, $options);
+    }
+
     // Syllabus files live in the system context only.
     if ($context->contextlevel != CONTEXT_SYSTEM) {
         return false;
@@ -93,4 +98,23 @@ function local_coursegen_pluginfile(
     }
 
     send_stored_file($file, 0, 0, $forcedownload, $options);
+}
+
+/**
+ * Preferences this plugin lets a user set through the standard user preference
+ * API, so core_user's REST route (and any other caller of
+ * set_user_preference()) accepts them.
+ *
+ * @return array
+ */
+function local_coursegen_user_preferences() {
+    return [
+        'local_coursegen_sidebar_pinned' => [
+            'type' => PARAM_BOOL,
+            'null' => NULL_NOT_ALLOWED,
+            'default' => true,
+            'choices' => [0, 1],
+            'permissioncallback' => [\core\user::class, 'is_current_user'],
+        ],
+    ];
 }

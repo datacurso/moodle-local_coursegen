@@ -58,6 +58,68 @@ import {makeEmitLog, makeRenderPlanMarkdown} from 'local_coursegen/courseai/boot
 import {makeHydratePlan} from 'local_coursegen/courseai/bootstrap/hydrate-plan';
 import {createExecutionControls} from 'local_coursegen/local/courseai/actions/execution-control';
 import {restoreAndTrackUiState, tabStorage} from 'local_coursegen/courseai/bootstrap/ui-state';
+import {wireTemplateMode} from 'local_coursegen/local/courseai/template_mode';
+
+/**
+ * Reset the workspace chrome back to the context-gathering view.
+ *
+ * On reload the page is server-rendered in planning mode (is-planning +
+ * in-place skeletons) so the static chrome shows immediately. If there is
+ * nothing to resume, fall back to the context form. Only relevant when
+ * resumeSessionId is actually set — an ordinary load (free or template
+ * mode, no ?sessionid=) never runs any of this, so it can't clobber
+ * whatever #contextView/#templateModeView the server already rendered.
+ *
+ * @param {Object} elements
+ */
+const revertToContextView = (elements) => {
+    const workspace = document.getElementById('courseaiWorkspace');
+    if (workspace) {
+        workspace.classList.remove('is-planning');
+    }
+    const planningView = document.getElementById('planningView');
+    if (planningView) {
+        planningView.style.display = 'none';
+    }
+    const compactChat = document.getElementById('compactChatCard');
+    if (compactChat) {
+        compactChat.style.display = 'none';
+    }
+    if (elements.contextView) {
+        elements.contextView.style.display = '';
+    }
+};
+
+/**
+ * Resume the workspace from a snapshot when one is pending, falling back
+ * to the context view when there is nothing to resume or resuming fails.
+ *
+ * @param {string} resumeSessionId
+ * @param {Function} resumeFromSnapshot
+ * @param {Object} elements
+ * @param {Function} setResumeBootLoading
+ * @returns {Promise<boolean>} True when the page was rebuilt from a snapshot.
+ */
+const attemptResume = async(resumeSessionId, resumeFromSnapshot, elements, setResumeBootLoading) => {
+    let resumed = false;
+    try {
+        if (resumeSessionId) {
+            resumed = await resumeFromSnapshot();
+            if (!resumed) {
+                revertToContextView(elements);
+            }
+        }
+    } catch (resumeError) {
+        revertToContextView(elements);
+    } finally {
+        // A resumed page decides about its own skeletons: a run that has not drawn its first
+        // section keeps them, as the live stream does.
+        if (!resumed) {
+            setResumeBootLoading(false);
+        }
+    }
+    return resumed;
+};
 
 /**
  * Initialize the courseai page.
@@ -66,15 +128,32 @@ import {restoreAndTrackUiState, tabStorage} from 'local_coursegen/courseai/boots
  */
 export const init = async(params) => {
     try {
-        const {guidelines, languages, defaultLang} = parseCourseaiData(params);
+        const {guidelines, languages, defaultLang, coursetemplates} = parseCourseaiData(params);
+        const state = createInitialState({defaultLang, guidelines, languages});
+        state.templates = coursetemplates || [];
+        state.selectedTemplateId = null;
+
+        // Wire template mode switching before awaiting anything below: it
+        // only needs `state`, not translated strings, and the Free/Template
+        // buttons are clickable the instant the page renders — the
+        // `await loadCourseaiStrings()` network round-trip used to leave
+        // them dead until it resolved (a dynamic import() here made it
+        // worse still, adding a second network wait on top).
+        // The page's actions do not exist yet; the template's finish step
+        // reads them from here once the generation is over.
+        const templateHost = {actions: null};
+        wireTemplateMode(state, templateHost);
+
         const texts = await loadCourseaiStrings();
         const elements = getCourseaiElements();
-        const state = createInitialState({defaultLang, guidelines, languages});
 
         // Decision log (§4) — instantiate before any module that needs it.
         const {emitLog, clearLog} = makeEmitLog(state);
 
-        const markedParser = markedModule.parse ? markedModule : markedModule.marked;
+        let markedParser = markedModule.marked;
+        if (markedModule.parse) {
+            markedParser = markedModule;
+        }
         const activityLabels = getActivityLabels(texts);
         const generateButtonHtml = getGenerateButtonHtml(texts);
 
@@ -187,6 +266,7 @@ export const init = async(params) => {
             emitLog,
         });
 
+        templateHost.actions = actions;
         actions.bindEvents();
 
         const executionControls = createExecutionControls({state, elements, streamManager, texts, emitLog});
@@ -246,42 +326,7 @@ export const init = async(params) => {
             texts,
         });
 
-        // On reload the page is server-rendered in planning mode (is-planning +
-        // in-place skeletons) so the static chrome shows immediately. If there is
-        // nothing to resume, fall back to the context form.
-        const revertToContextView = () => {
-            const workspace = document.getElementById('courseaiWorkspace');
-            if (workspace) {
-                workspace.classList.remove('is-planning');
-            }
-            const planningView = document.getElementById('planningView');
-            if (planningView) {
-                planningView.style.display = 'none';
-            }
-            const compactChat = document.getElementById('compactChatCard');
-            if (compactChat) {
-                compactChat.style.display = 'none';
-            }
-            if (elements.contextView) {
-                elements.contextView.style.display = '';
-            }
-        };
-
-        let resumed = false;
-        try {
-            resumed = await resumeFromSnapshot();
-            if (!resumed) {
-                revertToContextView();
-            }
-        } catch (resumeError) {
-            revertToContextView();
-        } finally {
-            // A resumed page decides about its own skeletons: a run that has not drawn its first
-            // section keeps them, as the live stream does.
-            if (!resumed) {
-                setResumeBootLoading(false);
-            }
-        }
+        const resumed = await attemptResume(resumeSessionId, resumeFromSnapshot, elements, setResumeBootLoading);
 
         // What the user left open and where the user scrolled comes back after a reload, and is kept from
         // then on. It is not awaited: the page is already usable while it settles.

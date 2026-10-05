@@ -32,6 +32,7 @@ use core_privacy\local\request\approved_userlist;
 use core_privacy\local\request\contextlist;
 use core_privacy\local\request\userlist;
 use core_privacy\local\request\writer;
+use local_coursegen\local\space\space_file_storage;
 use stdClass;
 
 /**
@@ -370,6 +371,7 @@ class provider implements
         foreach ($sessionids as $sessionid) {
             $fs->delete_area_files($syscontextid, 'local_coursegen', 'syllabus', (int)$sessionid);
         }
+        space_file_storage::delete_user_files($userid);
     }
 
     /**

@@ -1,0 +1,329 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Mockup — Sections Config — Course View Style</title>
+<link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/bootstrap@4.6.2/dist/css/bootstrap.min.css">
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/5.15.4/css/all.min.css">
+<style>
+body { background: #f4f4f4; font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; }
+
+/* Replicate Moodle Boost course section cards */
+.course-section-card {
+  background: #fff;
+  border: 1px solid #dee2e6;
+  border-radius: .75rem;
+  margin-bottom: 1.25rem;
+}
+.course-section-card.section-kept { border-color: #28a745; }
+.course-section-card.section-excluded { opacity: .4; }
+
+.section-head {
+  display: flex;
+  align-items: center;
+  padding: .75rem 1rem;
+}
+
+.section-chevron {
+  width: 40px; height: 40px; border-radius: 50%;
+  background: #e8f0fe; color: #0f6cbf;
+  display: flex; align-items: center; justify-content: center;
+  cursor: pointer; flex-shrink: 0; margin-right: .75rem;
+  border: none; transition: background .15s;
+}
+.section-chevron:hover { background: #d0e2fc; }
+
+.section-title { font-size: 1.15rem; font-weight: 600; flex-grow: 1; }
+
+/* Activity rows — mimic Moodle activity list */
+.activity-row {
+  display: flex; align-items: center;
+  padding: .6rem 1rem .6rem 3.25rem;
+  border-top: 1px solid #f0f0f0;
+  min-height: 48px;
+}
+.activity-row:hover { background: #fafafa; }
+.activity-row.excluded { opacity: .35; }
+.activity-row.kept { background: #f6fef6; }
+
+/* Moodle-style activity icons */
+.mod-icon {
+  width: 28px; height: 28px; border-radius: .375rem;
+  display: flex; align-items: center; justify-content: center;
+  flex-shrink: 0; margin-right: .625rem; font-size: .75rem;
+}
+.mod-icon.book { background: #e3f2fd; color: #1565c0; }
+.mod-icon.quiz { background: #fce4ec; color: #c62828; }
+.mod-icon.forum { background: #e0f2f1; color: #00695c; }
+.mod-icon.assign { background: #fff3e0; color: #e65100; }
+.mod-icon.page { background: #f3e5f5; color: #6a1b9a; }
+
+.activity-name { flex-grow: 1; color: #0f6cbf; }
+
+/* The inline action selector — blends with the row */
+.action-select {
+  border: none; background: transparent; color: #6c757d;
+  font-size: .8rem; cursor: pointer; padding: .15rem .5rem;
+  border-radius: .25rem; appearance: none; -webkit-appearance: none;
+  background-image: url("data:image/svg+xml,%3csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 16 16'%3e%3cpath fill='none' stroke='%236c757d' stroke-linecap='round' stroke-linejoin='round' stroke-width='2' d='M2 5l6 6 6-6'/%3e%3c/svg%3e");
+  background-repeat: no-repeat; background-position: right .25rem center; background-size: 10px;
+  padding-right: 1.25rem;
+}
+.action-select:hover { background-color: #f0f0f0; }
+.action-select:focus { outline: 2px solid #0f6cbf; outline-offset: 1px; }
+.action-select.modify { color: #0f6cbf; }
+.action-select.keep { color: #28a745; }
+.action-select.reference { color: #6f42c1; }
+.action-select.exclude { color: #6c757d; }
+
+/* Prompt — appears inline below activity when action is "modify" */
+.prompt-inline {
+  padding: .4rem 1rem .6rem 4.9rem;
+  border-top: none;
+}
+.prompt-input {
+  border: none; border-bottom: 1px solid #dee2e6;
+  background: transparent; width: 100%;
+  font-size: .8rem; color: #333; padding: .25rem 0;
+  transition: border-color .15s;
+}
+.prompt-input:focus { outline: none; border-bottom-color: #0f6cbf; }
+.prompt-input::placeholder { color: #adb5bd; }
+
+/* Section action - subtle, integrated */
+.section-action-group {
+  display: flex; gap: 2px; margin-left: auto;
+}
+.section-action-btn {
+  border: none; background: transparent; padding: .25rem .5rem;
+  font-size: .75rem; color: #6c757d; border-radius: .25rem;
+  cursor: pointer; transition: all .1s;
+}
+.section-action-btn:hover { background: #f0f0f0; }
+.section-action-btn.active { background: #0f6cbf; color: #fff; }
+.section-action-btn.active-keep { background: #28a745; color: #fff; }
+.section-action-btn.active-exclude { background: #6c757d; color: #fff; }
+</style>
+</head>
+<body>
+<div class="container py-4" style="max-width:960px">
+
+<p class="text-muted mb-1">1. Course &#9658; 2. Preview &#9658; <strong>3. Sections</strong> &#9658; 4. Limits &#9658; 5. Save</p>
+<h4 class="mb-1">Configure sections</h4>
+<p class="text-muted mb-4">Choose what AI should do with each part of the course</p>
+
+<!-- ==================== SECTION 1: Customised ==================== -->
+<div class="course-section-card">
+  <div class="section-head">
+    <button class="section-chevron" onclick="toggleSec(this)">
+      <i class="fa fa-chevron-down"></i>
+    </button>
+    <span class="section-title">Introducción al Machine Learning</span>
+    <div class="section-action-group">
+      <button class="section-action-btn active" onclick="secAction(this)" title="Configure each activity individually">Customise</button>
+      <button class="section-action-btn" onclick="secAction(this)" title="Copy this entire section exactly as-is to the new course">Keep</button>
+      <button class="section-action-btn" onclick="secAction(this)" title="This section will not appear in courses generated with this template">Exclude</button>
+    </div>
+  </div>
+
+  <div class="section-body">
+    <!-- Activity: Modify with prompt -->
+    <div class="activity-row">
+      <div class="mod-icon book"><i class="fa fa-book"></i></div>
+      <span class="activity-name">Fundamentos y Tipos de Aprendizaje</span>
+      <select class="action-select modify" onchange="actChanged(this)"
+              title="Choose how AI should handle this activity">
+        <option value="modify" title="AI will generate new content based on this activity" selected>Modify</option>
+        <option value="keep" title="This activity will be copied exactly as-is to the new course">Keep</option>
+        <option value="reference" title="AI will use this as a reference for tone and depth, but it won't appear in the new course">Reference</option>
+        <option value="exclude" title="This activity will not appear in courses generated with this template">Exclude</option>
+      </select>
+    </div>
+    <div class="prompt-inline">
+      <input type="text" class="prompt-input" value="Adaptar el contenido para ventas B2B"
+             placeholder="How should AI modify this? (leave empty for auto)">
+    </div>
+
+    <!-- Activity: Modify without prompt -->
+    <div class="activity-row">
+      <div class="mod-icon quiz"><i class="fa fa-question-circle"></i></div>
+      <span class="activity-name">Cuestionario de Introducción</span>
+      <select class="action-select modify" onchange="actChanged(this)"
+              title="Choose how AI should handle this activity">
+        <option value="modify" title="AI will generate new content based on this activity" selected>Modify</option>
+        <option value="keep" title="This activity will be copied exactly as-is to the new course">Keep</option>
+        <option value="reference" title="AI will use this as a reference for tone and depth, but it won't appear in the new course">Reference</option>
+        <option value="exclude" title="This activity will not appear in courses generated with this template">Exclude</option>
+      </select>
+    </div>
+    <div class="prompt-inline">
+      <input type="text" class="prompt-input" value=""
+             placeholder="How should AI modify this? (leave empty for auto)">
+    </div>
+
+    <!-- Activity: Keep -->
+    <div class="activity-row kept">
+      <div class="mod-icon forum"><i class="fa fa-comments"></i></div>
+      <span class="activity-name">Announcements</span>
+      <select class="action-select keep" onchange="actChanged(this)">
+        <option value="modify">Modify</option>
+        <option value="keep" selected>Keep</option>
+        <option value="reference">Reference</option>
+        <option value="exclude">Exclude</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SECTION 2: Keep intact ==================== -->
+<div class="course-section-card section-kept">
+  <div class="section-head">
+    <button class="section-chevron" onclick="toggleSec(this)" style="background:#d4edda;color:#28a745">
+      <i class="fa fa-chevron-right"></i>
+    </button>
+    <span class="section-title">Algoritmos y Modelos Comunes</span>
+    <span class="text-muted small mr-3">2 activities — kept as-is</span>
+    <div class="section-action-group">
+      <button class="section-action-btn" onclick="secAction(this)">Customise</button>
+      <button class="section-action-btn active-keep" onclick="secAction(this)">Keep</button>
+      <button class="section-action-btn" onclick="secAction(this)">Exclude</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SECTION 3: Excluded ==================== -->
+<div class="course-section-card section-excluded">
+  <div class="section-head">
+    <button class="section-chevron" style="background:#e9ecef;color:#6c757d">
+      <i class="fa fa-chevron-right"></i>
+    </button>
+    <span class="section-title">Apéndice: Recursos</span>
+    <span class="text-muted small mr-3">3 activities — excluded</span>
+    <div class="section-action-group">
+      <button class="section-action-btn" onclick="secAction(this)">Customise</button>
+      <button class="section-action-btn" onclick="secAction(this)">Keep</button>
+      <button class="section-action-btn active-exclude" onclick="secAction(this)">Exclude</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== SECTION 4: Mixed ==================== -->
+<div class="course-section-card">
+  <div class="section-head">
+    <button class="section-chevron" onclick="toggleSec(this)">
+      <i class="fa fa-chevron-down"></i>
+    </button>
+    <span class="section-title">Evaluación y Práctica</span>
+    <div class="section-action-group">
+      <button class="section-action-btn active" onclick="secAction(this)" title="Configure each activity individually">Customise</button>
+      <button class="section-action-btn" onclick="secAction(this)" title="Copy this entire section exactly as-is to the new course">Keep</button>
+      <button class="section-action-btn" onclick="secAction(this)" title="This section will not appear in courses generated with this template">Exclude</button>
+    </div>
+  </div>
+  <div class="section-body">
+    <!-- Reference -->
+    <div class="activity-row">
+      <div class="mod-icon page"><i class="fa fa-file-alt"></i></div>
+      <span class="activity-name">Guía de Estudio</span>
+      <select class="action-select reference" onchange="actChanged(this)">
+        <option value="modify">Modify</option>
+        <option value="keep">Keep</option>
+        <option value="reference" selected>Reference</option>
+        <option value="exclude">Exclude</option>
+      </select>
+    </div>
+
+    <!-- Modify with prompt -->
+    <div class="activity-row">
+      <div class="mod-icon assign"><i class="fa fa-tasks"></i></div>
+      <span class="activity-name">Tarea Final</span>
+      <select class="action-select modify" onchange="actChanged(this)"
+              title="Choose how AI should handle this activity">
+        <option value="modify" title="AI will generate new content based on this activity" selected>Modify</option>
+        <option value="keep" title="This activity will be copied exactly as-is to the new course">Keep</option>
+        <option value="reference" title="AI will use this as a reference for tone and depth, but it won't appear in the new course">Reference</option>
+        <option value="exclude" title="This activity will not appear in courses generated with this template">Exclude</option>
+      </select>
+    </div>
+    <div class="prompt-inline">
+      <input type="text" class="prompt-input"
+             value="Crear tarea práctica de negociación con cliente simulado"
+             placeholder="How should AI modify this?">
+    </div>
+
+    <!-- Excluded -->
+    <div class="activity-row excluded">
+      <div class="mod-icon quiz"><i class="fa fa-question-circle"></i></div>
+      <span class="activity-name" style="color:#6c757d">Quiz de Repaso</span>
+      <select class="action-select exclude" onchange="actChanged(this)">
+        <option value="modify">Modify</option>
+        <option value="keep">Keep</option>
+        <option value="reference">Reference</option>
+        <option value="exclude" selected>Exclude</option>
+      </select>
+    </div>
+
+    <!-- Keep -->
+    <div class="activity-row kept">
+      <div class="mod-icon forum"><i class="fa fa-comments"></i></div>
+      <span class="activity-name">Foro de Discusión</span>
+      <select class="action-select keep" onchange="actChanged(this)">
+        <option value="modify">Modify</option>
+        <option value="keep" selected>Keep</option>
+        <option value="reference">Reference</option>
+        <option value="exclude">Exclude</option>
+      </select>
+    </div>
+  </div>
+</div>
+
+<div class="d-flex justify-content-between mt-4">
+  <button class="btn btn-secondary"><i class="fa fa-chevron-left mr-1"></i> Back</button>
+  <button class="btn btn-primary">Next <i class="fa fa-chevron-right ml-1"></i></button>
+</div>
+
+</div>
+
+<script>
+function toggleSec(btn) {
+  const card = btn.closest('.course-section-card');
+  const body = card.querySelector('.section-body');
+  const icon = btn.querySelector('i');
+  if (body) {
+    body.style.display = body.style.display === 'none' ? '' : 'none';
+    icon.className = body.style.display === 'none' ? 'fa fa-chevron-right' : 'fa fa-chevron-down';
+  }
+}
+
+function actChanged(sel) {
+  const val = sel.value;
+  sel.className = 'action-select ' + val;
+
+  const row = sel.closest('.activity-row');
+  row.classList.remove('kept', 'excluded');
+  if (val === 'keep') row.classList.add('kept');
+  if (val === 'exclude') row.classList.add('excluded');
+  if (val !== 'exclude') row.querySelector('.activity-name').style.color = '';
+  else row.querySelector('.activity-name').style.color = '#6c757d';
+
+  // Show/hide prompt.
+  const prompt = row.nextElementSibling;
+  if (prompt && prompt.classList.contains('prompt-inline')) {
+    prompt.style.display = val === 'modify' ? '' : 'none';
+  }
+}
+
+function secAction(btn) {
+  const group = btn.closest('.section-action-group');
+  group.querySelectorAll('.section-action-btn').forEach(b => {
+    b.className = 'section-action-btn';
+  });
+  const text = btn.textContent.trim().toLowerCase();
+  if (text === 'keep') btn.classList.add('active-keep');
+  else if (text === 'exclude') btn.classList.add('active-exclude');
+  else btn.classList.add('active');
+}
+</script>
+</body>
+</html>

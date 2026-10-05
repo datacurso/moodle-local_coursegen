@@ -1,0 +1,253 @@
+/* Virtual template-instance rows and their insertion affordances, split out
+   of templates.css to keep each stylesheet under the project's line cap. */
+
+/* Between-row insertion point: a thin, near-invisible strip that reveals a
+   centered "+" on hover — opens the same template picker as the section's
+   persistent "Add activity" row. */
+.tpl-row-gap td {
+    padding: 0;
+    border-top: none;
+}
+
+.tpl-row-gap-line {
+    position: relative;
+    height: 9px;
+}
+
+/* Bootstrap's own ".dropdown" rule sets position:relative on this wrapper,
+   which would otherwise become the "+" button's absolute-positioning
+   context instead of .tpl-row-gap-line — filling it keeps the button
+   centered in the gap line exactly as before. */
+.tpl-row-gap-line .tpl-instance-dropdown {
+    position: absolute;
+    inset: 0;
+}
+
+.tpl-row-gap-line::before {
+    content: "";
+    position: absolute;
+    left: 14px;
+    right: 14px;
+    top: 50%;
+    height: 1px;
+    background: transparent;
+    transition: background 0.12s ease;
+}
+
+.tpl-row-gap:hover .tpl-row-gap-line::before {
+    background: #dee2e6;
+}
+
+.tpl-row-gap-plus {
+    position: absolute;
+    left: 50%;
+    top: 50%;
+    transform: translate(-50%, -50%) scale(0.6);
+    width: 22px;
+    height: 22px;
+    border-radius: 50%;
+    border: none;
+    background: #0f6cbf;
+    color: #fff;
+    font-size: 0.85rem;
+    line-height: 1;
+    cursor: pointer;
+    opacity: 0;
+    transition: opacity 0.12s ease, transform 0.12s ease;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tpl-row-gap:hover .tpl-row-gap-plus {
+    opacity: 1;
+    transform: translate(-50%, -50%) scale(1);
+}
+
+.tpl-row-add td {
+    padding: 0.5rem 0.75rem;
+    border-top: 1px solid #dee2e6;
+    text-align: center;
+}
+
+.tpl-add-instance-btn {
+    font-size: 0.8rem;
+    font-weight: 600;
+    color: #0f6cbf;
+    background: none;
+    border: 1px dashed #dee2e6;
+    border-radius: 0.375rem;
+    padding: 0.375rem 0.75rem;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    gap: 0.375rem;
+}
+
+.tpl-add-instance-btn:hover {
+    background: #f8f9fa;
+    border-color: #0f6cbf;
+}
+
+/* Virtual instance rows: a row that exists only in this template's saved
+   configuration, never in the real base course. */
+.tpl-row-instance {
+    animation: tplFadeIn 0.2s ease;
+}
+
+/* An instance's name: at rest, plain text plus a "quickeditlink" pencil —
+   the exact classes and hover/focus behaviour core/inplace_editable ships
+   its own CSS for already, reused here instead of hand-rolled styles.
+   Clicking the pencil swaps to the input+hint pair (this local module's
+   own — never full core/inplace_editable, which always commits over
+   AJAX; this row's name is only ever persisted later, by the wizard's own
+   "Save"). See template_instance_name_edit.js for the class toggle. */
+.tpl-instance-name-editable {
+    margin-right: 0.5rem;
+}
+
+.tpl-instance-name-editable .editinstructions,
+.tpl-instance-name-editable input[data-region="instance-name-input"] {
+    display: none;
+}
+
+.tpl-instance-name-editable input[data-region="instance-name-input"] {
+    max-width: 16rem;
+}
+
+.tpl-instance-name-editable.inplaceeditingon .tpl-instance-name-display,
+.tpl-instance-name-editable.inplaceeditingon .quickeditlink {
+    display: none;
+}
+
+/* Stack the hint above the input in normal flow, a real gap between them
+   instead of a guessed negative margin (core's own -30px, tuned for a
+   header-sized title's line height, landed this row's shorter input's
+   hint mounted right on its border) — self-adjusting to any font size or
+   content, no pixel value tied to anything but the gap actually wanted. */
+.tpl-instance-name-editable.inplaceeditingon {
+    display: inline-flex;
+    flex-direction: column;
+    align-items: flex-start;
+    gap: 0.2rem;
+}
+
+/* The icon, name and badge are aligned relative to each other purely as
+   inline content by default — fine for a single line, but against the
+   two-line hint+input stack while editing that left the icon sitting near
+   the top instead of centered with the row the same way the checkbox in
+   the column before it is (that column centers correctly because its own
+   content, the checkbox, is only ever one line tall). Flex centering
+   handles mixed-height children directly instead of leaning on inline
+   vertical-align, which only ever aligns relative to a line's own metrics,
+   not to a taller sibling next to it. */
+.tpl-instance-name-cell {
+    display: flex;
+    align-items: center;
+}
+
+.tpl-instance-name-editable.inplaceeditingon .editinstructions {
+    display: block;
+    position: static;
+    margin: 0;
+}
+
+.tpl-instance-name-editable.inplaceeditingon input[data-region="instance-name-input"] {
+    display: inline-block;
+}
+
+/* Hide the "Instance" badge while the name is being edited — sitting right
+   next to the open input, it crowded the one thing actually being worked
+   on. It comes back the moment editing ends. */
+.tpl-instance-name-editable.inplaceeditingon ~ .tpl-badge-instance {
+    display: none;
+}
+
+/* Frame the whole row while its name is open for editing — the same
+   highlighted-row treatment core_courseformat gives an activity/section
+   whose own inplace_editable title is open, not just a bordered input
+   floating with nothing around it.
+   A single "outline"/"border" on the <tr> itself renders unreliably across
+   browsers (table rows don't consistently paint an outline spanning every
+   cell) — bordering each cell individually, with only the first/last also
+   getting a left/right edge, is what actually draws one continuous box
+   around the row. */
+.tpl-row-instance:has(.tpl-instance-name-editable.inplaceeditingon) td {
+    border-top: 2px solid #0f6cbf;
+    border-bottom: 2px solid #0f6cbf;
+    background-color: #f8f9fa;
+}
+
+.tpl-row-instance:has(.tpl-instance-name-editable.inplaceeditingon) td:first-child {
+    border-left: 2px solid #0f6cbf;
+}
+
+.tpl-row-instance:has(.tpl-instance-name-editable.inplaceeditingon) td:last-child {
+    border-right: 2px solid #0f6cbf;
+}
+
+.tpl-instance-actions {
+    display: inline-flex;
+    align-items: center;
+    justify-content: flex-end;
+    gap: 0.375rem;
+}
+
+.tpl-instance-icon-btn {
+    border: none;
+    background: none;
+    color: #6c757d;
+    cursor: pointer;
+    width: 24px;
+    height: 24px;
+    border-radius: 0.3rem;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.tpl-instance-icon-btn:hover {
+    background: #f8f9fa;
+    color: #1d2125;
+}
+
+.tpl-instance-icon-danger:hover {
+    background: #fff5f5;
+    color: #b5351a;
+}
+
+/* Template picker menu: a real Bootstrap ".dropdown-menu" (its base
+   position/visibility/z-index rules already come from Boost's bundled
+   Bootstrap CSS) — these overrides only adjust its width and typography. */
+.tpl-instance-menu {
+    width: 280px;
+}
+
+.tpl-instance-menu-hint {
+    font-size: 0.68rem;
+    color: #6c757d;
+    padding: 0.375rem 0.5rem 0.25rem;
+    margin: 0;
+}
+
+.tpl-instance-menu-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 0.5rem;
+    font-size: 0.82rem;
+}
+
+.tpl-instance-menu-item[disabled] {
+    opacity: 0.4;
+    cursor: not-allowed;
+}
+
+.tpl-instance-menu-item[disabled]:hover {
+    background: none;
+}
+
+.tpl-instance-menu-scope-hint {
+    font-size: 0.68rem;
+    color: #6c757d;
+}

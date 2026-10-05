@@ -262,7 +262,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
         $this->resetAfterTest();
         $user = $this->create_user_with_capabilities([
             'moodle/course:create',
-            'local/coursegen:createcoursewithai',
+            'local/coursegen:createfreecoursewithai',
         ]);
         $this->setUser($user);
         $this->set_page_url('/my/courses.php');
@@ -284,9 +284,9 @@ final class mycourses_header_hook_test extends \advanced_testcase {
     }
 
     /**
-     * A user without local/coursegen:createcoursewithai does not get the button.
+     * A user without local/coursegen:createfreecoursewithai does not get the button.
      */
-    public function test_should_not_inject_without_createcoursewithai(): void {
+    public function test_should_not_inject_without_createfreecoursewithai(): void {
         global $PAGE;
 
         $this->resetAfterTest();
@@ -304,7 +304,7 @@ final class mycourses_header_hook_test extends \advanced_testcase {
         global $PAGE;
 
         $this->resetAfterTest();
-        $user = $this->create_user_with_capabilities(['local/coursegen:createcoursewithai']);
+        $user = $this->create_user_with_capabilities(['local/coursegen:createfreecoursewithai']);
         $this->setUser($user);
         $this->set_page_url('/my/courses.php');
 

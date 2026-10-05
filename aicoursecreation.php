@@ -22,6 +22,8 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+use local_coursegen\local\service\access_guard;
+
 require('../../config.php');
 require_once($CFG->libdir . '/filelib.php');
 
@@ -30,7 +32,8 @@ require_login();
 // Check permissions.
 $systemcontext = context_system::instance();
 require_capability('moodle/course:create', $systemcontext);
-require_capability('local/coursegen:createcoursewithai', $systemcontext);
+$creationmodes = ['local/coursegen:createfreecoursewithai', 'local/coursegen:createtemplatecoursewithai'];
+access_guard::require_any($creationmodes, $systemcontext);
 
 // Set up the page.
 $url = new moodle_url('/local/coursegen/aicoursecreation.php');
@@ -38,6 +41,10 @@ $PAGE->set_url($url);
 $PAGE->set_context($systemcontext);
 $PAGE->set_pagelayout('popup');
 $PAGE->set_title(get_string('createwithai', 'local_coursegen'));
+// Boost's popup layout still reserves margin-top on #page for a site navbar
+// that this page never renders (nonavbar) — drop it so the app layout can
+// reach the true top of the viewport (see aicoursecreation.css).
+$PAGE->add_body_class('local-coursegen-aicoursecreation');
 
 // Load courseai CSS + sidebar CSS. Direct plugin stylesheets get NO revision
 // from Moodle's cache pipeline, so browsers keep stale copies across plugin
@@ -46,11 +53,36 @@ $cssrev = get_config('local_coursegen', 'version');
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/aicoursecreation.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/chatui.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/sidebar.css', ['v' => $cssrev]));
+$PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_mode_prompt.css', ['v' => $cssrev]));
+$PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_space_card.css', ['v' => $cssrev]));
+$PAGE->requires->css(new moodle_url('/local/coursegen/styles/start_chooser.css', ['v' => $cssrev]));
 
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\course_session_service;
 
 $resumesessionid = optional_param('sessionid', 0, PARAM_INT);
+$showsessionsview = optional_param('view', '', PARAM_ALPHA) === 'courses';
+// A fresh visit opens on the choice of starting point: the parameter being
+// absent is what means "nothing chosen yet", so a card writes its own value
+// (free or template) and the old ?mode=template link keeps landing straight
+// on the template column.
+$modeparam = optional_param('mode', null, PARAM_ALPHA);
+$templatemodeactive = $modeparam === 'template';
+
+// Each way of creating a course is its own capability. A user who has only one of
+// them is taken to that mode and is not offered the other, nor the choice.
+$canfree = has_capability('local/coursegen:createfreecoursewithai', $systemcontext);
+$cantemplate = has_capability('local/coursegen:createtemplatecoursewithai', $systemcontext);
+if (!$canfree) {
+    $templatemodeactive = true;
+}
+if (!$cantemplate) {
+    $templatemodeactive = false;
+}
+$hasbothmodes = $canfree && $cantemplate;
+
+// A resumed session skips the choice, as it was already made.
+$startchooser = $hasbothmodes && !$resumesessionid && $modeparam === null;
 
 // Load system instructions (directrices institucionales).
 $systeminstructions = [];
@@ -61,6 +93,27 @@ foreach ($records as $record) {
         'name' => $record->name,
         'category' => 'General', // The table doesn't have a category field, using default.
         'description' => $record->content ?? '',
+    ];
+}
+
+// Load available course templates.
+$coursetemplates = [];
+$tplrecords = [];
+if ($cantemplate) {
+    $tplrecords = \local_coursegen\local\models\template::get_records([], 'name', 'ASC');
+}
+foreach ($tplrecords as $tpl) {
+    $tplcourse = $DB->get_record('course', ['id' => $tpl->get('courseid')], 'id, fullname', IGNORE_MISSING);
+    $tplcoursefullname = '';
+    if ($tplcourse) {
+        $tplcoursefullname = format_string($tplcourse->fullname);
+    }
+    $coursetemplates[] = [
+        'id' => (int) $tpl->get('id'),
+        'name' => $tpl->get('name'),
+        'courseid' => (int) $tpl->get('courseid'),
+        'coursefullname' => $tplcoursefullname,
+        'description' => $tpl->get('description') ?? '',
     ];
 }
 
@@ -87,9 +140,13 @@ $buildsessiondata = function ($session, $maxtitle = 50) {
     ];
     $coursedata = json_decode($session->get('coursedata') ?? '{}', true);
     $rawtitle = $coursedata['fullname'] ?? $coursedata['local_coursegen_custom_prompt'] ?? '';
+    $title = \core_text::str_max_bytes($rawtitle, $maxtitle);
+    if (empty($title)) {
+        $title = get_string('courseai_untitled', 'local_coursegen');
+    }
     return [
         'id' => $session->get('id'),
-        'title' => \core_text::str_max_bytes($rawtitle, $maxtitle) ?: get_string('courseai_untitled', 'local_coursegen'),
+        'title' => $title,
         'statuslabel' => $statuslabels[$session->get('status')] ?? '',
         'status' => $session->get('status'),
         'timecreated' => userdate($session->get('timecreated'), get_string('strftimedatetimeshort', 'langconfig')),
@@ -110,15 +167,36 @@ foreach ($allrecords as $session) {
     $allsessionsdata[] = $buildsessiondata($session, 80);
 }
 
-// Get logo URL.
-$logourl = new moodle_url('/local/coursegen/pix/logo.png');
-
 // Subsections toggle only renders when the feature is enabled and mod_subsection is available.
 $subsectionsenabled = \local_coursegen\local\service\course_planning_service::subsections_available();
+
+// Get logo URL (sidebar top bar, left of the collapse toggle).
+$logourl = new moodle_url('/local/coursegen/pix/logo.png');
+
+// The sidebar's pinned/closed state is a per-user preference: read it here so
+// the first render already carries the right class, with no flash and no
+// dependency on browser storage (see lib.php's local_coursegen_user_preferences()).
+$sidebarpinned = (bool) get_user_preferences('local_coursegen_sidebar_pinned', true);
+
+// Native Moodle form (single autocomplete field) for the template-mode picker.
+$templatepickerform = new \local_coursegen\form\course_template_picker_form(
+    null, ['templates' => $coursetemplates], 'post', '', ['id' => 'tpl-select-form']);
+ob_start();
+$templatepickerform->display();
+$templatepickerformhtml = ob_get_clean();
+
+// Native Moodle "info" notification (same alert-info markup report builder
+// uses for "Nothing to display") shown until a template is picked.
+$templateemptystatehtml = $OUTPUT->notification(
+    get_string('courseai_template_empty_state', 'local_coursegen'), 'info', false);
 
 // Prepare template context.
 $templatecontext = [
     'guidelines' => json_encode($systeminstructions),
+    'coursetemplates' => $coursetemplates,
+    'templatepickerformhtml' => $templatepickerformhtml,
+    'templateemptystatehtml' => $templateemptystatehtml,
+    'hascoursetemplates' => !empty($coursetemplates),
     'languages' => json_encode($languageoptions),
     'defaultlang' => current_language(),
     'logourl' => $logourl->out(),
@@ -126,6 +204,14 @@ $templatecontext = [
     'sessions' => $recent5,
     'allsessions' => $allsessionsdata,
     'isresuming' => $resumesessionid > 0,
+    'showsessionsview' => $showsessionsview,
+    'templatemodeactive' => $templatemodeactive,
+    'startchooser' => $startchooser,
+    'freemodeactive' => !$startchooser && !$templatemodeactive,
+    'showstartcrumb' => $hasbothmodes && !$startchooser,
+    'startcrumblocked' => $resumesessionid > 0,
+    'canuploadsyllabus' => has_capability('local/coursegen:uploadcoursesyllabus', $systemcontext),
+    'cangeneratecourseimages' => has_capability('local/coursegen:generatecourseimages', $systemcontext),
     'subsectionsenabled' => $subsectionsenabled,
     // Initial (empty) guideline listboxes; JavaScript re-renders them from the same templates.
     'guidelinelist' => [
@@ -134,24 +220,20 @@ $templatecontext = [
         'hasitems' => false,
         'items' => [],
     ],
+    'closeurl' => (new moodle_url('/my/courses.php'))->out(false),
+    'sidebarclosed' => !$sidebarpinned,
 ];
 
 echo $OUTPUT->header();
 
-// Navbar (floating top bar like reportbuilder/edit.php).
-$navbarcontext = [
-    'title' => get_string('createwithai', 'local_coursegen'),
-    'logourl' => $logourl->out(),
-    'closeurl' => (new moodle_url('/my/courses.php'))->out(false),
-];
-echo $OUTPUT->render_from_template('local_coursegen/editor_navbar', $navbarcontext);
-
 echo $OUTPUT->render_from_template('local_coursegen/courseai_page', $templatecontext);
 
-// Initialize JavaScript module.
+// Initialize JavaScript modules.
+$PAGE->requires->js_call_amd('local_coursegen/local/courseai/start_path', 'init');
 $PAGE->requires->js_call_amd('local_coursegen/courseai', 'init', [
     [
         'guidelines' => $systeminstructions,
+        'coursetemplates' => $coursetemplates,
         'languages' => $languageoptions,
         'defaultlang' => current_language(),
         'sessions' => $allsessionsdata,

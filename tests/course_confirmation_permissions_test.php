@@ -19,7 +19,6 @@ namespace local_coursegen;
 use local_coursegen\external\course_planning_feedback;
 use local_coursegen\external\create_course;
 use local_coursegen\external\get_course_session_state;
-use local_coursegen\external\regenerate_detailed_item;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
@@ -41,7 +40,6 @@ use local_coursegen\local\service\create_course_service;
  * @covers     \local_coursegen\external\get_course_settings
  * @covers     \local_coursegen\external\course_planning_feedback
  * @covers     \local_coursegen\external\get_course_session_state
- * @covers     \local_coursegen\external\regenerate_detailed_item
  * @covers     \local_coursegen\local\service\create_course_service
  *
  * @runTestsInSeparateProcesses
@@ -81,15 +79,15 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
     }
 
     /**
-     * Give the user the local/coursegen:createcoursewithai capability at system level.
+     * Give the user the local/coursegen:createfreecoursewithai capability at system level.
      *
      * @param int $userid User id.
      * @return void
      */
-    private function allow_createcoursewithai_at_system(int $userid): void {
+    private function allow_createfreecoursewithai_at_system(int $userid): void {
         $systemcontext = \context_system::instance();
         $roleid = create_role('AI course creator', 'aicoursecreator', '');
-        assign_capability('local/coursegen:createcoursewithai', CAP_ALLOW, $roleid, $systemcontext->id, true);
+        assign_capability('local/coursegen:createfreecoursewithai', CAP_ALLOW, $roleid, $systemcontext->id, true);
         role_assign($roleid, $userid, $systemcontext->id);
     }
 
@@ -158,14 +156,14 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
     }
 
     /**
-     * A user with createcoursewithai but no course:create anywhere is rejected
+     * A user with createfreecoursewithai but no course:create anywhere is rejected
      * by get_course_settings.
      */
     public function test_get_course_settings_rejects_user_without_any_course_create(): void {
         $this->resetAfterTest();
 
         $user = $this->getDataGenerator()->create_user();
-        $this->allow_createcoursewithai_at_system($user->id);
+        $this->allow_createfreecoursewithai_at_system($user->id);
         $this->setUser($user);
         $session = $this->create_session($user->id);
 
@@ -210,22 +208,6 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
     }
 
     /**
-     * A user without the capabilities is rejected by regenerate_detailed_item
-     * even for a session they own.
-     */
-    public function test_regenerate_detailed_item_rejects_user_without_capabilities(): void {
-        $this->resetAfterTest();
-
-        $user = $this->getDataGenerator()->create_user();
-        $this->setUser($user);
-        $session = $this->create_session($user->id);
-
-        $this->assert_requires_capability(static function () use ($session): void {
-            regenerate_detailed_item::execute((int) $session->get('id'), 'section', 0);
-        }, 'regenerate_detailed_item');
-    }
-
-    /**
      * A user holding course:create in one category only is offered exactly that
      * category by get_course_settings.
      */
@@ -237,7 +219,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
         $catb = \core_course_category::create(['name' => 'Forbidden category']);
 
         $user = $generator->create_user();
-        $this->allow_createcoursewithai_at_system($user->id);
+        $this->allow_createfreecoursewithai_at_system($user->id);
         $this->allow_course_create_in_category($user->id, $cata);
         $this->setUser($user);
 
@@ -277,7 +259,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
         $cata = \core_course_category::create(['name' => 'Allowed category']);
 
         $user = $this->getDataGenerator()->create_user();
-        $this->allow_createcoursewithai_at_system($user->id);
+        $this->allow_createfreecoursewithai_at_system($user->id);
         $this->allow_course_create_in_category($user->id, $cata);
         $this->setUser($user);
 
@@ -302,7 +284,7 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
         $catb = \core_course_category::create(['name' => 'Forbidden category']);
 
         $user = $this->getDataGenerator()->create_user();
-        $this->allow_createcoursewithai_at_system($user->id);
+        $this->allow_createfreecoursewithai_at_system($user->id);
         $this->allow_course_create_in_category($user->id, $cata);
         $this->setUser($user);
 
@@ -340,9 +322,6 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
             },
             'get_course_session_state' => static function () use ($recordid): void {
                 get_course_session_state::execute($recordid);
-            },
-            'regenerate_detailed_item' => static function () use ($recordid): void {
-                regenerate_detailed_item::execute($recordid, 'section', 0);
             },
         ];
 

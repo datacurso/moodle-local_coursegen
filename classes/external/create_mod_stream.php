@@ -111,6 +111,9 @@ class create_mod_stream extends external_api {
             // must not be enough to launch jobs that consume service credits.
             require_capability('moodle/course:manageactivities', $context);
             require_capability('local/coursegen:createactivitywithai', $context);
+            if ($generateimages == 1) {
+                require_capability('local/coursegen:generateactivityimages', $context);
+            }
 
             $coursecontext = course_context_service::get_course_context($courseid);
 

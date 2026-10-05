@@ -49,7 +49,27 @@ class stream_authorizer {
             return;
         }
 
+        if ($streamtype === stream_type::TEMPLATE) {
+            $this->authorize_template($threadid);
+            return;
+        }
+
         throw new \moodle_exception('error_stream_unknown_type', 'local_coursegen');
+    }
+
+    /**
+     * Template generation streams belong to the generation session of the user.
+     *
+     * @param string $threadid External generation session identifier.
+     */
+    private function authorize_template(string $threadid): void {
+        global $USER;
+
+        course_session_service::get_user_session_by_external_id($threadid, (int) $USER->id);
+
+        $context = \context_system::instance();
+        require_capability('moodle/course:create', $context);
+        require_capability('local/coursegen:createtemplatecoursewithai', $context);
     }
 
     /**
@@ -64,7 +84,7 @@ class stream_authorizer {
 
         $context = \context_system::instance();
         require_capability('moodle/course:create', $context);
-        require_capability('local/coursegen:createcoursewithai', $context);
+        require_capability('local/coursegen:createfreecoursewithai', $context);
     }
 
     /**

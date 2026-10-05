@@ -19,9 +19,22 @@
 
     AI Course Creation Wizard - Step 1: Context
 
+    Capability flags (the server decides them; the page only renders what they allow):
+    * startchooser bool           - A fresh visit with both modes available: the workspace shows the two cards instead of a path.
+    * freemodeactive bool         - The free creation path is the one showing (not the cards, not the template path).
+    * showstartcrumb bool         - The user can create in both modes, so the top bar names the path and leads back to the cards.
+    * startcrumblocked bool       - Planning already started, so the crumb only names the path.
+    * canuploadsyllabus bool      - The syllabus attach controls are rendered.
+    * cangeneratecourseimages bool - The generate-images controls are rendered.
+
     Example context (json):
     {
-        "logourl": "https://example.com/local/coursegen/pix/logo.png",
+        "startchooser": false,
+        "freemodeactive": true,
+        "showstartcrumb": true,
+        "startcrumblocked": false,
+        "canuploadsyllabus": true,
+        "cangeneratecourseimages": true,
         "guidelines": "[{\"id\":\"si_1\",\"name\":\"Example\",\"category\":\"General\",\"description\":\"...\"}]",
         "languages": "[{\"code\":\"es\",\"name\":\"Español (es)\"}]",
         "defaultlang": "es",
@@ -36,18 +49,94 @@
 
 {{! Wizard CSS will be loaded via PHP $PAGE->requires->css() }}
 
+<!-- ══════════════════════ APP LAYOUT ══════════════════════════════════ -->
+<div class="courseai-app-layout{{#sidebarclosed}} sidebar-closed{{/sidebarclosed}}" id="courseaiAppLayout">
+
+<!-- ══════════════════════ TOP BAR ═════════════════════════════════════
+     One thin bar owns the two controls that used to float over the page:
+     the sidebar toggle (which never leaves its top-left spot, whatever the
+     sidebar is doing) and the exit back to My courses. -->
+<header class="courseai-topbar" id="courseaiTopbar">
+  <div class="courseai-topbar-left">
+    <div class="courseai-sidebar-toggle-wrap" id="courseaiSidebarToggleWrap">
+      <button class="courseai-sidebar-toggle" id="courseaiSidebarToggle" type="button"
+              aria-controls="courseaiSidebar" aria-expanded="true" aria-keyshortcuts="["
+              data-label-close="{{#str}}courseai_sidebar_close, local_coursegen{{/str}}"
+              data-label-open="{{#str}}courseai_sidebar_open, local_coursegen{{/str}}"
+              title="{{#str}}courseai_sidebar_close, local_coursegen{{/str}} ["
+              aria-label="{{#str}}courseai_sidebar_close, local_coursegen{{/str}}">
+        <svg class="courseai-sidebar-toggle-icon courseai-sidebar-toggle-icon--panel" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <rect x="3.5" y="4.5" width="17" height="15" rx="3"/><path d="M9.5 4.5v15"/>
+        </svg>
+        <svg class="courseai-sidebar-toggle-icon courseai-sidebar-toggle-icon--menu" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" aria-hidden="true">
+          <path d="M5 7h14M5 12h14M5 17h14"/>
+        </svg>
+      </button>
+    </div>
+    <div class="courseai-topbar-brand">
+      {{#logourl}}
+      <img src="{{logourl}}" alt="" class="courseai-topbar-logo">
+      {{/logourl}}
+      <span class="courseai-topbar-name">{{#str}}pluginname, local_coursegen{{/str}}</span>
+    </div>
+  </div>
+  <div class="courseai-topbar-main">
+    {{! The starting point, once chosen: a quiet crumb that names the path and
+        leads back to the cards. Locked (no chevron, no action) once planning
+        has started. Not rendered on the cards themselves, nor for a user who
+        can only create one way. }}
+    {{#showstartcrumb}}
+    <button class="courseai-topbar-path{{#startcrumblocked}} is-locked{{/startcrumblocked}}" type="button"
+            data-region="local_coursegen/start/path-back"
+            data-url="aicoursecreation.php"
+            data-title-unlocked="{{#str}}courseai_start_back, local_coursegen{{/str}}"
+            data-title-locked="{{#str}}courseai_start_locked, local_coursegen{{/str}}"
+            {{#startcrumblocked}}disabled{{/startcrumblocked}}
+            title="{{#startcrumblocked}}{{#str}}courseai_start_locked, local_coursegen{{/str}}{{/startcrumblocked}}{{^startcrumblocked}}{{#str}}courseai_start_back, local_coursegen{{/str}}{{/startcrumblocked}}">
+      <svg class="courseai-topbar-path-chevron" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <path d="M15 6l-6 6 6 6"/>
+      </svg>
+      <span class="courseai-topbar-path-crumb">{{#str}}createwithai, local_coursegen{{/str}}</span>
+      <span class="courseai-topbar-path-sep" aria-hidden="true">/</span>
+      <b class="courseai-topbar-path-name">{{#templatemodeactive}}{{#str}}courseai_mode_template, local_coursegen{{/str}}{{/templatemodeactive}}{{^templatemodeactive}}{{#str}}courseai_mode_free, local_coursegen{{/str}}{{/templatemodeactive}}</b>
+    </button>
+    {{/showstartcrumb}}
+    <span class="courseai-topbar-spacer"></span>
+    {{! The popup layout has no Moodle navbar: this is the only exit back to My courses. }}
+    <a class="courseai-topbar-exit" id="courseaiCloseBtn" href="{{closeurl}}"
+       title="{{#str}}courseai_close_view, local_coursegen{{/str}}">
+      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"
+           stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+      </svg>
+      <span>{{#str}}courseai_topbar_close, local_coursegen{{/str}}</span>
+    </a>
+  </div>
+</header>
+
+<div class="courseai-app-body" id="courseaiAppBody">
+
 <!-- ══════════════════════ SIDEBAR ════════════════════════════════════ -->
 {{> local_coursegen/sidebar }}
-<div class="courseai-sidebar-backdrop" id="courseaiSidebarBackdrop"></div>
 
 <!-- ══════════════════════ MAIN ════════════════════════════════════════ -->
-<main class="app-main aicoursecreation-main">
-  <div class="container">
-    <div class="courseai-workspace{{#isresuming}} is-planning{{/isresuming}}" id="courseaiWorkspace">
+<main class="app-main aicoursecreation-main" style="position:relative">
+  <div class="container"{{#showsessionsview}} style="display:none"{{/showsessionsview}}>
+    <div class="courseai-workspace{{#isresuming}} is-planning{{/isresuming}}{{#startchooser}} is-choosing{{/startchooser}}{{#templatemodeactive}} is-template{{/templatemodeactive}}" id="courseaiWorkspace"
+         data-region="local_coursegen/start/workspace">
+
+    {{! Step one: how do you want to start? Each card is a link that opens its
+        own path, so the page renders one path at a time. }}
+    {{#startchooser}}
+    {{> local_coursegen/start_chooser }}
+    {{/startchooser}}
 
     <!-- Context step form (in planning mode the editor is hidden by CSS and the
          left chat column shows instead — so on reload the real chrome renders and
-         only the service-driven content areas show skeletons). -->
+         only the service-driven content areas show skeletons). Server-rendered
+         only in free mode: neither the cards nor template mode ever receive this
+         markup. -->
+    {{#freemodeactive}}
     <div class="context-wrap" id="contextView">
 
       <div class="courseai-context-editor" id="courseaiContextEditor">
@@ -72,7 +161,8 @@
         <!-- Selected chips (syllabus + guideline) -->
         <div class="chips-row" id="chipsRow" style="display:none">
 
-          <!-- Syllabus chip (shown after file attach) -->
+          {{#canuploadsyllabus}}
+<!-- Syllabus chip (shown after file attach) -->
           <span class="chip chip-syllabus hidden" id="chipSyllabus">
             <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
               <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/>
@@ -87,6 +177,7 @@
               </svg>
             </button>
           </span>
+          {{/canuploadsyllabus}}
 
           <!-- Guideline chip (shown after selecting a guideline) -->
           <span class="chip chip-guideline hidden" id="chipGuideline">
@@ -101,6 +192,19 @@
               </svg>
             </button>
             <button class="chip-btn" onclick="clearGuideline()" aria-label="{{#str}}courseai_chip_remove_guideline, local_coursegen{{/str}}">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </span>
+
+          <!-- Template chip (shown after selecting a template) -->
+          <span class="chip chip-template hidden" id="chipTemplate">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+            </svg>
+            <span class="chip-name" id="chipTemplateName"></span>
+            <button class="chip-btn" id="chipTemplateRemoveBtn" aria-label="{{#str}}courseai_chip_remove_template, local_coursegen{{/str}}">
               <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true">
                 <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
               </svg>
@@ -126,13 +230,24 @@
 
               <div class="plus-menu-panel" id="plusMenuPanel" role="menu" aria-label="{{#str}}courseai_options_menu, local_coursegen{{/str}}">
 
-                <!-- Sílabo (original button, restyled as menu item) -->
+                <!-- Template: opens a searchable popover (same pattern as guidelines) -->
+                <button class="plus-menu-item" id="btnTemplates" title="{{#str}}courseai_btn_templates_title, local_coursegen{{/str}}" type="button" role="menuitem" aria-haspopup="dialog" aria-expanded="false" aria-controls="templatesPopover">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+                  </svg>
+                  <span class="plus-menu-item__label">{{#str}}courseai_btn_templates, local_coursegen{{/str}}</span>
+                  <span class="template-badge hidden" id="templateBadge"></span>
+                </button>
+
+                {{#canuploadsyllabus}}
+<!-- Sílabo (original button, restyled as menu item) -->
                 <button class="plus-menu-item" id="btnSyllabus" title="{{#str}}courseai_btn_syllabus_title, local_coursegen{{/str}}" type="button" role="menuitem">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                     <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
                   </svg>
                   <span class="plus-menu-item__label">{{#str}}courseai_btn_syllabus, local_coursegen{{/str}}</span>
                 </button>
+                {{/canuploadsyllabus}}
 
                 <!-- Directrices (original button, restyled as menu item) -->
                 <button class="plus-menu-item" id="btnDirectrices" title="{{#str}}courseai_btn_guidelines_title, local_coursegen{{/str}}" type="button" role="menuitem" aria-haspopup="dialog" aria-expanded="false" aria-controls="guidelinesPopover">
@@ -159,7 +274,8 @@
                   </svg>
                 </button>
 
-                <!-- With images toggle switch -->
+                {{#cangeneratecourseimages}}
+<!-- With images toggle switch -->
                 <div class="tbar-toggle-wrap plus-menu-item plus-menu-item--toggle" title="{{#str}}courseai_images_title, local_coursegen{{/str}}" role="menuitemcheckbox" aria-checked="false" tabindex="0">
                   <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0">
                     <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
@@ -171,6 +287,7 @@
                   </div>
                   <input type="checkbox" id="btnWithImages" class="hidden" aria-label="{{#str}}courseai_images_arialabel, local_coursegen{{/str}}">
                 </div>
+                {{/cangeneratecourseimages}}
 
                 {{#subsectionsenabled}}
                 <!-- With subsections toggle switch -->
@@ -230,10 +347,31 @@
                   {{#guidelinelist}}{{> local_coursegen/local/courseai/guideline_list }}{{/guidelinelist}}
                 </div>
               </div>
+
+              <!-- Templates popover: searchable list -->
+              <div class="popover-panel popover-panel--down" id="templatesPopover" role="dialog" aria-label="{{#str}}courseai_templates_dialog_label, local_coursegen{{/str}}">
+                <button class="pop-close-btn" id="templatesPopoverClose" type="button" aria-label="{{#str}}closebuttontitle, core{{/str}}">
+                  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+                    <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                  </svg>
+                </button>
+                <div class="pop-search-row">
+                  <div class="pop-search-inner">
+                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <circle cx="11" cy="11" r="8"/>
+                      <path d="m21 21-4.35-4.35"/>
+                    </svg>
+                    <input type="text" id="templateSearch" placeholder="{{#str}}courseai_templates_search_placeholder, local_coursegen{{/str}}" autocomplete="off" />
+                  </div>
+                </div>
+                <ul class="pop-list" id="templateList" role="listbox" aria-label="{{#str}}courseai_templates_list_label, local_coursegen{{/str}}"></ul>
+              </div>
             </div>
 
-            <!-- Hidden file manager container for Moodle file picker -->
+            {{#canuploadsyllabus}}
+<!-- Hidden file manager container for Moodle file picker -->
             <div class="hidden" id="syllabusFilemanager"></div>
+            {{/canuploadsyllabus}}
 
             <!-- Hidden language select: still the single source of truth for state/lang -->
             <select class="tbar-select hidden" id="langSelect" title="{{#str}}courseai_lang_title, local_coursegen{{/str}}" aria-label="{{#str}}courseai_lang_arialabel, local_coursegen{{/str}}">
@@ -249,7 +387,7 @@
               <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M9.937 15.5A2 2 0 0 0 8.5 14.063l-6.135-1.582a.5.5 0 0 1 0-.962L8.5 9.936A2 2 0 0 0 9.937 8.5l1.582-6.135a.5.5 0 0 1 .962 0L14.063 8.5A2 2 0 0 0 15.5 9.937l6.135 1.581a.5.5 0 0 1 0 .964L15.5 14.063a2 2 0 0 0-1.437 1.437l-1.582 6.135a.5.5 0 0 1-.962 0z"/>
               </svg>
-              {{#str}}courseai_btn_generate, local_coursegen{{/str}}
+              <span class="btn-generate__label">{{#str}}courseai_btn_generate, local_coursegen{{/str}}</span>
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M12 19V5M5 12l7-7 7 7"/>
               </svg>
@@ -320,13 +458,7 @@
           <div class="courseai-adjustment-history hidden" id="courseaiAdjustmentHistory"></div>
         </div>
 
-        <!-- After "Adjust", the decision card is replaced by the composer; this slim
-             bar (a SEPARATE element above the composer, with a gap) keeps Accept
-             reachable so the user can always change their mind. -->
-        <div class="cg-accept-bar" id="cgAcceptBar" style="display:none">
-          <span class="cg-accept-bar-text">{{#str}}courseai_decision_still_accept, local_coursegen{{/str}}</span>
-          <button class="cg-accept-bar-btn" id="cgAcceptInline" type="button">{{#str}}courseai_decision_accept, local_coursegen{{/str}}</button>
-        </div>
+        {{> local_coursegen/courseai_accept_bar }}
 
         <!-- Pinned working-status slot: during an ACTION re-stream (reorder, replan,
              add, delete, adjust) the composer is hidden, so the "assistant is working"
@@ -347,7 +479,8 @@
 
           <!-- Chips row (same as main card) -->
           <div class="chips-row" id="compactChipsRow" style="display:none">
-            <span class="chip chip-syllabus hidden" id="compactChipSyllabus">
+            {{#canuploadsyllabus}}
+<span class="chip chip-syllabus hidden" id="compactChipSyllabus">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/>
                 <polyline points="14 2 14 8 20 8"/>
@@ -361,6 +494,7 @@
                 </svg>
               </button>
             </span>
+            {{/canuploadsyllabus}}
 
             <span class="chip chip-guideline hidden" id="compactChipGuideline">
               <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -374,6 +508,19 @@
                 </svg>
               </button>
               <button class="chip-btn" onclick="clearGuideline()" aria-label="{{#str}}courseai_chip_remove_guideline, local_coursegen{{/str}}">
+                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true">
+                  <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                </svg>
+              </button>
+            </span>
+
+            <!-- Template chip (compact, shown after selecting a template) -->
+            <span class="chip chip-template hidden" id="compactChipTemplate">
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+              </svg>
+              <span class="chip-name" id="compactChipTemplateName"></span>
+              <button class="chip-btn" id="compactChipTemplateRemoveBtn" aria-label="{{#str}}courseai_chip_remove_template, local_coursegen{{/str}}">
                 <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true">
                   <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
                 </svg>
@@ -397,12 +544,23 @@
 
                 <div class="plus-menu-panel plus-menu-panel--up" id="compactPlusMenuPanel" role="menu" aria-label="{{#str}}courseai_options_menu, local_coursegen{{/str}}">
 
-                  <button class="plus-menu-item" id="btnCompactSyllabus" title="{{#str}}courseai_btn_syllabus_title, local_coursegen{{/str}}" type="button" role="menuitem">
+                  <!-- Template: opens a searchable popover (same pattern as guidelines) -->
+                  <button class="plus-menu-item" id="btnTemplatesCompact" title="{{#str}}courseai_btn_templates_title, local_coursegen{{/str}}" type="button" role="menuitem" aria-haspopup="dialog" aria-expanded="false" aria-controls="templatesPopoverCompact">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                      <rect x="2" y="3" width="20" height="14" rx="2" ry="2"/><line x1="8" y1="21" x2="16" y2="21"/><line x1="12" y1="17" x2="12" y2="21"/>
+                    </svg>
+                    <span class="plus-menu-item__label">{{#str}}courseai_btn_templates, local_coursegen{{/str}}</span>
+                    <span class="template-badge hidden" id="templateBadgeCompact"></span>
+                  </button>
+
+                  {{#canuploadsyllabus}}
+<button class="plus-menu-item" id="btnCompactSyllabus" title="{{#str}}courseai_btn_syllabus_title, local_coursegen{{/str}}" type="button" role="menuitem">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                       <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
                     </svg>
                     <span class="plus-menu-item__label">{{#str}}courseai_btn_syllabus, local_coursegen{{/str}}</span>
                   </button>
+                  {{/canuploadsyllabus}}
 
                   <button class="plus-menu-item" id="btnCompactDirectrices" title="{{#str}}courseai_btn_guidelines_title, local_coursegen{{/str}}" type="button" role="menuitem" aria-haspopup="dialog" aria-expanded="false" aria-controls="guidelinesPopoverCompact">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
@@ -427,6 +585,7 @@
                     </svg>
                   </button>
 
+                  {{#cangeneratecourseimages}}
                   <div class="tbar-toggle-wrap plus-menu-item plus-menu-item--toggle" title="{{#str}}courseai_images_title, local_coursegen{{/str}}" role="menuitemcheckbox" aria-checked="false" tabindex="0">
                     <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" style="flex-shrink:0">
                       <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/>
@@ -438,6 +597,7 @@
                     </div>
                     <input type="checkbox" id="btnCompactWithImages" class="hidden" aria-label="{{#str}}courseai_images_arialabel, local_coursegen{{/str}}">
                   </div>
+                  {{/cangeneratecourseimages}}
 
                   {{#subsectionsenabled}}
                   <div class="tbar-toggle-wrap plus-menu-item plus-menu-item--toggle" title="{{#str}}courseai_subsections_title, local_coursegen{{/str}}" role="menuitemcheckbox" aria-checked="false" tabindex="0">
@@ -494,6 +654,25 @@
                     {{#guidelinelist}}{{> local_coursegen/local/courseai/guideline_list_compact }}{{/guidelinelist}}
                   </div>
                 </div>
+
+                <!-- Templates popover (compact): searchable list -->
+                <div class="popover-panel" id="templatesPopoverCompact" role="dialog" aria-label="{{#str}}courseai_templates_dialog_label, local_coursegen{{/str}}">
+                  <button class="pop-close-btn" id="templatesPopoverCompactClose" type="button" aria-label="{{#str}}closebuttontitle, core{{/str}}">
+                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4" stroke-linecap="round" aria-hidden="true">
+                      <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                  </button>
+                  <div class="pop-search-row">
+                    <div class="pop-search-inner">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                        <circle cx="11" cy="11" r="8"/>
+                        <path d="m21 21-4.35-4.35"/>
+                      </svg>
+                      <input type="text" id="templateSearchCompact" placeholder="{{#str}}courseai_templates_search_placeholder, local_coursegen{{/str}}" autocomplete="off" />
+                    </div>
+                  </div>
+                  <ul class="pop-list" id="templateListCompact" role="listbox" aria-label="{{#str}}courseai_templates_list_label, local_coursegen{{/str}}"></ul>
+                </div>
               </div>
 
               <!-- Hidden compact language select: mirrored source of truth -->
@@ -527,12 +706,233 @@
       </div>
 
     </div><!-- .context-wrap -->
+    {{/freemodeactive}}
+
+    <!-- ══════════ TEMPLATE MODE VIEW ════════════════════════════════════ -->
+    <!-- Server-rendered only in template mode: free mode never receives this
+         markup at all. -->
+    {{#templatemodeactive}}
+    {{! LEFT PANEL — mirrors the free-mode planning chat column (grid col 1,
+        resizable via the shared #cgSplitter). Picker on top, reduced input
+        bar pinned at the bottom. }}
+    <div class="context-wrap tpl-left-panel" id="templateModeView" data-region="tpl-left-panel">
+      <div class="tpl-left-scroll">
+        <div class="context-head">
+          <h2>{{#str}}courseai_template_title, local_coursegen{{/str}}</h2>
+          <p>{{#str}}courseai_template_subtitle, local_coursegen{{/str}}</p>
+        </div>
+
+        {{! Template selector — native Moodle form (single autocomplete field with
+            help text), the first field of the panel }}
+        <div class="card" id="templateModeCard">
+          <div class="p-3 text-left">
+            {{{templatepickerformhtml}}}
+          </div>
+        </div>
+
+        {{! Thread feed — the professor's own instruction is re-stated here as a
+            turn once generation starts, because the composer that held it is put
+            away for the duration. Same ids and classes as free mode's feed: the
+            log and working-indicator modules find them by id, and the two blocks
+            are mutually exclusive, so the ids never collide. }}
+        <div class="cg-log cg-thread-feed" id="cgLog" aria-live="polite"></div>
+
+        {{! One row per activity being generated, in the checklist markup free
+            mode uses for its own rows: the same group head and the same
+            spinner that becomes a check. Hidden until the generation reports
+            how many activities it will write; the rows come from
+            template_generation_item. }}
+        <div class="courseai-checklist cg-thread-checklist hidden" id="courseaiChecklist">
+          <div class="cg-group-head">
+            <span class="cg-group-avatar" aria-hidden="true"></span>
+            <span class="cg-group-title">{{#str}}courseai_template_progress_title, local_coursegen{{/str}}</span>
+            <span class="cg-group-count" id="courseaiChecklistCount"></span>
+          </div>
+          <ul class="courseai-checklist-list" id="courseaiChecklistList"></ul>
+        </div>
+      </div>
+
+      {{! Bottom slot — free mode pins its live "working" indicator here whenever
+          the composer is away, which in template mode is the whole generation. }}
+      <div class="cg-working-slot" id="cgWorkingSlot" aria-live="polite"></div>
+
+      {{! The decision itself, in the composer's own slot at the bottom of this
+          column, exactly where free mode puts it: the thread above stays
+          readable, only the field to write in is replaced. Same ids, so the
+          decision-overlay module drives it with no code of its own; the two
+          mode blocks are mutually exclusive, so the ids never collide.
+          There is no control here for adding, deleting or reordering: free mode
+          offers those because the structure is its own proposal, and here it
+          belongs to the template. }}
+      <div class="cg-decision-overlay" id="cgDecisionOverlay" style="display:none" role="group"
+           aria-label="{{#str}}courseai_template_review_title, local_coursegen{{/str}}">
+        <div class="cg-decision-card">
+          <p class="cg-decision-title">{{#str}}courseai_template_review_title, local_coursegen{{/str}}</p>
+          <p class="cg-decision-subtitle">{{#str}}courseai_template_review_hint, local_coursegen{{/str}}</p>
+          <div class="cg-decision-body" id="cgDecisionBody"></div>
+          <div class="cg-decision-actions">
+            <button class="cg-decision-btn cg-decision-btn--accept" id="cgDecisionAccept" type="button">
+              {{#str}}courseai_decision_accept, local_coursegen{{/str}}
+            </button>
+            <button class="cg-decision-btn cg-decision-btn--adjust" id="cgDecisionAdjust" type="button">
+              {{#str}}courseai_decision_adjust, local_coursegen{{/str}}
+            </button>
+          </div>
+        </div>
+      </div>
+
+      {{> local_coursegen/courseai_accept_bar }}
+
+      {{! Reduced input bar — chat-composer style, pinned at the panel bottom.
+          Only syllabus attach, generate-images toggle, language select and the
+          Generate action (still a stub). Values live in tplState
+          (template_mode.js) for the future generation payload. }}
+      <div class="card tpl-input-bar" id="tplInputBar" data-region="tpl-input-bar">
+        {{! Prompt — how to adapt the template to this course; same composer
+            textarea as free mode's compact chat card. Value lives in
+            tplState.prompt (template_mode.js). }}
+        <textarea
+          id="tplPromptInput"
+          class="compact-prompt-textarea"
+          placeholder="{{#str}}courseai_template_prompt_placeholder, local_coursegen{{/str}}"
+          rows="3"
+          aria-label="{{#str}}courseai_prompt_arialabel, local_coursegen{{/str}}"
+        ></textarea>
+
+        <div class="chips-row" id="tplChipsRow" style="display:none">
+          {{#canuploadsyllabus}}
+{{! Syllabus chip (shown after file attach) — same pattern as free mode }}
+          <span class="chip chip-syllabus hidden" id="tplChipSyllabus">
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+              <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/>
+              <polyline points="14 2 14 8 20 8"/>
+              <line x1="16" y1="13" x2="8" y2="13"/>
+              <line x1="16" y1="17" x2="8" y2="17"/>
+            </svg>
+            <span class="chip-name" id="tplChipSyllabusName"></span>
+            <button class="chip-btn" id="tplChipSyllabusRemove" type="button" aria-label="{{#str}}courseai_chip_remove_syllabus, local_coursegen{{/str}}">
+              <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true">
+                <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+              </svg>
+            </button>
+          </span>
+          {{/canuploadsyllabus}}
+        </div>
+
+        <div class="card-toolbar">
+          <div class="tbar-left">
+            {{#canuploadsyllabus}}
+{{! Syllabus / study-programme attach — same no-course filepicker
+                mechanics as free mode's btnSyllabus (context/filepicker.js) }}
+            <button class="plus-menu-btn" id="tplBtnSyllabus" type="button"
+                    title="{{#str}}courseai_btn_syllabus_title, local_coursegen{{/str}}"
+                    aria-label="{{#str}}courseai_btn_syllabus, local_coursegen{{/str}}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+              </svg>
+            </button>
+            {{/canuploadsyllabus}}
+
+            {{#cangeneratecourseimages}}
+{{! Generate-images toggle — same toggle-track/thumb pattern as the
+                free-mode plus-menu images row }}
+            <div class="tbar-toggle-wrap" id="tplImgToggleWrap" role="switch" aria-checked="false" tabindex="0"
+                 title="{{#str}}courseai_images_title, local_coursegen{{/str}}">
+              <span class="tbar-toggle-label">{{#str}}courseai_images_label, local_coursegen{{/str}}</span>
+              <div class="toggle-track" id="tplImgToggleTrack">
+                <div class="toggle-thumb"></div>
+              </div>
+              <input type="checkbox" id="tplWithImages" class="hidden" aria-label="{{#str}}courseai_images_arialabel, local_coursegen{{/str}}">
+            </div>
+            {{/cangeneratecourseimages}}
+
+            {{! Language select — options populated by JS from the same
+                languages array as free mode (page context / courseai-data) }}
+            <select class="tbar-select" id="tplLangSelect"
+                    title="{{#str}}courseai_lang_title, local_coursegen{{/str}}"
+                    aria-label="{{#str}}courseai_lang_arialabel, local_coursegen{{/str}}"></select>
+          </div>
+
+          <div class="tbar-right">
+            <button class="btn-generate" id="tplModeGenerate" type="button" disabled
+                    title="{{#str}}courseai_btn_generate, local_coursegen{{/str}}">
+              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.4"
+                   stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                <path d="M12 19V5M5 12l7-7 7 7"/>
+              </svg>
+              <span class="btn-generate__label">{{#str}}courseai_btn_generate, local_coursegen{{/str}}</span>
+            </button>
+          </div>
+        </div>
+      </div>
+    </div><!-- #templateModeView -->
+    {{/templatemodeactive}}
 
     <!-- Resizable divider (§2.1) — visible only in .is-planning (3-column grid) -->
     {{! aria-valuemin/max/now are set by the splitter AMD at init: the HTML
         validator rejects them as static attributes on role="separator". }}
     <div class="cg-splitter" id="cgSplitter" role="separator" aria-orientation="vertical" tabindex="0"
          aria-label="{{#str}}courseai_resize_panels, local_coursegen{{/str}}"></div>
+
+    {{#templatemodeactive}}
+    {{! MAIN COLUMN — grid col 3 in template mode (mirrors free mode's
+        planning-wrap slot). Holds the empty state until a template is picked,
+        then the limits badge + structure (template_mode.js). }}
+    <div class="tpl-main-wrap" id="tplModeMain" data-region="tpl-main-column">
+      {{! Empty state: shown until a template is picked, marking where its
+          structure will render — hidden once .tpl-active is set on the
+          workspace (template_mode.js). Real core/notification "info" markup
+          (same alert-info the report builder uses for "Nothing to display"). }}
+      <div id="tplModeEmpty">
+        {{{templateemptystatehtml}}}
+      </div>
+
+      {{! Everything below only appears once a template has been selected — see
+          tplModeDetails in template_mode.js. Only the structure itself. }}
+      <div id="tplModeDetails" style="display:none">
+        {{! Badge row — "N sections · M activities" stats plus the section
+            limits banner, both populated by JS when a template is selected }}
+        <div id="tplModeLimits" class="mb-3 tpl-badge-row" style="display:none">
+          <span class="badge badge-light border" id="tplModeStats"></span>
+          <span class="badge badge-light border" id="tplModeLimitsBadge"></span>
+          {{! Opens the whole course as it will be delivered. Hidden until a
+              run exists, because there is nothing to preview before one does. }}
+          <a href="#" class="btn btn-link btn-sm p-0 ms-2" id="tplPreviewCourse" target="_blank" rel="noopener" hidden>
+            {{#pix}} i/preview, core {{/pix}}
+            {{#str}}courseai_preview_course, local_coursegen{{/str}}
+          </a>
+        </div>
+
+        {{! Live generation status — hidden until Generate is pressed, then fed
+            by the generation's own SSE stream (see template/generation_stream.js).
+            Deliberately the SAME markup and the SAME prv-* classes free mode uses
+            for its own live header: one spinner/check pair swapped by display,
+            a title, and a single-line subtitle naming the phase. Reusing the
+            classes means this needs no styles of its own and cannot drift from
+            the look free mode has. }}
+        <div class="prv-header prv-header--stream" id="tplGenHeader" hidden>
+          <span class="prv-icon-wrap">
+            <svg id="tplGenSpinnerIcon" class="prv-spin" width="20" height="20" viewBox="0 0 24 24"
+                 fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
+              <path d="M21 12a9 9 0 1 1-6.219-8.56"/>
+            </svg>
+            <svg id="tplGenCheckIcon" width="18" height="18" viewBox="0 0 24 24" fill="none"
+                 stroke="currentColor" stroke-width="2.8" stroke-linecap="round" stroke-linejoin="round"
+                 aria-hidden="true" style="display:none">
+              <polyline points="20 6 9 17 4 12"/>
+            </svg>
+          </span>
+          <div class="prv-header-text">
+            <h2 class="prv-header-title" id="tplGenTitle"></h2>
+            <p class="prv-header-sub" id="tplGenStage" aria-live="polite"></p>
+          </div>
+        </div>
+
+        {{! Dynamic structure — populated by JS when template is selected }}
+        <div id="tplModeStructure"></div>
+      </div>
+    </div><!-- #tplModeMain -->
+    {{/templatemodeactive}}
 
     <!-- Step 2: Planning view -->
     <div class="planning-wrap" id="planningView" style="display:{{#isresuming}}flex{{/isresuming}}{{^isresuming}}none{{/isresuming}}">
@@ -698,34 +1098,61 @@
 
   </div><!-- .container -->
 
-  <!-- Sessions list view (hidden by default) -->
-  <div class="courseai-sessions-view" id="courseaiSessionsView" style="display:none">
-    <div class="courseai-sessions-header">
-      <button class="courseai-sessions-back-btn" id="courseaiSessionsBackBtn" type="button">
-        <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-          <polyline points="15 18 9 12 15 6"/>
-        </svg>
-      </button>
-      <h2>{{#str}}courseai_sessions_title, local_coursegen{{/str}}</h2>
+  <!-- Sessions list view (hidden by default). Header + toolbar + column
+       labels are one sticky block inside the SAME scroller as the rest of
+       the page (.aicoursecreation-main) — no separate inner scrollbox. -->
+  <div class="courseai-sessions-view" id="courseaiSessionsView"{{^showsessionsview}} style="display:none"{{/showsessionsview}}>
+    <div class="courseai-sessions-sticky">
+      <div class="courseai-sessions-header">
+        <h2>{{#str}}courseai_sessions_title, local_coursegen{{/str}}</h2>
+        <a class="courseai-sessions-create-btn" href="aicoursecreation.php">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/>
+          </svg>
+          {{#str}}courseai_sessions_newbtn, local_coursegen{{/str}}
+        </a>
+      </div>
+
+      {{#hassessions}}
+      <div class="courseai-sessions-toolbar">
+        <div class="courseai-sessions-search">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+            <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+          </svg>
+          <input type="search" id="courseaiSessionsSearch"
+                 placeholder="{{#str}}courseai_sessions_search, local_coursegen{{/str}}">
+        </div>
+        <select id="courseaiSessionsStatusFilter" class="courseai-sessions-filter">
+          <option value="">{{#str}}courseai_sessions_filter_all, local_coursegen{{/str}}</option>
+          <option value="1">{{#str}}status_pending, local_coursegen{{/str}}</option>
+          <option value="2">{{#str}}status_creating, local_coursegen{{/str}}</option>
+          <option value="4">{{#str}}status_failed, local_coursegen{{/str}}</option>
+        </select>
+      </div>
+
+      <div class="courseai-sessions-columns" role="row">
+        <span role="columnheader">{{#str}}courseai_sessions_col_name, local_coursegen{{/str}}</span>
+        <span role="columnheader">{{#str}}courseai_sessions_col_status, local_coursegen{{/str}}</span>
+        <span role="columnheader">{{#str}}courseai_sessions_col_created, local_coursegen{{/str}}</span>
+      </div>
+      {{/hassessions}}
     </div>
 
     {{#hassessions}}
-    <div class="courseai-sessions-grid" id="courseaiSessionsGrid">
+    <div class="courseai-sessions-table" role="table" id="courseaiSessionsGrid">
       {{#allsessions}}
-      <div class="courseai-session-card" data-sessionid="{{id}}">
-        <div class="courseai-session-card-icon">
-          <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
-            <rect x="3" y="3" width="18" height="18" rx="2"/><circle cx="8.5" cy="8.5" r="1.5"/><polyline points="21 15 16 10 5 21"/>
-          </svg>
-        </div>
-        <div class="courseai-session-card-body">
-          <h3 class="courseai-session-card-title">{{title}}</h3>
-          <span class="courseai-session-card-status">{{statuslabel}}</span>
-          <span class="courseai-session-card-date">{{timecreated}}</span>
-        </div>
-        <a class="courseai-session-card-btn" href="aicoursecreation.php?sessionid={{id}}">{{#str}}courseai_sessions_continuebtn, local_coursegen{{/str}} &rarr;</a>
+      <div class="courseai-session-row" role="row" data-sessionid="{{id}}" data-status="{{status}}" data-title="{{title}}">
+        <span class="courseai-session-row-name" role="cell">
+          <a href="aicoursecreation.php?sessionid={{id}}">{{title}}</a>
+        </span>
+        <span role="cell"><span class="courseai-session-row-status">{{statuslabel}}</span></span>
+        <span class="courseai-session-row-date" role="cell">{{timecreated}}</span>
       </div>
       {{/allsessions}}
+    </div>
+
+    <div class="courseai-sessions-noresults" id="courseaiSessionsNoResults" style="display:none">
+      {{#str}}courseai_sessions_noresults, local_coursegen{{/str}}
     </div>
 
     <div class="courseai-sessions-pagination" id="courseaiSessionsPagination" style="display:none">
@@ -755,10 +1182,13 @@
   </div>
 
 </main>
+</div><!-- .courseai-app-body -->
+</div><!-- .courseai-app-layout -->
 
 {{! Data passed to JavaScript }}
-<div id="courseai-data" style="display:none" 
-     data-guidelines="{{guidelines}}" 
-     data-languages="{{languages}}" 
-     data-defaultlang="{{defaultlang}}">
+<div id="courseai-data" style="display:none"
+     data-guidelines="{{guidelines}}"
+     data-languages="{{languages}}"
+     data-defaultlang="{{defaultlang}}"
+     data-templates="{{templates}}">
 </div>

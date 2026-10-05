@@ -37,6 +37,8 @@ $capabilities = [
             'editingteacher' => CAP_ALLOW,
         ],
     ],
+    // No code checks this capability any more; it stays defined because roles and
+    // overrides refer to it and the capabilities carved out of it copy its permissions.
     'local/coursegen:managesysteminstructions' => [
         'riskbitmask' => RISK_CONFIG,
         'captype' => 'write',
@@ -46,6 +48,8 @@ $capabilities = [
         ],
     ],
 
+    // No code checks this capability any more; it stays defined because roles and
+    // overrides refer to it and the capabilities carved out of it copy its permissions.
     'local/coursegen:createcoursewithai' => [
         'riskbitmask' => RISK_XSS,
         'captype' => 'write',
@@ -67,6 +71,8 @@ $capabilities = [
         'clonepermissionsfrom' => 'moodle/course:manageactivities',
     ],
 
+    // No code checks this capability any more; it stays defined because roles and
+    // overrides refer to it and the capabilities carved out of it copy its permissions.
     'local/coursegen:manageimagegeneration' => [
         'riskbitmask' => RISK_CONFIG,
         'captype' => 'write',
@@ -74,5 +80,164 @@ $capabilities = [
         'archetypes' => [
             'manager' => CAP_ALLOW,
         ],
+    ],
+
+    // No code checks this capability any more; it stays defined because roles and
+    // overrides refer to it and the capabilities carved out of it copy its permissions.
+    'local/coursegen:managetemplates' => [
+        'riskbitmask' => RISK_CONFIG,
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_SYSTEM,
+        'archetypes' => [
+            'manager' => CAP_ALLOW,
+        ],
+    ],
+
+    // Course templates, one capability per operation. Carved out of managetemplates, which is now only
+    // the source their permissions are copied from when the plugin is upgraded.
+    'local/coursegen:viewtemplates' => [
+        'captype' => 'read',
+        'contextlevel' => CONTEXT_SYSTEM,
+        'archetypes' => [
+            'manager' => CAP_ALLOW,
+        ],
+        'clonepermissionsfrom' => 'local/coursegen:managetemplates',
+    ],
+    'local/coursegen:createtemplates' => [
+        'riskbitmask' => RISK_CONFIG,
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_SYSTEM,
+        'archetypes' => [
+            'manager' => CAP_ALLOW,
+        ],
+        'clonepermissionsfrom' => 'local/coursegen:managetemplates',
+    ],
+    'local/coursegen:edittemplates' => [
+        'riskbitmask' => RISK_CONFIG,
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_SYSTEM,
+        'archetypes' => [
+            'manager' => CAP_ALLOW,
+        ],
+        'clonepermissionsfrom' => 'local/coursegen:managetemplates',
+    ],
+    'local/coursegen:deletetemplates' => [
+        'riskbitmask' => RISK_CONFIG,
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_SYSTEM,
+        'archetypes' => [
+            'manager' => CAP_ALLOW,
+        ],
+        'clonepermissionsfrom' => 'local/coursegen:managetemplates',
+    ],
+
+    // System instructions. Carved out of managesysteminstructions, which is now only
+    // the source their permissions are copied from when the plugin is upgraded.
+    'local/coursegen:viewsysteminstructions' => [
+        'captype' => 'read',
+        'contextlevel' => CONTEXT_SYSTEM,
+        'archetypes' => [
+            'manager' => CAP_ALLOW,
+        ],
+        'clonepermissionsfrom' => 'local/coursegen:managesysteminstructions',
+    ],
+    'local/coursegen:createsysteminstructions' => [
+        'riskbitmask' => RISK_CONFIG,
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_SYSTEM,
+        'archetypes' => [
+            'manager' => CAP_ALLOW,
+        ],
+        'clonepermissionsfrom' => 'local/coursegen:managesysteminstructions',
+    ],
+    'local/coursegen:editsysteminstructions' => [
+        'riskbitmask' => RISK_CONFIG,
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_SYSTEM,
+        'archetypes' => [
+            'manager' => CAP_ALLOW,
+        ],
+        'clonepermissionsfrom' => 'local/coursegen:managesysteminstructions',
+    ],
+    'local/coursegen:deletesysteminstructions' => [
+        'riskbitmask' => RISK_CONFIG,
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_SYSTEM,
+        'archetypes' => [
+            'manager' => CAP_ALLOW,
+        ],
+        'clonepermissionsfrom' => 'local/coursegen:managesysteminstructions',
+    ],
+
+    // Image generation settings. Carved out of manageimagegeneration, which is now only
+    // the source their permissions are copied from when the plugin is upgraded.
+    'local/coursegen:viewimagegenerationsettings' => [
+        'captype' => 'read',
+        'contextlevel' => CONTEXT_SYSTEM,
+        'archetypes' => [
+            'manager' => CAP_ALLOW,
+        ],
+        'clonepermissionsfrom' => 'local/coursegen:manageimagegeneration',
+    ],
+    'local/coursegen:editimagegenerationsettings' => [
+        'riskbitmask' => RISK_CONFIG,
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_SYSTEM,
+        'archetypes' => [
+            'manager' => CAP_ALLOW,
+        ],
+        'clonepermissionsfrom' => 'local/coursegen:manageimagegeneration',
+    ],
+
+    // Creating a course with AI: one capability per mode, plus the syllabus and the images. Carved out of
+    // createcoursewithai, which is now only the source their permissions are copied from when the plugin is upgraded.
+    'local/coursegen:createfreecoursewithai' => [
+        'riskbitmask' => RISK_XSS,
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_COURSECAT,
+        'archetypes' => [
+            'manager' => CAP_ALLOW,
+        ],
+        'clonepermissionsfrom' => 'local/coursegen:createcoursewithai',
+    ],
+    'local/coursegen:createtemplatecoursewithai' => [
+        'riskbitmask' => RISK_XSS,
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_COURSECAT,
+        'archetypes' => [
+            'manager' => CAP_ALLOW,
+        ],
+        'clonepermissionsfrom' => 'local/coursegen:createcoursewithai',
+    ],
+    'local/coursegen:uploadcoursesyllabus' => [
+        'riskbitmask' => RISK_XSS,
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_COURSECAT,
+        'archetypes' => [
+            'manager' => CAP_ALLOW,
+        ],
+        'clonepermissionsfrom' => 'local/coursegen:createcoursewithai',
+    ],
+    'local/coursegen:generatecourseimages' => [
+        'riskbitmask' => RISK_XSS,
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_COURSECAT,
+        'archetypes' => [
+            'manager' => CAP_ALLOW,
+        ],
+        'clonepermissionsfrom' => 'local/coursegen:createcoursewithai',
+    ],
+
+    // Images of an activity generated with AI. Carved out of createactivitywithai, which is still the
+    // capability for generating an activity.
+    'local/coursegen:generateactivityimages' => [
+        'riskbitmask' => RISK_XSS,
+        'captype' => 'write',
+        'contextlevel' => CONTEXT_MODULE,
+        'archetypes' => [
+            'editingteacher' => CAP_ALLOW,
+            'manager' => CAP_ALLOW,
+        ],
+        'clonepermissionsfrom' => 'local/coursegen:createactivitywithai',
     ],
 ];

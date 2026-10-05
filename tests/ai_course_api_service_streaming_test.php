@@ -85,12 +85,21 @@ final class ai_course_api_service_streaming_test extends \advanced_testcase {
     }
 
     /**
+     * The relay reads the course-from-template stream from the service.
+     */
+    public function test_upstream_url_of_a_template_stream(): void {
+        $url = $this->service()->get_upstream_stream_url(stream_type::TEMPLATE, 'thread-3');
+
+        $this->assertSame('https://ai.example.com/api/v1/course-template/stream/thread-3', $url);
+    }
+
+    /**
      * A stream type that does not exist has no service URL.
      */
     public function test_upstream_url_rejects_an_unknown_stream_type(): void {
         $this->expectException(\coding_exception::class);
 
-        $this->service()->get_upstream_stream_url('template', 'thread-1');
+        $this->service()->get_upstream_stream_url('unknown', 'thread-1');
     }
 
     /**

@@ -1,144 +1,278 @@
-/* ─── SIDEBAR BACKDROP ───────────────────────────────────────────── */
-.courseai-sidebar-backdrop {
-  position: fixed;
-  inset: 0;
-  background: hsl(0, 0%, 0%, 0.3);
-  z-index: 1039;            /* below sidebar (1040), above Bootstrap navbar (1030) */
-  opacity: 0;
-  pointer-events: none;
-  transition: opacity .28s ease;
-}
-
-.courseai-sidebar-backdrop.open {
-  opacity: 1;
-  pointer-events: auto;
-}
+/* ─── SIDEBAR BACKDROP (legacy, kept for JS compat) ──────────────── */
+.courseai-sidebar-backdrop { display: none; }
 
 /* ─── SIDEBAR — LIGHT MINIMALIST ───────────────────────────────────── */
 :root {
   --courseai-sidebar-w: 240px;
 }
 
-/* Toggle button – inside sidebar, only visible when open */
-.courseai-sidebar-toggle {
-  position: absolute;
-  top: 14px;
-  right: -14px;
-  width: 28px;
-  height: 28px;
+/* ─── APP SHELL ────────────────────────────────────────────────────────
+   Top bar over a two-column body. Both are grids on the same column
+   template, so the bar's left cell and the sidebar column are one shape and
+   move together. Only grid-template-columns is animated: never width or
+   padding, which relayout every frame. */
+:root {
+  --courseai-topbar-h: 40px;
+  --courseai-sidebar-t: 320ms;
+  --courseai-sidebar-ease: cubic-bezier(.22, 1, .36, 1);
+  --courseai-float-t: 220ms;
+}
+
+.courseai-app-layout {
+  display: flex;
+  flex-direction: column;
+  height: 100vh;
+  overflow: hidden;
+}
+
+/* ─── TOP BAR ──────────────────────────────────────────────────────── */
+.courseai-topbar {
+  flex: 0 0 var(--courseai-topbar-h);
+  display: grid;
+  grid-template-columns: var(--courseai-sidebar-w) minmax(0, 1fr);
+  align-items: center;
   background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 50%;
+  border-bottom: 1px solid var(--border);
+  position: relative;
+  z-index: 30;
+  transition: grid-template-columns var(--courseai-sidebar-t) var(--courseai-sidebar-ease);
+}
+/* Closed: the left cell shrinks to just the toggle, which stays put. */
+.courseai-app-layout.sidebar-closed .courseai-topbar {
+  grid-template-columns: 48px minmax(0, 1fr);
+}
+.courseai-topbar-left {
   display: flex;
   align-items: center;
-  justify-content: center;
-  cursor: pointer;
-  z-index: 5;
+  gap: 8px;
+  padding-left: 8px;
+  min-width: 0;
+  white-space: nowrap;
+}
+.courseai-topbar-brand {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  min-width: 0;
+  overflow: hidden;
+  transition: opacity calc(var(--courseai-sidebar-t) * .6) var(--courseai-sidebar-ease);
+}
+.courseai-topbar-logo {
+  width: 20px;
+  height: 20px;
+  object-fit: contain;
+  flex-shrink: 0;
+}
+.courseai-topbar-name {
+  font-size: 14px;
+  font-weight: 600;
   color: var(--fg);
-  padding: 0;
-  line-height: 1;
-  box-shadow: 0 1px 4px hsl(0, 0%, 0%, 0.08);
-  transition: opacity .2s;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
-
-.courseai-sidebar-toggle:hover {
-  background: var(--muted);
-}
-
-/* When sidebar is collapsed, toggle button is hidden too */
-.courseai-sidebar.collapsed .courseai-sidebar-toggle {
+.courseai-app-layout.sidebar-closed .courseai-topbar-brand {
   opacity: 0;
   pointer-events: none;
 }
+.courseai-topbar-main {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 0 12px 0 8px;
+  min-width: 0;
+}
+.courseai-topbar-spacer { flex: 1; }
+.courseai-topbar-exit {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  height: 28px;
+  padding: 0 9px;
+  border-radius: 6px;
+  color: var(--danger);
+  font-size: 13.5px;
+  font-weight: 500;
+  text-decoration: none;
+  white-space: nowrap;
+}
+.courseai-topbar-exit:hover,
+.courseai-topbar-exit:focus-visible {
+  background: var(--danger-soft);
+  color: var(--danger);
+  text-decoration: none;
+}
 
-/* Sidebar panel – covers everything including navbar */
+/* ─── SIDEBAR TOGGLE ───────────────────────────────────────────────────
+   One button, two icons crossfading: the panel glyph while the sidebar is
+   pinned or floating, the menu glyph while it is closed. */
+.courseai-sidebar-toggle-wrap {
+  position: relative;
+  display: flex;
+  align-items: center;
+}
+.courseai-sidebar-toggle {
+  width: 30px;
+  height: 30px;
+  border: 0;
+  border-radius: 8px;
+  background: transparent;
+  color: var(--muted-fg);
+  display: grid;
+  place-items: center;
+  cursor: pointer;
+  padding: 0;
+  position: relative;
+  flex-shrink: 0;
+}
+.courseai-sidebar-toggle:hover,
+.courseai-app-layout.sidebar-floating .courseai-sidebar-toggle {
+  background: var(--muted);
+  color: var(--fg);
+}
+.courseai-sidebar-toggle-icon {
+  position: absolute;
+  transition: opacity 240ms var(--courseai-sidebar-ease), transform 240ms var(--courseai-sidebar-ease);
+}
+.courseai-sidebar-toggle-icon--panel { opacity: 1; }
+.courseai-sidebar-toggle-icon--menu { opacity: 0; transform: scale(.85); }
+.courseai-app-layout.sidebar-closed:not(.sidebar-floating) .courseai-sidebar-toggle {
+  color: var(--fg);
+}
+.courseai-app-layout.sidebar-closed:not(.sidebar-floating) .courseai-sidebar-toggle-icon--panel {
+  opacity: 0;
+  transform: scale(.85);
+}
+.courseai-app-layout.sidebar-closed:not(.sidebar-floating) .courseai-sidebar-toggle-icon--menu {
+  opacity: 1;
+  transform: none;
+}
+
+/* ─── BODY: sidebar column + main ──────────────────────────────────── */
+.courseai-app-body {
+  flex: 1;
+  min-height: 0;
+  display: grid;
+  grid-template-columns: var(--courseai-sidebar-w) minmax(0, 1fr);
+  grid-template-rows: minmax(0, 1fr);
+  overflow: hidden;
+  position: relative;
+  transition: grid-template-columns var(--courseai-sidebar-t) var(--courseai-sidebar-ease);
+}
+.courseai-app-layout.sidebar-closed .courseai-app-body {
+  grid-template-columns: 0px minmax(0, 1fr);
+}
+
+/* ─── SIDEBAR PANEL ────────────────────────────────────────────────────
+   Pinned: a grid column. Closed: slid out of its column on the same curve
+   as the column shrinks, so the two read as one movement. Floating: lifted
+   out of the flow over the content while the toggle is hovered. Explicit
+   grid placement keeps the main column in place when the sidebar leaves
+   the flow. */
 .courseai-sidebar {
-  position: fixed;
-  top: 0;                   /* overlay navbar too */
-  left: 0;
-  bottom: 0;
+  grid-column: 1;
+  grid-row: 1;
   width: var(--courseai-sidebar-w);
   background: var(--card);
   border-right: 1px solid var(--border);
   color: var(--fg);
   display: flex;
   flex-direction: column;
-  z-index: 1040;            /* above Bootstrap navbar (1030) */
-  transform: translateX(0);
-  transition: transform .28s cubic-bezier(.4, 0, .2, 1);
+  min-width: 0;
+  min-height: 0;
   overflow: hidden;
-  box-shadow: 4px 0 24px hsl(0, 0%, 0%, 0.15);
+  transition: transform var(--courseai-sidebar-t) var(--courseai-sidebar-ease), visibility 0s;
+}
+.courseai-app-layout.sidebar-closed .courseai-sidebar {
+  transform: translateX(-100%);
+  visibility: hidden;
+  transition: transform var(--courseai-sidebar-t) var(--courseai-sidebar-ease),
+              visibility 0s var(--courseai-sidebar-t);
+}
+.courseai-app-layout.sidebar-floating .courseai-sidebar,
+.courseai-app-layout.sidebar-floating-out .courseai-sidebar {
+  position: fixed;
+  left: 8px;
+  top: calc(var(--courseai-topbar-h) + 8px);
+  bottom: 8px;
+  width: calc(var(--courseai-sidebar-w) + 8px);
+  z-index: 1035;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  box-shadow: 0 0 0 1px hsl(215 20% 88%), 0 6px 16px -6px hsl(215 28% 17% / .18), 0 28px 56px -18px hsl(215 28% 17% / .42);
+  visibility: visible;
+  transition: transform var(--courseai-float-t) var(--courseai-sidebar-ease),
+              opacity var(--courseai-float-t) var(--courseai-sidebar-ease),
+              visibility 0s;
+}
+.courseai-app-layout.sidebar-floating .courseai-sidebar {
+  transform: none;
+  opacity: 1;
+  animation: courseai-sidebar-floatin var(--courseai-float-t) var(--courseai-sidebar-ease);
+}
+.courseai-app-layout.sidebar-floating-out .courseai-sidebar {
+  transform: translateX(-10px);
+  opacity: 0;
+}
+/* Landing from the floating exit into the closed rest state must not replay
+   the pinned→closed slide: sidebar.js holds this class for one frame. */
+.courseai-app-layout.sidebar-snap .courseai-sidebar,
+.courseai-app-layout.sidebar-snap .courseai-sidebar * {
+  transition: none !important;
+  animation: none !important;
+}
+@keyframes courseai-sidebar-floatin {
+  from { opacity: 0; transform: translateX(-10px); }
 }
 
-.courseai-sidebar.collapsed {
-  transform: translateX(-100%);  /* completely off-screen – no visible strip */
-  box-shadow: none;
+/* Main content fills the second column */
+.courseai-app-body > .app-main,
+.courseai-app-body > .aicoursecreation-main {
+  grid-column: 2;
+  grid-row: 1;
+  min-width: 0;
+  min-height: 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .courseai-topbar,
+  .courseai-topbar-brand,
+  .courseai-sidebar-toggle-icon,
+  .courseai-app-body,
+  .courseai-sidebar {
+    transition: none !important;
+    animation: none !important;
+  }
 }
 
 /* Body */
 .courseai-sidebar-body {
   display: flex;
   flex-direction: column;
-  padding: 20px 14px;
+  padding: 8px 14px 20px 2px;
   gap: 8px;
   flex: 1;
   overflow-y: auto;
-}
-
-/* Brand */
-.courseai-sidebar-brand {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  padding: 0 10px 16px;
-  border-bottom: 1px solid var(--border);
-  margin-bottom: 12px;
-  color: var(--fg);
-  font-weight: 600;
-  font-size: 15px;
-  white-space: nowrap;
-}
-
-.courseai-sidebar-logo {
-  flex-shrink: 0;
-  width: 22px;
-  height: 22px;
-  object-fit: contain;
-}
-
-/* Collapsed: hide text */
-.courseai-sidebar.collapsed .courseai-sidebar-brand-text,
-.courseai-sidebar.collapsed .courseai-sidebar-btn-text,
-.courseai-sidebar.collapsed .courseai-sidebar-section-title,
-.courseai-sidebar.collapsed .courseai-sidebar-chevron,
-.courseai-sidebar.collapsed .courseai-sidebar-course-info,
-.courseai-sidebar.collapsed .courseai-sidebar-viewall {
-  display: none;
-}
-
-.courseai-sidebar.collapsed .courseai-sidebar-course-item svg {
-  margin: 0 auto;
 }
 
 /* New course button */
 .courseai-sidebar-btn-new {
   display: flex;
   align-items: center;
-  gap: 10px;
+  gap: 8px;
   width: 100%;
-  padding: 10px 12px;
-  background: var(--primary);
-  color: var(--primary-fg);
+  padding: 7px 10px;
+  background: transparent;
+  color: var(--fg);
   border: none;
   border-radius: 8px;
-  font-size: 14px;
-  font-weight: 600;
+  font-size: 13px;
+  font-weight: 500;
   cursor: pointer;
   white-space: nowrap;
-  transition: opacity .15s;
+  transition: background .15s;
 }
-
-.courseai-sidebar-btn-new:hover { opacity: .9; }
+.courseai-sidebar-btn-new:hover { background: var(--muted); }
 .courseai-sidebar-btn-new svg { flex-shrink: 0; }
 
 /* Recent section */
@@ -153,8 +287,6 @@
   border-radius: 6px;
   white-space: nowrap;
   transition: background .15s;
-  text-transform: uppercase;
-  letter-spacing: .4px;
   font-weight: 500;
   font-size: 12px;
   color: var(--muted-fg);
@@ -225,25 +357,24 @@
   font-style: italic;
 }
 
-/* View all — same style as section header */
+/* View all — flat gray pill, like Claude's "View all conversations". */
 .courseai-sidebar-viewall {
   display: flex;
   align-items: center;
-  gap: 10px;
+  justify-content: flex-start;
   padding: 8px 10px;
   border-radius: 6px;
   cursor: pointer;
   white-space: nowrap;
   transition: background .15s;
-  background: none;
+  background: transparent;
   border: none;
   color: var(--muted-fg);
+  text-decoration: none;
   font-size: 12px;
   font-family: inherit;
   width: 100%;
   margin-top: 4px;
-  text-transform: uppercase;
-  letter-spacing: .4px;
   font-weight: 500;
 }
 
@@ -251,111 +382,155 @@
 .courseai-sidebar-viewall svg { flex-shrink: 0; }
 
 /* ─── SESSIONS VIEW (inside wizard) ───────────────────────────────── */
+/* Uses the full width available (grows further once the sidebar collapses)
+   and scrolls as part of .aicoursecreation-main itself — no separate inner
+   scrollbox. Only the header/toolbar/column-labels block is sticky. */
 .courseai-sessions-view {
-  max-width: 1040px;
-  margin: 0 auto;
   padding: 32px 24px;
+}
+
+.courseai-sessions-sticky {
+  position: sticky;
+  top: 0;
+  z-index: 2;
+  background: var(--card);
+  margin: -32px -24px 0;
+  padding: 32px 24px 0;
 }
 
 .courseai-sessions-header {
   display: flex;
   align-items: center;
   gap: 16px;
-  margin-bottom: 28px;
+  margin-bottom: 20px;
 }
 
 .courseai-sessions-header h2 {
   font-size: 22px;
   font-weight: 700;
   margin: 0;
+  flex: 1;
 }
 
-.courseai-sessions-back-btn {
+.courseai-sessions-create-btn {
   display: inline-flex;
   align-items: center;
-  justify-content: center;
-  width: 36px;
-  height: 36px;
-  background: var(--muted);
-  border: 1px solid var(--border);
-  border-radius: 50%;
-  cursor: pointer;
-  color: var(--fg);
-  transition: background .15s;
+  gap: 6px;
+  padding: 8px 14px;
+  background: var(--primary);
+  color: var(--primary-fg);
+  border-radius: 8px;
+  font-size: 13px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
   flex-shrink: 0;
-  padding: 0;
+  transition: opacity .15s;
 }
 
-.courseai-sessions-back-btn:hover { background: var(--border); }
+.courseai-sessions-create-btn:hover { opacity: .9; }
 
-/* Card grid */
-.courseai-sessions-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(300px, 1fr));
-  gap: 16px;
-}
-
-.courseai-session-card {
+/* Toolbar: search + status filter */
+.courseai-sessions-toolbar {
   display: flex;
-  flex-direction: column;
-  background: var(--card);
-  border: 1px solid var(--border);
-  border-radius: 12px;
-  padding: 20px;
-  transition: box-shadow .2s;
+  gap: 10px;
+  margin-bottom: 16px;
 }
 
-.courseai-session-card:hover {
-  box-shadow: 0 4px 20px hsl(215, 28%, 17%, 0.1);
+/* Column labels — same grid template as .courseai-session-row below, so
+   labels and cells line up exactly. */
+.courseai-sessions-columns {
+  display: grid;
+  grid-template-columns: 1fr 140px 160px;
+  gap: 12px;
+  padding: 0 16px 10px;
+  border-bottom: 1px solid var(--border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--muted-fg);
 }
 
-.courseai-session-card-icon {
-  width: 48px;
-  height: 48px;
+.courseai-sessions-search {
   display: flex;
   align-items: center;
-  justify-content: center;
-  background: hsl(215, 40%, 96%);
-  border-radius: 10px;
-  margin-bottom: 12px;
-  color: var(--primary);
+  gap: 8px;
+  flex: 1;
+  max-width: 320px;
+  padding: 7px 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  color: var(--muted-fg);
 }
 
-.courseai-session-card-body { flex: 1; margin-bottom: 16px; }
+.courseai-sessions-search svg { flex-shrink: 0; }
 
-.courseai-session-card-title {
-  font-size: 16px;
-  font-weight: 600;
-  margin: 0 0 6px;
+.courseai-sessions-search input {
+  flex: 1;
+  border: none;
+  outline: none;
+  background: none;
+  font-size: 13px;
   color: var(--fg);
+  min-width: 0;
 }
 
-.courseai-session-card-status {
+.courseai-sessions-search input::placeholder { color: var(--muted-fg); }
+
+.courseai-sessions-filter {
+  padding: 7px 12px;
+  background: var(--card);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  font-size: 13px;
+  color: var(--fg);
+  cursor: pointer;
+}
+
+.courseai-sessions-noresults {
+  text-align: center;
+  padding: 40px 20px;
+  color: var(--muted-fg);
+  font-size: 14px;
+}
+
+/* Table (Name / Status / Created at) */
+.courseai-session-row {
+  display: grid;
+  grid-template-columns: 1fr 140px 160px;
+  gap: 12px;
+  align-items: center;
+  padding: 14px 16px;
+  border-bottom: 1px solid var(--border);
+  transition: background .15s;
+}
+
+.courseai-session-row:hover { background: var(--muted); }
+
+.courseai-session-row-name a {
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.courseai-session-row-name a:hover { text-decoration: underline; }
+
+.courseai-session-row-status {
   display: inline-block;
   font-size: 12px;
   padding: 3px 10px;
   border-radius: 20px;
   background: var(--muted);
   color: var(--muted-fg);
-  margin-right: 8px;
+  white-space: nowrap;
 }
 
-.courseai-session-card-date {
-  font-size: 11px;
+.courseai-session-row-date {
+  font-size: 13px;
   color: var(--muted-fg);
+  white-space: nowrap;
 }
-
-.courseai-session-card-btn {
-  display: inline-flex;
-  align-items: center;
-  gap: 4px;
-  font-size: 14px;
-  font-weight: 500;
-  color: var(--primary);
-  text-decoration: none;
-}
-
-.courseai-session-card-btn:hover { text-decoration: underline; }
 
 /* Empty state */
 .courseai-sessions-empty {
@@ -421,3 +596,5 @@
   min-width: 60px;
   text-align: center;
 }
+
+/* ─── COLLAPSE / EXPAND ────────────────────────────────────── */

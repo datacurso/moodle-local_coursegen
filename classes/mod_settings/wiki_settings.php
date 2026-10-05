@@ -18,6 +18,12 @@ namespace local_coursegen\mod_settings;
 
 use mod_wiki_external;
 
+defined('MOODLE_INTERNAL') || die();
+
+// The mod_wiki_external class is autoloaded (mod/wiki/classes/external.php),
+// but the wiki_*() library this class calls is not.
+require_once($CFG->dirroot . "/mod/wiki/locallib.php");
+
 /**
  * Class wiki_settings
  *
@@ -39,17 +45,31 @@ class wiki_settings extends base_settings {
         // must use that same markup or they render as literal text.
         $this->wikiformat = $wiki->defaultformat ?: 'html';
 
-        // Remove duplicate pages by title, excluding the first page title on wiki.
-        $pages = $this->unique_pages_by_title($this->modsettings['pages'], $wiki->firstpagetitle);
+        // Remove duplicate pages by title: new_page throws pageexists on a repeat.
+        $pages = $this->unique_pages_by_title($this->modsettings['pages']);
 
-        // Build first page data for the wiki.
-        $firstpage = $this->get_first_page($pages, $wiki);
+        // A mold ships its own first page, generated from the mold's own one:
+        // its content is where the resolved markers live, so it is used as is
+        // instead of a synthesized index, and never created a second time.
+        $generatedfirstpage = null;
+        $rest = [];
+        foreach ($pages as $page) {
+            if ((string) $page['title'] === (string) $wiki->firstpagetitle) {
+                $generatedfirstpage = $page;
+                continue;
+            }
+            $rest[] = $page;
+        }
+
+        // Without a generated first page (the model-driven path produces none)
+        // the first page is still synthesized as an index of wiki links.
+        $firstpage = $generatedfirstpage ?? $this->get_first_page($rest, $wiki);
 
         // Add first page to wiki.
         $this->add_page($firstpage);
 
         // Add pages to wiki.
-        foreach ($pages as $page) {
+        foreach ($rest as $page) {
             $this->add_page($page);
         }
     }
@@ -97,20 +117,15 @@ class wiki_settings extends base_settings {
     }
 
     /**
-     * Remove duplicate pages by title, excluding the first page title on wiki.
+     * Remove duplicate pages by title.
      *
      * @param array $pages
-     * @param string $firstpagetitle The title of the first page
      * @return array The pages without duplicates by title
      */
-    protected function unique_pages_by_title(array $pages, string $firstpagetitle) {
+    protected function unique_pages_by_title(array $pages) {
         $result = [];
         foreach ($pages as $page) {
-            $title = $page['title'];
-            if ($title == $firstpagetitle) {
-                continue;
-            }
-            $result[$title] = $page;
+            $result[$page['title']] = $page;
         }
         return array_values($result);
     }
