@@ -93,11 +93,11 @@ class stream_relay {
     public function run(string $streamtype, string $threadid): void {
         $this->authorizer->authorize($streamtype, $threadid);
         $url = $this->service->get_upstream_stream_url($streamtype, $threadid);
-        $licensekey = $this->service->get_license_key();
+        $licenseheader = $this->service->get_license_header();
 
         try {
             $this->prepare_output();
-            $this->relay($url, $licensekey);
+            $this->relay($url, $licenseheader);
         } catch (\Throwable $e) {
             $this->report_failure($e);
         }
@@ -149,12 +149,12 @@ class stream_relay {
      * Read the service stream until it ends, and close the stream for the browser when it ended badly.
      *
      * @param string $url Service stream URL.
-     * @param string $licensekey License key.
+     * @param string $licenseheader License-Key header line.
      */
-    private function relay(string $url, string $licensekey): void {
+    private function relay(string $url, string $licenseheader): void {
         $this->finished = false;
         $this->client->listen([$this, 'forward'], [$this, 'tick']);
-        $this->client->stream($url, $licensekey);
+        $this->client->stream($url, $licenseheader);
 
         if ($this->finished || $this->output->is_aborted()) {
             return;

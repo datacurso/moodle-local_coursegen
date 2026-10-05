@@ -52,8 +52,8 @@ class scripted_stream_client extends upstream_stream_client {
     }
 
     #[\Override]
-    public function stream(string $url, string $licensekey): void {
-        $this->calls[] = ['url' => $url, 'licensekey' => $licensekey];
+    public function stream(string $url, string $licenseheader): void {
+        $this->calls[] = ['url' => $url, 'licenseheader' => $licenseheader];
 
         foreach ($this->script as $step) {
             if ($this->play($step)) {

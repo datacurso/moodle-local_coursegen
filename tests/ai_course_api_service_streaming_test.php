@@ -94,22 +94,33 @@ final class ai_course_api_service_streaming_test extends \advanced_testcase {
     }
 
     /**
-     * The license key is the one configured in the provider plugin.
+     * The license header is the one the provider client builds, so there is a single place that builds it.
      */
-    public function test_license_key_comes_from_the_provider_configuration(): void {
-        $this->resetAfterTest();
-        set_config('licensekey', 'key-abc', 'aiprovider_datacurso');
+    public function test_license_header_comes_from_the_provider_client(): void {
+        $client = $this->createMock(ai_course_api::class);
+        $client->expects($this->once())->method('get_license_header')->willReturn('License-Key: key-abc');
 
-        $this->assertSame('key-abc', $this->service()->get_license_key());
+        $service = new ai_course_api_service($client);
+
+        $this->assertSame('License-Key: key-abc', $service->get_license_header());
     }
 
     /**
-     * Without a configured key the license key is an empty string.
+     * Without a configured key the provider client refuses, and the refusal reaches the caller untouched.
      */
-    public function test_license_key_is_empty_when_not_configured(): void {
-        $this->resetAfterTest();
-        unset_config('licensekey', 'aiprovider_datacurso');
+    public function test_license_header_fails_when_the_client_has_no_key(): void {
+        $client = $this->createMock(ai_course_api::class);
+        $client->method('get_license_header')->willThrowException(
+            new \moodle_exception('invalidlicensekey', 'aiprovider_datacurso')
+        );
 
-        $this->assertSame('', $this->service()->get_license_key());
+        $service = new ai_course_api_service($client);
+
+        try {
+            $service->get_license_header();
+            $this->fail('A missing key must stop the call.');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('invalidlicensekey', $e->errorcode);
+        }
     }
 }
