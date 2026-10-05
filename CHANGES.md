@@ -4,6 +4,11 @@
 
 **Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.2**.
 
+## Added
+
+- **A simple page to set up a template**  
+  An admin chooses a course and, for each activity of each section, one of two things: keep it intact, so the AI never touches it, or modify it with AI, with an optional instruction that tells the AI how to act on that activity. An empty instruction leaves the decision to the AI. There are no other settings: the number of activities, how to vary an activity or to use one as the style of the others is all said in the instruction. The page has a category filter and a course search, the name and an optional description of the template, and a list page to create, edit and delete templates. Saving replaces the activities of the template in one transaction, only activities of the chosen course are accepted, and the text is stored as typed and escaped when it is drawn. Activities deleted from the course after a save are listed and dropped on the next save, and a template whose course was deleted still opens. It needs the new capability `local/coursegen:managetemplates`, which managers have by default, and the user must also be able to see the course. The privacy provider describes the two new tables.
+
 ## Fixed
 
 - **"Create with AI" button missing on My courses in Moodle 5.2**  
