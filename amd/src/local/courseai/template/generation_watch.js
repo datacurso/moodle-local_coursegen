@@ -81,7 +81,7 @@ const handleStreamMessage = (state, progress, applyEvent, onFail, resolve, rejec
     }
 
     const outcome = applyEvent(data, progress);
-    if (outcome === 'review' || outcome === 'completed') {
+    if (outcome === 'review' || outcome === 'question' || outcome === 'completed') {
         // The stream is closed on both. A pause left open would be
         // read again from the same point and re-emit the same pause, forever.
         finishPass(state, () => resolve({outcome, data}));

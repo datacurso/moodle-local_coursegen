@@ -63,6 +63,8 @@ class template_review_feedback extends external_api {
                 []
             ),
             'instruction' => new external_value(PARAM_TEXT, 'What to change', VALUE_DEFAULT, ''),
+            'toolcallid' => new external_value(PARAM_ALPHANUMEXT, 'Pending ask_user call id', VALUE_DEFAULT, ''),
+            'answer' => new external_value(PARAM_RAW_TRIMMED, 'Answer to the pending question', VALUE_DEFAULT, ''),
         ]);
     }
 
@@ -75,7 +77,7 @@ class template_review_feedback extends external_api {
      * @param string $instruction
      * @return array
      */
-    public static function execute($sessionid, $action, $targetids = [], $instruction = '') {
+    public static function execute($sessionid, $action, $targetids = [], $instruction = '', $toolcallid = '', $answer = '') {
         global $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
@@ -83,6 +85,8 @@ class template_review_feedback extends external_api {
             'action' => $action,
             'targetids' => $targetids,
             'instruction' => $instruction,
+            'toolcallid' => $toolcallid,
+            'answer' => $answer,
         ]);
 
         $context = context_system::instance();
@@ -98,6 +102,13 @@ class template_review_feedback extends external_api {
         if ($params['action'] === 'replan_activity') {
             $intent['target_ids'] = array_values($params['targetids']);
             $intent['instruction'] = $params['instruction'];
+        }
+        if ($params['action'] === 'tool_answer') {
+            if ($params['toolcallid'] === '' || trim($params['answer']) === '' || strlen($params['answer']) > 4000) {
+                throw new \invalid_parameter_exception('A non-empty answer of at most 4000 characters and a tool call id are required.');
+            }
+            $intent['call_id'] = $params['toolcallid'];
+            $intent['answer'] = trim($params['answer']);
         }
 
         (new template_ai_api_service())->send_feedback($session->get('session_id'), $intent);

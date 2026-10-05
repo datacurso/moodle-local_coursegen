@@ -91,6 +91,7 @@ class template_export_service {
         ];
 
         return [
+            'source_course_id' => (int) $course->id,
             'course_configuration' => $courseconfiguration,
             'sections_info' => $sectionsinfo,
             'activities' => $activities,

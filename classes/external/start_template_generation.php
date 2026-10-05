@@ -35,6 +35,7 @@ use local_coursegen\local\service\template_ai_api_service;
 use local_coursegen\local\space\space_files_request;
 use local_coursegen\local\service\template_export_service;
 use local_coursegen\local\service\template_reference_uploads;
+use local_coursegen\local\service\test_syllabus_attachment;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -102,6 +103,11 @@ class start_template_generation extends external_api {
         $api = new template_ai_api_service();
         $threadid = $api->init($payload);
         template_reference_uploads::send($api, $threadid, $referenceuploads);
+
+        $sourcepdf = test_syllabus_attachment::referenced_pdf($payload);
+        if ($sourcepdf !== null) {
+            $api->upload_reference_file($threadid, $sourcepdf);
+        }
 
         $file = self::draft_file($params['draftitemid']);
         if ($file !== null) {

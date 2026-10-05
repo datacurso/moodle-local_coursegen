@@ -40,6 +40,7 @@ use local_coursegen\local\service\kept_link_rewriter;
 use local_coursegen\local\service\template_ai_api_service;
 use local_coursegen\local\service\template_course_order;
 use local_coursegen\local\service\template_keep_copier;
+use local_coursegen\local\service\template_tool_link_reference;
 use local_coursegen\local\space\file_spaces;
 use local_coursegen\local\space\space_file_storage;
 use local_coursegen\local\space\space_resource_file;
@@ -108,6 +109,7 @@ class finish_template_generation extends external_api {
 
         $api = new template_ai_api_service();
         $result = $api->get_result($session->get('session_id'));
+        $result = template_tool_link_reference::prepare($result);
         $templateid = self::template_id_of($session);
 
         // Only the AI-generated activities are built from the payload. The
@@ -136,6 +138,13 @@ class finish_template_generation extends external_api {
         $generatedcms = $created['generatedcms'] ?? [];
         self::arrange_course($templateid, $courseid, $generatedactivities, $generatedcms, $keptcms);
         self::resolve_activity_links($session, $courseid, $generatedactivities, $generatedcms, $keptcms);
+        $resourceReference = $result['template_tool_resource_reference'] ?? null;
+        template_tool_link_reference::resolve_file_url(
+            $courseid,
+            is_array($resourceReference) ? $resourceReference : null,
+            $generatedcms,
+            $keptcms
+        );
         space_file_storage::delete_session((int) $session->get('userid'), (int) $session->get('id'));
 
         return self::created_response($courseid, $CFG->wwwroot);

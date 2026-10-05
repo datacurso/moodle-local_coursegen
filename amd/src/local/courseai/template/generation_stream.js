@@ -44,6 +44,7 @@
 
 import {getStrings} from 'core/str';
 import {askForDecision} from 'local_coursegen/local/courseai/template/generation_review';
+import {askForAnswer} from 'local_coursegen/local/courseai/template/generation_question';
 import {
     announceTemplate,
     milestone,
@@ -52,7 +53,7 @@ import {
     turn,
 } from 'local_coursegen/local/courseai/template/thread';
 import {refreshPreviewLinks} from 'local_coursegen/local/courseai/template/preview';
-import {sendTemplateReviewFeedback} from 'local_coursegen/local/courseai/template/repository';
+import {sendTemplateReviewFeedback, sendTemplateToolAnswer} from 'local_coursegen/local/courseai/template/repository';
 import {hideWorkingIndicator, showWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
 import {ALL_STATUS_CLASSES, STATUS_CLASS, applyEvent} from 'local_coursegen/local/courseai/template/generation_events';
 import {watchOnce} from 'local_coursegen/local/courseai/template/generation_watch';
@@ -221,6 +222,14 @@ export const runGenerationStream = async(streamUrl, buildCourse, sessionId, cont
             hideWorkingIndicator();
             milestone('courseai_template_log_completed');
             return buildCourse();
+        }
+
+        if (outcome === 'question') {
+            const response = await askForAnswer(data);
+            turn('user', 'user', response.answer);
+            await sendTemplateToolAnswer(sessionId, response.callId, response.answer);
+            await paintStage('connecting');
+            continue;
         }
 
         await paintStage('reviewing');

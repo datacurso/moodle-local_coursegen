@@ -91,6 +91,7 @@ const EVENT_HANDLERS = {
         return '';
     },
     review_needed: () => 'review',
+    ask_user: () => 'question',
     activity_progress_init: (data, progress, paintStage) => {
         resetProgress(progress, data);
         openChecklist(progress);
@@ -114,7 +115,7 @@ const EVENT_HANDLERS = {
  * @param {Object} data
  * @param {Object} progress Mutable {total, done} counters.
  * @param {Function} paintStage Shows one phase label, by key.
- * @returns {string} '' to keep listening, otherwise 'review'/'completed'/'failed'.
+ * @returns {string} '' to keep listening, otherwise a pause or terminal outcome.
  */
 export const applyEvent = (data, progress, paintStage) => {
     const handler = EVENT_HANDLERS[data.type];

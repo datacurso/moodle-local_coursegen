@@ -70,6 +70,24 @@ export const sendTemplateReviewFeedback = (sessionId, action, targetIds, instruc
 }])[0];
 
 /**
+ * Resume one pending ask_user control call with the teacher's answer.
+ *
+ * @param {number} sessionId
+ * @param {string} callId
+ * @param {string} answer
+ * @returns {Promise<Object>}
+ */
+export const sendTemplateToolAnswer = (sessionId, callId, answer) => fetchMany([{
+    methodname: 'local_coursegen_template_review_feedback',
+    args: {
+        sessionid: sessionId,
+        action: 'tool_answer',
+        toolcallid: callId,
+        answer: answer,
+    },
+}])[0];
+
+/**
  * The course settings the generation proposes, for the teacher to review before the course exists.
  *
  * @param {number} sessionId

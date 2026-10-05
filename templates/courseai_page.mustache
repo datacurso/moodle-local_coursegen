@@ -787,12 +787,13 @@
           Only syllabus attach, generate-images toggle, language select and the
           Generate action (still a stub). Values live in tplState
           (template_mode.js) for the future generation payload. }}
-      <div class="card tpl-input-bar" id="tplInputBar" data-region="tpl-input-bar">
+      <div class="card tpl-input-bar" id="tplInputBar" data-region="local_coursegen/template/composer">
         {{! Prompt — how to adapt the template to this course; same composer
             textarea as free mode's compact chat card. Value lives in
             tplState.prompt (template_mode.js). }}
         <textarea
           id="tplPromptInput"
+          data-region="local_coursegen/template/tool-question-input"
           class="compact-prompt-textarea"
           placeholder="{{#str}}courseai_template_prompt_placeholder, local_coursegen{{/str}}"
           rows="3"
@@ -860,7 +861,10 @@
                    stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
                 <path d="M12 19V5M5 12l7-7 7 7"/>
               </svg>
-              <span class="btn-generate__label">{{#str}}courseai_btn_generate, local_coursegen{{/str}}</span>
+              <span class="btn-generate__label" data-region="local_coursegen/template/generate-label">{{#str}}courseai_btn_generate, local_coursegen{{/str}}</span>
+            </button>
+            <button class="btn-generate" data-action="local_coursegen/template/submit-tool-answer" type="button" hidden disabled>
+              <span class="btn-generate__label" data-region="local_coursegen/template/generate-label">{{#str}}courseai_template_answer, local_coursegen{{/str}}</span>
             </button>
           </div>
         </div>
