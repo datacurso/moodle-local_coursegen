@@ -63,10 +63,10 @@ class upstream_stream_client {
      * Open the stream and pass each event on until it ends or is cancelled.
      *
      * @param string $url Service stream URL.
-     * @param string $licensekey License key sent with the request.
+     * @param string $licenseheader License-Key header line sent with the request.
      * @throws \moodle_exception When the service cannot be reached or does not answer 200.
      */
-    public function stream(string $url, string $licensekey): void {
+    public function stream(string $url, string $licenseheader): void {
         global $CFG;
         require_once($CFG->libdir . '/filelib.php');
 
@@ -74,7 +74,7 @@ class upstream_stream_client {
         $curl->setHeader([
             'Accept: text/event-stream',
             'Cache-Control: no-cache',
-            'License-Key: ' . $licensekey,
+            $licenseheader,
         ]);
         $curl->get($url, [], $this->options());
 

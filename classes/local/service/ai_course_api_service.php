@@ -113,12 +113,13 @@ class ai_course_api_service {
     }
 
     /**
-     * Get the license key the service calls are authenticated with.
+     * Get the License-Key header every call to the service carries, built by the provider client.
      *
-     * @return string License key, empty when none is configured.
+     * @return string Header line, for example "License-Key: abc123".
+     * @throws \moodle_exception When no license key is configured.
      */
-    public function get_license_key(): string {
-        return (string) get_config('aiprovider_datacurso', 'licensekey');
+    public function get_license_header(): string {
+        return $this->client->get_license_header();
     }
 
     /**

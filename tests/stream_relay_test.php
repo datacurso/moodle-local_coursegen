@@ -69,11 +69,36 @@ final class stream_relay_test extends \advanced_testcase {
      * @return stream_relay
      */
     private function relay(): stream_relay {
-        $service = $this->createMock(ai_course_api_service::class);
-        $service->method('get_upstream_stream_url')->willReturnCallback([$this, 'upstream_url']);
-        $service->method('get_license_key')->willReturn('license-123');
+        $service = $this->service_double();
+        $service->method('get_license_header')->willReturn('License-Key: license-123');
 
         return new stream_relay($this->authorizer, $service, $this->client, $this->output);
+    }
+
+    /**
+     * Build the relay under test on a service that has no license key to give.
+     *
+     * @return stream_relay
+     */
+    private function relay_without_license(): stream_relay {
+        $service = $this->service_double();
+        $service->method('get_license_header')->willThrowException(
+            new \moodle_exception('invalidlicensekey', 'aiprovider_datacurso')
+        );
+
+        return new stream_relay($this->authorizer, $service, $this->client, $this->output);
+    }
+
+    /**
+     * Service double that builds a recognizable upstream URL.
+     *
+     * @return \PHPUnit\Framework\MockObject\MockObject
+     */
+    private function service_double() {
+        $service = $this->createMock(ai_course_api_service::class);
+        $service->method('get_upstream_stream_url')->willReturnCallback([$this, 'upstream_url']);
+
+        return $service;
     }
 
     /**
@@ -107,16 +132,54 @@ final class stream_relay_test extends \advanced_testcase {
     }
 
     /**
-     * The service URL and license key of the stream type reach the client.
+     * The service URL and license header of the stream type reach the client.
      */
-    public function test_client_gets_the_url_and_license_key_of_the_stream_type(): void {
+    public function test_client_gets_the_url_and_license_header_of_the_stream_type(): void {
         $this->client->script = [['event' => 'done', 'data' => '']];
 
         $this->relay()->run(stream_type::ACTIVITY, 'job-7');
 
         $this->assertSame([
-            ['url' => 'https://ai.example.com/activity/stream/job-7', 'licensekey' => 'license-123'],
+            [
+                'url' => 'https://ai.example.com/activity/stream/job-7',
+                'licenseheader' => 'License-Key: license-123',
+            ],
         ], $this->client->calls);
+    }
+
+    /**
+     * Without a license key the user gets an ordinary error, and nothing is written or requested.
+     */
+    public function test_missing_license_key_stops_the_stream_before_any_request(): void {
+        $this->client->script = [['event' => 'done', 'data' => '']];
+
+        try {
+            $this->relay_without_license()->run(stream_type::COURSE, 'thread-1');
+            $this->fail('The missing key must reach the caller.');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('invalidlicensekey', $e->errorcode);
+        }
+
+        $this->assertSame([], $this->output->written);
+        $this->assertSame([], $this->client->calls);
+    }
+
+    /**
+     * The authorizer still decides first: a refused user is told so, not that the key is missing.
+     */
+    public function test_a_refused_user_is_refused_before_the_license_is_asked(): void {
+        $this->authorizer->method('authorize')->willThrowException(
+            new \moodle_exception('error_no_session_found', 'local_coursegen')
+        );
+
+        try {
+            $this->relay_without_license()->run(stream_type::COURSE, 'thread-1');
+            $this->fail('The refusal must reach the caller.');
+        } catch (\moodle_exception $e) {
+            $this->assertSame('error_no_session_found', $e->errorcode);
+        }
+
+        $this->assertSame([], $this->client->calls);
     }
 
     /**
