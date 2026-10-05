@@ -69,6 +69,15 @@ if (!class_exists(ai_course_api::class)) {
         }
 
         /**
+         * Mirror of datacurso_api_base::get_license_header().
+         *
+         * @return string
+         */
+        public function get_license_header(): string {
+            throw new \coding_exception('aiprovider_datacurso stub: real provider behaviour required.');
+        }
+
+        /**
          * Mirror of datacurso_api_base::download_file().
          *
          * @param mixed $endpoint Endpoint path.

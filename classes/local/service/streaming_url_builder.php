@@ -16,12 +16,18 @@
 
 namespace local_coursegen\local\service;
 
+use local_coursegen\local\streaming\stream_type;
+use moodle_url;
+
 /**
- * Builds SSE streaming URLs for the Datacurso course AI service.
+ * Builds the streaming URLs of the Datacurso course AI service.
  *
  * The streaming endpoint paths are owned by this plugin so they can evolve
  * with the coursegen features without requiring a provider plugin release.
  * The provider only supplies the region-resolved base URL.
+ *
+ * Browsers never receive the service URLs: they read the streams through the relay
+ * of this plugin, whose URL is built here too.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -48,5 +54,24 @@ class streaming_url_builder {
      */
     public static function mod_stream(string $baseurl, string $jobid): string {
         return rtrim($baseurl, '/') . '/activity/stream/' . urlencode($jobid);
+    }
+
+    /**
+     * Build the URL of the plugin relay that streams a generation to the browser.
+     *
+     * The relay is called with the Moodle session key, which the caller adds.
+     *
+     * @param string $streamtype Stream type, one of the stream_type constants.
+     * @param string $threadid External thread identifier.
+     * @return string Relay URL.
+     * @throws \coding_exception When the stream type is unknown.
+     */
+    public static function relay(string $streamtype, string $threadid): string {
+        if (!stream_type::is_valid($streamtype)) {
+            throw new \coding_exception('Unknown stream type: ' . $streamtype);
+        }
+
+        $url = new moodle_url('/local/coursegen/stream.php', ['streamtype' => $streamtype, 'threadid' => $threadid]);
+        return $url->out(false);
     }
 }

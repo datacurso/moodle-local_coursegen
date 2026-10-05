@@ -23,7 +23,7 @@
  *
  * Public API (consumed by courseai.js):
  *   createStreamManager(deps) → { closeStream, openSSEStream }
- *   openSSEStream(url, retryAttempt, streamMode)
+ *   openSSEStream(url, retryAttempt, streamMode, keepPlan, replayEvents)
  *
  * @module     local_coursegen/local/courseai/stream
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -97,7 +97,9 @@ export const createStreamManager = (deps) => {
         state.sseSource = null;
     };
 
-    const openSSEStream = (streamUrl, retryAttempt = 0, streamMode = 'planning', keepPlan = false) => {
+    const openSSEStream = (
+        streamUrl, retryAttempt = 0, streamMode = 'planning', keepPlan = false, replayEvents = []
+    ) => {
         if (!streamUrl) {
             throw new Error(texts.courseai_error_stream_url);
         }
@@ -278,6 +280,7 @@ export const createStreamManager = (deps) => {
             getOrCreateRoundChecklist,
             streamMode,
             keepPlan,
+            replayEvents,
             retryAttempt,
             openSSEStream,
             preservedPhase4Total: () => preservedPhase4Total,

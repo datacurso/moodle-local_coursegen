@@ -14,7 +14,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * EventSource lifecycle management for the SSE stream.
+ * Lifecycle management of the generation stream read through the relay of this plugin.
  *
  * Knows nothing about event types — delegates all routing to routeEvent.
  *
@@ -24,6 +24,8 @@
  */
 
 import {routeEvent} from './handlers';
+import RelaySource from './relay-source';
+import {replayInto} from './replay';
 import {
     hideWorkingIndicator,
     showWorkingIndicator,
@@ -36,13 +38,13 @@ const MAX_STALE_RETRIES = 3;
 const STALE_RETRY_DELAY_MS = 2000;
 
 /**
- * Open an EventSource connection and wire message, done, and error listeners.
+ * Open the relay stream and wire message, done, and error listeners.
  *
  * The ctx.flags.contentReceived flag is reset to false here and set to true
  * by any structural content event handler (section, activity, token, etc.).
  * The 'done' listener uses it to detect stale-done races and retry.
  *
- * @param {string}   streamUrl      SSE endpoint URL
+ * @param {string}   streamUrl      Relay URL given by the server
  * @param {number}   retryAttempt   Current retry count (0 on first open)
  * @param {Object}   ctx            Per-stream context object (see handlers.js for shape)
  * @param {Function} openSSEStream  The outer openSSEStream function (for stale-done retry)
@@ -57,7 +59,7 @@ export const openConnection = (streamUrl, retryAttempt, ctx, openSSEStream) => {
     // Reset per-attempt content flag.
     ctx.flags.contentReceived = false;
 
-    state.sseSource = new EventSource(streamUrl);
+    state.sseSource = new RelaySource(streamUrl);
 
     // Show a working indicator the instant the stream opens, so the left panel is
     // NEVER blank between the prompt turn and the first server status (the first
@@ -70,7 +72,7 @@ export const openConnection = (streamUrl, retryAttempt, ctx, openSSEStream) => {
     }
 
     // Serialize handlers so SSE events are processed STRICTLY in arrival order.
-    // EventSource does NOT await an async 'message' listener, so two events that
+    // The source does NOT await an async 'message' listener, so two events that
     // arrive back-to-back run their async handlers concurrently — and a slower
     // one can finish AFTER a later event and undo its work. Concretely: a fast
     // reorder emits `status` then `review_needed`; handleStatus awaits
@@ -78,6 +80,18 @@ export const openConnection = (streamUrl, retryAttempt, ctx, openSSEStream) => {
     // handleReviewNeeded had already cleared it, leaving it stuck. Chaining each
     // routeEvent on the previous keeps ordering and fixes that class of races.
     let eventQueue = Promise.resolve();
+
+    // A reloaded page first replays what the phase already emitted, ahead of the live events, so
+    // it is drawn the way the live stream drew it.
+    let replay = [];
+    if (Array.isArray(ctx.replayEvents)) {
+        replay = ctx.replayEvents;
+    }
+    if (replay.length > 0) {
+        ctx.flags.contentReceived = true;
+    }
+    eventQueue = replayInto(eventQueue, replay, (data) => routeEvent(data, ctx));
+
     state.sseSource.addEventListener('message', (event) => {
         let data = null;
         try {
@@ -150,13 +164,10 @@ export const openConnection = (streamUrl, retryAttempt, ctx, openSSEStream) => {
     });
 
     state.sseSource.onerror = () => {
-        // EventSource auto-reconnects on TRANSIENT drops (proxy/idle timeout between
-        // sparse planning events). The browser fires 'onerror' with readyState
-        // CONNECTING while it silently retries — this is NOT fatal. Treating it as
-        // fatal (hiding the indicator, enabling chat, showing a connection error)
-        // made the LEFT panel flap to blank every few seconds during slow phases.
-        // Keep everything alive while reconnecting; only CLOSED is a real failure.
-        if (state.sseSource && state.sseSource.readyState === EventSource.CONNECTING) {
+        // The relay source never reconnects by itself: a lost connection is a failure
+        // the user retries.
+        // Only a source that is still CONNECTING is ignored, which is not a failure.
+        if (state.sseSource && state.sseSource.readyState === RelaySource.CONNECTING) {
             return;
         }
         state.isStreaming = false;

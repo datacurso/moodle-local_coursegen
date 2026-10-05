@@ -57,6 +57,7 @@ import {makeCreateCourseCallback} from 'local_coursegen/courseai/bootstrap/creat
 import {makeEmitLog, makeRenderPlanMarkdown} from 'local_coursegen/courseai/bootstrap/ui-helpers';
 import {makeHydratePlan} from 'local_coursegen/courseai/bootstrap/hydrate-plan';
 import {createExecutionControls} from 'local_coursegen/local/courseai/actions/execution-control';
+import {restoreAndTrackUiState, tabStorage} from 'local_coursegen/courseai/bootstrap/ui-state';
 
 /**
  * Initialize the courseai page.
@@ -231,6 +232,7 @@ export const init = async(params) => {
             proposalsUi,
             streamManager,
             actions,
+            createCourseFromSession,
             parseJsonField,
             normalizeSnapshotStatus,
             buildSectionsFromDetailedPlan,
@@ -265,16 +267,31 @@ export const init = async(params) => {
             }
         };
 
+        let resumed = false;
         try {
-            const resumed = await resumeFromSnapshot();
+            resumed = await resumeFromSnapshot();
             if (!resumed) {
                 revertToContextView();
             }
         } catch (resumeError) {
             revertToContextView();
         } finally {
-            setResumeBootLoading(false);
+            // A resumed page decides about its own skeletons: a run that has not drawn its first
+            // section keeps them, as the live stream does.
+            if (!resumed) {
+                setResumeBootLoading(false);
+            }
         }
+
+        // What the user left open and where the user scrolled comes back after a reload, and is kept from
+        // then on. It is not awaited: the page is already usable while it settles.
+        restoreAndTrackUiState({
+            root: document,
+            win: window,
+            storage: tabStorage(window),
+            getSessionId: () => resumeSessionId || Number(state.sessionid || 0),
+            restore: resumed,
+        }).catch(() => undefined);
 
         contextUi.renderGuidelineList();
         stepsUi.updateFlowNav();

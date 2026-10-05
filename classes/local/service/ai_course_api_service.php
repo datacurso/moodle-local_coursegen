@@ -18,6 +18,7 @@ namespace local_coursegen\local\service;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
 use local_coursegen\local\api_client_factory;
+use local_coursegen\local\streaming\stream_type;
 use stored_file;
 use stdClass;
 
@@ -68,23 +69,57 @@ class ai_course_api_service {
     }
 
     /**
-     * Get the streaming URL for a given activity generation thread/job.
+     * Get the URL the browser reads the stream of an activity generation job from.
+     *
+     * It is the relay of this plugin, never the service URL.
      *
      * @param string $jobid External job/thread identifier.
-     * @return string Streaming URL.
+     * @return string Relay URL.
      */
     public function get_mod_streaming_url_for_job(string $jobid): string {
-        return streaming_url_builder::mod_stream($this->client->get_base_url(), $jobid);
+        return streaming_url_builder::relay(stream_type::ACTIVITY, $jobid);
     }
 
     /**
-     * Get the streaming URL for a given course planning session.
+     * Get the URL the browser reads the stream of a course planning session from.
+     *
+     * It is the relay of this plugin, never the service URL.
      *
      * @param string $sessionid External planning thread identifier.
-     * @return string Streaming URL.
+     * @return string Relay URL.
      */
     public function get_course_streaming_url(string $sessionid): string {
-        return streaming_url_builder::course_stream($this->client->get_base_url(), $sessionid);
+        return streaming_url_builder::relay(stream_type::COURSE, $sessionid);
+    }
+
+    /**
+     * Get the service URL of a stream, which only the server side relay opens.
+     *
+     * @param string $streamtype Stream type, one of the stream_type constants.
+     * @param string $threadid External thread identifier.
+     * @return string Service stream URL.
+     * @throws \coding_exception When the stream type is unknown.
+     */
+    public function get_upstream_stream_url(string $streamtype, string $threadid): string {
+        $baseurl = $this->client->get_base_url();
+        if ($streamtype === stream_type::COURSE) {
+            return streaming_url_builder::course_stream($baseurl, $threadid);
+        }
+        if ($streamtype === stream_type::ACTIVITY) {
+            return streaming_url_builder::mod_stream($baseurl, $threadid);
+        }
+
+        throw new \coding_exception('Unknown stream type: ' . $streamtype);
+    }
+
+    /**
+     * Get the License-Key header every call to the service carries, built by the provider client.
+     *
+     * @return string Header line, for example "License-Key: abc123".
+     * @throws \moodle_exception When no license key is configured.
+     */
+    public function get_license_header(): string {
+        return $this->client->get_license_header();
     }
 
     /**
