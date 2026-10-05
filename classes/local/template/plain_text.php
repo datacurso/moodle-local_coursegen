@@ -30,7 +30,8 @@ use moodle_exception;
  */
 final class plain_text {
     /**
-     * Longest text in characters. It is the size of the TEXT column: 4 bytes per character still fit in 65535 bytes.
+     * Longest text in characters. It is far below what a text column holds, and even 4 bytes per character
+     * stay under the 65535 bytes of the smallest text column of the databases Moodle supports.
      */
     public const MAX_LENGTH = 16000;
 
