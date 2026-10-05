@@ -64,6 +64,12 @@ class provider implements
                 'context_type', 'system_instruction_name', 'sectionnum', 'beforemod',
                 'timecreated', 'timemodified',
             ],
+            'local_coursegen_template' => [
+                'courseid', 'name', 'description', 'timecreated', 'timemodified', 'usermodified',
+            ],
+            'local_coursegen_tpl_item' => [
+                'templateid', 'cmid', 'action', 'instruction', 'timemodified',
+            ],
         ];
 
         foreach ($tables as $table => $fields) {
@@ -330,6 +336,7 @@ class provider implements
         // Anonymize the shared configuration instead of destroying it.
         $DB->set_field('local_coursegen_system_instruction', 'usermodified', 0, ['usermodified' => $userid]);
         $DB->set_field('local_coursegen_course_context', 'usermodified', 0, ['usermodified' => $userid]);
+        $DB->set_field('local_coursegen_template', 'usermodified', 0, ['usermodified' => $userid]);
     }
 
     /**
@@ -383,6 +390,7 @@ class provider implements
         $tables = [
             'local_coursegen_system_instruction' => ['usermodified' => $user->id],
             'local_coursegen_course_context' => ['usermodified' => $user->id],
+            'local_coursegen_template' => ['usermodified' => $user->id],
             'local_coursegen_course_sessions' => ['userid' => $user->id],
             'local_coursegen_module_jobs' => ['userid' => $user->id],
         ];
