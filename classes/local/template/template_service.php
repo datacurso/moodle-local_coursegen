@@ -311,5 +311,4 @@ class template_service {
 
         return $this->repository->items_of((int) $template->id);
     }
-
 }
