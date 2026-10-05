@@ -7,3 +7,5 @@ They need no browser and no Moodle:
 
 The loader resolves `local_coursegen/...` module names to `amd/src` and stubs the modules that need a
 browser.
+
+`template-state.test.mjs` covers the logic of the template editor: the two choices of an activity, the checks before saving, the payload and the detection of unsaved changes.
