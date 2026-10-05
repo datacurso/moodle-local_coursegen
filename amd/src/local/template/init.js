@@ -16,11 +16,8 @@
 /**
  * Template configuration — state management for the single-screen flow.
  *
- * Replaces the previous 5-step wizard (course / preview / sections / limits
- * / save, each its own screen with Next/Prev navigation): the admin picks a
- * base course, then everything else — overall limits, per-type defaults,
- * and the course structure review — renders on the SAME page immediately,
- * no further navigation required before Save.
+ * The admin picks a base course, reviews its activities, and saves from the
+ * same page.
  *
  * @module     local_coursegen/local/template/init
  * @copyright  2025 Wilber Narvaez <https://datacurso.com>
@@ -28,7 +25,6 @@
  */
 
 import {renderStepSections, resetSectionsRender} from 'local_coursegen/local/template/step_sections';
-import {renderStepLimits} from 'local_coursegen/local/template/step_limits';
 import {defaultActionForModname} from 'local_coursegen/local/template/type_action_sync';
 import {saveTemplate} from 'local_coursegen/local/template/save_payload';
 import {bindCoursePicker, updateSelectedBanner} from 'local_coursegen/local/template/course_picker_binding';
@@ -43,18 +39,15 @@ const state = {
     selectedCourseId: null, selectedCourse: null,
     courseStructure: null, templateName: '', templateDesc: '', templateId: 0,
     sectionBehavior: {}, activityAction: {}, activityRef: {}, activityPrompt: {}, activityScope: {},
-    // Saved per-section/per-activity configuration when editing an existing
-    // template (see edit_template.php) — seeds the maps above so a re-save
-    // round-trips values that have no visible controls (useasreference,
-    // prompt). The rendered selects already preselect the saved actions
-    // server-side.
+    // Saved settings seed the maps so a re-save preserves legacy values and
+    // activity prompts; action choices are rendered server-side.
     savedSections: {}, savedActivities: {},
     maxSections: 0, noLimit: false, supportedTypes: [], activitySpace: {},
-    namingPattern: '', namingContract: null, namingStart: 1, categories: [],
+    namingPattern: '', namingStart: 1, categories: [],
 };
 /** @type {HTMLElement} Root element. */
 let root = null;
-/** @type {DynamicForm} The type-defaults/limits dynamic form (see init()). */
+/** @type {DynamicForm} The prompt marker guidance form. */
 let configForm = null;
 /**
  * Whether configForm's container already holds a real, server-rendered form
@@ -107,8 +100,8 @@ const renderConfigRegion = async() => {
         return;
     }
 
-    // Type-defaults and limits all live in ONE dynamic form
-    // now (see classes/form/template_config_form.php) — reloaded via
+    // Prompt-marker guidance lives in a dynamic form
+    // (see classes/form/template_config_form.php) — reloaded via
     // core_form/dynamicform whenever the selected course changes, instead
     // of a custom external function shuttling its HTML around. The very
     // first call after page load can skip reloading: edit_template.php
@@ -129,10 +122,6 @@ const renderConfigRegion = async() => {
     const structurePanel = region.querySelector(Selectors.regions.structure);
     await renderStepSections(structurePanel, state, isFreshFromPageLoad);
 
-    // Limits and the naming pattern all live inside the
-    // config form's own container now (see template_config_form.php) —
-    // scope directly to it instead of the whole region.
-    await renderStepLimits(configForm.container, state);
 };
 
 /**
@@ -156,10 +145,6 @@ const initSectionState = () => {
     state.activitySpace = {};
 
     state.courseStructure.forEach(seedSection);
-    // maxSections counts EXTRA sections the teacher may add on top of the
-    // template's own — 0 until the allow-add-sections checkbox is ticked
-    // (see step_limits.js), never the base course's own section count.
-    state.maxSections = 0;
 };
 
 /**
@@ -226,8 +211,10 @@ export const init = (config) => {
     state.savedSections = config.savedsections || {};
     state.savedActivities = config.savedactivities || {};
     state.supportedTypes = config.supportedtypes || [];
-    state.namingPattern = config.defaultnamingpattern || '';
-    state.namingContract = config.namingcontract;
+    state.maxSections = config.legacytemplateconfiguration?.maxsections || 0;
+    state.noLimit = config.legacytemplateconfiguration?.nolimit || false;
+    state.namingPattern = config.legacytemplateconfiguration?.namingpattern || '';
+    state.namingStart = config.legacytemplateconfiguration?.namingstart ?? 1;
 
     const initialCourseId = config.initialcourseid || 0;
     const initialCourseName = config.initialcoursename || '';

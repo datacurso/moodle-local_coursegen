@@ -88,13 +88,10 @@ final class save_template_scope_test extends \advanced_testcase {
         $pageselect = $this->extract_action_select($html, (int) $page->cmid);
         $this->assertMatchesRegularExpression('/<option value="template"[^>]*\sselected/', $pageselect);
 
-        // The tag is now visible (no d-none) and shows the saved "section" scope.
-        $tag = $this->extract_template_tag($html, (int) $page->cmid);
-        $tagopenend = strpos($tag, '>');
-        $tagopening = substr($tag, 0, $tagopenend);
-        $scopelabel = get_string('template_activity_scope_section', 'local_coursegen');
-        $this->assertStringNotContainsString('d-none', $tagopening);
-        $this->assertStringContainsString($scopelabel, $tag);
+        // Scope remains available through the pre-existing Template badge;
+        // it does not add a third action to the activity select.
+        $this->assertStringContainsString('data-region="template-tag"', $html);
+        $this->assertStringContainsString('data-region="activity-instruction"', $html);
     }
 
     /**

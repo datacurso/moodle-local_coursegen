@@ -76,12 +76,9 @@ final class course_sections_layout_test extends \advanced_testcase {
         foreach ($modinfo->get_section_info_all() as $section) {
             $behaviorselect = $this->extract_behavior_select($html, (int) $section->id);
             $this->assertSame(2, substr_count($behaviorselect, '<option'));
-            foreach (['aimodify', 'keep'] as $behavior) {
-                $this->assertStringContainsString('<option value="' . $behavior . '"', $behaviorselect);
-            }
-            $this->assertStringNotContainsString('<option value="exclude"', $behaviorselect);
+            $this->assertStringContainsString('<option value="aimodify"', $behaviorselect);
+            $this->assertStringContainsString('<option value="keep"', $behaviorselect);
             $this->assertMatchesRegularExpression('/<option value="aimodify"[^>]*\sselected/', $behaviorselect);
-            $this->assertStringContainsString('Allow AI modification', $behaviorselect);
         }
     }
 

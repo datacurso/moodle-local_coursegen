@@ -45,7 +45,6 @@
       (never carries data-modname: it must stay outside every selector that
       targets real activities, e.g. selection_bulk.js's checkbox queries or
       type_action_sync.js's default-seeding pass)
-    * data-region="section-behavior" data-sid on each header's behavior select
     * data-region="activity-action" data-id on each row's action select
     * data-region="activity-select" data-id on each row's checkbox
     * data-region="select-all" on each section table's header checkbox
@@ -160,8 +159,7 @@
                     {{#str}} template_activities_count, local_coursegen, {{activitycount}} {{/str}}
                 </span>
             </button>
-            {{! A sibling of the collapse toggle, never inside it: opening
-                the select must not collapse/expand the section. }}
+            {{! Keep section-level behavior controls; they are independent of activity choices. }}
             <select class="custom-select custom-select-sm tpl-section-behavior ml-auto"
                     data-region="section-behavior" data-sid="{{id}}"
                     aria-label="{{#str}} actions, core {{/str}}">
@@ -216,8 +214,6 @@
             <option value="" selected>{{#str}} choosedots, core {{/str}}</option>
             <option value="template">{{#str}} template_activity_template, local_coursegen {{/str}}</option>
             <option value="keep">{{#str}} template_activity_keep, local_coursegen {{/str}}</option>
-            <option value="reference">{{#str}} template_activity_reference, local_coursegen {{/str}}</option>
-            <option value="exclude">{{#str}} template_activity_exclude, local_coursegen {{/str}}</option>
         </select>
     </div>
 {{/hassections}}

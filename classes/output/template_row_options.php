@@ -28,52 +28,35 @@
 
 namespace local_coursegen\output;
 
-use local_coursegen\local\ai_activity_types;
 use local_coursegen\local\models\template_activity;
-use local_coursegen\local\models\template_instance;
 use local_coursegen\local\models\template_section;
-use local_coursegen\local\models\template_space;
-use local_coursegen\local\space\space_rules;
 
 /**
  * Builds the per-row select options for sections_config.
  */
 class template_row_options {
     /**
-     * Build the per-section behavior select options (custom/keep/exclude).
+     * Build the original section behavior control options.
      *
-     * Same action values and lang keys as the previous 3-dot menu items;
-     * "custom" stays the default (preselected) behavior for a new template.
-     *
-     * @param int $sectionid Base course section id.
-     * @param string $behavior The behavior to preselect (a saved one when
-     *     editing an existing template, "custom" otherwise).
-     * @return array Select option contexts.
+     * @param int $sectionid Section id.
+     * @param string $behavior Saved behavior.
+     * @return array
      */
     public static function section_actions(int $sectionid, string $behavior = template_section::BEHAVIOR_AI_MODIFY): array {
-        $valid = template_section::BEHAVIORS;
-        if (!in_array($behavior, $valid, true)) {
+        if (!in_array($behavior, template_section::BEHAVIORS, true)) {
             $behavior = template_section::BEHAVIOR_AI_MODIFY;
         }
-
-        // "exclude" is not offered in the UI any more: it only renders (and
-        // preselects) when an existing template already saved it, so
-        // edit-mode hydration never lies about the stored state. The backend
-        // keeps accepting and processing it untouched.
         $keys = [template_section::BEHAVIOR_AI_MODIFY, template_section::BEHAVIOR_KEEP];
         if ($behavior === template_section::BEHAVIOR_EXCLUDE) {
-            $keys = $valid;
+            $keys = template_section::BEHAVIORS;
         }
-
         $items = [];
         foreach ($keys as $key) {
-            $label = get_string('template_section_' . $key, 'local_coursegen');
-            $tip = get_string('template_section_' . $key . '_tip', 'local_coursegen');
             $items[] = [
                 'value' => $key,
                 'sectionid' => $sectionid,
-                'label' => $label,
-                'tip' => $tip,
+                'label' => get_string('template_section_' . $key, 'local_coursegen'),
+                'tip' => get_string('template_section_' . $key . '_tip', 'local_coursegen'),
                 'active' => $key === $behavior,
             ];
         }
@@ -83,50 +66,21 @@ class template_row_options {
     /**
      * Build the per-activity action select options.
      *
-     * "Space" (the professor brings a file for this activity) is offered only
-     * for a file resource, see space_rules. A space saved on any other type
-     * is read as exclude.
-     *
-     * Template is the only other action gated to a module type in
-     * ai_activity_types::MODNAMES — the real AI service's full content
-     * contract, never a constant scoped to whichever implementation currently
-     * satisfies it. Anything NOT in that contract
-     * only offers Keep / Reference / Exclude. Every row's default is Keep.
-     *
-     * When editing an existing template, the activity's SAVED action wins
-     * over the default — unless it is no longer offered for this row (a
-     * saved "template" on a type the generator cannot handle degrades to
-     * "keep").
+     * Every activity offers only Keep intact and Modify with AI. The saved
+     * Modify with AI action is preserved; legacy action values render as Keep.
      *
      * @param int $cmid Course module id.
-     * @param string $modname Module type name.
+     * @param string $modname Module type name, retained for caller compatibility.
      * @param string|null $savedaction The template's saved action for this
      *     cmid, null when there is none (new template, or a new activity).
      * @return array Select option contexts.
      */
     public static function activity_actions(int $cmid, string $modname, ?string $savedaction = null): array {
-        $keys = [
-            template_activity::ACTION_TEMPLATE,
-            template_activity::ACTION_KEEP,
-            template_activity::ACTION_REFERENCE,
-            template_activity::ACTION_EXCLUDE,
-        ];
-        $cansupporttemplate = in_array($modname, ai_activity_types::MODNAMES, true);
-        if (!$cansupporttemplate) {
-            $keys = [
-                template_activity::ACTION_KEEP,
-                template_activity::ACTION_REFERENCE,
-                template_activity::ACTION_EXCLUDE,
-            ];
-        }
-        if (space_rules::allows($modname)) {
-            $keys[] = template_activity::ACTION_SPACE;
-        }
+        // The editor exposes only the two supported activity decisions. Legacy
+        // values remain valid in storage and generation, but are not presented.
+        $keys = [template_activity::ACTION_KEEP, template_activity::ACTION_TEMPLATE];
         $default = template_activity::ACTION_KEEP;
-        if ($savedaction !== null) {
-            $savedaction = space_rules::effective_action($savedaction, $modname);
-        }
-        if ($savedaction !== null && in_array($savedaction, $keys, true)) {
+        if ($savedaction === template_activity::ACTION_TEMPLATE) {
             $default = $savedaction;
         }
 
@@ -205,30 +159,6 @@ class template_row_options {
     }
 
     /**
-     * Build the render context for one virtual instance row.
-     *
-     * @param template_instance $instance
-     * @return array
-     */
-    public static function instance_row_context(template_instance $instance): array {
-        $name = $instance->get('name');
-        $typelabel = $instance->get('typelabel');
-        $sourcename = $instance->get('sourcename');
-        $modname = $instance->get('modname');
-        $iconurl = self::instance_icon_url($modname);
-        return [
-            'instanceid' => (int) $instance->get('id'),
-            'name' => $name,
-            'typelabel' => $typelabel,
-            'prompt' => (string) $instance->get('prompt'),
-            'sourcecmid' => (int) $instance->get('sourcecmid'),
-            'sourcename' => $sourcename,
-            'modname' => (string) $modname,
-            'iconurl' => $iconurl,
-        ];
-    }
-
-    /**
      * The badge text for a space: "Space · Required" / "Space · Optional".
      *
      * @param bool $required
@@ -243,70 +173,13 @@ class template_row_options {
     }
 
     /**
-     * The display name of a module type, from the site's own language pack.
+     * Resolve a virtual row icon through Moodle's image URL helper.
      *
-     * @param string $modname
-     * @return string The type's name, or the bare module name when that
-     *     module is no longer installed.
-     */
-    public static function module_type_name(string $modname): string {
-        if (\core_component::get_plugin_directory('mod', $modname) === null) {
-            return $modname;
-        }
-        return get_string('modulename', 'mod_' . $modname);
-    }
-
-    /**
-     * Build the render context for one virtual space row.
-     *
-     * @param template_space $space
-     * @return array
-     */
-    public static function space_row_context(template_space $space): array {
-        $modname = (string) $space->get('modname');
-        $required = (bool) $space->get('required');
-        $instruction = (string) $space->get('instruction');
-        $typename = self::module_type_name($modname);
-        $iconurl = self::instance_icon_url($modname);
-        $badge = self::space_badge_label($required);
-        return [
-            'spaceid' => (int) $space->get('id'),
-            'name' => $typename,
-            'typelabel' => $typename,
-            'modname' => $modname,
-            'iconurl' => $iconurl,
-            'required' => $required,
-            'requiredvalue' => (int) $required,
-            'badge' => $badge,
-            'instruction' => $instruction,
-            'hasinstruction' => $instruction !== '',
-        ];
-    }
-
-    /**
-     * Resolve a virtual instance row's icon the exact same way a real
-     * activity's is (cm_info::get_icon_url()'s own generic fallback) —
-     * from the source template's own snapshotted module type, never a
-     * stored URL that could go stale across a theme change.
-     *
-     * Public because the professor-facing structure endpoint
-     * (external\get_template_structure) resolves its instance-row icons
-     * through this exact same rule.
-     *
-     * @param string|null $modname Null for a row saved before this field
-     *     existed.
-     * @return string Empty when $modname is unknown, so the row falls back
-     *     to a generic icon instead of a broken image.
+     * @param string|null $modname Null for older rows.
+     * @return string
      */
     public static function instance_icon_url(?string $modname): string {
-        global $OUTPUT;
-        if ($modname === null || $modname === '') {
-            return '';
-        }
-        $icon = $OUTPUT->image_url('monologo', $modname);
-        if (\core_component::has_monologo_icon('mod', $modname)) {
-            $icon->param('filtericon', 1);
-        }
-        return $icon->out(false);
+        return template_virtual_row_options::instance_icon_url($modname);
     }
+
 }
