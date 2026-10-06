@@ -14,9 +14,9 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * What the template editor knows, without the page: the choices, the checks and the payload to save.
+ * What the template editor knows, without the page: the two choices of an activity, the checks and the payload to save.
  *
- * @module     local_coursegen/template/state
+ * @module     local_coursegen/local/template/items_state
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */

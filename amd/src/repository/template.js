@@ -24,18 +24,6 @@
 import ajax from 'core/ajax';
 
 /**
- * Save a template.
- *
- * @param {{templateid: number, courseid: number, name: string, description: string, items: Array}} payload
- * @return {Promise<{templateid: number, itemcount: number}>}
- */
-export function saveTemplate(payload) {
-    const call = {methodname: 'local_coursegen_save_template', args: payload};
-
-    return ajax.call([call])[0];
-}
-
-/**
  * Delete a template.
  *
  * @param {number} templateid Template to delete, for example 3.
@@ -43,19 +31,6 @@ export function saveTemplate(payload) {
  */
 export function deleteTemplate(templateid) {
     const call = {methodname: 'local_coursegen_delete_template', args: {templateid}};
-
-    return ajax.call([call])[0];
-}
-
-/**
- * Search the courses that can be the base of a template.
- *
- * @param {number} categoryid Category to search in, or 0 for all.
- * @param {string} query Text the course name contains.
- * @return {Promise<Array<{id: number, fullname: string, shortname: string}>>}
- */
-export function searchCourses(categoryid, query) {
-    const call = {methodname: 'local_coursegen_search_template_courses', args: {categoryid, query}};
 
     return ajax.call([call])[0];
 }
