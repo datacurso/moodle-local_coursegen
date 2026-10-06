@@ -18,6 +18,7 @@ namespace local_coursegen;
 
 use core_external\external_api;
 use local_coursegen\external\delete_template;
+use local_coursegen\external\get_course_preview;
 use local_coursegen\external\save_template;
 use local_coursegen\external\search_template_courses;
 
@@ -35,6 +36,7 @@ require_once(__DIR__ . '/fixtures/template_test_helper.php');
  * @covers     \local_coursegen\external\save_template
  * @covers     \local_coursegen\external\delete_template
  * @covers     \local_coursegen\external\search_template_courses
+ * @covers     \local_coursegen\external\get_course_preview
  * @covers     \local_coursegen\local\template\template_access
  */
 final class template_external_test extends \advanced_testcase {
@@ -239,5 +241,106 @@ final class template_external_test extends \advanced_testcase {
         $this->expectException(\required_capability_exception::class);
 
         search_template_courses::execute(0, '');
+    }
+
+    /**
+     * Call the preview web service and clean what it returns.
+     *
+     * @param int $courseid Course whose sections are drawn.
+     * @param int $templateid Template whose saved choices preselect the review, or 0.
+     * @return array What the web service returns.
+     */
+    private function call_preview(int $courseid, int $templateid = 0): array {
+        $result = get_course_preview::execute($courseid, $templateid);
+        $definition = get_course_preview::execute_returns();
+
+        return external_api::clean_returnvalue($definition, $result);
+    }
+
+    /**
+     * The preview draws the sections of the course with every activity kept.
+     */
+    public function test_preview_draws_the_sections_of_the_course(): void {
+        $this->setAdminUser();
+        [$course, $page, $quiz] = $this->make_course();
+
+        $returned = $this->call_preview((int) $course->id);
+
+        $this->assertSame((int) $course->id, $returned['courseid']);
+        $this->assertSame($course->shortname, $returned['shortname']);
+        $this->assertStringContainsString('data-for="cmitem" data-id="' . $page . '"', $returned['html']);
+        $this->assertStringContainsString('data-for="cmitem" data-id="' . $quiz . '"', $returned['html']);
+        $this->assertSame(0, preg_match('/<option value="ai"[^>]* selected/', $returned['html']));
+    }
+
+    /**
+     * The preview preselects what the template saved for each activity.
+     */
+    public function test_preview_preselects_what_the_template_saved(): void {
+        $this->setAdminUser();
+        [$course, $page] = $this->make_course();
+        $saved = $this->call_save($course, [['cmid' => $page, 'action' => 'ai', 'instruction' => 'Shorter']]);
+
+        $returned = $this->call_preview((int) $course->id, $saved['templateid']);
+
+        $this->assertSame(1, preg_match('/<option value="ai"[^>]* selected/', $returned['html']));
+        $this->assertStringContainsString('Shorter</textarea>', $returned['html']);
+    }
+
+    /**
+     * A course that does not exist cannot be previewed.
+     */
+    public function test_preview_rejects_a_course_that_does_not_exist(): void {
+        $this->setAdminUser();
+
+        $this->expectException(\moodle_exception::class);
+
+        $this->call_preview(987654);
+    }
+
+    /**
+     * A template that does not exist cannot be previewed.
+     */
+    public function test_preview_rejects_a_template_that_does_not_exist(): void {
+        $this->setAdminUser();
+        [$course] = $this->make_course();
+
+        $this->expectException(\moodle_exception::class);
+
+        $this->call_preview((int) $course->id, 987654);
+    }
+
+    /**
+     * Users without the capability cannot preview, and neither can a manager who cannot see the course.
+     */
+    public function test_preview_needs_the_capability_and_the_course(): void {
+        [$course] = $this->make_course();
+        $student = $this->getDataGenerator()->create_user();
+        $this->setUser($student);
+        try {
+            $this->call_preview((int) $course->id);
+            $this->fail('A user without the capability must be rejected.');
+        } catch (\required_capability_exception $exception) {
+            $this->assertStringContainsString('managetemplates', $exception->getMessage());
+        }
+
+        $manager = $this->make_template_manager();
+        $this->setUser($manager);
+
+        $this->expectException(\required_capability_exception::class);
+
+        $this->call_preview((int) $course->id);
+    }
+
+    /**
+     * Anonymous users and guests cannot preview.
+     */
+    public function test_preview_rejects_guest_and_anonymous(): void {
+        [$course] = $this->make_course();
+        $this->setGuestUser();
+
+        $this->expectException(\required_capability_exception::class);
+
+        $this->call_preview((int) $course->id);
     }
 }

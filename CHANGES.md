@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100603
+
+### Changed
+
+- **The template editor is the page it was before, with only two choices per activity**  
+  The page that configures a template went back to its previous layout: the category and course pickers, the name and description, one collapsible card per section with its number of activities, select all, the bulk bar, Save and the warning about unsaved changes. The only difference is the choices of each activity: Keep intact, or Modify with AI with an optional instruction under the row. The extra options, the scope dialog, the spaces for the teacher and the section settings that the simplified editor added are gone.
+
 ## [2.0.10] - 2026100602
 
 ### Changed
