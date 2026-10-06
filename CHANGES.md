@@ -2,6 +2,31 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100601
+
+### Added
+
+- **A course made from a template runs on the template agent of the AI service**  
+  Starting a generation from a saved template creates the run at the template agent endpoints and follows it through the relay of the plugin, so the browser never talks to the service and the license travels on every call. The steps the AI takes show in the conversation as lines, and a step that fails shows its reason.
+- **The AI can stop and ask the teacher**  
+  When the run pauses on a question, the page shows a card with what the AI asks and the control that answers it: a file picker, a text box or a list of options. The answer is sent to the service and the run goes on from where it was. A file the teacher chooses is read from the draft area, sent to the service and deleted from the draft area whether it worked or not, and an empty file, a file over 25 MB or a blank answer is refused before anything is sent.
+- **A reloaded page goes on with the generation**  
+  A page reloaded in the middle of a template generation repaints the steps already shown, shows the pending question again exactly as it was and goes on with the stream. A run that stopped for a reason a new attempt may fix shows a button that continues it from its last checkpoint.
+- **The file the teacher brings goes in the new course**  
+  A resource whose file the run replaced is copied from the template and its file is swapped for the one the teacher brought, so the page that links it points to the new file. If the file cannot be put in the resource, the course is still created and a warning names the file.
+
+### Changed
+
+- **The activity uid of a template run is its course module id**  
+  The rows of the structure light up as the steps of the run come, and the links between activities resolve to the activities of the new course.
+- **A syllabus cannot be attached to a template generation yet**  
+  It is refused with a message instead of being dropped in silence, because the template agent does not read documents yet.
+
+### Removed
+
+- **The review of the generated activities before the course is created**  
+  The template agent has no review step. The accept and adjust actions, their web service and their screen are gone, together with the gate that held the generation back while the template flow was rebuilt and the scanner of reference markers.
+
 ## [2.0.10] - 2026100600
 
 ### Changed

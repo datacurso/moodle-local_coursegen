@@ -115,8 +115,10 @@ trait get_template_structure_rows {
     private static function activity_row(\cm_info $cm, ?\stdClass $item, $output): array {
         $modified = ($item !== null && $item->action === template_actions::AI);
         $action = 'keep';
+        $generationuid = '';
         if ($modified) {
             $action = 'modify';
+            $generationuid = (string) $cm->id;
         }
         $icon = $output->image_icon('monologo', $cm->modname, 'mod_' . $cm->modname, ['class' => 'icon activityicon']);
         return [
@@ -130,7 +132,7 @@ trait get_template_structure_rows {
             'action'  => $action,
             'isinstance' => false,
             'aigenerated' => $modified,
-            'generationuid' => '',
+            'generationuid' => $generationuid,
         ];
     }
 

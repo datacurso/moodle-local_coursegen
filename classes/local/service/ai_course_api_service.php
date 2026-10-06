@@ -109,7 +109,7 @@ class ai_course_api_service {
             return streaming_url_builder::mod_stream($baseurl, $threadid);
         }
         if ($streamtype === stream_type::TEMPLATE) {
-            return streaming_url_builder::course_template_stream($baseurl, $threadid);
+            return streaming_url_builder::template_agent_stream($baseurl, $threadid);
         }
 
         throw new \coding_exception('Unknown stream type: ' . $streamtype);

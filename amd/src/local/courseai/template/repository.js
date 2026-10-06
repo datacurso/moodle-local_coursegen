@@ -22,6 +22,7 @@
  */
 
 import {call as fetchMany} from 'core/ajax';
+import Notification from 'core/notification';
 
 /**
  * Fetch a template's guided-form structure: its sections and activities, the
@@ -58,22 +59,38 @@ export const startTemplateGeneration = (templateId, prompt, draftItemId) => fetc
  * @param {string} instruction What to change, in the professor's own words.
  * @returns {Promise<Object>} {status}
  */
-export const sendTemplateReviewFeedback = (sessionId, action, targetIds, instruction) => fetchMany([{
-    methodname: 'local_coursegen_template_review_feedback',
+/**
+ * Answer the question the template run is paused on.
+ *
+ * @param {number} sessionId Local session id, for example 139.
+ * @param {string} callId Call id of the question, for example "c4".
+ * @param {string} kind Kind of answer: "file", "text" or "choice".
+ * @param {{draftItemId: number, text: string, choice: string}} answer What the teacher answered.
+ * @returns {Promise<Object>} The status of the answer.
+ */
+export const answerTemplateQuestion = (sessionId, callId, kind, answer) => fetchMany([{
+    methodname: 'local_coursegen_answer_template_question',
     args: {
         sessionid: sessionId,
-        action: action,
-        targetids: targetIds || [],
-        instruction: instruction || '',
+        callid: callId,
+        kind: kind,
+        draftitemid: answer.draftItemId || 0,
+        text: answer.text || '',
+        choice: answer.choice || '',
     },
 }])[0];
 
 /**
- * The course settings the generation proposes, for the teacher to review before the course exists.
+ * Read the state of the run of a session, to repaint a reloaded page.
  *
- * @param {number} sessionId
- * @returns {Promise<Object>} {fullname, shortname, category, categories}
+ * @param {number} sessionId Local session id, for example 139.
+ * @returns {Promise<Object>} status, threadid, streamurl, pendingquestion and progressevents.
  */
+export const getTemplateAgentState = (sessionId) => fetchMany([{
+    methodname: 'local_coursegen_get_template_agent_state',
+    args: {sessionid: sessionId},
+}])[0];
+
 export const getTemplateCourseSettings = (sessionId) => fetchMany([{
     methodname: 'local_coursegen_get_template_course_settings',
     args: {recordid: sessionId},
@@ -87,12 +104,18 @@ export const getTemplateCourseSettings = (sessionId) => fetchMany([{
  * @param {Object} overrides What the teacher chose at the review: {fullname, shortname, category}, each optional.
  * @returns {Promise<Object>} {success, courseid, fullname, shortname, message, courseurl}
  */
-export const finishTemplateGeneration = (sessionId, overrides) => fetchMany([{
-    methodname: 'local_coursegen_finish_template_generation',
-    args: {
-        sessionid: sessionId,
-        fullname: overrides.fullname || '',
-        shortname: overrides.shortname || '',
-        category: overrides.category || 0,
-    },
-}])[0];
+export const finishTemplateGeneration = async(sessionId, overrides) => {
+    const response = await fetchMany([{
+        methodname: 'local_coursegen_finish_template_generation',
+        args: {
+            sessionid: sessionId,
+            fullname: overrides.fullname || '',
+            shortname: overrides.shortname || '',
+            category: overrides.category || 0,
+        },
+    }])[0];
+    if (response && response.warnings) {
+        Notification.addNotification({message: response.warnings, type: 'warning'});
+    }
+    return response;
+};

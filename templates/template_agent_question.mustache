@@ -1,0 +1,85 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/template_agent_question
+
+    The question the AI pauses a template generation on, with the control that answers it: a file picker, a text
+    box or a list of options.
+
+    Classes required for JS:
+    * none
+
+    Data attributes required for JS:
+    * data-region="local_coursegen/template-agent/question" on the card, with data-call-id of the question
+    * data-action="local_coursegen/template-agent/pick-file" on the button that opens the file picker
+    * data-action="local_coursegen/template-agent/send-answer" on the button that sends the answer
+    * data-region="file-name", "text-input" and "error" inside the card
+
+    Context variables required for this template:
+    * callid string - Call id of the question, for example "c4"
+    * question string - What the AI asks, for example "Which file replaces the guide?"
+    * askfile bool - The answer is a file
+    * asktext bool - The answer is a text
+    * askchoice bool - The answer is one of the options
+    * options array - The options of a choice, each with value string and index int
+
+    Example context (json):
+    {
+        "callid": "c4",
+        "question": "Which file replaces the weekly guide?",
+        "askfile": true,
+        "asktext": false,
+        "askchoice": false,
+        "options": []
+    }
+}}
+<div class="local_coursegen-template_agent_question card my-3 border-primary"
+     data-region="local_coursegen/template-agent/question" data-call-id="{{callid}}"
+     role="group" aria-labelledby="{{uniqid}}-title">
+    <div class="card-body">
+        <h5 class="card-title h6" id="{{uniqid}}-title">{{#str}} template_agent_question_title, local_coursegen {{/str}}</h5>
+        <p class="card-text">{{question}}</p>
+        {{#askfile}}
+        <div class="d-flex align-items-center flex-wrap mb-2">
+            <button type="button" class="btn btn-secondary me-2" data-action="local_coursegen/template-agent/pick-file">
+                {{#str}} template_agent_question_file_button, local_coursegen {{/str}}
+            </button>
+            <span class="text-muted" data-region="file-name" aria-live="polite"></span>
+        </div>
+        {{/askfile}}
+        {{#asktext}}
+        <label class="visually-hidden" for="{{uniqid}}-text">{{#str}} template_agent_question_text_label, local_coursegen {{/str}}</label>
+        <textarea class="form-control mb-2" id="{{uniqid}}-text" rows="3" data-region="text-input"></textarea>
+        {{/asktext}}
+        {{#askchoice}}
+        <fieldset class="mb-2">
+            <legend class="visually-hidden">{{#str}} template_agent_question_choice_label, local_coursegen {{/str}}</legend>
+            {{#options}}
+            <div class="form-check">
+                <input class="form-check-input" type="radio" name="{{uniqid}}-choice" id="{{uniqid}}-choice-{{index}}"
+                       value="{{value}}" data-region="choice-input">
+                <label class="form-check-label" for="{{uniqid}}-choice-{{index}}">{{value}}</label>
+            </div>
+            {{/options}}
+        </fieldset>
+        {{/askchoice}}
+        <div class="alert alert-danger" role="alert" data-region="error" hidden></div>
+        <button type="button" class="btn btn-primary" data-action="local_coursegen/template-agent/send-answer">
+            {{#str}} template_agent_question_send, local_coursegen {{/str}}
+        </button>
+    </div>
+</div>

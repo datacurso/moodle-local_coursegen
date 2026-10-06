@@ -27,62 +27,66 @@ namespace local_coursegen\external;
 use context_system;
 use external_api;
 use external_function_parameters;
-use external_multiple_structure;
 use external_single_structure;
 use external_value;
 use local_coursegen\local\models\course_session;
-use local_coursegen\local\service\template_ai_api_service;
+use local_coursegen\local\service\template_question_answerer;
 
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir . '/externallib.php');
 
 /**
- * One answer to the review of the generated course that a run is waiting on.
+ * Answers the question a template run is paused on.
  *
- * A template fixes the structure of the course, so the professor is offered
- * two answers and no more: accept the generated course as it stands, or ask
- * for one or more activities to be generated again. Adding, deleting or reordering, which
- * free course creation allows at this same point, would be undoing the
- * template.
+ * @package    local_coursegen
+ * @copyright  2026 Wilber Narvaez <https://datacurso.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class template_review_feedback extends external_api {
+class answer_template_question extends external_api {
     /**
-     * Parameters.
+     * Describes the parameters of execute.
      *
      * @return external_function_parameters
      */
     public static function execute_parameters() {
         return new external_function_parameters([
+            // Example: 139.
             'sessionid' => new external_value(PARAM_INT, 'Local session id'),
-            'action' => new external_value(PARAM_ALPHAEXT, 'accept or replan_activity'),
-            'targetids' => new external_multiple_structure(
-                new external_value(PARAM_ALPHANUMEXT, 'Activity uid to replan'),
-                'Activities to replan; empty means all of them',
-                VALUE_DEFAULT,
-                []
-            ),
-            'instruction' => new external_value(PARAM_TEXT, 'What to change', VALUE_DEFAULT, ''),
+            // Example: c4.
+            'callid' => new external_value(PARAM_ALPHANUMEXT, 'Call id of the pending question'),
+            // Example: file.
+            'kind' => new external_value(PARAM_ALPHA, 'Kind of answer: file, text or choice'),
+            // Example: 912345678.
+            'draftitemid' => new external_value(PARAM_INT, 'Draft item id of the file, 0 for none', VALUE_DEFAULT, 0),
+            // Example: Yes, use the second unit.
+            'text' => new external_value(PARAM_RAW, 'Text of a text answer', VALUE_DEFAULT, ''),
+            // Example: Unit 2.
+            'choice' => new external_value(PARAM_RAW, 'Option of a choice answer', VALUE_DEFAULT, ''),
         ]);
     }
 
     /**
-     * Send the answer to the service.
+     * Answer the pending question of the run of a session.
      *
-     * @param int $sessionid
-     * @param string $action
-     * @param string[] $targetids
-     * @param string $instruction
-     * @return array
+     * @param int $sessionid Local session id.
+     * @param string $callid Call id of the pending question.
+     * @param string $kind Kind of answer.
+     * @param int $draftitemid Draft item id of the file.
+     * @param string $text Text of a text answer.
+     * @param string $choice Option of a choice answer.
+     * @return array The status of the answer.
      */
-    public static function execute($sessionid, $action, $targetids = [], $instruction = '') {
+    public static function execute($sessionid, $callid, $kind, $draftitemid = 0, $text = '', $choice = '') {
         global $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'sessionid' => $sessionid,
-            'action' => $action,
-            'targetids' => $targetids,
-            'instruction' => $instruction,
+            'callid' => $callid,
+            'kind' => $kind,
+            'draftitemid' => $draftitemid,
+            'text' => $text,
+            'choice' => $choice,
         ]);
 
         $context = context_system::instance();
@@ -94,19 +98,22 @@ class template_review_feedback extends external_api {
             throw new \moodle_exception('nopermissions', 'error', '', 'answer this generation');
         }
 
-        $intent = ['action' => $params['action']];
-        if ($params['action'] === 'replan_activity') {
-            $intent['target_ids'] = array_values($params['targetids']);
-            $intent['instruction'] = $params['instruction'];
-        }
-
-        (new template_ai_api_service())->send_feedback($session->get('session_id'), $intent);
+        $threadid = (string) $session->get('session_id');
+        $answerer = new template_question_answerer();
+        $answerer->answer(
+            $threadid,
+            $params['callid'],
+            $params['kind'],
+            (int) $params['draftitemid'],
+            (string) $params['text'],
+            (string) $params['choice']
+        );
 
         return ['status' => 'stored'];
     }
 
     /**
-     * Returns.
+     * Describes the value execute returns.
      *
      * @return external_single_structure
      */

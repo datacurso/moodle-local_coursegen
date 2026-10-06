@@ -32,8 +32,6 @@ use external_value;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\template_ai_api_service;
 use local_coursegen\local\service\template_export_service;
-use local_coursegen\local\service\template_generation_gate;
-use local_coursegen\local\service\template_reference_uploads;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -77,23 +75,13 @@ class start_template_generation extends external_api {
         self::validate_context($context);
         require_capability('local/coursegen:createtemplatecoursewithai', $context);
         if ($params['draftitemid'] > 0) {
-            require_capability('local/coursegen:uploadcoursesyllabus', $context);
+            throw new \moodle_exception('templatesyllabusunsupported', 'local_coursegen');
         }
-        template_generation_gate::assert_open();
 
         $payload = template_export_service::build_init_payload($params['templateid'], $params['prompt']);
 
-        // Read first: a reference marker with no usable target is refused before a session exists.
-        $referenceuploads = template_reference_uploads::plan($payload);
-
         $api = new template_ai_api_service();
         $threadid = $api->init($payload);
-        template_reference_uploads::send($api, $threadid, $referenceuploads);
-
-        $file = self::draft_file($params['draftitemid']);
-        if ($file !== null) {
-            $api->upload_reference_file($threadid, $file);
-        }
 
         // The exact payload the run was given, kept alongside the session:
         // a preview reading it back later must see what the run saw, not the
@@ -118,27 +106,6 @@ class start_template_generation extends external_api {
             'sessionid' => (int) $session->get('id'),
             'streamurl' => $api->stream_url($threadid),
         ];
-    }
-
-    /**
-     * The first real file in a draft area, or null when there is none.
-     *
-     * @param int $draftitemid
-     * @return \stored_file|null
-     */
-    private static function draft_file(int $draftitemid): ?\stored_file {
-        if ($draftitemid <= 0) {
-            return null;
-        }
-        global $USER;
-        $usercontext = \context_user::instance($USER->id);
-        $fs = get_file_storage();
-        $files = $fs->get_area_files($usercontext->id, 'user', 'draft', $draftitemid, 'itemid', false);
-        $file = reset($files);
-        if (!$file) {
-            return null;
-        }
-        return $file;
     }
 
     /**

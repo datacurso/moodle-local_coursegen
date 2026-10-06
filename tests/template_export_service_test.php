@@ -114,7 +114,7 @@ final class template_export_service_test extends \advanced_testcase {
         $this->assertContains('keep', $behaviors);
     }
 
-    public function test_every_uid_in_the_payload_is_unique(): void {
+    public function test_the_uid_of_every_activity_is_its_course_module_id(): void {
         [$course] = $this->make_course();
         $templateid = $this->save_items($course, []);
 
@@ -124,7 +124,9 @@ final class template_export_service_test extends \advanced_testcase {
         $unique = array_unique($uids);
         $expected = count($uids);
         $this->assertCount($expected, $unique);
-        $this->assertMatchesRegularExpression('/^[0-9a-f]{12}$/', $uids[0]);
+        $cmids = array_map('strval', array_column($payload['activities'], 'cmid'));
+        $this->assertSame($cmids, $uids);
+        $this->assertMatchesRegularExpression('/^[0-9]+$/', $uids[0]);
     }
 
     public function test_the_entry_of_an_activity_names_its_type_section_and_name(): void {

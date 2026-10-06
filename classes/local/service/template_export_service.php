@@ -129,7 +129,7 @@ class template_export_service {
             'modname' => $cm->modname,
             'name' => $cm->name,
             'section' => (int) $cm->sectionnum,
-            'uid' => template_export_uids::random_uid(),
+            'uid' => (string) $cm->id,
             'cmid' => (int) $cm->id,
             'parameters' => template_activity_export::parameters_for($cm),
             'template_behavior' => template_export_behavior::for_item($item),

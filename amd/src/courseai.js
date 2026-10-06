@@ -132,6 +132,7 @@ export const init = async(params) => {
         const state = createInitialState({defaultLang, guidelines, languages});
         state.templates = coursetemplates || [];
         state.selectedTemplateId = null;
+        state.templateResume = params.templateresume || null;
 
         // Wire template mode switching before awaiting anything below: it
         // only needs `state`, not translated strings, and the Free/Template
@@ -142,6 +143,9 @@ export const init = async(params) => {
         // The page's actions do not exist yet; the template's finish step
         // reads them from here once the generation is over.
         const templateHost = {actions: null};
+        templateHost.ready = new Promise((resolve) => {
+            templateHost.markReady = resolve;
+        });
         wireTemplateMode(state, templateHost);
 
         const texts = await loadCourseaiStrings();
@@ -267,6 +271,7 @@ export const init = async(params) => {
         });
 
         templateHost.actions = actions;
+        templateHost.markReady();
         actions.bindEvents();
 
         const executionControls = createExecutionControls({state, elements, streamManager, texts, emitLog});
