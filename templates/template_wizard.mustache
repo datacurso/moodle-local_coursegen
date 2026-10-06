@@ -1,0 +1,85 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/template_wizard
+
+    Template configuration — one screen, no step navigation. Pick a base
+    course, name the template and choose, for every activity of the course,
+    whether it stays intact or the AI modifies it — all on this same page —
+    and Save. All initial state rendered server-side, no JS flash.
+
+    Example context (json):
+    {
+        "sesskey": "abc",
+        "haspreview": false,
+        "hassectionsconfig": false
+    }
+}}
+<div data-region="template-wizard">
+
+    {{! Course selection — standard category/course autocomplete pair, the
+        same pattern as the "Category" field on Moodle's own course settings
+        form (course/edit_form.php), not a custom-built browsing screen. }}
+    <div data-region="step-panel" data-step="1">
+        <h4>{{#str}}template_select_course, local_coursegen{{/str}}</h4>
+        <p class="text-muted">{{#str}}template_select_course_desc, local_coursegen{{/str}}</p>
+
+        <div class="alert alert-success mb-3 {{^haspreview}}d-none{{/haspreview}}" data-region="selected-banner">
+            <div class="d-flex align-items-center">
+                {{#pix}}i/valid, core{{/pix}}
+                <span class="ml-2">
+                    {{#str}}template_selected_course, local_coursegen{{/str}}
+                    <strong data-region="selected-name">{{initialcoursename}}</strong>
+                    (<span data-region="selected-short">{{initialcourseshortname}}</span>)
+                </span>
+                <a href="{{wwwroot}}/course/view.php?id={{initialcourseid}}" target="_blank"
+                   class="btn btn-sm btn-link" data-region="selected-link">
+                    {{#pix}}i/externallink, core{{/pix}}
+                    {{#str}}template_view_course, local_coursegen{{/str}}
+                </a>
+            </div>
+        </div>
+
+        <div data-region="course-picker-form">{{{courseformhtml}}}</div>
+    </div>
+
+    {{! Configuration — only meaningful once a course is selected }}
+    <div data-region="config" class="{{^haspreview}}d-none{{/haspreview}}">
+        <hr class="my-4">
+
+        {{! Name — first, so the template has one before anything else about
+            it is configured }}
+        <h4>{{#str}}template_summary_title, local_coursegen{{/str}}</h4>
+        {{{nameformhtml}}}
+
+        <hr class="my-4">
+
+        {{! Course structure — what the AI does with each activity }}
+        <h4>{{#str}}template_configure_sections, local_coursegen{{/str}}</h4>
+        <p class="text-muted">{{#str}}template_configure_sections_desc, local_coursegen{{/str}}</p>
+        <div data-region="structure">
+            <div data-region="sections-config">{{{sectionsconfightml}}}</div>
+        </div>
+
+        <div class="d-flex justify-content-end mt-3">
+            <button class="btn btn-primary" data-action="save">
+                {{#pix}}e/save, core{{/pix}}
+                {{#str}}template_save, local_coursegen{{/str}}
+            </button>
+        </div>
+    </div>
+</div>

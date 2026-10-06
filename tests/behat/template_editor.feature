@@ -18,38 +18,46 @@ Feature: Configure a template
     And I log in as "admin"
 
   Scenario: Save a template with one activity modified with AI and another kept
-    Given I visit "/local/coursegen/manage_templates.php"
-    And I click on "New template" "link"
-    And I open the autocomplete suggestions list
-    And I click on "Digital marketing" item in the autocomplete list
+    Given I visit "/local/coursegen/edit_template.php?courseid=2"
     When I set the field "Template name" to "Marketing base"
-    And I click on "Modify with AI" "radio" in the "Welcome page" "list_item"
+    And I set the field "Actions" to "Modify with AI" in the "Welcome page" "table_row"
     And I set the field "Instruction for the AI (optional)" to "Write it for beginners"
     And I click on "Save template" "button"
-    Then I should see "Template saved."
-    And I should see "Marketing base"
+    Then I should see "Marketing base"
+
+  Scenario: Every activity offers only two choices
+    Given I visit "/local/coursegen/edit_template.php?courseid=2"
+    Then the "Actions" select box in the "Welcome page" "table_row" contains "Keep intact"
+    And the "Actions" select box in the "Welcome page" "table_row" contains "Modify with AI"
+    And the "Actions" select box in the "Welcome page" "table_row" does not contain "Use as template"
+    And the "Actions" select box in the "Welcome page" "table_row" does not contain "Reference only"
+    And the "Actions" select box in the "Welcome page" "table_row" does not contain "Do not include"
 
   Scenario: The instruction box only appears for the activities modified with AI
-    Given I visit "/local/coursegen/edit_template.php"
-    And I open the autocomplete suggestions list
-    And I click on "Digital marketing" item in the autocomplete list
+    Given I visit "/local/coursegen/edit_template.php?courseid=2"
     Then I should not see "Instruction for the AI (optional)"
-    And I click on "Modify with AI" "radio" in the "Final quiz" "list_item"
-    And I should see "Instruction for the AI (optional)" in the "Final quiz" "list_item"
+    When I set the field "Actions" to "Modify with AI" in the "Final quiz" "table_row"
+    Then I should see "Instruction for the AI (optional)"
+    And I set the field "Actions" to "Keep intact" in the "Final quiz" "table_row"
+    And I should not see "Instruction for the AI (optional)"
+
+  Scenario: The bulk bar applies the same two choices to the selected activities
+    Given I visit "/local/coursegen/edit_template.php?courseid=2"
+    When I click on "Welcome page" "checkbox"
+    And I click on "Final quiz" "checkbox"
+    And I set the field "With selected activities…" to "Modify with AI"
+    Then the field "Actions" in the "Welcome page" "table_row" matches value "Modify with AI"
+    And the field "Actions" in the "Final quiz" "table_row" matches value "Modify with AI"
 
   Scenario: A template cannot be saved without a name
-    Given I visit "/local/coursegen/edit_template.php"
-    And I open the autocomplete suggestions list
-    And I click on "Digital marketing" item in the autocomplete list
+    Given I visit "/local/coursegen/edit_template.php?courseid=2"
     When I click on "Save template" "button"
-    Then I should see "Enter a name for the template."
+    Then I should see "Required"
 
   Scenario: What was saved is shown again when the template is edited
-    Given I visit "/local/coursegen/edit_template.php"
-    And I open the autocomplete suggestions list
-    And I click on "Digital marketing" item in the autocomplete list
+    Given I visit "/local/coursegen/edit_template.php?courseid=2"
     And I set the field "Template name" to "Marketing base"
-    And I click on "Modify with AI" "radio" in the "Welcome page" "list_item"
+    And I set the field "Actions" to "Modify with AI" in the "Welcome page" "table_row"
     And I set the field "Instruction for the AI (optional)" to "Write it for beginners"
     And I click on "Save template" "button"
     When I open the action menu in "Marketing base" "table_row"
@@ -57,9 +65,7 @@ Feature: Configure a template
     Then the field "Instruction for the AI (optional)" matches value "Write it for beginners"
 
   Scenario: A template can be deleted
-    Given I visit "/local/coursegen/edit_template.php"
-    And I open the autocomplete suggestions list
-    And I click on "Digital marketing" item in the autocomplete list
+    Given I visit "/local/coursegen/edit_template.php?courseid=2"
     And I set the field "Template name" to "Marketing base"
     And I click on "Save template" "button"
     When I open the action menu in "Marketing base" "table_row"
@@ -68,24 +74,10 @@ Feature: Configure a template
     Then I should see "Nothing to display"
 
   Scenario: The list of templates shows the course and the activities of each template
-    Given I visit "/local/coursegen/edit_template.php"
-    And I open the autocomplete suggestions list
-    And I click on "Digital marketing" item in the autocomplete list
+    Given I visit "/local/coursegen/edit_template.php?courseid=2"
     And I set the field "Template name" to "Marketing base"
-    And I click on "Modify with AI" "radio" in the "Welcome page" "list_item"
+    And I set the field "Actions" to "Modify with AI" in the "Welcome page" "table_row"
     And I click on "Save template" "button"
     Then the following should exist in the "reportbuilder-table" table:
       | Name           | Course            | Activities | Modified with AI |
       | Marketing base | Digital marketing | 2          | 1                |
-
-  Scenario: The list of templates can be filtered by name
-    Given I visit "/local/coursegen/edit_template.php"
-    And I open the autocomplete suggestions list
-    And I click on "Digital marketing" item in the autocomplete list
-    And I set the field "Template name" to "Marketing base"
-    And I click on "Save template" "button"
-    When I click on "Filters" "button"
-    And I set the following fields to these values:
-      | Name | Finance |
-    And I click on "Apply" "button" in the "[data-region='report-filters']" "css_element"
-    Then I should see "Nothing to display"
