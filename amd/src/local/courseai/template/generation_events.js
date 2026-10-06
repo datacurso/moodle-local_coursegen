@@ -27,7 +27,7 @@
  */
 
 import {addActivity, closeActivity, openChecklist} from 'local_coursegen/local/courseai/template/generation_checklist';
-import {createSeen, normalizeEvent} from 'local_coursegen/local/courseai/template/agent_events';
+import {createSeen, failureOutcome, normalizeEvent} from 'local_coursegen/local/courseai/template/agent_events';
 import {showToolCall, showToolResult} from 'local_coursegen/local/courseai/template/agent_steps';
 
 const seen = createSeen();
@@ -144,7 +144,7 @@ const EVENT_HANDLERS = {
     activity_progress_done: finishActivity,
     activity_progress_failed: finishActivity,
     completed: () => 'completed',
-    failed: () => 'failed',
+    failed: (data) => failureOutcome(data),
 };
 
 /**
@@ -153,7 +153,7 @@ const EVENT_HANDLERS = {
  * @param {Object} data
  * @param {Object} progress Mutable {total, done} counters.
  * @param {Function} paintStage Shows one phase label, by key.
- * @returns {string} '' to keep listening, otherwise 'question', 'completed' or 'failed'.
+ * @returns {string} '' to keep listening, otherwise 'question', 'retry', 'completed' or 'failed'.
  */
 export const applyEvent = (data, progress, paintStage) => {
     const event = normalizeEvent(data);

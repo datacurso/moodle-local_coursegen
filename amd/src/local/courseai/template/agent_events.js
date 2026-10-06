@@ -124,6 +124,22 @@ export const questionKind = (question) => {
     return 'text';
 };
 
+/**
+ * How a failed event ends the pass: a failure the teacher can try again is a retry, any other is final.
+ *
+ * @param {*} failure The failed event, for example {type: 'failed', retryable: true, message: 'Try again'}.
+ * @returns {string} "retry" or "failed".
+ */
+export const failureOutcome = (failure) => {
+    if (failure === null || typeof failure !== 'object') {
+        return 'failed';
+    }
+    if (failure.retryable === true) {
+        return 'retry';
+    }
+    return 'failed';
+};
+
 const cleanOption = (option) => {
     if (typeof option !== 'string') {
         return '';
