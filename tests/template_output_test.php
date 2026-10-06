@@ -18,7 +18,6 @@ namespace local_coursegen;
 
 use local_coursegen\local\template\template_service;
 use local_coursegen\output\edit_template_page;
-use local_coursegen\output\manage_templates_page;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -31,7 +30,6 @@ require_once(__DIR__ . '/fixtures/template_test_helper.php');
  * @category   test
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers     \local_coursegen\output\manage_templates_page
  * @covers     \local_coursegen\output\edit_template_page
  */
 final class template_output_test extends \advanced_testcase {
@@ -44,44 +42,6 @@ final class template_output_test extends \advanced_testcase {
         parent::setUp();
         $this->resetAfterTest();
         $this->setAdminUser();
-    }
-
-    /**
-     * Without templates the list is empty and offers to create one.
-     */
-    public function test_empty_list(): void {
-        global $OUTPUT;
-        $page = new manage_templates_page();
-
-        $data = $page->export_for_template($OUTPUT);
-
-        $this->assertFalse($data['hastemplates']);
-        $this->assertSame([], $data['templates']);
-        $this->assertStringContainsString('edit_template.php', $data['createurl']);
-    }
-
-    /**
-     * The list shows each template with its counts, and marks a template whose course was deleted.
-     */
-    public function test_list_shows_counts_and_a_missing_course(): void {
-        global $OUTPUT;
-        [$course, $page, $quiz] = $this->make_course();
-        [$gone, $gonepage] = $this->make_course();
-        $service = new template_service();
-        $items = [['cmid' => $page, 'action' => 'ai'], ['cmid' => $quiz, 'action' => 'keep']];
-        $service->save(0, (int) $course->id, 'A template', null, $items, 2);
-        $service->save(0, (int) $gone->id, 'B template', null, [['cmid' => $gonepage, 'action' => 'ai']], 2);
-        delete_course($gone, false);
-        $listpage = new manage_templates_page();
-
-        $data = $listpage->export_for_template($OUTPUT);
-
-        $this->assertTrue($data['hastemplates']);
-        $this->assertSame('A template', $data['templates'][0]['name']);
-        $this->assertSame(2, $data['templates'][0]['activitycount']);
-        $this->assertSame(1, $data['templates'][0]['aicount']);
-        $this->assertFalse($data['templates'][0]['coursemissing']);
-        $this->assertTrue($data['templates'][1]['coursemissing']);
     }
 
     /**

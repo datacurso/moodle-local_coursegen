@@ -52,17 +52,6 @@ class template_repository {
     }
 
     /**
-     * Every template, by name.
-     *
-     * @return stdClass[] Rows keyed by id.
-     */
-    public function list_all(): array {
-        global $DB;
-
-        return $DB->get_records(self::TEMPLATE_TABLE, null, 'name ASC, id ASC');
-    }
-
-    /**
      * What is saved for the activities of a template.
      *
      * @param int $templateid Template id, for example 3.
@@ -78,26 +67,6 @@ class template_repository {
         }
 
         return $bycmid;
-    }
-
-    /**
-     * How many activities each template has, and how many of them the AI modifies.
-     *
-     * @return array[] For each template id, an array with total and ai.
-     */
-    public function count_items(): array {
-        global $DB;
-
-        $sql = "SELECT templateid, COUNT(1) AS total, SUM(CASE WHEN action = :ai THEN 1 ELSE 0 END) AS aitotal
-                  FROM {" . self::ITEM_TABLE . "}
-              GROUP BY templateid";
-        $rows = $DB->get_records_sql($sql, ['ai' => template_actions::AI]);
-        $counts = [];
-        foreach ($rows as $row) {
-            $counts[(int) $row->templateid] = ['total' => (int) $row->total, 'ai' => (int) $row->aitotal];
-        }
-
-        return $counts;
     }
 
     /**
