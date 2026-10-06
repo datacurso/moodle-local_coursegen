@@ -80,6 +80,15 @@ if (!$cantemplate) {
 }
 $hasbothmodes = $canfree && $cantemplate;
 
+// A reloaded template generation that has not finished is picked up where it was, in template mode.
+$templateresume = null;
+if ($cantemplate) {
+    $templateresume = \local_coursegen\local\service\template_resume_context::for_session($resumesessionid, (int) $USER->id);
+}
+if ($templateresume !== null) {
+    $templatemodeactive = true;
+}
+
 // A resumed session skips the choice, as it was already made.
 $startchooser = $hasbothmodes && !$resumesessionid && $modeparam === null;
 
@@ -238,6 +247,7 @@ $PAGE->requires->js_call_amd('local_coursegen/courseai', 'init', [
         'sessions' => $allsessionsdata,
         'resumesessionid' => $resumesessionid,
         'isresuming' => $resumesessionid > 0,
+        'templateresume' => $templateresume,
     ],
 ]);
 
