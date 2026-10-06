@@ -14,30 +14,40 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+namespace local_coursegen\local\template;
+
 /**
- * The list of templates: create, edit and delete them.
+ * The two things an admin can ask for an activity of a template.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
+final class template_actions {
+    /** The AI never touches the activity. */
+    public const KEEP = 'keep';
 
-require_once('../../config.php');
-require_once($CFG->libdir . '/adminlib.php');
+    /** The AI modifies the activity following the optional instruction. */
+    public const AI = 'ai';
 
-use local_coursegen\output\manage_templates_page;
+    /**
+     * All the actions an activity can have.
+     *
+     * @return string[]
+     */
+    public static function all(): array {
+        return [self::KEEP, self::AI];
+    }
 
-admin_externalpage_setup('local_coursegen_manage_templates');
+    /**
+     * Whether a value is one of the actions.
+     *
+     * @param string $action Value to check, for example "ai".
+     * @return bool
+     */
+    public static function is_valid(string $action): bool {
+        $actions = self::all();
 
-if (optional_param('saved', 0, PARAM_BOOL)) {
-    \core\notification::success(get_string('template_saved', 'local_coursegen'));
+        return in_array($action, $actions, true);
+    }
 }
-
-$page = new manage_templates_page();
-$data = $page->export_for_template($OUTPUT);
-
-$PAGE->requires->js_call_amd('local_coursegen/template/manage', 'init');
-
-echo $OUTPUT->header();
-echo $OUTPUT->render_from_template('local_coursegen/manage_templates', $data);
-echo $OUTPUT->footer();

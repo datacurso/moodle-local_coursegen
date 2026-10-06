@@ -18,20 +18,21 @@ namespace local_coursegen\external;
 
 use core_external\external_api;
 use core_external\external_function_parameters;
+use core_external\external_multiple_structure;
 use core_external\external_single_structure;
 use core_external\external_value;
+use local_coursegen\local\template\course_search;
 use local_coursegen\local\template\template_access;
-use local_coursegen\local\template\template_service;
 
 /**
- * External function that deletes a template.
+ * External function that searches the courses an admin can choose as the base of a template.
  *
  * @package    local_coursegen
  * @category   external
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class delete_template extends external_api {
+class search_template_courses extends external_api {
     /**
      * Parameters definition.
      *
@@ -39,38 +40,44 @@ class delete_template extends external_api {
      */
     public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'templateid' => new external_value(PARAM_INT, 'Template to delete'),
+            'categoryid' => new external_value(PARAM_INT, 'Category to search in, or 0 for every category', VALUE_DEFAULT, 0),
+            'query' => new external_value(PARAM_RAW, 'Text the course name contains', VALUE_DEFAULT, ''),
         ]);
     }
 
     /**
-     * Delete the template.
+     * Search the courses.
      *
-     * @param int $templateid Template to delete.
-     * @return array
+     * @param int $categoryid Category to search in, or 0 for every category.
+     * @param string $query Text the course name contains.
+     * @return array The courses found.
      */
-    public static function execute(int $templateid): array {
+    public static function execute(int $categoryid = 0, string $query = ''): array {
         $definition = self::execute_parameters();
-        $params = self::validate_parameters($definition, ['templateid' => $templateid]);
+        $params = self::validate_parameters($definition, [
+            'categoryid' => $categoryid,
+            'query' => $query,
+        ]);
 
         $context = \context_system::instance();
         self::validate_context($context);
         template_access::require_manage();
 
-        $service = new template_service();
-        $service->delete($params['templateid']);
-
-        return ['deleted' => true];
+        return course_search::find($params['categoryid'], $params['query']);
     }
 
     /**
      * Return definition.
      *
-     * @return external_single_structure
+     * @return external_multiple_structure
      */
-    public static function execute_returns(): external_single_structure {
-        return new external_single_structure([
-            'deleted' => new external_value(PARAM_BOOL, 'True when the template was deleted'),
-        ]);
+    public static function execute_returns(): external_multiple_structure {
+        return new external_multiple_structure(
+            new external_single_structure([
+                'id' => new external_value(PARAM_INT, 'Course id'),
+                'fullname' => new external_value(PARAM_RAW, 'Full name of the course'),
+                'shortname' => new external_value(PARAM_RAW, 'Short name of the course'),
+            ])
+        );
     }
 }

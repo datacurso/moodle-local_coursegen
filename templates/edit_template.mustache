@@ -1,0 +1,231 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/edit_template
+
+    The editor of a template: the course picker, the name and description, and for each section its activities
+    with the two choices an admin has for each one: keep it intact or modify it with AI and an optional instruction.
+
+    Classes required for JS:
+    * none
+
+    Data attributes required for JS:
+    * data-region="local_coursegen/template/editor" on the root, with data-templateid, data-courseid, data-listurl and data-editurl
+    * data-region="local_coursegen/template/activity" with data-cmid on each activity row
+    * data-action="local_coursegen/template/set-action" on each of the two radios of an activity
+    * data-region="local_coursegen/template/instruction" on the box of the instruction of an activity
+    * data-action="local_coursegen/template/save" and data-action="local_coursegen/template/cancel" on the buttons
+
+    Context variables required for this template:
+    * templateid int - Template being edited, 0 for a new one
+    * courseid int - Course chosen, 0 when none
+    * name string - Name of the template
+    * description string - Description of the template
+    * maxnamelength int - Longest name
+    * maxtextlength int - Longest description or instruction
+    * categories array - Options of the category filter, each with id, name and selected
+    * coursename string - Name of the chosen course
+    * hascourse bool - Whether a course is chosen
+    * courseusable bool - Whether the chosen course can be the base of a template
+    * hassections bool - Whether the course has sections
+    * sections array - Each with number, name, visible, activitycount, hasactivities and activities
+    * hasmissing bool - Whether some saved activities no longer exist
+    * missing array - Each with cmid and label
+    * listurl string - Address of the list of templates
+    * editurl string - Address of this page
+
+    Example context (json):
+    {
+        "templateid": 3,
+        "courseid": 42,
+        "name": "Digital marketing",
+        "description": "Base for the marketing courses",
+        "maxnamelength": 255,
+        "maxtextlength": 16000,
+        "categories": [
+            {"id": 0, "name": "All categories", "selected": false},
+            {"id": 2, "name": "Business", "selected": true}
+        ],
+        "coursename": "Digital marketing 101",
+        "hascourse": true,
+        "courseusable": true,
+        "hassections": true,
+        "sections": [
+            {
+                "number": 1,
+                "name": "Introduction",
+                "visible": true,
+                "activitycount": 2,
+                "hasactivities": true,
+                "activities": [
+                    {
+                        "cmid": 101,
+                        "name": "Welcome page",
+                        "typename": "Page",
+                        "iconurl": "https://example.com/icon.svg",
+                        "visible": true,
+                        "stealth": false,
+                        "iskeep": false,
+                        "isai": true,
+                        "instruction": "Write it for beginners"
+                    },
+                    {
+                        "cmid": 102,
+                        "name": "Hidden quiz",
+                        "typename": "Quiz",
+                        "iconurl": "https://example.com/icon.svg",
+                        "visible": false,
+                        "stealth": false,
+                        "iskeep": true,
+                        "isai": false,
+                        "instruction": ""
+                    }
+                ]
+            }
+        ],
+        "hasmissing": true,
+        "missing": [{"cmid": 99, "label": "Deleted activity 99"}],
+        "listurl": "https://example.com/local/coursegen/manage_templates.php",
+        "editurl": "https://example.com/local/coursegen/edit_template.php"
+    }
+}}
+<div id="{{uniqid}}-editor" class="local_coursegen-edit_template mw-100" data-region="local_coursegen/template/editor"
+     data-templateid="{{templateid}}" data-courseid="{{courseid}}" data-listurl="{{listurl}}" data-editurl="{{editurl}}">
+
+    <div class="alert alert-danger d-none" role="alert" data-region="local_coursegen/template/error"></div>
+
+    <section class="mb-4" aria-labelledby="{{uniqid}}-course-heading">
+        <h2 id="{{uniqid}}-course-heading" class="h4">{{#str}} template_course, local_coursegen {{/str}}</h2>
+        <div class="form-row row">
+            <div class="form-group col-md-4">
+                <label for="{{uniqid}}-category">{{#str}} template_category, local_coursegen {{/str}}</label>
+                <select id="{{uniqid}}-category" class="custom-select form-select w-100" data-region="local_coursegen/template/category">
+                    {{#categories}}
+                    <option value="{{id}}" {{#selected}}selected{{/selected}}>{{name}}</option>
+                    {{/categories}}
+                </select>
+            </div>
+            <div class="form-group col-md-8">
+                <label for="{{uniqid}}-course">{{#str}} template_course, local_coursegen {{/str}}</label>
+                <select id="{{uniqid}}-course" class="custom-select form-select w-100" data-region="local_coursegen/template/course">
+                    {{#hascourse}}
+                    <option value="{{courseid}}" selected>{{coursename}}</option>
+                    {{/hascourse}}
+                </select>
+            </div>
+        </div>
+    </section>
+
+    {{#courseusable}}
+    <section class="mb-4" aria-labelledby="{{uniqid}}-details-heading">
+        <h2 id="{{uniqid}}-details-heading" class="h4">{{#str}} template_name, local_coursegen {{/str}}</h2>
+        <div class="form-group">
+            <label for="{{uniqid}}-name" class="sr-only visually-hidden">{{#str}} template_name, local_coursegen {{/str}}</label>
+            <input type="text" id="{{uniqid}}-name" class="form-control" maxlength="{{maxnamelength}}" value="{{name}}"
+                   data-region="local_coursegen/template/name" required>
+        </div>
+        <div class="form-group">
+            <label for="{{uniqid}}-description">{{#str}} template_description, local_coursegen {{/str}}</label>
+            <textarea id="{{uniqid}}-description" class="form-control" rows="2" maxlength="{{maxtextlength}}"
+                      data-region="local_coursegen/template/description">{{description}}</textarea>
+        </div>
+    </section>
+
+    <section class="mb-4" aria-labelledby="{{uniqid}}-structure-heading">
+        <h2 id="{{uniqid}}-structure-heading" class="h4">{{#str}} template_structure, local_coursegen {{/str}}</h2>
+
+        {{#hasmissing}}
+        <div class="alert alert-warning" role="status">
+            <p class="font-weight-bold fw-bold mb-1">{{#str}} template_missing_title, local_coursegen {{/str}}</p>
+            <p class="mb-1">{{#str}} template_missing_text, local_coursegen {{/str}}</p>
+            <ul class="mb-0">
+                {{#missing}}
+                <li>{{label}}</li>
+                {{/missing}}
+            </ul>
+        </div>
+        {{/hasmissing}}
+
+        {{^hassections}}
+        <p class="text-muted">{{#str}} template_course_empty, local_coursegen {{/str}}</p>
+        {{/hassections}}
+
+        {{#sections}}
+        <div class="card mb-3" data-region="local_coursegen/template/section" data-section="{{number}}">
+            <div class="card-header d-flex align-items-center justify-content-between">
+                <h3 class="h5 mb-0">{{name}}{{^visible}} <span class="badge badge-secondary bg-secondary">{{#str}} template_hidden, local_coursegen {{/str}}</span>{{/visible}}</h3>
+                <span class="badge badge-light bg-light text-dark">{{#str}} template_activities_count, local_coursegen, {{activitycount}} {{/str}}</span>
+            </div>
+            <ul class="list-group list-group-flush">
+                {{^hasactivities}}
+                <li class="list-group-item text-muted">{{#str}} template_section_empty, local_coursegen {{/str}}</li>
+                {{/hasactivities}}
+                {{#activities}}
+                <li class="list-group-item" data-region="local_coursegen/template/activity" data-cmid="{{cmid}}">
+                    <div class="d-flex flex-wrap align-items-center justify-content-between">
+                        <div class="d-flex align-items-center mr-3 me-3">
+                            <img src="{{iconurl}}" class="icon activityicon mr-2 me-2" alt="" role="presentation">
+                            <span class="font-weight-bold fw-bold">{{name}}</span>
+                            <span class="text-muted ml-2 ms-2">{{typename}}</span>
+                            {{^visible}}<span class="badge badge-secondary bg-secondary ml-2 ms-2">{{#str}} template_hidden, local_coursegen {{/str}}</span>{{/visible}}
+                            {{#stealth}}<span class="badge badge-info bg-info ml-2 ms-2">{{#str}} template_stealth, local_coursegen {{/str}}</span>{{/stealth}}
+                        </div>
+                        <fieldset class="local_coursegen-template_action mb-0">
+                            <legend class="sr-only visually-hidden">{{#str}} template_activity_action, local_coursegen {{/str}}</legend>
+                            <div class="form-check form-check-inline">
+                                <input type="radio" class="form-check-input" name="{{uniqid}}-action-{{cmid}}" id="{{uniqid}}-keep-{{cmid}}"
+                                       value="keep" {{#iskeep}}checked{{/iskeep}} data-action="local_coursegen/template/set-action">
+                                <label class="form-check-label" for="{{uniqid}}-keep-{{cmid}}">{{#str}} template_action_keep, local_coursegen {{/str}}</label>
+                            </div>
+                            <div class="form-check form-check-inline">
+                                <input type="radio" class="form-check-input" name="{{uniqid}}-action-{{cmid}}" id="{{uniqid}}-ai-{{cmid}}"
+                                       value="ai" {{#isai}}checked{{/isai}} data-action="local_coursegen/template/set-action"
+                                       aria-controls="{{uniqid}}-instruction-box-{{cmid}}" aria-expanded="{{#isai}}true{{/isai}}{{^isai}}false{{/isai}}">
+                                <label class="form-check-label" for="{{uniqid}}-ai-{{cmid}}">{{#str}} template_action_ai, local_coursegen {{/str}}</label>
+                            </div>
+                        </fieldset>
+                    </div>
+                    <div id="{{uniqid}}-instruction-box-{{cmid}}" class="form-group mt-2 mb-0 {{^isai}}d-none{{/isai}}"
+                         data-region="local_coursegen/template/instruction">
+                        <label for="{{uniqid}}-instruction-{{cmid}}">{{#str}} template_instruction, local_coursegen {{/str}}</label>
+                        <textarea id="{{uniqid}}-instruction-{{cmid}}" class="form-control" rows="3" maxlength="{{maxtextlength}}"
+                                  placeholder="{{#str}} template_instruction_placeholder, local_coursegen {{/str}}"
+                                  data-region="local_coursegen/template/instruction-text">{{instruction}}</textarea>
+                    </div>
+                </li>
+                {{/activities}}
+            </ul>
+        </div>
+        {{/sections}}
+    </section>
+
+    <div class="d-flex align-items-center">
+        <button type="button" class="btn btn-primary mr-2 me-2" data-action="local_coursegen/template/save">{{#str}} template_save, local_coursegen {{/str}}</button>
+        <a href="{{listurl}}" class="btn btn-secondary" data-action="local_coursegen/template/cancel">{{#str}} template_cancel, local_coursegen {{/str}}</a>
+        <span class="ml-3 ms-3 text-muted" role="status" aria-live="polite" data-region="local_coursegen/template/status"></span>
+    </div>
+    {{/courseusable}}
+
+    {{^courseusable}}
+    <p class="text-muted">{{#str}} template_course_unusable, local_coursegen {{/str}}</p>
+    {{/courseusable}}
+</div>
+{{#js}}
+require(['local_coursegen/template/editor'], function(Editor) {
+    Editor.init('{{uniqid}}-editor');
+});
+{{/js}}

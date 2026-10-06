@@ -14,30 +14,27 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+namespace local_coursegen;
+
+use local_coursegen\local\template\template_repository;
+
 /**
- * The list of templates: create, edit and delete them.
+ * A repository whose write of the activities of a template fails, like a database that goes away.
  *
  * @package    local_coursegen
+ * @category   test
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
-require_once('../../config.php');
-require_once($CFG->libdir . '/adminlib.php');
-
-use local_coursegen\output\manage_templates_page;
-
-admin_externalpage_setup('local_coursegen_manage_templates');
-
-if (optional_param('saved', 0, PARAM_BOOL)) {
-    \core\notification::success(get_string('template_saved', 'local_coursegen'));
+class failing_template_repository extends template_repository {
+    /**
+     * Fail instead of writing.
+     *
+     * @param int $templateid Template id.
+     * @param array $rows Rows to write.
+     * @throws \dml_write_exception Always.
+     */
+    public function replace_items(int $templateid, array $rows): void {
+        throw new \dml_write_exception('boom');
+    }
 }
-
-$page = new manage_templates_page();
-$data = $page->export_for_template($OUTPUT);
-
-$PAGE->requires->js_call_amd('local_coursegen/template/manage', 'init');
-
-echo $OUTPUT->header();
-echo $OUTPUT->render_from_template('local_coursegen/manage_templates', $data);
-echo $OUTPUT->footer();

@@ -2,6 +2,26 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100600
+
+### Changed
+
+- **A template only says what the AI keeps and what it modifies**  
+  The template page has the course of the template, a name, a description and, for each activity of that course, two choices: keep it intact or modify it with the AI, with an instruction that is optional. Everything else the old page configured, such as using an activity as a template, scopes, instances, spaces for the teacher, naming patterns, section limits and section behavior, is gone: what an activity should become is written in its instruction.
+- **The data of a template is rebuilt**  
+  A template is saved in two tables, one for the template and one for its activities. The tables of the previous shape are dropped when the plugin is upgraded or reinstalled, so the templates saved before have to be created again. The permission to manage templates is a single one again, and the four permissions carved out of it are removed.
+- **The init payload for the AI service follows contract version 2**  
+  Each activity travels with `keep` or `modify` and its instruction, and the sections of the template are marked as modified when any of their activities is. One class maps what a template saves to what the service is told.
+- **A course is built from the kept activities and the ones the AI wrote**  
+  The activities of the template that are kept are copied, the ones the AI modifies are written by the AI, and the new course follows the order of the template. The files of a text come from the template course or the AI service.
+
+### Removed
+
+- **The spaces for the teacher and the section limits of the teacher screen**  
+  The cards that asked the teacher for a file before generating, and the badge with the sections still available, are gone with the options they depended on.
+- **Generating a course from a template says that it is being rebuilt**  
+  Starting a generation from a template is refused with a clear message until the AI service can run it, instead of failing in the service.
+
 ## [2.0.10] - 2026100501
 
 ### Fixed

@@ -106,16 +106,16 @@ if ($hassiteconfig) {
 
     $ADMIN->add($pluginname, new admin_externalpage(
         'local_coursegen_manage_templates',
-        get_string('managetemplates', 'local_coursegen'),
+        get_string('templates_manage', 'local_coursegen'),
         new moodle_url('/local/coursegen/manage_templates.php'),
-        'local/coursegen:viewtemplates'
+        'local/coursegen:managetemplates'
     ));
 
     $ADMIN->add($pluginname, new admin_externalpage(
         'local_coursegen_edit_template',
-        get_string('template_create', 'local_coursegen'),
+        get_string('template_edit', 'local_coursegen'),
         new moodle_url('/local/coursegen/edit_template.php'),
-        ['local/coursegen:createtemplates', 'local/coursegen:edittemplates'],
+        'local/coursegen:managetemplates',
         true
     ));
 
