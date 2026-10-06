@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100225
+
+### Added
+- **A command makes the template of a course from the placeholders of its activities**  
+  Given a course whose activities carry `[[coursegen:...]]` markers, `cli/create_template_from_course.php --courseid=N` makes a template with the name of the course. Every activity with placeholders is marked "use as template" and gets one instance right after it, the sections that hold an instance may be modified by the AI and everything else is kept. Running it again for the same course and name replaces the template. It has `--dry-run`, `--json`, `--name`, `--scope`, `--no-replace` and `--allow-empty`, and it refuses with its own exit code when the course does not exist, has no activities or no placeholders, or the template tables are missing.
+
 ## [2.0.10] - 2026100224
 
 ### Fixed

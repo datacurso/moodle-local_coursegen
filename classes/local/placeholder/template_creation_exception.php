@@ -17,7 +17,8 @@
 namespace local_coursegen\local\placeholder;
 
 /**
- * Why a template could not be made from a course.
+ * Why a template could not be made from a course. The code of the exception is the reason, and it is also the exit
+ * code of the command line script.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -47,16 +48,6 @@ final class template_creation_exception extends \RuntimeException {
 
     /** @var int There is no administrator to act as. */
     public const NO_ADMIN = 9;
-
-    /**
-     * Keep the reason; it is also the exit code of the command line script.
-     *
-     * @param string $message What went wrong, e.g. "Course 9 does not exist".
-     * @param int $reason One of the constants of this class.
-     */
-    public function __construct(string $message, int $reason) {
-        parent::__construct($message, $reason);
-    }
 
     /**
      * The reason of the failure.
