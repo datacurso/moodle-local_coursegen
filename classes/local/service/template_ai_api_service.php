@@ -86,6 +86,19 @@ class template_ai_api_service {
     }
 
     /**
+     * Upload the syllabus the teacher attached to the run, to the endpoint that reads documents.
+     *
+     * It is not the endpoint of the file a question asks for: the syllabus is read before the run starts.
+     *
+     * @param string $threadid Thread of the run, for example "3f2a9c1e-77b4".
+     * @param stored_file $file Syllabus file.
+     * @return array Decoded answer of the service.
+     */
+    public function upload_syllabus(string $threadid, stored_file $file): array {
+        return (array) $this->client->upload_file(self::BASE . '/syllabus/upload', $file, ['thread_id' => $threadid]);
+    }
+
+    /**
      * Answer the question the run is paused on.
      *
      * @param string $threadid Thread id of the run.

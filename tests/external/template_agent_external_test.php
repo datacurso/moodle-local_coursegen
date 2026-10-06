@@ -149,19 +149,6 @@ final class template_agent_external_test extends \advanced_testcase {
     }
 
     /**
-     * A syllabus attached to a template generation is refused with a clear message, not dropped in silence.
-     */
-    public function test_an_attached_syllabus_is_refused(): void {
-        $this->resetAfterTest();
-        $user = $this->teacher();
-        $this->setUser($user);
-
-        $this->expectException(\moodle_exception::class);
-        $this->expectExceptionMessage(get_string('templatesyllabusunsupported', 'local_coursegen'));
-        start_template_generation::execute(1, 'x', 123);
-    }
-
-    /**
      * The services are registered and the answer is a write while the state is a read.
      */
     public function test_the_services_are_registered_with_the_right_type(): void {

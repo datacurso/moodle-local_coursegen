@@ -91,6 +91,54 @@ final class template_ai_api_service_test extends \advanced_testcase {
     }
 
     /**
+     * A stored file of the site that stands for the syllabus of a teacher.
+     *
+     * @return \stored_file The file.
+     */
+    private function syllabus_file(): \stored_file {
+        $context = \context_system::instance();
+        $record = [
+            'contextid' => $context->id, 'component' => 'local_coursegen', 'filearea' => 'x', 'itemid' => 0,
+            'filepath' => '/', 'filename' => 'syllabus.pdf',
+        ];
+        $storage = get_file_storage();
+        return $storage->create_file_from_string($record, 'PDF');
+    }
+
+    /**
+     * The syllabus is uploaded to its own endpoint with the thread id, apart from the file of a question.
+     */
+    public function test_the_syllabus_is_uploaded_to_its_own_endpoint_with_the_thread_id(): void {
+        $this->resetAfterTest();
+        $file = $this->syllabus_file();
+        $client = $this->createMock(ai_course_api::class);
+        $once = $this->once();
+        $client->expects($once)->method('upload_file')
+            ->with('/template-agent/syllabus/upload', $file, ['thread_id' => 't-9'])
+            ->willReturn(['status' => 'stored']);
+        $service = $this->service($client);
+
+        $answer = $service->upload_syllabus('t-9', $file);
+
+        $this->assertSame(['status' => 'stored'], $answer);
+    }
+
+    /**
+     * A null answer of the syllabus upload becomes an empty array.
+     */
+    public function test_a_null_answer_of_the_syllabus_upload_becomes_an_empty_array(): void {
+        $this->resetAfterTest();
+        $file = $this->syllabus_file();
+        $client = $this->createMock(ai_course_api::class);
+        $client->method('upload_file')->willReturn(null);
+        $service = $this->service($client);
+
+        $answer = $service->upload_syllabus('t-9', $file);
+
+        $this->assertSame([], $answer);
+    }
+
+    /**
      * A generated file is downloaded from the file endpoint, with the ids encoded.
      */
     public function test_a_generated_file_is_downloaded_from_the_file_endpoint(): void {

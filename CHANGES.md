@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100605
+
+### Fixed
+
+- **A syllabus can be attached when a course is generated from a template**  
+  Starting a generation from a template with a syllabus attached stopped with a message saying the syllabus was not available yet. The syllabus is now sent to the run right after it is created and before it starts, in the same order as the free creation: the run reads its pages as images in every step. The plugin checks the capability to upload syllabi, refuses an empty file or one over 25 MB before sending it, and turns each refusal of the service into a message the teacher can act on: file too large, file that cannot be used, reading that took too long, or a run that cannot take the file. A refused syllabus creates no session and is dropped from the start form, because the draft area of the file is emptied as soon as it has been read, so no copy of the file stays in the site files. The transfer is recorded in the same event as in the free creation, without the content of the file. The reading of the draft area is shared with the answer to a question, whose file keeps its own endpoint and is never taken for the syllabus.
+
 ## [2.0.10] - 2026100604
 
 ### Fixed
