@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100604
+
+### Fixed
+
+- **Switching the course in the template editor draws its sections again**  
+  The service that draws the sections of the chosen course set up the page after reading the course, which Moodle refuses once the theme is ready. The page is now set up first, so picking another course shows its sections.
+
 ## [2.0.10] - 2026100603
 
 ### Changed
