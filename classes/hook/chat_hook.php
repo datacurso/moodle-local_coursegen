@@ -17,6 +17,7 @@
 namespace local_coursegen\hook;
 
 use core\hook\output\before_footer_html_generation;
+use local_coursegen\local\permission;
 
 /**
  * Hook to load the floating chat
@@ -174,11 +175,6 @@ class chat_hook {
             return false;
         }
 
-        $systemcontext = \context_system::instance();
-
-        return has_all_capabilities([
-            'moodle/course:create',
-            'local/coursegen:createcoursewithai',
-        ], $systemcontext);
+        return permission::can_create_course_with_ai();
     }
 }

@@ -44,11 +44,8 @@ class ai_course_api_service {
             return;
         }
 
-        $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
-        $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
-
         // Built through the factory so PHPUnit tests can inject a test double.
-        $this->client = api_client_factory::ai_course_api($baseurl, $baseurleu);
+        $this->client = api_client_factory::ai_course_api_for_current_tenant();
     }
 
     /**

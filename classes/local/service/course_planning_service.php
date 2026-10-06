@@ -21,6 +21,7 @@ use local_coursegen\local\h5p_core_api;
 use local_coursegen\local\image_generation\activities;
 use local_coursegen\local\image_generation\image_policy_builder;
 use local_coursegen\local\models\course_session;
+use local_coursegen\local\tenant_config;
 
 /**
  * Service for AI course planning session orchestration.
@@ -31,15 +32,15 @@ use local_coursegen\local\models\course_session;
  */
 class course_planning_service {
     /**
-     * Whether AI-generated subsections are available on this site.
+     * Whether AI-generated subsections are available for the current user's tenant.
      *
-     * Requires the admin setting to be enabled AND the subsection activity
-     * module (Moodle 4.5 delegated sections) to be enabled.
+     * Requires the setting to be enabled for the tenant AND the subsection
+     * activity module (Moodle 4.5 delegated sections) to be enabled.
      *
      * @return bool
      */
     public static function subsections_available(): bool {
-        if (!get_config('local_coursegen', 'enablesubsections')) {
+        if (!tenant_config::get('enablesubsections')) {
             return false;
         }
         $enabledmods = \core_plugin_manager::instance()->get_enabled_plugins('mod');

@@ -1,3 +1,35 @@
+## 2.1.0-wp
+
+**Released on:** Unreleased
+
+**Compatibility note:** This version is compatible only with **Moodle Workplace 4.5**.
+
+## Added
+
+- **Multi-tenancy for Moodle Workplace**  
+  Every Workplace tenant is fully independent: it has its own plugin configuration, stored in the new `local_coursegen_tenant_config` table, with no site-wide layer. A value a tenant has not set uses the plugin default.
+- **Per-tenant general and development settings**  
+  The `General settings` and `Development settings` pages read and save the values of the tenant the user is currently in, and are available to tenant administrators through the `local/coursegen:managetenantsettings` capability. The HTTPS rule for the service URLs and the `mod_subsection` guard are kept.
+- **Per-tenant image generation settings**  
+  The `Manage image generation` page and the `local_coursegen_manage_image_generation` web service read and save the settings of the current tenant, and the image policy sent to the AI service uses the settings of the user's tenant. The web service is declared with the `local/coursegen:manageimagegeneration` capability.
+- **Per-tenant system instructions**  
+  System instructions belong to a tenant (`tenantid` column) and are private to it: no other tenant can see, edit or use them, and names are unique per tenant. Starting a course plan with an instruction of another tenant is rejected.
+- **Tenant scope notice**  
+  Every plugin configuration page shows a read-only notice naming the tenant its values apply to. There is no tenant selector: pages and web services always use the tenant of the current user, and site administrators configure another tenant by switching to it with the Workplace tenant switcher.
+- **Course creation for tenant administrators**  
+  `Create a new course with AI` is available to users who can create courses in any category (for example the Workplace tenant manager role in the tenant category), not only at system level. The page is listed in the Workplace admin tree and launcher, and AI courses are created in the tenant category by default.
+- **Tenant data cleanup**  
+  Deleting a Workplace tenant removes its configuration and its system instructions, and detaches those instructions from the courses that referenced them.
+
+## Changed
+
+- **Moodle Workplace only**  
+  This branch requires Moodle Workplace 4.5: `tool_tenant` and `tool_wp` are declared as dependencies and `$plugin->supported` is `[405, 405]`. Installing it on Moodle LMS fails on the missing dependencies by design.
+- **Tenant administrator role receives the plugin capabilities on upgrade**  
+  The install and upgrade steps add `local/coursegen:createcoursewithai`, `local/coursegen:managesysteminstructions`, `local/coursegen:manageimagegeneration` and the new `local/coursegen:managetenantsettings` to the Workplace `Tenant administrator` role, so existing sites change that role when upgrading.
+- **Existing data moves to the Default tenant**  
+  The upgrade moves the plugin settings stored in `config_plugins` (service URLs, subsections and image generation settings) to the Workplace Default tenant, keeping any value that tenant already had, and removes them from `config_plugins`. Existing system instructions are assigned to the Default tenant as well.
+
 ## 2.0.6
 
 **Released on:** Unreleased

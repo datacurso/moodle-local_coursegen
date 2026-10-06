@@ -27,6 +27,10 @@
  * Custom code to be run on installing the plugin.
  */
 function xmldb_local_coursegen_install() {
+    // Capabilities are normally installed after this hook runs; load them now so
+    // they can be granted to the Workplace "Tenant administrator" role.
+    update_capabilities('local_coursegen');
+    \tool_tenant\tenancy::add_plugin_capabilities_to_tenant_admin_role('local_coursegen');
 
     return true;
 }

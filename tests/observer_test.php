@@ -17,10 +17,11 @@
 namespace local_coursegen;
 
 use context_system;
+use local_coursegen\local\tenant_config;
 use stdClass;
 
 /**
- * Tests for the course_deleted observer cleanup.
+ * Tests for the course_deleted and tenant_deleted observer cleanups.
  *
  * @package    local_coursegen
  * @category   test
@@ -72,6 +73,50 @@ final class observer_test extends \advanced_testcase {
     }
 
     /**
+     * Deleting a tenant removes its settings and instructions, keeping other tenants intact.
+     */
+    public function test_tenant_deleted_removes_tenant_data(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $generator = $this->getDataGenerator();
+        $tenantgenerator = $generator->get_plugin_generator('tool_tenant');
+        $coursegen = $generator->get_plugin_generator('local_coursegen');
+        $user = $generator->create_user();
+        $tenanta = (int) $tenantgenerator->create_tenant()->id;
+        $tenantb = (int) $tenantgenerator->create_tenant()->id;
+
+        tenant_config::set('enablesubsections', 0, $tenanta);
+        tenant_config::set('enablesubsections', 0, $tenantb);
+
+        $asi = $coursegen->create_system_instruction(['name' => 'A rule', 'tenantid' => $tenanta]);
+        $bsi = $coursegen->create_system_instruction(['name' => 'B rule', 'tenantid' => $tenantb]);
+
+        $courseacontext = $this->insert_course_context($generator->create_course()->id, $user->id, (int) $asi->id);
+        $coursebcontext = $this->insert_course_context($generator->create_course()->id, $user->id, (int) $bsi->id);
+
+        $manager = new \tool_tenant\manager();
+        $manager->archive_tenant($tenanta);
+        $manager->delete_tenant($tenanta);
+
+        // Tenant A data is gone.
+        $this->assertSame(0, $DB->count_records('local_coursegen_tenant_config', ['tenantid' => $tenanta]));
+        $this->assertSame(0, $DB->count_records('local_coursegen_system_instruction', ['tenantid' => $tenanta]));
+        $this->assertNull($DB->get_field('local_coursegen_course_context', 'system_instruction_id', ['id' => $courseacontext]));
+        $this->assertTrue($DB->record_exists('local_coursegen_course_context', ['id' => $courseacontext]));
+
+        // Tenant B keeps its data.
+        $this->assertSame(1, $DB->count_records('local_coursegen_tenant_config', ['tenantid' => $tenantb]));
+        $this->assertTrue($DB->record_exists('local_coursegen_system_instruction', ['id' => $bsi->id]));
+        $this->assertEquals(
+            $bsi->id,
+            $DB->get_field('local_coursegen_course_context', 'system_instruction_id', ['id' => $coursebcontext])
+        );
+    }
+
+    /**
      * Insert a planning session row.
      *
      * @param int $courseid Course id.
@@ -115,13 +160,15 @@ final class observer_test extends \advanced_testcase {
      *
      * @param int $courseid Course id.
      * @param int $userid User id.
+     * @param int|null $systeminstructionid Selected system instruction, if any.
      * @return int Record id.
      */
-    private function insert_course_context(int $courseid, int $userid): int {
+    private function insert_course_context(int $courseid, int $userid, ?int $systeminstructionid = null): int {
         global $DB;
         $record = new stdClass();
         $record->courseid = $courseid;
-        $record->context_type = 'syllabus';
+        $record->context_type = $systeminstructionid ? 'system_instruction' : 'syllabus';
+        $record->system_instruction_id = $systeminstructionid;
         $record->timecreated = time();
         $record->timemodified = time();
         $record->usermodified = $userid;

@@ -28,6 +28,7 @@ use external_api;
 use external_function_parameters;
 use external_value;
 use external_single_structure;
+use local_coursegen\local\permission;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
@@ -81,8 +82,7 @@ class create_course extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
-        require_capability('moodle/course:create', $context);
-        require_capability('local/coursegen:createcoursewithai', $context);
+        permission::require_create_course_with_ai();
 
         $recordid = (int)$params['recordid'];
 

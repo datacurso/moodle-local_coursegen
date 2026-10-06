@@ -15,117 +15,65 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Manage system instructions page for DataCurso plugin.
+ * Manage the system instructions of a tenant (Moodle Workplace).
  *
  * @package    local_coursegen
  * @copyright  2025 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-use local_coursegen\local\models\system_instruction;
 use local_coursegen\local\service\system_instruction_service;
+use local_coursegen\local\tenancy;
+use local_coursegen\output\system_instruction_list;
+use local_coursegen\output\tenant_scope_notice;
 
 require_once('../../config.php');
-require_once($CFG->libdir . '/adminlib.php');
-
-admin_externalpage_setup('local_coursegen_manage_system_instructions');
 
 $action = optional_param('action', '', PARAM_ALPHA);
 $id = optional_param('id', 0, PARAM_INT);
 $confirm = optional_param('confirm', 0, PARAM_INT);
 
-$context = context_system::instance();
-require_capability('local/coursegen:managesysteminstructions', $context);
+require_login(null, false);
+\tool_wp\admin_externalpage::setup_page('local_coursegen_manage_system_instructions');
+require_capability('local/coursegen:managesysteminstructions', context_system::instance());
 
-$PAGE->set_url('/local/coursegen/manage_system_instructions.php');
+// The instructions always belong to the tenant the user is currently in.
+$tenantid = tenancy::get_tenant_id();
+
+$pageurl = new moodle_url('/local/coursegen/manage_system_instructions.php');
+$PAGE->set_url($pageurl);
 $PAGE->set_title(get_string('managesysteminstructions', 'local_coursegen'));
 $PAGE->set_heading(get_string('managesysteminstructions', 'local_coursegen'));
 
-// Handle delete action.
+// Handle delete action: only instructions owned by the current tenant can be deleted.
 if ($action === 'delete' && $id > 0) {
-    if ($confirm && confirm_sesskey()) {
-        // Soft delete the system instruction.
-        $model = new system_instruction($id);
-        $model->set('deleted', 1);
-        $model->update();
+    $instruction = system_instruction_service::require_owned($id, $tenantid);
+
+    if ($confirm) {
+        require_sesskey();
+        system_instruction_service::delete($id, $tenantid);
         redirect(
-            $PAGE->url,
+            $pageurl,
             get_string('systeminstructiondeleted', 'local_coursegen'),
             null,
             \core\output\notification::NOTIFY_SUCCESS
         );
-    } else {
-        // Show confirmation dialog.
-        $model = system_instruction::get_record(['id' => $id, 'deleted' => 0]);
-
-        echo $OUTPUT->header();
-        echo $OUTPUT->heading(get_string('deletesysteminstruction', 'local_coursegen'));
-
-        $confirmurl = new moodle_url(
-            $PAGE->url,
-            ['action' => 'delete', 'id' => $id, 'confirm' => 1, 'sesskey' => sesskey()]
-        );
-        $cancelurl = $PAGE->url;
-
-        echo $OUTPUT->confirm(
-            get_string('confirmdeletesysteminstruction', 'local_coursegen') .
-                '<br><strong>' . format_string($model->get('name')) . '</strong>',
-            $confirmurl,
-            $cancelurl
-        );
-
-        echo $OUTPUT->footer();
-        exit;
     }
+
+    $confirmurl = new moodle_url($pageurl, ['action' => 'delete', 'id' => $id, 'confirm' => 1, 'sesskey' => sesskey()]);
+
+    echo $OUTPUT->header();
+    echo $OUTPUT->heading(get_string('deletesysteminstruction', 'local_coursegen'));
+    echo $OUTPUT->confirm(
+        get_string('confirmdeletesysteminstructionnamed', 'local_coursegen', format_string($instruction->get('name'))),
+        $confirmurl,
+        $pageurl
+    );
+    echo $OUTPUT->footer();
+    exit;
 }
 
 echo $OUTPUT->header();
-
-// Add system instruction button.
-$addurl = new moodle_url('/local/coursegen/edit_system_instruction.php');
-echo html_writer::div(
-    $OUTPUT->single_button($addurl, get_string('addsysteminstruction', 'local_coursegen'), 'get'),
-    'mb-3'
-);
-
-// Create table to display system instructions.
-$table = new html_table();
-$table->head = [
-    get_string('systeminstructionname', 'local_coursegen'),
-    get_string('systeminstructioncreated', 'local_coursegen'),
-    get_string('systeminstructionmodified', 'local_coursegen'),
-    get_string('actions', 'local_coursegen'),
-];
-$table->attributes['class'] = 'table table-striped';
-
-// Get system instructions from service (handles filtering and ordering).
-$instructions = system_instruction_service::get_all();
-
-if (empty($instructions)) {
-    echo html_writer::div(
-        html_writer::tag('p', get_string('nosysteminstructions', 'local_coursegen'), ['class' => 'alert alert-info']),
-        'mt-3'
-    );
-} else {
-    foreach ($instructions as $instruction) {
-        $editurl = new moodle_url('/local/coursegen/edit_system_instruction.php', ['id' => $instruction->get('id')]);
-        $deleteurl = new moodle_url($PAGE->url, ['action' => 'delete', 'id' => $instruction->get('id')]);
-
-        $editicon = $OUTPUT->pix_icon('t/edit', get_string('edit', 'local_coursegen'));
-        $deleteicon = $OUTPUT->pix_icon('t/delete', get_string('delete', 'local_coursegen'));
-
-        $actions = html_writer::link($editurl, $editicon, ['title' => get_string('edit', 'local_coursegen')]);
-        $actions .= html_writer::link($deleteurl, $deleteicon, ['title' => get_string('delete', 'local_coursegen')]);
-
-        $table->data[] = [
-            format_string($instruction->get('name')),
-            userdate($instruction->get('timecreated')),
-            userdate($instruction->get('timemodified')),
-            $actions,
-        ];
-    }
-
-    echo html_writer::table($table);
-}
-
+echo $OUTPUT->render(new tenant_scope_notice(get_string('managesysteminstructions_desc', 'local_coursegen')));
+echo $OUTPUT->render(new system_instruction_list(system_instruction_service::get_available($tenantid)));
 echo $OUTPUT->footer();

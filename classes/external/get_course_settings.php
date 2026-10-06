@@ -29,6 +29,7 @@ use external_function_parameters;
 use external_multiple_structure;
 use external_value;
 use external_single_structure;
+use local_coursegen\local\permission;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
@@ -68,14 +69,11 @@ class get_course_settings extends external_api {
 
         $context = context_system::instance();
         self::validate_context($context);
-        require_capability('local/coursegen:createcoursewithai', $context);
+        permission::require_create_course_with_ai();
 
-        // Category-level course creators are accepted: the user must hold
-        // moodle/course:create at system level or in at least one category.
+        // Categories where the user can actually create courses (system-level
+        // creators get every category, category-level creators only theirs).
         $catlist = \core_course_category::make_categories_list('moodle/course:create');
-        if (empty($catlist) && !has_capability('moodle/course:create', $context)) {
-            throw new \required_capability_exception($context, 'moodle/course:create', 'nopermissions', '');
-        }
 
         $recordid = (int)$params['recordid'];
 

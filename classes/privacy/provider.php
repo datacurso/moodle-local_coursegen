@@ -50,7 +50,7 @@ class provider implements
     public static function get_metadata(collection $collection): collection {
         $tables = [
             'local_coursegen_system_instruction' => [
-                'name', 'content', 'deleted', 'timecreated', 'timemodified', 'usermodified',
+                'name', 'content', 'deleted', 'timecreated', 'timemodified', 'usermodified', 'tenantid',
             ],
             'local_coursegen_course_context' => [
                 'courseid', 'context_type', 'system_instruction_id', 'lang',
@@ -63,6 +63,11 @@ class provider implements
                 'courseid', 'userid', 'job_id', 'status', 'generate_images',
                 'context_type', 'system_instruction_name', 'sectionnum', 'beforemod',
                 'timecreated', 'timemodified',
+            ],
+            // Per-tenant configuration values: tenant level settings with no user
+            // reference, declared for transparency (nothing to export or delete per user).
+            'local_coursegen_tenant_config' => [
+                'tenantid', 'name', 'value',
             ],
         ];
 

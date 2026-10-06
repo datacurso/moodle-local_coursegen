@@ -47,6 +47,30 @@ final class generator_test extends \advanced_testcase {
         $this->assertSame('All courses must include a welcome forum.', $record->content);
         $this->assertEquals(0, $record->deleted);
         $this->assertEquals(get_admin()->id, $record->usermodified);
+        $this->assertEquals(
+            \tool_tenant\tenancy::get_tenant_id(),
+            $record->tenantid,
+            'Without a tenant the instruction belongs to the tenant of the current user.'
+        );
+    }
+
+    /**
+     * A seeded system instruction may belong to a tenant.
+     */
+    public function test_create_system_instruction_for_tenant(): void {
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $tenantid = (int) $this->getDataGenerator()->get_plugin_generator('tool_tenant')->create_tenant()->id;
+
+        $instruction = $this->getDataGenerator()->get_plugin_generator('local_coursegen')->create_system_instruction([
+            'name' => 'Tenant policy',
+            'tenantid' => $tenantid,
+        ]);
+
+        $storedtenantid = $DB->get_field('local_coursegen_system_instruction', 'tenantid', ['id' => $instruction->id]);
+        $this->assertEquals($tenantid, $storedtenantid);
     }
 
     /**

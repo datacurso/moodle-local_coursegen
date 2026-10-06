@@ -34,7 +34,24 @@ class behat_local_coursegen_generator extends behat_generator_base {
                 'singular' => 'system instruction',
                 'datagenerator' => 'system_instruction',
                 'required' => ['name'],
+                'switchids' => ['tenant' => 'tenantid'],
             ],
         ];
+    }
+
+    /**
+     * Look up the id of a Workplace tenant from its name.
+     *
+     * @param string $tenantname Tenant name.
+     * @return int Tenant id.
+     */
+    protected function get_tenant_id(string $tenantname): int {
+        global $DB;
+
+        $id = $DB->get_field('tool_tenant', 'id', ['name' => $tenantname]);
+        if (!$id) {
+            throw new Exception('The specified tenant with name "' . $tenantname . '" does not exist');
+        }
+        return (int) $id;
     }
 }

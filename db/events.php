@@ -30,4 +30,8 @@ $observers = [
         'eventname' => '\core\event\course_deleted',
         'callback' => '\local_coursegen\observer::course_deleted',
     ],
+    [
+        'eventname' => '\tool_tenant\event\tenant_deleted',
+        'callback' => '\local_coursegen\observer::tenant_deleted',
+    ],
 ];

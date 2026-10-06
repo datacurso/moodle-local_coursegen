@@ -102,7 +102,7 @@ $functions = [
         'description' => 'Save image generation settings for course and activity creation',
         'type' => 'write',
         'ajax' => true,
-        'capabilities' => 'moodle/site:config',
+        'capabilities' => 'local/coursegen:manageimagegeneration',
         'loginrequired' => true,
     ],
     'local_coursegen_start_course_planning' => [

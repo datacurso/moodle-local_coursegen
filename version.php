@@ -25,11 +25,13 @@
 defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_coursegen';
-$plugin->release = '2.0.6';
-$plugin->version = 2026093010;
+$plugin->release = '2.1.0-wp';
+$plugin->version = 2026100600;
 $plugin->requires = 2024100700; // Moodle 4.5.
 $plugin->maturity = MATURITY_STABLE;
-$plugin->supported = [405, 502];
+$plugin->supported = [405, 405]; // Moodle Workplace 4.5 only.
 $plugin->dependencies = [
     'aiprovider_datacurso' => 2026081000,
+    'tool_tenant' => 2024110500,
+    'tool_wp' => 2024110500,
 ];

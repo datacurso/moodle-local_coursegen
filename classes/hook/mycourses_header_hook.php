@@ -17,6 +17,7 @@
 namespace local_coursegen\hook;
 
 use core\hook\output\before_http_headers;
+use local_coursegen\local\permission;
 
 /**
  * Hook to add the "Create with AI" button to the My courses page.
@@ -151,12 +152,7 @@ class mycourses_header_hook {
      * @return bool
      */
     private static function user_can_see_button(): bool {
-        $systemcontext = \context_system::instance();
-
-        return has_all_capabilities([
-            'moodle/course:create',
-            'local/coursegen:createcoursewithai',
-        ], $systemcontext);
+        return permission::can_create_course_with_ai();
     }
 
     /**

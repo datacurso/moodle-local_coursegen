@@ -30,6 +30,7 @@ use external_api;
 use external_function_parameters;
 use external_single_structure;
 use external_value;
+use local_coursegen\local\permission;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
@@ -73,8 +74,7 @@ class get_course_session_state extends external_api {
 
         // Owning the session is not enough: resuming exposes planning data and
         // backend state, so require the same capabilities as start_course_planning.
-        require_capability('moodle/course:create', $context);
-        require_capability('local/coursegen:createcoursewithai', $context);
+        permission::require_create_course_with_ai();
 
         $sessionid = (string)$session->get('session_id');
         if ($sessionid === '') {

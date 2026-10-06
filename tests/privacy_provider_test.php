@@ -73,6 +73,17 @@ final class privacy_provider_test extends provider_testcase {
         $sessionfields = $tables['local_coursegen_course_sessions']->get_privacy_fields();
         $this->assertArrayHasKey('coursedata', $sessionfields);
 
+        // The tenant owning a system instruction must be declared.
+        $instructionfields = $tables['local_coursegen_system_instruction']->get_privacy_fields();
+        $this->assertArrayHasKey('tenantid', $instructionfields);
+
+        // Tenant overrides are declared for transparency but hold no personal data.
+        $this->assertArrayHasKey('local_coursegen_tenant_config', $tables);
+        $this->assertSame(
+            ['tenantid', 'name', 'value'],
+            array_keys($tables['local_coursegen_tenant_config']->get_privacy_fields())
+        );
+
         // The external Datacurso course service link must declare the data actually sent.
         $this->assertArrayHasKey('datacurso_course_service', $links);
         $linkfields = $links['datacurso_course_service']->get_privacy_fields();

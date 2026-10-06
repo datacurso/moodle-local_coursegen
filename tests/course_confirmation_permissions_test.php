@@ -55,7 +55,11 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
         require_once(__DIR__ . '/fixtures/testable_get_course_settings.php');
 
         // Any accidental real API call must fail fast instead of reaching the network.
-        set_config('datacurso_service_url', 'https://invalid.invalid', 'local_coursegen');
+        \local_coursegen\local\tenant_config::set(
+            'datacurso_service_url',
+            'https://invalid.invalid',
+            \local_coursegen\local\tenancy::get_tenant_id()
+        );
     }
 
     /**
@@ -104,6 +108,20 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
         $categorycontext = \context_coursecat::instance($category->id);
         $roleid = create_role('Category course creator', 'catcoursecreator', '');
         assign_capability('moodle/course:create', CAP_ALLOW, $roleid, $categorycontext->id, true);
+        role_assign($roleid, $userid, $categorycontext->id);
+    }
+
+    /**
+     * Give the user local/coursegen:createcoursewithai in one category only.
+     *
+     * @param int $userid User id.
+     * @param \core_course_category $category Category where the user may use the AI.
+     * @return void
+     */
+    private function allow_createcoursewithai_in_category(int $userid, \core_course_category $category): void {
+        $categorycontext = \context_coursecat::instance($category->id);
+        $roleid = create_role('Category AI course creator', 'cataicoursecreator', '');
+        assign_capability('local/coursegen:createcoursewithai', CAP_ALLOW, $roleid, $categorycontext->id, true);
         role_assign($roleid, $userid, $categorycontext->id);
     }
 
@@ -264,6 +282,77 @@ final class course_confirmation_permissions_test extends \advanced_testcase {
         $offeredids = array_column($result['categories'], 'id');
         $this->assertSame([(int) $cata->id], $offeredids);
         $this->assertNotContains((int) $catb->id, $offeredids);
+    }
+
+    /**
+     * A user holding both capabilities in one category only (nothing at system
+     * level) passes the capability gates of the session web services.
+     */
+    public function test_category_level_creator_passes_capability_gates(): void {
+        $this->resetAfterTest();
+
+        $cata = \core_course_category::create(['name' => 'Allowed category']);
+        $user = $this->getDataGenerator()->create_user();
+        $this->allow_createcoursewithai_in_category($user->id, $cata);
+        $this->allow_course_create_in_category($user->id, $cata);
+        $this->setUser($user);
+        $session = $this->create_session($user->id);
+        $recordid = (int) $session->get('id');
+
+        // The gates run before any API call; the client double only keeps the
+        // calls that pass the gates away from the network.
+        $client = $this->createMock(\aiprovider_datacurso\httpclient\ai_course_api::class);
+        $client->method('request')->willReturn([]);
+        \local_coursegen\local\api_client_factory::set_test_client($client);
+
+        // The regenerate_detailed_item service is not exercised past its gate: it
+        // calls a service method that does not exist (ai_course_api_service::regenerate_detailed_item).
+        $calls = [
+            'course_planning_feedback' => static function () use ($recordid): void {
+                course_planning_feedback::execute($recordid, ['action' => 'accept', 'target_ids' => []]);
+            },
+            'get_course_session_state' => static function () use ($recordid): void {
+                get_course_session_state::execute($recordid);
+            },
+        ];
+
+        foreach ($calls as $label => $call) {
+            try {
+                $call();
+            } catch (\required_capability_exception $e) {
+                $this->fail($label . ' must accept a user holding both capabilities at category level.');
+            } catch (\moodle_exception $e) {
+                // Any later failure comes from the API double, after the gates.
+                $this->assertNotInstanceOf(\required_capability_exception::class, $e, $label);
+            }
+            $this->resetDebugging();
+        }
+        \local_coursegen\local\api_client_factory::set_test_client(null);
+    }
+
+    /**
+     * get_course_settings accepts a user holding both capabilities in one category only.
+     */
+    public function test_get_course_settings_accepts_category_level_creator(): void {
+        $this->resetAfterTest();
+
+        $cata = \core_course_category::create(['name' => 'Allowed category']);
+        $user = $this->getDataGenerator()->create_user();
+        $this->allow_createcoursewithai_in_category($user->id, $cata);
+        $this->allow_course_create_in_category($user->id, $cata);
+        $this->setUser($user);
+        $session = $this->create_session($user->id);
+
+        $service = $this->getMockBuilder(ai_course_api_service::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['get_course_result'])
+            ->getMock();
+        $service->method('get_course_result')->willReturn(['result' => []]);
+        testable_get_course_settings::$mockservice = $service;
+
+        $result = testable_get_course_settings::execute((int) $session->get('id'));
+
+        $this->assertSame([(int) $cata->id], array_column($result['categories'], 'id'));
     }
 
     /**

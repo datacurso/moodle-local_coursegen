@@ -49,4 +49,46 @@ class observer {
         $DB->delete_records('local_coursegen_module_jobs', ['courseid' => $courseid]);
         $DB->delete_records('local_coursegen_course_context', ['courseid' => $courseid]);
     }
+
+    /**
+     * Remove the plugin data owned by a deleted Workplace tenant.
+     *
+     * Deletes the tenant configuration and hard deletes its system instructions
+     * (so their names can never clash with a future tenant reusing the id),
+     * detaching them from the courses that referenced them. Other tenants are
+     * never touched.
+     *
+     * @param \tool_tenant\event\tenant_deleted $event The tenant_deleted event.
+     * @return void
+     */
+    public static function tenant_deleted(\tool_tenant\event\tenant_deleted $event): void {
+        global $DB;
+
+        $tenantid = (int) $event->objectid;
+        if ($tenantid <= 0) {
+            // Not a real tenant: nothing can belong to it.
+            return;
+        }
+
+        local\tenant_config::delete_all($tenantid);
+
+        $instructionids = $DB->get_fieldset_select(
+            'local_coursegen_system_instruction',
+            'id',
+            'tenantid = :tenantid',
+            ['tenantid' => $tenantid]
+        );
+        if ($instructionids) {
+            [$insql, $params] = $DB->get_in_or_equal($instructionids, SQL_PARAMS_NAMED, 'si');
+            $DB->set_field_select(
+                'local_coursegen_course_context',
+                'system_instruction_id',
+                null,
+                "system_instruction_id {$insql}",
+                $params
+            );
+        }
+
+        $DB->delete_records('local_coursegen_system_instruction', ['tenantid' => $tenantid]);
+    }
 }

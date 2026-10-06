@@ -20,6 +20,7 @@ use core_course_category;
 use local_coursegen\event\generation_failed;
 use local_coursegen\event\generation_result_applied;
 use local_coursegen\local\models\course_session;
+use local_coursegen\local\tenancy;
 
 /**
  * Service responsible for creating a course from an AI planning session.
@@ -206,7 +207,8 @@ class create_course_service {
     /**
      * Resolve the category the course will effectively be created in.
      *
-     * Precedence: user override → AI-generated value → site default category.
+     * Precedence: user override → AI-generated value → default category
+     * (the category of the user's tenant, else the site default).
      *
      * @param array $resultdata Result data from the Datacurso API.
      * @param array $overrides Optional user overrides for course fields.
@@ -222,6 +224,23 @@ class create_course_service {
             return (int)$config['category'];
         }
 
+        return self::get_default_categoryid();
+    }
+
+    /**
+     * Default category for a new AI course.
+     *
+     * In Moodle Workplace a tenant owns a course category: courses of its users
+     * default there. Without a tenant category the site default is used.
+     *
+     * @return int Category id, 0 when the site has no category at all.
+     */
+    private static function get_default_categoryid(): int {
+        $tenantcategoryid = tenancy::get_tenant_categoryid(tenancy::get_tenant_id());
+        if ($tenantcategoryid !== null) {
+            return $tenantcategoryid;
+        }
+
         $defaultcategory = core_course_category::get_default();
         return $defaultcategory ? (int)$defaultcategory->id : 0;
     }
@@ -235,8 +254,7 @@ class create_course_service {
     private static function build_course_data_from_api(array $resultdata): \stdClass {
         $coursedata = new \stdClass();
 
-        $defaultcategory = core_course_category::get_default();
-        $defaultcategoryid = $defaultcategory ? (int)$defaultcategory->id : 0;
+        $defaultcategoryid = self::get_default_categoryid();
 
         $config = $resultdata['course_configuration'] ?? null;
         if (!is_array($config)) {

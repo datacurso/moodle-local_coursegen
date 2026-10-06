@@ -94,3 +94,22 @@ function local_coursegen_pluginfile(
 
     send_stored_file($file, 0, 0, $forcedownload, $options);
 }
+
+/**
+ * Callback for theme_workplace: adds "Create with AI" to the Workplace launcher.
+ *
+ * @return array[] Launcher items, each with url (moodle_url), name and imageurl keys.
+ */
+function local_coursegen_theme_workplace_menu_items(): array {
+    global $OUTPUT;
+
+    if (!\local_coursegen\local\permission::can_create_course_with_ai()) {
+        return [];
+    }
+
+    return [[
+        'url' => new moodle_url('/local/coursegen/aicoursecreation.php'),
+        'name' => get_string('createwithai', 'local_coursegen'),
+        'imageurl' => $OUTPUT->image_url('sparkles', 'local_coursegen')->out(false),
+    ]];
+}

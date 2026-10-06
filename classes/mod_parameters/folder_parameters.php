@@ -16,7 +16,7 @@
 
 namespace local_coursegen\mod_parameters;
 
-use aiprovider_datacurso\httpclient\ai_course_api;
+use local_coursegen\local\api_client_factory;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -50,9 +50,7 @@ class folder_parameters extends base_parameters {
             return $this->parameters;
         }
 
-        $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
-        $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
-        $client = new ai_course_api(null, $baseurl, $baseurleu);
+        $client = api_client_factory::ai_course_api_for_current_tenant();
 
         $draftid = file_get_unused_draft_itemid();
         $fs = get_file_storage();

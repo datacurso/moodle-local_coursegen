@@ -16,7 +16,7 @@
 
 namespace local_coursegen;
 
-use aiprovider_datacurso\httpclient\ai_course_api;
+use local_coursegen\local\api_client_factory;
 
 /**
  * Class ai_context
@@ -50,10 +50,7 @@ class ai_context {
                 'site_id' => $siteid,
             ];
 
-            $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
-            $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
-
-            $client = new ai_course_api(null, $baseurl, $baseurleu);
+            $client = api_client_factory::ai_course_api_for_current_tenant();
             $client->request('POST', '/context/upload-model-context', $postdata);
         } catch (\Exception $e) {
             // Show error notification to the user.

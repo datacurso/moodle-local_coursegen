@@ -29,6 +29,7 @@ use context_system;
 use external_api;
 use external_function_parameters;
 use external_single_structure;
+use local_coursegen\local\permission;
 use external_value;
 
 defined('MOODLE_INTERNAL') || die();
@@ -63,8 +64,7 @@ class courseai_filepicker_init extends external_api {
         self::validate_context($context);
 
         // Check permissions.
-        require_capability('moodle/course:create', $context);
-        require_capability('local/coursegen:createcoursewithai', $context);
+        permission::require_create_course_with_ai();
 
         $draftitemid = file_get_unused_draft_itemid();
         $clientid = uniqid('local_coursegen_courseai_syllabus_');

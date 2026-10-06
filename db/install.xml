@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="UTF-8"?>
-<XMLDB PATH="local/coursegen/db" VERSION="20250827"
+<XMLDB PATH="local/coursegen/db" VERSION="20261005"
     COMMENT="XMLDB file for Moodle local/coursegen"
     xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
     xsi:noNamespaceSchemaLocation="../../../lib/xmldb/xmldb.xsd">
@@ -15,11 +15,15 @@
                 <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="usermodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
+                <FIELD NAME="tenantid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Workplace tenant owning the instruction" />
             </FIELDS>
             <KEYS>
                 <KEY NAME="primary" TYPE="primary" FIELDS="id" />
                 <KEY NAME="usermodified" TYPE="foreign" FIELDS="usermodified" REFTABLE="user" REFFIELDS="id" />
             </KEYS>
+            <INDEXES>
+                <INDEX NAME="tenantid_deleted" UNIQUE="false" FIELDS="tenantid, deleted" />
+            </INDEXES>
         </TABLE>
         
         <TABLE NAME="local_coursegen_course_context" COMMENT="Store course context type and system instruction selection">
@@ -83,6 +87,18 @@
             <INDEXES>
                 <INDEX NAME="job_id" UNIQUE="true" FIELDS="job_id" />
             </INDEXES>
+        </TABLE>
+        <TABLE NAME="local_coursegen_tenant_config" COMMENT="Per-tenant overrides of the plugin configuration (tenant 0 lives in config_plugins)">
+            <FIELDS>
+                <FIELD NAME="id" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="true" />
+                <FIELD NAME="tenantid" TYPE="int" LENGTH="10" NOTNULL="true" DEFAULT="0" SEQUENCE="false" COMMENT="Workplace tenant the override applies to" />
+                <FIELD NAME="name" TYPE="char" LENGTH="100" NOTNULL="true" SEQUENCE="false" COMMENT="Setting name" />
+                <FIELD NAME="value" TYPE="text" NOTNULL="true" SEQUENCE="false" COMMENT="Setting value" />
+            </FIELDS>
+            <KEYS>
+                <KEY NAME="primary" TYPE="primary" FIELDS="id" />
+                <KEY NAME="tenantid_name" TYPE="unique" FIELDS="tenantid, name" />
+            </KEYS>
         </TABLE>
     </TABLES>
 </XMLDB>
