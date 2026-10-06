@@ -26,6 +26,8 @@ import {startTemplateGeneration} from './repository';
 import {runGenerationStream} from './generation_stream';
 import {usePreviewSession} from './preview';
 import {reviewAndCreate} from './finish';
+import {forgetRefusedSyllabus} from './syllabus_refusal';
+import {refreshSyllabusChip} from './input_bar';
 
 /**
  * Generate the course from the picked template, with the input bar's own
@@ -71,6 +73,9 @@ export const runGeneration = async(tplState, tplSelect, genBtn, state, host) => 
         );
     } catch (e) {
         genBtn.disabled = false;
+        if (forgetRefusedSyllabus(tplState, e)) {
+            refreshSyllabusChip(tplState);
+        }
         Notification.exception(e);
     }
 };

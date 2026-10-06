@@ -31,7 +31,7 @@ import {bindToggleWrap, showFilePicker} from '../context/filepicker';
  *
  * @param {Object} tplState
  */
-const refreshSyllabusChip = (tplState) => {
+export const refreshSyllabusChip = (tplState) => {
     const hasFile = !!tplState.syllabusdraftitemid;
     const chipsRow = document.getElementById('tplChipsRow');
     const chip = document.getElementById('tplChipSyllabus');
