@@ -213,6 +213,15 @@ $functions = [
         'capabilities' => 'local/coursegen:managetemplates',
         'loginrequired' => true,
     ],
+    'local_coursegen_get_course_preview' => [
+        'classname' => 'local_coursegen\\external\\get_course_preview',
+        'methodname' => 'execute',
+        'description' => 'Render the sections and activities of the course a template is based on',
+        'type' => 'read',
+        'ajax' => true,
+        'capabilities' => 'local/coursegen:managetemplates',
+        'loginrequired' => true,
+    ],
     'local_coursegen_search_template_courses' => [
         'classname' => 'local_coursegen\\external\\search_template_courses',
         'methodname' => 'execute',

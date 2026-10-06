@@ -87,7 +87,6 @@ final class template_service_load_test extends \advanced_testcase {
 
         $this->assertTrue($loaded['courseusable']);
         $this->assertNull($loaded['template']);
-        $this->assertSame([], $loaded['missing']);
         $activities = $this->activities_by_cmid($loaded['sections']);
         $keys = array_keys($activities);
         $this->assertEqualsCanonicalizing([$page, $quiz, $label], $keys);
@@ -148,9 +147,9 @@ final class template_service_load_test extends \advanced_testcase {
     }
 
     /**
-     * An activity deleted after the save is reported and does not appear among the sections.
+     * An activity deleted after the save does not appear among the sections, and the others keep their choice.
      */
-    public function test_deleted_activity_is_reported_as_missing(): void {
+    public function test_deleted_activity_does_not_appear(): void {
         [$course, $page, $quiz] = $this->make_course();
         $id = $this->save_items($course, [
             ['cmid' => $page, 'action' => 'ai', 'instruction' => 'gone soon'],
@@ -162,9 +161,7 @@ final class template_service_load_test extends \advanced_testcase {
 
         $activities = $this->activities_by_cmid($loaded['sections']);
         $this->assertArrayNotHasKey($page, $activities);
-        $this->assertCount(1, $loaded['missing']);
-        $this->assertSame($page, $loaded['missing'][0]['cmid']);
-        $this->assertSame('gone soon', $loaded['missing'][0]['instruction']);
+        $this->assertSame('keep', $activities[$quiz]['action']);
     }
 
     /**
@@ -178,7 +175,6 @@ final class template_service_load_test extends \advanced_testcase {
         $loaded = $this->service->load_for_edit($id, (int) $other->id);
 
         $this->assertSame((int) $other->id, $loaded['courseid']);
-        $this->assertSame([], $loaded['missing']);
         $activities = $this->activities_by_cmid($loaded['sections']);
         $this->assertSame('keep', $activities[$otherpage]['action']);
     }

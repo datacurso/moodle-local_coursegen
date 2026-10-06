@@ -1,0 +1,78 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/template_course_sections_row
+
+    One activity of the "Course sections" review table: its row plus, right
+    under it, the row that holds the optional instruction for the AI (hidden
+    while the activity stays intact). Included once per entry of a section's
+    "rows" array by template_course_sections.mustache (split out to keep that
+    file small); never rendered on its own.
+
+    Context variables: see template_course_sections.mustache's own
+    docblock for the full shape of one "rows" entry.
+
+    Example context (json):
+    {
+        "cmid": 42,
+        "name": "Welcome page",
+        "viewurl": "https://example.com/mod/page/view.php?id=42",
+        "modname": "page",
+        "typelabel": "Page",
+        "iconurl": "https://example.com/theme/image.php/boost/page/1/monologo",
+        "isai": false,
+        "instruction": "",
+        "actions": [
+            {"value": "keep", "cmid": 42, "label": "Keep intact", "tip": "The AI never touches the activity", "active": true},
+            {"value": "ai", "cmid": 42, "label": "Modify with AI", "tip": "The AI modifies the activity following your instruction", "active": false}
+        ]
+    }
+}}
+<tr data-for="cmitem" data-id="{{cmid}}" data-modname="{{modname}}">
+    <td class="align-middle tpl-select-col">
+        <input type="checkbox" data-region="activity-select" data-id="{{cmid}}"
+               aria-label="{{name}}">
+    </td>
+    <td class="align-middle">
+        <img src="{{iconurl}}" class="icon activityicon mr-2" alt="">{{!
+        }}{{#viewurl}}<a href="{{viewurl}}" target="_blank" rel="noopener">{{name}}</a>{{/viewurl}}{{!
+        }}{{^viewurl}}<span>{{name}}</span>{{/viewurl}}
+    </td>
+    <td class="align-middle text-muted">{{typelabel}}</td>
+    <td class="align-middle text-right">
+        <select class="custom-select custom-select-sm tpl-activity-action"
+                data-region="activity-action" data-id="{{cmid}}"
+                aria-controls="local-coursegen-tpl-instruction-{{cmid}}"
+                aria-label="{{#str}} actions, core {{/str}}">
+            {{#actions}}
+            <option value="{{value}}" title="{{tip}}"{{#active}} selected{{/active}}>{{label}}</option>
+            {{/actions}}
+        </select>
+    </td>
+</tr>
+<tr class="tpl-instruction-row{{^isai}} d-none{{/isai}}" data-for="instruction" data-id="{{cmid}}">
+    <td></td>
+    <td colspan="3">
+        <label class="small text-muted mb-1" for="local-coursegen-tpl-instruction-{{cmid}}">
+            {{#str}} template_instruction, local_coursegen {{/str}}
+        </label>
+        <textarea class="form-control form-control-sm" rows="2"
+                  id="local-coursegen-tpl-instruction-{{cmid}}"
+                  data-region="activity-instruction" data-id="{{cmid}}"
+                  placeholder="{{#str}} template_instruction_placeholder, local_coursegen {{/str}}">{{instruction}}</textarea>
+    </td>
+</tr>

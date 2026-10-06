@@ -65,29 +65,4 @@ final class template_editor_data {
 
         return $applied;
     }
-
-    /**
-     * The saved rows whose activity is no longer in the course.
-     *
-     * @param array[] $sections Sections as returned by course_structure.
-     * @param stdClass[] $saved Saved rows keyed by course module id.
-     * @return array[] Entries with cmid, action and instruction.
-     */
-    public static function missing_items(array $sections, array $saved): array {
-        $cmids = course_structure::cmids_of($sections);
-        $known = array_flip($cmids);
-        $missing = [];
-        foreach ($saved as $cmid => $row) {
-            if (isset($known[$cmid])) {
-                continue;
-            }
-            $missing[] = [
-                'cmid' => (int) $cmid,
-                'action' => (string) $row->action,
-                'instruction' => (string) $row->instruction,
-            ];
-        }
-
-        return $missing;
-    }
 }

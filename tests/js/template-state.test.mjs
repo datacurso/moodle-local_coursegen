@@ -2,7 +2,7 @@
 import {test} from 'node:test';
 import assert from 'node:assert/strict';
 
-import * as State from 'local_coursegen/template/state';
+import * as State from 'local_coursegen/local/template/items_state';
 
 const row = (cmid, action, instruction) => ({cmid, action, instruction});
 const model = (overrides) => ({templateid: 3, courseid: 42, name: 'Marketing', description: '', rows: [], ...overrides});

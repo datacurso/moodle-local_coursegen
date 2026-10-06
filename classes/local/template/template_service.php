@@ -112,8 +112,8 @@ class template_service {
      *
      * @param int $templateid Id of the template being edited, or 0 for a new one.
      * @param int $courseid Course chosen in the editor, or 0 to use the one of the template.
-     * @return array With template, courseid, courseusable, sections and missing. The activities of a section carry
-     *               action and instruction, and missing lists what is saved for activities that no longer exist.
+     * @return array With template, courseid, courseusable and sections. The activities of a section carry
+     *               action and instruction.
      * @throws moodle_exception When the template does not exist.
      */
     public function load_for_edit(int $templateid, int $courseid): array {
@@ -133,7 +133,6 @@ class template_service {
             'courseid' => $effectivecourseid,
             'courseusable' => false,
             'sections' => [],
-            'missing' => [],
         ];
         if (!course_structure::is_usable_course($effectivecourseid)) {
             return $loaded;
@@ -143,7 +142,6 @@ class template_service {
         $saved = $this->saved_items($template, $effectivecourseid);
         $loaded['courseusable'] = true;
         $loaded['sections'] = template_editor_data::apply_saved_items($sections, $saved);
-        $loaded['missing'] = template_editor_data::missing_items($sections, $saved);
 
         return $loaded;
     }
