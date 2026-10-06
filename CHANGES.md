@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. Each change
 
 ### Fixed
 - **A site that already ran the plugin upgrades to the template tables without failing**  
-  The template tables were created only by the step 2026072002, so a site that was already past that step when they arrived never got them, and the steps after it failed when they touched a table that did not exist. The creation now lives in one helper that creates only the tables that are missing, and the step that follows it calls the helper first. Sites that already have the tables keep them as they are.
+  The template tables were created only by the step 2026072002, so a site that was already past that step when they arrived never got them, and the steps after it failed when they touched a table that did not exist. The creation now runs at the start of the step 2026091504, and it creates only the tables that are missing, so sites that already have them keep them as they are.
 
 ## [2.0.10] - 2026100223
 
