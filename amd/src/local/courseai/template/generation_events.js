@@ -27,6 +27,17 @@
  */
 
 import {addActivity, closeActivity, openChecklist} from 'local_coursegen/local/courseai/template/generation_checklist';
+import {createSeen, normalizeEvent} from 'local_coursegen/local/courseai/template/agent_events';
+import {showToolCall, showToolResult} from 'local_coursegen/local/courseai/template/agent_steps';
+
+const seen = createSeen();
+
+/**
+ * Forget the events already shown, when a run starts or a reloaded page repaints it.
+ */
+export const resetSeen = () => {
+    seen.reset();
+};
 
 /** The status classes the shared generation stylesheet reacts to. */
 export const STATUS_CLASS = {
@@ -63,6 +74,23 @@ const resetProgress = (progress, data) => {
 };
 
 /**
+ * One activity starts being written: open the progress list the first time, light its row and add its item.
+ *
+ * @param {Object} data
+ * @param {Object} progress Mutable {total, done, opened} counters.
+ * @returns {string} ''
+ */
+const startActivity = (data, progress) => {
+    if (!progress.opened) {
+        progress.opened = true;
+        openChecklist(progress);
+    }
+    markRow(data.uid, 'running');
+    addActivity(data);
+    return '';
+};
+
+/**
  * One activity's generation failed or finished; count it and, once every
  * activity is accounted for, move the header on to the next phase.
  *
@@ -77,6 +105,9 @@ const finishActivity = (data, progress, paintStage) => {
     // professor is told about.
     markRow(data.uid, 'done');
     progress.done += 1;
+    if (progress.total < progress.done) {
+        progress.total = progress.done;
+    }
     closeActivity(data.uid, progress);
     if (progress.total > 0 && progress.done >= progress.total) {
         paintStage('saving');
@@ -90,18 +121,26 @@ const EVENT_HANDLERS = {
         paintStage(data.stage);
         return '';
     },
-    review_needed: () => 'review',
     activity_progress_init: (data, progress, paintStage) => {
         resetProgress(progress, data);
+        progress.opened = true;
         openChecklist(progress);
         paintStage('activities');
         return '';
     },
-    activity_progress_start: (data) => {
-        markRow(data.uid, 'running');
-        addActivity(data);
+    activity_progress_start: startActivity,
+    status: () => '',
+    token: () => '',
+    section: () => '',
+    tool_call: (data) => {
+        showToolCall(data);
         return '';
     },
+    tool_result: (data) => {
+        showToolResult(data);
+        return '';
+    },
+    question: () => 'question',
     activity_progress_done: finishActivity,
     activity_progress_failed: finishActivity,
     completed: () => 'completed',
@@ -114,12 +153,16 @@ const EVENT_HANDLERS = {
  * @param {Object} data
  * @param {Object} progress Mutable {total, done} counters.
  * @param {Function} paintStage Shows one phase label, by key.
- * @returns {string} '' to keep listening, otherwise 'review'/'completed'/'failed'.
+ * @returns {string} '' to keep listening, otherwise 'question', 'completed' or 'failed'.
  */
 export const applyEvent = (data, progress, paintStage) => {
-    const handler = EVENT_HANDLERS[data.type];
-    if (!handler) {
+    const event = normalizeEvent(data);
+    if (!seen.accept(event)) {
         return '';
     }
-    return handler(data, progress, paintStage);
+    if (!Object.prototype.hasOwnProperty.call(EVENT_HANDLERS, event.type)) {
+        return '';
+    }
+    const handler = EVENT_HANDLERS[event.type];
+    return handler(event, progress, paintStage);
 };

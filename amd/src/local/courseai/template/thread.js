@@ -37,6 +37,8 @@ const STRING_KEYS = [
     'courseai_template_log_approved',
     'courseai_template_log_adjusting',
     'courseai_template_log_completed',
+    'template_agent_log_waiting',
+    'template_agent_log_resumed',
 ];
 
 let labels = null;

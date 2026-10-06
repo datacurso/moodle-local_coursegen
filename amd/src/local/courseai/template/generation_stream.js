@@ -43,7 +43,7 @@
  */
 
 import {getStrings} from 'core/str';
-import {askForDecision} from 'local_coursegen/local/courseai/template/generation_review';
+import {askQuestion, askRetry} from 'local_coursegen/local/courseai/template/generation_question';
 import {
     announceTemplate,
     milestone,
@@ -52,9 +52,13 @@ import {
     turn,
 } from 'local_coursegen/local/courseai/template/thread';
 import {refreshPreviewLinks} from 'local_coursegen/local/courseai/template/preview';
-import {sendTemplateReviewFeedback} from 'local_coursegen/local/courseai/template/repository';
 import {hideWorkingIndicator, showWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
-import {ALL_STATUS_CLASSES, STATUS_CLASS, applyEvent} from 'local_coursegen/local/courseai/template/generation_events';
+import {
+    ALL_STATUS_CLASSES,
+    STATUS_CLASS,
+    applyEvent,
+    resetSeen,
+} from 'local_coursegen/local/courseai/template/generation_events';
 import {watchOnce} from 'local_coursegen/local/courseai/template/generation_watch';
 import {hideHeader, markHeaderDone, showGeneratingHeader} from 'local_coursegen/local/courseai/template/generation_header';
 
@@ -147,6 +151,7 @@ const paintStage = async(key) => {
  */
 const openView = async(context) => {
     document.body.classList.add('cg-generating');
+    resetSeen();
 
     // The composer goes away for the duration, the way free mode's does: there
     // is nothing left to type, and leaving an active-looking input under a run
@@ -189,62 +194,142 @@ const closeView = (message) => {
 };
 
 /**
- * Run one generation, pausing for the professor's review, and resolve when
- * the course has been built.
+ * The run completed: close the header and build the course.
  *
- * @param {string} streamUrl SSE endpoint returned by start_template_generation.
  * @param {Function} buildCourse Called once the run completes; resolves to {courseurl}.
- * @param {number} sessionId Session the review answers belong to.
- * @param {Object} context {prompt, templateName}, for the opening turns.
- * @returns {Promise<Object>} The built course, as buildCourse resolved it.
+ * @returns {Promise<*>} What buildCourse resolved to.
  */
-export const runGenerationStream = async(streamUrl, buildCourse, sessionId, context) => {
-    await openView(context);
-    await paintStage('connecting');
+const finishRun = (buildCourse) => {
+    markHeaderDone();
+    hideWorkingIndicator();
+    milestone('courseai_template_log_completed');
+    return buildCourse();
+};
 
-    const progress = {total: 0, done: 0};
+/**
+ * The run paused on a question: show it and wait for the answer to be stored.
+ *
+ * @param {number} sessionId Local session id, for example 139.
+ * @param {Object} question The question event.
+ */
+const waitForAnswer = async(sessionId, question) => {
+    hideWorkingIndicator();
+    milestone('template_agent_log_waiting');
+    await askQuestion(sessionId, question);
+    milestone('template_agent_log_resumed');
+    await paintStage('activities');
+};
+
+/**
+ * The run stopped for a reason a new attempt may fix: show it and wait for the teacher to try again.
+ *
+ * @param {Object} failure The failed event.
+ */
+const waitForRetry = async(failure) => {
+    hideWorkingIndicator();
+    await askRetry(failure.message);
+    await paintStage('connecting');
+};
+
+/**
+ * Follow the stream of a run, pass by pass, until the run completes.
+ *
+ * @param {string} streamUrl Relay URL of the stream of the run.
+ * @param {Function} buildCourse Creates the course once the run completed.
+ * @param {number} sessionId Local session id, for example 139.
+ * @param {{total: number, done: number}} progress Counters of the activities written.
+ * @returns {Promise<*>} What buildCourse returns.
+ */
+const followRun = async(streamUrl, buildCourse, sessionId, progress) => {
     for (;;) {
-        // eslint-disable-next-line no-await-in-loop
         const {outcome, data} = await watchOnce(
             streamUrl,
             progress,
             (eventData, eventProgress) => applyEvent(eventData, eventProgress, paintStage),
             closeView
         );
-
         if (outcome === 'completed') {
-            // The result payload stays server-side: the browser only reports
-            // that the run finished, and Moodle fetches it to build the course.
-            markHeaderDone();
-            // The working indicator gives way to the review: nothing is being
-            // built until the professor has confirmed the course's name.
-            hideWorkingIndicator();
-            milestone('courseai_template_log_completed');
-            return buildCourse();
+            return finishRun(buildCourse);
         }
-
-        await paintStage('reviewing');
-        markHeaderDone();
-        milestone('courseai_template_log_review_ready');
-        // eslint-disable-next-line no-await-in-loop
-        const decision = await askForDecision(data.generated_activities || []);
-        showGeneratingHeader((await getLabels()).title);
-
-        if (decision.action === 'accept') {
-            milestone('courseai_template_log_approved', 'user', 'success');
-            await paintStage('saving');
+        if (outcome === 'retry') {
+            await waitForRetry(data);
         } else {
-            turn('user', 'user', decision.instruction);
-            milestone('courseai_template_log_adjusting');
-            await paintStage('activities');
+            await waitForAnswer(sessionId, data);
         }
-
-        // eslint-disable-next-line no-await-in-loop
-        await sendTemplateReviewFeedback(
-            sessionId,
-            decision.action,
-            decision.targetIds,
-            decision.instruction
-        );
     }
+};
+
+/**
+ * Run a template generation: open the stream, show what the AI does, stop to ask what it needs and go on.
+ *
+ * @param {string} streamUrl Relay URL of the stream of the run.
+ * @param {Function} buildCourse Creates the course once the run completed.
+ * @param {number} sessionId Local session id, for example 139.
+ * @param {{prompt: string, templateName: string}} context What the teacher asked and the template used.
+ * @returns {Promise<*>} What buildCourse returns.
+ */
+export const runGenerationStream = async(streamUrl, buildCourse, sessionId, context) => {
+    await openView(context);
+    await paintStage('connecting');
+    return followRun(streamUrl, buildCourse, sessionId, {total: 0, done: 0});
+};
+
+const lastFailure = (events) => {
+    const failures = events.filter((event) => event && event.type === 'failed');
+    return failures[failures.length - 1] || null;
+};
+
+const replayEvents = (events, progress) => {
+    for (const event of events) {
+        applyEvent(event, progress, paintStage);
+    }
+};
+
+const parseJson = (text, fallback) => {
+    try {
+        return JSON.parse(text);
+    } catch (exception) {
+        return fallback;
+    }
+};
+
+/**
+ * Repaint a template generation after a reload and go on from where it was: replay what was shown, show the
+ * pending question again, or follow the stream.
+ *
+ * @param {Object} snapshot The state of the run: status, streamurl, pendingquestion and progressevents.
+ * @param {Function} buildCourse Creates the course once the run completed.
+ * @param {number} sessionId Local session id, for example 139.
+ * @param {{prompt: string, templateName: string}} context What the teacher asked and the template used.
+ * @returns {Promise<*>} What buildCourse returns, or null when the run cannot go on.
+ */
+export const resumeGenerationStream = async(snapshot, buildCourse, sessionId, context) => {
+    await openView(context);
+    const progress = {total: 0, done: 0};
+    const events = parseJson(snapshot.progressevents, []);
+    replayEvents(events, progress);
+
+    if (snapshot.status === 'COMPLETED') {
+        return finishRun(buildCourse);
+    }
+    if (snapshot.status === 'FAILED') {
+        const failure = lastFailure(events);
+        if (failure === null || failure.retryable !== true) {
+            let message = '';
+            if (failure !== null) {
+                message = failure.message;
+            }
+            closeView(message);
+            return null;
+        }
+        await waitForRetry(failure);
+    }
+    if (snapshot.status === 'WAITING_USER') {
+        const question = parseJson(snapshot.pendingquestion, null);
+        if (question !== null) {
+            await waitForAnswer(sessionId, question);
+        }
+    }
+    await paintStage('connecting');
+    return followRun(snapshot.streamurl, buildCourse, sessionId, progress);
 };

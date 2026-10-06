@@ -28,10 +28,12 @@
 
 import Notification from 'core/notification';
 import {getString} from 'core/str';
-import {getTemplateStructure} from './template/repository';
+import {getTemplateAgentState, getTemplateStructure} from './template/repository';
 import {runGeneration} from './template/run_generation';
+import {resumeGenerationStream} from './template/generation_stream';
+import {reviewAndCreate} from './template/finish';
 import {wireInputBar} from './template/input_bar';
-import {refreshPreviewLinks} from './template/preview';
+import {refreshPreviewLinks, usePreviewSession} from './template/preview';
 import {
     createTemplateState,
     applyStructureResponse,
@@ -170,6 +172,44 @@ export const wireTemplateMode = (state, host) => {
             }
         });
     }
+
+    if (state.templateResume && state.templateResume.sessionid > 0 && tplSelect) {
+        resumeRun(state.templateResume, {tplSelect, tplState, container, state, host, requestTracker});
+    }
+};
+
+/**
+ * Repaint a template generation after a reload and go on with it.
+ *
+ * @param {Object} resume What the page was given: sessionid, templateid, prompt and templatename.
+ * @param {Object} parts The elements and state of the template mode.
+ */
+const resumeRun = async(resume, parts) => {
+    const {tplSelect, tplState, container, state, host, requestTracker} = parts;
+    try {
+        tplSelect.value = String(resume.templateid);
+        const workspace = document.getElementById('courseaiWorkspace');
+        if (workspace) {
+            workspace.classList.add('tpl-active');
+        }
+        requestTracker.id += 1;
+        await loadTemplateStructure(resume.templateid, tplState, container, state, requestTracker, requestTracker.id);
+        const snapshot = await getTemplateAgentState(resume.sessionid);
+        usePreviewSession(resume.sessionid);
+        await resumeGenerationStream(
+            snapshot,
+            () => createCourseWhenReady(host, state, tplState, resume.sessionid),
+            resume.sessionid,
+            {prompt: resume.prompt || '', templateName: resume.templatename || ''}
+        );
+    } catch (e) {
+        Notification.exception(e);
+    }
+};
+
+const createCourseWhenReady = async(host, state, tplState, sessionId) => {
+    await host.ready;
+    return reviewAndCreate(host, state, tplState, sessionId);
 };
 
 /**
