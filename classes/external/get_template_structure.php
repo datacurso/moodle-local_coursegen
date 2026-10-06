@@ -16,8 +16,7 @@
 
 /**
  * External API for the professor-facing template guided form: the template's
- * section/activity structure (with the admin-defined lock state applied), the
- * file resources the professor brings a file for included.
+ * section/activity structure, with the activities the AI modifies marked.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -30,7 +29,7 @@ use external_api;
 use external_function_parameters;
 use external_value;
 use context_system;
-use local_coursegen\local\models\template;
+use local_coursegen\local\template\template_repository;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -55,7 +54,7 @@ class get_template_structure extends external_api {
     }
 
     /**
-     * Return the template's structure, locked state and spaces.
+     * Return the template's structure and what the AI does with each activity.
      *
      * @param int $templateid Template ID.
      * @return array
@@ -70,37 +69,18 @@ class get_template_structure extends external_api {
         self::validate_context($context);
         require_capability('local/coursegen:createtemplatecoursewithai', $context);
 
-        $template = template::get_record(['id' => $params['templateid']]);
-        if (!$template) {
+        $repository = new template_repository();
+        $template = $repository->find($params['templateid']);
+        if ($template === null) {
             throw new \moodle_exception('invalidtemplate', 'local_coursegen');
         }
 
-        $courseid = $template->get('courseid');
-        $course  = get_course($courseid);
+        $course = get_course($template->courseid);
         $modinfo = get_fast_modinfo($course);
-
-        $sectionsettings = self::section_settings($template);
-        $activitysettings = self::activity_settings($template);
-        $instancesbysection = self::instances_by_section($template);
-        $sections = self::sections($course, $modinfo, $sectionsettings, $activitysettings, $instancesbysection, $OUTPUT);
-
-        $nolimit = (bool) $template->get('nolimit');
-        $maxsections = $template->get('maxsections') ?? 0;
-        $maxsections = (int) $maxsections;
-        // The stored value already IS the extra allowance - how many sections
-        // the professor may add ON TOP of the template's own - so the
-        // template's sections never get subtracted from it.
-        if ($nolimit) {
-            $remaining = 0;
-        } else {
-            $remaining = max(0, $maxsections);
-        }
+        $items = $repository->items_of($params['templateid']);
 
         return [
-            'nolimit' => $nolimit,
-            'maxsections' => $maxsections,
-            'remainingsections' => $remaining,
-            'sections' => $sections,
+            'sections' => self::sections($course, $modinfo, $items, $OUTPUT),
         ];
     }
 }

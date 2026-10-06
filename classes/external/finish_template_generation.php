@@ -40,11 +40,6 @@ use local_coursegen\local\service\kept_link_rewriter;
 use local_coursegen\local\service\template_ai_api_service;
 use local_coursegen\local\service\template_course_order;
 use local_coursegen\local\service\template_keep_copier;
-use local_coursegen\local\space\file_spaces;
-use local_coursegen\local\space\space_file_storage;
-use local_coursegen\local\space\space_resource_file;
-use local_coursegen\local\space\space_scope;
-use local_coursegen\local\space\space_selection;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -117,26 +112,23 @@ class finish_template_generation extends external_api {
         $generatedactivities = $result['generated_activities'] ?? [];
         $writtenactivities = generated_activities_filter::only_ai_written($generatedactivities);
         $result['generated_activities'] = $writtenactivities;
-        $selection = self::space_selection_of($session, $templateid);
 
         $overrides = course_review_service::overrides(
             (string) $params['fullname'],
             (string) $params['shortname'],
             (int) $params['category']
         );
-        $created = self::create_in_space_scope($selection, $session, $result, $overrides);
+        $created = create_course_service::create_course($session, $result, $overrides);
         course_creation_guard::ensure_created($created);
         $courseid = $created['courseid'] ?? 0;
         $courseid = (int) $courseid;
         $keptcms = [];
         if ($courseid > 0 && $templateid !== null && $templateid > 0) {
-            template_keep_copier::copy_into($templateid, $courseid, $keptcms, $selection->filled_cmids());
+            template_keep_copier::copy_into($templateid, $courseid, $keptcms);
         }
-        self::place_space_files($session, $selection, $keptcms);
         $generatedcms = $created['generatedcms'] ?? [];
         self::arrange_course($templateid, $courseid, $generatedactivities, $generatedcms, $keptcms);
         self::resolve_activity_links($session, $courseid, $generatedactivities, $generatedcms, $keptcms);
-        space_file_storage::delete_session((int) $session->get('userid'), (int) $session->get('id'));
 
         return self::created_response($courseid, $CFG->wwwroot);
     }
@@ -161,7 +153,7 @@ class finish_template_generation extends external_api {
             return;
         }
         kept_link_rewriter::rewrite_for_course($courseid, $payloadactivities, $generatedcms, $keptcms);
-        template_course_order::apply($templateid, $courseid, $payloadactivities, $generatedcms, $keptcms);
+        template_course_order::apply($templateid, $courseid, $generatedcms, $keptcms);
     }
 
     /**
@@ -191,66 +183,6 @@ class finish_template_generation extends external_api {
             $sessionid = (int) $session->get('id');
             course_session_service::update_status($sessionid, course_session::STATUS_FAILED);
             throw $exception;
-        }
-    }
-
-    /**
-     * The spaces of the template with the files the teacher brought for this generation.
-     *
-     * @param course_session $session
-     * @param int|null $templateid
-     * @return space_selection
-     */
-    private static function space_selection_of(course_session $session, ?int $templateid): space_selection {
-        if ($templateid === null || $templateid <= 0) {
-            return new space_selection([], []);
-        }
-        $userid = (int) $session->get('userid');
-        $sessionid = (int) $session->get('id');
-        return file_spaces::selection_of_session($templateid, $userid, $sessionid);
-    }
-
-    /**
-     * Build the course with the spaces in scope, so every activity gets the teacher's file or loses its element.
-     *
-     * @param space_selection $selection
-     * @param course_session $session
-     * @param array $result The result with the activities to build.
-     * @param array $overrides What the teacher chose at the review.
-     * @return array What create_course returns.
-     */
-    private static function create_in_space_scope(
-        space_selection $selection,
-        course_session $session,
-        array $result,
-        array $overrides
-    ): array {
-        space_scope::enter($selection);
-        try {
-            return create_course_service::create_course($session, $result, $overrides);
-        } finally {
-            space_scope::leave();
-        }
-    }
-
-    /**
-     * Put the teacher's file in the copy of each space's resource.
-     *
-     * When a copy is missing the generation is marked failed and the error reaches the caller.
-     *
-     * @param course_session $session
-     * @param space_selection $selection
-     * @param array $keptcms Base course cmid => created cmid, for the copied activities.
-     */
-    private static function place_space_files(course_session $session, space_selection $selection, array $keptcms): void {
-        foreach ($selection->filled() as $space) {
-            $created = $keptcms[$space->cmid] ?? null;
-            if ($created === null) {
-                $sessionid = (int) $session->get('id');
-                course_session_service::update_status($sessionid, course_session::STATUS_FAILED);
-                throw new \moodle_exception('spacecopyfailed', 'local_coursegen', '', $space->name);
-            }
-            space_resource_file::replace((int) $created, $selection->file_of($space));
         }
     }
 

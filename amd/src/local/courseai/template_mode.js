@@ -27,7 +27,7 @@
  */
 
 import Notification from 'core/notification';
-import {getString, getStrings} from 'core/str';
+import {getString} from 'core/str';
 import {getTemplateStructure} from './template/repository';
 import {runGeneration} from './template/run_generation';
 import {wireInputBar} from './template/input_bar';
@@ -38,8 +38,25 @@ import {
     toggleSectionCollapsed,
 } from './template/state';
 import {renderStructure, wireStructureEvents} from './template/render';
-import {pickSpaceFile, removeSpaceFile, refreshGenerateState} from './template/space_files';
 import {formatTemplate} from './utils';
+import Selectors from './template/selectors';
+
+/**
+ * Let the Generate button follow the template: it is on once a template is loaded.
+ *
+ * Nothing happens before a template is loaded, or while a generation is on
+ * screen: from then on the button belongs to the review.
+ *
+ * @param {Object} tplState
+ * @param {HTMLButtonElement|null} genBtn
+ */
+const refreshGenerateState = (tplState, genBtn) => {
+    const generating = document.body.classList.contains(Selectors.classes.generating);
+    if (!genBtn || !tplState.loaded || generating) {
+        return;
+    }
+    genBtn.disabled = false;
+};
 
 // The "N sections · M activities" stats template. Fetched once and cached —
 // wireTemplateMode runs before the page's own translated strings are loaded
@@ -124,15 +141,9 @@ export const wireTemplateMode = (state, host) => {
                 Notification.exception(e);
             }
         },
-        onPickSpaceFile: (sectionIndex, activityIndex) => {
-            pickSpaceFile(tplState, sectionIndex, activityIndex, rerenderStructure);
-        },
-        onRemoveSpaceFile: (sectionIndex, activityIndex) => {
-            removeSpaceFile(tplState, sectionIndex, activityIndex, rerenderStructure);
-        },
     });
 
-    // Generate: the button is only on while a template is loaded and every required space has its file.
+    // Generate: the button is only on while a template is loaded.
     if (genBtn) {
         genBtn.addEventListener('click', () => {
             runGeneration(tplState, tplSelect, genBtn, state, host);
@@ -175,7 +186,6 @@ export const wireTemplateMode = (state, host) => {
 const loadTemplateStructure = async(templateId, tplState, container, state, requestTracker, requestId) => {
     const detailsEl = document.getElementById('tplModeDetails');
     const limitsEl = document.getElementById('tplModeLimits');
-    const limitsBadge = document.getElementById('tplModeLimitsBadge');
     const genBtn = document.getElementById('tplModeGenerate');
     if (!container) {
         return;
@@ -197,7 +207,7 @@ const loadTemplateStructure = async(templateId, tplState, container, state, requ
         await renderStructure(container, tplState);
         refreshPreviewLinks();
         updateStats(tplState, statsTemplate);
-        await renderLimitsBanner(limitsEl, limitsBadge, tplState);
+        showStatsRow(limitsEl);
 
         // A required space keeps the button off until its file is picked.
         refreshGenerateState(tplState, genBtn);
@@ -217,29 +227,16 @@ const loadTemplateStructure = async(templateId, tplState, container, state, requ
 };
 
 /**
- * Render the section limits banner text (the badge markup itself is static,
- * see courseai_page.mustache#tplModeLimits — this only toggles it and sets text).
+ * Show the row that holds the stats and the preview link (the markup itself is static,
+ * see courseai_page.mustache#tplModeLimits - this only reveals it).
  *
- * @param {HTMLElement} limitsEl
- * @param {HTMLElement} limitsBadge
- * @param {Object} tplState
+ * @param {HTMLElement} rowEl
  */
-const renderLimitsBanner = async(limitsEl, limitsBadge, tplState) => {
-    if (!limitsEl || !limitsBadge) {
+const showStatsRow = (rowEl) => {
+    if (!rowEl) {
         return;
     }
-    if (tplState.nolimit) {
-        const [nolimitStr] = await getStrings([
-            {key: 'courseai_template_limits_nolimit', component: 'local_coursegen'},
-        ]);
-        limitsBadge.textContent = nolimitStr;
-    } else {
-        const [remainingStr] = await getStrings([
-            {key: 'courseai_template_limits_remaining', component: 'local_coursegen'},
-        ]);
-        limitsBadge.textContent = remainingStr.replace('{$a}', tplState.remainingSections);
-    }
-    limitsEl.style.display = '';
+    rowEl.style.display = '';
 };
 
 /**
@@ -262,12 +259,8 @@ const clearStructure = (tplState, container, state) => {
         workspace.classList.remove('tpl-active');
     }
     const limitsEl = document.getElementById('tplModeLimits');
-    const limitsBadge = document.getElementById('tplModeLimitsBadge');
     if (limitsEl) {
         limitsEl.style.display = 'none';
-    }
-    if (limitsBadge) {
-        limitsBadge.textContent = '';
     }
     const genBtn = document.getElementById('tplModeGenerate');
     if (genBtn) {

@@ -23,7 +23,6 @@
 
 import Notification from 'core/notification';
 import {startTemplateGeneration} from './repository';
-import {pickedSpaceFiles} from './state';
 import {runGenerationStream} from './generation_stream';
 import {usePreviewSession} from './preview';
 import {reviewAndCreate} from './finish';
@@ -58,8 +57,7 @@ export const runGeneration = async(tplState, tplSelect, genBtn, state, host) => 
         const started = await startTemplateGeneration(
             templateId,
             tplState.prompt || '',
-            parseInt(tplState.syllabusdraftitemid || 0, 10) || 0,
-            pickedSpaceFiles(tplState)
+            parseInt(tplState.syllabusdraftitemid || 0, 10) || 0
         );
         usePreviewSession(started.sessionid);
         await runGenerationStream(

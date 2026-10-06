@@ -15,82 +15,29 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Manage course templates page.
+ * The list of templates: create, edit and delete them.
  *
  * @package    local_coursegen
- * @copyright  2025 Wilber Narvaez <https://datacurso.com>
+ * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-
-use local_coursegen\local\models\template;
-use local_coursegen\local\models\template_section;
-use local_coursegen\local\models\template_activity;
-use local_coursegen\reportbuilder\local\systemreports\templates;
-use core_reportbuilder\system_report_factory;
 
 require_once('../../config.php');
 require_once($CFG->libdir . '/adminlib.php');
 
+use local_coursegen\output\manage_templates_page;
+
 admin_externalpage_setup('local_coursegen_manage_templates');
 
-$context = context_system::instance();
-require_capability('local/coursegen:viewtemplates', $context);
-
-$action = optional_param('action', '', PARAM_ALPHA);
-$id = optional_param('id', 0, PARAM_INT);
-$confirm = optional_param('confirm', 0, PARAM_INT);
-
-$PAGE->set_url('/local/coursegen/manage_templates.php');
-$PAGE->set_title(get_string('managetemplates', 'local_coursegen'));
-$PAGE->set_heading(get_string('managetemplates', 'local_coursegen'));
-
-// Handle delete action.
-if ($action === 'delete' && $id > 0) {
-    require_capability('local/coursegen:deletetemplates', $context);
-    if ($confirm && confirm_sesskey()) {
-        $activities = template_activity::get_records(['templateid' => $id]);
-        foreach ($activities as $a) {
-            $a->delete();
-        }
-        $sections = template_section::get_records(['templateid' => $id]);
-        foreach ($sections as $s) {
-            $s->delete();
-        }
-        $tpl = new template($id);
-        $tpl->delete();
-        redirect(
-            $PAGE->url,
-            get_string('template_deleted', 'local_coursegen'),
-            null,
-            \core\output\notification::NOTIFY_SUCCESS
-        );
-    } else {
-        $tpl = new template($id);
-        echo $OUTPUT->header();
-        echo $OUTPUT->confirm(
-            get_string('template_confirm_delete', 'local_coursegen') .
-                '<br><strong>' . format_string($tpl->get('name')) . '</strong>',
-            new moodle_url($PAGE->url, ['action' => 'delete', 'id' => $id, 'confirm' => 1, 'sesskey' => sesskey()]),
-            $PAGE->url
-        );
-        echo $OUTPUT->footer();
-        exit;
-    }
+if (optional_param('saved', 0, PARAM_BOOL)) {
+    \core\notification::success(get_string('template_saved', 'local_coursegen'));
 }
+
+$page = new manage_templates_page();
+$data = $page->export_for_template($OUTPUT);
+
+$PAGE->requires->js_call_amd('local_coursegen/template/manage', 'init');
 
 echo $OUTPUT->header();
-
-// Create template button.
-if (has_capability('local/coursegen:createtemplates', $context)) {
-    $addurl = new moodle_url('/local/coursegen/edit_template.php');
-    echo html_writer::div(
-        $OUTPUT->single_button($addurl, get_string('template_create', 'local_coursegen'), 'get'),
-        'mb-3'
-    );
-}
-
-// System report.
-$report = system_report_factory::create(templates::class, $context);
-echo $report->output();
-
+echo $OUTPUT->render_from_template('local_coursegen/manage_templates', $data);
 echo $OUTPUT->footer();

@@ -45,8 +45,6 @@
  */
 export const createTemplateState = (inputbar = {}) => ({
     loaded: false,
-    nolimit: false,
-    remainingSections: 0,
     sections: [],
     typeLabels: {},
     // Input-bar values, ready for the future generation payload.
@@ -65,8 +63,6 @@ export const createTemplateState = (inputbar = {}) => ({
  */
 export const applyStructureResponse = (state, data) => {
     state.loaded = true;
-    state.nolimit = !!data.nolimit;
-    state.remainingSections = data.remainingsections || 0;
     state.sections = (data.sections || []).map((section) => ({
         id: section.id,
         name: section.name,
@@ -94,98 +90,9 @@ export const applyStructureResponse = (state, data) => {
             // and in its own preview link — the same uid the payload sent
             // and the run's events/answer echo back.
             generationuid: activity.generationuid || '',
-            // A space is a file resource the teacher brings a file for;
-            // spacefile is that file once picked: {draftitemid, filename}.
-            isspace: !!activity.isspace,
-            spaceinstruction: activity.spaceinstruction || '',
-            spacerequired: !!activity.spacerequired,
-            spacefile: null,
         })),
     }));
 };
-
-/**
- * The activity rows of every section, in order.
- *
- * @param {Object} state
- * @returns {Object[]}
- */
-const allActivities = (state) => state.sections.flatMap((section) => section.activities);
-
-/**
- * The space row at a position, or null when the position holds none.
- *
- * @param {Object} state
- * @param {number} sectionIndex
- * @param {number} activityIndex
- * @returns {Object|null}
- */
-const findSpace = (state, sectionIndex, activityIndex) => {
-    const section = state.sections[sectionIndex];
-    if (!section) {
-        return null;
-    }
-    const activity = section.activities[activityIndex];
-    if (!activity || !activity.isspace) {
-        return null;
-    }
-    return activity;
-};
-
-/**
- * Set the file of one space row.
- *
- * @param {Object} state
- * @param {number} sectionIndex - The section's position in state.sections.
- * @param {number} activityIndex - The row's position in its section.
- * @param {string} filename
- * @param {number} draftitemid - Draft area holding the picked file.
- * @returns {boolean} Whether the row is a space and took the file.
- */
-export const setSpaceFile = (state, sectionIndex, activityIndex, filename, draftitemid) => {
-    const activity = findSpace(state, sectionIndex, activityIndex);
-    if (!activity) {
-        return false;
-    }
-    activity.spacefile = {draftitemid, filename};
-    return true;
-};
-
-/**
- * Empty the file of one space row.
- *
- * @param {Object} state
- * @param {number} sectionIndex - The section's position in state.sections.
- * @param {number} activityIndex - The row's position in its section.
- * @returns {boolean} Whether the row is a space.
- */
-export const clearSpaceFile = (state, sectionIndex, activityIndex) => {
-    const activity = findSpace(state, sectionIndex, activityIndex);
-    if (!activity) {
-        return false;
-    }
-    activity.spacefile = null;
-    return true;
-};
-
-/**
- * Whether a required space is still without its file.
- *
- * @param {Object} state
- * @returns {boolean}
- */
-export const hasMissingRequiredSpace = (state) => allActivities(state)
-    .some((activity) => activity.isspace && activity.spacerequired && !activity.spacefile);
-
-/**
- * The files picked for the spaces, as the generation start takes them.
- *
- * @param {Object} state
- * @returns {Object[]} Each {cmid, draftitemid}.
- */
-export const pickedSpaceFiles = (state) => allActivities(state)
-    .filter((activity) => activity.isspace && activity.spacefile)
-    .map((activity) => ({cmid: parseInt(activity.id, 10), draftitemid: activity.spacefile.draftitemid}));
 
 /**
  * Toggle a section's collapsed state.

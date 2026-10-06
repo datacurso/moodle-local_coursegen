@@ -27,13 +27,12 @@ namespace local_coursegen\external;
 use context_system;
 use external_api;
 use external_function_parameters;
-use external_multiple_structure;
 use external_single_structure;
 use external_value;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\template_ai_api_service;
-use local_coursegen\local\space\space_files_request;
 use local_coursegen\local\service\template_export_service;
+use local_coursegen\local\service\template_generation_gate;
 use local_coursegen\local\service\template_reference_uploads;
 
 defined('MOODLE_INTERNAL') || die();
@@ -54,15 +53,6 @@ class start_template_generation extends external_api {
             'templateid' => new external_value(PARAM_INT, 'Template ID'),
             'prompt' => new external_value(PARAM_RAW, 'The professor\'s general instruction', VALUE_DEFAULT, ''),
             'draftitemid' => new external_value(PARAM_INT, 'Draft item id of the syllabus, 0 for none', VALUE_DEFAULT, 0),
-            'spacefiles' => new external_multiple_structure(
-                new external_single_structure([
-                    'cmid' => new external_value(PARAM_INT, 'Course module id of the space in the template course'),
-                    'draftitemid' => new external_value(PARAM_INT, 'Draft item id of the file the teacher brought'),
-                ]),
-                'The files the teacher brought for the spaces of the template',
-                VALUE_DEFAULT,
-                []
-            ),
         ]);
     }
 
@@ -72,27 +62,24 @@ class start_template_generation extends external_api {
      * @param int $templateid
      * @param string $prompt
      * @param int $draftitemid
-     * @param array $spacefiles Each: cmid, draftitemid.
      * @return array
      */
-    public static function execute($templateid, $prompt = '', $draftitemid = 0, $spacefiles = []) {
+    public static function execute($templateid, $prompt = '', $draftitemid = 0) {
         global $USER;
 
         $params = self::validate_parameters(self::execute_parameters(), [
             'templateid' => $templateid,
             'prompt' => $prompt,
             'draftitemid' => $draftitemid,
-            'spacefiles' => $spacefiles,
         ]);
 
         $context = context_system::instance();
         self::validate_context($context);
         require_capability('local/coursegen:createtemplatecoursewithai', $context);
-        if ($params['draftitemid'] > 0 || !empty($params['spacefiles'])) {
+        if ($params['draftitemid'] > 0) {
             require_capability('local/coursegen:uploadcoursesyllabus', $context);
         }
-        // Refused before anything is sent: a space that is not the template's, or a required one with no file.
-        $spaces = space_files_request::validated($params['templateid'], (int) $USER->id, $params['spacefiles']);
+        template_generation_gate::assert_open();
 
         $payload = template_export_service::build_init_payload($params['templateid'], $params['prompt']);
 
@@ -122,8 +109,6 @@ class start_template_generation extends external_api {
             'coursedata' => json_encode($coursedata),
         ]);
         $session->create();
-        $sessionid = (int) $session->get('id');
-        space_files_request::store($spaces, (int) $USER->id, $sessionid);
 
         // Nothing has run yet: consuming the stream is what drives the
         // generation, so the caller opens this URL and watches it happen,

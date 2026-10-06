@@ -42,12 +42,11 @@ export const getTemplateStructure = (templateId) => fetchMany([{
  * @param {number} templateId
  * @param {string} prompt The professor's single general instruction.
  * @param {number} draftItemId Draft area holding the syllabus, 0 when none.
- * @param {Object[]} spaceFiles The file of each space: {cmid, draftitemid}.
  * @returns {Promise<Object>} {threadid, sessionid, streamurl}
  */
-export const startTemplateGeneration = (templateId, prompt, draftItemId, spaceFiles) => fetchMany([{
+export const startTemplateGeneration = (templateId, prompt, draftItemId) => fetchMany([{
     methodname: 'local_coursegen_start_template_generation',
-    args: {templateid: templateId, prompt: prompt, draftitemid: draftItemId, spacefiles: spaceFiles},
+    args: {templateid: templateId, prompt: prompt, draftitemid: draftItemId},
 }])[0];
 
 /**

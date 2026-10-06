@@ -14,98 +14,63 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/**
- * External API for deleting a course template.
- *
- * @package    local_coursegen
- * @copyright  2025 Wilber Narvaez <https://datacurso.com>
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-
 namespace local_coursegen\external;
 
-use external_api;
-use external_function_parameters;
-use external_single_structure;
-use external_value;
-use local_coursegen\local\models\template;
-use local_coursegen\local\models\template_section;
-use local_coursegen\local\models\template_space;
-use local_coursegen\local\models\template_activity;
-use context_system;
-
-defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/externallib.php');
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_single_structure;
+use core_external\external_value;
+use local_coursegen\local\template\template_access;
+use local_coursegen\local\template\template_service;
 
 /**
- * External API for deleting a course template and all its child records.
+ * External function that deletes a template.
+ *
+ * @package    local_coursegen
+ * @category   external
+ * @copyright  2026 Wilber Narvaez <https://datacurso.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class delete_template extends external_api {
-
     /**
-     * Returns description of method parameters.
+     * Parameters definition.
      *
      * @return external_function_parameters
      */
-    public static function execute_parameters() {
+    public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'id' => new external_value(PARAM_INT, 'Template ID to delete'),
+            'templateid' => new external_value(PARAM_INT, 'Template to delete'),
         ]);
     }
 
     /**
-     * Delete a template, including all associated sections and activities.
+     * Delete the template.
      *
-     * @param int $id Template ID.
-     * @return array Success flag.
+     * @param int $templateid Template to delete.
+     * @return array
      */
-    public static function execute($id) {
-        $parameterdescription = self::execute_parameters();
-        $params = self::validate_parameters($parameterdescription, ['id' => $id]);
+    public static function execute(int $templateid): array {
+        $definition = self::execute_parameters();
+        $params = self::validate_parameters($definition, ['templateid' => $templateid]);
 
-        $context = context_system::instance();
+        $context = \context_system::instance();
         self::validate_context($context);
-        require_capability('local/coursegen:deletetemplates', $context);
+        template_access::require_manage();
 
-        // Delete child activity records first.
-        $activities = template_activity::get_records(['templateid' => $params['id']]);
-        self::delete_all($activities);
+        $service = new template_service();
+        $service->delete($params['templateid']);
 
-        // Delete child space records.
-        $spaces = template_space::get_records(['templateid' => $params['id']]);
-        self::delete_all($spaces);
-
-        // Delete child section records.
-        $sections = template_section::get_records(['templateid' => $params['id']]);
-        self::delete_all($sections);
-
-        // Delete the template itself.
-        $tpl = new template($params['id']);
-        $tpl->delete();
-
-        return ['success' => true];
+        return ['deleted' => true];
     }
 
     /**
-     * Delete every given record.
-     *
-     * @param \core\persistent[] $records Records to delete.
-     */
-    private static function delete_all(array $records): void {
-        foreach ($records as $record) {
-            $record->delete();
-        }
-    }
-
-    /**
-     * Returns description of method return value.
+     * Return definition.
      *
      * @return external_single_structure
      */
-    public static function execute_returns() {
+    public static function execute_returns(): external_single_structure {
         return new external_single_structure([
-            'success' => new external_value(PARAM_BOOL, 'Whether deletion succeeded'),
+            'deleted' => new external_value(PARAM_BOOL, 'True when the template was deleted'),
         ]);
     }
 }

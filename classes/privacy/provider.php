@@ -32,7 +32,6 @@ use core_privacy\local\request\approved_userlist;
 use core_privacy\local\request\contextlist;
 use core_privacy\local\request\userlist;
 use core_privacy\local\request\writer;
-use local_coursegen\local\space\space_file_storage;
 use stdClass;
 
 /**
@@ -64,6 +63,12 @@ class provider implements
                 'courseid', 'userid', 'job_id', 'status', 'generate_images',
                 'context_type', 'system_instruction_name', 'sectionnum', 'beforemod',
                 'timecreated', 'timemodified',
+            ],
+            'local_coursegen_template' => [
+                'courseid', 'name', 'description', 'timecreated', 'timemodified', 'usermodified',
+            ],
+            'local_coursegen_tpl_item' => [
+                'templateid', 'cmid', 'action', 'instruction', 'timemodified',
             ],
         ];
 
@@ -331,6 +336,7 @@ class provider implements
         // Anonymize the shared configuration instead of destroying it.
         $DB->set_field('local_coursegen_system_instruction', 'usermodified', 0, ['usermodified' => $userid]);
         $DB->set_field('local_coursegen_course_context', 'usermodified', 0, ['usermodified' => $userid]);
+        $DB->set_field('local_coursegen_template', 'usermodified', 0, ['usermodified' => $userid]);
     }
 
     /**
@@ -371,7 +377,6 @@ class provider implements
         foreach ($sessionids as $sessionid) {
             $fs->delete_area_files($syscontextid, 'local_coursegen', 'syllabus', (int)$sessionid);
         }
-        space_file_storage::delete_user_files($userid);
     }
 
     /**
@@ -385,6 +390,7 @@ class provider implements
         $tables = [
             'local_coursegen_system_instruction' => ['usermodified' => $user->id],
             'local_coursegen_course_context' => ['usermodified' => $user->id],
+            'local_coursegen_template' => ['usermodified' => $user->id],
             'local_coursegen_course_sessions' => ['userid' => $user->id],
             'local_coursegen_module_jobs' => ['userid' => $user->id],
         ];

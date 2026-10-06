@@ -16,9 +16,6 @@
 
 namespace local_coursegen\local\files;
 
-use local_coursegen\local\space\file_space;
-use local_coursegen\local\space\space_scope;
-use local_coursegen\local\space\space_selection;
 use local_coursegen\local\service\create_mod_service;
 use local_coursegen\tests\fixtures\file_scenarios;
 use local_coursegen\utils\generated_file_cache;
@@ -33,8 +30,8 @@ require_once($CFG->libdir . '/testing/generator/lib.php');
  * Every file a text of a new activity references reaches the activity, whatever the module and the field.
  *
  * Each module that is created from a result of the AI service is built through the service, with a source activity
- * that really owns the files in those fields, once for each place a file comes from: the template, the AI
- * service and the teacher.
+ * that really owns the files in those fields, once for each place a file comes from: the template and the AI
+ * service.
  *
  * @package    local_coursegen
  * @category   test
@@ -45,20 +42,6 @@ require_once($CFG->libdir . '/testing/generator/lib.php');
  * @covers     \local_coursegen\local\files\quiz_question_carriers
  */
 final class activity_file_pass_test extends \advanced_testcase {
-    /** @var int Counts the files brought by the teacher, so each has its own place and session. */
-    private int $brought = 0;
-
-    /** @var file_space[] The spaces whose files the texts point at. */
-    private array $spaces = [];
-
-    /** @var \stored_file[] The teacher's file of each space, by cmid. */
-    private array $teacherfiles = [];
-
-    protected function tearDown(): void {
-        space_scope::leave();
-        parent::tearDown();
-    }
-
     /**
      * Every module created from a result, once for each source of files.
      *
@@ -77,7 +60,7 @@ final class activity_file_pass_test extends \advanced_testcase {
     }
 
     /**
-     * The three sources of files for one module.
+     * The two sources of files for one module.
      *
      * @param string $module
      * @return array
@@ -86,7 +69,6 @@ final class activity_file_pass_test extends \advanced_testcase {
         return [
             $module . ' with template files' => [$module, 'template'],
             $module . ' with generated files' => [$module, 'generated'],
-            $module . ' with teacher files' => [$module, 'teacher'],
         ];
     }
 
@@ -103,45 +85,6 @@ final class activity_file_pass_test extends \advanced_testcase {
             }
         }
         $this->fail('No scenario for ' . $module);
-    }
-
-    /**
-     * A file of the teacher for a space of the template, as the address of the template's file the text points at.
-     *
-     * The space stays in scope until the test leaves it.
-     *
-     * @param string $name The teacher's file name.
-     * @param string $content
-     * @return string
-     */
-    private function brought_address(string $name, string $content): string {
-        global $USER;
-        $this->brought++;
-        $course = $this->getDataGenerator()->create_course();
-        $resource = $this->getDataGenerator()->create_module('resource', ['course' => $course->id]);
-        $resourcecontext = \context_module::instance($resource->cmid);
-        $fs = get_file_storage();
-        $fs->delete_area_files($resourcecontext->id, 'mod_resource', 'content');
-        $templatefile = $fs->create_file_from_string([
-            'contextid' => $resourcecontext->id, 'component' => 'mod_resource', 'filearea' => 'content', 'itemid' => 0,
-            'filepath' => '/', 'filename' => 'template' . $this->brought . '.png',
-        ], 'TEMPLATE');
-        $usercontext = \context_user::instance($USER->id);
-        $teacherfile = $fs->create_file_from_string([
-            'contextid' => $usercontext->id, 'component' => 'local_coursegen', 'filearea' => 'spacefile',
-            'itemid' => 5000 + $this->brought, 'filepath' => '/' . $resource->cmid . '/', 'filename' => $name,
-        ], $content);
-        $this->spaces[] = new file_space((int) $resource->cmid, 'Guide', '', false, [$templatefile]);
-        $this->teacherfiles[(int) $resource->cmid] = $teacherfile;
-        $url = \moodle_url::make_pluginfile_url(
-            $resourcecontext->id,
-            'mod_resource',
-            'content',
-            1,
-            '/',
-            $templatefile->get_filename()
-        );
-        return $url->out(false);
     }
 
     /**
@@ -228,7 +171,7 @@ final class activity_file_pass_test extends \advanced_testcase {
     }
 
     /**
-     * Every field of the module receives its file from the template, the AI service or the teacher.
+     * Every field of the module receives its file from the template or the AI service.
      *
      * @dataProvider matrix_provider
      * @param string $module
@@ -257,19 +200,16 @@ final class activity_file_pass_test extends \advanced_testcase {
         if ($kind === 'template') {
             $source = (int) $sourcecourse->id;
         }
-        if ($kind === 'teacher') {
-            space_scope::enter(new space_selection($this->spaces, $this->teacherfiles));
-        }
         $cm = create_mod_service::create_from_ai_result($result, $course, 1, null, $source);
 
         $this->assert_every_slot($scenario, $cm, $names, $kind);
     }
 
     /**
-     * The texts that point at the AI service's or the teacher's files.
+     * The texts that point at the AI service's files.
      *
      * @param array $scenario
-     * @param string $kind 'generated' or 'teacher'.
+     * @param string $kind 'generated'.
      * @return array{0: array, 1: array, 2: array}
      */
     private function other_texts(array $scenario, string $kind): array {
@@ -282,12 +222,8 @@ final class activity_file_pass_test extends \advanced_testcase {
             if (!empty($slot['asis'])) {
                 continue;
             }
-            if ($kind === 'generated') {
-                $entries[] = $this->generated_entry($names[$label], 'CONTENT-' . $label);
-                $source = '@@PLUGINFILE@@/' . $names[$label];
-            } else {
-                $source = $this->brought_address($names[$label], 'CONTENT-' . $label);
-            }
+            $entries[] = $this->generated_entry($names[$label], 'CONTENT-' . $label);
+            $source = '@@PLUGINFILE@@/' . $names[$label];
             $texts[$label] = '<p><img src="' . $source . '" alt="a"></p>';
         }
         return [$texts, $names, $entries];
