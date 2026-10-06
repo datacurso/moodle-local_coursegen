@@ -76,13 +76,13 @@ class streaming_url_builder {
     }
 
     /**
-     * Build the course-from-template streaming URL for a session.
+     * Build the template agent streaming URL of a run.
      *
      * @param string $baseurl Region-resolved API base URL, with or without trailing slash.
      * @param string $threadid External generation session identifier (thread_id).
      * @return string Streaming URL.
      */
-    public static function course_template_stream(string $baseurl, string $threadid): string {
-        return rtrim($baseurl, '/') . '/course-template/stream/' . urlencode($threadid);
+    public static function template_agent_stream(string $baseurl, string $threadid): string {
+        return rtrim($baseurl, '/') . '/template-agent/stream/' . urlencode($threadid);
     }
 }

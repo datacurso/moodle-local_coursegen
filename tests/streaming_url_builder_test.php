@@ -48,12 +48,12 @@ final class streaming_url_builder_test extends \basic_testcase {
     }
 
     /**
-     * Course-from-template stream URL is built from the base URL and thread id.
+     * The template agent stream URL is built from the base URL and thread id.
      */
-    public function test_course_template_stream_url(): void {
-        $url = streaming_url_builder::course_template_stream('https://ai.example.com/api/v1/', 'thread-7');
+    public function test_template_agent_stream_url(): void {
+        $url = streaming_url_builder::template_agent_stream('https://ai.example.com/api/v1/', 'thread-7');
 
-        $this->assertSame('https://ai.example.com/api/v1/course-template/stream/thread-7', $url);
+        $this->assertSame('https://ai.example.com/api/v1/template-agent/stream/thread-7', $url);
     }
 
     /**
@@ -105,7 +105,7 @@ final class streaming_url_builder_test extends \basic_testcase {
         $url = streaming_url_builder::relay(stream_type::TEMPLATE, 'thread-3');
 
         $this->assertSame($CFG->wwwroot . '/local/coursegen/stream.php?streamtype=template&threadid=thread-3', $url);
-        $this->assertStringNotContainsString('/course-template/stream/', $url);
+        $this->assertStringNotContainsString('/template-agent/stream/', $url);
     }
 
     /**

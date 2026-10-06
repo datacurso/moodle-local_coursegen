@@ -85,12 +85,12 @@ final class ai_course_api_service_streaming_test extends \advanced_testcase {
     }
 
     /**
-     * The relay reads the course-from-template stream from the service.
+     * The relay reads the stream of the template agent from the service.
      */
     public function test_upstream_url_of_a_template_stream(): void {
         $url = $this->service()->get_upstream_stream_url(stream_type::TEMPLATE, 'thread-3');
 
-        $this->assertSame('https://ai.example.com/api/v1/course-template/stream/thread-3', $url);
+        $this->assertSame('https://ai.example.com/api/v1/template-agent/stream/thread-3', $url);
     }
 
     /**
