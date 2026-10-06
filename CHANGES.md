@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100602
+
+### Changed
+
+- **The list of templates is a Report Builder report again**  
+  The page that lists the templates went back to the report it had before the simplified editor: a table with filters and the Edit and Delete actions of each row in its action menu, instead of a plain table. It shows the name, the course, how many activities the template has, how many of them the AI modifies and when it was last saved, newest first, and a template whose course was deleted says so. The name can be filtered, long lists are paged, and deleting still asks first. The plain list and the code only it used are gone.
+
 ## [2.0.10] - 2026100601
 
 ### Added
