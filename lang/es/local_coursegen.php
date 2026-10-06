@@ -951,6 +951,7 @@ $string['template_space_modal_title'] = 'Espacio para el profesor';
 $string['template_space_modal_intro'] = 'El profesor aportará esta actividad por su cuenta: {$a}.';
 $string['template_space_edit'] = 'Editar espacio';
 $string['template_space_remove'] = 'Quitar espacio';
+$string['template_from_placeholders_description'] = 'Creada a partir de los marcadores del curso {$a->course} (id {$a->courseid}): {$a->molds} actividades usadas como plantilla, una instancia por cada una.';
 $string['template_instance_menu_hint'] = 'Plantillas disponibles para esta sección';
 $string['template_instance_menu_empty'] = 'Todavía no hay ninguna actividad marcada como "Usar como plantilla".';
 $string['template_instance_badge'] = 'Instancia · {$a}';
