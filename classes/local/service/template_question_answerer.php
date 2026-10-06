@@ -114,7 +114,7 @@ final class template_question_answerer {
      * @return array What the service stored.
      */
     private function answer_file(string $threadid, string $callid, int $draftitemid): array {
-        $file = $this->draft_file($draftitemid);
+        $file = user_draft_file::first($draftitemid);
         if ($file === null) {
             throw new \moodle_exception('templateanswerfilemissing', 'local_coursegen');
         }
@@ -122,7 +122,7 @@ final class template_question_answerer {
             $this->check_file($file);
             return $this->send_file($threadid, $callid, $file);
         } finally {
-            $this->empty_draft($draftitemid);
+            user_draft_file::remove_all($draftitemid);
         }
     }
 
@@ -156,35 +156,5 @@ final class template_question_answerer {
             throw new \moodle_exception('templateanswerfilenotstored', 'local_coursegen');
         }
         return $this->api->answer($threadid, $callid, ['file_id' => $fileid]);
-    }
-
-    /**
-     * The first file of a draft area of the current user.
-     *
-     * @param int $draftitemid Draft item id.
-     * @return stored_file|null The file, or null when the draft area holds none.
-     */
-    private function draft_file(int $draftitemid): ?stored_file {
-        global $USER;
-        $context = \context_user::instance($USER->id);
-        $storage = get_file_storage();
-        $files = $storage->get_area_files($context->id, 'user', 'draft', $draftitemid, 'id', false);
-        $file = reset($files);
-        if (!$file) {
-            return null;
-        }
-        return $file;
-    }
-
-    /**
-     * Delete every file of a draft area of the current user.
-     *
-     * @param int $draftitemid Draft item id.
-     */
-    private function empty_draft(int $draftitemid): void {
-        global $USER;
-        $context = \context_user::instance($USER->id);
-        $storage = get_file_storage();
-        $storage->delete_area_files($context->id, 'user', 'draft', $draftitemid);
     }
 }
