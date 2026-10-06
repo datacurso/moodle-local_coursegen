@@ -41,12 +41,14 @@ class template_keep_copier {
      * @param int $targetcourseid
      * @param array $createdcmids Filled with base course cmid => cmid of its copy in the
      *     target course, for every activity that was copied.
+     * @param int[] $extracmids Template activities to copy as well as the kept ones, for example [11340].
      * @return array Names of the activities that could not be copied.
      */
     public static function copy_into(
         int $templateid,
         int $targetcourseid,
-        array &$createdcmids = []
+        array &$createdcmids = [],
+        array $extracmids = []
     ): array {
         global $CFG;
         require_once($CFG->dirroot . '/course/lib.php');
@@ -69,6 +71,7 @@ class template_keep_copier {
         $targetcourse = get_course($targetcourseid);
         $modinfo = get_fast_modinfo($sourcecourse);
         $keepcmids = self::kept_cmids($templateid, $modinfo);
+        $keepcmids = self::with_extra_cmids($keepcmids, $extracmids, $modinfo);
         $targetsectionids = self::target_section_ids($targetcourse);
 
         $failures = self::copy_kept_activities($keepcmids, $modinfo, $targetcourse, $targetsectionids, $createdcmids);
@@ -157,6 +160,28 @@ class template_keep_copier {
             $createdcmids[(int) $cm->id] = $createdcmid;
         }
         return $failures;
+    }
+
+    /**
+     * Add to the kept activities the ones the run changed only in their file, keeping the order of the template.
+     *
+     * @param int[] $keepcmids Template activities saved as kept.
+     * @param int[] $extracmids Template activities to copy as well, for example 11340.
+     * @param \course_modinfo $modinfo Structure of the template course.
+     * @return int[] Template activities to copy, each once, in the order of the template.
+     */
+    private static function with_extra_cmids(array $keepcmids, array $extracmids, $modinfo): array {
+        if ($extracmids === []) {
+            return $keepcmids;
+        }
+        $wanted = array_flip(array_merge($keepcmids, $extracmids));
+        $cmids = [];
+        foreach ($modinfo->get_cms() as $cm) {
+            if (isset($wanted[(int) $cm->id])) {
+                $cmids[] = (int) $cm->id;
+            }
+        }
+        return $cmids;
     }
 
     /**

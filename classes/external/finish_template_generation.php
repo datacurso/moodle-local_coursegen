@@ -39,6 +39,8 @@ use local_coursegen\local\service\generated_activities_filter;
 use local_coursegen\local\service\kept_link_rewriter;
 use local_coursegen\local\service\template_ai_api_service;
 use local_coursegen\local\service\template_course_order;
+use local_coursegen\local\service\template_file_resource_applier;
+use local_coursegen\local\service\template_file_resources;
 use local_coursegen\local\service\template_keep_copier;
 
 defined('MOODLE_INTERNAL') || die();
@@ -98,7 +100,7 @@ class finish_template_generation extends external_api {
 
         // A reconnecting client can land here twice; the course is built once.
         if ((int) $session->get('status') === course_session::STATUS_CREATED) {
-            return self::created_response((int) $session->get('courseid'), $CFG->wwwroot);
+            return self::created_response((int) $session->get('courseid'), $CFG->wwwroot, []);
         }
 
         $api = new template_ai_api_service();
@@ -110,6 +112,7 @@ class finish_template_generation extends external_api {
         // the base course - they are copied below instead of being rebuilt
         // from a JSON description that could never carry all of that.
         $generatedactivities = $result['generated_activities'] ?? [];
+        $fileresources = template_file_resources::select($generatedactivities);
         $writtenactivities = generated_activities_filter::only_ai_written($generatedactivities);
         $result['generated_activities'] = $writtenactivities;
 
@@ -124,13 +127,17 @@ class finish_template_generation extends external_api {
         $courseid = (int) $courseid;
         $keptcms = [];
         if ($courseid > 0 && $templateid !== null && $templateid > 0) {
-            template_keep_copier::copy_into($templateid, $courseid, $keptcms);
+            $extracmids = template_file_resources::cmids($fileresources);
+            template_keep_copier::copy_into($templateid, $courseid, $keptcms, $extracmids);
         }
+        $threadid = (string) $session->get('session_id');
+        $applier = new template_file_resource_applier($api);
+        $failedfiles = $applier->apply($threadid, $fileresources, $keptcms);
         $generatedcms = $created['generatedcms'] ?? [];
         self::arrange_course($templateid, $courseid, $generatedactivities, $generatedcms, $keptcms);
         self::resolve_activity_links($session, $courseid, $generatedactivities, $generatedcms, $keptcms);
 
-        return self::created_response($courseid, $CFG->wwwroot);
+        return self::created_response($courseid, $CFG->wwwroot, $failedfiles);
     }
 
     /**
@@ -208,10 +215,16 @@ class finish_template_generation extends external_api {
      *
      * @param int $courseid
      * @param string $wwwroot
+     * @param string[] $failedfiles Names of the files the run attached that could not be put in their resource.
      * @return array
      */
-    private static function created_response(int $courseid, string $wwwroot): array {
+    private static function created_response(int $courseid, string $wwwroot, array $failedfiles): array {
         $course = get_course($courseid);
+        $warnings = '';
+        if ($failedfiles !== []) {
+            $names = implode(', ', $failedfiles);
+            $warnings = get_string('templatefilesnotapplied', 'local_coursegen', $names);
+        }
         return [
             'success' => true,
             'courseid' => $courseid,
@@ -219,6 +232,7 @@ class finish_template_generation extends external_api {
             'shortname' => $course->shortname,
             'message' => get_string('coursecreated', 'local_coursegen'),
             'courseurl' => $wwwroot . '/course/view.php?id=' . $courseid,
+            'warnings' => $warnings,
         ];
     }
 
@@ -235,6 +249,7 @@ class finish_template_generation extends external_api {
             'shortname' => new external_value(PARAM_TEXT, 'Course shortname'),
             'message' => new external_value(PARAM_TEXT, 'Status message'),
             'courseurl' => new external_value(PARAM_RAW, 'Created course URL'),
+            'warnings' => new external_value(PARAM_TEXT, 'Warning to show after the course exists, empty when none'),
         ]);
     }
 }

@@ -42,9 +42,13 @@ class generated_activities_filter {
         foreach ($activities as $activity) {
             $behavior = $activity['template_behavior'] ?? [];
             $action = $behavior['action'] ?? '';
-            if ($action === template_export_behavior::MODIFY) {
-                $written[] = $activity;
+            if ($action !== template_export_behavior::MODIFY) {
+                continue;
             }
+            if (template_file_resources::is_file_resource($activity)) {
+                continue;
+            }
+            $written[] = $activity;
         }
         return $written;
     }
