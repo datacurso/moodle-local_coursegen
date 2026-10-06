@@ -17,23 +17,28 @@
 namespace local_coursegen\local\service;
 
 /**
- * Names the elements of an init payload.
+ * Tells whether a course can be generated from a template yet.
  *
- * Every element of a payload is named by a random uid, drawn once per export and echoed back
- * by the AI service's answers.
+ * The templates now say only what to keep and what the AI modifies, and the AI service
+ * that acts on them is being rebuilt. Until it is, starting a generation is refused
+ * with a clear message instead of a failure of the service.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-class template_export_uids {
+final class template_generation_gate {
+    /** @var bool Whether the AI service can run a generation from a template. */
+    public const OPEN = false;
+
     /**
-     * A fresh random uid for one element of one export.
+     * Refuse the start of a generation while the service cannot run it.
      *
-     * @return string A lowercase hexadecimal string, for example "9f2c41d7a0b3".
+     * @throws \moodle_exception While the gate is closed.
      */
-    public static function random_uid(): string {
-        $bytes = random_bytes(6);
-        return bin2hex($bytes);
+    public static function assert_open(): void {
+        if (!self::OPEN) {
+            throw new \moodle_exception('templategenerationrebuilding', 'local_coursegen');
+        }
     }
 }

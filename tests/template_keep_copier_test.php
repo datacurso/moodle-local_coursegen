@@ -17,7 +17,7 @@
 namespace local_coursegen;
 
 use local_coursegen\local\models\template;
-use local_coursegen\local\models\template_activity;
+use local_coursegen\local\template\template_actions;
 use local_coursegen\local\service\template_keep_copier;
 
 /**
@@ -213,50 +213,64 @@ final class template_keep_copier_test extends \advanced_testcase {
     }
 
     /**
-     * A resource saved as a space is not copied unless the caller asks for it, and then it keeps its place.
+     * An activity the AI modifies is not copied: the AI writes its own version of it.
      */
-    public function test_a_space_is_copied_only_when_asked_for(): void {
+    public function test_an_activity_the_ai_modifies_is_not_copied(): void {
         $this->resetAfterTest(true);
 
         $sourcecourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
         $targetcourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
-        $resource = $this->getDataGenerator()->create_module('resource', ['course' => $sourcecourse->id, 'section' => 2]);
+        $modified = $this->getDataGenerator()->create_module('page', ['course' => $sourcecourse->id, 'section' => 1]);
+        $kept = $this->getDataGenerator()->create_module('page', ['course' => $sourcecourse->id, 'section' => 2]);
         $template = $this->create_template($sourcecourse->id);
-        $this->save_space($template, (int) $resource->cmid);
+        $this->save_item($template, (int) $modified->cmid, template_actions::AI);
 
-        $without = [];
-        template_keep_copier::copy_into((int) $template->get('id'), $targetcourse->id, $without);
-        $this->assertSame([], $without);
-        $this->assertCount(0, get_fast_modinfo($targetcourse)->get_instances_of('resource'));
+        $created = [];
+        $failures = template_keep_copier::copy_into((int) $template->get('id'), $targetcourse->id, $created);
 
-        $with = [];
-        $failures = template_keep_copier::copy_into((int) $template->get('id'), $targetcourse->id, $with, [(int) $resource->cmid]);
-
-        $targetmodinfo = get_fast_modinfo($targetcourse);
         $this->assertSame([], $failures);
-        $this->assertSame([(int) $resource->cmid], array_keys($with));
-        $this->assertSame(2, $targetmodinfo->get_cm($with[(int) $resource->cmid])->sectionnum);
+        $this->assertSame([(int) $kept->cmid], array_keys($created));
     }
 
     /**
-     * Save a space action for an activity of a template.
+     * An activity saved as kept is copied like one with nothing saved.
+     */
+    public function test_an_activity_saved_as_kept_is_copied(): void {
+        $this->resetAfterTest(true);
+
+        $sourcecourse = $this->getDataGenerator()->create_course(['numsections' => 1]);
+        $targetcourse = $this->getDataGenerator()->create_course(['numsections' => 1]);
+        $page = $this->getDataGenerator()->create_module('page', ['course' => $sourcecourse->id, 'section' => 1]);
+        $template = $this->create_template($sourcecourse->id);
+        $this->save_item($template, (int) $page->cmid, template_actions::KEEP);
+
+        $created = [];
+        template_keep_copier::copy_into((int) $template->get('id'), $targetcourse->id, $created);
+
+        $this->assertSame([(int) $page->cmid], array_keys($created));
+    }
+
+    /**
+     * Save what the template does with an activity.
      *
      * @param template $template
      * @param int $cmid
+     * @param string $action
      */
-    private function save_space(template $template, int $cmid): void {
-        $record = new template_activity(0, (object) [
+    private function save_item(template $template, int $cmid, string $action): void {
+        global $DB;
+        $DB->insert_record('local_coursegen_tpl_item', (object) [
             'templateid' => $template->get('id'),
-            'sectionid' => 0,
             'cmid' => $cmid,
-            'action' => template_activity::ACTION_SPACE,
+            'action' => $action,
+            'instruction' => null,
+            'timemodified' => time(),
         ]);
-        $record->create();
     }
 
     /**
      * A template row pointing at the given course, with no saved
-     * template_activity rows - every activity there defaults to "keep".
+     * items - every activity there defaults to "keep".
      *
      * @param int $courseid
      * @return template

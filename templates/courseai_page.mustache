@@ -890,11 +890,9 @@
       {{! Everything below only appears once a template has been selected — see
           tplModeDetails in template_mode.js. Only the structure itself. }}
       <div id="tplModeDetails" style="display:none">
-        {{! Badge row — "N sections · M activities" stats plus the section
-            limits banner, both populated by JS when a template is selected }}
+        {{! Badge row — "N sections · M activities" stats, populated by JS when a template is selected }}
         <div id="tplModeLimits" class="mb-3 tpl-badge-row" style="display:none">
           <span class="badge badge-light border" id="tplModeStats"></span>
-          <span class="badge badge-light border" id="tplModeLimitsBadge"></span>
           {{! Opens the whole course as it will be delivered. Hidden until a
               run exists, because there is nothing to preview before one does. }}
           <a href="#" class="btn btn-link btn-sm p-0 ms-2" id="tplPreviewCourse" target="_blank" rel="noopener" hidden>

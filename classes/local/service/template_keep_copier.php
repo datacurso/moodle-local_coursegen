@@ -17,7 +17,8 @@
 namespace local_coursegen\local\service;
 
 use local_coursegen\local\models\template;
-use local_coursegen\local\models\template_activity;
+use local_coursegen\local\template\template_actions;
+use local_coursegen\local\template\template_repository;
 
 /**
  * Copies a template's "keep" activities into the generated course.
@@ -40,15 +41,12 @@ class template_keep_copier {
      * @param int $targetcourseid
      * @param array $createdcmids Filled with base course cmid => cmid of its copy in the
      *     target course, for every activity that was copied.
-     * @param int[] $alsocmids Base course cmids to copy as well as the kept ones: the file resources of the
-     *     spaces the teacher brought a file for.
      * @return array Names of the activities that could not be copied.
      */
     public static function copy_into(
         int $templateid,
         int $targetcourseid,
-        array &$createdcmids = [],
-        array $alsocmids = []
+        array &$createdcmids = []
     ): array {
         global $CFG;
         require_once($CFG->dirroot . '/course/lib.php');
@@ -70,7 +68,7 @@ class template_keep_copier {
         $sourcecourse = get_course($sourcecourseid);
         $targetcourse = get_course($targetcourseid);
         $modinfo = get_fast_modinfo($sourcecourse);
-        $keepcmids = self::kept_cmids($templateid, $modinfo, $alsocmids);
+        $keepcmids = self::kept_cmids($templateid, $modinfo);
         $targetsectionids = self::target_section_ids($targetcourse);
 
         $failures = self::copy_kept_activities($keepcmids, $modinfo, $targetcourse, $targetsectionids, $createdcmids);
@@ -162,47 +160,30 @@ class template_keep_copier {
     }
 
     /**
-     * The cmids saved as "keep" for this template, in course order.
+     * The cmids the AI does not modify, in course order.
      *
-     * An activity with no saved row defaults to keep - same default the
-     * professor-facing structure uses.
+     * An activity with no saved row defaults to keep: the AI never touches what the admin did not mark.
      *
      * @param int $templateid
      * @param \course_modinfo $modinfo
-     * @param int[] $alsocmids Cmids copied whatever their action.
      * @return int[]
      */
-    private static function kept_cmids(int $templateid, $modinfo, array $alsocmids): array {
-        $actions = self::kept_actions($templateid);
+    private static function kept_cmids(int $templateid, $modinfo): array {
+        $repository = new template_repository();
+        $items = $repository->items_of($templateid);
         $cms = $modinfo->get_cms();
 
         $cmids = [];
         foreach ($cms as $cm) {
-            $action = $actions[$cm->id] ?? 'keep';
-            $also = in_array((int) $cm->id, $alsocmids, true);
-            if ($action === 'keep' || $action === 'reference' || $also) {
+            $action = template_actions::KEEP;
+            if (isset($items[$cm->id])) {
+                $action = $items[$cm->id]->action;
+            }
+            if ($action === template_actions::KEEP) {
                 $cmids[] = (int) $cm->id;
             }
         }
         return $cmids;
-    }
-
-    /**
-     * Every saved template_activity action for this template, keyed by cmid.
-     *
-     * @param int $templateid
-     * @return array Cmid => action.
-     */
-    private static function kept_actions(int $templateid): array {
-        $records = template_activity::get_records(['templateid' => $templateid]);
-
-        $actions = [];
-        foreach ($records as $activity) {
-            $cmid = $activity->get('cmid');
-            $cmid = (int) $cmid;
-            $actions[$cmid] = $activity->get('action');
-        }
-        return $actions;
     }
 
     /**

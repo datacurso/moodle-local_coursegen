@@ -17,18 +17,15 @@
 namespace local_coursegen\local\service;
 
 use course_modinfo;
-use local_coursegen\local\models\template;
-use local_coursegen\local\models\template_instance;
+use local_coursegen\local\template\template_repository;
 
 /**
  * Puts the activities of a course built from a template in the order the template shows them.
  *
- * The professor reads each section of the template as its real activities with
- * the generated ones placed right after the activity they are anchored to. The
- * course is built with the generated activities first and the copied kept ones
- * after them, so once both exist each section is laid out again following
- * the rows of the template (template_instance_layout). An activity of the
- * new course that no row accounts for stays after the ones that do, in the
+ * The course is built with the generated activities first and the copied kept ones
+ * after them, so once both exist each section is laid out again following the
+ * activities of the template's course. An activity of the new course that no
+ * activity of the template accounts for stays after the ones that do, in the
  * order it already had.
  *
  * @package    local_coursegen
@@ -41,127 +38,66 @@ final class template_course_order {
      *
      * @param int $templateid
      * @param int $courseid The new course.
-     * @param array $payloadactivities Every activity entry of the result, kept ones included.
-     * @param array $generatedcms Payload cmid => created cmid, for the generated activities.
+     * @param array $generatedcms Base course cmid => created cmid, for the activities the AI wrote.
      * @param array $keptcms Base course cmid => created cmid, for the copied kept activities.
      */
-    public static function apply(
-        int $templateid,
-        int $courseid,
-        array $payloadactivities,
-        array $generatedcms,
-        array $keptcms
-    ): void {
+    public static function apply(int $templateid, int $courseid, array $generatedcms, array $keptcms): void {
         global $DB;
 
-        $template = template::get_record(['id' => $templateid]);
-        if (!$template || !$DB->record_exists('course', ['id' => $template->get('courseid')])) {
+        $repository = new template_repository();
+        $template = $repository->find($templateid);
+        if ($template === null || !$DB->record_exists('course', ['id' => $template->courseid])) {
             return;
         }
-        $basemodinfo = get_fast_modinfo($template->get('courseid'));
-        $createdbyuid = link_targets::build($payloadactivities, $generatedcms, $keptcms);
-        $sectionnumbers = self::section_numbers($basemodinfo);
-        $instances = self::instances_by_section($templateid, $sectionnumbers);
+        $basemodinfo = get_fast_modinfo($template->courseid);
 
         course_modinfo::clear_instance_cache($courseid);
         $targetmodinfo = get_fast_modinfo($courseid);
-        $neworders = self::new_orders($basemodinfo, $instances, $createdbyuid, $keptcms);
+        $neworders = self::new_orders($basemodinfo, $generatedcms, $keptcms);
         self::store_orders($targetmodinfo, $neworders);
         rebuild_course_cache($courseid, true);
-    }
-
-    /**
-     * The number of each section of the base course, by section id.
-     *
-     * @param course_modinfo $modinfo
-     * @return array<int,int>
-     */
-    private static function section_numbers(course_modinfo $modinfo): array {
-        $numbers = [];
-        foreach ($modinfo->get_section_info_all() as $section) {
-            $numbers[(int) $section->id] = (int) $section->section;
-        }
-        return $numbers;
-    }
-
-    /**
-     * The saved virtual rows of a template, by the number of their section.
-     *
-     * @param int $templateid
-     * @param array<int,int> $sectionnumbers
-     * @return array<int,template_instance[]>
-     */
-    private static function instances_by_section(int $templateid, array $sectionnumbers): array {
-        $bysection = [];
-        foreach (template_instance::get_records(['templateid' => $templateid]) as $instance) {
-            $number = $sectionnumbers[(int) $instance->get('sectionid')] ?? null;
-            if ($number === null) {
-                continue;
-            }
-            $bysection[$number][] = $instance;
-        }
-        return $bysection;
     }
 
     /**
      * The wanted order of every section, as the cmids of the new course.
      *
      * @param course_modinfo $basemodinfo
-     * @param array<int,template_instance[]> $instances
-     * @param array<string,int> $createdbyuid
-     * @param array $keptcms
+     * @param array $generatedcms Base course cmid => created cmid, for the activities the AI wrote.
+     * @param array $keptcms Base course cmid => created cmid, for the copied kept activities.
      * @return array<int,int[]> Section number => cmids in the wanted order.
      */
-    private static function new_orders(course_modinfo $basemodinfo, array $instances, array $createdbyuid, array $keptcms): array {
+    private static function new_orders(course_modinfo $basemodinfo, array $generatedcms, array $keptcms): array {
         $orders = [];
         foreach ($basemodinfo->get_section_info_all() as $section) {
             $number = (int) $section->section;
-            $realcmids = $basemodinfo->sections[$number] ?? [];
-            $rows = template_instance_layout::ordered_rows($realcmids, $instances[$number] ?? []);
-            $orders[$number] = self::created_cmids($rows, $createdbyuid, $keptcms);
+            $basecmids = $basemodinfo->sections[$number] ?? [];
+            $orders[$number] = self::created_cmids($basecmids, $generatedcms, $keptcms);
         }
         return $orders;
     }
 
     /**
-     * The cmids of the new course that the rows of a section stand for, in row order.
+     * The cmids of the new course that the activities of a template section stand for, in the template's order.
      *
-     * A row with no counterpart (an excluded or template activity of the base course,
-     * or a generated one that was not created) is left out.
+     * An activity with no counterpart, such as one the AI did not write, is left out.
      *
-     * @param array $rows From template_instance_layout::ordered_rows().
-     * @param array<string,int> $createdbyuid
-     * @param array $keptcms
+     * @param int[] $basecmids Course modules of the template's section, in order.
+     * @param array $generatedcms Base course cmid => created cmid, for the activities the AI wrote.
+     * @param array $keptcms Base course cmid => created cmid, for the copied kept activities.
      * @return int[]
      */
-    private static function created_cmids(array $rows, array $createdbyuid, array $keptcms): array {
+    private static function created_cmids(array $basecmids, array $generatedcms, array $keptcms): array {
         $cmids = [];
-        foreach ($rows as $row) {
-            $cmid = self::row_cmid($row, $createdbyuid, $keptcms);
-            if ($cmid !== null) {
-                $cmids[] = $cmid;
+        foreach ($basecmids as $basecmid) {
+            $created = $keptcms[$basecmid] ?? null;
+            if ($created === null) {
+                $created = $generatedcms[$basecmid] ?? null;
+            }
+            if ($created !== null) {
+                $cmids[] = (int) $created;
             }
         }
         return $cmids;
-    }
-
-    /**
-     * The cmid of the new course that one row stands for, or null when there is none.
-     *
-     * @param array $row
-     * @param array<string,int> $createdbyuid
-     * @param array $keptcms
-     * @return int|null
-     */
-    private static function row_cmid(array $row, array $createdbyuid, array $keptcms): ?int {
-        if ($row['type'] === template_instance_layout::TYPE_INSTANCE) {
-            $uid = (string) $row['record']->get('uid');
-            return $createdbyuid[$uid] ?? null;
-        }
-        if ($row['type'] === template_instance_layout::TYPE_REAL) {
-            return $keptcms[(int) $row['cmid']] ?? null;
-        }
-        return null;
     }
 
     /**

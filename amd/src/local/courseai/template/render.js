@@ -84,13 +84,6 @@ const buildActivityContext = (activity, state, sectionindex, index) => ({
     sectionindex,
     index,
     typelabel: activity.typelabel || state.typeLabels[activity.modname] || '',
-    isspace: !!activity.isspace,
-    spaceinstruction: activity.spaceinstruction || '',
-    hasspaceinstruction: !!activity.spaceinstruction,
-    spacerequired: !!activity.spacerequired,
-    spacemissing: !!activity.isspace && !!activity.spacerequired && !activity.spacefile,
-    hasspacefile: !!activity.spacefile,
-    spacefilename: activity.spacefile?.filename || '',
 });
 
 /**
@@ -134,17 +127,6 @@ export const renderStructure = async(container, state) => {
 };
 
 /**
- * The section and row positions a control carries.
- *
- * @param {HTMLElement} control
- * @returns {number[]} [sectionIndex, activityIndex]
- */
-const positionOf = (control) => [
-    parseInt(control.dataset.sectionIndex, 10),
-    parseInt(control.dataset.activityIndex, 10),
-];
-
-/**
  * Wire delegated click handling on the structure container. Called ONCE per
  * page load — the container node itself is never replaced (only its children,
  * by renderStructure), so this delegation keeps working across every re-render.
@@ -152,8 +134,6 @@ const positionOf = (control) => [
  * @param {HTMLElement} container
  * @param {Object} handlers
  * @param {Function} handlers.onToggleSection - (sectionIndex) => void
- * @param {Function} handlers.onPickSpaceFile - (sectionIndex, activityIndex) => void
- * @param {Function} handlers.onRemoveSpaceFile - (sectionIndex, activityIndex) => void
  */
 export const wireStructureEvents = (container, handlers) => {
     if (!container) {
@@ -165,20 +145,6 @@ export const wireStructureEvents = (container, handlers) => {
         if (toggleEl) {
             event.preventDefault();
             handlers.onToggleSection(parseInt(toggleEl.dataset.sectionIndex, 10));
-            return;
-        }
-
-        const pickEl = event.target.closest(Selectors.actions.pickSpaceFile);
-        if (pickEl) {
-            event.preventDefault();
-            handlers.onPickSpaceFile(...positionOf(pickEl));
-            return;
-        }
-
-        const removeEl = event.target.closest(Selectors.actions.removeSpaceFile);
-        if (removeEl) {
-            event.preventDefault();
-            handlers.onRemoveSpaceFile(...positionOf(removeEl));
         }
     });
 };

@@ -14,26 +14,29 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_coursegen\local\service;
+namespace local_coursegen;
+
+use local_coursegen\local\service\template_generation_gate;
 
 /**
- * Names the elements of an init payload.
- *
- * Every element of a payload is named by a random uid, drawn once per export and echoed back
- * by the AI service's answers.
+ * Starting a generation from a template while the AI service cannot run it.
  *
  * @package    local_coursegen
+ * @category   test
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @covers     \local_coursegen\local\service\template_generation_gate
  */
-class template_export_uids {
-    /**
-     * A fresh random uid for one element of one export.
-     *
-     * @return string A lowercase hexadecimal string, for example "9f2c41d7a0b3".
-     */
-    public static function random_uid(): string {
-        $bytes = random_bytes(6);
-        return bin2hex($bytes);
+final class template_generation_gate_test extends \advanced_testcase {
+    public function test_the_gate_is_closed_until_the_service_can_run_the_generation(): void {
+        $this->assertFalse(template_generation_gate::OPEN);
+    }
+
+    public function test_a_closed_gate_refuses_with_its_own_message(): void {
+        $this->expectException(\moodle_exception::class);
+        $message = get_string('templategenerationrebuilding', 'local_coursegen');
+        $this->expectExceptionMessage($message);
+
+        template_generation_gate::assert_open();
     }
 }

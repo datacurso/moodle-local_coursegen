@@ -16,307 +16,156 @@
 
 namespace local_coursegen;
 
-use local_coursegen\local\models\template;
-use local_coursegen\local\models\template_activity;
-use local_coursegen\local\models\template_instance;
 use local_coursegen\local\service\template_export_service;
+use local_coursegen\local\template\template_actions;
+use local_coursegen\local\template\template_service;
 
 /**
- * Unit tests for template_export_service::build_init_payload().
+ * The init payload of a template: the course, and what the AI does with each of its activities.
  *
  * @package    local_coursegen
  * @category   test
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_coursegen\local\service\template_export_service
- *
- * @runTestsInSeparateProcesses
  */
 final class template_export_service_test extends \advanced_testcase {
-    /**
-     * A real activity's own entry carries a random UUID uid, not the old
-     * "cm-{templateid}-{cmid}" derived key.
-     */
-    public function test_real_activity_entry_carries_a_random_uuid_uid(): void {
-        $this->resetAfterTest(true);
+    use template_test_helper;
+
+    /** @var template_service Service used to save the templates of the tests. */
+    private template_service $service;
+
+    protected function setUp(): void {
+        parent::setUp();
+        $this->resetAfterTest();
         $this->setAdminUser();
-
-        $generator = $this->getDataGenerator();
-        $course = $generator->create_course();
-        $page = $generator->create_module('page', ['course' => $course->id]);
-        $template = $this->create_template($course->id);
-        $templateid = $template->get('id');
-
-        $payload = template_export_service::build_init_payload($templateid);
-        $entry = $this->find_activity($payload, (int) $page->cmid);
-
-        $this->assertNotNull($entry);
-        $pattern = '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i';
-        $matched = preg_match($pattern, $entry['uid']);
-        $this->assertSame(1, $matched);
+        $this->service = new template_service();
     }
 
-    /**
-     * The payload carries the template course's format, its language and the
-     * course settings the new course takes as they are.
-     */
-    public function test_course_configuration_carries_the_format_and_settings(): void {
-        $this->resetAfterTest(true);
-        $this->setAdminUser();
-
-        $course = $this->getDataGenerator()->create_course([
-            'format' => 'topics',
-            'lang' => 'es',
-            'newsitems' => 0,
-            'showreports' => 1,
-            'enablecompletion' => 1,
-        ]);
-        $template = $this->create_template($course->id);
-
-        $payload = template_export_service::build_init_payload($template->get('id'));
-        $configuration = $payload['course_configuration'];
-
-        $this->assertSame('topics', $configuration['format']);
-        $this->assertSame(1, $configuration['enablecompletion']);
-        $this->assertSame('es', $configuration['course_settings']['lang']);
-        $this->assertEquals(0, $configuration['course_settings']['newsitems']);
-        $this->assertEquals(1, $configuration['course_settings']['showreports']);
-    }
-
-    /**
-     * A language the template leaves open travels as open, not as the language of the person exporting.
-     */
-    public function test_course_settings_keep_an_open_language_open(): void {
-        $this->resetAfterTest(true);
-        $this->setAdminUser();
-
-        $course = $this->getDataGenerator()->create_course(['lang' => '']);
-        $template = $this->create_template($course->id);
-
-        $payload = template_export_service::build_init_payload($template->get('id'));
-
-        $this->assertSame('', $payload['course_configuration']['course_settings']['lang']);
-    }
-
-    /**
-     * An activity saved with action "exclude" never reaches the payload.
-     */
-    public function test_excluded_activity_is_left_out_of_the_payload(): void {
-        $this->resetAfterTest(true);
-        $this->setAdminUser();
-
-        $generator = $this->getDataGenerator();
-        $course = $generator->create_course();
-        $page = $generator->create_module('page', ['course' => $course->id]);
-        $template = $this->create_template($course->id);
-        $templateid = $template->get('id');
-        $this->mark_excluded($templateid, (int) $page->cmid);
-
-        $payload = template_export_service::build_init_payload($templateid);
-        $entry = $this->find_activity($payload, (int) $page->cmid);
-
-        $this->assertNull($entry);
-    }
-
-    /**
-     * An activity saved with action "space" is for the professor to provide,
-     * so it never reaches the payload the AI service is asked about, while
-     * a neighbouring activity that is kept still does.
-     */
-    public function test_space_activity_is_left_out_of_the_payload(): void {
-        $this->resetAfterTest(true);
-        $this->setAdminUser();
-
-        $generator = $this->getDataGenerator();
-        $course = $generator->create_course();
-        $page = $generator->create_module('page', ['course' => $course->id]);
-        $forum = $generator->create_module('forum', ['course' => $course->id]);
-        $template = $this->create_template($course->id);
-        $templateid = $template->get('id');
-        $this->mark_with_action($templateid, (int) $page->cmid, 'space');
+    public function test_the_payload_says_which_contract_it_follows(): void {
+        [$course] = $this->make_course();
+        $templateid = $this->save_items($course, []);
 
         $payload = template_export_service::build_init_payload($templateid);
 
-        $pageentry = $this->find_activity($payload, (int) $page->cmid);
-        $forumentry = $this->find_activity($payload, (int) $forum->cmid);
-        $this->assertNull($pageentry);
-        $this->assertNotNull($forumentry);
+        $this->assertSame(2, $payload['contract_version']);
+        $this->assertSame($course->fullname, $payload['course_configuration']['fullname']);
+        $this->assertTrue($payload['defer_start']);
     }
 
-    /**
-     * A file resource marked "space" never reaches the payload either, and a
-     * space saved on any other type is read as exclude, so it stays out too.
-     */
-    public function test_space_on_a_resource_or_on_another_type_is_left_out_of_the_payload(): void {
-        $this->resetAfterTest(true);
-        $this->setAdminUser();
-
-        $generator = $this->getDataGenerator();
-        $course = $generator->create_course();
-        $resource = $generator->create_module('resource', ['course' => $course->id]);
-        $forum = $generator->create_module('forum', ['course' => $course->id]);
-        $template = $this->create_template($course->id);
-        $templateid = $template->get('id');
-        $this->mark_with_action($templateid, (int) $resource->cmid, 'space');
-        $this->mark_with_action($templateid, (int) $forum->cmid, 'space');
+    public function test_an_activity_with_nothing_saved_is_kept(): void {
+        [$course, $page] = $this->make_course();
+        $templateid = $this->save_items($course, []);
 
         $payload = template_export_service::build_init_payload($templateid);
 
-        $this->assertNull($this->find_activity($payload, (int) $resource->cmid));
-        $this->assertNull($this->find_activity($payload, (int) $forum->cmid));
+        $entry = $this->find_activity($payload, $page);
+        $this->assertSame(['action' => 'keep'], $entry['template_behavior']);
     }
 
-    /**
-     * No two entries of the same payload - activities or sections - ever
-     * share a uid.
-     */
+    public function test_an_activity_the_ai_modifies_travels_as_modify_with_its_instruction(): void {
+        [$course, $page] = $this->make_course();
+        $items = [['cmid' => $page, 'action' => template_actions::AI, 'instruction' => '  Update the dates  ']];
+        $templateid = $this->save_items($course, $items);
+
+        $payload = template_export_service::build_init_payload($templateid);
+
+        $entry = $this->find_activity($payload, $page);
+        $this->assertSame('modify', $entry['template_behavior']['action']);
+        $this->assertSame('Update the dates', $entry['template_behavior']['instruction']);
+    }
+
+    public function test_a_modified_activity_without_instruction_carries_a_null_one(): void {
+        [$course, $page] = $this->make_course();
+        $items = [['cmid' => $page, 'action' => template_actions::AI, 'instruction' => '   ']];
+        $templateid = $this->save_items($course, $items);
+
+        $payload = template_export_service::build_init_payload($templateid);
+
+        $entry = $this->find_activity($payload, $page);
+        $this->assertSame('modify', $entry['template_behavior']['action']);
+        $this->assertNull($entry['template_behavior']['instruction']);
+    }
+
+    public function test_only_the_activities_the_user_can_see_are_exported(): void {
+        [$course, $page, $quiz] = $this->make_course();
+        $templateid = $this->save_items($course, []);
+        $teacher = $this->getDataGenerator()->create_and_enrol($course, 'student');
+        $this->setUser($teacher);
+
+        $payload = template_export_service::build_init_payload($templateid);
+
+        $pageentry = $this->find_activity($payload, $page);
+        $quizentry = $this->find_activity($payload, $quiz);
+        $this->assertNotNull($pageentry);
+        $this->assertNull($quizentry, 'The hidden quiz is not exported to a student.');
+    }
+
+    public function test_a_section_with_a_modified_activity_is_modified_and_the_others_are_kept(): void {
+        [$course, $page] = $this->make_course();
+        $items = [['cmid' => $page, 'action' => template_actions::AI, 'instruction' => '']];
+        $templateid = $this->save_items($course, $items);
+
+        $payload = template_export_service::build_init_payload($templateid);
+
+        $templatebehaviors = array_column($payload['sections_info'], 'template_behavior');
+        $behaviors = array_column($templatebehaviors, 'behavior');
+        $this->assertContains('aimodify', $behaviors);
+        $this->assertContains('keep', $behaviors);
+    }
+
     public function test_every_uid_in_the_payload_is_unique(): void {
-        $this->resetAfterTest(true);
-        $this->setAdminUser();
-
-        $generator = $this->getDataGenerator();
-        $course = $generator->create_course(['numsections' => 2]);
-        $generator->create_module('page', ['course' => $course->id]);
-        $generator->create_module('forum', ['course' => $course->id]);
-        $template = $this->create_template($course->id);
-        $templateid = $template->get('id');
+        [$course] = $this->make_course();
+        $templateid = $this->save_items($course, []);
 
         $payload = template_export_service::build_init_payload($templateid);
 
-        $activityuids = array_column($payload['activities'], 'uid');
-        $sectionuids = array_column($payload['sections_info'], 'uid');
-        $uids = array_merge($activityuids, $sectionuids);
-
-        $uniqueuids = array_unique($uids);
-        $expectedcount = count($uids);
-        $this->assertCount($expectedcount, $uniqueuids);
+        $uids = array_column($payload['activities'], 'uid');
+        $unique = array_unique($uids);
+        $expected = count($uids);
+        $this->assertCount($expected, $unique);
+        $this->assertMatchesRegularExpression('/^[0-9a-f]{12}$/', $uids[0]);
     }
 
-    /**
-     * A template instance travels with action "instance", the cmid of the
-     * source it was made from and its own prompt, and never with the retired
-     * "modify" action.
-     */
-    public function test_instance_entry_carries_the_instance_action_and_its_source(): void {
-        $this->resetAfterTest(true);
-        $this->setAdminUser();
-
-        $generator = $this->getDataGenerator();
-        $course = $generator->create_course();
-        $page = $generator->create_module('page', ['course' => $course->id]);
-        $template = $this->create_template($course->id);
-        $templateid = $template->get('id');
-        $this->mark_with_action($templateid, (int) $page->cmid, 'template');
-        $instance = $this->create_instance($templateid, (int) $page->cmid);
-        $instanceuid = $instance->get('uid');
+    public function test_the_entry_of_an_activity_names_its_type_section_and_name(): void {
+        [$course, $page] = $this->make_course();
+        $templateid = $this->save_items($course, []);
 
         $payload = template_export_service::build_init_payload($templateid);
 
-        $entry = $this->find_activity_by_uid($payload, $instanceuid);
-        $this->assertNotNull($entry);
-        $this->assertSame('instance', $entry['template_behavior']['action']);
-        $this->assertSame((int) $page->cmid, $entry['template_behavior']['template_source_cmid']);
-        $this->assertSame('Write the intro', $entry['template_behavior']['prompt']);
-        $actions = array_column(array_column($payload['activities'], 'template_behavior'), 'action');
-        $this->assertNotContains('modify', $actions);
+        $entry = $this->find_activity($payload, $page);
+        $this->assertSame('page', $entry['modname']);
+        $this->assertSame('page', $entry['resource_type']);
+        $this->assertSame('Welcome page', $entry['name']);
+        $this->assertSame(1, $entry['section']);
+    }
+
+    public function test_the_payload_of_an_unknown_template_is_refused(): void {
+        $this->expectException(\moodle_exception::class);
+
+        template_export_service::build_init_payload(987654);
+    }
+
+    public function test_the_payload_of_a_template_whose_course_is_gone_is_refused(): void {
+        [$course] = $this->make_course();
+        $templateid = $this->save_items($course, []);
+        delete_course($course, false);
+
+        $this->expectException(\dml_missing_record_exception::class);
+
+        template_export_service::build_init_payload($templateid);
     }
 
     /**
-     * A throwaway template pointing at the given course, with no saved
-     * activity/section rows - every activity defaults to "keep".
-     *
-     * @param int $courseid
-     * @return template
-     */
-    private function create_template(int $courseid): template {
-        $template = new template(0, (object) [
-            'name' => 'Test template',
-            'courseid' => $courseid,
-        ]);
-        $template->create();
-        return $template;
-    }
-
-    /**
-     * Save an "exclude" action for one cmid of this template.
-     *
-     * @param int $templateid
-     * @param int $cmid
-     */
-    private function mark_excluded(int $templateid, int $cmid): void {
-        $this->mark_with_action($templateid, $cmid, 'exclude');
-    }
-
-    /**
-     * Save an action for one cmid of this template.
-     *
-     * @param int $templateid
-     * @param int $cmid
-     * @param string $action
-     */
-    private function mark_with_action(int $templateid, int $cmid, string $action): void {
-        $activity = new template_activity(0, (object) [
-            'templateid' => $templateid,
-            'sectionid' => 0,
-            'cmid' => $cmid,
-            'action' => $action,
-        ]);
-        $activity->create();
-    }
-
-    /**
-     * Save one virtual instance of the given source for this template.
-     *
-     * @param int $templateid
-     * @param int $sourcecmid
-     * @return template_instance
-     */
-    private function create_instance(int $templateid, int $sourcecmid): template_instance {
-        $instance = new template_instance(0, (object) [
-            'uid' => 'instance-test-uid',
-            'templateid' => $templateid,
-            'sectionid' => 0,
-            'sourcecmid' => $sourcecmid,
-            'sourcename' => 'Source page',
-            'name' => 'Instance page',
-            'typelabel' => 'Page',
-            'modname' => 'page',
-            'prompt' => 'Write the intro',
-        ]);
-        $instance->create();
-        return $instance;
-    }
-
-    /**
-     * The payload's own entry for one uid, or null if it is not there.
-     *
-     * @param array $payload
-     * @param string $uid
-     * @return array|null
-     */
-    private function find_activity_by_uid(array $payload, string $uid): ?array {
-        $activities = $payload['activities'] ?? [];
-        foreach ($activities as $activity) {
-            if (($activity['uid'] ?? '') === $uid) {
-                return $activity;
-            }
-        }
-        return null;
-    }
-
-    /**
-     * The payload's own entry for one cmid, or null if it is not there.
+     * The entry of an activity in a payload.
      *
      * @param array $payload
      * @param int $cmid
      * @return array|null
      */
     private function find_activity(array $payload, int $cmid): ?array {
-        $activities = $payload['activities'] ?? [];
-        foreach ($activities as $activity) {
-            $activitycmid = $activity['cmid'] ?? 0;
-            $activitycmid = (int) $activitycmid;
-            if ($activitycmid === $cmid) {
+        foreach ($payload['activities'] as $activity) {
+            if ($activity['cmid'] === $cmid) {
                 return $activity;
             }
         }
