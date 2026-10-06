@@ -73,16 +73,17 @@ class get_course_preview extends external_api {
         template_access::require_manage();
         template_access::require_course_visible($params['courseid']);
 
+        // The page is set up before the structure is read: reading it initialises the theme.
+        $course = get_course($params['courseid']);
+        $coursecontext = \context_course::instance($course->id);
+        $PAGE->set_context($coursecontext);
+        $PAGE->set_course($course);
+
         $service = new template_service();
         $loaded = $service->load_for_edit($params['templateid'], $params['courseid']);
         if (!$loaded['courseusable']) {
             throw new moodle_exception('error_template_course_invalid', 'local_coursegen');
         }
-
-        $course = get_course($params['courseid']);
-        $coursecontext = \context_course::instance($course->id);
-        $PAGE->set_context($coursecontext);
-        $PAGE->set_course($course);
 
         // The same server-side render the first page load uses: one rendering
         // path, so what an AJAX course switch shows can never drift from it.
