@@ -167,6 +167,18 @@ final class get_template_structure_view_test extends \advanced_testcase {
         $this->assertSame('', $row['generationuid']);
     }
 
+    public function test_a_kept_row_has_no_generation_uid_and_a_modified_row_has_its_cmid(): void {
+        [$course, $page] = $this->make_course();
+        $kept = $this->save_items($course, []);
+        $modified = $this->save_items($course, [['cmid' => $page, 'action' => template_actions::AI, 'instruction' => '']]);
+
+        $keptrow = $this->rows($this->view($kept), 1)[0];
+        $modifiedrow = $this->rows($this->view($modified), 1)[0];
+
+        $this->assertSame('', $keptrow['generationuid']);
+        $this->assertSame((string) $page, $modifiedrow['generationuid']);
+    }
+
     public function test_the_view_of_an_unknown_template_is_refused(): void {
         $this->expectException(\moodle_exception::class);
 
