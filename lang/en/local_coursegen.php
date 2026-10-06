@@ -990,6 +990,7 @@ $string['template_space_modal_title'] = 'Space for the teacher';
 $string['template_space_modal_intro'] = 'The teacher will provide this activity themselves: {$a}.';
 $string['template_space_edit'] = 'Edit space';
 $string['template_space_remove'] = 'Remove space';
+$string['template_from_placeholders_description'] = 'Made from the placeholders of the course {$a->course} (id {$a->courseid}): {$a->molds} activities used as template, one instance each.';
 $string['template_instance_menu_hint'] = 'Templates available for this section';
 $string['template_instance_menu_empty'] = 'No activity has been marked "Use as template" yet.';
 $string['template_instance_badge'] = 'Instance · {$a}';
