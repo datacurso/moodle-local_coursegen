@@ -174,13 +174,13 @@ final class save_template_spaces_test extends \advanced_testcase {
 
         $html = $this->render_review($course, $templateid);
         $select = $this->extract_action_select($html, $cmid);
-        $this->assertMatchesRegularExpression('/<option value="keep"[^>]*\sselected/', $select);
+        $this->assertMatchesRegularExpression('/<option value="space"[^>]*\sselected/', $select);
 
         $tag = $this->extract_space_tag($html, $cmid);
         $badge = $this->badge_text('template_space_optional');
         $opening = $this->opening_tag($tag);
         $this->assertStringContainsString($badge, $tag);
-        $this->assertStringContainsString('d-none', $opening);
+        $this->assertStringNotContainsString('d-none', $opening);
         $this->assertStringContainsString('Replace this page with your own welcome.', $html);
     }
 
@@ -207,9 +207,10 @@ final class save_template_spaces_test extends \advanced_testcase {
     }
 
     /**
-     * A legacy space value is hidden from the choices while backend data remains intact.
+     * A space saved before the rule existed, on a forum, shows exclude with a
+     * warning and no space badge; a resource row shows no warning.
      */
-    public function test_legacy_space_on_a_forum_is_hidden_and_warned(): void {
+    public function test_legacy_space_on_a_forum_shows_exclude_and_a_warning(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -234,13 +235,13 @@ final class save_template_spaces_test extends \advanced_testcase {
         $html = $this->render_review($course, $templateid);
 
         $forumselect = $this->extract_action_select($html, (int) $forum->cmid);
-        $this->assertMatchesRegularExpression('/<option value="keep"[^>]*\sselected/', $forumselect);
+        $this->assertMatchesRegularExpression('/<option value="exclude"[^>]*\sselected/', $forumselect);
         $warning = get_string('template_space_legacy_warning', 'local_coursegen');
         $this->assertSame(1, substr_count($html, $warning));
         $forumtag = $this->opening_tag($this->extract_space_tag($html, (int) $forum->cmid));
         $this->assertStringContainsString('d-none', $forumtag);
         $resourceselect = $this->extract_action_select($html, (int) $resource->cmid);
-        $this->assertMatchesRegularExpression('/<option value="keep"[^>]*\sselected/', $resourceselect);
+        $this->assertMatchesRegularExpression('/<option value="space"[^>]*\sselected/', $resourceselect);
     }
 
     /**

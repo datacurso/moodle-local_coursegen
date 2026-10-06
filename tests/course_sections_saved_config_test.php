@@ -25,7 +25,6 @@ require_once(__DIR__ . '/sections_config_fixture_trait.php');
 use local_coursegen\external\get_course_preview;
 use local_coursegen\external\save_template;
 use local_coursegen\local\models\template_activity;
-use local_coursegen\local\models\template_section;
 use local_coursegen\output\sections_config;
 
 /**
@@ -50,33 +49,6 @@ use local_coursegen\output\sections_config;
  */
 final class course_sections_saved_config_test extends \advanced_testcase {
     use sections_config_fixture_trait;
-
-    /**
-     * Saved Modify with AI instructions are rendered in the optional row editor.
-     */
-    public function test_saved_activity_instruction_round_trips_in_editor(): void {
-        $this->resetAfterTest();
-        $this->setAdminUser();
-        [$course, $page] = $this->create_course_fixture();
-        $modinfo = get_fast_modinfo($course);
-        $section = $modinfo->get_section_info(1);
-        $instruction = 'Adapt the activity for a beginner audience.';
-        $saved = save_template::execute(0, 'Prompt test', '', (int) $course->id, 0, false, '', 1, [[
-            'sectionid' => (int) $section->id,
-            'sectionnum' => 1,
-            'behavior' => 'aimodify',
-            'activities' => [[
-                'cmid' => (int) $page->cmid,
-                'action' => 'template',
-                'prompt' => $instruction,
-            ]],
-        ]]);
-
-        $html = sections_config::render($modinfo, (int) $saved['id']);
-
-        $this->assertStringContainsString('data-region="activity-instruction"', $html);
-        $this->assertStringContainsString($instruction, $html);
-    }
 
     /**
      * Rendering for an existing template preselects the SAVED per-activity
@@ -117,7 +89,7 @@ final class course_sections_saved_config_test extends \advanced_testcase {
         $html = sections_config::render($modinfo, $templateid);
 
         $pageselect = $this->extract_action_select($html, (int) $page->cmid);
-        $this->assertMatchesRegularExpression('/<option value="keep"[^>]*\sselected/', $pageselect);
+        $this->assertMatchesRegularExpression('/<option value="exclude"[^>]*\sselected/', $pageselect);
         $this->assertStringNotContainsString('<option value="instance"', $pageselect);
 
         // Forum has no saved row, so it falls back to the unconditional "keep"
@@ -127,14 +99,20 @@ final class course_sections_saved_config_test extends \advanced_testcase {
 
         $section1select = $this->extract_behavior_select($html, (int) $section1->id);
         $this->assertMatchesRegularExpression('/<option value="keep"[^>]*\sselected/', $section1select);
+        $this->assertStringNotContainsString('<option value="exclude"', $section1select);
+
         $section2select = $this->extract_behavior_select($html, (int) $section2->id);
+        $section2options = substr_count($section2select, '<option');
+        $this->assertSame(3, $section2options);
         $this->assertMatchesRegularExpression('/<option value="exclude"[^>]*\sselected/', $section2select);
-        $savedsection = template_section::get_record(['templateid' => $templateid, 'sectionid' => (int) $section2->id]);
-        $this->assertSame('exclude', $savedsection->get('behavior'));
+
+        $section0 = $modinfo->get_section_info(0);
+        $generalselect = $this->extract_behavior_select($html, (int) $section0->id);
+        $this->assertMatchesRegularExpression('/<option value="aimodify"[^>]*\sselected/', $generalselect);
 
         $result = get_course_preview::execute((int) $course->id, $templateid);
         $ajaxpageselect = $this->extract_action_select($result['html'], (int) $page->cmid);
-        $this->assertMatchesRegularExpression('/<option value="keep"[^>]*\sselected/', $ajaxpageselect);
+        $this->assertMatchesRegularExpression('/<option value="exclude"[^>]*\sselected/', $ajaxpageselect);
     }
 
     /**

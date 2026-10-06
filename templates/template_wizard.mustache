@@ -18,7 +18,8 @@
     @template local_coursegen/template_wizard
 
     Template configuration — one screen, no step navigation. Pick a base
-    course, then configure the course structure — all on this same page — and
+    course, then review the overall limits, the default behavior per activity type
+    of component, and the course structure — all on this same page — and
     Save. All initial state rendered server-side, no JS flash.
 
     Example context (json):
@@ -67,7 +68,9 @@
 
         <hr class="my-4">
 
-        {{! Prompt marker guidance, not generated-course limits or naming controls. }}
+        {{! Default behavior per activity type + generated-course limits +
+            section naming pattern — real mform
+            elements, see classes/form/template_config_form.php }}
         <div data-region="config-form">{{{configformhtml}}}</div>
 
         <hr class="my-4">

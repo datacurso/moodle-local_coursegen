@@ -108,9 +108,6 @@ export const resetSectionsDirtyState = () => {
     window.removeEventListener(EVENT.BEFORE_UNLOAD, onBeforeUnload);
 };
 
-/** Mark an edit made by the optional activity-instruction binder as unsaved. */
-export const markSectionsDirty = () => markDirty();
-
 /**
  * Resolve the action a row may actually take: types the generator cannot
  * produce content for degrade template to keep (their selects do not

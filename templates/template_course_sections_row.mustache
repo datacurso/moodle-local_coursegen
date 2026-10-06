@@ -66,17 +66,6 @@
         </select>
     </td>
 </tr>
-<tr class="tpl-instruction-row{{^istemplate}} d-none{{/istemplate}}" data-region="activity-instruction-row" data-id="{{cmid}}">
-    <td></td>
-    <td colspan="3" class="pt-0">
-        <label class="sr-only" for="tpl-activity-instruction-{{cmid}}">
-            {{#str}} template_activity_instruction, local_coursegen {{/str}}
-        </label>
-        <textarea class="form-control form-control-sm" id="tpl-activity-instruction-{{cmid}}"
-                data-region="activity-instruction" data-id="{{cmid}}" rows="2"
-                placeholder="{{#str}} template_activity_instruction_placeholder, local_coursegen {{/str}}">{{prompt}}</textarea>
-    </td>
-</tr>
 {{/isreal}}
 {{#isinstance}}
 {{> local_coursegen/template_instance_row}}

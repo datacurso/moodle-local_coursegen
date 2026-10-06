@@ -63,31 +63,33 @@ final class course_sections_actions_test extends \advanced_testcase {
 
         $this->assertStringNotContainsString('data-act-val=', $html);
 
-        // Every type gets the same minimal pair; keep is the default.
+        // AI-supported type (page): template/keep/reference/exclude, keep preselected; no space.
         $pageselect = $this->extract_action_select($html, (int) $page->cmid);
         $pageoptions = substr_count($pageselect, '<option');
-        $this->assertSame(2, $pageoptions);
-        foreach (['template', 'keep'] as $action) {
+        $this->assertSame(4, $pageoptions);
+        foreach (['template', 'keep', 'reference', 'exclude'] as $action) {
             $this->assertStringContainsString('<option value="' . $action . '"', $pageselect);
         }
         $this->assertStringNotContainsString('<option value="space"', $pageselect);
         $this->assertStringNotContainsString('<option value="instance"', $pageselect);
         $this->assertMatchesRegularExpression('/<option value="keep"[^>]*\sselected/', $pageselect);
         $templatelabel = get_string('template_activity_template', 'local_coursegen');
+        $referencelabel = get_string('template_activity_reference', 'local_coursegen');
         $this->assertStringContainsString($templatelabel, $pageselect);
+        $this->assertStringContainsString($referencelabel, $pageselect);
 
-        // Unsupported type (lti): it still gets the same two choices.
+        // Unsupported type (lti): instance, template and space omitted, keep preselected.
         $ltiselect = $this->extract_action_select($html, (int) $lti->cmid);
         $ltioptions = substr_count($ltiselect, '<option');
-        $this->assertSame(2, $ltioptions);
+        $this->assertSame(3, $ltioptions);
         $this->assertStringNotContainsString('<option value="space"', $ltiselect);
         $this->assertStringNotContainsString('<option value="instance"', $ltiselect);
-        $this->assertStringContainsString('<option value="template"', $ltiselect);
+        $this->assertStringNotContainsString('<option value="template"', $ltiselect);
         $this->assertMatchesRegularExpression('/<option value="keep"[^>]*\sselected/', $ltiselect);
     }
 
     /**
-     * Legacy space actions are not offered in the simplified editor.
+     * A file resource is the only row that offers the space action.
      */
     public function test_render_offers_space_only_for_a_file_resource(): void {
         $this->resetAfterTest();
@@ -100,7 +102,7 @@ final class course_sections_actions_test extends \advanced_testcase {
         $html = sections_config::render($modinfo);
 
         $resourceselect = $this->extract_action_select($html, (int) $resource->cmid);
-        $this->assertStringNotContainsString('<option value="space"', $resourceselect);
+        $this->assertStringContainsString('<option value="space"', $resourceselect);
         $forumselect = $this->extract_action_select($html, (int) $forum->cmid);
         $this->assertStringNotContainsString('<option value="space"', $forumselect);
     }
@@ -111,7 +113,7 @@ final class course_sections_actions_test extends \advanced_testcase {
      * "Whole course" label — sections_events.js is what reveals it (and
      * opens the scope modal) on selection.
      */
-    public function test_render_hides_template_scope_badge_by_default(): void {
+    public function test_render_hides_template_tag_by_default(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -121,7 +123,11 @@ final class course_sections_actions_test extends \advanced_testcase {
         $html = sections_config::render($modinfo);
 
         $tag = $this->extract_template_tag($html, (int) $page->cmid);
-        $this->assertStringContainsString('d-none', $tag);
+        $tagopenend = strpos($tag, '>');
+        $tagopening = substr($tag, 0, $tagopenend);
+        $courselabel = get_string('template_activity_scope_course', 'local_coursegen');
+        $this->assertStringContainsString('d-none', $tagopening);
+        $this->assertStringContainsString($courselabel, $tag);
     }
 
     /**
@@ -130,7 +136,7 @@ final class course_sections_actions_test extends \advanced_testcase {
      * which one is currently active — template_row_scope.js swaps between
      * them after a scope change without any further server round trip.
      */
-    public function test_render_preserves_template_scope_labels(): void {
+    public function test_render_template_tag_carries_both_scope_labels(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
 
@@ -140,12 +146,18 @@ final class course_sections_actions_test extends \advanced_testcase {
         $html = sections_config::render($modinfo);
 
         $tag = $this->extract_template_tag($html, (int) $page->cmid);
-        $this->assertStringContainsString('data-tag-course=', $tag);
-        $this->assertStringContainsString('data-tag-section=', $tag);
+        $courselabel = get_string('template_activity_scope_course', 'local_coursegen');
+        $expectedcourse = get_string('template_activity_template_tag', 'local_coursegen', $courselabel);
+        $sectionlabel = get_string('template_activity_scope_section', 'local_coursegen');
+        $expectedsection = get_string('template_activity_template_tag', 'local_coursegen', $sectionlabel);
+        $this->assertStringContainsString('data-tag-course="' . $expectedcourse . '"', $tag);
+        $this->assertStringContainsString('data-tag-section="' . $expectedsection . '"', $tag);
     }
 
     /**
-     * ONE global bulk action bar offers the two supported per-activity actions.
+     * ONE global bulk action bar renders below all the section cards, with
+     * a label, a select born disabled, a choosedots placeholder plus the
+     * four per-activity actions offered ("instance" is never one of them).
      */
     public function test_render_offers_a_single_global_bulk_bar(): void {
         $this->resetAfterTest();
@@ -168,12 +180,12 @@ final class course_sections_actions_test extends \advanced_testcase {
         $bulkselect = substr($html, $start, $end - $start);
         $this->assertStringContainsString('disabled', $bulkselect);
         $optioncount = substr_count($bulkselect, '<option');
-        $this->assertSame(3, $optioncount);
+        $this->assertSame(5, $optioncount);
         $this->assertMatchesRegularExpression('/<option value=""[^>]*\sselected/', $bulkselect);
         $choosedots = get_string('choosedots');
         $this->assertStringContainsString($choosedots, $bulkselect);
         $this->assertStringNotContainsString('<option value="instance"', $bulkselect);
-        foreach (['template', 'keep'] as $action) {
+        foreach (['template', 'keep', 'reference', 'exclude'] as $action) {
             $this->assertStringContainsString('<option value="' . $action . '"', $bulkselect);
         }
     }

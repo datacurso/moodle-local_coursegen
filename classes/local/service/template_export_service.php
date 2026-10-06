@@ -19,6 +19,7 @@ namespace local_coursegen\local\service;
 use local_coursegen\local\models\template;
 use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_instance;
+use local_coursegen\local\models\template_section;
 
 /**
  * Builds the /course-template/init payload for one saved template.
@@ -57,7 +58,8 @@ class template_export_service {
         $course = get_course($courseid);
         $modinfo = get_fast_modinfo($course);
 
-        $savedconfiguration = template_export_saved_configuration::load($templateid);
+        $actions = self::saved_activity_actions($templateid);
+        $behaviors = self::saved_section_behaviors($templateid);
 
         $lang = $course->lang;
         if (!$lang) {
@@ -68,9 +70,9 @@ class template_export_service {
         $numsections = count($sectioninfoall) - 1;
 
         $formatoptions = template_export_sections::format_settings($course);
-        $sectionsinfo = template_export_sections::sections_info($course, $modinfo, $savedconfiguration['behaviors']);
+        $sectionsinfo = template_export_sections::sections_info($course, $modinfo, $behaviors);
 
-        $realactivities = self::real_activities($modinfo, $savedconfiguration['activities']);
+        $realactivities = self::real_activities($modinfo, $actions);
         $instanceactivities = self::instance_activities($templateid, $modinfo);
         $activities = array_merge($realactivities, $instanceactivities);
 
@@ -91,7 +93,6 @@ class template_export_service {
         ];
 
         return [
-            'source_course_id' => (int) $course->id,
             'course_configuration' => $courseconfiguration,
             'sections_info' => $sectionsinfo,
             'activities' => $activities,
@@ -103,6 +104,40 @@ class template_export_service {
             // thread_id), so the run must not start until they have landed.
             'defer_start' => true,
         ];
+    }
+
+    /**
+     * cmid => saved action, for this template.
+     *
+     * @param int $templateid
+     * @return array
+     */
+    private static function saved_activity_actions(int $templateid): array {
+        $records = template_activity::get_records(['templateid' => $templateid]);
+        $actions = [];
+        foreach ($records as $activity) {
+            $cmid = (int) $activity->get('cmid');
+            $action = $activity->get('action');
+            $actions[$cmid] = $action;
+        }
+        return $actions;
+    }
+
+    /**
+     * sectionid => saved behavior, for this template.
+     *
+     * @param int $templateid
+     * @return array
+     */
+    private static function saved_section_behaviors(int $templateid): array {
+        $records = template_section::get_records(['templateid' => $templateid]);
+        $behaviors = [];
+        foreach ($records as $section) {
+            $sectionid = (int) $section->get('sectionid');
+            $behavior = $section->get('behavior');
+            $behaviors[$sectionid] = $behavior;
+        }
+        return $behaviors;
     }
 
     /**
@@ -121,13 +156,11 @@ class template_export_service {
             if (!$cm->uservisible) {
                 continue;
             }
-            $saved = $actions[$cm->id] ?? [];
-            $action = $saved['action'] ?? template_activity::ACTION_KEEP;
-            $prompt = $saved['prompt'] ?? '';
+            $action = $actions[$cm->id] ?? template_activity::ACTION_KEEP;
             if ($action === template_activity::ACTION_EXCLUDE || $action === template_activity::ACTION_SPACE) {
                 continue;
             }
-            $activities[] = self::real_activity_entry($cm, $action, $prompt);
+            $activities[] = self::real_activity_entry($cm, $action);
         }
         return $activities;
     }
@@ -137,10 +170,9 @@ class template_export_service {
      *
      * @param \cm_info $cm
      * @param string $action
-     * @param string $prompt
      * @return array
      */
-    private static function real_activity_entry($cm, string $action, string $prompt): array {
+    private static function real_activity_entry($cm, string $action): array {
         $cmid = (int) $cm->id;
         $uid = template_export_uids::random_uid();
         $parameters = template_activity_export::parameters_for($cm);
@@ -149,7 +181,7 @@ class template_export_service {
             'uid' => $uid,
             'cmid' => $cmid,
             'parameters' => $parameters,
-            'template_behavior' => ['action' => $action, 'useasreference' => true, 'prompt' => $prompt],
+            'template_behavior' => ['action' => $action, 'useasreference' => true],
         ];
     }
 

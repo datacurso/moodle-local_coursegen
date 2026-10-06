@@ -16,6 +16,7 @@
 
 namespace local_coursegen;
 
+use local_coursegen\form\template_config_form;
 use local_coursegen\form\template_name_form;
 
 /**
@@ -29,6 +30,7 @@ use local_coursegen\form\template_name_form;
  * @category   test
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @covers     \local_coursegen\form\template_config_form
  * @covers     \local_coursegen\form\template_name_form
  */
 final class template_editor_hooks_test extends \advanced_testcase {
@@ -95,6 +97,61 @@ final class template_editor_hooks_test extends \advanced_testcase {
         $this->assertNotEmpty($hooks);
         $missing = $this->missing_from($hooks, $sources);
         $this->assertSame([], $missing);
+    }
+
+    /**
+     * The naming preview shows a section name holding markup as plain text.
+     */
+    public function test_the_naming_preview_escapes_section_names(): void {
+        global $OUTPUT;
+        $this->resetAfterTest();
+
+        $context = ['lines' => [['text' => 'Unit 1: <img src=x onerror=alert(1)>']]];
+        $html = $OUTPUT->render_from_template('local_coursegen/template_naming_preview', $context);
+
+        $this->assertStringContainsString('Unit 1: &lt;img src=x onerror=alert(1)&gt;', $html);
+        $this->assertStringNotContainsString('<img', $html);
+    }
+
+    /**
+     * The naming preview prints its label from the language pack, then one line per section.
+     */
+    public function test_the_naming_preview_has_a_label_and_one_line_per_section(): void {
+        global $OUTPUT;
+        $this->resetAfterTest();
+
+        $context = ['lines' => [['text' => 'A'], ['text' => 'B']]];
+        $html = $OUTPUT->render_from_template('local_coursegen/template_naming_preview', $context);
+
+        $label = get_string('template_naming_preview', 'local_coursegen');
+        $this->assertStringContainsString($label, $html);
+        $count = substr_count($html, '<small');
+        $this->assertSame(3, $count);
+    }
+
+    /**
+     * The naming preview is empty but for its label when the course has no sections.
+     */
+    public function test_the_naming_preview_with_no_sections_only_has_the_label(): void {
+        global $OUTPUT;
+        $this->resetAfterTest();
+
+        $html = $OUTPUT->render_from_template('local_coursegen/template_naming_preview', ['lines' => []]);
+
+        $count = substr_count($html, '<small');
+        $this->assertSame(1, $count);
+    }
+
+    /**
+     * The preview box carries the hook the script renders the preview into.
+     */
+    public function test_the_preview_box_carries_its_region_hook(): void {
+        global $OUTPUT;
+        $this->resetAfterTest();
+
+        $html = $OUTPUT->render_from_template('local_coursegen/template_naming_preview_box', []);
+
+        $this->assertStringContainsString('data-region="local_coursegen/template/naming-preview"', $html);
     }
 
     /**
@@ -172,33 +229,12 @@ final class template_editor_hooks_test extends \advanced_testcase {
     public function test_the_form_hook_constants_match_the_selectors(): void {
         $hooks = $this->hooks_in_selectors();
 
-        $this->assertNotContains('local_coursegen/template/naming-pattern', $hooks);
-        $this->assertNotContains('local_coursegen/template/custom-pattern', $hooks);
-        $this->assertNotContains('local_coursegen/template/naming-start', $hooks);
-        $this->assertNotContains('local_coursegen/template/max-sections', $hooks);
-        $this->assertNotContains('local_coursegen/template/allow-add-sections', $hooks);
+        $this->assertContains(template_config_form::HOOK_NAMING_PATTERN, $hooks);
+        $this->assertContains(template_config_form::HOOK_CUSTOM_PATTERN, $hooks);
+        $this->assertContains(template_config_form::HOOK_NAMING_START, $hooks);
+        $this->assertContains(template_config_form::HOOK_MAX_SECTIONS, $hooks);
+        $this->assertContains(template_config_form::HOOK_ALLOW_ADD_SECTIONS, $hooks);
         $this->assertContains(template_name_form::HOOK_NAME, $hooks);
         $this->assertContains(template_name_form::HOOK_DESCRIPTION, $hooks);
-    }
-
-    /**
-     * The template wizard no longer renders limits or section-name controls.
-     */
-    public function test_limits_and_section_naming_controls_are_not_in_the_wizard(): void {
-        global $CFG;
-
-        $wizard = file_get_contents($CFG->dirroot . '/local/coursegen/templates/template_wizard.mustache');
-        $selectors = file_get_contents($CFG->dirroot . '/local/coursegen/amd/src/local/template/selectors.js');
-
-        $form = file_get_contents($CFG->dirroot . '/local/coursegen/classes/form/template_config_form.php');
-        $this->assertStringNotContainsString('maxsections', $form);
-        $this->assertStringNotContainsString('allowaddsections', $form);
-        $this->assertStringNotContainsString('namingpattern', $form);
-        $this->assertStringNotContainsString('namingstart', $form);
-        $this->assertStringNotContainsString('custompattern', $form);
-        $this->assertStringNotContainsString('naming-pattern', $selectors);
-        $this->assertStringNotContainsString('naming-start', $selectors);
-        $this->assertStringNotContainsString('max-sections', $selectors);
-        $this->assertStringNotContainsString('allow-add-sections', $selectors);
     }
 }

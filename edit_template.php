@@ -42,10 +42,11 @@ $PAGE->requires->css(new moodle_url('/local/coursegen/styles/templates-widgets.c
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/templates-instances.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/templates-spaces.css', ['v' => $cssrev]));
 
-// Edit mode: the saved configuration hydrates the page — the base
+// Edit mode: the whole saved configuration hydrates the page — the base
 // course comes from the template itself (no courseid param needed), the
-// name form prefills below, the sections review preselects saved actions,
-// and legacy settings remain unchanged when an existing template is saved.
+// name/config forms prefill below, the sections review preselects the saved
+// actions/behaviors, and the saved per-activity reference/prompt values are
+// handed to JS so a re-save round-trips them (they have no visible controls).
 $template = null;
 $savedsections = new stdClass();
 $savedactivities = new stdClass();
@@ -165,15 +166,13 @@ $templatecontext = [
     // have no controls, so they must round-trip through the JS state.
     'savedsections' => $savedsections,
     'savedactivities' => $savedactivities,
-    'legacytemplateconfiguration' => [
-        'maxsections' => $template ? (int) $template->get('maxsections') : 0,
-        'nolimit' => $template ? (bool) $template->get('nolimit') : false,
-        'namingpattern' => $template ? (string) $template->get('namingpattern') : '',
-        'namingstart' => $template ? (int) $template->get('namingstart') : 1,
-    ],
     // The activity types a space can be made for: the AI-supported ones that
     // are installed on this site.
     'supportedtypes' => \local_coursegen\local\ai_activity_types::installed(),
+    // The naming pattern a fresh template starts with, worded in the admin's language.
+    'defaultnamingpattern' => \local_coursegen\form\template_config_form::default_naming_pattern(),
+    // The select value that means "custom pattern" and the two tokens a pattern can use.
+    'namingcontract' => \local_coursegen\form\template_config_form::naming_contract(),
 ];
 
 echo $OUTPUT->header();

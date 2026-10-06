@@ -31,7 +31,6 @@ export default {
         toggleSection: '[data-action="local_coursegen/template/toggle-section"]',
         pickSpaceFile: '[data-action="local_coursegen/template/pick-space-file"]',
         removeSpaceFile: '[data-action="local_coursegen/template/remove-space-file"]',
-        submitToolAnswer: '[data-action="local_coursegen/template/submit-tool-answer"]',
     },
     classes: {
         generating: 'cg-generating',
@@ -40,8 +39,5 @@ export default {
     regions: {
         generationNotices: '[data-region="local_coursegen/template/generation-notices"]',
         spaceButtonLabel: '[data-region="local_coursegen/template/space-button-label"]',
-        templateComposer: '[data-region="local_coursegen/template/composer"]',
-        toolQuestionInput: '[data-region="local_coursegen/template/tool-question-input"]',
-        generateLabel: '[data-region="local_coursegen/template/generate-label"]',
     },
 };

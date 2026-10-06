@@ -28,39 +28,39 @@ namespace local_coursegen\output;
  */
 final class template_row_options_test extends \advanced_testcase {
     /**
-     * Only keep and AI modification are offered for any activity type.
+     * The space action is offered for a file resource only.
      */
-    public function test_activity_actions_offer_only_keep_and_ai_modify(): void {
+    public function test_activity_actions_offer_space_only_for_a_resource(): void {
         $resource = array_column(template_row_options::activity_actions(1, 'resource'), 'value');
         $page = array_column(template_row_options::activity_actions(2, 'page'), 'value');
         $forum = array_column(template_row_options::activity_actions(3, 'forum'), 'value');
         $lti = array_column(template_row_options::activity_actions(4, 'lti'), 'value');
 
-        $this->assertSame(['keep', 'template'], $resource);
-        $this->assertSame(['keep', 'template'], $page);
-        $this->assertSame(['keep', 'template'], $forum);
-        $this->assertSame(['keep', 'template'], $lti);
+        $this->assertContains('space', $resource);
+        $this->assertNotContains('space', $page);
+        $this->assertNotContains('space', $forum);
+        $this->assertNotContains('space', $lti);
     }
 
     /**
-     * A legacy action is hidden and defaults to keep.
+     * A space saved on a type that cannot be one preselects exclude, not keep.
      */
-    public function test_saved_space_on_another_type_preselects_keep(): void {
+    public function test_saved_space_on_another_type_preselects_exclude(): void {
         $options = template_row_options::activity_actions(5, 'forum', 'space');
 
         $active = $this->active_options($options);
         $this->assertCount(1, $active);
-        $this->assertSame('keep', $active[0]['value']);
+        $this->assertSame('exclude', $active[0]['value']);
     }
 
     /**
-     * A legacy space action on a resource does not reappear in the editor.
+     * A space saved on a resource stays preselected.
      */
-    public function test_saved_space_on_a_resource_preselects_keep(): void {
+    public function test_saved_space_on_a_resource_stays_preselected(): void {
         $options = template_row_options::activity_actions(6, 'resource', 'space');
 
         $active = $this->active_options($options);
-        $this->assertSame('keep', $active[0]['value']);
+        $this->assertSame('space', $active[0]['value']);
     }
 
     /**
@@ -128,11 +128,11 @@ final class template_row_options_test extends \advanced_testcase {
     public function test_activity_actions_never_offers_instance(): void {
         $supported = template_row_options::activity_actions(1, 'page');
         $supportedvalues = array_column($supported, 'value');
-        $this->assertSame(['keep', 'template'], $supportedvalues);
+        $this->assertSame(['template', 'keep', 'reference', 'exclude', 'space'], $supportedvalues);
 
         $unsupported = template_row_options::activity_actions(1, 'lti');
         $unsupportedvalues = array_column($unsupported, 'value');
-        $this->assertSame(['keep', 'template'], $unsupportedvalues);
+        $this->assertSame(['keep', 'reference', 'exclude', 'space'], $unsupportedvalues);
     }
 
     /**
@@ -150,12 +150,12 @@ final class template_row_options_test extends \advanced_testcase {
     }
 
     /**
-     * A saved AI-modification action remains available for every activity type.
+     * A saved "template" action on an unsupported type degrades to "keep".
      */
-    public function test_activity_actions_preserves_saved_template_on_unsupported_type(): void {
+    public function test_activity_actions_degrades_saved_template_on_unsupported_type(): void {
         $options = template_row_options::activity_actions(1, 'lti', 'template');
         $action = template_row_options::active_action($options);
-        $this->assertSame('template', $action);
+        $this->assertSame('keep', $action);
     }
 
     /**

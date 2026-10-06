@@ -22,8 +22,9 @@
  * that can drift from it).
  *
  * After each render (either path) sections_events.js binds the review's
- * activity selects and row controls; instruction fields have their own binder.
- * The defaults flow the same
+ * controls — row action selects, selection checkboxes, bulk action bars and
+ * section behavior selects — so their changes flow into the shared state that
+ * buildSections() turns into the save payload. The defaults flow the same
  * way as before: init.js::initSectionState() seeds
  * state.sectionBehavior/activityAction/activityRef/activityPrompt from the
  * course structure, applyTypeDefaultsToState() below re-seeds from the
@@ -38,8 +39,7 @@
 
 import {getCoursePreview} from 'local_coursegen/local/template/repository';
 import {applyTypeDefaultsToState} from 'local_coursegen/local/template/type_action_sync';
-import {bindServerRenderedControls, markSectionsDirty} from 'local_coursegen/local/template/sections_events';
-import {bindActivityInstructions} from 'local_coursegen/local/template/activity_instructions';
+import {bindServerRenderedControls} from 'local_coursegen/local/template/sections_events';
 import Notification from 'core/notification';
 
 let rendered = false;
@@ -72,10 +72,9 @@ export const renderStepSections = async(panel, state, isFreshFromPageLoad) => {
     // Server already rendered the review on initial page load — seed the
     // per-activity defaults and bind the review controls to it.
     if (isFreshFromPageLoad && container
-            && container.querySelector('[data-region="activity-action"]')) {
+            && container.querySelector('[data-region="section-behavior"], [data-region="activity-action"]')) {
         applyTypeDefaultsToState(container, state);
         bindServerRenderedControls(container, state);
-        bindActivityInstructions(container, state, markSectionsDirty);
         rendered = true;
         return;
     }
@@ -92,7 +91,6 @@ export const renderStepSections = async(panel, state, isFreshFromPageLoad) => {
         container.innerHTML = preview.html;
         applyTypeDefaultsToState(container, state);
         bindServerRenderedControls(container, state);
-        bindActivityInstructions(container, state, markSectionsDirty);
         rendered = true;
     } catch (e) {
         Notification.exception(e);
