@@ -25,7 +25,8 @@
 require_once('../../config.php');
 require_once($CFG->libdir . '/adminlib.php');
 
-use local_coursegen\output\manage_templates_page;
+use core_reportbuilder\system_report_factory;
+use local_coursegen\reportbuilder\local\systemreports\templates;
 
 admin_externalpage_setup('local_coursegen_manage_templates');
 
@@ -33,11 +34,16 @@ if (optional_param('saved', 0, PARAM_BOOL)) {
     \core\notification::success(get_string('template_saved', 'local_coursegen'));
 }
 
-$page = new manage_templates_page();
-$data = $page->export_for_template($OUTPUT);
+$report = system_report_factory::create(templates::class, context_system::instance());
+$createurl = new moodle_url('/local/coursegen/edit_template.php');
+$createaddress = $createurl->out(false);
+$reporthtml = $report->output();
 
 $PAGE->requires->js_call_amd('local_coursegen/template/manage', 'init');
 
 echo $OUTPUT->header();
-echo $OUTPUT->render_from_template('local_coursegen/manage_templates', $data);
+echo $OUTPUT->render_from_template('local_coursegen/manage_templates', [
+    'createurl' => $createaddress,
+    'report' => $reporthtml,
+]);
 echo $OUTPUT->footer();

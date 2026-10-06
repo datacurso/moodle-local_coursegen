@@ -17,78 +17,28 @@
 {{!
     @template local_coursegen/manage_templates
 
-    The list of templates with the actions to create, edit and delete them.
+    The list of templates: the button to create one and the report with the rows and their actions.
 
     Classes required for JS:
     * none
 
     Data attributes required for JS:
     * data-region="local_coursegen/template/list" on the root
-    * data-action="local_coursegen/template/delete" with data-templateid and data-name on each delete button
+    * data-action="local_coursegen/template/delete" with data-templateid and data-name on each delete action of the report
 
     Context variables required for this template:
-    * hastemplates bool - Whether there is at least one template
-    * templates array - Each with id, name, coursename, coursemissing, activitycount, aicount, modified and editurl
     * createurl string - Address of the editor for a new template
+    * report string - The drawn report; it is HTML already prepared by the report
 
     Example context (json):
     {
-        "hastemplates": true,
-        "templates": [
-            {
-                "id": 3,
-                "name": "Digital marketing",
-                "coursename": "Digital marketing 101",
-                "coursemissing": false,
-                "activitycount": 12,
-                "aicount": 5,
-                "modified": "5/10/26, 09:30",
-                "editurl": "https://example.com/local/coursegen/edit_template.php?id=3"
-            }
-        ],
-        "createurl": "https://example.com/local/coursegen/edit_template.php"
+        "createurl": "https://example.com/local/coursegen/edit_template.php",
+        "report": "<div>The report with its table</div>"
     }
 }}
 <div class="local_coursegen-manage_templates" data-region="local_coursegen/template/list">
-    <div class="d-flex justify-content-between align-items-center mb-3">
-        <h2 class="h3 mb-0">{{#str}} templates_manage, local_coursegen {{/str}}</h2>
+    <div class="mb-3">
         <a href="{{createurl}}" class="btn btn-primary">{{#str}} template_new, local_coursegen {{/str}}</a>
     </div>
-
-    {{^hastemplates}}
-    <p class="text-muted">{{#str}} template_list_empty, local_coursegen {{/str}}</p>
-    {{/hastemplates}}
-
-    {{#hastemplates}}
-    <div class="table-responsive">
-        <table class="table table-striped">
-            <thead>
-                <tr>
-                    <th scope="col">{{#str}} template_col_name, local_coursegen {{/str}}</th>
-                    <th scope="col">{{#str}} template_col_course, local_coursegen {{/str}}</th>
-                    <th scope="col">{{#str}} template_col_activities, local_coursegen {{/str}}</th>
-                    <th scope="col">{{#str}} template_col_ai, local_coursegen {{/str}}</th>
-                    <th scope="col">{{#str}} template_col_modified, local_coursegen {{/str}}</th>
-                    <th scope="col">{{#str}} template_col_actions, local_coursegen {{/str}}</th>
-                </tr>
-            </thead>
-            <tbody>
-                {{#templates}}
-                <tr>
-                    <th scope="row"><a href="{{editurl}}">{{name}}</a></th>
-                    <td>{{#coursemissing}}<span class="text-danger">{{#str}} template_course_missing, local_coursegen {{/str}}</span>{{/coursemissing}}{{^coursemissing}}{{coursename}}{{/coursemissing}}</td>
-                    <td>{{activitycount}}</td>
-                    <td>{{aicount}}</td>
-                    <td>{{modified}}</td>
-                    <td>
-                        <a href="{{editurl}}" class="btn btn-sm btn-outline-secondary">{{#str}} edit, core {{/str}}</a>
-                        <button type="button" class="btn btn-sm btn-outline-danger" data-action="local_coursegen/template/delete"
-                                data-templateid="{{id}}" data-name="{{name}}">{{#str}} template_delete, local_coursegen {{/str}}</button>
-                    </td>
-                </tr>
-                {{/templates}}
-            </tbody>
-        </table>
-    </div>
-    {{/hastemplates}}
+    {{{report}}}
 </div>

@@ -52,7 +52,8 @@ Feature: Configure a template
     And I click on "Modify with AI" "radio" in the "Welcome page" "list_item"
     And I set the field "Instruction for the AI (optional)" to "Write it for beginners"
     And I click on "Save template" "button"
-    When I click on "Marketing base" "link"
+    When I open the action menu in "Marketing base" "table_row"
+    And I choose "Edit" in the open action menu
     Then the field "Instruction for the AI (optional)" matches value "Write it for beginners"
 
   Scenario: A template can be deleted
@@ -61,6 +62,30 @@ Feature: Configure a template
     And I click on "Digital marketing" item in the autocomplete list
     And I set the field "Template name" to "Marketing base"
     And I click on "Save template" "button"
-    When I click on "Delete" "button" in the "Marketing base" "table_row"
+    When I open the action menu in "Marketing base" "table_row"
+    And I choose "Delete" in the open action menu
     And I click on "Delete" "button" in the "Delete" "dialogue"
-    Then I should see "There are no templates yet."
+    Then I should see "Nothing to display"
+
+  Scenario: The list of templates shows the course and the activities of each template
+    Given I visit "/local/coursegen/edit_template.php"
+    And I open the autocomplete suggestions list
+    And I click on "Digital marketing" item in the autocomplete list
+    And I set the field "Template name" to "Marketing base"
+    And I click on "Modify with AI" "radio" in the "Welcome page" "list_item"
+    And I click on "Save template" "button"
+    Then the following should exist in the "reportbuilder-table" table:
+      | Name           | Course            | Activities | Modified with AI |
+      | Marketing base | Digital marketing | 2          | 1                |
+
+  Scenario: The list of templates can be filtered by name
+    Given I visit "/local/coursegen/edit_template.php"
+    And I open the autocomplete suggestions list
+    And I click on "Digital marketing" item in the autocomplete list
+    And I set the field "Template name" to "Marketing base"
+    And I click on "Save template" "button"
+    When I click on "Filters" "button"
+    And I set the following fields to these values:
+      | Name | Finance |
+    And I click on "Apply" "button" in the "[data-region='report-filters']" "css_element"
+    Then I should see "Nothing to display"
