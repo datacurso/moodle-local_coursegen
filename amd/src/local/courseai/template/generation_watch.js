@@ -27,6 +27,9 @@
 
 import RelaySource from 'local_coursegen/local/courseai/stream/relay-source';
 
+// The outcomes that end a pass without failing it: the run waits for an answer, can be tried again, or is done.
+const PASS_ENDS = ['question', 'retry', 'completed'];
+
 /**
  * Close the pass's source once, then run the given action. Guards against
  * running twice: a pass can be finished by more than one listener racing
@@ -81,8 +84,8 @@ const handleStreamMessage = (state, progress, applyEvent, onFail, resolve, rejec
     }
 
     const outcome = applyEvent(data, progress);
-    if (outcome === 'review' || outcome === 'completed') {
-        // The stream is closed on both. A pause left open would be
+    if (PASS_ENDS.includes(outcome)) {
+        // The stream is closed on all of them. A pause left open would be
         // read again from the same point and re-emit the same pause, forever.
         finishPass(state, () => resolve({outcome, data}));
     } else if (outcome === 'failed') {
@@ -93,15 +96,15 @@ const handleStreamMessage = (state, progress, applyEvent, onFail, resolve, rejec
 /**
  * Watch one pass of the stream.
  *
- * A pass ends in one of three ways: the graph pauses for the review, the run
- * completes, or it fails. The first two are not the end of the work, only of
+ * A pass ends in one of four ways: the run pauses on a question, a failure can be tried again,
+ * the run completes, or it fails for good. The first three are not the end of the work, only of
  * this connection, which is why the caller loops.
  *
  * @param {string} streamUrl
  * @param {Object} progress Mutable {total, done} counters.
  * @param {Function} applyEvent (data, progress) => outcome string.
  * @param {Function} onFail Called with a message once the pass fails.
- * @returns {Promise<Object>} {outcome: 'review'|'completed', data}
+ * @returns {Promise<Object>} {outcome: 'question'|'retry'|'completed', data}
  */
 export const watchOnce = (streamUrl, progress, applyEvent, onFail) => new Promise((resolve, reject) => {
     const state = {source: new RelaySource(streamUrl), settled: false};

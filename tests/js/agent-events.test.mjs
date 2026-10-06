@@ -142,3 +142,13 @@ test('an id that could break a selector is not used as a row id', () => {
     assert.equal(Agent.normalizeEvent({type: 'activity_progress_start', aid: 'a"]x'}).uid, '');
     assert.equal(Agent.normalizeEvent({type: 'activity_progress_start', uid: '"><b>'}).uid, '');
 });
+
+test('a failure the teacher can try again has the outcome retry', () => {
+    assert.equal(Agent.failureOutcome({type: 'failed', retryable: true}), 'retry');
+});
+
+test('a failure that is final, or does not say, has the outcome failed', () => {
+    for (const value of [{type: 'failed', retryable: false}, {type: 'failed'}, {retryable: 'yes'}, {retryable: 1}, null, undefined, 'x']) {
+        assert.equal(Agent.failureOutcome(value), 'failed', String(value));
+    }
+});

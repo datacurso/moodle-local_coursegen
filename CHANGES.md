@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100606
+
+### Fixed
+
+- **A question of the AI no longer ends the generation as if it had failed**  
+  When the AI stopped to ask the teacher for a file, a text or a choice, the page reported that the generation ended unexpectedly instead of showing the question. The pass that follows the stream now ends on a question, on a failure the teacher can try again and on completion, which are the three ways a pass ends without failing, so the question card appears and the run goes on once it is answered. A failure the service marks as retryable now shows the retry card while the run is live, as it already did after a reload, instead of closing the page. A stream that ends with nothing said before its end is still reported as a failure.
+
 ## [2.0.10] - 2026100605
 
 ### Fixed
