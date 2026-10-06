@@ -159,11 +159,20 @@ $functions = [
         'capabilities' => 'local/coursegen:createtemplatecoursewithai',
         'loginrequired' => true,
     ],
-    'local_coursegen_template_review_feedback' => [
-        'classname' => 'local_coursegen\\external\\template_review_feedback',
+    'local_coursegen_answer_template_question' => [
+        'classname' => 'local_coursegen\\external\\answer_template_question',
         'methodname' => 'execute',
-        'description' => 'Answer the review of a generated course made from a template',
+        'description' => 'Answer the question a template generation is paused on',
         'type' => 'write',
+        'ajax' => true,
+        'capabilities' => 'local/coursegen:createtemplatecoursewithai',
+        'loginrequired' => true,
+    ],
+    'local_coursegen_get_template_agent_state' => [
+        'classname' => 'local_coursegen\\external\\get_template_agent_state',
+        'methodname' => 'execute',
+        'description' => 'Read the state of a template generation to repaint a reloaded page',
+        'type' => 'read',
         'ajax' => true,
         'capabilities' => 'local/coursegen:createtemplatecoursewithai',
         'loginrequired' => true,
