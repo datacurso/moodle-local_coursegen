@@ -2,6 +2,20 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100615
+
+### Changed
+
+- **The Generate button of a template waits for something to work from**  
+  The button was on as soon as a template was loaded. It now needs a text that says what the course is to be, a file, or both: with neither it stays off, it comes on when the professor types or attaches a file, and it goes off again if both are taken away. A text the browser puts back in the box after a reload counts too. Starting with neither is also refused when the request reaches the server, with a clear message.
+- **The first line of a generation no longer talks about material the professor did not attach**  
+  It now says the AI is reading the template.
+
+### Added
+
+- **A professor with no file can say so when the AI asks for one**  
+  The question that asks for a file now has a button to say there is none. The AI then asks what the content must be, so nothing is invented.
+
 ## [2.0.10] - 2026100614
 
 ### Fixed

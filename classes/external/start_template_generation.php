@@ -79,6 +79,10 @@ class start_template_generation extends external_api {
         if ($params['draftitemid'] > 0) {
             require_capability('local/coursegen:uploadcoursesyllabus', $context);
         }
+        // A generation needs something to work from: a request, a file, or both.
+        if (trim((string) $params['prompt']) === '' && $params['draftitemid'] <= 0) {
+            throw new \moodle_exception('templatenothingtostart', 'local_coursegen');
+        }
 
         $payload = template_export_service::build_init_payload($params['templateid'], $params['prompt']);
 
