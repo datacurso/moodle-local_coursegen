@@ -51,6 +51,29 @@ final class link_token_test extends \basic_testcase {
     }
 
     /**
+     * A src takes the URL meant for embedding when the uid has one, and an href keeps the page URL.
+     */
+    public function test_a_src_takes_the_embed_url_and_an_href_keeps_the_page_url(): void {
+        $text = '<a href="$@COURSEGENLINK*uid-1@$">Go</a><iframe src="$@COURSEGENLINK*uid-1@$"></iframe>';
+
+        $result = link_token::replace($text, ['uid-1' => 'https://example.com/view'], ['uid-1' => 'https://example.com/file.pdf']);
+
+        $expected = '<a href="https://example.com/view">Go</a><iframe src="https://example.com/file.pdf"></iframe>';
+        $this->assertSame($expected, $result);
+    }
+
+    /**
+     * A src whose uid has no embed URL falls back to the page URL, as before.
+     */
+    public function test_a_src_without_an_embed_url_falls_back_to_the_page_url(): void {
+        $text = '<iframe src="$@COURSEGENLINK*uid-1@$"></iframe>';
+
+        $result = link_token::replace($text, ['uid-1' => 'https://example.com/view'], ['uid-2' => 'https://example.com/other']);
+
+        $this->assertSame('<iframe src="https://example.com/view"></iframe>', $result);
+    }
+
+    /**
      * The URL lands in an attribute, so quotes and ampersands are escaped.
      */
     public function test_escapes_the_url_for_the_attribute_context(): void {

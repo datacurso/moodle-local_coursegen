@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100610
+
+### Fixed
+
+- **A page that embeds the attached file now shows that file from the new course**  
+  The iframe of the generated guide page pointed at the page of the resource, so the file was shown inside a page of Moodle. A link that is the source of an embedded frame now points at the file stored in the resource of the new course, and a plain link to the resource still opens the resource as before. A resource with no file keeps the link to its page.
+
 ## [2.0.10] - 2026100609
 
 ### Fixed

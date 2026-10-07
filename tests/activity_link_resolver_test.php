@@ -94,6 +94,111 @@ final class activity_link_resolver_test extends \advanced_testcase {
     }
 
     /**
+     * An iframe that points at a file resource shows the stored file; a link to it still opens the resource.
+     */
+    public function test_a_src_to_a_file_resource_resolves_to_the_url_of_its_stored_file(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $course = $this->getDataGenerator()->create_course();
+        $resource = $this->getDataGenerator()->create_module('resource', [
+            'course' => $course->id,
+            'files' => $this->draft_with('guide new.pdf'),
+        ]);
+        $page = $this->getDataGenerator()->create_module('page', [
+            'course' => $course->id,
+            'content' => '<a href="$@COURSEGENLINK*uid-file@$">Open</a><iframe src="$@COURSEGENLINK*uid-file@$"></iframe>',
+        ]);
+
+        activity_link_resolver::resolve_for_course(
+            $course->id,
+            $this->payload(['uid-file' => -3]),
+            [-3 => (int) $resource->cmid, -4 => (int) $page->cmid],
+            []
+        );
+
+        $record = $DB->get_record('page', ['id' => $page->id], '*', MUST_EXIST);
+        $context = \context_module::instance((int) $resource->cmid);
+        $revision = (int) $DB->get_field('resource', 'revision', ['id' => $resource->id]);
+        $fileurl = \moodle_url::make_pluginfile_url($context->id, 'mod_resource', 'content', $revision, '/', 'guide new.pdf');
+        $this->assertStringContainsString('<iframe src="' . s($fileurl->out(false)) . '">', $record->content);
+        $this->assertStringContainsString('href="' . $this->url('resource', (int) $resource->cmid) . '"', $record->content);
+        $this->assertStringContainsString('/pluginfile.php/' . $context->id . '/mod_resource/content/', $record->content);
+    }
+
+    /**
+     * A resource that holds no file leaves the src on the page URL instead of failing.
+     */
+    public function test_a_src_to_a_resource_without_a_file_falls_back_to_its_page_url(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $resource = $this->getDataGenerator()->create_module('resource', ['course' => $course->id]);
+        $fs = get_file_storage();
+        $context = \context_module::instance((int) $resource->cmid);
+        $fs->delete_area_files($context->id, 'mod_resource', 'content');
+        $page = $this->getDataGenerator()->create_module('page', [
+            'course' => $course->id,
+            'content' => '<iframe src="$@COURSEGENLINK*uid-file@$"></iframe>',
+        ]);
+
+        activity_link_resolver::resolve_for_course(
+            $course->id,
+            $this->payload(['uid-file' => -3]),
+            [-3 => (int) $resource->cmid, -4 => (int) $page->cmid],
+            []
+        );
+
+        $record = $DB->get_record('page', ['id' => $page->id], '*', MUST_EXIST);
+        $this->assertSame('<iframe src="' . $this->url('resource', (int) $resource->cmid) . '"></iframe>', $record->content);
+    }
+
+    /**
+     * A src to an activity that is not a file resource keeps the page URL.
+     */
+    public function test_a_src_to_another_kind_of_activity_keeps_its_page_url(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $target = $this->getDataGenerator()->create_module('forum', ['course' => $course->id]);
+        $page = $this->getDataGenerator()->create_module('page', [
+            'course' => $course->id,
+            'content' => '<iframe src="$@COURSEGENLINK*uid-forum@$"></iframe>',
+        ]);
+
+        activity_link_resolver::resolve_for_course(
+            $course->id,
+            $this->payload(['uid-forum' => -3]),
+            [-3 => (int) $target->cmid, -4 => (int) $page->cmid],
+            []
+        );
+
+        $record = $DB->get_record('page', ['id' => $page->id], '*', MUST_EXIST);
+        $this->assertSame('<iframe src="' . $this->url('forum', (int) $target->cmid) . '"></iframe>', $record->content);
+    }
+
+    /**
+     * A draft area of the current user holding one file, for a resource created by the generator.
+     *
+     * @param string $filename
+     * @return int The draft item id.
+     */
+    private function draft_with(string $filename): int {
+        global $USER;
+        $draftid = file_get_unused_draft_itemid();
+        $record = [
+            'contextid' => \context_user::instance($USER->id)->id,
+            'component' => 'user',
+            'filearea' => 'draft',
+            'itemid' => $draftid,
+            'filepath' => '/',
+            'filename' => $filename,
+        ];
+        get_file_storage()->create_file_from_string($record, 'pdf bytes');
+        return $draftid;
+    }
+
+    /**
      * Tokens in the content of a generated label become the URL of the target.
      */
     public function test_replaces_tokens_in_a_label_intro(): void {
