@@ -88,12 +88,15 @@ class create_mod_service {
 
         $mform = self::create_mod_form_instance($modname, $data, $cw, $cm, $course);
 
+        $rawcmid = $resultinfo['cmid'] ?? 0;
+        $sourcecmid = (int) $rawcmid;
         $parameters = self::prepare_parameters(
             $modname,
             $resultinfo['parameters'],
             $sectionnum,
             $beforemod,
-            $module->id
+            $module->id,
+            $sourcecmid
         );
 
         $newcm = add_moduleinfo($parameters, $course, $mform);
@@ -232,13 +235,17 @@ class create_mod_service {
         $rawparameters,
         $sectionnum,
         $beforemod,
-        $moduleid
+        $moduleid,
+        int $sourcecmid = 0
     ) {
         $cleanedparameters = text_editor_parameter_cleaner::clean_text_editor_objects($rawparameters);
         $parameters = (object)$cleanedparameters;
         $parameters->section = $sectionnum;
         $parameters->beforemod = $beforemod;
         $parameters->module = $moduleid;
+        if ($sourcecmid > 0) {
+            $parameters->source_cmid = $sourcecmid;
+        }
 
         $parameters = self::process_mod_parameters($modname, $parameters);
 

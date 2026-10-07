@@ -33,11 +33,12 @@ use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\activity_link_resolver;
 use local_coursegen\local\service\course_creation_guard;
 use local_coursegen\local\service\course_review_service;
-use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
 use local_coursegen\local\service\generated_activities_filter;
 use local_coursegen\local\service\kept_link_rewriter;
 use local_coursegen\local\service\template_ai_api_service;
+use local_coursegen\local\service\template_apply_guard;
+use local_coursegen\local\service\template_creation_rollback;
 use local_coursegen\local\service\template_files_cleaner;
 use local_coursegen\local\service\template_course_order;
 use local_coursegen\local\service\template_file_resource_applier;
@@ -57,6 +58,28 @@ require_once($CFG->libdir . '/externallib.php');
  * finished, not to carry a whole course through itself.
  */
 class finish_template_generation extends external_api {
+    /** @var template_ai_api_service|null Client of the service that tests put in place of the real one. */
+    private static ?template_ai_api_service $apioverride = null;
+
+    /**
+     * Replaces the client of the service; null brings the real one back.
+     *
+     * @param template_ai_api_service|null $api
+     * @return void
+     */
+    public static function set_api_service(?template_ai_api_service $api): void {
+        self::$apioverride = $api;
+    }
+
+    /**
+     * The client of the service.
+     *
+     * @return template_ai_api_service
+     */
+    private static function get_api_service(): template_ai_api_service {
+        return self::$apioverride ?? new template_ai_api_service();
+    }
+
     /**
      * Parameters.
      *
@@ -104,7 +127,7 @@ class finish_template_generation extends external_api {
             return self::created_response((int) $session->get('courseid'), $CFG->wwwroot, []);
         }
 
-        $api = new template_ai_api_service();
+        $api = self::get_api_service();
         $result = $api->get_result($session->get('session_id'));
         $templateid = self::template_id_of($session);
 
@@ -122,21 +145,28 @@ class finish_template_generation extends external_api {
             (string) $params['shortname'],
             (int) $params['category']
         );
-        $created = create_course_service::create_course($session, $result, $overrides);
-        course_creation_guard::ensure_created($created);
-        $courseid = $created['courseid'] ?? 0;
-        $courseid = (int) $courseid;
-        $keptcms = [];
-        if ($courseid > 0 && $templateid !== null && $templateid > 0) {
-            $extracmids = template_file_resources::cmids($fileresources);
-            template_keep_copier::copy_into($templateid, $courseid, $keptcms, $extracmids);
+        try {
+            $created = create_course_service::create_course($session, $result, $overrides);
+            course_creation_guard::ensure_created($created);
+            $courseid = $created['courseid'] ?? 0;
+            $courseid = (int) $courseid;
+            $keptcms = [];
+            if ($courseid > 0 && $templateid !== null && $templateid > 0) {
+                $extracmids = template_file_resources::cmids($fileresources);
+                template_keep_copier::copy_into($templateid, $courseid, $keptcms, $extracmids);
+            }
+            $threadid = (string) $session->get('session_id');
+            $applier = new template_file_resource_applier($api);
+            $failedfiles = $applier->apply($threadid, $fileresources, $keptcms);
+            template_apply_guard::ensure_complete($created, $failedfiles);
+            $generatedcms = $created['generatedcms'] ?? [];
+            self::arrange_course($templateid, $courseid, $generatedactivities, $generatedcms, $keptcms);
+            activity_link_resolver::resolve_for_course($courseid, $generatedactivities, $generatedcms, $keptcms);
+        } catch (\Throwable $exception) {
+            // The course is complete or it is not made: nothing is left behind for the professor to find.
+            template_creation_rollback::undo(new course_session((int) $session->get('id')));
+            throw $exception;
         }
-        $threadid = (string) $session->get('session_id');
-        $applier = new template_file_resource_applier($api);
-        $failedfiles = $applier->apply($threadid, $fileresources, $keptcms);
-        $generatedcms = $created['generatedcms'] ?? [];
-        self::arrange_course($templateid, $courseid, $generatedactivities, $generatedcms, $keptcms);
-        self::resolve_activity_links($session, $courseid, $generatedactivities, $generatedcms, $keptcms);
         template_files_cleaner::discard($threadid, $api);
 
         return self::created_response($courseid, $CFG->wwwroot, $failedfiles);
@@ -163,36 +193,6 @@ class finish_template_generation extends external_api {
         }
         kept_link_rewriter::rewrite_for_course($courseid, $payloadactivities, $generatedcms, $keptcms);
         template_course_order::apply($templateid, $courseid, $generatedcms, $keptcms);
-    }
-
-    /**
-     * Turn the link tokens of the generated activities into real URLs.
-     *
-     * Runs once every activity exists, the copied kept ones included, since a
-     * token may name any of them. When one cannot be resolved the generation
-     * is marked failed, so a retry is not answered as if it had finished, and
-     * the error reaches the caller.
-     *
-     * @param course_session $session
-     * @param int $courseid
-     * @param array $payloadactivities Every activity entry of the result, kept ones included.
-     * @param array $generatedcms Payload cmid => created cmid, for the generated activities.
-     * @param array $keptcms Payload cmid => created cmid, for the copied kept activities.
-     */
-    private static function resolve_activity_links(
-        course_session $session,
-        int $courseid,
-        array $payloadactivities,
-        array $generatedcms,
-        array $keptcms
-    ): void {
-        try {
-            activity_link_resolver::resolve_for_course($courseid, $payloadactivities, $generatedcms, $keptcms);
-        } catch (\Throwable $exception) {
-            $sessionid = (int) $session->get('id');
-            course_session_service::update_status($sessionid, course_session::STATUS_FAILED);
-            throw $exception;
-        }
     }
 
     /**
