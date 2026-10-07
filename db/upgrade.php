@@ -296,6 +296,14 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026100600, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026100611) {
+        // Every activity of a template carries its own opaque id, so the number of its course module is not used as one.
+        local_coursegen_add_item_uid($dbman);
+
+        // Coursegen savepoint reached.
+        upgrade_plugin_savepoint(true, 2026100611, 'local', 'coursegen');
+    }
+
     return true;
 }
 
@@ -337,4 +345,36 @@ function local_coursegen_install_template_tables(database_manager $dbman): void 
             $dbman->install_one_table_from_xmldb_file(__DIR__ . '/install.xml', $templatetable);
         }
     }
+}
+
+/**
+ * Give the activities of the saved templates an opaque uid: add the column, fill it and make it unique per template.
+ *
+ * A site that already has the column keeps it and its values.
+ *
+ * @param database_manager $dbman
+ * @param string $tablename Table of the template items, for example "local_coursegen_tpl_item".
+ */
+function local_coursegen_add_item_uid(database_manager $dbman, string $tablename = 'local_coursegen_tpl_item'): void {
+    global $DB;
+
+    $table = new xmldb_table($tablename);
+    $field = new xmldb_field('uid', XMLDB_TYPE_CHAR, '36', null, XMLDB_NOTNULL, null, '', 'templateid');
+    if ($dbman->field_exists($table, $field)) {
+        return;
+    }
+    $dbman->add_field($table, $field);
+
+    $rows = $DB->get_recordset($tablename, null, 'id ASC', 'id');
+    foreach ($rows as $row) {
+        $DB->set_field($tablename, 'uid', \core\uuid::generate(), ['id' => $row->id]);
+    }
+    $rows->close();
+
+    // The column has no default once it is filled, as install.xml defines it.
+    $nodefault = new xmldb_field('uid', XMLDB_TYPE_CHAR, '36', null, XMLDB_NOTNULL, null, null);
+    $dbman->change_field_default($table, $nodefault);
+
+    $key = new xmldb_key('templateid_uid', XMLDB_KEY_UNIQUE, ['templateid', 'uid']);
+    $dbman->add_key($table, $key);
 }

@@ -5,7 +5,13 @@ import assert from 'node:assert/strict';
 import {applyEvent, resetSeen} from 'local_coursegen/local/courseai/template/generation_events';
 import {calls, reset} from '../../tests/js/stubs/generation-checklist.mjs';
 
-globalThis.document = {querySelector: () => null};
+const UID_OF_GUIDE = '3f2a9c1e-77b4-4e0a-9d21-5c8f1b2e7a90';
+const UID_OF_RESOURCE = '8c1d0b52-0f4e-4d0c-b1f3-2a6e9d7c4b15';
+const rows = {
+    '[data-generation-cmid="11342"]': {dataset: {generationUid: UID_OF_GUIDE}},
+    '[data-generation-cmid="11340"]': {dataset: {generationUid: UID_OF_RESOURCE}},
+};
+globalThis.document = {querySelector: (selector) => rows[selector] || null};
 
 const paint = () => undefined;
 const newProgress = () => ({total: 0, done: 0});
@@ -26,19 +32,19 @@ test('an activity left as it was closes its row as unchanged and still counts', 
     const progress = {total: 2, done: 0};
     applyEvent({type: 'activity_progress_failed', aid: 't:11342', reason: 'not_changed'}, progress, paint);
     assert.equal(progress.done, 1);
-    assert.deepEqual(calls[0], ['close', '11342', true, 1]);
+    assert.deepEqual(calls[0], ['close', UID_OF_GUIDE, true, 1]);
 });
 
 test('a real failure closes its row without calling it unchanged', () => {
     const progress = {total: 2, done: 0};
     applyEvent({type: 'activity_progress_failed', aid: 't:11342', reason: 'failed'}, progress, paint);
-    assert.deepEqual(calls[0], ['close', '11342', false, 1]);
+    assert.deepEqual(calls[0], ['close', UID_OF_GUIDE, false, 1]);
 });
 
 test('an activity that was written closes its row as done', () => {
     const progress = {total: 1, done: 0};
     applyEvent({type: 'activity_progress_done', aid: 't:11340', status: 'ok'}, progress, paint);
-    assert.deepEqual(calls[0], ['close', '11340', false, 1]);
+    assert.deepEqual(calls[0], ['close', UID_OF_RESOURCE, false, 1]);
 });
 
 test('the end of the run settles any row still spinning', () => {

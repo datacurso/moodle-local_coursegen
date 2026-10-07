@@ -62,7 +62,7 @@ class template_export_service {
 
         $behaviors = self::section_behaviors($modinfo, $items);
         $sectionsinfo = template_export_sections::sections_info($course, $modinfo, $behaviors);
-        $activities = self::activities($modinfo, $items);
+        $activities = self::activities($templateid, $modinfo, $items);
         $formatoptions = template_export_sections::format_settings($course);
         $sectioninfos = $modinfo->get_section_info_all();
         $sectioncount = count($sectioninfos);
@@ -105,13 +105,13 @@ class template_export_service {
      * @param \stdClass[] $items Saved items keyed by course module id.
      * @return array
      */
-    private static function activities(\course_modinfo $modinfo, array $items): array {
+    private static function activities(int $templateid, \course_modinfo $modinfo, array $items): array {
         $activities = [];
         foreach ($modinfo->get_cms() as $cm) {
             if (!$cm->uservisible) {
                 continue;
             }
-            $activities[] = self::activity_entry($cm, $items[$cm->id] ?? null);
+            $activities[] = self::activity_entry($templateid, $cm, $items[$cm->id] ?? null);
         }
         return $activities;
     }
@@ -123,13 +123,13 @@ class template_export_service {
      * @param \stdClass|null $item
      * @return array
      */
-    private static function activity_entry(\cm_info $cm, ?\stdClass $item): array {
+    private static function activity_entry(int $templateid, \cm_info $cm, ?\stdClass $item): array {
         return [
             'resource_type' => $cm->modname,
             'modname' => $cm->modname,
             'name' => $cm->name,
             'section' => (int) $cm->sectionnum,
-            'uid' => (string) $cm->id,
+            'uid' => self::uid_of($templateid, $cm, $item),
             'cmid' => (int) $cm->id,
             'parameters' => template_activity_export::parameters_for($cm),
             'template_behavior' => template_export_behavior::for_item($item),
@@ -182,5 +182,21 @@ class template_export_service {
             }
         }
         return $sectionids;
+    }
+
+    /**
+     * The opaque uid the payload gives an activity: the one saved with it, or a derived one when it has no row.
+     *
+     * @param int $templateid Template id, for example 3.
+     * @param \cm_info $cm Activity of the template course.
+     * @param \stdClass|null $item What is saved for the activity, or null when nothing is.
+     * @return string The uid, for example "3f2a9c1e-77b4-4e0a-9d21-5c8f1b2e7a90".
+     */
+    private static function uid_of(int $templateid, \cm_info $cm, ?\stdClass $item): string {
+        if ($item !== null && (string) $item->uid !== '') {
+            return (string) $item->uid;
+        }
+
+        return template_export_uids::stand_in_uid($templateid, (int) $cm->id);
     }
 }

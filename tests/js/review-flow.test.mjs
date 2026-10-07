@@ -27,15 +27,23 @@ test('a completed event without a result has no activities to review', () => {
     }
 });
 
-test('the row of an activity of the template is sent to the service as the draft id of that activity', () => {
-    assert.equal(Review.rowAid('11342'), 't:11342');
-    assert.equal(Review.rowAid(7), 't:7');
+const UID_A = '7f1c2a9e-5b0d-4c1e-9a77-3e2d8b6a4f10';
+const UID_B = '2b4f9d1e-aaaa-4bbb-8ccc-000000000007';
+const cmidOf = (uid) => ({[UID_A]: '11342', [UID_B]: '11340'}[uid] || '');
+
+test('the opaque uid of a row is sent to the service as the draft id of the activity it stands for', () => {
+    assert.equal(Review.rowAid(UID_A, cmidOf), 't:11342');
+    assert.equal(Review.rowAid(UID_B, cmidOf), 't:11340');
 });
 
 test('a row that is not an activity of the template has no draft id', () => {
     for (const value of ['', 'abc', 't:5', null, undefined, '12 3', '-4']) {
-        assert.equal(Review.rowAid(value), '', String(value));
+        assert.equal(Review.rowAid(value, cmidOf), '', String(value));
     }
+});
+
+test('without a page there is no row to read, so there is no draft id', () => {
+    assert.equal(Review.rowAid(UID_A), '');
 });
 
 test('a call id is made of letters and digits only and differs from one request to the next', () => {
@@ -47,7 +55,7 @@ test('a call id is made of letters and digits only and differs from one request 
 });
 
 test('accepting needs no instruction and sends nothing to the service', () => {
-    const flow = new Review.ReviewFlow();
+    const flow = new Review.ReviewFlow(cmidOf);
     flow.completed(COMPLETED);
     const outcome = flow.submit({action: 'accept', targetIds: [], instruction: ''});
     assert.equal(outcome.screen, 'accepted');
@@ -56,7 +64,7 @@ test('accepting needs no instruction and sends nothing to the service', () => {
 
 test('a change request without text is refused before it is sent', () => {
     for (const instruction of ['', '   ', '\n\t', null, undefined]) {
-        const flow = new Review.ReviewFlow();
+        const flow = new Review.ReviewFlow(cmidOf);
         flow.completed(COMPLETED);
         const outcome = flow.submit({action: 'adjust', targetIds: [], instruction});
         assert.equal(outcome.error, 'blank', String(instruction));
@@ -65,7 +73,7 @@ test('a change request without text is refused before it is sent', () => {
 });
 
 test('a change request that is too long is refused before it is sent', () => {
-    const flow = new Review.ReviewFlow();
+    const flow = new Review.ReviewFlow(cmidOf);
     flow.completed(COMPLETED);
     const outcome = flow.submit({action: 'adjust', targetIds: [], instruction: 'x'.repeat(Review.MAX_INSTRUCTION + 1)});
     assert.equal(outcome.error, 'toolong');
@@ -73,7 +81,7 @@ test('a change request that is too long is refused before it is sent', () => {
 });
 
 test('a change request for the whole result is sent trimmed and without an activity', () => {
-    const flow = new Review.ReviewFlow();
+    const flow = new Review.ReviewFlow(cmidOf);
     flow.completed(COMPLETED);
     const outcome = flow.submit({action: 'adjust', targetIds: [], instruction: '  Make it shorter  '});
     assert.equal(outcome.send.instruction, 'Make it shorter');
@@ -83,22 +91,22 @@ test('a change request for the whole result is sent trimmed and without an activ
 });
 
 test('a change request from the row of one activity sends the draft id of that activity', () => {
-    const flow = new Review.ReviewFlow();
+    const flow = new Review.ReviewFlow(cmidOf);
     flow.completed(COMPLETED);
-    const outcome = flow.submit({action: 'adjust', targetIds: ['11342'], instruction: 'More examples'});
-    assert.deepEqual(outcome.send.targetIds, ['11342']);
+    const outcome = flow.submit({action: 'adjust', targetIds: [UID_A], instruction: 'More examples'});
+    assert.deepEqual(outcome.send.targetIds, [UID_A]);
     assert.equal(outcome.send.aid, 't:11342');
 });
 
 test('a change request that names several activities is sent for the whole result', () => {
-    const flow = new Review.ReviewFlow();
+    const flow = new Review.ReviewFlow(cmidOf);
     flow.completed(COMPLETED);
-    const outcome = flow.submit({action: 'adjust', targetIds: ['11342', '11340'], instruction: 'Rewrite'});
+    const outcome = flow.submit({action: 'adjust', targetIds: [UID_A, UID_B], instruction: 'Rewrite'});
     assert.equal(outcome.send.aid, '');
 });
 
 test('a second click while a request is on its way is ignored', () => {
-    const flow = new Review.ReviewFlow();
+    const flow = new Review.ReviewFlow(cmidOf);
     flow.completed(COMPLETED);
     const first = flow.submit({action: 'adjust', targetIds: [], instruction: 'Change it'});
     const second = flow.submit({action: 'adjust', targetIds: [], instruction: 'Change it'});
@@ -108,7 +116,7 @@ test('a second click while a request is on its way is ignored', () => {
 });
 
 test('a request the service refused shows the reason, keeps the review and can be sent again', () => {
-    const flow = new Review.ReviewFlow();
+    const flow = new Review.ReviewFlow(cmidOf);
     flow.completed(COMPLETED);
     flow.submit({action: 'adjust', targetIds: [], instruction: 'Change it'});
     const failed = flow.feedbackFailed({message: 'The run already ended'});
@@ -126,7 +134,7 @@ test('the reason of a refused request falls back to a generic one when the error
 });
 
 test('a request that was stored puts the page in adjusting until the run completes again', () => {
-    const flow = new Review.ReviewFlow();
+    const flow = new Review.ReviewFlow(cmidOf);
     flow.completed(COMPLETED);
     flow.submit({action: 'adjust', targetIds: [], instruction: 'Change it'});
     const stored = flow.feedbackStored();
@@ -134,7 +142,7 @@ test('a request that was stored puts the page in adjusting until the run complet
 });
 
 test('when the run completes again the review is shown again with the new activities', () => {
-    const flow = new Review.ReviewFlow();
+    const flow = new Review.ReviewFlow(cmidOf);
     flow.completed(COMPLETED);
     flow.submit({action: 'adjust', targetIds: [], instruction: 'Change it'});
     flow.feedbackStored();
@@ -149,7 +157,7 @@ test('when the run completes again the review is shown again with the new activi
 });
 
 test('a question that comes while adjusting is shown and, once answered, the page goes on adjusting', () => {
-    const flow = new Review.ReviewFlow();
+    const flow = new Review.ReviewFlow(cmidOf);
     flow.completed(COMPLETED);
     flow.submit({action: 'adjust', targetIds: [], instruction: 'Change it'});
     flow.feedbackStored();
@@ -158,41 +166,41 @@ test('a question that comes while adjusting is shown and, once answered, the pag
 });
 
 test('a page that reloads after the end of the run shows the review', () => {
-    const flow = new Review.ReviewFlow();
+    const flow = new Review.ReviewFlow(cmidOf);
     const screen = flow.restore({status: 'COMPLETED'}, [{type: 'status'}, COMPLETED]);
     assert.equal(screen.screen, 'review');
     assert.deepEqual(screen.generated.map((entry) => entry.uid), ['11342', '11340']);
 });
 
 test('a page that reloads after the end of the run without its event shows the review of nothing', () => {
-    const flow = new Review.ReviewFlow();
+    const flow = new Review.ReviewFlow(cmidOf);
     const screen = flow.restore({status: 'COMPLETED'}, []);
     assert.equal(screen.screen, 'review');
     assert.deepEqual(screen.generated, []);
 });
 
 test('a page that reloads while a change is being made keeps adjusting and not the review of the previous result', () => {
-    const flow = new Review.ReviewFlow();
+    const flow = new Review.ReviewFlow(cmidOf);
     const events = [COMPLETED, {type: 'tool_call', call_id: 'c9'}];
     const screen = flow.restore({status: 'RUNNING'}, events);
     assert.equal(screen.screen, 'adjusting');
 });
 
 test('a page that reloads while the first run goes on is simply running', () => {
-    const flow = new Review.ReviewFlow();
+    const flow = new Review.ReviewFlow(cmidOf);
     const screen = flow.restore({status: 'RUNNING'}, [{type: 'tool_call', call_id: 'c1'}]);
     assert.equal(screen.screen, 'running');
 });
 
 test('a page that reloads with a question pending shows the question', () => {
-    const flow = new Review.ReviewFlow();
+    const flow = new Review.ReviewFlow(cmidOf);
     assert.equal(flow.restore({status: 'WAITING_USER'}, []).screen, 'question');
     const afterReview = flow.restore({status: 'WAITING_USER'}, [COMPLETED]);
     assert.equal(afterReview.screen, 'question');
 });
 
 test('a page that reloads after a failure that can be retried offers the retry and after any other failure ends', () => {
-    const flow = new Review.ReviewFlow();
+    const flow = new Review.ReviewFlow(cmidOf);
     const retry = flow.restore({status: 'FAILED'}, [{type: 'failed', retryable: true, message: 'x'}]);
     const ended = flow.restore({status: 'FAILED'}, [{type: 'failed', retryable: false, message: 'x'}]);
     const unknown = flow.restore({status: 'FAILED'}, []);
@@ -202,7 +210,7 @@ test('a page that reloads after a failure that can be retried offers the retry a
 });
 
 test('a page that reloads with a state it does not know is simply running', () => {
-    const flow = new Review.ReviewFlow();
+    const flow = new Review.ReviewFlow(cmidOf);
     assert.equal(flow.restore({status: 'SOMETHING'}, []).screen, 'running');
     assert.equal(flow.restore({}, []).screen, 'running');
     assert.equal(flow.restore(null, null).screen, 'running');

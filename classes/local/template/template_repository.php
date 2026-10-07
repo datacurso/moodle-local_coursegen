@@ -16,6 +16,7 @@
 
 namespace local_coursegen\local\template;
 
+use local_coursegen\local\service\template_export_uids;
 use stdClass;
 
 /**
@@ -93,20 +94,57 @@ class template_repository {
     }
 
     /**
-     * Replace everything saved for the activities of a template.
+     * Replace what is saved for the activities of a template.
+     *
+     * An activity that was saved before keeps its uid, so the links and previews that name it stay valid;
+     * an activity that is new gets a fresh one.
      *
      * @param int $templateid Template id, for example 3.
-     * @param stdClass[] $rows New rows, without id.
+     * @param stdClass[] $rows Rows without id and without uid: templateid, cmid, action, instruction, timemodified.
      */
     public function replace_items(int $templateid, array $rows): void {
         global $DB;
 
+        $uidbycmid = $this->uids_by_cmid($templateid);
         $DB->delete_records(self::ITEM_TABLE, ['templateid' => $templateid]);
         if ($rows === []) {
             return;
         }
 
-        $DB->insert_records(self::ITEM_TABLE, $rows);
+        $DB->insert_records(self::ITEM_TABLE, $this->with_uids($rows, $uidbycmid));
+    }
+
+    /**
+     * The uids saved for the activities of a template.
+     *
+     * @param int $templateid Template id, for example 3.
+     * @return string[] The uids keyed by the course module id.
+     */
+    private function uids_by_cmid(int $templateid): array {
+        $uids = [];
+        foreach ($this->items_of($templateid) as $cmid => $item) {
+            $uids[$cmid] = (string) $item->uid;
+        }
+
+        return $uids;
+    }
+
+    /**
+     * Put a uid in each row: the one the activity had, or a new one.
+     *
+     * @param stdClass[] $rows The rows to save.
+     * @param string[] $uidbycmid The uids the activities had, keyed by the course module id.
+     * @return stdClass[] The rows with their uid.
+     */
+    private function with_uids(array $rows, array $uidbycmid): array {
+        $withuids = [];
+        foreach ($rows as $row) {
+            $copy = clone (object) $row;
+            $copy->uid = $uidbycmid[(int) $copy->cmid] ?? template_export_uids::new_item_uid();
+            $withuids[] = $copy;
+        }
+
+        return $withuids;
     }
 
     /**

@@ -114,19 +114,54 @@ final class template_export_service_test extends \advanced_testcase {
         $this->assertContains('keep', $behaviors);
     }
 
-    public function test_the_uid_of_every_activity_is_its_course_module_id(): void {
+    public function test_the_uid_of_every_activity_is_opaque_and_never_its_course_module_id(): void {
         [$course] = $this->make_course();
         $templateid = $this->save_items($course, []);
 
         $payload = template_export_service::build_init_payload($templateid);
 
         $uids = array_column($payload['activities'], 'uid');
-        $unique = array_unique($uids);
-        $expected = count($uids);
-        $this->assertCount($expected, $unique);
         $cmids = array_map('strval', array_column($payload['activities'], 'cmid'));
-        $this->assertSame($cmids, $uids);
-        $this->assertMatchesRegularExpression('/^[0-9]+$/', $uids[0]);
+        $this->assertCount(count($uids), array_unique($uids));
+        $this->assertSame([], array_intersect($uids, $cmids));
+        foreach ($uids as $uid) {
+            $this->assertMatchesRegularExpression('/^[A-Za-z0-9_.-]{8,128}$/', $uid);
+            $this->assertDoesNotMatchRegularExpression('/^[0-9]+$/', $uid);
+        }
+    }
+
+    public function test_the_uid_of_a_saved_activity_is_the_one_stored_with_it(): void {
+        global $DB;
+        [$course, $page] = $this->make_course();
+        $templateid = $this->save_items($course, [['cmid' => $page, 'action' => template_actions::AI, 'instruction' => '']]);
+
+        $payload = template_export_service::build_init_payload($templateid);
+
+        $stored = $DB->get_field('local_coursegen_tpl_item', 'uid', ['templateid' => $templateid, 'cmid' => $page]);
+        $this->assertSame($stored, $this->find_activity($payload, $page)['uid']);
+    }
+
+    public function test_the_uid_of_an_activity_survives_saving_the_template_again(): void {
+        [$course, $page] = $this->make_course();
+        $items = [['cmid' => $page, 'action' => template_actions::AI, 'instruction' => 'First']];
+        $templateid = $this->save_items($course, $items);
+        $before = $this->find_activity(template_export_service::build_init_payload($templateid), $page)['uid'];
+
+        $items = [['cmid' => $page, 'action' => template_actions::AI, 'instruction' => 'Second']];
+        $this->save_items($course, $items, $templateid);
+
+        $after = $this->find_activity(template_export_service::build_init_payload($templateid), $page)['uid'];
+        $this->assertSame($before, $after);
+    }
+
+    public function test_an_activity_without_a_saved_row_keeps_the_same_uid_on_every_export(): void {
+        [$course, $page] = $this->make_course();
+        $templateid = $this->save_items($course, []);
+
+        $first = $this->find_activity(template_export_service::build_init_payload($templateid), $page)['uid'];
+        $second = $this->find_activity(template_export_service::build_init_payload($templateid), $page)['uid'];
+
+        $this->assertSame($first, $second);
     }
 
     public function test_the_entry_of_an_activity_names_its_type_section_and_name(): void {
