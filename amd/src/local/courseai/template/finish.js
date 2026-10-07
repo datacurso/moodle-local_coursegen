@@ -27,7 +27,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {finishTemplateGeneration, getTemplateCourseSettings} from './repository';
+import {cancelTemplateGeneration, finishTemplateGeneration, getTemplateCourseSettings} from './repository';
 
 /** Where "create another course" leads when the course came from a template. */
 const CREATE_ANOTHER_URL = 'aicoursecreation.php?mode=template';
@@ -85,6 +85,8 @@ export const reviewAndCreate = async(host, state, tplState, sessionId) => {
     actions.showReviewState();
     const overrides = await actions.showCourseReviewPanel(getTemplateCourseSettings);
     if (overrides === null) {
+        // The service has no more use for the files of a run whose course will not be built.
+        cancelTemplateGeneration(sessionId).catch(() => null);
         return null;
     }
     return actions.createCourseFromSession(

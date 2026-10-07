@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100608
+
+### Fixed
+
+- **The course is created only after the teacher accepts what the AI generated**  
+  When the AI finished, the page went straight to the form that creates the course, with no chance to read the result or ask for changes. The review step is back: the generated course is shown with a card to accept it or ask for changes, to the whole result or to one activity from its row. Accepting opens the review of the name and category and only then creates the course; Cancel leaves without creating anything. A change request makes the AI continue from its draft and finish again, the preview refreshes, and a question asked during a change is answered as before. Reloading the page at any point shows the same screen again: the review, the change in progress or the pending question. The progress bar reaches 100% and no row keeps spinning while the review is open. The files the service holds for the run are deleted once the course is created or the teacher cancels, never between rounds of changes. The preview of a written page now shows the text the AI wrote instead of the text of the template, and its links to other activities open their preview. Nothing else that was removed along with the review step comes back: spaces, markers, reference scanning, instances, scope and naming stay as they are.
+
 ## [2.0.10] - 2026100607
 
 ### Fixed

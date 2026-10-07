@@ -51,15 +51,6 @@ export const startTemplateGeneration = (templateId, prompt, draftItemId) => fetc
 }])[0];
 
 /**
- * Answer the review of the generated course that a paused run is waiting on.
- *
- * @param {number} sessionId
- * @param {string} action 'accept' or 'replan_activity'.
- * @param {string[]} targetIds Activity uids to generate again; empty means all of them.
- * @param {string} instruction What to change, in the professor's own words.
- * @returns {Promise<Object>} {status}
- */
-/**
  * Answer the question the template run is paused on.
  *
  * @param {number} sessionId Local session id, for example 139.
@@ -78,6 +69,31 @@ export const answerTemplateQuestion = (sessionId, callId, kind, answer) => fetch
         text: answer.text || '',
         choice: answer.choice || '',
     },
+}])[0];
+
+/**
+ * Ask a completed run for changes: the run continues from its draft and completes again.
+ *
+ * @param {number} sessionId Local session id, for example 139.
+ * @param {string} callId Id of this request, so sending it twice changes nothing twice, for example "adj0k3j9x2a".
+ * @param {string} instruction What to change, in the teacher's own words.
+ * @param {string} aid Draft id of the only activity to change, for example "t:11342", or an empty text for all.
+ * @returns {Promise<Object>} {status}
+ */
+export const sendTemplateReviewFeedback = (sessionId, callId, instruction, aid) => fetchMany([{
+    methodname: 'local_coursegen_template_review_feedback',
+    args: {sessionid: sessionId, callid: callId, instruction: instruction, aid: aid || ''},
+}])[0];
+
+/**
+ * Tell the service the course will not be built, so it deletes the files it holds for the run.
+ *
+ * @param {number} sessionId Local session id, for example 139.
+ * @returns {Promise<Object>} {status}
+ */
+export const cancelTemplateGeneration = (sessionId) => fetchMany([{
+    methodname: 'local_coursegen_cancel_template_generation',
+    args: {sessionid: sessionId},
 }])[0];
 
 /**
