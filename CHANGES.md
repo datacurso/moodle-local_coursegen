@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100607
+
+### Fixed
+
+- **The template generation now sends each page's text and closes every row of the progress list**  
+  The service saw the guide page as empty because the page's html travelled only inside its backup structure, so the page was never rewritten and was still reported as done. Each page now also carries its html and intro in the place the service reads them. The progress list takes its total from the count the service announces, closes any row that is still spinning when the run ends, and shows an activity the run left as it was with a quiet "No changes" label instead of a spinner.
+
 ## [2.0.10] - 2026100606
 
 ### Fixed
