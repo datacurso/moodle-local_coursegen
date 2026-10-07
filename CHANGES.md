@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100609
+
+### Fixed
+
+- **Accepting the result now builds the course with the page the AI wrote, or builds nothing**  
+  Accepting a generated course failed while creating the page the AI had rewritten, because the page was never given the data Moodle needs to create it. The page is now created with the text the AI wrote, the way the template page was shown and the visibility and completion of the template activity, and its links to the attached file and to other activities resolve. A course is also complete or not made: when an activity cannot be built or a file cannot be put in its resource, the course that was started is deleted, the generation is marked as failed and the error is shown, instead of leaving a course with something missing that was reported as created.
+
 ## [2.0.10] - 2026100608
 
 ### Fixed
