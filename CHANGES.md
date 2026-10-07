@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100612
+
+### Fixed
+
+- **A step the AI retries by itself is no longer shown as a failure while a course is generated from a template**  
+  The conversation printed a red line such as "A step did not work: t:11340 is a resource; this phase can modify: ['page']" whenever the AI tried something that was refused and then did it another way. Those refusals are meant for the AI, not for the person watching, so the conversation now shows only what the AI is doing, and a real failure still stops the generation with its own message. The string of that line is removed from both languages.
+
 ## [2.0.10] - 2026100611
 
 ### Fixed

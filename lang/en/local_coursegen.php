@@ -238,7 +238,6 @@ $string['template_agent_retry_message'] = 'The generation stopped. You can try a
 $string['template_agent_tool_ask_user'] = 'Asking you a question';
 $string['template_agent_tool_attach_file'] = 'Attaching a file to an activity';
 $string['template_agent_tool_create_section'] = 'Creating a section';
-$string['template_agent_tool_failed'] = 'A step did not work: {$a}';
 $string['template_agent_tool_finish'] = 'Finishing the course';
 $string['template_agent_tool_generic'] = 'Working on the course';
 $string['template_agent_tool_get_activity'] = 'Reading an activity';

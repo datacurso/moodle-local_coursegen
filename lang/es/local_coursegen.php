@@ -231,7 +231,6 @@ $string['template_agent_retry_message'] = 'La generación se detuvo. Puedes inte
 $string['template_agent_tool_ask_user'] = 'Haciéndote una pregunta';
 $string['template_agent_tool_attach_file'] = 'Adjuntando un archivo a una actividad';
 $string['template_agent_tool_create_section'] = 'Creando una sección';
-$string['template_agent_tool_failed'] = 'Un paso no funcionó: {$a}';
 $string['template_agent_tool_finish'] = 'Terminando el curso';
 $string['template_agent_tool_generic'] = 'Trabajando en el curso';
 $string['template_agent_tool_get_activity'] = 'Leyendo una actividad';

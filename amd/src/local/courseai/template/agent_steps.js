@@ -13,9 +13,9 @@
 // You should have received a copy of the GNU General Public License
 
 /**
- * Shows the steps the AI takes in the conversation of a template generation: one line when a tool starts and a
- * warning when a tool fails. The lines are added in the order the events arrive, even though the labels are
- * fetched asynchronously.
+ * Shows the steps the AI takes in the conversation of a template generation: one line when a step starts. A step
+ * the AI can recover from by itself is never shown as a failure. The lines are added in the order the events
+ * arrive, even though the labels are fetched asynchronously.
  *
  * @module     local_coursegen/local/courseai/template/agent_steps
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -37,12 +37,6 @@ const showCall = async(data) => {
     turn('ai', 'ai', label);
 };
 
-const showFailure = async(data) => {
-    const summary = String(data.summary || '');
-    const message = await getString('template_agent_tool_failed', 'local_coursegen', summary);
-    turn('ai', 'danger', message);
-};
-
 /**
  * Show that a tool starts.
  *
@@ -50,16 +44,4 @@ const showFailure = async(data) => {
  */
 export const showToolCall = (data) => {
     enqueue(() => showCall(data));
-};
-
-/**
- * Show that a tool failed. A tool that worked shows nothing more than its call.
- *
- * @param {Object} data The tool_result event.
- */
-export const showToolResult = (data) => {
-    if (data.ok !== false) {
-        return;
-    }
-    enqueue(() => showFailure(data));
 };
