@@ -112,6 +112,34 @@ export const normalizeEvent = (event, rowLookup = uidOfRowWithCmid) => {
     return copy;
 };
 
+/** The id the service gives to the status that counts the seconds of a call in flight. */
+const WAITING_STRING_ID = 'agent_waiting';
+
+/**
+ * The whole seconds a waiting status says the AI has been working on one call.
+ *
+ * @param {*} event A decoded event, for example a status whose message has string_id "agent_waiting" and seconds 35.
+ * @returns {number} The seconds, or -1 when the event is not a waiting status or its seconds are not a number.
+ */
+export const waitingSeconds = (event) => {
+    if (event === null || typeof event !== 'object' || event.type !== 'status') {
+        return -1;
+    }
+    const message = event.message;
+    if (message === null || typeof message !== 'object' || message.string_id !== WAITING_STRING_ID) {
+        return -1;
+    }
+    const args = message.string_args;
+    if (args === null || typeof args !== 'object') {
+        return -1;
+    }
+    const seconds = Number(args.seconds);
+    if (!Number.isFinite(seconds) || seconds < 0) {
+        return -1;
+    }
+    return Math.floor(seconds);
+};
+
 /**
  * The language string key that names a tool.
  *

@@ -8,7 +8,9 @@ const STUBS = {
     'local_coursegen/local/courseai/ui/subsections-decision': new URL('./stubs/subsections-decision.mjs', import.meta.url),
     'local_coursegen/local/courseai/ui/plan-transcript': new URL('./stubs/plan-transcript.mjs', import.meta.url),
     'local_coursegen/local/courseai/template/generation_checklist': new URL('./stubs/generation-checklist.mjs', import.meta.url),
+    'local_coursegen/local/courseai/template/generation_waiting': new URL('./stubs/generation-waiting.mjs', import.meta.url),
     'local_coursegen/local/courseai/template/agent_steps': new URL('./stubs/agent-steps.mjs', import.meta.url),
+    'core/str': new URL('./stubs/core-str.mjs', import.meta.url),
     'local_coursegen/local/courseai/stream/relay-source': new URL('./stubs/relay-source.mjs', import.meta.url),
 };
 

@@ -238,6 +238,7 @@ $string['template_agent_tool_get_draft'] = 'Revisando el curso hasta ahora';
 $string['template_agent_tool_list_template'] = 'Leyendo la plantilla';
 $string['template_agent_tool_modify_activity'] = 'Modificando una actividad';
 $string['template_agent_tool_set_link'] = 'Enlazando una actividad';
+$string['template_agent_waiting'] = 'Esperando a la IA… {$a} s';
 $string['template_col_activities'] = 'Actividades';
 $string['template_col_ai'] = 'Modificadas con IA';
 $string['template_col_course'] = 'Curso';
