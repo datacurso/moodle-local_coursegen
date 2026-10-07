@@ -16,44 +16,42 @@
 
 namespace local_coursegen\local\service;
 
+use local_coursegen\utils\preview_draft_store;
+
 /**
  * Gives the copies of the template resources the files the run attached to them.
  *
- * Each file is downloaded into the draft area of the user, put in the resource and deleted from the draft area
- * straight away, whether the replacement worked or not, so no copy of it stays behind.
+ * Each file is read from the draft area of the user, where the review preview stored it under the uid of its
+ * activity (it is downloaded only when the preview did not), and is copied from there into the resource.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 final class template_file_resource_applier {
-    /** @var template_ai_api_service Client of the template agent endpoints. */
-    private template_ai_api_service $api;
+    /** @var preview_draft_store Draft area the files of the run are in. */
+    private preview_draft_store $store;
 
     /**
      * Constructor.
      *
-     * @param template_ai_api_service|null $api Optional pre-built service client; tests pass a mock.
+     * @param preview_draft_store $store Draft store of the generation session.
      */
-    public function __construct(?template_ai_api_service $api = null) {
-        if ($api === null) {
-            $api = new template_ai_api_service();
-        }
-        $this->api = $api;
+    public function __construct(preview_draft_store $store) {
+        $this->store = $store;
     }
 
     /**
      * Replace the file of every copied resource that has one attached by the run.
      *
-     * @param string $threadid Thread id of the run, for example "5c1e2a".
      * @param array[] $selected Output of template_file_resources::select().
      * @param int[] $copiedcms Template cmid => cmid of its copy in the new course.
      * @return string[] Names of the files that could not be put in their resource.
      */
-    public function apply(string $threadid, array $selected, array $copiedcms): array {
+    public function apply(array $selected, array $copiedcms): array {
         $failures = [];
         foreach ($selected as $entry) {
-            if (!$this->apply_entry($threadid, $entry, $copiedcms)) {
+            if (!$this->apply_entry($entry, $copiedcms)) {
                 $failures[] = $this->file_name($entry);
             }
         }
@@ -63,18 +61,17 @@ final class template_file_resource_applier {
     /**
      * Put the file of one selected resource in the copy of that resource.
      *
-     * @param string $threadid Thread id of the run.
      * @param array $entry One entry of template_file_resources::select().
      * @param int[] $copiedcms Template cmid => cmid of its copy in the new course.
      * @return bool True when the copy now holds the file.
      */
-    private function apply_entry(string $threadid, array $entry, array $copiedcms): bool {
+    private function apply_entry(array $entry, array $copiedcms): bool {
         $cmid = (int) $entry['cmid'];
         $copied = $copiedcms[$cmid] ?? null;
         if ($copied === null) {
             return false;
         }
-        return $this->apply_one($threadid, $entry['file'], (int) $copied);
+        return $this->apply_one((string) $entry['uid'], $entry['file'], (int) $copied);
     }
 
     /**
@@ -89,42 +86,23 @@ final class template_file_resource_applier {
     }
 
     /**
-     * Download one file and put it in a resource.
+     * Put one stored file in a resource.
      *
-     * @param string $threadid Thread id of the run.
+     * @param string $uid Opaque uid of the activity the file belongs to.
      * @param array $file Entry of generated_files: file_id and filename.
      * @param int $cmid Course module id of the copy of the resource.
      * @return bool True when the resource now holds the file.
      */
-    private function apply_one(string $threadid, array $file, int $cmid): bool {
-        $draftid = file_get_unused_draft_itemid();
-        $fileid = (string) $file['file_id'];
-        $filename = (string) $file['filename'];
+    private function apply_one(string $uid, array $file, int $cmid): bool {
         try {
-            $stored = $this->api->download_generated_file($threadid, $fileid, $filename, ['itemid' => $draftid]);
-            if ($stored === null) {
-                return false;
-            }
+            $stored = $this->store->get($uid, $file);
             resource_file_replacer::replace($cmid, $stored);
             return true;
         } catch (\Throwable $exception) {
             $reason = $exception->getMessage();
+            $filename = (string) $file['filename'];
             debugging('local_coursegen: the file ' . $filename . ' could not be put in its resource: ' . $reason, DEBUG_DEVELOPER);
             return false;
-        } finally {
-            $this->empty_draft($draftid);
         }
-    }
-
-    /**
-     * Delete every file of a draft area of the current user.
-     *
-     * @param int $draftid Draft item id.
-     */
-    private function empty_draft(int $draftid): void {
-        global $USER;
-        $context = \context_user::instance($USER->id);
-        $storage = get_file_storage();
-        $storage->delete_area_files($context->id, 'user', 'draft', $draftid);
     }
 }

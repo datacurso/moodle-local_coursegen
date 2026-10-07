@@ -44,6 +44,7 @@ use local_coursegen\local\service\template_course_order;
 use local_coursegen\local\service\template_file_resource_applier;
 use local_coursegen\local\service\template_file_resources;
 use local_coursegen\local\service\template_keep_copier;
+use local_coursegen\utils\preview_draft_store;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -156,8 +157,9 @@ class finish_template_generation extends external_api {
                 template_keep_copier::copy_into($templateid, $courseid, $keptcms, $extracmids);
             }
             $threadid = (string) $session->get('session_id');
-            $applier = new template_file_resource_applier($api);
-            $failedfiles = $applier->apply($threadid, $fileresources, $keptcms);
+            $store = new preview_draft_store((int) $session->get('id'), $threadid, [$api, 'download_generated_file']);
+            $applier = new template_file_resource_applier($store);
+            $failedfiles = $applier->apply($fileresources, $keptcms);
             template_apply_guard::ensure_complete($created, $failedfiles);
             $generatedcms = $created['generatedcms'] ?? [];
             self::arrange_course($templateid, $courseid, $generatedactivities, $generatedcms, $keptcms);
@@ -167,6 +169,7 @@ class finish_template_generation extends external_api {
             template_creation_rollback::undo(new course_session((int) $session->get('id')));
             throw $exception;
         }
+        $store->discard();
         template_files_cleaner::discard($threadid, $api);
 
         return self::created_response($courseid, $CFG->wwwroot, $failedfiles);

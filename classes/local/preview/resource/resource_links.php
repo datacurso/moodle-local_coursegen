@@ -27,6 +27,33 @@ namespace local_coursegen\local\preview\resource;
  */
 trait resource_links {
     /**
+     * Where a file of the resource is served from.
+     *
+     * A file the run attached is served from the draft area of the reviewer, at the address its row carries.
+     * A file of the template is served from the module's own file area.
+     *
+     * @param json_file $file
+     * @param int $revision
+     * @param bool $forcedownload Whether the address makes the browser download the file.
+     * @return string
+     */
+    protected function resource_file_address($file, $revision, bool $forcedownload): string {
+        global $CFG;
+
+        $draftaddress = $file->get_url();
+        if ($draftaddress !== null) {
+            $parameters = [];
+            if ($forcedownload) {
+                $parameters['forcedownload'] = 1;
+            }
+            $address = new \moodle_url($draftaddress, $parameters);
+            return $address->out(false);
+        }
+        $path = '/' . $file->get_contextid() . '/mod_resource/content/' . $revision . $file->get_filepath() . $file->get_filename();
+        return file_encode_url($CFG->wwwroot . '/pluginfile.php', $path, $forcedownload);
+    }
+
+    /**
      * mod/resource/locallib.php resource_get_clicktoopen().
      *
      * @param json_file $file
@@ -35,11 +62,10 @@ trait resource_links {
      * @return string
      */
     protected function resource_get_clicktoopen($file, $revision, $onclick = '') {
-        global $CFG, $OUTPUT;
+        global $OUTPUT;
 
         $filename = $file->get_filename();
-        $path = '/'.$file->get_contextid().'/mod_resource/content/'.$revision.$file->get_filepath().$file->get_filename();
-        $fullurl = file_encode_url($CFG->wwwroot.'/pluginfile.php', $path, false);
+        $fullurl = $this->resource_file_address($file, $revision, false);
 
         $link = $OUTPUT->render_from_template('local_coursegen/preview_link', [
             'url' => $fullurl,
@@ -57,11 +83,10 @@ trait resource_links {
      * @return string
      */
     protected function resource_get_clicktodownload($file, $revision) {
-        global $CFG, $OUTPUT;
+        global $OUTPUT;
 
         $filename = $file->get_filename();
-        $path = '/'.$file->get_contextid().'/mod_resource/content/'.$revision.$file->get_filepath().$file->get_filename();
-        $fullurl = file_encode_url($CFG->wwwroot.'/pluginfile.php', $path, true);
+        $fullurl = $this->resource_file_address($file, $revision, true);
 
         $link = $OUTPUT->render_from_template('local_coursegen/preview_link', [
             'url' => $fullurl,

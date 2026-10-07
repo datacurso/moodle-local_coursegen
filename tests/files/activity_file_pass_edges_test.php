@@ -18,8 +18,8 @@ namespace local_coursegen\local\files;
 
 use local_coursegen\local\service\create_mod_service;
 use local_coursegen\tests\fixtures\file_scenarios;
-use local_coursegen\utils\generated_file_cache;
 use local_coursegen\utils\generated_files_scope;
+use local_coursegen\utils\preview_draft_store;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -38,6 +38,22 @@ require_once($CFG->libdir . '/testing/generator/lib.php');
  * @covers     \local_coursegen\local\files\file_copy_exception
  */
 final class activity_file_pass_edges_test extends \advanced_testcase {
+    /** @var string The opaque uid of the activity. */
+    private const UID = '7f1c2a9e-5b0d-4c1e-9a77-3e2d8b6a4f10';
+
+    /**
+     * A draft store whose downloader gives the content registered for the name of each file.
+     *
+     * @param array $contents File name => content.
+     * @return preview_draft_store
+     */
+    private function draft_store(array $contents): preview_draft_store {
+        $downloader = static function (string $thread, string $id, string $name, array $record) use ($contents) {
+            return get_file_storage()->create_file_from_string($record, $contents[$name]);
+        };
+        return new preview_draft_store(211, 'thread-1', $downloader);
+    }
+
     /**
      * The modules created from a package, with each source of files.
      *
@@ -79,9 +95,7 @@ final class activity_file_pass_edges_test extends \advanced_testcase {
             $reference = \moodle_url::make_pluginfile_url($sourcecontext->id, 'mod_' . $module, 'intro', 0, '/', 'pic.png');
             $address = $reference->out(false);
         } else {
-            $entry = ['filename' => 'pic.png', 'mimetype' => 'image/png', 'size' => 7, 'thread_id' => 't', 'file_id' => 'f.png'];
-            get_file_storage()->create_file_from_string(generated_file_cache::file_record($entry), 'PICTURE');
-            $generated = [$entry];
+            $generated = [['filename' => 'pic.png', 'content_type' => 'image/png', 'file_id' => 'f.png']];
             $address = '@@PLUGINFILE@@/pic.png';
         }
         $DB->set_field($module, 'intro', '<p><img src="' . $address . '"></p>', ['id' => $dest->id]);
@@ -90,9 +104,9 @@ final class activity_file_pass_edges_test extends \advanced_testcase {
         ];
         $pass = activity_file_pass::for_new_activity($sourceid);
 
-        generated_files_scope::run($generated, static function () use ($pass, $activity) {
+        generated_files_scope::run(self::UID, $generated, static function () use ($pass, $activity) {
             $pass->run($activity, 'Intro');
-        });
+        }, $this->draft_store(['pic.png' => 'PICTURE']));
 
         $context = \context_module::instance($dest->cmid);
         $stored = get_file_storage()->get_file($context->id, 'mod_' . $module, 'intro', 0, '/', 'pic.png');
@@ -242,8 +256,7 @@ final class activity_file_pass_edges_test extends \advanced_testcase {
             'filepath' => '/', 'filename' => 'a.png',
         ];
         get_file_storage()->create_file_from_string($record, 'OLD');
-        $entry = ['filename' => 'a.png', 'mimetype' => 'image/png', 'size' => 3, 'thread_id' => 't', 'file_id' => 'f.png'];
-        get_file_storage()->create_file_from_string(generated_file_cache::file_record($entry), 'NEW');
+        $entry = ['filename' => 'a.png', 'content_type' => 'image/png', 'file_id' => 'f.png'];
         $DB->set_field('page', 'content', '<img src="@@PLUGINFILE@@/a.png">', ['id' => $page->id]);
         $activity = (object) [
             'id' => (int) $page->cmid, 'instance' => (int) $page->id, 'modname' => 'page', 'course' => (int) $course->id,
@@ -252,9 +265,9 @@ final class activity_file_pass_edges_test extends \advanced_testcase {
 
         $this->expectException(file_copy_exception::class);
 
-        generated_files_scope::run([$entry], static function () use ($pass, $activity) {
+        generated_files_scope::run(self::UID, [$entry], static function () use ($pass, $activity) {
             $pass->run($activity, 'Page');
-        });
+        }, $this->draft_store(['a.png' => 'NEW']));
     }
 
     /**

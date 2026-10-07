@@ -31,6 +31,7 @@ use external_single_structure;
 use external_value;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\template_files_cleaner;
+use local_coursegen\utils\preview_draft_store;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -72,7 +73,10 @@ class cancel_template_generation extends external_api {
             throw new \moodle_exception('nopermissions', 'error', '', 'cancel this generation');
         }
 
-        template_files_cleaner::discard((string) $session->get('session_id'));
+        $threadid = (string) $session->get('session_id');
+        $store = new preview_draft_store((int) $session->get('id'), $threadid);
+        $store->discard();
+        template_files_cleaner::discard($threadid);
 
         return ['status' => 'cancelled'];
     }

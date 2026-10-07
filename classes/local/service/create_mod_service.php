@@ -20,6 +20,7 @@ use local_coursegen\local\files\activity_file_pass;
 use local_coursegen\local\files\file_copy_exception;
 use local_coursegen\mod_settings\base_settings;
 use local_coursegen\utils\generated_files_scope;
+use local_coursegen\utils\preview_draft_store;
 use local_coursegen\utils\text_editor_parameter_cleaner;
 
 defined('MOODLE_INTERNAL') || die();
@@ -45,6 +46,7 @@ class create_mod_service {
      * @param int|null $sourcecourseid Course whose files the payload's texts may
      *     reference by pluginfile URL (the template's base course); null lets any
      *     course the current user can access through.
+     * @param preview_draft_store|null $store Draft area the files of the run are in; null when the run made none.
      *
      * @return object New course module.
      */
@@ -53,17 +55,19 @@ class create_mod_service {
         $course,
         $sectionnum,
         $beforemod = null,
-        ?int $sourcecourseid = null
+        ?int $sourcecourseid = null,
+        ?preview_draft_store $store = null
     ) {
         $generatedfiles = $resultinfo['generated_files'] ?? [];
-        if (!$generatedfiles) {
+        if (!$generatedfiles || $store === null) {
             return self::create_module($resultinfo, $course, $sectionnum, $beforemod, $sourcecourseid);
         }
         // The files the AI service made for this activity are in scope while its texts are saved.
         $creation = static function () use ($resultinfo, $course, $sectionnum, $beforemod, $sourcecourseid) {
             return self::create_module($resultinfo, $course, $sectionnum, $beforemod, $sourcecourseid);
         };
-        return generated_files_scope::run($generatedfiles, $creation);
+        $uid = (string) ($resultinfo['uid'] ?? '');
+        return generated_files_scope::run($uid, $generatedfiles, $creation, $store);
     }
 
     /**

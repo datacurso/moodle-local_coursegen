@@ -18,6 +18,7 @@ namespace local_coursegen\local\preview;
 
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\template_ai_api_service;
+use local_coursegen\utils\preview_draft_store;
 
 /**
  * Which activity activity_preview.php is being asked for, and what to draw
@@ -48,7 +49,7 @@ class activity_preview_lookup {
         $answer = self::answer_of($session);
         $found = self::from_answer($answer, $uid);
         if ($found !== null) {
-            $found['parameters'] = self::with_files($found);
+            $found['parameters'] = self::with_files($found, $uid, $session);
             $found['parameters'] = self::with_written_text($found, $answer, $session);
             return $found;
         }
@@ -224,13 +225,40 @@ class activity_preview_lookup {
     /**
      * The parameters of a finished activity with its files in place of their placeholders.
      *
-     * The files the AI made are addressed where they are served from.
+     * The files the AI made are addressed where they are served from: the draft area of the reviewer.
      *
      * @param array $found What from_answer() found.
+     * @param string $uid Opaque uid of the activity.
+     * @param course_session $session
      * @return array
      */
-    private static function with_files(array $found): array {
-        $addressed = new generated_file_preview();
-        return $addressed->addressed($found['parameters'], $found['generated_files']);
+    private static function with_files(array $found, string $uid, course_session $session): array {
+        $threadid = (string) $session->get('session_id');
+        $sessionid = (int) $session->get('id');
+        $store = new preview_draft_store($sessionid, $threadid);
+        $addressed = new generated_file_preview($store);
+        $parameters = $addressed->addressed($found['parameters'], $found['generated_files'], $uid);
+        if ($found['modname'] === 'resource' && $found['generated_files']) {
+            $contextid = self::template_context_id($parameters);
+            $parameters['files'] = $addressed->resource_rows($found['generated_files'], $uid, $contextid);
+        }
+        return $parameters;
+    }
+
+    /**
+     * The context the preview of a module reads its files from: the one of the template module.
+     *
+     * @param array $parameters The activity's parameters.
+     * @return int Context id, or 0 when the parameters name none.
+     */
+    private static function template_context_id(array $parameters): int {
+        $structure = $parameters['structure'] ?? [];
+        $contextid = (int) ($structure['contextid'] ?? 0);
+        if ($contextid > 0) {
+            return $contextid;
+        }
+        $files = $parameters['files'] ?? [];
+        $first = $files[0] ?? [];
+        return (int) ($first['contextid'] ?? 0);
     }
 }

@@ -18,7 +18,7 @@ namespace local_coursegen\local\files;
 
 use local_coursegen\local\service\create_mod_service;
 use local_coursegen\tests\fixtures\file_scenarios;
-use local_coursegen\utils\generated_file_cache;
+use local_coursegen\utils\preview_draft_store;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -42,6 +42,9 @@ require_once($CFG->libdir . '/testing/generator/lib.php');
  * @covers     \local_coursegen\local\files\quiz_question_carriers
  */
 final class activity_file_pass_test extends \advanced_testcase {
+    /** @var string[] File name => content of the files the AI service made in the current test. */
+    private array $contents = [];
+
     /**
      * Every module created from a result, once for each source of files.
      *
@@ -95,15 +98,21 @@ final class activity_file_pass_test extends \advanced_testcase {
      * @return array The entry of the result's generated_files.
      */
     private function generated_entry(string $name, string $content): array {
-        $entry = [
-            'filename' => $name,
-            'mimetype' => 'image/png',
-            'size' => strlen($content),
-            'thread_id' => 'thread-1',
-            'file_id' => md5($name) . '.png',
-        ];
-        get_file_storage()->create_file_from_string(generated_file_cache::file_record($entry), $content);
-        return $entry;
+        $this->contents[$name] = $content;
+        return ['filename' => $name, 'content_type' => 'image/png', 'file_id' => md5($name) . '.png'];
+    }
+
+    /**
+     * A draft store whose downloader gives the content registered for the name of each file.
+     *
+     * @return preview_draft_store
+     */
+    private function draft_store(): preview_draft_store {
+        $contents = $this->contents;
+        $downloader = static function (string $thread, string $id, string $name, array $record) use ($contents) {
+            return get_file_storage()->create_file_from_string($record, $contents[$name]);
+        };
+        return new preview_draft_store(211, 'thread-1', $downloader);
     }
 
     /**
@@ -196,11 +205,12 @@ final class activity_file_pass_test extends \advanced_testcase {
 
         $result = $scenario['build']($texts, $names);
         $result['generated_files'] = $entries;
+        $result['uid'] = '7f1c2a9e-5b0d-4c1e-9a77-3e2d8b6a4f10';
         $source = null;
         if ($kind === 'template') {
             $source = (int) $sourcecourse->id;
         }
-        $cm = create_mod_service::create_from_ai_result($result, $course, 1, null, $source);
+        $cm = create_mod_service::create_from_ai_result($result, $course, 1, null, $source, $this->draft_store());
 
         $this->assert_every_slot($scenario, $cm, $names, $kind);
     }
