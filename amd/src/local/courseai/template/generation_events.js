@@ -33,7 +33,7 @@ import {
     settleChecklist,
 } from 'local_coursegen/local/courseai/template/generation_checklist';
 import {createSeen, failureOutcome, normalizeEvent} from 'local_coursegen/local/courseai/template/agent_events';
-import {showToolCall, showToolResult} from 'local_coursegen/local/courseai/template/agent_steps';
+import {showToolCall} from 'local_coursegen/local/courseai/template/agent_steps';
 
 const seen = createSeen();
 
@@ -147,10 +147,7 @@ const EVENT_HANDLERS = {
         showToolCall(data);
         return '';
     },
-    tool_result: (data) => {
-        showToolResult(data);
-        return '';
-    },
+    tool_result: () => '',
     question: () => 'question',
     activity_progress_done: finishActivity,
     activity_progress_failed: finishActivity,

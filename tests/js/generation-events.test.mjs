@@ -79,3 +79,18 @@ test('a question of a new round is shown even when an earlier round asked one wi
     assert.equal(first, 'question');
     assert.equal(second, 'question');
 });
+
+test('a refused step the AI recovers from by itself changes nothing on screen and keeps listening', () => {
+    const progress = {total: 2, done: 0};
+    const outcome = applyEvent({type: 'tool_result', call_id: 'c1', name: 'modify_activity', ok: false}, progress, paint);
+    assert.equal(outcome, '');
+    assert.deepEqual(progress, {total: 2, done: 0});
+    assert.deepEqual(calls, []);
+});
+
+test('a step that worked changes nothing on screen either', () => {
+    const progress = {total: 2, done: 0};
+    const outcome = applyEvent({type: 'tool_result', call_id: 'c2', name: 'attach_file', ok: true}, progress, paint);
+    assert.equal(outcome, '');
+    assert.deepEqual(calls, []);
+});
