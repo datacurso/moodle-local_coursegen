@@ -25,6 +25,7 @@ import Notification from 'core/notification';
 import YUI from 'core/yui';
 import {initFilepicker} from '../../../repository/courseai';
 import {bindToggleWrap, showFilePicker} from '../context/filepicker';
+import {attachSyllabus, removeSyllabus, trackPrompt} from './generate_gate';
 
 /**
  * Show/refresh or hide the input bar's syllabus chip to match tplState.
@@ -55,15 +56,11 @@ export const refreshSyllabusChip = (tplState) => {
  *
  * @param {Object} tplState
  * @param {Object} state - Page state (createInitialState) carrying languages/defaultLang.
+ * @param {Function} [onChange] - Called when the text or the file changed, so the Generate button can follow.
  */
-export const wireInputBar = (tplState, state) => {
+export const wireInputBar = (tplState, state, onChange = () => undefined) => {
     // Adaptation prompt — composer textarea, value tracked in tplState.
-    const promptInput = document.getElementById('tplPromptInput');
-    if (promptInput) {
-        promptInput.addEventListener('input', () => {
-            tplState.prompt = promptInput.value;
-        });
-    }
+    trackPrompt(document.getElementById('tplPromptInput'), tplState, onChange);
 
     // Language select — same options source as free mode (the page-context
     // languages array parsed by courseai.js into state.languages).
@@ -109,9 +106,10 @@ export const wireInputBar = (tplState, state) => {
                 YUI,
                 texts: {},
                 onPicked: (filename, draftitemid) => {
-                    tplState.syllabusfilename = filename;
-                    tplState.syllabusdraftitemid = draftitemid;
-                    refreshSyllabusChip(tplState);
+                    attachSyllabus(tplState, filename, draftitemid, () => {
+                        refreshSyllabusChip(tplState);
+                        onChange();
+                    });
                 },
             });
         });
@@ -120,9 +118,10 @@ export const wireInputBar = (tplState, state) => {
     const removeBtn = document.getElementById('tplChipSyllabusRemove');
     if (removeBtn) {
         removeBtn.addEventListener('click', () => {
-            tplState.syllabusfilename = '';
-            tplState.syllabusdraftitemid = 0;
-            refreshSyllabusChip(tplState);
+            removeSyllabus(tplState, () => {
+                refreshSyllabusChip(tplState);
+                onChange();
+            });
         });
     }
 };

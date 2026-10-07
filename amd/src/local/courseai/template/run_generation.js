@@ -28,6 +28,7 @@ import {usePreviewSession} from './preview';
 import {reviewAndCreate} from './finish';
 import {forgetRefusedSyllabus} from './syllabus_refusal';
 import {refreshSyllabusChip} from './input_bar';
+import {hasMaterial, refreshGenerateButton} from './generate_gate';
 
 /**
  * Generate the course from the picked template, with the input bar's own
@@ -54,6 +55,9 @@ export const runGeneration = async(tplState, tplSelect, genBtn, state, host) => 
     if (document.body.classList.contains('cg-generating')) {
         return;
     }
+    if (!hasMaterial(tplState)) {
+        return;
+    }
     genBtn.disabled = true;
     try {
         const started = await startTemplateGeneration(
@@ -72,10 +76,10 @@ export const runGeneration = async(tplState, tplSelect, genBtn, state, host) => 
             }
         );
     } catch (e) {
-        genBtn.disabled = false;
         if (forgetRefusedSyllabus(tplState, e)) {
             refreshSyllabusChip(tplState);
         }
+        refreshGenerateButton(tplState, genBtn, false);
         Notification.exception(e);
     }
 };

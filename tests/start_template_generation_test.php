@@ -293,8 +293,97 @@ final class start_template_generation_test extends \advanced_testcase {
         $this->setUser($user);
         $this->service();
 
-        $result = testable_start_template_generation::execute($templateid, '', 0);
+        $result = testable_start_template_generation::execute($templateid, 'Make it', 0);
 
         $this->assertSame('t-5', $result['threadid']);
+    }
+
+    /**
+     * A start with no request and no file is refused in plain words, creates no session and reaches no service.
+     *
+     * @dataProvider nothing_to_work_from_provider
+     * @param string $prompt The request, empty or only blanks.
+     */
+    public function test_a_start_with_no_request_and_no_file_is_refused(string $prompt): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $templateid = $this->template();
+        $service = $this->createMock(template_ai_api_service::class);
+        $never = $this->never();
+        $service->expects($never)->method('init');
+        $never = $this->never();
+        $service->expects($never)->method('upload_syllabus');
+        testable_start_template_generation::$mockservice = $service;
+
+        try {
+            testable_start_template_generation::execute($templateid, $prompt, 0);
+            $this->fail('A start with nothing to work from must be refused.');
+        } catch (\moodle_exception $exception) {
+            $this->assertSame('templatenothingtostart', $exception->errorcode);
+        }
+
+        $sessions = $this->sessions();
+
+        $this->assertCount(0, $sessions);
+    }
+
+    /**
+     * What counts as no request.
+     *
+     * @return array Each case holds the request text.
+     */
+    public static function nothing_to_work_from_provider(): array {
+        return [
+            'empty' => [''],
+            'one space' => [' '],
+            'blanks' => ["  \n\t "],
+        ];
+    }
+
+    /**
+     * The refusal says what to do, without a word about how the generation works.
+     */
+    public function test_the_refusal_names_what_to_do(): void {
+        $this->resetAfterTest();
+        $english = get_string('templatenothingtostart', 'local_coursegen');
+
+        $this->assertStringContainsString('attach', $english);
+        $this->assertStringNotContainsStringIgnoringCase('service', $english);
+        $this->assertStringNotContainsStringIgnoringCase('token', $english);
+    }
+
+    /**
+     * A request alone starts the generation, with no file and no upload.
+     */
+    public function test_a_request_alone_starts(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $templateid = $this->template();
+        $service = $this->service();
+        $never = $this->never();
+        $service->expects($never)->method('upload_syllabus');
+
+        $result = testable_start_template_generation::execute($templateid, 'Adapt it to nursing', 0);
+
+        $this->assertSame('t-5', $result['threadid']);
+        $this->assertCount(1, $this->sessions());
+    }
+
+    /**
+     * A file alone starts the generation, with an empty request.
+     */
+    public function test_a_file_alone_starts(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $templateid = $this->template();
+        $draftid = $this->draft_with();
+        $service = $this->service();
+        $once = $this->once();
+        $service->expects($once)->method('upload_syllabus');
+
+        $result = testable_start_template_generation::execute($templateid, '', $draftid);
+
+        $this->assertSame('t-5', $result['threadid']);
+        $this->assertCount(1, $this->sessions());
     }
 }

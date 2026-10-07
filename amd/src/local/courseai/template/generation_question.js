@@ -30,6 +30,7 @@ import {showFilePicker} from 'local_coursegen/local/courseai/context/filepicker'
 import {answerTemplateQuestion} from 'local_coursegen/local/courseai/template/repository';
 import {turn} from 'local_coursegen/local/courseai/template/thread';
 import {questionKind, questionOptions} from 'local_coursegen/local/courseai/template/agent_events';
+import {allowsNoFile, answerWithoutFile} from 'local_coursegen/local/courseai/template/question_answer';
 
 const CARD_TEMPLATE = 'local_coursegen/template_agent_question';
 const RETRY_TEMPLATE = 'local_coursegen/template_agent_retry';
@@ -42,6 +43,7 @@ const SELECT = {
     choiceChecked: '[data-region="choice-input"]:checked',
     error: '[data-region="error"]',
     pick: '[data-action="local_coursegen/template-agent/pick-file"]',
+    noFile: '[data-action="local_coursegen/template-agent/no-file"]',
     send: '[data-action="local_coursegen/template-agent/send-answer"]',
     retryButton: '[data-action="local_coursegen/template-agent/retry"]',
 };
@@ -53,6 +55,7 @@ const cardContext = (question) => {
         callid: String(question.call_id || ''),
         question: String(question.question || ''),
         askfile: kind === 'file',
+        nofile: allowsNoFile(kind),
         asktext: kind === 'text',
         askchoice: kind === 'choice',
         options,
@@ -131,11 +134,35 @@ const sendAnswer = async(card, sessionId, question, kind, picked) => {
     return true;
 };
 
+const sendWithoutFile = async(card, sessionId, question) => {
+    const sentence = await getString('template_agent_question_nofile_answer', 'local_coursegen');
+    const {kind, answer} = answerWithoutFile(sentence);
+    setBusy(card, true);
+    try {
+        await answerTemplateQuestion(sessionId, String(question.call_id), kind, answer);
+    } catch (exception) {
+        setBusy(card, false);
+        showError(card, exception.message || String(exception));
+        return false;
+    }
+    card.remove();
+    turn('user', 'user', answer.text);
+    return true;
+};
+
 const bindCard = (card, sessionId, question, kind, done) => {
     const picked = {filename: '', draftItemId: 0};
     const pick = card.querySelector(SELECT.pick);
     if (pick) {
         pick.addEventListener('click', () => pickFile(card, picked));
+    }
+    const noFile = card.querySelector(SELECT.noFile);
+    if (noFile) {
+        noFile.addEventListener('click', async() => {
+            if (await sendWithoutFile(card, sessionId, question)) {
+                done();
+            }
+        });
     }
     card.querySelector(SELECT.send).addEventListener('click', async() => {
         if (await sendAnswer(card, sessionId, question, kind, picked)) {

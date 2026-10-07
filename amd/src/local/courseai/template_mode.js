@@ -42,22 +42,20 @@ import {
 import {renderStructure, wireStructureEvents} from './template/render';
 import {formatTemplate} from './utils';
 import Selectors from './template/selectors';
+import {refreshGenerateButton} from './template/generate_gate';
 
 /**
- * Let the Generate button follow the template: it is on once a template is loaded.
+ * Let the Generate button follow the form: it is on once a template is loaded and the professor gave a text or a
+ * file, and off again when both are taken away.
  *
- * Nothing happens before a template is loaded, or while a generation is on
- * screen: from then on the button belongs to the review.
+ * Nothing happens while a generation is on screen: from then on the button belongs to the review.
  *
  * @param {Object} tplState
  * @param {HTMLButtonElement|null} genBtn
  */
 const refreshGenerateState = (tplState, genBtn) => {
     const generating = document.body.classList.contains(Selectors.classes.generating);
-    if (!genBtn || !tplState.loaded || generating) {
-        return;
-    }
-    genBtn.disabled = false;
+    refreshGenerateButton(tplState, genBtn, generating);
 };
 
 // The "N sections · M activities" stats template. Fetched once and cached —
@@ -112,7 +110,9 @@ export const wireTemplateMode = (state, host) => {
     // Input-bar defaults: no images, page default language, no syllabus yet.
     const tplState = createTemplateState({lang: state.defaultLang || ''});
 
-    wireInputBar(tplState, state);
+    // The Generate button follows the form: a template, and a text or a file.
+    const genBtn = document.getElementById('tplModeGenerate');
+    wireInputBar(tplState, state, () => refreshGenerateState(tplState, genBtn));
 
     // Sequence guard: reselecting the template autocomplete before a previous
     // getTemplateStructure() fetch resolves must not let the slower, stale
@@ -123,7 +123,6 @@ export const wireTemplateMode = (state, host) => {
 
     // Single source of truth for re-rendering: the structure, the stats line
     // and the Generate button all follow the in-memory model.
-    const genBtn = document.getElementById('tplModeGenerate');
     const rerenderStructure = async() => {
         const statsTemplate = await getStatsTemplate();
         await renderStructure(container, tplState);
@@ -249,7 +248,7 @@ const loadTemplateStructure = async(templateId, tplState, container, state, requ
         updateStats(tplState, statsTemplate);
         showStatsRow(limitsEl);
 
-        // A required space keeps the button off until its file is picked.
+        // The button comes on when there is a text or a file to work from.
         refreshGenerateState(tplState, genBtn);
         state.templateStructureLoaded = true;
     } catch (e) {
