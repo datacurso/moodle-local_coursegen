@@ -131,6 +131,8 @@ const EVENT_HANDLERS = {
         return '';
     },
     activity_progress_init: (data, progress, paintStage) => {
+        // A new round after a change request reopens activities and may ask again with the same ids.
+        seen.reset();
         resetProgress(progress, data);
         progress.opened = true;
         openChecklist(progress);

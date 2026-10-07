@@ -47,3 +47,29 @@ test('the end of the run settles any row still spinning', () => {
     assert.equal(outcome, 'completed');
     assert.deepEqual(calls[0], ['settle', 2]);
 });
+
+test('a new round after a change request draws the reopened activity again from the start', () => {
+    const progress = newProgress();
+    applyEvent({type: 'activity_progress_init', total: 1, activities: [{aid: 't:11342'}]}, progress, paint);
+    applyEvent({type: 'activity_progress_start', aid: 't:11342', modname: 'page', title: 'Guide'}, progress, paint);
+    applyEvent({type: 'activity_progress_done', aid: 't:11342', status: 'ok'}, progress, paint);
+    applyEvent({type: 'completed'}, progress, paint);
+    reset();
+
+    applyEvent({type: 'activity_progress_init', total: 1, activities: [{aid: 't:11342'}]}, progress, paint);
+    applyEvent({type: 'activity_progress_start', aid: 't:11342', modname: 'page', title: 'Guide'}, progress, paint);
+    applyEvent({type: 'activity_progress_done', aid: 't:11342', status: 'ok'}, progress, paint);
+
+    assert.deepEqual(calls.map((call) => call[0]), ['open', 'add', 'close']);
+    assert.equal(progress.done, 1);
+    assert.equal(progress.total, 1);
+});
+
+test('a question of a new round is shown even when an earlier round asked one with the same id', () => {
+    const progress = newProgress();
+    const first = applyEvent({type: 'question', call_id: 'c1x0', question: 'Which file?'}, progress, paint);
+    applyEvent({type: 'activity_progress_init', total: 1, activities: []}, progress, paint);
+    const second = applyEvent({type: 'question', call_id: 'c1x0', question: 'Which file?'}, progress, paint);
+    assert.equal(first, 'question');
+    assert.equal(second, 'question');
+});
