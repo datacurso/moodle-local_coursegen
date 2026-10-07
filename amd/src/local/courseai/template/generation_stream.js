@@ -61,6 +61,9 @@ import {
 } from 'local_coursegen/local/courseai/template/generation_events';
 import {watchOnce} from 'local_coursegen/local/courseai/template/generation_watch';
 import {hideHeader, markHeaderDone, showGeneratingHeader} from 'local_coursegen/local/courseai/template/generation_header';
+import {askForDecision} from 'local_coursegen/local/courseai/template/generation_review';
+import {sendTemplateReviewFeedback} from 'local_coursegen/local/courseai/template/repository';
+import {ReviewFlow, adjustable, errorMessage} from 'local_coursegen/local/courseai/template/review_flow';
 
 /** Phase keys the service reports, plus the two this module owns. */
 const STAGE_STRINGS = {
@@ -73,6 +76,8 @@ const STAGE_STRINGS = {
     connecting: 'courseai_template_stage_connecting',
 };
 const TITLE_STRING = 'courseai_template_generating_title';
+const ADJUST_FAILED_STRING = 'courseai_template_adjust_failed';
+const ADJUST_TOO_LONG_STRING = 'courseai_template_adjust_toolong';
 
 let labels = null;
 
@@ -106,8 +111,17 @@ const getLabels = async() => {
     if (!labels) {
         const keys = Object.keys(STAGE_STRINGS);
         const requests = stageStringRequests(keys);
-        const values = await getStrings([...requests, {key: TITLE_STRING, component: 'local_coursegen'}]);
-        labels = {title: values[keys.length]};
+        const values = await getStrings([
+            ...requests,
+            {key: TITLE_STRING, component: 'local_coursegen'},
+            {key: ADJUST_FAILED_STRING, component: 'local_coursegen'},
+            {key: ADJUST_TOO_LONG_STRING, component: 'local_coursegen'},
+        ]);
+        labels = {
+            title: values[keys.length],
+            adjustFailed: values[keys.length + 1],
+            adjustTooLong: values[keys.length + 2],
+        };
         assignStageLabels(labels, keys, values);
     }
     return labels;
@@ -194,16 +208,110 @@ const closeView = (message) => {
 };
 
 /**
- * The run completed: close the header and build the course.
+ * Show the review of what the run generated: the header rests, the working indicator goes away and the
+ * feed says the course is ready to be read.
  *
- * @param {Function} buildCourse Called once the run completes; resolves to {courseurl}.
+ * @returns {Promise<void>}
+ */
+const paintReview = async() => {
+    markHeaderDone();
+    hideWorkingIndicator();
+    await paintStage('reviewing');
+    milestone('courseai_template_log_review_ready');
+};
+
+/**
+ * The teacher accepted the generated course: go on to the review of its name and build it.
+ *
+ * @param {Function} buildCourse Creates the course once the teacher accepted the result.
  * @returns {Promise<*>} What buildCourse resolved to.
  */
 const finishRun = (buildCourse) => {
-    markHeaderDone();
-    hideWorkingIndicator();
-    milestone('courseai_template_log_completed');
+    milestone('courseai_template_log_approved', 'user', 'success');
     return buildCourse();
+};
+
+/**
+ * Send a change request to the run and tell the flow how it went.
+ *
+ * @param {ReviewFlow} flow
+ * @param {{callId: string, instruction: string, aid: string}} sent What the flow validated.
+ * @param {number} sessionId Local session id, for example 139.
+ * @returns {Promise<boolean>} True when the service stored the request.
+ */
+const sendAdjustment = async(flow, sent, sessionId) => {
+    try {
+        await sendTemplateReviewFeedback(sessionId, sent.callId, sent.instruction, sent.aid);
+    } catch (error) {
+        const texts = await getLabels();
+        flow.feedbackFailed(error);
+        turn('ai', 'danger', errorMessage(error, texts.adjustFailed));
+        return false;
+    }
+    flow.feedbackStored();
+    return true;
+};
+
+/**
+ * The run goes on from its draft after a change request: say so and show it working again.
+ *
+ * @param {{instruction: string}} sent What was sent.
+ * @returns {Promise<void>}
+ */
+const startAdjustedRound = async(sent) => {
+    turn('user', 'user', sent.instruction);
+    milestone('courseai_template_log_adjusting');
+    resetSeen();
+    showGeneratingHeader((await getLabels()).title);
+    await paintStage('activities');
+};
+
+/**
+ * Settle one decision of the teacher.
+ *
+ * @param {ReviewFlow} flow
+ * @param {Object} outcome What the flow answered to the decision.
+ * @param {number} sessionId Local session id, for example 139.
+ * @returns {Promise<string>} 'accepted', 'adjusting' or 'again' when the review stays open.
+ */
+const settleDecision = async(flow, outcome, sessionId) => {
+    if (outcome.screen === 'accepted') {
+        return 'accepted';
+    }
+    if (outcome.error === 'toolong') {
+        const texts = await getLabels();
+        turn('ai', 'danger', texts.adjustTooLong);
+        return 'again';
+    }
+    if (!outcome.send) {
+        return 'again';
+    }
+    const stored = await sendAdjustment(flow, outcome.send, sessionId);
+    if (!stored) {
+        return 'again';
+    }
+    await startAdjustedRound(outcome.send);
+    return 'adjusting';
+};
+
+/**
+ * Keep the review open until the teacher accepts the course or a change request is stored.
+ *
+ * @param {ReviewFlow} flow
+ * @param {{generated: Array<Object>}} shown The review that is on screen.
+ * @param {number} sessionId Local session id, for example 139.
+ * @returns {Promise<string>} 'accepted' or 'adjusting'.
+ */
+const reviewResult = async(flow, shown, sessionId) => {
+    const rows = adjustable(shown.generated);
+    for (;;) {
+        const decision = await askForDecision(rows);
+        const outcome = flow.submit(decision);
+        const verdict = await settleDecision(flow, outcome, sessionId);
+        if (verdict !== 'again') {
+            return verdict;
+        }
+    }
 };
 
 /**
@@ -211,11 +319,13 @@ const finishRun = (buildCourse) => {
  *
  * @param {number} sessionId Local session id, for example 139.
  * @param {Object} question The question event.
+ * @param {ReviewFlow} flow
  */
-const waitForAnswer = async(sessionId, question) => {
+const waitForAnswer = async(sessionId, question, flow) => {
     hideWorkingIndicator();
     milestone('template_agent_log_waiting');
     await askQuestion(sessionId, question);
+    flow.answered();
     milestone('template_agent_log_resumed');
     await paintStage('activities');
 };
@@ -232,15 +342,53 @@ const waitForRetry = async(failure) => {
 };
 
 /**
- * Follow the stream of a run, pass by pass, until the run completes.
+ * The run completed: review what it generated and, when the teacher accepts it, build the course.
+ *
+ * @param {Object} data The completed event.
+ * @param {Object} run {buildCourse, sessionId, flow} of the run.
+ * @returns {Promise<{done: boolean, value: *}>} done is true once the course was built.
+ */
+const completePass = async(data, run) => {
+    milestone('courseai_template_log_completed');
+    await paintReview();
+    const shown = run.flow.completed(data);
+    const verdict = await reviewResult(run.flow, shown, run.sessionId);
+    if (verdict !== 'accepted') {
+        return {done: false, value: null};
+    }
+    const course = await finishRun(run.buildCourse);
+    return {done: true, value: course};
+};
+
+/**
+ * Act on how one pass of the stream ended.
+ *
+ * @param {string} outcome 'completed', 'retry' or 'question'.
+ * @param {Object} data The event the pass ended on.
+ * @param {Object} run {buildCourse, sessionId, flow} of the run.
+ * @returns {Promise<{done: boolean, value: *}>}
+ */
+const settlePass = async(outcome, data, run) => {
+    if (outcome === 'completed') {
+        return completePass(data, run);
+    }
+    if (outcome === 'retry') {
+        await waitForRetry(data);
+        return {done: false, value: null};
+    }
+    await waitForAnswer(run.sessionId, data, run.flow);
+    return {done: false, value: null};
+};
+
+/**
+ * Follow the stream of a run, pass by pass, until the teacher accepts a completed run and the course is built.
  *
  * @param {string} streamUrl Relay URL of the stream of the run.
- * @param {Function} buildCourse Creates the course once the run completed.
- * @param {number} sessionId Local session id, for example 139.
+ * @param {Object} run {buildCourse, sessionId, flow} of the run.
  * @param {{total: number, done: number}} progress Counters of the activities written.
  * @returns {Promise<*>} What buildCourse returns.
  */
-const followRun = async(streamUrl, buildCourse, sessionId, progress) => {
+const followRun = async(streamUrl, run, progress) => {
     for (;;) {
         const {outcome, data} = await watchOnce(
             streamUrl,
@@ -248,22 +396,19 @@ const followRun = async(streamUrl, buildCourse, sessionId, progress) => {
             (eventData, eventProgress) => applyEvent(eventData, eventProgress, paintStage),
             closeView
         );
-        if (outcome === 'completed') {
-            return finishRun(buildCourse);
-        }
-        if (outcome === 'retry') {
-            await waitForRetry(data);
-        } else {
-            await waitForAnswer(sessionId, data);
+        const settled = await settlePass(outcome, data, run);
+        if (settled.done) {
+            return settled.value;
         }
     }
 };
 
 /**
- * Run a template generation: open the stream, show what the AI does, stop to ask what it needs and go on.
+ * Run a template generation: open the stream, show what the AI does, stop to ask what it needs, show the review
+ * when it completes and go on when the teacher asks for changes.
  *
  * @param {string} streamUrl Relay URL of the stream of the run.
- * @param {Function} buildCourse Creates the course once the run completed.
+ * @param {Function} buildCourse Creates the course once the teacher accepted the result.
  * @param {number} sessionId Local session id, for example 139.
  * @param {{prompt: string, templateName: string}} context What the teacher asked and the template used.
  * @returns {Promise<*>} What buildCourse returns.
@@ -271,12 +416,18 @@ const followRun = async(streamUrl, buildCourse, sessionId, progress) => {
 export const runGenerationStream = async(streamUrl, buildCourse, sessionId, context) => {
     await openView(context);
     await paintStage('connecting');
-    return followRun(streamUrl, buildCourse, sessionId, {total: 0, done: 0});
+    const run = {buildCourse, sessionId, flow: new ReviewFlow()};
+    return followRun(streamUrl, run, {total: 0, done: 0});
 };
 
 const lastFailure = (events) => {
     const failures = events.filter((event) => event && event.type === 'failed');
     return failures[failures.length - 1] || null;
+};
+
+const lastCompleted = (events) => {
+    const completed = events.filter((event) => event && event.type === 'completed');
+    return completed[completed.length - 1] || null;
 };
 
 const replayEvents = (events, progress) => {
@@ -294,11 +445,28 @@ const parseJson = (text, fallback) => {
 };
 
 /**
+ * A page that reloads with a completed run: show its review again and, once the teacher accepts, build the course.
+ *
+ * @param {Array<Object>} events The events of the run, in order.
+ * @param {Object} run {buildCourse, sessionId, flow} of the run.
+ * @returns {Promise<*>} What buildCourse returns, or null when a change request goes on.
+ */
+const resumeReview = async(events, run) => {
+    await paintReview();
+    const shown = run.flow.completed(lastCompleted(events));
+    const verdict = await reviewResult(run.flow, shown, run.sessionId);
+    if (verdict === 'accepted') {
+        return finishRun(run.buildCourse);
+    }
+    return null;
+};
+
+/**
  * Repaint a template generation after a reload and go on from where it was: replay what was shown, show the
- * pending question again, or follow the stream.
+ * review or the pending question again, or follow the stream.
  *
  * @param {Object} snapshot The state of the run: status, streamurl, pendingquestion and progressevents.
- * @param {Function} buildCourse Creates the course once the run completed.
+ * @param {Function} buildCourse Creates the course once the teacher accepted the result.
  * @param {number} sessionId Local session id, for example 139.
  * @param {{prompt: string, templateName: string}} context What the teacher asked and the template used.
  * @returns {Promise<*>} What buildCourse returns, or null when the run cannot go on.
@@ -309,27 +477,33 @@ export const resumeGenerationStream = async(snapshot, buildCourse, sessionId, co
     const events = parseJson(snapshot.progressevents, []);
     replayEvents(events, progress);
 
-    if (snapshot.status === 'COMPLETED') {
-        return finishRun(buildCourse);
-    }
-    if (snapshot.status === 'FAILED') {
-        const failure = lastFailure(events);
-        if (failure === null || failure.retryable !== true) {
-            let message = '';
-            if (failure !== null) {
-                message = failure.message;
-            }
-            closeView(message);
-            return null;
+    const run = {buildCourse, sessionId, flow: new ReviewFlow()};
+    const screen = run.flow.restore(snapshot, events);
+
+    if (screen.screen === 'review') {
+        const course = await resumeReview(events, run);
+        if (course !== null) {
+            return course;
         }
-        await waitForRetry(failure);
     }
-    if (snapshot.status === 'WAITING_USER') {
+    if (screen.screen === 'failed') {
+        const failure = lastFailure(events);
+        let message = '';
+        if (failure !== null) {
+            message = failure.message;
+        }
+        closeView(message);
+        return null;
+    }
+    if (screen.screen === 'retry') {
+        await waitForRetry(lastFailure(events));
+    }
+    if (screen.screen === 'question') {
         const question = parseJson(snapshot.pendingquestion, null);
         if (question !== null) {
-            await waitForAnswer(sessionId, question);
+            await waitForAnswer(sessionId, question, run.flow);
         }
     }
     await paintStage('connecting');
-    return followRun(snapshot.streamurl, buildCourse, sessionId, progress);
+    return followRun(snapshot.streamurl, run, progress);
 };
