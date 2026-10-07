@@ -42,21 +42,27 @@ final class link_token {
      * Replace the tokens whose uid has a URL.
      *
      * The URL is escaped for the attribute it lands in. A token with a uid
-     * that has no URL stays where it is.
+     * that has no URL stays where it is. A src takes the embed URL of its uid
+     * when it has one, because it shows what it points at instead of opening it.
      *
      * @param string $text
      * @param array $urlbyuid uid => URL.
+     * @param array $embedurlbyuid uid => URL a src shows, for the targets that have a file to show.
      * @return string
      */
-    public static function replace(string $text, array $urlbyuid): string {
+    public static function replace(string $text, array $urlbyuid, array $embedurlbyuid = []): string {
         return preg_replace_callback(
             self::ATTRIBUTE_PATTERN,
-            static function (array $match) use ($urlbyuid): string {
+            static function (array $match) use ($urlbyuid, $embedurlbyuid): string {
                 $uid = $match[3];
-                if (!isset($urlbyuid[$uid])) {
+                $url = $urlbyuid[$uid] ?? null;
+                if (strtolower($match[1]) === 'src' && isset($embedurlbyuid[$uid])) {
+                    $url = $embedurlbyuid[$uid];
+                }
+                if ($url === null) {
                     return $match[0];
                 }
-                $escaped = s($urlbyuid[$uid]);
+                $escaped = s($url);
                 return $match[1] . '=' . $match[2] . $escaped . $match[2];
             },
             $text

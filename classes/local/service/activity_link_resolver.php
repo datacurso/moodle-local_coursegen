@@ -70,10 +70,11 @@ final class activity_link_resolver {
         course_modinfo::clear_instance_cache($courseid);
         $modinfo = get_fast_modinfo($courseid);
         $urlbyuid = self::urls_by_uid($cmidbyuid, $modinfo);
+        $embedurlbyuid = self::file_urls_by_uid($cmidbyuid, $modinfo);
 
         $transaction = $DB->start_delegated_transaction();
         try {
-            self::resolve_activities($modinfo, $generatedcmids, $urlbyuid);
+            self::resolve_activities($modinfo, $generatedcmids, $urlbyuid, $embedurlbyuid);
             $transaction->allow_commit();
         } catch (\Throwable $exception) {
             $transaction->rollback($exception);
@@ -103,16 +104,55 @@ final class activity_link_resolver {
     }
 
     /**
+     * The URL of the stored file of every target that is a file resource.
+     *
+     * A src that points at a resource shows its file, so it needs the address of the file in the new course. A
+     * resource with no file is left out and its src keeps the page URL.
+     *
+     * @param array<string,int> $cmidbyuid
+     * @param course_modinfo $modinfo
+     * @return array<string,string> uid => URL of the file.
+     */
+    private static function file_urls_by_uid(array $cmidbyuid, course_modinfo $modinfo): array {
+        global $DB;
+
+        $urls = [];
+        foreach ($cmidbyuid as $uid => $cmid) {
+            $cm = $modinfo->get_cm($cmid);
+            if ($cm->modname !== 'resource') {
+                continue;
+            }
+            $files = get_file_storage()->get_area_files($cm->context->id, 'mod_resource', 'content', 0, 'sortorder, id', false);
+            $file = reset($files);
+            if (!$file) {
+                continue;
+            }
+            $revision = (int) $DB->get_field('resource', 'revision', ['id' => $cm->instance]);
+            $filepath = $file->get_filepath();
+            $filename = $file->get_filename();
+            $url = \moodle_url::make_pluginfile_url($cm->context->id, 'mod_resource', 'content', $revision, $filepath, $filename);
+            $urls[(string) $uid] = $url->out(false);
+        }
+        return $urls;
+    }
+
+    /**
      * Resolve the texts of each of the given activities.
      *
      * @param course_modinfo $modinfo
      * @param int[] $generatedcmids
      * @param array<string,string> $urlbyuid
+     * @param array<string,string> $embedurlbyuid
      */
-    private static function resolve_activities(course_modinfo $modinfo, array $generatedcmids, array $urlbyuid): void {
+    private static function resolve_activities(
+        course_modinfo $modinfo,
+        array $generatedcmids,
+        array $urlbyuid,
+        array $embedurlbyuid
+    ): void {
         foreach ($generatedcmids as $cmid) {
             $cm = $modinfo->get_cm($cmid);
-            self::resolve_activity($cm, $urlbyuid);
+            self::resolve_activity($cm, $urlbyuid, $embedurlbyuid);
         }
     }
 
@@ -121,8 +161,9 @@ final class activity_link_resolver {
      *
      * @param cm_info $cm
      * @param array<string,string> $urlbyuid
+     * @param array<string,string> $embedurlbyuid
      */
-    private static function resolve_activity(cm_info $cm, array $urlbyuid): void {
+    private static function resolve_activity(cm_info $cm, array $urlbyuid, array $embedurlbyuid): void {
         global $DB;
 
         $texts = module_link_texts_registry::for_module($cm->modname);
@@ -130,7 +171,7 @@ final class activity_link_resolver {
             return;
         }
         $records = $DB->get_records($texts->table(), [$texts->instance_column() => $cm->instance]);
-        self::resolve_records($cm, $texts, $records, $urlbyuid);
+        self::resolve_records($cm, $texts, $records, $urlbyuid, $embedurlbyuid);
     }
 
     /**
@@ -140,10 +181,17 @@ final class activity_link_resolver {
      * @param module_link_texts $texts
      * @param \stdClass[] $records
      * @param array<string,string> $urlbyuid
+     * @param array<string,string> $embedurlbyuid
      */
-    private static function resolve_records(cm_info $cm, module_link_texts $texts, array $records, array $urlbyuid): void {
+    private static function resolve_records(
+        cm_info $cm,
+        module_link_texts $texts,
+        array $records,
+        array $urlbyuid,
+        array $embedurlbyuid
+    ): void {
         foreach ($records as $record) {
-            self::resolve_columns($cm, $texts, $record, $urlbyuid);
+            self::resolve_columns($cm, $texts, $record, $urlbyuid, $embedurlbyuid);
         }
     }
 
@@ -154,10 +202,17 @@ final class activity_link_resolver {
      * @param module_link_texts $texts
      * @param \stdClass $record
      * @param array<string,string> $urlbyuid
+     * @param array<string,string> $embedurlbyuid
      */
-    private static function resolve_columns(cm_info $cm, module_link_texts $texts, \stdClass $record, array $urlbyuid): void {
+    private static function resolve_columns(
+        cm_info $cm,
+        module_link_texts $texts,
+        \stdClass $record,
+        array $urlbyuid,
+        array $embedurlbyuid
+    ): void {
         foreach ($texts->text_columns() as $column) {
-            self::resolve_column($cm, $texts->table(), $record, $column, $urlbyuid);
+            self::resolve_column($cm, $texts->table(), $record, $column, $urlbyuid, $embedurlbyuid);
         }
     }
 
@@ -169,13 +224,21 @@ final class activity_link_resolver {
      * @param \stdClass $record
      * @param string $column
      * @param array<string,string> $urlbyuid
+     * @param array<string,string> $embedurlbyuid
      * @throws \moodle_exception When a token remains after resolving.
      */
-    private static function resolve_column(cm_info $cm, string $table, \stdClass $record, string $column, array $urlbyuid): void {
+    private static function resolve_column(
+        cm_info $cm,
+        string $table,
+        \stdClass $record,
+        string $column,
+        array $urlbyuid,
+        array $embedurlbyuid
+    ): void {
         global $DB;
 
         $original = (string) $record->{$column};
-        $resolved = link_token::replace($original, $urlbyuid);
+        $resolved = link_token::replace($original, $urlbyuid, $embedurlbyuid);
 
         $remaininguid = link_token::first_remaining_uid($resolved);
         if ($remaininguid !== null) {
