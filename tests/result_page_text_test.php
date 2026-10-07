@@ -95,4 +95,37 @@ final class result_page_text_test extends \advanced_testcase {
             $laid['structure']['page'][0]['content']
         );
     }
+
+    /**
+     * A file the page shows inside itself is shown from the address of the file, not from the preview of its resource.
+     */
+    public function test_an_embedded_file_shows_the_file_of_its_resource(): void {
+        $parameters = $this->page_parameters(['content' => '<iframe src="$@COURSEGENLINK*11340@$"></iframe>']);
+
+        $laid = result_page_text::laid_in(
+            'page',
+            $parameters,
+            ['11340' => 'https://example.com/p?uid=11340'],
+            ['11340' => '/draftfile.php/5/user/draft/9/uid/guide.pdf']
+        );
+
+        $this->assertSame(
+            '<iframe src="/draftfile.php/5/user/draft/9/uid/guide.pdf"></iframe>',
+            $laid['structure']['page'][0]['content']
+        );
+    }
+
+    /**
+     * Without an address for the file, the embedded file keeps the preview of its resource.
+     */
+    public function test_an_embedded_file_without_an_address_keeps_the_preview_of_its_resource(): void {
+        $parameters = $this->page_parameters(['content' => '<iframe src="$@COURSEGENLINK*11340@$"></iframe>']);
+
+        $laid = result_page_text::laid_in('page', $parameters, ['11340' => 'https://example.com/p?uid=11340']);
+
+        $this->assertSame(
+            '<iframe src="https://example.com/p?uid=11340"></iframe>',
+            $laid['structure']['page'][0]['content']
+        );
+    }
 }

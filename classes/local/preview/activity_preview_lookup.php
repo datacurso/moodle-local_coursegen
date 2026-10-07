@@ -219,7 +219,27 @@ class activity_preview_lookup {
             ]);
             $urlbyuid[$uid] = $url->out(false);
         }
-        return result_page_text::laid_in($found['modname'], $found['parameters'], $urlbyuid);
+        $embedurlbyuid = self::embedded_files($found, $answer, $session);
+        return result_page_text::laid_in($found['modname'], $found['parameters'], $urlbyuid, $embedurlbyuid);
+    }
+
+    /**
+     * The address of the file of each resource a finished page shows inside itself.
+     *
+     * @param array $found What from_answer() found.
+     * @param array $answer The result of the run.
+     * @param course_session $session
+     * @return array<string,string> Uid of the resource => address its file is served from.
+     */
+    private static function embedded_files(array $found, array $answer, course_session $session): array {
+        if ($found['modname'] !== 'page') {
+            return [];
+        }
+        $threadid = (string) $session->get('session_id');
+        $sessionid = (int) $session->get('id');
+        $store = new preview_draft_store($sessionid, $threadid);
+        $activities = (array) ($answer['generated_activities'] ?? []);
+        return embedded_file_addresses::for_page($activities, $found['parameters'], $store);
     }
 
     /**
