@@ -142,6 +142,19 @@ final class template_export_service_test extends \advanced_testcase {
         $this->assertSame(1, $entry['section']);
     }
 
+    public function test_a_page_travels_with_its_html_and_intro_where_the_service_reads_them(): void {
+        global $DB;
+        [$course, $page] = $this->make_course();
+        $record = $DB->get_record('page', ['id' => get_coursemodule_from_id('page', $page)->instance], '*', MUST_EXIST);
+        $templateid = $this->save_items($course, []);
+
+        $payload = template_export_service::build_init_payload($templateid);
+
+        $entry = $this->find_activity($payload, $page);
+        $this->assertSame($record->content, $entry['parameters']['content']);
+        $this->assertSame($record->intro, $entry['parameters']['intro']);
+    }
+
     public function test_the_payload_of_an_unknown_template_is_refused(): void {
         $this->expectException(\moodle_exception::class);
 

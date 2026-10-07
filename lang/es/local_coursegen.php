@@ -953,6 +953,7 @@ $string['courseai_template_instance_badge_tip'] = 'Aquí se creará para su curs
 $string['invalidtemplate'] = 'Plantilla inválida.';
 $string['courseai_template_prompt_placeholder'] = 'Describe cómo adaptar esta plantilla a tu curso…';
 $string['courseai_template_progress_count'] = '{$a->done} de {$a->total} actividades';
+$string['courseai_template_progress_unchanged'] = 'Sin cambios';
 $string['courseai_template_progress_title'] = 'Actividades generadas';
 $string['courseai_template_empty_state'] = 'Seleccione una plantilla arriba para comenzar a crear el curso.';
 

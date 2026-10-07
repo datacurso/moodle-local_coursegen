@@ -963,6 +963,7 @@ $string['courseai_template_title'] = 'Create course from template';
 $string['courseai_template_subtitle'] = 'Select a template, customize the structure, and generate.';
 $string['courseai_template_prompt_placeholder'] = 'Describe how to adapt this template to your course…';
 $string['courseai_template_progress_count'] = '{$a->done} of {$a->total} activities';
+$string['courseai_template_progress_unchanged'] = 'No changes';
 $string['courseai_template_progress_title'] = 'Generated activities';
 $string['courseai_template_empty_state'] = 'Please choose a template above to start building your course.';
 $string['courseai_template_locked_badge'] = 'From template';

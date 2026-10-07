@@ -68,7 +68,28 @@ class template_activity_export {
             // The files the activity keeps, which its tree only points at: a
             // folder is its files, a file resource is one of them.
             'files' => $files,
-        ] + $questions;
+        ] + $questions + self::page_text_of($cm, $read['tree']);
+    }
+
+    /**
+     * A page's html and intro, where the service reads them.
+     *
+     * The service rewrites a page from its own html, which in the tree sits
+     * deep inside the page's element; the contract asks for it flat.
+     *
+     * @param cm_info $cm
+     * @param array $tree The activity's structure.
+     * @return array Empty for anything but a page.
+     */
+    private static function page_text_of(cm_info $cm, array $tree): array {
+        if ($cm->modname !== 'page') {
+            return [];
+        }
+        $row = $tree['page'][0] ?? [];
+        return [
+            'content' => (string) ($row['content'] ?? ''),
+            'intro' => (string) ($row['intro'] ?? ''),
+        ];
     }
 
     /**
