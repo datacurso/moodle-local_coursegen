@@ -115,6 +115,39 @@ class template_ai_api_service {
     }
 
     /**
+     * Ask the completed run to change its result; the run reopens from its draft.
+     *
+     * @param string $threadid Thread id of the run.
+     * @param string $callid Id of this request, so a repeated one is recognised.
+     * @param string $text What to change.
+     * @param string $aid Draft id of the only activity to change, for example "t:11342"; empty for every open activity.
+     * @return array What the service stored: round and aids.
+     */
+    public function adjust(string $threadid, string $callid, string $text, string $aid = ''): array {
+        $body = [
+            'thread_id' => $threadid,
+            'kind' => 'adjust',
+            'call_id' => $callid,
+            'text' => $text,
+        ];
+        if ($aid !== '') {
+            $body['aid'] = $aid;
+        }
+        return (array) $this->client->request('POST', self::BASE . '/feedback', $body);
+    }
+
+    /**
+     * Delete every file the run holds, once the course was created or the teacher cancelled.
+     *
+     * Repeating it is harmless. It is never called between adjust rounds: the next round still needs the files.
+     *
+     * @param string $threadid Thread id of the run.
+     */
+    public function delete_files(string $threadid): void {
+        $this->client->request('DELETE', self::BASE . '/files/' . rawurlencode($threadid));
+    }
+
+    /**
      * Download a file attached to the draft of the run.
      *
      * @param string $threadid Thread id of the run.
