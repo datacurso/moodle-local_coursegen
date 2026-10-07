@@ -604,3 +604,8 @@ body.cg-plan-reviewed .courseai-checklist-item.is-loading .courseai-checklist-ch
   flex: 1;
   min-width: 0;
 }
+
+/* An activity the run left as it was: the same check, a quieter name. */
+.courseai-checklist-item.is-unchanged .courseai-checklist-name {
+    opacity: 0.65;
+}

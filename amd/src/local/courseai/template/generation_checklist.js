@@ -158,8 +158,9 @@ export const addActivity = (data) => {
  *
  * @param {string} uid
  * @param {Object} progress {total, done}
+ * @param {boolean} unchanged True when the run left the activity as it was.
  */
-export const closeActivity = (uid, progress) => {
+export const closeActivity = (uid, progress, unchanged = false) => {
     const done = progress.done;
     const total = progress.total;
     enqueue(async() => {
@@ -168,6 +169,31 @@ export const closeActivity = (uid, progress) => {
             item.classList.remove('is-loading');
             item.classList.add('is-done');
         }
+        if (item && unchanged) {
+            item.classList.add('is-unchanged');
+            const detail = item.querySelector('.courseai-checklist-detail');
+            const label = await getString('courseai_template_progress_unchanged', 'local_coursegen');
+            detail.textContent = [detail.textContent.trim(), label].filter(Boolean).join(' · ');
+        }
+        await paintCount({done, total});
+    });
+};
+
+/**
+ * The run is over: no row may keep spinning, and the count shows every activity accounted for.
+ *
+ * @param {Object} progress Mutable {total, done}; done catches up with total.
+ */
+export const settleChecklist = (progress) => {
+    progress.done = Math.max(progress.done, progress.total);
+    const done = progress.done;
+    const total = progress.total;
+    enqueue(async() => {
+        const loading = document.querySelectorAll('#courseaiChecklistList .courseai-checklist-item.is-loading');
+        loading.forEach((item) => {
+            item.classList.remove('is-loading');
+            item.classList.add('is-done');
+        });
         await paintCount({done, total});
     });
 };

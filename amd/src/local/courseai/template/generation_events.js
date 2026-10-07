@@ -26,11 +26,19 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {addActivity, closeActivity, openChecklist} from 'local_coursegen/local/courseai/template/generation_checklist';
+import {
+    addActivity,
+    closeActivity,
+    openChecklist,
+    settleChecklist,
+} from 'local_coursegen/local/courseai/template/generation_checklist';
 import {createSeen, failureOutcome, normalizeEvent} from 'local_coursegen/local/courseai/template/agent_events';
 import {showToolCall, showToolResult} from 'local_coursegen/local/courseai/template/agent_steps';
 
 const seen = createSeen();
+
+/** The reason the service gives for an activity the run left as it was. */
+const REASON_NOT_CHANGED = 'not_changed';
 
 /**
  * Forget the events already shown, when a run starts or a reloaded page repaints it.
@@ -100,6 +108,7 @@ const startActivity = (data, progress) => {
  * @returns {string} ''
  */
 const finishActivity = (data, progress, paintStage) => {
+    const unchanged = data.type === 'activity_progress_failed' && data.reason === REASON_NOT_CHANGED;
     // A failed activity is still counted and still stops looking
     // "in progress": the run itself then fails, which is what the
     // professor is told about.
@@ -108,7 +117,7 @@ const finishActivity = (data, progress, paintStage) => {
     if (progress.total < progress.done) {
         progress.total = progress.done;
     }
-    closeActivity(data.uid, progress);
+    closeActivity(data.uid, progress, unchanged);
     if (progress.total > 0 && progress.done >= progress.total) {
         paintStage('saving');
     }
@@ -143,7 +152,10 @@ const EVENT_HANDLERS = {
     question: () => 'question',
     activity_progress_done: finishActivity,
     activity_progress_failed: finishActivity,
-    completed: () => 'completed',
+    completed: (data, progress) => {
+        settleChecklist(progress);
+        return 'completed';
+    },
     failed: (data) => failureOutcome(data),
 };
 
