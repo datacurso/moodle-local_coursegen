@@ -4095,8 +4095,10 @@ body.cg-generating :is(#prvSections, #tplModeStructure) .cg-gen-active .cg-activ
   opacity: .85;
 }
 /* IN PROGRESS — a small spinner on the icon in the brand coral, kept SOFT (light
-   coral ring + slightly dimmed by the card opacity) so it is present but not loud. */
-body.cg-generating :is(#prvSections, #tplModeStructure) .cg-gen-active .activity-icon::after {
+   coral ring + slightly dimmed by the card opacity) so it is present but not loud.
+   A row the AI has not reached yet carries the same spinner, in grey, so every
+   row it will write shows at a glance that it is still to come. */
+body.cg-generating :is(#prvSections, #tplModeStructure) :is(.cg-gen-pending, .cg-gen-active) .activity-icon::after {
   content: '';
   position: absolute;
   right: -5px;
@@ -4110,6 +4112,28 @@ body.cg-generating :is(#prvSections, #tplModeStructure) .cg-gen-active .activity
   background: #fff;
   box-shadow: 0 0 0 2px #fff;
   animation: spin .8s linear infinite;
+}
+/* The row being written stands out from the queued ones: a soft coral tint and a coral edge. */
+body.cg-generating :is(#prvSections, #tplModeStructure) .cg-gen-active .activity-item {
+  background: hsl(10 81% 63% / .06);
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+/* While the AI waits for the answer of the professor nothing is being written, so no spinner turns. */
+body.cg-generating.cg-generation-paused :is(#prvSections, #tplModeStructure) :is(.cg-gen-pending, .cg-gen-active) .activity-icon::after,
+body.cg-generating.cg-generation-paused .courseai-checklist-item.is-loading .spinner-icon {
+  animation-play-state: paused;
+  display: none;
+}
+/* The line that counts the seconds of a long call, under the progress list. */
+.cg-waiting-line {
+  display: none;
+  margin: .5rem 0 0;
+  padding: 0 .25rem;
+  color: var(--muted-fg);
+  font-size: .875rem;
+}
+body.cg-generating:not(.cg-generation-paused) .cg-waiting-line {
+  display: block;
 }
 /* DONE — the card "turns on" (full colour) + a sober check badge on the icon
    (same muted tone as the section checklist check, NOT a loud green). */

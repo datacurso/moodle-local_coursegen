@@ -245,6 +245,7 @@ $string['template_agent_tool_get_draft'] = 'Checking the course so far';
 $string['template_agent_tool_list_template'] = 'Reading the template';
 $string['template_agent_tool_modify_activity'] = 'Modifying an activity';
 $string['template_agent_tool_set_link'] = 'Linking an activity';
+$string['template_agent_waiting'] = 'Waiting for the AI… {$a} s';
 $string['template_col_activities'] = 'Activities';
 $string['template_col_ai'] = 'Modified with AI';
 $string['template_col_course'] = 'Course';

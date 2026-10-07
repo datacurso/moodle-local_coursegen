@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100613
+
+### Added
+
+- **While a course is generated from a template, every activity the AI will write shows a spinner from the first moment, and a long wait counts its seconds**  
+  The rows marked to be generated stayed still until the AI reached them, and the conversation showed nothing for as long as the first answer of the AI took. Now each of those rows spins as soon as the generation starts, the row being written stands out from the queued ones, and a line under the progress list says "Waiting for the AI… 35 s" and updates in place until the call ends. When the AI stops to ask a question the spinners and the line stop, and they turn again when it goes on
+
 ## [2.0.10] - 2026100612
 
 ### Fixed

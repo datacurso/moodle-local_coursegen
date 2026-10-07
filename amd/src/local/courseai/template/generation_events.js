@@ -32,7 +32,13 @@ import {
     openChecklist,
     settleChecklist,
 } from 'local_coursegen/local/courseai/template/generation_checklist';
-import {createSeen, failureOutcome, normalizeEvent} from 'local_coursegen/local/courseai/template/agent_events';
+import {
+    createSeen,
+    failureOutcome,
+    normalizeEvent,
+    waitingSeconds,
+} from 'local_coursegen/local/courseai/template/agent_events';
+import {clearWaiting, setPaused, showWaiting} from 'local_coursegen/local/courseai/template/generation_waiting';
 import {showToolCall} from 'local_coursegen/local/courseai/template/agent_steps';
 
 const seen = createSeen();
@@ -79,6 +85,40 @@ export const markRow = (uid, status) => {
 const resetProgress = (progress, data) => {
     progress.total = Math.max(0, Number(data.total) || 0);
     progress.done = 0;
+};
+
+/**
+ * Queue every activity the run announces, so its row spins from the first event until it ends.
+ *
+ * @param {Object} data An activity_progress_init event: the activities the AI may work on.
+ */
+const queueAnnouncedRows = (data) => {
+    let announced = data.activities;
+    if (!Array.isArray(announced)) {
+        announced = [];
+    }
+    for (const activity of announced) {
+        const row = normalizeEvent(activity);
+        if (row.uid !== '') {
+            markRow(row.uid, 'pending');
+        }
+    }
+};
+
+/**
+ * A status of the run: only the one that counts the seconds of a call in flight is shown.
+ *
+ * @param {Object} data
+ * @returns {string} ''
+ */
+const showStatus = (data) => {
+    const seconds = waitingSeconds(data);
+    if (seconds >= 0) {
+        // A call in flight means the run went on after an answer, so the spinners turn again.
+        setPaused(false);
+        showWaiting(seconds);
+    }
+    return '';
 };
 
 /**
@@ -134,13 +174,14 @@ const EVENT_HANDLERS = {
         // A new round after a change request reopens activities and may ask again with the same ids.
         seen.reset();
         resetProgress(progress, data);
+        queueAnnouncedRows(data);
         progress.opened = true;
         openChecklist(progress);
         paintStage('activities');
         return '';
     },
     activity_progress_start: startActivity,
-    status: () => '',
+    status: showStatus,
     token: () => '',
     section: () => '',
     tool_call: (data) => {
@@ -156,6 +197,21 @@ const EVENT_HANDLERS = {
         return 'completed';
     },
     failed: (data) => failureOutcome(data),
+};
+
+/**
+ * Any event of the run other than a status ends the wait that the last tick showed, and a question also pauses
+ * the spinners until the next event shows the run went on.
+ *
+ * @param {Object} event
+ */
+const settleWaiting = (event) => {
+    if (event.type === 'status') {
+        return;
+    }
+    clearWaiting();
+    const paused = event.type === 'question';
+    setPaused(paused);
 };
 
 /**
@@ -175,5 +231,6 @@ export const applyEvent = (data, progress, paintStage) => {
         return '';
     }
     const handler = EVENT_HANDLERS[event.type];
+    settleWaiting(event);
     return handler(event, progress, paintStage);
 };
