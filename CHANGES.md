@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100611
+
+### Fixed
+
+- **The preview of a file the AI attached no longer fails, and every preview file is read from the draft area of the reviewer**  
+  Opening the preview of a modified file resource stopped with "A generated file entry has no thread_id", because the files of the template result carry only an id and a name. The files of a run are now downloaded once into the draft area of the person who reviews it, in a folder named by the uid of their activity, and the previews address them there. A modified file resource shows the file that was attached instead of the file of the template. Creating the course copies the files from that draft area into the new activities and the resource, and the draft files are deleted when the course is created or the generation is cancelled. The old storage of generated files under the system context and its file server are removed.
+
+### Changed
+
+- **Each activity of a template now has its own opaque uid instead of the number of its course module**  
+  The uid is generated when the activity is first saved in the template, stays the same while the template is saved again, and is what the payload, the answer of the AI, the previews and the links between activities are named by. The upgrade gives every activity already saved in a template its uid. The progress list and the change requests find the row of an activity through its course module id, which the row keeps separately.
+
 ## [2.0.10] - 2026100610
 
 ### Fixed

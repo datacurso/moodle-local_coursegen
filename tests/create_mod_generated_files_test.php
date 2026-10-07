@@ -16,7 +16,7 @@
 
 namespace local_coursegen\local\service;
 
-use local_coursegen\utils\generated_file_cache;
+use local_coursegen\utils\preview_draft_store;
 
 /**
  * An activity created from a result with generated files ends up with those files in its own file area.
@@ -28,21 +28,28 @@ use local_coursegen\utils\generated_file_cache;
  * @covers     \local_coursegen\local\service\create_mod_service
  */
 final class create_mod_generated_files_test extends \advanced_testcase {
+    /** @var string The opaque uid of the activity. */
+    private const UID = '7f1c2a9e-5b0d-4c1e-9a77-3e2d8b6a4f10';
+
     /**
-     * A generated file entry, stored in the cache so no download is needed.
+     * A draft store whose downloader stores seven bytes.
+     *
+     * @return preview_draft_store
+     */
+    private function store(): preview_draft_store {
+        $downloader = static function (string $thread, string $id, string $name, array $record) {
+            return get_file_storage()->create_file_from_string($record, 'PNGDATA');
+        };
+        return new preview_draft_store(211, 'thread-1', $downloader);
+    }
+
+    /**
+     * A generated file entry as the template agent returns it: no thread_id and no size.
      *
      * @return array
      */
-    private function stored_entry(): array {
-        $entry = [
-            'filename' => 'foro-1a2b3c4d-1.png',
-            'mimetype' => 'image/png',
-            'size' => 7,
-            'thread_id' => 'thread-1',
-            'file_id' => str_repeat('a', 32) . '.png',
-        ];
-        get_file_storage()->create_file_from_string(generated_file_cache::file_record($entry), 'PNGDATA');
-        return $entry;
+    private function entry(): array {
+        return ['file_id' => str_repeat('a', 32) . '.png', 'filename' => 'foro-1a2b3c4d-1.png', 'content_type' => 'image/png'];
     }
 
     /**
@@ -54,6 +61,7 @@ final class create_mod_generated_files_test extends \advanced_testcase {
     private function page_result(array $entries): array {
         $result = [
             'resource_type' => 'page',
+            'uid' => self::UID,
             'parameters' => [
                 'modulename' => 'page',
                 'visible' => 1,
@@ -82,9 +90,9 @@ final class create_mod_generated_files_test extends \advanced_testcase {
         $this->resetAfterTest();
         $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course(['numsections' => 2]);
-        $entry = $this->stored_entry();
 
-        $cm = create_mod_service::create_from_ai_result($this->page_result([$entry]), $course, 1);
+        $result = $this->page_result([$this->entry()]);
+        $cm = create_mod_service::create_from_ai_result($result, $course, 1, null, null, $this->store());
 
         $context = \context_module::instance($cm->coursemodule);
         $files = get_file_storage()->get_area_files($context->id, 'mod_page', 'content', false, 'filename', false);
@@ -97,18 +105,18 @@ final class create_mod_generated_files_test extends \advanced_testcase {
     }
 
     /**
-     * Once the activity exists, nothing keeps the stored copy.
+     * The file stays in the draft area of the user after the activity exists: the course creation discards it.
      */
-    public function test_the_stored_copy_is_removed_after_the_creation(): void {
+    public function test_the_draft_copy_stays_until_the_course_is_made(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course(['numsections' => 2]);
-        $entry = $this->stored_entry();
+        $store = $this->store();
 
-        create_mod_service::create_from_ai_result($this->page_result([$entry]), $course, 1);
+        create_mod_service::create_from_ai_result($this->page_result([$this->entry()]), $course, 1, null, null, $store);
 
-        $record = generated_file_cache::file_record($entry);
-        $this->assertFalse(get_file_storage()->file_exists(
+        $record = $store->file_record(self::UID, 'foro-1a2b3c4d-1.png');
+        $this->assertTrue(get_file_storage()->file_exists(
             $record['contextid'],
             $record['component'],
             $record['filearea'],

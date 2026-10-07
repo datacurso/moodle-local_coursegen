@@ -17,6 +17,7 @@
 namespace local_coursegen\local\service;
 
 use local_coursegen\tests\fixtures\downloading_template_api;
+use local_coursegen\utils\preview_draft_store;
 
 /**
  * Giving the copies of the template resources the files the run attached.
@@ -37,37 +38,36 @@ final class template_file_resource_applier_test extends \advanced_testcase {
     }
 
     /**
-     * The files of a draft area of the current user.
+     * A draft store of the generation session whose downloads go through the given client.
      *
-     * @param int $draftid Draft item id.
-     * @return int Count of files.
+     * @param template_ai_api_service $api
+     * @return preview_draft_store
      */
-    private function draft_count(int $draftid): int {
-        global $USER;
-        $context = \context_user::instance($USER->id);
-        return count(get_file_storage()->get_area_files($context->id, 'user', 'draft', $draftid, 'id', false));
+    private function store(template_ai_api_service $api): preview_draft_store {
+        return new preview_draft_store(211, 't-9', [$api, 'download_generated_file']);
     }
 
     /**
-     * The file lands in the copy of the resource and the draft area is emptied.
+     * The file lands in the copy of the resource, and the draft copy stays for the course creation to discard.
      */
-    public function test_the_file_lands_in_the_copy_and_the_draft_is_emptied(): void {
+    public function test_the_file_lands_in_the_copy_from_the_draft_area(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course();
         $copy = $this->getDataGenerator()->create_module('resource', ['course' => $course->id]);
         $api = new downloading_template_api();
-        $applier = new template_file_resource_applier($api);
-        $selected = [['uid' => '11340', 'cmid' => 11340, 'file' => ['file_id' => 'f1', 'filename' => 'guide.pdf']]];
+        $store = $this->store($api);
+        $applier = new template_file_resource_applier($store);
+        $selected = [['uid' => 'uid-11340', 'cmid' => 11340, 'file' => ['file_id' => 'f1', 'filename' => 'guide.pdf']]];
 
-        $failures = $applier->apply('t-9', $selected, [11340 => (int) $copy->cmid]);
+        $failures = $applier->apply($selected, [11340 => (int) $copy->cmid]);
 
         $this->assertSame([], $failures);
         $context = \context_module::instance($copy->cmid);
         $files = get_file_storage()->get_area_files($context->id, 'mod_resource', 'content', 0, 'id', false);
         $this->assertCount(1, $files);
         $this->assertSame('CONTENT OF f1', reset($files)->get_content());
-        $this->assertSame(0, $this->draft_count($api->drafts[0]));
+        $this->assertSame([$store->itemid()], $api->drafts);
     }
 
     /**
@@ -78,14 +78,14 @@ final class template_file_resource_applier_test extends \advanced_testcase {
         $this->setAdminUser();
         $api = $this->createMock(template_ai_api_service::class);
         $api->expects($this->never())->method('download_generated_file');
-        $applier = new template_file_resource_applier($api);
-        $selected = [['uid' => '11340', 'cmid' => 11340, 'file' => ['file_id' => 'f1', 'filename' => 'guide.pdf']]];
+        $applier = new template_file_resource_applier($this->store($api));
+        $selected = [['uid' => 'uid-11340', 'cmid' => 11340, 'file' => ['file_id' => 'f1', 'filename' => 'guide.pdf']]];
 
-        $this->assertSame(['guide.pdf'], $applier->apply('t-9', $selected, []));
+        $this->assertSame(['guide.pdf'], $applier->apply($selected, []));
     }
 
     /**
-     * A download that fails is reported, the draft is emptied and the next file is still applied.
+     * A download that fails is reported and the next file is still applied.
      */
     public function test_a_failed_download_is_reported_and_the_next_file_is_applied(): void {
         $this->resetAfterTest();
@@ -93,13 +93,13 @@ final class template_file_resource_applier_test extends \advanced_testcase {
         $course = $this->getDataGenerator()->create_course();
         $first = $this->getDataGenerator()->create_module('resource', ['course' => $course->id]);
         $second = $this->getDataGenerator()->create_module('resource', ['course' => $course->id]);
-        $applier = new template_file_resource_applier(new downloading_template_api('bad'));
+        $applier = new template_file_resource_applier($this->store(new downloading_template_api('bad')));
         $selected = [
-            ['uid' => '1', 'cmid' => 1, 'file' => ['file_id' => 'bad', 'filename' => 'bad.pdf']],
-            ['uid' => '2', 'cmid' => 2, 'file' => ['file_id' => 'ok', 'filename' => 'ok.pdf']],
+            ['uid' => 'uid-1', 'cmid' => 1, 'file' => ['file_id' => 'bad', 'filename' => 'bad.pdf']],
+            ['uid' => 'uid-2', 'cmid' => 2, 'file' => ['file_id' => 'ok', 'filename' => 'ok.pdf']],
         ];
 
-        $failures = $applier->apply('t-9', $selected, [1 => (int) $first->cmid, 2 => (int) $second->cmid]);
+        $failures = $applier->apply($selected, [1 => (int) $first->cmid, 2 => (int) $second->cmid]);
 
         $this->assertSame(['bad.pdf'], $failures);
         $this->assertDebuggingCalled(null, DEBUG_DEVELOPER);
@@ -116,10 +116,10 @@ final class template_file_resource_applier_test extends \advanced_testcase {
         $this->setAdminUser();
         $course = $this->getDataGenerator()->create_course();
         $copy = $this->getDataGenerator()->create_module('resource', ['course' => $course->id]);
-        $applier = new template_file_resource_applier(new downloading_template_api(null, true));
-        $selected = [['uid' => '1', 'cmid' => 1, 'file' => ['file_id' => 'f', 'filename' => 'x.pdf']]];
+        $applier = new template_file_resource_applier($this->store(new downloading_template_api(null, true)));
+        $selected = [['uid' => 'uid-1', 'cmid' => 1, 'file' => ['file_id' => 'f', 'filename' => 'x.pdf']]];
 
-        $this->assertSame(['x.pdf'], $applier->apply('t-9', $selected, [1 => (int) $copy->cmid]));
+        $this->assertSame(['x.pdf'], $applier->apply($selected, [1 => (int) $copy->cmid]));
     }
 
     /**
@@ -130,6 +130,6 @@ final class template_file_resource_applier_test extends \advanced_testcase {
         $api = $this->createMock(template_ai_api_service::class);
         $api->expects($this->never())->method('download_generated_file');
 
-        $this->assertSame([], (new template_file_resource_applier($api))->apply('t-9', [], [1 => 2]));
+        $this->assertSame([], (new template_file_resource_applier($this->store($api)))->apply([], [1 => 2]));
     }
 }

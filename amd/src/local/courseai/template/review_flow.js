@@ -30,6 +30,7 @@
 export const MAX_INSTRUCTION = 4000;
 
 const DIGITS = /^[0-9]+$/;
+const SAFE_UID = /^[A-Za-z0-9_.-]{1,128}$/;
 const ID_LENGTH_FROM_RANDOM = 12;
 
 /**
@@ -84,21 +85,39 @@ export const adjustable = (generated) => {
 };
 
 /**
- * The draft id the service gives an activity of the template, from the uid of its row.
+ * The course module id of the template activity a row stands for, read from the page.
  *
- * @param {*} uid Course module id of the template activity, for example "11342".
+ * @param {string} uid Opaque uid of the row, for example "7f1c2a9e-5b0d-4c1e-9a77-3e2d8b6a4f10".
+ * @returns {string} The course module id, for example "11342", or an empty text when the page has no such row.
+ */
+const cmidOfRowWithUid = (uid) => {
+    if (typeof document === 'undefined' || !SAFE_UID.test(uid)) {
+        return '';
+    }
+    const row = document.querySelector(`li.activity[data-generation-uid="${uid}"]`);
+    if (row === null) {
+        return '';
+    }
+    return String(row.dataset.generationCmid);
+};
+
+/**
+ * The draft id the service gives an activity of the template, from the opaque uid of its row.
+ *
+ * @param {*} uid Opaque uid of the row, for example "7f1c2a9e-5b0d-4c1e-9a77-3e2d8b6a4f10".
+ * @param {Function} cmidLookup Gives the course module id of the row of a uid; by default it reads the page.
  * @returns {string} "t:11342", or an empty text when the row is not an activity of the template.
  */
-export const rowAid = (uid) => {
+export const rowAid = (uid, cmidLookup = cmidOfRowWithUid) => {
     if (uid === null || uid === undefined) {
         return '';
     }
-    const text = String(uid);
-    const valid = DIGITS.test(text);
+    const cmid = String(cmidLookup(String(uid)));
+    const valid = DIGITS.test(cmid);
     if (!valid) {
         return '';
     }
-    return 't:' + text;
+    return 't:' + cmid;
 };
 
 /**
@@ -184,13 +203,14 @@ const targetsOf = (value) => {
  * The draft id of the only activity a request names, or an empty text when it names none or several.
  *
  * @param {Array<string>} targetIds
+ * @param {Function} cmidLookup Gives the course module id of the row of a uid.
  * @returns {string}
  */
-const aimedAid = (targetIds) => {
+const aimedAid = (targetIds, cmidLookup) => {
     if (targetIds.length !== 1) {
         return '';
     }
-    return rowAid(targetIds[0]);
+    return rowAid(targetIds[0], cmidLookup);
 };
 
 /**
@@ -214,8 +234,11 @@ const failureScreen = (events) => {
 export class ReviewFlow {
     /**
      * Start with nothing reviewed.
+     *
+     * @param {Function} cmidLookup Gives the course module id of the row of a uid; by default it reads the page.
      */
-    constructor() {
+    constructor(cmidLookup = cmidOfRowWithUid) {
+        this.cmidLookup = cmidLookup;
         this.generated = [];
         this.pending = false;
         this.adjusting = false;
@@ -269,7 +292,7 @@ export class ReviewFlow {
             return {error: 'toolong'};
         }
         const targetIds = targetsOf(decision.targetIds);
-        const aid = aimedAid(targetIds);
+        const aid = aimedAid(targetIds, this.cmidLookup);
         const callId = newCallId();
         this.pending = true;
         return {send: {instruction, targetIds, aid, callId}};

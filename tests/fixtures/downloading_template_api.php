@@ -19,7 +19,7 @@ namespace local_coursegen\tests\fixtures;
 use local_coursegen\local\service\template_ai_api_service;
 
 /**
- * A template agent client whose download puts the file in the draft area it is given and remembers the draft.
+ * A template agent client whose download puts the file where the record says and remembers the draft item.
  *
  * @package    local_coursegen
  * @category   test
@@ -53,11 +53,10 @@ final class downloading_template_api extends template_ai_api_service {
      * @param string $threadid Thread id of the run.
      * @param string $fileid File id of the service.
      * @param string $filename Name of the file.
-     * @param array $filerecord Overrides of the stored file record, with the draft item id.
+     * @param array $filerecord The stored file record: the draft area and the folder of the uid.
      * @return \stored_file|null The file, or null when this client answers nothing.
      */
     public function download_generated_file(string $threadid, string $fileid, string $filename, array $filerecord): ?\stored_file {
-        global $USER;
         if ($this->failfor !== null && $fileid === $this->failfor) {
             throw new \moodle_exception('invalidlicensekey', 'aiprovider_datacurso');
         }
@@ -65,9 +64,7 @@ final class downloading_template_api extends template_ai_api_service {
             return null;
         }
         $this->drafts[] = $filerecord['itemid'];
-        return get_file_storage()->create_file_from_string([
-            'contextid' => \context_user::instance($USER->id)->id, 'component' => 'user', 'filearea' => 'draft',
-            'itemid' => $filerecord['itemid'], 'filepath' => '/', 'filename' => $filename,
-        ], 'CONTENT OF ' . $fileid);
+        $filerecord['filename'] = $filename;
+        return get_file_storage()->create_file_from_string($filerecord, 'CONTENT OF ' . $fileid);
     }
 }

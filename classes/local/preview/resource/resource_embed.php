@@ -42,9 +42,7 @@ trait resource_embed {
 
         $clicktoopen = $this->resource_get_clicktoopen($file, $resource->revision);
 
-        $context = $this->context;
-        $moodleurl = moodle_url::make_pluginfile_url($context->id, 'mod_resource', 'content', $resource->revision,
-                $file->get_filepath(), $file->get_filename());
+        $moodleurl = new moodle_url($this->resource_file_address($file, $resource->revision, false));
 
         $mimetype = $file->get_mimetype();
         $title    = $resource->name;

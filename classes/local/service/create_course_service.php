@@ -21,6 +21,7 @@ use local_coursegen\event\generation_failed;
 use local_coursegen\event\generation_result_applied;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\models\template;
+use local_coursegen\utils\preview_draft_store;
 
 /**
  * Service responsible for creating a course from an AI planning session.
@@ -130,12 +131,15 @@ class create_course_service {
             $activityerrors = [];
             $generatedcms = [];
             if (!empty($resultdata['generated_activities'])) {
+                // The files the run made are in the draft area of the user, where the review previews read them.
+                $store = new preview_draft_store($sessionid, (string) $session->get('session_id'));
                 $activityerrors = self::process_generated_activities(
                     $course->id,
                     $resultdata['generated_activities'],
                     $subsections,
                     $generatedcms,
-                    $sourcecourseid
+                    $sourcecourseid,
+                    $store
                 );
             }
 
@@ -663,6 +667,7 @@ class create_course_service {
      *     that carries a cmid and was created. A virtual template instance travels under
      *     a negative cmid, which is tracked like any other.
      * @param int|null $sourcecourseid Course whose files the payload may reference (template base course).
+     * @param preview_draft_store|null $store Draft area the files of the run are in.
      * @return array Activity creation errors.
      */
     private static function process_generated_activities(
@@ -670,7 +675,8 @@ class create_course_service {
         array $activities,
         array &$subsections = [],
         array &$generatedcms = [],
-        ?int $sourcecourseid = null
+        ?int $sourcecourseid = null,
+        ?preview_draft_store $store = null
     ): array {
         global $CFG;
 
@@ -713,7 +719,7 @@ class create_course_service {
             }
 
             try {
-                $newcm = create_mod_service::create_from_ai_result($activity, $course, $sectionnum, null, $sourcecourseid);
+                $newcm = create_mod_service::create_from_ai_result($activity, $course, $sectionnum, null, $sourcecourseid, $store);
                 $payloadcmid = (int) ($activity['cmid'] ?? 0);
                 if ($payloadcmid !== 0) {
                     $generatedcms[$payloadcmid] = (int) $newcm->coursemodule;

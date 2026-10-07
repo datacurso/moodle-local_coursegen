@@ -62,7 +62,9 @@ trait get_template_structure_schema {
                             'aigenerated' => new external_value(PARAM_BOOL,
                                 'Whether AI will generate this activity in the new course (drives the badge)'),
                             'generationuid' => new external_value(PARAM_ALPHANUMEXT,
-                                'Id this row answers to in the generation progress events; empty when it is not generated'),
+                                'Opaque uid of the activity, the one its preview is asked for; empty when it is not generated'),
+                            'generationcmid' => new external_value(PARAM_INT,
+                                'Course module the progress events name the activity by; 0 when it is not generated'),
                         ])
                     ),
                 ])

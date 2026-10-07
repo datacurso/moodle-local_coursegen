@@ -39,12 +39,31 @@ const TOOLS = new Set([
 ]);
 
 /**
- * The row of an activity of the template: its course module id, for example "11342" for "t:11342".
+ * The uid of the row that shows an activity, read off the page: the row names the course module the service
+ * calls the activity by.
  *
- * @param {*} aid Draft id of an activity.
- * @returns {string} The uid of the row, or an empty text when the activity has no row.
+ * @param {string} cmid Course module id, for example "11342".
+ * @returns {string} The opaque uid of the row, or an empty text when no row shows that activity.
  */
-export const rowUid = (aid) => {
+const uidOfRowWithCmid = (cmid) => {
+    if (typeof document === 'undefined') {
+        return '';
+    }
+    const row = document.querySelector(`[data-generation-cmid="${cmid}"]`);
+    if (row === null) {
+        return '';
+    }
+    return safeId(row.dataset.generationUid);
+};
+
+/**
+ * The row of an activity of the template, which the service names "t:" and the number of its course module.
+ *
+ * @param {*} aid Draft id of an activity, for example "t:11342".
+ * @param {Function} rowLookup Gives the uid of the row of a course module id; by default it reads the page.
+ * @returns {string} The opaque uid of the row, or an empty text when the activity has no row.
+ */
+export const rowUid = (aid, rowLookup = uidOfRowWithCmid) => {
     if (typeof aid !== 'string') {
         return '';
     }
@@ -52,7 +71,7 @@ export const rowUid = (aid) => {
     if (match === null) {
         return '';
     }
-    return match[1];
+    return rowLookup(match[1]);
 };
 
 /**
@@ -72,16 +91,17 @@ export const safeId = (value) => {
  * A copy of an event with the uid of its row and its name, the way the progress handlers read them.
  *
  * @param {*} event Event of the stream.
+ * @param {Function} rowLookup Gives the uid of the row of a course module id; by default it reads the page.
  * @returns {Object} The event, or an empty object when it is not one.
  */
-export const normalizeEvent = (event) => {
+export const normalizeEvent = (event, rowLookup = uidOfRowWithCmid) => {
     if (event === null || typeof event !== 'object' || Array.isArray(event)) {
         return {};
     }
     const copy = {...event};
     copy.uid = safeId(copy.uid);
     if (copy.uid === '') {
-        copy.uid = rowUid(copy.aid);
+        copy.uid = rowUid(copy.aid, rowLookup);
     }
     if (copy.uid === '') {
         copy.uid = safeId(copy.aid);

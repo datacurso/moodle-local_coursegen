@@ -42,8 +42,9 @@
         * activities[].name string, modname string (may be empty),
           purpose string, iconhtml string (raw, may be empty), locked bool,
           isinstance bool, aigenerated bool (shows the "AI will generate it"
-          badge), generationuid string (optional; the id a live progress
-          event and its own preview answer to), sectionindex int, index int,
+          badge), generationuid string (optional; the opaque uid its own preview
+          answers to), generationcmid int (optional; the course module the live
+          progress events name the activity by), sectionindex int, index int,
           typelabel string (optional)
 
     Example context (json):
@@ -63,6 +64,7 @@
                         "name": "Weekly guide", "modname": "resource", "purpose": "content",
                         "iconhtml": "<img class=\"icon activityicon\" src=\"#\" alt=\"\">",
                         "locked": false, "isinstance": false, "aigenerated": true,
+                        "generationuid": "3f2a9c1e-77b4-4e0a-9d21-5c8f1b2e7a90", "generationcmid": 11340,
                         "sectionindex": 0, "index": 1, "typelabel": "File"
                     }
                 ]
@@ -106,7 +108,7 @@
           {{#activities}}
           <li class="activity activity-wrapper {{modname}} modtype_{{modname}}{{#locked}} is-locked{{/locked}}"
               data-section-index="{{sectionindex}}" data-activity-index="{{index}}"
-              {{#generationuid}}data-generation-uid="{{generationuid}}"{{/generationuid}}>
+              {{#generationuid}}data-generation-uid="{{generationuid}}" data-generation-cmid="{{generationcmid}}"{{/generationuid}}>
             <div class="activity-item focus-control" data-region="activity-card">
               <div class="activity-grid">
                 <div class="activity-icon activityiconcontainer smaller {{purpose}} courseicon align-self-start me-2">

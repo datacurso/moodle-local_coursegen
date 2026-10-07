@@ -32,34 +32,36 @@ class generated_files_scope {
     /** @var array[] File name => entry of the activity being created. */
     private static array $entries = [];
 
-    /** @var generated_file_cache|null The cache the files are read through. */
-    private static ?generated_file_cache $cache = null;
+    /** @var string Opaque uid of the activity being created. */
+    private static string $uid = '';
+
+    /** @var preview_draft_store|null The draft store the files are read from. */
+    private static ?preview_draft_store $store = null;
 
     /**
      * Run the creation of one activity with its generated files in scope.
      *
-     * The stored copies are removed after a creation that succeeded: the draft saves moved the files into the
-     * new activity, and nothing else needs them. A failed creation leaves them for the next attempt.
+     * The files stay in the draft area of the user: the creation of the whole course discards them once it is done.
      *
+     * @param string $uid Opaque uid of the activity, for example "7f1c2a9e-5b0d-4c1e-9a77-3e2d8b6a4f10".
      * @param array[] $entries The activity's generated_files.
      * @param callable $creation Creates the activity and returns what it returns.
-     * @param generated_file_cache|null $cache Replaces the default cache; tests pass their own.
+     * @param preview_draft_store $store Where the files of the run are stored.
      * @return mixed What the creation returned.
      */
-    public static function run(array $entries, callable $creation, ?generated_file_cache $cache = null) {
+    public static function run(string $uid, array $entries, callable $creation, preview_draft_store $store) {
         $previousentries = self::$entries;
-        $previouscache = self::$cache;
+        $previousuid = self::$uid;
+        $previousstore = self::$store;
         self::$entries = self::by_name($entries);
-        self::$cache = $cache ?? new generated_file_cache();
+        self::$uid = $uid;
+        self::$store = $store;
         try {
-            $created = $creation();
-            foreach ($entries as $entry) {
-                self::$cache->forget($entry);
-            }
-            return $created;
+            return $creation();
         } finally {
             self::$entries = $previousentries;
-            self::$cache = $previouscache;
+            self::$uid = $previousuid;
+            self::$store = $previousstore;
         }
     }
 
@@ -80,10 +82,10 @@ class generated_files_scope {
      * @return \stored_file
      */
     public static function stored_file(array $entry): \stored_file {
-        if (self::$cache === null) {
+        if (self::$store === null) {
             throw new \coding_exception('No generated files are in scope.');
         }
-        return self::$cache->get($entry);
+        return self::$store->get(self::$uid, $entry);
     }
 
     /**

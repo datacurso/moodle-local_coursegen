@@ -35,7 +35,7 @@ final class template_file_resources_test extends \basic_testcase {
      * @return array The entry.
      */
     private function entry(array $files, string $type = 'resource', int $cmid = 11340): array {
-        return ['cmid' => $cmid, 'uid' => (string) $cmid, 'resource_type' => $type, 'generated_files' => $files];
+        return ['cmid' => $cmid, 'uid' => 'uid-' . $cmid, 'resource_type' => $type, 'generated_files' => $files];
     }
 
     /**
@@ -46,7 +46,7 @@ final class template_file_resources_test extends \basic_testcase {
 
         $selected = template_file_resources::select([$this->entry([$main])]);
 
-        $this->assertSame([['uid' => '11340', 'cmid' => 11340, 'file' => $main]], $selected);
+        $this->assertSame([['uid' => 'uid-11340', 'cmid' => 11340, 'file' => $main]], $selected);
         $this->assertSame([11340], template_file_resources::cmids($selected));
     }
 
@@ -96,16 +96,26 @@ final class template_file_resources_test extends \basic_testcase {
     }
 
     /**
-     * The uid falls back to the course module id and several resources keep their order.
+     * Several resources keep their order and their opaque uids.
      */
-    public function test_the_uid_falls_back_to_the_cmid_and_the_order_is_kept(): void {
+    public function test_the_uids_are_kept_and_the_order_is_kept(): void {
         $file = ['file_id' => 'f1', 'filename' => 'a.pdf'];
-        $first = ['cmid' => 7, 'resource_type' => 'resource', 'generated_files' => [$file]];
-        $second = $this->entry([$file], 'resource', 9);
+        $first = ['uid' => 'uid-seven', 'cmid' => 7, 'resource_type' => 'resource', 'generated_files' => [$file]];
+        $second = ['uid' => 'uid-nine', 'cmid' => 9, 'resource_type' => 'resource', 'generated_files' => [$file]];
 
         $selected = template_file_resources::select([$first, $second]);
 
-        $this->assertSame(['7', '9'], array_column($selected, 'uid'));
+        $this->assertSame([$first['uid'], $second['uid']], array_column($selected, 'uid'));
         $this->assertSame([7, 9], template_file_resources::cmids($selected));
+    }
+
+    /**
+     * A resource without a uid cannot be addressed in the draft area, so it is not selected.
+     */
+    public function test_a_resource_without_a_uid_is_not_selected(): void {
+        $file = ['file_id' => 'f1', 'filename' => 'a.pdf'];
+        $activity = ['cmid' => 7, 'resource_type' => 'resource', 'generated_files' => [$file]];
+
+        $this->assertSame([], template_file_resources::select([$activity]));
     }
 }

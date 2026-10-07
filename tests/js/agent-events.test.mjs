@@ -4,9 +4,20 @@ import assert from 'node:assert/strict';
 
 import * as Agent from 'local_coursegen/local/courseai/template/agent_events';
 
-test('the row of an activity of the template is its course module id', () => {
-    assert.equal(Agent.rowUid('t:11342'), '11342');
-    assert.equal(Agent.rowUid('t:7'), '7');
+const UID_OF_GUIDE = '3f2a9c1e-77b4-4e0a-9d21-5c8f1b2e7a90';
+const rowsOnThePage = (cmid) => ({11342: UID_OF_GUIDE, 7: 'a-b_c.1'}[cmid] || '');
+
+test('the row of an activity of the template is found by its course module and answers with its opaque uid', () => {
+    assert.equal(Agent.rowUid('t:11342', rowsOnThePage), UID_OF_GUIDE);
+    assert.equal(Agent.rowUid('t:7', rowsOnThePage), 'a-b_c.1');
+});
+
+test('an activity of the template that no row shows has no row uid', () => {
+    assert.equal(Agent.rowUid('t:99', rowsOnThePage), '');
+});
+
+test('the row uid is never the number of the course module', () => {
+    assert.notEqual(Agent.rowUid('t:11342', rowsOnThePage), '11342');
 });
 
 test('an activity the run created has no row', () => {
@@ -21,13 +32,14 @@ test('an id that is missing or not text has no row', () => {
 });
 
 test('an event with an aid of the template gets the uid of its row and keeps its title as the name', () => {
-    const event = Agent.normalizeEvent({type: 'activity_progress_start', aid: 't:11342', title: 'Guide', modname: 'page'});
-    assert.equal(event.uid, '11342');
+    const event = Agent.normalizeEvent({type: 'activity_progress_start', aid: 't:11342', title: 'Guide', modname: 'page'},
+        rowsOnThePage);
+    assert.equal(event.uid, UID_OF_GUIDE);
     assert.equal(event.name, 'Guide');
 });
 
 test('an event that has a uid already keeps it', () => {
-    const event = Agent.normalizeEvent({type: 'activity_progress_done', aid: 't:1', uid: '99'});
+    const event = Agent.normalizeEvent({type: 'activity_progress_done', aid: 't:1', uid: '99'}, rowsOnThePage);
     assert.equal(event.uid, '99');
 });
 

@@ -93,8 +93,11 @@ final class template_file_resources {
         if ($file === null) {
             return null;
         }
-        $rawuid = $activity['uid'] ?? $cmid;
+        $rawuid = $activity['uid'] ?? '';
         $uid = (string) $rawuid;
+        if ($uid === '') {
+            return null;
+        }
         return ['uid' => $uid, 'cmid' => $cmid, 'file' => $file];
     }
 

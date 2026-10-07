@@ -77,4 +77,28 @@ final class random_uid_test extends \basic_testcase {
         $unique = array_unique($uids);
         $this->assertCount(100, $unique);
     }
+
+    /**
+     * The uid saved with an activity is a V4 UUID and never repeats.
+     */
+    public function test_the_uid_of_an_activity_is_a_unique_uuid(): void {
+        $first = template_export_uids::new_item_uid();
+        $second = template_export_uids::new_item_uid();
+
+        $pattern = '/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i';
+        $this->assertSame(1, preg_match($pattern, $first));
+        $this->assertNotSame($first, $second);
+    }
+
+    /**
+     * The stand-in uid of an activity with no saved row is stable, opaque and different for each activity.
+     */
+    public function test_the_stand_in_uid_is_stable_and_differs_per_activity_and_template(): void {
+        $uid = template_export_uids::stand_in_uid(3, 11342);
+
+        $this->assertSame($uid, template_export_uids::stand_in_uid(3, 11342));
+        $this->assertNotSame($uid, template_export_uids::stand_in_uid(3, 11343));
+        $this->assertNotSame($uid, template_export_uids::stand_in_uid(4, 11342));
+        $this->assertSame(1, preg_match('/^[0-9a-f]{32}$/', $uid));
+    }
 }
