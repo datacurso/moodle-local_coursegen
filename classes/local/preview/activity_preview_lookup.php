@@ -49,6 +49,7 @@ class activity_preview_lookup {
         $found = self::from_answer($answer, $uid);
         if ($found !== null) {
             $found['parameters'] = self::with_files($found);
+            $found['parameters'] = self::with_written_text($found, $answer, $session);
             return $found;
         }
         $found = self::from_payload($payload, $uid);
@@ -192,6 +193,32 @@ class activity_preview_lookup {
         $intro = (string) $intro;
         $parameters['introeditor'] = ['text' => $intro, 'format' => FORMAT_HTML, 'itemid' => 0];
         return $parameters;
+    }
+
+    /**
+     * The parameters of a finished activity with the text the AI wrote where its preview reads it.
+     *
+     * The links the AI left to other activities point to the preview of each of them.
+     *
+     * @param array $found What from_answer() found.
+     * @param array $answer The result of the run.
+     * @param course_session $session
+     * @return array
+     */
+    private static function with_written_text(array $found, array $answer, course_session $session): array {
+        $urlbyuid = [];
+        foreach ((array) ($answer['generated_activities'] ?? []) as $activity) {
+            $uid = (string) ($activity['uid'] ?? '');
+            if ($uid === '') {
+                continue;
+            }
+            $url = new \moodle_url('/local/coursegen/activity_preview.php', [
+                'sessionid' => (int) $session->get('id'),
+                'uid' => $uid,
+            ]);
+            $urlbyuid[$uid] = $url->out(false);
+        }
+        return result_page_text::laid_in($found['modname'], $found['parameters'], $urlbyuid);
     }
 
     /**
