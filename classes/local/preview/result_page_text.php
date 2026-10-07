@@ -39,9 +39,10 @@ final class result_page_text {
      * @param string $modname Type of the activity, for example "page".
      * @param array $parameters The activity's parameters, as the result holds them.
      * @param array $urlbyuid Uid => URL of its preview, for the links the AI left as tokens.
+     * @param array $embedurlbyuid Uid => address of the file of a resource, for a file the page shows inside itself.
      * @return array The same parameters, with the page row of the tree updated.
      */
-    public static function laid_in(string $modname, array $parameters, array $urlbyuid): array {
+    public static function laid_in(string $modname, array $parameters, array $urlbyuid, array $embedurlbyuid = []): array {
         if ($modname !== 'page') {
             return $parameters;
         }
@@ -51,7 +52,7 @@ final class result_page_text {
         }
         foreach (self::COLUMNS as $column) {
             if (isset($parameters[$column]) && is_string($parameters[$column])) {
-                $row[$column] = link_token::replace($parameters[$column], $urlbyuid);
+                $row[$column] = link_token::replace($parameters[$column], $urlbyuid, $embedurlbyuid);
             }
         }
         $parameters['structure']['page'][0] = $row;

@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100614
+
+### Fixed
+
+- **The preview of a page from a template shows the file the AI attached where the template page showed its own document**  
+  A page that embedded the file of a resource, such as a PDF viewer, kept showing the original document of the template even though the resource got the attached file. The page now points to the resource, and its preview shows the attached file from the draft area of the person who reviews it. Creating the course already placed the new file; the page now follows it there too.
+
 ## [2.0.10] - 2026100613
 
 ### Added
