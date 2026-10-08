@@ -28,6 +28,7 @@ import {getString} from 'core/str';
 import {initFilepicker} from 'local_coursegen/repository/courseai';
 import {showFilePicker} from 'local_coursegen/local/courseai/context/filepicker';
 import {answerTemplateQuestion} from 'local_coursegen/local/courseai/template/repository';
+import {failureText} from 'local_coursegen/local/courseai/template/failure_text';
 import {turn} from 'local_coursegen/local/courseai/template/thread';
 import {
     questionActivity,
@@ -185,7 +186,8 @@ const sendAnswer = async(card, sessionId, question, kind, picked) => {
         await answerTemplateQuestion(sessionId, String(question.call_id), kind, answer);
     } catch (exception) {
         restoreControls(card, kind, picked);
-        showError(card, exception.message || String(exception));
+        const words = await failureText(exception);
+        showError(card, words);
         return false;
     }
     const summary = await summaryOf(kind, answer, picked);
@@ -202,7 +204,8 @@ const sendWithoutFile = async(card, sessionId, question, picked) => {
         await answerTemplateQuestion(sessionId, String(question.call_id), kind, answer);
     } catch (exception) {
         restoreControls(card, 'file', picked);
-        showError(card, exception.message || String(exception));
+        const words = await failureText(exception);
+        showError(card, words);
         return false;
     }
     card.remove();

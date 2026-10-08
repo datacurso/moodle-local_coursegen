@@ -42,7 +42,6 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {getStrings} from 'core/str';
 import {askQuestion, askRetry} from 'local_coursegen/local/courseai/template/generation_question';
 import {
     announceTemplate,
@@ -52,7 +51,7 @@ import {
     turn,
 } from 'local_coursegen/local/courseai/template/thread';
 import {refreshPreviewLinks} from 'local_coursegen/local/courseai/template/preview';
-import {hideWorkingIndicator, showWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
+import {hideWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
 import {
     ALL_STATUS_CLASSES,
     STATUS_CLASS,
@@ -61,101 +60,13 @@ import {
 } from 'local_coursegen/local/courseai/template/generation_events';
 import {watchOnce} from 'local_coursegen/local/courseai/template/generation_watch';
 import {hideHeader, markHeaderDone, showGeneratingHeader} from 'local_coursegen/local/courseai/template/generation_header';
-import {askForDecision} from 'local_coursegen/local/courseai/template/generation_review';
-import {sendTemplateReviewFeedback} from 'local_coursegen/local/courseai/template/repository';
-import {ReviewFlow, adjustable, errorMessage} from 'local_coursegen/local/courseai/template/review_flow';
-
-/** Phase keys the service reports, plus the two this module owns. */
-const STAGE_STRINGS = {
-    reviewing: 'courseai_template_stage_reviewing',
-    style: 'courseai_template_stage_style',
-    activities: 'courseai_template_stage_activities',
-    activity_images: 'courseai_template_stage_activity_images',
-    section_images: 'courseai_template_stage_section_images',
-    saving: 'courseai_template_stage_saving',
-    connecting: 'courseai_template_stage_connecting',
-};
-const TITLE_STRING = 'courseai_template_generating_title';
-const ADJUST_FAILED_STRING = 'courseai_template_adjust_failed';
-const ADJUST_TOO_LONG_STRING = 'courseai_template_adjust_toolong';
-
-let labels = null;
-
-/**
- * The batched string request for every phase key.
- *
- * @param {Array<string>} keys
- * @returns {Array<Object>}
- */
-const stageStringRequests = (keys) => keys.map((key) => ({key: STAGE_STRINGS[key], component: 'local_coursegen'}));
-
-/**
- * Copy the fetched phase strings onto the labels map, keyed by phase.
- *
- * @param {Object} target
- * @param {Array<string>} keys
- * @param {Array<string>} values
- */
-const assignStageLabels = (target, keys, values) => {
-    keys.forEach((key, index) => {
-        target[key] = values[index];
-    });
-};
-
-/**
- * The localised header strings, fetched once.
- *
- * @returns {Promise<Object>} Keyed by phase key, plus `title`.
- */
-const getLabels = async() => {
-    if (!labels) {
-        const keys = Object.keys(STAGE_STRINGS);
-        const requests = stageStringRequests(keys);
-        const values = await getStrings([
-            ...requests,
-            {key: TITLE_STRING, component: 'local_coursegen'},
-            {key: ADJUST_FAILED_STRING, component: 'local_coursegen'},
-            {key: ADJUST_TOO_LONG_STRING, component: 'local_coursegen'},
-        ]);
-        labels = {
-            title: values[keys.length],
-            adjustFailed: values[keys.length + 1],
-            adjustTooLong: values[keys.length + 2],
-        };
-        assignStageLabels(labels, keys, values);
-    }
-    return labels;
-};
+import {ReviewFlow} from 'local_coursegen/local/courseai/template/review_flow';
+import {getLabels, paintStage} from 'local_coursegen/local/courseai/template/generation_stage';
+import {reviewResult} from 'local_coursegen/local/courseai/template/generation_adjust';
+import {failureWords, lastCompleted, lastFailure, parseJson} from 'local_coursegen/local/courseai/template/run_events';
 
 /** Every activity row the AI is going to generate. */
 const generatedRows = () => document.querySelectorAll('[data-generation-uid]');
-
-/**
- * Show one phase label in the header's subtitle.
- *
- * @param {string} key
- */
-const paintStage = async(key) => {
-    const text = (await getLabels())[key];
-    if (!text) {
-        return;
-    }
-    const stage = document.getElementById('tplGenStage');
-    if (stage) {
-        stage.textContent = text;
-    }
-    // Waiting for the professor is not work in progress: free mode shows no
-    // indicator then, only the decision card.
-    if (key === 'reviewing') {
-        hideWorkingIndicator();
-        return;
-    }
-    // Free mode keeps both panels on the same sentence, updating one indicator
-    // in place rather than stacking an entry per phase. showWorkingIndicator
-    // does exactly that, and pins itself to the bottom slot while the composer
-    // is away - which here is the whole generation.
-    showWorkingIndicator({}, text);
-};
 
 /**
  * Put the page in its generating state: header visible and spinning, every
@@ -232,89 +143,6 @@ const finishRun = (buildCourse) => {
 };
 
 /**
- * Send a change request to the run and tell the flow how it went.
- *
- * @param {ReviewFlow} flow
- * @param {{callId: string, instruction: string, aid: string}} sent What the flow validated.
- * @param {number} sessionId Local session id, for example 139.
- * @returns {Promise<boolean>} True when the service stored the request.
- */
-const sendAdjustment = async(flow, sent, sessionId) => {
-    try {
-        await sendTemplateReviewFeedback(sessionId, sent.callId, sent.instruction, sent.aid);
-    } catch (error) {
-        const texts = await getLabels();
-        flow.feedbackFailed(error);
-        turn('ai', 'danger', errorMessage(error, texts.adjustFailed));
-        return false;
-    }
-    flow.feedbackStored();
-    return true;
-};
-
-/**
- * The run goes on from its draft after a change request: say so and show it working again.
- *
- * @param {{instruction: string}} sent What was sent.
- * @returns {Promise<void>}
- */
-const startAdjustedRound = async(sent) => {
-    turn('user', 'user', sent.instruction);
-    milestone('courseai_template_log_adjusting');
-    resetSeen();
-    showGeneratingHeader((await getLabels()).title);
-    await paintStage('activities');
-};
-
-/**
- * Settle one decision of the teacher.
- *
- * @param {ReviewFlow} flow
- * @param {Object} outcome What the flow answered to the decision.
- * @param {number} sessionId Local session id, for example 139.
- * @returns {Promise<string>} 'accepted', 'adjusting' or 'again' when the review stays open.
- */
-const settleDecision = async(flow, outcome, sessionId) => {
-    if (outcome.screen === 'accepted') {
-        return 'accepted';
-    }
-    if (outcome.error === 'toolong') {
-        const texts = await getLabels();
-        turn('ai', 'danger', texts.adjustTooLong);
-        return 'again';
-    }
-    if (!outcome.send) {
-        return 'again';
-    }
-    const stored = await sendAdjustment(flow, outcome.send, sessionId);
-    if (!stored) {
-        return 'again';
-    }
-    await startAdjustedRound(outcome.send);
-    return 'adjusting';
-};
-
-/**
- * Keep the review open until the teacher accepts the course or a change request is stored.
- *
- * @param {ReviewFlow} flow
- * @param {{generated: Array<Object>}} shown The review that is on screen.
- * @param {number} sessionId Local session id, for example 139.
- * @returns {Promise<string>} 'accepted' or 'adjusting'.
- */
-const reviewResult = async(flow, shown, sessionId) => {
-    const rows = adjustable(shown.generated);
-    for (;;) {
-        const decision = await askForDecision(rows);
-        const outcome = flow.submit(decision);
-        const verdict = await settleDecision(flow, outcome, sessionId);
-        if (verdict !== 'again') {
-            return verdict;
-        }
-    }
-};
-
-/**
  * The run paused on a question: show it and wait for the answer to be stored.
  *
  * @param {number} sessionId Local session id, for example 139.
@@ -337,7 +165,8 @@ const waitForAnswer = async(sessionId, question, flow) => {
  */
 const waitForRetry = async(failure) => {
     hideWorkingIndicator();
-    await askRetry(failure.message);
+    const words = await failureWords(failure);
+    await askRetry(words);
     await paintStage('connecting');
 };
 
@@ -420,27 +249,9 @@ export const runGenerationStream = async(streamUrl, buildCourse, sessionId, cont
     return followRun(streamUrl, run, {total: 0, done: 0});
 };
 
-const lastFailure = (events) => {
-    const failures = events.filter((event) => event && event.type === 'failed');
-    return failures[failures.length - 1] || null;
-};
-
-const lastCompleted = (events) => {
-    const completed = events.filter((event) => event && event.type === 'completed');
-    return completed[completed.length - 1] || null;
-};
-
 const replayEvents = (events, progress) => {
     for (const event of events) {
         applyEvent(event, progress, paintStage);
-    }
-};
-
-const parseJson = (text, fallback) => {
-    try {
-        return JSON.parse(text);
-    } catch (exception) {
-        return fallback;
     }
 };
 
@@ -488,10 +299,7 @@ export const resumeGenerationStream = async(snapshot, buildCourse, sessionId, co
     }
     if (screen.screen === 'failed') {
         const failure = lastFailure(events);
-        let message = '';
-        if (failure !== null) {
-            message = failure.message;
-        }
+        const message = await failureWords(failure);
         closeView(message);
         return null;
     }
