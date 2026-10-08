@@ -223,6 +223,7 @@ $string['template_agent_log_resumed'] = 'Continuando con tu respuesta.';
 $string['template_agent_log_waiting'] = 'La IA está esperando tu respuesta.';
 $string['template_agent_question_choice_label'] = 'Elige una opción';
 $string['template_agent_question_file_button'] = 'Elegir un archivo';
+$string['template_agent_question_file_hint'] = 'PDF, DOCX o TXT';
 $string['template_agent_question_file_remove'] = 'Quitar el archivo';
 $string['template_agent_question_nofile_answer'] = 'No tengo un archivo para esto.';
 $string['template_agent_question_nofile_button'] = 'No tengo un archivo';
