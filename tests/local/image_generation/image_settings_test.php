@@ -28,12 +28,15 @@ use local_coursegen\local\tenant_config;
  * @covers     \local_coursegen\local\image_generation\image_settings
  */
 final class image_settings_test extends \advanced_testcase {
+    use \local_coursegen\tests\requires_workplace;
+
     /**
      * Creates a tenant and returns its id.
      *
      * @return int
      */
     private function create_tenant(): int {
+        $this->require_tool_tenant();
         return (int) $this->getDataGenerator()->get_plugin_generator('tool_tenant')->create_tenant()->id;
     }
 

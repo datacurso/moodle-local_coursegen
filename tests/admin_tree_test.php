@@ -31,12 +31,21 @@ require_once($CFG->libdir . '/adminlib.php');
  * @coversNothing
  */
 final class admin_tree_test extends \advanced_testcase {
+    use \local_coursegen\tests\requires_workplace;
+
+    #[\Override]
+    protected function tearDown(): void {
+        \local_coursegen\admin\external_page::reset_for_testing();
+        parent::tearDown();
+    }
+
     /**
      * Creates a tenant (with its course category) and a tenant administrator, and logs in as that administrator.
      *
      * @return int Tenant id.
      */
     private function login_as_new_tenant_admin(): int {
+        $this->require_tool_tenant();
         $this->setAdminUser();
         \tool_tenant\tenancy::add_plugin_capabilities_to_tenant_admin_role('local_coursegen');
         $generator = $this->getDataGenerator()->get_plugin_generator('tool_tenant');
@@ -53,6 +62,7 @@ final class admin_tree_test extends \advanced_testcase {
      * A tenant administrator (no site:config) finds every plugin configuration page in the tree and may access it.
      */
     public function test_tenant_admin_can_access_tenant_pages(): void {
+        $this->require_tool_wp();
         $this->resetAfterTest();
         $this->login_as_new_tenant_admin();
 
@@ -147,5 +157,33 @@ final class admin_tree_test extends \advanced_testcase {
             \local_coursegen\local\tenant_config::get_raw('datacurso_service_url', $tenantid)
         );
         $this->assertFalse(get_config('local_coursegen', 'datacurso_service_url'));
+    }
+
+    /**
+     * Without tool_wp the external pages are core admin pages gated by the plugin capabilities.
+     */
+    public function test_external_pages_fall_back_to_core_pages_without_workplace(): void {
+        $this->resetAfterTest();
+        \local_coursegen\admin\external_page::simulate_workplace_unavailable_for_testing();
+        $sections = [
+            'local_coursegen_addnewcourseai',
+            'local_coursegen_manage_image_generation',
+            'local_coursegen_manage_system_instructions',
+            'local_coursegen_edit_system_instruction',
+        ];
+
+        $this->setAdminUser();
+        $root = admin_get_root(true, false);
+        foreach ($sections as $section) {
+            $page = $root->locate($section);
+            $this->assertSame(\admin_externalpage::class, get_class($page), $section);
+            $this->assertTrue($page->check_access(), $section);
+        }
+
+        $this->setUser($this->getDataGenerator()->create_user());
+        $root = admin_get_root(true, false);
+        foreach ($sections as $section) {
+            $this->assertFalse($root->locate($section)->check_access(), $section);
+        }
     }
 }

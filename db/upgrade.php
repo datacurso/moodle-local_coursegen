@@ -299,8 +299,9 @@ function xmldb_local_coursegen_upgrade($oldversion) {
     if ($oldversion < 2026100501) {
         // Grant the plugin capabilities to the Workplace "Tenant administrator" role.
         // The new local/coursegen:managetenantsettings capability must exist first.
+        // Skipped without tool_tenant (plain Moodle LMS), where the role does not exist.
         update_capabilities('local_coursegen');
-        \tool_tenant\tenancy::add_plugin_capabilities_to_tenant_admin_role('local_coursegen');
+        \local_coursegen\local\tenancy::add_plugin_capabilities_to_tenant_admin_role();
 
         // Coursegen savepoint reached.
         upgrade_plugin_savepoint(true, 2026100501, 'local', 'coursegen');

@@ -30,8 +30,9 @@ require_login();
 // Check permissions: system-level or category-level (Workplace tenant administrators).
 \local_coursegen\local\permission::require_create_course_with_ai();
 
-// Set up the page through the Workplace admin tree entry registered in settings.php.
-\tool_wp\admin_externalpage::setup_page('local_coursegen_addnewcourseai', '', null, '', ['pagelayout' => 'popup']);
+// Set up the page through the admin tree entry registered in settings.php (the
+// Workplace page, or the core page gated by the capability on plain Moodle LMS).
+\local_coursegen\admin\external_page::setup('local_coursegen_addnewcourseai', ['pagelayout' => 'popup']);
 $systemcontext = context_system::instance();
 $url = new moodle_url('/local/coursegen/aicoursecreation.php');
 $PAGE->set_title(get_string('createwithai', 'local_coursegen'));

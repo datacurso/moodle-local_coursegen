@@ -26,12 +26,15 @@ namespace local_coursegen\local\service;
  * @covers     \local_coursegen\local\service\system_instruction_service
  */
 final class system_instruction_service_test extends \advanced_testcase {
+    use \local_coursegen\tests\requires_workplace;
+
     /**
      * Creates a tenant and returns its id.
      *
      * @return int
      */
     private function create_tenant(): int {
+        $this->require_tool_tenant();
         return (int) $this->getDataGenerator()->get_plugin_generator('tool_tenant')->create_tenant()->id;
     }
 

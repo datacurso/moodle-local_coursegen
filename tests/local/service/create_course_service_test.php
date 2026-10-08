@@ -28,6 +28,8 @@ use local_coursegen\local\models\course_session;
  * @covers     \local_coursegen\local\service\create_course_service
  */
 final class create_course_service_test extends \advanced_testcase {
+    use \local_coursegen\tests\requires_workplace;
+
     /**
      * Logs in as admin allocated to a new tenant and returns the tenant id.
      *
@@ -35,6 +37,7 @@ final class create_course_service_test extends \advanced_testcase {
      * @return int
      */
     private function login_as_admin_in_tenant(?int $categoryid): int {
+        $this->require_tool_tenant();
         global $USER;
 
         $this->setAdminUser();

@@ -52,10 +52,15 @@ class tenant_scope_notice implements renderable, templatable {
      * @return array
      */
     public function export_for_template(renderer_base $output): array {
+        // Without tenancy (plain Moodle LMS) there is no tenant to name: only the description is shown.
         $tenantname = tenancy::get_tenant_name(tenancy::get_tenant_id());
+        $hasmessage = $tenantname !== null;
+        $hasdescription = $this->description !== null && $this->description !== '';
         return [
-            'message' => get_string('tenantscopenotice', 'local_coursegen', $tenantname),
-            'hasdescription' => $this->description !== null && $this->description !== '',
+            'hascontent' => $hasmessage || $hasdescription,
+            'hasmessage' => $hasmessage,
+            'message' => $hasmessage ? get_string('tenantscopenotice', 'local_coursegen', $tenantname) : '',
+            'hasdescription' => $hasdescription,
             'description' => (string) $this->description,
         ];
     }

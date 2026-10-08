@@ -28,9 +28,10 @@
  */
 function xmldb_local_coursegen_install() {
     // Capabilities are normally installed after this hook runs; load them now so
-    // they can be granted to the Workplace "Tenant administrator" role.
+    // they can be granted to the Workplace "Tenant administrator" role. Without
+    // tool_tenant (plain Moodle LMS) there is no such role and nothing is granted.
     update_capabilities('local_coursegen');
-    \tool_tenant\tenancy::add_plugin_capabilities_to_tenant_admin_role('local_coursegen');
+    \local_coursegen\local\tenancy::add_plugin_capabilities_to_tenant_admin_role();
 
     return true;
 }

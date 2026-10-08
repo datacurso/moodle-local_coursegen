@@ -49,8 +49,10 @@ Feature: Create with AI button on the My courses page
     Then "Create with AI" "button" should not exist
     And "#local_coursegen_aicourseform" "css_element" should not exist
 
+  @tool_tenant
   Scenario: Tenant administrator sees the button on My courses
-    Given the following "categories" exist:
+    Given Moodle Workplace multi-tenancy is available
+    And the following "categories" exist:
       | name            | category | idnumber |
       | Tenant category | 0        | TENANTA  |
     And the following "tool_tenant > tenants" exist:

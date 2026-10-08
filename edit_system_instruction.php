@@ -32,7 +32,7 @@ require_once('../../config.php');
 $id = optional_param('id', 0, PARAM_INT);
 
 require_login(null, false);
-\tool_wp\admin_externalpage::setup_page('local_coursegen_edit_system_instruction');
+\local_coursegen\admin\external_page::setup('local_coursegen_edit_system_instruction');
 require_capability('local/coursegen:managesysteminstructions', context_system::instance());
 
 // The instruction always belongs to the tenant the user is currently in.

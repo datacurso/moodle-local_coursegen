@@ -26,6 +26,14 @@ namespace local_coursegen\output;
  * @covers     \local_coursegen\output\tenant_scope_notice
  */
 final class tenant_scope_notice_test extends \advanced_testcase {
+    use \local_coursegen\tests\requires_workplace;
+
+    #[\Override]
+    protected function tearDown(): void {
+        \local_coursegen\local\tenancy::reset_for_testing();
+        parent::tearDown();
+    }
+
     /**
      * Creates a tenant with the given name, allocates a new user to it and logs that user in.
      *
@@ -33,6 +41,7 @@ final class tenant_scope_notice_test extends \advanced_testcase {
      * @return int Tenant id.
      */
     private function login_into_new_tenant(string $name): int {
+        $this->require_tool_tenant();
         $this->setAdminUser();
         $generator = $this->getDataGenerator()->get_plugin_generator('tool_tenant');
         $tenantid = (int) $generator->create_tenant(['name' => $name])->id;
@@ -57,6 +66,7 @@ final class tenant_scope_notice_test extends \advanced_testcase {
 
         $expected = get_string('tenantscopenotice', 'local_coursegen', 'Tenant, Alpha');
         $this->assertSame($expected, $exported['message']);
+        $this->assertTrue($exported['hasmessage']);
         $this->assertFalse($exported['hasdescription']);
         $this->assertStringContainsString($expected, $html);
         $this->assertStringNotContainsString('<select', $html);
@@ -77,5 +87,41 @@ final class tenant_scope_notice_test extends \advanced_testcase {
         $this->assertTrue($exported['hasdescription']);
         $this->assertSame('Instructions of this tenant.', $exported['description']);
         $this->assertSame(get_string('tenantscopenotice', 'local_coursegen', 'Beta'), $exported['message']);
+    }
+
+    /**
+     * Without tenancy there is no tenant to name: the notice renders nothing.
+     */
+    public function test_renders_nothing_without_tenancy(): void {
+        global $PAGE;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        \local_coursegen\local\tenancy::simulate_unavailable_for_testing();
+        $output = $PAGE->get_renderer('core');
+
+        $notice = new tenant_scope_notice();
+        $exported = $notice->export_for_template($output);
+        $html = $output->render($notice);
+
+        $this->assertFalse($exported['hasmessage']);
+        $this->assertFalse($exported['hascontent']);
+        $this->assertStringNotContainsString('tenant-scope-notice', $html);
+        $this->assertStringNotContainsString('alert', $html);
+    }
+
+    /**
+     * Without tenancy the page description is still shown, without the tenant notice.
+     */
+    public function test_description_without_tenancy(): void {
+        global $PAGE;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        \local_coursegen\local\tenancy::simulate_unavailable_for_testing();
+        $output = $PAGE->get_renderer('core');
+
+        $html = $output->render(new tenant_scope_notice('Instructions of this site.'));
+
+        $this->assertStringContainsString('Instructions of this site.', $html);
+        $this->assertStringNotContainsString('alert', $html);
     }
 }

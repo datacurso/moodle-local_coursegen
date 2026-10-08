@@ -25,6 +25,8 @@
 
 - **Moodle Workplace only**  
   This branch requires Moodle Workplace 4.5: `tool_tenant` and `tool_wp` are declared as dependencies and `$plugin->supported` is `[405, 405]`. Installing it on Moodle LMS fails on the missing dependencies by design.
+- **Single-tenant fallback for CI on Moodle LMS**  
+  The code no longer calls `tool_tenant` or `tool_wp` when they are missing: without them the plugin installs and runs as a single tenant (tenant id `0`, no tenant scope notice, core admin pages gated by the plugin capabilities), so the automated tests can run on Moodle LMS. Workplace tests and Behat scenarios are skipped there. Workplace remains a declared dependency.
 - **Tenant administrator role receives the plugin capabilities on upgrade**  
   The install and upgrade steps add `local/coursegen:createcoursewithai`, `local/coursegen:managesysteminstructions`, `local/coursegen:manageimagegeneration` and the new `local/coursegen:managetenantsettings` to the Workplace `Tenant administrator` role, so existing sites change that role when upgrading.
 - **Existing data moves to the Default tenant**  

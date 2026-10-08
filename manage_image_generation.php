@@ -30,7 +30,7 @@ use local_coursegen\local\tenancy;
 use local_coursegen\output\tenant_scope_notice;
 
 require_login(null, false);
-\tool_wp\admin_externalpage::setup_page('local_coursegen_manage_image_generation');
+\local_coursegen\admin\external_page::setup('local_coursegen_manage_image_generation');
 require_capability('local/coursegen:manageimagegeneration', context_system::instance());
 
 // The settings always belong to the tenant the user is currently in.

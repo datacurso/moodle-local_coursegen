@@ -19,6 +19,7 @@
 
     Read-only notice shown at the top of every plugin configuration page,
     naming the tenant the settings apply to, with an optional page description.
+    Without tenancy (plain Moodle LMS) only the description is shown, if any.
 
     Classes required for JS:
     * none
@@ -27,23 +28,31 @@
     * none
 
     Context variables required for this template:
+    * hascontent bool      - Whether there is anything to show (the notice or the description).
+    * hasmessage bool      - Whether the tenant notice is shown (false without tenancy).
     * message string       - Localised notice naming the current tenant (HTML-safe, the tenant name is formatted).
     * hasdescription bool  - Whether a page description is shown.
     * description string   - Localised page description, only when hasdescription is true.
 
     Example context (json):
     {
+        "hascontent": true,
+        "hasmessage": true,
         "message": "These settings only apply to the tenant \"Tenant A\"",
         "hasdescription": true,
         "description": "Manage the system instructions used as course guidelines."
     }
 }}
+{{#hascontent}}
 <div class="local_coursegen-tenant_scope_notice mb-3" data-region="local_coursegen/tenant-scope-notice">
+    {{#hasmessage}}
     <div class="alert alert-warning d-flex align-items-center mb-2" role="status">
         {{#pix}} i/info, core {{/pix}}
         <strong class="ml-2">{{{message}}}</strong>
     </div>
+    {{/hasmessage}}
     {{#hasdescription}}
         <p class="text-muted mb-0">{{description}}</p>
     {{/hasdescription}}
 </div>
+{{/hascontent}}

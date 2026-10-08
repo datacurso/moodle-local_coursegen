@@ -30,6 +30,8 @@ use stdClass;
  * @covers     \local_coursegen\observer
  */
 final class observer_test extends \advanced_testcase {
+    use \local_coursegen\tests\requires_workplace;
+
     /**
      * Deleting a course removes its coursegen rows and syllabus files, keeping other courses intact.
      */
@@ -76,6 +78,7 @@ final class observer_test extends \advanced_testcase {
      * Deleting a tenant removes its settings and instructions, keeping other tenants intact.
      */
     public function test_tenant_deleted_removes_tenant_data(): void {
+        $this->require_tool_tenant();
         global $DB;
 
         $this->resetAfterTest();

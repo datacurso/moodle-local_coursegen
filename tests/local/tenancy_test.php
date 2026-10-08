@@ -26,12 +26,21 @@ namespace local_coursegen\local;
  * @covers     \local_coursegen\local\tenancy
  */
 final class tenancy_test extends \advanced_testcase {
+    use \local_coursegen\tests\requires_workplace;
+
+    #[\Override]
+    protected function tearDown(): void {
+        tenancy::reset_for_testing();
+        parent::tearDown();
+    }
+
     /**
      * Returns the tool_tenant data generator.
      *
      * @return \tool_tenant_generator
      */
     private function tenant_generator(): \tool_tenant_generator {
+        $this->require_tool_tenant();
         return $this->getDataGenerator()->get_plugin_generator('tool_tenant');
     }
 
@@ -67,6 +76,7 @@ final class tenancy_test extends \advanced_testcase {
         $this->resetAfterTest();
         $this->setAdminUser();
 
+        $this->require_tool_tenant();
         $defaulttenantid = \tool_tenant\tenancy::get_default_tenant_id();
         $this->tenant_generator()->create_tenant();
         $user = $this->getDataGenerator()->create_user();
@@ -115,5 +125,70 @@ final class tenancy_test extends \advanced_testcase {
 
         $this->assertSame(format_string('Acme & Learning'), tenancy::get_tenant_name($tenantid));
         $this->assertSame('', tenancy::get_tenant_name(999999));
+    }
+
+    /**
+     * Tenancy is available exactly when tool_tenant is installed.
+     */
+    public function test_is_available_matches_tool_tenant(): void {
+        $this->assertSame(class_exists('\tool_tenant\tenancy'), tenancy::is_available());
+    }
+
+    /**
+     * Without tool_tenant the site is a single tenant: id 0, no category and no name.
+     */
+    public function test_unavailable_resolves_single_tenant(): void {
+        $this->resetAfterTest();
+        $user = $this->getDataGenerator()->create_user();
+        $this->setUser($user);
+
+        tenancy::simulate_unavailable_for_testing();
+
+        $this->assertFalse(tenancy::is_available());
+        $this->assertSame(0, tenancy::get_tenant_id());
+        $this->assertSame(0, tenancy::get_tenant_id((int) $user->id));
+        $this->assertSame(0, tenancy::get_default_tenant_id());
+        $this->assertNull(tenancy::get_tenant_categoryid(0));
+        $this->assertNull(tenancy::get_tenant_name(0));
+    }
+
+    /**
+     * The test seam is undone by the reset method.
+     */
+    public function test_reset_for_testing_restores_detection(): void {
+        tenancy::simulate_unavailable_for_testing();
+        tenancy::reset_for_testing();
+
+        $this->assertSame(class_exists('\tool_tenant\tenancy'), tenancy::is_available());
+    }
+
+    /**
+     * Without tool_tenant the capabilities are not granted to any tenant administrator role.
+     */
+    public function test_add_plugin_capabilities_skipped_when_unavailable(): void {
+        tenancy::simulate_unavailable_for_testing();
+
+        $this->assertFalse(tenancy::add_plugin_capabilities_to_tenant_admin_role());
+    }
+
+    /**
+     * With tool_tenant the plugin capabilities are granted to the tenant administrator role.
+     */
+    public function test_add_plugin_capabilities_granted_when_available(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->require_tool_tenant();
+
+        $roleid = \tool_tenant\manager::get_tenant_admin_role();
+        $systemcontextid = \context_system::instance()->id;
+        unassign_capability('local/coursegen:managetenantsettings', $roleid, $systemcontextid);
+
+        $this->assertTrue(tenancy::add_plugin_capabilities_to_tenant_admin_role());
+        $this->assertTrue($DB->record_exists('role_capabilities', [
+            'roleid' => $roleid,
+            'contextid' => $systemcontextid,
+            'capability' => 'local/coursegen:managetenantsettings',
+            'permission' => CAP_ALLOW,
+        ]));
     }
 }

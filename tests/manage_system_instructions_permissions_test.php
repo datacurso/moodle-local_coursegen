@@ -38,12 +38,15 @@ use local_coursegen\output\system_instruction_list;
  * @covers     \local_coursegen\output\system_instruction_list
  */
 final class manage_system_instructions_permissions_test extends \advanced_testcase {
+    use \local_coursegen\tests\requires_workplace;
+
     /**
      * Creates a tenant and a user who administers it, logs that user in and returns the tenant id.
      *
      * @return int
      */
     private function login_as_new_tenant_admin(): int {
+        $this->require_tool_tenant();
         $generator = $this->getDataGenerator()->get_plugin_generator('tool_tenant');
         $tenantid = (int) $generator->create_tenant()->id;
         $tenantadmin = $this->getDataGenerator()->create_user();
@@ -60,6 +63,7 @@ final class manage_system_instructions_permissions_test extends \advanced_testca
      * @return \local_coursegen\local\models\system_instruction
      */
     private function create_other_tenant_instruction(string $name): \local_coursegen\local\models\system_instruction {
+        $this->require_tool_tenant();
         $this->setAdminUser();
         $othertenantid = (int) $this->getDataGenerator()->get_plugin_generator('tool_tenant')->create_tenant()->id;
         return system_instruction_service::create(['name' => $name, 'content' => ''], $othertenantid);

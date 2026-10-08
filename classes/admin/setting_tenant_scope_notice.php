@@ -17,6 +17,7 @@
 namespace local_coursegen\admin;
 
 use admin_setting_heading;
+use local_coursegen\local\tenancy;
 use local_coursegen\output\tenant_scope_notice;
 
 defined('MOODLE_INTERNAL') || die();
@@ -52,6 +53,10 @@ class setting_tenant_scope_notice extends admin_setting_heading {
      */
     public function output_html($data, $query = '') {
         global $OUTPUT;
+        if (!tenancy::is_available()) {
+            // Plain Moodle LMS: the settings are site-wide, there is no tenant to name.
+            return '';
+        }
         return $OUTPUT->render(new tenant_scope_notice());
     }
 }

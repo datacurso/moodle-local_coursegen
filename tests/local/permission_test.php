@@ -26,6 +26,8 @@ namespace local_coursegen\local;
  * @covers     \local_coursegen\local\permission
  */
 final class permission_test extends \advanced_testcase {
+    use \local_coursegen\tests\requires_workplace;
+
     /**
      * Creates a user holding the given capabilities through a new role in the given context.
      *
@@ -78,6 +80,7 @@ final class permission_test extends \advanced_testcase {
      * A Workplace tenant administrator (role granted by tool_tenant) may create courses with AI.
      */
     public function test_tenant_admin_allowed(): void {
+        $this->require_tool_tenant();
         $this->resetAfterTest();
         $this->setAdminUser();
 

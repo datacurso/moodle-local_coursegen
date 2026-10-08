@@ -32,10 +32,13 @@ $pluginname = 'local_coursegen';
 // $hassiteconfig block with its own access check, which accepts system-level
 // and category-level course creators alike (see \local_coursegen\local\permission).
 // The "Restore course" sibling only exists for users holding moodle/site:config.
-$ADMIN->add('courses', new \tool_wp\admin_externalpage(
+// The external pages are built by \local_coursegen\admin\external_page, which
+// falls back to core admin pages gated by the capability on plain Moodle LMS.
+$ADMIN->add('courses', \local_coursegen\admin\external_page::create(
     'local_coursegen_addnewcourseai',
     get_string('courseai_admin_addnewcourse', 'local_coursegen'),
     (new moodle_url('/local/coursegen/aicoursecreation.php'))->out(false),
+    \local_coursegen\local\permission::CAP_CREATE_WITH_AI,
     static fn(): bool => \local_coursegen\local\permission::can_create_course_with_ai()
 ), $ADMIN->locate('restorecourse') ? 'restorecourse' : null);
 
@@ -108,25 +111,26 @@ $devsettings->add(new \local_coursegen\admin\setting_https_url(
 $ADMIN->add($pluginname, $devsettings);
 
 // Image generation policy of the current tenant.
-$ADMIN->add($pluginname, new \tool_wp\admin_externalpage(
+$ADMIN->add($pluginname, \local_coursegen\admin\external_page::create(
     'local_coursegen_manage_image_generation',
     get_string('manage_image_generation', 'local_coursegen'),
     (new moodle_url('/local/coursegen/manage_image_generation.php'))->out(false),
-    static fn(): bool => has_capability('local/coursegen:manageimagegeneration', context_system::instance())
+    'local/coursegen:manageimagegeneration'
 ));
 
 // System instructions of the current tenant.
-$ADMIN->add($pluginname, new \tool_wp\admin_externalpage(
+$ADMIN->add($pluginname, \local_coursegen\admin\external_page::create(
     'local_coursegen_manage_system_instructions',
     get_string('managesysteminstructions', 'local_coursegen'),
     (new moodle_url('/local/coursegen/manage_system_instructions.php'))->out(false),
-    static fn(): bool => has_capability('local/coursegen:managesysteminstructions', context_system::instance())
+    'local/coursegen:managesysteminstructions'
 ));
 
-$ADMIN->add($pluginname, new \tool_wp\admin_externalpage(
+$ADMIN->add($pluginname, \local_coursegen\admin\external_page::create(
     'local_coursegen_edit_system_instruction',
     get_string('editsysteminstruction', 'local_coursegen'),
     (new moodle_url('/local/coursegen/edit_system_instruction.php'))->out(false),
-    static fn(): bool => has_capability('local/coursegen:managesysteminstructions', context_system::instance()),
+    'local/coursegen:managesysteminstructions',
+    null,
     true
 ));

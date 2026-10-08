@@ -26,6 +26,8 @@ namespace local_coursegen;
  * @covers     \local_coursegen\tool_tenant
  */
 final class tool_tenant_test extends \advanced_testcase {
+    use \local_coursegen\tests\requires_workplace;
+
     /** @var string[] Capabilities the tenant administrator must receive. */
     private const EXPECTED = [
         'local/coursegen:createcoursewithai',
@@ -68,6 +70,7 @@ final class tool_tenant_test extends \advanced_testcase {
      * After the install/upgrade hook the tenant administrator role holds every exported capability.
      */
     public function test_tenant_admin_role_receives_the_capabilities(): void {
+        $this->require_tool_tenant();
         global $DB;
         $this->resetAfterTest();
 

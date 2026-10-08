@@ -28,12 +28,15 @@ use local_coursegen\local\tenant_config;
  * @covers     \local_coursegen\local\image_generation\image_policy_builder
  */
 final class image_policy_builder_test extends \advanced_testcase {
+    use \local_coursegen\tests\requires_workplace;
+
     /**
      * Creates a tenant and a user allocated to it, then returns [tenantid, user].
      *
      * @return array{0:int,1:\stdClass}
      */
     private function create_tenant_with_user(): array {
+        $this->require_tool_tenant();
         $generator = $this->getDataGenerator()->get_plugin_generator('tool_tenant');
         $tenantid = (int) $generator->create_tenant()->id;
         $user = $this->getDataGenerator()->create_user();

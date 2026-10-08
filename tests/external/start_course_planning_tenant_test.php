@@ -41,6 +41,8 @@ require_once(__DIR__ . '/../fixtures/aiprovider_datacurso_stub.php');
  * @runTestsInSeparateProcesses
  */
 final class start_course_planning_tenant_test extends \advanced_testcase {
+    use \local_coursegen\tests\requires_workplace;
+
     /**
      * Any accidental real API call must fail fast instead of reaching the network.
      */
@@ -81,6 +83,7 @@ final class start_course_planning_tenant_test extends \advanced_testcase {
      * An instruction of another tenant is rejected before any planning request.
      */
     public function test_other_tenant_instruction_rejected(): void {
+        $this->require_tool_tenant();
         $this->resetAfterTest();
         $this->setAdminUser();
         $othertenantid = (int) $this->getDataGenerator()->get_plugin_generator('tool_tenant')->create_tenant()->id;

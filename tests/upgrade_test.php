@@ -30,6 +30,8 @@ use xmldb_table;
  * @coversNothing
  */
 final class upgrade_test extends \advanced_testcase {
+    use \local_coursegen\tests\requires_workplace;
+
     /**
      * The tenant configuration table exists with its fields and the (tenantid, name) unique key.
      */
@@ -69,6 +71,7 @@ final class upgrade_test extends \advanced_testcase {
      * The plugin install hook granted the tenant administrator role all plugin capabilities.
      */
     public function test_tenant_admin_role_holds_plugin_capabilities_after_install(): void {
+        $this->require_tool_tenant();
         global $DB;
 
         $roleid = \tool_tenant\manager::get_tenant_admin_role();

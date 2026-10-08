@@ -33,6 +33,8 @@ require_once(__DIR__ . '/../fixtures/aiprovider_datacurso_stub.php');
  * @covers     \local_coursegen\local\api_client_factory
  */
 final class api_client_factory_tenant_test extends \advanced_testcase {
+    use \local_coursegen\tests\requires_workplace;
+
     /**
      * Removes the injected test double after each test.
      */
@@ -47,6 +49,7 @@ final class api_client_factory_tenant_test extends \advanced_testcase {
      * @return array{0:int,1:\stdClass}
      */
     private function create_tenant_with_user(): array {
+        $this->require_tool_tenant();
         $generator = $this->getDataGenerator()->get_plugin_generator('tool_tenant');
         $tenantid = (int) $generator->create_tenant()->id;
         $user = $this->getDataGenerator()->create_user();

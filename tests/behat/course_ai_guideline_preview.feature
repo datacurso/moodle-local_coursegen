@@ -41,8 +41,10 @@ Feature: Preview an institutional guideline in the course AI creation page
     Then ".modal-body" "css_element" should not exist
     And I should see "Quality policy" in the "#guidelineList" "css_element"
 
+  @tool_tenant
   Scenario: Guidelines are private to the tenant that owns them
-    Given the following "categories" exist:
+    Given Moodle Workplace multi-tenancy is available
+    And the following "categories" exist:
       | name              | category | idnumber |
       | Tenant A category | 0        | TENANTA  |
       | Tenant B category | 0        | TENANTB  |

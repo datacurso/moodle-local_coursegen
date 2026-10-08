@@ -26,6 +26,14 @@ namespace local_coursegen\local;
  * @covers     \local_coursegen\local\tenant_migration
  */
 final class tenant_migration_test extends \advanced_testcase {
+    use \local_coursegen\tests\requires_workplace;
+
+    #[\Override]
+    protected function tearDown(): void {
+        tenancy::reset_for_testing();
+        parent::tearDown();
+    }
+
     /**
      * Inserts a system instruction row directly, as the former site rows were stored.
      *
@@ -53,6 +61,7 @@ final class tenant_migration_test extends \advanced_testcase {
     public function test_moves_tenant_settings_to_default_tenant(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
+        $this->require_tool_tenant();
         $defaulttenantid = \tool_tenant\tenancy::get_default_tenant_id();
 
         $settings = [
@@ -88,6 +97,7 @@ final class tenant_migration_test extends \advanced_testcase {
     public function test_leaves_non_setting_keys_untouched(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
+        $this->require_tool_tenant();
         $defaulttenantid = \tool_tenant\tenancy::get_default_tenant_id();
         $version = get_config('local_coursegen', 'version');
         set_config('someinternalflag', 'x', 'local_coursegen');
@@ -106,6 +116,7 @@ final class tenant_migration_test extends \advanced_testcase {
     public function test_existing_default_tenant_value_wins(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
+        $this->require_tool_tenant();
         $defaulttenantid = \tool_tenant\tenancy::get_default_tenant_id();
         tenant_config::set('datacurso_service_url', 'https://tenant.example.com', $defaulttenantid);
         set_config('datacurso_service_url', 'https://site.example.com', 'local_coursegen');
@@ -123,6 +134,7 @@ final class tenant_migration_test extends \advanced_testcase {
         global $DB;
         $this->resetAfterTest();
         $this->setAdminUser();
+        $this->require_tool_tenant();
         $defaulttenantid = \tool_tenant\tenancy::get_default_tenant_id();
         $othertenantid = (int) $this->getDataGenerator()->get_plugin_generator('tool_tenant')->create_tenant()->id;
 
@@ -143,6 +155,7 @@ final class tenant_migration_test extends \advanced_testcase {
         global $DB;
         $this->resetAfterTest();
         $this->setAdminUser();
+        $this->require_tool_tenant();
         $defaulttenantid = \tool_tenant\tenancy::get_default_tenant_id();
         set_config('generationmode', 'auto', 'local_coursegen');
         $siteid = $this->insert_instruction('Site rule', 0);
@@ -158,5 +171,23 @@ final class tenant_migration_test extends \advanced_testcase {
             'name' => 'generationmode',
         ]));
         $this->assertEquals($defaulttenantid, $DB->get_field('local_coursegen_system_instruction', 'tenantid', ['id' => $siteid]));
+    }
+
+    /**
+     * Without tenancy the site data stays with the single implicit tenant 0.
+     */
+    public function test_targets_tenant_zero_without_tenancy(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        tenancy::simulate_unavailable_for_testing();
+        set_config('datacurso_service_url', 'https://site.example.com', 'local_coursegen');
+        $siteid = $this->insert_instruction('Site rule', 0);
+
+        tenant_migration::migrate_site_data_to_default_tenant();
+
+        $this->assertSame('https://site.example.com', tenant_config::get_raw('datacurso_service_url', 0));
+        $this->assertFalse(get_config('local_coursegen', 'datacurso_service_url'));
+        $this->assertEquals(0, $DB->get_field('local_coursegen_system_instruction', 'tenantid', ['id' => $siteid]));
     }
 }

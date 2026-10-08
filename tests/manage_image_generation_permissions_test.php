@@ -37,6 +37,8 @@ use local_coursegen\local\tenant_config;
  * @runTestsInSeparateProcesses
  */
 final class manage_image_generation_permissions_test extends \advanced_testcase {
+    use \local_coursegen\tests\requires_workplace;
+
     /**
      * A minimal valid payload for the service.
      *
@@ -72,6 +74,7 @@ final class manage_image_generation_permissions_test extends \advanced_testcase 
      * @return int Tenant id.
      */
     private function login_as_new_tenant_admin(): int {
+        $this->require_tool_tenant();
         $generator = $this->getDataGenerator()->get_plugin_generator('tool_tenant');
         $tenantid = (int) $generator->create_tenant()->id;
         $tenantadmin = $this->getDataGenerator()->create_user();
@@ -117,6 +120,7 @@ final class manage_image_generation_permissions_test extends \advanced_testcase 
      * A tenant administrator saves the settings of their own tenant only; config_plugins is untouched.
      */
     public function test_tenant_admin_saves_own_tenant(): void {
+        $this->require_tool_tenant();
         $this->resetAfterTest();
         $this->setAdminUser();
         $othertenantid = (int) $this->getDataGenerator()->get_plugin_generator('tool_tenant')->create_tenant()->id;
@@ -134,6 +138,7 @@ final class manage_image_generation_permissions_test extends \advanced_testcase 
      * A site administrator saves the settings of the tenant they are currently in.
      */
     public function test_site_admin_saves_current_tenant(): void {
+        $this->require_tool_tenant();
         $this->resetAfterTest();
         $this->setAdminUser();
         $othertenantid = (int) $this->getDataGenerator()->get_plugin_generator('tool_tenant')->create_tenant()->id;
