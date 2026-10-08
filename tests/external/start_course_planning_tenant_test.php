@@ -103,9 +103,12 @@ final class start_course_planning_tenant_test extends \advanced_testcase {
 
     /**
      * A legacy instruction without a real tenant (tenant 0) is not shared with anyone and is rejected.
+     *
+     * Workplace only: without tool_tenant every user belongs to tenant 0, so the row is the user's own.
      */
     public function test_tenantless_instruction_rejected(): void {
         global $DB;
+        $this->require_tool_tenant();
         $this->resetAfterTest();
         $this->setAdminUser();
         $legacyid = (int) $DB->insert_record('local_coursegen_system_instruction', (object) [

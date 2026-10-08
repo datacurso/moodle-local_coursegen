@@ -25,6 +25,10 @@ use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
 
+defined('MOODLE_INTERNAL') || die();
+
+require_once(__DIR__ . '/fixtures/aiprovider_datacurso_stub.php');
+
 /**
  * Capability gate tests for the full-course confirmation flow web services.
  *
