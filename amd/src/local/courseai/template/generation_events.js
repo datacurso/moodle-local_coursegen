@@ -58,6 +58,7 @@ export const STATUS_CLASS = {
     pending: 'cg-gen-pending',
     running: 'cg-gen-active',
     done: 'cg-gen-done',
+    skipped: 'cg-gen-skipped',
 };
 export const ALL_STATUS_CLASSES = Object.values(STATUS_CLASS);
 
@@ -77,13 +78,38 @@ export const markRow = (uid, status) => {
 };
 
 /**
- * Take every status off the activity rows, so none keeps a spinner or a badge once the run has ended.
+ * Take the status off one row, unless its activity was written: that row keeps its check, as in free mode.
+ *
+ * @param {Element} row
+ */
+const settleRow = (row) => {
+    if (row.classList.contains(STATUS_CLASS.done)) {
+        return;
+    }
+    row.classList.remove(...ALL_STATUS_CLASSES);
+};
+
+/**
+ * Settle the activity rows once the run has ended: the written ones keep their check, no row keeps a spinner.
  */
 export const settleRows = () => {
     const rows = document.querySelectorAll('[data-generation-uid]');
     for (const row of rows) {
-        row.classList.remove(...ALL_STATUS_CLASSES);
+        settleRow(row);
     }
+};
+
+/**
+ * The status a row takes when its activity is closed: a check when it was written, none when it failed or was left as it was.
+ *
+ * @param {Object} data An activity_progress_done or activity_progress_failed event.
+ * @returns {string} A key of STATUS_CLASS.
+ */
+const closedStatus = (data) => {
+    if (data.type === 'activity_progress_failed') {
+        return 'skipped';
+    }
+    return 'done';
 };
 
 /**
@@ -159,10 +185,9 @@ const startActivity = (data, progress) => {
  */
 const finishActivity = (data, progress, paintStage) => {
     const unchanged = data.type === 'activity_progress_failed' && data.reason === REASON_NOT_CHANGED;
-    // A failed activity is still counted and still stops looking
-    // "in progress": the run itself then fails, which is what the
-    // professor is told about.
-    markRow(data.uid, 'done');
+    // A failed activity is still counted and still stops looking "in progress", but it gets no check.
+    const status = closedStatus(data);
+    markRow(data.uid, status);
     progress.done += 1;
     if (progress.total < progress.done) {
         progress.total = progress.done;

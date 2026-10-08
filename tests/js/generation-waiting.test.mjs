@@ -105,7 +105,8 @@ test('a failed row stops spinning and the others keep their spinner', () => {
     const progress = {total: 2, done: 0};
     applyEvent(INIT, progress, paint);
     applyEvent({type: 'activity_progress_failed', aid: 't:11342', reason: 'failed'}, progress, paint);
-    assert.equal(GUIDE.classList.contains('cg-gen-done'), true);
+    assert.equal(GUIDE.classList.contains('cg-gen-skipped'), true);
+    assert.equal(GUIDE.classList.contains('cg-gen-done'), false);
     assert.equal(RESOURCE.classList.contains('cg-gen-pending'), true);
 });
 
