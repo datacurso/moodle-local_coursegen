@@ -130,6 +130,50 @@ test('a failure with no message gets a default one', async() => {
     assert.equal(calls.settled.rejected, 'local_coursegen:template_agent_error_failed:undefined');
 });
 
+test('a failure whose message is an object fails the pass with plain words, never the object marker', async() => {
+    const {source, calls} = startPass();
+    source.emitMessage({type: 'failed', message: {string_id: 'stream_generic_error', string: 'The stream broke.'}});
+    await flush();
+    assert.equal(calls.settled.rejected, 'local_coursegen:stream_generic_error:null');
+    assert.deepEqual(calls.failures, ['local_coursegen:stream_generic_error:null']);
+});
+
+test('a failure with a known code is told by the sentence of that code', async() => {
+    const {source, calls} = startPass();
+    source.emitMessage({type: 'failed', code: 'document_too_long', message: 'Raw words'});
+    await flush();
+    assert.equal(calls.settled.rejected, 'local_coursegen:template_error_document_too_long:undefined');
+});
+
+test('a failure whose message is empty or an unreadable object gets the default one', async() => {
+    for (const message of [{}, [], {a: {b: 1}}, '[object Object]', null]) {
+        const {source, calls} = startPass();
+        source.emitMessage({type: 'failed', message});
+        await flush();
+        assert.equal(calls.settled.rejected, 'local_coursegen:template_agent_error_failed:undefined');
+        assert.equal(calls.failures.length, 1);
+    }
+});
+
+test('the done that follows a failure does not replace its reason with the vague one', async() => {
+    const {source, calls} = startPass();
+    source.emitMessage({type: 'failed', code: 'timeout'});
+    source.emitDone();
+    await flush();
+    assert.equal(calls.settled.rejected, 'local_coursegen:template_error_timeout:undefined');
+    assert.equal(calls.failures.length, 1);
+});
+
+test('the connection error that follows a failure does not replace its reason either', async() => {
+    const {source, calls} = startPass();
+    source.emitMessage({type: 'failed', message: 'A fuse ended the run'});
+    source.readyState = FakeRelaySource.CLOSED;
+    source.onerror();
+    await flush();
+    assert.equal(calls.settled.rejected, 'A fuse ended the run');
+    assert.equal(calls.failures.length, 1);
+});
+
 test('a failure after a question, in the same pass, is ignored because the pass already ended', async() => {
     const {source, calls} = startPass();
     source.emitMessage(QUESTION);

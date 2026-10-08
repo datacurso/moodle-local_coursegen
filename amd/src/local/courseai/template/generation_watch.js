@@ -27,6 +27,7 @@
 
 import RelaySource from 'local_coursegen/local/courseai/stream/relay-source';
 import {getString} from 'core/str';
+import {failureText} from 'local_coursegen/local/courseai/template/failure_text';
 
 // The outcomes that end a pass without failing it: the run waits for an answer, can be tried again, or is done.
 const PASS_ENDS = ['question', 'retry', 'completed'];
@@ -73,7 +74,28 @@ const failPass = (state, onFail, reject, message) => finishPass(state, () => {
  * @returns {Promise<void>}
  */
 const failWithString = async(state, onFail, reject, key) => {
+    if (state.failing) {
+        return;
+    }
     const message = await getString(key, 'local_coursegen');
+    failPass(state, onFail, reject, message);
+};
+
+/**
+ * Fail the pass with the plain words of a failure event, whatever shape its message has.
+ *
+ * The pass is marked as failing at once, so the done or the error that follows the event cannot
+ * replace its reason with a vaguer one while the words are being read.
+ *
+ * @param {Object} state {source: RelaySource, settled: boolean, failing: boolean}
+ * @param {Function} onFail Called with the message once the pass fails.
+ * @param {Function} reject The pass promise's reject.
+ * @param {Object} failure The failed event.
+ * @returns {Promise<void>}
+ */
+const failWithFailure = async(state, onFail, reject, failure) => {
+    state.failing = true;
+    const message = await failureText(failure);
     failPass(state, onFail, reject, message);
 };
 
@@ -104,11 +126,7 @@ const handleStreamMessage = (state, progress, applyEvent, onFail, resolve, rejec
         // read again from the same point and re-emit the same pause, forever.
         finishPass(state, () => resolve({outcome, data}));
     } else if (outcome === 'failed') {
-        if (data.message) {
-            failPass(state, onFail, reject, data.message);
-        } else {
-            failWithString(state, onFail, reject, 'template_agent_error_failed');
-        }
+        failWithFailure(state, onFail, reject, data);
     }
 };
 
@@ -126,7 +144,7 @@ const handleStreamMessage = (state, progress, applyEvent, onFail, resolve, rejec
  * @returns {Promise<Object>} {outcome: 'question'|'retry'|'completed', data}
  */
 export const watchOnce = (streamUrl, progress, applyEvent, onFail) => new Promise((resolve, reject) => {
-    const state = {source: new RelaySource(streamUrl), settled: false};
+    const state = {source: new RelaySource(streamUrl), settled: false, failing: false};
 
     state.source.addEventListener('message', (event) => {
         handleStreamMessage(state, progress, applyEvent, onFail, resolve, reject, event);

@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100624
+
+### Fixed
+
+- **A failed template generation always tells what happened in plain words**  
+  The card that offers to try again showed "[object Object]" when the service reported the failure as an object, for example a message it had already localized, a code with its details, or a failure wrapped under `detail` or `error`. Every place that shows a failure of the template run, the card to try again, the closed view after a reload and the pass that follows the stream, now reads the failure whatever its shape: a known code (a document with too many pages, a missing request, a license problem, a model that took too long, a busy service, a file that could not be saved and more) gets its own sentence in English and Spanish, an unknown code shows the sentence that came with it, and when nothing safe can be shown a generic sentence is used. Raw JSON, object markers, stack traces and codes are never shown, and the text is always written as text. The failure reason also stays the one the service gave when the connection closes right after it. The answer card reads the errors of a rejected answer the same way. Along the way the template stream module was split into smaller ones for the stage labels, the review round and the events of a run, with no change in behavior.
+
 ## [2.0.10] - 2026100623
 
 ### Changed
