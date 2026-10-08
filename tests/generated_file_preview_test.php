@@ -74,7 +74,7 @@ final class generated_file_preview_test extends \advanced_testcase {
         $result = (new generated_file_preview($store))->addressed($parameters, [$this->entry()], self::UID);
 
         $address = $store->address(self::UID, 'forum-1a2b3c4d-1.png');
-        $this->assertStringContainsString('/draftfile.php/', $address);
+        $this->assertStringContainsString('/local/coursegen/preview_file.php/', $address);
         $this->assertSame('<img src="' . $address . '" alt="x">', $result['introeditor']['text']);
         $this->assertSame('See ' . $address, $result['mod_settings']['discussions'][0]['message']);
         $this->assertSame(3, $result['count']);

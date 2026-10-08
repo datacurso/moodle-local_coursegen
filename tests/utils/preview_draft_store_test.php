@@ -160,20 +160,105 @@ final class preview_draft_store_test extends \advanced_testcase {
     }
 
     /**
-     * The address of a stored file is its draft file URL without the site address.
+     * The address of a stored file is the page of the preview that serves it, without the site address.
      */
-    public function test_the_address_is_the_draft_file_url(): void {
-        global $USER;
+    public function test_the_address_is_the_preview_file_page_of_the_session(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
         $store = new preview_draft_store(211, self::THREAD);
-        $contextid = \context_user::instance($USER->id)->id;
 
         $address = $store->address(self::UID, 'guide.pdf');
 
-        $path = '/draftfile.php/' . $contextid . '/user/draft/' . $store->itemid() . '/' . self::UID . '/guide.pdf';
-        $this->assertStringEndsWith($path, $address);
+        $this->assertStringEndsWith('/local/coursegen/preview_file.php/211/' . self::UID . '/guide.pdf', $address);
         $this->assertStringStartsNotWith('http', $address);
+        $this->assertStringNotContainsString('draftfile.php', $address);
+    }
+
+    /**
+     * A name with spaces and accents is encoded in the address.
+     */
+    public function test_the_address_encodes_the_file_name(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $store = new preview_draft_store(211, self::THREAD);
+
+        $address = $store->address(self::UID, 'Guía semanal.pdf');
+
+        $this->assertStringEndsWith('/' . self::UID . '/Gu%C3%ADa%20semanal.pdf', $address);
+    }
+
+    /**
+     * A file already stored is the one the preview serves.
+     */
+    public function test_served_finds_a_file_that_is_stored(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $calls = [];
+        $store = new preview_draft_store(211, self::THREAD, $this->downloader('%PDF-1.4', $calls));
+        $store->get(self::UID, $this->entry());
+
+        $served = $store->served(self::UID, 'guide.pdf');
+
+        $this->assertNotNull($served);
+        $this->assertSame('%PDF-1.4', $served->get_content());
+    }
+
+    /**
+     * Serving never downloads from the AI service.
+     */
+    public function test_served_does_not_download_a_missing_file(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $calls = [];
+        $store = new preview_draft_store(211, self::THREAD, $this->downloader('x', $calls));
+        $store->itemid();
+
+        $this->assertNull($store->served(self::UID, 'guide.pdf'));
+        $this->assertSame([], $calls);
+    }
+
+    /**
+     * A generation session the user never opened has no draft item, and asking for it does not create one.
+     */
+    public function test_served_of_an_unknown_session_is_nothing_and_creates_no_draft_item(): void {
+        global $SESSION;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $store = new preview_draft_store(999, self::THREAD, static fn() => null);
+
+        $this->assertNull($store->served(self::UID, 'guide.pdf'));
+        $remembered = $SESSION->local_coursegen_previewdrafts ?? [];
+        $this->assertArrayNotHasKey(999, $remembered);
+    }
+
+    /**
+     * Another user cannot read a draft file of the first one, even knowing the session, the uid and the name.
+     */
+    public function test_served_never_reads_the_draft_area_of_another_user(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $calls = [];
+        $owner = new preview_draft_store(211, self::THREAD, $this->downloader('secret', $calls));
+        $owner->get(self::UID, $this->entry());
+        $other = $this->getDataGenerator()->create_user();
+        $this->setUser($other);
+
+        $store = new preview_draft_store(211, self::THREAD, static fn() => null);
+
+        $this->assertNull($store->served(self::UID, 'guide.pdf'));
+    }
+
+    /**
+     * A folder is not a file to serve.
+     */
+    public function test_served_does_not_serve_a_folder(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $calls = [];
+        $store = new preview_draft_store(211, self::THREAD, $this->downloader('x', $calls));
+        $store->get(self::UID, $this->entry());
+
+        $this->assertNull($store->served(self::UID, '.'));
     }
 
     /**

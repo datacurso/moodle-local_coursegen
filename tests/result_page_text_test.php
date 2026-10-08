@@ -106,11 +106,11 @@ final class result_page_text_test extends \advanced_testcase {
             'page',
             $parameters,
             ['11340' => 'https://example.com/p?uid=11340'],
-            ['11340' => '/draftfile.php/5/user/draft/9/uid/guide.pdf']
+            ['11340' => '/local/coursegen/preview_file.php/9/uid/guide.pdf']
         );
 
         $this->assertSame(
-            '<iframe src="/draftfile.php/5/user/draft/9/uid/guide.pdf"></iframe>',
+            '<iframe src="/local/coursegen/preview_file.php/9/uid/guide.pdf"></iframe>',
             $laid['structure']['page'][0]['content']
         );
     }

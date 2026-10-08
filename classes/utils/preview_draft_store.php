@@ -145,16 +145,56 @@ class preview_draft_store {
     /**
      * The address a stored generated file is served from.
      *
-     * It is the draft file URL without the site address: the text formatting of Moodle turns a draft file URL that
-     * starts with the site address into a broken one, since a draft URL should never reach a saved text.
+     * It is the page of the preview that serves the file to its owner, without the site address: a page that embeds
+     * the file shows it inside itself, which the draft file page of Moodle never does because it always downloads.
+     * The text formatting of Moodle turns an address that starts with the site address into a broken one in some
+     * fields, so the address starts at the path.
      *
      * @param string $uid Opaque uid of the activity the file belongs to.
      * @param string $filename File name, for example "guide.pdf".
      * @return string
      */
     public function address(string $uid, string $filename): string {
-        $url = \moodle_url::make_draftfile_url($this->itemid(), '/' . $uid . '/', $filename);
+        $encoded = rawurlencode($filename);
+        $path = '/local/coursegen/preview_file.php/' . $this->sessionid . '/' . $uid . '/' . $encoded;
+        $url = new \moodle_url($path);
         return $url->get_path(true);
+    }
+
+    /**
+     * The stored file of the user's draft area to serve, without downloading or creating anything.
+     *
+     * @param string $uid Opaque uid of the activity the file belongs to.
+     * @param string $filename File name, for example "guide.pdf".
+     * @return \stored_file|null Null when this session has no draft item of the user or the file is not in it.
+     */
+    public function served(string $uid, string $filename): ?\stored_file {
+        $known = $this->known_itemid();
+        if ($known <= 0) {
+            return null;
+        }
+        $record = $this->file_record($uid, $filename);
+        $stored = $this->find($record);
+        if ($stored === null) {
+            return null;
+        }
+        $isfolder = $stored->is_directory();
+        if ($isfolder) {
+            return null;
+        }
+        return $stored;
+    }
+
+    /**
+     * The draft item remembered for this generation session, or zero when there is none.
+     *
+     * @return int
+     */
+    private function known_itemid(): int {
+        global $SESSION;
+
+        $remembered = $SESSION->{self::REMEMBERED} ?? [];
+        return (int) ($remembered[$this->sessionid] ?? 0);
     }
 
     /**
