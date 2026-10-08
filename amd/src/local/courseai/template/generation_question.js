@@ -29,7 +29,12 @@ import {initFilepicker} from 'local_coursegen/repository/courseai';
 import {showFilePicker} from 'local_coursegen/local/courseai/context/filepicker';
 import {answerTemplateQuestion} from 'local_coursegen/local/courseai/template/repository';
 import {turn} from 'local_coursegen/local/courseai/template/thread';
-import {questionKind, questionOptions} from 'local_coursegen/local/courseai/template/agent_events';
+import {
+    questionActivity,
+    questionKind,
+    questionOptions,
+    questionTitleKey,
+} from 'local_coursegen/local/courseai/template/agent_events';
 import {allowsNoFile, answerWithoutFile, canSendAnswer} from 'local_coursegen/local/courseai/template/question_answer';
 
 const CARD_TEMPLATE = 'local_coursegen/template_agent_question';
@@ -51,10 +56,13 @@ const SELECT = {
     retryButton: '[data-action="local_coursegen/template-agent/retry"]',
 };
 
-const cardContext = (question) => {
+const cardContext = (question, title, about) => {
     const kind = questionKind(question);
     const options = questionOptions(question).map((value, index) => ({value, index}));
     return {
+        title,
+        about,
+        hasabout: about !== '',
         callid: String(question.call_id || ''),
         question: String(question.question || ''),
         askfile: kind === 'file',
@@ -63,6 +71,20 @@ const cardContext = (question) => {
         askchoice: kind === 'choice',
         options,
     };
+};
+
+/**
+ * The line of the card that names the activity the question is about.
+ *
+ * @param {Object} question The question event, for example {activity_name: "Weekly guide"}.
+ * @returns {Promise<string>} The line, or an empty text when the question is about no activity.
+ */
+const aboutLine = async(question) => {
+    const activity = questionActivity(question);
+    if (activity === '') {
+        return '';
+    }
+    return getString('template_agent_question_about', 'local_coursegen', activity);
 };
 
 const appendCard = async(template, context) => {
@@ -244,7 +266,9 @@ export const askQuestion = async(sessionId, question) => {
     if (existing) {
         existing.remove();
     }
-    await appendCard(CARD_TEMPLATE, cardContext(question));
+    const title = await getString(questionTitleKey(question), 'local_coursegen');
+    const about = await aboutLine(question);
+    await appendCard(CARD_TEMPLATE, cardContext(question, title, about));
     const card = document.querySelector(SELECT.card);
     const kind = questionKind(question);
     await new Promise((resolve) => {

@@ -38,6 +38,9 @@
     * data-region="file-name", "text-input", "choice-input" and "error" inside the card
 
     Context variables required for this template:
+    * title string - What is missing, for example "Falta un archivo"
+    * about string - The activity the question is about, for example "Actividad: Guía Semanal"; empty when none
+    * hasabout bool - The question names an activity
     * callid string - Call id of the question, for example "c4"
     * question string - What the AI asks, for example "Which file replaces the guide?"
     * askfile bool - The answer is a file
@@ -48,6 +51,9 @@
 
     Example context (json):
     {
+        "title": "Falta un archivo",
+        "about": "Actividad: Guía Semanal",
+        "hasabout": true,
         "callid": "c4",
         "question": "Which file replaces the weekly guide?",
         "askfile": true,
@@ -60,7 +66,10 @@
 <div class="local_coursegen-template_agent_question cg-decision-card cg-ask-card"
      data-region="local_coursegen/template-agent/question" data-call-id="{{callid}}"
      role="group" aria-labelledby="{{uniqid}}-title">
-    <p class="cg-decision-title" id="{{uniqid}}-title">{{#str}} template_agent_question_title, local_coursegen {{/str}}</p>
+    <p class="cg-decision-title" id="{{uniqid}}-title">{{title}}</p>
+    {{#hasabout}}
+    <p class="cg-ask-about">{{about}}</p>
+    {{/hasabout}}
     <p class="cg-decision-subtitle">{{question}}</p>
     <div class="cg-decision-body cg-ask-body">
         {{#askfile}}

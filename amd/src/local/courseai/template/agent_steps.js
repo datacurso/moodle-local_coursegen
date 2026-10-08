@@ -24,7 +24,7 @@
 
 import {getString} from 'core/str';
 import {turn} from 'local_coursegen/local/courseai/template/thread';
-import {toolLabelKey} from 'local_coursegen/local/courseai/template/agent_events';
+import {stepLabel} from 'local_coursegen/local/courseai/template/agent_events';
 
 let queue = Promise.resolve();
 
@@ -33,7 +33,8 @@ const enqueue = (task) => {
 };
 
 const showCall = async(data) => {
-    const label = await getString(toolLabelKey(data.name), 'local_coursegen');
+    const step = stepLabel(data);
+    const label = await getString(step.key, 'local_coursegen', step.argument);
     turn('ai', 'ai', label);
 };
 
