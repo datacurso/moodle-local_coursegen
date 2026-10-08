@@ -126,16 +126,11 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
             'Prompt textarea must render above the toolbar controls'
         );
 
-        // The stats line moved out of the input bar into the main column's
-        // badge area (asserted in the main-column test below).
+        // The stats line lives in the top bar, never in the input bar.
         $statspos = strpos($html, 'id="tplModeStats"');
         $this->assertNotFalse($statspos, 'Stats span missing');
         $this->assertSame(1, substr_count($html, 'id="tplModeStats"'), 'Stats span must render exactly once');
-        $this->assertGreaterThan(
-            strpos($html, 'data-region="tpl-main-column"'),
-            $statspos,
-            'Stats span must not render inside the input bar'
-        );
+        $this->assertLessThan($inputbarpos, $statspos, 'Stats span must not render inside the input bar');
     }
 
     /**
@@ -161,30 +156,12 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
         $maincolpos = strpos($html, 'data-region="tpl-main-column"');
         $this->assertNotFalse($maincolpos, 'Main column region missing');
 
-        // Structure containers plus the pre-pick empty state live in the main column.
-        foreach ([
-                self::EMPTY_SENTINEL,
-                'id="tplModeLimits"',
-                'id="tplModeLimitsBadge"',
-                'id="tplModeStats"',
-                'id="tplModeStructure"',
-            ] as $needle) {
+        // Structure container plus the pre-pick empty state live in the main column.
+        foreach ([self::EMPTY_SENTINEL, 'id="tplModeStructure"'] as $needle) {
             $pos = strpos($html, $needle);
             $this->assertNotFalse($pos, "Main column content {$needle} missing");
             $this->assertGreaterThan($maincolpos, $pos, "{$needle} must render inside the main column");
         }
-
-        // The stats span lives in the limits badge area, above the structure.
-        $this->assertGreaterThan(
-            strpos($html, 'id="tplModeLimits"'),
-            strpos($html, 'id="tplModeStats"'),
-            'Stats span must render inside the limits badge area'
-        );
-        $this->assertGreaterThan(
-            strpos($html, 'id="tplModeStats"'),
-            strpos($html, 'id="tplModeStructure"'),
-            'Stats span must render above the structure container'
-        );
 
         // The splitter sits between the left panel and the main column.
         $splitterpos = strpos($html, 'id="cgSplitter"');
@@ -194,23 +171,62 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
     }
 
     /**
-     * The left panel holds a hidden progress list under the feed, which the
-     * generation fills in one item per activity.
+     * The progress of the activities is a pill in the top bar, hidden until a run counts activities, with a closed
+     * list the generation fills in one item per activity.
      */
-    public function test_template_mode_renders_hidden_progress_list_under_the_feed(): void {
+    public function test_template_mode_renders_hidden_progress_pill_in_the_top_bar(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
 
         $html = $this->render_page(true);
 
-        $feedpos = strpos($html, 'id="cgLog"');
+        $barpos = strpos($html, 'id="courseaiTopbar"');
+        $barend = strpos($html, '</header>');
         $progresspos = strpos($html, 'id="courseaiChecklist"');
-        $this->assertNotFalse($progresspos, 'Progress list missing');
-        $this->assertGreaterThan($feedpos, $progresspos, 'Progress list must render below the feed');
-        $this->assertMatchesRegularExpression('/id="courseaiChecklist"[^>]*>/', $html);
+        $this->assertNotFalse($progresspos, 'Progress pill missing');
+        $this->assertGreaterThan($barpos, $progresspos, 'Progress pill must render inside the top bar');
+        $this->assertLessThan($barend, $progresspos, 'Progress pill must render inside the top bar');
+        $this->assertSame(1, substr_count($html, 'id="courseaiChecklist"'), 'The progress pill must render once');
         $this->assertMatchesRegularExpression('/class="[^"]*\bhidden\b[^"]*"\s+id="courseaiChecklist"/', $html);
+        $this->assertMatchesRegularExpression('/id="tplTopActivitiesToggle"[^>]*aria-expanded="false"/s', $html);
+        $this->assertMatchesRegularExpression('/id="tplTopActivitiesPanel"[^>]*\shidden/s', $html);
         $this->assertStringContainsString('id="courseaiChecklistList"', $html);
         $this->assertStringContainsString('id="courseaiChecklistCount"', $html);
+        $this->assertStringContainsString('id="tplTopActivitiesCount"', $html);
+    }
+
+    /**
+     * The stats chip and the course preview link live in the top bar in template mode, and the preview link stays
+     * hidden until a run exists.
+     */
+    public function test_template_mode_renders_stats_and_course_preview_in_the_top_bar(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $html = $this->render_page(true);
+
+        $barend = strpos($html, '</header>');
+        foreach (['id="tplModeLimits"', 'id="tplModeStats"', 'id="tplPreviewCourse"'] as $needle) {
+            $pos = strpos($html, $needle);
+            $this->assertNotFalse($pos, "{$needle} missing");
+            $this->assertLessThan($barend, $pos, "{$needle} must render inside the top bar");
+            $this->assertSame(1, substr_count($html, $needle), "{$needle} must render once");
+        }
+        $this->assertMatchesRegularExpression('/id="tplPreviewCourse"[^>]*\shidden/s', $html);
+    }
+
+    /**
+     * Free mode gets none of the top bar pieces of the template mode.
+     */
+    public function test_free_mode_renders_no_template_top_bar_pieces(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $html = $this->render_page(false);
+
+        $this->assertStringNotContainsString('tpl-topbar', $html);
+        $this->assertStringNotContainsString('id="tplModeStats"', $html);
+        $this->assertStringNotContainsString('id="tplPreviewCourse"', $html);
     }
 
     /**

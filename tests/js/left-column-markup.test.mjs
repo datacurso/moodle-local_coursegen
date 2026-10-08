@@ -92,9 +92,9 @@ test('the meter reads the number the script sets and the script sets that same n
 
 test('a teacher who asked for less motion gets no spinner and no pulse', () => {
     const feed = read('styles/template_left_column.css');
-    const cards = read('styles/template_left_cards.css');
+    const topBar = read('styles/template_top_bar.css');
     assert.match(feed, /prefers-reduced-motion: reduce/);
-    assert.match(cards, /prefers-reduced-motion: reduce/);
+    assert.match(topBar, /prefers-reduced-motion: reduce/);
 });
 
 test('every control of the cards shows a focus ring', () => {

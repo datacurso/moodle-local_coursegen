@@ -57,6 +57,7 @@ $PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_mode_promp
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_agent_question.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_left_column.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_left_cards.css', ['v' => $cssrev]));
+$PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_top_bar.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/start_chooser.css', ['v' => $cssrev]));
 
 use local_coursegen\local\models\course_session;
