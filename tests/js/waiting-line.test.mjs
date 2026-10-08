@@ -1,4 +1,4 @@
-// The waiting line under the progress list: one line updated in place, removed when the call ends, and the paused
+// The waiting line right after the steps of the feed: one line updated in place, removed when the call ends, and the paused
 // state that stops the spinners while the AI waits for an answer.
 import {test, beforeEach} from 'node:test';
 import assert from 'node:assert/strict';
@@ -6,6 +6,7 @@ import assert from 'node:assert/strict';
 import {
     clearWaiting,
     setPaused,
+    setSettled,
     showWaiting,
 } from '../../amd/src/local/courseai/template/generation_waiting.js';
 
@@ -14,17 +15,17 @@ const flush = () => new Promise((resolve) => setImmediate(resolve));
 let created = 0;
 let page = null;
 
-const makePage = (withChecklist) => {
+const makePage = (withFeed) => {
     const nodes = {};
     const bodyClasses = new Set();
-    const checklist = {
+    const feed = {
         insertAdjacentElement: (where, element) => {
             nodes[element.id] = element;
             assert.equal(where, 'afterend');
         },
     };
-    if (withChecklist) {
-        nodes.courseaiChecklist = checklist;
+    if (withFeed) {
+        nodes.cgLog = feed;
     }
     return {
         nodes,
@@ -65,7 +66,7 @@ beforeEach(async() => {
     globalThis.document = page;
 });
 
-test('the first tick creates the line under the progress list with the seconds in it', async() => {
+test('the first tick creates the line right after the steps with the seconds in it', async() => {
     showWaiting(12);
     await flush();
     const line = page.nodes.cgWaitingLine;
@@ -108,7 +109,7 @@ test('clearing when no line was ever shown does nothing', async() => {
     assert.equal(created, 0);
 });
 
-test('a page with no progress list shows no line and does not fail', async() => {
+test('a page with no feed shows no line and does not fail', async() => {
     page = makePage(false);
     globalThis.document = page;
     showWaiting(5);
@@ -121,5 +122,20 @@ test('the paused state is a class of the page that a resume takes off', () => {
     setPaused(true);
     assert.equal(page.bodyClasses.has('cg-generation-paused'), true);
     setPaused(false);
+    assert.equal(page.bodyClasses.has('cg-generation-paused'), false);
+});
+
+test('the settled state is a class of the page that a new round takes off', () => {
+    setSettled(true);
+    assert.equal(page.bodyClasses.has('cg-generation-settled'), true);
+    setSettled(false);
+    assert.equal(page.bodyClasses.has('cg-generation-settled'), false);
+});
+
+test('the settled state and the paused state are independent classes', () => {
+    setPaused(true);
+    setSettled(true);
+    setPaused(false);
+    assert.equal(page.bodyClasses.has('cg-generation-settled'), true);
     assert.equal(page.bodyClasses.has('cg-generation-paused'), false);
 });

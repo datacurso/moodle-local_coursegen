@@ -29,6 +29,7 @@
 import {getStrings} from 'core/str';
 import {createLog} from 'local_coursegen/local/courseai/ui/log';
 import {resetChecklist} from 'local_coursegen/local/courseai/template/generation_checklist';
+import {collapseRepeat} from 'local_coursegen/local/courseai/template/feed_repeat';
 
 const STRING_KEYS = [
     'courseai_template_log_selected',
@@ -103,6 +104,14 @@ const getLog = () => {
  */
 export const turn = (actor, kind, message, markdown = false) => {
     if (!String(message || '').trim()) {
+        return;
+    }
+    const feed = document.getElementById('cgLog');
+    let repeated = false;
+    if (actor === 'ai' && !markdown) {
+        repeated = collapseRepeat(feed, message);
+    }
+    if (repeated) {
         return;
     }
     getLog().add({actor, kind, message, markdown});

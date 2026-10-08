@@ -6,7 +6,7 @@ import assert from 'node:assert/strict';
 import {applyEvent, resetSeen} from 'local_coursegen/local/courseai/template/generation_events';
 import {waitingSeconds} from 'local_coursegen/local/courseai/template/agent_events';
 import {reset as resetChecklist} from '../../tests/js/stubs/generation-checklist.mjs';
-import {shown, reset as resetShown} from '../../tests/js/stubs/generation-waiting.mjs';
+import {shown, settledStates, reset as resetShown} from '../../tests/js/stubs/generation-waiting.mjs';
 
 const makeRow = (uid) => {
     const classes = new Set();
@@ -181,4 +181,35 @@ test('a waiting tick after the answer of the professor turns the spinners again 
     applyEvent({type: 'question', call_id: 'c3', question: 'Which file?'}, progress, paint);
     applyEvent(waiting(8), progress, paint);
     assert.deepEqual(shown.slice(-2), [['paused', false], ['wait', 8]]);
+});
+
+test('the end of the run settles the page: the last step of the feed becomes a check', () => {
+    applyEvent({type: 'completed'}, {total: 1, done: 1}, paint);
+    assert.deepEqual(settledStates, [true]);
+});
+
+test('every event of a running run leaves the page unsettled', () => {
+    const progress = {total: 1, done: 0};
+    applyEvent(INIT, progress, paint);
+    applyEvent({type: 'tool_call', name: 'get_activity', call_id: 'c1'}, progress, paint);
+    applyEvent({type: 'question', call_id: 'c2', question: 'Which file?'}, progress, paint);
+    assert.deepEqual(settledStates, [false, false, false]);
+});
+
+test('a new round after a finished run takes the settled state off with its first event', () => {
+    const progress = {total: 2, done: 0};
+    applyEvent({type: 'completed'}, {total: 2, done: 2}, paint);
+    applyEvent(INIT, progress, paint);
+    assert.deepEqual(settledStates, [true, false]);
+});
+
+test('a status tick does not change the settled state', () => {
+    applyEvent(waiting(12), {total: 1, done: 0}, paint);
+    applyEvent({type: 'status', message: 'Working'}, {total: 1, done: 0}, paint);
+    assert.deepEqual(settledStates, []);
+});
+
+test('a failure of the run leaves the page unsettled', () => {
+    applyEvent({type: 'failed', retryable: false, message: 'No'}, {total: 1, done: 0}, paint);
+    assert.deepEqual(settledStates, [false]);
 });

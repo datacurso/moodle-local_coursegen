@@ -11,6 +11,8 @@ const STUBS = {
     'local_coursegen/local/courseai/template/generation_waiting': new URL('./stubs/generation-waiting.mjs', import.meta.url),
     'local_coursegen/local/courseai/template/agent_steps': new URL('./stubs/agent-steps.mjs', import.meta.url),
     'core/str': new URL('./stubs/core-str.mjs', import.meta.url),
+    'local_coursegen/local/courseai/ui/log': new URL('./stubs/log.mjs', import.meta.url),
+    'core/templates': new URL('./stubs/core-templates.mjs', import.meta.url),
     'local_coursegen/local/courseai/stream/relay-source': new URL('./stubs/relay-source.mjs', import.meta.url),
 };
 
