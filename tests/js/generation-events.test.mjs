@@ -11,7 +11,7 @@ const rows = {
     '[data-generation-cmid="11342"]': {dataset: {generationUid: UID_OF_GUIDE}},
     '[data-generation-cmid="11340"]': {dataset: {generationUid: UID_OF_RESOURCE}},
 };
-globalThis.document = {querySelector: (selector) => rows[selector] || null};
+globalThis.document = {querySelector: (selector) => rows[selector] || null, querySelectorAll: () => []};
 
 const paint = () => undefined;
 const newProgress = () => ({total: 0, done: 0});

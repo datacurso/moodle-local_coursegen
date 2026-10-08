@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100616
+
+### Fixed
+
+- **No row keeps a spinner or a badge once a template generation has finished**  
+  The rows of the activities the AI writes kept the mark of their last state, a spinner or a badge, while the generated course was waiting for the professor to accept it or ask for changes. When the run completes, every row now goes back to its normal look, as it does in free mode, and the same happens when the page is reloaded on that review. A change request spins only the rows being redone and clears them again at the end.
+
 ## [2.0.10] - 2026100615
 
 ### Changed
