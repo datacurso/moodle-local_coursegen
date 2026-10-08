@@ -1,0 +1,74 @@
+/* The question the AI asks in a template run, and the notice that offers a new attempt. Both are the decision card of
+   the page (see aicoursecreation.css), so this only adds what that card does not have: the file row, the disabled
+   send button, the error line and the focus ring. */
+
+.cg-ask-card {
+  margin: 12px 0;
+}
+
+/* The chip is an inline-flex box, which would win over the hidden attribute. */
+.cg-ask-card [hidden] {
+  display: none !important;
+}
+
+.cg-ask-card .cg-decision-subtitle {
+  color: var(--fg);
+}
+
+.cg-ask-card .cg-decision-actions {
+  flex-wrap: wrap;
+}
+
+/* The row keeps its height whether or not a file is picked, so the card does not jump. */
+.cg-ask-file {
+  display: flex;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 8px;
+  min-height: 36px;
+}
+
+.cg-ask-pick {
+  gap: 6px;
+}
+
+.cg-ask-card .chip-name {
+  max-width: 200px;
+}
+
+.cg-ask-choices {
+  border: 0;
+  margin: 0;
+  padding: 0;
+  min-width: 0;
+}
+
+.cg-ask-card .plan-proposal-other-textarea {
+  margin-top: 0;
+}
+
+.cg-ask-error {
+  margin: 10px 0 0;
+  padding: 8px 12px;
+  font-size: 13px;
+  line-height: 1.45;
+  color: var(--primary, hsl(10 81% 42%));
+  background: hsl(10 81% 42% / .08);
+  border-radius: 8px;
+}
+
+.cg-ask-retry-message {
+  margin: 0;
+}
+
+.cg-ask-card .cg-decision-btn:disabled,
+.cg-ask-card .cg-decision-btn:disabled:hover {
+  opacity: .45;
+  cursor: not-allowed;
+}
+
+.cg-ask-card .cg-decision-btn:focus-visible,
+.cg-ask-card .chip-btn:focus-visible {
+  outline: 2px solid var(--primary, hsl(10 81% 42%));
+  outline-offset: 2px;
+}

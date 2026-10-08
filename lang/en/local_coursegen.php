@@ -230,6 +230,7 @@ $string['template_agent_log_resumed'] = 'Continuing with your answer.';
 $string['template_agent_log_waiting'] = 'The AI is waiting for your answer.';
 $string['template_agent_question_choice_label'] = 'Choose one option';
 $string['template_agent_question_file_button'] = 'Choose a file';
+$string['template_agent_question_file_remove'] = 'Remove the file';
 $string['template_agent_question_nofile_answer'] = 'I do not have a file for this.';
 $string['template_agent_question_nofile_button'] = 'I do not have a file';
 $string['template_agent_question_send'] = 'Send answer';

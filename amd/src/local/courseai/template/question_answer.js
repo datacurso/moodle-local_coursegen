@@ -37,3 +37,26 @@ export const answerWithoutFile = (sentence) => ({kind: 'text', answer: {text: St
  * @returns {boolean}
  */
 export const allowsNoFile = (kind) => kind === 'file';
+
+/**
+ * Whether the answer the teacher has so far can be sent: a file picked, words written or an option chosen.
+ *
+ * @param {string} kind The kind of the question: file, text or choice.
+ * @param {Object} [answer] What the card holds now: draftItemId, text or choice, for example {text: 'Twelve weeks'}.
+ * @returns {boolean}
+ */
+export const canSendAnswer = (kind, answer) => {
+    if (!answer) {
+        return false;
+    }
+    if (kind === 'file') {
+        return Number(answer.draftItemId) > 0;
+    }
+    if (kind === 'text') {
+        return String(answer.text || '').trim() !== '';
+    }
+    if (kind === 'choice') {
+        return String(answer.choice || '') !== '';
+    }
+    return false;
+};

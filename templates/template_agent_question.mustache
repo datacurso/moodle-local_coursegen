@@ -20,6 +20,9 @@
     The question the AI pauses a template generation on, with the control that answers it: a file picker, a text
     box or a list of options.
 
+    The card is the decision card of the page: its title, its buttons (the primary one is the coral of Accept, the
+    outline one is the one of Adjust), the option rows of the proposals and the chip of the attached syllabus.
+
     Classes required for JS:
     * none
 
@@ -27,8 +30,11 @@
     * data-region="local_coursegen/template-agent/question" on the card, with data-call-id of the question
     * data-action="local_coursegen/template-agent/pick-file" on the button that opens the file picker
     * data-action="local_coursegen/template-agent/no-file" on the button of a teacher who has no file
-    * data-action="local_coursegen/template-agent/send-answer" on the button that sends the answer
-    * data-region="file-name", "text-input" and "error" inside the card
+    * data-action="local_coursegen/template-agent/send-answer" on the button that sends the answer, disabled until
+      there is an answer to send
+    * data-action="local_coursegen/template-agent/remove-file" on the button that drops the picked file
+    * data-region="file-chip" on the chip of the picked file, hidden until one is picked
+    * data-region="file-name", "text-input", "choice-input" and "error" inside the card
 
     Context variables required for this template:
     * callid string - Call id of the question, for example "c4"
@@ -50,43 +56,66 @@
         "options": []
     }
 }}
-<div class="local_coursegen-template_agent_question card my-3 border-primary"
+<div class="local_coursegen-template_agent_question cg-decision-card cg-ask-card my-3"
      data-region="local_coursegen/template-agent/question" data-call-id="{{callid}}"
      role="group" aria-labelledby="{{uniqid}}-title">
-    <div class="card-body">
-        <h5 class="card-title h6" id="{{uniqid}}-title">{{#str}} template_agent_question_title, local_coursegen {{/str}}</h5>
-        <p class="card-text">{{question}}</p>
+    <p class="cg-decision-title" id="{{uniqid}}-title">{{#str}} template_agent_question_title, local_coursegen {{/str}}</p>
+    <p class="cg-decision-subtitle">{{question}}</p>
+    <div class="cg-decision-body cg-ask-body">
         {{#askfile}}
-        <div class="d-flex align-items-center flex-wrap mb-2">
-            <button type="button" class="btn btn-secondary me-2" data-action="local_coursegen/template-agent/pick-file">
+        <div class="cg-ask-file">
+            <button type="button" class="cg-decision-btn cg-decision-btn--adjust cg-ask-pick"
+                    data-action="local_coursegen/template-agent/pick-file">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                </svg>
                 {{#str}} template_agent_question_file_button, local_coursegen {{/str}}
             </button>
-            <span class="text-muted" data-region="file-name" aria-live="polite"></span>
-            {{#nofile}}
-            <button type="button" class="btn btn-link ms-auto" data-action="local_coursegen/template-agent/no-file">
-                {{#str}} template_agent_question_nofile_button, local_coursegen {{/str}}
-            </button>
-            {{/nofile}}
+            <span class="chip chip-syllabus" data-region="file-chip" hidden>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+                <span class="chip-name" data-region="file-name" aria-live="polite"></span>
+                <button type="button" class="chip-btn" data-action="local_coursegen/template-agent/remove-file"
+                        aria-label="{{#str}} template_agent_question_file_remove, local_coursegen {{/str}}">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </span>
         </div>
         {{/askfile}}
         {{#asktext}}
         <label class="visually-hidden" for="{{uniqid}}-text">{{#str}} template_agent_question_text_label, local_coursegen {{/str}}</label>
-        <textarea class="form-control mb-2" id="{{uniqid}}-text" rows="3" data-region="text-input"></textarea>
+        <textarea class="plan-proposal-other-textarea" id="{{uniqid}}-text" rows="3" data-region="text-input"></textarea>
         {{/asktext}}
         {{#askchoice}}
-        <fieldset class="mb-2">
+        <fieldset class="plan-proposals-group cg-ask-choices">
             <legend class="visually-hidden">{{#str}} template_agent_question_choice_label, local_coursegen {{/str}}</legend>
             {{#options}}
-            <div class="form-check">
-                <input class="form-check-input" type="radio" name="{{uniqid}}-choice" id="{{uniqid}}-choice-{{index}}"
+            <label class="plan-proposal-card" for="{{uniqid}}-choice-{{index}}">
+                <input class="plan-proposal-radio" type="radio" name="{{uniqid}}-choice" id="{{uniqid}}-choice-{{index}}"
                        value="{{value}}" data-region="choice-input">
-                <label class="form-check-label" for="{{uniqid}}-choice-{{index}}">{{value}}</label>
-            </div>
+                <span class="plan-proposal-summary">{{value}}</span>
+            </label>
             {{/options}}
         </fieldset>
         {{/askchoice}}
-        <div class="alert alert-danger" role="alert" data-region="error" hidden></div>
-        <button type="button" class="btn btn-primary" data-action="local_coursegen/template-agent/send-answer">
+        <p class="cg-ask-error" role="alert" data-region="error" hidden></p>
+    </div>
+    <div class="cg-decision-actions">
+        {{#nofile}}
+        <button type="button" class="cg-decision-btn cg-decision-btn--adjust"
+                data-action="local_coursegen/template-agent/no-file">
+            {{#str}} template_agent_question_nofile_button, local_coursegen {{/str}}
+        </button>
+        {{/nofile}}
+        <button type="button" class="cg-decision-btn cg-decision-btn--accept"
+                data-action="local_coursegen/template-agent/send-answer" disabled>
             {{#str}} template_agent_question_send, local_coursegen {{/str}}
         </button>
     </div>

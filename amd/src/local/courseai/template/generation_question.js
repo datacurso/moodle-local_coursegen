@@ -30,7 +30,7 @@ import {showFilePicker} from 'local_coursegen/local/courseai/context/filepicker'
 import {answerTemplateQuestion} from 'local_coursegen/local/courseai/template/repository';
 import {turn} from 'local_coursegen/local/courseai/template/thread';
 import {questionKind, questionOptions} from 'local_coursegen/local/courseai/template/agent_events';
-import {allowsNoFile, answerWithoutFile} from 'local_coursegen/local/courseai/template/question_answer';
+import {allowsNoFile, answerWithoutFile, canSendAnswer} from 'local_coursegen/local/courseai/template/question_answer';
 
 const CARD_TEMPLATE = 'local_coursegen/template_agent_question';
 const RETRY_TEMPLATE = 'local_coursegen/template_agent_retry';
@@ -39,11 +39,14 @@ const SELECT = {
     card: '[data-region="local_coursegen/template-agent/question"]',
     retry: '[data-region="local_coursegen/template-agent/retry"]',
     fileName: '[data-region="file-name"]',
+    fileChip: '[data-region="file-chip"]',
     textInput: '[data-region="text-input"]',
     choiceChecked: '[data-region="choice-input"]:checked',
+    choiceInputs: '[data-region="choice-input"]',
     error: '[data-region="error"]',
     pick: '[data-action="local_coursegen/template-agent/pick-file"]',
     noFile: '[data-action="local_coursegen/template-agent/no-file"]',
+    removeFile: '[data-action="local_coursegen/template-agent/remove-file"]',
     send: '[data-action="local_coursegen/template-agent/send-answer"]',
     retryButton: '[data-action="local_coursegen/template-agent/retry"]',
 };
@@ -89,10 +92,29 @@ const showError = (card, message) => {
     alert.hidden = false;
 };
 
+const clearError = (card) => {
+    const alert = card.querySelector(SELECT.error);
+    alert.textContent = '';
+    alert.hidden = true;
+};
+
+// The send button works only while there is an answer to send, so an empty card never reaches the service.
+const refreshSend = (card, kind, picked) => {
+    const send = card.querySelector(SELECT.send);
+    const answer = readAnswer(card, kind, picked);
+    send.disabled = !canSendAnswer(kind, answer);
+};
+
 const setBusy = (card, busy) => {
     card.querySelectorAll('button, textarea, input').forEach((control) => {
         control.disabled = busy;
     });
+};
+
+// After a failed send every control comes back, the send button only if there is still an answer to send.
+const restoreControls = (card, kind, picked) => {
+    setBusy(card, false);
+    refreshSend(card, kind, picked);
 };
 
 const summaryOf = async(kind, answer, picked) => {
@@ -105,7 +127,14 @@ const summaryOf = async(kind, answer, picked) => {
     return answer.text;
 };
 
-const pickFile = (card, picked) => showFilePicker({
+// The chip of the picked file: its name and the way to drop it, hidden while there is no file.
+const showPicked = (card, picked) => {
+    const chip = card.querySelector(SELECT.fileChip);
+    card.querySelector(SELECT.fileName).textContent = picked.filename;
+    chip.hidden = picked.draftItemId <= 0;
+};
+
+const pickFile = (card, picked, kind) => showFilePicker({
     state: {},
     CourseaiRepository: {initFilepicker},
     Notification,
@@ -114,9 +143,18 @@ const pickFile = (card, picked) => showFilePicker({
     onPicked: (filename, draftItemId) => {
         picked.filename = filename;
         picked.draftItemId = draftItemId;
-        card.querySelector(SELECT.fileName).textContent = filename;
+        clearError(card);
+        showPicked(card, picked);
+        refreshSend(card, kind, picked);
     },
 });
+
+const removeFile = (card, picked, kind) => {
+    picked.filename = '';
+    picked.draftItemId = 0;
+    showPicked(card, picked);
+    refreshSend(card, kind, picked);
+};
 
 const sendAnswer = async(card, sessionId, question, kind, picked) => {
     const answer = readAnswer(card, kind, picked);
@@ -124,7 +162,7 @@ const sendAnswer = async(card, sessionId, question, kind, picked) => {
     try {
         await answerTemplateQuestion(sessionId, String(question.call_id), kind, answer);
     } catch (exception) {
-        setBusy(card, false);
+        restoreControls(card, kind, picked);
         showError(card, exception.message || String(exception));
         return false;
     }
@@ -134,14 +172,14 @@ const sendAnswer = async(card, sessionId, question, kind, picked) => {
     return true;
 };
 
-const sendWithoutFile = async(card, sessionId, question) => {
+const sendWithoutFile = async(card, sessionId, question, picked) => {
     const sentence = await getString('template_agent_question_nofile_answer', 'local_coursegen');
     const {kind, answer} = answerWithoutFile(sentence);
     setBusy(card, true);
     try {
         await answerTemplateQuestion(sessionId, String(question.call_id), kind, answer);
     } catch (exception) {
-        setBusy(card, false);
+        restoreControls(card, 'file', picked);
         showError(card, exception.message || String(exception));
         return false;
     }
@@ -150,16 +188,39 @@ const sendWithoutFile = async(card, sessionId, question) => {
     return true;
 };
 
-const bindCard = (card, sessionId, question, kind, done) => {
-    const picked = {filename: '', draftItemId: 0};
+// The controls that change the answer: the text box and the options keep the send button in step with them.
+const bindAnswerControls = (card, kind, picked) => {
+    const textInput = card.querySelector(SELECT.textInput);
+    if (textInput) {
+        textInput.addEventListener('input', () => {
+            clearError(card);
+            refreshSend(card, kind, picked);
+        });
+    }
+    card.querySelectorAll(SELECT.choiceInputs).forEach((choice) => {
+        choice.addEventListener('change', () => refreshSend(card, kind, picked));
+    });
+};
+
+const bindFileControls = (card, kind, picked) => {
     const pick = card.querySelector(SELECT.pick);
     if (pick) {
-        pick.addEventListener('click', () => pickFile(card, picked));
+        pick.addEventListener('click', () => pickFile(card, picked, kind));
     }
+    const remove = card.querySelector(SELECT.removeFile);
+    if (remove) {
+        remove.addEventListener('click', () => removeFile(card, picked, kind));
+    }
+};
+
+const bindCard = (card, sessionId, question, kind, done) => {
+    const picked = {filename: '', draftItemId: 0};
+    bindFileControls(card, kind, picked);
+    bindAnswerControls(card, kind, picked);
     const noFile = card.querySelector(SELECT.noFile);
     if (noFile) {
         noFile.addEventListener('click', async() => {
-            if (await sendWithoutFile(card, sessionId, question)) {
+            if (await sendWithoutFile(card, sessionId, question, picked)) {
                 done();
             }
         });
