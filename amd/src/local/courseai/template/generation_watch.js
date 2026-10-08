@@ -26,6 +26,7 @@
  */
 
 import RelaySource from 'local_coursegen/local/courseai/stream/relay-source';
+import {getString} from 'core/str';
 
 // The outcomes that end a pass without failing it: the run waits for an answer, can be tried again, or is done.
 const PASS_ENDS = ['question', 'retry', 'completed'];
@@ -63,6 +64,20 @@ const failPass = (state, onFail, reject, message) => finishPass(state, () => {
 });
 
 /**
+ * Fail the pass with a message read from the language strings.
+ *
+ * @param {Object} state {source: RelaySource, settled: boolean}
+ * @param {Function} onFail Called with the message once the pass fails.
+ * @param {Function} reject The pass promise's reject.
+ * @param {string} key The language string key of the message.
+ * @returns {Promise<void>}
+ */
+const failWithString = async(state, onFail, reject, key) => {
+    const message = await getString(key, 'local_coursegen');
+    failPass(state, onFail, reject, message);
+};
+
+/**
  * Handle one decoded 'message' event: apply it, and finish or fail the pass
  * once it reaches a terminal outcome.
  *
@@ -89,7 +104,11 @@ const handleStreamMessage = (state, progress, applyEvent, onFail, resolve, rejec
         // read again from the same point and re-emit the same pause, forever.
         finishPass(state, () => resolve({outcome, data}));
     } else if (outcome === 'failed') {
-        failPass(state, onFail, reject, data.message || 'The generation could not be completed.');
+        if (data.message) {
+            failPass(state, onFail, reject, data.message);
+        } else {
+            failWithString(state, onFail, reject, 'template_agent_error_failed');
+        }
     }
 };
 
@@ -117,7 +136,7 @@ export const watchOnce = (streamUrl, progress, applyEvent, onFail) => new Promis
         // A 'done' with no terminal event before it means the stream ended
         // without ever saying how: reported as a failure rather than leaving
         // the professor watching a header that will never resolve.
-        failPass(state, onFail, reject, 'The generation ended unexpectedly.');
+        failWithString(state, onFail, reject, 'template_agent_error_ended');
     });
 
     state.source.onerror = () => {
@@ -126,6 +145,6 @@ export const watchOnce = (streamUrl, progress, applyEvent, onFail) => new Promis
         if (state.source.readyState === RelaySource.CONNECTING) {
             return;
         }
-        failPass(state, onFail, reject, 'The connection to the generation was lost.');
+        failWithString(state, onFail, reject, 'template_agent_error_connection');
     };
 });
