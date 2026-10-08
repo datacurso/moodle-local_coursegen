@@ -2,6 +2,55 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100620
+
+### Changed
+
+- **The left column of a template generation is a clean timeline with cards**  
+  What the AI does is now a compact timeline: one small line per step with a marker (a spinner for the step in progress, an amber ring while the AI waits for the professor, a check once the run is over), the time on the same baseline and a thin line joining the steps. A step the AI takes several times in a row is one line with a count instead of repeated lines. The seconds of a long call sit right under the steps in a small pill. The activities the AI writes are a card with a meter that fills as they are written, one tidy row per activity with its type, and a green check on each one that is done. The question of the AI, the progress and the review of the course share one look: the same border, radius, spacing and buttons, with the secondary action on the left and the primary one on the right in a single aligned row, and a primary button that is clearly disabled but still readable until there is an answer. The file control of a question is a drop-zone looking area that says which files it takes (PDF, DOCX or TXT) and turns into a roomy row with the file name once one is picked. The bar that said the AI was generating is hidden while the AI waits for an answer. Nothing turns or pulses for a professor who asked for less motion. Free mode is not affected.
+
+## [2.0.10] - 2026100619
+
+### Changed
+
+- **The question the AI asks during a template generation looks like the rest of the page**  
+  The card that appears when the AI needs something from the professor was drawn with stock blue buttons, a native file button and a bare link, so it stood out from everything around it. It is now the decision card of the page: the send button is the same coral one as Accept and stays disabled until there is something to send, the secondary actions are the outline button of Adjust, a picked file shows as the same chip as the attached syllabus with a way to remove it, and the options are the same selectable rows as the proposals. The notice that offers a new attempt uses the same buttons.
+
+### Fixed
+
+- **The progress list no longer opens with two almost identical lines**  
+  A generation started with "Reading the template." and the first step of the AI said "Reading the template" right after it. The first line now says that the generation is starting.
+
+## [2.0.10] - 2026100618
+
+### Fixed
+
+- **The PDF a page embeds shows inside the page of the preview instead of being downloaded**  
+  A page of a template whose viewer pointed to the file of a resource showed an empty frame while the browser downloaded the file, because the page that served it from the draft area of the reviewer always downloads. The preview now serves its files from a page of its own, only to the person who is reviewing, and shows a PDF or an image inside the page. Any other type is still downloaded, and a link to the file keeps working as before. Creating the course is not affected.
+
+## [2.0.10] - 2026100617
+
+### Fixed
+
+- **A written activity keeps its check once a template generation has finished**  
+  After the previous fix the rows of the activities the AI had written went back to a bare look, with nothing to show they were done. Now a row the AI wrote ends with the same check as in free mode, and it stays through the review and after a reload. A row the AI did not reach, or could not write, ends with no mark and never with a spinner. A change request sends only the rows being redone back to the spinner, and they end with their check again.
+
+## [2.0.10] - 2026100616
+
+### Fixed
+
+- **No row keeps a spinner or a badge once a template generation has finished**  
+  The rows of the activities the AI writes kept the mark of their last state, a spinner or a badge, while the generated course was waiting for the professor to accept it or ask for changes. When the run completes, every row now goes back to its normal look, as it does in free mode, and the same happens when the page is reloaded on that review. A change request spins only the rows being redone and clears them again at the end.
+
+## [2.0.10] - 2026100615
+
+### Changed
+
+- **The Generate button of a template waits for something to work from**  
+  The button was on as soon as a template was loaded. It now needs a text that says what the course is to be, a file, or both: with neither it stays off, it comes on when the professor types or attaches a file, and it goes off again if both are taken away. A text the browser puts back in the box after a reload counts too. Starting with neither is also refused when the request reaches the server, with a clear message.
+- **The first line of a generation no longer talks about material the professor did not attach**  
+  It now says the AI is reading the template.
+
 ## [2.0.10] - 2026101201
 
 ### Added

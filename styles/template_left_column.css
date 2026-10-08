@@ -1,0 +1,249 @@
+/* The feed of the left column of the template flow: what the AI is doing, step by step, the line that counts the
+   seconds of a long call and the bar of the stage the run is in.
+
+   The feed is a quiet timeline (a marker, a line of text, the time). The page palette is used as it is: coral for the
+   step in progress, amber for what waits for the teacher, green for what is done, greys for the rest. The cards that
+   come after the feed (progress, question, review) are in template_left_cards.css.
+
+   Every rule is scoped to .tpl-left-panel, the column of the template mode, so the free mode that shares the markup
+   of the feed keeps its own look. */
+
+.tpl-left-panel {
+  --cg-marker: 14px;
+  --cg-dot: hsl(215 16% 47% / .4);
+  --cg-outline: hsl(215 16% 76%);
+  --cg-amber-ink: hsl(32 85% 30%);
+  --cg-green-ink: hsl(142 70% 26%);
+}
+
+/* ── The feed: a timeline of steps ─────────────────────────────────────── */
+
+.tpl-left-panel .cg-thread-feed {
+  gap: 0;
+}
+
+/* What the teacher said: a compact grey card at the top of the run, not a block of body text. */
+.tpl-left-panel .cg-thread-feed > .cg-log-entry--turn-user {
+  margin: 4px 0 14px;
+  padding: 10px 14px;
+  border-radius: 12px;
+  background: var(--muted);
+}
+
+.tpl-left-panel .cg-thread-feed > .cg-log-entry--turn-user .cg-log-msg {
+  font-size: 13.5px;
+  line-height: 1.5;
+}
+
+/* A step of the AI: a marker on the left, the words, the time on the same baseline. */
+.tpl-left-panel .cg-thread-feed > .cg-log-entry--turn-ai {
+  position: relative;
+  padding: 5px 8px 5px 30px;
+  border-radius: 10px;
+}
+
+.tpl-left-panel .cg-thread-feed > .cg-log-entry--turn-ai .cg-log-body {
+  align-items: baseline;
+  gap: 10px;
+}
+
+.tpl-left-panel .cg-thread-feed > .cg-log-entry--turn-ai .cg-log-msg {
+  font-size: 13px;
+  line-height: 20px;
+  color: var(--muted-fg);
+}
+
+.tpl-left-panel .cg-thread-feed > .cg-log-entry--turn-ai .cg-log-ts {
+  min-width: 2.2em;
+  font-size: 11px;
+  line-height: 20px;
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  opacity: 1;
+}
+
+/* The marker is the bar the log already draws, turned into a small dot that sits on the first line of the step. */
+.tpl-left-panel .cg-thread-feed > .cg-log-entry--turn-ai .cg-log-bar {
+  display: block;
+  position: absolute;
+  z-index: 1;
+  left: 8px;
+  top: 8px;
+  width: var(--cg-marker);
+  height: var(--cg-marker);
+  box-sizing: border-box;
+  border-radius: 50%;
+  background: radial-gradient(circle, var(--cg-dot) 0 3.5px, var(--card) 4px);
+}
+
+/* The line that joins a step to the one before and the one after it. */
+.tpl-left-panel .cg-thread-feed > .cg-log-entry--turn-ai::before,
+.tpl-left-panel .cg-thread-feed > .cg-log-entry--turn-ai::after {
+  content: '';
+  display: none;
+  position: absolute;
+  left: 14.5px;
+  width: 1px;
+  background: var(--border);
+}
+
+.tpl-left-panel .cg-thread-feed > .cg-log-entry--turn-ai + .cg-log-entry--turn-ai::before {
+  display: block;
+  top: 0;
+  height: 15px;
+}
+
+.tpl-left-panel .cg-thread-feed > .cg-log-entry--turn-ai:has(+ .cg-log-entry--turn-ai)::after {
+  display: block;
+  top: 15px;
+  bottom: 0;
+}
+
+/* A step that went wrong reads as one. */
+.tpl-left-panel .cg-thread-feed > .cg-log-entry--danger .cg-log-msg {
+  color: var(--danger);
+}
+
+.tpl-left-panel .cg-thread-feed > .cg-log-entry--danger .cg-log-bar {
+  background: radial-gradient(circle, var(--danger) 0 3.5px, var(--card) 4px);
+}
+
+/* The step the run is on stands out from the ones that are over. */
+.tpl-left-panel .cg-thread-feed > .cg-log-entry--turn-ai:nth-last-child(1 of .cg-log-entry) .cg-log-msg {
+  color: var(--fg);
+  font-weight: 500;
+}
+
+/* Running: the marker of the last step turns. */
+body.cg-generating:not(.cg-generation-paused):not(.cg-generation-settled)
+  .tpl-left-panel .cg-thread-feed > .cg-log-entry--turn-ai:nth-last-child(1 of .cg-log-entry) .cg-log-bar {
+  background: var(--card);
+  border: 2px solid hsl(10 81% 63% / .25);
+  border-top-color: var(--primary);
+  animation: courseai-spin .8s linear infinite;
+}
+
+/* Waiting for the teacher: nothing turns, the step is highlighted and its marker is amber. */
+body.cg-generating.cg-generation-paused
+  .tpl-left-panel .cg-thread-feed > .cg-log-entry--turn-ai:nth-last-child(1 of .cg-log-entry) {
+  background: var(--warn-soft);
+}
+
+body.cg-generating.cg-generation-paused
+  .tpl-left-panel .cg-thread-feed > .cg-log-entry--turn-ai:nth-last-child(1 of .cg-log-entry) .cg-log-bar {
+  border: 2px solid var(--warn);
+  background: radial-gradient(circle, var(--warn) 0 2.5px, transparent 3px);
+}
+
+body.cg-generating.cg-generation-paused
+  .tpl-left-panel .cg-thread-feed > .cg-log-entry--turn-ai:nth-last-child(1 of .cg-log-entry) .cg-log-msg {
+  color: var(--cg-amber-ink);
+}
+
+/* Over: the last step is a check. */
+body.cg-generation-settled
+  .tpl-left-panel .cg-thread-feed > .cg-log-entry--turn-ai:nth-last-child(1 of .cg-log-entry) .cg-log-bar {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='hsl(142,70%25,26%25)' stroke-width='3.4' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E")
+      center / 9px no-repeat,
+    var(--success-soft);
+}
+
+/* A step the AI took several times in a row: one line and how many. */
+.tpl-left-panel .cg-log-repeat {
+  display: inline-flex;
+  align-items: center;
+  height: 16px;
+  margin-left: 8px;
+  padding: 0 6px;
+  border-radius: 8px;
+  background: var(--muted);
+  color: var(--muted-fg);
+  font-size: 11px;
+  font-weight: 600;
+  font-variant-numeric: tabular-nums;
+  vertical-align: 1px;
+}
+
+/* The seconds of a long call, right after the steps. */
+.tpl-left-panel .cg-waiting-line {
+  display: none;
+  align-items: center;
+  gap: 8px;
+  width: fit-content;
+  margin: 8px 0 0 8px;
+  padding: 5px 12px 5px 10px;
+  border-radius: 999px;
+  background: var(--muted);
+  color: var(--muted-fg);
+  font-size: 12px;
+  line-height: 16px;
+  font-variant-numeric: tabular-nums;
+}
+
+body.cg-generating:not(.cg-generation-paused) .tpl-left-panel .cg-waiting-line {
+  display: inline-flex;
+}
+
+.tpl-left-panel .cg-waiting-line::before {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--primary);
+  animation: cg-waiting-pulse 1.4s ease-in-out infinite;
+}
+
+@keyframes cg-waiting-pulse {
+  50% {
+    opacity: .3;
+  }
+}
+
+/* ── The bar of the stage the run is in ────────────────────────────────── */
+
+.tpl-left-panel .cg-working-slot {
+  width: 100%;
+  margin-top: 12px;
+}
+
+.tpl-left-panel .cg-working-slot .cg-log-thinking {
+  padding: 9px 14px;
+  border: 0;
+  border-radius: 12px;
+  background: var(--muted);
+  box-shadow: none;
+}
+
+.tpl-left-panel .cg-working-slot .cg-log-msg {
+  font-size: 13px;
+  line-height: 18px;
+  color: var(--muted-fg);
+}
+
+.tpl-left-panel .cg-working-slot .cg-log-ts {
+  display: none;
+}
+
+/* Nothing is being generated while the AI waits for the teacher, so the bar of the stage is not shown. */
+body.cg-generation-paused .tpl-left-panel .cg-working-slot {
+  display: none;
+}
+
+.tpl-left-panel .cg-working-slot .cg-log-spin {
+  width: 14px;
+  height: 14px;
+  border-width: 2px;
+  border-color: hsl(10 81% 63% / .25);
+  border-top-color: var(--primary);
+}
+
+/* ── Motion: nothing turns or pulses for a teacher who asked for less ──── */
+
+@media (prefers-reduced-motion: reduce) {
+  body.cg-generating:not(.cg-generation-paused):not(.cg-generation-settled)
+    .tpl-left-panel .cg-thread-feed > .cg-log-entry--turn-ai:nth-last-child(1 of .cg-log-entry) .cg-log-bar,
+  .tpl-left-panel .cg-waiting-line::before {
+    animation: none;
+  }
+}

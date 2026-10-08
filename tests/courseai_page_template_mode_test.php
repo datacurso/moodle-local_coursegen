@@ -214,6 +214,24 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
     }
 
     /**
+     * The review card of template mode lists its actions as the screen shows them: the secondary one, then the
+     * primary one, so the order of the keyboard is the order of the eyes. Free mode keeps its own order.
+     */
+    public function test_template_mode_review_lists_adjust_before_accept(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $html = $this->render_page(true);
+
+        $panel = substr($html, (int) strpos($html, 'data-region="tpl-left-panel"'));
+        $adjustpos = strpos($panel, 'id="cgDecisionAdjust"');
+        $acceptpos = strpos($panel, 'id="cgDecisionAccept"');
+        $this->assertNotFalse($adjustpos, 'Adjust button missing');
+        $this->assertNotFalse($acceptpos, 'Accept button missing');
+        $this->assertLessThan($acceptpos, $adjustpos, 'Adjust must come before Accept in template mode');
+    }
+
+    /**
      * Free mode never receives the progress list.
      */
     public function test_free_mode_renders_no_template_progress_list(): void {
