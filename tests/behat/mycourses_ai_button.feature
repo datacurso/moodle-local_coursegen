@@ -48,3 +48,20 @@ Feature: Create with AI button on the My courses page
     When I visit "/my/courses.php"
     Then "Create with AI" "button" should not exist
     And "#local_coursegen_aicourseform" "css_element" should not exist
+
+  @tool_tenant
+  Scenario: Tenant administrator sees the button on My courses
+    Given Moodle Workplace multi-tenancy is available
+    And the following "categories" exist:
+      | name            | category | idnumber |
+      | Tenant category | 0        | TENANTA  |
+    And the following "tool_tenant > tenants" exist:
+      | name    | category |
+      | TenantA | TENANTA  |
+    And the following "tool_tenant > users" exist:
+      | username     | firstname | lastname | email                    | tenant  | tenantadmin |
+      | tenantadmin1 | Tina      | Tenant   | tenantadmin1@example.com | TenantA | 1           |
+    When I log in as "tenantadmin1"
+    And I visit "/my/courses.php"
+    Then "Create with AI" "button" should exist
+    And "#local_coursegen_aicourseform" "css_element" should exist

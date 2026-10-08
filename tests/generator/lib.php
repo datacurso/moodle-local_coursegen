@@ -30,7 +30,7 @@ class local_coursegen_generator extends component_generator_base {
      * local_coursegen_system_instruction as a guideline, so seeding this table
      * is enough to exercise the guideline UI without the external AI service.
      *
-     * @param array $record Column overrides: name (required), content, deleted.
+     * @param array $record Column overrides: name (required), content, deleted, tenantid (defaults to the current user's tenant).
      * @return stdClass The inserted record.
      */
     public function create_system_instruction(array $record): stdClass {
@@ -48,6 +48,7 @@ class local_coursegen_generator extends component_generator_base {
             'timecreated' => $now,
             'timemodified' => $now,
             'usermodified' => (int) ($record['usermodified'] ?? ($USER->id ?: 2)),
+            'tenantid' => (int) ($record['tenantid'] ?? \local_coursegen\local\tenancy::get_tenant_id()),
         ];
         $instruction->id = $DB->insert_record('local_coursegen_system_instruction', $instruction);
 

@@ -19,6 +19,15 @@
 
     Manage image generation settings page.
 
+    Settings are saved for the tenant the user is currently in.
+
+    Context variables required for this template:
+    * currentmode string - Current generation mode: disabled, manual or auto.
+    * overridecourse bool - Whether course level overrides are allowed.
+    * overrideactivity bool - Whether activity level overrides are allowed.
+    * ismoddisabled, ismodemanual, ismodeauto bool - Which mode card is selected.
+    * activities array - Activity rows with: id, iconurl, name, tooltip, enabled, show, parts.
+
     Example context (json):
     {
         "currentmode": "manual",

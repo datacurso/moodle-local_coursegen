@@ -272,5 +272,74 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026090900, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026100500) {
+        // Define table local_coursegen_tenant_config to be created: per-tenant
+        // overrides of the plugin settings (tenant 0 keeps using config_plugins).
+        $table = new xmldb_table('local_coursegen_tenant_config');
+
+        // Adding fields to table local_coursegen_tenant_config.
+        $table->add_field('id', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, XMLDB_SEQUENCE, null);
+        $table->add_field('tenantid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0');
+        $table->add_field('name', XMLDB_TYPE_CHAR, '100', null, XMLDB_NOTNULL, null, null);
+        $table->add_field('value', XMLDB_TYPE_TEXT, null, null, XMLDB_NOTNULL, null, null);
+
+        // Adding keys to table local_coursegen_tenant_config.
+        $table->add_key('primary', XMLDB_KEY_PRIMARY, ['id']);
+        $table->add_key('tenantid_name', XMLDB_KEY_UNIQUE, ['tenantid', 'name']);
+
+        // Conditionally launch create table for local_coursegen_tenant_config.
+        if (!$dbman->table_exists($table)) {
+            $dbman->create_table($table);
+        }
+
+        // Coursegen savepoint reached.
+        upgrade_plugin_savepoint(true, 2026100500, 'local', 'coursegen');
+    }
+
+    if ($oldversion < 2026100501) {
+        // Grant the plugin capabilities to the Workplace "Tenant administrator" role.
+        // The new local/coursegen:managetenantsettings capability must exist first.
+        // Skipped without tool_tenant (plain Moodle LMS), where the role does not exist.
+        update_capabilities('local_coursegen');
+        \local_coursegen\local\tenancy::add_plugin_capabilities_to_tenant_admin_role();
+
+        // Coursegen savepoint reached.
+        upgrade_plugin_savepoint(true, 2026100501, 'local', 'coursegen');
+    }
+
+    if ($oldversion < 2026100502) {
+        // Define field tenantid to be added to local_coursegen_system_instruction:
+        // existing instructions become site instructions (tenant 0), visible to
+        // every tenant; tenants may then add their own private instructions.
+        $table = new xmldb_table('local_coursegen_system_instruction');
+        $field = new xmldb_field('tenantid', XMLDB_TYPE_INTEGER, '10', null, XMLDB_NOTNULL, null, '0', 'usermodified');
+
+        // Conditionally launch add field tenantid.
+        if (!$dbman->field_exists($table, $field)) {
+            $dbman->add_field($table, $field);
+        }
+
+        // Define index tenantid_deleted (not unique) to be added to local_coursegen_system_instruction.
+        $index = new xmldb_index('tenantid_deleted', XMLDB_INDEX_NOTUNIQUE, ['tenantid', 'deleted']);
+
+        // Conditionally launch add index tenantid_deleted.
+        if (!$dbman->index_exists($table, $index)) {
+            $dbman->add_index($table, $index);
+        }
+
+        // Coursegen savepoint reached.
+        upgrade_plugin_savepoint(true, 2026100502, 'local', 'coursegen');
+    }
+
+    if ($oldversion < 2026100600) {
+        // Every tenant is now fully independent: the former site-wide settings
+        // (config_plugins) and site system instructions (tenant 0) are handed
+        // to the Workplace default tenant.
+        \local_coursegen\local\tenant_migration::migrate_site_data_to_default_tenant();
+
+        // Coursegen savepoint reached.
+        upgrade_plugin_savepoint(true, 2026100600, 'local', 'coursegen');
+    }
+
     return true;
 }

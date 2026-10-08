@@ -271,6 +271,27 @@ final class mycourses_header_hook_test extends \advanced_testcase {
     }
 
     /**
+     * A user holding both capabilities in a single category (not at system level) gets the button.
+     */
+    public function test_should_inject_for_user_with_category_level_capabilities(): void {
+        global $PAGE;
+
+        $this->resetAfterTest();
+        $generator = $this->getDataGenerator();
+        $category = $generator->create_category();
+        $categorycontext = \context_coursecat::instance($category->id);
+        $user = $generator->create_user();
+        $roleid = $generator->create_role();
+        assign_capability('moodle/course:create', CAP_ALLOW, $roleid, $categorycontext);
+        assign_capability('local/coursegen:createcoursewithai', CAP_ALLOW, $roleid, $categorycontext);
+        role_assign($roleid, $user->id, $categorycontext);
+        $this->setUser($user);
+        $this->set_page_url('/my/courses.php');
+
+        $this->assertTrue(mycourses_header_hook::should_inject($PAGE));
+    }
+
+    /**
      * Pages other than My courses are never decorated.
      */
     public function test_should_not_inject_on_other_pages(): void {

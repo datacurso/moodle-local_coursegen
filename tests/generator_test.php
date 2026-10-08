@@ -26,6 +26,8 @@ namespace local_coursegen;
  * @covers     \local_coursegen_generator
  */
 final class generator_test extends \advanced_testcase {
+    use \local_coursegen\tests\requires_workplace;
+
     /**
      * A seeded system instruction is stored as a visible guideline row.
      */
@@ -47,6 +49,31 @@ final class generator_test extends \advanced_testcase {
         $this->assertSame('All courses must include a welcome forum.', $record->content);
         $this->assertEquals(0, $record->deleted);
         $this->assertEquals(get_admin()->id, $record->usermodified);
+        $this->assertEquals(
+            \local_coursegen\local\tenancy::get_tenant_id(),
+            $record->tenantid,
+            'Without a tenant the instruction belongs to the tenant of the current user.'
+        );
+    }
+
+    /**
+     * A seeded system instruction may belong to a tenant.
+     */
+    public function test_create_system_instruction_for_tenant(): void {
+        $this->require_tool_tenant();
+        global $DB;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $tenantid = (int) $this->getDataGenerator()->get_plugin_generator('tool_tenant')->create_tenant()->id;
+
+        $instruction = $this->getDataGenerator()->get_plugin_generator('local_coursegen')->create_system_instruction([
+            'name' => 'Tenant policy',
+            'tenantid' => $tenantid,
+        ]);
+
+        $storedtenantid = $DB->get_field('local_coursegen_system_instruction', 'tenantid', ['id' => $instruction->id]);
+        $this->assertEquals($tenantid, $storedtenantid);
     }
 
     /**

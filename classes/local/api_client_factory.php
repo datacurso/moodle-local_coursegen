@@ -55,6 +55,21 @@ class api_client_factory {
     }
 
     /**
+     * Build the AI course API client with the service URLs of the current user's tenant.
+     *
+     * The URLs are the values of the tenant (tenant_config); an empty or missing
+     * value falls back to the client defaults.
+     *
+     * @return ai_course_api
+     */
+    public static function ai_course_api_for_current_tenant(): ai_course_api {
+        $baseurl = tenant_config::get('datacurso_service_url') ?: null;
+        $baseurleu = tenant_config::get('datacurso_service_url_eu') ?: null;
+
+        return self::ai_course_api($baseurl, $baseurleu);
+    }
+
+    /**
      * Inject a test double to be returned by ai_course_api(). PHPUnit only.
      *
      * Pass null to remove the injected double and restore real construction.

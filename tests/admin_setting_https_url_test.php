@@ -106,4 +106,65 @@ final class admin_setting_https_url_test extends \advanced_testcase {
         $CFG->debugdeveloper = true;
         $this->assertIsString($setting->validate('http://localhost.evil.com/api'));
     }
+
+    /**
+     * The static validator accepts empty values and HTTPS URLs (null = valid).
+     */
+    public function test_validate_url_accepts_empty_and_https(): void {
+        $this->assertNull(setting_https_url::validate_url(''));
+        $this->assertNull(setting_https_url::validate_url('   '));
+        $this->assertNull(setting_https_url::validate_url('https://service.datacurso.com/api'));
+        $this->assertNull(setting_https_url::validate_url('HTTPS://service.datacurso.com'));
+    }
+
+    /**
+     * The static validator rejects remote HTTP URLs with the HTTPS-required message, regardless of debug mode.
+     */
+    public function test_validate_url_rejects_remote_http(): void {
+        global $CFG;
+        $this->resetAfterTest();
+
+        $expected = get_string('error_https_required', 'local_coursegen');
+
+        $CFG->debugdeveloper = false;
+        $this->assertSame($expected, setting_https_url::validate_url('http://service.datacurso.com/api'));
+
+        $CFG->debugdeveloper = true;
+        $this->assertSame($expected, setting_https_url::validate_url('http://service.datacurso.com/api'));
+        $this->assertSame($expected, setting_https_url::validate_url('http://localhost.evil.com/api'));
+        $this->assertSame($expected, setting_https_url::validate_url('ftp://localhost/api'));
+    }
+
+    /**
+     * The static validator allows HTTP loopback URLs only while developer debugging is enabled.
+     */
+    public function test_validate_url_allows_http_localhost_only_with_debugdeveloper(): void {
+        global $CFG;
+        $this->resetAfterTest();
+
+        $CFG->debugdeveloper = true;
+        $this->assertNull(setting_https_url::validate_url('http://localhost'));
+        $this->assertNull(setting_https_url::validate_url('http://localhost:8000/api/v1'));
+        $this->assertNull(setting_https_url::validate_url('http://127.0.0.1:8080/service'));
+
+        $CFG->debugdeveloper = false;
+        $this->assertIsString(setting_https_url::validate_url('http://localhost'));
+        $this->assertIsString(setting_https_url::validate_url('http://127.0.0.1:8080/service'));
+    }
+
+    /**
+     * The admin setting keeps delegating to the static validator.
+     */
+    public function test_validate_delegates_to_validate_url(): void {
+        global $CFG;
+        $this->resetAfterTest();
+        $CFG->debugdeveloper = false;
+
+        $setting = $this->make_setting();
+        $this->assertSame(
+            setting_https_url::validate_url('http://remote.example.com'),
+            $setting->validate('http://remote.example.com')
+        );
+        $this->assertTrue($setting->validate('https://remote.example.com'));
+    }
 }

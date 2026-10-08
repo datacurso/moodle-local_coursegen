@@ -170,8 +170,12 @@ final class create_mod_stream_contract_test extends \advanced_testcase {
         $captured = null;
         $this->inject_api_service($captured);
 
-        // A configured (non-disabled) admin image mode must travel with the request.
-        set_config('generationmode', \local_coursegen\local\image_generation\activities::MODE_MANUAL, 'local_coursegen');
+        // A configured (non-disabled) image mode of the user's tenant must travel with the request.
+        \local_coursegen\local\tenant_config::set(
+            'generationmode',
+            \local_coursegen\local\image_generation\activities::MODE_MANUAL,
+            \local_coursegen\local\tenancy::get_tenant_id()
+        );
 
         $result = testable_create_mod_stream::execute($course->id, 1, 'Create an H5P quiz about volcanoes', 1, null, 'es');
         // One pre-existing developer notice: execute_parameters() declares

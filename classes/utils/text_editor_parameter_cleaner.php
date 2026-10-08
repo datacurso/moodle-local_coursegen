@@ -25,6 +25,7 @@
 namespace local_coursegen\utils;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
+use local_coursegen\local\api_client_factory;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -320,9 +321,7 @@ class text_editor_parameter_cleaner {
 
         $initialized = true;
         try {
-            $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
-            $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
-            $client = new ai_course_api(null, $baseurl, $baseurleu);
+            $client = api_client_factory::ai_course_api_for_current_tenant();
         } catch (\Throwable $exception) {
             debugging('Could not initialize AI file client: ' . $exception->getMessage(), DEBUG_DEVELOPER);
             $client = null;

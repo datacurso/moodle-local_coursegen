@@ -23,6 +23,7 @@ use external_function_parameters;
 use external_single_structure;
 use external_value;
 use local_coursegen\event\external_transfer_initiated;
+use local_coursegen\local\permission;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\ai_course_api_service;
 
@@ -68,8 +69,7 @@ class courseai_syllabus_upload extends external_api {
 
         // Check permissions.
         $context = context_system::instance();
-        require_capability('moodle/course:create', $context);
-        require_capability('local/coursegen:createcoursewithai', $context);
+        permission::require_create_course_with_ai();
 
         try {
             // Get session record.

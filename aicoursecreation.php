@@ -27,16 +27,14 @@ require_once($CFG->libdir . '/filelib.php');
 
 require_login();
 
-// Check permissions.
-$systemcontext = context_system::instance();
-require_capability('moodle/course:create', $systemcontext);
-require_capability('local/coursegen:createcoursewithai', $systemcontext);
+// Check permissions: system-level or category-level (Workplace tenant administrators).
+\local_coursegen\local\permission::require_create_course_with_ai();
 
-// Set up the page.
+// Set up the page through the admin tree entry registered in settings.php (the
+// Workplace page, or the core page gated by the capability on plain Moodle LMS).
+\local_coursegen\admin\external_page::setup('local_coursegen_addnewcourseai', ['pagelayout' => 'popup']);
+$systemcontext = context_system::instance();
 $url = new moodle_url('/local/coursegen/aicoursecreation.php');
-$PAGE->set_url($url);
-$PAGE->set_context($systemcontext);
-$PAGE->set_pagelayout('popup');
 $PAGE->set_title(get_string('createwithai', 'local_coursegen'));
 
 // Load courseai CSS + sidebar CSS. Direct plugin stylesheets get NO revision
@@ -49,12 +47,15 @@ $PAGE->requires->css(new moodle_url('/local/coursegen/styles/sidebar.css', ['v' 
 
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\course_session_service;
+use local_coursegen\local\service\system_instruction_service;
+use local_coursegen\local\tenancy;
 
 $resumesessionid = optional_param('sessionid', 0, PARAM_INT);
 
-// Load system instructions (directrices institucionales).
+// Load the system instructions (institutional guidelines) the user's tenant may
+// use: its own private ones plus the site ones.
 $systeminstructions = [];
-$records = $DB->get_records('local_coursegen_system_instruction', ['deleted' => 0], 'name ASC');
+$records = system_instruction_service::get_available(tenancy::get_tenant_id());
 foreach ($records as $record) {
     $systeminstructions[] = [
         'id' => 'si_' . $record->id,

@@ -56,7 +56,11 @@ final class error_message_disclosure_test extends \advanced_testcase {
         require_once(__DIR__ . '/fixtures/testable_create_mod.php');
 
         // Any accidental real API call must fail fast instead of reaching the network.
-        set_config('datacurso_service_url', 'https://invalid.invalid', 'local_coursegen');
+        \local_coursegen\local\tenant_config::set(
+            'datacurso_service_url',
+            'https://invalid.invalid',
+            \local_coursegen\local\tenancy::get_tenant_id()
+        );
     }
 
     /**

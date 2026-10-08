@@ -37,10 +37,7 @@ class h5pactivity_parameters extends base_parameters {
      */
     public function get_parameters() {
         $downloadinfo = $this->get_package_download_info();
-        $baseurl = get_config('local_coursegen', 'datacurso_service_url') ?: null;
-        $baseurleu = get_config('local_coursegen', 'datacurso_service_url_eu') ?: null;
-
-        $client = api_client_factory::ai_course_api($baseurl, $baseurleu);
+        $client = api_client_factory::ai_course_api_for_current_tenant();
         $file = $client->download_file($downloadinfo['endpoint'], $downloadinfo['filename']);
         $this->validate_package($file, $downloadinfo['filename']);
         $this->parameters->packagefile = $file->get_itemid();

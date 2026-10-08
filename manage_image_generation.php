@@ -23,59 +23,52 @@
  */
 
 require_once('../../config.php');
-require_once($CFG->libdir . '/adminlib.php');
 
 use local_coursegen\local\image_generation\activities;
+use local_coursegen\local\image_generation\image_settings;
+use local_coursegen\local\tenancy;
+use local_coursegen\output\tenant_scope_notice;
 
-admin_externalpage_setup('local_coursegen_manage_image_generation');
+require_login(null, false);
+\local_coursegen\admin\external_page::setup('local_coursegen_manage_image_generation');
+require_capability('local/coursegen:manageimagegeneration', context_system::instance());
+
+// The settings always belong to the tenant the user is currently in.
+$tenantid = tenancy::get_tenant_id();
+
+$PAGE->set_url(new moodle_url('/local/coursegen/manage_image_generation.php'));
 
 // Show a standard success notification if coming back from a save redirect.
 if (optional_param('saved', 0, PARAM_BOOL)) {
     \core\notification::success(get_string('changessaved'));
 }
 
-$currentmode = get_config('local_coursegen', 'generationmode') ?: activities::MODE_DISABLED;
+$settings = image_settings::get_settings($tenantid);
+$currentmode = $settings[image_settings::KEY_MODE];
 
-$activitydefinitions = activities::get_definitions();
 $activitiescontext = [];
-
-foreach ($activitydefinitions as $definition) {
+foreach (activities::get_definitions() as $definition) {
     $id = $definition['id'];
-    $configenable = $definition['configenable'];
-
-    $enabled = (int) get_config('local_coursegen', $configenable) === 1;
+    $enabled = $settings[$definition['configenable']] === 1;
 
     // Use the standard module monologo icon, similar to admin activity table.
-    $component = 'mod_' . $id;
-    $iconurl = $OUTPUT->image_url('monologo', $component)->out(false);
+    $iconurl = $OUTPUT->image_url('monologo', 'mod_' . $id)->out(false);
 
     $partcontexts = [];
-    if (!empty($definition['parts']) && is_array($definition['parts'])) {
-        foreach ($definition['parts'] as $partdefinition) {
-            $partid = $partdefinition['id'];
-            $partconfigenable = $partdefinition['configenable'];
-            $partconfigmaximages = $partdefinition['configmaximages'] ?? null;
-            $partenabled = (int) get_config('local_coursegen', $partconfigenable) === 1;
+    foreach ($definition['parts'] ?? [] as $partdefinition) {
+        $partid = $partdefinition['id'];
+        $partconfigmaximages = $partdefinition['configmaximages'] ?? null;
 
-            $maximages = 1;
-            if ($partconfigmaximages !== null) {
-                $savedmax = (int) get_config('local_coursegen', $partconfigmaximages);
-                if ($savedmax >= 0) {
-                    $maximages = $savedmax;
-                }
-            }
-
-            $partcontexts[] = [
-                'id' => $partid,
-                'partuniqueid' => $id . '_' . $partid,
-                'label' => $partdefinition['stringlabel'],
-                'enabled' => $partenabled,
-                'maximages' => $maximages,
-                'partmaximageshelp' => $OUTPUT->render(
-                    new \core\output\help_icon('help_maximages_' . $id . '_' . $partid, 'local_coursegen')
-                ),
-            ];
-        }
+        $partcontexts[] = [
+            'id' => $partid,
+            'partuniqueid' => $id . '_' . $partid,
+            'label' => $partdefinition['stringlabel'],
+            'enabled' => $settings[$partdefinition['configenable']] === 1,
+            'maximages' => $partconfigmaximages !== null ? $settings[$partconfigmaximages] : 1,
+            'partmaximageshelp' => $OUTPUT->render(
+                new \core\output\help_icon('help_maximages_' . $id . '_' . $partid, 'local_coursegen')
+            ),
+        ];
     }
 
     $activitiescontext[] = [
@@ -90,8 +83,8 @@ foreach ($activitydefinitions as $definition) {
 }
 
 $context = [
-    'overridecourse'   => (bool) get_config('local_coursegen', 'overridecourse'),
-    'overrideactivity' => (bool) get_config('local_coursegen', 'overrideactivity'),
+    'overridecourse'   => $settings[image_settings::KEY_OVERRIDE_COURSE] === 1,
+    'overrideactivity' => $settings[image_settings::KEY_OVERRIDE_ACTIVITY] === 1,
 
     'ismoddisabled' => ($currentmode === activities::MODE_DISABLED),
     'ismodeauto'    => ($currentmode === activities::MODE_AUTO),
@@ -102,5 +95,6 @@ $context = [
 ];
 
 echo $OUTPUT->header();
+echo $OUTPUT->render(new tenant_scope_notice());
 echo $OUTPUT->render_from_template('local_coursegen/manage_image_generation', $context);
 echo $OUTPUT->footer();

@@ -39,7 +39,7 @@ All plugins in this suite are powered by the **Datacurso AI Provider**.
 
 ## Pre-requisites
 
-1. Moodle 4.5
+1. Moodle Workplace 4.5 (the plugin depends on `tool_tenant` and `tool_wp`)
 2. Install the Moodle AI provider **DataCurso AI Provider**. Download it for free from [https://moodle.org/plugins/aiprovider_datacurso/versions](https://moodle.org/plugins/aiprovider_datacurso/versions).
 3. In the DataCurso AI Provider settings, configure a valid license key as documented at [https://docs.datacurso.com/index.php?title=Datacurso_AI_Provider#Getting_license_keys](https://docs.datacurso.com/index.php?title=Datacurso_AI_Provider#Getting_license_keys).
 
@@ -95,6 +95,37 @@ To manage system instructions:
 
   ![Edit or delete system instructions](./_docs/images/local_coursegen_edit_or_delete_system_instructions.png)
 
+
+## Multi-tenancy (Moodle Workplace)
+
+This version of the plugin runs only on Moodle Workplace 4.5 and is aware of Workplace tenants.
+
+### Each tenant is fully independent
+
+- Every tenant has its own plugin configuration: the AI service URLs, the subsections option, every image generation setting and its system instructions. There is no site-wide layer: a value a tenant has not set uses the plugin default.
+- The course planning flow, the activity generation flow and the image policy sent to the AI service always use the values of the current user's tenant.
+- Every configuration page (`General settings`, `Development settings`, `Manage image generation`, `Manage system instructions`) shows a notice at the top with the tenant the values apply to, for example: *These settings only apply to the tenant "Tenant A"*. There is no tenant selector.
+
+### Who can edit what
+
+| Page | Capability | Site administrator | Tenant administrator |
+|------|------------|--------------------|----------------------|
+| General settings / Development settings | `local/coursegen:managetenantsettings` | Tenant they are currently in | Own tenant only |
+| Manage image generation | `local/coursegen:manageimagegeneration` | Tenant they are currently in | Own tenant only |
+| Manage system instructions | `local/coursegen:managesysteminstructions` | Tenant they are currently in | Own tenant only |
+| Create a new course with AI | `local/coursegen:createcoursewithai` plus `moodle/course:create` in a category | Yes | Yes, in the tenant category |
+
+The plugin capabilities are granted to the Workplace `Tenant administrator` role on install and upgrade, so tenant administrators find these pages under the plugin category of the Workplace admin tree. Pages and web services never accept a tenant parameter: they always work on the tenant of the current user. To configure another tenant, a site administrator first switches to it with the Workplace tenant switcher.
+
+### System instructions per tenant
+
+- System instructions are private to their tenant: other tenants cannot see them nor use them to plan a course.
+- Instruction names are unique within a tenant and may be reused by other tenants.
+- When a tenant is deleted, its settings and instructions are removed.
+
+### Upgrading from a single-tenant version
+
+The upgrade moves the existing site data to the Workplace **Default tenant**: the plugin settings stored in `config_plugins` (service URLs, subsections and image generation settings) and the existing system instructions. A value the Default tenant already had is kept. Other tenants start with the plugin defaults and no instructions.
 
 ## Create a Course with Datacurso AI
 
