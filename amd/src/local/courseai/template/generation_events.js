@@ -77,6 +77,16 @@ export const markRow = (uid, status) => {
 };
 
 /**
+ * Take every status off the activity rows, so none keeps a spinner or a badge once the run has ended.
+ */
+export const settleRows = () => {
+    const rows = document.querySelectorAll('[data-generation-uid]');
+    for (const row of rows) {
+        row.classList.remove(...ALL_STATUS_CLASSES);
+    }
+};
+
+/**
  * Reset the progress counters for a phase that is starting over.
  *
  * @param {Object} progress Mutable {total, done} counters.
@@ -194,6 +204,7 @@ const EVENT_HANDLERS = {
     activity_progress_failed: finishActivity,
     completed: (data, progress) => {
         settleChecklist(progress);
+        settleRows();
         return 'completed';
     },
     failed: (data) => failureOutcome(data),

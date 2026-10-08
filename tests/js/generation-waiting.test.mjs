@@ -28,7 +28,7 @@ const rows = {
     '[data-generation-cmid="11342"]': GUIDE,
     '[data-generation-cmid="11340"]': RESOURCE,
 };
-globalThis.document = {querySelector: (selector) => rows[selector] || null};
+globalThis.document = {querySelector: (selector) => rows[selector] || null, querySelectorAll: () => []};
 
 const paint = () => undefined;
 const waiting = (seconds) => ({
