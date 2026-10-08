@@ -26,6 +26,22 @@ const TEMPLATE_AID = /^t:([0-9]+)$/;
 const SAFE_ID = /^[A-Za-z0-9:_.-]+$/;
 
 const TOOL_LABEL_PREFIX = 'template_agent_tool_';
+const NAMED_SUFFIX = '_named';
+const QUESTION_TITLE = 'template_agent_question_title';
+const QUESTION_TITLE_FILE = 'template_agent_question_title_file';
+
+/** The most characters of an activity name the page shows; a longer name is cut with an ellipsis. */
+export const MAX_NAME_CHARS = 60;
+
+/** The tools whose line in the feed names the activity they are about. */
+const NAMED_TOOLS = new Set([
+    'get_activity',
+    'modify_activity',
+    'attach_file',
+    'create_file_for_activity',
+    'set_link',
+    'ask_user',
+]);
 const TOOLS = new Set([
     'list_template',
     'get_activity',
@@ -33,6 +49,7 @@ const TOOLS = new Set([
     'create_section',
     'modify_activity',
     'attach_file',
+    'create_file_for_activity',
     'set_link',
     'ask_user',
     'finish',
@@ -151,6 +168,67 @@ export const toolLabelKey = (name) => {
         return TOOL_LABEL_PREFIX + name;
     }
     return TOOL_LABEL_PREFIX + 'generic';
+};
+
+/**
+ * The name of an activity as the page shows it: trimmed, and cut with an ellipsis when it is very long.
+ *
+ * @param {*} value Display name of an activity, for example "Weekly guide".
+ * @returns {string} The name, or an empty text when the value is not a usable text.
+ */
+const cleanName = (value) => {
+    if (typeof value !== 'string') {
+        return '';
+    }
+    const name = value.trim();
+    if (name.length <= MAX_NAME_CHARS) {
+        return name;
+    }
+    return name.slice(0, MAX_NAME_CHARS - 1).trimEnd() + '…';
+};
+
+/**
+ * The line of the feed for a call: the label of the tool, and the name of the activity when the line names one.
+ *
+ * @param {*} data The tool_call event, for example {name: "get_activity", activity_name: "Weekly guide"}.
+ * @returns {{key: string, argument: (string|undefined)}} The language string key and, for a named line, its argument.
+ */
+export const stepLabel = (data) => {
+    if (data === null || typeof data !== 'object') {
+        return {key: toolLabelKey(undefined)};
+    }
+    const key = toolLabelKey(data.name);
+    const activity = cleanName(data.activity_name);
+    if (activity === '' || !NAMED_TOOLS.has(data.name)) {
+        return {key};
+    }
+    return {key: key + NAMED_SUFFIX, argument: activity};
+};
+
+/**
+ * The language string key of the title of a question card: a file that is missing, or more information.
+ *
+ * @param {*} question The question event.
+ * @returns {string} The key of the title.
+ */
+export const questionTitleKey = (question) => {
+    if (question !== null && typeof question === 'object' && question.ask_for_file === true) {
+        return QUESTION_TITLE_FILE;
+    }
+    return QUESTION_TITLE;
+};
+
+/**
+ * The name of the activity a question is about.
+ *
+ * @param {*} question The question event.
+ * @returns {string} The name, or an empty text when the question is about no activity.
+ */
+export const questionActivity = (question) => {
+    if (question === null || typeof question !== 'object') {
+        return '';
+    }
+    return cleanName(question.activity_name);
 };
 
 /**

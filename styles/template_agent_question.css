@@ -16,6 +16,15 @@
   color: var(--fg);
 }
 
+/* The activity the question is about, in small muted type between the title and the question. */
+.tpl-left-panel .cg-ask-card .cg-ask-about {
+  margin: -2px 0 6px;
+  font-size: 12px;
+  line-height: 1.3;
+  color: var(--muted-fg);
+  overflow-wrap: anywhere;
+}
+
 /* The control of the answer sits right under the question; its focus rings are not cut by the card. */
 .tpl-left-panel .cg-ask-body {
   display: flex;

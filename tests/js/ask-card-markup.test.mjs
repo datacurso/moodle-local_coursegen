@@ -98,3 +98,16 @@ test('the progress list never opens with the same words as the first step of the
         assert.notEqual(opening, step, lang);
     }
 });
+
+test('the card title and the activity line are escaped text from the page, never markup', () => {
+    assert.match(card, /<p class="cg-decision-title"[^>]*>\{\{title\}\}<\/p>/);
+    assert.match(card, /\{\{#hasabout\}\}\s*<p class="cg-ask-about">\{\{about\}\}<\/p>\s*\{\{\/hasabout\}\}/);
+    assert.doesNotMatch(card, /\{\{\{(title|about|question)\}\}\}/);
+});
+
+test('the activity line sits between the title and the question', () => {
+    const title = card.indexOf('cg-decision-title');
+    const about = card.indexOf('cg-ask-about');
+    const question = card.indexOf('cg-decision-subtitle');
+    assert.ok(title < about && about < question);
+});

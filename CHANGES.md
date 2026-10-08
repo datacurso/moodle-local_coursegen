@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100623
+
+### Changed
+
+- **The steps of a template generation name the activity and read as professional status lines**  
+  The progress feed now says which activity each step is about ("Revisando la actividad «Guía Semanal»", "Adjuntando el archivo a «Guía Didáctica»") and repeated lines are only merged when they are the same step on the same activity. The lines are neutral statements in the gerund, like the status lines of free mode, and the chat voice is kept only for the messages the AI writes as a conversation. The question card says what is missing ("Falta un archivo" or "Se necesita más información") and names the activity it is about. The errors, the notices and the answer and syllabus messages state what happened and what to do, and the leftover formal wording in the template picker help is gone. The activity name travels in the stream events as plain data and is always shown as text.
+
 ## [2.0.10] - 2026100622
 
 ### Changed

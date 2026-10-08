@@ -7,7 +7,18 @@ const SCOPE = /^(template_agent_|courseai_template_|template(answer|adjust|sylla
 const LINE = /^\$string\['([a-z0-9_]+)'\] = '(.*)';$/;
 const PLACEHOLDER = /\{\$a(->[a-z]+)?\}/g;
 const INFORMAL_POSSESSIVE = /\btus?\b/i;
-const FORMAL_FORMS = /\b(usted|ustedes|seleccione|su curso|sus actividades)\b/i;
+const FORMAL_FORMS = /\b(usted|ustedes|seleccione|su|sus)\b/i;
+const CHATTY_SPANISH = /\b(estoy|tengo|puedo|pude|quiero|quise|me|mi|mis|te|terminé|creé|encontré|preparé|continúo)\b/i;
+const CHATTY_ENGLISH = /\b(I|I'm|me|my|we|us|our)\b/;
+// What the AI says in its own voice, like the chat bubbles of the free mode, or what the teacher says: first person is fine.
+const OWN_VOICE = new Set([
+    'courseai_template_log_review_ready',
+    'template_agent_question_nofile_answer',
+    'template_agent_question_nofile_button',
+]);
+const GERUND_SPANISH = /^[A-ZÁÉÍÓÚ][a-záéíóúñ]+(ando|endo|iendo)\b/;
+const GERUND_ENGLISH = /^[A-Z][a-z]+ing\b/;
+const NAMED_TOOLS = ['get_activity', 'modify_activity', 'attach_file', 'create_file_for_activity', 'set_link', 'ask_user'];
 
 // Read the strings of one language that belong to the template mode.
 const readScope = (language) => {
@@ -69,11 +80,62 @@ test('the Spanish texts never address the teacher as usted', () => {
     }
 });
 
-test('the progress feed lines of the AI are written in the first person', () => {
-    const everyString = [...spanish];
-    const tools = everyString.filter(([key]) => key.startsWith('template_agent_tool_'));
+test('no template text is a chatty first person remark, except the chat bubbles and the teacher\'s own words', () => {
+    for (const [key, text] of spanish) {
+        if (!OWN_VOICE.has(key)) {
+            assert.equal(CHATTY_SPANISH.test(text), false, `${key}: ${text}`);
+        }
+    }
+    for (const [key, text] of english) {
+        if (!OWN_VOICE.has(key)) {
+            assert.equal(CHATTY_ENGLISH.test(text), false, `${key}: ${text}`);
+        }
+    }
+});
+
+test('the progress feed lines are professional statements that start with a gerund', () => {
+    const tools = [...spanish].filter(([key]) => key.startsWith('template_agent_tool_'));
     assert.ok(tools.length >= 10);
     for (const [key, text] of tools) {
-        assert.match(text, /^(Estoy|Tengo)\b/, key);
+        assert.match(text, GERUND_SPANISH, key);
     }
+    const englishTools = [...english].filter(([key]) => key.startsWith('template_agent_tool_'));
+    for (const [key, text] of englishTools) {
+        assert.match(text, GERUND_ENGLISH, key);
+    }
+});
+
+test('every tool that is about an activity has a named line with the name, and a plain line without it', () => {
+    for (const tool of NAMED_TOOLS) {
+        for (const language of [english, spanish]) {
+            const named = language.get(`template_agent_tool_${tool}_named`);
+            const plain = language.get(`template_agent_tool_${tool}`);
+            assert.ok(named, `${tool} named`);
+            assert.ok(plain, `${tool} plain`);
+            assert.match(named, /\{\$a\}/, tool);
+            assert.doesNotMatch(plain, /\{\$a\}/, tool);
+        }
+    }
+});
+
+test('the named lines put the name between quotation marks', () => {
+    for (const tool of NAMED_TOOLS) {
+        assert.match(spanish.get(`template_agent_tool_${tool}_named`), /«\{\$a\}»/, tool);
+        assert.match(english.get(`template_agent_tool_${tool}_named`), /["“«]\{\$a\}["”»]/, tool);
+    }
+});
+
+test('the question card says what is missing and for which activity', () => {
+    for (const language of [english, spanish]) {
+        assert.ok(language.get('template_agent_question_title'));
+        assert.ok(language.get('template_agent_question_title_file'));
+        assert.notEqual(language.get('template_agent_question_title'), language.get('template_agent_question_title_file'));
+        assert.match(language.get('template_agent_question_about'), /\{\$a\}/);
+    }
+    assert.equal(spanish.get('template_agent_question_title'), 'Se necesita más información');
+    assert.equal(spanish.get('template_agent_question_title_file'), 'Falta un archivo');
+});
+
+test('the waiting step of the feed is a state, not a chat line', () => {
+    assert.equal(spanish.get('template_agent_log_waiting'), 'Esperando información para continuar.');
 });
