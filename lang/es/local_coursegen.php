@@ -967,8 +967,12 @@ $string['courseai_template_instance_badge_tip'] = 'Aquí se creará para su curs
 $string['invalidtemplate'] = 'Plantilla inválida.';
 $string['courseai_template_prompt_placeholder'] = 'Describe cómo adaptar esta plantilla a tu curso…';
 $string['courseai_template_progress_count'] = '{$a->done} de {$a->total} actividades';
+$string['courseai_template_progress_short'] = '{$a->done}/{$a->total}';
 $string['courseai_template_progress_unchanged'] = 'Sin cambios';
 $string['courseai_template_progress_title'] = 'Actividades generadas';
+$string['courseai_topbar_activities'] = 'Actividades';
+$string['courseai_topbar_activities_toggle'] = 'Ver las actividades que escribe la IA';
+$string['courseai_topbar_activities_panel'] = 'Actividades que escribe la IA';
 $string['courseai_template_empty_state'] = 'Seleccione una plantilla arriba para comenzar a crear el curso.';
 
 // Review modal strings.

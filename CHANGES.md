@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100621
+
+### Changed
+
+- **The progress of a template generation and the way to preview the course are always in view**  
+  The count of the activities the AI writes moved from the bottom of the left column to the top bar, right after the path: a small pill with a ring that fills as the activities are written and the count ("1/2"). A press opens a short list under it with one row per activity (a ring that turns while it is written, a green check once it is done); the list closes with a press anywhere else or with Escape, so the detail is one press away and never takes room of its own. While the AI waits for an answer the pill shows a small amber dot. The line that said how many sections and activities the template has, and the link to preview the course, moved from the top of the right column to the same bar, on the right. On a narrow screen the bar gives up its words before anything else: the link keeps only its icon, then the chip and the label of the pill go, and the list takes the width of the screen. The cards of the left column keep their place. Free mode is not affected.
+
 ## [2.0.10] - 2026100620
 
 ### Changed

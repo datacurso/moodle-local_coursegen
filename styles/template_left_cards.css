@@ -1,137 +1,15 @@
-/* The cards of the left column of the template flow: the progress of the activities the AI writes, the question it
-   asks and the review of the course. One system: the same border, radius, padding and buttons. The feed that sits
-   above them is in template_left_column.css.
+/* The cards of the left column of the template flow: the question the AI asks and the review of the course. One system:
+   the same border, radius, padding and buttons. The feed that sits above them is in template_left_column.css, and the
+   progress of the activities is a pill in the top bar (template_top_bar.css).
 
    Every rule is scoped to .tpl-left-panel, the column of the template mode, so the free mode that shares the markup
-   of the card keeps its own look. The progress meter reads --cg-progress (0 to 1), which the script sets on the
-   card; the palette variables (--cg-outline, --cg-green-ink) are declared in template_left_column.css. */
+   of the card keeps its own look. --cg-progress (0 to 1) is the share of the activities written, which the script sets
+   on the pill of the top bar; the palette variables (--cg-outline, --cg-green-ink) are in template_left_column.css. */
 
 @property --cg-progress {
   syntax: '<number>';
   inherits: true;
   initial-value: 0;
-}
-
-/* ── The activities the AI writes: a card with a meter ─────────────────── */
-
-.tpl-left-panel #courseaiChecklist:not(.hidden) {
-  margin-top: 16px;
-  padding: 14px 16px 6px;
-  border: 1px solid var(--border);
-  border-radius: 14px;
-  background: var(--card);
-  box-shadow: var(--shadow-card);
-  transition: --cg-progress .4s var(--ease);
-}
-
-.tpl-left-panel .cg-thread-checklist .cg-group-head {
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 8px;
-  margin: 0;
-  padding: 0;
-  cursor: default;
-}
-
-.tpl-left-panel .cg-thread-checklist .cg-group-title {
-  flex: 1 1 auto;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--fg);
-}
-
-.tpl-left-panel .cg-thread-checklist .cg-group-count {
-  margin: 0;
-  font-size: 12px;
-  color: var(--muted-fg);
-  font-variant-numeric: tabular-nums;
-}
-
-/* The meter: a track and the part that is written, green once the run is over. */
-.tpl-left-panel .cg-thread-checklist .cg-group-head::after {
-  content: '';
-  flex: 0 0 100%;
-  height: 4px;
-  margin-top: 6px;
-  border-radius: 2px;
-  background: linear-gradient(90deg, var(--primary) calc(var(--cg-progress) * 100%), var(--border) 0);
-}
-
-body.cg-generation-settled .tpl-left-panel .cg-thread-checklist .cg-group-head::after {
-  background: linear-gradient(90deg, var(--success-strong) calc(var(--cg-progress) * 100%), var(--border) 0);
-}
-
-.tpl-left-panel .cg-thread-checklist .courseai-checklist-list {
-  gap: 0;
-  margin-top: 6px;
-}
-
-/* One row per activity: the state, its name, its type. */
-.tpl-left-panel .courseai-checklist-item {
-  display: grid;
-  grid-template-columns: 18px minmax(0, 1fr) auto;
-  align-items: center;
-  column-gap: 10px;
-  padding: 10px 0;
-  border-top: 0;
-  opacity: 1;
-}
-
-.tpl-left-panel .courseai-checklist-item + .courseai-checklist-item {
-  border-top: 1px solid var(--border);
-  padding-top: 10px;
-}
-
-.tpl-left-panel .courseai-checklist-head {
-  display: contents;
-}
-
-.tpl-left-panel .courseai-checklist-name {
-  min-width: 0;
-  font-size: 13.5px;
-  font-weight: 500;
-  line-height: 1.35;
-  color: var(--fg);
-}
-
-.tpl-left-panel .courseai-checklist-detail {
-  margin: 0;
-  font-size: 12px;
-  line-height: 1.35;
-  color: var(--muted-fg);
-  white-space: nowrap;
-}
-
-.tpl-left-panel .courseai-checklist-check {
-  flex: 0 0 18px;
-}
-
-/* Being written: the ring of the row turns. */
-.tpl-left-panel .courseai-checklist-item.is-loading .courseai-checklist-check {
-  border-color: hsl(10 81% 63% / .25);
-  border-top-color: var(--primary);
-  animation: courseai-spin .8s linear infinite;
-}
-
-.tpl-left-panel .courseai-checklist-item.is-loading .courseai-checklist-check svg.spinner-icon {
-  display: none;
-}
-
-/* Written: a green check. */
-.tpl-left-panel .courseai-checklist-item.is-done .courseai-checklist-check {
-  border-color: transparent;
-  background: var(--success-soft);
-}
-
-.tpl-left-panel .courseai-checklist-item.is-done .courseai-checklist-check .check-icon {
-  stroke: var(--cg-green-ink);
-  stroke-width: 3.4;
-}
-
-/* Waiting for the teacher: nothing is being written, so nothing turns. */
-body.cg-generation-paused .tpl-left-panel .courseai-checklist-item.is-loading .courseai-checklist-check {
-  animation: none;
-  border-color: var(--border);
 }
 
 /* ── The cards: the question of the AI and the review of the course ────── */
@@ -238,16 +116,4 @@ body.cg-generation-paused .tpl-left-panel .courseai-checklist-item.is-loading .c
 
 .tpl-left-panel #cgDecisionOverlay {
   margin-top: 16px;
-}
-
-/* ── Motion: nothing turns for a teacher who asked for less ───────────── */
-
-@media (prefers-reduced-motion: reduce) {
-  .tpl-left-panel .courseai-checklist-item.is-loading .courseai-checklist-check {
-    animation: none;
-  }
-
-  .tpl-left-panel #courseaiChecklist:not(.hidden) {
-    transition: none;
-  }
 }
