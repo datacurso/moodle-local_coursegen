@@ -14,9 +14,10 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * What the page shows while the AI works on a long call: one line under the progress list that counts the
- * seconds in place, and the paused state that stops every spinner while the AI waits for an answer. The line is
- * only ever the latest tick, so a reload shows nothing stale and the page never accumulates one line per tick.
+ * What the page shows while the AI works on a long call: one line right after the steps of the feed that counts the
+ * seconds in place, the paused state that stops every spinner while the AI waits for an answer, and the settled
+ * state that turns the last step into a check once the run is over. The line is only ever the latest tick, so a
+ * reload shows nothing stale and the page never accumulates one line per tick.
  *
  * @module     local_coursegen/local/courseai/template/generation_waiting
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -28,6 +29,7 @@ import {getString} from 'core/str';
 const LINE_ID = 'cgWaitingLine';
 const LINE_CLASS = 'cg-waiting-line';
 const PAUSED_CLASS = 'cg-generation-paused';
+const SETTLED_CLASS = 'cg-generation-settled';
 const WAITING_STRING = 'template_agent_waiting';
 
 let queue = Promise.resolve();
@@ -42,7 +44,7 @@ const enqueue = (task) => {
 };
 
 /**
- * The line that counts the seconds, created under the progress list the first time it is needed.
+ * The line that counts the seconds, created right after the steps of the feed the first time it is needed.
  *
  * @returns {Element|null} The line, or null when the page has no place for it.
  */
@@ -51,7 +53,7 @@ const lineNode = () => {
     if (existing) {
         return existing;
     }
-    const anchor = document.getElementById('courseaiChecklist');
+    const anchor = document.getElementById('cgLog');
     if (!anchor) {
         return null;
     }
@@ -97,4 +99,13 @@ export const clearWaiting = () => {
  */
 export const setPaused = (paused) => {
     document.body.classList.toggle(PAUSED_CLASS, paused);
+};
+
+/**
+ * Mark the run as over or as going on: once it is over the last step of the feed shows a check, not a spinner.
+ *
+ * @param {boolean} settled True once the run has completed.
+ */
+export const setSettled = (settled) => {
+    document.body.classList.toggle(SETTLED_CLASS, settled);
 };

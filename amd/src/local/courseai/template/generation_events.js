@@ -38,7 +38,7 @@ import {
     normalizeEvent,
     waitingSeconds,
 } from 'local_coursegen/local/courseai/template/agent_events';
-import {clearWaiting, setPaused, showWaiting} from 'local_coursegen/local/courseai/template/generation_waiting';
+import {clearWaiting, setPaused, setSettled, showWaiting} from 'local_coursegen/local/courseai/template/generation_waiting';
 import {showToolCall} from 'local_coursegen/local/courseai/template/agent_steps';
 
 const seen = createSeen();
@@ -236,8 +236,8 @@ const EVENT_HANDLERS = {
 };
 
 /**
- * Any event of the run other than a status ends the wait that the last tick showed, and a question also pauses
- * the spinners until the next event shows the run went on.
+ * Any event of the run other than a status ends the wait that the last tick showed, a question also pauses
+ * the spinners until the next event shows the run went on, and the end of the run settles the page.
  *
  * @param {Object} event
  */
@@ -248,6 +248,8 @@ const settleWaiting = (event) => {
     clearWaiting();
     const paused = event.type === 'question';
     setPaused(paused);
+    const settled = event.type === 'completed';
+    setSettled(settled);
 };
 
 /**

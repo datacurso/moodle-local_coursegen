@@ -31,10 +31,32 @@ test('the send button is the primary coral one of Accept and it starts disabled'
     assert.doesNotMatch(card, /btn-primary/);
 });
 
-test('the secondary actions are the outline button of Adjust, never a bare link', () => {
+test('the secondary action is the outline button of Adjust, never a bare link', () => {
     assert.match(card, /cg-decision-btn cg-decision-btn--adjust[^>]*data-action="local_coursegen\/template-agent\/no-file"|data-action="local_coursegen\/template-agent\/no-file"[^>]*cg-decision-btn--adjust/s);
-    assert.match(card, /cg-decision-btn--adjust[^>]*pick-file|pick-file[^>]*cg-decision-btn--adjust/s);
     assert.doesNotMatch(card, /btn-link|btn-secondary/);
+});
+
+test('the file control is a drop-zone looking button: an icon, what it does and which files it takes', () => {
+    assert.match(card, /class="cg-ask-pick"[^>]*data-action="local_coursegen\/template-agent\/pick-file"/s);
+    assert.match(card, /cg-ask-pick-icon/);
+    assert.match(card, /cg-ask-pick-label/);
+    assert.match(card, /cg-ask-pick-hint/);
+    assert.match(card, /template_agent_question_file_hint/);
+    assert.doesNotMatch(card, /btn-link|btn-secondary/);
+});
+
+test('the file hint names the types the picker takes, in both languages', () => {
+    for (const lang of ['en', 'es']) {
+        const hint = stringOf(`lang/${lang}/local_coursegen.php`, 'template_agent_question_file_hint');
+        assert.match(hint, /PDF/, lang);
+        assert.match(hint, /DOCX/, lang);
+        assert.match(hint, /TXT/, lang);
+    }
+});
+
+test('no card carries a utility margin that would beat the spacing of the column', () => {
+    assert.doesNotMatch(card, /\bmy-3\b/);
+    assert.doesNotMatch(retry, /\bmy-3\b/);
 });
 
 test('the picked file shows as the chip of the syllabus with a remove action', () => {

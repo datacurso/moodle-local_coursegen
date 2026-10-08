@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100620
+
+### Changed
+
+- **The left column of a template generation is a clean timeline with cards**  
+  What the AI does is now a compact timeline: one small line per step with a marker (a spinner for the step in progress, an amber ring while the AI waits for the professor, a check once the run is over), the time on the same baseline and a thin line joining the steps. A step the AI takes several times in a row is one line with a count instead of repeated lines. The seconds of a long call sit right under the steps in a small pill. The activities the AI writes are a card with a meter that fills as they are written, one tidy row per activity with its type, and a green check on each one that is done. The question of the AI, the progress and the review of the course share one look: the same border, radius, spacing and buttons, with the secondary action on the left and the primary one on the right in a single aligned row, and a primary button that is clearly disabled but still readable until there is an answer. The file control of a question is a drop-zone looking area that says which files it takes (PDF, DOCX or TXT) and turns into a roomy row with the file name once one is picked. The bar that said the AI was generating is hidden while the AI waits for an answer. Nothing turns or pulses for a professor who asked for less motion. Free mode is not affected.
+
 ## [2.0.10] - 2026100619
 
 ### Changed
