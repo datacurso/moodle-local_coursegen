@@ -84,8 +84,8 @@ test('a done with no event before it still fails the pass', async() => {
     const {source, calls} = startPass();
     source.emitDone();
     await flush();
-    assert.equal(calls.settled.rejected, 'The generation ended unexpectedly.');
-    assert.deepEqual(calls.failures, ['The generation ended unexpectedly.']);
+    assert.equal(calls.settled.rejected, 'local_coursegen:template_agent_error_ended:undefined');
+    assert.deepEqual(calls.failures, ['local_coursegen:template_agent_error_ended:undefined']);
 });
 
 test('a done after only tool events still fails the pass', async() => {
@@ -93,7 +93,7 @@ test('a done after only tool events still fails the pass', async() => {
     source.emitMessage({type: 'tool_call', call_id: 'c1'});
     source.emitDone();
     await flush();
-    assert.equal(calls.settled.rejected, 'The generation ended unexpectedly.');
+    assert.equal(calls.settled.rejected, 'local_coursegen:template_agent_error_ended:undefined');
 });
 
 test('a completed event resolves the pass as completed and the done after it changes nothing', async() => {
@@ -127,7 +127,7 @@ test('a failure with no message gets a default one', async() => {
     const {source, calls} = startPass();
     source.emitMessage({type: 'failed'});
     await flush();
-    assert.equal(calls.settled.rejected, 'The generation could not be completed.');
+    assert.equal(calls.settled.rejected, 'local_coursegen:template_agent_error_failed:undefined');
 });
 
 test('a failure after a question, in the same pass, is ignored because the pass already ended', async() => {
@@ -152,7 +152,7 @@ test('an error once the connection was open fails the pass', async() => {
     source.emitMessage({type: 'tool_call'});
     source.emitError();
     await flush();
-    assert.equal(calls.settled.rejected, 'The connection to the generation was lost.');
+    assert.equal(calls.settled.rejected, 'local_coursegen:template_agent_error_connection:undefined');
 });
 
 test('a message that is not JSON is ignored and the pass goes on', async() => {
