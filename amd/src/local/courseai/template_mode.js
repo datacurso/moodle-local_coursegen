@@ -32,6 +32,7 @@ import {getTemplateStructure} from './template/repository';
 import {runGeneration} from './template/run_generation';
 import {wireInputBar} from './template/input_bar';
 import {refreshPreviewLinks} from './template/preview';
+import {initTopBar} from './template/top_bar';
 import {
     createTemplateState,
     applyStructureResponse,
@@ -89,6 +90,9 @@ export const wireTemplateMode = (state, host) => {
     // Moodleform's default id for an unnamed-id element is "id_<fieldname>".
     const tplSelect = document.getElementById('id_templateid');
     const container = document.getElementById('tplModeStructure');
+
+    // The activities pill of the top bar opens and closes its list of activities.
+    initTopBar();
 
     // Input-bar defaults: no images, page default language, no syllabus yet.
     const tplState = createTemplateState({lang: state.defaultLang || ''});

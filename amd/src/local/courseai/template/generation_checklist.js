@@ -33,6 +33,8 @@
 
 import Templates from 'core/templates';
 import {getString} from 'core/str';
+import {progressRatio} from 'local_coursegen/local/courseai/template/progress_ratio';
+import {closeActivitiesPanel} from 'local_coursegen/local/courseai/template/top_bar';
 
 const ITEM_TEMPLATE = 'local_coursegen/template_generation_item';
 
@@ -88,20 +90,38 @@ const describeRow = (uid) => {
 const listNode = () => document.getElementById('courseaiChecklistList');
 
 /**
- * Show how many activities are written out of how many there are.
+ * Fill the meter of the progress card: the card carries the share written as a number from 0 to 1 that its style draws.
+ *
+ * @param {Object} progress {total, done}
+ */
+const paintMeter = (progress) => {
+    const checklist = document.getElementById('courseaiChecklist');
+    if (!checklist) {
+        return;
+    }
+    const ratio = progressRatio(progress);
+    const value = String(ratio);
+    checklist.style.setProperty('--cg-progress', value);
+};
+
+/**
+ * Show how many activities are written out of how many there are, in words, on the pill and in the meter.
  *
  * @param {Object} progress {total, done}
  * @returns {Promise<void>}
  */
 const paintCount = async(progress) => {
+    paintMeter(progress);
+    const words = {done: progress.done, total: progress.total};
     const count = document.getElementById('courseaiChecklistCount');
-    if (!count) {
-        return;
+    if (count) {
+        count.textContent = await getString('courseai_template_progress_count', 'local_coursegen', words);
     }
-    count.textContent = await getString('courseai_template_progress_count', 'local_coursegen', {
-        done: progress.done,
-        total: progress.total,
-    });
+    // The pill of the top bar says the same in a few characters.
+    const shortCount = document.getElementById('tplTopActivitiesCount');
+    if (shortCount) {
+        shortCount.textContent = await getString('courseai_template_progress_short', 'local_coursegen', words);
+    }
 };
 
 /**
@@ -109,6 +129,7 @@ const paintCount = async(progress) => {
  */
 export const resetChecklist = () => {
     enqueue(() => {
+        closeActivitiesPanel();
         const list = listNode();
         if (list) {
             list.innerHTML = '';

@@ -1095,3 +1095,7 @@ $string['spacefilemissing'] = 'The file for the space {$a} was not found. Choose
 $string['spacerequiredmissing'] = 'The course cannot be generated until you add: {$a}.';
 $string['task_purge_space_files'] = 'Delete the files teachers brought for a space in a generation that never used them';
 $string['template_space_legacy_warning'] = 'This activity was saved as a space, but only file resources can be one. It is treated as excluded until you choose another action.';
+$string['courseai_template_progress_short'] = '{$a->done}/{$a->total}';
+$string['courseai_topbar_activities'] = 'Activities';
+$string['courseai_topbar_activities_toggle'] = 'Show the activities the AI writes';
+$string['courseai_topbar_activities_panel'] = 'Activities the AI writes';

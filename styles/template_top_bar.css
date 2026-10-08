@@ -1,0 +1,393 @@
+/* The top bar of the template flow: the activities pill with its list, the stats chip and the way to preview the
+   course. They are always in view, so nothing of the run scrolls away from the professor.
+
+   The pill is a small round count with a ring that fills as the AI writes; a press opens the list of activities under
+   it (one tidy row per activity, a ring that turns while it is written and a green check once it is done). The palette
+   is the page's own: coral for what is being written, green for what is done, greys for the rest.
+
+   Every rule belongs to .tpl-topbar-*, the pieces that only the template mode renders, so the free mode that shares
+   the markup of the checklist keeps its own look. The ring and the meter read --cg-progress (0 to 1), which the
+   script sets on the pill's wrapper. */
+
+.courseai-topbar-main .tpl-topbar-activities {
+  --tpl-outline: hsl(215 16% 76%);
+  --tpl-green-ink: hsl(142 70% 26%);
+  --tpl-amber: hsl(38 92% 50%);
+  position: relative;
+  flex: 0 0 auto;
+  margin: 0;
+  padding: 0;
+  background: transparent;
+  font-size: 12.5px;
+}
+
+/* ── The pill ──────────────────────────────────────────────────────────── */
+
+.tpl-topbar-pill {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  height: 28px;
+  padding: 0 10px 0 8px;
+  border: 1px solid var(--border);
+  border-radius: 999px;
+  background: var(--card);
+  color: var(--fg);
+  font: inherit;
+  font-size: 12.5px;
+  font-weight: 500;
+  line-height: 1;
+  white-space: nowrap;
+  cursor: pointer;
+  transition: background .15s var(--ease), border-color .15s var(--ease);
+}
+
+.tpl-topbar-pill:hover,
+.tpl-topbar-pill[aria-expanded="true"] {
+  background: var(--muted);
+  border-color: var(--tpl-outline);
+}
+
+.tpl-topbar-pill:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+/* The ring: the share written, drawn as a conic fill with a hole in the middle. */
+.tpl-topbar-ring {
+  flex: 0 0 16px;
+  width: 16px;
+  height: 16px;
+  border-radius: 50%;
+  background: conic-gradient(var(--primary) calc(var(--cg-progress) * 1turn), var(--border) 0);
+  -webkit-mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
+  mask: radial-gradient(farthest-side, transparent calc(100% - 3px), #000 calc(100% - 2.5px));
+}
+
+body.cg-generation-settled .tpl-topbar-ring {
+  background: conic-gradient(var(--success-strong) calc(var(--cg-progress) * 1turn), var(--border) 0);
+}
+
+.tpl-topbar-pill-label {
+  color: var(--muted-fg);
+}
+
+.tpl-topbar-pill-count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.tpl-topbar-pill-chevron {
+  flex: none;
+  color: var(--muted-fg);
+  transition: transform .15s var(--ease);
+}
+
+.tpl-topbar-pill[aria-expanded="true"] .tpl-topbar-pill-chevron {
+  transform: rotate(180deg);
+}
+
+/* Waiting for the professor: a small amber dot on the pill says the run needs an answer. */
+body.cg-generation-paused .tpl-topbar-pill::after {
+  content: '';
+  position: absolute;
+  top: -2px;
+  right: -2px;
+  width: 9px;
+  height: 9px;
+  border: 2px solid var(--card);
+  border-radius: 50%;
+  background: var(--tpl-amber);
+}
+
+/* ── The list that opens under the pill ────────────────────────────────── */
+
+.tpl-topbar-panel {
+  position: absolute;
+  top: calc(100% + 8px);
+  left: 0;
+  z-index: 40;
+  width: 340px;
+  max-width: calc(100vw - 24px);
+  max-height: min(60vh, 420px);
+  overflow-y: auto;
+  padding: 14px 16px 6px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: 0 12px 32px hsl(215 28% 17% / .14), var(--shadow-card);
+}
+
+.tpl-topbar-panel[hidden] {
+  display: none;
+}
+
+.tpl-topbar-panel .cg-group-head {
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 8px;
+  margin: 0;
+  padding: 0;
+  cursor: default;
+}
+
+.tpl-topbar-panel .cg-group-title {
+  flex: 1 1 auto;
+  font-size: 13px;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.tpl-topbar-panel .cg-group-count {
+  margin: 0;
+  font-size: 12px;
+  color: var(--muted-fg);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The meter: a track and the part that is written, green once the run is over. */
+.tpl-topbar-panel .cg-group-head::after {
+  content: '';
+  flex: 0 0 100%;
+  height: 4px;
+  margin-top: 6px;
+  border-radius: 2px;
+  background: linear-gradient(90deg, var(--primary) calc(var(--cg-progress) * 100%), var(--border) 0);
+}
+
+body.cg-generation-settled .tpl-topbar-panel .cg-group-head::after {
+  background: linear-gradient(90deg, var(--success-strong) calc(var(--cg-progress) * 100%), var(--border) 0);
+}
+
+.tpl-topbar-panel .courseai-checklist-list {
+  gap: 0;
+  margin-top: 6px;
+}
+
+/* One row per activity: the state, its name, its type. */
+.tpl-topbar-panel .courseai-checklist-item {
+  display: grid;
+  grid-template-columns: 18px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 10px;
+  padding: 10px 0;
+  border-top: 0;
+  opacity: 1;
+}
+
+.tpl-topbar-panel .courseai-checklist-item + .courseai-checklist-item {
+  border-top: 1px solid var(--border);
+  padding-top: 10px;
+}
+
+.tpl-topbar-panel .courseai-checklist-head {
+  display: contents;
+}
+
+.tpl-topbar-panel .courseai-checklist-name {
+  min-width: 0;
+  font-size: 13.5px;
+  font-weight: 500;
+  line-height: 1.35;
+  color: var(--fg);
+}
+
+.tpl-topbar-panel .courseai-checklist-detail {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--muted-fg);
+  white-space: nowrap;
+}
+
+.tpl-topbar-panel .courseai-checklist-check {
+  flex: 0 0 18px;
+}
+
+/* Being written: the ring of the row turns. */
+.tpl-topbar-panel .courseai-checklist-item.is-loading .courseai-checklist-check {
+  border-color: hsl(10 81% 63% / .25);
+  border-top-color: var(--primary);
+  animation: courseai-spin .8s linear infinite;
+}
+
+.tpl-topbar-panel .courseai-checklist-item.is-loading .courseai-checklist-check svg.spinner-icon {
+  display: none;
+}
+
+/* Written: a green check. */
+.tpl-topbar-panel .courseai-checklist-item.is-done .courseai-checklist-check {
+  border-color: transparent;
+  background: var(--success-soft);
+}
+
+.tpl-topbar-panel .courseai-checklist-item.is-done .courseai-checklist-check .check-icon {
+  stroke: var(--tpl-green-ink);
+  stroke-width: 3.4;
+}
+
+/* Waiting for the professor: nothing is being written, so nothing turns. */
+body.cg-generation-paused .tpl-topbar-panel .courseai-checklist-item.is-loading .courseai-checklist-check {
+  animation: none;
+  border-color: var(--border);
+}
+
+/* ── What the structure holds and the way to see the whole course ──────── */
+
+.tpl-topbar-limits {
+  display: flex;
+  align-items: center;
+  flex: 0 1 auto;
+  min-width: 0;
+  gap: 8px;
+}
+
+.tpl-topbar-stats {
+  display: inline-flex;
+  align-items: center;
+  height: 24px;
+  padding: 0 10px;
+  border-radius: 999px;
+  background: var(--muted);
+  color: var(--muted-fg);
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.tpl-topbar-stats:empty {
+  display: none;
+}
+
+.tpl-topbar-preview {
+  display: inline-flex;
+  align-items: center;
+  flex: none;
+  gap: 6px;
+  height: 28px;
+  padding: 0 10px;
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  background: var(--card);
+  color: var(--fg);
+  font-size: 12.5px;
+  font-weight: 500;
+  white-space: nowrap;
+  text-decoration: none;
+  transition: background .15s var(--ease), border-color .15s var(--ease);
+}
+
+.tpl-topbar-preview[hidden] {
+  display: none;
+}
+
+.tpl-topbar-preview:hover,
+.tpl-topbar-preview:focus-visible {
+  background: var(--muted);
+  border-color: var(--tpl-outline, var(--border));
+  color: var(--fg);
+  text-decoration: none;
+}
+
+.tpl-topbar-preview:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.tpl-topbar-preview img,
+.tpl-topbar-preview .icon {
+  flex: none;
+  width: 14px;
+  height: 14px;
+  margin: 0;
+  opacity: .75;
+}
+
+/* The path gives way before anything else: it shortens with dots instead of pushing the controls off the bar. */
+.courseai-topbar-main:has(.tpl-topbar-activities) .courseai-topbar-path {
+  flex: 0 1 auto;
+  min-width: 0;
+  overflow: hidden;
+}
+
+.courseai-topbar-main:has(.tpl-topbar-activities) .courseai-topbar-path-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+/* ── A bar that must not overflow ────────────────────────────────────────
+   The bar measures itself (a size container), so the texts give way to icons as the room goes, whatever the sidebar
+   is doing: first the words of the preview link, then the stats chip, then the label of the pill and the start of
+   the path. On a narrow bar the list takes the width of the screen instead of hanging from the pill. The sizes count
+   the sidebar column, which is the widest case. */
+
+.courseai-topbar:has(.tpl-topbar-activities) {
+  container-type: inline-size;
+  container-name: tpl-topbar;
+}
+
+@container tpl-topbar (max-width: 1260px) {
+  .tpl-topbar-link-text {
+    display: none;
+  }
+
+  .tpl-topbar-preview {
+    width: 28px;
+    padding: 0;
+    justify-content: center;
+  }
+}
+
+@container tpl-topbar (max-width: 1100px) {
+  .tpl-topbar-stats {
+    display: none;
+  }
+}
+
+@container tpl-topbar (max-width: 900px) {
+  .tpl-topbar-pill-label {
+    display: none;
+  }
+
+  .courseai-topbar-main:has(.tpl-topbar-activities) .courseai-topbar-path-crumb,
+  .courseai-topbar-main:has(.tpl-topbar-activities) .courseai-topbar-path-sep {
+    display: none;
+  }
+}
+
+@container tpl-topbar (max-width: 520px) {
+  .courseai-topbar-main:has(.tpl-topbar-activities) .courseai-topbar-exit span {
+    display: none;
+  }
+}
+
+@container tpl-topbar (max-width: 700px) {
+  .courseai-topbar-main .tpl-topbar-activities {
+    position: static;
+  }
+
+  .tpl-topbar-panel {
+    position: absolute;
+    top: calc(100% + 6px);
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: none;
+  }
+}
+
+/* ── Motion: nothing turns or slides for a professor who asked for less ─ */
+
+@media (prefers-reduced-motion: reduce) {
+  .tpl-topbar-panel .courseai-checklist-item.is-loading .courseai-checklist-check {
+    animation: none;
+  }
+
+  .tpl-topbar-pill,
+  .tpl-topbar-pill-chevron,
+  .tpl-topbar-preview {
+    transition: none;
+  }
+}

@@ -1056,3 +1056,7 @@ $string['spacefilemissing'] = 'No se encontró el archivo del espacio {$a}. Elí
 $string['spacerequiredmissing'] = 'El curso no se puede generar hasta que añadas: {$a}.';
 $string['task_purge_space_files'] = 'Eliminar los archivos que los docentes llevaron a un espacio en una generación que nunca los usó';
 $string['template_space_legacy_warning'] = 'Esta actividad se guardó como espacio, pero solo los recursos de tipo archivo pueden serlo. Se tratará como excluida hasta que elijas otra acción.';
+$string['courseai_template_progress_short'] = '{$a->done}/{$a->total}';
+$string['courseai_topbar_activities'] = 'Actividades';
+$string['courseai_topbar_activities_toggle'] = 'Ver las actividades que escribe la IA';
+$string['courseai_topbar_activities_panel'] = 'Actividades que escribe la IA';
