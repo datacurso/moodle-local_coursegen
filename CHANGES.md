@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100622
+
+### Changed
+
+- **Everything the AI says in a template generation reads as a conversation with the teacher**  
+  The steps of the progress feed, the question card, the review card, the messages when something stops, the errors of the syllabus and of the answers, and the notices now speak the way free mode already does: the AI in the first person ("I am reading the template", "I finished generating the course") and the teacher spoken to directly. In Spanish the register is neutral, warm and professional: it avoids "tu" and never uses "usted", and prefers phrasing such as "la plantilla" or "el curso". The three failures of the stream that were hard-coded in English (the run could not finish, ended unexpectedly, lost its connection) are now language strings in both languages. A test checks that both languages carry the same strings with the same placeholders and that the Spanish ones keep the register.
+
 ## [2.0.10] - 2026100621
 
 ### Changed
