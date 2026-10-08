@@ -35,10 +35,13 @@
         "message": "The AI service is busy. Please retry."
     }
 }}
-<div class="local_coursegen-template_agent_retry alert alert-danger my-3" role="alert"
+<div class="local_coursegen-template_agent_retry cg-decision-card cg-ask-card my-3" role="alert"
      data-region="local_coursegen/template-agent/retry">
-    <p class="mb-2">{{message}}</p>
-    <button type="button" class="btn btn-primary" data-action="local_coursegen/template-agent/retry">
-        {{#str}} template_agent_retry_button, local_coursegen {{/str}}
-    </button>
+    <p class="cg-decision-subtitle cg-ask-retry-message">{{message}}</p>
+    <div class="cg-decision-actions">
+        <button type="button" class="cg-decision-btn cg-decision-btn--accept"
+                data-action="local_coursegen/template-agent/retry">
+            {{#str}} template_agent_retry_button, local_coursegen {{/str}}
+        </button>
+    </div>
 </div>

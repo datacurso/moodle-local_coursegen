@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100619
+
+### Changed
+
+- **The question the AI asks during a template generation looks like the rest of the page**  
+  The card that appears when the AI needs something from the professor was drawn with stock blue buttons, a native file button and a bare link, so it stood out from everything around it. It is now the decision card of the page: the send button is the same coral one as Accept and stays disabled until there is something to send, the secondary actions are the outline button of Adjust, a picked file shows as the same chip as the attached syllabus with a way to remove it, and the options are the same selectable rows as the proposals. The notice that offers a new attempt uses the same buttons.
+
+### Fixed
+
+- **The progress list no longer opens with two almost identical lines**  
+  A generation started with "Reading the template." and the first step of the AI said "Reading the template" right after it. The first line now says that the generation is starting.
+
 ## [2.0.10] - 2026100618
 
 ### Fixed

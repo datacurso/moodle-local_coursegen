@@ -54,6 +54,7 @@ $PAGE->requires->css(new moodle_url('/local/coursegen/styles/aicoursecreation.cs
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/chatui.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/sidebar.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_mode_prompt.css', ['v' => $cssrev]));
+$PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_agent_question.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/start_chooser.css', ['v' => $cssrev]));
 
 use local_coursegen\local\models\course_session;
