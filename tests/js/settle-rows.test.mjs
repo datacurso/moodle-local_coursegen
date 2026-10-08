@@ -1,4 +1,4 @@
-// What the rows of the activities look like when a run ends: no row keeps a spinner or a badge, as in free mode.
+// What the rows of the activities look like when a run ends, as in free mode: a row that was written keeps its check, any other row keeps no spinner.
 import {test, beforeEach} from 'node:test';
 import assert from 'node:assert/strict';
 
@@ -13,6 +13,7 @@ const makeRow = (uid, cmid) => {
         classList: {
             add: (...names) => names.forEach((name) => classes.add(name)),
             remove: (...names) => names.forEach((name) => classes.delete(name)),
+            contains: (name) => classes.has(name),
         },
     };
 };
@@ -50,9 +51,17 @@ beforeEach(() => {
     globalThis.document = page;
 });
 
-test('settling the rows clears every status class of every row', () => {
+test('settling the rows keeps the check of a row that was written and clears every other status', () => {
     GUIDE.classes.add('cg-gen-pending');
     RESOURCE.classes.add('cg-gen-done');
+    settleRows();
+    assert.deepEqual(stateOf(GUIDE), []);
+    assert.deepEqual(stateOf(RESOURCE), ['cg-gen-done']);
+});
+
+test('settling the rows clears the active and the skipped status', () => {
+    GUIDE.classes.add('cg-gen-active');
+    RESOURCE.classes.add('cg-gen-skipped');
     settleRows();
     assert.deepEqual(stateOf(GUIDE), []);
     assert.deepEqual(stateOf(RESOURCE), []);
@@ -61,8 +70,11 @@ test('settling the rows clears every status class of every row', () => {
 test('settling the rows keeps the classes that are not status ones', () => {
     GUIDE.classes.add('cg-gen-active');
     GUIDE.classes.add('activity');
+    RESOURCE.classes.add('cg-gen-done');
+    RESOURCE.classes.add('activity');
     settleRows();
     assert.deepEqual(stateOf(GUIDE), ['activity']);
+    assert.deepEqual(stateOf(RESOURCE).sort(), ['activity', 'cg-gen-done']);
 });
 
 test('settling a page with no generated rows changes nothing and does not fail', () => {
@@ -70,19 +82,27 @@ test('settling a page with no generated rows changes nothing and does not fail',
     assert.doesNotThrow(() => settleRows());
 });
 
-test('the end of a run leaves no row spinning, whether it was written or never reached', () => {
+test('settling twice leaves the same rows', () => {
+    RESOURCE.classes.add('cg-gen-done');
+    settleRows();
+    settleRows();
+    assert.deepEqual(stateOf(RESOURCE), ['cg-gen-done']);
+});
+
+test('a row written during the run ends with its check and a row never reached ends clear', () => {
     const progress = {total: 2, done: 0};
     applyEvent(INIT, progress, paint);
     applyEvent({type: 'activity_progress_start', aid: 't:11342', modname: 'page', title: 'Guide'}, progress, paint);
     applyEvent({type: 'activity_progress_done', aid: 't:11342', status: 'ok'}, progress, paint);
+    assert.deepEqual(stateOf(GUIDE), ['cg-gen-done']);
     assert.deepEqual(stateOf(RESOURCE), ['cg-gen-pending']);
     const outcome = applyEvent({type: 'completed'}, progress, paint);
     assert.equal(outcome, 'completed');
-    assert.deepEqual(stateOf(GUIDE), []);
+    assert.deepEqual(stateOf(GUIDE), ['cg-gen-done']);
     assert.deepEqual(stateOf(RESOURCE), []);
 });
 
-test('rows announced and never closed are settled at the end of the run', () => {
+test('rows announced and never closed end clear', () => {
     const progress = {total: 2, done: 0};
     applyEvent(INIT, progress, paint);
     applyEvent({type: 'completed'}, progress, paint);
@@ -90,15 +110,25 @@ test('rows announced and never closed are settled at the end of the run', () => 
     assert.deepEqual(stateOf(RESOURCE), []);
 });
 
-test('a failed row does not keep spinning once the run completes', () => {
+test('a failed row stops spinning at once and ends clear, with no check', () => {
     const progress = {total: 2, done: 0};
     applyEvent(INIT, progress, paint);
     applyEvent({type: 'activity_progress_failed', aid: 't:11340', reason: 'failed'}, progress, paint);
+    assert.deepEqual(stateOf(RESOURCE), ['cg-gen-skipped']);
     applyEvent({type: 'completed'}, progress, paint);
     assert.deepEqual(stateOf(RESOURCE), []);
 });
 
-test('replaying the events of a finished run on a reloaded page shows no spinner', () => {
+test('an activity the run left as it was ends clear, with no check', () => {
+    const progress = {total: 2, done: 0};
+    applyEvent(INIT, progress, paint);
+    applyEvent({type: 'activity_progress_failed', aid: 't:11342', reason: 'not_changed'}, progress, paint);
+    assert.deepEqual(stateOf(GUIDE), ['cg-gen-skipped']);
+    applyEvent({type: 'completed'}, progress, paint);
+    assert.deepEqual(stateOf(GUIDE), []);
+});
+
+test('replaying the events of a finished run on a reloaded page shows a check on every written row and no spinner', () => {
     const progress = {total: 0, done: 0};
     GUIDE.classes.add('cg-gen-pending');
     RESOURCE.classes.add('cg-gen-pending');
@@ -113,8 +143,8 @@ test('replaying the events of a finished run on a reloaded page shows no spinner
     for (const event of events) {
         applyEvent(event, progress, paint);
     }
-    assert.deepEqual(stateOf(GUIDE), []);
-    assert.deepEqual(stateOf(RESOURCE), []);
+    assert.deepEqual(stateOf(GUIDE), ['cg-gen-done']);
+    assert.deepEqual(stateOf(RESOURCE), ['cg-gen-done']);
 });
 
 test('while the run is still going the rows keep their spinners', () => {
@@ -125,19 +155,33 @@ test('while the run is still going the rows keep their spinners', () => {
     assert.deepEqual(stateOf(RESOURCE), ['cg-gen-pending']);
 });
 
-test('a change request spins only the rows that are redone and clears them at the end', () => {
+test('a row never shows a spinner and a check together', () => {
     const progress = {total: 2, done: 0};
     applyEvent(INIT, progress, paint);
+    applyEvent({type: 'activity_progress_start', aid: 't:11342', modname: 'page', title: 'Guide'}, progress, paint);
+    applyEvent({type: 'activity_progress_done', aid: 't:11342', status: 'ok'}, progress, paint);
+    const classes = stateOf(GUIDE);
+    assert.equal(classes.length, 1);
+    assert.equal(classes[0], 'cg-gen-done');
+});
+
+test('a change request spins only the rows that are redone, and they end with a check again', () => {
+    const progress = {total: 2, done: 0};
+    applyEvent(INIT, progress, paint);
+    applyEvent({type: 'activity_progress_start', aid: 't:11342', modname: 'page', title: 'Guide'}, progress, paint);
+    applyEvent({type: 'activity_progress_done', aid: 't:11342', status: 'ok'}, progress, paint);
+    applyEvent({type: 'activity_progress_start', aid: 't:11340', modname: 'resource', title: 'File'}, progress, paint);
+    applyEvent({type: 'activity_progress_done', aid: 't:11340', status: 'ok'}, progress, paint);
     applyEvent({type: 'completed'}, progress, paint);
     const round = {type: 'activity_progress_init', total: 1, activities: [{aid: 't:11342'}]};
     applyEvent(round, progress, paint);
     assert.deepEqual(stateOf(GUIDE), ['cg-gen-pending']);
-    assert.deepEqual(stateOf(RESOURCE), []);
+    assert.deepEqual(stateOf(RESOURCE), ['cg-gen-done']);
     applyEvent({type: 'activity_progress_start', aid: 't:11342', modname: 'page', title: 'Guide'}, progress, paint);
     applyEvent({type: 'activity_progress_done', aid: 't:11342', status: 'ok'}, progress, paint);
     applyEvent({type: 'completed'}, progress, paint);
-    assert.deepEqual(stateOf(GUIDE), []);
-    assert.deepEqual(stateOf(RESOURCE), []);
+    assert.deepEqual(stateOf(GUIDE), ['cg-gen-done']);
+    assert.deepEqual(stateOf(RESOURCE), ['cg-gen-done']);
 });
 
 test('a question keeps the rows as they are: the page hides their spinners while the run waits', () => {
@@ -146,4 +190,13 @@ test('a question keeps the rows as they are: the page hides their spinners while
     const outcome = applyEvent({type: 'question', call_id: 'q1', question: 'Which file?'}, progress, paint);
     assert.equal(outcome, 'question');
     assert.deepEqual(stateOf(GUIDE), ['cg-gen-pending']);
+});
+
+test('the free-mode tracker and the template flow share the done class', async() => {
+    const tracker = await import('local_coursegen/local/courseai/stream/tracker-renderer');
+    const row = makeRow('x', '1');
+    const root = {querySelector: () => row};
+    globalThis.document = {getElementById: () => root};
+    tracker.renderGenerationTracker({generationTracker: {flat: [{id: 'a', status: 'done'}]}});
+    assert.deepEqual(stateOf(row), ['cg-gen-done']);
 });

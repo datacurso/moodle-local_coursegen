@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100617
+
+### Fixed
+
+- **A written activity keeps its check once a template generation has finished**  
+  After the previous fix the rows of the activities the AI had written went back to a bare look, with nothing to show they were done. Now a row the AI wrote ends with the same check as in free mode, and it stays through the review and after a reload. A row the AI did not reach, or could not write, ends with no mark and never with a spinner. A change request sends only the rows being redone back to the spinner, and they end with their check again.
+
 ## [2.0.10] - 2026100616
 
 ### Fixed
