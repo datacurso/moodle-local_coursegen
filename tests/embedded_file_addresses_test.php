@@ -181,10 +181,10 @@ final class embedded_file_addresses_test extends \advanced_testcase {
         $laid = link_token::replace(
             $text,
             [self::RESOURCE_UID => 'https://example.com/preview?uid=r'],
-            [self::RESOURCE_UID => '/draftfile.php/5/user/draft/9/uid/syllabus.pdf']
+            [self::RESOURCE_UID => '/local/coursegen/preview_file.php/9/uid/syllabus.pdf']
         );
 
-        $this->assertStringContainsString('src="/draftfile.php/5/user/draft/9/uid/syllabus.pdf"', $laid);
+        $this->assertStringContainsString('src="/local/coursegen/preview_file.php/9/uid/syllabus.pdf"', $laid);
         $this->assertStringContainsString('href="https://example.com/preview?uid=r"', $laid);
     }
 }

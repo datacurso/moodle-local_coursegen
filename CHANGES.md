@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100618
+
+### Fixed
+
+- **The PDF a page embeds shows inside the page of the preview instead of being downloaded**  
+  A page of a template whose viewer pointed to the file of a resource showed an empty frame while the browser downloaded the file, because the page that served it from the draft area of the reviewer always downloads. The preview now serves its files from a page of its own, only to the person who is reviewing, and shows a PDF or an image inside the page. Any other type is still downloaded, and a link to the file keeps working as before. Creating the course is not affected.
+
 ## [2.0.10] - 2026100617
 
 ### Fixed
