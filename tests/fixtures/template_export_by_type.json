@@ -1,0 +1,2247 @@
+{
+ "assign": {
+  "cmid": 54,
+  "resource_type": "assign",
+  "parameters": {
+   "name": "Assignment 1",
+   "section": 0,
+   "structure": {
+    "id": "10",
+    "moduleid": 54,
+    "modulename": "assign",
+    "contextid": 78,
+    "assign": [
+     {
+      "id": "10",
+      "name": "Assignment 1",
+      "intro": "",
+      "introformat": "1",
+      "alwaysshowdescription": "1",
+      "submissiondrafts": "0",
+      "sendnotifications": "0",
+      "sendlatenotifications": "0",
+      "sendstudentnotifications": "1",
+      "duedate": "1762059600",
+      "cutoffdate": "0",
+      "gradingduedate": "1762664400",
+      "allowsubmissionsfromdate": "1761454800",
+      "grade": "100",
+      "timemodified": "1761503725",
+      "completionsubmit": "1",
+      "requiresubmissionstatement": "0",
+      "teamsubmission": "0",
+      "requireallteammemberssubmit": "0",
+      "teamsubmissiongroupingid": "0",
+      "blindmarking": "0",
+      "hidegrader": "0",
+      "revealidentities": "0",
+      "attemptreopenmethod": "untilpass",
+      "maxattempts": "1",
+      "markingworkflow": "0",
+      "markingallocation": "0",
+      "markinganonymous": "0",
+      "preventsubmissionnotingroup": "0",
+      "activity": "",
+      "activityformat": "1",
+      "timelimit": "0",
+      "submissionattachments": "0",
+      "userflags": [
+       []
+      ],
+      "submissions": [
+       []
+      ],
+      "grades": [
+       []
+      ],
+      "plugin_configs": [
+       {
+        "plugin_config": [
+         {
+          "id": "94",
+          "plugin": "onlinetext",
+          "subtype": "assignsubmission",
+          "name": "enabled",
+          "value": "0"
+         },
+         {
+          "id": "95",
+          "plugin": "file",
+          "subtype": "assignsubmission",
+          "name": "enabled",
+          "value": "1"
+         },
+         {
+          "id": "96",
+          "plugin": "file",
+          "subtype": "assignsubmission",
+          "name": "maxfilesubmissions",
+          "value": "20"
+         }
+        ]
+       }
+      ],
+      "overrides": [
+       []
+      ]
+     }
+    ]
+   },
+   "structure_tables": {
+    "assign": "assign",
+    "plugin_config": "assign_plugin_config"
+   },
+   "structure_aliases": [],
+   "files": []
+  }
+ },
+ "book": {
+  "cmid": 103,
+  "resource_type": "book",
+  "parameters": {
+   "name": "Practical Machine Learning: A Comprehensive Guide",
+   "section": 0,
+   "structure": {
+    "id": "9",
+    "moduleid": 103,
+    "modulename": "book",
+    "contextid": 139,
+    "book": [
+     {
+      "id": "9",
+      "name": "Practical Machine Learning: A Comprehensive Guide",
+      "intro": "<p>This book provides a practical, concise, and structured introduction to machine learning. It covers theoretical foundations, core algorithms, applied techniques, and best practices for deploying mo",
+      "introformat": "1",
+      "numbering": "1",
+      "navstyle": "1",
+      "customtitles": "0",
+      "timecreated": "1761869166",
+      "timemodified": "1761869166",
+      "chapters": [
+       {
+        "chapter": [
+         {
+          "id": "37",
+          "pagenum": "1",
+          "subchapter": "0",
+          "title": "Foundations of Machine Learning",
+          "content": "<p>Machine learning is the study of algorithms that improve through experience. It bridges statistics, computer science, and optimization to create systems that can generalize from data. Key paradigms",
+          "contentformat": "1",
+          "hidden": "0",
+          "timemodified": "1761869166",
+          "importsrc": ""
+         },
+         {
+          "id": "38",
+          "pagenum": "2",
+          "subchapter": "1",
+          "title": "Supervised Learning",
+          "content": "<p>Supervised learning trains models on labeled data to predict outcomes. Common tasks include classification (discrete labels) and regression (continuous values). Typical algorithms: linear regressio",
+          "contentformat": "1",
+          "hidden": "0",
+          "timemodified": "1761869166",
+          "importsrc": ""
+         },
+         {
+          "id": "39",
+          "pagenum": "3",
+          "subchapter": "1",
+          "title": "Unsupervised Learning",
+          "content": "<p>Unsupervised learning discovers structure in unlabeled data. Core tasks include clustering, dimensionality reduction, and density estimation. Common algorithms: k-means, hierarchical clustering, DB",
+          "contentformat": "1",
+          "hidden": "0",
+          "timemodified": "1761869166",
+          "importsrc": ""
+         }
+        ]
+       }
+      ],
+      "chaptertags": [
+       []
+      ]
+     }
+    ]
+   },
+   "structure_tables": {
+    "book": "book",
+    "chapter": "book_chapters"
+   },
+   "structure_aliases": [],
+   "files": []
+  }
+ },
+ "choice": {
+  "cmid": 1160,
+  "resource_type": "choice",
+  "parameters": {
+   "name": "Consulta: ¿Qué otro tema quisieras ver en la Unidad 1?",
+   "section": 0,
+   "structure": {
+    "id": "9",
+    "moduleid": 1160,
+    "modulename": "choice",
+    "contextid": 1428,
+    "choice": [
+     {
+      "id": "9",
+      "name": "Consulta: ¿Qué otro tema quisieras ver en la Unidad 1?",
+      "intro": "<p>Queremos saber qué contenido adicional te gustaría que incluyéramos para complementar la Unidad 1. Selecciona todas las opciones que consideres útiles o interesantes para profundizar en los temas v",
+      "introformat": "1",
+      "publish": "0",
+      "showresults": "0",
+      "display": "0",
+      "allowupdate": "0",
+      "allowmultiple": "1",
+      "showunanswered": "0",
+      "limitanswers": "0",
+      "timeopen": "0",
+      "timeclose": "0",
+      "timemodified": "1766097719",
+      "completionsubmit": "0",
+      "showpreview": "0",
+      "includeinactive": "0",
+      "showavailable": "0",
+      "options": [
+       {
+        "option": [
+         {
+          "id": "47",
+          "text": "Repaso y resumen de los conceptos fundamentales de la Unidad 1",
+          "maxanswers": "0",
+          "timemodified": "1766097719"
+         },
+         {
+          "id": "48",
+          "text": "Ejercicios prácticos paso a paso con soluciones comentadas",
+          "maxanswers": "0",
+          "timemodified": "1766097719"
+         },
+         {
+          "id": "49",
+          "text": "Casos de estudio aplicados a situaciones reales",
+          "maxanswers": "0",
+          "timemodified": "1766097719"
+         }
+        ]
+       }
+      ],
+      "answers": [
+       []
+      ]
+     }
+    ]
+   },
+   "structure_tables": {
+    "choice": "choice",
+    "option": "choice_options"
+   },
+   "structure_aliases": [],
+   "files": []
+  }
+ },
+ "data": {
+  "cmid": 2560,
+  "resource_type": "data",
+  "parameters": {
+   "name": "Machine Learning Algorithms",
+   "section": 3,
+   "structure": {
+    "id": "15",
+    "moduleid": 2560,
+    "modulename": "data",
+    "contextid": 3183,
+    "data": [
+     {
+      "id": "15",
+      "name": "Machine Learning Algorithms",
+      "intro": "<h3>Welcome to the Machine Learning Algorithm Catalog</h3><p>This database activity allows learners to record, categorize, and explore key Machine Learning algorithms to build a shared reference catal",
+      "introformat": "1",
+      "comments": "0",
+      "timeavailablefrom": "0",
+      "timeavailableto": "0",
+      "timeviewfrom": "0",
+      "timeviewto": "0",
+      "requiredentries": "0",
+      "requiredentriestoview": "0",
+      "maxentries": "0",
+      "rssarticles": "0",
+      "singletemplate": "<div class=\"algorithm-detail\" style=\"border:1px solid #ccc; border-radius:8px; padding:24px; max-width:800px; margin:0 auto; background-color:#fff;\"><h2 style=\"margin-top:0; color:#1a73e8; border-bott",
+      "listtemplate": "<div class=\"algorithm-card\" style=\"border:1px solid #e0e0e0; border-radius:8px; padding:16px; margin-bottom:12px; background-color:#f9f9f9;\"><h3 style=\"margin-top:0; color:#1a73e8;\">[[Algorithm Name]]",
+      "listtemplateheader": null,
+      "listtemplatefooter": null,
+      "addtemplate": null,
+      "rsstemplate": null,
+      "rsstitletemplate": null,
+      "csstemplate": null,
+      "jstemplate": null,
+      "asearchtemplate": null,
+      "approval": "0",
+      "manageapproved": "1",
+      "scale": "100",
+      "assessed": "0",
+      "assesstimestart": "0",
+      "assesstimefinish": "0",
+      "defaultsort": "2",
+      "defaultsortdir": "0",
+      "editany": "0",
+      "notification": "0",
+      "timemodified": "1789067200",
+      "config": null,
+      "completionentries": "0",
+      "fields": [
+       {
+        "field": [
+         {
+          "id": "2",
+          "type": "text",
+          "name": "Algorithm Name",
+          "description": "The standard name of the machine learning algorithm.",
+          "required": "1",
+          "param1": "",
+          "param2": "",
+          "param3": "",
+          "param4": null,
+          "param5": null,
+          "param6": null,
+          "param7": null,
+          "param8": null,
+          "param9": null,
+          "param10": null
+         },
+         {
+          "id": "3",
+          "type": "menu",
+          "name": "Type",
+          "description": "The learning paradigm of the algorithm.",
+          "required": "1",
+          "param1": "Supervised\nUnsupervised\nReinforcement",
+          "param2": "",
+          "param3": "",
+          "param4": null,
+          "param5": null,
+          "param6": null,
+          "param7": null,
+          "param8": null,
+          "param9": null,
+          "param10": null
+         },
+         {
+          "id": "4",
+          "type": "textarea",
+          "name": "Typical Use Case",
+          "description": "A detailed description of standard application scenarios for this algorithm.",
+          "required": "1",
+          "param1": "",
+          "param2": "60",
+          "param3": "35",
+          "param4": "1",
+          "param5": "0",
+          "param6": null,
+          "param7": null,
+          "param8": null,
+          "param9": null,
+          "param10": null
+         }
+        ]
+       }
+      ],
+      "records": [
+       []
+      ],
+      "recordstags": [
+       []
+      ]
+     }
+    ]
+   },
+   "structure_tables": {
+    "data": "data",
+    "field": "data_fields"
+   },
+   "structure_aliases": [],
+   "files": []
+  }
+ },
+ "feedback": {
+  "cmid": 167,
+  "resource_type": "feedback",
+  "parameters": {
+   "name": "Self-check Survey: Identify Weak Areas (no grade)",
+   "section": 1,
+   "structure": {
+    "id": "3",
+    "moduleid": 167,
+    "modulename": "feedback",
+    "contextid": 238,
+    "feedback": [
+     {
+      "id": "3",
+      "name": "Self-check Survey: Identify Weak Areas (no grade)",
+      "intro": "<p>This quick self-assessment helps you identify which mathematical topics need more practice. There is no grade — you will get immediate feedback suggesting areas to focus on and resources to use. An",
+      "introformat": "1",
+      "anonymous": "1",
+      "email_notification": "0",
+      "multiple_submit": "0",
+      "autonumbering": "0",
+      "site_after_submit": "",
+      "page_after_submit": "",
+      "page_after_submitformat": "1",
+      "publish_stats": "0",
+      "timeopen": "0",
+      "timeclose": "0",
+      "timemodified": "1762358215",
+      "completionsubmit": "0",
+      "items": [
+       {
+        "item": [
+         {
+          "id": "18",
+          "template": "0",
+          "name": "Instructions: Complete the short survey about your confidence and study availability. Use the rating scales to indicate how confident you feel in each topic. Responses are private and used to generate",
+          "label": "",
+          "presentation": "2",
+          "typ": "info",
+          "hasvalue": "1",
+          "position": "1",
+          "required": "0",
+          "dependitem": "0",
+          "dependvalue": "",
+          "options": ""
+         },
+         {
+          "id": "19",
+          "template": "0",
+          "name": "Rate your confidence in: Conversions and scientific notation (1 = Not confident, 5 = Very confident)",
+          "label": "Conversions",
+          "presentation": "r>>>>>1####Not confident|2####Somewhat confident|3####Neutral|4####Confident|5####Very confident",
+          "typ": "multichoicerated",
+          "hasvalue": "1",
+          "position": "2",
+          "required": "1",
+          "dependitem": "0",
+          "dependvalue": "",
+          "options": ""
+         },
+         {
+          "id": "20",
+          "template": "0",
+          "name": "Rate your confidence in: Cartesian plane and plotting points",
+          "label": "Cartesian plane",
+          "presentation": "r>>>>>1####Not confident|2####Somewhat confident|3####Neutral|4####Confident|5####Very confident",
+          "typ": "multichoicerated",
+          "hasvalue": "1",
+          "position": "3",
+          "required": "1",
+          "dependitem": "0",
+          "dependvalue": "",
+          "options": ""
+         }
+        ]
+       }
+      ],
+      "completeds": [
+       []
+      ]
+     }
+    ]
+   },
+   "structure_tables": {
+    "feedback": "feedback",
+    "item": "feedback_item"
+   },
+   "structure_aliases": [],
+   "files": []
+  }
+ },
+ "folder": {
+  "cmid": 891,
+  "resource_type": "folder",
+  "parameters": {
+   "name": "Carpeta de evidencias - Curso Machine Learning",
+   "section": 0,
+   "structure": {
+    "id": "3",
+    "moduleid": 891,
+    "modulename": "folder",
+    "contextid": 1143,
+    "folder": [
+     {
+      "id": "3",
+      "name": "Carpeta de evidencias - Curso Machine Learning",
+      "intro": "<p><strong>Propósito:</strong> Espacio para que los profesores suban evidencias del curso de Machine Learning (proyectos, notebooks, informes, resultados de experimentos y materiales complementarios).",
+      "introformat": "1",
+      "revision": "1",
+      "timemodified": "1765895069",
+      "display": "0",
+      "showexpanded": "1",
+      "showdownloadfolder": "1",
+      "forcedownload": "1"
+     }
+    ]
+   },
+   "structure_tables": {
+    "folder": "folder"
+   },
+   "structure_aliases": [],
+   "files": [
+    {
+     "id": 140559,
+     "contextid": 1143,
+     "component": "mod_folder",
+     "filearea": "content",
+     "itemid": 0,
+     "filepath": "/",
+     "filename": ".",
+     "isdir": true,
+     "filesize": 0,
+     "mimetype": null,
+     "timecreated": 1789690436,
+     "timemodified": 1789690436,
+     "sortorder": 0,
+     "author": null,
+     "license": null,
+     "url": null
+    },
+    {
+     "id": 140558,
+     "contextid": 1143,
+     "component": "mod_folder",
+     "filearea": "content",
+     "itemid": 0,
+     "filepath": "/",
+     "filename": "guia.txt",
+     "isdir": false,
+     "filesize": 4,
+     "mimetype": "text/plain",
+     "timecreated": 1789690435,
+     "timemodified": 1789690435,
+     "sortorder": 0,
+     "author": null,
+     "license": null,
+     "url": "http://company1.moodle:8080/pluginfile.php/1143/mod_folder/content/0/guia.txt"
+    },
+    {
+     "id": 140562,
+     "contextid": 1143,
+     "component": "mod_folder",
+     "filearea": "content",
+     "itemid": 0,
+     "filepath": "/",
+     "filename": "logo.png",
+     "isdir": false,
+     "filesize": 70,
+     "mimetype": "image/png",
+     "timecreated": 1789690436,
+     "timemodified": 1789690436,
+     "sortorder": 0,
+     "author": null,
+     "license": null,
+     "url": "http://company1.moodle:8080/pluginfile.php/1143/mod_folder/content/0/logo.png"
+    }
+   ]
+  }
+ },
+ "glossary": {
+  "cmid": 1697,
+  "resource_type": "glossary",
+  "parameters": {
+   "name": "TEST",
+   "section": 0,
+   "structure": {
+    "id": "8",
+    "moduleid": 1697,
+    "modulename": "glossary",
+    "contextid": 2067,
+    "glossary": [
+     {
+      "id": "8",
+      "name": "TEST",
+      "intro": "<p>TEST</p>",
+      "introformat": "1",
+      "allowduplicatedentries": "0",
+      "displayformat": "dictionary",
+      "mainglossary": "0",
+      "showspecial": "1",
+      "showalphabet": "1",
+      "showall": "1",
+      "allowcomments": "0",
+      "allowprintview": "1",
+      "usedynalink": "1",
+      "defaultapproval": "1",
+      "globalglossary": "0",
+      "entbypage": "10",
+      "editalways": "0",
+      "rsstype": "0",
+      "rssarticles": "0",
+      "assessed": "0",
+      "assesstimestart": "0",
+      "assesstimefinish": "0",
+      "scale": "100",
+      "timecreated": "1774402873",
+      "timemodified": "1774402873",
+      "completionentries": "0",
+      "entries": [
+       []
+      ],
+      "entriestags": [
+       []
+      ],
+      "categories": [
+       []
+      ]
+     }
+    ]
+   },
+   "structure_tables": {
+    "glossary": "glossary"
+   },
+   "structure_aliases": [],
+   "files": [
+    {
+     "id": 12332,
+     "contextid": 2067,
+     "component": "mod_glossary",
+     "filearea": "entry",
+     "itemid": 57,
+     "filepath": "/",
+     "filename": ".",
+     "isdir": true,
+     "filesize": 0,
+     "mimetype": null,
+     "timecreated": 1774402917,
+     "timemodified": 1774402926,
+     "sortorder": 0,
+     "author": null,
+     "license": null,
+     "url": null
+    },
+    {
+     "id": 12331,
+     "contextid": 2067,
+     "component": "mod_glossary",
+     "filearea": "entry",
+     "itemid": 57,
+     "filepath": "/",
+     "filename": "Screenshot From 2026-03-24 20-41-40.png",
+     "isdir": false,
+     "filesize": 33191,
+     "mimetype": "image/png",
+     "timecreated": 1774402917,
+     "timemodified": 1774402926,
+     "sortorder": 0,
+     "author": null,
+     "license": "unknown",
+     "url": "http://company1.moodle:8080/pluginfile.php/2067/mod_glossary/entry/57/Screenshot%20From%202026-03-24%2020-41-40.png"
+    }
+   ]
+  }
+ },
+ "h5pactivity": {
+  "cmid": 1544,
+  "resource_type": "h5pactivity",
+  "parameters": {
+   "name": "Unidad 1: Fundamentos del Liderazgo Digital y la Cultura Digital - Actividad H5P",
+   "section": 0,
+   "structure": {
+    "id": "31",
+    "moduleid": 1544,
+    "modulename": "h5pactivity",
+    "contextid": 1856,
+    "h5pactivity": [
+     {
+      "id": "31",
+      "name": "Unidad 1: Fundamentos del Liderazgo Digital y la Cultura Digital - Actividad H5P",
+      "timecreated": "1769471465",
+      "timemodified": "1769471465",
+      "intro": "<p>Esta actividad interactiva evalúa y refuerza los conceptos clave de la Unidad 1: liderazgo digital y cultura digital. Repasa competencias del líder digital, pilares de la cultura digital, y analiza",
+      "introformat": "1",
+      "grade": "100",
+      "displayoptions": "15",
+      "enabletracking": "1",
+      "grademethod": "1",
+      "reviewmode": "1",
+      "attempts": [
+       []
+      ]
+     }
+    ]
+   },
+   "structure_tables": {
+    "h5pactivity": "h5pactivity"
+   },
+   "structure_aliases": [],
+   "files": [
+    {
+     "id": 11642,
+     "contextid": 1856,
+     "component": "mod_h5pactivity",
+     "filearea": "package",
+     "itemid": 0,
+     "filepath": "/",
+     "filename": ".",
+     "isdir": true,
+     "filesize": 0,
+     "mimetype": null,
+     "timecreated": 1769471465,
+     "timemodified": 1769471465,
+     "sortorder": 0,
+     "author": null,
+     "license": null,
+     "url": null
+    },
+    {
+     "id": 11641,
+     "contextid": 1856,
+     "component": "mod_h5pactivity",
+     "filearea": "package",
+     "itemid": 0,
+     "filepath": "/",
+     "filename": "h5p_pkg_4r875ons.h5p",
+     "isdir": false,
+     "filesize": 1342808,
+     "mimetype": "application/zip.h5p",
+     "timecreated": 1769471465,
+     "timemodified": 1769471465,
+     "sortorder": 0,
+     "author": null,
+     "license": null,
+     "url": "http://company1.moodle:8080/pluginfile.php/1856/mod_h5pactivity/package/0/h5p_pkg_4r875ons.h5p"
+    }
+   ]
+  }
+ },
+ "imscp": {
+  "cmid": 9253,
+  "resource_type": "imscp",
+  "parameters": {
+   "name": "Paquete IMS (molde)",
+   "section": 1,
+   "structure": {
+    "id": "1",
+    "moduleid": 9253,
+    "modulename": "imscp",
+    "contextid": 10850,
+    "imscp": [
+     {
+      "id": "1",
+      "name": "Paquete IMS (molde)",
+      "intro": "<div style=\"font-family:'Segoe UI',Arial,sans-serif; max-width:1000px; margin:0 auto; color:#333;\">\n  <div style=\"background:#f4f5f7; padding:18px 22px; border-radius:14px; border-left:8px solid #adad",
+      "introformat": "1",
+      "revision": "1",
+      "keepold": "-1",
+      "structure": "a:3:{i:0;a:4:{s:4:\"href\";s:20:\"01_presentacion.html\";s:5:\"title\";s:13:\"Presentación\";s:5:\"level\";i:0;s:8:\"subitems\";a:0:{}}i:1;a:4:{s:4:\"href\";s:18:\"02_desarrollo.html\";s:5:\"title\";s:10:\"Desarrollo\";s",
+      "timemodified": "1789508457"
+     }
+    ]
+   },
+   "structure_tables": {
+    "imscp": "imscp"
+   },
+   "structure_aliases": [],
+   "files": [
+    {
+     "id": 140731,
+     "contextid": 10850,
+     "component": "mod_imscp",
+     "filearea": "backup",
+     "itemid": 1,
+     "filepath": "/",
+     "filename": ".",
+     "isdir": true,
+     "filesize": 0,
+     "mimetype": null,
+     "timecreated": 1790717190,
+     "timemodified": 1790717190,
+     "sortorder": 0,
+     "author": null,
+     "license": null,
+     "url": null
+    },
+    {
+     "id": 140730,
+     "contextid": 10850,
+     "component": "mod_imscp",
+     "filearea": "backup",
+     "itemid": 1,
+     "filepath": "/",
+     "filename": "paquete-ims-molde.zip",
+     "isdir": false,
+     "filesize": 3015,
+     "mimetype": "application/zip",
+     "timecreated": 1790717190,
+     "timemodified": 1790717190,
+     "sortorder": 0,
+     "author": null,
+     "license": null,
+     "url": "http://company1.moodle:8080/pluginfile.php/10850/mod_imscp/backup/1/paquete-ims-molde.zip"
+    },
+    {
+     "id": 140733,
+     "contextid": 10850,
+     "component": "mod_imscp",
+     "filearea": "content",
+     "itemid": 1,
+     "filepath": "/",
+     "filename": ".",
+     "isdir": true,
+     "filesize": 0,
+     "mimetype": null,
+     "timecreated": 1790717190,
+     "timemodified": 1790717190,
+     "sortorder": 0,
+     "author": null,
+     "license": null,
+     "url": null
+    }
+   ]
+  }
+ },
+ "label": {
+  "cmid": 1719,
+  "resource_type": "label",
+  "parameters": {
+   "name": "Banner - Unit 1: Foundations of Digital Leadership and Digital Culture",
+   "section": 0,
+   "structure": {
+    "id": "18",
+    "moduleid": 1719,
+    "modulename": "label",
+    "contextid": 2092,
+    "label": [
+     {
+      "id": "18",
+      "name": "Banner - Unit 1: Foundations of Digital Leadership and Digital Culture",
+      "intro": "<div style=\"border-radius:8px; padding:18px; background:linear-gradient(90deg,#0f6fb6,#66c0ff); color:#ffffff; font-family:Arial,Helvetica,sans-serif;\">\n  <h1 style=\"margin:0 0 8px 0; font-size:26px;\"",
+      "introformat": "1",
+      "timemodified": "1777040987"
+     }
+    ]
+   },
+   "structure_tables": {
+    "label": "label"
+   },
+   "structure_aliases": [],
+   "files": []
+  }
+ },
+ "lesson": {
+  "cmid": 411,
+  "resource_type": "lesson",
+  "parameters": {
+   "name": "About Lesson Activity",
+   "section": 0,
+   "structure": {
+    "id": "13",
+    "moduleid": 411,
+    "modulename": "lesson",
+    "contextid": 533,
+    "lesson": [
+     {
+      "id": "13",
+      "course": "83",
+      "name": "About Lesson Activity",
+      "intro": "",
+      "introformat": "1",
+      "practice": "1",
+      "modattempts": "1",
+      "usepassword": "0",
+      "password": "",
+      "dependency": "0",
+      "conditions": "O:8:\"stdClass\":3:{s:9:\"timespent\";i:0;s:9:\"completed\";i:0;s:15:\"gradebetterthan\";i:0;}",
+      "grade": "100",
+      "custom": "1",
+      "ongoing": "0",
+      "usemaxgrade": "1",
+      "maxanswers": "5",
+      "maxattempts": "0",
+      "review": "0",
+      "nextpagedefault": "0",
+      "feedback": "0",
+      "minquestions": "0",
+      "maxpages": "1",
+      "timelimit": "0",
+      "retake": "1",
+      "activitylink": "0",
+      "mediafile": "",
+      "mediaheight": "480",
+      "mediawidth": "640",
+      "mediaclose": "0",
+      "slideshow": "0",
+      "width": "640",
+      "height": "480",
+      "bgcolor": "#F4F4F4",
+      "displayleft": "1",
+      "displayleftif": "0",
+      "progressbar": "1",
+      "available": "0",
+      "deadline": "0",
+      "timemodified": "1712609236",
+      "completionendreached": "1",
+      "completiontimespent": "0",
+      "allowofflineattempts": "0",
+      "pages": [
+       {
+        "page": [
+         {
+          "id": "37",
+          "prevpageid": "0",
+          "nextpageid": "38",
+          "qtype": "20",
+          "qoption": "0",
+          "layout": "1",
+          "display": "1",
+          "timecreated": "1642394601",
+          "timemodified": "1696193216",
+          "title": "About Lesson activity",
+          "contents": "<p></p><p><span lang=\"EN-GB\">A lesson activity enables an adaptive form of\nteaching and a high level of interaction for the students, given that going through\nthe teaching materials depends on their a",
+          "contentsformat": "1",
+          "answers": [
+           {
+            "answer": [
+             {
+              "id": "71",
+              "jumpto": "-1",
+              "grade": "0",
+              "score": "0",
+              "flags": "0",
+              "timecreated": "1642394601",
+              "timemodified": "0",
+              "answer_text": "Next<span data-translationhash=\"6e2c6280bd023c6bfac404e0db5f19e7\"></span>",
+              "response": null,
+              "answerformat": "0",
+              "responseformat": "0",
+              "attempts": [
+               []
+              ]
+             }
+            ]
+           }
+          ],
+          "branches": [
+           []
+          ]
+         },
+         {
+          "id": "38",
+          "prevpageid": "37",
+          "nextpageid": "39",
+          "qtype": "20",
+          "qoption": "0",
+          "layout": "1",
+          "display": "1",
+          "timecreated": "1642394689",
+          "timemodified": "1696193253",
+          "title": "Pages in Lesson activity",
+          "contents": "<p><b><span lang=\"EN-GB\">Pages with a question</span></b><span lang=\"EN-GB\"> are usually displayed between\nseveral content pages and contain a text that the student should study along\nwith a question,",
+          "contentsformat": "1",
+          "answers": [
+           {
+            "answer": [
+             {
+              "id": "72",
+              "jumpto": "-40",
+              "grade": "0",
+              "score": "0",
+              "flags": "0",
+              "timecreated": "1642394689",
+              "timemodified": "0",
+              "answer_text": "Back<span data-translationhash=\"078820c1462f47d3bb4cc9fdb147c52b\"></span>",
+              "response": null,
+              "answerformat": "0",
+              "responseformat": "0",
+              "attempts": [
+               []
+              ]
+             },
+             {
+              "id": "75",
+              "jumpto": "-1",
+              "grade": "0",
+              "score": "0",
+              "flags": "0",
+              "timecreated": "1642394689",
+              "timemodified": "0",
+              "answer_text": "Next<span data-translationhash=\"4b9d40b8bc23d7a6a7fbd68ba60c260b\"></span>",
+              "response": null,
+              "answerformat": "0",
+              "responseformat": "0",
+              "attempts": [
+               []
+              ]
+             }
+            ]
+           }
+          ],
+          "branches": [
+           []
+          ]
+         },
+         {
+          "id": "39",
+          "prevpageid": "38",
+          "nextpageid": "40",
+          "qtype": "20",
+          "qoption": "0",
+          "layout": "1",
+          "display": "1",
+          "timecreated": "1696193438",
+          "timemodified": "1696249744",
+          "title": "Content page",
+          "contents": "<p></p><p><span lang=\"EN-GB\">The content page contains text, without\nquestions, and moving through the lesson is determined by the button that the\nstudent selects at the bottom of the page. Each butto",
+          "contentsformat": "1",
+          "answers": [
+           {
+            "answer": [
+             {
+              "id": "82",
+              "jumpto": "-40",
+              "grade": "0",
+              "score": "0",
+              "flags": "0",
+              "timecreated": "1696193438",
+              "timemodified": "0",
+              "answer_text": "Back<span data-translationhash=\"edc208ff81aa7f0866f0f9110047ba35\"></span>",
+              "response": null,
+              "answerformat": "0",
+              "responseformat": "0",
+              "attempts": [
+               []
+              ]
+             },
+             {
+              "id": "83",
+              "jumpto": "-1",
+              "grade": "0",
+              "score": "0",
+              "flags": "0",
+              "timecreated": "1696193438",
+              "timemodified": "0",
+              "answer_text": "Next<span data-translationhash=\"383da05b82524be20cc3b0b93d89a0e2\"></span>",
+              "response": null,
+              "answerformat": "0",
+              "responseformat": "0",
+              "attempts": [
+               []
+              ]
+             }
+            ]
+           }
+          ],
+          "branches": [
+           []
+          ]
+         }
+        ]
+       }
+      ],
+      "grades": [
+       []
+      ],
+      "timers": [
+       []
+      ],
+      "overrides": [
+       []
+      ]
+     }
+    ]
+   },
+   "structure_tables": {
+    "lesson": "lesson",
+    "page": "lesson_pages",
+    "answer": "lesson_answers"
+   },
+   "structure_aliases": {
+    "answer": {
+     "answer_text": "answer"
+    }
+   },
+   "files": []
+  }
+ },
+ "page": {
+  "cmid": 40,
+  "resource_type": "page",
+  "parameters": {
+   "name": "Ficha del curso: Liderazgo (30003)",
+   "section": 0,
+   "structure": {
+    "id": "4",
+    "moduleid": 40,
+    "modulename": "page",
+    "contextid": 63,
+    "page": [
+     {
+      "id": "4",
+      "name": "Ficha del curso: Liderazgo (30003)",
+      "intro": "<h2>Ficha del curso: Liderazgo (30003)</h2>\n<p>Bienvenido/a. En esta página encontrarás los datos esenciales del curso, el cronograma semanal con los temas y actividades, y los criterios de evaluación",
+      "introformat": "1",
+      "content": "<h1>Curso: Liderazgo (Código 30003)</h1>\n<h2>Datos del curso</h2>\n<ul>\n  <li><strong>Código:</strong> 30003</li>\n  <li><strong>Créditos:</strong> 2</li>\n  <li><strong>Departamento:</strong> Seguridad ",
+      "contentformat": "1",
+      "legacyfiles": "0",
+      "legacyfileslast": null,
+      "display": "5",
+      "displayoptions": "a:2:{s:10:\"printintro\";s:1:\"0\";s:17:\"printlastmodified\";s:1:\"1\";}",
+      "revision": "1",
+      "timemodified": "1761317322"
+     }
+    ]
+   },
+   "structure_tables": {
+    "page": "page"
+   },
+   "structure_aliases": [],
+   "files": [],
+   "content": "<h1>Curso: Liderazgo (Código 30003)</h1>\n<h2>Datos del curso</h2>\n<ul>\n  <li><strong>Código:</strong> 30003</li>\n  <li><strong>Créditos:</strong> 2</li>\n  <li><strong>Departamento:</strong> Seguridad ",
+   "intro": "<h2>Ficha del curso: Liderazgo (30003)</h2>\n<p>Bienvenido/a. En esta página encontrarás los datos esenciales del curso, el cronograma semanal con los temas y actividades, y los criterios de evaluación"
+  }
+ },
+ "quiz": {
+  "cmid": 47,
+  "resource_type": "quiz",
+  "parameters": {
+   "name": "Cuestionario formativo: teorías de liderazgo",
+   "section": 2,
+   "structure": {
+    "id": "7",
+    "moduleid": 47,
+    "modulename": "quiz",
+    "contextid": 70,
+    "quiz": [
+     {
+      "id": "7",
+      "name": "Cuestionario formativo: teorías de liderazgo",
+      "intro": "<p>Este cuestionario formativo evalúa conceptos clave sobre teorías y modelos de liderazgo presentados en la exposición. Responda las preguntas de opción múltiple y revise la retroalimentación proporc",
+      "introformat": "1",
+      "timeopen": "0",
+      "timeclose": "0",
+      "timelimit": "0",
+      "overduehandling": "autosubmit",
+      "graceperiod": "0",
+      "preferredbehaviour": "deferredfeedback",
+      "canredoquestions": "0",
+      "attempts_number": "0",
+      "attemptonlast": "0",
+      "grademethod": "1",
+      "decimalpoints": "2",
+      "questiondecimalpoints": "-1",
+      "reviewattempt": "69888",
+      "reviewcorrectness": "4352",
+      "reviewmaxmarks": "69888",
+      "reviewmarks": "4352",
+      "reviewspecificfeedback": "4352",
+      "reviewgeneralfeedback": "4352",
+      "reviewrightanswer": "4352",
+      "reviewoverallfeedback": "4352",
+      "questionsperpage": "1",
+      "navmethod": "free",
+      "shuffleanswers": "1",
+      "sumgrades": "5.00000",
+      "grade": "10.00000",
+      "timecreated": "1761317324",
+      "timemodified": "1761317324",
+      "password": "",
+      "subnet": "",
+      "browsersecurity": "-",
+      "delay1": "0",
+      "delay2": "0",
+      "showuserpicture": "0",
+      "showblocks": "0",
+      "completionattemptsexhausted": "0",
+      "completionminattempts": "0",
+      "allowofflineattempts": "0",
+      "subplugin_quizaccess_seb_quiz": [
+       []
+      ],
+      "quiz_grade_items": [
+       []
+      ],
+      "question_instances": [
+       {
+        "question_instance": [
+         {
+          "id": "22",
+          "quizid": "7",
+          "slot": "1",
+          "page": "1",
+          "displaynumber": null,
+          "requireprevious": "0",
+          "maxmark": "1.0000000",
+          "quizgradeitemid": null,
+          "question_reference": [
+           {
+            "id": "22",
+            "usingcontextid": "70",
+            "component": "mod_quiz",
+            "questionarea": "slot",
+            "questionbankentryid": "24",
+            "version": null
+           }
+          ]
+         },
+         {
+          "id": "23",
+          "quizid": "7",
+          "slot": "2",
+          "page": "2",
+          "displaynumber": null,
+          "requireprevious": "0",
+          "maxmark": "1.0000000",
+          "quizgradeitemid": null,
+          "question_reference": [
+           {
+            "id": "23",
+            "usingcontextid": "70",
+            "component": "mod_quiz",
+            "questionarea": "slot",
+            "questionbankentryid": "25",
+            "version": null
+           }
+          ]
+         },
+         {
+          "id": "24",
+          "quizid": "7",
+          "slot": "3",
+          "page": "3",
+          "displaynumber": null,
+          "requireprevious": "0",
+          "maxmark": "1.0000000",
+          "quizgradeitemid": null,
+          "question_reference": [
+           {
+            "id": "24",
+            "usingcontextid": "70",
+            "component": "mod_quiz",
+            "questionarea": "slot",
+            "questionbankentryid": "26",
+            "version": null
+           }
+          ]
+         }
+        ]
+       }
+      ],
+      "sections": [
+       {
+        "section": [
+         {
+          "id": "7",
+          "firstslot": "1",
+          "heading": "",
+          "shufflequestions": "0"
+         }
+        ]
+       }
+      ],
+      "feedbacks": [
+       {
+        "feedback": [
+         {
+          "id": "7",
+          "feedbacktext": "",
+          "feedbacktextformat": "1",
+          "mingrade": "0.00000",
+          "maxgrade": "11.00000"
+         }
+        ]
+       }
+      ],
+      "overrides": [
+       []
+      ],
+      "grades": [
+       []
+      ],
+      "attempts": [
+       []
+      ]
+     }
+    ]
+   },
+   "structure_tables": {
+    "quiz": "quiz",
+    "question_instance": "quiz_slots",
+    "question_reference": "question_references",
+    "section": "quiz_sections",
+    "feedback": "quiz_feedback"
+   },
+   "structure_aliases": {
+    "quiz": {
+     "attempts_number": "attempts"
+    }
+   },
+   "files": [],
+   "questions": [
+    {
+     "slot": 1,
+     "page": 1,
+     "maxmark": 1,
+     "displaynumber": null,
+     "requireprevious": 0,
+     "question": {
+      "id": "24",
+      "category": "14",
+      "parent": "0",
+      "name": "Teoría de rasgos",
+      "questiontext": "<p>Según la teoría de rasgos del liderazgo, ¿cuál es la idea principal?</p>",
+      "questiontextformat": "1",
+      "generalfeedback": "<p>La teoría de rasgos asume que ciertos rasgos personales (como inteligencia, determinación y carisma) predisponen a una persona a ser un líder efectivo, aunque esta visión ha sido matizada por teorí",
+      "generalfeedbackformat": "1",
+      "defaultmark": 1,
+      "penalty": 0,
+      "qtype": "multichoice",
+      "length": "1",
+      "stamp": "company1.moodle+251024144844+4WmOzI",
+      "timecreated": "1761317324",
+      "timemodified": "1761317324",
+      "createdby": "2",
+      "modifiedby": "2",
+      "idnumber": null,
+      "contextid": "70",
+      "status": "ready",
+      "versionid": "24",
+      "version": "1",
+      "questionbankentryid": "24",
+      "categoryobject": {
+       "id": "14",
+       "name": "Default for Cuestionario formativo: teorías de liderazgo",
+       "contextid": "70",
+       "info": "The default category for questions shared in context 'Cuestionario formativo: teorías de liderazgo'.",
+       "infoformat": "0",
+       "stamp": "company1.moodle+251024144844+aSR9RZ",
+       "parent": "13",
+       "sortorder": "999",
+       "idnumber": null
+      },
+      "options": {
+       "id": "15",
+       "questionid": "24",
+       "layout": "0",
+       "single": "1",
+       "shuffleanswers": "1",
+       "correctfeedback": "<p>Bien: identificó la idea central de la teoría de rasgos.</p>",
+       "correctfeedbackformat": "1",
+       "partiallycorrectfeedback": "<p>Parcialmente correcto: revise cómo las teorías posteriores modifican esta visión.</p>",
+       "partiallycorrectfeedbackformat": "1",
+       "incorrectfeedback": "<p>Incorrecto: recuerde que la teoría de rasgos centra la explicación en características personales.</p>",
+       "incorrectfeedbackformat": "1",
+       "answernumbering": "abc",
+       "shownumcorrect": "1",
+       "showstandardinstruction": "0",
+       "answers": {
+        "62": {
+         "id": "62",
+         "question": "24",
+         "answer": "<p>Que algunos rasgos personales hacen más probable que una persona sea líder efectivo.</p>",
+         "answerformat": "1",
+         "fraction": 1,
+         "feedback": "<p>Correcto. La teoría de rasgos destaca factores personales que facilitan el liderazgo.</p>",
+         "feedbackformat": "1"
+        },
+        "63": {
+         "id": "63",
+         "question": "24",
+         "answer": "<p>Que el liderazgo depende únicamente de las circunstancias externas, no de la persona.</p>",
+         "answerformat": "1",
+         "fraction": 0,
+         "feedback": "<p>Incorrecto. Esa postura corresponde más a teorías situacionales o de contingencia.</p>",
+         "feedbackformat": "1"
+        },
+        "64": {
+         "id": "64",
+         "question": "24",
+         "answer": "<p>Que el liderazgo surge solo mediante procesos formales de capacitación.</p>",
+         "answerformat": "1",
+         "fraction": 0,
+         "feedback": "<p>Incorrecto. La teoría de rasgos no enfatiza la formación, sino rasgos innatos o estables.</p>",
+         "feedbackformat": "1"
+        }
+       }
+      },
+      "hints": {
+       "29": {
+        "id": "29",
+        "questionid": "24",
+        "hint": "Piense en características personales como carisma o determinación.",
+        "hintformat": "1",
+        "shownumcorrect": "0",
+        "clearwrong": "0",
+        "options": null
+       },
+       "30": {
+        "id": "30",
+        "questionid": "24",
+        "hint": "Hint 2 text",
+        "hintformat": "1",
+        "shownumcorrect": "0",
+        "clearwrong": "0",
+        "options": null
+       }
+      }
+     }
+    },
+    {
+     "slot": 2,
+     "page": 2,
+     "maxmark": 1,
+     "displaynumber": null,
+     "requireprevious": 0,
+     "question": {
+      "id": "25",
+      "category": "14",
+      "parent": "0",
+      "name": "Teoría situacional (Hersey-Blanchard)",
+      "questiontext": "<p>Según la teoría situacional de Hersey y Blanchard, ¿qué debe adaptar el líder para ser eficaz?</p>",
+      "questiontextformat": "1",
+      "generalfeedback": "<p>La teoría situacional postula que los líderes deben adaptar su estilo (dirigir, entrenar, apoyar, delegar) al nivel de desarrollo o madurez de los seguidores en una tarea concreta.</p>",
+      "generalfeedbackformat": "1",
+      "defaultmark": 1,
+      "penalty": 0,
+      "qtype": "multichoice",
+      "length": "1",
+      "stamp": "company1.moodle+251024144844+6DJHRe",
+      "timecreated": "1761317324",
+      "timemodified": "1761317324",
+      "createdby": "2",
+      "modifiedby": "2",
+      "idnumber": null,
+      "contextid": "70",
+      "status": "ready",
+      "versionid": "25",
+      "version": "1",
+      "questionbankentryid": "25",
+      "categoryobject": {
+       "id": "14",
+       "name": "Default for Cuestionario formativo: teorías de liderazgo",
+       "contextid": "70",
+       "info": "The default category for questions shared in context 'Cuestionario formativo: teorías de liderazgo'.",
+       "infoformat": "0",
+       "stamp": "company1.moodle+251024144844+aSR9RZ",
+       "parent": "13",
+       "sortorder": "999",
+       "idnumber": null
+      },
+      "options": {
+       "id": "16",
+       "questionid": "25",
+       "layout": "0",
+       "single": "1",
+       "shuffleanswers": "1",
+       "correctfeedback": "<p>Excelente: la teoría situacional enfatiza la adaptación del liderazgo al nivel de los seguidores.</p>",
+       "correctfeedbackformat": "1",
+       "partiallycorrectfeedback": "<p>Parcialmente correcto: revise el rol del nivel de competencia y confianza de los seguidores.</p>",
+       "partiallycorrectfeedbackformat": "1",
+       "incorrectfeedback": "<p>Incorrecto: la teoría situacional se centra en la relación entre estilo del líder y desarrollo del seguidor.</p>",
+       "incorrectfeedbackformat": "1",
+       "answernumbering": "abc",
+       "shownumcorrect": "1",
+       "showstandardinstruction": "0",
+       "answers": {
+        "65": {
+         "id": "65",
+         "question": "25",
+         "answer": "<p>El estilo de liderazgo según el nivel de desarrollo y competencia de los seguidores.</p>",
+         "answerformat": "1",
+         "fraction": 1,
+         "feedback": "<p>Correcto. El ajuste al nivel de madurez del seguidor es clave en esta teoría.</p>",
+         "feedbackformat": "1"
+        },
+        "66": {
+         "id": "66",
+         "question": "25",
+         "answer": "<p>La estructura organizacional formal sin considerar a los seguidores.</p>",
+         "answerformat": "1",
+         "fraction": 0,
+         "feedback": "<p>Incorrecto. La teoría situacional sí considera a los seguidores como elemento central.</p>",
+         "feedbackformat": "1"
+        },
+        "67": {
+         "id": "67",
+         "question": "25",
+         "answer": "<p>La selección de líderes basada únicamente en rasgos heredados.</p>",
+         "answerformat": "1",
+         "fraction": 0,
+         "feedback": "<p>Incorrecto. Eso corresponde a la teoría de rasgos, no a la situacional.</p>",
+         "feedbackformat": "1"
+        }
+       }
+      },
+      "hints": {
+       "31": {
+        "id": "31",
+        "questionid": "25",
+        "hint": "Considere la palabra 'situacional' y el foco en los seguidores.",
+        "hintformat": "1",
+        "shownumcorrect": "0",
+        "clearwrong": "0",
+        "options": null
+       },
+       "32": {
+        "id": "32",
+        "questionid": "25",
+        "hint": "Hint 2 text",
+        "hintformat": "1",
+        "shownumcorrect": "0",
+        "clearwrong": "0",
+        "options": null
+       }
+      }
+     }
+    },
+    {
+     "slot": 3,
+     "page": 3,
+     "maxmark": 1,
+     "displaynumber": null,
+     "requireprevious": 0,
+     "question": {
+      "id": "26",
+      "category": "14",
+      "parent": "0",
+      "name": "Teoría intercambio líder-miembro (ILM/LMX)",
+      "questiontext": "<p>¿Qué aspecto enfatiza principalmente la teoría de intercambio líder-miembro (LMX)?</p>",
+      "questiontextformat": "1",
+      "generalfeedback": "<p>LMX destaca la calidad de las relaciones dyádicas entre líder y cada miembro; relaciones de alta calidad llevan a beneficios mutuos, responsabilidad y mayor desempeño.</p>",
+      "generalfeedbackformat": "1",
+      "defaultmark": 1,
+      "penalty": 0,
+      "qtype": "multichoice",
+      "length": "1",
+      "stamp": "company1.moodle+251024144844+aWbXj7",
+      "timecreated": "1761317324",
+      "timemodified": "1761317324",
+      "createdby": "2",
+      "modifiedby": "2",
+      "idnumber": null,
+      "contextid": "70",
+      "status": "ready",
+      "versionid": "26",
+      "version": "1",
+      "questionbankentryid": "26",
+      "categoryobject": {
+       "id": "14",
+       "name": "Default for Cuestionario formativo: teorías de liderazgo",
+       "contextid": "70",
+       "info": "The default category for questions shared in context 'Cuestionario formativo: teorías de liderazgo'.",
+       "infoformat": "0",
+       "stamp": "company1.moodle+251024144844+aSR9RZ",
+       "parent": "13",
+       "sortorder": "999",
+       "idnumber": null
+      },
+      "options": {
+       "id": "17",
+       "questionid": "26",
+       "layout": "0",
+       "single": "1",
+       "shuffleanswers": "1",
+       "correctfeedback": "<p>Correcto: la teoría LMX valora las relaciones individuales líder-miembro.</p>",
+       "correctfeedbackformat": "1",
+       "partiallycorrectfeedback": "<p>Parcial: recuerde la distinción entre in-group y out-group dentro de LMX.</p>",
+       "partiallycorrectfeedbackformat": "1",
+       "incorrectfeedback": "<p>Incorrecto: revise cómo LMX conceptualiza la relación interpersonal como factor central.</p>",
+       "incorrectfeedbackformat": "1",
+       "answernumbering": "abc",
+       "shownumcorrect": "1",
+       "showstandardinstruction": "0",
+       "answers": {
+        "68": {
+         "id": "68",
+         "question": "26",
+         "answer": "<p>La calidad de la relación entre líder y cada miembro individual (intercambio dyádico).</p>",
+         "answerformat": "1",
+         "fraction": 1,
+         "feedback": "<p>Correcto. LMX se focaliza en relaciones diferenciadas entre líder y miembros.</p>",
+         "feedbackformat": "1"
+        },
+        "69": {
+         "id": "69",
+         "question": "26",
+         "answer": "<p>Que todos los miembros deben recibir tratamiento idéntico para lograr eficiencia.</p>",
+         "answerformat": "1",
+         "fraction": 0,
+         "feedback": "<p>Incorrecto. LMX reconoce relaciones diferenciadas (in-group y out-group).</p>",
+         "feedbackformat": "1"
+        },
+        "70": {
+         "id": "70",
+         "question": "26",
+         "answer": "<p>Que el liderazgo solo depende de la autoridad formal del puesto.</p>",
+         "answerformat": "1",
+         "fraction": 0,
+         "feedback": "<p>Incorrecto. LMX va más allá de la autoridad formal y mira la calidad del intercambio.</p>",
+         "feedbackformat": "1"
+        }
+       }
+      },
+      "hints": {
+       "33": {
+        "id": "33",
+        "questionid": "26",
+        "hint": "Piense en 'intercambio' entre dos personas (líder y miembro).",
+        "hintformat": "1",
+        "shownumcorrect": "0",
+        "clearwrong": "0",
+        "options": null
+       },
+       "34": {
+        "id": "34",
+        "questionid": "26",
+        "hint": "Hint 2 text",
+        "hintformat": "1",
+        "shownumcorrect": "0",
+        "clearwrong": "0",
+        "options": null
+       }
+      }
+     }
+    }
+   ]
+  }
+ },
+ "resource": {
+  "cmid": 42,
+  "resource_type": "resource",
+  "parameters": {
+   "name": "Guía semanal — Cronograma detallado de sesiones teóricas (1 h) y prácticas (1 h)",
+   "section": 0,
+   "structure": {
+    "id": "7",
+    "moduleid": 42,
+    "modulename": "resource",
+    "contextid": 65,
+    "resource": [
+     {
+      "id": "7",
+      "name": "Guía semanal — Cronograma detallado de sesiones teóricas (1 h) y prácticas (1 h)",
+      "intro": "<h1>Guía semanal: Cronograma detallado de sesiones</h1>\n<p><strong>Instrucciones generales:</strong> Cada semana incluye una sesión teórica (1 h) y una sesión práctica (1 h). <strong>Consultar antes d",
+      "introformat": "1",
+      "tobemigrated": "0",
+      "legacyfiles": "0",
+      "legacyfileslast": null,
+      "display": "0",
+      "displayoptions": "a:2:{s:10:\"printintro\";i:1;s:8:\"showtype\";i:1;}",
+      "filterfiles": "0",
+      "revision": "1",
+      "timemodified": "1761317323"
+     }
+    ]
+   },
+   "structure_tables": {
+    "resource": "resource"
+   },
+   "structure_aliases": [],
+   "files": [
+    {
+     "id": 71,
+     "contextid": 65,
+     "component": "mod_resource",
+     "filearea": "content",
+     "itemid": 0,
+     "filepath": "/",
+     "filename": ".",
+     "isdir": true,
+     "filesize": 0,
+     "mimetype": null,
+     "timecreated": 1761317323,
+     "timemodified": 1761317323,
+     "sortorder": 0,
+     "author": null,
+     "license": null,
+     "url": null
+    },
+    {
+     "id": 70,
+     "contextid": 65,
+     "component": "mod_resource",
+     "filearea": "content",
+     "itemid": 0,
+     "filepath": "/",
+     "filename": "pdf-test.pdf",
+     "isdir": false,
+     "filesize": 1295066,
+     "mimetype": "application/pdf",
+     "timecreated": 1761317323,
+     "timemodified": 1761317323,
+     "sortorder": 1,
+     "author": null,
+     "license": null,
+     "url": "http://company1.moodle:8080/pluginfile.php/65/mod_resource/content/0/pdf-test.pdf"
+    }
+   ]
+  }
+ },
+ "scorm": {
+  "cmid": 1509,
+  "resource_type": "scorm",
+  "parameters": {
+   "name": "TEST",
+   "section": 0,
+   "structure": {
+    "id": "11",
+    "moduleid": 1509,
+    "modulename": "scorm",
+    "contextid": 1813,
+    "scorm": [
+     {
+      "id": "11",
+      "name": "TEST",
+      "scormtype": "local",
+      "reference": "440_the_impact_of_dt_on_our_lives_net_neutrality_scorm12_k76XvfB5.zip",
+      "intro": "",
+      "introformat": "1",
+      "version": "SCORM_1.2",
+      "maxgrade": "100",
+      "grademethod": "1",
+      "whatgrade": "0",
+      "maxattempt": "0",
+      "forcecompleted": "0",
+      "forcenewattempt": "0",
+      "lastattemptlock": "0",
+      "masteryoverride": "1",
+      "displayattemptstatus": "1",
+      "displaycoursestructure": "0",
+      "updatefreq": "0",
+      "sha1hash": "7e1f9839beb49097aee6e92c60374118b09eed23",
+      "md5hash": "",
+      "revision": "1",
+      "launch": "22",
+      "skipview": "0",
+      "hidebrowse": "0",
+      "hidetoc": "0",
+      "nav": "1",
+      "navpositionleft": "-100",
+      "navpositiontop": "-100",
+      "auto": "0",
+      "popup": "0",
+      "options": "",
+      "width": "100",
+      "height": "500",
+      "timeopen": "0",
+      "timeclose": "0",
+      "timemodified": "1768926443",
+      "completionstatusrequired": null,
+      "completionscorerequired": null,
+      "completionstatusallscos": "0",
+      "autocommit": "0",
+      "scoes": [
+       {
+        "sco": [
+         {
+          "id": "21",
+          "manifest": "hflwHHkiExlS7NiFcXchvlnNAXT82x-Bk76XvfB5",
+          "organization": "",
+          "parent": "/",
+          "identifier": "articulate_rise",
+          "launch": "",
+          "scormtype": "",
+          "title": "The impact of DT on our lives: Net neutrality",
+          "sortorder": "1",
+          "sco_datas": [
+           []
+          ],
+          "seq_ruleconds": [
+           []
+          ],
+          "seq_rolluprules": [
+           []
+          ],
+          "seq_objectives": [
+           []
+          ],
+          "sco_tracks": [
+           []
+          ]
+         },
+         {
+          "id": "22",
+          "manifest": "hflwHHkiExlS7NiFcXchvlnNAXT82x-Bk76XvfB5",
+          "organization": "articulate_rise",
+          "parent": "articulate_rise",
+          "identifier": "i1",
+          "launch": "scormdriver/indexAPI.html",
+          "scormtype": "sco",
+          "title": "The impact of DT on our lives: Net neutrality",
+          "sortorder": "2",
+          "sco_datas": [
+           {
+            "sco_data": [
+             {
+              "id": "21",
+              "name": "isvisible",
+              "value": "true"
+             },
+             {
+              "id": "22",
+              "name": "parameters",
+              "value": ""
+             },
+             {
+              "id": "23",
+              "name": "datafromlms",
+              "value": "eyJjcHYiOiJrNzZYdmZCNSIsInJsZCI6ZmFsc2V9"
+             }
+            ]
+           }
+          ],
+          "seq_ruleconds": [
+           []
+          ],
+          "seq_rolluprules": [
+           []
+          ],
+          "seq_objectives": [
+           []
+          ],
+          "sco_tracks": [
+           []
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "structure_tables": {
+    "scorm": "scorm",
+    "sco": "scorm_scoes",
+    "sco_data": "scorm_scoes_data"
+   },
+   "structure_aliases": [],
+   "files": [
+    {
+     "id": 11492,
+     "contextid": 1813,
+     "component": "mod_scorm",
+     "filearea": "content",
+     "itemid": 0,
+     "filepath": "/",
+     "filename": ".",
+     "isdir": true,
+     "filesize": 0,
+     "mimetype": null,
+     "timecreated": 1768917878,
+     "timemodified": 1768917878,
+     "sortorder": 0,
+     "author": null,
+     "license": null,
+     "url": null
+    },
+    {
+     "id": 11495,
+     "contextid": 1813,
+     "component": "mod_scorm",
+     "filearea": "content",
+     "itemid": 0,
+     "filepath": "/",
+     "filename": "adlcp_rootv1p2.xsd",
+     "isdir": false,
+     "filesize": 4508,
+     "mimetype": "text/xml",
+     "timecreated": 1768917878,
+     "timemodified": 1768917878,
+     "sortorder": 0,
+     "author": null,
+     "license": null,
+     "url": "http://company1.moodle:8080/pluginfile.php/1813/mod_scorm/content/0/adlcp_rootv1p2.xsd"
+    },
+    {
+     "id": 11499,
+     "contextid": 1813,
+     "component": "mod_scorm",
+     "filearea": "content",
+     "itemid": 0,
+     "filepath": "/",
+     "filename": "imscp_rootv1p1p2.xsd",
+     "isdir": false,
+     "filesize": 14905,
+     "mimetype": "text/xml",
+     "timecreated": 1768917878,
+     "timemodified": 1768917878,
+     "sortorder": 0,
+     "author": null,
+     "license": null,
+     "url": "http://company1.moodle:8080/pluginfile.php/1813/mod_scorm/content/0/imscp_rootv1p1p2.xsd"
+    }
+   ]
+  }
+ },
+ "url": {
+  "cmid": 48,
+  "resource_type": "url",
+  "parameters": {
+   "name": "Análisis de caso en video — Foro de discusión",
+   "section": 2,
+   "structure": {
+    "id": "2",
+    "moduleid": 48,
+    "modulename": "url",
+    "contextid": 71,
+    "url": [
+     {
+      "id": "2",
+      "name": "Análisis de caso en video — Foro de discusión",
+      "intro": "<h3>Instrucciones generales</h3>\n<p>Ver el caso asignado en la URL: <strong>ver caso asignado</strong>. Realice un análisis crítico del video aplicando los conceptos y teorías del sílabo (estilos de l",
+      "introformat": "1",
+      "externalurl": "https://moodle.net/collection/c2u2nRlo/h5p",
+      "display": "0",
+      "displayoptions": "a:1:{s:10:\"printintro\";i:1;}",
+      "parameters": "a:0:{}",
+      "timemodified": "1761317324"
+     }
+    ]
+   },
+   "structure_tables": {
+    "url": "url"
+   },
+   "structure_aliases": [],
+   "files": []
+  }
+ },
+ "wiki": {
+  "cmid": 1958,
+  "resource_type": "wiki",
+  "parameters": {
+   "name": "Glosario de Cultura Digital",
+   "section": 3,
+   "structure": {
+    "id": "12",
+    "moduleid": 1958,
+    "modulename": "wiki",
+    "contextid": 2434,
+    "wiki": [
+     {
+      "id": "12",
+      "name": "Glosario de Cultura Digital",
+      "intro": "<p>Este espacio está diseñado para la co-creación y la investigación colaborativa. Aquí, los estudiantes construirán un glosario de términos clave relacionados con la cultura digital, el liderazgo y l",
+      "introformat": "1",
+      "timecreated": "0",
+      "timemodified": "1782971591",
+      "firstpagetitle": "Página Principal",
+      "wikimode": "collaborative",
+      "defaultformat": "html",
+      "forceformat": "0",
+      "editbegin": "0",
+      "editend": "0",
+      "subwikis": [
+       {
+        "subwiki": [
+         {
+          "id": "12",
+          "groupid": "0",
+          "userid": "0",
+          "pages": [
+           {
+            "page": [
+             {
+              "id": "67",
+              "title": "Directrices para la Contribución",
+              "cachedcontent": "<div class=\"wiki-toc\"><p class=\"wiki-toc-title\">Table of contents</p><p class=\"wiki-toc-section-1 wiki-toc-section\">1. <a href=\"#toc-1\">Directrices para la Contribución al Glosario Colaborativo de Cul",
+              "timecreated": "1782971591",
+              "timemodified": "1782971591",
+              "timerendered": "1782971591",
+              "userid": "2",
+              "pageviews": "0",
+              "readonly": "0",
+              "versions": [
+               {
+                "version": [
+                 {
+                  "id": "133",
+                  "content": "",
+                  "contentformat": "html",
+                  "version": "0",
+                  "timecreated": "1782971591",
+                  "userid": "2"
+                 },
+                 {
+                  "id": "134",
+                  "content": "<h1>Directrices para la Contribución al Glosario Colaborativo de Cultura Digital</h1><p>Este glosario es una herramienta colaborativa fundamental para sintetizar y comprender los conceptos clave relac",
+                  "contentformat": "html",
+                  "version": "1",
+                  "timecreated": "1782971591",
+                  "userid": "2"
+                 }
+                ]
+               }
+              ],
+              "tags": [
+               []
+              ]
+             },
+             {
+              "id": "66",
+              "title": "Glosario General de Cultura Digital",
+              "cachedcontent": "<div class=\"wiki-toc\"><p class=\"wiki-toc-title\">Table of contents</p><p class=\"wiki-toc-section-1 wiki-toc-section\">1. <a href=\"#toc-1\">Glosario General de Cultura Digital <a href=\"edit.php?pageid=66&",
+              "timecreated": "1782971591",
+              "timemodified": "1782971591",
+              "timerendered": "1782971591",
+              "userid": "2",
+              "pageviews": "1",
+              "readonly": "0",
+              "versions": [
+               {
+                "version": [
+                 {
+                  "id": "131",
+                  "content": "",
+                  "contentformat": "html",
+                  "version": "0",
+                  "timecreated": "1782971591",
+                  "userid": "2"
+                 },
+                 {
+                  "id": "132",
+                  "content": "<h1>Glosario General de Cultura Digital</h1><p>¡Bienvenidos a nuestro glosario colaborativo de Cultura Digital! Esta página es el punto central para compilar y organizar de manera alfabética todos los",
+                  "contentformat": "html",
+                  "version": "1",
+                  "timecreated": "1782971591",
+                  "userid": "2"
+                 }
+                ]
+               }
+              ],
+              "tags": [
+               []
+              ]
+             },
+             {
+              "id": "65",
+              "title": "Página Principal",
+              "cachedcontent": "<p><a href=\"http://company1.moodle:8080/mod/wiki/view.php?pageid=66\">Glosario General de Cultura Digital</a></p>\n<p><a href=\"http://company1.moodle:8080/mod/wiki/view.php?pageid=67\">Directrices para l",
+              "timecreated": "1782971591",
+              "timemodified": "1782971591",
+              "timerendered": "1782971603",
+              "userid": "2",
+              "pageviews": "1",
+              "readonly": "0",
+              "versions": [
+               {
+                "version": [
+                 {
+                  "id": "129",
+                  "content": "",
+                  "contentformat": "html",
+                  "version": "0",
+                  "timecreated": "1782971591",
+                  "userid": "2"
+                 },
+                 {
+                  "id": "130",
+                  "content": "<p>[[Glosario General de Cultura Digital]]</p>\n<p>[[Directrices para la Contribución]]</p>\n<p>[[Términos de Liderazgo Digital]]</p>\n<p>[[Términos de Gestión del Cambio]]</p>\n",
+                  "contentformat": "html",
+                  "version": "1",
+                  "timecreated": "1782971591",
+                  "userid": "2"
+                 }
+                ]
+               }
+              ],
+              "tags": [
+               []
+              ]
+             }
+            ]
+           }
+          ],
+          "synonyms": [
+           []
+          ],
+          "links": [
+           {
+            "link": [
+             {
+              "id": "73",
+              "frompageid": "65",
+              "topageid": "66",
+              "tomissingpage": null
+             },
+             {
+              "id": "74",
+              "frompageid": "65",
+              "topageid": "67",
+              "tomissingpage": null
+             },
+             {
+              "id": "75",
+              "frompageid": "65",
+              "topageid": "68",
+              "tomissingpage": null
+             }
+            ]
+           }
+          ]
+         }
+        ]
+       }
+      ]
+     }
+    ]
+   },
+   "structure_tables": {
+    "wiki": "wiki",
+    "subwiki": "wiki_subwikis",
+    "page": "wiki_pages",
+    "version": "wiki_versions",
+    "link": "wiki_links"
+   },
+   "structure_aliases": [],
+   "files": []
+  }
+ },
+ "workshop": {
+  "cmid": 907,
+  "resource_type": "workshop",
+  "parameters": {
+   "name": "Taller de Biología: Fundamentos y aplicación",
+   "section": 0,
+   "structure": {
+    "id": "6",
+    "moduleid": 907,
+    "modulename": "workshop",
+    "contextid": 1159,
+    "workshop": [
+     {
+      "id": "6",
+      "name": "Taller de Biología: Fundamentos y aplicación",
+      "intro": "<p><strong>Descripción:</strong> En este taller exploraremos conceptos fundamentales de la biología y su aplicación en problemas reales. Los participantes investigarán un tema seleccionado, elaborarán",
+      "introformat": "1",
+      "instructauthors": "",
+      "instructauthorsformat": "1",
+      "instructreviewers": "",
+      "instructreviewersformat": "1",
+      "timemodified": "1765913361",
+      "phase": "10",
+      "useexamples": "0",
+      "usepeerassessment": "1",
+      "useselfassessment": "0",
+      "grade": "80.00000",
+      "gradinggrade": "20.00000",
+      "strategy": "accumulative",
+      "evaluation": "best",
+      "gradedecimals": "0",
+      "submissiontypetext": "1",
+      "submissiontypefile": "1",
+      "nattachments": "1",
+      "submissionfiletypes": "",
+      "latesubmissions": "0",
+      "maxbytes": "0",
+      "examplesmode": "0",
+      "submissionstart": "0",
+      "submissionend": "0",
+      "assessmentstart": "0",
+      "assessmentend": "0",
+      "conclusion": "",
+      "conclusionformat": "1",
+      "overallfeedbackmode": "1",
+      "overallfeedbackfiles": "0",
+      "overallfeedbackfiletypes": "",
+      "overallfeedbackmaxbytes": "0",
+      "subplugin_workshopform_accumulative_workshop": [
+       []
+      ],
+      "subplugin_workshopform_comments_workshop": [
+       []
+      ],
+      "subplugin_workshopform_numerrors_workshop": [
+       []
+      ],
+      "subplugin_workshopform_rubric_workshop": [
+       []
+      ],
+      "subplugin_workshopeval_best_workshop": [
+       []
+      ],
+      "examplesubmissions": [
+       []
+      ],
+      "submissions": [
+       []
+      ],
+      "aggregations": [
+       []
+      ]
+     }
+    ]
+   },
+   "structure_tables": {
+    "workshop": "workshop"
+   },
+   "structure_aliases": [],
+   "files": []
+  }
+ },
+ "forum": {
+  "cmid": 11341,
+  "resource_type": "forum",
+  "parameters": {
+   "name": "Avisos",
+   "section": 0,
+   "structure": {
+    "id": "1832",
+    "moduleid": 11341,
+    "modulename": "forum",
+    "contextid": 13347,
+    "forum": [
+     {
+      "id": "1832",
+      "type": "news",
+      "name": "Avisos",
+      "intro": "Avisos y novedades generales",
+      "introformat": "1",
+      "duedate": "0",
+      "cutoffdate": "0",
+      "assessed": "0",
+      "assesstimestart": "0",
+      "assesstimefinish": "0",
+      "scale": "0",
+      "maxbytes": "0",
+      "maxattachments": "1",
+      "forcesubscribe": "1",
+      "trackingtype": "1",
+      "rsstype": "0",
+      "rssarticles": "0",
+      "timemodified": "1772118178",
+      "warnafter": "0",
+      "blockafter": "0",
+      "blockperiod": "0",
+      "completiondiscussions": "0",
+      "completionreplies": "0",
+      "completionposts": "0",
+      "displaywordcount": "0",
+      "lockdiscussionafter": "0",
+      "grade_forum": "0",
+      "discussions": [
+       []
+      ],
+      "subscriptions": [
+       []
+      ],
+      "digests": [
+       []
+      ],
+      "readposts": [
+       []
+      ],
+      "trackedprefs": [
+       []
+      ],
+      "poststags": [
+       []
+      ],
+      "grades": [
+       []
+      ]
+     }
+    ]
+   },
+   "structure_tables": {
+    "forum": "forum"
+   },
+   "structure_aliases": [],
+   "files": []
+  }
+ }
+}
