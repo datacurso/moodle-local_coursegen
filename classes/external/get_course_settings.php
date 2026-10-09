@@ -40,6 +40,10 @@ require_once($CFG->libdir . '/externallib.php');
 
 /**
  * External API for fetching the AI-generated course settings for final review.
+ *
+ * No audit event is emitted: the call only reads the generated result and the
+ * categories the user may create in, it modifies no state. The course creation
+ * that may follow is audited by create_course.
  */
 class get_course_settings extends external_api {
     /**

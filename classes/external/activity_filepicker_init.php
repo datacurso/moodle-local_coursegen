@@ -38,6 +38,10 @@ require_once($CFG->dirroot . '/repository/lib.php');
 
 /**
  * External API to initialise a filepicker (draft area) for AI activity uploads.
+ *
+ * No audit event is emitted: this call only allocates an unused draft item id
+ * and returns filepicker options, it modifies no state and transfers nothing.
+ * The transfer that may follow is audited by activity_file_upload.
  */
 class activity_filepicker_init extends external_api {
     /**

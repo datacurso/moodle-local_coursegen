@@ -201,7 +201,9 @@ final class events_test extends \advanced_testcase {
     }
 
     /**
-     * A successful syllabus upload fires external_transfer_initiated with name and size, never content.
+     * A successful syllabus upload fires external_transfer_initiated with
+     * non-identifying metadata only: never the original file name, never the
+     * file content.
      */
     public function test_external_transfer_initiated_event_on_syllabus_upload(): void {
         global $USER;
@@ -217,6 +219,9 @@ final class events_test extends \advanced_testcase {
         ]);
         $session->create();
 
+        // A deliberately identifying file name: it must not survive into the log.
+        $identifyingname = 'programa-2026-juan-perez.pdf';
+
         // Put a PDF into the user draft area.
         $fs = get_file_storage();
         $draftitemid = file_get_unused_draft_itemid();
@@ -226,7 +231,7 @@ final class events_test extends \advanced_testcase {
             'filearea' => 'draft',
             'itemid' => $draftitemid,
             'filepath' => '/',
-            'filename' => 'syllabus.pdf',
+            'filename' => $identifyingname,
         ], '%PDF-1.4 syllabus body');
 
         $service = $this->getMockBuilder(ai_course_api_service::class)
@@ -245,9 +250,122 @@ final class events_test extends \advanced_testcase {
         $this->assertCount(1, $events);
         $event = reset($events);
         $this->assertEquals(context_system::instance()->id, $event->get_context()->id);
-        $this->assertSame('syllabus.pdf', $event->other['filename']);
+
+        // The uploaded file name is personal data: it may not appear anywhere
+        // in the persisted payload nor in the persisted description.
+        $payload = json_encode($event->other);
+        $this->assertArrayNotHasKey('filename', $event->other);
+        $this->assertStringNotContainsString($identifyingname, $payload);
+        $this->assertStringNotContainsString('juan-perez', $payload);
+        $this->assertStringNotContainsString($identifyingname, $event->get_description());
+        $this->assertStringNotContainsString('juan-perez', $event->get_description());
+
+        // Non-identifying metadata still serves the audit purpose.
+        $this->assertSame('pdf', $event->other['fileextension']);
+        $this->assertSame('thread-1', $event->other['threadid']);
+        $this->assertSame((int)$session->get('id'), $event->other['sessionid']);
         $this->assertGreaterThan(0, $event->other['filesize']);
-        $this->assertStringNotContainsString('syllabus body', json_encode($event->other));
+        $this->assertStringNotContainsString('syllabus body', $payload);
+    }
+
+    /**
+     * external_transfer_initiated carries no restorable ids, so it declares the
+     * explicit "nothing to map" contract instead of warning on log restore.
+     */
+    public function test_external_transfer_initiated_declares_no_restore_mapping(): void {
+        $this->resetAfterTest();
+        $this->assertFalse(event\external_transfer_initiated::get_other_mapping());
+    }
+
+    /**
+     * Sending an activity file to the AI backend is an external transfer and
+     * is audited with the same non-identifying metadata as the syllabus.
+     */
+    public function test_external_transfer_initiated_event_on_activity_file_upload(): void {
+        global $USER;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $course = $this->getDataGenerator()->create_course();
+        module_job_service::create_job($course->id, $USER->id, 'job-file', 0, null, null, 1, null, 'completed');
+
+        $identifyingname = 'programa-2026-juan-perez.pdf';
+        $fs = get_file_storage();
+        $draftitemid = file_get_unused_draft_itemid();
+        $fs->create_file_from_string((object) [
+            'contextid' => context_user::instance($USER->id)->id,
+            'component' => 'user',
+            'filearea' => 'draft',
+            'itemid' => $draftitemid,
+            'filepath' => '/',
+            'filename' => $identifyingname,
+        ], '%PDF-1.4 activity body');
+
+        $client = $this->getMockBuilder(ai_course_api::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['upload_file'])
+            ->getMock();
+        $client->method('upload_file')->willReturn(['ok' => true]);
+        api_client_factory::set_test_client($client);
+
+        $sink = $this->redirectEvents();
+        $result = external\activity_file_upload::execute((int)$course->id, 'job-file', $draftitemid);
+        $this->resetDebugging();
+
+        $this->assertTrue($result['success']);
+        $events = $this->events_of_class($sink, event\external_transfer_initiated::class);
+        $this->assertCount(1, $events);
+        $event = reset($events);
+
+        $payload = json_encode($event->other);
+        $this->assertArrayNotHasKey('filename', $event->other);
+        $this->assertStringNotContainsString('juan-perez', $payload);
+        $this->assertStringNotContainsString('juan-perez', $event->get_description());
+        $this->assertSame('pdf', $event->other['fileextension']);
+        $this->assertSame('job-file', $event->other['threadid']);
+        $this->assertGreaterThan(0, $event->other['filesize']);
+    }
+
+    /**
+     * Adjusting a plan starts a new AI generation turn on the thread, so the
+     * planning feedback endpoint is audited like any other generation start.
+     */
+    public function test_generation_job_started_event_on_course_planning_feedback(): void {
+        global $USER;
+
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $session = new course_session(0, (object) [
+            'userid' => (int)$USER->id,
+            'session_id' => 'thread-feedback',
+            'status' => course_session::STATUS_PENDING,
+            'coursedata' => json_encode(['local_coursegen_context_type' => 'customprompt']),
+        ]);
+        $session->create();
+
+        $client = $this->getMockBuilder(ai_course_api::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['request'])
+            ->getMock();
+        $client->method('request')->willReturn(['ok' => true]);
+        api_client_factory::set_test_client($client);
+
+        $sink = $this->redirectEvents();
+        $result = external\course_planning_feedback::execute((int)$session->get('id'), [
+            'action' => 'feedback',
+            'instruction' => 'A very personal instruction',
+        ]);
+        $this->resetDebugging();
+
+        $this->assertTrue($result['success']);
+        $events = $this->events_of_class($sink, event\generation_job_started::class);
+        $this->assertCount(1, $events);
+        $event = reset($events);
+        $this->assertSame('thread-feedback', $event->other['job_id']);
+        // No personal content may travel in the event.
+        $this->assertStringNotContainsString('personal instruction', json_encode($event->other));
     }
 
     /**

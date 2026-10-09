@@ -30,6 +30,7 @@ use external_api;
 use external_function_parameters;
 use external_single_structure;
 use external_value;
+use local_coursegen\event\generation_job_started;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\module_job_service;
 
@@ -101,10 +102,24 @@ class activity_feedback extends external_api {
         try {
             $result = $apiservice->send_activity_feedback($threadid, $approvalstatus, $instruction);
         } catch (\moodle_exception $e) {
-            throw new \moodle_exception('error_sending_feedback', 'local_coursegen', '', $e->getMessage());
+            // Keep the technical detail in developer debugging only: the client
+            // receives a localized message without internal information.
+            debugging('Unexpected error while sending activity feedback: ' . $e->getMessage());
+            throw new \moodle_exception('error_sending_feedback', 'local_coursegen');
         }
 
         $action = $result['action'] ?? null;
+
+        // Accepting or adjusting an activity starts a new AI generation turn on
+        // the thread, so it is audited like any other generation start. The
+        // free-text instruction is deliberately left out of the payload.
+        generation_job_started::create([
+            'context' => $context,
+            'other' => [
+                'job_id' => $threadid,
+                'approval_status' => $approvalstatus,
+            ],
+        ])->trigger();
 
         return [
             'success' => true,
