@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100626
+
+### Added
+
+- **An activity the AI rewrites in a template generation keeps the structure of its template activity**  
+  The template activity is copied with Moodle's own backup and restore, so its structure, its rows, its files, its settings, its completion, its dates and its visibility come with the copy, and only the texts the AI rewrote are written onto the matching rows of the copy. The rows are found through the structure each module declares for its own backup, so no type of activity is named in the code and a new module is covered without any change. A text goes only into a text column and only when its row exists in the copy; a text that cannot be written is left as the template has it and does not stop the others. The template activity is never touched. The review preview draws such an activity from the rewritten tree, and one that the generator wrote from scratch is drawn from its settings even when it also carries a tree, so what is previewed is what is created. The copy of an activity of the template is now one piece that the copy of the kept activities uses as well.
+
 ## [2.0.10] - 2026100625
 
 ### Added
