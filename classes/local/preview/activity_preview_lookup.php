@@ -17,6 +17,7 @@
 namespace local_coursegen\local\preview;
 
 use local_coursegen\local\models\course_session;
+use local_coursegen\local\service\agent_result_activities;
 use local_coursegen\local\service\template_ai_api_service;
 use local_coursegen\utils\preview_draft_store;
 
@@ -86,25 +87,47 @@ class activity_preview_lookup {
      * @throws \moodle_exception When the activity predates record ids or a record names an unknown row.
      */
     public static function from_answer(array $answer, string $uid): ?array {
+        $answer = agent_result_activities::placed($answer);
         $activities = $answer['generated_activities'] ?? [];
         $activity = self::listed($activities, $uid);
         if ($activity === null || self::is_kept($activity)) {
             return null;
         }
-        result_activity_check::assert_current($activity);
+        if (!agent_result_activities::is_agent_result($answer)) {
+            result_activity_check::assert_current($activity);
+        }
 
         $modname = $activity['resource_type'] ?? '';
-        $templatebehavior = $activity['template_behavior'] ?? [];
-        $sourcecmid = $templatebehavior['template_source_cmid'] ?? 0;
+        $sourcecmid = self::template_cmid_of($activity, agent_result_activities::is_agent_result($answer));
         $parameters = $activity['parameters'] ?? [];
         $generatedfiles = $activity['generated_files'] ?? [];
         return [
             'modname' => (string) $modname,
             'parameters' => (array) $parameters,
-            'cmid' => (int) $sourcecmid,
+            'cmid' => $sourcecmid,
             'kept' => false,
             'generated_files' => (array) $generatedfiles,
         ];
+    }
+
+    /**
+     * The course module of the template that a written activity is built into.
+     *
+     * The result of the old flow names it in the behavior of the activity. The agent names it on the row itself,
+     * as the course module the activity was copied from; a row without a real one has none.
+     *
+     * @param array $activity One of the result's generated activities.
+     * @param bool $fromagent Whether the agent made the result.
+     * @return int Zero when the activity names none.
+     */
+    private static function template_cmid_of(array $activity, bool $fromagent): int {
+        $templatebehavior = $activity['template_behavior'] ?? [];
+        $named = $templatebehavior['template_source_cmid'] ?? 0;
+        if ((int) $named > 0 || !$fromagent) {
+            return (int) $named;
+        }
+        $rowcmid = $activity['cmid'] ?? 0;
+        return max(0, (int) $rowcmid);
     }
 
     /**

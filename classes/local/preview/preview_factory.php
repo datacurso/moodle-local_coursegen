@@ -67,8 +67,26 @@ class preview_factory {
      * @return activity_preview
      */
     public static function for_activity(string $modname, array $parameters, int $cmid = 0): activity_preview {
+        if (self::is_written_from_scratch($parameters)) {
+            return new settings_preview($modname, $parameters, $cmid);
+        }
         $class = self::PREVIEWS[$modname] ?? intro_preview::class;
         return new $class($parameters, $cmid);
+    }
+
+    /**
+     * Whether the activity was written from scratch by the generator of its type.
+     *
+     * An activity drawn from a template carries the tree of the template activity it came from, and the previews
+     * written against the views of each module read that tree. One that was written from scratch has no tree: what
+     * it is made of travels in its settings, and {@see settings_preview} shows that.
+     *
+     * @param array $parameters The activity's parameters, as the AI returned them.
+     * @return bool
+     */
+    private static function is_written_from_scratch(array $parameters): bool {
+        $structure = $parameters['structure'] ?? [];
+        return empty($structure);
     }
 
     /**
