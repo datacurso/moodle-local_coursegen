@@ -56,8 +56,10 @@ class ai_context {
             $client = new ai_course_api(null, $baseurl, $baseurleu);
             $client->request('POST', '/context/upload-model-context', $postdata);
         } catch (\Exception $e) {
-            // Show error notification to the user.
-            \core\notification::error(get_string('error_upload_failed_system_instruction', 'local_coursegen', $e->getMessage()));
+            // Keep the technical detail in developer debugging only: the user
+            // receives a localized notification without internal information.
+            debugging('Unexpected error while uploading the system instruction: ' . $e->getMessage());
+            \core\notification::error(get_string('error_upload_failed_system_instruction', 'local_coursegen'));
         }
     }
 

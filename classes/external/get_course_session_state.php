@@ -40,6 +40,10 @@ require_once($CFG->libdir . '/externallib.php');
 
 /**
  * External API to retrieve resumable state for an AI course session.
+ *
+ * No audit event is emitted: this is a read-only resume/poll call that changes
+ * no state and transfers nothing outwards, and one event per poll would flood
+ * {logstore_standard_log} without adding audit value.
  */
 class get_course_session_state extends external_api {
     /**

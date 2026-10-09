@@ -39,6 +39,24 @@ require_once($CFG->libdir . '/externallib.php');
  */
 class courseai_syllabus_upload extends external_api {
     /**
+     * @var int Largest syllabus accepted by the server.
+     *
+     * Mirrors the maxbytes advertised by courseai_filepicker_init: the
+     * filepicker only constrains the browser, so the limit is re-applied here.
+     */
+    public const MAX_SYLLABUS_BYTES = 10 * 1024 * 1024;
+
+    /** @var string[] Extensions accepted by the server, lower case, no dot. */
+    public const ACCEPTED_EXTENSIONS = ['pdf', 'docx', 'txt'];
+
+    /** @var string[] Mimetypes accepted by the server, one per accepted extension. */
+    public const ACCEPTED_MIMETYPES = [
+        'application/pdf',
+        'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+        'text/plain',
+    ];
+
+    /**
      * Returns description of method parameters.
      *
      * @return external_function_parameters
@@ -68,6 +86,7 @@ class courseai_syllabus_upload extends external_api {
 
         // Check permissions.
         $context = context_system::instance();
+        self::validate_context($context);
         require_capability('moodle/course:create', $context);
         require_capability('local/coursegen:createcoursewithai', $context);
 
@@ -116,14 +135,33 @@ class courseai_syllabus_upload extends external_api {
                 ];
             }
 
-            // Save to syllabus area.
+            // Never trust the filepicker: its accepted_types and maxbytes only
+            // constrain the browser. Re-check the draft before anything is
+            // persisted into the site file storage.
+            $rejection = self::syllabus_rejection_reason(reset($draftfiles));
+            if ($rejection !== null) {
+                return [
+                    'success' => false,
+                    'filename' => '',
+                    'message' => get_string($rejection, 'local_coursegen'),
+                ];
+            }
+
+            // Save to syllabus area. accepted_types is declared for parity with
+            // courseai_filepicker_init; the binding check is the explicit
+            // re-validation of the persisted file below.
             file_save_draft_area_files(
                 $params['draftitemid'],
                 $syscontext->id,
                 'local_coursegen',
                 'syllabus',
                 $params['sessionid'],
-                ['subdirs' => 0, 'maxfiles' => 1]
+                [
+                    'subdirs' => 0,
+                    'maxfiles' => 1,
+                    'maxbytes' => self::MAX_SYLLABUS_BYTES,
+                    'accepted_types' => self::accepted_filepicker_types(),
+                ]
             );
 
             // Get the saved file.
@@ -145,18 +183,35 @@ class courseai_syllabus_upload extends external_api {
             }
 
             $file = reset($files);
+
+            // Re-validate what actually got persisted (extension and mimetype)
+            // before a single byte leaves the site.
+            $rejection = self::syllabus_rejection_reason($file);
+            if ($rejection !== null) {
+                $file->delete();
+                return [
+                    'success' => false,
+                    'filename' => '',
+                    'message' => get_string($rejection, 'local_coursegen'),
+                ];
+            }
+
             $filename = $file->get_filename();
 
             // Upload to Datacurso API.
             $apiservice = static::get_api_service();
             $response = $apiservice->upload_syllabus($threadid, $file);
 
-            // Audit the external transfer: file name and size only, no content.
+            // Audit the external transfer with non-identifying metadata only:
+            // the original file name is personal data and must not outlive the
+            // file itself in the standard log.
             external_transfer_initiated::create([
                 'context' => $context,
                 'other' => [
-                    'filename' => $filename,
+                    'fileextension' => self::file_extension($filename),
                     'filesize' => (int)$file->get_filesize(),
+                    'threadid' => $threadid,
+                    'sessionid' => (int)$params['sessionid'],
                 ],
             ])->trigger();
 
@@ -181,6 +236,49 @@ class courseai_syllabus_upload extends external_api {
                 'message' => get_string('error_upload_failed', 'local_coursegen'),
             ];
         }
+    }
+
+    /**
+     * Why a syllabus file must be refused, if it must.
+     *
+     * @param \stored_file $file File to check, either the draft or the stored copy.
+     * @return string|null Language string identifier of the rejection, or null when accepted.
+     */
+    protected static function syllabus_rejection_reason(\stored_file $file): ?string {
+        if (!in_array(self::file_extension($file->get_filename()), self::ACCEPTED_EXTENSIONS, true)) {
+            return 'error_syllabus_invalid_file_type';
+        }
+
+        if (!in_array((string)$file->get_mimetype(), self::ACCEPTED_MIMETYPES, true)) {
+            return 'error_syllabus_invalid_file_type';
+        }
+
+        if ((int)$file->get_filesize() > self::MAX_SYLLABUS_BYTES) {
+            return 'error_syllabus_file_too_large';
+        }
+
+        return null;
+    }
+
+    /**
+     * Lower-case extension of a file name, without the leading dot.
+     *
+     * @param string $filename File name.
+     * @return string Extension, or an empty string when there is none.
+     */
+    protected static function file_extension(string $filename): string {
+        return strtolower((string)pathinfo($filename, PATHINFO_EXTENSION));
+    }
+
+    /**
+     * Accepted extensions in the dotted form the filepicker API expects.
+     *
+     * @return string[]
+     */
+    public static function accepted_filepicker_types(): array {
+        return array_map(static function (string $extension): string {
+            return '.' . $extension;
+        }, self::ACCEPTED_EXTENSIONS);
     }
 
     /**

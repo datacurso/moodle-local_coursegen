@@ -22,6 +22,7 @@ use external_function_parameters;
 use external_single_structure;
 use external_value;
 use local_coursegen\event\generation_failed;
+use local_coursegen\event\generation_job_started;
 use local_coursegen\local\service\course_planning_service;
 
 defined('MOODLE_INTERNAL') || die();
@@ -89,7 +90,7 @@ class start_course_planning extends external_api {
         require_capability('local/coursegen:createcoursewithai', $context);
 
         try {
-            return course_planning_service::start_course_planning(
+            $outcome = course_planning_service::start_course_planning(
                 $params['prompt'],
                 $params['lang'],
                 (bool)$params['withimages'],
@@ -97,6 +98,21 @@ class start_course_planning extends external_api {
                 (int)$USER->id,
                 (bool)$params['withsubsections']
             );
+
+            // Audit the started job. The prompt is personal content and never
+            // travels in the event payload.
+            if (!empty($outcome['success'])) {
+                generation_job_started::create([
+                    'context' => $context,
+                    'other' => [
+                        'job_id' => (string)($outcome['threadid'] ?? ''),
+                        'session_id' => (int)($outcome['sessionid'] ?? 0),
+                        'generate_images' => (int)$params['withimages'],
+                    ],
+                ])->trigger();
+            }
+
+            return $outcome;
         } catch (\Exception $e) {
             // Keep the technical detail in developer debugging only: the client
             // receives a localized message without internal information.
