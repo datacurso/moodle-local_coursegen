@@ -221,4 +221,93 @@ final class activity_preview_lookup_test extends \basic_testcase {
 
         $this->assertNull($found);
     }
+
+    /**
+     * An activity the agent wrote from scratch, with the row of the result that places it.
+     *
+     * @param array $parameters The parameters the generator of its type answered.
+     * @param int $section The section the row places the activity in.
+     * @return array
+     */
+    private function agent_book(array $parameters, int $section): array {
+        return [
+            'generated_activities' => [[
+                'uid' => 'book-uid',
+                'resource_type' => 'book',
+                'cmid' => 21,
+                'section' => $section,
+                'template_behavior' => ['action' => 'modify'],
+                'parameters' => $parameters,
+            ]],
+            'agent_report' => ['summary' => 'Done', 'warnings' => [], 'tool_calls' => 3, 'failed' => []],
+        ];
+    }
+
+    /**
+     * What the agent wrote from scratch has no tree and is still drawn: there is nothing of a template to check it against.
+     */
+    public function test_an_activity_the_agent_wrote_from_scratch_is_drawn_without_a_tree(): void {
+        $parameters = ['name' => 'Water', 'mod_settings' => ['chapters' => [['title' => 'Rain']]]];
+
+        $found = activity_preview_lookup::from_answer($this->agent_book($parameters, 2), 'book-uid');
+
+        $this->assertSame('book', $found['modname']);
+        $this->assertFalse($found['kept']);
+        $this->assertSame('Rain', $found['parameters']['mod_settings']['chapters'][0]['title']);
+    }
+
+    /**
+     * A part the generator wrote has no record id of a template, and the agent's result is not refused for that.
+     */
+    public function test_a_part_without_a_record_id_is_not_refused_in_an_agent_result(): void {
+        $parameters = ['name' => 'Water', 'mod_settings' => ['chapters' => [['title' => 'Rain', 'content_editor' => []]]]];
+
+        $found = activity_preview_lookup::from_answer($this->agent_book($parameters, 1), 'book-uid');
+
+        $this->assertNotNull($found);
+    }
+
+    /**
+     * The section the row names is the one the activity is drawn and placed in.
+     */
+    public function test_the_section_of_the_row_is_laid_into_the_parameters(): void {
+        $parameters = ['name' => 'Water', 'section' => 0, 'mod_settings' => ['chapters' => []]];
+
+        $found = activity_preview_lookup::from_answer($this->agent_book($parameters, 4), 'book-uid');
+
+        $this->assertSame(4, $found['parameters']['section']);
+    }
+
+    /**
+     * A result that is not the agent's keeps the rule: without its tree it is refused.
+     */
+    public function test_a_result_that_is_not_the_agents_is_still_refused_without_its_tree(): void {
+        $answer = $this->agent_book(['name' => 'Water', 'mod_settings' => ['chapters' => []]], 1);
+        unset($answer['agent_report']);
+
+        $this->expectException(\moodle_exception::class);
+
+        activity_preview_lookup::from_answer($answer, 'book-uid');
+    }
+
+    /**
+     * The agent names the template course module on the row, and the page is built on it.
+     */
+    public function test_the_page_is_built_on_the_course_module_the_agent_row_names(): void {
+        $found = activity_preview_lookup::from_answer($this->agent_book(['name' => 'Water'], 1), 'book-uid');
+
+        $this->assertSame(21, $found['cmid']);
+    }
+
+    /**
+     * A row without a real course module has none to build the page on.
+     */
+    public function test_a_row_without_a_real_course_module_has_none(): void {
+        $answer = $this->agent_book(['name' => 'Water'], 1);
+        $answer['generated_activities'][0]['cmid'] = -3;
+
+        $found = activity_preview_lookup::from_answer($answer, 'book-uid');
+
+        $this->assertSame(0, $found['cmid']);
+    }
 }

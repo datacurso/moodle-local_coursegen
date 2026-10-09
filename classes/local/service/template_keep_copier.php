@@ -151,7 +151,7 @@ class template_keep_copier {
             $sectionid = $targetsectionids[$sectionnumber] ?? null;
             $createdcmid = null;
             if ($sectionid !== null) {
-                $createdcmid = self::copy_one($cm, $targetcourse, $sectionid);
+                $createdcmid = template_activity_duplicator::duplicate_into($cm, $targetcourse, $sectionid);
             }
             if ($createdcmid === null) {
                 $failures[] = $cm->name;
@@ -209,108 +209,5 @@ class template_keep_copier {
             }
         }
         return $cmids;
-    }
-
-    /**
-     * Duplicate one activity into the target course, in the matching section.
-     *
-     * @param \cm_info $cm Source activity, from the base course.
-     * @param \stdClass $targetcourse
-     * @param int $sectionid Target section id (not its number).
-     * @return int|null The cmid of the copy, or null when the copy failed.
-     */
-    private static function copy_one($cm, $targetcourse, int $sectionid): ?int {
-        $targetmodinfo = get_fast_modinfo($targetcourse);
-        $targetcms = $targetmodinfo->get_cms();
-        $before = array_keys($targetcms);
-
-        // Moodle's own duplication path prints HTML straight to the output
-        // buffer on its way through (course/lib.php echoes a notification when
-        // it cannot tidy the source section, among others). Harmless on the
-        // CLI, fatal for a webservice: that markup lands in front of the JSON
-        // body and the caller fails with "Unexpected token '<'". Anything the
-        // copy prints is captured here and logged instead.
-        ob_start();
-        $placed = null;
-        $coursefailed = false;
-        try {
-            $placed = duplicate_module($targetcourse, $cm, $sectionid, false);
-        } catch (\Throwable $exception) {
-            // duplicate_module() resolves its $sectionid with
-            // ['id' => $sectionid, 'course' => $cm->course] - the SOURCE
-            // course - so a target-course section id never matches a record
-            // and its own moveto_module() call fails on a false one. That
-            // happens AFTER the backup/restore, so the activity itself is
-            // already copied, with its files and configuration intact; only
-            // its placement and the creation event are missing, and both are
-            // completed below. A copy that genuinely failed leaves no new
-            // module behind and is reported as a failure there.
-            $coursefailed = true;
-        } finally {
-            $buffered = ob_get_clean();
-            $buffered = (string) $buffered;
-            $printed = trim($buffered);
-            if ($printed !== '') {
-                debugging(
-                    'local_coursegen: output swallowed while copying cmid ' . $cm->id . ': ' . $printed,
-                    DEBUG_DEVELOPER
-                );
-            }
-        }
-
-        if (!$coursefailed) {
-            if ($placed === null) {
-                return null;
-            }
-            return (int) $placed->id;
-        }
-
-        return self::recover_misplaced_copy($cm, $targetcourse, $sectionid, $before);
-    }
-
-    /**
-     * Find and place the copy duplicate_module() made but could not move,
-     * after it failed resolving the target section against the wrong course.
-     *
-     * @param \cm_info $cm Source activity, from the base course.
-     * @param \stdClass $targetcourse
-     * @param int $sectionid Target section id (not its number).
-     * @param int[] $before Target course cmids, from just before the copy.
-     * @return int|null The cmid of the copy, or null when it could not be found.
-     */
-    private static function recover_misplaced_copy($cm, $targetcourse, int $sectionid, array $before): ?int {
-        global $DB;
-
-        $targetcourseid = $targetcourse->id;
-        rebuild_course_cache($targetcourseid, true);
-        $targetmodinfo = get_fast_modinfo($targetcourse);
-        $targetcms = $targetmodinfo->get_cms();
-        $aftercmids = array_keys($targetcms);
-        $newcmids = array_diff($aftercmids, $before);
-        $newcmids = array_values($newcmids);
-        if (count($newcmids) !== 1) {
-            debugging(
-                'local_coursegen: could not locate the copy of kept activity ' . $cm->id,
-                DEBUG_DEVELOPER
-            );
-            return null;
-        }
-
-        $newcmid = $newcmids[0];
-        $newcm = $targetcms[$newcmid];
-        $newcmsection = $newcm->section;
-        $newcmsection = (int) $newcmsection;
-        if ($newcmsection !== $sectionid) {
-            $section = $DB->get_record(
-                'course_sections',
-                ['id' => $sectionid, 'course' => $targetcourseid],
-                '*',
-                MUST_EXIST
-            );
-            moveto_module($newcm, $section);
-        }
-
-        \core\event\course_module_created::create_from_cm($newcm)->trigger();
-        return (int) $newcmid;
     }
 }

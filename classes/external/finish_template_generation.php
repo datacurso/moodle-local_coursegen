@@ -34,13 +34,14 @@ use local_coursegen\local\service\activity_link_resolver;
 use local_coursegen\local\service\course_creation_guard;
 use local_coursegen\local\service\course_review_service;
 use local_coursegen\local\service\create_course_service;
+use local_coursegen\local\service\agent_result_activities;
 use local_coursegen\local\service\generated_activities_filter;
 use local_coursegen\local\service\kept_link_rewriter;
 use local_coursegen\local\service\template_ai_api_service;
-use local_coursegen\local\service\template_apply_guard;
 use local_coursegen\local\service\template_creation_rollback;
 use local_coursegen\local\service\template_files_cleaner;
 use local_coursegen\local\service\template_course_order;
+use local_coursegen\local\service\template_creation_report;
 use local_coursegen\local\service\template_file_resource_applier;
 use local_coursegen\local\service\template_file_resources;
 use local_coursegen\local\service\template_keep_copier;
@@ -125,11 +126,12 @@ class finish_template_generation extends external_api {
 
         // A reconnecting client can land here twice; the course is built once.
         if ((int) $session->get('status') === course_session::STATUS_CREATED) {
-            return self::created_response((int) $session->get('courseid'), $CFG->wwwroot, []);
+            return self::created_response((int) $session->get('courseid'), $CFG->wwwroot, '');
         }
 
         $api = self::get_api_service();
         $result = $api->get_result($session->get('session_id'));
+        $result = agent_result_activities::placed($result);
         $templateid = self::template_id_of($session);
 
         // Only the AI-generated activities are built from the payload. The
@@ -160,7 +162,6 @@ class finish_template_generation extends external_api {
             $store = new preview_draft_store((int) $session->get('id'), $threadid, [$api, 'download_generated_file']);
             $applier = new template_file_resource_applier($store);
             $failedfiles = $applier->apply($fileresources, $keptcms);
-            template_apply_guard::ensure_complete($created, $failedfiles);
             $generatedcms = $created['generatedcms'] ?? [];
             self::arrange_course($templateid, $courseid, $generatedactivities, $generatedcms, $keptcms);
             activity_link_resolver::resolve_for_course($courseid, $generatedactivities, $generatedcms, $keptcms);
@@ -172,7 +173,8 @@ class finish_template_generation extends external_api {
         $store->discard();
         template_files_cleaner::discard($threadid, $api);
 
-        return self::created_response($courseid, $CFG->wwwroot, $failedfiles);
+        $warnings = template_creation_report::warnings($created, $failedfiles, $writtenactivities);
+        return self::created_response($courseid, $CFG->wwwroot, $warnings);
     }
 
     /**
@@ -220,16 +222,11 @@ class finish_template_generation extends external_api {
      *
      * @param int $courseid
      * @param string $wwwroot
-     * @param string[] $failedfiles Names of the files the run attached that could not be put in their resource.
+     * @param string $warnings What the course is missing, in plain words; empty when nothing is.
      * @return array
      */
-    private static function created_response(int $courseid, string $wwwroot, array $failedfiles): array {
+    private static function created_response(int $courseid, string $wwwroot, string $warnings): array {
         $course = get_course($courseid);
-        $warnings = '';
-        if ($failedfiles !== []) {
-            $names = implode(', ', $failedfiles);
-            $warnings = get_string('templatefilesnotapplied', 'local_coursegen', $names);
-        }
         return [
             'success' => true,
             'courseid' => $courseid,

@@ -67,8 +67,33 @@ class preview_factory {
      * @return activity_preview
      */
     public static function for_activity(string $modname, array $parameters, int $cmid = 0): activity_preview {
+        if (self::is_written_from_scratch($parameters)) {
+            return new settings_preview($modname, $parameters, $cmid);
+        }
         $class = self::PREVIEWS[$modname] ?? intro_preview::class;
         return new $class($parameters, $cmid);
+    }
+
+    /**
+     * Whether the activity is created from what it carries in its settings rather than from a template tree.
+     *
+     * The template agent says it in the parameters: an activity it made by rewriting the words of its template
+     * activity is created from that tree, and one it wrote with the generator of its type is created from its
+     * settings, whatever tree it also carries. The previews written against the views of each module read the tree,
+     * so they show the first kind and {@see settings_preview} shows the second. A result that does not say, for
+     * example the one of a flow without the agent, is judged by whether it has a tree, and so is one that says it
+     * is made from its tree but carries none.
+     *
+     * @param array $parameters The activity's parameters, as the AI returned them.
+     * @return bool
+     */
+    private static function is_written_from_scratch(array $parameters): bool {
+        $stated = array_key_exists('from_structure', $parameters);
+        if ($stated && empty($parameters['from_structure'])) {
+            return true;
+        }
+        $structure = $parameters['structure'] ?? [];
+        return empty($structure);
     }
 
     /**
