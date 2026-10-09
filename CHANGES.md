@@ -2,6 +2,18 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100625
+
+### Added
+
+- **Every activity type the AI writes in a template generation is previewed and created**  
+  An activity that the generator of its type wrote from scratch (a book, a quiz, a lesson, a glossary, a wiki, a forum, a workshop, a feedback, an assignment, a database, a choice, a URL and the rest of the types) used to be refused by the review preview, because the preview asked for the tree of a template activity that such an activity does not have. The preview now shows what the activity is made of, read from its settings: its description, each list of parts (the chapters, the questions, the entries, the pages, the discussions, the criteria, the fields or the options) with the title and the text of every part, and the address of a URL. What each type shows is declared in one place, so a new type is one entry. The section the agent names on each row of its result is also laid into the activity, so an activity written from scratch is previewed and created in its own section instead of the first one.
+
+### Changed
+
+- **A course made from a template is created even when something could not be made**  
+  An activity or a file that could not be made no longer cancels the whole course. The course is created and the teacher is told, in plain words, which activities were left out, which files could not be placed and which parts of an activity the generator could not write (chapters or questions skipped).
+
 ## [2.0.10] - 2026100624
 
 ### Fixed
