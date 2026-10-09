@@ -149,4 +149,52 @@ final class agent_result_activities_test extends \basic_testcase {
 
         $this->assertSame([], $placed['generated_activities']);
     }
+
+    /**
+     * An activity the agent made without saying how is stated as made from its settings.
+     */
+    public function test_an_activity_not_marked_is_stated_as_not_made_from_its_tree(): void {
+        $result = $this->agent_result(['uid' => 'a', 'section' => 2, 'parameters' => ['name' => 'A']]);
+
+        $placed = agent_result_activities::placed($result);
+
+        $this->assertFalse($placed['generated_activities'][0]['parameters']['from_structure']);
+    }
+
+    /**
+     * An activity the agent made from its template tree keeps saying so.
+     */
+    public function test_an_activity_marked_from_its_tree_stays_marked(): void {
+        $parameters = ['name' => 'A', 'from_structure' => true];
+        $result = $this->agent_result(['uid' => 'a', 'section' => 2, 'parameters' => $parameters]);
+
+        $placed = agent_result_activities::placed($result);
+
+        $this->assertTrue($placed['generated_activities'][0]['parameters']['from_structure']);
+    }
+
+    /**
+     * A row with neither parameters nor a section is not given a mark, and a row with a mark but no section keeps it.
+     */
+    public function test_a_row_without_parameters_and_section_is_left_alone(): void {
+        $bare = ['uid' => 'a'];
+        $marked = ['uid' => 'b', 'parameters' => ['from_structure' => true]];
+
+        $placed = agent_result_activities::with_sections([$bare, $marked]);
+
+        $this->assertSame($bare, $placed[0]);
+        $this->assertTrue($placed[1]['parameters']['from_structure']);
+        $this->assertArrayNotHasKey('section', $placed[1]['parameters']);
+    }
+
+    /**
+     * The result of any other flow is not given a mark.
+     */
+    public function test_the_result_of_another_flow_is_not_marked(): void {
+        $result = ['generated_activities' => [['uid' => 'a', 'section' => 1, 'parameters' => ['name' => 'A']]]];
+
+        $placed = agent_result_activities::placed($result);
+
+        $this->assertArrayNotHasKey('from_structure', $placed['generated_activities'][0]['parameters']);
+    }
 }

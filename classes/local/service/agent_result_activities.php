@@ -22,7 +22,9 @@ namespace local_coursegen\local\service;
  * The agent names the section of each activity on the row itself, while the plugin creates and previews an activity
  * from the section number its parameters carry. An activity the generator of its type wrote from scratch comes back
  * with a section of zero in its parameters, so it would land in the wrong place. Here the section of the row is
- * laid into the parameters, and only for a result that the agent made: the result of any other flow is left alone.
+ * laid into the parameters, and the way the activity is made is stated: from the tree of its template activity when
+ * the agent says so, from its settings otherwise. Only a result that the agent made is touched: the result of any
+ * other flow is left alone.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -72,18 +74,25 @@ final class agent_result_activities {
     }
 
     /**
-     * One activity with the section of its row in its parameters.
+     * One activity with the section of its row in its parameters and how it is made stated.
      *
      * @param array $activity One generated activity.
-     * @return array The activity; unchanged when its row names no section.
+     * @return array The activity; unchanged when it has neither parameters nor a section.
      */
     private static function with_section(array $activity): array {
-        if (!isset($activity['section'])) {
+        $hasparameters = isset($activity['parameters']);
+        $hassection = isset($activity['section']);
+        if (!$hasparameters && !$hassection) {
             return $activity;
         }
         $parameters = $activity['parameters'] ?? [];
         $parameters = (array) $parameters;
-        $parameters['section'] = (int) $activity['section'];
+        if (!array_key_exists('from_structure', $parameters)) {
+            $parameters['from_structure'] = false;
+        }
+        if ($hassection) {
+            $parameters['section'] = (int) $activity['section'];
+        }
         $activity['parameters'] = $parameters;
         return $activity;
     }

@@ -110,4 +110,50 @@ final class preview_factory_test extends \basic_testcase {
 
         $this->assertSame('Final quiz', $preview->name());
     }
+
+    /**
+     * An activity the agent made from its settings is drawn from them even if it carries the tree of its template.
+     *
+     * @dataProvider every_type_provider
+     * @param string $modname
+     */
+    public function test_a_tree_does_not_count_when_the_activity_is_made_from_its_settings(string $modname): void {
+        $parameters = [
+            'name' => 'Written',
+            'from_structure' => false,
+            'structure' => [$modname => [['id' => '1']]],
+            'mod_settings' => [],
+        ];
+
+        $preview = preview_factory::for_activity($modname, $parameters);
+
+        $this->assertInstanceOf(settings_preview::class, $preview);
+    }
+
+    /**
+     * An activity the agent made from its template tree is drawn from that tree.
+     *
+     * @dataProvider every_type_provider
+     * @param string $modname
+     */
+    public function test_a_tree_counts_when_the_activity_is_made_from_it(string $modname): void {
+        $parameters = [
+            'name' => 'Rewritten',
+            'from_structure' => true,
+            'structure' => [$modname => [['id' => '1']]],
+        ];
+
+        $preview = preview_factory::for_activity($modname, $parameters);
+
+        $this->assertNotInstanceOf(settings_preview::class, $preview);
+    }
+
+    /**
+     * The mark decides even when the tree is missing: nothing to draw it from means the settings.
+     */
+    public function test_the_mark_without_a_tree_falls_back_to_the_settings(): void {
+        $preview = preview_factory::for_activity('book', ['from_structure' => true, 'structure' => []]);
+
+        $this->assertInstanceOf(settings_preview::class, $preview);
+    }
 }
