@@ -105,8 +105,7 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
         $inputbarpos = strpos($html, 'data-region="tpl-input-bar"');
         $this->assertNotFalse($inputbarpos, 'Input bar region missing');
 
-        foreach (
-            [
+        foreach ([
                 'id="tplPromptInput"',
                 'id="tplBtnSyllabus"',
                 'id="tplWithImages"',
@@ -114,8 +113,7 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
                 'id="tplLangSelect"',
                 'id="tplModeGenerate"',
                 'id="tplChipSyllabus"',
-            ] as $needle
-        ) {
+            ] as $needle) {
             $pos = strpos($html, $needle);
             $this->assertNotFalse($pos, "Control {$needle} missing");
             $this->assertGreaterThan($inputbarpos, $pos, "Control {$needle} must render inside the input bar");
@@ -128,16 +126,11 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
             'Prompt textarea must render above the toolbar controls'
         );
 
-        // The stats line moved out of the input bar into the main column's
-        // badge area (asserted in the main-column test below).
+        // The stats line lives in the top bar, never in the input bar.
         $statspos = strpos($html, 'id="tplModeStats"');
         $this->assertNotFalse($statspos, 'Stats span missing');
         $this->assertSame(1, substr_count($html, 'id="tplModeStats"'), 'Stats span must render exactly once');
-        $this->assertGreaterThan(
-            strpos($html, 'data-region="tpl-main-column"'),
-            $statspos,
-            'Stats span must not render inside the input bar'
-        );
+        $this->assertLessThan($inputbarpos, $statspos, 'Stats span must not render inside the input bar');
     }
 
     /**
@@ -163,38 +156,149 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
         $maincolpos = strpos($html, 'data-region="tpl-main-column"');
         $this->assertNotFalse($maincolpos, 'Main column region missing');
 
-        // Structure containers plus the pre-pick empty state live in the main column.
-        foreach (
-            [
-                self::EMPTY_SENTINEL,
-                'id="tplModeLimits"',
-                'id="tplModeLimitsBadge"',
-                'id="tplModeStats"',
-                'id="tplModeStructure"',
-            ] as $needle
-        ) {
+        // Structure container plus the pre-pick empty state live in the main column.
+        foreach ([self::EMPTY_SENTINEL, 'id="tplModeStructure"'] as $needle) {
             $pos = strpos($html, $needle);
             $this->assertNotFalse($pos, "Main column content {$needle} missing");
             $this->assertGreaterThan($maincolpos, $pos, "{$needle} must render inside the main column");
         }
-
-        // The stats span lives in the limits badge area, above the structure.
-        $this->assertGreaterThan(
-            strpos($html, 'id="tplModeLimits"'),
-            strpos($html, 'id="tplModeStats"'),
-            'Stats span must render inside the limits badge area'
-        );
-        $this->assertGreaterThan(
-            strpos($html, 'id="tplModeStats"'),
-            strpos($html, 'id="tplModeStructure"'),
-            'Stats span must render above the structure container'
-        );
 
         // The splitter sits between the left panel and the main column.
         $splitterpos = strpos($html, 'id="cgSplitter"');
         $leftpanelpos = strpos($html, 'data-region="tpl-left-panel"');
         $this->assertGreaterThan($leftpanelpos, $splitterpos, 'Splitter must follow the left panel');
         $this->assertGreaterThan($splitterpos, $maincolpos, 'Main column must follow the splitter');
+    }
+
+    /**
+     * The progress of the activities is a pill in the top bar, hidden until a run counts activities, with a closed
+     * list the generation fills in one item per activity.
+     */
+    public function test_template_mode_renders_hidden_progress_pill_in_the_top_bar(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $html = $this->render_page(true);
+
+        $barpos = strpos($html, 'id="courseaiTopbar"');
+        $barend = strpos($html, '</header>');
+        $progresspos = strpos($html, 'id="courseaiChecklist"');
+        $this->assertNotFalse($progresspos, 'Progress pill missing');
+        $this->assertGreaterThan($barpos, $progresspos, 'Progress pill must render inside the top bar');
+        $this->assertLessThan($barend, $progresspos, 'Progress pill must render inside the top bar');
+        $this->assertSame(1, substr_count($html, 'id="courseaiChecklist"'), 'The progress pill must render once');
+        $this->assertMatchesRegularExpression('/class="[^"]*\bhidden\b[^"]*"\s+id="courseaiChecklist"/', $html);
+        $this->assertMatchesRegularExpression('/id="tplTopActivitiesToggle"[^>]*aria-expanded="false"/s', $html);
+        $this->assertMatchesRegularExpression('/id="tplTopActivitiesPanel"[^>]*\shidden/s', $html);
+        $this->assertStringContainsString('id="courseaiChecklistList"', $html);
+        $this->assertStringContainsString('id="courseaiChecklistCount"', $html);
+        $this->assertStringContainsString('id="tplTopActivitiesCount"', $html);
+    }
+
+    /**
+     * The stats chip and the course preview link live in the top bar in template mode, and the preview link stays
+     * hidden until a run exists.
+     */
+    public function test_template_mode_renders_stats_and_course_preview_in_the_top_bar(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $html = $this->render_page(true);
+
+        $barend = strpos($html, '</header>');
+        foreach (['id="tplModeLimits"', 'id="tplModeStats"', 'id="tplPreviewCourse"'] as $needle) {
+            $pos = strpos($html, $needle);
+            $this->assertNotFalse($pos, "{$needle} missing");
+            $this->assertLessThan($barend, $pos, "{$needle} must render inside the top bar");
+            $this->assertSame(1, substr_count($html, $needle), "{$needle} must render once");
+        }
+        $this->assertMatchesRegularExpression('/id="tplPreviewCourse"[^>]*\shidden/s', $html);
+    }
+
+    /**
+     * Free mode gets none of the top bar pieces of the template mode.
+     */
+    public function test_free_mode_renders_no_template_top_bar_pieces(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $html = $this->render_page(false);
+
+        $this->assertStringNotContainsString('tpl-topbar', $html);
+        $this->assertStringNotContainsString('id="tplModeStats"', $html);
+        $this->assertStringNotContainsString('id="tplPreviewCourse"', $html);
+    }
+
+    /**
+     * The review card of template mode lists its actions as the screen shows them: the secondary one, then the
+     * primary one, so the order of the keyboard is the order of the eyes. Free mode keeps its own order.
+     */
+    public function test_template_mode_review_lists_adjust_before_accept(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $html = $this->render_page(true);
+
+        $panel = substr($html, (int) strpos($html, 'data-region="tpl-left-panel"'));
+        $adjustpos = strpos($panel, 'id="cgDecisionAdjust"');
+        $acceptpos = strpos($panel, 'id="cgDecisionAccept"');
+        $this->assertNotFalse($adjustpos, 'Adjust button missing');
+        $this->assertNotFalse($acceptpos, 'Accept button missing');
+        $this->assertLessThan($acceptpos, $adjustpos, 'Adjust must come before Accept in template mode');
+    }
+
+    /**
+     * Free mode never receives the progress list.
+     */
+    public function test_free_mode_renders_no_template_progress_list(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $html = $this->render_page(false);
+
+        $this->assertStringNotContainsString('id="courseaiChecklist"', $html);
+    }
+
+    /**
+     * One progress item shows the activity's name, type and section while it
+     * is in progress, carrying the uid the stream events answer to.
+     */
+    public function test_generation_item_renders_name_type_and_section_in_progress(): void {
+        global $OUTPUT;
+        $this->resetAfterTest();
+
+        $html = $OUTPUT->render_from_template('local_coursegen/template_generation_item', [
+            'uid' => 'inst-7',
+            'name' => 'Intro lesson',
+            'typelabel' => 'Lesson',
+            'sectionname' => 'Week 1',
+        ]);
+
+        $this->assertStringContainsString('data-progress-uid="inst-7"', $html);
+        $this->assertStringContainsString('courseai-checklist-item is-loading', $html);
+        $this->assertStringContainsString('Intro lesson', $html);
+        $this->assertStringContainsString('Lesson', $html);
+        $this->assertStringContainsString('Week 1', $html);
+        $this->assertStringContainsString('spinner-icon', $html);
+        $this->assertStringContainsString('check-icon', $html);
+    }
+
+    /**
+     * An item without type or section leaves its detail slot empty, which the
+     * stylesheet hides.
+     */
+    public function test_generation_item_without_type_or_section_has_an_empty_detail(): void {
+        global $OUTPUT;
+        $this->resetAfterTest();
+
+        $html = $OUTPUT->render_from_template('local_coursegen/template_generation_item', [
+            'uid' => 'inst-8',
+            'name' => 'Quiz',
+            'typelabel' => '',
+            'sectionname' => '',
+        ]);
+
+        $this->assertMatchesRegularExpression('/<div class="courseai-checklist-detail">\s*<\/div>/', $html);
     }
 
     /**
@@ -210,5 +314,18 @@ final class courseai_page_template_mode_test extends \advanced_testcase {
         $this->assertStringNotContainsString('data-region="tpl-input-bar"', $html);
         $this->assertStringNotContainsString('data-region="tpl-main-column"', $html);
         $this->assertStringNotContainsString('is-template', $html);
+    }
+
+    /**
+     * Template mode has no section for the files of the course and no picker of activities to add.
+     */
+    public function test_template_mode_holds_no_course_files_region_nor_activity_picker(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $html = $this->render_page(true);
+
+        $this->assertStringNotContainsString('template/reference-files', $html);
+        $this->assertStringNotContainsString('tplActivityChooserModal', $html);
     }
 }

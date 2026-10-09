@@ -1026,9 +1026,22 @@ svg { display: block; flex-shrink: 0; }
 }
 
 /* ─── Guideline preview modal ─────────────────────────────────────────── */
-.preview-dialog { max-width: 560px; }
+.guideline-preview {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
 
-.preview-modal-content {
+/*
+ * Scoped to the modal-dialog via the "classes" templateContext passed to
+ * core/modal's create() (see guideline.js): core/modal has no hook to attach
+ * a class to individual header/body/close-button elements, only to
+ * modal-dialog itself through {{$classes}} in lib/templates/modal.mustache,
+ * so the compact skin is expressed as descendant rules from there.
+ */
+.local-coursegen-guideline-preview { max-width: 560px; }
+
+.local-coursegen-guideline-preview .modal-content {
   border: 1px solid var(--border) !important;
   border-radius: 14px !important;
   box-shadow: 0 20px 60px hsl(215, 28%, 17%, 0.18) !important;
@@ -1037,15 +1050,11 @@ svg { display: block; flex-shrink: 0; }
   overflow: hidden;
 }
 
-/* Circle-X close button */
-.preview-close {
+/* Circle close button (core/modal's own .btn-close) */
+.local-coursegen-guideline-preview .btn-close {
   position: absolute;
   top: 16px;
   right: 16px;
-  background: none;
-  border: none;
-  cursor: pointer;
-  color: var(--primary);
   display: flex;
   align-items: center;
   justify-content: center;
@@ -1054,21 +1063,15 @@ svg { display: block; flex-shrink: 0; }
   transition: background .12s;
   z-index: 10;
 }
-.preview-close:hover { background: var(--primary-soft); }
+.local-coursegen-guideline-preview .btn-close:hover { background: var(--primary-soft); }
 
 /* Header area */
-.preview-header {
+.local-coursegen-guideline-preview .modal-header {
   padding: 24px 48px 16px 24px;
   border-bottom: none;
 }
 
-.preview-title {
-  display: flex;
-  align-items: center;
-  gap: 10px;
-  margin-bottom: 10px;
-}
-.preview-title span {
+.local-coursegen-guideline-preview .modal-title {
   font-size: 17px;
   font-weight: 700;
   color: var(--fg);
@@ -1102,7 +1105,7 @@ svg { display: block; flex-shrink: 0; }
 }
 
 /* Body with bordered description box */
-.preview-body {
+.local-coursegen-guideline-preview .modal-body {
   padding: 0 24px 24px;
 }
 
@@ -2625,9 +2628,7 @@ svg { display: block; flex-shrink: 0; }
    loaded Boost theme for free — real course-format markup, real Boost
    CSS. This block only adds what Boost only gives inside `body.editing`
    (which this popup never has): edit-view dashed activity separators,
-   the locked/reference dimmed state, the hover-reveal insert-between-
-   rows "+" (mirrors detailed/'s .cg-insert-zone pattern verbatim), and
-   the add-section/add-activity pill controls.
+   the locked/reference dimmed state.
    ============================================================ */
 #tplModeStructure .course-section { margin-top: 20px; position: relative; }
 #tplModeStructure .course-content > .course-section:first-child { margin-top: 0; }
@@ -2680,7 +2681,7 @@ svg { display: block; flex-shrink: 0; }
   line-height: 1.4;
 }
 
-/* Delete action control — same look/hover as detailed/'s .dp-action-btn. */
+/* Row action controls — same look/hover as detailed/'s .dp-action-btn. */
 #tplModeStructure .cg-item-actions { display: inline-flex; align-items: center; gap: 6px; }
 #tplModeStructure .cg-item-actions .dp-action-btn { box-shadow: none; }
 #tplModeStructure .cg-item-actions .dp-action-btn:hover {
@@ -2688,180 +2689,8 @@ svg { display: block; flex-shrink: 0; }
   color: hsl(215 28% 28%);
 }
 
-/* ── On-hover "add activity" divider — mirrors detailed/'s .cg-insert-zone
-   pattern verbatim (see #prvSections .cg-insert-zone in §8). A "+" centered
-   on the dashed line above EVERY activity, including a locked one, so the
-   professor can insert a new activity next to a reference row. The
-   mustache template omits this zone entirely inside a locked section
-   (showinsertzone), so there is nothing to hide here via CSS. ── */
-#tplModeStructure .cg-insert-zone {
-  position: absolute;
-  top: -13px;
-  left: 0;
-  right: 0;
-  height: 26px;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  z-index: 3;
-}
-#tplModeStructure .cg-insert-btn {
-  opacity: 0;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 30px;
-  height: 20px;
-  padding: 0;
-  border: none;
-  border-radius: 5px;
-  background: hsl(10 85% 91%);
-  color: hsl(10 62% 42%);
-  cursor: pointer;
-  box-shadow: none;
-  transition: opacity .12s ease, background-color .12s ease, color .12s ease;
-}
-#tplModeStructure .cg-insert-zone:hover .cg-insert-btn,
-#tplModeStructure .cg-insert-btn:focus-visible { opacity: 1; }
-#tplModeStructure .cg-insert-btn:hover { background: var(--primary); color: var(--primary-fg); }
-#tplModeStructure .course-section .activity:has(> .cg-insert-zone .cg-insert-btn:hover) {
-  border-top-color: var(--primary);
-}
-
-/* ── "+ Add activity" pill, centered on a closing dashed line — same look
-   as detailed/'s bottom add control (§8). "+ Add section" reuses the
-   unscoped .dp-add-section-wrap .dp-add-control rule above as-is. ── */
-#tplModeStructure .dp-add-activity-wrap {
-  position: relative;
-  display: block;
-  margin-top: 14px;
-  padding-top: 2px;
-  list-style: none;
-}
-#tplModeStructure .dp-add-activity-wrap::before {
-  content: '';
-  position: absolute;
-  left: 4px;
-  right: 4px;
-  top: 50%;
-  border-top: 2px dashed #c8ccd1;
-  transition: border-top-color .12s ease;
-  z-index: 0;
-}
-#tplModeStructure .dp-add-activity-wrap:has(.dp-add-control:hover)::before {
-  border-top-color: var(--primary);
-}
-#tplModeStructure .dp-add-activity-wrap .dp-add-control {
-  position: relative;
-  z-index: 1;
-  width: fit-content;
-  margin: 0 auto;
-  justify-content: center;
-  align-items: center;
-  gap: 5px;
-  border: none;
-  border-radius: 6px;
-  background: hsl(10 85% 91%);
-  color: hsl(10 62% 42%);
-  padding: 4px 14px;
-  font-size: 13px;
-  line-height: 1.35;
-  box-shadow: none;
-  transition: background-color .12s ease, color .12s ease;
-}
-#tplModeStructure .dp-add-activity-wrap .dp-add-control:hover {
-  background: var(--primary);
-  color: var(--primary-fg);
-}
-#tplModeStructure .dp-add-activity-wrap .dp-add-control .dp-add-control__icon { color: inherit; font-size: 14px; }
-
-/* ============================================================
-   §7.2 Template mode — activity chooser modal restyle.
-   Functionally unchanged (search input + click-to-add card, limited to
-   the template's allowedactivities): only visual polish so it reads as
-   part of the same modern card language as #tplModeStructure above
-   (rounded corners, calmer note banner, hover-lift cards). The grid/icon
-   layout itself (.modchoosercontainer/.optionscontainer/.option/
-   .activityiconcontainer) is real core_course activity-chooser markup,
-   styled natively by the loaded Boost theme.
-   ============================================================ */
-#tplActivityChooserModal .modal-content {
-  border-radius: var(--radius);
-  border: none;
-  overflow: hidden;
-}
-#tplActivityChooserModal .modal-header {
-  border-bottom: 1px solid var(--border);
-  padding: 1rem 1.25rem;
-}
-#tplActivityChooserModal .modal-title { font-weight: 700; font-size: 1rem; }
-#tplActivityChooserModal .alert-info {
-  background: hsl(210 60% 96%);
-  border: none;
-  color: hsl(210 40% 35%);
-  border-radius: 8px;
-}
-#tplActivityChooserModal .searchcontainer .form-control {
-  border-radius: 8px;
-  border-color: var(--border);
-}
-#tplActivityChooserModal .option {
-  border-radius: 10px;
-  transition: box-shadow .12s ease, transform .12s ease;
-}
-#tplActivityChooserModal .option:hover {
-  box-shadow: 0 4px 14px rgba(0, 0, 0, .08);
-  transform: translateY(-1px);
-}
-#tplActivityChooserModal .optioninfo a { text-decoration: none; color: inherit; }
-#tplActivityChooserModal .optionname { font-size: 12px; font-weight: 600; color: var(--fg); }
-
-/* Prompt panel revealed below the grid once a type is picked. The rounded
-   textarea itself reuses .ai-prompt-container/.ai-prompt-textarea from
-   chatui.css (loaded on this page) — only the panel chrome lives here.
-   The modal body keeps a tall min-height (core modchooser sizing), so the
-   panel is pinned to its bottom edge instead of hugging the grid: the body
-   becomes a flex column and the panel takes margin-top:auto. */
-#tplActivityChooserModal .modal-body {
-  display: flex;
-  flex-direction: column;
-}
-#tplActivityChooserModal .modchoosercontainer { flex: 1 1 auto; }
-#tplActivityChooserModal .chooser-prompt-panel {
-  margin-top: auto;
-  border-top: 1px solid var(--border);
-  padding: 1rem 1.25rem;
-}
-#tplActivityChooserModal .chooser-selected-chip {
-  display: inline-flex;
-  align-items: center;
-  gap: .5rem;
-  border: 1px solid var(--border);
-  border-radius: 999px;
-  background: #fff;
-  padding: .25rem .75rem .25rem .35rem;
-  font-size: 13px;
-  font-weight: 600;
-  color: var(--fg);
-}
-#tplActivityChooserModal .chooser-selected-chip-icon {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 28px;
-  height: 28px;
-  border-radius: 8px;
-}
-#tplActivityChooserModal .chooser-selected-chip-icon .icon {
-  width: 18px;
-  height: 18px;
-  margin: 0;
-}
-#tplActivityChooserModal .chooser-confirm-btn {
-  border-radius: 999px;
-  padding: .3rem 1rem;
-  font-weight: 600;
-}
+/* A space card keeps its controls only until the generation starts: from then on its file is fixed. */
+body.cg-generating #tplModeStructure .cg-space-controls { display: none; }
 
 /* Section row is a positioning context for the simple plan renderer. */
 .prv-section-row {
@@ -4266,8 +4095,10 @@ body.cg-generating :is(#prvSections, #tplModeStructure) .cg-gen-active .cg-activ
   opacity: .85;
 }
 /* IN PROGRESS — a small spinner on the icon in the brand coral, kept SOFT (light
-   coral ring + slightly dimmed by the card opacity) so it is present but not loud. */
-body.cg-generating :is(#prvSections, #tplModeStructure) .cg-gen-active .activity-icon::after {
+   coral ring + slightly dimmed by the card opacity) so it is present but not loud.
+   A row the AI has not reached yet carries the same spinner, in grey, so every
+   row it will write shows at a glance that it is still to come. */
+body.cg-generating :is(#prvSections, #tplModeStructure) :is(.cg-gen-pending, .cg-gen-active) .activity-icon::after {
   content: '';
   position: absolute;
   right: -5px;
@@ -4281,6 +4112,28 @@ body.cg-generating :is(#prvSections, #tplModeStructure) .cg-gen-active .activity
   background: #fff;
   box-shadow: 0 0 0 2px #fff;
   animation: spin .8s linear infinite;
+}
+/* The row being written stands out from the queued ones: a soft coral tint and a coral edge. */
+body.cg-generating :is(#prvSections, #tplModeStructure) .cg-gen-active .activity-item {
+  background: hsl(10 81% 63% / .06);
+  box-shadow: inset 3px 0 0 var(--primary);
+}
+/* While the AI waits for the answer of the professor nothing is being written, so no spinner turns. */
+body.cg-generating.cg-generation-paused :is(#prvSections, #tplModeStructure) :is(.cg-gen-pending, .cg-gen-active) .activity-icon::after,
+body.cg-generating.cg-generation-paused .courseai-checklist-item.is-loading .spinner-icon {
+  animation-play-state: paused;
+  display: none;
+}
+/* The line that counts the seconds of a long call, under the progress list. */
+.cg-waiting-line {
+  display: none;
+  margin: .5rem 0 0;
+  padding: 0 .25rem;
+  color: var(--muted-fg);
+  font-size: .875rem;
+}
+body.cg-generating:not(.cg-generation-paused) .cg-waiting-line {
+  display: block;
 }
 /* DONE — the card "turns on" (full colour) + a sober check badge on the icon
    (same muted tone as the section checklist check, NOT a loud green). */

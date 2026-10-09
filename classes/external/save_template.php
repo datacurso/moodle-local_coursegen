@@ -14,223 +14,100 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-/**
- * External API for saving (creating or updating) a course template.
- *
- * @package    local_coursegen
- * @copyright  2025 Wilber Narvaez <https://datacurso.com>
- * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- */
-
 namespace local_coursegen\external;
 
-use external_api;
-use external_function_parameters;
-use external_multiple_structure;
-use external_single_structure;
-use external_value;
-use local_coursegen\local\models\template;
-use local_coursegen\local\service\template_persistence_service;
-use context_system;
-
-defined('MOODLE_INTERNAL') || die();
-
-require_once($CFG->libdir . '/externallib.php');
+use core_external\external_api;
+use core_external\external_function_parameters;
+use core_external\external_multiple_structure;
+use core_external\external_single_structure;
+use core_external\external_value;
+use local_coursegen\local\template\template_access;
+use local_coursegen\local\template\template_service;
 
 /**
- * External API for creating or updating a course template with its section/activity config.
+ * External function that saves a template: its course, its name and what the AI does with each activity.
+ *
+ * @package    local_coursegen
+ * @category   external
+ * @copyright  2026 Wilber Narvaez <https://datacurso.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class save_template extends external_api {
-
     /**
-     * Returns description of method parameters.
+     * Parameters definition.
      *
      * @return external_function_parameters
      */
-    public static function execute_parameters() {
+    public static function execute_parameters(): external_function_parameters {
         return new external_function_parameters([
-            'id'             => new external_value(PARAM_INT,  'Template ID (0 for new)', VALUE_DEFAULT, 0),
-            'name'           => new external_value(PARAM_TEXT, 'Template name'),
-            'description'    => new external_value(PARAM_RAW,  'Template description', VALUE_DEFAULT, ''),
-            'courseid'       => new external_value(PARAM_INT,  'Base course ID'),
-            'maxsections'    => new external_value(PARAM_INT,  'Max sections', VALUE_DEFAULT, 0),
-            'nolimit'        => new external_value(PARAM_BOOL, 'No section limit', VALUE_DEFAULT, false),
-            'namingpattern'  => new external_value(PARAM_RAW,  'Section naming pattern', VALUE_DEFAULT, ''),
-            'namingstart'    => new external_value(PARAM_INT,  'Naming start number', VALUE_DEFAULT, 1),
-            'sections'       => new external_multiple_structure(
+            'templateid' => new external_value(PARAM_INT, 'Template to replace, or 0 to create one'),
+            'courseid' => new external_value(PARAM_INT, 'Course whose structure is the template'),
+            'name' => new external_value(PARAM_RAW, 'Name of the template, cleaned when it is saved'),
+            'description' => new external_value(PARAM_RAW, 'Optional description', VALUE_DEFAULT, ''),
+            'items' => new external_multiple_structure(
                 new external_single_structure([
-                    'sectionid'  => new external_value(PARAM_INT,   'Section ID'),
-                    'sectionnum' => new external_value(PARAM_INT,   'Section number'),
-                    'behavior'   => new external_value(PARAM_ALPHA, 'Section behavior'),
-                    'activities' => new external_multiple_structure(
-                        new external_single_structure([
-                            'cmid'           => new external_value(PARAM_INT,  'Course module ID'),
-                            'action'         => new external_value(PARAM_ALPHA, 'Activity action'),
-                            'useasreference' => new external_value(PARAM_BOOL, 'Use as reference'),
-                            'prompt'         => new external_value(PARAM_RAW,  'Activity prompt', VALUE_DEFAULT, ''),
-                            'templatescope'  => new external_value(
-                                PARAM_ALPHA,
-                                'Template scope (course or section); only meaningful when action=template',
-                                VALUE_DEFAULT,
-                                'course'
-                            ),
-                            'spacerequired'  => new external_value(
-                                PARAM_BOOL,
-                                'Whether the professor must provide this activity; only meaningful when action=space',
-                                VALUE_DEFAULT,
-                                true
-                            ),
-                            'spaceinstruction' => new external_value(
-                                PARAM_RAW,
-                                'What the professor has to provide; only meaningful when action=space',
-                                VALUE_DEFAULT,
-                                ''
-                            ),
-                        ])
-                    ),
-                    'instances' => new external_multiple_structure(
-                        new external_single_structure([
-                            'sourcecmid' => new external_value(PARAM_INT, 'cmid of the action=template activity this instance was created from'),
-                            'sourcename' => new external_value(PARAM_TEXT, 'Snapshot of the source template\'s display name'),
-                            'name'       => new external_value(PARAM_TEXT, 'This instance\'s own display name'),
-                            'typelabel'  => new external_value(PARAM_TEXT, 'Snapshot of the source template\'s module type label'),
-                            'modname'    => new external_value(PARAM_PLUGIN, 'Snapshot of the source template\'s module type', VALUE_DEFAULT, ''),
-                            'prompt'     => new external_value(PARAM_RAW, 'Instance prompt', VALUE_DEFAULT, ''),
-                            'aftercmid' => new external_value(
-                                PARAM_INT,
-                                'Real cmid this instance renders after within its section; 0 = section start',
-                                VALUE_DEFAULT,
-                                0
-                            ),
-                            'sortorder'  => new external_value(PARAM_INT, 'Tiebreaker order among instances sharing an anchor', VALUE_DEFAULT, 0),
-                        ]),
-                        'Virtual template instances placed in this section',
-                        VALUE_DEFAULT,
-                        []
-                    ),
-                    'spaces' => new external_multiple_structure(
-                        new external_single_structure([
-                            'modname'     => new external_value(PARAM_PLUGIN, 'Module type the professor provides'),
-                            'required'    => new external_value(PARAM_BOOL, 'Whether the professor must provide it', VALUE_DEFAULT, true),
-                            'instruction' => new external_value(PARAM_RAW, 'What the professor has to provide', VALUE_DEFAULT, ''),
-                            'aftercmid' => new external_value(
-                                PARAM_INT,
-                                'Real cmid this space renders after within its section; 0 = section start',
-                                VALUE_DEFAULT,
-                                0
-                            ),
-                            'sortorder'   => new external_value(PARAM_INT, 'Tiebreaker order among virtual rows sharing an anchor', VALUE_DEFAULT, 0),
-                        ]),
-                        'Virtual spaces the professor fills with an activity of their own',
-                        VALUE_DEFAULT,
-                        []
-                    ),
-                ])
+                    'cmid' => new external_value(PARAM_INT, 'Course module of the template course'),
+                    'action' => new external_value(PARAM_ALPHA, 'keep or ai'),
+                    'instruction' => new external_value(PARAM_RAW, 'Optional text telling the AI what to do', VALUE_DEFAULT, ''),
+                ]),
+                'What the AI does with each activity',
+                VALUE_DEFAULT,
+                []
             ),
         ]);
     }
 
     /**
-     * Create or update a course template, replacing all section and activity config.
+     * Save the template.
      *
-     * @param int    $id
-     * @param string $name
-     * @param string $description
-     * @param int    $courseid
-     * @param int    $maxsections
-     * @param bool   $nolimit
-     * @param string $namingpattern
-     * @param int    $namingstart
-     * @param array  $sections
-     * @return array Saved template id and name.
+     * @param int $templateid Template to replace, or 0 to create one.
+     * @param int $courseid Course whose structure is the template.
+     * @param string $name Name of the template.
+     * @param string $description Optional description.
+     * @param array $items What the AI does with each activity.
+     * @return array The id of the template and how many activities it has.
      */
-    public static function execute(
-        $id,
-        $name,
-        $description,
-        $courseid,
-        $maxsections,
-        $nolimit,
-        $namingpattern,
-        $namingstart,
-        $sections
-    ) {
-        $parameterdescription = self::execute_parameters();
-        $params = self::validate_parameters($parameterdescription, [
-            'id'            => $id,
-            'name'          => $name,
-            'description'   => $description,
-            'courseid'      => $courseid,
-            'maxsections'   => $maxsections,
-            'nolimit'       => $nolimit,
-            'namingpattern' => $namingpattern,
-            'namingstart'   => $namingstart,
-            'sections'      => $sections,
+    public static function execute(int $templateid, int $courseid, string $name, string $description, array $items): array {
+        global $USER;
+
+        $definition = self::execute_parameters();
+        $params = self::validate_parameters($definition, [
+            'templateid' => $templateid,
+            'courseid' => $courseid,
+            'name' => $name,
+            'description' => $description,
+            'items' => $items,
         ]);
 
-        $context = context_system::instance();
+        $context = \context_system::instance();
         self::validate_context($context);
-        $capability = 'local/coursegen:createtemplates';
-        if ($params['id'] > 0) {
-            $capability = 'local/coursegen:edittemplates';
-        }
-        require_capability($capability, $context);
+        template_access::require_manage();
+        template_access::require_course_visible($params['courseid']);
 
-        if (trim($params['name']) === '') {
-            // The wizard's own name field only ever gets this far via a
-            // direct save_template() call, never a real mform submission
-            // (classes/form/template_name_form.php's "required" rule is
-            // client-only and never actually runs) — this is the one place
-            // a blank name is ever really rejected.
-            throw new \moodle_exception('template_name_required', 'local_coursegen');
-        }
+        $service = new template_service();
+        $savedid = $service->save(
+            $params['templateid'],
+            $params['courseid'],
+            $params['name'],
+            $params['description'],
+            $params['items'],
+            (int) $USER->id
+        );
 
-        // Create or load existing template.
-        $existingid = 0;
-        if ($params['id'] > 0) {
-            $existingid = $params['id'];
-        }
-        $tpl = new template($existingid);
+        $itemcount = count($params['items']);
 
-        $maxsections = null;
-        if ($params['maxsections']) {
-            $maxsections = $params['maxsections'];
-        }
-
-        $tpl->set('name',          $params['name']);
-        $tpl->set('description',   $params['description']);
-        $tpl->set('courseid',      $params['courseid']);
-        $tpl->set('maxsections',   $maxsections);
-        $tpl->set('nolimit',       (int) $params['nolimit']);
-        $tpl->set('namingpattern', $params['namingpattern']);
-        $tpl->set('namingstart',   $params['namingstart']);
-
-        if ($params['id'] > 0) {
-            $tpl->update();
-        } else {
-            $tpl->create();
-        }
-
-        $templateid = (int) $tpl->get('id');
-
-        template_persistence_service::save_sections($templateid, $params['sections']);
-
-        $savedname = $tpl->get('name');
-        return [
-            'id'   => $templateid,
-            'name' => $savedname,
-        ];
+        return ['templateid' => $savedid, 'itemcount' => $itemcount];
     }
 
     /**
-     * Returns description of method return value.
+     * Return definition.
      *
      * @return external_single_structure
      */
-    public static function execute_returns() {
+    public static function execute_returns(): external_single_structure {
         return new external_single_structure([
-            'id'   => new external_value(PARAM_INT,  'Template ID'),
-            'name' => new external_value(PARAM_TEXT, 'Template name'),
+            'templateid' => new external_value(PARAM_INT, 'Id of the saved template'),
+            'itemcount' => new external_value(PARAM_INT, 'Activities saved with the template'),
         ]);
     }
 }

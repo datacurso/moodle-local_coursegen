@@ -36,16 +36,14 @@ trait get_template_structure_schema {
      */
     public static function execute_returns() {
         return new external_single_structure([
-            'nolimit' => new external_value(PARAM_BOOL, 'Whether the section limit is disabled'),
-            'maxsections' => new external_value(PARAM_INT, 'Maximum total sections allowed'),
-            'remainingsections' => new external_value(PARAM_INT, 'Additional sections the professor may still add'),
             'sections' => new external_multiple_structure(
                 new external_single_structure([
                     'id'     => new external_value(PARAM_INT, 'Section ID'),
                     'num'    => new external_value(PARAM_INT, 'Section number'),
                     'name'   => new external_value(PARAM_TEXT, 'Section name'),
-                    'behavior' => new external_value(PARAM_ALPHA, 'Admin-configured section behavior (custom/keep)'),
-                    'locked' => new external_value(PARAM_BOOL, 'Whether the section is kept as-is from the template'),
+                    'behavior' => new external_value(PARAM_ALPHA,
+                        'Section behavior: aimodify when the AI modifies an activity of it, keep otherwise'),
+                    'locked' => new external_value(PARAM_BOOL, 'Whether the AI leaves the whole section as it is'),
                     'activities' => new external_multiple_structure(
                         new external_single_structure([
                             'id'       => new external_value(PARAM_ALPHANUMEXT,
@@ -57,24 +55,18 @@ trait get_template_structure_schema {
                             'typelabel' => new external_value(PARAM_TEXT,
                                 'Snapshotted type label for instance rows; empty for real activities'),
                             'iconhtml' => new external_value(PARAM_RAW, 'Rendered module icon HTML; may be empty'),
-                            'locked'   => new external_value(PARAM_BOOL, 'Always true — activities from the template are reference-only'),
+                            'locked'   => new external_value(PARAM_BOOL, 'Whether the AI leaves the activity as it is'),
                             'action'   => new external_value(PARAM_ALPHA,
-                                'Resolved admin action ("keep"); empty for virtual instance rows'),
+                                'What the AI does with the activity: keep or modify'),
                             'isinstance' => new external_value(PARAM_BOOL, 'Whether this is a virtual instance row'),
                             'aigenerated' => new external_value(PARAM_BOOL,
                                 'Whether AI will generate this activity in the new course (drives the badge)'),
                             'generationuid' => new external_value(PARAM_ALPHANUMEXT,
-                                'Id this row answers to in the generation progress events; empty when it is not generated'),
+                                'Opaque uid of the activity, the one its preview is asked for; empty when it is not generated'),
+                            'generationcmid' => new external_value(PARAM_INT,
+                                'Course module the progress events name the activity by; 0 when it is not generated'),
                         ])
                     ),
-                ])
-            ),
-            'allowedactivities' => new external_multiple_structure(
-                new external_single_structure([
-                    'modname'     => new external_value(PARAM_ALPHANUMEXT, 'Module type name'),
-                    'displayname' => new external_value(PARAM_TEXT, 'Human-readable module name'),
-                    'purpose'     => new external_value(PARAM_ALPHA, 'Activity purpose category'),
-                    'iconhtml'    => new external_value(PARAM_RAW, 'Rendered module icon HTML'),
                 ])
             ),
         ]);

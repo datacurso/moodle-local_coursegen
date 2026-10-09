@@ -24,10 +24,10 @@ use moodle_url;
  * A lesson, drawn by mod_lesson's own code run against the payload.
  *
  * Nothing here decides what a lesson looks like. The classes under lesson/ are
- * mod_lesson's own view code, reading the rows the payload carries
+ * mod_lesson's own view code, reading the rows the activity's own tree carries
  * instead of the database, and this only hands them what they need: the rows,
- * the page being read, where links go, and what the plan intends to write
- * laid over the mould page by page.
+ * the page being read and where links go. The pages the AI wrote are already
+ * in those rows, each in the row it came from, so none is looked for.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -47,55 +47,9 @@ class lesson_preview extends preview_base {
     }
 
     /**
-     * A draft names the page it fills by id. A finished answer does not,
-     * because the generator that wrote it matched pages by title, so the
-     * same match is made here for the pages that arrive without one.
+     * The lesson, built from the activity's own tree.
      *
-     * @param json_store $store
-     */
-    protected function overlay(json_store $store): void {
-        $idbytitle = $this->ids_by_title($store);
-        $pages = $this->parameters['mod_settings']['pages'] ?? [];
-        foreach ($pages as $page) {
-            $rawtitle = $page['title'] ?? '';
-            $title = trim((string) $rawtitle);
-            $fallbackid = $idbytitle[$title] ?? null;
-            $id = $page['id'] ?? $fallbackid;
-            if ($id === null) {
-                continue;
-            }
-            if (isset($page['title'])) {
-                $store->set('lesson_pages', $id, 'title', (string) $page['title']);
-            }
-            if (isset($page['content_html'])) {
-                $store->set('lesson_pages', $id, 'contents', (string) $page['content_html']);
-            }
-        }
-    }
-
-    /**
-     * Every lesson page's own row id, keyed by its title, for the pages a
-     * draft names by title rather than by id.
-     *
-     * @param json_store $store
-     * @return array
-     */
-    protected function ids_by_title(json_store $store): array {
-        $idbytitle = [];
-        foreach ($store->get_records('lesson_pages') as $row) {
-            $rawtitle = $row->title ?? '';
-            $title = trim((string) $rawtitle);
-            if (!isset($idbytitle[$title])) {
-                $idbytitle[$title] = $row->id;
-            }
-        }
-        return $idbytitle;
-    }
-
-    /**
-     * The lesson, built from the payload with the draft laid over it.
-     *
-     * @return lesson|null Null when the payload holds no lesson row.
+     * @return lesson|null Null when the tree holds no lesson row.
      */
     protected function lesson(): ?lesson {
         if ($this->lesson !== null) {
@@ -103,12 +57,11 @@ class lesson_preview extends preview_base {
         }
         $store = $this->store();
         $row = $this->instance();
-        if ($store === null || $row === null) {
+        if ($row === null) {
             return null;
         }
 
-        $sourceparameters = $this->source['parameters'] ?? [];
-        $structure = $sourceparameters['structure'] ?? [];
+        $structure = $this->parameters['structure'] ?? [];
         $contextid = null;
         if (isset($structure['contextid'])) {
             $contextid = (int) $structure['contextid'];
@@ -118,8 +71,8 @@ class lesson_preview extends preview_base {
             $row,
             $store,
             $this->cm(),
-            [$this, 'lesson_page_url'],
-            [$this, 'lesson_exit_url'],
+            fn(int $pageid): moodle_url => $this->lesson_page_url($pageid),
+            fn(): moodle_url => $this->lesson_exit_url(),
             $contextid
         );
         return $this->lesson;

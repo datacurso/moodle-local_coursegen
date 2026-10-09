@@ -109,6 +109,8 @@ Follow these steps to create a new course using the Datacurso AI workflow:
 
     ![Create course path B](./_docs/images/local_coursegen_create_course_path_b.png)
 
+    On fresh Moodle 5.2 installs the My courses page is disabled by default; enable it in `Site administration > Appearance > Navigation > Enable My courses` to use this path.
+
 ### Fill in basic course details
 - Complete standard fields like `Course full name`, `Course short name`, `Course category`, `Course format`, and any other  required fields.
 

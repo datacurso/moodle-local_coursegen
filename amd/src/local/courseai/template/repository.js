@@ -22,10 +22,11 @@
  */
 
 import {call as fetchMany} from 'core/ajax';
+import Notification from 'core/notification';
 
 /**
- * Fetch a template's guided-form structure: locked sections/activities, section
- * limits and the admin-allowed activity catalog.
+ * Fetch a template's guided-form structure: its sections and activities, the
+ * spaces for the teacher's files included, and the section limits.
  *
  * @param {number} templateId
  * @returns {Promise<Object>}
@@ -36,8 +37,8 @@ export const getTemplateStructure = (templateId) => fetchMany([{
 }])[0];
 
 /**
- * Open a generation: exports the template, attaches the syllabus and returns
- * the stream whose consumption actually runs it.
+ * Open a generation: exports the template, attaches the syllabus and the files
+ * of the spaces, and returns the stream whose consumption actually runs it.
  *
  * @param {number} templateId
  * @param {string} prompt The professor's single general instruction.
@@ -50,31 +51,87 @@ export const startTemplateGeneration = (templateId, prompt, draftItemId) => fetc
 }])[0];
 
 /**
- * Answer the plan review a paused generation is waiting on.
+ * Answer the question the template run is paused on.
  *
- * @param {number} sessionId
- * @param {string} action 'accept' or 'replan_activity'.
- * @param {string[]} targetIds Activity uids to replan; empty means all of them.
- * @param {string} instruction What to change, in the professor's own words.
- * @returns {Promise<Object>} {status}
+ * @param {number} sessionId Local session id, for example 139.
+ * @param {string} callId Call id of the question, for example "c4".
+ * @param {string} kind Kind of answer: "file", "text" or "choice".
+ * @param {{draftItemId: number, text: string, choice: string}} answer What the teacher answered.
+ * @returns {Promise<Object>} The status of the answer.
  */
-export const sendTemplatePlanningFeedback = (sessionId, action, targetIds, instruction) => fetchMany([{
-    methodname: 'local_coursegen_template_planning_feedback',
+export const answerTemplateQuestion = (sessionId, callId, kind, answer) => fetchMany([{
+    methodname: 'local_coursegen_answer_template_question',
     args: {
         sessionid: sessionId,
-        action: action,
-        targetids: targetIds || [],
-        instruction: instruction || '',
+        callid: callId,
+        kind: kind,
+        draftitemid: answer.draftItemId || 0,
+        text: answer.text || '',
+        choice: answer.choice || '',
     },
 }])[0];
 
 /**
- * Build the course, once the stream has reported the generation complete.
+ * Ask a completed run for changes: the run continues from its draft and completes again.
  *
- * @param {number} sessionId
- * @returns {Promise<Object>} {status, courseid, courseurl}
+ * @param {number} sessionId Local session id, for example 139.
+ * @param {string} callId Id of this request, so sending it twice changes nothing twice, for example "adj0k3j9x2a".
+ * @param {string} instruction What to change, in the teacher's own words.
+ * @param {string} aid Draft id of the only activity to change, for example "t:11342", or an empty text for all.
+ * @returns {Promise<Object>} {status}
  */
-export const finishTemplateGeneration = (sessionId) => fetchMany([{
-    methodname: 'local_coursegen_finish_template_generation',
+export const sendTemplateReviewFeedback = (sessionId, callId, instruction, aid) => fetchMany([{
+    methodname: 'local_coursegen_template_review_feedback',
+    args: {sessionid: sessionId, callid: callId, instruction: instruction, aid: aid || ''},
+}])[0];
+
+/**
+ * Tell the service the course will not be built, so it deletes the files it holds for the run.
+ *
+ * @param {number} sessionId Local session id, for example 139.
+ * @returns {Promise<Object>} {status}
+ */
+export const cancelTemplateGeneration = (sessionId) => fetchMany([{
+    methodname: 'local_coursegen_cancel_template_generation',
     args: {sessionid: sessionId},
 }])[0];
+
+/**
+ * Read the state of the run of a session, to repaint a reloaded page.
+ *
+ * @param {number} sessionId Local session id, for example 139.
+ * @returns {Promise<Object>} status, threadid, streamurl, pendingquestion and progressevents.
+ */
+export const getTemplateAgentState = (sessionId) => fetchMany([{
+    methodname: 'local_coursegen_get_template_agent_state',
+    args: {sessionid: sessionId},
+}])[0];
+
+export const getTemplateCourseSettings = (sessionId) => fetchMany([{
+    methodname: 'local_coursegen_get_template_course_settings',
+    args: {recordid: sessionId},
+}])[0];
+
+/**
+ * Build the course, once the stream has reported the generation complete and the
+ * teacher has reviewed its name.
+ *
+ * @param {number} sessionId
+ * @param {Object} overrides What the teacher chose at the review: {fullname, shortname, category}, each optional.
+ * @returns {Promise<Object>} {success, courseid, fullname, shortname, message, courseurl}
+ */
+export const finishTemplateGeneration = async(sessionId, overrides) => {
+    const response = await fetchMany([{
+        methodname: 'local_coursegen_finish_template_generation',
+        args: {
+            sessionid: sessionId,
+            fullname: overrides.fullname || '',
+            shortname: overrides.shortname || '',
+            category: overrides.category || 0,
+        },
+    }])[0];
+    if (response && response.warnings) {
+        Notification.addNotification({message: response.warnings, type: 'warning'});
+    }
+    return response;
+};

@@ -54,6 +54,10 @@ $PAGE->requires->css(new moodle_url('/local/coursegen/styles/aicoursecreation.cs
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/chatui.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/sidebar.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_mode_prompt.css', ['v' => $cssrev]));
+$PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_agent_question.css', ['v' => $cssrev]));
+$PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_left_column.css', ['v' => $cssrev]));
+$PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_left_cards.css', ['v' => $cssrev]));
+$PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_top_bar.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/start_chooser.css', ['v' => $cssrev]));
 
 use local_coursegen\local\models\course_session;
@@ -79,6 +83,15 @@ if (!$cantemplate) {
     $templatemodeactive = false;
 }
 $hasbothmodes = $canfree && $cantemplate;
+
+// A reloaded template generation that has not finished is picked up where it was, in template mode.
+$templateresume = null;
+if ($cantemplate) {
+    $templateresume = \local_coursegen\local\service\template_resume_context::for_session($resumesessionid, (int) $USER->id);
+}
+if ($templateresume !== null) {
+    $templatemodeactive = true;
+}
 
 // A resumed session skips the choice, as it was already made.
 $startchooser = $hasbothmodes && !$resumesessionid && $modeparam === null;
@@ -212,6 +225,13 @@ $templatecontext = [
     'canuploadsyllabus' => has_capability('local/coursegen:uploadcoursesyllabus', $systemcontext),
     'cangeneratecourseimages' => has_capability('local/coursegen:generatecourseimages', $systemcontext),
     'subsectionsenabled' => $subsectionsenabled,
+    // Initial (empty) guideline listboxes; JavaScript re-renders them from the same templates.
+    'guidelinelist' => [
+        'listlabel' => get_string('courseai_guidelines_list_label', 'local_coursegen'),
+        'emptytext' => get_string('courseai_no_results', 'local_coursegen'),
+        'hasitems' => false,
+        'items' => [],
+    ],
     'closeurl' => (new moodle_url('/my/courses.php'))->out(false),
     'sidebarclosed' => !$sidebarpinned,
 ];
@@ -231,6 +251,7 @@ $PAGE->requires->js_call_amd('local_coursegen/courseai', 'init', [
         'sessions' => $allsessionsdata,
         'resumesessionid' => $resumesessionid,
         'isresuming' => $resumesessionid > 0,
+        'templateresume' => $templateresume,
     ],
 ]);
 

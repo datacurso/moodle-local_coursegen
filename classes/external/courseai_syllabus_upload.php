@@ -22,8 +22,9 @@ use external_api;
 use external_function_parameters;
 use external_single_structure;
 use external_value;
-use local_coursegen\local\service\ai_course_api_service;
+use local_coursegen\event\external_transfer_initiated;
 use local_coursegen\local\models\course_session;
+use local_coursegen\local\service\ai_course_api_service;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -147,8 +148,17 @@ class courseai_syllabus_upload extends external_api {
             $filename = $file->get_filename();
 
             // Upload to Datacurso API.
-            $apiservice = new ai_course_api_service();
+            $apiservice = static::get_api_service();
             $response = $apiservice->upload_syllabus($threadid, $file);
+
+            // Audit the external transfer: file name and size only, no content.
+            external_transfer_initiated::create([
+                'context' => $context,
+                'other' => [
+                    'filename' => $filename,
+                    'filesize' => (int)$file->get_filesize(),
+                ],
+            ])->trigger();
 
             // Update session coursedata to include syllabus context type.
             $coursedata = json_decode($session->get('coursedata'), true);
@@ -162,12 +172,27 @@ class courseai_syllabus_upload extends external_api {
                 'message' => get_string('courseai_syllabus_upload_success', 'local_coursegen'),
             ];
         } catch (\Exception $e) {
+            // Keep the technical detail in developer debugging only: the client
+            // receives a localized message without internal information.
+            debugging('Unexpected error while uploading syllabus: ' . $e->getMessage());
             return [
                 'success' => false,
                 'filename' => '',
-                'message' => $e->getMessage(),
+                'message' => get_string('error_upload_failed', 'local_coursegen'),
             ];
         }
+    }
+
+    /**
+     * Build the AI course API service used by this endpoint.
+     *
+     * Extracted as a protected factory so PHPUnit tests can override it
+     * through a testable subclass (late static binding).
+     *
+     * @return ai_course_api_service
+     */
+    protected static function get_api_service(): ai_course_api_service {
+        return new ai_course_api_service();
     }
 
     /**

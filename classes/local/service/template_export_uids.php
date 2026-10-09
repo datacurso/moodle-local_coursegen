@@ -16,20 +16,12 @@
 
 namespace local_coursegen\local\service;
 
-use local_coursegen\local\models\template_instance;
-
 /**
- * How every element of a template's export payload is named and identified.
+ * Names the elements of an init payload.
  *
- * Two different lifetimes need two different strategies. A template instance
- * (template_instance) is a row of ours that outlives any one export: it can be
- * read again by a later, unrelated build, so its name has to survive between
- * them and is persisted in the row itself. A real activity or section carries
- * no row of ours at all, but it no longer needs to survive between builds
- * either - the payload that names it is built exactly once per generation and
- * then read back from that same stored copy for as long as the run lasts, so
- * a name generated fresh at that one point in time is already exactly as
- * stable as anything reading it will ever need.
+ * A section is named by a random uid drawn once per export. An activity is named by the opaque uid saved
+ * with it in its template, which is never the number of its course module; the AI service echoes the
+ * uids back in its answers.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -37,56 +29,37 @@ use local_coursegen\local\models\template_instance;
  */
 class template_export_uids {
     /**
-     * The name one instance travels under, everywhere it is named.
+     * A fresh random uid for one element of one export.
      *
-     * Stored rather than derived: it has to be the same string in two
-     * different requests - the page that draws a link to it, and the payload
-     * the answer comes back against - and those cannot agree on something
-     * generated fresh in either one.
-     *
-     * @param template_instance $instance
-     * @return string A UUID.
+     * @return string A lowercase hexadecimal string, for example "9f2c41d7a0b3".
      */
-    public static function instance_uid(template_instance $instance): string {
-        $uid = (string) $instance->get('uid');
-        if ($uid !== '') {
-            return $uid;
-        }
-
-        // No uid stored yet: name it now and persist it, so every later
-        // read of this row agrees on the same name.
-        $uid = \core\uuid::generate();
-        $instance->set('uid', $uid);
-        $instance->update();
-        return $uid;
+    public static function random_uid(): string {
+        $bytes = random_bytes(6);
+        return bin2hex($bytes);
     }
 
     /**
-     * The name a real activity or section travels under, for this one export.
+     * A fresh opaque uid for an activity that is saved in a template.
      *
-     * Nothing of ours to store this against, and nothing needed: the payload
-     * that carries this name is built once and read back from that same
-     * stored copy for the rest of the run, never rebuilt, so a fresh random
-     * name at build time is read consistently without being remembered
-     * anywhere of our own.
+     * It is a version 4 UUID, which makes a clash across templates and sites practically impossible.
      *
-     * @return string A UUID.
+     * @return string A UUID, for example "3f2a9c1e-77b4-4e0a-9d21-5c8f1b2e7a90".
      */
-    public static function random_uid(): string {
+    public static function new_item_uid(): string {
         return \core\uuid::generate();
     }
 
     /**
-     * The id one virtual instance travels under.
+     * The uid of an activity the template has no saved row for, because it was added to the course later.
      *
-     * Negative, because an instance is not a course module and has no id of
-     * its own in that space: every real cmid is positive, so a negative one
-     * can never be mistaken for one.
+     * It is derived, so the same activity of the same template always gets the same one.
      *
-     * @param int $instanceid
-     * @return int
+     * @param int $templateid Template id, for example 3.
+     * @param int $cmid Course module id of the activity, for example 11342.
+     * @return string A lowercase hexadecimal string of 32 characters.
      */
-    public static function instance_cmid(int $instanceid): int {
-        return -$instanceid;
+    public static function stand_in_uid(int $templateid, int $cmid): string {
+        $hash = hash('sha256', $templateid . ':' . $cmid);
+        return substr($hash, 0, 32);
     }
 }

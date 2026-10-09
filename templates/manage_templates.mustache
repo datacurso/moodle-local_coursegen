@@ -1,0 +1,44 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/manage_templates
+
+    The list of templates: the button to create one and the report with the rows and their actions.
+
+    Classes required for JS:
+    * none
+
+    Data attributes required for JS:
+    * data-region="local_coursegen/template/list" on the root
+    * data-action="local_coursegen/template/delete" with data-templateid and data-name on each delete action of the report
+
+    Context variables required for this template:
+    * createurl string - Address of the editor for a new template
+    * report string - The drawn report; it is HTML already prepared by the report
+
+    Example context (json):
+    {
+        "createurl": "https://example.com/local/coursegen/edit_template.php",
+        "report": "<div>The report with its table</div>"
+    }
+}}
+<div class="local_coursegen-manage_templates" data-region="local_coursegen/template/list">
+    <div class="mb-3">
+        <a href="{{createurl}}" class="btn btn-primary">{{#str}} template_new, local_coursegen {{/str}}</a>
+    </div>
+    {{{report}}}
+</div>

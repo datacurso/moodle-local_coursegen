@@ -18,9 +18,8 @@
  *
  * This entrypoint only wires DOM events; the guided-form structure (sections
  * and activities, replicating core_courseformat's card/row look) is rendered
- * server-side by local/template/render.js from local_coursegen/template_structure,
- * and the activity-type picker grid by local/template/chooser.js from
- * local_coursegen/template_activity_chooser. Nothing here builds HTML by hand.
+ * server-side by local/template/render.js from local_coursegen/template_structure.
+ * Nothing here builds HTML by hand.
  *
  * @module     local_coursegen/local/courseai/template_mode
  * @copyright  2025 Wilber Narvaez <https://datacurso.com>
@@ -28,86 +27,47 @@
  */
 
 import Notification from 'core/notification';
-import YUI from 'core/yui';
-import {getStrings} from 'core/str';
-import {initFilepicker} from '../../repository/courseai';
-import {bindToggleWrap, showFilePicker} from './context/filepicker';
-import {
-    getTemplateStructure,
-    startTemplateGeneration,
-    finishTemplateGeneration,
-} from './template/repository';
-import {runGenerationStream} from './template/generation_stream';
+import {getString} from 'core/str';
+import {getTemplateAgentState, getTemplateStructure} from './template/repository';
+import {runGeneration} from './template/run_generation';
+import {resumeGenerationStream} from './template/generation_stream';
+import {reviewAndCreate} from './template/finish';
+import {wireInputBar} from './template/input_bar';
 import {refreshPreviewLinks, usePreviewSession} from './template/preview';
+import {initTopBar} from './template/top_bar';
 import {
     createTemplateState,
     applyStructureResponse,
-    addSection,
-    insertActivity,
-    removeActivity,
     toggleSectionCollapsed,
 } from './template/state';
 import {renderStructure, wireStructureEvents} from './template/render';
-import {renderChooserGrid, openActivityChooser, wireChooserModal} from './template/chooser';
 import {formatTemplate} from './utils';
-
-// Localised labels used while mutating the structure (add-section button text,
-// generic "Section" word for naming new sections, and the "N sections · M
-// activities" stats template). Fetched once and cached — wireTemplateMode runs
-// before the page's own translated strings are loaded (see courseai.js), so
-// this module fetches only the couple of strings it needs.
-let labelsPromise = null;
-const getLabels = () => {
-    if (!labelsPromise) {
-        labelsPromise = getStrings([
-            {key: 'courseai_template_add_section', component: 'local_coursegen'},
-            {key: 'section', component: 'moodle'},
-            {key: 'courseai_plan_sections_counter', component: 'local_coursegen'},
-        ]).then(([addSectionLabel, sectionWord, statsTemplate]) => ({addSectionLabel, sectionWord, statsTemplate}));
-    }
-    return labelsPromise;
-};
+import Selectors from './template/selectors';
+import {refreshGenerateButton} from './template/generate_gate';
 
 /**
- * Generate the course from the picked template, with the input bar's own
- * values (prompt and syllabus), and watch it happen.
+ * Let the Generate button follow the form: it is on once a template is loaded and the professor gave a text or a
+ * file, and off again when both are taken away.
  *
- * Nothing runs until the stream is opened: start_template_generation only
- * exports the template, attaches the syllabus and hands back the stream whose
- * consumption drives the run. The professor therefore sees each activity being
- * generated as it happens, instead of a spinner over a job nobody can see.
+ * Nothing happens while a generation is on screen: from then on the button belongs to the review.
  *
  * @param {Object} tplState
- * @param {HTMLSelectElement|null} tplSelect
- * @param {HTMLElement} genBtn
+ * @param {HTMLButtonElement|null} genBtn
  */
-const runGeneration = async(tplState, tplSelect, genBtn) => {
-    const templateId = parseInt(tplSelect?.value || '0', 10);
-    if (!templateId) {
-        return;
+const refreshGenerateState = (tplState, genBtn) => {
+    const generating = document.body.classList.contains(Selectors.classes.generating);
+    refreshGenerateButton(tplState, genBtn, generating);
+};
+
+// The "N sections · M activities" stats template. Fetched once and cached —
+// wireTemplateMode runs before the page's own translated strings are loaded
+// (see courseai.js), so this module fetches only the string it needs.
+let statsTemplatePromise = null;
+const getStatsTemplate = () => {
+    if (!statsTemplatePromise) {
+        statsTemplatePromise = getString('courseai_plan_sections_counter', 'local_coursegen');
     }
-    genBtn.disabled = true;
-    try {
-        const started = await startTemplateGeneration(
-            templateId,
-            tplState.prompt || '',
-            parseInt(tplState.syllabusdraftitemid || 0, 10) || 0
-        );
-        usePreviewSession(started.sessionid);
-        const created = await runGenerationStream(
-            started.streamurl,
-            () => finishTemplateGeneration(started.sessionid),
-            started.sessionid,
-            {
-                prompt: tplState.prompt || '',
-                templateName: tplSelect?.options[tplSelect.selectedIndex]?.text || '',
-            }
-        );
-        window.location.href = created.courseurl;
-    } catch (e) {
-        genBtn.disabled = false;
-        Notification.exception(e);
-    }
+    return statsTemplatePromise;
 };
 
 /**
@@ -132,8 +92,9 @@ const updateStats = (tplState, statsTemplate) => {
  * Wire mode switching and template form.
  *
  * @param {Object} state
+ * @param {Object} host Holds the page's actions once they exist.
  */
-export const wireTemplateMode = (state) => {
+export const wireTemplateMode = (state, host) => {
     // Free/Template mode switching is plain <a href> navigation
     // (aicoursecreation.php / ?mode=template), server-rendered from the
     // mode param — no JS involved.
@@ -147,10 +108,15 @@ export const wireTemplateMode = (state) => {
     const tplSelect = document.getElementById('id_templateid');
     const container = document.getElementById('tplModeStructure');
 
+    // The activities pill of the top bar opens and closes its list of activities.
+    initTopBar();
+
     // Input-bar defaults: no images, page default language, no syllabus yet.
     const tplState = createTemplateState({lang: state.defaultLang || ''});
 
-    wireInputBar(tplState, state);
+    // The Generate button follows the form: a template, and a text or a file.
+    const genBtn = document.getElementById('tplModeGenerate');
+    wireInputBar(tplState, state, () => refreshGenerateState(tplState, genBtn));
 
     // Sequence guard: reselecting the template autocomplete before a previous
     // getTemplateStructure() fetch resolves must not let the slower, stale
@@ -159,13 +125,14 @@ export const wireTemplateMode = (state) => {
     // was launched with and discards its response if it no longer matches.
     const requestTracker = {id: 0};
 
-    // Single source of truth for re-rendering: always resolves the localised
-    // label first so the "+ Add section" button never flashes untranslated text.
+    // Single source of truth for re-rendering: the structure, the stats line
+    // and the Generate button all follow the in-memory model.
     const rerenderStructure = async() => {
-        const {addSectionLabel, statsTemplate} = await getLabels();
-        await renderStructure(container, tplState, {addSection: addSectionLabel});
+        const statsTemplate = await getStatsTemplate();
+        await renderStructure(container, tplState);
         refreshPreviewLinks();
         updateStats(tplState, statsTemplate);
+        refreshGenerateState(tplState, genBtn);
     };
 
     wireStructureEvents(container, {
@@ -179,79 +146,12 @@ export const wireTemplateMode = (state) => {
                 Notification.exception(e);
             }
         },
-        onOpenChooser: (sectionIndex, position) => {
-            openActivityChooser(sectionIndex, position);
-        },
-        onRemoveActivity: async(sectionIndex, activityIndex) => {
-            const section = tplState.sections[sectionIndex];
-            const removedActivity = section ? section.activities[activityIndex] : null;
-            if (removeActivity(tplState, sectionIndex, activityIndex)) {
-                try {
-                    await rerenderStructure();
-                } catch (e) {
-                    // Put the removed row back so state matches the still-rendered DOM.
-                    if (section && removedActivity) {
-                        section.activities.splice(activityIndex, 0, removedActivity);
-                    }
-                    Notification.exception(e);
-                }
-            }
-        },
-        onAddSection: async() => {
-            const {sectionWord} = await getLabels();
-            const section = addSection(tplState, sectionWord);
-            if (section) {
-                try {
-                    await rerenderStructure();
-                } catch (e) {
-                    // Undo the append so state matches the still-rendered DOM.
-                    const idx = tplState.sections.indexOf(section);
-                    if (idx !== -1) {
-                        tplState.sections.splice(idx, 1);
-                        if (!tplState.nolimit) {
-                            tplState.remainingSections += 1;
-                        }
-                    }
-                    Notification.exception(e);
-                }
-            }
-        },
     });
 
-    wireChooserModal(async(sectionIndex, position, modname, extras) => {
-        const activity = tplState.allowedActivities.find((a) => a.modname === modname);
-        if (!activity) {
-            return;
-        }
-        const inserted = insertActivity(tplState, sectionIndex, position, {...activity, ...(extras || {})});
-        if (inserted) {
-            try {
-                await rerenderStructure();
-            } catch (e) {
-                // Undo the insertion so state matches the still-rendered DOM.
-                const section = tplState.sections[sectionIndex];
-                let idx = -1;
-                if (section) {
-                    idx = section.activities.indexOf(inserted);
-                }
-                if (idx !== -1) {
-                    section.activities.splice(idx, 1);
-                }
-                Notification.exception(e);
-            }
-        }
-    });
-
-    // The real course-creation backend for this button (create_course_from_template
-    // webservice / template_course_builder_service) was removed - it shipped the
-    // old backup/restore + mock-AI design, already superseded elsewhere. Rather
-    // than leave the button silently do nothing when other code re-enables it
-    // (limits/loading logic still toggles genBtn.disabled below), tell the
-    // professor plainly instead of failing silently.
-    const genBtn = document.getElementById('tplModeGenerate');
+    // Generate: the button is only on while a template is loaded.
     if (genBtn) {
         genBtn.addEventListener('click', () => {
-            runGeneration(tplState, tplSelect, genBtn);
+            runGeneration(tplState, tplSelect, genBtn, state, host);
         });
     }
 
@@ -275,112 +175,49 @@ export const wireTemplateMode = (state) => {
             }
         });
     }
-};
 
-/**
- * Show/refresh or hide the input bar's syllabus chip to match tplState.
- *
- * @param {Object} tplState
- */
-const refreshSyllabusChip = (tplState) => {
-    const hasFile = !!tplState.syllabusdraftitemid;
-    const chipsRow = document.getElementById('tplChipsRow');
-    const chip = document.getElementById('tplChipSyllabus');
-    const chipName = document.getElementById('tplChipSyllabusName');
-    if (chipName) {
-        chipName.textContent = tplState.syllabusfilename || '';
-    }
-    if (chip) {
-        chip.classList.toggle('hidden', !hasFile);
-    }
-    if (chipsRow) {
-        chipsRow.style.display = hasFile ? '' : 'none';
+    if (state.templateResume && state.templateResume.sessionid > 0 && tplSelect) {
+        resumeRun(state.templateResume, {tplSelect, tplState, container, state, host, requestTracker});
     }
 };
 
 /**
- * Wire the reduced input bar pinned at the bottom of the left panel: syllabus
- * attach (same no-course filepicker mechanics as free mode), generate-images
- * toggle, and language select. Values live in tplState, ready for the future
- * generation payload — the Generate button itself stays a stub elsewhere.
+ * Repaint a template generation after a reload and go on with it.
  *
- * @param {Object} tplState
- * @param {Object} state - Page state (createInitialState) carrying languages/defaultLang.
+ * @param {Object} resume What the page was given: sessionid, templateid, prompt and templatename.
+ * @param {Object} parts The elements and state of the template mode.
  */
-const wireInputBar = (tplState, state) => {
-    // Adaptation prompt — composer textarea, value tracked in tplState.
-    const promptInput = document.getElementById('tplPromptInput');
-    if (promptInput) {
-        promptInput.addEventListener('input', () => {
-            tplState.prompt = promptInput.value;
-        });
-    }
-
-    // Language select — same options source as free mode (the page-context
-    // languages array parsed by courseai.js into state.languages).
-    const langSelect = document.getElementById('tplLangSelect');
-    if (langSelect) {
-        (state.languages || []).forEach((language) => {
-            const option = document.createElement('option');
-            option.value = language.code;
-            option.textContent = language.name;
-            langSelect.appendChild(option);
-        });
-        if (tplState.lang) {
-            langSelect.value = tplState.lang;
+const resumeRun = async(resume, parts) => {
+    const {tplSelect, tplState, container, state, host, requestTracker} = parts;
+    try {
+        tplSelect.value = String(resume.templateid);
+        const workspace = document.getElementById('courseaiWorkspace');
+        if (workspace) {
+            workspace.classList.add('tpl-active');
         }
-        // If the default language isn't offered, track whatever the select
-        // actually shows so state and UI never disagree.
-        tplState.lang = langSelect.value || tplState.lang;
-        langSelect.addEventListener('change', () => {
-            tplState.lang = langSelect.value;
-        });
-    }
-
-    // Generate-images toggle — same toggle-track pattern as free mode.
-    const imgToggleWrap = document.getElementById('tplImgToggleWrap');
-    const imgCheckbox = document.getElementById('tplWithImages');
-    if (imgToggleWrap && imgCheckbox) {
-        bindToggleWrap(imgToggleWrap, imgCheckbox);
-        imgCheckbox.addEventListener('change', () => {
-            tplState.generateimages = imgCheckbox.checked ? 1 : 0;
-            imgToggleWrap.classList.toggle('on', imgCheckbox.checked);
-        });
-    }
-
-    // Syllabus attach — reuses the free-mode courseai_filepicker_init flow via
-    // showFilePicker's onPicked hook; the picked draft file lives in tplState.
-    const attachBtn = document.getElementById('tplBtnSyllabus');
-    if (attachBtn) {
-        attachBtn.addEventListener('click', async() => {
-            await showFilePicker({
-                state: {},
-                CourseaiRepository: {initFilepicker},
-                Notification,
-                YUI,
-                texts: {},
-                onPicked: (filename, draftitemid) => {
-                    tplState.syllabusfilename = filename;
-                    tplState.syllabusdraftitemid = draftitemid;
-                    refreshSyllabusChip(tplState);
-                },
-            });
-        });
-    }
-
-    const removeBtn = document.getElementById('tplChipSyllabusRemove');
-    if (removeBtn) {
-        removeBtn.addEventListener('click', () => {
-            tplState.syllabusfilename = '';
-            tplState.syllabusdraftitemid = 0;
-            refreshSyllabusChip(tplState);
-        });
+        requestTracker.id += 1;
+        await loadTemplateStructure(resume.templateid, tplState, container, state, requestTracker, requestTracker.id);
+        const snapshot = await getTemplateAgentState(resume.sessionid);
+        usePreviewSession(resume.sessionid);
+        await resumeGenerationStream(
+            snapshot,
+            () => createCourseWhenReady(host, state, tplState, resume.sessionid),
+            resume.sessionid,
+            {prompt: resume.prompt || '', templateName: resume.templatename || ''}
+        );
+    } catch (e) {
+        Notification.exception(e);
     }
 };
 
+const createCourseWhenReady = async(host, state, tplState, sessionId) => {
+    await host.ready;
+    return reviewAndCreate(host, state, tplState, sessionId);
+};
+
 /**
- * Load a template's guided-form structure (locked sections/activities, section
- * limits, and the admin-allowed activity catalog) and render it.
+ * Load a template's guided-form structure (sections, activities, spaces and
+ * section limits) and render it.
  *
  * @param {number} templateId
  * @param {Object} tplState
@@ -392,7 +229,6 @@ const wireInputBar = (tplState, state) => {
 const loadTemplateStructure = async(templateId, tplState, container, state, requestTracker, requestId) => {
     const detailsEl = document.getElementById('tplModeDetails');
     const limitsEl = document.getElementById('tplModeLimits');
-    const limitsBadge = document.getElementById('tplModeLimitsBadge');
     const genBtn = document.getElementById('tplModeGenerate');
     if (!container) {
         return;
@@ -410,16 +246,14 @@ const loadTemplateStructure = async(templateId, tplState, container, state, requ
             detailsEl.style.display = '';
         }
 
-        const {addSectionLabel, statsTemplate} = await getLabels();
-        await renderStructure(container, tplState, {addSection: addSectionLabel});
+        const statsTemplate = await getStatsTemplate();
+        await renderStructure(container, tplState);
         refreshPreviewLinks();
         updateStats(tplState, statsTemplate);
-        await renderChooserGrid(tplState.allowedActivities);
-        await renderLimitsBanner(limitsEl, limitsBadge, tplState);
+        showStatsRow(limitsEl);
 
-        if (genBtn) {
-            genBtn.disabled = false;
-        }
+        // The button comes on when there is a text or a file to work from.
+        refreshGenerateState(tplState, genBtn);
         state.templateStructureLoaded = true;
     } catch (e) {
         if (requestTracker.id !== requestId) {
@@ -436,29 +270,16 @@ const loadTemplateStructure = async(templateId, tplState, container, state, requ
 };
 
 /**
- * Render the section limits banner text (the badge markup itself is static,
- * see courseai_page.mustache#tplModeLimits — this only toggles it and sets text).
+ * Show the row that holds the stats and the preview link (the markup itself is static,
+ * see courseai_page.mustache#tplModeLimits - this only reveals it).
  *
- * @param {HTMLElement} limitsEl
- * @param {HTMLElement} limitsBadge
- * @param {Object} tplState
+ * @param {HTMLElement} rowEl
  */
-const renderLimitsBanner = async(limitsEl, limitsBadge, tplState) => {
-    if (!limitsEl || !limitsBadge) {
+const showStatsRow = (rowEl) => {
+    if (!rowEl) {
         return;
     }
-    if (tplState.nolimit) {
-        const [nolimitStr] = await getStrings([
-            {key: 'courseai_template_limits_nolimit', component: 'local_coursegen'},
-        ]);
-        limitsBadge.textContent = nolimitStr;
-    } else {
-        const [remainingStr] = await getStrings([
-            {key: 'courseai_template_limits_remaining', component: 'local_coursegen'},
-        ]);
-        limitsBadge.textContent = remainingStr.replace('{$a}', tplState.remainingSections);
-    }
-    limitsEl.style.display = '';
+    rowEl.style.display = '';
 };
 
 /**
@@ -481,12 +302,8 @@ const clearStructure = (tplState, container, state) => {
         workspace.classList.remove('tpl-active');
     }
     const limitsEl = document.getElementById('tplModeLimits');
-    const limitsBadge = document.getElementById('tplModeLimitsBadge');
     if (limitsEl) {
         limitsEl.style.display = 'none';
-    }
-    if (limitsBadge) {
-        limitsBadge.textContent = '';
     }
     const genBtn = document.getElementById('tplModeGenerate');
     if (genBtn) {

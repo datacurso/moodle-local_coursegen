@@ -70,7 +70,9 @@ if ($hassiteconfig) {
         get_string('devsettings_desc', 'local_coursegen')
     ));
 
-    $devsettings->add(new admin_setting_configtext(
+    // HTTPS is enforced: the overrides carry prompts and syllabus files, so
+    // plain HTTP is only accepted for localhost under developer debugging.
+    $devsettings->add(new \local_coursegen\admin\setting_https_url(
         'local_coursegen/datacurso_service_url',
         get_string('datacurso_service_url', 'local_coursegen'),
         get_string('datacurso_service_url_desc', 'local_coursegen'),
@@ -78,7 +80,7 @@ if ($hassiteconfig) {
         PARAM_URL
     ));
 
-    $devsettings->add(new admin_setting_configtext(
+    $devsettings->add(new \local_coursegen\admin\setting_https_url(
         'local_coursegen/datacurso_service_url_eu',
         get_string('datacurso_service_url_eu', 'local_coursegen'),
         get_string('datacurso_service_url_eu_desc', 'local_coursegen'),
@@ -104,16 +106,16 @@ if ($hassiteconfig) {
 
     $ADMIN->add($pluginname, new admin_externalpage(
         'local_coursegen_manage_templates',
-        get_string('managetemplates', 'local_coursegen'),
+        get_string('templates_manage', 'local_coursegen'),
         new moodle_url('/local/coursegen/manage_templates.php'),
-        'local/coursegen:viewtemplates'
+        'local/coursegen:managetemplates'
     ));
 
     $ADMIN->add($pluginname, new admin_externalpage(
         'local_coursegen_edit_template',
-        get_string('template_create', 'local_coursegen'),
+        get_string('template_edit', 'local_coursegen'),
         new moodle_url('/local/coursegen/edit_template.php'),
-        ['local/coursegen:createtemplates', 'local/coursegen:edittemplates'],
+        'local/coursegen:managetemplates',
         true
     ));
 

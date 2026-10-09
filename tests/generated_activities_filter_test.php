@@ -21,11 +21,9 @@ use local_coursegen\local\service\generated_activities_filter;
 /**
  * Unit tests for generated_activities_filter::only_ai_written().
  *
- * This is the exact check finish_template_generation.php runs on every
- * finished generation. An earlier version of it compared an activity's cmid
- * against a base number that stood for virtual instances, which crashed every
- * real generation once that number was gone. These tests exercise only the
- * action field, never a cmid's numeric shape.
+ * It is the check finish_template_generation.php runs on every finished generation: only the activities the
+ * run was asked to modify are written by the AI. The kept ones are copied from the template, and a resource
+ * whose file the run replaced is a copy of the template resource with another file.
  *
  * @package    local_coursegen
  * @category   test
@@ -35,103 +33,103 @@ use local_coursegen\local\service\generated_activities_filter;
  */
 final class generated_activities_filter_test extends \basic_testcase {
     /**
-     * An activity submitted with action "instance" - the one a virtual
-     * instance is always submitted with - is kept.
+     * An activity modified by the AI is written by it.
      */
-    public function test_instance_activity_is_kept(): void {
-        $activities = [$this->activity('instance')];
-
-        $result = generated_activities_filter::only_ai_written($activities);
+    public function test_a_modified_activity_is_kept(): void {
+        $result = generated_activities_filter::only_ai_written([$this->activity('modify', 'page', 11342)]);
 
         $this->assertCount(1, $result);
     }
 
     /**
-     * The retired "modify" action is not an instance, so it is dropped.
+     * A kept activity travels back unchanged and is not written.
      */
-    public function test_retired_modify_activity_is_dropped(): void {
-        $activities = [$this->activity('modify')];
-
-        $result = generated_activities_filter::only_ai_written($activities);
+    public function test_a_kept_activity_is_dropped(): void {
+        $result = generated_activities_filter::only_ai_written([$this->activity('keep', 'page', 11335)]);
 
         $this->assertSame([], $result);
     }
 
     /**
-     * A "keep" activity - a real activity travelling back only as context -
-     * is dropped.
+     * Any action the service does not know is dropped.
      */
-    public function test_keep_activity_is_dropped(): void {
-        $activities = [$this->activity('keep')];
+    public function test_an_unknown_action_is_dropped(): void {
+        foreach (['reference', 'instance', 'template', 'space', 'exclude', 'MODIFY', ''] as $action) {
+            $result = generated_activities_filter::only_ai_written([$this->activity($action, 'page', 1)]);
+            $this->assertSame([], $result, 'Action: ' . $action);
+        }
+    }
 
-        $result = generated_activities_filter::only_ai_written($activities);
+    /**
+     * An activity with no template_behavior is dropped instead of crashing.
+     */
+    public function test_an_activity_without_behavior_is_dropped(): void {
+        $result = generated_activities_filter::only_ai_written([['resource_type' => 'page', 'parameters' => []]]);
 
         $this->assertSame([], $result);
     }
 
     /**
-     * A "reference" activity is dropped, the same as "keep".
+     * A resource whose file the run replaced is not written by the AI, even when it is marked as modified.
      */
-    public function test_reference_activity_is_dropped(): void {
-        $activities = [$this->activity('reference')];
+    public function test_a_file_resource_with_a_replacement_file_is_dropped(): void {
+        $resource = $this->activity('modify', 'resource', 11340);
+        $resource['generated_files'] = [['file_id' => 'f1', 'filename' => 'guide.pdf', 'role' => 'main']];
 
-        $result = generated_activities_filter::only_ai_written($activities);
+        $result = generated_activities_filter::only_ai_written([$resource]);
 
         $this->assertSame([], $result);
     }
 
     /**
-     * An activity with no template_behavior at all - malformed input, not
-     * something the real payload ever sends - is dropped rather than
-     * crashing, since an absent action is never "instance".
+     * A resource marked as modified that got no file is still written by the AI.
      */
-    public function test_activity_with_no_template_behavior_is_dropped(): void {
-        $activities = [['resource_type' => 'page', 'parameters' => []]];
+    public function test_a_modified_resource_without_a_file_is_kept(): void {
+        $result = generated_activities_filter::only_ai_written([$this->activity('modify', 'resource', 11340)]);
 
-        $result = generated_activities_filter::only_ai_written($activities);
-
-        $this->assertSame([], $result);
+        $this->assertCount(1, $result);
     }
 
     /**
-     * A mixed batch keeps only the instance entries, in their original order,
-     * regardless of the cmid each one carries - proving the filter never
-     * reads a cmid's value or shape, only the action.
+     * A mixed batch keeps only the modified activities, in their original order.
      */
-    public function test_mixed_batch_keeps_only_instance_entries_regardless_of_cmid(): void {
+    public function test_a_mixed_batch_keeps_only_the_modified_ones_in_order(): void {
+        $resource = $this->activity('modify', 'resource', 11340);
+        $resource['generated_files'] = [['file_id' => 'f1', 'filename' => 'guide.pdf']];
         $activities = [
-            $this->activity('keep', 5),
-            $this->activity('instance', -1),
-            $this->activity('reference', 12),
-            $this->activity('instance', 900007),
+            $this->activity('keep', 'forum', 5),
+            $this->activity('modify', 'page', 11342),
+            $resource,
+            $this->activity('modify', 'quiz', 900007),
         ];
 
         $result = generated_activities_filter::only_ai_written($activities);
 
         $this->assertCount(2, $result);
-        $this->assertSame(-1, $result[0]['cmid']);
+        $this->assertSame(11342, $result[0]['cmid']);
         $this->assertSame(900007, $result[1]['cmid']);
     }
 
     /**
      * An empty batch returns an empty list.
      */
-    public function test_empty_batch_returns_empty_list(): void {
+    public function test_an_empty_batch_returns_an_empty_list(): void {
         $this->assertSame([], generated_activities_filter::only_ai_written([]));
     }
 
     /**
-     * One payload activity entry with the given action and cmid.
+     * One entry of the result with the given action, type and cmid.
      *
-     * @param string $action
-     * @param int $cmid
-     * @return array
+     * @param string $action Action of the template_behavior.
+     * @param string $type Module name.
+     * @param int $cmid Course module id.
+     * @return array The entry.
      */
-    private function activity(string $action, int $cmid = 0): array {
+    private function activity(string $action, string $type, int $cmid): array {
         return [
-            'resource_type' => 'page',
             'cmid' => $cmid,
-            'parameters' => ['name' => 'Test'],
+            'resource_type' => $type,
+            'parameters' => ['name' => 'Activity'],
             'template_behavior' => ['action' => $action],
         ];
     }

@@ -20,14 +20,15 @@
     "Course sections" review on the create-template screen: one collapsible
     card per section (expanded by default) holding a report-style table of
     its activities. Each row carries a selection checkbox and a compact
-    action select preselected with its type's default action; each section
-    table a select-all checkbox in its header, and ONE global bulk action
-    bar sits below all the cards ("With selected activities…", born
-    disabled). local/template/sections_events.js binds all of them after
-    every render (initial page load and AJAX course switch).
+    action select (keep intact, or modify with AI, which shows an optional
+    instruction under the row); each section table a select-all checkbox in
+    its header, and ONE global bulk action bar sits below all the cards
+    ("With selected activities…", born disabled). local/template/
+    sections_events.js binds all of them after every render (initial page
+    load and AJAX course switch).
 
-    The collapse ids are deterministic (course id + section id) instead of
-    the uniqid helper: its output can start with a digit, which is not a
+    The collapse ids are deterministic (course id + section number) instead
+    of the uniqid helper: its output can start with a digit, which is not a
     valid CSS identifier, so Bootstrap 4 silently drops the data-target
     selector and the toggle does nothing. (No literal double closing braces
     may appear anywhere in this comment either — they would end it early
@@ -38,98 +39,54 @@
 
     Data attributes required for JS:
     * data-for="section" data-id on each section card
-    * data-for="cmitem" data-id + data-modname + data-typelabel on each
-      real activity row (data-typelabel lets the instance-menu builder read
-      a template mold's type label without a string lookup)
-    * data-for="instancerow" data-instance-id on each virtual instance row
-      (never carries data-modname: it must stay outside every selector that
-      targets real activities, e.g. selection_bulk.js's checkbox queries or
-      type_action_sync.js's default-seeding pass)
-    * data-region="section-behavior" data-sid on each header's behavior select
+    * data-for="cmitem" data-id + data-modname on each activity row
+    * data-for="instruction" data-id on the row under an activity that holds
+      its instruction field (hidden unless the activity is modified with AI)
     * data-region="activity-action" data-id on each row's action select
+    * data-region="activity-instruction" data-id on each row's instruction textarea
     * data-region="activity-select" data-id on each row's checkbox
     * data-region="select-all" on each section table's header checkbox
     * data-region="section-select-all" data-sid on each section card
       header's checkbox (usable while the section is collapsed)
     * data-region="bulk-action" on the single global bulk select
-    * data-region="template-tag" data-id + data-name + data-tag-course +
-      data-tag-section on each row's clickable "Template" tag, next to the
-      activity name (hidden unless the row's action is "template") — opens
-      local/template/template_scope_modal.js to set/change the row's scope
-    * data-region="row-gap" on the thin hover-reveal strip rendered after
-      every row except the section's last one (that gap is skipped: the
-      persistent "Add activity" row right below already covers the same
-      insertion point), and data-region="add-instance" on that persistent trailing
-      "Add activity from a template" row — each trigger carries
-      data-toggle="dropdown" (so Bootstrap's own outside-click/Escape
-      handling can close it) and sits inside its own dropdown wrapper
-      (data-region="local_coursegen/template/instance-dropdown") next to an
-      empty menu sibling (data-region="local_coursegen/template/instance-dropdown-menu")
-      (local/template/template_instance_menu.js renders the picker body into
-      that sibling and opens it as a native Bootstrap dropdown); picking an
-      item inserts that template's instance immediately before the element
-      that follows the trigger
 
     Each "rows" entry is rendered by the local_coursegen/template_course_sections_row
-    partial (its own row plus the hover-reveal gap after it) — split out to
-    keep this file under the project's 250-line cap.
-    * data-region="local_coursegen/template/space-tag" data-id on each real
-      row's clickable space badge (hidden unless the row's action is
-      "space"), and data-region="local_coursegen/template/space-row" on each
-      virtual space row (see template_space_row.mustache)
-    * data-region="instance-name" data-id on each instance row's editable
-      name input
-    * data-region="instance-prompt-toggle" data-id on each instance row's
-      edit-instructions icon; data-region="instance-remove" data-id on its
-      remove icon
+    partial (the activity row plus its instruction row) — split out to keep
+    this file small.
 
     Context variables required for this template:
     * courseid int          - Base course id (keeps collapse ids unique per course)
     * hassections bool      - True when the course has any section
-    * scopelabelcourse string  - "Whole course" scope label, for the tag's data-tag-course
-    * scopelabelsection string - "This section only" scope label, for data-tag-section
-    * spacebadgerequired string - "Space · Required", for the space badge's data-badge-required
-    * spacebadgeoptional string - "Space · Optional", for the space badge's data-badge-optional
     * sections array   - Sections, each with: id int, num int, name string,
                          activitycount int, hasactivities bool,
-                         actions array (value, sectionid, label, tip, active),
-                         rows array, each either a real activity row
-                         (isreal true, isinstance false, cmid, name, modname,
-                         typelabel, iconurl, viewurl, actions array,
-                         istemplate bool, scopelabel string) or a virtual
-                         instance row (isreal false, isinstance true,
-                         instanceid, name, typelabel, prompt, sourcecmid,
-                         sourcename, badge string) — every entry also
-                         carries islast bool (true only for the section's
-                         final row, which renders no trailing gap)
+                         rows array (cmid, name, viewurl, modname, typelabel,
+                         iconurl, actions array (value, cmid, label, tip, active),
+                         isai bool, instruction string)
 
     Example context (json):
     {
         "courseid": 3,
         "hassections": true,
-        "scopelabelcourse": "Whole course",
-        "scopelabelsection": "This section only",
         "sections": [
             {
-                "id": 11,
+                "id": 1,
                 "num": 1,
                 "name": "Topic 1",
                 "activitycount": 1,
                 "hasactivities": true,
-                "actions": [
-                    {"value": "custom", "sectionid": 11, "label": "Customised", "tip": "Configure each activity", "active": true}
-                ],
                 "rows": [
                     {
-                        "isreal": true,
-                        "isinstance": false,
                         "cmid": 42,
                         "name": "Welcome page",
+                        "viewurl": "https://example.com/mod/page/view.php?id=42",
                         "modname": "page",
                         "typelabel": "Page",
                         "iconurl": "https://example.com/theme/image.php/boost/page/1/monologo",
+                        "isai": true,
+                        "instruction": "Rewrite it for the new group",
                         "actions": [
-                            {"value": "keep", "cmid": 42, "label": "Keep intact", "tip": "The activity is copied exactly as is", "active": true}
+                            {"value": "keep", "cmid": 42, "label": "Keep intact", "tip": "The AI never touches the activity", "active": false},
+                            {"value": "ai", "cmid": 42, "label": "Modify with AI", "tip": "The AI modifies the activity following your instruction", "active": true}
                         ]
                     }
                 ]
@@ -159,15 +116,6 @@
                     {{#str}} template_activities_count, local_coursegen, {{activitycount}} {{/str}}
                 </span>
             </button>
-            {{! A sibling of the collapse toggle, never inside it: opening
-                the select must not collapse/expand the section. }}
-            <select class="custom-select custom-select-sm tpl-section-behavior ml-auto"
-                    data-region="section-behavior" data-sid="{{id}}"
-                    aria-label="{{#str}} actions, core {{/str}}">
-                {{#actions}}
-                <option value="{{value}}" title="{{tip}}"{{#active}} selected{{/active}}>{{label}}</option>
-                {{/actions}}
-            </select>
         </div>
         <div class="collapse show" id="local-coursegen-tpl-section-{{courseid}}-{{id}}">
             <table class="table generaltable table-hover mb-0 tpl-activity-table">
@@ -186,19 +134,6 @@
                     {{#rows}}
                     {{> local_coursegen/template_course_sections_row}}
                     {{/rows}}
-                    <tr class="tpl-row-add" data-region="add-instance">
-                        <td colspan="4">
-                            <div class="dropdown tpl-instance-dropdown" data-region="local_coursegen/template/instance-dropdown">
-                                <button type="button" class="tpl-add-instance-btn" data-instance-menu-trigger
-                                        data-toggle="dropdown"
-                                        aria-haspopup="true" aria-expanded="false">
-                                    <span>&#65291;</span>
-                                    <span>{{#str}} template_add_menu, local_coursegen {{/str}}</span>
-                                </button>
-                                <div class="dropdown-menu tpl-instance-menu" role="menu" data-region="local_coursegen/template/instance-dropdown-menu"></div>
-                            </div>
-                        </td>
-                    </tr>
                 </tbody>
             </table>
         </div>
@@ -213,10 +148,8 @@
                 id="local-coursegen-bulk-action-{{courseid}}"
                 data-region="bulk-action" disabled>
             <option value="" selected>{{#str}} choosedots, core {{/str}}</option>
-            <option value="template">{{#str}} template_activity_template, local_coursegen {{/str}}</option>
             <option value="keep">{{#str}} template_activity_keep, local_coursegen {{/str}}</option>
-            <option value="reference">{{#str}} template_activity_reference, local_coursegen {{/str}}</option>
-            <option value="exclude">{{#str}} template_activity_exclude, local_coursegen {{/str}}</option>
+            <option value="ai">{{#str}} template_activity_ai, local_coursegen {{/str}}</option>
         </select>
     </div>
 {{/hassections}}

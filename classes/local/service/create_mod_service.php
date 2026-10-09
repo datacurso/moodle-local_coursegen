@@ -17,10 +17,13 @@
 namespace local_coursegen\local\service;
 
 use local_coursegen\mod_settings\base_settings;
+use local_coursegen\utils\generated_files_scope;
+use local_coursegen\utils\preview_draft_store;
 use local_coursegen\utils\text_editor_parameter_cleaner;
 
 defined('MOODLE_INTERNAL') || die();
 require_once($CFG->dirroot . '/course/externallib.php');
+require_once($CFG->dirroot . '/course/lib.php');
 require_once($CFG->dirroot . '/course/modlib.php');
 
 /**
@@ -38,9 +41,10 @@ class create_mod_service {
      * @param object $course Course object
      * @param int $sectionnum Section number where the module will be created
      * @param int|null $beforemod Before module id where the module will be created
-     * @param int|null $sourcecourseid Course whose files the payload's rich text may
+     * @param int|null $sourcecourseid Course whose files the payload's texts may
      *     reference by pluginfile URL (the template's base course); null lets any
      *     course the current user can access through.
+     * @param preview_draft_store|null $store Draft area the files of the run are in; null when the run made none.
      *
      * @return object New course module.
      */
@@ -49,8 +53,32 @@ class create_mod_service {
         $course,
         $sectionnum,
         $beforemod = null,
-        ?int $sourcecourseid = null
+        ?int $sourcecourseid = null,
+        ?preview_draft_store $store = null
     ) {
+        $generatedfiles = $resultinfo['generated_files'] ?? [];
+        if (!$generatedfiles || $store === null) {
+            return self::create_module($resultinfo, $course, $sectionnum, $beforemod, $sourcecourseid);
+        }
+        // The files the AI service made for this activity are in scope while its texts are saved.
+        $creation = static function () use ($resultinfo, $course, $sectionnum, $beforemod, $sourcecourseid) {
+            return self::create_module($resultinfo, $course, $sectionnum, $beforemod, $sourcecourseid);
+        };
+        $uid = (string) ($resultinfo['uid'] ?? '');
+        return generated_files_scope::run($uid, $generatedfiles, $creation, $store);
+    }
+
+    /**
+     * Create the module once the files of its result are in scope.
+     *
+     * @param array $resultinfo Result info from response of AI service
+     * @param object $course Course object
+     * @param int $sectionnum Section number where the module will be created
+     * @param int|null $beforemod Before module id where the module will be created
+     * @param int|null $sourcecourseid Course whose files the payload's rich text may reference.
+     * @return object New course module.
+     */
+    private static function create_module($resultinfo, $course, $sectionnum, $beforemod, ?int $sourcecourseid) {
 
         self::validate_resultinfo($resultinfo);
 
@@ -58,24 +86,32 @@ class create_mod_service {
 
         self::validate_mod_existence($modname);
 
+        if (activity_from_structure::applies($resultinfo)) {
+            return activity_from_structure::create($resultinfo, $course, (int) $sectionnum, $sourcecourseid);
+        }
+
         [ $module, $context, $cw, $cm, $data ] = prepare_new_moduleinfo_data($course, $modname, $sectionnum);
 
         $mform = self::create_mod_form_instance($modname, $data, $cw, $cm, $course);
 
+        $rawcmid = $resultinfo['cmid'] ?? 0;
+        $sourcecmid = (int) $rawcmid;
         $parameters = self::prepare_parameters(
             $modname,
             $resultinfo['parameters'],
             $sectionnum,
             $beforemod,
             $module->id,
-            $sourcecourseid
+            $sourcecmid
         );
 
         $newcm = add_moduleinfo($parameters, $course, $mform);
 
         $modsettings = $parameters->mod_settings;
 
-        self::apply_mod_settings($modname, $newcm, $modsettings, $sourcecourseid);
+        self::apply_mod_settings($modname, $newcm, $modsettings);
+
+        new_activity_files::give($modname, $newcm, (string) ($parameters->name ?? ''), $sourcecourseid);
 
         return $newcm;
     }
@@ -168,7 +204,6 @@ class create_mod_service {
      * @param int $sectionnum Target section number.
      * @param int|null $beforemod Optional cm id to insert before.
      * @param int $moduleid Module id from 'modules' table.
-     * @param int|null $sourcecourseid Course whose files may be copied into the editors' drafts.
      * @return object Parameters ready for add_moduleinfo().
      */
     private static function prepare_parameters(
@@ -177,13 +212,16 @@ class create_mod_service {
         $sectionnum,
         $beforemod,
         $moduleid,
-        ?int $sourcecourseid = null
+        int $sourcecmid = 0
     ) {
-        $cleanedparameters = text_editor_parameter_cleaner::clean_text_editor_objects($rawparameters, $sourcecourseid);
+        $cleanedparameters = text_editor_parameter_cleaner::clean_text_editor_objects($rawparameters);
         $parameters = (object)$cleanedparameters;
         $parameters->section = $sectionnum;
         $parameters->beforemod = $beforemod;
         $parameters->module = $moduleid;
+        if ($sourcecmid > 0) {
+            $parameters->source_cmid = $sourcecmid;
+        }
 
         $parameters = self::process_mod_parameters($modname, $parameters);
 
@@ -278,14 +316,12 @@ class create_mod_service {
      * @param string $modname Module plugin name.
      * @param object $newcm Newly created course module.
      * @param array|null $modsettings Settings to apply.
-     * @param int|null $sourcecourseid Course whose files the settings' rich text may reference.
      * @return void
      */
     private static function apply_mod_settings(
         string $modname,
         $newcm,
-        ?array $modsettings,
-        ?int $sourcecourseid = null
+        ?array $modsettings
     ): void {
         if (empty($modsettings)) {
             return;
@@ -301,7 +337,7 @@ class create_mod_service {
         }
 
         /** @var base_settings $modsettingsinstance */
-        $modsettingsinstance = new $classpath($newcm, $modsettings, $sourcecourseid);
+        $modsettingsinstance = new $classpath($newcm, $modsettings);
         $modsettingsinstance->add_settings();
     }
 

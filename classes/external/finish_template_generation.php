@@ -32,11 +32,20 @@ use external_value;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\activity_link_resolver;
 use local_coursegen\local\service\course_creation_guard;
-use local_coursegen\local\service\course_session_service;
+use local_coursegen\local\service\course_review_service;
 use local_coursegen\local\service\create_course_service;
+use local_coursegen\local\service\agent_result_activities;
 use local_coursegen\local\service\generated_activities_filter;
+use local_coursegen\local\service\kept_link_rewriter;
 use local_coursegen\local\service\template_ai_api_service;
+use local_coursegen\local\service\template_creation_rollback;
+use local_coursegen\local\service\template_files_cleaner;
+use local_coursegen\local\service\template_course_order;
+use local_coursegen\local\service\template_creation_report;
+use local_coursegen\local\service\template_file_resource_applier;
+use local_coursegen\local\service\template_file_resources;
 use local_coursegen\local\service\template_keep_copier;
+use local_coursegen\utils\preview_draft_store;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -51,6 +60,28 @@ require_once($CFG->libdir . '/externallib.php');
  * finished, not to carry a whole course through itself.
  */
 class finish_template_generation extends external_api {
+    /** @var template_ai_api_service|null Client of the service that tests put in place of the real one. */
+    private static ?template_ai_api_service $apioverride = null;
+
+    /**
+     * Replaces the client of the service; null brings the real one back.
+     *
+     * @param template_ai_api_service|null $api
+     * @return void
+     */
+    public static function set_api_service(?template_ai_api_service $api): void {
+        self::$apioverride = $api;
+    }
+
+    /**
+     * The client of the service.
+     *
+     * @return template_ai_api_service
+     */
+    private static function get_api_service(): template_ai_api_service {
+        return self::$apioverride ?? new template_ai_api_service();
+    }
+
     /**
      * Parameters.
      *
@@ -59,6 +90,9 @@ class finish_template_generation extends external_api {
     public static function execute_parameters() {
         return new external_function_parameters([
             'sessionid' => new external_value(PARAM_INT, 'Local session id'),
+            'fullname' => new external_value(PARAM_TEXT, 'Course fullname chosen at the review', VALUE_DEFAULT, ''),
+            'shortname' => new external_value(PARAM_TEXT, 'Course shortname chosen at the review', VALUE_DEFAULT, ''),
+            'category' => new external_value(PARAM_INT, 'Course category chosen at the review', VALUE_DEFAULT, 0),
         ]);
     }
 
@@ -66,12 +100,20 @@ class finish_template_generation extends external_api {
      * Build the course from the finished result.
      *
      * @param int $sessionid
+     * @param string $fullname Course fullname chosen at the review.
+     * @param string $shortname Course shortname chosen at the review.
+     * @param int $category Course category chosen at the review.
      * @return array
      */
-    public static function execute($sessionid) {
+    public static function execute($sessionid, $fullname = '', $shortname = '', $category = 0) {
         global $USER, $CFG;
 
-        $params = self::validate_parameters(self::execute_parameters(), ['sessionid' => $sessionid]);
+        $params = self::validate_parameters(self::execute_parameters(), [
+            'sessionid' => $sessionid,
+            'fullname' => $fullname,
+            'shortname' => $shortname,
+            'category' => $category,
+        ]);
 
         $context = context_system::instance();
         self::validate_context($context);
@@ -84,11 +126,12 @@ class finish_template_generation extends external_api {
 
         // A reconnecting client can land here twice; the course is built once.
         if ((int) $session->get('status') === course_session::STATUS_CREATED) {
-            return self::created_response((int) $session->get('courseid'), $CFG->wwwroot);
+            return self::created_response((int) $session->get('courseid'), $CFG->wwwroot, '');
         }
 
-        $api = new template_ai_api_service();
+        $api = self::get_api_service();
         $result = $api->get_result($session->get('session_id'));
+        $result = agent_result_activities::placed($result);
         $templateid = self::template_id_of($session);
 
         // Only the AI-generated activities are built from the payload. The
@@ -96,50 +139,65 @@ class finish_template_generation extends external_api {
         // the base course - they are copied below instead of being rebuilt
         // from a JSON description that could never carry all of that.
         $generatedactivities = $result['generated_activities'] ?? [];
-        $result['generated_activities'] = generated_activities_filter::only_ai_written($generatedactivities);
+        $fileresources = template_file_resources::select($generatedactivities);
+        $writtenactivities = generated_activities_filter::only_ai_written($generatedactivities);
+        $result['generated_activities'] = $writtenactivities;
 
-        $created = create_course_service::create_course($session, $result);
-        course_creation_guard::ensure_created($created);
-        $courseid = $created['courseid'] ?? 0;
-        $courseid = (int) $courseid;
-        $keptcms = [];
-        if ($courseid > 0 && $templateid !== null && $templateid > 0) {
-            template_keep_copier::copy_into($templateid, $courseid, $keptcms);
+        $overrides = course_review_service::overrides(
+            (string) $params['fullname'],
+            (string) $params['shortname'],
+            (int) $params['category']
+        );
+        try {
+            $created = create_course_service::create_course($session, $result, $overrides);
+            course_creation_guard::ensure_created($created);
+            $courseid = $created['courseid'] ?? 0;
+            $courseid = (int) $courseid;
+            $keptcms = [];
+            if ($courseid > 0 && $templateid !== null && $templateid > 0) {
+                $extracmids = template_file_resources::cmids($fileresources);
+                template_keep_copier::copy_into($templateid, $courseid, $keptcms, $extracmids);
+            }
+            $threadid = (string) $session->get('session_id');
+            $store = new preview_draft_store((int) $session->get('id'), $threadid, [$api, 'download_generated_file']);
+            $applier = new template_file_resource_applier($store);
+            $failedfiles = $applier->apply($fileresources, $keptcms);
+            $generatedcms = $created['generatedcms'] ?? [];
+            self::arrange_course($templateid, $courseid, $generatedactivities, $generatedcms, $keptcms);
+            activity_link_resolver::resolve_for_course($courseid, $generatedactivities, $generatedcms, $keptcms);
+        } catch (\Throwable $exception) {
+            // The course is complete or it is not made: nothing is left behind for the professor to find.
+            template_creation_rollback::undo(new course_session((int) $session->get('id')));
+            throw $exception;
         }
-        $generatedcms = $created['generatedcms'] ?? [];
-        self::resolve_activity_links($session, $courseid, $generatedactivities, $generatedcms, $keptcms);
+        $store->discard();
+        template_files_cleaner::discard($threadid, $api);
 
-        return self::created_response($courseid, $CFG->wwwroot);
+        $warnings = template_creation_report::warnings($created, $failedfiles, $writtenactivities);
+        return self::created_response($courseid, $CFG->wwwroot, $warnings);
     }
 
     /**
-     * Turn the link tokens of the generated activities into real URLs.
+     * Make the kept activities and the order of the course follow the template.
      *
-     * Runs once every activity exists, the copied kept ones included, since a
-     * token may name any of them. When one cannot be resolved the generation
-     * is marked failed, so a retry is not answered as if it had finished, and
-     * the error reaches the caller.
-     *
-     * @param course_session $session
+     * @param int|null $templateid
      * @param int $courseid
      * @param array $payloadactivities Every activity entry of the result, kept ones included.
      * @param array $generatedcms Payload cmid => created cmid, for the generated activities.
      * @param array $keptcms Payload cmid => created cmid, for the copied kept activities.
      */
-    private static function resolve_activity_links(
-        course_session $session,
+    private static function arrange_course(
+        ?int $templateid,
         int $courseid,
         array $payloadactivities,
         array $generatedcms,
         array $keptcms
     ): void {
-        try {
-            activity_link_resolver::resolve_for_course($courseid, $payloadactivities, $generatedcms, $keptcms);
-        } catch (\Throwable $exception) {
-            $sessionid = (int) $session->get('id');
-            course_session_service::update_status($sessionid, course_session::STATUS_FAILED);
-            throw $exception;
+        if ($courseid <= 0 || $templateid === null || $templateid <= 0) {
+            return;
         }
+        kept_link_rewriter::rewrite_for_course($courseid, $payloadactivities, $generatedcms, $keptcms);
+        template_course_order::apply($templateid, $courseid, $generatedcms, $keptcms);
     }
 
     /**
@@ -160,21 +218,23 @@ class finish_template_generation extends external_api {
     }
 
     /**
-     * The finished response shape.
+     * The finished response shape, the one creating a course without a template answers with.
      *
      * @param int $courseid
      * @param string $wwwroot
+     * @param string $warnings What the course is missing, in plain words; empty when nothing is.
      * @return array
      */
-    private static function created_response(int $courseid, string $wwwroot): array {
-        $courseurl = '';
-        if ($courseid > 0) {
-            $courseurl = $wwwroot . '/course/view.php?id=' . $courseid;
-        }
+    private static function created_response(int $courseid, string $wwwroot, string $warnings): array {
+        $course = get_course($courseid);
         return [
-            'status' => 'completed',
+            'success' => true,
             'courseid' => $courseid,
-            'courseurl' => $courseurl,
+            'fullname' => $course->fullname,
+            'shortname' => $course->shortname,
+            'message' => get_string('coursecreated', 'local_coursegen'),
+            'courseurl' => $wwwroot . '/course/view.php?id=' . $courseid,
+            'warnings' => $warnings,
         ];
     }
 
@@ -185,9 +245,13 @@ class finish_template_generation extends external_api {
      */
     public static function execute_returns() {
         return new external_single_structure([
-            'status' => new external_value(PARAM_ALPHA, 'Always "completed" once the course exists'),
+            'success' => new external_value(PARAM_BOOL, 'Always true once the course exists'),
             'courseid' => new external_value(PARAM_INT, 'Created course id'),
+            'fullname' => new external_value(PARAM_TEXT, 'Course fullname'),
+            'shortname' => new external_value(PARAM_TEXT, 'Course shortname'),
+            'message' => new external_value(PARAM_TEXT, 'Status message'),
             'courseurl' => new external_value(PARAM_RAW, 'Created course URL'),
+            'warnings' => new external_value(PARAM_TEXT, 'Warning to show after the course exists, empty when none'),
         ]);
     }
 }

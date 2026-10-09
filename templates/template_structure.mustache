@@ -31,51 +31,45 @@
 
     Data attributes required for JS:
     * data-action="local_coursegen/template/toggle-section" on the section chevron
-    * data-action="local_coursegen/template/open-chooser" on "+ Add activity" triggers
-      and on the between-activities insert dividers (data-section-index, optional data-position)
-    * data-action="local_coursegen/template/remove-activity" on the per-activity delete
-      control (data-section-index, data-activity-index)
-    * data-action="local_coursegen/template/add-section" on the bottom "+ Add section" button
 
     A section/activity has no id of its own here: every data-section-index and
     data-activity-index is a position in the in-memory model (state.js), not a
-    database id — a row the professor just added has no id at all yet, and a
-    row loaded from the server addresses clicks the exact same way a new one
-    does, so there is only one addressing scheme, not two.
+    database id, so a row loaded from the server and a click on it are addressed
+    the same way.
 
     Context variables required for this template:
-    * sections array - index int, name string, locked bool, activitiescount int,
-      showaddactivity bool, activities array
+    * sections array - index int, name string, locked bool, collapsed bool, activitiescount int, activities array
         * activities[].name string, modname string (may be empty),
           purpose string, iconhtml string (raw, may be empty), locked bool,
           isinstance bool, aigenerated bool (shows the "AI will generate it"
-          badge), generationuid string (optional; the id a live progress
-          event and its own preview answer to), sectionindex int, index int,
-          typelabel string (optional), showinsertzone bool
-    * showaddsection bool
-    * addsectiondisabled bool
-    * addsectionlabel string
+          badge), generationuid string (optional; the opaque uid its own preview
+          answers to), generationcmid int (optional; the course module the live
+          progress events name the activity by), sectionindex int, index int,
+          typelabel string (optional)
 
     Example context (json):
     {
         "sections": [
             {
-                "index": 0, "name": "Introduction", "locked": true, "collapsed": false,
-                "activitiescount": 1, "showaddactivity": false,
+                "index": 0, "name": "Introduction", "locked": false, "collapsed": false,
+                "activitiescount": 2,
                 "activities": [
                     {
                         "name": "Welcome page", "modname": "page", "purpose": "content",
                         "iconhtml": "<img class=\"icon activityicon\" src=\"#\" alt=\"\">",
                         "locked": true, "isinstance": false, "aigenerated": false,
-                        "sectionindex": 0, "index": 0, "typelabel": "Page",
-                        "showinsertzone": false
+                        "sectionindex": 0, "index": 0, "typelabel": "Page"
+                    },
+                    {
+                        "name": "Weekly guide", "modname": "resource", "purpose": "content",
+                        "iconhtml": "<img class=\"icon activityicon\" src=\"#\" alt=\"\">",
+                        "locked": false, "isinstance": false, "aigenerated": true,
+                        "generationuid": "3f2a9c1e-77b4-4e0a-9d21-5c8f1b2e7a90", "generationcmid": 11340,
+                        "sectionindex": 0, "index": 1, "typelabel": "File"
                     }
                 ]
             }
-        ],
-        "showaddsection": true,
-        "addsectiondisabled": false,
-        "addsectionlabel": "Add section (3)"
+        ]
     }
 }}
 <ul class="course-content course-section-list list-unstyled m-0" data-region="template-section-list">
@@ -114,21 +108,7 @@
           {{#activities}}
           <li class="activity activity-wrapper {{modname}} modtype_{{modname}}{{#locked}} is-locked{{/locked}}"
               data-section-index="{{sectionindex}}" data-activity-index="{{index}}"
-              {{#generationuid}}data-generation-uid="{{generationuid}}"{{/generationuid}}>
-            {{#showinsertzone}}
-            <div class="cg-insert-zone" role="presentation">
-              <button type="button" class="cg-insert-btn"
-                      data-action="local_coursegen/template/open-chooser"
-                      data-section-index="{{sectionindex}}" data-position="{{index}}"
-                      aria-label="{{#str}}courseai_template_add_activity, local_coursegen{{/str}}"
-                      title="{{#str}}courseai_template_add_activity, local_coursegen{{/str}}">
-                <svg viewBox="0 0 24 24" width="16" height="16" fill="none" stroke="currentColor"
-                     stroke-width="2.5" stroke-linecap="round" aria-hidden="true">
-                  <path d="M12 5v14M5 12h14"/>
-                </svg>
-              </button>
-            </div>
-            {{/showinsertzone}}
+              {{#generationuid}}data-generation-uid="{{generationuid}}" data-generation-cmid="{{generationcmid}}"{{/generationuid}}>
             <div class="activity-item focus-control" data-region="activity-card">
               <div class="activity-grid">
                 <div class="activity-icon activityiconcontainer smaller {{purpose}} courseicon align-self-start me-2">
@@ -148,6 +128,11 @@
                   {{#typelabel}}
                   <p class="cg-activity-desc mb-0">{{typelabel}}</p>
                   {{/typelabel}}
+                  {{#generationuid}}
+                  {{! Notices of the generation about this activity, such as a video it could not find;
+                      filled when the review opens, see template/generation_review.js. }}
+                  <div data-region="local_coursegen/template/generation-notices" data-notice-uid="{{generationuid}}"></div>
+                  {{/generationuid}}
                 </div>
                 <div class="activity-actions cg-item-actions align-self-start ms-sm-2">
                   {{#generationuid}}
@@ -161,42 +146,25 @@
                      title="{{#str}}courseai_preview_activity, local_coursegen{{/str}}">
                     {{#pix}} i/preview, core {{/pix}}
                   </a>
-                  {{/generationuid}}
-                  {{^locked}}
-                  <span class="dp-action-btn dp-action-btn--delete" role="button" tabindex="0"
-                        data-action="local_coursegen/template/remove-activity"
-                        data-section-index="{{sectionindex}}" data-activity-index="{{index}}"
-                        aria-label="{{#str}}courseai_btn_cancel, local_coursegen{{/str}}"
-                        title="{{#str}}courseai_btn_cancel, local_coursegen{{/str}}">
-                    <span class="dp-action-icon dp-action-icon--delete">{{#pix}} t/delete, core {{/pix}}</span>
+                  {{! Asks for a change to this one activity once it is generated.
+                      Hidden until the review is open, because there is nothing
+                      to change before then; see template/generation_review.js. }}
+                  <span class="dp-action-btn cg-adjust-btn" role="button" tabindex="0" hidden
+                        data-action="local_coursegen/template/adjust-activity"
+                        data-generation-uid="{{generationuid}}"
+                        aria-label="{{#str}}courseai_template_adjust_activity, local_coursegen{{/str}}"
+                        title="{{#str}}courseai_template_adjust_activity, local_coursegen{{/str}}">
+                    {{#pix}} i/edit, core {{/pix}}
                   </span>
-                  {{/locked}}
+                  {{/generationuid}}
                 </div>
               </div>
             </div>
           </li>
           {{/activities}}
-          {{#showaddactivity}}
-          <li class="dp-add-activity-wrap">
-            <button type="button" class="dp-add-control"
-                    data-action="local_coursegen/template/open-chooser" data-section-index="{{index}}">
-              <span class="dp-add-control__icon">+</span>
-              <span>{{#str}}courseai_template_add_activity, local_coursegen{{/str}}</span>
-            </button>
-          </li>
-          {{/showaddactivity}}
         </ul>
       </div>
     </div>
   </li>
 {{/sections}}
 </ul>
-{{#showaddsection}}
-<div class="dp-add-section-wrap mt-2">
-  <button type="button" class="dp-add-control{{#addsectiondisabled}} dp-add-control--disabled{{/addsectiondisabled}}"
-          data-action="local_coursegen/template/add-section"{{#addsectiondisabled}} disabled{{/addsectiondisabled}}>
-    <span class="dp-add-control__icon">+</span>
-    <span>{{addsectionlabel}}</span>
-  </button>
-</div>
-{{/showaddsection}}

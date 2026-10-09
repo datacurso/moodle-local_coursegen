@@ -24,8 +24,8 @@ use moodle_url;
  *
  * The entries a glossary holds are written by its users, so a kept glossary
  * arrives without them and previews as the empty glossary it will be created
- * as. A glossary the run writes arrives with the entries the plan intends,
- * which are put in as the rows mod_glossary reads.
+ * as. A glossary the run writes arrives with the entries it intends, already
+ * in its tree as the rows mod_glossary reads.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -39,51 +39,6 @@ class glossary_preview extends preview_base {
      */
     protected function modname(): string {
         return 'glossary';
-    }
-
-    /**
-     * The plan's entries become the glossary's rows.
-     *
-     * @param json_store $store
-     */
-    protected function overlay(json_store $store): void {
-        $rows = $store->get_records('glossary');
-        if (!$rows) {
-            return;
-        }
-        $glossary = reset($rows);
-        $now = time();
-        $id = 1;
-        $entries = $this->parameters['mod_settings']['entries'] ?? [];
-        $usedynalink = $glossary->usedynalink ?? 0;
-        $usedynalink = (int) $usedynalink;
-        foreach ($entries as $entry) {
-            $definition = $entry['definition_editor'] ?? $entry['definition'] ?? '';
-            if (is_array($definition)) {
-                $definition = $definition['text'] ?? '';
-            }
-            $definition = (string) $definition;
-            $concept = $entry['concept'] ?? '';
-            $concept = (string) $concept;
-            $store->add('glossary_entries', [
-                'id' => $id++,
-                'glossaryid' => $glossary->id,
-                'userid' => 0,
-                'concept' => $concept,
-                'definition' => $definition,
-                'definitionformat' => FORMAT_HTML,
-                'definitiontrust' => 0,
-                'attachment' => '',
-                'timecreated' => $now,
-                'timemodified' => $now,
-                'teacherentry' => 1,
-                'sourceglossaryid' => 0,
-                'usedynalink' => $usedynalink,
-                'casesensitive' => 0,
-                'fullmatch' => 1,
-                'approved' => 1,
-            ]);
-        }
     }
 
     /**

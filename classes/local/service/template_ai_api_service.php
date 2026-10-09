@@ -17,21 +17,23 @@
 namespace local_coursegen\local\service;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
+use local_coursegen\local\streaming\stream_type;
 use stored_file;
 
 /**
- * The /course-template endpoints of the AI service.
+ * The /template-agent endpoints of the AI service.
  *
- * /init only seeds the session; opening its SSE stream is what actually runs
- * the generation, exactly as free-mode course creation and single-activity
- * generation already work. Reference files are therefore attached between the
- * two, with no risk of the run starting without the syllabus.
+ * /init seeds the run and opening its SSE stream through the relay is what runs it. When the run pauses on a
+ * question the teacher answers through /feedback and the stream is opened again.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class template_ai_api_service {
+    /** @var string Prefix of every endpoint of the template agent. */
+    private const BASE = '/template-agent';
+
     /** @var ai_course_api Datacurso course API client. */
     private ai_course_api $client;
 
@@ -57,13 +59,14 @@ class template_ai_api_service {
     }
 
     /**
-     * Create the generation session. Seeds it only: the stream runs it.
+     * Create the run of a template generation.
      *
-     * @param array $payload Built by template_export_service::build_init_payload().
-     * @return string The thread id.
+     * @param array $payload Init payload, version 2.
+     * @return string Thread id of the run.
+     * @throws \moodle_exception When the service returns no thread id.
      */
     public function init(array $payload): string {
-        $result = $this->client->request('POST', '/course-template/init', $payload);
+        $result = $this->client->request('POST', self::BASE . '/init', $payload);
         $threadid = $result['thread_id'] ?? '';
         if ($threadid === '') {
             throw new \moodle_exception('error_starting_course_planning', 'local_coursegen');
@@ -72,72 +75,119 @@ class template_ai_api_service {
     }
 
     /**
-     * Attach a reference file (the syllabus) to a session.
+     * Upload the file a question asked for.
      *
-     * @param string $threadid
-     * @param stored_file $file
-     * @return array Decoded response.
+     * @param string $threadid Thread id of the run.
+     * @param stored_file $file File the teacher chose.
+     * @return array The service answer: file_id, original_filename, content_type and size.
      */
-    public function upload_reference_file(string $threadid, stored_file $file): array {
-        return $this->client->upload_file(
-            '/course-template/file/upload',
-            $file,
-            ['thread_id' => $threadid, 'scope' => 'general']
-        );
+    public function upload_answer_file(string $threadid, stored_file $file): array {
+        return (array) $this->client->upload_file(self::BASE . '/file/upload', $file, ['thread_id' => $threadid]);
     }
 
     /**
-     * Answer the review a paused run is waiting on.
+     * Upload the syllabus the teacher attached to the run, to the endpoint that reads documents.
      *
-     * The run stops inside its approval step until this lands. Writing the
-     * answer is all this does; reopening the stream is what resumes it.
+     * It is not the endpoint of the file a question asks for: the syllabus is read before the run starts.
      *
-     * @param string $threadid
-     * @param array $action {action: accept|replan_activity, target_ids?: string[], instruction?: string}
-     * @return array Decoded response.
+     * @param string $threadid Thread of the run, for example "3f2a9c1e-77b4".
+     * @param stored_file $file Syllabus file.
+     * @return array Decoded answer of the service.
      */
-    public function send_feedback(string $threadid, array $action): array {
-        return $this->client->request('POST', '/course-template/feedback', [
+    public function upload_syllabus(string $threadid, stored_file $file): array {
+        return (array) $this->client->upload_file(self::BASE . '/syllabus/upload', $file, ['thread_id' => $threadid]);
+    }
+
+    /**
+     * Answer the question the run is paused on.
+     *
+     * @param string $threadid Thread id of the run.
+     * @param string $callid Call id of the pending question.
+     * @param array $answer Exactly one of file_id, text or choice.
+     * @return array What the service stored.
+     */
+    public function answer(string $threadid, string $callid, array $answer): array {
+        return (array) $this->client->request('POST', self::BASE . '/feedback', [
             'thread_id' => $threadid,
-            'pending_action' => $action,
+            'call_id' => $callid,
+            'answer' => $answer,
         ]);
     }
 
     /**
-     * The SSE URL whose consumption drives one session's generation.
+     * Ask the completed run to change its result; the run reopens from its draft.
      *
-     * Handed to the browser, which opens it directly: the progress events the
-     * graph emits are for the professor to watch live, so proxying them
-     * through Moodle would only add a hop and buffer them.
+     * @param string $threadid Thread id of the run.
+     * @param string $callid Id of this request, so a repeated one is recognised.
+     * @param string $text What to change.
+     * @param string $aid Draft id of the only activity to change, for example "t:11342"; empty for every open activity.
+     * @return array What the service stored: round and aids.
+     */
+    public function adjust(string $threadid, string $callid, string $text, string $aid = ''): array {
+        $body = [
+            'thread_id' => $threadid,
+            'kind' => 'adjust',
+            'call_id' => $callid,
+            'text' => $text,
+        ];
+        if ($aid !== '') {
+            $body['aid'] = $aid;
+        }
+        return (array) $this->client->request('POST', self::BASE . '/feedback', $body);
+    }
+
+    /**
+     * Delete every file the run holds, once the course was created or the teacher cancelled.
      *
-     * @param string $threadid
-     * @return string
+     * Repeating it is harmless. It is never called between adjust rounds: the next round still needs the files.
+     *
+     * @param string $threadid Thread id of the run.
+     */
+    public function delete_files(string $threadid): void {
+        $this->client->request('DELETE', self::BASE . '/files/' . rawurlencode($threadid));
+    }
+
+    /**
+     * Download a file attached to the draft of the run.
+     *
+     * @param string $threadid Thread id of the run.
+     * @param string $fileid File id of the service.
+     * @param string $filename Name to give the stored file.
+     * @param array $filerecord Overrides of the stored file record.
+     * @return stored_file|null The downloaded file in the draft area of the user.
+     */
+    public function download_generated_file(string $threadid, string $fileid, string $filename, array $filerecord): ?stored_file {
+        $endpoint = self::BASE . '/file/' . rawurlencode($threadid) . '/' . rawurlencode($fileid);
+        return $this->client->download_file($endpoint, $filename, $filerecord);
+    }
+
+    /**
+     * The URL the browser reads the stream of the run from. It is the relay of this plugin, never the service.
+     *
+     * @param string $threadid Thread id of the run.
+     * @return string Relay URL.
      */
     public function stream_url(string $threadid): string {
-        return streaming_url_builder::course_template_stream($this->client->get_base_url(), $threadid);
+        return streaming_url_builder::relay(stream_type::TEMPLATE, $threadid);
     }
 
     /**
-     * The plan a run has produced, while it is still only a plan.
+     * The snapshot a reloaded page repaints from.
      *
-     * Read from outside the stream that already carries it: a preview opened
-     * in its own tab cannot reach into the tab that is watching the run.
-     *
-     * @param string $threadid
-     * @return array
+     * @param string $threadid Thread id of the run.
+     * @return array status, pending_question, draft, messages, progress_events and usage.
      */
-    public function get_plan(string $threadid): array {
-        return (array) $this->client->request('GET', '/course-template/plan/' . $threadid);
+    public function get_state(string $threadid): array {
+        return (array) $this->client->request('GET', self::BASE . '/state/' . rawurlencode($threadid));
     }
 
     /**
-     * Fetch the finished result. Only call this once the stream has reported
-     * "completed" - it errors while the run is still in flight.
+     * The result document of a completed run.
      *
-     * @param string $threadid
-     * @return array
+     * @param string $threadid Thread id of the run.
+     * @return array Result document.
      */
     public function get_result(string $threadid): array {
-        return (array) $this->client->request('GET', '/course-template/result/' . $threadid);
+        return (array) $this->client->request('GET', self::BASE . '/result/' . rawurlencode($threadid));
     }
 }

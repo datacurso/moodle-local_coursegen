@@ -1,0 +1,273 @@
+<?php
+// This file is part of Moodle - http://moodle.org/
+//
+// Moodle is free software: you can redistribute it and/or modify
+// it under the terms of the GNU General Public License as published by
+// the Free Software Foundation, either version 3 of the License, or
+// (at your option) any later version.
+//
+// Moodle is distributed in the hope that it will be useful,
+// but WITHOUT ANY WARRANTY; without even the implied warranty of
+// MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+// GNU General Public License for more details.
+//
+// You should have received a copy of the GNU General Public License
+// along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+
+namespace local_coursegen\local\files;
+
+use local_coursegen\local\service\create_mod_service;
+use local_coursegen\tests\fixtures\file_scenarios;
+use local_coursegen\utils\preview_draft_store;
+
+defined('MOODLE_INTERNAL') || die();
+
+global $CFG;
+require_once(__DIR__ . '/../fixtures/file_scenarios.php');
+require_once($CFG->libdir . '/testing/generator/lib.php');
+
+/**
+ * Every file a text of a new activity references reaches the activity, whatever the module and the field.
+ *
+ * Each module that is created from a result of the AI service is built through the service, with a source activity
+ * that really owns the files in those fields, once for each place a file comes from: the template and the AI
+ * service.
+ *
+ * @package    local_coursegen
+ * @category   test
+ * @copyright  2026 Wilber Narvaez <https://datacurso.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @covers     \local_coursegen\local\files\activity_file_pass
+ * @covers     \local_coursegen\local\files\text_carrier_collector
+ * @covers     \local_coursegen\local\files\quiz_question_carriers
+ */
+final class activity_file_pass_test extends \advanced_testcase {
+    /** @var string[] File name => content of the files the AI service made in the current test. */
+    private array $contents = [];
+
+    /**
+     * Every module created from a result, once for each source of files.
+     *
+     * @return array
+     */
+    public static function matrix_provider(): array {
+        $modules = [
+            'page', 'label', 'forum', 'lesson', 'book', 'glossary', 'wiki', 'quiz',
+            'assign', 'feedback', 'workshop', 'choice', 'data',
+        ];
+        $cases = [];
+        foreach ($modules as $module) {
+            $cases = array_merge($cases, self::kinds_of($module));
+        }
+        return $cases;
+    }
+
+    /**
+     * The two sources of files for one module.
+     *
+     * @param string $module
+     * @return array
+     */
+    private static function kinds_of(string $module): array {
+        return [
+            $module . ' with template files' => [$module, 'template'],
+            $module . ' with generated files' => [$module, 'generated'],
+        ];
+    }
+
+    /**
+     * The scenario of a module.
+     *
+     * @param string $module
+     * @return array
+     */
+    private function scenario(string $module): array {
+        foreach (file_scenarios::all() as $scenario) {
+            if ($scenario['module'] === $module) {
+                return $scenario;
+            }
+        }
+        $this->fail('No scenario for ' . $module);
+    }
+
+    /**
+     * A file the AI service made, stored where the creation finds it.
+     *
+     * @param string $name
+     * @param string $content
+     * @return array The entry of the result's generated_files.
+     */
+    private function generated_entry(string $name, string $content): array {
+        $this->contents[$name] = $content;
+        return ['filename' => $name, 'content_type' => 'image/png', 'file_id' => md5($name) . '.png'];
+    }
+
+    /**
+     * A draft store whose downloader gives the content registered for the name of each file.
+     *
+     * @return preview_draft_store
+     */
+    private function draft_store(): preview_draft_store {
+        $contents = $this->contents;
+        $downloader = static function (string $thread, string $id, string $name, array $record) use ($contents) {
+            return get_file_storage()->create_file_from_string($record, $contents[$name]);
+        };
+        return new preview_draft_store(211, 'thread-1', $downloader);
+    }
+
+    /**
+     * The item id a slot's files are stored under for a row.
+     *
+     * @param mixed $item 0, 'row', 'qid' or 'sub'.
+     * @param \stdClass|null $row
+     * @return int
+     */
+    private function item_of($item, ?\stdClass $row): int {
+        global $DB;
+        if ($item === 'row') {
+            return (int) $row->id;
+        }
+        if ($item === 'qid') {
+            return (int) $row->questionid;
+        }
+        if ($item === 'sub') {
+            return (int) $DB->get_field('wiki_pages', 'subwikiid', ['id' => $row->pageid]);
+        }
+        return 0;
+    }
+
+    /**
+     * The nth row of a slot's table for an activity.
+     *
+     * @param array $slot
+     * @param int $instance
+     * @return \stdClass|null
+     */
+    private function row_of(array $slot, int $instance): ?\stdClass {
+        $rows = array_values($slot['rows']($instance));
+        return $rows[$slot['n']] ?? null;
+    }
+
+    /**
+     * The source activity with a file in each slot, and the text that points at it.
+     *
+     * @param array $scenario
+     * @param \stdClass $course The template's course.
+     * @return array{0: array<string,string>, 1: array<string,string>} The text of each slot and the file name of each.
+     */
+    private function template_texts(array $scenario, \stdClass $course): array {
+        $plain = array_map(static fn($slot) => '<p>plain</p>', $scenario['slots']);
+        $result = $scenario['build']($plain, []);
+        $result['parameters']['name'] = 'Source';
+        $source = create_mod_service::create_from_ai_result($result, $course, 1);
+        $context = \context_module::instance($source->coursemodule);
+        $texts = [];
+        $names = [];
+        foreach ($scenario['slots'] as $label => $slot) {
+            $names[$label] = $scenario['module'] . $label . '.png';
+            $row = $this->row_of($slot, (int) $source->instance);
+            get_file_storage()->create_file_from_string([
+                'contextid' => $context->id, 'component' => $slot['component'], 'filearea' => $slot['area'],
+                'itemid' => $this->item_of($slot['item'], $row), 'filepath' => '/', 'filename' => $names[$label],
+                'author' => 'Template Author', 'license' => 'cc',
+            ], 'CONTENT-' . $label);
+            $address = \moodle_url::make_pluginfile_url(
+                $context->id, $slot['component'], $slot['area'], $this->item_of($slot['item'], $row), '/', $names[$label]
+            );
+            $texts[$label] = '<p><img src="' . $address->out(false) . '" alt="a"></p>';
+        }
+        return [$texts, $names];
+    }
+
+    /**
+     * Every field of the module receives its file from the template or the AI service.
+     *
+     * @dataProvider matrix_provider
+     * @param string $module
+     * @param string $kind
+     */
+    public function test_every_text_of_a_new_activity_receives_its_file(string $module, string $kind): void {
+        global $PAGE;
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $scenario = $this->scenario($module);
+        $sourcecourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
+        $course = $this->getDataGenerator()->create_course(['numsections' => 2]);
+        $PAGE->set_course($course);
+        $texts = [];
+        $names = [];
+        $entries = [];
+        if ($kind === 'template') {
+            [$texts, $names] = $this->template_texts($scenario, $sourcecourse);
+        } else {
+            [$texts, $names, $entries] = $this->other_texts($scenario, $kind);
+        }
+
+        $result = $scenario['build']($texts, $names);
+        $result['generated_files'] = $entries;
+        $result['uid'] = '7f1c2a9e-5b0d-4c1e-9a77-3e2d8b6a4f10';
+        $source = null;
+        if ($kind === 'template') {
+            $source = (int) $sourcecourse->id;
+        }
+        $cm = create_mod_service::create_from_ai_result($result, $course, 1, null, $source, $this->draft_store());
+
+        $this->assert_every_slot($scenario, $cm, $names, $kind);
+    }
+
+    /**
+     * The texts that point at the AI service's files.
+     *
+     * @param array $scenario
+     * @param string $kind 'generated'.
+     * @return array{0: array, 1: array, 2: array}
+     */
+    private function other_texts(array $scenario, string $kind): array {
+        $texts = [];
+        $names = [];
+        $entries = [];
+        foreach ($scenario['slots'] as $label => $slot) {
+            $names[$label] = $scenario['module'] . $label . '.png';
+            $texts[$label] = '<p>plain</p>';
+            if (!empty($slot['asis'])) {
+                continue;
+            }
+            $entries[] = $this->generated_entry($names[$label], 'CONTENT-' . $label);
+            $source = '@@PLUGINFILE@@/' . $names[$label];
+            $texts[$label] = '<p><img src="' . $source . '" alt="a"></p>';
+        }
+        return [$texts, $names, $entries];
+    }
+
+    /**
+     * Each slot of the new activity holds its file, with the content it had, and its text names it.
+     *
+     * @param array $scenario
+     * @param \stdClass $cm
+     * @param array $names
+     * @param string $kind
+     */
+    private function assert_every_slot(array $scenario, $cm, array $names, string $kind): void {
+        $context = \context_module::instance($cm->coursemodule);
+        foreach ($scenario['slots'] as $label => $slot) {
+            $row = $this->row_of($slot, (int) $cm->instance);
+            $this->assertNotNull($row, "$label: the row exists");
+            $text = (string) $row->{$slot['column']};
+            if (!empty($slot['asis'])) {
+                $this->assertStringNotContainsString('@@PLUGINFILE@@', $text, "$label: shown as written");
+                continue;
+            }
+            $file = get_file_storage()->get_file(
+                $context->id, $slot['component'], $slot['area'], $this->item_of($slot['item'], $row), '/', $names[$label]
+            );
+            $this->assertNotFalse($file, "$label: the file is in {$slot['component']}/{$slot['area']}");
+            $this->assertSame('CONTENT-' . $label, $file->get_content(), "$label: same content");
+            $this->assertStringContainsString('@@PLUGINFILE@@/' . $names[$label], $text, "$label: the text names it");
+            $this->assertStringNotContainsString('pluginfile.php', $text, "$label: no address left");
+            if ($kind === 'template') {
+                $this->assertSame('Template Author', $file->get_author(), "$label: author kept");
+                $this->assertSame('cc', $file->get_license(), "$label: license kept");
+            }
+        }
+    }
+}

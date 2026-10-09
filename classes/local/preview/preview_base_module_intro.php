@@ -16,6 +16,8 @@
 
 namespace local_coursegen\local\preview;
 
+use stdClass;
+
 /**
  * A module's description, formatted the way core's own format_module_intro()
  * formats it. Kept apart from preview_base.php only because together they

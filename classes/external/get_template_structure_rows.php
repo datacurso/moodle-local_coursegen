@@ -14,15 +14,19 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+/**
+ * External API for the professor-facing template guided form: the template's
+ * section/activity structure (with the admin-defined lock state applied), the
+ * file resources the professor brings a file for included.
+ *
+ * @package    local_coursegen
+ * @copyright  2026 Wilber Narvaez <https://datacurso.com>
+ * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ */
+
 namespace local_coursegen\external;
 
-use local_coursegen\local\models\template;
-use local_coursegen\local\models\template_activity;
-use local_coursegen\local\models\template_instance;
-use local_coursegen\local\models\template_section;
-use local_coursegen\local\service\template_export_uids;
-use local_coursegen\local\service\template_instance_layout;
-use local_coursegen\output\template_row_options;
+use local_coursegen\local\template\template_actions;
 
 /**
  * Per-activity-row building for get_template_structure, kept apart from the
@@ -35,92 +39,29 @@ use local_coursegen\output\template_row_options;
  */
 trait get_template_structure_rows {
     /**
-     * sectionid => saved behavior, for this template.
-     *
-     * @param template $template
-     * @return array
-     */
-    private static function section_settings(template $template): array {
-        $sectionsettings = [];
-        $templateid = $template->get('id');
-        $records = template_section::get_records(['templateid' => $templateid]);
-        foreach ($records as $s) {
-            $sectionid = $s->get('sectionid');
-            $behavior = $s->get('behavior');
-            $sectionsettings[$sectionid] = $behavior;
-        }
-        return $sectionsettings;
-    }
-
-    /**
-     * cmid => saved action, for this template.
-     *
-     * @param template $template
-     * @return array
-     */
-    private static function activity_settings(template $template): array {
-        $activitysettings = [];
-        $templateid = $template->get('id');
-        $records = template_activity::get_records(['templateid' => $templateid]);
-        foreach ($records as $a) {
-            $cmid = $a->get('cmid');
-            $action = $a->get('action');
-            $activitysettings[$cmid] = $action;
-        }
-        return $activitysettings;
-    }
-
-    /**
-     * sectionid => the virtual instances anchored there.
-     *
-     * @param template $template
-     * @return array
-     */
-    private static function instances_by_section(template $template): array {
-        $instancesbysection = [];
-        $templateid = $template->get('id');
-        $records = template_instance::get_records(['templateid' => $templateid]);
-        foreach ($records as $instance) {
-            $sectionid = $instance->get('sectionid');
-            $instancesbysection[$sectionid][] = $instance;
-        }
-        return $instancesbysection;
-    }
-
-    /**
-     * Every section's own row, with its activities.
+     * Every section of the course with its visible activities.
      *
      * @param \stdClass $course
      * @param \course_modinfo $modinfo
-     * @param array $sectionsettings sectionid => behavior.
-     * @param array $activitysettings cmid => action.
-     * @param array $instancesbysection sectionid => instances.
+     * @param \stdClass[] $items Saved items keyed by course module id.
      * @param \renderer_base $output
      * @return array
      */
-    private static function sections(
-        $course,
-        $modinfo,
-        array $sectionsettings,
-        array $activitysettings,
-        array $instancesbysection,
-        $output
-    ): array {
+    private static function sections($course, $modinfo, array $items, $output): array {
         $sections = [];
-        $sectioninfos = $modinfo->get_section_info_all();
-        foreach ($sectioninfos as $section) {
-            $behavior = $sectionsettings[$section->id] ?? template_section::BEHAVIOR_AI_MODIFY;
-            if ($behavior === template_section::BEHAVIOR_EXCLUDE) {
-                continue;
+        foreach ($modinfo->get_section_info_all() as $section) {
+            $activities = self::section_activities($modinfo, $section, $items, $output);
+            $modified = self::has_modified_activity($activities);
+            $behavior = 'keep';
+            if ($modified) {
+                $behavior = 'aimodify';
             }
-            $activities = self::section_activities($modinfo, $section, $activitysettings, $instancesbysection, $output);
-            $name = get_section_name($course, $section);
             $sections[] = [
                 'id'         => (int) $section->id,
                 'num'        => (int) $section->section,
-                'name'       => $name,
+                'name'       => get_section_name($course, $section),
                 'behavior'   => $behavior,
-                'locked'     => ($behavior === template_section::BEHAVIOR_KEEP),
+                'locked'     => !$modified,
                 'activities' => $activities,
             ];
         }
@@ -128,145 +69,73 @@ trait get_template_structure_rows {
     }
 
     /**
-     * One section's own activity rows, interleaving real activities and
-     * virtual instances in the plan's own display order.
+     * Whether any of the rows is an activity the AI modifies.
      *
-     * Interleave over ALL real cmids - including rows filtered out below
-     * (hidden actions, not uservisible) - so an instance anchored to a
-     * filtered-out row keeps its anchor's slot: once the hidden anchor is
-     * dropped, the instance renders exactly where that anchor would have
-     * been (immediately after the nearest preceding visible row, or at the
-     * section start when there is none). Orphan anchors append at the
-     * section end, the same rule the admin review follows.
+     * @param array $activities
+     * @return bool
+     */
+    private static function has_modified_activity(array $activities): bool {
+        foreach ($activities as $activity) {
+            if ($activity['aigenerated']) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    /**
+     * One section's own activity rows.
      *
      * @param \course_modinfo $modinfo
      * @param \section_info $section
-     * @param array $activitysettings
-     * @param array $instancesbysection
+     * @param \stdClass[] $items Saved items keyed by course module id.
      * @param \renderer_base $output
      * @return array
      */
-    private static function section_activities(
-        $modinfo,
-        $section,
-        array $activitysettings,
-        array $instancesbysection,
-        $output
-    ): array {
-        $sectioncms = $modinfo->sections[$section->section] ?? [];
-        $sectioninstances = $instancesbysection[$section->id] ?? [];
-        $rows = template_instance_layout::ordered_rows($sectioncms, $sectioninstances);
-
+    private static function section_activities($modinfo, $section, array $items, $output): array {
+        $cmids = $modinfo->sections[$section->section] ?? [];
         $activities = [];
-        foreach ($rows as $row) {
-            $activity = self::section_activity_row($row, $modinfo, $activitysettings, $output);
-            if ($activity !== null) {
-                $activities[] = $activity;
+        foreach ($cmids as $cmid) {
+            $cm = $modinfo->cms[$cmid];
+            if ($cm->uservisible) {
+                $activities[] = self::activity_row($cm, $items[$cmid] ?? null, $output);
             }
         }
         return $activities;
     }
 
     /**
-     * One row of a section's plan, as an activity entry - or null when it
-     * does not reach the professor at all.
+     * One activity's own row.
      *
-     * @param array $row
-     * @param \course_modinfo $modinfo
-     * @param array $activitysettings
+     * @param \cm_info $cm
+     * @param \stdClass|null $item The saved item of the activity, or null when nothing was saved for it.
      * @param \renderer_base $output
-     * @return array|null
-     */
-    private static function section_activity_row(array $row, $modinfo, array $activitysettings, $output): ?array {
-        if ($row['type'] === template_instance_layout::TYPE_INSTANCE) {
-            return self::instance_row($row['record']);
-        }
-        $cm = $modinfo->cms[$row['cmid']];
-        if (!$cm->uservisible) {
-            return null;
-        }
-        // Mirror the admin's action mapping: keep (with unset defaulting to
-        // keep) stays visible and locked; reference, template (mold) and exclude rows
-        // never reach the professor at all.
-        $action = $activitysettings[$cm->id] ?? template_activity::ACTION_KEEP;
-        if ($action !== template_activity::ACTION_KEEP) {
-            return null;
-        }
-        $purpose = self::get_purpose($cm->modname);
-        $name = format_string($cm->name);
-        $iconhtml = $output->image_icon('monologo', $cm->modname, 'mod_' . $cm->modname, ['class' => 'icon activityicon']);
-        return [
-            'id'      => (string) $cm->id,
-            'name'    => $name,
-            'modname' => $cm->modname,
-            'purpose' => $purpose,
-            'typelabel' => '',
-            'iconhtml' => $iconhtml,
-            'locked'  => true,
-            'action'  => $action,
-            'isinstance' => false,
-            'aigenerated' => false,
-            'generationuid' => '',
-        ];
-    }
-
-    /**
-     * Build one virtual-instance activity row ("generate an activity here,
-     * molded on one of the template's model activities").
-     *
-     * Id scheme: the row id IS the instance's stable uid
-     * (template_export_uids::instance_uid()) — the same name it already
-     * answers to as generationuid, so this method asks for it once and uses
-     * it for both. A real activity row's id is that cmid, stringified for
-     * type consistency across the whole activities array; nothing about a
-     * real activity's id changes otherwise.
-     *
-     * Everything renders from the row's own snapshots (name, typelabel,
-     * modname) — sourcecmid is never dereferenced. The icon resolves from
-     * the snapshot modname through the exact same monologo rule as the
-     * admin review (template_row_options::instance_icon_url()), and an
-     * empty snapshot yields an empty iconhtml, not a broken image.
-     *
-     * @param template_instance $instance
      * @return array
      */
-    private static function instance_row(template_instance $instance): array {
-        $rawmodname = $instance->get('modname');
-        $modname = (string) $rawmodname;
-        $iconurl = template_row_options::instance_icon_url($rawmodname);
-        $iconhtml = '';
-        if ($iconurl !== '') {
-            $iconhtml = \html_writer::empty_tag('img', ['src' => $iconurl, 'class' => 'icon activityicon', 'alt' => '']);
+    private static function activity_row(\cm_info $cm, ?\stdClass $item, $output): array {
+        $modified = ($item !== null && $item->action === template_actions::AI);
+        $action = 'keep';
+        $generationuid = '';
+        $generationcmid = 0;
+        if ($modified) {
+            $action = 'modify';
+            $generationuid = (string) $item->uid;
+            $generationcmid = (int) $cm->id;
         }
-        $uid = template_export_uids::instance_uid($instance);
-        $purpose = MOD_PURPOSE_OTHER;
-        if ($modname !== '') {
-            $purpose = self::get_purpose($modname);
-        }
-        $rawname = $instance->get('name');
-        $name = format_string($rawname);
-        $rawtypelabel = $instance->get('typelabel');
-        $typelabel = format_string($rawtypelabel);
+        $icon = $output->image_icon('monologo', $cm->modname, 'mod_' . $cm->modname, ['class' => 'icon activityicon']);
         return [
-            'id'      => $uid,
-            'name'    => $name,
-            'modname' => $modname,
-            'purpose' => $purpose,
-            'typelabel' => $typelabel,
-            'iconhtml' => $iconhtml,
-            'locked'  => true,
-            'action'  => '',
-            'isinstance' => true,
-            'aigenerated' => true,
-            // The id this row will answer to in the generation's progress
-            // events, so the live view can mark THIS activity when its own
-            // content lands - the same uid the payload sent and the run's
-            // events echo back, never a number invented for this alone.
-            // Kept as a separate field from the row's own id, because it
-            // names a different thing (what the AI's answer calls this row,
-            // not what the tree calls it), even though today they happen to
-            // be the same string.
-            'generationuid' => $uid,
+            'id'      => (string) $cm->id,
+            'name'    => format_string($cm->name),
+            'modname' => $cm->modname,
+            'purpose' => self::get_purpose($cm->modname),
+            'typelabel' => '',
+            'iconhtml' => $icon,
+            'locked'  => !$modified,
+            'action'  => $action,
+            'isinstance' => false,
+            'aigenerated' => $modified,
+            'generationuid' => $generationuid,
+            'generationcmid' => $generationcmid,
         ];
     }
 
@@ -278,48 +147,5 @@ trait get_template_structure_rows {
      */
     private static function get_purpose(string $modname): string {
         return plugin_supports('mod', $modname, FEATURE_MOD_PURPOSE, MOD_PURPOSE_OTHER);
-    }
-
-    /**
-     * The allowed-type catalog, each with its display name, purpose and
-     * icon, sorted by display name in the site language's collation.
-     *
-     * @param array $allowedtypes
-     * @param \renderer_base $output
-     * @return array
-     */
-    private static function allowed_activities(array $allowedtypes, $output): array {
-        $allowedactivities = [];
-        foreach ($allowedtypes as $modname) {
-            $activity = self::allowed_activity($modname, $output);
-            if ($activity !== null) {
-                $allowedactivities[] = $activity;
-            }
-        }
-        \core_collator::asort_array_of_arrays_by_key($allowedactivities, self::CATALOG_NAME_FIELD);
-        return array_values($allowedactivities);
-    }
-
-    /**
-     * One allowed type's own catalog entry, or null when it names no real
-     * installed module.
-     *
-     * @param string $modname
-     * @param \renderer_base $output
-     * @return array|null
-     */
-    private static function allowed_activity(string $modname, $output): ?array {
-        if (!\core_component::is_valid_plugin_name('mod', $modname)) {
-            return null;
-        }
-        $displayname = get_string('pluginname', 'mod_' . $modname);
-        $purpose = self::get_purpose($modname);
-        $iconhtml = $output->image_icon('monologo', $modname, 'mod_' . $modname, ['class' => 'icon activityicon']);
-        return [
-            'modname' => $modname,
-            self::CATALOG_NAME_FIELD => $displayname,
-            'purpose' => $purpose,
-            'iconhtml' => $iconhtml,
-        ];
     }
 }

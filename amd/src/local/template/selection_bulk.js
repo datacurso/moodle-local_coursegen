@@ -13,21 +13,31 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+
 /**
  * Row-selection checkboxes and the single global bulk action bar, for the
  * server-rendered "Course sections" review. Split out of sections_events.js
  * so that module stays focused on seeding/tracking each control's own state.
  *
- * Bulk-applying "template" opens ONE scope modal for the whole batch instead
- * of one per row — every checked, applicable row gets the same chosen scope.
+ * The bulk bar offers the same two actions as every row: keep intact or
+ * modify with AI. Applying one leaves each checked row exactly as if its own
+ * select had been changed.
  *
  * @module     local_coursegen/local/template/selection_bulk
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {openTemplateScopeModal} from 'local_coursegen/local/template/template_scope_modal';
-import {get_string as getString} from 'core/str';
+import {applyRowAction} from 'local_coursegen/local/template/row_action';
+import Selectors from 'local_coursegen/local/template/selectors';
+import {EVENT} from 'local_coursegen/local/template/constants';
+
+/** @type {string} Every control whose change can enable or disable the bulk bar. */
+const SELECTION_REGIONS = [
+    Selectors.regions.activitySelect,
+    Selectors.regions.selectAll,
+    Selectors.regions.sectionSelectAll,
+].join(', ');
 
 /**
  * Bind the three selection tiers per section (card-header select-all,
@@ -81,143 +91,123 @@ const collectCheckedRows = (container) => [...container.querySelectorAll('[data-
     .filter(row => row !== null);
 
 /**
- * Apply one action to one row: updates its select, state, and template
- * visual in one place, so every bulk path (template or otherwise) stays
- * consistent with a single row change.
+ * Enable the bulk select only while some row is checked.
  *
- * @param {HTMLElement} row The activity row (data-for="cmitem").
- * @param {string} action The requested action.
- * @param {Object} state The live wizard state from init.js.
- * @param {Function} applicableAction (action, modname) => string.
- * @param {Function} applyTemplateVisual (row, istemplate, cmid, state) => void.
+ * @param {HTMLElement} container The rendered course sections review.
+ * @param {HTMLSelectElement} bulk The single global bulk select.
  */
-const applyActionToRow = (row, action, state, applicableAction, applyTemplateVisual) => {
-    const cmid = parseInt(row.dataset.id);
-    if (!cmid) {
-        return;
-    }
-    const applied = applicableAction(action, row.dataset.modname);
-    const select = row.querySelector('select[data-region="activity-action"]');
-    if (select) {
-        select.value = applied;
-    }
-    state.activityAction[cmid] = applied;
-    applyTemplateVisual(row, applied === 'template', cmid, state);
+const updateBulkAvailability = (container, bulk) => {
+    const checked = container.querySelector(Selectors.regions.activitySelectChecked);
+    bulk.disabled = !checked;
 };
 
 /**
- * Bulk-apply "template": rows whose type cannot support it degrade to
- * "keep" immediately; the rest share ONE scope modal instead of one per
- * row, and all take the single scope the admin picks there.
+ * Apply one action to every given row.
  *
- * @param {HTMLElement[]} rows The checked rows.
- * @param {Object} state The live wizard state from init.js.
- * @param {Function} applicableAction (action, modname) => string.
- * @param {Function} applyTemplateVisual (row, istemplate, cmid, state) => void.
- * @param {Function} markDirty Marks the wizard as having unsaved changes.
+ * @param {HTMLElement[]} rows The checked rows (data-for="cmitem").
+ * @param {string} action The requested action.
+ * @param {Object} state The live editor state from init.js.
  */
-const applyBulkTemplate = async(rows, state, applicableAction, applyTemplateVisual, markDirty) => {
-    const templaterows = [];
-    rows.forEach(row => {
-        if (applicableAction('template', row.dataset.modname) === 'template') {
-            templaterows.push(row);
-        } else {
-            applyActionToRow(row, 'template', state, applicableAction, applyTemplateVisual);
+const applyActionToRows = (rows, action, state) => {
+    for (const row of rows) {
+        applyRowAction(row, action, state);
+    }
+};
+
+/**
+ * Uncheck the selection checkbox of every given row.
+ *
+ * @param {HTMLElement[]} rows The rows (data-for="cmitem").
+ */
+const clearRowSelection = (rows) => {
+    for (const row of rows) {
+        const box = row.querySelector(Selectors.regions.activitySelect);
+        if (box) {
+            box.checked = false;
         }
-    });
-    markDirty();
-    if (!templaterows.length) {
+    }
+};
+
+/**
+ * Clear both aggregate tiers (table select-all and section-header checkbox),
+ * including any indeterminate state.
+ *
+ * @param {HTMLElement} container The rendered course sections review.
+ */
+const clearAggregates = (container) => {
+    const selector = `${Selectors.regions.selectAll}, ${Selectors.regions.sectionSelectAll}`;
+    const aggregates = container.querySelectorAll(selector);
+    for (const aggregate of aggregates) {
+        aggregate.checked = false;
+        aggregate.indeterminate = false;
+    }
+};
+
+/**
+ * Apply the chosen bulk action to every checked row, then fall back to the
+ * placeholder and the disabled resting state.
+ *
+ * @param {Object} ctx The bar's binding context {container, bulk, state, markDirty}.
+ */
+const handleBulkChange = (ctx) => {
+    const action = ctx.bulk.value;
+    ctx.bulk.value = '';
+    if (!action) {
         return;
     }
-    const subject = await getString('template_activities_count', 'local_coursegen', templaterows.length);
-    openTemplateScopeModal({
-        subject,
-        scope: 'course',
-        onSave: (scope) => {
-            templaterows.forEach(row => {
-                state.activityScope[parseInt(row.dataset.id)] = scope;
-                applyActionToRow(row, 'template', state, applicableAction, applyTemplateVisual);
-            });
-            markDirty();
-        },
-    });
+    const rows = collectCheckedRows(ctx.container);
+    applyActionToRows(rows, action, ctx.state);
+    ctx.markDirty();
+    clearRowSelection(rows);
+    clearAggregates(ctx.container);
+    updateBulkAvailability(ctx.container, ctx.bulk);
+};
+
+/**
+ * Row checkbox and aggregate changes all bubble up to the container; an
+ * aggregate's own handler (bound directly on it, in bindSelectionTiers) has
+ * already toggled its rows by the time this delegated one runs.
+ *
+ * @param {Object} ctx The bar's binding context {container, bulk}.
+ * @param {Event} e The change event.
+ */
+const handleSelectionChange = (ctx, e) => {
+    if (e.target.matches(SELECTION_REGIONS)) {
+        updateBulkAvailability(ctx.container, ctx.bulk);
+    }
 };
 
 /**
  * Bind the single global bulk action bar: disabled while nothing is checked
  * anywhere, applies the chosen action to every checked row across all
- * sections (degrading template to keep for unsupported types), then
- * resets itself back to its placeholder.
+ * sections, then resets itself back to its placeholder.
  *
  * @param {HTMLElement} container The rendered course sections review.
- * @param {Object} state The live wizard state from init.js.
- * @param {Function} applicableAction (action, modname) => string.
- * @param {Function} applyTemplateVisual (row, istemplate, cmid, state) => void.
- * @param {Function} markDirty Marks the wizard as having unsaved changes.
+ * @param {Object} state The live editor state from init.js.
+ * @param {Function} markDirty Marks the editor as having unsaved changes.
  */
-const bindBulkBar = (container, state, applicableAction, applyTemplateVisual, markDirty) => {
-    const bulk = container.querySelector('select[data-region="bulk-action"]');
+const bindBulkBar = (container, state, markDirty) => {
+    const bulk = container.querySelector(Selectors.regions.bulkAction);
     if (!bulk) {
         return;
     }
-
-    const updateBulkAvailability = () => {
-        bulk.disabled = !container.querySelector('[data-region="activity-select"]:checked');
-    };
-    updateBulkAvailability();
-
-    // Row checkbox and aggregate changes all bubble up here; an aggregate's
-    // own handler (bound directly on it, in bindSelectionTiers) has already
-    // toggled its rows by the time this delegated one runs.
-    const selectionregions = '[data-region="activity-select"], [data-region="select-all"],'
-        + ' [data-region="section-select-all"]';
-    container.addEventListener('change', (e) => {
-        if (e.target.matches(selectionregions)) {
-            updateBulkAvailability();
-        }
-    });
-
-    bulk.addEventListener('change', () => {
-        const action = bulk.value;
-        bulk.value = '';
-        if (!action) {
-            return;
-        }
-        const rows = collectCheckedRows(container);
-        if (action === 'template') {
-            applyBulkTemplate(rows, state, applicableAction, applyTemplateVisual, markDirty);
-        } else {
-            rows.forEach(row => applyActionToRow(row, action, state, applicableAction, applyTemplateVisual));
-            markDirty();
-        }
-        rows.forEach(row => {
-            const box = row.querySelector('[data-region="activity-select"]');
-            if (box) {
-                box.checked = false;
-            }
-        });
-        // The batch is done: clear both aggregate tiers (table select-all and
-        // section-header checkbox, including any indeterminate state) and let
-        // the bar fall back to its disabled resting state.
-        container.querySelectorAll('[data-region="select-all"], [data-region="section-select-all"]').forEach(all => {
-            all.checked = false;
-            all.indeterminate = false;
-        });
-        updateBulkAvailability();
-    });
+    updateBulkAvailability(container, bulk);
+    const ctx = {container, bulk, state, markDirty};
+    const onSelectionChange = handleSelectionChange.bind(null, ctx);
+    container.addEventListener(EVENT.CHANGE, onSelectionChange);
+    const onBulkChange = handleBulkChange.bind(null, ctx);
+    bulk.addEventListener(EVENT.CHANGE, onBulkChange);
 };
 
 /**
  * Bind row selection and the global bulk action bar.
  *
  * @param {HTMLElement} container The rendered course sections review.
- * @param {Object} state The live wizard state from init.js.
+ * @param {Object} state The live editor state from init.js.
  * @param {Object} helpers
- * @param {Function} helpers.applicableAction (action, modname) => string.
- * @param {Function} helpers.applyTemplateVisual (row, istemplate, cmid, state) => void.
- * @param {Function} helpers.markDirty Marks the wizard as having unsaved changes.
+ * @param {Function} helpers.markDirty Marks the editor as having unsaved changes.
  */
-export const bindSelectionAndBulk = (container, state, {applicableAction, applyTemplateVisual, markDirty}) => {
+export const bindSelectionAndBulk = (container, state, {markDirty}) => {
     bindSelectionTiers(container);
-    bindBulkBar(container, state, applicableAction, applyTemplateVisual, markDirty);
+    bindBulkBar(container, state, markDirty);
 };

@@ -16,13 +16,11 @@
 
 namespace local_coursegen\local\service;
 
-use local_coursegen\local\models\template_activity;
-
 /**
  * Which of a finished run's answered activities are new, versus travelling
  * back only as context.
  *
- * A "keep"/"reference" activity comes back exactly as it was submitted - a
+ * A "keep" activity comes back exactly as it was submitted - a
  * description of an activity that already exists elsewhere, not something to
  * build. Only the entries the AI was asked to write should be created from
  * the payload, and the payload says which those are: it is the action each
@@ -44,9 +42,13 @@ class generated_activities_filter {
         foreach ($activities as $activity) {
             $behavior = $activity['template_behavior'] ?? [];
             $action = $behavior['action'] ?? '';
-            if ($action === template_activity::ACTION_INSTANCE) {
-                $written[] = $activity;
+            if ($action !== template_export_behavior::MODIFY) {
+                continue;
             }
+            if (template_file_resources::is_file_resource($activity)) {
+                continue;
+            }
+            $written[] = $activity;
         }
         return $written;
     }

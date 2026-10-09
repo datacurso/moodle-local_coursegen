@@ -57,6 +57,7 @@ import {makeCreateCourseCallback} from 'local_coursegen/courseai/bootstrap/creat
 import {makeEmitLog, makeRenderPlanMarkdown} from 'local_coursegen/courseai/bootstrap/ui-helpers';
 import {makeHydratePlan} from 'local_coursegen/courseai/bootstrap/hydrate-plan';
 import {createExecutionControls} from 'local_coursegen/local/courseai/actions/execution-control';
+import {restoreAndTrackUiState, tabStorage} from 'local_coursegen/courseai/bootstrap/ui-state';
 import {wireTemplateMode} from 'local_coursegen/local/courseai/template_mode';
 
 /**
@@ -97,11 +98,13 @@ const revertToContextView = (elements) => {
  * @param {Function} resumeFromSnapshot
  * @param {Object} elements
  * @param {Function} setResumeBootLoading
+ * @returns {Promise<boolean>} True when the page was rebuilt from a snapshot.
  */
 const attemptResume = async(resumeSessionId, resumeFromSnapshot, elements, setResumeBootLoading) => {
+    let resumed = false;
     try {
         if (resumeSessionId) {
-            const resumed = await resumeFromSnapshot();
+            resumed = await resumeFromSnapshot();
             if (!resumed) {
                 revertToContextView(elements);
             }
@@ -109,8 +112,13 @@ const attemptResume = async(resumeSessionId, resumeFromSnapshot, elements, setRe
     } catch (resumeError) {
         revertToContextView(elements);
     } finally {
-        setResumeBootLoading(false);
+        // A resumed page decides about its own skeletons: a run that has not drawn its first
+        // section keeps them, as the live stream does.
+        if (!resumed) {
+            setResumeBootLoading(false);
+        }
     }
+    return resumed;
 };
 
 /**
@@ -124,6 +132,7 @@ export const init = async(params) => {
         const state = createInitialState({defaultLang, guidelines, languages});
         state.templates = coursetemplates || [];
         state.selectedTemplateId = null;
+        state.templateResume = params.templateresume || null;
 
         // Wire template mode switching before awaiting anything below: it
         // only needs `state`, not translated strings, and the Free/Template
@@ -131,7 +140,13 @@ export const init = async(params) => {
         // `await loadCourseaiStrings()` network round-trip used to leave
         // them dead until it resolved (a dynamic import() here made it
         // worse still, adding a second network wait on top).
-        wireTemplateMode(state);
+        // The page's actions do not exist yet; the template's finish step
+        // reads them from here once the generation is over.
+        const templateHost = {actions: null};
+        templateHost.ready = new Promise((resolve) => {
+            templateHost.markReady = resolve;
+        });
+        wireTemplateMode(state, templateHost);
 
         const texts = await loadCourseaiStrings();
         const elements = getCourseaiElements();
@@ -255,6 +270,8 @@ export const init = async(params) => {
             emitLog,
         });
 
+        templateHost.actions = actions;
+        templateHost.markReady();
         actions.bindEvents();
 
         const executionControls = createExecutionControls({state, elements, streamManager, texts, emitLog});
@@ -300,6 +317,7 @@ export const init = async(params) => {
             proposalsUi,
             streamManager,
             actions,
+            createCourseFromSession,
             parseJsonField,
             normalizeSnapshotStatus,
             buildSectionsFromDetailedPlan,
@@ -313,7 +331,17 @@ export const init = async(params) => {
             texts,
         });
 
-        await attemptResume(resumeSessionId, resumeFromSnapshot, elements, setResumeBootLoading);
+        const resumed = await attemptResume(resumeSessionId, resumeFromSnapshot, elements, setResumeBootLoading);
+
+        // What the user left open and where the user scrolled comes back after a reload, and is kept from
+        // then on. It is not awaited: the page is already usable while it settles.
+        restoreAndTrackUiState({
+            root: document,
+            win: window,
+            storage: tabStorage(window),
+            getSessionId: () => resumeSessionId || Number(state.sessionid || 0),
+            restore: resumed,
+        }).catch(() => undefined);
 
         contextUi.renderGuidelineList();
         stepsUi.updateFlowNav();

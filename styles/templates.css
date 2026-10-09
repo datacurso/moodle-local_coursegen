@@ -15,8 +15,8 @@
 .tpl-step-line.done { background: #28a745; }
 .tpl-step-line.active { background: #b5351a; }
 
-/* Section cards. No overflow:hidden here: it would clip the
-   instance-picker's dropdown-menu, which is a descendant of this card. */
+/* Section cards. No overflow:hidden here: it would clip a dropdown-menu
+   opened from inside the card. */
 .tpl-section-card {
     border: 1px solid #dee2e6;
     border-radius: 0.5rem;
@@ -94,15 +94,19 @@
 }
 
 .tpl-activity-action,
-.tpl-bulk-select,
-.tpl-section-behavior {
+.tpl-bulk-select {
     width: auto;
 }
 
-/* A row marked as a template mold. */
-.tpl-row-template {
-    background: #fff5f5;
-    box-shadow: inset 3px 0 0 #b5351a;
+/* The row under an activity that holds its optional instruction for the AI:
+   it reads as part of the activity above it. */
+.tpl-instruction-row td {
+    border-top: 0;
+    padding-top: 0;
+}
+
+.tpl-instruction-row textarea {
+    resize: vertical;
 }
 
 /* Global bulk action bar: clearly separated from the last section card. */

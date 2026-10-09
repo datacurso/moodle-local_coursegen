@@ -75,7 +75,7 @@ export const bindCoursePicker = (panel, state, setState) => {
     // previously chosen course from the old category must not linger.
     categoryField.addEventListener('change', () => {
         if (state.selectedCourseId) {
-            setState({selectedCourseId: null, selectedCourse: null, courseStructure: null});
+            setState({selectedCourseId: null, selectedCourse: null, sectionsReady: false});
         }
     });
 
@@ -97,7 +97,7 @@ export const bindCoursePicker = (panel, state, setState) => {
         setState({
             selectedCourseId: id,
             selectedCourse: {id, fullname, shortname},
-            courseStructure: null,
+            sectionsReady: false,
         });
     });
 };

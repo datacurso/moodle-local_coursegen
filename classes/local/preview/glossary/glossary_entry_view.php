@@ -116,7 +116,7 @@ trait glossary_entry_view {
         $context = $this->context;
         $definition = file_rewrite_pluginfile_urls($definition, 'pluginfile.php', $context->id, 'mod_glossary', 'entry', $entry->id);
 
-        $options = new stdClass();
+        $options = new \stdClass();
         $options->para = false;
         $options->trusted = $entry->definitiontrust ?? 0;
         $options->context = $context;

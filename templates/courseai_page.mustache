@@ -37,7 +37,13 @@
         "cangeneratecourseimages": true,
         "guidelines": "[{\"id\":\"si_1\",\"name\":\"Example\",\"category\":\"General\",\"description\":\"...\"}]",
         "languages": "[{\"code\":\"es\",\"name\":\"Español (es)\"}]",
-        "defaultlang": "es"
+        "defaultlang": "es",
+        "guidelinelist": {
+            "listlabel": "Guidelines list",
+            "emptytext": "No results",
+            "hasitems": false,
+            "items": []
+        }
     }
 }}
 
@@ -95,7 +101,50 @@
       <b class="courseai-topbar-path-name">{{#templatemodeactive}}{{#str}}courseai_mode_template, local_coursegen{{/str}}{{/templatemodeactive}}{{^templatemodeactive}}{{#str}}courseai_mode_free, local_coursegen{{/str}}{{/templatemodeactive}}</b>
     </button>
     {{/showstartcrumb}}
+    {{! Template mode only: how many activities the AI has written, always in view. The pill is the one place
+        the count lives; a press opens the list of activities under it. The ids are the ones the checklist
+        script and the styles already know, so the rows are drawn exactly as before. Hidden until a run says
+        how many activities it will write. }}
+    {{#templatemodeactive}}
+    <div class="courseai-checklist cg-thread-checklist tpl-topbar-activities hidden" id="courseaiChecklist"
+         data-region="tpl-top-activities">
+      <button class="tpl-topbar-pill" id="tplTopActivitiesToggle" type="button" aria-haspopup="true"
+              aria-expanded="false" aria-controls="tplTopActivitiesPanel"
+              title="{{#str}}courseai_topbar_activities_toggle, local_coursegen{{/str}}"
+              aria-label="{{#str}}courseai_topbar_activities_toggle, local_coursegen{{/str}}">
+        <span class="tpl-topbar-ring" aria-hidden="true"></span>
+        <span class="tpl-topbar-pill-label">{{#str}}courseai_topbar_activities, local_coursegen{{/str}}</span>
+        <span class="tpl-topbar-pill-count" id="tplTopActivitiesCount"></span>
+        <svg class="tpl-topbar-pill-chevron" width="14" height="14" viewBox="0 0 24 24" fill="none"
+             stroke="currentColor" stroke-width="2.4" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+          <path d="M6 9l6 6 6-6"/>
+        </svg>
+      </button>
+      <div class="tpl-topbar-panel" id="tplTopActivitiesPanel" role="region"
+           aria-label="{{#str}}courseai_topbar_activities_panel, local_coursegen{{/str}}" hidden>
+        <div class="cg-group-head">
+          <span class="cg-group-title">{{#str}}courseai_template_progress_title, local_coursegen{{/str}}</span>
+          <span class="cg-group-count" id="courseaiChecklistCount"></span>
+        </div>
+        <ul class="courseai-checklist-list" id="courseaiChecklistList"></ul>
+      </div>
+    </div>
+    {{/templatemodeactive}}
     <span class="courseai-topbar-spacer"></span>
+    {{! Template mode only: what the structure holds and the way to see the whole course. The stats chip is
+        filled by the structure script; the preview link stays hidden until a run exists, because there is
+        nothing to preview before one does. On a narrow bar the link keeps only its icon. }}
+    {{#templatemodeactive}}
+    <div class="tpl-topbar-limits" id="tplModeLimits" style="display:none">
+      <span class="tpl-topbar-stats" id="tplModeStats"></span>
+      <a href="#" class="tpl-topbar-preview" id="tplPreviewCourse" target="_blank" rel="noopener" hidden
+         title="{{#str}}courseai_preview_course, local_coursegen{{/str}}"
+         aria-label="{{#str}}courseai_preview_course, local_coursegen{{/str}}">
+        {{#pix}} i/preview, core {{/pix}}
+        <span class="tpl-topbar-link-text">{{#str}}courseai_preview_course, local_coursegen{{/str}}</span>
+      </a>
+    </div>
+    {{/templatemodeactive}}
     {{! The popup layout has no Moodle navbar: this is the only exit back to My courses. }}
     <a class="courseai-topbar-exit" id="courseaiCloseBtn" href="{{closeurl}}"
        title="{{#str}}courseai_close_view, local_coursegen{{/str}}">
@@ -314,7 +363,7 @@
                       <circle cx="11" cy="11" r="8"/>
                       <path d="m21 21-4.35-4.35"/>
                     </svg>
-                    <input type="text" id="langSearch" placeholder="{{#str}}courseai_lang_search_placeholder, local_coursegen{{/str}}" autocomplete="off" />
+                    <input type="text" id="langSearch" placeholder="{{#str}}courseai_lang_search_placeholder, local_coursegen{{/str}}" autocomplete="off">
                   </div>
                 </div>
                 <ul class="pop-list" id="langList" role="listbox" aria-label="{{#str}}courseai_lang_arialabel, local_coursegen{{/str}}"></ul>
@@ -333,11 +382,13 @@
                       <circle cx="11" cy="11" r="8"/>
                       <path d="m21 21-4.35-4.35"/>
                     </svg>
-                    <input type="text" id="guidelineSearch" placeholder="{{#str}}courseai_guidelines_search_placeholder, local_coursegen{{/str}}" autocomplete="off" />
+                    <input type="text" id="guidelineSearch" placeholder="{{#str}}courseai_guidelines_search_placeholder, local_coursegen{{/str}}" autocomplete="off">
                   </div>
                   <p class="pop-note">{{#str}}courseai_guidelines_note_one, local_coursegen{{/str}}</p>
                 </div>
-                <ul class="pop-list" id="guidelineList" role="listbox" aria-label="{{#str}}courseai_guidelines_list_label, local_coursegen{{/str}}"></ul>
+                <div class="pop-list-wrap" data-region="guideline-list">
+                  {{#guidelinelist}}{{> local_coursegen/local/courseai/guideline_list }}{{/guidelinelist}}
+                </div>
               </div>
 
               <!-- Templates popover: searchable list -->
@@ -421,7 +472,7 @@
                  The initial prompt is the FIRST user turn (emitted via emitLog),
                  followed by AI planning turns. No rigid "INITIAL MESSAGE" block
                  and no uppercase section labels — it reads top-to-bottom. -->
-            <div class="cg-log cg-thread-feed" id="cgLog" aria-live="polite"
+            <div class="cg-log cg-thread-feed" id="cgLog" role="log" aria-live="polite"
                  aria-label="{{#str}}courseai_log_label, local_coursegen{{/str}}"></div>
 
             <!-- Left loading skeleton: previews the checklist shape while the
@@ -450,13 +501,7 @@
           <div class="courseai-adjustment-history hidden" id="courseaiAdjustmentHistory"></div>
         </div>
 
-        <!-- After "Adjust", the decision card is replaced by the composer; this slim
-             bar (a SEPARATE element above the composer, with a gap) keeps Accept
-             reachable so the user can always change their mind. -->
-        <div class="cg-accept-bar" id="cgAcceptBar" style="display:none">
-          <span class="cg-accept-bar-text">{{#str}}courseai_decision_still_accept, local_coursegen{{/str}}</span>
-          <button class="cg-accept-bar-btn" id="cgAcceptInline" type="button">{{#str}}courseai_decision_accept, local_coursegen{{/str}}</button>
-        </div>
+        {{> local_coursegen/courseai_accept_bar }}
 
         <!-- Pinned working-status slot: during an ACTION re-stream (reorder, replan,
              add, delete, adjust) the composer is hidden, so the "assistant is working"
@@ -626,7 +671,7 @@
                         <circle cx="11" cy="11" r="8"/>
                         <path d="m21 21-4.35-4.35"/>
                       </svg>
-                      <input type="text" id="langSearchCompact" placeholder="{{#str}}courseai_lang_search_placeholder, local_coursegen{{/str}}" autocomplete="off" />
+                      <input type="text" id="langSearchCompact" placeholder="{{#str}}courseai_lang_search_placeholder, local_coursegen{{/str}}" autocomplete="off">
                     </div>
                   </div>
                   <ul class="pop-list" id="langListCompact" role="listbox" aria-label="{{#str}}courseai_lang_arialabel, local_coursegen{{/str}}"></ul>
@@ -644,11 +689,13 @@
                         <circle cx="11" cy="11" r="8"/>
                         <path d="m21 21-4.35-4.35"/>
                       </svg>
-                      <input type="text" id="guidelineSearchCompact" placeholder="{{#str}}courseai_guidelines_search_placeholder, local_coursegen{{/str}}" autocomplete="off" />
+                      <input type="text" id="guidelineSearchCompact" placeholder="{{#str}}courseai_guidelines_search_placeholder, local_coursegen{{/str}}" autocomplete="off">
                     </div>
                     <p class="pop-note">{{#str}}courseai_guidelines_note_one, local_coursegen{{/str}}</p>
                   </div>
-                  <ul class="pop-list" id="guidelineListCompact" role="listbox" aria-label="{{#str}}courseai_guidelines_list_label, local_coursegen{{/str}}"></ul>
+                  <div class="pop-list-wrap" data-region="guideline-list-compact">
+                    {{#guidelinelist}}{{> local_coursegen/local/courseai/guideline_list_compact }}{{/guidelinelist}}
+                  </div>
                 </div>
 
                 <!-- Templates popover (compact): searchable list -->
@@ -732,24 +779,6 @@
             log and working-indicator modules find them by id, and the two blocks
             are mutually exclusive, so the ids never collide. }}
         <div class="cg-log cg-thread-feed" id="cgLog" aria-live="polite"></div>
-
-        {{! One row per activity the AI is planning, exactly the checklist free
-            mode builds while it plans its own sections: the same group head,
-            the same spinner that becomes a check, and the same detail slot
-            underneath, which here holds that activity's plan. }}
-        <div class="courseai-checklist cg-thread-checklist hidden" id="courseaiChecklist">
-          <div class="cg-group-head" role="button" tabindex="0" aria-expanded="true">
-            <span class="cg-group-chevron" aria-hidden="true">⌄</span>
-            <span class="cg-group-avatar" aria-hidden="true"></span>
-            <span class="cg-group-title">{{#str}}courseai_template_log_planned, local_coursegen{{/str}}</span>
-            <span class="cg-group-count"></span>
-          </div>
-          <ul class="courseai-checklist-list" id="courseaiChecklistList"></ul>
-        </div>
-
-        {{! Everything said after the plan settles, which is where free mode
-            puts its own post-plan turns too. }}
-        <div class="cg-log cg-thread-feed" id="cgLogAfter" aria-live="polite"></div>
       </div>
 
       {{! Bottom slot — free mode pins its live "working" indicator here whenever
@@ -771,15 +800,17 @@
           <p class="cg-decision-subtitle">{{#str}}courseai_template_review_hint, local_coursegen{{/str}}</p>
           <div class="cg-decision-body" id="cgDecisionBody"></div>
           <div class="cg-decision-actions">
-            <button class="cg-decision-btn cg-decision-btn--accept" id="cgDecisionAccept" type="button">
-              {{#str}}courseai_template_review_approve, local_coursegen{{/str}}
-            </button>
             <button class="cg-decision-btn cg-decision-btn--adjust" id="cgDecisionAdjust" type="button">
-              {{#str}}courseai_template_review_adjust, local_coursegen{{/str}}
+              {{#str}}courseai_decision_adjust, local_coursegen{{/str}}
+            </button>
+            <button class="cg-decision-btn cg-decision-btn--accept" id="cgDecisionAccept" type="button">
+              {{#str}}courseai_decision_accept, local_coursegen{{/str}}
             </button>
           </div>
         </div>
       </div>
+
+      {{> local_coursegen/courseai_accept_bar }}
 
       {{! Reduced input bar — chat-composer style, pinned at the panel bottom.
           Only syllabus attach, generate-images toggle, language select and the
@@ -888,19 +919,6 @@
       {{! Everything below only appears once a template has been selected — see
           tplModeDetails in template_mode.js. Only the structure itself. }}
       <div id="tplModeDetails" style="display:none">
-        {{! Badge row — "N sections · M activities" stats plus the section
-            limits banner, both populated by JS when a template is selected }}
-        <div id="tplModeLimits" class="mb-3 tpl-badge-row" style="display:none">
-          <span class="badge badge-light border" id="tplModeStats"></span>
-          <span class="badge badge-light border" id="tplModeLimitsBadge"></span>
-          {{! Opens the whole course as it will be delivered. Hidden until a
-              run exists, because there is nothing to preview before one does. }}
-          <a href="#" class="btn btn-link btn-sm p-0 ms-2" id="tplPreviewCourse" target="_blank" rel="noopener" hidden>
-            {{#pix}} i/preview, core {{/pix}}
-            {{#str}}courseai_preview_course, local_coursegen{{/str}}
-          </a>
-        </div>
-
         {{! Live generation status — hidden until Generate is pressed, then fed
             by the generation's own SSE stream (see template/generation_stream.js).
             Deliberately the SAME markup and the SAME prv-* classes free mode uses
@@ -1182,145 +1200,6 @@
 </main>
 </div><!-- .courseai-app-body -->
 </div><!-- .courseai-app-layout -->
-
-<!-- Template mode: activity picker (Bootstrap 4), filtered to the template's
-     allowedtypes. Structure mirrors core_course's real activity chooser
-     (course/templates/activitychooser.mustache + local/activitychooser/item.mustache)
-     so the already-loaded Boost theme CSS styles the grid/icons natively —
-     see .modchoosercontainer / .optionscontainer / .activityiconcontainer in
-     theme/boost/scss/moodle/{core,icons}.scss. -->
-<div class="modal fade" id="tplActivityChooserModal" tabindex="-1" role="dialog" aria-labelledby="tplActivityChooserLabel" aria-hidden="true">
-  <div class="modal-dialog modal-lg modal-dialog-centered" role="document" style="max-width:900px">
-    <div class="modal-content modchooser">
-      <div class="modal-header">
-        <h5 class="modal-title" id="tplActivityChooserLabel">{{#str}}courseai_template_modal_title, local_coursegen{{/str}}</h5>
-        <button type="button" class="close" data-dismiss="modal" aria-label="{{#str}}courseai_modal_close, local_coursegen{{/str}}">
-          <span aria-hidden="true">&times;</span>
-        </button>
-      </div>
-      <div class="modal-body p-0">
-        <div class="modchoosercontainer d-flex flex-column">
-          <div class="alert alert-info m-3 mb-0 py-2 small">
-            {{#str}}courseai_template_modal_note, local_coursegen{{/str}}
-          </div>
-          <div class="searchcontainer p-3">
-            <input type="search" class="form-control" id="tplChooserSearch"
-                   placeholder="{{#str}}courseai_template_modal_search, local_coursegen{{/str}}">
-          </div>
-          <div class="chooser-container">
-            <div class="optionscontainer d-flex flex-wrap p-2" id="tplChooserGrid" role="menubar"></div>
-          </div>
-          <!-- Prompt panel: picking a type above only reveals/updates this panel
-               (see local/courseai/template/chooser.js); the confirm button is what
-               inserts the activity. Same UX as the "add activity with AI" chat
-               footer (activity_chat_footer.mustache): generate-images radios,
-               selected-file chip + upload button, rounded prompt textarea. -->
-          <div class="chooser-prompt-panel" id="tplChooserPromptPanel" hidden
-               data-region="local_coursegen/template/chooser-panel">
-            <div class="mb-2 d-flex align-items-center flex-wrap" style="gap: .5rem;">
-              <span class="small text-muted">{{#str}}courseai_template_selected_activity, local_coursegen{{/str}}</span>
-              <span class="chooser-selected-chip">
-                <span class="chooser-selected-chip-icon" data-region="local_coursegen/template/chooser-selected-icon"></span>
-                <span data-region="local_coursegen/template/chooser-selected-name"></span>
-              </span>
-            </div>
-
-            {{#cangeneratecourseimages}}
-<div style="gap: .8rem;" class="mb-2 d-flex align-items-center flex-wrap">
-              <label style="gap: .3rem;" class="mb-0 d-flex align-items-center">
-                <input type="radio" name="tpl_generate_images" value="0" checked
-                       data-region="local_coursegen/template/chooser-generateimages">
-                {{#str}} noimages, local_coursegen {{/str}}
-              </label>
-              <label style="gap: .3rem;" class="mb-0 d-flex align-items-center">
-                <input type="radio" name="tpl_generate_images" value="1"
-                       data-region="local_coursegen/template/chooser-generateimages">
-                {{#str}} yesimages, local_coursegen {{/str}}
-              </label>
-            </div>
-            {{/cangeneratecourseimages}}
-
-            <div class="mb-2" data-region="local_coursegen/template/chooser-selectedfile" style="display: none;">
-              <div class="d-flex align-items-center justify-content-between p-2 border rounded bg-light" style="gap: .5rem;">
-                <div class="text-truncate" style="min-width: 0;">
-                  <i class="fa fa-paperclip mr-1" aria-hidden="true"></i>
-                  <span data-region="local_coursegen/template/chooser-selectedfile_name"></span>
-                </div>
-                <button type="button" class="btn btn-link p-0" data-region="local_coursegen/template/chooser-selectedfile_remove">
-                  <i class="fa fa-times" aria-hidden="true"></i>
-                </button>
-              </div>
-            </div>
-
-            <label class="sr-only" for="tplChooserPrompt">{{#str}} addactivityai_label, local_coursegen {{/str}}</label>
-            <div class="ai-prompt-container shadow-sm d-flex flex-column"
-                 style="background-color: var(--body-bg); border: 1px solid var(--border-color, #d1d5db); border-radius: 24px; padding: 10px; max-width: 100%;">
-
-              <textarea
-                  id="tplChooserPrompt"
-                  class="form-control ai-prompt-textarea"
-                  data-region="local_coursegen/template/chooser-prompt"
-                  placeholder="{{#str}} courseai_add_activity_placeholder, local_coursegen {{/str}}"
-                  rows="1"
-                  style="resize: none; border: none; box-shadow: none; padding: 0 10px; margin: 0; background: transparent; min-height: 24px; max-height: 6em; overflow-y: auto; line-height: 1.5; color: inherit; width: 100%;"></textarea>
-
-              <div class="d-flex justify-content-between align-items-center">
-                <button type="button" class="btn btn-light p-0 d-flex align-items-center justify-content-center rounded-circle"
-                    data-region="local_coursegen/template/chooser-upload"
-                    style="width: 34px; height: 34px; flex-shrink: 0;">
-                  <i class="fa fa-file text-primary" aria-hidden="true" style="font-size: 1.1rem;"></i>
-                </button>
-
-                <button type="button" class="btn btn-primary btn-sm chooser-confirm-btn"
-                    data-region="local_coursegen/template/chooser-confirm">
-                  {{#str}} courseai_template_add_activity, local_coursegen {{/str}}
-                </button>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-    </div>
-  </div>
-</div>
-
-<!-- Guideline preview modal (Bootstrap 4) -->
-<div class="modal fade" id="guidelinePreviewModal" tabindex="-1" role="dialog" aria-labelledby="previewModalLabel" aria-hidden="true">
-  <div class="modal-dialog modal-dialog-centered preview-dialog" role="document">
-    <div class="modal-content preview-modal-content">
-
-      <!-- Circle-X close button (top right) -->
-      <button type="button" class="preview-close" data-dismiss="modal" aria-label="{{#str}}courseai_modal_close, local_coursegen{{/str}}">
-        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true">
-          <circle cx="12" cy="12" r="10"/>
-          <line x1="15" y1="9" x2="9" y2="15"/><line x1="9" y1="9" x2="15" y2="15"/>
-        </svg>
-      </button>
-
-      <!-- Header -->
-      <div class="preview-header">
-        <div class="preview-title">
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" style="color:var(--primary);flex-shrink:0" aria-hidden="true">
-            <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/><polyline points="9 12 11 14 15 10"/>
-          </svg>
-          <span id="previewModalLabel"></span>
-        </div>
-        <div class="preview-subtitle">
-          <span class="preview-cat-badge" id="previewModalCategory"></span>
-          <span class="preview-subtitle-text">{{#str}}courseai_modal_fullcontext, local_coursegen{{/str}}</span>
-        </div>
-      </div>
-
-      <!-- Description box -->
-      <div class="preview-body">
-        <div class="preview-desc-box">
-          <p id="previewModalBody"></p>
-        </div>
-      </div>
-
-    </div>
-  </div>
-</div>
 
 {{! Data passed to JavaScript }}
 <div id="courseai-data" style="display:none"

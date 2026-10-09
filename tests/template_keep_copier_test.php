@@ -17,6 +17,7 @@
 namespace local_coursegen;
 
 use local_coursegen\local\models\template;
+use local_coursegen\local\template\template_actions;
 use local_coursegen\local\service\template_keep_copier;
 
 /**
@@ -179,8 +180,97 @@ final class template_keep_copier_test extends \advanced_testcase {
     }
 
     /**
+     * The copy of a kept activity owns the files of every field of the original, with the content they had.
+     *
+     * A kept activity is not rebuilt from a result: it is duplicated by backup and restore, which carries every file
+     * area its module declares, so no file has to be given to it afterwards.
+     */
+    public function test_a_kept_activity_keeps_the_files_of_its_texts(): void {
+        $this->resetAfterTest(true);
+
+        $sourcecourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
+        $targetcourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
+        $page = $this->getDataGenerator()->create_module('page', ['course' => $sourcecourse->id, 'section' => 1]);
+        $context = \context_module::instance($page->cmid);
+        foreach (['intro', 'content'] as $area) {
+            get_file_storage()->create_file_from_string([
+                'contextid' => $context->id, 'component' => 'mod_page', 'filearea' => $area, 'itemid' => 0,
+                'filepath' => '/', 'filename' => $area . '.png', 'author' => 'Template Author', 'license' => 'cc',
+            ], 'FILE-' . $area);
+        }
+        $template = $this->create_template($sourcecourse->id);
+
+        $createdcmids = [];
+        template_keep_copier::copy_into((int) $template->get('id'), $targetcourse->id, $createdcmids);
+
+        $copycontext = \context_module::instance($createdcmids[(int) $page->cmid]);
+        foreach (['intro', 'content'] as $area) {
+            $file = get_file_storage()->get_file($copycontext->id, 'mod_page', $area, 0, '/', $area . '.png');
+            $this->assertNotFalse($file, $area);
+            $this->assertSame('FILE-' . $area, $file->get_content());
+            $this->assertSame('Template Author', $file->get_author());
+        }
+    }
+
+    /**
+     * An activity the AI modifies is not copied: the AI writes its own version of it.
+     */
+    public function test_an_activity_the_ai_modifies_is_not_copied(): void {
+        $this->resetAfterTest(true);
+
+        $sourcecourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
+        $targetcourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
+        $modified = $this->getDataGenerator()->create_module('page', ['course' => $sourcecourse->id, 'section' => 1]);
+        $kept = $this->getDataGenerator()->create_module('page', ['course' => $sourcecourse->id, 'section' => 2]);
+        $template = $this->create_template($sourcecourse->id);
+        $this->save_item($template, (int) $modified->cmid, template_actions::AI);
+
+        $created = [];
+        $failures = template_keep_copier::copy_into((int) $template->get('id'), $targetcourse->id, $created);
+
+        $this->assertSame([], $failures);
+        $this->assertSame([(int) $kept->cmid], array_keys($created));
+    }
+
+    /**
+     * An activity saved as kept is copied like one with nothing saved.
+     */
+    public function test_an_activity_saved_as_kept_is_copied(): void {
+        $this->resetAfterTest(true);
+
+        $sourcecourse = $this->getDataGenerator()->create_course(['numsections' => 1]);
+        $targetcourse = $this->getDataGenerator()->create_course(['numsections' => 1]);
+        $page = $this->getDataGenerator()->create_module('page', ['course' => $sourcecourse->id, 'section' => 1]);
+        $template = $this->create_template($sourcecourse->id);
+        $this->save_item($template, (int) $page->cmid, template_actions::KEEP);
+
+        $created = [];
+        template_keep_copier::copy_into((int) $template->get('id'), $targetcourse->id, $created);
+
+        $this->assertSame([(int) $page->cmid], array_keys($created));
+    }
+
+    /**
+     * Save what the template does with an activity.
+     *
+     * @param template $template
+     * @param int $cmid
+     * @param string $action
+     */
+    private function save_item(template $template, int $cmid, string $action): void {
+        global $DB;
+        $DB->insert_record('local_coursegen_tpl_item', (object) [
+            'templateid' => $template->get('id'),
+            'cmid' => $cmid,
+            'action' => $action,
+            'instruction' => null,
+            'timemodified' => time(),
+        ]);
+    }
+
+    /**
      * A template row pointing at the given course, with no saved
-     * template_activity rows - every activity there defaults to "keep".
+     * items - every activity there defaults to "keep".
      *
      * @param int $courseid
      * @return template

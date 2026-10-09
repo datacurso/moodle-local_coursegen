@@ -22,15 +22,11 @@
  * that can drift from it).
  *
  * After each render (either path) sections_events.js binds the review's
- * controls — row action selects, selection checkboxes, bulk action bars and
- * section behavior selects — so their changes flow into the shared state that
- * buildSections() turns into the save payload. The defaults flow the same
- * way as before: init.js::initSectionState() seeds
- * state.sectionBehavior/activityAction/activityRef/activityPrompt from the
- * course structure, applyTypeDefaultsToState() below re-seeds from the
- * rendered rows' data-modname as a safety net, and binding then re-seeds
- * activityAction from the rendered selects themselves (the server-side
- * render is the single source of truth for per-row defaults).
+ * controls — row action selects, instruction fields, selection checkboxes
+ * and the bulk action bar — so their changes flow into the shared state that
+ * the save payload is built from. Binding first seeds state.activityAction
+ * and state.activityInstruction from the rendered controls themselves (the
+ * server-side render is the single source of truth for per-row values).
  *
  * @module     local_coursegen/local/template/step_sections
  * @copyright  2025 Wilber Narvaez <https://datacurso.com>
@@ -38,14 +34,16 @@
  */
 
 import {getCoursePreview} from 'local_coursegen/local/template/repository';
-import {applyTypeDefaultsToState} from 'local_coursegen/local/template/type_action_sync';
 import {bindServerRenderedControls} from 'local_coursegen/local/template/sections_events';
 import Notification from 'core/notification';
+import Selectors from 'local_coursegen/local/template/selectors';
 
 let rendered = false;
 
 /** Reset so a newly selected course's structure gets rendered again. */
-export const resetSectionsRender = () => { rendered = false; };
+export const resetSectionsRender = () => {
+    rendered = false;
+};
 
 /**
  * @param {HTMLElement} panel The structure panel (holds [data-region="sections-config"]).
@@ -67,13 +65,12 @@ export const renderStepSections = async(panel, state, isFreshFromPageLoad) => {
         return;
     }
 
-    let container = panel.querySelector('[data-region="sections-config"]');
+    let container = panel.querySelector(Selectors.regions.sectionsConfig);
 
-    // Server already rendered the review on initial page load — seed the
-    // per-activity defaults and bind the review controls to it.
+    // Server already rendered the review on initial page load — bind the
+    // review controls to it.
     if (isFreshFromPageLoad && container
-            && container.querySelector('[data-region="section-behavior"], [data-region="activity-action"]')) {
-        applyTypeDefaultsToState(container, state);
+            && container.querySelector(Selectors.regions.activityActionSelect)) {
         bindServerRenderedControls(container, state);
         rendered = true;
         return;
@@ -81,7 +78,7 @@ export const renderStepSections = async(panel, state, isFreshFromPageLoad) => {
 
     // Otherwise fetch via AJAX (course picked without a full page reload,
     // or a DIFFERENT course selected after the initial one).
-    container = panel.querySelector('[data-region="sections-config"]') || panel;
+    container = panel.querySelector(Selectors.regions.sectionsConfig) || panel;
     container.innerHTML = `<div class="d-flex align-items-center py-5 justify-content-center">
             <div class="spinner-border text-primary mr-2" role="status"></div>
             <span class="text-muted">Loading course structure...</span>
@@ -89,7 +86,6 @@ export const renderStepSections = async(panel, state, isFreshFromPageLoad) => {
     try {
         const preview = await getCoursePreview(state.selectedCourseId, state.templateId || 0);
         container.innerHTML = preview.html;
-        applyTypeDefaultsToState(container, state);
         bindServerRenderedControls(container, state);
         rendered = true;
     } catch (e) {

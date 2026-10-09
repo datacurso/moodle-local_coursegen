@@ -20,6 +20,8 @@
     AI Course Generation Button Template
 
     Self-contained template with all styling, icons and text included.
+    The button carries no margin or width utilities so it sits inline with
+    core's course action buttons, whose containers are flex rows with a gap.
 
     Example context (json):
     {
@@ -28,7 +30,7 @@
 }}
 <form action="{{#url}}{{url}}{{/url}}{{^url}}#{{/url}}" method="get" id="local_coursegen_aicourseform">
     <button type="submit"
-        class="btn btn-outline-secondary m-1 w-100 datacurso-ai-button"
+        class="btn btn-outline-secondary datacurso-ai-button"
         data-action="local_coursegen/add_ai_course">
         <i class="fa fa-magic" aria-hidden="true"></i>
         {{#str}}createwithai, local_coursegen{{/str}}

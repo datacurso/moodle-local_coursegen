@@ -17,12 +17,11 @@
  * In-memory data model for the template-mode guided form.
  *
  * The server (get_template_structure) is the source of truth for the template's
- * locked reference sections/activities. Everything the professor adds afterwards
- * (new sections, new activities picked from the chooser) only exists in this
- * client-side model until the (not-yet-built) course-creation step consumes it;
- * that endpoint does not exist yet and is out of scope for this module.
- * Mutating this object and calling renderStructure() again is the only way the
- * view changes: there is no hand-built DOM anywhere (see local/template/render.js).
+ * sections and activities. The only thing the professor adds is the file of a
+ * space (a file resource the template asks a file for), kept on the row until
+ * the generation starts. Mutating this object and calling renderStructure()
+ * again is the only way the view changes: there is no hand-built DOM anywhere
+ * (see local/template/render.js).
  *
  * @module     local_coursegen/local/courseai/template/state
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -46,9 +45,6 @@
  */
 export const createTemplateState = (inputbar = {}) => ({
     loaded: false,
-    nolimit: false,
-    remainingSections: 0,
-    allowedActivities: [],
     sections: [],
     typeLabels: {},
     // Input-bar values, ready for the future generation payload.
@@ -67,9 +63,6 @@ export const createTemplateState = (inputbar = {}) => ({
  */
 export const applyStructureResponse = (state, data) => {
     state.loaded = true;
-    state.nolimit = !!data.nolimit;
-    state.remainingSections = data.remainingsections || 0;
-    state.allowedActivities = data.allowedactivities || [];
     state.sections = (data.sections || []).map((section) => ({
         id: section.id,
         name: section.name,
@@ -99,104 +92,6 @@ export const applyStructureResponse = (state, data) => {
             generationuid: activity.generationuid || '',
         })),
     }));
-};
-
-/**
- * Whether a new section can still be added given the template's section limit.
- *
- * @param {Object} state
- * @returns {boolean}
- */
-export const canAddSection = (state) => state.nolimit || state.remainingSections > 0;
-
-/**
- * Append a new, empty, unlocked section.
- *
- * A newly added section has no id: it has nothing server-side to answer to
- * yet (no real Moodle section), so there is nothing to name it by. Every
- * function below that acts on "a section" is given its position in
- * state.sections instead — the same way a newly added activity is already
- * addressed by its position, not by an id of its own (see insertActivity).
- * A real, locked section keeps whatever id the server sent it, unaffected.
- *
- * @param {Object} state
- * @param {string} sectionLabel - Localised generic label (e.g. "Section"), numbered by position.
- * @returns {Object|null} The created section, or null if the limit was reached.
- */
-export const addSection = (state, sectionLabel) => {
-    if (!canAddSection(state)) {
-        return null;
-    }
-    const section = {
-        name: `${sectionLabel || 'Section'} ${state.sections.length + 1}`,
-        locked: false,
-        collapsed: false,
-        activities: [],
-    };
-    state.sections.push(section);
-    if (!state.nolimit) {
-        state.remainingSections -= 1;
-    }
-    return section;
-};
-
-/**
- * Insert an activity (picked from the chooser) into a section's activity list.
- *
- * @param {Object} state
- * @param {number} sectionIndex - The section's position in state.sections.
- * @param {number|null} position - 0-based index to insert BEFORE, or null/undefined to append.
- * @param {Object} activity - {modname, displayname, purpose, iconhtml} plus the
- *     optional chooser prompt-panel extras {prompt, generateimages, draftitemid,
- *     filename}, defaulted to ''/0/0/'' when absent.
- * @returns {Object|null} The created activity row, or null if the insertion
- *     did not happen — the caller uses the returned reference (not its id)
- *     to find and undo the insertion if a later step fails.
- */
-export const insertActivity = (state, sectionIndex, position, activity) => {
-    const section = state.sections[sectionIndex];
-    if (!section || section.locked) {
-        return null;
-    }
-    const newActivity = {
-        name: activity.displayname,
-        modname: activity.modname,
-        purpose: activity.purpose,
-        iconhtml: activity.iconhtml,
-        locked: false,
-        prompt: activity.prompt || '',
-        generateimages: activity.generateimages ? 1 : 0,
-        draftitemid: activity.draftitemid || 0,
-        filename: activity.filename || '',
-    };
-    const hasPosition = typeof position === 'number' && position >= 0 && position <= section.activities.length;
-    if (hasPosition) {
-        section.activities.splice(position, 0, newActivity);
-    } else {
-        section.activities.push(newActivity);
-    }
-    return newActivity;
-};
-
-/**
- * Remove one (unlocked) activity from a section by its current render index.
- *
- * @param {Object} state
- * @param {number} sectionIndex - The section's position in state.sections.
- * @param {number} activityIndex
- * @returns {boolean} Whether a row was removed.
- */
-export const removeActivity = (state, sectionIndex, activityIndex) => {
-    const section = state.sections[sectionIndex];
-    if (!section) {
-        return false;
-    }
-    const activity = section.activities[activityIndex];
-    if (!activity || activity.locked) {
-        return false;
-    }
-    section.activities.splice(activityIndex, 1);
-    return true;
 };
 
 /**

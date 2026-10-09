@@ -13,8 +13,9 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+
 /**
- * Repository for template wizard AJAX calls.
+ * Repository for the template editor's AJAX calls.
  *
  * @module     local_coursegen/local/template/repository
  * @copyright  2025 Wilber Narvaez <https://datacurso.com>
@@ -24,65 +25,40 @@
 import Ajax from 'core/ajax';
 
 /**
- * Get all templates.
+ * Get the "Course sections" review of a course, rendered with the same server-side code as the first page load.
  *
- * @returns {Promise<Array>} Resolves with the list of template objects.
- */
-export const getTemplates = () => Ajax.call([{
-    methodname: 'local_coursegen_get_templates',
-    args: {},
-}])[0];
-
-/**
- * Delete a template by ID.
- *
- * @param {number} id Template ID to delete.
- * @returns {Promise<Object>} Resolves with the deletion result.
- */
-export const deleteTemplate = (id) => Ajax.call([{
-    methodname: 'local_coursegen_delete_template',
-    args: {id},
-}])[0];
-
-/**
- * Get the section/activity structure for a course.
- *
- * @param {number} courseid Moodle course ID.
- * @returns {Promise<Array>} Resolves with an array of section objects.
- */
-export const getCourseStructure = (courseid) => Ajax.call([{
-    methodname: 'local_coursegen_get_course_structure',
-    args: {courseid},
-}])[0];
-
-/**
- * Save a template (create or update).
- *
- * @param {Object} data Template payload.
- * @param {number} data.id Template ID (0 for new).
- * @param {string} data.name Template name.
- * @param {string} data.description Template description.
- * @param {number} data.courseid Source course ID.
- * @param {number} data.maxsections Maximum sections allowed.
- * @param {boolean} data.nolimit Whether section limit is disabled.
- * @param {string} data.namingpattern Section naming pattern string.
- * @param {number} data.namingstart Starting number for section naming.
- * @param {Array} data.sections Section configuration array.
- * @returns {Promise<Object>} Resolves with the saved template object.
- */
-/**
- * Get course preview rendered with native format renderer.
- *
- * @param {number} courseid Course ID.
- * @param {number} templateid Existing template whose saved configuration
- *     preselects the review controls (0: none).
- * @returns {Promise<Object>} Resolves with {html, fullname, shortname, format, numsections, numactivities}.
+ * @param {number} courseid Course ID, for example 42.
+ * @param {number} templateid Existing template whose saved choices preselect the review (0: none).
+ * @returns {Promise<Object>} Resolves with {html, courseid, fullname, shortname}.
  */
 export const getCoursePreview = (courseid, templateid = 0) => Ajax.call([{
     methodname: 'local_coursegen_get_course_preview',
     args: {courseid, templateid},
 }])[0];
 
+/**
+ * Find the courses of a category whose name contains a text.
+ *
+ * @param {number} categoryid Category ID, for example 3.
+ * @param {string} query Text the course name contains, for example "marketing".
+ * @returns {Promise<Array>} Resolves with the courses, each {id, fullname, shortname}.
+ */
+export const searchCourses = (categoryid, query) => Ajax.call([{
+    methodname: 'local_coursegen_search_template_courses',
+    args: {categoryid, query},
+}])[0];
+
+/**
+ * Save a template (create or update).
+ *
+ * @param {Object} data The arguments of the save web service.
+ * @param {number} data.templateid Template ID (0 for new).
+ * @param {number} data.courseid Course the template is based on.
+ * @param {string} data.name Template name.
+ * @param {string} data.description Template description.
+ * @param {Array} data.items What the AI does with each activity, each {cmid, action, instruction}.
+ * @returns {Promise<Object>} Resolves with {templateid, itemcount}.
+ */
 export const saveTemplate = (data) => Ajax.call([{
     methodname: 'local_coursegen_save_template',
     args: data,

@@ -17,43 +17,46 @@
 {{!
     @template local_coursegen/template_course_sections_row
 
-    One row of the "Course sections" review table — a real activity, a
-    virtual template instance or a virtual space — plus the hover-reveal insertion gap that
-    follows it. Included once per entry of a section's "rows" array by
-    template_course_sections.mustache (split out to keep that file under
-    the project's 250-line cap); never rendered on its own.
+    One activity of the "Course sections" review table: its row plus, right
+    under it, the row that holds the optional instruction for the AI (hidden
+    while the activity stays intact). Included once per entry of a section's
+    "rows" array by template_course_sections.mustache (split out to keep that
+    file small); never rendered on its own.
 
     Context variables: see template_course_sections.mustache's own
     docblock for the full shape of one "rows" entry.
+
+    Example context (json):
+    {
+        "cmid": 42,
+        "name": "Welcome page",
+        "viewurl": "https://example.com/mod/page/view.php?id=42",
+        "modname": "page",
+        "typelabel": "Page",
+        "iconurl": "https://example.com/theme/image.php/boost/page/1/monologo",
+        "isai": false,
+        "instruction": "",
+        "actions": [
+            {"value": "keep", "cmid": 42, "label": "Keep intact", "tip": "The AI never touches the activity", "active": true},
+            {"value": "ai", "cmid": 42, "label": "Modify with AI", "tip": "The AI modifies the activity following your instruction", "active": false}
+        ]
+    }
 }}
-{{#isreal}}
-<tr class="{{#istemplate}}tpl-row-template{{/istemplate}}{{#isspace}} tpl-row-space{{/isspace}}" data-for="cmitem" data-id="{{cmid}}" data-modname="{{modname}}" data-typelabel="{{typelabel}}">
+<tr data-for="cmitem" data-id="{{cmid}}" data-modname="{{modname}}">
     <td class="align-middle tpl-select-col">
         <input type="checkbox" data-region="activity-select" data-id="{{cmid}}"
                aria-label="{{name}}">
     </td>
     <td class="align-middle">
-        <img src="{{iconurl}}" class="icon activityicon mr-2" alt="" data-region="local_coursegen/template/activity-icon">{{!
+        <img src="{{iconurl}}" class="icon activityicon mr-2" alt="">{{!
         }}{{#viewurl}}<a href="{{viewurl}}" target="_blank" rel="noopener">{{name}}</a>{{/viewurl}}{{!
-        }}{{^viewurl}}<span>{{name}}</span>{{/viewurl}}{{!
-        }}<button type="button"
-                class="tpl-badge tpl-badge-template tpl-template-tag ml-2{{^istemplate}} d-none{{/istemplate}}"
-                data-region="template-tag" data-id="{{cmid}}" data-name="{{name}}"
-                data-tag-course="{{#str}} template_activity_template_tag, local_coursegen, {{scopelabelcourse}} {{/str}}"
-                data-tag-section="{{#str}} template_activity_template_tag, local_coursegen, {{scopelabelsection}} {{/str}}">
-            {{#str}} template_activity_template_tag, local_coursegen, {{scopelabel}} {{/str}}
-        </button>{{!
-        }}<button type="button"
-                class="tpl-badge tpl-badge-space tpl-space-tag ml-2{{^isspace}} d-none{{/isspace}}"
-                data-region="local_coursegen/template/space-tag" data-id="{{cmid}}" data-name="{{name}}"
-                data-badge-required="{{spacebadgerequired}}" data-badge-optional="{{spacebadgeoptional}}">{{spacebadge}}</button>
-        <div class="tpl-space-instruction text-muted small{{^hasspaceinstruction}} d-none{{/hasspaceinstruction}}"
-             data-region="local_coursegen/template/space-row-instruction" data-id="{{cmid}}">{{spaceinstruction}}</div>
+        }}{{^viewurl}}<span>{{name}}</span>{{/viewurl}}
     </td>
-    <td class="align-middle text-muted" data-region="local_coursegen/template/type-label">{{typelabel}}</td>
+    <td class="align-middle text-muted">{{typelabel}}</td>
     <td class="align-middle text-right">
         <select class="custom-select custom-select-sm tpl-activity-action"
                 data-region="activity-action" data-id="{{cmid}}"
+                aria-controls="local-coursegen-tpl-instruction-{{cmid}}"
                 aria-label="{{#str}} actions, core {{/str}}">
             {{#actions}}
             <option value="{{value}}" title="{{tip}}"{{#active}} selected{{/active}}>{{label}}</option>
@@ -61,13 +64,15 @@
         </select>
     </td>
 </tr>
-{{/isreal}}
-{{#isinstance}}
-{{> local_coursegen/template_instance_row}}
-{{/isinstance}}
-{{#isvirtualspace}}
-{{> local_coursegen/template_space_row}}
-{{/isvirtualspace}}
-{{^islast}}
-{{> local_coursegen/template_row_gap}}
-{{/islast}}
+<tr class="tpl-instruction-row{{^isai}} d-none{{/isai}}" data-for="instruction" data-id="{{cmid}}">
+    <td></td>
+    <td colspan="3">
+        <label class="small text-muted mb-1" for="local-coursegen-tpl-instruction-{{cmid}}">
+            {{#str}} template_instruction, local_coursegen {{/str}}
+        </label>
+        <textarea class="form-control form-control-sm" rows="2"
+                  id="local-coursegen-tpl-instruction-{{cmid}}"
+                  data-region="activity-instruction" data-id="{{cmid}}"
+                  placeholder="{{#str}} template_instruction_placeholder, local_coursegen {{/str}}">{{instruction}}</textarea>
+    </td>
+</tr>

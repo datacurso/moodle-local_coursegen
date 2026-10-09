@@ -17,7 +17,8 @@
 namespace local_coursegen\local\link;
 
 /**
- * The modules whose texts are searched for link tokens.
+ * The modules whose texts are searched for link tokens, and for the addresses
+ * of the template's course in the copied kept activities.
  *
  * Only the modules whose generators fill their texts under the strict link
  * rule are listed; every other module is not read.
@@ -29,6 +30,7 @@ namespace local_coursegen\local\link;
 final class module_link_texts_registry {
     /** @var array<string,class-string<module_link_texts>> Module name => the class describing its texts. */
     private const MODULES = [
+        'label' => label_link_texts::class,
         'page' => page_link_texts::class,
         'lesson' => lesson_link_texts::class,
     ];

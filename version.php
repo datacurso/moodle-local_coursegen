@@ -26,10 +26,10 @@ defined('MOODLE_INTERNAL') || die();
 
 $plugin->component = 'local_coursegen';
 $plugin->release = '2.0.10';
-$plugin->version = 2026100101;
+$plugin->version = 2026100626;
 $plugin->requires = 2024100700; // Moodle 4.5.
 $plugin->maturity = MATURITY_STABLE;
-$plugin->supported = [405, 501];
+$plugin->supported = [405, 502];
 $plugin->dependencies = [
-    'aiprovider_datacurso' => 2026081000,
+    'aiprovider_datacurso' => 2026100400,
 ];

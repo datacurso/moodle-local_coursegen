@@ -21,9 +21,7 @@ use local_coursegen\local\preview\scorm\view;
 /**
  * A SCORM package, drawn by mod_scorm's own view code run against the payload.
  *
- * The package itself is the mould's: an answer writes the description of a
- * package, not the package, so what enters the player is what the template
- * carries.
+ * The package is the one the activity's own result lists among its files.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -37,31 +35,6 @@ class scorm_preview extends preview_base {
      */
     protected function modname(): string {
         return 'scorm';
-    }
-
-    /**
-     * A draft's description replaces the mould's.
-     *
-     * @param json_store $store
-     */
-    protected function overlay(json_store $store): void {
-        $rows = $store->get_records('scorm');
-        if (!$rows) {
-            return;
-        }
-        $scorm = reset($rows);
-        $value = $this->parameters['introeditor'] ?? ($this->parameters['intro'] ?? null);
-        if (is_array($value)) {
-            $text = (string) ($value['text'] ?? '');
-            $introformat = (int) ($value['format'] ?? FORMAT_HTML);
-        } else {
-            $text = (string) ($value ?? '');
-            $introformat = FORMAT_HTML;
-        }
-        if (trim($text) !== '') {
-            $store->set('scorm', $scorm->id, 'intro', $text);
-            $store->set('scorm', $scorm->id, 'introformat', $introformat);
-        }
     }
 
     /**

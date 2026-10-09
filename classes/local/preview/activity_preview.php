@@ -39,6 +39,9 @@ abstract class activity_preview {
     /** @var array The activity's parameters, as the AI returned them. */
     protected array $parameters;
 
+    /** @var int The template's course module this page is built on, or 0 when it names none. */
+    protected int $cmid = 0;
+
     /** @var \moodle_url Where this preview is being read, for a type that has pages. */
     protected \moodle_url $here;
 
@@ -48,14 +51,16 @@ abstract class activity_preview {
     /**
      * Constructor.
      *
-     * @param array $parameters The activity's own parameters from the answer.
-     * @param array $source The activity as the payload describes it, with its
-     *                      structure, for a preview that runs the module's own
-     *                      code against it. Unused by previews that draw from
-     *                      the parameters alone.
+     * @param array $parameters The activity's own parameters from the answer,
+     *                          with the tree of rows a preview that runs the
+     *                          module's own code reads them from.
+     * @param int $cmid The course module of the template course the page is
+     *                  built on: the chrome of a page and the course module
+     *                  object a module's view code is handed come from it.
      */
-    public function __construct(array $parameters, array $source = []) {
+    public function __construct(array $parameters, int $cmid = 0) {
         $this->parameters = $parameters;
+        $this->cmid = $cmid;
         $this->here = new \moodle_url('/local/coursegen/activity_preview.php');
     }
 
@@ -136,6 +141,24 @@ abstract class activity_preview {
      */
     public function header_title(): string {
         return '';
+    }
+
+    /**
+     * Give the course module the page is built on this activity's name.
+     *
+     * The page heading and the activity header are printed from the course
+     * module, which is the template activity the generated one is built into
+     * and carries its name. The change lasts for this request only; nothing
+     * is saved.
+     *
+     * @param \cm_info $cm
+     */
+    public function name_course_module(\cm_info $cm): void {
+        $name = $this->name();
+        if ($name === '') {
+            return;
+        }
+        $cm->set_name($name);
     }
 
     /**

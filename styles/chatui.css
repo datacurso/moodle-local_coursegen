@@ -24,7 +24,7 @@
 }
 
 .ai-prompt-textarea::-webkit-scrollbar-thumb {
-  background-color: var(--secondary);
+  background-color: var(--bs-secondary, var(--secondary));
   border-radius: 10px;
 }
 
@@ -603,4 +603,9 @@ body.cg-plan-reviewed .courseai-checklist-item.is-loading .courseai-checklist-ch
   color: var(--muted-fg);
   flex: 1;
   min-width: 0;
+}
+
+/* An activity the run left as it was: the same check, a quieter name. */
+.courseai-checklist-item.is-unchanged .courseai-checklist-name {
+    opacity: 0.65;
 }

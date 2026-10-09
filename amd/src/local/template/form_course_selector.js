@@ -21,9 +21,8 @@
  * Mirrors core/form-course-selector.js in shape, but core's course search
  * (core_course_search_courses) has no category filter, only free text
  * across every course on the site — this plugin's own
- * local_coursegen_get_courses_by_category already exists for exactly this
- * (category-scoped course listing) and only needed a $query parameter
- * added to also filter by free text.
+ * local_coursegen_search_template_courses exists for exactly this
+ * (category-scoped course search, also filtered by free text).
  *
  * Scoped to the SELECTED category only (recursive: false): the sibling
  * category field already lists every category in the full hierarchy, so a
@@ -34,7 +33,7 @@
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
-define(['core/ajax'], function(Ajax) {
+define(['local_coursegen/local/template/repository'], function(Repository) {
 
     return {
         /**
@@ -64,10 +63,7 @@ define(['core/ajax'], function(Ajax) {
                 return;
             }
 
-            Ajax.call([{
-                methodname: 'local_coursegen_get_courses_by_category',
-                args: {categoryid: categoryid, recursive: false, query: query || ''},
-            }])[0].then(success).catch(failure);
+            Repository.searchCourses(categoryid, query || '').then(success).catch(failure);
         }
     };
 });

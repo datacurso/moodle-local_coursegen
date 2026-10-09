@@ -86,6 +86,75 @@ class course_session_service {
     }
 
     /**
+     * Get a course planning session by its external session identifier for the given user.
+     *
+     * @param string $sessionid External session (thread) identifier.
+     * @param int $userid User ID.
+     * @return course_session
+     * @throws \moodle_exception When the user has no session with that identifier.
+     */
+    public static function get_user_session_by_external_id(string $sessionid, int $userid): course_session {
+        $session = course_session::get_record([
+            'session_id' => $sessionid,
+            'userid' => $userid,
+        ]);
+
+        if (!$session) {
+            throw new \moodle_exception('error_no_session_found', 'local_coursegen');
+        }
+
+        return $session;
+    }
+
+    /**
+     * Whether a user may view the stored syllabus file of a planning session.
+     *
+     * Allowed for the session owner, or for holders of the
+     * local/coursegen:view_syllabus capability in the system context.
+     *
+     * @param int $sessionid Session record ID (syllabus file item id).
+     * @param int $userid User ID requesting access.
+     * @return bool
+     */
+    public static function can_view_syllabus(int $sessionid, int $userid): bool {
+        $session = course_session::get_record(['id' => $sessionid]);
+        if (!$session) {
+            return false;
+        }
+
+        if ((int)$session->get('userid') === $userid) {
+            return true;
+        }
+
+        return has_capability('local/coursegen:view_syllabus', \context_system::instance(), $userid);
+    }
+
+    /**
+     * Name of the syllabus file uploaded for a planning session.
+     *
+     * The upload stores the file in the system context with the session record id as item id.
+     *
+     * @param int $recordid Session record ID.
+     * @return string The file name, or an empty string when the session has no syllabus.
+     */
+    public static function get_syllabus_filename(int $recordid): string {
+        $files = get_file_storage()->get_area_files(
+            \context_system::instance()->id,
+            'local_coursegen',
+            'syllabus',
+            $recordid,
+            'id',
+            false
+        );
+        if (empty($files)) {
+            return '';
+        }
+
+        $file = reset($files);
+        return (string)$file->get_filename();
+    }
+
+    /**
      * Get in-progress course sessions for a user.
      *
      * @param int $userid User ID.

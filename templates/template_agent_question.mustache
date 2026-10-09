@@ -1,0 +1,138 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/template_agent_question
+
+    The question the AI pauses a template generation on, with the control that answers it: a file picker, a text
+    box or a list of options.
+
+    The card is the decision card of the page: its title, its buttons (the primary one is the coral of Accept, the
+    outline one is the one of Adjust), the option rows of the proposals and the chip of the attached syllabus.
+
+    Classes required for JS:
+    * none
+
+    Data attributes required for JS:
+    * data-region="local_coursegen/template-agent/question" on the card, with data-call-id of the question
+    * data-action="local_coursegen/template-agent/pick-file" on the button that opens the file picker (a drop-zone
+      looking control: an upload icon, what it does and which files it takes)
+    * data-action="local_coursegen/template-agent/no-file" on the button of a teacher who has no file
+    * data-action="local_coursegen/template-agent/send-answer" on the button that sends the answer, disabled until
+      there is an answer to send
+    * data-action="local_coursegen/template-agent/remove-file" on the button that drops the picked file
+    * data-region="file-chip" on the chip of the picked file, hidden until one is picked
+    * data-region="file-name", "text-input", "choice-input" and "error" inside the card
+
+    Context variables required for this template:
+    * title string - What is missing, for example "Falta un archivo"
+    * about string - The activity the question is about, for example "Actividad: Guía Semanal"; empty when none
+    * hasabout bool - The question names an activity
+    * callid string - Call id of the question, for example "c4"
+    * question string - What the AI asks, for example "Which file replaces the guide?"
+    * askfile bool - The answer is a file
+    * nofile bool - The teacher may say there is no file
+    * asktext bool - The answer is a text
+    * askchoice bool - The answer is one of the options
+    * options array - The options of a choice, each with value string and index int
+
+    Example context (json):
+    {
+        "title": "Falta un archivo",
+        "about": "Actividad: Guía Semanal",
+        "hasabout": true,
+        "callid": "c4",
+        "question": "Which file replaces the weekly guide?",
+        "askfile": true,
+        "nofile": true,
+        "asktext": false,
+        "askchoice": false,
+        "options": []
+    }
+}}
+<div class="local_coursegen-template_agent_question cg-decision-card cg-ask-card"
+     data-region="local_coursegen/template-agent/question" data-call-id="{{callid}}"
+     role="group" aria-labelledby="{{uniqid}}-title">
+    <p class="cg-decision-title" id="{{uniqid}}-title">{{title}}</p>
+    {{#hasabout}}
+    <p class="cg-ask-about">{{about}}</p>
+    {{/hasabout}}
+    <p class="cg-decision-subtitle">{{question}}</p>
+    <div class="cg-decision-body cg-ask-body">
+        {{#askfile}}
+        <div class="cg-ask-file">
+            <button type="button" class="cg-ask-pick"
+                    data-action="local_coursegen/template-agent/pick-file">
+                <span class="cg-ask-pick-icon" aria-hidden="true">
+                    <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+                        <polyline points="17 8 12 3 7 8"/>
+                        <line x1="12" y1="3" x2="12" y2="15"/>
+                    </svg>
+                </span>
+                <span class="cg-ask-pick-text">
+                    <span class="cg-ask-pick-label">{{#str}} template_agent_question_file_button, local_coursegen {{/str}}</span>
+                    <span class="cg-ask-pick-hint">{{#str}} template_agent_question_file_hint, local_coursegen {{/str}}</span>
+                </span>
+            </button>
+            <span class="chip chip-syllabus" data-region="file-chip" hidden>
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">
+                    <path d="M15 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V7z"/>
+                    <polyline points="14 2 14 8 20 8"/>
+                    <line x1="16" y1="13" x2="8" y2="13"/>
+                    <line x1="16" y1="17" x2="8" y2="17"/>
+                </svg>
+                <span class="chip-name" data-region="file-name" aria-live="polite"></span>
+                <button type="button" class="chip-btn" data-action="local_coursegen/template-agent/remove-file"
+                        aria-label="{{#str}} template_agent_question_file_remove, local_coursegen {{/str}}">
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.8" stroke-linecap="round" aria-hidden="true">
+                        <line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/>
+                    </svg>
+                </button>
+            </span>
+        </div>
+        {{/askfile}}
+        {{#asktext}}
+        <label class="visually-hidden" for="{{uniqid}}-text">{{#str}} template_agent_question_text_label, local_coursegen {{/str}}</label>
+        <textarea class="plan-proposal-other-textarea" id="{{uniqid}}-text" rows="3" data-region="text-input"></textarea>
+        {{/asktext}}
+        {{#askchoice}}
+        <fieldset class="plan-proposals-group cg-ask-choices">
+            <legend class="visually-hidden">{{#str}} template_agent_question_choice_label, local_coursegen {{/str}}</legend>
+            {{#options}}
+            <label class="plan-proposal-card" for="{{uniqid}}-choice-{{index}}">
+                <input class="plan-proposal-radio" type="radio" name="{{uniqid}}-choice" id="{{uniqid}}-choice-{{index}}"
+                       value="{{value}}" data-region="choice-input">
+                <span class="plan-proposal-summary">{{value}}</span>
+            </label>
+            {{/options}}
+        </fieldset>
+        {{/askchoice}}
+        <p class="cg-ask-error" role="alert" data-region="error" hidden></p>
+    </div>
+    <div class="cg-decision-actions">
+        {{#nofile}}
+        <button type="button" class="cg-decision-btn cg-decision-btn--adjust"
+                data-action="local_coursegen/template-agent/no-file">
+            {{#str}} template_agent_question_nofile_button, local_coursegen {{/str}}
+        </button>
+        {{/nofile}}
+        <button type="button" class="cg-decision-btn cg-decision-btn--accept"
+                data-action="local_coursegen/template-agent/send-answer" disabled>
+            {{#str}} template_agent_question_send, local_coursegen {{/str}}
+        </button>
+    </div>
+</div>

@@ -17,80 +17,26 @@
 namespace local_coursegen\utils;
 
 use context;
-use context_user;
 use stored_file;
 
 /**
- * Copies the files a mold's rich text references into an editor draft area.
+ * Finds the files a mold's texts point at, and the markers the AI service left unresolved.
  *
  * A mold exporter rewrites @@PLUGINFILE@@ placeholders to absolute
  * pluginfile.php URLs of the base course's files so the AI service can hand
- * the text back intact. Before that text reaches add_moduleinfo(), each such
- * URL is resolved to its stored_file, copied into the draft area of the
- * field's editor and rewritten back to @@PLUGINFILE@@/<filename>; the normal
- * draft-to-module save then carries the file into the new module's area.
+ * the text back intact. This resolves such an address to its stored_file and
+ * says whether the current user may copy it; giving the file to the new
+ * activity is the work of activity_file_pass.
  *
- * Only files of an allowed course are copied: the template's base course
- * when the flow knows it, otherwise any course the current user can access.
- * Every other pluginfile URL is left untouched.
+ * Only files of a course or module the current user can manage activities in
+ * are copied: the template's base course when the flow knows it, otherwise any
+ * course the current user can access. Every other pluginfile URL is refused.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class mold_file_copier {
-    /**
-     * Copy every referenced pluginfile.php file of this site into the draft area and rewrite its URL.
-     *
-     * Matches src/href attributes pointing at $CFG->wwwroot/pluginfile.php/...
-     * in the given HTML.
-     *
-     * @param string $text HTML text.
-     * @param int $draftitemid Draft area of the field's editor (current user).
-     * @param int|null $sourcecourseid The only course whose files may be copied; null
-     *     allows any course the current user can access.
-     * @return string The text with copied files rewritten to @@PLUGINFILE@@ URLs.
-     */
-    public static function copy_pluginfile_urls_to_draft(string $text, int $draftitemid, ?int $sourcecourseid = null): string {
-        global $CFG;
-
-        if ($text === '' || $draftitemid <= 0 || !str_contains($text, 'pluginfile.php/')) {
-            return $text;
-        }
-
-        $prefix = preg_quote($CFG->wwwroot . '/pluginfile.php/', '#');
-        $pattern = '#\b(src|href)\s*=\s*(["\'])(' . $prefix . '[^"\']+)\2#iu';
-
-        return preg_replace_callback(
-            $pattern,
-            static function (array $matches) use ($draftitemid, $sourcecourseid): string {
-                $url = html_entity_decode($matches[3], ENT_QUOTES | ENT_SUBSTITUTE, 'UTF-8');
-                $filename = self::copy_url_to_draft($url, $draftitemid, $sourcecourseid);
-                if ($filename === null) {
-                    return $matches[0];
-                }
-                return $matches[1] . '="@@PLUGINFILE@@/' . rawurlencode($filename) . '"';
-            },
-            $text
-        ) ?? $text;
-    }
-
-    /**
-     * Copy the file one pluginfile URL points at into the draft area.
-     *
-     * @param string $url Absolute pluginfile.php URL of this site.
-     * @param int $draftitemid Draft area of the current user.
-     * @param int|null $sourcecourseid Allowed source course, or null for any accessible course.
-     * @return string|null The filename inside the draft area, or null when nothing was copied.
-     */
-    public static function copy_url_to_draft(string $url, int $draftitemid, ?int $sourcecourseid = null): ?string {
-        $file = self::resolve_url($url);
-        if ($file === null || !self::is_allowed_source($file, $sourcecourseid)) {
-            return null;
-        }
-        return self::copy_to_draft($file, $draftitemid);
-    }
-
     /**
      * Locate the stored_file an absolute pluginfile URL of this site refers to.
      *
@@ -125,78 +71,73 @@ class mold_file_copier {
             return null;
         }
 
-        $fs = get_file_storage();
-        // With an item id.
-        if (!empty($segments) && ctype_digit($segments[0])) {
-            $itemid = (int) $segments[0];
-            $filepath = '/' . implode('/', array_slice($segments, 1));
-            $filepath = rtrim($filepath, '/') . '/';
-            $file = $fs->get_file($contextid, $component, $filearea, $itemid, $filepath, $filename);
-            if ($file) {
-                return $file;
-            }
-        }
-        // Without an item id (intro-like areas).
-        $filepath = '/' . implode('/', $segments);
-        $filepath = rtrim($filepath, '/') . '/';
-        $file = $fs->get_file($contextid, $component, $filearea, 0, $filepath, $filename);
-        return $file ?: null;
+        return self::file_at($contextid, $component, $filearea, $segments, $filename);
     }
 
     /**
-     * File areas a mold legitimately references, as component => fileareas.
+     * The file at an address, reading the segments between the area and the name in each way Moodle writes them.
      *
-     * Everything else (submissions, attempts, private or user files, ...)
-     * is never copied, whatever URL the payload carries.
+     * The segments may start with the item id, or with a revision (a number that only defeats the browser cache and
+     * is not stored: the file has item id 0), or hold only the folders of the file.
      *
-     * @var array<string,string[]>
-     */
-    private const ALLOWED_AREAS = [
-        'course' => ['section', 'summary'],
-        'mod_page' => ['content'],
-        'mod_lesson' => ['page_contents'],
-        'mod_glossary' => ['entry'],
-        'mod_assign' => ['introattachment', 'activityattachment'],
-        'mod_workshop' => ['instructauthors', 'instructreviewers', 'conclusion'],
-        'mod_folder' => ['content'],
-        'mod_imscp' => ['content'],
-        'mod_feedback' => ['page_after_submit'],
-        'mod_book' => ['chapter'],
-    ];
-
-    /**
-     * Whether a component/filearea pair is a legitimate mold asset area.
-     *
-     * Every module's intro area qualifies, plus the explicit list above.
-     *
+     * @param int $contextid
      * @param string $component
      * @param string $filearea
-     * @return bool
+     * @param string[] $segments What lies between the file area and the file name.
+     * @param string $filename
+     * @return stored_file|null
      */
-    public static function is_allowed_area(string $component, string $filearea): bool {
-        if ($filearea === 'intro' && str_starts_with($component, 'mod_')) {
-            return true;
+    private static function file_at(
+        int $contextid,
+        string $component,
+        string $filearea,
+        array $segments,
+        string $filename
+    ): ?stored_file {
+        $fs = get_file_storage();
+        $numbered = !empty($segments) && ctype_digit($segments[0]);
+        if ($numbered) {
+            $folders = array_slice($segments, 1);
+            $withitem = $fs->get_file($contextid, $component, $filearea, (int) $segments[0], self::folder_path($folders), $filename);
+            if ($withitem) {
+                return $withitem;
+            }
+            $withrevision = $fs->get_file($contextid, $component, $filearea, 0, self::folder_path($folders), $filename);
+            if ($withrevision) {
+                return $withrevision;
+            }
         }
-        return in_array($filearea, self::ALLOWED_AREAS[$component] ?? [], true);
+        $withoutitem = $fs->get_file($contextid, $component, $filearea, 0, self::folder_path($segments), $filename);
+        if ($withoutitem) {
+            return $withoutitem;
+        }
+        return null;
+    }
+
+    /**
+     * The path of a file for a list of folders.
+     *
+     * @param string[] $folders
+     * @return string
+     */
+    private static function folder_path(array $folders): string {
+        $path = '/' . implode('/', $folders);
+        return rtrim($path, '/') . '/';
     }
 
     /**
      * Whether the current user may copy this file.
      *
-     * The file must sit in an allowed mold area of a course or module
-     * context, in a course the current user can manage activities in - with a
-     * source course given, it must additionally be that exact course, so a
-     * template flow can never be pointed at a different course's files by a
-     * crafted URL in the AI service's response.
+     * The file must sit in a course or module context, in a course the current
+     * user can manage activities in; with a source course given, it must additionally be that
+     * exact course, so a template flow can never be pointed at a different
+     * course's files by a crafted URL in the AI service's response.
      *
      * @param stored_file $file
      * @param int|null $sourcecourseid
      * @return bool
      */
-    public static function is_allowed_source(stored_file $file, ?int $sourcecourseid = null): bool {
-        if (!self::is_allowed_area($file->get_component(), $file->get_filearea())) {
-            return false;
-        }
+    public static function can_copy(stored_file $file, ?int $sourcecourseid = null): bool {
         $context = context::instance_by_id($file->get_contextid(), IGNORE_MISSING);
         if (!$context) {
             return false;
@@ -215,47 +156,6 @@ class mold_file_copier {
         }
 
         return has_capability('moodle/course:manageactivities', $coursecontext);
-    }
-
-    /**
-     * Copy a stored file into the current user's draft area.
-     *
-     * A file already present under the same name with the same content is
-     * reused; a different file with the same name gets a free name instead.
-     *
-     * @param stored_file $file
-     * @param int $draftitemid
-     * @return string|null The filename inside the draft area, or null on failure.
-     */
-    public static function copy_to_draft(stored_file $file, int $draftitemid): ?string {
-        global $USER;
-
-        $fs = get_file_storage();
-        $usercontext = context_user::instance($USER->id);
-        $filename = $file->get_filename();
-
-        $existing = $fs->get_file($usercontext->id, 'user', 'draft', $draftitemid, '/', $filename);
-        if ($existing) {
-            if ($existing->get_contenthash() === $file->get_contenthash()) {
-                return $filename;
-            }
-            $filename = $fs->get_unused_filename($usercontext->id, 'user', 'draft', $draftitemid, '/', $filename);
-        }
-
-        try {
-            $fs->create_file_from_storedfile([
-                'contextid' => $usercontext->id,
-                'component' => 'user',
-                'filearea' => 'draft',
-                'itemid' => $draftitemid,
-                'filepath' => '/',
-                'filename' => $filename,
-            ], $file);
-        } catch (\Throwable $exception) {
-            debugging('local_coursegen: could not copy mold file: ' . $exception->getMessage(), DEBUG_DEVELOPER);
-            return null;
-        }
-        return $filename;
     }
 
     /**

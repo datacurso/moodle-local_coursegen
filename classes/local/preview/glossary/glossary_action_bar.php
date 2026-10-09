@@ -16,6 +16,8 @@
 
 namespace local_coursegen\local\preview\glossary;
 
+use stdClass;
+
 /**
  * mod_glossary's standard action bar and view tabs, built the same way
  * view.php builds them: the search box, the add-entry button (always disabled - a

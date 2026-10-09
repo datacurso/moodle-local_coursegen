@@ -16,12 +16,18 @@
 
 namespace local_coursegen\local\service;
 
+use local_coursegen\local\streaming\stream_type;
+use moodle_url;
+
 /**
- * Builds SSE streaming URLs for the Datacurso course AI service.
+ * Builds the streaming URLs of the Datacurso course AI service.
  *
  * The streaming endpoint paths are owned by this plugin so they can evolve
  * with the coursegen features without requiring a provider plugin release.
  * The provider only supplies the region-resolved base URL.
+ *
+ * Browsers never receive the service URLs: they read the streams through the relay
+ * of this plugin, whose URL is built here too.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -51,13 +57,32 @@ class streaming_url_builder {
     }
 
     /**
-     * Build the course-from-template streaming URL for a session.
+     * Build the URL of the plugin relay that streams a generation to the browser.
+     *
+     * The relay is called with the Moodle session key, which the caller adds.
+     *
+     * @param string $streamtype Stream type, one of the stream_type constants.
+     * @param string $threadid External thread identifier.
+     * @return string Relay URL.
+     * @throws \coding_exception When the stream type is unknown.
+     */
+    public static function relay(string $streamtype, string $threadid): string {
+        if (!stream_type::is_valid($streamtype)) {
+            throw new \coding_exception('Unknown stream type: ' . $streamtype);
+        }
+
+        $url = new moodle_url('/local/coursegen/stream.php', ['streamtype' => $streamtype, 'threadid' => $threadid]);
+        return $url->out(false);
+    }
+
+    /**
+     * Build the template agent streaming URL of a run.
      *
      * @param string $baseurl Region-resolved API base URL, with or without trailing slash.
      * @param string $threadid External generation session identifier (thread_id).
      * @return string Streaming URL.
      */
-    public static function course_template_stream(string $baseurl, string $threadid): string {
-        return rtrim($baseurl, '/') . '/course-template/stream/' . urlencode($threadid);
+    public static function template_agent_stream(string $baseurl, string $threadid): string {
+        return rtrim($baseurl, '/') . '/template-agent/stream/' . urlencode($threadid);
     }
 }

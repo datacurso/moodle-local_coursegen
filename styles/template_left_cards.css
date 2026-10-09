@@ -1,0 +1,119 @@
+/* The cards of the left column of the template flow: the question the AI asks and the review of the course. One system:
+   the same border, radius, padding and buttons. The feed that sits above them is in template_left_column.css, and the
+   progress of the activities is a pill in the top bar (template_top_bar.css).
+
+   Every rule is scoped to .tpl-left-panel, the column of the template mode, so the free mode that shares the markup
+   of the card keeps its own look. --cg-progress (0 to 1) is the share of the activities written, which the script sets
+   on the pill of the top bar; the palette variables (--cg-outline, --cg-green-ink) are in template_left_column.css. */
+
+@property --cg-progress {
+  syntax: '<number>';
+  inherits: true;
+  initial-value: 0;
+}
+
+/* ── The cards: the question of the AI and the review of the course ────── */
+
+.tpl-left-panel .cg-decision-card {
+  gap: 12px;
+  padding: 16px;
+  border: 1px solid var(--border);
+  border-radius: 14px;
+  background: var(--card);
+  box-shadow: var(--shadow-card);
+}
+
+.tpl-left-panel .cg-decision-title {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 14px;
+  line-height: 20px;
+  font-weight: 600;
+}
+
+/* The icon of a card says what the card is: a question, or a review. */
+.tpl-left-panel .cg-decision-title::before {
+  content: '';
+  flex: 0 0 24px;
+  width: 24px;
+  height: 24px;
+  border-radius: 50%;
+}
+
+.tpl-left-panel .cg-ask-card .cg-decision-title::before {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='hsl(32,85%25,30%25)' stroke-width='2.8' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M9.1 9a3 3 0 0 1 5.8 1c0 2-3 3-3 3'/%3E%3Cline x1='12' y1='17' x2='12.01' y2='17'/%3E%3C/svg%3E")
+      center / 16px no-repeat,
+    var(--warn-soft);
+}
+
+.tpl-left-panel #cgDecisionOverlay .cg-decision-title::before {
+  background:
+    url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='hsl(142,70%25,26%25)' stroke-width='3' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpolyline points='20 6 9 17 4 12'/%3E%3C/svg%3E")
+      center / 13px no-repeat,
+    var(--success-soft);
+}
+
+.tpl-left-panel .cg-decision-subtitle {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+/* The actions: the secondary one on the left, the primary one on the right, one row of the same height. When the
+   column is too narrow for both they stack with the primary one on top. */
+.tpl-left-panel .cg-decision-actions {
+  flex-wrap: wrap-reverse;
+  justify-content: space-between;
+  gap: 8px;
+}
+
+.tpl-left-panel .cg-decision-actions .cg-decision-btn {
+  flex: 1 1 130px;
+}
+
+.tpl-left-panel .cg-decision-actions .cg-decision-btn:only-child {
+  flex: 0 1 auto;
+  margin-left: auto;
+}
+
+.tpl-left-panel .cg-decision-btn {
+  height: 36px;
+  padding: 0 16px;
+  border-radius: 10px;
+  font-size: 13.5px;
+  font-weight: 600;
+  line-height: 1;
+  white-space: nowrap;
+}
+
+.tpl-left-panel .cg-decision-btn--accept:hover {
+  opacity: 1;
+  filter: brightness(.94);
+}
+
+.tpl-left-panel .cg-decision-btn--adjust {
+  border: 1px solid var(--cg-outline);
+  background: var(--card);
+  font-weight: 500;
+}
+
+.tpl-left-panel .cg-decision-btn:disabled,
+.tpl-left-panel .cg-decision-btn:disabled:hover {
+  border: 1px solid var(--border);
+  background: var(--muted);
+  color: hsl(215 14% 40%);
+  opacity: 1;
+  filter: none;
+  cursor: not-allowed;
+}
+
+.tpl-left-panel .cg-decision-btn:focus-visible {
+  outline: 2px solid var(--primary);
+  outline-offset: 2px;
+}
+
+.tpl-left-panel #cgDecisionOverlay {
+  margin-top: 16px;
+}

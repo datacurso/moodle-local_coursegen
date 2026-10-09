@@ -13,18 +13,13 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
+
 /**
- * Selectors for the template editor (course picker, configuration form,
- * sections review, "add from a template" menu and spaces).
+ * Selectors for the template editor (course picker, name form and sections review).
  *
  * Every JS hook in the markup is a data-action (something to click), a
  * data-region (an element the scripts read or write) or a data-form attribute,
- * never a CSS class or an id. Hooks written for the spaces work and the naming
- * preview are namespaced as local_coursegen/template/<name>. The hooks that
- * were already in the markup before the spaces work keep their original
- * attribute: the data-for kinds of a row, the plain data-region names of the
- * wizard and of the instance rows, and data-action="save". Nothing outside
- * this file may hold a selector string.
+ * never a CSS class or an id. Nothing outside this file may hold a selector string.
  *
  * @module     local_coursegen/local/template/selectors
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -34,52 +29,24 @@
 export default {
     actions: {
         save: '[data-action="save"]',
-        instanceTrigger: '[data-instance-menu-trigger]',
-        menuFromTemplate: '[data-action="local_coursegen/template/menu-from-template"]',
-        menuBack: '[data-action="local_coursegen/template/menu-back"]',
-        menuAddSpace: '[data-action="local_coursegen/template/menu-add-space"]',
-        menuAny: '[data-action="local_coursegen/template/menu-from-template"], ' +
-            '[data-action="local_coursegen/template/menu-back"], ' +
-            '[data-action="local_coursegen/template/menu-add-space"]',
-        pickTemplateSource: '[data-action="local_coursegen/template/pick-template-source"][data-source-cmid]',
-        spaceEdit: '[data-action="local_coursegen/template/space-edit"]',
-        spaceRemove: '[data-action="local_coursegen/template/space-remove"]',
-        // Owned by Moodle core's activity chooser markup, not by this plugin.
-        coreChooserOption: 'a[data-action="add-chooser-option"]',
     },
     regions: {
         wizard: '[data-region="template-wizard"]',
         config: '[data-region="config"]',
         structure: '[data-region="structure"]',
-        configForm: '[data-region="config-form"]',
+        sectionsConfig: '[data-region="sections-config"]',
         coursePickerPanel: '[data-region="step-panel"][data-step="1"]',
-        addInstance: '[data-region="add-instance"]',
-        rowGap: '[data-region="row-gap"]',
-        gapOrAddInstance: '[data-region="row-gap"], [data-region="add-instance"]',
-        instanceRemove: '[data-region="instance-remove"]',
-        instancePromptToggle: '[data-region="instance-prompt-toggle"]',
-        instancePrompt: '[data-region="instance-prompt"]',
-        instanceNameEditable: '[data-region="instance-name-editable"]',
+        selectedBanner: '[data-region="selected-banner"]',
+        selectedName: '[data-region="selected-name"]',
+        selectedShort: '[data-region="selected-short"]',
+        selectedLink: '[data-region="selected-link"]',
         activityActionSelect: 'select[data-region="activity-action"]',
-        sectionBehaviorSelect: 'select[data-region="section-behavior"]',
-        templateTag: '[data-region="template-tag"]',
-        instanceDropdown: '[data-region="local_coursegen/template/instance-dropdown"]',
-        instanceDropdownMenu: '[data-region="local_coursegen/template/instance-dropdown-menu"]',
-        activityIcon: '[data-region="local_coursegen/template/activity-icon"]',
-        typeLabel: '[data-region="local_coursegen/template/type-label"]',
-        spaceRow: '[data-region="local_coursegen/template/space-row"]',
-        spaceBadge: '[data-region="local_coursegen/template/space-badge"]',
-        spaceInstruction: '[data-region="local_coursegen/template/space-instruction"]',
-        spaceTag: '[data-region="local_coursegen/template/space-tag"]',
-        spaceRowInstruction: '[data-region="local_coursegen/template/space-row-instruction"]',
-        spaceRequiredChoice: '[data-region="local_coursegen/template/space-required-choice"]:checked',
-        spaceInstructionField: '[data-region="local_coursegen/template/space-instruction-field"]',
-        namingPreview: '[data-region="local_coursegen/template/naming-preview"]',
-        namingPattern: '[data-region="local_coursegen/template/naming-pattern"]',
-        customPattern: '[data-region="local_coursegen/template/custom-pattern"]',
-        namingStart: '[data-region="local_coursegen/template/naming-start"]',
-        maxSections: '[data-region="local_coursegen/template/max-sections"]',
-        allowAddSections: '[data-region="local_coursegen/template/allow-add-sections"]',
+        activityInstructionField: 'textarea[data-region="activity-instruction"]',
+        activitySelect: '[data-region="activity-select"]',
+        activitySelectChecked: '[data-region="activity-select"]:checked',
+        selectAll: '[data-region="select-all"]',
+        sectionSelectAll: '[data-region="section-select-all"]',
+        bulkAction: 'select[data-region="bulk-action"]',
         templateName: '[data-region="local_coursegen/template/template-name"]',
         templateDescription: '[data-region="local_coursegen/template/template-description"]',
     },
@@ -89,14 +56,6 @@ export default {
     rows: {
         section: '[data-for="section"]',
         activity: '[data-for="cmitem"]',
-        instance: '[data-for="instancerow"]',
-        instancePrompt: '[data-for="instanceprompt"]',
-        // The three kinds of row a section holds, in the order they are read.
-        anyRow: '[data-for="cmitem"], [data-for="instancerow"], ' +
-            '[data-region="local_coursegen/template/space-row"]',
-        sectionById: (sectionid) => `[data-for="section"][data-id="${sectionid}"]`,
-        promptDrawerOf: (instanceid) => `[data-for="instanceprompt"][data-instance-id="${instanceid}"]`,
-        promptFieldOf: (instanceid) => '[data-for="instanceprompt"]' +
-            `[data-instance-id="${instanceid}"] [data-region="instance-prompt"]`,
+        instructionOf: (cmid) => `[data-for="instruction"][data-id="${cmid}"]`,
     },
 };

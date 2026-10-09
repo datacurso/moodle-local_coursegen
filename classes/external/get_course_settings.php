@@ -31,6 +31,7 @@ use external_value;
 use external_single_structure;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
+use local_coursegen\local\service\course_review_service;
 use local_coursegen\local\service\create_course_service;
 use context_system;
 
@@ -70,29 +71,38 @@ class get_course_settings extends external_api {
         self::validate_context($context);
         require_capability('local/coursegen:createfreecoursewithai', $context);
 
+        // Category-level course creators are accepted: the user must hold
+        // moodle/course:create at system level or in at least one category.
+        $categories = course_review_service::available_categories();
+        if (empty($categories) && !has_capability('moodle/course:create', $context)) {
+            throw new \required_capability_exception($context, 'moodle/course:create', 'nopermissions', '');
+        }
+
         $recordid = (int)$params['recordid'];
 
         // Load session (validates ownership).
         $session = course_session_service::get_user_session($recordid, $USER->id);
 
         // Fetch the AI-generated result data from the Datacurso API.
-        $apiservice = new ai_course_api_service();
+        $apiservice = static::get_api_service();
         $result = $apiservice->get_course_result((string)$session->get('session_id'));
         $resultdata = $result['result'] ?? [];
 
         $settings = create_course_service::get_course_settings($session, $resultdata);
 
-        // Load categories with full paths using Moodle's built-in function.
-        $categories = [];
-        $catlist = \core_course_category::make_categories_list('moodle/category:manage');
-        foreach ($catlist as $id => $pathname) {
-            $categories[] = [
-                'id' => (int)$id,
-                'pathname' => $pathname,
-            ];
-        }
-
         return $settings + ['categories' => $categories];
+    }
+
+    /**
+     * Build the AI course API service used by this endpoint.
+     *
+     * Extracted as a protected factory so PHPUnit tests can override it
+     * through a testable subclass (late static binding).
+     *
+     * @return ai_course_api_service
+     */
+    protected static function get_api_service(): ai_course_api_service {
+        return new ai_course_api_service();
     }
 
     /**

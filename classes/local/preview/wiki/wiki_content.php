@@ -16,6 +16,8 @@
 
 namespace local_coursegen\local\preview\wiki;
 
+use stdClass;
+
 /**
  * mod_wiki's page content rendering: parsing a page's markup with the
  * module's own parser, resolving links against the payload so they lead to
@@ -130,7 +132,7 @@ trait wiki_content {
 
         self::$parsing = $this;
         try {
-            return wiki_parser_proxy::parse($pagecontent, $markup, $parser_options);
+            return \wiki_parser_proxy::parse($pagecontent, $markup, $parser_options);
         } finally {
             self::$parsing = null;
         }

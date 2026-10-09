@@ -17,7 +17,7 @@
 namespace local_coursegen\local\preview;
 
 use html_writer;
-use local_coursegen\local\models\template_activity;
+use local_coursegen\local\service\template_export_behavior;
 use moodle_url;
 
 /**
@@ -46,13 +46,12 @@ class course_from_payload {
      * The whole course, ready for core_courseformat/local/content.
      *
      * @param array $payload What was sent to the service.
-     * @param array $summaries uid => what the plan says that activity will contain.
      * @param int $sessionid The run being previewed, for the links out.
      * @param int|null $only One section on its own, for a format that opens
      *                       them that way; null for the whole course.
      * @return array
      */
-    public static function content(array $payload, array $summaries, int $sessionid, ?int $only = null): array {
+    public static function content(array $payload, int $sessionid, ?int $only = null): array {
         $bysection = self::activities_by_section($payload);
 
         $sections = [];
@@ -65,7 +64,7 @@ class course_from_payload {
                 continue;
             }
             $sectionactivities = $bysection[$number] ?? [];
-            $section = self::section($info, $sectionactivities, $summaries, $sessionid);
+            $section = self::section($info, $sectionactivities, $sessionid);
             if ($number === 0 && $only !== null) {
                 continue;
             }
@@ -121,11 +120,10 @@ class course_from_payload {
      *
      * @param array $info The section as the payload describes it.
      * @param array $activities Its activities, in the order they were sent.
-     * @param array $summaries
      * @param int $sessionid
      * @return array
      */
-    private static function section(array $info, array $activities, array $summaries, int $sessionid): array {
+    private static function section(array $info, array $activities, int $sessionid): array {
         $number = $info['section'] ?? 0;
         $number = (int) $number;
         $name = $info['name'] ?? '';
@@ -136,7 +134,7 @@ class course_from_payload {
 
         $cms = [];
         foreach ($activities as $activity) {
-            $cmitem = self::activity($activity, $summaries, $sessionid);
+            $cmitem = self::activity($activity, $sessionid);
             $cms[] = ['cmitem' => $cmitem];
         }
 
@@ -186,11 +184,10 @@ class course_from_payload {
      * One activity, as a row of the list its section draws.
      *
      * @param array $activity
-     * @param array $summaries
      * @param int $sessionid
      * @return array
      */
-    private static function activity(array $activity, array $summaries, int $sessionid): array {
+    private static function activity(array $activity, int $sessionid): array {
         global $OUTPUT;
 
         $uid = $activity['uid'] ?? '';
@@ -202,17 +199,13 @@ class course_from_payload {
         $name = (string) $name;
         $templatebehavior = $activity['template_behavior'] ?? [];
         $action = $templatebehavior['action'] ?? '';
-        $writing = ($action === template_activity::ACTION_INSTANCE);
+        $writing = ($action === template_export_behavior::MODIFY);
 
         $url = new moodle_url('/local/coursegen/activity_preview.php', [
             'sessionid' => $sessionid,
             'uid' => $uid,
         ]);
         $url = $url->out(false);
-
-        $summary = $summaries[$uid] ?? '';
-        $summary = (string) $summary;
-        $summary = trim($summary);
 
         $activitybadge = null;
         if ($writing) {
@@ -222,16 +215,6 @@ class course_from_payload {
                 'badgecontent' => get_string('courseai_template_instance_badge', 'local_coursegen'),
                 'badgestyle' => 'badge-none border',
             ];
-        }
-
-        $altcontent = '';
-        if ($summary !== '') {
-            $altcontent = format_text($summary, FORMAT_PLAIN);
-        }
-
-        $extraclasses = '';
-        if ($writing) {
-            $extraclasses = 'local-coursegen-planned';
         }
 
         $displayname = format_string($name);
@@ -257,13 +240,11 @@ class course_from_payload {
                     ],
                     'activitybadge' => $activitybadge,
                 ],
-                'altcontent' => $altcontent,
-                'hasaltcontent' => $summary !== '',
             ],
             'id' => $uid,
             'anchor' => 'activity-' . $uid,
             'module' => $modname,
-            'extraclasses' => $extraclasses,
+            'extraclasses' => '',
             'indent' => 0,
         ];
     }

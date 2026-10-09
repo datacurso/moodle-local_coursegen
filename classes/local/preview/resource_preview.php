@@ -21,8 +21,8 @@ use local_coursegen\local\preview\resource\view;
 /**
  * A file, drawn by mod_resource's own view code run against the payload.
  *
- * The file is the template's, listed in the payload; a draft cannot upload
- * one, so a planned file shows the mould's.
+ * The file is the one the activity's own result lists, with the address it is
+ * served from.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -39,26 +39,6 @@ class resource_preview extends preview_base {
      */
     protected function modname(): string {
         return 'resource';
-    }
-
-    /**
-     * A draft replaces the description.
-     *
-     * @param json_store $store
-     */
-    protected function overlay(json_store $store): void {
-        $rows = $store->get_records('resource');
-        if (!$rows) {
-            return;
-        }
-        $row = reset($rows);
-        $intro = $this->parameters['introeditor'] ?? null;
-        if (is_array($intro)) {
-            $intro = $intro['text'] ?? null;
-        }
-        if (is_string($intro) && trim($intro) !== '') {
-            $store->set('resource', $row->id, 'intro', $intro);
-        }
     }
 
     /**

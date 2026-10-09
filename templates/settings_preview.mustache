@@ -1,0 +1,75 @@
+{{!
+    This file is part of Moodle - http://moodle.org/
+
+    Moodle is free software: you can redistribute it and/or modify
+    it under the terms of the GNU General Public License as published by
+    the Free Software Foundation, either version 3 of the License, or
+    (at your option) any later version.
+
+    Moodle is distributed in the hope that it will be useful,
+    but WITHOUT ANY WARRANTY; without even the implied warranty of
+    MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+    GNU General Public License for more details.
+
+    You should have received a copy of the GNU General Public License
+    along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
+}}
+{{!
+    @template local_coursegen/settings_preview
+
+    What an activity written from scratch is made of: its description, a few plain facts and each list of parts
+    (chapters, questions, entries...) with the title and the text of every part.
+
+    Classes required for JS:
+    * none
+
+    Data attributes required for JS:
+    * none
+
+    Context variables required for this template:
+    * hasintro - Whether the activity has a description.
+    * intro - The description, already cleaned for display.
+    * facts - Plain facts of the activity: label and value.
+    * groups - The lists of parts: label and items (title, hasbody, body).
+
+    Example context (json):
+    {
+        "hasintro": true,
+        "intro": "<p>A short introduction.</p>",
+        "facts": [{"label": "Address", "value": "https://example.org"}],
+        "groups": [
+            {
+                "label": "Chapters",
+                "items": [
+                    {"title": "Chapter one", "hasbody": true, "body": "<p>The text of the chapter.</p>"},
+                    {"title": "Chapter two", "hasbody": false, "body": ""}
+                ]
+            }
+        ]
+    }
+}}
+<div data-region="local_coursegen/settings-preview">
+    {{#hasintro}}
+        <div class="mod_introbox mb-4">{{{intro}}}</div>
+    {{/hasintro}}
+    {{#facts}}
+        <p class="mb-3"><strong>{{label}}</strong> {{value}}</p>
+    {{/facts}}
+    {{#groups}}
+        <section class="mb-4">
+            <h4 class="h5">{{label}}</h4>
+            <ol class="list-unstyled">
+                {{#items}}
+                    <li class="mb-3">
+                        {{#title}}
+                            <h5 class="h6 mb-1">{{title}}</h5>
+                        {{/title}}
+                        {{#hasbody}}
+                            <div>{{{body}}}</div>
+                        {{/hasbody}}
+                    </li>
+                {{/items}}
+            </ol>
+        </section>
+    {{/groups}}
+</div>

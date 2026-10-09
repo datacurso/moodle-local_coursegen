@@ -41,77 +41,6 @@ class book_preview extends preview_base {
     }
 
     /**
-     * A draft's chapters replace the mould's, matched by id.
-     *
-     * A plan names each piece by the id its module gave it; an answer that
-     * arrives without ids is matched by title, the way the generator that
-     * wrote it matched the mould's chapters.
-     *
-     * @param json_store $store
-     */
-    protected function overlay(json_store $store): void {
-        $rows = $store->get_records('book_chapters');
-        $idbytitle = self::chapter_ids_by_title($rows);
-        $drafts = $this->parameters['mod_settings']['chapters'] ?? [];
-        foreach ($drafts as $chapter) {
-            $this->overlay_chapter($store, $chapter, $idbytitle);
-        }
-    }
-
-    /**
-     * A mould's own chapter id, keyed by its title, for a draft that arrives
-     * without ids.
-     *
-     * @param \stdClass[] $rows
-     * @return array
-     */
-    private static function chapter_ids_by_title(array $rows): array {
-        $idbytitle = [];
-        foreach ($rows as $row) {
-            $title = $row->title ?? '';
-            $title = (string) $title;
-            $title = trim($title);
-            if (!isset($idbytitle[$title])) {
-                $idbytitle[$title] = $row->id;
-            }
-        }
-        return $idbytitle;
-    }
-
-    /**
-     * Lay one drafted chapter over the mould's row it fills.
-     *
-     * @param json_store $store
-     * @param array $chapter
-     * @param array $idbytitle
-     */
-    private function overlay_chapter(json_store $store, array $chapter, array $idbytitle): void {
-        $id = $chapter['id'] ?? null;
-        if ($id === null) {
-            $title = $chapter['title'] ?? '';
-            $title = (string) $title;
-            $title = trim($title);
-            $id = $idbytitle[$title] ?? null;
-        }
-        if ($id === null) {
-            return;
-        }
-        if (isset($chapter['title'])) {
-            $store->set('book_chapters', $id, 'title', (string) $chapter['title']);
-        }
-        $content = $chapter['content_editor'] ?? null;
-        if ($content === null) {
-            $content = $chapter['content'] ?? null;
-        }
-        if (is_array($content)) {
-            $content = $content['text'] ?? null;
-        }
-        if (is_string($content)) {
-            $store->set('book_chapters', $id, 'content', $content);
-        }
-    }
-
-    /**
      * The chapters, prepared the way mod_book prepares them.
      *
      * @return array
@@ -121,10 +50,9 @@ class book_preview extends preview_base {
             return $this->chapters;
         }
         $book = $this->instance();
-        $store = $this->store();
         $this->chapters = [];
-        if ($book !== null && $store !== null) {
-            $this->chapters = view::book_preload_chapters($book, $store);
+        if ($book !== null) {
+            $this->chapters = view::book_preload_chapters($book, $this->store());
         }
         return $this->chapters;
     }

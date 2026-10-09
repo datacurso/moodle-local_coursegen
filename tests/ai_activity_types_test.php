@@ -16,8 +16,6 @@
 
 namespace local_coursegen;
 
-use local_coursegen\external\get_template_structure;
-use local_coursegen\local\models\template;
 use local_coursegen\local\ai_activity_types;
 
 /**
@@ -102,30 +100,5 @@ final class ai_activity_types_test extends \advanced_testcase {
 
         $this->assertNotContains('wiki', $installed);
         $this->assertContains('page', $installed);
-    }
-
-    /**
-     * The professor-side catalog offers every supported type, even for a
-     * template row saved by an older version with a narrower list.
-     */
-    public function test_professor_catalog_ignores_a_narrowing_legacy_saved_list(): void {
-        $this->resetAfterTest();
-        $this->setAdminUser();
-
-        $generator = $this->getDataGenerator();
-        $course = $generator->create_course();
-        $template = new template(0, (object) [
-            'name' => 'Legacy list',
-            'courseid' => $course->id,
-            'allowedtypes' => '["forum"]',
-        ]);
-        $template->create();
-
-        $result = get_template_structure::execute((int) $template->get('id'));
-
-        $modnames = array_column($result['allowedactivities'], 'modname');
-        sort($modnames);
-        $installed = ai_activity_types::installed();
-        $this->assertSame($installed, $modnames);
     }
 }

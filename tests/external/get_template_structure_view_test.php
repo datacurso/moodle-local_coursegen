@@ -14,397 +14,189 @@
 // You should have received a copy of the GNU General Public License
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
-namespace local_coursegen;
+namespace local_coursegen\external;
 
-use local_coursegen\external\get_template_structure;
-use local_coursegen\local\models\template;
-use local_coursegen\local\models\template_activity;
-use local_coursegen\local\models\template_instance;
-use local_coursegen\local\models\template_section;
-
-defined('MOODLE_INTERNAL') || die();
-
-// The shared fixture trait lives one level up, outside this directory's
-// autoload scope.
-require_once(__DIR__ . '/../sections_config_fixture_trait.php');
+use local_coursegen\local\template\template_actions;
+use local_coursegen\local\template\template_service;
+use local_coursegen\template_test_helper;
 
 /**
- * The professor-facing view of a saved template (get_template_structure)
- * must mirror the admin's configuration exactly:
- *
- * - action mapping: keep / unset are visible and locked;
- *   reference, template (mold) and exclude rows are not returned at all;
- * - virtual instances (local_coursegen_tpl_instance) are interleaved among
- *   the visible real activities at their saved anchor/sortorder positions,
- *   each returned as a locked, AI-generated row with a stable NEGATIVE id
- *   (-recordid, so it can never collide with a real cmid);
- * - an instance anchored to a row the professor cannot see (hidden action,
- *   or not uservisible) keeps its anchor's slot: it renders exactly where
- *   the hidden anchor would have been (immediately after the nearest
- *   preceding visible row, or at the section start when there is none);
- *   an anchor that matches no cmid in the section appends at the end;
- * - per-section behavior and per-activity action/isinstance are exposed as
- *   backward-compatible additions to execute_returns().
+ * The professor-facing view of a saved template (get_template_structure): the sections of the template
+ * course with their activities, and the ones the AI modifies marked.
  *
  * @package    local_coursegen
  * @category   test
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  * @covers     \local_coursegen\external\get_template_structure
- *
- * @runTestsInSeparateProcesses
+ * @covers     \local_coursegen\external\get_template_structure_rows
+ * @covers     \local_coursegen\external\get_template_structure_schema
  */
 final class get_template_structure_view_test extends \advanced_testcase {
-    use sections_config_fixture_trait;
+    use template_test_helper;
 
-    /**
-     * Create a bare template record for a course, bypassing save_template —
-     * these tests exercise the read side only, so the fixture writes the
-     * exact rows under test straight through the models.
-     *
-     * @param int $courseid
-     * @return int The new template id.
-     */
-    private function make_template(int $courseid): int {
-        $template = new template(0, (object) ['name' => 'Professor view fixture', 'courseid' => $courseid]);
-        $template->create();
-        return (int) $template->get('id');
+    /** @var template_service Service used to save the templates of the tests. */
+    private template_service $service;
+
+    protected function setUp(): void {
+        parent::setUp();
+        $this->resetAfterTest();
+        $this->setAdminUser();
+        $this->service = new template_service();
     }
 
     /**
-     * Save one per-activity action row.
+     * The view of a template, checked against the contract of the service.
      *
      * @param int $templateid
-     * @param int $sectionid
-     * @param int $cmid
-     * @param string $action
-     */
-    private function add_activity_action(int $templateid, int $sectionid, int $cmid, string $action): void {
-        (new template_activity(0, (object) [
-            'templateid' => $templateid,
-            'sectionid' => $sectionid,
-            'cmid' => $cmid,
-            'action' => $action,
-        ]))->create();
-    }
-
-    /**
-     * Save one per-section behavior row.
-     *
-     * @param int $templateid
-     * @param int $sectionid
-     * @param int $sectionnum
-     * @param string $behavior
-     */
-    private function add_section_behavior(int $templateid, int $sectionid, int $sectionnum, string $behavior): void {
-        (new template_section(0, (object) [
-            'templateid' => $templateid,
-            'sectionid' => $sectionid,
-            'sectionnum' => $sectionnum,
-            'behavior' => $behavior,
-        ]))->create();
-    }
-
-    /**
-     * Save one virtual instance row.
-     *
-     * @param int $templateid
-     * @param int $sectionid
-     * @param array $overrides Field overrides.
-     * @return template_instance
-     */
-    private function add_instance(int $templateid, int $sectionid, array $overrides = []): template_instance {
-        $data = array_merge([
-            'templateid' => $templateid,
-            'sectionid' => $sectionid,
-            'sourcecmid' => 1,
-            'sourcename' => 'Source template',
-            'name' => 'Generated activity',
-            'typelabel' => 'Forum',
-            'modname' => 'forum',
-            'prompt' => '',
-            'aftercmid' => 0,
-            'sortorder' => 0,
-        ], $overrides);
-        $instance = new template_instance(0, (object) $data);
-        $instance->create();
-        return $instance;
-    }
-
-    /**
-     * Find one returned section by its base-course section id.
-     *
-     * @param array $result get_template_structure::execute() return value.
-     * @param int $sectionid
      * @return array
      */
-    private function section_by_id(array $result, int $sectionid): array {
-        foreach ($result['sections'] as $section) {
-            if ((int) $section['id'] === $sectionid) {
-                return $section;
-            }
-        }
-        $this->fail('Section not found in response: ' . $sectionid);
+    private function view(int $templateid): array {
+        $result = get_template_structure::execute($templateid);
+        $returns = get_template_structure::execute_returns();
+        return \core_external\external_api::clean_returnvalue($returns, $result);
     }
 
     /**
-     * The returned activity names of one section, in render order.
+     * The rows of one section of a view.
      *
-     * @param array $section One entry of the response's sections array.
-     * @return string[]
+     * @param array $view
+     * @param int $number
+     * @return array
      */
-    private function activity_names(array $section): array {
-        return array_map(static fn($activity) => $activity['name'], $section['activities']);
-    }
-
-    /**
-     * Rows saved as reference, template (mold) or exclude are not returned
-     * at all — the professor only sees what the generated course will
-     * actually keep.
-     */
-    public function test_reference_template_and_exclude_rows_are_hidden(): void {
-        $this->resetAfterTest();
-        $this->setAdminUser();
-
-        [$course, $page, $forum, $lti, $label] = $this->create_course_fixture();
-        $modinfo = get_fast_modinfo($course);
-        $section1 = $modinfo->get_section_info(1);
-        $section2 = $modinfo->get_section_info(2);
-
-        $templateid = $this->make_template((int) $course->id);
-        $this->add_activity_action($templateid, (int) $section1->id, (int) $page->cmid, 'reference');
-        $this->add_activity_action($templateid, (int) $section2->id, (int) $forum->cmid, 'template');
-        $this->add_activity_action($templateid, (int) $section2->id, (int) $lti->cmid, 'exclude');
-
-        $result = get_template_structure::execute($templateid);
-
-        $this->assertSame([], $this->section_by_id($result, (int) $section1->id)['activities']);
-        // Only the label (no saved action at all) survives in section 2.
-        $this->assertSame(
-            [format_string($label->name)],
-            $this->activity_names($this->section_by_id($result, (int) $section2->id))
-        );
-    }
-
-    /**
-     * A row with no saved action resolves to keep: visible, locked, and
-     * reported as action "keep"; a row saved with the retired "modify"
-     * action is not one the professor sees.
-     */
-    public function test_unset_action_is_visible_as_keep_and_retired_modify_is_hidden(): void {
-        $this->resetAfterTest();
-        $this->setAdminUser();
-
-        [$course, $page, , , $label] = $this->create_course_fixture();
-        $modinfo = get_fast_modinfo($course);
-        $section1 = $modinfo->get_section_info(1);
-        $section2 = $modinfo->get_section_info(2);
-
-        $templateid = $this->make_template((int) $course->id);
-        $this->add_activity_action($templateid, (int) $section1->id, (int) $page->cmid, 'modify');
-
-        $result = get_template_structure::execute($templateid);
-
-        $pagerow = $this->section_by_id($result, (int) $section1->id)['activities'][0] ?? null;
-        $this->assertNull($pagerow, 'A retired modify row must not reach the professor');
-
-        $labelrow = null;
-        foreach ($this->section_by_id($result, (int) $section2->id)['activities'] as $activity) {
-            if ($activity['name'] === format_string($label->name)) {
-                $labelrow = $activity;
+    private function rows(array $view, int $number): array {
+        foreach ($view['sections'] as $section) {
+            if ($section['num'] === $number) {
+                return $section['activities'];
             }
         }
-        $this->assertNotNull($labelrow, 'Unset-action row must stay visible');
-        $this->assertSame('keep', $labelrow['action']);
-        $this->assertTrue($labelrow['locked']);
+        return [];
     }
 
-    /**
-     * Instances interleave among the visible real rows at their saved
-     * positions: anchor 0 renders at the section start, anchored instances
-     * render right after their anchor, and sortorder (not creation order)
-     * breaks ties on a shared anchor. The activity list length — what the
-     * client's "N activities" count reads — includes them.
-     */
-    public function test_instances_interleave_with_visible_activities(): void {
-        $this->resetAfterTest();
-        $this->setAdminUser();
+    public function test_the_view_has_no_section_limit_any_more(): void {
+        [$course] = $this->make_course();
 
-        [$course, , $forum, $lti, $label] = $this->create_course_fixture();
-        $section2 = get_fast_modinfo($course)->get_section_info(2);
+        $templateid = $this->save_items($course, []);
 
-        $templateid = $this->make_template((int) $course->id);
-        $this->add_instance($templateid, (int) $section2->id, ['name' => 'At start', 'aftercmid' => 0]);
-        // Created second-after-forum FIRST to prove sortorder wins over ids.
-        $this->add_instance($templateid, (int) $section2->id, [
-            'name' => 'Second after forum', 'aftercmid' => (int) $forum->cmid, 'sortorder' => 2,
-        ]);
-        $this->add_instance($templateid, (int) $section2->id, [
-            'name' => 'First after forum', 'aftercmid' => (int) $forum->cmid, 'sortorder' => 1,
-        ]);
+        $view = $this->view($templateid);
 
-        $result = get_template_structure::execute($templateid);
-        $section = $this->section_by_id($result, (int) $section2->id);
-
-        $this->assertSame([
-            'At start',
-            format_string($forum->name),
-            'First after forum',
-            'Second after forum',
-            format_string($lti->name),
-            format_string($label->name),
-        ], $this->activity_names($section));
-        $this->assertCount(6, $section['activities']);
+        $keys = array_keys($view);
+        $this->assertSame(['sections'], $keys);
     }
 
-    /**
-     * An instance anchored to a row the professor cannot see (here: its
-     * anchor is the mold activity itself, action=template) keeps its
-     * anchor's slot — it renders exactly where the hidden anchor would
-     * have been, not at the section end.
-     */
-    public function test_instance_anchored_to_hidden_row_takes_anchor_slot(): void {
-        $this->resetAfterTest();
-        $this->setAdminUser();
+    public function test_every_section_of_the_course_is_listed_in_order(): void {
+        [$course] = $this->make_course();
 
-        [$course, , $forum, $lti, $label] = $this->create_course_fixture();
-        $section2 = get_fast_modinfo($course)->get_section_info(2);
+        $templateid = $this->save_items($course, []);
 
-        $templateid = $this->make_template((int) $course->id);
-        $this->add_activity_action($templateid, (int) $section2->id, (int) $forum->cmid, 'template');
-        $this->add_instance($templateid, (int) $section2->id, [
-            'name' => 'Molded on forum', 'aftercmid' => (int) $forum->cmid,
-        ]);
+        $view = $this->view($templateid);
 
-        $result = get_template_structure::execute($templateid);
-
-        // Forum is first in the section, so its instance takes the section
-        // start once the mold row itself disappears.
-        $this->assertSame([
-            'Molded on forum',
-            format_string($lti->name),
-            format_string($label->name),
-        ], $this->activity_names($this->section_by_id($result, (int) $section2->id)));
+        $numbers = array_column($view['sections'], 'num');
+        $this->assertSame([0, 1, 2], $numbers);
     }
 
-    /**
-     * An instance whose aftercmid matches nothing in the section (the base
-     * activity was deleted) appends at the section end instead of being
-     * dropped — same rule the admin review follows.
-     */
-    public function test_instance_with_orphan_anchor_appends_at_section_end(): void {
-        $this->resetAfterTest();
-        $this->setAdminUser();
+    public function test_an_activity_with_nothing_saved_is_kept_and_locked(): void {
+        [$course, $page] = $this->make_course();
 
-        [$course, , $forum, $lti, $label] = $this->create_course_fixture();
-        $section2 = get_fast_modinfo($course)->get_section_info(2);
+        $templateid = $this->save_items($course, []);
 
-        $templateid = $this->make_template((int) $course->id);
-        $this->add_instance($templateid, (int) $section2->id, [
-            'name' => 'Orphaned instance', 'aftercmid' => 999999,
-        ]);
+        $view = $this->view($templateid);
 
-        $result = get_template_structure::execute($templateid);
-
-        $this->assertSame([
-            format_string($forum->name),
-            format_string($lti->name),
-            format_string($label->name),
-            'Orphaned instance',
-        ], $this->activity_names($this->section_by_id($result, (int) $section2->id)));
-    }
-
-    /**
-     * Instance rows carry every field the client renders from — a stable uid
-     * id, the same uid again as generationuid (the id a live progress event
-     * echoes back, so the two are always the same string), the
-     * isinstance/aigenerated flags, the snapshot name/typelabel/modname,
-     * locked, a monologo icon resolved from the snapshot modname (empty
-     * when the snapshot has none) — and the whole payload survives
-     * external_api::clean_returnvalue, proving execute_returns() declares
-     * the new fields.
-     */
-    public function test_instance_row_fields_and_id_scheme(): void {
-        $this->resetAfterTest();
-        $this->setAdminUser();
-
-        [$course, $page] = $this->create_course_fixture();
-        $section1 = get_fast_modinfo($course)->get_section_info(1);
-
-        $templateid = $this->make_template((int) $course->id);
-        $this->add_instance($templateid, (int) $section1->id, [
-            'name' => 'Discussion 1', 'typelabel' => 'Forum', 'modname' => 'forum', 'aftercmid' => 0,
-        ]);
-        $this->add_instance($templateid, (int) $section1->id, [
-            'name' => 'No icon', 'typelabel' => 'Page', 'modname' => null, 'aftercmid' => (int) $page->cmid,
-        ]);
-
-        $result = get_template_structure::execute($templateid);
-        $result = \external_api::clean_returnvalue(get_template_structure::execute_returns(), $result);
-
-        $activities = $this->section_by_id($result, (int) $section1->id)['activities'];
-        $this->assertSame(['Discussion 1', format_string($page->name), 'No icon'], array_column($activities, 'name'));
-
-        $row = $activities[0];
-        $this->assertSame($row['generationuid'], $row['id']);
-        $matched = preg_match('/^[0-9a-f]{8}-[0-9a-f]{4}-4[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/i', $row['id']);
-        $this->assertSame(1, $matched);
-        $this->assertArrayNotHasKey('generationcmid', $row);
-        $this->assertTrue($row['isinstance']);
-        $this->assertTrue($row['aigenerated']);
+        $row = $this->rows($view, 1)[0];
+        $this->assertSame((string) $page, $row['id']);
+        $this->assertSame('keep', $row['action']);
         $this->assertTrue($row['locked']);
-        $this->assertSame('Forum', $row['typelabel']);
-        $this->assertSame('forum', $row['modname']);
-        $this->assertSame('collaboration', $row['purpose']);
-        $this->assertStringContainsString('forum', $row['iconhtml']);
-
-        $pagerow = $activities[1];
-        $this->assertFalse($pagerow['isinstance']);
-        $this->assertFalse($pagerow['aigenerated']);
-        $this->assertSame('keep', $pagerow['action']);
-        $this->assertSame('', $pagerow['typelabel']);
-
-        $noiconrow = $activities[2];
-        $this->assertSame('', $noiconrow['modname']);
-        $this->assertSame('', $noiconrow['iconhtml'], 'A missing modname snapshot must yield no icon, not a broken one');
-        $this->assertSame('other', $noiconrow['purpose']);
+        $this->assertFalse($row['aigenerated']);
     }
 
-    /**
-     * Per-section behavior is exposed; a kept section is locked and its
-     * rows — instances included — all come back locked, so the admin's
-     * configuration mirrors faithfully into the professor view.
-     */
-    public function test_section_behavior_is_exposed_and_kept_sections_lock_everything(): void {
-        $this->resetAfterTest();
-        $this->setAdminUser();
+    public function test_an_activity_the_ai_modifies_is_marked_and_not_locked(): void {
+        [$course, $page] = $this->make_course();
+        $items = [['cmid' => $page, 'action' => template_actions::AI, 'instruction' => 'Update it']];
 
-        [$course, $page] = $this->create_course_fixture();
-        $modinfo = get_fast_modinfo($course);
-        $section1 = $modinfo->get_section_info(1);
-        $section2 = $modinfo->get_section_info(2);
+        $templateid = $this->save_items($course, $items);
 
-        $templateid = $this->make_template((int) $course->id);
-        $this->add_section_behavior($templateid, (int) $section1->id, 1, 'keep');
-        $this->add_instance($templateid, (int) $section1->id, [
-            'name' => 'Kept-section instance', 'aftercmid' => (int) $page->cmid,
-        ]);
+        $view = $this->view($templateid);
 
-        $result = get_template_structure::execute($templateid);
+        $row = $this->rows($view, 1)[0];
+        $this->assertSame('modify', $row['action']);
+        $this->assertFalse($row['locked']);
+        $this->assertTrue($row['aigenerated']);
+    }
 
-        $kept = $this->section_by_id($result, (int) $section1->id);
-        $this->assertSame('keep', $kept['behavior']);
-        $this->assertTrue($kept['locked']);
-        $this->assertSame(
-            [format_string($page->name), 'Kept-section instance'],
-            $this->activity_names($kept)
-        );
-        foreach ($kept['activities'] as $activity) {
-            $this->assertTrue($activity['locked']);
-        }
+    public function test_a_section_with_a_modified_activity_is_not_locked_and_the_others_are(): void {
+        [$course, $page] = $this->make_course();
+        $items = [['cmid' => $page, 'action' => template_actions::AI, 'instruction' => '']];
 
-        $aimodify = $this->section_by_id($result, (int) $section2->id);
-        $this->assertSame('aimodify', $aimodify['behavior']);
-        $this->assertFalse($aimodify['locked']);
+        $templateid = $this->save_items($course, $items);
+
+        $view = $this->view($templateid);
+
+        $bynumber = array_column($view['sections'], null, 'num');
+        $this->assertSame('aimodify', $bynumber[1]['behavior']);
+        $this->assertFalse($bynumber[1]['locked']);
+        $this->assertSame('keep', $bynumber[2]['behavior']);
+        $this->assertTrue($bynumber[2]['locked']);
+    }
+
+    public function test_a_hidden_activity_does_not_reach_a_student(): void {
+        [$course, $page, $quiz] = $this->make_course();
+        $templateid = $this->save_items($course, []);
+        $student = $this->getDataGenerator()->create_and_enrol($course, 'student');
+        $this->setUser($student);
+        $this->assignUserCapability('local/coursegen:createtemplatecoursewithai', \context_system::instance()->id);
+
+        $view = $this->view($templateid);
+
+        $rows = $this->rows($view, 1);
+        $ids = array_column($rows, 'id');
+        $this->assertSame([(string) $page], $ids);
+        $this->assertNotContains((string) $quiz, $ids);
+    }
+
+    public function test_a_row_has_no_space_or_instance_fields_any_more(): void {
+        [$course] = $this->make_course();
+
+        $templateid = $this->save_items($course, []);
+
+        $view = $this->view($templateid);
+
+        $row = $this->rows($view, 1)[0];
+        $this->assertArrayNotHasKey('isspace', $row);
+        $this->assertArrayNotHasKey('spacerequired', $row);
+        $this->assertFalse($row['isinstance']);
+        $this->assertSame('', $row['generationuid']);
+    }
+
+    public function test_a_kept_row_has_no_generation_uid_and_a_modified_row_has_its_opaque_uid(): void {
+        global $DB;
+        [$course, $page] = $this->make_course();
+        $kept = $this->save_items($course, []);
+        $modified = $this->save_items($course, [['cmid' => $page, 'action' => template_actions::AI, 'instruction' => '']]);
+
+        $keptrow = $this->rows($this->view($kept), 1)[0];
+        $modifiedrow = $this->rows($this->view($modified), 1)[0];
+
+        $this->assertSame('', $keptrow['generationuid']);
+        $stored = $DB->get_field('local_coursegen_tpl_item', 'uid', ['templateid' => $modified, 'cmid' => $page]);
+        $this->assertSame($stored, $modifiedrow['generationuid']);
+        $this->assertNotSame((string) $page, $modifiedrow['generationuid']);
+        $this->assertSame($page, $modifiedrow['generationcmid']);
+    }
+
+    public function test_the_view_of_an_unknown_template_is_refused(): void {
+        $this->expectException(\moodle_exception::class);
+
+        get_template_structure::execute(987654);
+    }
+
+    public function test_a_user_without_the_capability_cannot_see_the_view(): void {
+        [$course] = $this->make_course();
+        $templateid = $this->save_items($course, []);
+        $user = $this->getDataGenerator()->create_user();
+        $this->setUser($user);
+
+        $this->expectException(\required_capability_exception::class);
+
+        get_template_structure::execute($templateid);
     }
 }

@@ -24,11 +24,12 @@ use local_coursegen\external\create_mod_stream;
 use local_coursegen\external\finish_template_generation;
 use local_coursegen\external\get_course_session_state;
 use local_coursegen\external\get_course_settings;
+use local_coursegen\external\get_template_course_settings;
 use local_coursegen\external\get_template_structure;
 use local_coursegen\external\manage_image_generation;
 use local_coursegen\external\start_course_planning;
 use local_coursegen\external\start_template_generation;
-use local_coursegen\external\template_planning_feedback;
+use local_coursegen\external\answer_template_question;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -49,9 +50,10 @@ require_once(__DIR__ . '/../capability_user_trait.php');
  * @covers     \local_coursegen\external\course_planning_feedback
  * @covers     \local_coursegen\external\create_course
  * @covers     \local_coursegen\external\get_course_settings
+ * @covers     \local_coursegen\external\get_template_course_settings
  * @covers     \local_coursegen\external\get_template_structure
  * @covers     \local_coursegen\external\start_template_generation
- * @covers     \local_coursegen\external\template_planning_feedback
+ * @covers     \local_coursegen\external\answer_template_question
  * @covers     \local_coursegen\external\finish_template_generation
  * @covers     \local_coursegen\external\courseai_filepicker_init
  * @covers     \local_coursegen\external\courseai_syllabus_upload
@@ -120,7 +122,8 @@ final class course_creation_capabilities_test extends \advanced_testcase {
             'settings' => [get_course_settings::class, [1], $free, []],
             'structure' => [get_template_structure::class, [1], $template, []],
             'templatestart' => [start_template_generation::class, [1], $template, []],
-            'templatefeedback' => [template_planning_feedback::class, [1, 'accept'], $template, []],
+            'templateanswer' => [answer_template_question::class, [1, 'c1', 'text', 0, 'x', ''], $template, []],
+            'templatesettings' => [get_template_course_settings::class, [1], $template, []],
             'templatefinish' => [finish_template_generation::class, [1], $template, []],
             'filepicker' => [courseai_filepicker_init::class, [], $syllabus, $createcourse],
             'syllabus' => [courseai_syllabus_upload::class, [1, 1], $syllabus, $createcourse],

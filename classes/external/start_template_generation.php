@@ -29,9 +29,11 @@ use external_api;
 use external_function_parameters;
 use external_single_structure;
 use external_value;
+use local_coursegen\event\external_transfer_initiated;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\template_ai_api_service;
 use local_coursegen\local\service\template_export_service;
+use local_coursegen\local\service\template_syllabus_uploader;
 
 defined('MOODLE_INTERNAL') || die();
 
@@ -77,16 +79,15 @@ class start_template_generation extends external_api {
         if ($params['draftitemid'] > 0) {
             require_capability('local/coursegen:uploadcoursesyllabus', $context);
         }
+        // A generation needs something to work from: a request, a file, or both.
+        if (trim((string) $params['prompt']) === '' && $params['draftitemid'] <= 0) {
+            throw new \moodle_exception('templatenothingtostart', 'local_coursegen');
+        }
 
         $payload = template_export_service::build_init_payload($params['templateid'], $params['prompt']);
 
-        $api = new template_ai_api_service();
+        $api = static::get_api_service();
         $threadid = $api->init($payload);
-
-        $file = self::draft_file($params['draftitemid']);
-        if ($file !== null) {
-            $api->upload_reference_file($threadid, $file);
-        }
 
         // The exact payload the run was given, kept alongside the session:
         // a preview reading it back later must see what the run saw, not the
@@ -95,6 +96,9 @@ class start_template_generation extends external_api {
             'templateid' => $params['templateid'],
             'payload' => $payload,
         ];
+        if ($params['draftitemid'] > 0) {
+            $coursedata['syllabus'] = static::send_syllabus($api, $threadid, $params['draftitemid']);
+        }
         $session = new course_session(0, (object) [
             'userid' => (int) $USER->id,
             'session_id' => $threadid,
@@ -114,24 +118,31 @@ class start_template_generation extends external_api {
     }
 
     /**
-     * The first real file in a draft area, or null when there is none.
+     * The client of the template agent endpoints.
      *
-     * @param int $draftitemid
-     * @return \stored_file|null
+     * @return template_ai_api_service
      */
-    private static function draft_file(int $draftitemid): ?\stored_file {
-        if ($draftitemid <= 0) {
-            return null;
-        }
-        global $USER;
-        $usercontext = \context_user::instance($USER->id);
-        $fs = get_file_storage();
-        $files = $fs->get_area_files($usercontext->id, 'user', 'draft', $draftitemid, 'itemid', false);
-        $file = reset($files);
-        if (!$file) {
-            return null;
-        }
-        return $file;
+    protected static function get_api_service(): template_ai_api_service {
+        return new template_ai_api_service();
+    }
+
+    /**
+     * Send the syllabus of the draft area to the run, before it starts, and record that it left the site.
+     *
+     * Nothing is stored when the service refuses the file: the run has not started and the session is not created.
+     *
+     * @param template_ai_api_service $api Client of the service.
+     * @param string $threadid Thread of the run, for example "3f2a9c1e-77b4".
+     * @param int $draftitemid Draft item id of the syllabus, for example 8421.
+     * @return array Name and size of the file that was sent.
+     */
+    protected static function send_syllabus(template_ai_api_service $api, string $threadid, int $draftitemid): array {
+        $uploader = new template_syllabus_uploader($api);
+        $sent = $uploader->send($threadid, $draftitemid);
+        $context = context_system::instance();
+        $event = external_transfer_initiated::create(['context' => $context, 'other' => $sent]);
+        $event->trigger();
+        return $sent;
     }
 
     /**
