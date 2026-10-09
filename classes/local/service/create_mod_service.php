@@ -16,8 +16,6 @@
 
 namespace local_coursegen\local\service;
 
-use local_coursegen\local\files\activity_file_pass;
-use local_coursegen\local\files\file_copy_exception;
 use local_coursegen\mod_settings\base_settings;
 use local_coursegen\utils\generated_files_scope;
 use local_coursegen\utils\preview_draft_store;
@@ -88,6 +86,10 @@ class create_mod_service {
 
         self::validate_mod_existence($modname);
 
+        if (activity_from_structure::applies($resultinfo)) {
+            return activity_from_structure::create($resultinfo, $course, (int) $sectionnum, $sourcecourseid);
+        }
+
         [ $module, $context, $cw, $cm, $data ] = prepare_new_moduleinfo_data($course, $modname, $sectionnum);
 
         $mform = self::create_mod_form_instance($modname, $data, $cw, $cm, $course);
@@ -109,39 +111,9 @@ class create_mod_service {
 
         self::apply_mod_settings($modname, $newcm, $modsettings);
 
-        self::give_files($modname, $newcm, (string) ($parameters->name ?? ''), $sourcecourseid);
+        new_activity_files::give($modname, $newcm, (string) ($parameters->name ?? ''), $sourcecourseid);
 
         return $newcm;
-    }
-
-    /**
-     * Give the new activity every file its texts reference.
-     *
-     * Runs once the activity and everything its settings create exist, so the
-     * rows of every text are real whatever the module is. When a file cannot be
-     * given, the activity is removed again and the error is raised.
-     *
-     * @param string $modname Module plugin name.
-     * @param object $newcm Newly created course module.
-     * @param string $name The activity's name, for the error.
-     * @param int|null $sourcecourseid Course whose files the texts may reference.
-     * @return void
-     */
-    private static function give_files(string $modname, $newcm, string $name, ?int $sourcecourseid): void {
-        $activity = (object) [
-            'id' => (int) $newcm->coursemodule,
-            'instance' => (int) $newcm->instance,
-            'modname' => $modname,
-            'course' => (int) $newcm->course,
-        ];
-        $pass = activity_file_pass::for_new_activity($sourcecourseid);
-        try {
-            $pass->run($activity, $name);
-        } catch (file_copy_exception $exception) {
-            // An activity whose files are missing would stay in the course half made.
-            course_delete_module($activity->id);
-            throw $exception;
-        }
     }
 
     /**
