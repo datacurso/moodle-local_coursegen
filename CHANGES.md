@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. Each change
 
 ### Changed
 - **The left column of a template generation is a timeline of cards, and the activities live in a fixed top bar**  
-  The progress of the generation is drawn as cards with a meter that fills as the activities are written. The top bar keeps in view a pill with how many activities the AI has written out of how many it will write, which opens the list of activities, the stats of the structure and the link to preview the whole course. The section limits badge stays next to the stats. The question card of the template agent and its texts are not part of this change.
+  The progress of the generation is drawn as cards with a meter that fills as the activities are written. The top bar keeps in view a pill with how many activities the AI has written out of how many it will write, which opens the list of activities, the stats of the structure and the link to preview the whole course. The section limits badge stays next to the stats. The same rows of the activities are also kept in the thread of the left column, so the progress of each activity stays in view while it is written. The question card of the template agent and its texts are not part of this change.
 
 ## [2.0.10] - 2026101201
 

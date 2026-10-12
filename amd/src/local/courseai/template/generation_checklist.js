@@ -87,7 +87,26 @@ const describeRow = (uid) => {
  *
  * @returns {Element|null}
  */
-const listNode = () => document.getElementById('courseaiChecklistList');
+const LIST_IDS = ['courseaiChecklistList', 'courseaiLeftChecklistList'];
+const CARD_IDS = ['courseaiChecklist', 'courseaiLeftChecklist'];
+const COUNT_IDS = ['courseaiChecklistCount', 'courseaiLeftChecklistCount'];
+
+/**
+ * The nodes of the page that have one of these ids; a page may lack some of them.
+ *
+ * @param {string[]} ids
+ * @returns {Element[]}
+ */
+const nodesOf = (ids) => {
+    const found = [];
+    for (const id of ids) {
+        const node = document.getElementById(id);
+        if (node) {
+            found.push(node);
+        }
+    }
+    return found;
+};
 
 /**
  * Fill the meter of the progress card: the card carries the share written as a number from 0 to 1 that its style draws.
@@ -95,13 +114,11 @@ const listNode = () => document.getElementById('courseaiChecklistList');
  * @param {Object} progress {total, done}
  */
 const paintMeter = (progress) => {
-    const checklist = document.getElementById('courseaiChecklist');
-    if (!checklist) {
-        return;
-    }
     const ratio = progressRatio(progress);
     const value = String(ratio);
-    checklist.style.setProperty('--cg-progress', value);
+    for (const checklist of nodesOf(CARD_IDS)) {
+        checklist.style.setProperty('--cg-progress', value);
+    }
 };
 
 /**
@@ -113,9 +130,9 @@ const paintMeter = (progress) => {
 const paintCount = async(progress) => {
     paintMeter(progress);
     const words = {done: progress.done, total: progress.total};
-    const count = document.getElementById('courseaiChecklistCount');
-    if (count) {
-        count.textContent = await getString('courseai_template_progress_count', 'local_coursegen', words);
+    const text = await getString('courseai_template_progress_count', 'local_coursegen', words);
+    for (const count of nodesOf(COUNT_IDS)) {
+        count.textContent = text;
     }
     // The pill of the top bar says the same in a few characters.
     const shortCount = document.getElementById('tplTopActivitiesCount');
@@ -130,12 +147,10 @@ const paintCount = async(progress) => {
 export const resetChecklist = () => {
     enqueue(() => {
         closeActivitiesPanel();
-        const list = listNode();
-        if (list) {
+        for (const list of nodesOf(LIST_IDS)) {
             list.innerHTML = '';
         }
-        const checklist = document.getElementById('courseaiChecklist');
-        if (checklist) {
+        for (const checklist of nodesOf(CARD_IDS)) {
             checklist.classList.add('hidden');
         }
     });
@@ -149,8 +164,7 @@ export const resetChecklist = () => {
 export const openChecklist = (progress) => {
     resetChecklist();
     enqueue(async() => {
-        const checklist = document.getElementById('courseaiChecklist');
-        if (checklist) {
+        for (const checklist of nodesOf(CARD_IDS)) {
             checklist.classList.remove('hidden');
         }
         await paintCount(progress);
@@ -165,12 +179,14 @@ export const openChecklist = (progress) => {
 export const addActivity = (data) => {
     const context = {uid: data.uid, name: data.name || '', ...describeRow(data.uid)};
     enqueue(async() => {
-        const list = listNode();
-        if (!list) {
+        const lists = nodesOf(LIST_IDS);
+        if (lists.length === 0) {
             return;
         }
         const {html, js} = await Templates.renderForPromise(ITEM_TEMPLATE, context);
-        Templates.appendNodeContents(list, html, js);
+        for (const list of lists) {
+            Templates.appendNodeContents(list, html, js);
+        }
     });
 };
 
@@ -184,8 +200,7 @@ export const closeActivity = (uid, progress) => {
     const done = progress.done;
     const total = progress.total;
     enqueue(async() => {
-        const item = document.querySelector(`#courseaiChecklistList [data-progress-uid="${uid}"]`);
-        if (item) {
+        for (const item of document.querySelectorAll(`.courseai-checklist-list [data-progress-uid="${uid}"]`)) {
             item.classList.remove('is-loading');
             item.classList.add('is-done');
         }
