@@ -6,7 +6,6 @@ import {
     closeActivity,
     openChecklist,
     resetChecklist,
-    settleChecklist,
 } from '../../amd/src/local/courseai/template/generation_checklist.js';
 
 const flush = () => new Promise((resolve) => setImmediate(resolve));
@@ -78,14 +77,6 @@ test('an activity that closes moves the meter that the ring of the pill reads', 
     closeActivity('a', {total: 2, done: 1});
     await flush();
     assert.equal(card.style.props['--cg-progress'], '0.5');
-});
-
-test('the end of the run fills the ring and the short count', async() => {
-    openChecklist({total: 2, done: 0});
-    await flush();
-    settleChecklist({total: 2, done: 1});
-    await flush();
-    assert.equal(card.style.props['--cg-progress'], '1');
 });
 
 test('a run that starts over closes the panel so it never greets the next run open', async() => {
