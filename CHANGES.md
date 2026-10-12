@@ -2,6 +2,13 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026100627
+
+### Fixed
+
+- **A page the AI service writes as a standard activity is created again**  
+  The handler that builds a page from what the template agent wrote required the plain html of the agent and refused every page that arrived with its text in the editor fields, so creating a page failed with "Could not get parameters to create the module". A page that already carries its text in the page editor field is now created as it came, and only the page the template agent wrote, which carries plain html, is rebuilt from its template page. Both kinds are covered by tests, including a page with an image.
+
 ## [2.0.10] - 2026100626
 
 ### Added

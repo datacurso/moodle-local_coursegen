@@ -29,17 +29,41 @@ defined('MOODLE_INTERNAL') || die();
  */
 class page_parameters extends base_parameters {
     /**
-     * Returns the data add_moduleinfo needs to create the page the template agent wrote.
+     * Returns the data add_moduleinfo needs to create the page.
+     *
+     * A page the AI service wrote as a standard activity already carries its editor fields and is created as it is.
+     * Only the page the template agent wrote, which carries its text as plain html, is built from its template page.
      *
      * @return object The module info of the page.
      */
     public function get_parameters() {
         $parameters = (array) $this->parameters;
+        if ($this->has_page_editor($parameters)) {
+            return $this->parameters;
+        }
+
         $rawcmid = $parameters['source_cmid'] ?? 0;
         $sourcecmid = (int) $rawcmid;
         unset($parameters['source_cmid']);
 
         $info = agent_page_moduleinfo::build($parameters, $sourcecmid);
         return (object) $info;
+    }
+
+    /**
+     * Whether the parameters already hold the text of the page in the editor field the page module reads.
+     *
+     * @param array $parameters The parameters of the generated activity.
+     * @return bool True when the page text is there as an editor field.
+     */
+    private function has_page_editor(array $parameters): bool {
+        $editor = $parameters['page'] ?? null;
+        if (is_object($editor)) {
+            $editor = (array) $editor;
+        }
+        if (!is_array($editor)) {
+            return false;
+        }
+        return array_key_exists('text', $editor);
     }
 }
