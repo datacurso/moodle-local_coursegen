@@ -29,7 +29,6 @@ use local_coursegen\local\models\template_activity;
 use local_coursegen\local\models\template_instance;
 use local_coursegen\local\models\template_section;
 use local_coursegen\local\models\template_space;
-use local_coursegen\local\space\space_rules;
 use local_coursegen\local\service\template_instance_layout;
 
 /**
@@ -90,8 +89,6 @@ class sections_config {
         $courseid = (int) $course->id;
         $scopelabelcourse = get_string('template_activity_scope_course', 'local_coursegen');
         $scopelabelsection = get_string('template_activity_scope_section', 'local_coursegen');
-        $spacebadgerequired = template_row_options::space_badge_label(true);
-        $spacebadgeoptional = template_row_options::space_badge_label(false);
 
         return [
             // The collapse ids are built from course id + section id: they
@@ -107,11 +104,6 @@ class sections_config {
             // without an extra string lookup.
             'scopelabelcourse' => $scopelabelcourse,
             'scopelabelsection' => $scopelabelsection,
-            // Both space badge labels, for the same reason: the row's badge
-            // swaps between them after a requirement change without a string
-            // lookup.
-            'spacebadgerequired' => $spacebadgerequired,
-            'spacebadgeoptional' => $spacebadgeoptional,
         ];
     }
 
@@ -120,10 +112,10 @@ class sections_config {
      * makes: empty for a new template (id 0).
      *
      * @param int $templateid Existing template id, 0 for a new template.
-     * @return array {behaviors, actions, scopes, spaces, instances}
+     * @return array {behaviors, actions, scopes, instances}
      */
     private static function saved_configuration(int $templateid): array {
-        $saved = ['behaviors' => [], 'actions' => [], 'scopes' => [], 'spaces' => [], 'instances' => []];
+        $saved = ['behaviors' => [], 'actions' => [], 'scopes' => [], 'instances' => []];
         if ($templateid <= 0) {
             return $saved;
         }
@@ -151,26 +143,21 @@ class sections_config {
     }
 
     /**
-     * The saved action, template scope and space settings of each activity,
-     * keyed by cmid.
+     * The saved action and template scope of each activity, keyed by cmid.
      *
      * @param int $templateid
-     * @return array {actions, scopes, spaces}
+     * @return array {actions, scopes}
      */
     private static function saved_activity_settings(int $templateid): array {
         $records = template_activity::get_records(['templateid' => $templateid]);
         $actions = [];
         $scopes = [];
-        $spaces = [];
         foreach ($records as $record) {
             $cmid = (int) $record->get('cmid');
             $actions[$cmid] = $record->get('action');
             $scopes[$cmid] = $record->get('templatescope');
-            $required = (bool) $record->get('spacerequired');
-            $instruction = (string) $record->get('spaceinstruction');
-            $spaces[$cmid] = ['required' => $required, 'instruction' => $instruction];
         }
-        return ['actions' => $actions, 'scopes' => $scopes, 'spaces' => $spaces];
+        return ['actions' => $actions, 'scopes' => $scopes];
     }
 
     /**
@@ -266,10 +253,6 @@ class sections_config {
         $savedscope = $saved['scopes'][$cmid] ?? template_activity::SCOPE_COURSE;
         $scopeoptions = template_row_options::template_scope_options($cmid, $savedscope);
         $scopelabel = template_row_options::active_scope_label($scopeoptions);
-        $space = $saved['spaces'][$cmid] ?? ['required' => true, 'instruction' => ''];
-        $isspace = $activeaction === template_activity::ACTION_SPACE;
-        $legacyspace = $savedaction === template_activity::ACTION_SPACE && !space_rules::allows($cm->modname);
-        $spacebadge = template_row_options::space_badge_label($space['required']);
 
         // Link to the real activity in the base course; null for modules
         // with no view page of their own (label), whose names stay plain text.
@@ -298,16 +281,6 @@ class sections_config {
             // by sections_events.js.
             'istemplate' => $activeaction === template_activity::ACTION_TEMPLATE,
             'scopelabel' => $scopelabel,
-            // Drives the clickable "Space" badge the same way: hidden unless
-            // the row's action is "space", reopening the space settings.
-            'isspace' => $isspace,
-            'spacerequired' => $space['required'],
-            'spacerequiredvalue' => (int) $space['required'],
-            'spaceinstruction' => $space['instruction'],
-            'hasspaceinstruction' => $isspace && $space['instruction'] !== '',
-            'spacebadge' => $spacebadge,
-            // A space saved before only a file resource could be one: shown as exclude, with a warning.
-            'legacyspace' => $legacyspace,
         ];
     }
 

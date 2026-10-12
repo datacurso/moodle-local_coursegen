@@ -44,9 +44,6 @@ class template_activity extends persistent {
     /** Action: the activity is a mold other activities are generated from. */
     const ACTION_TEMPLATE = 'template';
 
-    /** Action: the professor provides this activity instead. */
-    const ACTION_SPACE = 'space';
-
     /** Template scope: the mold serves the whole course. */
     const SCOPE_COURSE = 'course';
 
@@ -93,19 +90,6 @@ class template_activity extends persistent {
                 'default' => self::SCOPE_COURSE,
             ],
             'prompt' => [
-                'type' => PARAM_RAW,
-                'null' => NULL_ALLOWED,
-                'default' => null,
-            ],
-            // Only meaningful when action=space: the professor must provide
-            // this activity (1) or may skip it (0).
-            'spacerequired' => [
-                'type' => PARAM_INT,
-                'default' => 1,
-            ],
-            // Only meaningful when action=space: what the professor has to
-            // provide in place of this activity.
-            'spaceinstruction' => [
                 'type' => PARAM_RAW,
                 'null' => NULL_ALLOWED,
                 'default' => null,

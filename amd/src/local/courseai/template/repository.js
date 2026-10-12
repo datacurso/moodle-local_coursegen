@@ -36,18 +36,17 @@ export const getTemplateStructure = (templateId) => fetchMany([{
 }])[0];
 
 /**
- * Open a generation: exports the template, attaches the syllabus and the files
- * of the spaces, and returns the stream whose consumption actually runs it.
+ * Open a generation: exports the template, attaches the syllabus, and returns the
+ * stream whose consumption actually runs it.
  *
  * @param {number} templateId
  * @param {string} prompt The professor's single general instruction.
  * @param {number} draftItemId Draft area holding the syllabus, 0 when none.
- * @param {Object[]} spaceFiles The file of each space: {cmid, draftitemid}.
  * @returns {Promise<Object>} {threadid, sessionid, streamurl}
  */
-export const startTemplateGeneration = (templateId, prompt, draftItemId, spaceFiles) => fetchMany([{
+export const startTemplateGeneration = (templateId, prompt, draftItemId) => fetchMany([{
     methodname: 'local_coursegen_start_template_generation',
-    args: {templateid: templateId, prompt: prompt, draftitemid: draftItemId, spacefiles: spaceFiles},
+    args: {templateid: templateId, prompt: prompt, draftitemid: draftItemId},
 }])[0];
 
 /**

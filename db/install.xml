@@ -126,12 +126,10 @@
                 <FIELD NAME="templateid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="sectionid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="cmid" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
-                <FIELD NAME="action" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="keep" SEQUENCE="false" COMMENT="keep, reference, exclude, template, or space" />
+                <FIELD NAME="action" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="keep" SEQUENCE="false" COMMENT="keep, reference, exclude, or template" />
                 <FIELD NAME="useasreference" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1" SEQUENCE="false" />
                 <FIELD NAME="templatescope" TYPE="char" LENGTH="20" NOTNULL="true" DEFAULT="course" SEQUENCE="false" COMMENT="course or section; only meaningful when action=template" />
                 <FIELD NAME="prompt" TYPE="text" NOTNULL="false" SEQUENCE="false" />
-                <FIELD NAME="spacerequired" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1" SEQUENCE="false" COMMENT="Only meaningful when action=space: 1 when the professor must provide this activity, 0 when it is optional" />
-                <FIELD NAME="spaceinstruction" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Only meaningful when action=space: what the professor has to provide" />
                 <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
             </FIELDS>

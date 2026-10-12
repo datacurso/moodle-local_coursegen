@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101203
+
+### Removed
+- **The space for the teacher's file is gone**  
+  A file resource of a template can no longer be marked "Space for the teacher": the option, its card on the teacher screen, the rule that kept Generate off until the file was added, the step that put the teacher's file in the new course and removed the elements that pointed at the template's file, the scheduled task that purged those files and the fields `spacerequired` and `spaceinstruction` are removed, and the activity file pass no longer reads files from a space. A file resource is now kept, referenced or excluded like any other activity. The spaces the professor fills with an activity of their own are not part of this change.
+
 ## [2.0.10] - 2026101202
 
 ### Changed

@@ -55,9 +55,6 @@ final class activity_file_pass {
     /** @var file_area_chooser */
     private file_area_chooser $chooser;
 
-    /** @var space_element_remover */
-    private space_element_remover $spaces;
-
     /** @var string[][] Table => its text columns. */
     private array $columns = [];
 
@@ -70,7 +67,6 @@ final class activity_file_pass {
         $this->sources = $sources;
         $this->rewriter = new text_file_rewriter($sources);
         $this->chooser = new file_area_chooser();
-        $this->spaces = new space_element_remover();
     }
 
     /**
@@ -165,13 +161,11 @@ final class activity_file_pass {
         if (!$this->worth_reading($text)) {
             return;
         }
-        $stripped = $this->spaces->strip($text);
         if (!$this->chooser->holds_files($carrier->table, $column)) {
-            $this->refuse_placeholders($stripped, $where);
-            $this->store_if_changed($carrier, $column, $text, $stripped);
+            $this->refuse_placeholders($text, $where);
             return;
         }
-        $rewritten = $this->rewriter->rewrite($stripped, $where, $carrier->areas);
+        $rewritten = $this->rewriter->rewrite($text, $where, $carrier->areas);
         $paths = text_file_rewriter::placeholder_paths($rewritten->text);
         $this->place_files($carrier, $column, $paths, $rewritten, $where);
         $this->store_if_changed($carrier, $column, $text, $rewritten->text);

@@ -40,15 +40,12 @@ class template_keep_copier {
      * @param int $targetcourseid
      * @param array $createdcmids Filled with base course cmid => cmid of its copy in the
      *     target course, for every activity that was copied.
-     * @param int[] $alsocmids Base course cmids to copy as well as the kept ones: the file resources of the
-     *     spaces the teacher brought a file for.
      * @return array Names of the activities that could not be copied.
      */
     public static function copy_into(
         int $templateid,
         int $targetcourseid,
-        array &$createdcmids = [],
-        array $alsocmids = []
+        array &$createdcmids = []
     ): array {
         global $CFG;
         require_once($CFG->dirroot . '/course/lib.php');
@@ -70,7 +67,7 @@ class template_keep_copier {
         $sourcecourse = get_course($sourcecourseid);
         $targetcourse = get_course($targetcourseid);
         $modinfo = get_fast_modinfo($sourcecourse);
-        $keepcmids = self::kept_cmids($templateid, $modinfo, $alsocmids);
+        $keepcmids = self::kept_cmids($templateid, $modinfo);
         $targetsectionids = self::target_section_ids($targetcourse);
 
         $failures = self::copy_kept_activities($keepcmids, $modinfo, $targetcourse, $targetsectionids, $createdcmids);
@@ -169,18 +166,16 @@ class template_keep_copier {
      *
      * @param int $templateid
      * @param \course_modinfo $modinfo
-     * @param int[] $alsocmids Cmids copied whatever their action.
      * @return int[]
      */
-    private static function kept_cmids(int $templateid, $modinfo, array $alsocmids): array {
+    private static function kept_cmids(int $templateid, $modinfo): array {
         $actions = self::kept_actions($templateid);
         $cms = $modinfo->get_cms();
 
         $cmids = [];
         foreach ($cms as $cm) {
             $action = $actions[$cm->id] ?? 'keep';
-            $also = in_array((int) $cm->id, $alsocmids, true);
-            if ($action === 'keep' || $action === 'reference' || $also) {
+            if ($action === 'keep' || $action === 'reference') {
                 $cmids[] = (int) $cm->id;
             }
         }

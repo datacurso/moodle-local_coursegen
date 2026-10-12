@@ -39,7 +39,6 @@ import {
     toggleSectionCollapsed,
 } from './template/state';
 import {renderStructure, wireStructureEvents} from './template/render';
-import {pickSpaceFile, removeSpaceFile, refreshGenerateState} from './template/space_files';
 import {formatTemplate} from './utils';
 
 // The "N sections · M activities" stats template. Fetched once and cached —
@@ -51,6 +50,19 @@ const getStatsTemplate = () => {
         statsTemplatePromise = getString('courseai_plan_sections_counter', 'local_coursegen');
     }
     return statsTemplatePromise;
+};
+
+/**
+ * Turn the Generate button on once a template is loaded and no run is on screen.
+ *
+ * @param {Object} tplState
+ * @param {HTMLElement|null} genBtn
+ */
+const refreshGenerateState = (tplState, genBtn) => {
+    if (!genBtn || !tplState.loaded || document.body.classList.contains('cg-generating')) {
+        return;
+    }
+    genBtn.disabled = false;
 };
 
 /**
@@ -128,15 +140,9 @@ export const wireTemplateMode = (state, host) => {
                 Notification.exception(e);
             }
         },
-        onPickSpaceFile: (sectionIndex, activityIndex) => {
-            pickSpaceFile(tplState, sectionIndex, activityIndex, rerenderStructure);
-        },
-        onRemoveSpaceFile: (sectionIndex, activityIndex) => {
-            removeSpaceFile(tplState, sectionIndex, activityIndex, rerenderStructure);
-        },
     });
 
-    // Generate: the button is only on while a template is loaded and every required space has its file.
+    // Generate: the button is only on while a template is loaded.
     if (genBtn) {
         genBtn.addEventListener('click', () => {
             runGeneration(tplState, tplSelect, genBtn, state, host);
@@ -203,7 +209,6 @@ const loadTemplateStructure = async(templateId, tplState, container, state, requ
         updateStats(tplState, statsTemplate);
         await renderLimitsBanner(limitsEl, limitsBadge, tplState);
 
-        // A required space keeps the button off until its file is picked.
         refreshGenerateState(tplState, genBtn);
         state.templateStructureLoaded = true;
     } catch (e) {

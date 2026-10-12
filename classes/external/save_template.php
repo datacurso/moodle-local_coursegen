@@ -74,18 +74,6 @@ class save_template extends external_api {
                                 VALUE_DEFAULT,
                                 'course'
                             ),
-                            'spacerequired'  => new external_value(
-                                PARAM_BOOL,
-                                'Whether the professor must provide this activity; only meaningful when action=space',
-                                VALUE_DEFAULT,
-                                true
-                            ),
-                            'spaceinstruction' => new external_value(
-                                PARAM_RAW,
-                                'What the professor has to provide; only meaningful when action=space',
-                                VALUE_DEFAULT,
-                                ''
-                            ),
                         ])
                     ),
                     'instances' => new external_multiple_structure(

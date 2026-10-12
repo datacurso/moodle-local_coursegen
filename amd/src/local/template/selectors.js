@@ -70,7 +70,6 @@ export default {
         spaceRow: '[data-region="local_coursegen/template/space-row"]',
         spaceBadge: '[data-region="local_coursegen/template/space-badge"]',
         spaceInstruction: '[data-region="local_coursegen/template/space-instruction"]',
-        spaceTag: '[data-region="local_coursegen/template/space-tag"]',
         spaceRowInstruction: '[data-region="local_coursegen/template/space-row-instruction"]',
         spaceRequiredChoice: '[data-region="local_coursegen/template/space-required-choice"]:checked',
         spaceInstructionField: '[data-region="local_coursegen/template/space-instruction-field"]',

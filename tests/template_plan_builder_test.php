@@ -303,7 +303,7 @@ final class template_plan_builder_test extends \basic_testcase {
         $instancekeys = array_keys($section['instances'][0]);
         $this->assertSame(['sectionid', 'sectionnum', 'behavior', 'activities', 'instances', 'spaces'], $sectionkeys);
         $this->assertSame(
-            ['cmid', 'action', 'useasreference', 'prompt', 'templatescope', 'spacerequired', 'spaceinstruction'],
+            ['cmid', 'action', 'useasreference', 'prompt', 'templatescope'],
             $activitykeys
         );
         $this->assertSame(

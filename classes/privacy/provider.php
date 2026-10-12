@@ -32,7 +32,6 @@ use core_privacy\local\request\approved_userlist;
 use core_privacy\local\request\contextlist;
 use core_privacy\local\request\userlist;
 use core_privacy\local\request\writer;
-use local_coursegen\local\space\space_file_storage;
 use stdClass;
 
 /**
@@ -216,7 +215,6 @@ class provider implements
         foreach ($tables as $table => $filterparams) {
             $DB->delete_records($table, $filterparams);
         }
-        space_file_storage::delete_user_files($userid);
     }
 
     /**

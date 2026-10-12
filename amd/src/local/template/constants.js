@@ -37,7 +37,6 @@ export const ACTION = {
     REFERENCE: 'reference',
     EXCLUDE: 'exclude',
     TEMPLATE: 'template',
-    SPACE: 'space',
 };
 
 /** @type {Object} What the generator does with a section. */
@@ -56,7 +55,6 @@ export const SCOPE = {
 /** @type {Object} CSS classes the scripts add or remove to change how a row looks (never used to find elements). */
 export const CLASS = {
     HIDDEN: 'd-none',
-    ROW_SPACE: 'tpl-row-space',
 };
 
 /** @type {Object} Tag names the scripts look up on an ancestor. */

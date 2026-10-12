@@ -2686,9 +2686,6 @@ svg { display: block; flex-shrink: 0; }
   color: hsl(215 28% 28%);
 }
 
-/* A space card keeps its controls only until the generation starts: from then on its file is fixed. */
-body.cg-generating #tplModeStructure .cg-space-controls { display: none; }
-
 /* Section row is a positioning context for the simple plan renderer. */
 .prv-section-row {
   position: relative;

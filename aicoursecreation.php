@@ -54,7 +54,6 @@ $PAGE->requires->css(new moodle_url('/local/coursegen/styles/aicoursecreation.cs
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/chatui.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/sidebar.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_mode_prompt.css', ['v' => $cssrev]));
-$PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_space_card.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_left_column.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_left_cards.css', ['v' => $cssrev]));
 $PAGE->requires->css(new moodle_url('/local/coursegen/styles/template_top_bar.css', ['v' => $cssrev]));

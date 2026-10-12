@@ -213,48 +213,6 @@ final class template_keep_copier_test extends \advanced_testcase {
     }
 
     /**
-     * A resource saved as a space is not copied unless the caller asks for it, and then it keeps its place.
-     */
-    public function test_a_space_is_copied_only_when_asked_for(): void {
-        $this->resetAfterTest(true);
-
-        $sourcecourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
-        $targetcourse = $this->getDataGenerator()->create_course(['numsections' => 2]);
-        $resource = $this->getDataGenerator()->create_module('resource', ['course' => $sourcecourse->id, 'section' => 2]);
-        $template = $this->create_template($sourcecourse->id);
-        $this->save_space($template, (int) $resource->cmid);
-
-        $without = [];
-        template_keep_copier::copy_into((int) $template->get('id'), $targetcourse->id, $without);
-        $this->assertSame([], $without);
-        $this->assertCount(0, get_fast_modinfo($targetcourse)->get_instances_of('resource'));
-
-        $with = [];
-        $failures = template_keep_copier::copy_into((int) $template->get('id'), $targetcourse->id, $with, [(int) $resource->cmid]);
-
-        $targetmodinfo = get_fast_modinfo($targetcourse);
-        $this->assertSame([], $failures);
-        $this->assertSame([(int) $resource->cmid], array_keys($with));
-        $this->assertSame(2, $targetmodinfo->get_cm($with[(int) $resource->cmid])->sectionnum);
-    }
-
-    /**
-     * Save a space action for an activity of a template.
-     *
-     * @param template $template
-     * @param int $cmid
-     */
-    private function save_space(template $template, int $cmid): void {
-        $record = new template_activity(0, (object) [
-            'templateid' => $template->get('id'),
-            'sectionid' => 0,
-            'cmid' => $cmid,
-            'action' => template_activity::ACTION_SPACE,
-        ]);
-        $record->create();
-    }
-
-    /**
      * A template row pointing at the given course, with no saved
      * template_activity rows - every activity there defaults to "keep".
      *

@@ -27,7 +27,7 @@
     docblock for the full shape of one "rows" entry.
 }}
 {{#isreal}}
-<tr class="{{#istemplate}}tpl-row-template{{/istemplate}}{{#isspace}} tpl-row-space{{/isspace}}" data-for="cmitem" data-id="{{cmid}}" data-modname="{{modname}}" data-typelabel="{{typelabel}}">
+<tr class="{{#istemplate}}tpl-row-template{{/istemplate}}" data-for="cmitem" data-id="{{cmid}}" data-modname="{{modname}}" data-typelabel="{{typelabel}}">
     <td class="align-middle tpl-select-col">
         <input type="checkbox" data-region="activity-select" data-id="{{cmid}}"
                aria-label="{{name}}">
@@ -43,17 +43,7 @@
                 data-tag-section="{{#str}} template_activity_template_tag, local_coursegen, {{scopelabelsection}} {{/str}}">
             {{#str}} template_activity_template_tag, local_coursegen, {{scopelabel}} {{/str}}
         </button>{{!
-        }}<button type="button"
-                class="tpl-badge tpl-badge-space tpl-space-tag ml-2{{^isspace}} d-none{{/isspace}}"
-                data-region="local_coursegen/template/space-tag" data-id="{{cmid}}" data-name="{{name}}"
-                data-badge-required="{{spacebadgerequired}}" data-badge-optional="{{spacebadgeoptional}}">{{spacebadge}}</button>
-        <div class="tpl-space-instruction text-muted small{{^hasspaceinstruction}} d-none{{/hasspaceinstruction}}"
-             data-region="local_coursegen/template/space-row-instruction" data-id="{{cmid}}">{{spaceinstruction}}</div>
-        {{#legacyspace}}
-        <div class="tpl-space-legacy-warning text-warning small" data-region="local_coursegen/template/space-legacy-warning" data-id="{{cmid}}">
-            {{#str}} template_space_legacy_warning, local_coursegen {{/str}}
-        </div>
-        {{/legacyspace}}
+        }}
     </td>
     <td class="align-middle text-muted" data-region="local_coursegen/template/type-label">{{typelabel}}</td>
     <td class="align-middle text-right">

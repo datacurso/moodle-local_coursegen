@@ -89,25 +89,6 @@ final class course_sections_actions_test extends \advanced_testcase {
     }
 
     /**
-     * A file resource is the only row that offers the space action.
-     */
-    public function test_render_offers_space_only_for_a_file_resource(): void {
-        $this->resetAfterTest();
-        $this->setAdminUser();
-
-        [$course, , $forum] = $this->create_course_fixture();
-        $resource = $this->getDataGenerator()->create_module('resource', ['course' => $course->id, 'section' => 1]);
-
-        $modinfo = get_fast_modinfo($course);
-        $html = sections_config::render($modinfo);
-
-        $resourceselect = $this->extract_action_select($html, (int) $resource->cmid);
-        $this->assertStringContainsString('<option value="space"', $resourceselect);
-        $forumselect = $this->extract_action_select($html, (int) $forum->cmid);
-        $this->assertStringNotContainsString('<option value="space"', $forumselect);
-    }
-
-    /**
      * A row whose default (or saved) action is NOT "template" renders the
      * "Template" tag, but it starts hidden (d-none) and showing the
      * "Whole course" label — sections_events.js is what reveals it (and

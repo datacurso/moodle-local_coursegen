@@ -27,9 +27,6 @@
  *   "template" opens the shared scope modal (template_scope_modal.js)
  *   instead of applying the action immediately; changing it away from
  *   "template" clears the row's visual signal with no modal involved.
- * - Changing a row's action TO "space" opens the shared space modal
- *   (template_row_space.js): required or optional, and what the professor has
- *   to provide. Its clickable badge (data-region="local_coursegen/template/space-tag") reopens it.
  * - Per-row clickable "Template" tag (data-region="template-tag"): visible
  *   only while the row's action is "template", reopens the same modal to
  *   change an already-set scope.
@@ -58,11 +55,6 @@ import {
     confirmUnmarkTemplate,
     bindTemplateTagClicks,
 } from 'local_coursegen/local/template/template_row_scope';
-import {
-    applySpaceVisual,
-    openSpaceModalForNewSelection,
-    bindSpaceTagClicks,
-} from 'local_coursegen/local/template/template_row_space';
 import {bindInstanceInserts} from 'local_coursegen/local/template/template_instance_events';
 import {bindNameEditing} from 'local_coursegen/local/template/template_instance_name_edit';
 import Selectors from 'local_coursegen/local/template/selectors';
@@ -125,9 +117,7 @@ const applicableAction = (action, modname) => {
 };
 
 /**
- * Keep the visual of a row in step with an action applied in bulk. The bulk
- * bar never sets "space", so whatever it applies to a row also clears that
- * row's space visual.
+ * Keep the visual of a row in step with an action applied in bulk.
  *
  * @param {HTMLElement} row The row the bulk action was applied to.
  * @param {boolean} istemplate Whether the row is now a template mold.
@@ -136,7 +126,6 @@ const applicableAction = (action, modname) => {
  */
 const applyRowVisual = (row, istemplate, cmid, rowstate) => {
     applyTemplateVisual(row, istemplate, cmid, rowstate);
-    applySpaceVisual(row, false, cmid, rowstate);
 };
 
 /**
@@ -150,19 +139,7 @@ const rememberResolvedAction = (ctx, finalaction) => {
 };
 
 /**
- * Paint a row once the space modal resolved its action.
- *
- * @param {Object} ctx The row's binding context (see bindActivityActionSelect()).
- * @param {string} finalspace The action the row ended up with.
- */
-const applySpaceResolution = (ctx, finalspace) => {
-    ctx.prioraction = finalspace;
-    applyTemplateVisual(ctx.row, finalspace === ACTION.TEMPLATE, ctx.cmid, ctx.state);
-};
-
-/**
- * Continue after the unmark-template confirmation resolved: open the space
- * modal when the row is now a space, otherwise clear its space visual.
+ * Continue after the unmark-template confirmation resolved: remember the action the row ended with.
  *
  * @param {Object} ctx The row's binding context (see bindActivityActionSelect()).
  * @param {string} before The action the row had before the change.
@@ -170,12 +147,6 @@ const applySpaceResolution = (ctx, finalspace) => {
  */
 const continueAfterUnmark = (ctx, before, finalaction) => {
     ctx.prioraction = finalaction;
-    if (finalaction === ACTION.SPACE) {
-        const onSpaceResolved = applySpaceResolution.bind(null, ctx);
-        openSpaceModalForNewSelection(ctx.row, ctx.select, ctx.cmid, before, ctx.state, onSpaceResolved);
-        return;
-    }
-    applySpaceVisual(ctx.row, false, ctx.cmid, ctx.state);
 };
 
 /**
@@ -189,8 +160,7 @@ const startTemplateFlow = (ctx) => {
 };
 
 /**
- * Changing a row to anything else first confirms unmarking a template, and a
- * change TO "space" then opens the space modal.
+ * Changing a row to anything else first confirms unmarking a template.
  *
  * @param {Object} ctx The row's binding context (see bindActivityActionSelect()).
  * @param {string} action The action just selected.
@@ -244,7 +214,6 @@ const bindActivityActionSelect = (container, select, state) => {
     state.activityAction[cmid] = select.value;
     if (row) {
         applyTemplateVisual(row, select.value === ACTION.TEMPLATE, cmid, state);
-        applySpaceVisual(row, select.value === ACTION.SPACE, cmid, state);
     }
     const onChange = handleActionChange.bind(null, ctx);
     select.addEventListener(EVENT.CHANGE, onChange);
@@ -313,7 +282,6 @@ const bindSectionBehaviorSelects = (container, state) => {
 export const bindServerRenderedControls = (container, state) => {
     bindActivityActionSelects(container, state);
     bindTemplateTagClicks(container, state, markDirty);
-    bindSpaceTagClicks(container, state, markDirty);
     bindInstanceInserts(container, state, markDirty);
     bindNameEditing(container, markDirty);
     // Row selection checkboxes (three synced tiers) and the single global

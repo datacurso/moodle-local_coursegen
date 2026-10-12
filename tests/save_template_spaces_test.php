@@ -28,7 +28,7 @@ use local_coursegen\output\sections_config;
 
 /**
  * save_template's persistence of spaces the professor fills with an activity
- * of their own - virtual ones, and existing activities marked "space" - and
+ * of their own - virtual ones - and
  * sections_config's hydration of them back into the review.
  *
  * @package    local_coursegen
@@ -138,126 +138,6 @@ final class save_template_spaces_test extends \advanced_testcase {
         $this->assertNotFalse($spaceposition);
         $this->assertNotFalse($instanceposition);
         $this->assertLessThan($instanceposition, $spaceposition);
-    }
-
-    /**
-     * An existing activity marked "space" keeps its requirement and
-     * instruction, preselects the action and shows its badge.
-     */
-    public function test_activity_marked_as_space_round_trips_into_the_review(): void {
-        $this->resetAfterTest();
-        $this->setAdminUser();
-
-        [$course] = $this->create_course_fixture();
-        $page = $this->getDataGenerator()->create_module('resource', ['course' => $course->id, 'section' => 1]);
-        $sectionid = $this->first_section_id($course);
-        $cmid = (int) $page->cmid;
-        $activities = [[
-            'cmid' => $cmid,
-            'action' => 'space',
-            'useasreference' => true,
-            'prompt' => '',
-            'spacerequired' => false,
-            'spaceinstruction' => 'Replace this page with your own welcome.',
-        ]];
-
-        $saved = $this->save_with_instances((int) $course->id, $sectionid, 1, $activities, []);
-
-        $templateid = (int) $saved['id'];
-        $record = template_activity::get_record(['templateid' => $templateid, 'cmid' => $cmid]);
-        $action = $record->get('action');
-        $required = (int) $record->get('spacerequired');
-        $instruction = $record->get('spaceinstruction');
-        $this->assertSame('space', $action);
-        $this->assertSame(0, $required);
-        $this->assertSame('Replace this page with your own welcome.', $instruction);
-
-        $html = $this->render_review($course, $templateid);
-        $select = $this->extract_action_select($html, $cmid);
-        $this->assertMatchesRegularExpression('/<option value="space"[^>]*\sselected/', $select);
-
-        $tag = $this->extract_space_tag($html, $cmid);
-        $badge = $this->badge_text('template_space_optional');
-        $opening = $this->opening_tag($tag);
-        $this->assertStringContainsString($badge, $tag);
-        $this->assertStringNotContainsString('d-none', $opening);
-        $this->assertStringContainsString('Replace this page with your own welcome.', $html);
-    }
-
-    /**
-     * Saving a space on an activity that is not a file resource is refused.
-     */
-    public function test_space_on_a_page_is_rejected(): void {
-        $this->resetAfterTest();
-        $this->setAdminUser();
-
-        [$course, $page] = $this->create_course_fixture();
-        $sectionid = $this->first_section_id($course);
-        $activities = [[
-            'cmid' => (int) $page->cmid,
-            'action' => 'space',
-            'useasreference' => true,
-            'prompt' => '',
-            'spacerequired' => true,
-            'spaceinstruction' => '',
-        ]];
-
-        $this->expectException(\invalid_parameter_exception::class);
-        $this->save_with_instances((int) $course->id, $sectionid, 1, $activities, []);
-    }
-
-    /**
-     * A space saved before the rule existed, on a forum, shows exclude with a
-     * warning and no space badge; a resource row shows no warning.
-     */
-    public function test_legacy_space_on_a_forum_shows_exclude_and_a_warning(): void {
-        $this->resetAfterTest();
-        $this->setAdminUser();
-
-        [$course, , $forum] = $this->create_course_fixture();
-        $resource = $this->getDataGenerator()->create_module('resource', ['course' => $course->id, 'section' => 1]);
-        $template = new \local_coursegen\local\models\template(0, (object) [
-            'name' => 'Legacy',
-            'courseid' => $course->id,
-        ]);
-        $template->create();
-        $templateid = (int) $template->get('id');
-        foreach ([$forum, $resource] as $module) {
-            $record = new template_activity(0, (object) [
-                'templateid' => $templateid,
-                'sectionid' => 0,
-                'cmid' => (int) $module->cmid,
-                'action' => 'space',
-            ]);
-            $record->create();
-        }
-
-        $html = $this->render_review($course, $templateid);
-
-        $forumselect = $this->extract_action_select($html, (int) $forum->cmid);
-        $this->assertMatchesRegularExpression('/<option value="exclude"[^>]*\sselected/', $forumselect);
-        $warning = get_string('template_space_legacy_warning', 'local_coursegen');
-        $this->assertSame(1, substr_count($html, $warning));
-        $forumtag = $this->opening_tag($this->extract_space_tag($html, (int) $forum->cmid));
-        $this->assertStringContainsString('d-none', $forumtag);
-        $resourceselect = $this->extract_action_select($html, (int) $resource->cmid);
-        $this->assertMatchesRegularExpression('/<option value="space"[^>]*\sselected/', $resourceselect);
-    }
-
-    /**
-     * An activity that is not marked as a space keeps its badge hidden.
-     */
-    public function test_activity_not_marked_as_space_keeps_its_badge_hidden(): void {
-        $this->resetAfterTest();
-        $this->setAdminUser();
-
-        [$course, $page] = $this->create_course_fixture();
-
-        $html = $this->render_review($course);
-
-        $tag = $this->extract_space_tag($html, (int) $page->cmid);
-        $opening = $this->opening_tag($tag);
-        $this->assertStringContainsString('d-none', $opening);
     }
 
     /**
