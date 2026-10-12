@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101205
+
+### Fixed
+- **The activities in the left column use the compact card of the redesign**  
+  The list had fallen back to the large rows of the free creation chat. It is now a card with a meter that fills as the activities are written, one tight row per activity with its state, name and type, a ring that turns while it is written, a green check once it is done, and no turning while the review waits for the teacher.
+
 ## [2.0.10] - 2026101204
 
 ### Fixed
