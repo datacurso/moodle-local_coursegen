@@ -475,18 +475,6 @@
             <!-- Section checklist: a compact result card inside the AI planning
                  turn. The data hooks (data-section-id/data-round/data-remaining on
                  each <li>) are consumed by the streaming handlers — do not remove. -->
-            {{#templatemodeactive}}
-            {{! Template mode: the same rows the pill of the top bar lists, kept in the thread so the progress of
-                each activity is in view while it is written. The ids differ from the free mode block below. }}
-            <div class="courseai-checklist cg-thread-checklist hidden" id="courseaiLeftChecklist">
-              <div class="cg-group-head">
-                <span class="cg-group-title">{{#str}}courseai_template_progress_title, local_coursegen{{/str}}</span>
-                <span class="cg-group-count" id="courseaiLeftChecklistCount"></span>
-              </div>
-              <ul class="courseai-checklist-list" id="courseaiLeftChecklistList"></ul>
-            </div>
-            {{/templatemodeactive}}
-            {{^templatemodeactive}}
             <div class="courseai-checklist cg-thread-checklist hidden" id="courseaiChecklist">
               <div class="cg-group-head" role="button" tabindex="0" aria-expanded="true">
                 <span class="cg-group-chevron" aria-hidden="true">⌄</span>
@@ -496,7 +484,6 @@
               </div>
               <ul class="courseai-checklist-list" id="courseaiChecklistList"></ul>
             </div>
-            {{/templatemodeactive}}
 
             <!-- Continuation of the thread (§7.1): once the plan settles, user
                  actions and their results flow chronologically below the checklist. -->
@@ -783,6 +770,17 @@
             log and working-indicator modules find them by id, and the two blocks
             are mutually exclusive, so the ids never collide. }}
         <div class="cg-log cg-thread-feed" id="cgLog" aria-live="polite"></div>
+
+        {{! The activities as the AI writes them: the same rows the pill of the top bar lists, kept in the thread so
+            the progress of each activity stays in view. Its ids differ from the pill's, and generation_checklist
+            keeps both lists in step. Hidden until a run says how many activities it will write. }}
+        <div class="courseai-checklist cg-thread-checklist hidden" id="courseaiLeftChecklist">
+          <div class="cg-group-head">
+            <span class="cg-group-title">{{#str}}courseai_template_progress_title, local_coursegen{{/str}}</span>
+            <span class="cg-group-count" id="courseaiLeftChecklistCount"></span>
+          </div>
+          <ul class="courseai-checklist-list" id="courseaiLeftChecklistList"></ul>
+        </div>
       </div>
 
       {{! Bottom slot — free mode pins its live "working" indicator here whenever

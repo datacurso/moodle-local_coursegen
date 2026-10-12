@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101204
+
+### Fixed
+- **The left column lists the activities as they are written, and stops turning while it waits for the teacher**  
+  The list of activities had been put in the column of free creation, which a template generation never shows, so nothing appeared there. It now sits under the thread of the template column and is kept in step with the list of the top bar. While the review waits for the teacher the last step of the thread is amber and does not turn, and once the run is over it is a check.
+
 ## [2.0.10] - 2026101203
 
 ### Removed

@@ -59,6 +59,10 @@ import {watchOnce} from 'local_coursegen/local/courseai/template/generation_watc
 import {hideHeader, markHeaderDone, showGeneratingHeader} from 'local_coursegen/local/courseai/template/generation_header';
 
 /** Phase keys the service reports, plus the two this module owns. */
+// Body classes the styles of the left column read: waiting for the professor, and the run is over.
+const PAUSED_CLASS = 'cg-generation-paused';
+const SETTLED_CLASS = 'cg-generation-settled';
+
 const STAGE_STRINGS = {
     reviewing: 'courseai_template_stage_reviewing',
     style: 'courseai_template_stage_style',
@@ -147,6 +151,7 @@ const paintStage = async(key) => {
  */
 const openView = async(context) => {
     document.body.classList.add('cg-generating');
+    document.body.classList.remove(PAUSED_CLASS, SETTLED_CLASS);
 
     // The composer goes away for the duration, the way free mode's does: there
     // is nothing left to type, and leaving an active-looking input under a run
@@ -174,7 +179,7 @@ const openView = async(context) => {
  * @param {string} message What went wrong, reported as a turn in the feed.
  */
 const closeView = (message) => {
-    document.body.classList.remove('cg-generating');
+    document.body.classList.remove('cg-generating', PAUSED_CLASS, SETTLED_CLASS);
     generatedRows().forEach((row) => row.classList.remove(...ALL_STATUS_CLASSES));
     hideWorkingIndicator();
     hideHeader();
@@ -216,6 +221,9 @@ export const runGenerationStream = async(streamUrl, buildCourse, sessionId, cont
             // The result payload stays server-side: the browser only reports
             // that the run finished, and Moodle fetches it to build the course.
             markHeaderDone();
+            // The run is over: the last step of the thread is a check, never a spinner.
+            document.body.classList.remove(PAUSED_CLASS);
+            document.body.classList.add(SETTLED_CLASS);
             // The working indicator gives way to the review: nothing is being
             // built until the professor has confirmed the course's name.
             hideWorkingIndicator();
@@ -226,8 +234,11 @@ export const runGenerationStream = async(streamUrl, buildCourse, sessionId, cont
         await paintStage('reviewing');
         markHeaderDone();
         milestone('courseai_template_log_review_ready');
+        // Waiting for the professor is not work in progress: nothing turns until the answer.
+        document.body.classList.add(PAUSED_CLASS);
         // eslint-disable-next-line no-await-in-loop
         const decision = await askForDecision(data.generated_activities || []);
+        document.body.classList.remove(PAUSED_CLASS);
         showGeneratingHeader((await getLabels()).title);
 
         if (decision.action === 'accept') {
