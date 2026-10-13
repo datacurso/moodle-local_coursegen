@@ -89,17 +89,22 @@ final class courseai_syllabus_upload_test extends \advanced_testcase {
     }
 
     /**
-     * A file whose stored mimetype is outside the allow list is rejected even
-     * when its extension looks acceptable.
+     * The stored mimetype is not evidence: Moodle derives it from the file
+     * name, so a crafted draft record that claims an accepted mimetype must
+     * still be rejected when the bytes say otherwise.
      */
-    public function test_upload_rejects_a_disallowed_mimetype(): void {
+    public function test_upload_rejects_a_forged_draft_mimetype_record(): void {
         $this->resetAfterTest();
         $this->setAdminUser();
 
         $session = $this->create_session();
-        // The extension is allowed but the stored mimetype is forced to an
-        // executable one, mimicking a crafted draft record.
-        $draftitemid = $this->create_draft_file('syllabus.pdf', '%PDF-1.4 body', 'application/x-msdownload');
+        // Both the extension and the recorded mimetype are the ones an
+        // attacker would choose; only the content gives the file away.
+        $draftitemid = $this->create_draft_file(
+            'syllabus.pdf',
+            self::windows_executable_bytes(),
+            'application/pdf'
+        );
         testable_courseai_syllabus_upload::$mockservice = $this->mock_service_expecting_no_upload();
 
         $result = testable_courseai_syllabus_upload::execute((int)$session->get('id'), $draftitemid);
@@ -111,6 +116,156 @@ final class courseai_syllabus_upload_test extends \advanced_testcase {
             $result['message']
         );
         $this->assertSame([], $this->stored_syllabus_files((int)$session->get('id')));
+    }
+
+    /**
+     * A Windows executable renamed to .pdf is rejected. Moodle stores
+     * application/pdf for it because the mimetype comes from the name, so only
+     * a content check can catch it.
+     */
+    public function test_upload_rejects_an_executable_renamed_to_pdf(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $session = $this->create_session();
+        $draftitemid = $this->create_draft_file('fake.pdf', self::windows_executable_bytes());
+        testable_courseai_syllabus_upload::$mockservice = $this->mock_service_expecting_no_upload();
+
+        $sink = $this->redirectEvents();
+        $result = testable_courseai_syllabus_upload::execute((int)$session->get('id'), $draftitemid);
+        $this->resetDebugging();
+
+        $this->assertFalse($result['success']);
+        $this->assertSame(
+            get_string('error_syllabus_invalid_file_type', 'local_coursegen'),
+            $result['message']
+        );
+        $this->assertCount(0, $sink->get_events());
+        $this->assertSame([], $this->stored_syllabus_files((int)$session->get('id')));
+    }
+
+    /**
+     * The content must match the declared extension: a real PDF renamed to
+     * .txt satisfies a flat mimetype allow list but is still a mismatch.
+     */
+    public function test_upload_rejects_a_pdf_renamed_to_txt(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $session = $this->create_session();
+        $draftitemid = $this->create_draft_file('programa.txt', self::pdf_bytes());
+        testable_courseai_syllabus_upload::$mockservice = $this->mock_service_expecting_no_upload();
+
+        $result = testable_courseai_syllabus_upload::execute((int)$session->get('id'), $draftitemid);
+        $this->resetDebugging();
+
+        $this->assertFalse($result['success']);
+        $this->assertSame(
+            get_string('error_syllabus_invalid_file_type', 'local_coursegen'),
+            $result['message']
+        );
+        $this->assertSame([], $this->stored_syllabus_files((int)$session->get('id')));
+    }
+
+    /**
+     * A .txt holding something libmagic cannot name is still a legitimate
+     * syllabus. Source-like text sniffs as document/unknown, so demanding a
+     * recognised text mimetype would reject real files.
+     */
+    public function test_upload_accepts_a_txt_whose_content_sniffs_as_unknown(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $session = $this->create_session();
+        $draftitemid = $this->create_draft_file(
+            'syllabus.txt',
+            "#include <stdio.h>\nint main(){return 0;}\n"
+        );
+        testable_courseai_syllabus_upload::$mockservice = $this->mock_service_expecting_one_upload();
+
+        $result = testable_courseai_syllabus_upload::execute((int)$session->get('id'), $draftitemid);
+        $this->resetDebugging();
+
+        $this->assertTrue($result['success'], 'Upload must succeed: ' . ($result['message'] ?? ''));
+        $this->assertSame(['syllabus.txt'], $this->stored_syllabus_files((int)$session->get('id')));
+    }
+
+    /**
+     * An almost empty .txt sniffs as application/octet-stream and is still a
+     * legitimate text file.
+     */
+    public function test_upload_accepts_an_almost_empty_txt(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $session = $this->create_session();
+        $draftitemid = $this->create_draft_file('syllabus.txt', ' ');
+        testable_courseai_syllabus_upload::$mockservice = $this->mock_service_expecting_one_upload();
+
+        $result = testable_courseai_syllabus_upload::execute((int)$session->get('id'), $draftitemid);
+        $this->resetDebugging();
+
+        $this->assertTrue($result['success'], 'Upload must succeed: ' . ($result['message'] ?? ''));
+        $this->assertSame(['syllabus.txt'], $this->stored_syllabus_files((int)$session->get('id')));
+    }
+
+    /**
+     * A .txt carrying NUL bytes is binary content, whatever its name says.
+     */
+    public function test_upload_rejects_a_txt_containing_nul_bytes(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $session = $this->create_session();
+        $draftitemid = $this->create_draft_file('syllabus.txt', "Unit 1\x00\x01\x02 binary payload\x00");
+        testable_courseai_syllabus_upload::$mockservice = $this->mock_service_expecting_no_upload();
+
+        $result = testable_courseai_syllabus_upload::execute((int)$session->get('id'), $draftitemid);
+        $this->resetDebugging();
+
+        $this->assertFalse($result['success']);
+        $this->assertSame(
+            get_string('error_syllabus_invalid_file_type', 'local_coursegen'),
+            $result['message']
+        );
+        $this->assertSame([], $this->stored_syllabus_files((int)$session->get('id')));
+    }
+
+    /**
+     * A real OOXML document is accepted.
+     */
+    public function test_upload_accepts_a_valid_docx(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $session = $this->create_session();
+        $draftitemid = $this->create_draft_file('syllabus.docx', $this->docx_bytes());
+        testable_courseai_syllabus_upload::$mockservice = $this->mock_service_expecting_one_upload();
+
+        $result = testable_courseai_syllabus_upload::execute((int)$session->get('id'), $draftitemid);
+        $this->resetDebugging();
+
+        $this->assertTrue($result['success'], 'Upload must succeed: ' . ($result['message'] ?? ''));
+        $this->assertSame(['syllabus.docx'], $this->stored_syllabus_files((int)$session->get('id')));
+    }
+
+    /**
+     * Older libmagic builds cannot tell an OOXML container apart from a plain
+     * zip, so application/zip must stay acceptable for .docx.
+     */
+    public function test_upload_accepts_a_docx_that_sniffs_as_a_plain_zip(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $session = $this->create_session();
+        $draftitemid = $this->create_draft_file('syllabus.docx', $this->plain_zip_bytes());
+        testable_courseai_syllabus_upload::$mockservice = $this->mock_service_expecting_one_upload();
+
+        $result = testable_courseai_syllabus_upload::execute((int)$session->get('id'), $draftitemid);
+        $this->resetDebugging();
+
+        $this->assertTrue($result['success'], 'Upload must succeed: ' . ($result['message'] ?? ''));
+        $this->assertSame(['syllabus.docx'], $this->stored_syllabus_files((int)$session->get('id')));
     }
 
     /**
@@ -249,6 +404,95 @@ final class courseai_syllabus_upload_test extends \advanced_testcase {
         return array_values(array_map(static function (\stored_file $file): string {
             return $file->get_filename();
         }, $files));
+    }
+
+    /**
+     * Bytes of a Windows executable: the MZ signature plus padding.
+     *
+     * @return string
+     */
+    private static function windows_executable_bytes(): string {
+        return "\x4d\x5a\x90\x00" . str_repeat("\x00", 256);
+    }
+
+    /**
+     * Bytes of a small but genuine PDF document.
+     *
+     * @return string
+     */
+    private static function pdf_bytes(): string {
+        return "%PDF-1.4\n1 0 obj\n<< /Type /Catalog >>\nendobj\ntrailer\n<< /Root 1 0 R >>\n%%EOF\n";
+    }
+
+    /**
+     * Bytes of a minimal but genuine OOXML word processing document.
+     *
+     * @return string
+     */
+    private function docx_bytes(): string {
+        $contenttypes = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            . '<Types xmlns="http://schemas.openxmlformats.org/package/2006/content-types">'
+            . '<Default Extension="xml" ContentType="application/xml"/>'
+            . '<Default Extension="rels" ContentType="application/vnd.openxmlformats-package.relationships+xml"/>'
+            . '<Override PartName="/word/document.xml" ContentType="application/vnd.openxmlformats-officedocument'
+            . '.wordprocessingml.document.main+xml"/></Types>';
+        $rels = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            . '<Relationships xmlns="http://schemas.openxmlformats.org/package/2006/relationships">'
+            . '<Relationship Id="rId1" Type="http://schemas.openxmlformats.org/officeDocument/2006/relationships'
+            . '/officeDocument" Target="word/document.xml"/></Relationships>';
+        $document = '<?xml version="1.0" encoding="UTF-8" standalone="yes"?>'
+            . '<w:document xmlns:w="http://schemas.openxmlformats.org/wordprocessingml/2006/main">'
+            . '<w:body><w:p><w:r><w:t>Syllabus</w:t></w:r></w:p></w:body></w:document>';
+
+        // The content types part must come first for libmagic to recognise the
+        // package as OOXML rather than as a bare zip.
+        return $this->zip_bytes([
+            '[Content_Types].xml' => $contenttypes,
+            '_rels/.rels' => $rels,
+            'word/document.xml' => $document,
+        ]);
+    }
+
+    /**
+     * Bytes of a zip archive that carries nothing OOXML specific.
+     *
+     * @return string
+     */
+    private function plain_zip_bytes(): string {
+        return $this->zip_bytes(['readme.txt' => 'A plain zip, not an OOXML package.']);
+    }
+
+    /**
+     * Build a zip archive in memory from a map of entry name to content.
+     *
+     * @param array $entries Entry name => entry content, in insertion order.
+     * @return string Raw archive bytes.
+     */
+    private function zip_bytes(array $entries): string {
+        $path = make_request_directory() . '/archive.zip';
+        $zip = new \ZipArchive();
+        $this->assertTrue($zip->open($path, \ZipArchive::CREATE | \ZipArchive::OVERWRITE));
+        foreach ($entries as $name => $content) {
+            $zip->addFromString($name, $content);
+        }
+        $zip->close();
+
+        return (string)file_get_contents($path);
+    }
+
+    /**
+     * An API service double that expects exactly one successful transfer.
+     *
+     * @return ai_course_api_service
+     */
+    private function mock_service_expecting_one_upload(): ai_course_api_service {
+        $service = $this->getMockBuilder(ai_course_api_service::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods(['upload_syllabus'])
+            ->getMock();
+        $service->expects($this->once())->method('upload_syllabus')->willReturn(['ok' => true]);
+
+        return $service;
     }
 
     /**
