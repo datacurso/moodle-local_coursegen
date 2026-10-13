@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101207
+
+### Fixed
+- **The type and module of each activity are no longer cut in the left column**  
+  The detail of each row (for example "Lesson · Módulo #1") was shortened with an ellipsis. It is now shown whole, as in the list of the top bar, and the name is the one that wraps when the row is narrow.
+
 ## [2.0.10] - 2026101206
 
 ### Changed

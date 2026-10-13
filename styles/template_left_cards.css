@@ -312,9 +312,9 @@ body.cg-generation-paused .tpl-left-panel #courseaiLeftChecklist .courseai-check
 
 .tpl-left-panel #courseaiLeftChecklist .courseai-checklist-detail {
   font-size: 10.5px;
-  max-width: 45%;
-  overflow: hidden;
-  text-overflow: ellipsis;
+  max-width: none;
+  overflow: visible;
+  text-overflow: clip;
 }
 
 .tpl-left-panel #courseaiLeftChecklist .courseai-checklist-check {
