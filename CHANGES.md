@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101210
+
+### Changed
+- **The left column of a template generation looks like the one of free creation**  
+  The progress is a card with one item per section: a spinner that becomes a check when all the activities of the section are written, and under its name the text of its activities (name in bold, type in italics) with the same "Show more" toggle. An activity with repeat blocks adds how many items are written out of how many there are, the one being written and the list of items. The compact rows of the first design are gone from this card; the pill of the top bar keeps its own list of activities.
+
 ## [2.0.10] - 2026101209
 
 ### Added

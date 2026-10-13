@@ -863,6 +863,7 @@ $string['courseai_template_picker_placeholder'] = 'Buscar plantillas de curso...
 $string['courseai_template_prompt_placeholder'] = 'Describe cómo adaptar esta plantilla a tu curso…';
 $string['courseai_template_progress_count'] = '{$a->done} de {$a->total} actividades';
 $string['courseai_template_repeat_count'] = '{$a->done} de {$a->total}';
+$string['courseai_template_repeat_includes'] = 'Incluye: {$a}';
 $string['courseai_template_progress_title'] = 'Actividades generadas';
 $string['courseai_template_empty_state'] = 'Seleccione una plantilla arriba para comenzar a crear el curso.';
 

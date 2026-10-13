@@ -124,7 +124,7 @@ const EVENT_HANDLERS = {
         return '';
     },
     activity_repeat_plan: (data) => {
-        repeats.plan(data.uid, data.block, data.total);
+        repeats.plan(data.uid, data.block, data.total, data.names);
         reportRepeats(data.uid);
         return '';
     },

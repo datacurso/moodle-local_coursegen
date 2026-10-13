@@ -60,11 +60,17 @@ export const createRepeatTracker = () => {
          * @param {string} uid
          * @param {string} block
          * @param {number} total
+         * @param {string[]} [names] The items of the block, by name.
          */
-        plan: (uid, block, total) => {
+        plan: (uid, block, total, names = []) => {
             const blocks = blocksOf(uid);
             const known = blocks.get(block);
-            blocks.set(block, {total: count(total), done: known ? known.done : 0, last: known ? known.last : ''});
+            blocks.set(block, {
+                total: count(total),
+                done: known ? known.done : 0,
+                last: known ? known.last : '',
+                names: Array.isArray(names) ? names.map(String) : [],
+            });
         },
 
         /**
@@ -78,12 +84,13 @@ export const createRepeatTracker = () => {
          */
         progress: (uid, block, done, total, last) => {
             const blocks = blocksOf(uid);
-            const known = blocks.get(block) || {total: 0, done: 0, last: ''};
+            const known = blocks.get(block) || {total: 0, done: 0, last: '', names: []};
             const nextDone = count(done);
             blocks.set(block, {
                 total: Math.max(known.total, count(total)),
                 done: Math.max(known.done, nextDone),
                 last: nextDone >= known.done && last ? String(last) : known.last,
+                names: known.names,
             });
         },
 
@@ -91,7 +98,7 @@ export const createRepeatTracker = () => {
          * What the activity reports: the sum over its blocks and the last item written, or null with no block.
          *
          * @param {string} uid
-         * @returns {Object|null} {done, total, last}
+         * @returns {Object|null} {done, total, last, names}
          */
         summary: (uid) => {
             const blocks = activities.get(uid);
@@ -101,12 +108,14 @@ export const createRepeatTracker = () => {
             let done = 0;
             let total = 0;
             let last = '';
+            let names = [];
             for (const block of blocks.values()) {
                 done += Math.min(block.done, block.total);
                 total += block.total;
                 last = block.last || last;
+                names = names.concat(block.names);
             }
-            return {done, total, last};
+            return {done, total, last, names};
         },
 
         /**

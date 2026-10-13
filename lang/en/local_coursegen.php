@@ -860,6 +860,7 @@ $string['courseai_template_picker_placeholder'] = 'Search course templates...';
 $string['courseai_template_prompt_placeholder'] = 'Describe how to adapt this template to your course…';
 $string['courseai_template_progress_count'] = '{$a->done} of {$a->total} activities';
 $string['courseai_template_repeat_count'] = '{$a->done} of {$a->total}';
+$string['courseai_template_repeat_includes'] = 'Includes: {$a}';
 $string['courseai_template_progress_title'] = 'Generated activities';
 $string['courseai_template_empty_state'] = 'Please choose a template above to start building your course.';
 $string['courseai_template_locked_badge'] = 'From template';

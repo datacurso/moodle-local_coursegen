@@ -35,6 +35,13 @@ import Templates from 'core/templates';
 import {getString} from 'core/str';
 import {progressRatio} from 'local_coursegen/local/courseai/template/progress_ratio';
 import {closeActivitiesPanel} from 'local_coursegen/local/courseai/template/top_bar';
+import {
+    finishActivity,
+    openSections,
+    resetSections,
+    setActivityRepeat,
+    startActivity,
+} from 'local_coursegen/local/courseai/template/section_progress';
 
 const ITEM_TEMPLATE = 'local_coursegen/template_generation_item';
 
@@ -87,7 +94,8 @@ const describeRow = (uid) => {
  *
  * @returns {Element|null}
  */
-const LIST_IDS = ['courseaiChecklistList', 'courseaiLeftChecklistList'];
+const LIST_IDS = ['courseaiChecklistList'];
+const SECTION_LIST_ID = 'courseaiLeftChecklistList';
 const CARD_IDS = ['courseaiChecklist', 'courseaiLeftChecklist'];
 const COUNT_IDS = ['courseaiChecklistCount', 'courseaiLeftChecklistCount'];
 
@@ -150,6 +158,7 @@ export const resetChecklist = () => {
         for (const list of nodesOf(LIST_IDS)) {
             list.innerHTML = '';
         }
+        resetSections(document.getElementById(SECTION_LIST_ID));
         for (const checklist of nodesOf(CARD_IDS)) {
             checklist.classList.add('hidden');
         }
@@ -167,6 +176,7 @@ export const openChecklist = (progress) => {
         for (const checklist of nodesOf(CARD_IDS)) {
             checklist.classList.remove('hidden');
         }
+        await openSections(document.getElementById(SECTION_LIST_ID));
         await paintCount(progress);
     });
 };
@@ -188,6 +198,7 @@ export const addActivity = (data) => {
             Templates.appendNodeContents(list, html, js);
         }
     });
+    enqueue(() => startActivity(data.uid, data.name || ''));
 };
 
 /**
@@ -205,6 +216,7 @@ export const closeActivity = (uid, progress) => {
             item.classList.add('is-done');
         }
         await paintCount({done, total});
+        await finishActivity(uid);
     });
 };
 
@@ -215,6 +227,7 @@ export const closeActivity = (uid, progress) => {
  * @param {Object} summary {done, total, last} from the repeat tracker.
  */
 export const showRepeatProgress = (uid, summary) => {
+    enqueue(() => setActivityRepeat(uid, summary));
     enqueue(async() => {
         const text = await getString('courseai_template_repeat_count', 'local_coursegen', {
             done: summary.done,

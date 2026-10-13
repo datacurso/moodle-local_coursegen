@@ -775,7 +775,9 @@
             the progress of each activity stays in view. Its ids differ from the pill's, and generation_checklist
             keeps both lists in step. Hidden until a run says how many activities it will write. }}
         <div class="courseai-checklist cg-thread-checklist hidden" id="courseaiLeftChecklist">
-          <div class="cg-group-head">
+          <div class="cg-group-head" role="button" tabindex="0" aria-expanded="true">
+            <span class="cg-group-chevron" aria-hidden="true">⌄</span>
+            <span class="cg-group-avatar" aria-hidden="true"></span>
             <span class="cg-group-title">{{#str}}courseai_template_progress_title, local_coursegen{{/str}}</span>
             <span class="cg-group-count" id="courseaiLeftChecklistCount"></span>
           </div>
