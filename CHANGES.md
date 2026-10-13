@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101206
+
+### Changed
+- **The left column of a template generation uses a smaller type scale**  
+  The heading, the thread and the list of activities are set at 17, 12 and 12px, with tighter rows and a finer meter, so the whole column reads as one compact card instead of large chat text.
+
 ## [2.0.10] - 2026101205
 
 ### Fixed
