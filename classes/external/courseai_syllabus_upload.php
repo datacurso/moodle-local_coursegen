@@ -29,15 +29,63 @@ use local_coursegen\local\service\ai_course_api_service;
 defined('MOODLE_INTERNAL') || die();
 
 require_once($CFG->libdir . '/externallib.php');
+require_once($CFG->libdir . '/filelib.php');
 
 /**
  * External function to upload syllabus for courseai session.
+ *
+ * Two notes on the file validation implemented here.
+ *
+ * Antivirus is already covered: a file only reaches this endpoint through a
+ * draft area, and the upload repository scans every incoming file with
+ * \core\antivirus\manager::scan_file() (repository/upload/lib.php and
+ * repository/lib.php). Scanning again here would duplicate that work.
+ *
+ * file_extension_in_typegroup() is deliberately not used. It looks like a
+ * content check but is not: with $checktype = true its fallback is
+ * mimeinfo('type', $filename), which is derived from the file name just like
+ * stored_file::get_mimetype(). Renaming an executable to .pdf defeats it.
  *
  * @package    local_coursegen
  * @copyright  2025 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 class courseai_syllabus_upload extends external_api {
+    /**
+     * @var int Largest syllabus accepted by the server.
+     *
+     * Mirrors the maxbytes advertised by courseai_filepicker_init: the
+     * filepicker only constrains the browser, so the limit is re-applied here.
+     */
+    public const MAX_SYLLABUS_BYTES = 10 * 1024 * 1024;
+
+    /** @var string[] Extensions accepted by the server, lower case, no dot. */
+    public const ACCEPTED_EXTENSIONS = ['pdf', 'docx', 'txt'];
+
+    /**
+     * @var array[] Content types legitimately sniffed from the bytes of each accepted extension.
+     *
+     * An empty list means the extension cannot be recognised by content
+     * without false positives, and is checked by the text rule in
+     * syllabus_rejection_reason() instead.
+     */
+    protected const CONTENT_SIGNATURES = [
+        'pdf' => ['application/pdf'],
+        'docx' => [
+            'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+            // Older libmagic cannot tell the OOXML container apart from a plain zip.
+            'application/zip',
+        ],
+        // Intentionally empty: plain text has no signature. Real syllabi sniff
+        // as text/plain, text/html, document/unknown (source-like text) or
+        // application/octet-stream (almost empty files), so requiring a
+        // recognised type would reject legitimate uploads.
+        'txt' => [],
+    ];
+
+    /** @var int Bytes of content inspected when looking for binary markers in a text file. */
+    protected const TEXT_PROBE_BYTES = 8192;
+
     /**
      * Returns description of method parameters.
      *
@@ -68,6 +116,7 @@ class courseai_syllabus_upload extends external_api {
 
         // Check permissions.
         $context = context_system::instance();
+        self::validate_context($context);
         require_capability('moodle/course:create', $context);
         require_capability('local/coursegen:createcoursewithai', $context);
 
@@ -116,14 +165,33 @@ class courseai_syllabus_upload extends external_api {
                 ];
             }
 
-            // Save to syllabus area.
+            // Never trust the filepicker: its accepted_types and maxbytes only
+            // constrain the browser. Re-check the draft before anything is
+            // persisted into the site file storage.
+            $rejection = self::syllabus_rejection_reason(reset($draftfiles));
+            if ($rejection !== null) {
+                return [
+                    'success' => false,
+                    'filename' => '',
+                    'message' => get_string($rejection, 'local_coursegen'),
+                ];
+            }
+
+            // Save to syllabus area. accepted_types is declared for parity with
+            // courseai_filepicker_init; the binding check is the explicit
+            // re-validation of the persisted file below.
             file_save_draft_area_files(
                 $params['draftitemid'],
                 $syscontext->id,
                 'local_coursegen',
                 'syllabus',
                 $params['sessionid'],
-                ['subdirs' => 0, 'maxfiles' => 1]
+                [
+                    'subdirs' => 0,
+                    'maxfiles' => 1,
+                    'maxbytes' => self::MAX_SYLLABUS_BYTES,
+                    'accepted_types' => self::accepted_filepicker_types(),
+                ]
             );
 
             // Get the saved file.
@@ -145,18 +213,35 @@ class courseai_syllabus_upload extends external_api {
             }
 
             $file = reset($files);
+
+            // Re-validate what actually got persisted (extension and mimetype)
+            // before a single byte leaves the site.
+            $rejection = self::syllabus_rejection_reason($file);
+            if ($rejection !== null) {
+                $file->delete();
+                return [
+                    'success' => false,
+                    'filename' => '',
+                    'message' => get_string($rejection, 'local_coursegen'),
+                ];
+            }
+
             $filename = $file->get_filename();
 
             // Upload to Datacurso API.
             $apiservice = static::get_api_service();
             $response = $apiservice->upload_syllabus($threadid, $file);
 
-            // Audit the external transfer: file name and size only, no content.
+            // Audit the external transfer with non-identifying metadata only:
+            // the original file name is personal data and must not outlive the
+            // file itself in the standard log.
             external_transfer_initiated::create([
                 'context' => $context,
                 'other' => [
-                    'filename' => $filename,
+                    'fileextension' => self::file_extension($filename),
                     'filesize' => (int)$file->get_filesize(),
+                    'threadid' => $threadid,
+                    'sessionid' => (int)$params['sessionid'],
                 ],
             ])->trigger();
 
@@ -181,6 +266,75 @@ class courseai_syllabus_upload extends external_api {
                 'message' => get_string('error_upload_failed', 'local_coursegen'),
             ];
         }
+    }
+
+    /**
+     * Why a syllabus file must be refused, if it must.
+     *
+     * @param \stored_file $file File to check, either the draft or the stored copy.
+     * @return string|null Language string identifier of the rejection, or null when accepted.
+     */
+    protected static function syllabus_rejection_reason(\stored_file $file): ?string {
+        $extension = self::file_extension($file->get_filename());
+        if (!in_array($extension, self::ACCEPTED_EXTENSIONS, true)) {
+            return 'error_syllabus_invalid_file_type';
+        }
+
+        if ((int)$file->get_filesize() > self::MAX_SYLLABUS_BYTES) {
+            return 'error_syllabus_file_too_large';
+        }
+
+        // stored_file::get_mimetype() is not evidence about the content: it
+        // holds what file_storage::mimetype() recorded, and that is derived
+        // from the file name for every known extension. Inspect the bytes.
+        $path = get_file_storage()->get_file_system()->get_local_path_from_storedfile($file, true);
+        $sniffed = \file_storage::mimetype_from_file($path);
+        $signatures = self::CONTENT_SIGNATURES[$extension];
+
+        if ($signatures !== []) {
+            return in_array($sniffed, $signatures, true) ? null : 'error_syllabus_invalid_file_type';
+        }
+
+        // Plain text has no signature, so it cannot be confirmed positively:
+        // legitimate syllabi sniff as text/plain, text/html, document/unknown
+        // or application/octet-stream depending on their wording and length.
+        // Reject only what text demonstrably is not. First, content that
+        // libmagic positively identifies as one of the binary formats accepted
+        // under another extension, which is the extension/content mismatch.
+        if (in_array($sniffed, array_merge(...array_values(self::CONTENT_SIGNATURES)), true)) {
+            return 'error_syllabus_invalid_file_type';
+        }
+
+        // Second, a NUL byte, which text never carries and binaries do. Only a
+        // bounded prefix is read so a file at the size limit is not loaded
+        // into memory.
+        $probe = @file_get_contents($path, false, null, 0, self::TEXT_PROBE_BYTES);
+        if ($probe === false || strpos($probe, "\0") !== false) {
+            return 'error_syllabus_invalid_file_type';
+        }
+
+        return null;
+    }
+
+    /**
+     * Lower-case extension of a file name, without the leading dot.
+     *
+     * @param string $filename File name.
+     * @return string Extension, or an empty string when there is none.
+     */
+    protected static function file_extension(string $filename): string {
+        return strtolower((string)pathinfo($filename, PATHINFO_EXTENSION));
+    }
+
+    /**
+     * Accepted extensions in the dotted form the filepicker API expects.
+     *
+     * @return string[]
+     */
+    public static function accepted_filepicker_types(): array {
+        return array_map(static function (string $extension): string {
+            return '.' . $extension;
+        }, self::ACCEPTED_EXTENSIONS);
     }
 
     /**

@@ -28,6 +28,7 @@ use external_api;
 use external_function_parameters;
 use external_value;
 use external_single_structure;
+use local_coursegen\event\generation_result_applied;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
@@ -109,7 +110,21 @@ class create_course extends external_api {
             $overrides['category'] = $category;
         }
 
-        return create_course_service::create_course($session, $resultdata, $overrides);
+        $outcome = create_course_service::create_course($session, $resultdata, $overrides);
+
+        // Applying a generation result is a state change worth auditing. Only
+        // the ids travel: no course content, no prompt.
+        if (!empty($outcome['success']) && !empty($outcome['courseid'])) {
+            generation_result_applied::create([
+                'context' => $context,
+                'other' => [
+                    'jobid' => (string)$session->get('session_id'),
+                    'courseid' => (int)$outcome['courseid'],
+                ],
+            ])->trigger();
+        }
+
+        return $outcome;
     }
 
     /**

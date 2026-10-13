@@ -31,6 +31,11 @@ require_once($CFG->libdir . '/externallib.php');
 /**
  * External function to manage image generation settings.
  *
+ * No plugin audit event is emitted: every write here goes through set_config(),
+ * which already records the old and new value in {config_log} and triggers
+ * \core\event\config_log_created. A second, coarser plugin event would only
+ * duplicate that trail.
+ *
  * @package    local_coursegen
  * @category   external
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>

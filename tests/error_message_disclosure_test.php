@@ -17,9 +17,13 @@
 namespace local_coursegen;
 
 use aiprovider_datacurso\httpclient\ai_course_api;
+use local_coursegen\external\activity_feedback;
+use local_coursegen\external\activity_file_upload;
+use local_coursegen\external\course_planning_feedback;
 use local_coursegen\external\start_course_planning;
 use local_coursegen\local\api_client_factory;
 use local_coursegen\local\service\ai_course_api_service;
+use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\module_job_service;
 
 defined('MOODLE_INTERNAL') || die();
@@ -39,6 +43,9 @@ require_once(__DIR__ . '/fixtures/aiprovider_datacurso_stub.php');
  * @category   test
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
+ * @covers     \local_coursegen\external\activity_feedback
+ * @covers     \local_coursegen\external\activity_file_upload
+ * @covers     \local_coursegen\external\course_planning_feedback
  * @covers     \local_coursegen\external\create_mod
  * @covers     \local_coursegen\external\start_course_planning
  *
@@ -83,6 +90,177 @@ final class error_message_disclosure_test extends \advanced_testcase {
             return strpos($message, self::TECHNICALDETAIL) !== false;
         });
         $this->assertNotEmpty($matches, 'The technical detail must be kept in debugging output.');
+    }
+
+    /**
+     * Inject an API client double whose calls always fail with the technical marker.
+     *
+     * @param string $method Client method to break ('request' or 'upload_file').
+     * @return void
+     */
+    private function inject_failing_client(string $method): void {
+        $client = $this->getMockBuilder(ai_course_api::class)
+            ->disableOriginalConstructor()
+            ->onlyMethods([$method])
+            ->getMock();
+        $client->method($method)->willThrowException(new \coding_exception(self::TECHNICALDETAIL));
+        api_client_factory::set_test_client($client);
+    }
+
+    /**
+     * Assert a localized exception carries no technical detail in any of the
+     * fields a language pack can render.
+     *
+     * The placeholder argument matters even when the English string ignores it:
+     * translated packs interpolate {$a}, so a technical detail stored there is
+     * shown verbatim to any user running the site in another language.
+     *
+     * @param \moodle_exception $e Exception raised by the endpoint.
+     * @param string $errorcode Expected error code.
+     * @return void
+     */
+    private function assert_localized_exception_without_detail(\moodle_exception $e, string $errorcode): void {
+        $this->assertSame($errorcode, $e->errorcode);
+        $this->assertStringNotContainsString(self::TECHNICALDETAIL, (string) $e->a);
+        $this->assertStringNotContainsString(self::TECHNICALDETAIL, (string) $e->debuginfo);
+        $this->assertStringNotContainsString(self::TECHNICALDETAIL, $e->getMessage());
+    }
+
+    /**
+     * A service exception in activity_feedback surfaces a localized message and
+     * the technical detail stays out of every user-facing field.
+     */
+    public function test_activity_feedback_error_returns_localized_message(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        global $USER;
+        $course = $this->getDataGenerator()->create_course();
+        module_job_service::create_job($course->id, (int) $USER->id, 'job-feedback', 0, null, null, 1, null, 'completed');
+
+        $this->inject_failing_client('request');
+
+        try {
+            activity_feedback::execute($course->id, 'job-feedback', 'accept');
+            $this->fail('activity_feedback must rethrow a localized exception.');
+        } catch (\moodle_exception $e) {
+            $this->assert_localized_exception_without_detail($e, 'error_sending_feedback');
+        }
+
+        $this->assert_technical_detail_debugged();
+    }
+
+    /**
+     * A service exception in course_planning_feedback surfaces a localized
+     * message and the technical detail stays out of every user-facing field.
+     */
+    public function test_course_planning_feedback_error_returns_localized_message(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        global $USER;
+        $session = course_session_service::create_from_form_data(
+            (object) ['fullname' => 'AI course'],
+            (int) $USER->id,
+            'thread-feedback'
+        );
+
+        $this->inject_failing_client('request');
+
+        try {
+            course_planning_feedback::execute((int) $session->get('id'), ['action' => 'accept']);
+            $this->fail('course_planning_feedback must rethrow a localized exception.');
+        } catch (\moodle_exception $e) {
+            $this->assert_localized_exception_without_detail($e, 'error_sending_feedback');
+        }
+
+        $this->assert_technical_detail_debugged();
+    }
+
+    /**
+     * A service exception in activity_file_upload surfaces a localized message
+     * and the technical detail stays out of every user-facing field.
+     */
+    public function test_activity_file_upload_error_returns_localized_message(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        global $USER;
+        $course = $this->getDataGenerator()->create_course();
+        module_job_service::create_job($course->id, (int) $USER->id, 'job-upload', 0, null, null, 1, null, 'completed');
+
+        $draftitemid = file_get_unused_draft_itemid();
+        get_file_storage()->create_file_from_string([
+            'contextid' => \context_user::instance($USER->id)->id,
+            'component' => 'user',
+            'filearea' => 'draft',
+            'itemid' => $draftitemid,
+            'filepath' => '/',
+            'filename' => 'notes.txt',
+        ], 'Course notes.');
+
+        $this->inject_failing_client('upload_file');
+
+        try {
+            activity_file_upload::execute($course->id, 'job-upload', $draftitemid);
+            $this->fail('activity_file_upload must rethrow a localized exception.');
+        } catch (\moodle_exception $e) {
+            $this->assert_localized_exception_without_detail($e, 'error_sending_activity_file');
+        }
+
+        $this->assert_technical_detail_debugged();
+    }
+
+    /**
+     * No language pack may interpolate {$a} in the error strings that report an
+     * upstream AI failure: a placeholder there would render whatever technical
+     * detail a future caller passes as the fourth moodle_exception argument.
+     *
+     * The packs are read from disk so a newly added translation is covered too.
+     */
+    public function test_upstream_error_strings_have_no_placeholder_in_any_language(): void {
+        $this->resetAfterTest();
+
+        $keys = [
+            'error_sending_activity_file',
+            'error_sending_feedback',
+            'error_upload_failed_system_instruction',
+        ];
+
+        $files = glob(__DIR__ . '/../lang/*/local_coursegen.php');
+        $this->assertNotEmpty($files, 'No language pack was found under lang/.');
+
+        $checked = 0;
+        foreach ($files as $file) {
+            $pack = basename(dirname($file));
+            $strings = self::load_language_pack($file);
+            foreach ($keys as $key) {
+                if (!array_key_exists($key, $strings)) {
+                    continue;
+                }
+                $checked++;
+                $this->assertStringNotContainsString(
+                    '{$a}',
+                    $strings[$key],
+                    "lang/{$pack}: the string '{$key}' interpolates a placeholder and would disclose technical details."
+                );
+            }
+        }
+
+        $this->assertGreaterThan(0, $checked, 'None of the audited strings was found in any language pack.');
+    }
+
+    /**
+     * Read the string array of a language pack file without polluting the test scope.
+     *
+     * @param string $file Absolute path to a lang/<code>/local_coursegen.php file.
+     * @return array Strings defined by the pack.
+     */
+    private static function load_language_pack(string $file): array {
+        $string = [];
+        include($file);
+
+        return $string;
     }
 
     /**
@@ -180,6 +358,9 @@ final class error_message_disclosure_test extends \advanced_testcase {
             'error_invalid_session',
             'error_no_file_uploaded',
             'error_not_your_session',
+            'error_sending_activity_file',
+            'error_sending_feedback',
+            'error_upload_failed_system_instruction',
         ];
         foreach ($keys as $key) {
             $this->assertTrue(

@@ -34,7 +34,8 @@ $functions = [
         'description' => 'Create module for ask question to chatbot based in that information',
         'type' => 'write',
         'ajax' => true,
-        'capabilities' => 'moodle/course:manageactivities,moodle/course:update',
+        'capabilities' => 'moodle/course:manageactivities,local/coursegen:createactivitywithai',
+        'loginrequired' => true,
     ],
     'local_coursegen_create_mod_stream' => [
         'classname' => 'local_coursegen\external\create_mod_stream',
@@ -42,7 +43,8 @@ $functions = [
         'description' => 'Start streaming job to create module with AI and store job_id',
         'type' => 'write',
         'ajax' => true,
-        'capabilities' => 'moodle/course:manageactivities,moodle/course:update',
+        'capabilities' => 'moodle/course:manageactivities,local/coursegen:createactivitywithai',
+        'loginrequired' => true,
     ],
     'local_coursegen_create_course' => [
         'classname' => 'local_coursegen\external\create_course',
@@ -51,6 +53,7 @@ $functions = [
         'type' => 'write',
         'ajax' => true,
         'capabilities' => 'moodle/course:create,local/coursegen:createcoursewithai',
+        'loginrequired' => true,
     ],
     'local_coursegen_get_course_settings' => [
         'classname' => 'local_coursegen\external\get_course_settings',
@@ -59,6 +62,7 @@ $functions = [
         'type' => 'read',
         'ajax' => true,
         'capabilities' => 'moodle/course:create,local/coursegen:createcoursewithai',
+        'loginrequired' => true,
     ],
     'local_coursegen_course_planning_feedback' => [
         'classname' => 'local_coursegen\external\course_planning_feedback',
@@ -84,7 +88,7 @@ $functions = [
         'description' => 'Initialise filepicker draft area for AI activity file uploads',
         'type' => 'read',
         'ajax' => true,
-        'capabilities' => 'moodle/course:manageactivities,moodle/course:update',
+        'capabilities' => 'moodle/course:manageactivities,local/coursegen:createactivitywithai',
         'loginrequired' => true,
     ],
     'local_coursegen_activity_file_upload' => [
@@ -93,7 +97,7 @@ $functions = [
         'description' => 'Upload a file for an AI activity generation thread',
         'type' => 'write',
         'ajax' => true,
-        'capabilities' => 'moodle/course:manageactivities,moodle/course:update',
+        'capabilities' => 'moodle/course:manageactivities,local/coursegen:createactivitywithai',
         'loginrequired' => true,
     ],
     'local_coursegen_manage_image_generation' => [
@@ -102,7 +106,7 @@ $functions = [
         'description' => 'Save image generation settings for course and activity creation',
         'type' => 'write',
         'ajax' => true,
-        'capabilities' => 'moodle/site:config',
+        'capabilities' => 'local/coursegen:manageimagegeneration',
         'loginrequired' => true,
     ],
     'local_coursegen_start_course_planning' => [
@@ -132,6 +136,9 @@ $functions = [
         'capabilities' => 'moodle/course:create,local/coursegen:createcoursewithai',
         'loginrequired' => true,
     ],
+    // Note: local_coursegen\external\regenerate_detailed_item is deliberately not
+    // declared as a web service. Its upstream endpoint no longer exists, so the
+    // class is unreachable from the browser and is kept only until it is removed.
     'local_coursegen_get_course_session_state' => [
         'classname' => 'local_coursegen\\external\\get_course_session_state',
         'methodname' => 'execute',

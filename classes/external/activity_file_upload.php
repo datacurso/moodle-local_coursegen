@@ -31,6 +31,7 @@ use external_api;
 use external_function_parameters;
 use external_single_structure;
 use external_value;
+use local_coursegen\event\external_transfer_initiated;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\module_job_service;
 
@@ -117,9 +118,22 @@ class activity_file_upload extends external_api {
         try {
             $apiservice->upload_activity_file($threadid, $file);
         } catch (\moodle_exception $e) {
-            $details = $e->debuginfo ?: $e->getMessage();
-            throw new \moodle_exception('error_sending_activity_file', 'local_coursegen', '', $details);
+            // Keep the technical detail in developer debugging only: the client
+            // receives a localized message without internal information.
+            debugging('Unexpected error while uploading an activity file: ' . ($e->debuginfo ?: $e->getMessage()));
+            throw new \moodle_exception('error_sending_activity_file', 'local_coursegen');
         }
+
+        // Audit the external transfer with non-identifying metadata only: the
+        // original file name is personal data and must not reach the log.
+        external_transfer_initiated::create([
+            'context' => $context,
+            'other' => [
+                'fileextension' => strtolower((string)pathinfo($file->get_filename(), PATHINFO_EXTENSION)),
+                'filesize' => (int)$file->get_filesize(),
+                'threadid' => $threadid,
+            ],
+        ])->trigger();
 
         return [
             'success' => true,

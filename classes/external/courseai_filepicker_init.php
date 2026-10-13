@@ -38,6 +38,11 @@ require_once($CFG->dirroot . '/repository/lib.php');
 
 /**
  * External API to initialise a filepicker (draft area) for courseai syllabus upload.
+ *
+ * No audit event is emitted: this call only allocates an unused draft item id
+ * and returns filepicker options, it modifies no state and transfers nothing.
+ * The accepted types and size limit it advertises are the browser-side half of
+ * the contract; courseai_syllabus_upload re-applies them server side.
  */
 class courseai_filepicker_init extends external_api {
     /**
@@ -71,12 +76,13 @@ class courseai_filepicker_init extends external_api {
 
         $args = (object) [
             'context' => $context,
-            'accepted_types' => ['.pdf', '.docx', '.txt'],
+            // Single source of truth with the endpoint that enforces them.
+            'accepted_types' => courseai_syllabus_upload::accepted_filepicker_types(),
             'return_types' => FILE_INTERNAL,
             'env' => 'filepicker',
             'client_id' => $clientid,
             'itemid' => $draftitemid,
-            'maxbytes' => 10 * 1024 * 1024, // 10MB
+            'maxbytes' => courseai_syllabus_upload::MAX_SYLLABUS_BYTES,
             'maxfiles' => 1,
             'subdirs' => 0,
         ];

@@ -1,3 +1,27 @@
+## 2.0.7
+
+**Released on:** Unreleased
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.2**.
+
+## Fixed
+
+- **Syllabus uploads are validated on the server**  
+  The syllabus endpoint no longer relies on the file picker alone. It now re-checks the extension (PDF, DOCX or TXT), the 10 MB size limit and the real file content before anything is stored or sent to the course service, so a renamed or forged file is rejected with a localized message. The endpoint also validates its context.
+- **Error messages no longer expose technical detail**  
+  The notification shown when the system instruction upload fails is now a localized message; the technical detail stays in developer debugging only.
+
+## Changed
+
+- **Privacy metadata matches the data actually sent**  
+  The external service declaration now lists every field of the outbound requests (planning, activity, feedback and file uploads), and the user id is described as the stable pseudonym that is sent instead of the raw Moodle id.
+- **Syllabus files are covered by the privacy provider**  
+  Users with stored syllabus files are now listed under the system context and their files can be exported and deleted through the privacy API.
+- **Audit events carry less personal data**  
+  The external transfer event stores the file extension, size and generation identifiers instead of the original file name, and applying a generation result to a course is now logged.
+- **Tests**  
+  Added coverage for syllabus upload validation, privacy provider system context handling and a check that outbound payloads match the declared privacy metadata.
+
 ## 2.0.6
 
 **Released on:** Unreleased

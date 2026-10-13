@@ -30,6 +30,7 @@ use external_api;
 use external_function_parameters;
 use external_single_structure;
 use external_value;
+use local_coursegen\event\generation_job_started;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
 
@@ -115,8 +116,22 @@ class regenerate_detailed_item extends external_api {
                 (bool)$params['deleted']
             );
         } catch (\moodle_exception $e) {
-            throw new \moodle_exception('error_sending_feedback', 'local_coursegen', '', $e->getMessage());
+            // Keep the technical detail in developer debugging only: the client
+            // receives a localized message without internal information.
+            debugging('Unexpected error while regenerating a detailed plan item: ' . $e->getMessage());
+            throw new \moodle_exception('error_sending_feedback', 'local_coursegen');
         }
+
+        // Regenerating an item starts a new AI generation turn on the thread,
+        // so it is audited like any other generation start. The free-text
+        // instruction is deliberately left out of the payload.
+        generation_job_started::create([
+            'context' => $context,
+            'other' => [
+                'job_id' => $sessionid,
+                'target_type' => (string)$params['target_type'],
+            ],
+        ])->trigger();
 
         return [
             'success' => !empty($result['success']),
