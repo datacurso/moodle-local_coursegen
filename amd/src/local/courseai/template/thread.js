@@ -33,6 +33,7 @@ import {resetChecklist} from 'local_coursegen/local/courseai/template/generation
 const STRING_KEYS = [
     'courseai_template_log_selected',
     'courseai_template_log_starting',
+    'courseai_template_log_writing',
     'courseai_template_log_review_ready',
     'courseai_template_log_approved',
     'courseai_template_log_adjusting',

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101208
+
+### Fixed
+- **The first step of the thread stops turning when the activities start being written**  
+  "Reading the template and the material you attached" kept its spinner and its timer for the whole run, because it was the only step of the thread. A step "Writing the activities of the course" now follows it as soon as the first activity starts, so the reading is a past step and only the step in progress turns.
+
 ## [2.0.10] - 2026101207
 
 ### Fixed

@@ -834,6 +834,7 @@ $string['courseai_template_log_adjusting'] = 'Generando de nuevo con tu cambio�
 $string['courseai_template_log_approved'] = 'Aprobaste el curso generado.';
 $string['courseai_template_log_completed'] = 'El contenido del curso está listo.';
 $string['courseai_template_log_starting'] = 'Leyendo la plantilla y el material que adjuntaste.';
+$string['courseai_template_log_writing'] = 'Escribiendo las actividades del curso.';
 $string['courseai_template_log_review_ready'] = 'El curso está generado. Revísalo y apruébalo, o pide cambios.';
 $string['courseai_template_adjust_activity'] = 'Pedir cambios a esta actividad';
 $string['courseai_template_review_hint'] = 'Revisa las actividades generadas. Si todo está bien, acepta el curso; si quieres cambiar algo, pulsa Ajustar.';

@@ -229,10 +229,11 @@ test('the page loads the top bar styles after the files they build on', () => {
     assert.ok(own > after);
 });
 
-test('the old progress card of the left column is gone from its styles', () => {
+test('the progress card of the left column is styled only inside its own card', () => {
     const cards = read('styles/template_left_cards.css');
-    assert.equal(cards.includes('#courseaiChecklist'), false);
-    assert.equal(cards.includes('courseai-checklist-item'), false);
+    assert.equal(cards.includes('.tpl-left-panel #courseaiChecklist:not'), false);
+    assert.ok(cards.includes('.tpl-left-panel #courseaiLeftChecklist'));
+    assert.equal(/(^|\n)\.tpl-left-panel \.courseai-checklist-item/.test(cards), false);
 });
 
 test('the preview link and the activities pill honour the hidden attribute their scripts use', () => {

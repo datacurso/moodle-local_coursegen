@@ -208,12 +208,22 @@ export const runGenerationStream = async(streamUrl, buildCourse, sessionId, cont
     await paintStage('connecting');
 
     const progress = {total: 0, done: 0};
+    // Reading the material is over once the first activity starts: the thread moves on to the
+    // writing, so the step that was spinning becomes a past one.
+    let writingAnnounced = false;
+    const paintStageOfRun = async(key) => {
+        if (key === 'activities' && !writingAnnounced) {
+            writingAnnounced = true;
+            milestone('courseai_template_log_writing');
+        }
+        await paintStage(key);
+    };
     for (;;) {
         // eslint-disable-next-line no-await-in-loop
         const {outcome, data} = await watchOnce(
             streamUrl,
             progress,
-            (eventData, eventProgress) => applyEvent(eventData, eventProgress, paintStage),
+            (eventData, eventProgress) => applyEvent(eventData, eventProgress, paintStageOfRun),
             closeView
         );
 
