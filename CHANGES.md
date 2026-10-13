@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101209
+
+### Added
+- **The row of an activity shows how many items of its repeat blocks are written**  
+  When an activity has a repeat block, its row in the progress list of the left column and of the top bar shows how many items are written out of how many the plan has ("10 of 50"), the item last written and a fine bar. An activity with several blocks adds them up, and one with none keeps the row it had. The service sends two events for it, one when the plan of a block is ready and one for every group written, which carry the names of the items and counts and nothing of what was written.
+
 ## [2.0.10] - 2026101208
 
 ### Fixed

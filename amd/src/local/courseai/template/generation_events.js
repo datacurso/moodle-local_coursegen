@@ -26,7 +26,15 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
-import {addActivity, closeActivity, openChecklist} from 'local_coursegen/local/courseai/template/generation_checklist';
+import {
+    addActivity,
+    closeActivity,
+    openChecklist,
+    showRepeatProgress,
+} from 'local_coursegen/local/courseai/template/generation_checklist';
+import {createRepeatTracker} from 'local_coursegen/local/courseai/template/repeat_progress';
+
+const repeats = createRepeatTracker();
 
 /** The status classes the shared generation stylesheet reacts to. */
 export const STATUS_CLASS = {
@@ -84,6 +92,18 @@ const finishActivity = (data, progress, paintStage) => {
     return '';
 };
 
+/**
+ * Show on the row of an activity how far its repeat blocks have got.
+ *
+ * @param {string} uid
+ */
+const reportRepeats = (uid) => {
+    const summary = repeats.summary(uid);
+    if (summary) {
+        showRepeatProgress(uid, summary);
+    }
+};
+
 /** One handler per stream event type, keyed the way the server names them. */
 const EVENT_HANDLERS = {
     template_stage: (data, progress, paintStage) => {
@@ -92,6 +112,7 @@ const EVENT_HANDLERS = {
     },
     review_needed: () => 'review',
     activity_progress_init: (data, progress, paintStage) => {
+        repeats.reset();
         resetProgress(progress, data);
         openChecklist(progress);
         paintStage('activities');
@@ -100,6 +121,16 @@ const EVENT_HANDLERS = {
     activity_progress_start: (data) => {
         markRow(data.uid, 'running');
         addActivity(data);
+        return '';
+    },
+    activity_repeat_plan: (data) => {
+        repeats.plan(data.uid, data.block, data.total);
+        reportRepeats(data.uid);
+        return '';
+    },
+    activity_repeat_progress: (data) => {
+        repeats.progress(data.uid, data.block, data.done, data.total, data.last);
+        reportRepeats(data.uid);
         return '';
     },
     activity_progress_done: finishActivity,

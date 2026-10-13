@@ -327,3 +327,51 @@ body.cg-generation-paused .tpl-left-panel #courseaiLeftChecklist .courseai-check
   width: 9px;
   height: 9px;
 }
+
+/* The items of the repeat blocks of an activity: how many are written, the one being written and a fine bar. */
+.tpl-left-panel #courseaiLeftChecklist .courseai-checklist-repeat,
+.tpl-topbar-panel .courseai-checklist-repeat {
+  display: grid;
+  grid-column: 2 / -1;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: baseline;
+  column-gap: 8px;
+  margin-top: 4px;
+  font-size: 10.5px;
+  line-height: 1.3;
+  color: var(--muted-fg);
+}
+
+.tpl-left-panel #courseaiLeftChecklist .courseai-checklist-repeat[hidden],
+.tpl-topbar-panel .courseai-checklist-repeat[hidden] {
+  display: none;
+}
+
+.courseai-checklist-repeat-count {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+  color: var(--fg);
+}
+
+.courseai-checklist-repeat-last {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.courseai-checklist-repeat-bar {
+  grid-column: 1 / -1;
+  height: 2px;
+  margin-top: 3px;
+  border-radius: 1px;
+  background: linear-gradient(90deg, var(--primary) calc(var(--cg-repeat, 0) * 100%), var(--border) 0);
+}
+
+.courseai-checklist-item.is-done .courseai-checklist-repeat-bar {
+  background: linear-gradient(90deg, var(--success-strong) calc(var(--cg-repeat, 0) * 100%), var(--border) 0);
+}
+
+body.cg-generation-paused .courseai-checklist-item.is-loading .courseai-checklist-repeat-bar {
+  background: linear-gradient(90deg, var(--warn) calc(var(--cg-repeat, 0) * 100%), var(--border) 0);
+}

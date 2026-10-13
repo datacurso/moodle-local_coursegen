@@ -207,3 +207,35 @@ export const closeActivity = (uid, progress) => {
         await paintCount({done, total});
     });
 };
+
+/**
+ * Show how many items of the repeat blocks of an activity are written, and the last one, in its rows.
+ *
+ * @param {string} uid
+ * @param {Object} summary {done, total, last} from the repeat tracker.
+ */
+export const showRepeatProgress = (uid, summary) => {
+    enqueue(async() => {
+        const text = await getString('courseai_template_repeat_count', 'local_coursegen', {
+            done: summary.done,
+            total: summary.total,
+        });
+        const ratio = summary.total > 0 ? Math.min(1, summary.done / summary.total) : 0;
+        for (const item of document.querySelectorAll(`.courseai-checklist-list [data-progress-uid="${uid}"]`)) {
+            const box = item.querySelector('.courseai-checklist-repeat');
+            if (!box) {
+                continue;
+            }
+            box.hidden = false;
+            box.style.setProperty('--cg-repeat', String(ratio));
+            const countNode = box.querySelector('.courseai-checklist-repeat-count');
+            const lastNode = box.querySelector('.courseai-checklist-repeat-last');
+            if (countNode) {
+                countNode.textContent = text;
+            }
+            if (lastNode) {
+                lastNode.textContent = summary.last || '';
+            }
+        }
+    });
+};
