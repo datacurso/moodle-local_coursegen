@@ -146,6 +146,10 @@ class lesson_settings extends base_settings {
             // setDefault('display', true)); leaving it unset stored 0 and the
             // menu rendered empty on every generated lesson.
             $properties->display = 1;
+            // The branch-table form also defaults "Arrange content buttons horizontally" to checked
+            // (branchtable.php's setDefault('layout', true)); unset it stored 0 and the Anterior and
+            // Siguiente buttons stacked one under the other. A page that carries its own layout keeps it.
+            $properties->layout = (int) ($page['layout'] ?? 1);
             return $properties;
         }
 

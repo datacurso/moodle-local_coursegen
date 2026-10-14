@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101211
+
+### Fixed
+- **The Anterior and Siguiente buttons of a generated lesson page sit side by side**  
+  A lesson page created from a template stored its buttons stacked one under the other, while the same page in the template shows them in a row. The page now arranges its buttons horizontally, as the lesson form does by default, unless the page says otherwise.
+
 ## [2.0.10] - 2026101210
 
 ### Changed
