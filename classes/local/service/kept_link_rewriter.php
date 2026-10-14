@@ -22,10 +22,10 @@ use local_coursegen\local\link\module_link_texts;
 use local_coursegen\local\link\module_link_texts_registry;
 
 /**
- * Points the links of the copied kept activities at the new course.
+ * Points the links of the copied kept activities and of the generated ones at the new course.
  *
- * A kept activity is copied as it was written, so the links in its texts
- * still address the activities of the template's course. Each address of an
+ * A kept activity is copied as it was written, and a generated one keeps the text of its template
+ * that has no placeholder, so the links in both still address the activities of the template's course. Each address of an
  * activity that has a counterpart in the new course is changed to that
  * counterpart: a kept activity maps to its copy and a template source that
  * produced exactly one activity maps to that activity. An address of any
@@ -38,7 +38,7 @@ use local_coursegen\local\link\module_link_texts_registry;
  */
 final class kept_link_rewriter {
     /**
-     * Rewrite the links of the kept activities of a course built from a template result.
+     * Rewrite the links of the kept and the generated activities of a course built from a template result.
      *
      * @param int $courseid The new course.
      * @param array $payloadactivities Every activity entry of the result, kept ones included.
@@ -52,12 +52,14 @@ final class kept_link_rewriter {
         array $keptcms
     ): void {
         $newcmidbyoldcmid = self::counterparts($payloadactivities, $generatedcms, $keptcms);
-        if ($newcmidbyoldcmid === [] || $keptcms === []) {
+        $cmids = array_unique(array_map('intval', array_merge(array_values($keptcms), array_values($generatedcms))));
+        $cmids = array_values(array_filter($cmids));
+        if ($newcmidbyoldcmid === [] || $cmids === []) {
             return;
         }
         course_modinfo::clear_instance_cache($courseid);
         $modinfo = get_fast_modinfo($courseid);
-        self::rewrite_activities($modinfo, array_values($keptcms), $newcmidbyoldcmid);
+        self::rewrite_activities($modinfo, $cmids, $newcmidbyoldcmid);
         rebuild_course_cache($courseid, true);
     }
 

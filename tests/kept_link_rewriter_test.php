@@ -143,9 +143,9 @@ final class kept_link_rewriter_test extends \advanced_testcase {
     }
 
     /**
-     * A generated activity is not a kept one: its texts are not read here.
+     * A generated activity keeps the template text that has no placeholder, so its links are rewritten as well.
      */
-    public function test_texts_of_generated_activities_are_not_rewritten(): void {
+    public function test_links_in_the_texts_of_generated_activities_are_rewritten(): void {
         global $DB;
         $this->resetAfterTest();
         $course = $this->getDataGenerator()->create_course();
@@ -155,7 +155,30 @@ final class kept_link_rewriter_test extends \advanced_testcase {
 
         kept_link_rewriter::rewrite_for_course($course->id, [], [-1 => (int) $generated->cmid], [9326 => (int) $copy->cmid]);
 
-        $this->assertSame($intro, $DB->get_field('label', 'intro', ['id' => $generated->id]));
+        $expected = '<a href="' . $this->url('resource', (int) $copy->cmid) . '">Support</a>';
+        $this->assertSame($expected, $DB->get_field('label', 'intro', ['id' => $generated->id]));
+    }
+
+    /**
+     * With only generated activities, the links to a single-instance source are still rewritten.
+     */
+    public function test_generated_activities_are_rewritten_when_nothing_is_kept(): void {
+        global $DB;
+        $this->resetAfterTest();
+        $course = $this->getDataGenerator()->create_course();
+        $forum = $this->getDataGenerator()->create_module('forum', ['course' => $course->id]);
+        $intro = '<a href="' . $this->url('forum', 9331) . '">Forum</a>';
+        $label = $this->getDataGenerator()->create_module('label', ['course' => $course->id, 'intro' => $intro]);
+
+        kept_link_rewriter::rewrite_for_course(
+            $course->id,
+            [$this->instance(-1, 9331)],
+            [-1 => (int) $forum->cmid, -2 => (int) $label->cmid],
+            []
+        );
+
+        $expected = '<a href="' . $this->url('forum', (int) $forum->cmid) . '">Forum</a>';
+        $this->assertSame($expected, $DB->get_field('label', 'intro', ['id' => $label->id]));
     }
 
     /**

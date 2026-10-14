@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101212
+
+### Fixed
+- **Links to the activities of the template course now point at the new course in the activities the AI writes**  
+  A page, label or lesson page that had a link to another activity of the template course written as plain text kept that address in the new course, so the link opened the activity of the template course. The addresses are now changed to the matching activity of the new course in the generated activities as well, not only in the kept ones. An address of an activity that has no counterpart is left as it is.
+
 ## [2.0.10] - 2026101211
 
 ### Fixed
