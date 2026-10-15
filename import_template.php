@@ -33,15 +33,11 @@ admin_externalpage_setup('local_coursegen_import_template');
 $context = context_system::instance();
 require_capability('local/coursegen:edittemplates', $context);
 
-$categoryid = optional_param('categoryid', 0, PARAM_INT);
-if ($categoryid > 0 && !core_course_category::get($categoryid, IGNORE_MISSING)) {
-    $categoryid = 0;
-}
-$PAGE->set_url('/local/coursegen/import_template.php', ['categoryid' => $categoryid]);
+$PAGE->set_url('/local/coursegen/import_template.php');
 $PAGE->set_title(get_string('template_import', 'local_coursegen'));
 $PAGE->set_heading(get_string('template_import', 'local_coursegen'));
 
-$form = new template_transfer_import_form($PAGE->url, ['categoryid' => $categoryid]);
+$form = new template_transfer_import_form($PAGE->url);
 $notification = '';
 if ($formdata = $form->get_data()) {
     try {
@@ -57,16 +53,6 @@ echo $OUTPUT->header();
 echo $notification;
 
 echo html_writer::tag('p', get_string('template_transfer_import_help', 'local_coursegen'));
-$categories = ['0' => get_string('all')] + core_course_category::make_categories_list();
-$filter = new single_select(
-    new moodle_url('/local/coursegen/import_template.php'),
-    'categoryid',
-    $categories,
-    $categoryid,
-    null
-);
-$filter->set_label(get_string('category'));
-echo html_writer::div($OUTPUT->render($filter), 'mb-3');
 $form->display();
 
 echo $OUTPUT->footer();

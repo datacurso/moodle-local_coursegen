@@ -207,6 +207,7 @@ $string['template_transfer_course_id'] = 'course {$a}';
 $string['template_transfer_course_search'] = 'Search for a course';
 $string['template_transfer_done'] = 'The template "{$a->name}" is configured over the course "{$a->course}".';
 $string['template_transfer_file'] = 'Configuration file';
+$string['template_transfer_filter'] = 'Filter courses';
 $string['template_transfer_import_button'] = 'Import';
 $string['template_transfer_import_help'] = 'Restore the course first. The course must have the same sections and activities as the one the template was exported from: if any is missing, nothing is imported. If the course already has a template, it is replaced.';
 $string['template_transfer_invalid'] = 'The file is not a template configuration exported by this plugin.';

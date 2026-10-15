@@ -34,11 +34,20 @@ class template_transfer_import_form extends \moodleform {
     protected function definition(): void {
         $mform = $this->_form;
 
+        // The category narrows the courses of the list below; its button reloads the form without submitting it.
+        $categoryid = optional_param('categoryid', 0, PARAM_INT);
+        $categories = [0 => get_string('all')] + \core_course_category::make_categories_list();
+        $mform->addElement('autocomplete', 'categoryid', get_string('category'), $categories);
+        $mform->setType('categoryid', PARAM_INT);
+        $mform->setDefault('categoryid', $categoryid);
+        $mform->addElement('submit', 'filtercourses', get_string('template_transfer_filter', 'local_coursegen'));
+        $mform->registerNoSubmitButton('filtercourses');
+
         $mform->addElement(
             'autocomplete',
             'courseid',
             get_string('template_transfer_course', 'local_coursegen'),
-            $this->course_options((int) ($this->_customdata['categoryid'] ?? 0)),
+            $this->course_options($categoryid),
             ['placeholder' => get_string('template_transfer_course_search', 'local_coursegen')]
         );
         $mform->addRule('courseid', null, 'required', null, 'client');
@@ -67,8 +76,9 @@ class template_transfer_import_form extends \moodleform {
 
         $select = 'id <> :site';
         $params = ['site' => SITEID];
-        if ($categoryid > 0) {
-            $ids = \core_course_category::get($categoryid)->get_all_children_ids();
+        $category = $categoryid > 0 ? \core_course_category::get($categoryid, IGNORE_MISSING) : null;
+        if ($category) {
+            $ids = $category->get_all_children_ids();
             $ids[] = $categoryid;
             [$insql, $inparams] = $DB->get_in_or_equal($ids, SQL_PARAMS_NAMED);
             $select .= ' AND category ' . $insql;

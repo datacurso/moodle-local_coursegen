@@ -200,6 +200,7 @@ $string['template_transfer_course_id'] = 'curso {$a}';
 $string['template_transfer_course_search'] = 'Buscar un curso';
 $string['template_transfer_done'] = 'La plantilla "{$a->name}" quedó configurada sobre el curso "{$a->course}".';
 $string['template_transfer_file'] = 'Archivo de configuración';
+$string['template_transfer_filter'] = 'Filtrar cursos';
 $string['template_transfer_import_button'] = 'Importar';
 $string['template_transfer_import_help'] = 'Restaura primero el curso. Debe tener las mismas secciones y actividades que el curso del que se exportó la plantilla: si falta alguna, no se importa nada. Si el curso ya tiene una plantilla, se reemplaza.';
 $string['template_transfer_invalid'] = 'El archivo no es una configuración de plantilla exportada por este plugin.';
