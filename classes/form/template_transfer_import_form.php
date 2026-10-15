@@ -34,10 +34,13 @@ class template_transfer_import_form extends \moodleform {
     protected function definition(): void {
         $mform = $this->_form;
 
-        $mform->addElement('course', 'courseid', get_string('template_transfer_course', 'local_coursegen'), [
-            'multiple' => false,
-            'includefrontpage' => false,
-        ]);
+        $mform->addElement(
+            'autocomplete',
+            'courseid',
+            get_string('template_transfer_course', 'local_coursegen'),
+            $this->course_options((int) ($this->_customdata['categoryid'] ?? 0)),
+            ['placeholder' => get_string('template_transfer_course_search', 'local_coursegen')]
+        );
         $mform->addRule('courseid', null, 'required', null, 'client');
 
         $mform->addElement('filepicker', 'configfile', get_string('template_transfer_file', 'local_coursegen'), null, [
@@ -51,5 +54,30 @@ class template_transfer_import_form extends \moodleform {
         $mform->addHelpButton('templatename', 'template_transfer_name', 'local_coursegen');
 
         $this->add_action_buttons(false, get_string('template_transfer_import_button', 'local_coursegen'));
+    }
+
+    /**
+     * The courses that can be chosen: the ones of a category and its subcategories, or all of them.
+     *
+     * @param int $categoryid The category, or 0 for every course of the site.
+     * @return array Course id => name.
+     */
+    private function course_options(int $categoryid): array {
+        global $DB;
+
+        $select = 'id <> :site';
+        $params = ['site' => SITEID];
+        if ($categoryid > 0) {
+            $ids = \core_course_category::get($categoryid)->get_all_children_ids();
+            $ids[] = $categoryid;
+            [$insql, $inparams] = $DB->get_in_or_equal($ids, SQL_PARAMS_NAMED);
+            $select .= ' AND category ' . $insql;
+            $params += $inparams;
+        }
+        $options = [];
+        foreach ($DB->get_records_select('course', $select, $params, 'fullname', 'id, fullname, shortname') as $course) {
+            $options[$course->id] = format_string($course->fullname) . ' (' . s($course->shortname) . ')';
+        }
+        return $options;
     }
 }

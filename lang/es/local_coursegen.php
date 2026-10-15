@@ -197,6 +197,7 @@ $string['template_reference_marker_help'] = 'Escribe `[[coursegen:reference: lo 
 Cuando se crea un curso a partir de la plantilla, el docente ve un apartado con el nombre que escribiste y puede aportar su propio archivo antes de generar el curso. Sin archivo, se genera una imagen nueva a partir de la referencia cuando el elemento es una imagen, y cualquier otro elemento se omite del curso. El marcador se lee en las actividades guardadas con la acción "plantilla", y nunca aparece en el curso.';
 $string['template_transfer_course'] = 'Curso';
 $string['template_transfer_course_id'] = 'curso {$a}';
+$string['template_transfer_course_search'] = 'Buscar un curso';
 $string['template_transfer_done'] = 'La plantilla "{$a->name}" quedó configurada sobre el curso "{$a->course}".';
 $string['template_transfer_file'] = 'Archivo de configuración';
 $string['template_transfer_import_button'] = 'Importar';

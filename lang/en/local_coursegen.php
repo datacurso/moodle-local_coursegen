@@ -204,6 +204,7 @@ $string['template_reference_marker_help'] = 'Type `[[coursegen:reference: what t
 When a course is made from the template, the teacher sees a place labelled with what you wrote and may bring their own file for it, before the course is generated. With no file, a new image is generated from the reference when the element is an image, and any other element is left out of the course. The marker is read in the activities saved with the action "template", and it never appears in the course.';
 $string['template_transfer_course'] = 'Course';
 $string['template_transfer_course_id'] = 'course {$a}';
+$string['template_transfer_course_search'] = 'Search for a course';
 $string['template_transfer_done'] = 'The template "{$a->name}" is configured over the course "{$a->course}".';
 $string['template_transfer_file'] = 'Configuration file';
 $string['template_transfer_import_button'] = 'Import';
