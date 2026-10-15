@@ -89,6 +89,15 @@ if (has_capability('local/coursegen:createtemplates', $context)) {
     );
 }
 
+// Import a template.
+if (has_capability('local/coursegen:edittemplates', $context)) {
+    $transferurl = new moodle_url('/local/coursegen/import_template.php');
+    echo html_writer::div(
+        $OUTPUT->single_button($transferurl, get_string('template_import', 'local_coursegen'), 'get'),
+        'mb-3'
+    );
+}
+
 // System report.
 $report = system_report_factory::create(templates::class, $context);
 echo $report->output();

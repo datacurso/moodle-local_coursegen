@@ -187,12 +187,29 @@ $string['courseai_chip_remove_syllabus'] = 'Eliminar programa de estudios';
 $string['courseai_chip_view_guideline'] = 'Ver directriz';
 $string['courseai_close_view'] = 'Cerrar y volver a Mis cursos';
 $string['courseai_topbar_close'] = 'Cerrar';
+$string['template_export'] = 'Exportar';
+$string['template_import'] = 'Importar';
 $string['template_markers_title'] = 'Marcadores';
 $string['template_reference_marker'] = 'Archivo que aporta el docente';
 $string['template_reference_marker_example'] = '[[coursegen:reference: lo que aporta el docente]]';
 $string['template_reference_marker_help'] = 'Escribe `[[coursegen:reference: lo que aporta el docente]]` como texto simple justo encima del elemento de una actividad que contiene un archivo, como el visor de un PDF, una imagen, un video o un enlace a un documento. El marcador se aplica al elemento siguiente, sea cual sea, y ese elemento debe contener exactamente un archivo de esta actividad.
 
 Cuando se crea un curso a partir de la plantilla, el docente ve un apartado con el nombre que escribiste y puede aportar su propio archivo antes de generar el curso. Sin archivo, se genera una imagen nueva a partir de la referencia cuando el elemento es una imagen, y cualquier otro elemento se omite del curso. El marcador se lee en las actividades guardadas con la acción "plantilla", y nunca aparece en el curso.';
+$string['template_transfer_course'] = 'Curso';
+$string['template_transfer_course_id'] = 'curso {$a}';
+$string['template_transfer_course_search'] = 'Buscar un curso';
+$string['template_transfer_done'] = 'La plantilla "{$a->name}" quedó configurada sobre el curso "{$a->course}".';
+$string['template_transfer_file'] = 'Archivo de configuración';
+$string['template_transfer_filter'] = 'Filtrar cursos';
+$string['template_transfer_import_button'] = 'Importar';
+$string['template_transfer_import_help'] = 'Restaura primero el curso. Debe tener las mismas secciones y actividades que el curso del que se exportó la plantilla: si falta alguna, no se importa nada. Si el curso ya tiene una plantilla, se reemplaza.';
+$string['template_transfer_invalid'] = 'El archivo no es una configuración de plantilla exportada por este plugin.';
+$string['template_transfer_mismatch'] = 'El curso no tiene la estructura de la plantilla. No se importó nada. Le falta:';
+$string['template_transfer_missing_activity'] = '{$a->modname} "{$a->name}" (número {$a->position} entre las del mismo tipo) en la sección {$a->section}';
+$string['template_transfer_missing_section'] = 'Sección {$a}';
+$string['template_transfer_name'] = 'Nombre de la plantilla';
+$string['template_transfer_name_help'] = 'Déjalo vacío para conservar el nombre que tenía la plantilla al exportarla.';
+$string['template_transfer_open'] = 'Abrir la plantilla';
 $string['template_video_marker'] = 'Video de una actividad';
 $string['template_video_marker_example'] = 'src=&quot;[[coursegen:aiprompt: un video sobre el tema de la lección]]&quot;';
 $string['template_video_marker_help'] = 'Escribe `[[coursegen:aiprompt: un video sobre el tema de la lección]]` como el `src` completo de un `<iframe>` y deja los demás atributos y estilos del iframe como están. El texto entre corchetes describe el video que quieres; el tema también se toma del curso, la sección y el texto generado para la actividad.

@@ -194,12 +194,29 @@ $string['courseai_chip_remove_syllabus'] = 'Remove syllabus';
 $string['courseai_chip_view_guideline'] = 'View guideline';
 $string['courseai_close_view'] = 'Close and return to My courses';
 $string['courseai_topbar_close'] = 'Close';
+$string['template_export'] = 'Export';
+$string['template_import'] = 'Import';
 $string['template_markers_title'] = 'Markers';
 $string['template_reference_marker'] = 'File the teacher brings';
 $string['template_reference_marker_example'] = '[[coursegen:reference: what the teacher brings]]';
 $string['template_reference_marker_help'] = 'Type `[[coursegen:reference: what the teacher brings]]` as plain text right above the element of an activity that holds a file, such as the viewer of a PDF, an image, a video or a link to a document. The marker applies to the next element, whatever it is, and that element must hold exactly one file of this activity.
 
 When a course is made from the template, the teacher sees a place labelled with what you wrote and may bring their own file for it, before the course is generated. With no file, a new image is generated from the reference when the element is an image, and any other element is left out of the course. The marker is read in the activities saved with the action "template", and it never appears in the course.';
+$string['template_transfer_course'] = 'Course';
+$string['template_transfer_course_id'] = 'course {$a}';
+$string['template_transfer_course_search'] = 'Search for a course';
+$string['template_transfer_done'] = 'The template "{$a->name}" is configured over the course "{$a->course}".';
+$string['template_transfer_file'] = 'Configuration file';
+$string['template_transfer_filter'] = 'Filter courses';
+$string['template_transfer_import_button'] = 'Import';
+$string['template_transfer_import_help'] = 'Restore the course first. The course must have the same sections and activities as the one the template was exported from: if any is missing, nothing is imported. If the course already has a template, it is replaced.';
+$string['template_transfer_invalid'] = 'The file is not a template configuration exported by this plugin.';
+$string['template_transfer_mismatch'] = 'The course does not have the structure of the template. Nothing was imported. It lacks:';
+$string['template_transfer_missing_activity'] = '{$a->modname} "{$a->name}" (number {$a->position} among those alike) in section {$a->section}';
+$string['template_transfer_missing_section'] = 'Section {$a}';
+$string['template_transfer_name'] = 'Template name';
+$string['template_transfer_name_help'] = 'Leave it empty to keep the name the template had when it was exported.';
+$string['template_transfer_open'] = 'Open the template';
 $string['template_video_marker'] = 'Video of an activity';
 $string['template_video_marker_example'] = 'src=&quot;[[coursegen:aiprompt: a video about the topic of the lesson]]&quot;';
 $string['template_video_marker_help'] = 'Type `[[coursegen:aiprompt: a video about the topic of the lesson]]` as the whole `src` of an `<iframe>` and keep the other attributes and styles of the iframe as they are. The text between the brackets describes the video you want; the topic is also taken from the course, the section and the text generated for the activity.
