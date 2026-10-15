@@ -34,6 +34,9 @@ $context = context_system::instance();
 require_capability('local/coursegen:edittemplates', $context);
 
 $categoryid = optional_param('categoryid', 0, PARAM_INT);
+if ($categoryid > 0 && !core_course_category::get($categoryid, IGNORE_MISSING)) {
+    $categoryid = 0;
+}
 $PAGE->set_url('/local/coursegen/import_template.php', ['categoryid' => $categoryid]);
 $PAGE->set_title(get_string('template_import', 'local_coursegen'));
 $PAGE->set_heading(get_string('template_import', 'local_coursegen'));
