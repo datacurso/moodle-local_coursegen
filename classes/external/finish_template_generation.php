@@ -155,7 +155,7 @@ class finish_template_generation extends external_api {
         }
         kept_link_rewriter::rewrite_for_course($courseid, $payloadactivities, $generatedcms, $keptcms);
         template_course_order::apply($templateid, $courseid, $payloadactivities, $generatedcms, $keptcms);
-        template_access_copier::copy_into($courseid, $payloadactivities, $generatedcms, $keptcms);
+        template_access_copier::copy_into($templateid, $courseid, $payloadactivities, $generatedcms, $keptcms);
     }
 
     /**

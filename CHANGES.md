@@ -5,8 +5,8 @@ All notable changes to this project will be documented in this file. Each change
 ## [2.0.10] - 2026101214
 
 ### Fixed
-- **The activities of a course made from a template keep the access of their template activity**  
-  An activity the AI wrote, and a kept one, was left visible on the course page and without restrictions even when its template activity was hidden from the page or asked for something to be opened. Each activity now takes from its template activity whether it is visible, whether it is shown on the course page and its access restrictions. A restriction on the completion of another activity points at that activity's counterpart in the new course; a restriction that cannot point at anything in it (a completion with no counterpart, a grade or a group) is left out.
+- **The activities and sections of a course made from a template keep the access of their template counterpart**  
+  An activity the AI wrote, and a kept one, was left visible on the course page and without restrictions even when its template activity was hidden from the page or asked for something to be opened, and the sections were created without restrictions. Each activity and section now takes from its template counterpart whether it is visible, whether it is shown on the course page and its whole tree of access restrictions, through Moodle's own availability tree, so every kind of condition is carried: completion, grade, group, grouping, date, user profile, nested sets and the ones other plugins add. The ids a restriction holds are pointed at the new course: an activity at its copy, a grade item at the one of the copy, and a group or grouping a restriction uses is created in the new course with the same name. A reference that still has no counterpart (for instance an activity left out of the template) gets the value Moodle's restore gives it, so the restriction shows as broken instead of opening access.
 
 ## [2.0.10] - 2026101213
 
