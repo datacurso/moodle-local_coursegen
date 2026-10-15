@@ -40,6 +40,8 @@ class template_course_settings {
         'showreports',
         'showactivitydates',
         'showcompletionconditions',
+        'enablecompletion',
+        'completionnotify',
         'maxbytes',
         'groupmode',
         'groupmodeforce',

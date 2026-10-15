@@ -16,7 +16,7 @@
 
 namespace local_coursegen;
 
-use local_coursegen\local\service\template_access_copier;
+use local_coursegen\local\service\template_availability_tree;
 
 /**
  * The access restrictions of a template item, carried onto its counterpart in the new course.
@@ -25,21 +25,20 @@ use local_coursegen\local\service\template_access_copier;
  * @category   test
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
- * @covers     \local_coursegen\local\service\template_access_copier
+ * @covers     \local_coursegen\local\service\template_availability_tree
  */
-final class template_access_copier_test extends \advanced_testcase {
+final class template_availability_tree_test extends \advanced_testcase {
     /**
      * Carry a restriction with the counterparts of the test.
      *
      * @param string $tree The restrictions of the template item.
      * @param array $maps What each table maps to.
      * @param array $existing What the new course owns.
-     * @return array The restrictions of the new item.
+     * @return array|null The restrictions of the new item.
      */
-    private function carry(string $tree, array $maps = [], array $existing = []): array {
+    private function carry(string $tree, array $maps = [], array $existing = []): ?array {
         $this->resetAfterTest();
-        $carried = template_access_copier::carry_availability($tree, $maps, $existing);
-        return json_decode((string) $carried, true);
+        return json_decode((string) template_availability_tree::carry($tree, $maps, $existing), true);
     }
 
     /**
@@ -98,17 +97,40 @@ final class template_access_copier_test extends \advanced_testcase {
     }
 
     /**
-     * Dates and nested sets travel as they are, with their operators.
+     * The conditions on a date are left out, the rest stays with what it shows, and a set left empty goes too.
      */
-    public function test_dates_and_nested_sets_are_kept(): void {
-        $tree = '{"op":"|","show":false,"c":[{"type":"date","d":">=","t":1790000000},' .
+    public function test_dates_are_left_out_and_the_rest_is_kept(): void {
+        $tree = '{"op":"&","showc":[false,true,true],"c":[{"type":"date","d":">=","t":1790000000},' .
+            '{"type":"profile","op":"isnotempty","sf":"email"},' .
+            '{"op":"|","c":[{"type":"date","d":"<","t":1791000000}]}]}';
+
+        $carried = $this->carry($tree);
+
+        $this->assertCount(1, $carried['c']);
+        $this->assertSame('profile', $carried['c'][0]['type']);
+        $this->assertSame([true], $carried['showc']);
+    }
+
+    /**
+     * A restriction made only of dates leaves no restriction.
+     */
+    public function test_a_restriction_of_only_dates_leaves_none(): void {
+        $tree = '{"op":"&","showc":[true],"c":[{"type":"date","d":">=","t":1790000000}]}';
+
+        $this->assertNull($this->carry($tree));
+    }
+
+    /**
+     * Nested sets travel with their operators.
+     */
+    public function test_nested_sets_are_kept(): void {
+        $tree = '{"op":"|","show":false,"c":[{"type":"profile","op":"isnotempty","sf":"city"},' .
             '{"op":"&","c":[{"type":"completion","cm":10,"e":1}]}]}';
 
         $carried = $this->carry($tree, ['course_modules' => [10 => 77]], ['course_modules' => [77 => true]]);
 
         $this->assertSame('|', $carried['op']);
         $this->assertFalse($carried['show']);
-        $this->assertSame(1790000000, $carried['c'][0]['t']);
         $this->assertSame(77, $carried['c'][1]['c'][0]['cm']);
     }
 
@@ -127,12 +149,22 @@ final class template_access_copier_test extends \advanced_testcase {
     }
 
     /**
+     * The groups and groupings a restriction names are found at any depth.
+     */
+    public function test_the_groups_a_restriction_names_are_found(): void {
+        $tree = '{"op":"&","showc":[true,true],"c":[{"type":"group","id":4},' .
+            '{"op":"|","c":[{"type":"grouping","id":9},{"type":"group"}]}]}';
+
+        $this->assertSame(['group' => [4], 'grouping' => [9]], template_availability_tree::group_ids($tree));
+    }
+
+    /**
      * No restriction stays none.
      */
     public function test_an_item_without_restriction_stays_without_one(): void {
         $this->resetAfterTest();
 
-        $this->assertNull(template_access_copier::carry_availability(null, [], []));
-        $this->assertNull(template_access_copier::carry_availability('', [], []));
+        $this->assertNull(template_availability_tree::carry(null, [], []));
+        $this->assertNull(template_availability_tree::carry('', [], []));
     }
 }
