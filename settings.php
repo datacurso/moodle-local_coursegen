@@ -53,6 +53,15 @@ if ($hassiteconfig) {
         0
     ));
 
+    // Off by default: importing into an existing course copies and replaces
+    // the target, so the site must opt in explicitly (ticket #9539).
+    $settings->add(new admin_setting_configcheckbox(
+        'local_coursegen/enableimportexisting',
+        get_string('setting_enableimportexisting', 'local_coursegen'),
+        get_string('setting_enableimportexisting_desc', 'local_coursegen'),
+        0
+    ));
+
     $ADMIN->add($pluginname, $settings);
 
     // Development settings page: service URL overrides for dev/staging

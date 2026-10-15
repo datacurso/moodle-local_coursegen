@@ -126,8 +126,17 @@ export const getCourseaiElements = () => {
         btnCompactSyllabus: document.getElementById('btnCompactSyllabus'),
         btnCompactDirectrices: document.getElementById('btnCompactDirectrices'),
         completionView: document.getElementById('completionView'),
+        completionTitle: document.getElementById('completionTitle'),
         completionSummary: document.getElementById('completionSummary'),
         btnOpenMoodleCourse: document.getElementById('btnOpenMoodleCourse'),
+        btnOpenMoodleCourseLabel: document.getElementById('btnOpenMoodleCourseLabel'),
         btnCreateAnotherCourse: document.getElementById('btnCreateAnotherCourse'),
+        // Import into an existing course (ticket #9539).
+        importProgressView: document.getElementById('importProgressView'),
+        importProgressSpinner: document.getElementById('importProgressSpinner'),
+        importProgressFailedIcon: document.getElementById('importProgressFailedIcon'),
+        importProgressTitle: document.getElementById('importProgressTitle'),
+        importProgressSummary: document.getElementById('importProgressSummary'),
+        btnOpenGeneratedCourse: document.getElementById('btnOpenGeneratedCourse'),
     };
 };
