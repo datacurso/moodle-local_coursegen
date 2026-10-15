@@ -37,6 +37,7 @@ use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
 use local_coursegen\local\service\generated_activities_filter;
 use local_coursegen\local\service\kept_link_rewriter;
+use local_coursegen\local\service\template_access_copier;
 use local_coursegen\local\service\template_ai_api_service;
 use local_coursegen\local\service\template_course_order;
 use local_coursegen\local\service\template_keep_copier;
@@ -154,6 +155,7 @@ class finish_template_generation extends external_api {
         }
         kept_link_rewriter::rewrite_for_course($courseid, $payloadactivities, $generatedcms, $keptcms);
         template_course_order::apply($templateid, $courseid, $payloadactivities, $generatedcms, $keptcms);
+        template_access_copier::copy_into($courseid, $payloadactivities, $generatedcms, $keptcms);
     }
 
     /**

@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101214
+
+### Fixed
+- **The activities of a course made from a template keep the access of their template activity**  
+  An activity the AI wrote, and a kept one, was left visible on the course page and without restrictions even when its template activity was hidden from the page or asked for something to be opened. Each activity now takes from its template activity whether it is visible, whether it is shown on the course page and its access restrictions. A restriction on the completion of another activity points at that activity's counterpart in the new course; a restriction that cannot point at anything in it (a completion with no counterpart, a grade or a group) is left out.
+
 ## [2.0.10] - 2026101213
 
 ### Added

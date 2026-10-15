@@ -71,7 +71,7 @@ final class kept_link_rewriter {
      * @param array $keptcms
      * @return array<int,int> Template course cmid => new course cmid.
      */
-    private static function counterparts(array $payloadactivities, array $generatedcms, array $keptcms): array {
+    public static function counterparts(array $payloadactivities, array $generatedcms, array $keptcms): array {
         $counterparts = $keptcms;
         $instancecmidsbysource = self::instance_cmids_by_source($payloadactivities, $generatedcms);
         foreach ($instancecmidsbysource as $sourcecmid => $cmids) {
