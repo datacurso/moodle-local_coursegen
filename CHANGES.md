@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101215
+
+### Added
+- **The pictures of the course itself can be made again from the ones of the template**  
+  The cover of the course, the picture each section is shown with in the grid format and the pictures in the summary of a section can now be replaced by new ones the AI makes looking at the template's picture and following an instruction. The author writes `[[coursegen:reference: instruction]]` in the rich text next to the picture: in the summary of the course for its cover, in the summary of a section (with no picture of the text after it) for the picture of that section, and right above a picture of a section summary for that picture. The instructions are taken out of the texts the new course receives, a place where the template has no picture gets one made from nothing, and a marker that points at more than one picture, or two markers for the same place, are refused before the generation starts.
+
 ## [2.0.10] - 2026101214
 
 ### Fixed

@@ -79,6 +79,8 @@ class template_export_sections {
         // means something to the page that owns them. Whatever reads
         // this payload owns nothing, so they travel as addresses.
         $summary = file_rewrite_pluginfile_urls($summary, 'pluginfile.php', $contextid, 'course', 'section', $sectionid);
+        // The instructions the author left for the pictures are for the generation, not for the course.
+        $summary = template_course_image_slots::without_markers($summary);
 
         $summaryformat = $section->summaryformat ?? FORMAT_HTML;
         $summaryformat = (int) $summaryformat;

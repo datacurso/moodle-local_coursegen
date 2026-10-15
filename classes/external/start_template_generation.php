@@ -31,6 +31,7 @@ use external_single_structure;
 use external_value;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\template_ai_api_service;
+use local_coursegen\local\service\template_course_image_slots;
 use local_coursegen\local\service\template_export_service;
 use local_coursegen\local\service\template_reference_uploads;
 
@@ -82,6 +83,9 @@ class start_template_generation extends external_api {
 
         // Read first: a reference marker with no usable target is refused before a session exists.
         $referenceuploads = template_reference_uploads::plan($payload);
+        $template = \local_coursegen\local\models\template::get_record(['id' => $params['templateid']]);
+        $slots = template_course_image_slots::for_course(get_course((int) $template->get('courseid')));
+        $referenceuploads = array_merge($referenceuploads, template_course_image_slots::uploads($slots));
 
         $api = new template_ai_api_service();
         $threadid = $api->init($payload);
