@@ -110,9 +110,9 @@ if ($hassiteconfig) {
     ));
 
     $ADMIN->add($pluginname, new admin_externalpage(
-        'local_coursegen_transfer_template',
-        get_string('template_transfer', 'local_coursegen'),
-        new moodle_url('/local/coursegen/transfer_template.php'),
+        'local_coursegen_import_template',
+        get_string('template_import', 'local_coursegen'),
+        new moodle_url('/local/coursegen/import_template.php'),
         'local/coursegen:edittemplates',
         true
     ));

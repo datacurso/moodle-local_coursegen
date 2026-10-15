@@ -15,7 +15,7 @@
 // along with Moodle.  If not, see <http://www.gnu.org/licenses/>.
 
 /**
- * Export a template's configuration, or import it over a restored copy of its course.
+ * Import the configuration of a template over a restored copy of its course.
  *
  * @package    local_coursegen
  * @copyright  2026 Wilber Narvaez <https://datacurso.com>
@@ -23,31 +23,19 @@
  */
 
 use local_coursegen\form\template_transfer_import_form;
-use local_coursegen\local\models\template;
 use local_coursegen\local\service\template_config_transfer;
 
 require_once('../../config.php');
 require_once($CFG->libdir . '/adminlib.php');
 
-admin_externalpage_setup('local_coursegen_transfer_template');
+admin_externalpage_setup('local_coursegen_import_template');
 
 $context = context_system::instance();
 require_capability('local/coursegen:edittemplates', $context);
 
-$PAGE->set_url('/local/coursegen/transfer_template.php');
-$PAGE->set_title(get_string('template_transfer', 'local_coursegen'));
-$PAGE->set_heading(get_string('template_transfer', 'local_coursegen'));
-
-$action = optional_param('action', '', PARAM_ALPHA);
-if ($action === 'export') {
-    require_sesskey();
-    $templateid = required_param('id', PARAM_INT);
-    $tpl = new template($templateid);
-    $data = template_config_transfer::export($templateid);
-    $filename = clean_filename('template-' . $tpl->get('name') . '.json');
-    $flags = JSON_PRETTY_PRINT | JSON_UNESCAPED_UNICODE | JSON_UNESCAPED_SLASHES;
-    send_file(json_encode($data, $flags), $filename, 0, 0, true, true, 'application/json');
-}
+$PAGE->set_url('/local/coursegen/import_template.php');
+$PAGE->set_title(get_string('template_import', 'local_coursegen'));
+$PAGE->set_heading(get_string('template_import', 'local_coursegen'));
 
 $form = new template_transfer_import_form($PAGE->url);
 $notification = '';
@@ -64,18 +52,6 @@ if ($formdata = $form->get_data()) {
 echo $OUTPUT->header();
 echo $notification;
 
-echo $OUTPUT->heading(get_string('template_transfer_export', 'local_coursegen'), 3);
-echo html_writer::tag('p', get_string('template_transfer_export_help', 'local_coursegen'));
-$items = [];
-foreach (template::get_records([], 'name') as $tpl) {
-    $url = new moodle_url($PAGE->url, ['action' => 'export', 'id' => $tpl->get('id'), 'sesskey' => sesskey()]);
-    $courselabel = get_string('template_transfer_course_id', 'local_coursegen', $tpl->get('courseid'));
-    $items[] = html_writer::link($url, format_string($tpl->get('name'))) . ' ' .
-        html_writer::span('(' . $courselabel . ')', 'text-muted');
-}
-echo html_writer::alist($items);
-
-echo $OUTPUT->heading(get_string('template_transfer_import', 'local_coursegen'), 3);
 echo html_writer::tag('p', get_string('template_transfer_import_help', 'local_coursegen'));
 $form->display();
 

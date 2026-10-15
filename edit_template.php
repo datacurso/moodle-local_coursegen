@@ -174,6 +174,13 @@ $templatecontext = [
 ];
 
 echo $OUTPUT->header();
+if ($id > 0 && has_capability('local/coursegen:edittemplates', context_system::instance())) {
+    $exporturl = new moodle_url('/local/coursegen/export_template.php', ['id' => $id, 'sesskey' => sesskey()]);
+    echo html_writer::div(
+        html_writer::link($exporturl, get_string('template_export', 'local_coursegen'), ['class' => 'btn btn-secondary']),
+        'mb-3'
+    );
+}
 echo $OUTPUT->render_from_template('local_coursegen/template_wizard', $templatecontext);
 
 $PAGE->requires->js_call_amd('local_coursegen/local/template/init', 'init', [$templatecontext]);

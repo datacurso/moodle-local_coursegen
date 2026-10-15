@@ -5,8 +5,8 @@ All notable changes to this project will be documented in this file. Each change
 ## [2.0.10] - 2026101213
 
 ### Added
-- **A template can be exported and imported from the page that lists the templates**  
-  A new "Export or import a template" page downloads the configuration of a template as a file and rebuilds it over a course from such a file, so a template can be moved to a site where its course was restored from a backup. The course must have the same sections and activities as the one the template was exported from: if any is missing, nothing is imported and the page lists what is missing. If the course already has a template, it is replaced. The command line offers the same operation.
+- **A template can be exported and imported**  
+  The row of each template in the list has an Export action, and the screen of a template has an Export button: both download its configuration as a file. An Import button on the list opens a page that rebuilds a template over a course from such a file, so a template can be moved to a site where its course was restored from a backup. The course must have the same sections and activities as the one the template was exported from: if any is missing, nothing is imported and the page lists what is missing. If the course already has a template, it is replaced. The command line offers the same operation.
 
 ## [2.0.10] - 2026101212
 

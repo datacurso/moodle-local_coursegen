@@ -88,6 +88,7 @@ class templates extends system_report {
         $context = $this->get_context();
         if (has_capability('local/coursegen:edittemplates', $context)) {
             $this->add_edit_action();
+            $this->add_export_action();
         }
         if (has_capability('local/coursegen:deletetemplates', $context)) {
             $this->add_delete_action();
@@ -118,6 +119,18 @@ class templates extends system_report {
         $url = new moodle_url('/local/coursegen/manage_templates.php', $urlparams);
         $icon = new pix_icon('t/delete', '');
         $title = new lang_string('delete');
+        $action = new action($url, $icon, [], false, $title);
+        $this->add_action($action);
+    }
+
+    /**
+     * Add the export row action.
+     */
+    private function add_export_action(): void {
+        $urlparams = ['id' => ':id', 'sesskey' => sesskey()];
+        $url = new moodle_url('/local/coursegen/export_template.php', $urlparams);
+        $icon = new pix_icon('t/download', '');
+        $title = new lang_string('template_export', 'local_coursegen');
         $action = new action($url, $icon, [], false, $title);
         $this->add_action($action);
     }

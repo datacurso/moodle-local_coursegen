@@ -89,11 +89,11 @@ if (has_capability('local/coursegen:createtemplates', $context)) {
     );
 }
 
-// Export or import a template.
+// Import a template.
 if (has_capability('local/coursegen:edittemplates', $context)) {
-    $transferurl = new moodle_url('/local/coursegen/transfer_template.php');
+    $transferurl = new moodle_url('/local/coursegen/import_template.php');
     echo html_writer::div(
-        $OUTPUT->single_button($transferurl, get_string('template_transfer', 'local_coursegen'), 'get'),
+        $OUTPUT->single_button($transferurl, get_string('template_import', 'local_coursegen'), 'get'),
         'mb-3'
     );
 }
