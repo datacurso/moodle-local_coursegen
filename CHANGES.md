@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101214
+
+### Fixed
+- **The activities, the sections and the completion of a course made from a template keep the settings of the template**  
+  An activity the AI wrote, and a kept one, was left visible on the course page, without restrictions and without completion tracking even when the template had them, the sections were created without restrictions, and the criteria that complete the course were not carried. Now each activity and section takes from its template counterpart whether it is visible and shown on the course page, its whole tree of access restrictions (through Moodle's own availability tree, so every kind of condition is carried, the ones other plugins add included), how its completion is tracked and the completion rules of its module, its group mode and grouping, its tags and its competencies. The course takes the criteria that complete it, how they are added up and its competencies. The ids those settings hold are pointed at the new course: an activity at its copy, a grade item at the one of the copy, and a group or grouping that is used is created in the new course with the same name. A reference that still has no counterpart (for instance an activity left out of the template) gets the value Moodle's restore gives it, so the restriction shows as broken instead of opening access. The dates of the template are not copied: neither the ones in a restriction, nor the date an activity is to be completed by, nor the criterion that completes the course on a date.
+
 ## [2.0.10] - 2026101213
 
 ### Added
