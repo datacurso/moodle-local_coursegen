@@ -4,7 +4,7 @@ Recorrido paso a paso del flujo de importación: qué archivos intervienen en ca
 
 ## Qué hace y por qué existe el staging
 
-Con el ajuste de administrador activado, el panel de confirmación permite elegir entre crear un curso nuevo o importar el contenido generado a un curso existente. En modo importación el plugin **no** genera el contenido directamente sobre el curso destino: materializa el resultado de la IA en un curso de **staging** (en la categoría del destino) y encola una tarea adhoc que copia el destino sin datos de usuario, vuelca el staging sobre la copia (reemplazando o añadiendo contenido según el ajuste `importcontentmode`) y borra el staging. El original queda renombrado y oculto como copia de seguridad. La razón es que `create_course_service::process_course_sections()` llama a `delete_course_sections()` de forma incondicional: generar directamente sobre un curso existente lo vaciaría antes de escribir el contenido nuevo.
+Con el ajuste de administrador activado, el panel de confirmación permite elegir entre crear un curso nuevo o importar el contenido generado a un curso existente. En modo importación el plugin **no** genera el contenido directamente sobre el curso destino: materializa el resultado de la IA en un curso de **staging** (en la categoría del destino) y encola una tarea adhoc que copia el destino **con todos sus datos de usuario** (matriculaciones, roles, grupos, calificaciones, finalización y datos de usuario de las actividades), vuelca el staging sobre la copia (reemplazando o añadiendo contenido según el ajuste `importcontentmode`) y borra el staging. El original queda renombrado y oculto como copia de seguridad. La razón es que `create_course_service::process_course_sections()` llama a `delete_course_sections()` de forma incondicional: generar directamente sobre un curso existente lo vaciaría antes de escribir el contenido nuevo.
 
 `classes/local/service/create_course_service.php:374-382`
 
@@ -108,7 +108,15 @@ $importexistingenabled = !empty(get_config('local_coursegen', 'enableimportexist
 
 // Prepare template context.
 $templatecontext = [
-// …
+    'guidelines' => json_encode($systeminstructions),
+    'languages' => json_encode($languageoptions),
+    'defaultlang' => current_language(),
+    'logourl' => $logourl->out(),
+    'hassessions' => !empty($recent5),
+    'sessions' => $recent5,
+    'allsessions' => $allsessionsdata,
+    'isresuming' => $resumesessionid > 0,
+    'subsectionsenabled' => $subsectionsenabled,
     'importexistingenabled' => $importexistingenabled,
 ```
 
@@ -402,7 +410,7 @@ El web service está declarado en `db/services.php` como función de lectura con
 
 ## 3. Confirmar: el web service `create_course` en modo importación
 
-Al pulsar confirmar, `onConfirm` lee el modo y el curso destino del controlador; en modo `import` devuelve **solo** `targetmode = 'import'` y `targetcourseid` y sale antes de leer los inputs (`fullname`, `shortname` y `category` se leen únicamente en modo `new`). `createCourseFromSession` copia esos dos campos al payload y el repositorio los reenvía a `local_coursegen_create_course`. En el servidor, `execute` valida `targetmode`, exige `moodle/course:create` y `local/coursegen:createcoursewithai` en contexto de sistema, carga la sesión del usuario y, **antes de pedir el resultado a la API y de materializar nada**, llama a `require_import_target`: ajuste activado, `targetcourseid > 0`, el curso existe y no es el sitio (`(int)SITEID`), y capacidades de backup/restore y `moodle/course:visibility` sobre el destino (la importación oculta el original) y `moodle/course:create` sobre su categoría. Luego fuerza la categoría del staging a la del destino, llama a `create_course_service::create_course` y, si tuvo éxito, encola `import_generated_course_task` y responde `importqueued = true` con el `courseid` del **staging**.
+Al pulsar confirmar, `onConfirm` lee el modo y el curso destino del controlador; en modo `import` devuelve **solo** `targetmode = 'import'` y `targetcourseid` y sale antes de leer los inputs (`fullname`, `shortname` y `category` se leen únicamente en modo `new`). `createCourseFromSession` copia esos dos campos al payload y el repositorio los reenvía a `local_coursegen_create_course`. En el servidor, `execute` valida `targetmode`, exige `moodle/course:create` y `local/coursegen:createcoursewithai` en contexto de sistema, carga la sesión del usuario y, **antes de pedir el resultado a la API y de materializar nada**, llama a `require_import_target`: ajuste activado, `targetcourseid > 0`, el curso existe y no es el sitio (`(int)SITEID`), y capacidades de backup/restore y `moodle/course:visibility` sobre el destino (la importación oculta el original), `moodle/course:create` sobre su categoría y, en último lugar, `moodle/backup:userinfo` sobre el destino y `moodle/restore:userinfo` sobre su categoría: la copia lleva los datos de usuario del original y, como aún no existe, hereda los permisos de la categoría del destino. Luego fuerza la categoría del staging a la del destino, llama a `create_course_service::create_course` y, si tuvo éxito, encola `import_generated_course_task` y responde `importqueued = true` con el `courseid` del **staging**.
 
 `amd/src/local/courseai/actions/course-create.js:253-281`
 
@@ -545,7 +553,7 @@ export async function createCourse({recordid, fullname, shortname, category, tar
         }
 ```
 
-`classes/external/create_course.php:205-227`
+`classes/external/create_course.php:205-231`
 
 ```php
     private static function require_import_target(int $targetcourseid): \stdClass {
@@ -568,6 +576,10 @@ export async function createCourse({recordid, fullname, shortname, category, tar
         require_capability('moodle/course:create', context_coursecat::instance($target->category));
         // The import hides the original course, so the acting user must be allowed to change its visibility.
         require_capability('moodle/course:visibility', $targetcontext);
+        // The copy carries the user data of the original: backup side on the target, restore side on
+        // the copy, which does not exist yet and inherits its permissions from the target's category.
+        require_capability('moodle/backup:userinfo', $targetcontext);
+        require_capability('moodle/restore:userinfo', context_coursecat::instance($target->category));
 
         return $target;
     }
@@ -597,14 +609,25 @@ export async function createCourse({recordid, fullname, shortname, category, tar
         }
 ```
 
-`classes/external/create_course.php:246-271`
+`classes/external/create_course.php:250-275`
 
 ```php
     public static function execute_returns() {
         return new external_single_structure([
             'success' => new external_value(PARAM_BOOL, 'Success status'),
             'courseid' => new external_value(PARAM_INT, 'Created course ID'),
-// …
+            'shortname' => new external_value(PARAM_TEXT, 'Course shortname'),
+            'fullname' => new external_value(PARAM_TEXT, 'Course fullname'),
+            'message' => new external_value(PARAM_TEXT, 'Status message'),
+            'courseurl' => new external_value(PARAM_URL, 'Course URL', VALUE_OPTIONAL),
+            'partial' => new external_value(PARAM_BOOL, 'Whether course content was only partially applied', VALUE_DEFAULT, false),
+            'haswarnings' => new external_value(
+                PARAM_BOOL,
+                'Whether activity creation warnings were detected',
+                VALUE_DEFAULT,
+                false
+            ),
+            'warningscount' => new external_value(PARAM_INT, 'Count of skipped activity creations', VALUE_DEFAULT, 0),
             'importqueued' => new external_value(
                 PARAM_BOOL,
                 'Whether an import into an existing course was queued',
@@ -660,7 +683,7 @@ De vuelta en el navegador, `createCourseFromSession` bifurca según `importqueue
     }
 ```
 
-`classes/local/service/course_import_service.php:165-173`
+`classes/local/service/course_import_service.php:169-177`
 
 ```php
     public static function mark_queued(int $sessionid, int $stagingcourseid, int $targetcourseid): void {
@@ -705,9 +728,9 @@ De vuelta en el navegador, `createCourseFromSession` bifurca según `importqueue
 
 ### 4.2 Secuencia completa de `import_into_existing`
 
-El método orquesta todo el proceso. Antes de cualquier escritura carga destino y staging, vuelve a exigir las capacidades (ahora incluyendo `moodle/backup:backuptargetimport` sobre el staging, que no existía cuando se validó en `create_course`) y pone la sesión en `STATUS_IMPORTING` con el bloque `import` en estado `running`, guardando también la visibilidad original del destino (`originalvisible`, `originalvisibleold`). El orden real dentro del `try` es: (1) backup del destino, (2) renombrado y ocultación del original + creación de la copia en una transacción, (3) restore del backup sobre la copia, (4) backup del staging y restore sobre la copia con el target que fija `importcontentmode` (en modo `add`, con la renumeración transitoria de secciones del paso 4.7). Cualquier `Throwable` entra en el rollback.
+El método orquesta todo el proceso. Antes de cualquier escritura carga destino y staging, vuelve a exigir las capacidades (ahora incluyendo `moodle/backup:backuptargetimport` sobre el staging, que no existía cuando se validó en `create_course`) y pone la sesión en `STATUS_IMPORTING` con el bloque `import` en estado `running`, guardando también la visibilidad original del destino (`originalvisible`, `originalvisibleold`). El orden real dentro del `try` es: (1) backup del destino con sus datos de usuario (`$withusers = true`), (2) renombrado y ocultación del original + creación de la copia en una transacción, (3) restore del backup sobre la copia con esos datos de usuario, (4) backup del staging y restore sobre la copia con el target que fija `importcontentmode` (en modo `add`, con la renumeración transitoria de secciones del paso 4.7). Cualquier `Throwable` entra en el rollback.
 
-`classes/local/service/course_import_service.php:80-155`
+`classes/local/service/course_import_service.php:84-159`
 
 ```php
     public static function import_into_existing(int $sessionid, int $stagingcourseid, int $targetcourseid, int $userid): array {
@@ -742,7 +765,7 @@ El método orquesta todo el proceso. Antes de cualquier escritura carga destino 
             // Back up the target while it still carries the original names: the
             // restore engine takes the new course names from the backup whenever
             // the name settings are locked for the acting user.
-            $backupid = static::backup_course((int)$target->id, \backup::MODE_SAMESITE, $userid, $tempdirs);
+            $backupid = static::backup_course((int)$target->id, \backup::MODE_SAMESITE, $userid, $tempdirs, true);
 
             [$names, $copyid] = self::rename_original_and_create_copy($target);
             $renamed = true;
@@ -790,9 +813,9 @@ El método orquesta todo el proceso. Antes de cualquier escritura carga destino 
 
 ### 4.3 Comprobación de capacidades (antes de escribir nada)
 
-Además de backup/restore sobre el destino, creación en su categoría y `backuptargetimport` sobre el staging, exige `moodle/course:visibility` sobre el destino: el original se oculta cuando la copia ocupa su lugar.
+Además de backup/restore sobre el destino, creación en su categoría y `backuptargetimport` sobre el staging, exige `moodle/course:visibility` sobre el destino: el original se oculta cuando la copia ocupa su lugar. Las dos últimas son `moodle/backup:userinfo` sobre el destino y `moodle/restore:userinfo` sobre la categoría del destino: la copia lleva los datos de usuario del original, y el motor comprueba el lado del restore sobre el contexto del curso de destino de la restauración, es decir, la copia, que hereda de esa categoría (`backup/util/checks/restore_check.class.php:65` y `:121`). Son de arquetipo Gestor en Moodle: hay que añadirlas al rol que use la función (ver §7 de la estrategia).
 
-`classes/local/service/course_import_service.php:211-219`
+`classes/local/service/course_import_service.php:215-227`
 
 ```php
     private static function require_import_capabilities(\stdClass $target, \stdClass $staging, int $userid): void {
@@ -803,17 +826,21 @@ Además de backup/restore sobre el destino, creación en su categoría y `backup
         require_capability('moodle/backup:backuptargetimport', \context_course::instance($staging->id), $userid);
         // The original is hidden once the copy takes its place.
         require_capability('moodle/course:visibility', $targetcontext, $userid);
+        // The copy carries the user data of the original; the restore engine
+        // checks the restore side on the copy, which inherits from the category.
+        require_capability('moodle/backup:userinfo', $targetcontext, $userid);
+        require_capability('moodle/restore:userinfo', \context_coursecat::instance($target->category), $userid);
     }
 ```
 
 ### 4.4 Backup del destino ANTES del renombrado
 
-El backup del destino se hace con `MODE_SAMESITE` mientras el curso todavía tiene sus nombres originales: si los ajustes de nombre del restore están bloqueados para el usuario, el motor toma los nombres del backup, y así la copia conserva fullname y shortname originales. `backup_course` fuerza `users = false` (sin datos de usuario) y falla si no puede garantizarlo; fuera del modo import, descomprime el `.mbz` resultante en el directorio temporal y borra el archivo almacenado.
+El backup del destino se hace con `MODE_SAMESITE` mientras el curso todavía tiene sus nombres originales: si los ajustes de nombre del restore están bloqueados para el usuario, el motor toma los nombres del backup, y así la copia conserva fullname y shortname originales. `backup_course` recibe un quinto parámetro `$withusers`: el backup del destino lo pide con `true` (línea 116 del bloque 4.2) y los dos backups del staging con `false` (4.7 y 4.7.1). El ajuste `users` solo se escribe si no está bloqueado; el motor lo fuerza a `false` cuando el usuario carece de `moodle/backup:userinfo` y lo bloquea en su valor por defecto cuando carece de `moodle/backup:configure` (`backup/util/checks/backup_check.class.php:159` y `:222`), y en `MODE_IMPORT` siempre va apagado. Si se pidieron datos de usuario y el ajuste acaba apagado, lanza `error_import_users_required` y la importación entra en el rollback. Fuera del modo import, descomprime el `.mbz` resultante en el directorio temporal y borra el archivo almacenado.
 
-`classes/local/service/course_import_service.php:579-621`
+`classes/local/service/course_import_service.php:602-644`
 
 ```php
-    protected static function backup_course(int $courseid, int $mode, int $userid, array &$tempdirs): string {
+    protected static function backup_course(int $courseid, int $mode, int $userid, array &$tempdirs, bool $withusers): string {
         $bc = new \backup_controller(
             \backup::TYPE_1COURSE,
             $courseid,
@@ -824,16 +851,16 @@ El backup del destino se hace con `MODE_SAMESITE` mientras el curso todavía tie
         );
         $basepath = $bc->get_plan()->get_basepath();
         $tempdirs[] = $basepath;
-        // Never carry enrolments, grades or any other user data. The setting is
-        // locked by permission when the user lacks moodle/backup:userinfo, and
-        // in that case the engine already forced it off.
+        // The engine locks the setting (forced off) when the user lacks
+        // moodle/backup:userinfo, and locks every setting at its default when
+        // the user lacks moodle/backup:configure; import mode always forces it off.
         $users = $bc->get_plan()->get_setting('users');
         if ($users->get_status() === \base_setting::NOT_LOCKED) {
-            $users->set_value(false);
+            $users->set_value($withusers);
         }
-        if ($users->get_value()) {
+        if ($withusers && !$users->get_value()) {
             $bc->destroy();
-            throw new \moodle_exception('error_import_users_setting_locked', 'local_coursegen');
+            throw new \moodle_exception('error_import_users_required', 'local_coursegen');
         }
         $backupid = $bc->get_backupid();
         self::execute_silently(function () use ($bc) {
@@ -862,7 +889,7 @@ El backup del destino se hace con `MODE_SAMESITE` mientras el curso todavía tie
 
 No hay índice único sobre `course.shortname`, así que renombrar el original y crear la copia con los nombres originales comparten una transacción para cerrar la ventana en la que otra petición podría ocupar el shortname liberado. En el mismo paso el original se oculta (`set_course_visibility(…, 0, 0)`), de modo que `rollback` lo cubra; si la importación termina bien, queda renombrado y oculto. `compute_renamed_names` sigue el patrón de `delete_user()`: prefijo truncado + `.` + sello de 10 dígitos, incrementado mientras el shortname exista; el fullname recibe el sufijo ` (sello)`.
 
-`classes/local/service/course_import_service.php:232-243`
+`classes/local/service/course_import_service.php:240-251`
 
 ```php
     private static function rename_original_and_create_copy(\stdClass $target): array {
@@ -879,7 +906,7 @@ No hay índice único sobre `course.shortname`, así que renombrar el original y
     }
 ```
 
-`classes/local/service/course_import_service.php:186-200`
+`classes/local/service/course_import_service.php:190-204`
 
 ```php
     public static function compute_renamed_names(string $shortname, string $fullname, int $stamp): array {
@@ -903,7 +930,7 @@ No hay índice único sobre `course.shortname`, así que renombrar el original y
 
 Escribe `visible` y `visibleold` directamente (en vez de `course_change_visibility()`, que siempre iguala `visibleold` a `visible` y perdería un curso oculto por su categoría), rebuild + purge de cachés y evento `course_updated`, imitando la ruta de visibilidad de `update_course()`. No comprueba capacidades: ya lo hizo `require_import_capabilities`. El rollback la reutiliza con los valores guardados en el registro `$target`.
 
-`classes/local/service/course_import_service.php:282-305`
+`classes/local/service/course_import_service.php:290-313`
 
 ```php
     private static function set_course_visibility(int $courseid, int $visible, int $visibleold): void {
@@ -934,29 +961,44 @@ Escribe `visible` y `visibleold` directamente (en vez de `course_change_visibili
 
 ### 4.6 Restore del destino sobre la copia (`TARGET_NEW_COURSE`)
 
-Se restaura el backup del destino sobre la copia con `TARGET_NEW_COURSE`, pasando explícitamente los nombres originales; `restore_course` solo aplica cada ajuste si no está bloqueado y lanza excepción si el precheck reporta errores.
+Se restaura el backup del destino sobre la copia con `TARGET_NEW_COURSE`, pasando explícitamente los nombres originales y los ajustes de una restauración completa con usuarios: `users`, `enrolments => \backup::ENROL_WITHUSERS` (instancias de matriculación con sus matrículas), `role_assignments`, `userscompletion` y `grade_histories`; grupos, miembros y datos de usuario de las actividades siguen al ajuste `users`. `restore_course` ignora los ajustes que el plan no expone (`setting_exists`), escribe los de `OWNED_RESTORE_SETTINGS` a través de `set_owned_setting_value` (4.6.1) y el resto solo si no están bloqueados; si se pidió `users` y el ajuste acaba apagado lanza `error_import_users_required` (el motor lo fuerza a `false` cuando el usuario carece de `moodle/restore:userinfo` sobre la copia), y lanza `error_import_precheck_failed` si el precheck reporta errores.
 
-`classes/local/service/course_import_service.php:320-325`
+`classes/local/service/course_import_service.php:332-342`
 
 ```php
     private static function restore_copy_with_original_names(string $backupid, \stdClass $target, int $copyid, int $userid): void {
         static::restore_course($backupid, $copyid, $userid, \backup::TARGET_NEW_COURSE, [
             'course_fullname' => $target->fullname,
             'course_shortname' => $target->shortname,
+            'users' => true,
+            'enrolments' => \backup::ENROL_WITHUSERS,
+            'role_assignments' => true,
+            'userscompletion' => true,
+            'grade_histories' => true,
         ]);
     }
 ```
 
-`classes/local/service/course_import_service.php:634-653`
+`classes/local/service/course_import_service.php:659-688`
 
 ```php
     protected static function restore_course(string $backupid, int $courseid, int $userid, int $target, array $settings): void {
         $rc = new \restore_controller($backupid, $courseid, \backup::INTERACTIVE_NO, \backup::MODE_SAMESITE, $userid, $target);
+        $plan = $rc->get_plan();
         foreach ($settings as $name => $value) {
-            $setting = $rc->get_plan()->get_setting($name);
-            if ($setting->get_status() === \base_setting::NOT_LOCKED) {
+            if (!$plan->setting_exists($name)) {
+                continue;
+            }
+            $setting = $plan->get_setting($name);
+            if (in_array($name, self::OWNED_RESTORE_SETTINGS, true)) {
+                self::set_owned_setting_value($setting, $value);
+            } else if ($setting->get_status() === \base_setting::NOT_LOCKED) {
                 $setting->set_value($value);
             }
+        }
+        if (!empty($settings['users']) && !$plan->get_setting('users')->get_value()) {
+            $rc->destroy();
+            throw new \moodle_exception('error_import_users_required', 'local_coursegen');
         }
         if (!$rc->execute_precheck()) {
             $results = $rc->get_precheck_results();
@@ -972,13 +1014,46 @@ Se restaura el backup del destino sobre la copia con `TARGET_NEW_COURSE`, pasand
     }
 ```
 
+#### 4.6.1 Ajustes propios del servicio: `OWNED_RESTORE_SETTINGS` y `set_owned_setting_value`
+
+Cuando el usuario carece de `moodle/restore:configure`, el motor bloquea por permiso todos los ajustes del restore en su valor por defecto (`backup/util/checks/restore_check.class.php:154`). `keep_roles_and_enrolments` y `keep_groups_and_groupings` (los ajustes con los que un restore `TARGET_EXISTING_DELETING` conserva personas y grupos, ver 4.7) no tienen capacidad propia y el usuario nunca configura este restore, así que el servicio los decide él mismo: `set_owned_setting_value` levanta un bloqueo por permiso para escribir y lo repone después, igual que hace `core\task\asynchronous_copy_task` con `users` (`lib/classes/task/asynchronous_copy_task.php:83-86`); un bloqueo por configuración del sitio (`LOCKED_BY_CONFIG`) se respeta y el ajuste se deja como está.
+
+`classes/local/service/course_import_service.php:71-72`
+
+```php
+    /** @var string[] Restore settings the service decides whatever the acting user may configure. */
+    private const OWNED_RESTORE_SETTINGS = ['keep_roles_and_enrolments', 'keep_groups_and_groupings'];
+```
+
+`classes/local/service/course_import_service.php:705-717`
+
+```php
+    private static function set_owned_setting_value(\base_setting $setting, $value): void {
+        $status = $setting->get_status();
+        if ($status === \base_setting::LOCKED_BY_CONFIG) {
+            return;
+        }
+        if ($status !== \base_setting::NOT_LOCKED) {
+            $setting->set_status(\base_setting::NOT_LOCKED);
+        }
+        $setting->set_value($value);
+        if ($status !== \base_setting::NOT_LOCKED) {
+            $setting->set_status($status);
+        }
+    }
+```
+
+#### 4.6.2 Nota: remapeo de roles y acceso del restaurador (comportamiento de core)
+
+El motor de restore no copia las asignaciones de rol tal cual: para cada rol del backup busca el mejor rol **asignable por el usuario que restaura** en el contexto de la copia (`restore_dbops::precheck_included_roles`, `backup/util/dbops/restore_dbops.class.php:185`, que llama a `get_best_assignable_role`, `backup/util/dbops/restore_dbops.class.php:362-398`): coincide por shortname, después por arquetipo, después `editingteacher` → `teacher`, y si no hay coincidencia el rol se omite (`0`, con el aviso `cannotfindassignablerole` en el precheck). La lista de roles asignables sale de `get_assignable_roles()` con el `$userid` del restaurador: un administrador del sitio puede asignar cualquier rol (`lib/accesslib.php:3281`), pero un rol al que no se le permita asignar `editingteacher` verá a los demás profesores con permiso de edición convertidos en profesores sin permiso de edición en la copia. La solución es permitir a ese rol la asignación de los roles del curso (pestaña «Permitir asignaciones de roles» en la definición del rol), ver §7 de la estrategia. Además, `restore_fix_restorer_access_step` (`backup/moodle2/restore_stepslib.php:2560-2605`, registrado en `backup/moodle2/restore_root_task.class.php:46`) comprueba que el restaurador pueda acceder a la copia con `moodle/course:update`; si no puede y `$CFG->restorernewroleid` está definido, le asigna ese rol y, en último término, lo matricula manualmente en la copia.
+
 ### 4.7 Backup del staging (`MODE_IMPORT`) y restore sobre la copia (`TARGET_EXISTING_DELETING` o `TARGET_EXISTING_ADDING`)
 
-El contenido generado se lleva a la copia con un backup del staging en `MODE_IMPORT` y un restore cuyo target lo decide el ajuste `importcontentmode` (paso 0.1) a través de `get_import_target`: `add` devuelve `TARGET_EXISTING_ADDING`; cualquier otro valor devuelve `TARGET_EXISTING_DELETING`, que borra el contenido de la copia antes de volcar el del staging. `import_staging_into_copy` bifurca sobre ese target: en `replace` el backup es el `backup_course` normal; en `add` pasa por `backup_staging_appended` (4.7.1) y, tras el restore, por `extend_numsections`.
+El contenido generado se lleva a la copia con un backup del staging en `MODE_IMPORT` y un restore cuyo target lo decide el ajuste `importcontentmode` (paso 0.1) a través de `get_import_target`: `add` devuelve `TARGET_EXISTING_ADDING`; cualquier otro valor devuelve `TARGET_EXISTING_DELETING`, que borra el contenido de la copia antes de volcar el del staging. `import_staging_into_copy` bifurca sobre ese target. Los dos backups del staging van sin usuarios (`$withusers = false`: el staging no tiene). En `replace` el restore recibe `keep_roles_and_enrolments` y `keep_groups_and_groupings`, de modo que el borrado previo de `TARGET_EXISTING_DELETING` conserva las matriculaciones, las asignaciones de rol, los grupos y los agrupamientos de la copia; los datos de usuario ligados a las actividades reemplazadas (calificaciones, intentos, entregas) se pierden con ellas. En `add` no se borra nada y los usuarios conservan sus datos en las actividades originales; el backup pasa por `backup_staging_appended` (4.7.1) y, tras el restore, por `extend_numsections`.
 
 Por qué hace falta algo más en modo `add`: el motor de restore empareja las secciones **por número**. Con `TARGET_EXISTING_ADDING` una sección entrante cuyo número ya existe en la copia conserva el nombre y el resumen de la copia y solo recibe las actividades entrantes, es decir, el contenido generado se **mezclaría** con las secciones existentes. Para **anexar** en vez de mezclar, el staging se renumera antes del backup, con `T = MAX(section)` de la copia. Hay que contar con la forma real de un staging generado: el plan de la IA numera sus secciones **desde cero**, así que la sección 0 del staging no es una cabecera vacía sino la primera sección de contenido (con nombre y módulos). Si la sección 0 tiene módulos, nombre o resumen (`$materialise`), se **materializa** como una sección nueva `T+1` y las demás se desplazan `+T+1` para quedar detrás de ella; si está vacía, las demás se desplazan `+T`. En ambos casos la sección 0 del staging queda en blanco, de modo que su merge con la sección 0 de la copia no cambia nada. La renumeración es **transitoria**: `finally` repone el layout original del staging justo después del backup (y borra la sección materializada), de modo que un fallo posterior nunca deja el staging con huecos en la numeración ni filas de más. Al terminar, `extend_numsections` solo actúa si el formato de la copia expone la opción `numsections` (los formatos de core en 4.5, `format_topics` incluido, ya no la usan; formatos de terceros pueden hacerlo).
 
-`classes/local/service/course_import_service.php:341-351`
+`classes/local/service/course_import_service.php:359-372`
 
 ```php
     private static function import_staging_into_copy(\stdClass $staging, int $copyid, int $userid, array &$tempdirs): void {
@@ -989,12 +1064,15 @@ Por qué hace falta algo más en modo `add`: el motor de restore empareja las se
             self::extend_numsections($copyid);
             return;
         }
-        $backupid = static::backup_course((int)$staging->id, \backup::MODE_IMPORT, $userid, $tempdirs);
-        static::restore_course($backupid, $copyid, $userid, $target, []);
+        $backupid = static::backup_course((int)$staging->id, \backup::MODE_IMPORT, $userid, $tempdirs, false);
+        static::restore_course($backupid, $copyid, $userid, $target, [
+            'keep_roles_and_enrolments' => true,
+            'keep_groups_and_groupings' => true,
+        ]);
     }
 ```
 
-`classes/local/service/course_import_service.php:562-568`
+`classes/local/service/course_import_service.php:583-589`
 
 ```php
     private static function get_import_target(): int {
@@ -1010,7 +1088,7 @@ Por qué hace falta algo más en modo `add`: el motor de restore empareja las se
 
 `backup_staging_appended` captura el layout del staging (`snapshot_section_layout`: número, nombre, resumen y secuencia de cada sección, más la sección de cada módulo), calcula `T`, lee la sección 0 (`id, name, summary, summaryformat, sequence`) y decide `$materialise`: verdadero si la sección 0 tiene módulos, nombre o resumen. Desplaza las secciones `> 0` en `+T+1` cuando materializa (si no, en `+T`), materializa la sección 0 como sección `T+1`, reconstruye la caché y hace el backup en `MODE_IMPORT`; el `finally` repone el layout y vuelve a reconstruir la caché tanto si el backup salió bien como si lanzó.
 
-`classes/local/service/course_import_service.php:373-397`
+`classes/local/service/course_import_service.php:394-418`
 
 ```php
     private static function backup_staging_appended(int $stagingid, int $copyid, int $userid, array &$tempdirs): string {
@@ -1032,7 +1110,7 @@ Por qué hace falta algo más en modo `add`: el motor de restore empareja las se
                 self::materialise_section_zero($stagingid, $zero, $zeromodules, $offset + 1);
             }
             rebuild_course_cache($stagingid, true);
-            return static::backup_course($stagingid, \backup::MODE_IMPORT, $userid, $tempdirs);
+            return static::backup_course($stagingid, \backup::MODE_IMPORT, $userid, $tempdirs, false);
         } finally {
             self::restore_section_layout($stagingid, $snapshot);
             rebuild_course_cache($stagingid, true);
@@ -1042,7 +1120,7 @@ Por qué hace falta algo más en modo `add`: el motor de restore empareja las se
 
 `shift_section_numbers` suma `$offset` a toda sección `> 0`, en orden **descendente** por el índice único `(course, section)`; las secciones delegadas (`mod_subsection`) se desplazan igual, porque solo su número las ordena.
 
-`classes/local/service/course_import_service.php:410-426`
+`classes/local/service/course_import_service.php:431-447`
 
 ```php
     private static function shift_section_numbers(int $courseid, int $offset): void {
@@ -1066,7 +1144,7 @@ Por qué hace falta algo más en modo `add`: el motor de restore empareja las se
 
 `section_zero_modules` devuelve los ids de los módulos cuya `course_modules.section` es la sección 0, en el orden de `sequence` y detrás los que no figuren en ella.
 
-`classes/local/service/course_import_service.php:435-444`
+`classes/local/service/course_import_service.php:456-465`
 
 ```php
     private static function section_zero_modules(int $courseid, \stdClass $zero): array {
@@ -1083,7 +1161,7 @@ Por qué hace falta algo más en modo `add`: el motor de restore empareja las se
 
 `materialise_section_zero` inserta una fila **nueva** de `course_sections` con el número `T+1` (debe estar libre: por eso el desplazamiento previo fue `+T+1`), copiando nombre, resumen y formato de la sección 0 y su secuencia de módulos en orden; reapunta `course_modules.section` de esos módulos a la fila nueva y deja la sección 0 con secuencia, nombre y resumen vacíos (el restore solo rellena nombre o resumen vacíos en la sección destino). La fila es transitoria: `restore_section_layout` la elimina tras el backup.
 
-`classes/local/service/course_import_service.php:461-480`
+`classes/local/service/course_import_service.php:482-501`
 
 ```php
     private static function materialise_section_zero(int $courseid, \stdClass $zero, array $cmids, int $number): void {
@@ -1110,7 +1188,7 @@ Por qué hace falta algo más en modo `add`: el motor de restore empareja las se
 
 `restore_section_layout` borra las secciones que no existían en el snapshot (la materializada para la sección 0, si la hubo), devuelve cada módulo a su sección y repone los números en orden ascendente: cada sección baja a un número que ninguna otra fila puede ocupar todavía, así que el índice único no salta.
 
-`classes/local/service/course_import_service.php:514-527`
+`classes/local/service/course_import_service.php:535-548`
 
 ```php
     private static function restore_section_layout(int $courseid, array $snapshot): void {
@@ -1131,7 +1209,7 @@ Por qué hace falta algo más en modo `add`: el motor de restore empareja las se
 
 `extend_numsections` existe porque el paso `course.xml` del restore se omite al restaurar sobre un curso existente, así que nadie más subiría la opción tras anexar secciones. Es condicional: sale sin hacer nada si el formato no expone `numsections`.
 
-`classes/local/service/course_import_service.php:539-555`
+`classes/local/service/course_import_service.php:560-576`
 
 ```php
     private static function extend_numsections(int $courseid): void {
@@ -1155,9 +1233,9 @@ Por qué hace falta algo más en modo `add`: el motor de restore empareja las se
 
 ### 4.8 Éxito: reapuntar la sesión a la copia ANTES de borrar el staging
 
-Al terminar, la sesión pasa a `STATUS_CREATED` con `courseid = copia` y `state = done` **antes** de borrar el staging: el observer de `course_deleted` elimina toda sesión ligada a un curso borrado, así que si el borrado fuese antes, la sesión desaparecería. El borrado del staging marca `deletesource = 'restore'`, que es lo que `tool_recyclebin_pre_course_delete()` respeta para no dejar copia en la papelera (ver `course_import_service.php:141-147` en el bloque 4.2).
+Al terminar, la sesión pasa a `STATUS_CREATED` con `courseid = copia` y `state = done` **antes** de borrar el staging: el observer de `course_deleted` elimina toda sesión ligada a un curso borrado, así que si el borrado fuese antes, la sesión desaparecería. El borrado del staging marca `deletesource = 'restore'`, que es lo que `tool_recyclebin_pre_course_delete()` respeta para no dejar copia en la papelera (ver `course_import_service.php:145-151` en el bloque 4.2).
 
-`classes/local/service/course_import_service.php:696-706`
+`classes/local/service/course_import_service.php:760-770`
 
 ```php
     private static function delete_course_bypassing_bin(int $courseid): void {
@@ -1175,9 +1253,9 @@ Al terminar, la sesión pasa a `STATUS_CREATED` con `courseid = copia` y `state 
 
 ### 4.9 Rollback
 
-Ante cualquier fallo, `rollback` borra la copia (si llegó a crearse), restaura los nombres y la visibilidad originales del destino (si se renombró; `$target->visible`/`visibleold` son los valores leídos antes de tocar nada, los mismos que guarda la sesión como `originalvisible`/`originalvisibleold`) y limpia los temporales. Si la copia no se pudo borrar, sigue adelante (restaurar los nombres importa más) y deja el `copycourseid` en la sesión. El staging **se conserva** a propósito: la sesión queda en `STATUS_FAILED` apuntando al staging, con `state = failed` y la clase de la excepción en `errorclass` (ver `course_import_service.php:124-137` en el bloque 4.2).
+Ante cualquier fallo, `rollback` borra la copia (si llegó a crearse), restaura los nombres y la visibilidad originales del destino (si se renombró; `$target->visible`/`visibleold` son los valores leídos antes de tocar nada, los mismos que guarda la sesión como `originalvisible`/`originalvisibleold`) y limpia los temporales. Si la copia no se pudo borrar, sigue adelante (restaurar los nombres importa más) y deja el `copycourseid` en la sesión. El staging **se conserva** a propósito: la sesión queda en `STATUS_FAILED` apuntando al staging, con `state = failed` y la clase de la excepción en `errorclass` (ver `course_import_service.php:128-141` en el bloque 4.2).
 
-`classes/local/service/course_import_service.php:666-685`
+`classes/local/service/course_import_service.php:730-749`
 
 ```php
     private static function rollback(\stdClass $target, int $copyid, bool $renamed, array $tempdirs): bool {
@@ -1206,7 +1284,7 @@ Ante cualquier fallo, `rollback` borra la copia (si llegó a crearse), restaura 
 
 Toda la contabilidad de la importación se guarda como objeto `import` dentro del JSON `coursedata` de la sesión; `update_session` hace un merge sobre las claves existentes y, opcionalmente, actualiza `status` y `courseid`.
 
-`classes/local/service/course_import_service.php:739-754`
+`classes/local/service/course_import_service.php:803-818`
 
 ```php
     private static function update_session(course_session $session, ?int $status, ?int $courseid, array $import): void {
@@ -1534,7 +1612,7 @@ Al recargar o reabrir la página, el bootstrap lee `sessionstatus` e `importstat
 | 3. Staging | `classes/local/service/create_course_service.php` | `create_course` (categoría forzada a la del destino) |
 | 4. Encolado | `classes/task/import_generated_course_task.php` | `queue` → `course_import_service::mark_queued` |
 | 4. Ejecución / sin reintentos | `classes/task/import_generated_course_task.php` | `execute`, `retry_until_success` |
-| 4. Importación | `classes/local/service/course_import_service.php` | `import_into_existing`, `require_import_capabilities`, `backup_course`, `rename_original_and_create_copy`, `compute_renamed_names`, `set_course_visibility`, `restore_copy_with_original_names`, `import_staging_into_copy`, `get_import_target`, `restore_course`, `rollback`, `delete_course_bypassing_bin`, `update_session` |
+| 4. Importación | `classes/local/service/course_import_service.php` | `import_into_existing`, `require_import_capabilities`, `backup_course`, `rename_original_and_create_copy`, `compute_renamed_names`, `set_course_visibility`, `restore_copy_with_original_names`, `import_staging_into_copy`, `get_import_target`, `restore_course`, `set_owned_setting_value`, `rollback`, `delete_course_bypassing_bin`, `update_session` |
 | 4.7 Modo `add` (anexar) | `classes/local/service/course_import_service.php` | `backup_staging_appended`, `snapshot_section_layout`, `shift_section_numbers`, `section_zero_modules`, `materialise_section_zero`, `restore_section_layout`, `extend_numsections` |
 | 5. Estado | `classes/local/models/course_session.php` | `STATUS_IMPORTING = 5` |
 | 5. Lectura de estado | `classes/external/get_course_session_state.php` | `execute`, `describe_import`, `execute_returns` |

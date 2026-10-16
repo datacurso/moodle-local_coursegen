@@ -96,25 +96,30 @@ final class course_import_service_test extends \advanced_testcase {
     }
 
     /**
-     * Create a user holding exactly the capabilities the import requires, assigned at the category.
+     * Create a user holding exactly the given capabilities, assigned at the category.
      *
      * @param int $categoryid Category of the target and staging courses.
      * @param string[] $capabilities Capabilities to allow.
+     * @param string[] $assignableroles Shortnames of the roles the user may assign (role_allow_assign).
      * @return \stdClass
      */
-    private function create_importer(int $categoryid, array $capabilities): \stdClass {
+    private function create_importer(int $categoryid, array $capabilities, array $assignableroles = []): \stdClass {
+        global $DB;
         $user = $this->getDataGenerator()->create_user();
         $context = \context_coursecat::instance($categoryid);
         $roleid = create_role('AI importer', 'aiimporter', '');
         foreach ($capabilities as $capability) {
             assign_capability($capability, CAP_ALLOW, $roleid, $context->id, true);
         }
+        foreach ($assignableroles as $shortname) {
+            core_role_set_assign_allowed($roleid, $DB->get_field('role', 'id', ['shortname' => $shortname], MUST_EXIST));
+        }
         role_assign($roleid, $user->id, $context->id);
         return $user;
     }
 
     /**
-     * The capabilities the import requires, as checked by the service and by the backup engine.
+     * The capabilities the import requires, as checked by the service and by the backup/restore engines.
      *
      * @return string[]
      */
@@ -994,13 +999,28 @@ final class course_import_service_test extends \advanced_testcase {
     }
 
     /**
-     * A non-admin user holding exactly the required capabilities can run the whole import.
+     * A non-admin user holding the required capabilities can run the whole import and the people reach the copy intact.
+     *
+     * Such a user lacks moodle/backup:configure and moodle/restore:configure,
+     * so the engine locks every backup and restore setting: the people of the
+     * course must still reach the copy and survive the replace. The restore
+     * engine maps every role of the backup to a role the restorer may assign
+     * and enrols a restorer who cannot update the copy as editing teacher, so
+     * an exact copy of the people also needs moodle/course:view,
+     * moodle/course:update and moodle/role:assign with the course roles allowed.
      */
     public function test_import_succeeds_for_user_with_exact_capabilities(): void {
         global $DB;
         $this->resetAfterTest();
         [$target, $staging, $category] = $this->create_course_pair();
-        $user = $this->create_importer($category->id, $this->required_capabilities());
+        $people = $this->populate_target_with_people($target);
+        $enrolments = $this->enrolment_signature($target->id);
+        $groups = $this->group_signature($target->id);
+        $user = $this->create_importer(
+            $category->id,
+            array_merge($this->required_capabilities(), ['moodle/course:view', 'moodle/course:update', 'moodle/role:assign']),
+            ['student', 'editingteacher']
+        );
         $this->setUser($user);
         $session = $this->create_session($user->id, $staging->id);
 
@@ -1011,6 +1031,9 @@ final class course_import_service_test extends \advanced_testcase {
         $this->assertSame('ORIG-101', $copy->shortname);
         $this->assertSame(['page:AI page', 'url:AI link'], $this->module_signature($copy->id));
         $this->assertFalse($DB->record_exists('course', ['id' => $staging->id]));
+        $this->assertSame($enrolments, $this->enrolment_signature((int)$copy->id));
+        $this->assertSame($groups, $this->group_signature((int)$copy->id));
+        $this->assertNull($this->assign_grade((int)$copy->id, $people['student']->id));
     }
 
     /**

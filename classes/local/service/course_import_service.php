@@ -25,10 +25,11 @@ use local_coursegen\local\models\course_session;
  * Imports an AI-generated (staging) course into an existing course.
  *
  * Strategy (ticket #9539): the original course is renamed with a unique
- * time stamp, a copy of it is created under the original names without any
- * user data, the staging content is imported into the copy (replacing or
- * adding to it, per the importcontentmode setting), and the staging course is
- * deleted. The original stays renamed and hidden as a backup. On any failure
+ * time stamp, a copy of it is created under the original names carrying its
+ * users (enrolments, roles, groups, grades, completion and activity user
+ * data), the staging content is imported into the copy (replacing or adding
+ * to it, per the importcontentmode setting; people, roles and groups survive
+ * a replace), and the staging course is deleted. The original stays renamed and hidden as a backup. On any failure
  * the copy is removed, the original names and visibility are restored and the
  * staging course is kept so the generated content is never lost.
  *
@@ -66,6 +67,9 @@ class course_import_service {
 
     /** @var int Digits of the time stamp suffix. */
     private const STAMP_LENGTH = 10;
+
+    /** @var string[] Restore settings the service decides whatever the acting user may configure. */
+    private const OWNED_RESTORE_SETTINGS = ['keep_roles_and_enrolments', 'keep_groups_and_groupings'];
 
     /**
      * Import the staging course into the target course.
@@ -109,7 +113,7 @@ class course_import_service {
             // Back up the target while it still carries the original names: the
             // restore engine takes the new course names from the backup whenever
             // the name settings are locked for the acting user.
-            $backupid = static::backup_course((int)$target->id, \backup::MODE_SAMESITE, $userid, $tempdirs);
+            $backupid = static::backup_course((int)$target->id, \backup::MODE_SAMESITE, $userid, $tempdirs, true);
 
             [$names, $copyid] = self::rename_original_and_create_copy($target);
             $renamed = true;
@@ -216,6 +220,10 @@ class course_import_service {
         require_capability('moodle/backup:backuptargetimport', \context_course::instance($staging->id), $userid);
         // The original is hidden once the copy takes its place.
         require_capability('moodle/course:visibility', $targetcontext, $userid);
+        // The copy carries the user data of the original; the restore engine
+        // checks the restore side on the copy, which inherits from the category.
+        require_capability('moodle/backup:userinfo', $targetcontext, $userid);
+        require_capability('moodle/restore:userinfo', \context_coursecat::instance($target->category), $userid);
     }
 
     /**
@@ -305,11 +313,15 @@ class course_import_service {
     }
 
     /**
-     * Restore the target backup into the copy, keeping the original names.
+     * Restore the target backup into the copy, keeping the original names and all the user data.
      *
      * The backup predates the rename, so the engine defaults already hold the
      * original names; they are set explicitly only when the acting user is
      * allowed to change them (otherwise restore_check locks the settings).
+     * The user data settings mirror a full restore with users: enrolment
+     * instances with their user enrolments, role assignments, completion and
+     * grade histories; groups, memberships and activity user data follow the
+     * "users" setting.
      *
      * @param string $backupid Backup of the target course.
      * @param \stdClass $target Target course record (original names).
@@ -321,6 +333,11 @@ class course_import_service {
         static::restore_course($backupid, $copyid, $userid, \backup::TARGET_NEW_COURSE, [
             'course_fullname' => $target->fullname,
             'course_shortname' => $target->shortname,
+            'users' => true,
+            'enrolments' => \backup::ENROL_WITHUSERS,
+            'role_assignments' => true,
+            'userscompletion' => true,
+            'grade_histories' => true,
         ]);
     }
 
@@ -330,7 +347,8 @@ class course_import_service {
      * The admin setting local_coursegen/importcontentmode decides the restore
      * target: "add" keeps the copy sections and activities untouched and
      * appends the staging sections after them (see backup_staging_appended());
-     * any other value deletes the copy content first.
+     * any other value deletes the copy content first, keeping its enrolments,
+     * role assignments, groups and groupings.
      *
      * @param \stdClass $staging Staging course record.
      * @param int $copyid Copy course id.
@@ -346,8 +364,11 @@ class course_import_service {
             self::extend_numsections($copyid);
             return;
         }
-        $backupid = static::backup_course((int)$staging->id, \backup::MODE_IMPORT, $userid, $tempdirs);
-        static::restore_course($backupid, $copyid, $userid, $target, []);
+        $backupid = static::backup_course((int)$staging->id, \backup::MODE_IMPORT, $userid, $tempdirs, false);
+        static::restore_course($backupid, $copyid, $userid, $target, [
+            'keep_roles_and_enrolments' => true,
+            'keep_groups_and_groupings' => true,
+        ]);
     }
 
     /**
@@ -389,7 +410,7 @@ class course_import_service {
                 self::materialise_section_zero($stagingid, $zero, $zeromodules, $offset + 1);
             }
             rebuild_course_cache($stagingid, true);
-            return static::backup_course($stagingid, \backup::MODE_IMPORT, $userid, $tempdirs);
+            return static::backup_course($stagingid, \backup::MODE_IMPORT, $userid, $tempdirs, false);
         } finally {
             self::restore_section_layout($stagingid, $snapshot);
             rebuild_course_cache($stagingid, true);
@@ -568,15 +589,17 @@ class course_import_service {
     }
 
     /**
-     * Run an immediate course backup without user data.
+     * Run an immediate course backup, with or without user data.
      *
      * @param int $courseid Course to back up.
      * @param int $mode One of the backup::MODE_* constants.
      * @param int $userid Acting user.
      * @param string[] $tempdirs Collects backup temp directories to remove.
+     * @param bool $withusers Whether to include enrolments, grades and every other user data.
      * @return string Backup id.
+     * @throws \moodle_exception When user data is required but the "users" setting is locked off.
      */
-    protected static function backup_course(int $courseid, int $mode, int $userid, array &$tempdirs): string {
+    protected static function backup_course(int $courseid, int $mode, int $userid, array &$tempdirs, bool $withusers): string {
         $bc = new \backup_controller(
             \backup::TYPE_1COURSE,
             $courseid,
@@ -587,16 +610,16 @@ class course_import_service {
         );
         $basepath = $bc->get_plan()->get_basepath();
         $tempdirs[] = $basepath;
-        // Never carry enrolments, grades or any other user data. The setting is
-        // locked by permission when the user lacks moodle/backup:userinfo, and
-        // in that case the engine already forced it off.
+        // The engine locks the setting (forced off) when the user lacks
+        // moodle/backup:userinfo, and locks every setting at its default when
+        // the user lacks moodle/backup:configure; import mode always forces it off.
         $users = $bc->get_plan()->get_setting('users');
         if ($users->get_status() === \base_setting::NOT_LOCKED) {
-            $users->set_value(false);
+            $users->set_value($withusers);
         }
-        if ($users->get_value()) {
+        if ($withusers && !$users->get_value()) {
             $bc->destroy();
-            throw new \moodle_exception('error_import_users_setting_locked', 'local_coursegen');
+            throw new \moodle_exception('error_import_users_required', 'local_coursegen');
         }
         $backupid = $bc->get_backupid();
         self::execute_silently(function () use ($bc) {
@@ -627,17 +650,29 @@ class course_import_service {
      * @param int $courseid Destination course id.
      * @param int $userid Acting user.
      * @param int $target One of the backup::TARGET_* constants.
-     * @param array $settings Restore settings to override (name => value).
+     * @param array $settings Restore settings to override (name => value); unknown names are ignored,
+     *                        locked settings keep their value except OWNED_RESTORE_SETTINGS.
      * @return void
-     * @throws \moodle_exception When the restore prechecks report errors.
+     * @throws \moodle_exception When the restore prechecks report errors, or when user data was
+     *                           requested but the "users" setting is locked off.
      */
     protected static function restore_course(string $backupid, int $courseid, int $userid, int $target, array $settings): void {
         $rc = new \restore_controller($backupid, $courseid, \backup::INTERACTIVE_NO, \backup::MODE_SAMESITE, $userid, $target);
+        $plan = $rc->get_plan();
         foreach ($settings as $name => $value) {
-            $setting = $rc->get_plan()->get_setting($name);
-            if ($setting->get_status() === \base_setting::NOT_LOCKED) {
+            if (!$plan->setting_exists($name)) {
+                continue;
+            }
+            $setting = $plan->get_setting($name);
+            if (in_array($name, self::OWNED_RESTORE_SETTINGS, true)) {
+                self::set_owned_setting_value($setting, $value);
+            } else if ($setting->get_status() === \base_setting::NOT_LOCKED) {
                 $setting->set_value($value);
             }
+        }
+        if (!empty($settings['users']) && !$plan->get_setting('users')->get_value()) {
+            $rc->destroy();
+            throw new \moodle_exception('error_import_users_required', 'local_coursegen');
         }
         if (!$rc->execute_precheck()) {
             $results = $rc->get_precheck_results();
@@ -650,6 +685,35 @@ class course_import_service {
             $rc->execute_plan();
         });
         $rc->destroy();
+    }
+
+    /**
+     * Set a restore setting the service owns, lifting a permission lock for the write.
+     *
+     * The engine locks every setting by permission when the acting user lacks
+     * moodle/restore:configure. The keep_roles_and_enrolments and
+     * keep_groups_and_groupings settings of a deleting restore have no
+     * capability of their own and the user never configures this restore, so
+     * the lock is lifted for the write and put back, the way core's course
+     * copy task does with the "users" setting. A lock set by site
+     * configuration is respected.
+     *
+     * @param \base_setting $setting Setting to write.
+     * @param mixed $value Value to set.
+     * @return void
+     */
+    private static function set_owned_setting_value(\base_setting $setting, $value): void {
+        $status = $setting->get_status();
+        if ($status === \base_setting::LOCKED_BY_CONFIG) {
+            return;
+        }
+        if ($status !== \base_setting::NOT_LOCKED) {
+            $setting->set_status(\base_setting::NOT_LOCKED);
+        }
+        $setting->set_value($value);
+        if ($status !== \base_setting::NOT_LOCKED) {
+            $setting->set_status($status);
+        }
     }
 
     /**

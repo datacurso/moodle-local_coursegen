@@ -27,7 +27,7 @@
 **Consecuencia que queda asumida** (ver §5 del análisis de respaldo): la copia tiene un `id` nuevo.
 Por **nombre** pasa a ser «el curso»; por **identificador**, enlaces guardados, informes e
 integraciones siguen apuntando al original renombrado. El original conserva `id`, matriculaciones y
-calificaciones.
+calificaciones; la copia recibe su propia copia de todo ello (fila «Matriculaciones y datos de usuario»).
 
 ---
 
@@ -37,8 +37,9 @@ calificaciones.
 1. Generar el curso con IA              → curso staging  (síncrono, flujo actual)
    ── a partir de aquí, tarea adhoc ──
 2. Renombrar y OCULTAR el original      → «<shortname>.<marca>» / «<fullname> (<marca>)», visible = 0
-3. Copiar el original, sin usuarios     → copia con el nombre corto y largo originales
-4. Importar staging sobre la copia      → reemplazando, o añadiendo al final (staging renumerado), según `importcontentmode`
+3. Copiar el original, con usuarios     → copia con los nombres originales y todos los datos de usuario
+4. Importar staging sobre la copia      → reemplazando, o añadiendo al final (staging renumerado), según `importcontentmode`;
+                                          personas, roles, grupos y agrupamientos se conservan en los dos modos
 5. Borrar el staging
 ```
 
@@ -70,12 +71,12 @@ además omite la duplicación de ficheros igual que `MODE_COPY`) y con manejo de
 
 ## 4. Secuencia técnica
 
-**Paso 1 — copia, sin usuarios:**
+**Paso 1 — copia, con usuarios:**
 
 ```php
 $bc = new backup_controller(backup::TYPE_1COURSE, $destinoid, backup::FORMAT_MOODLE,
     backup::INTERACTIVE_NO, backup::MODE_SAMESITE, $USER->id);
-$bc->get_plan()->get_setting('users')->set_value(0);
+$bc->get_plan()->get_setting('users')->set_value(1);   // exige moodle/backup:userinfo sobre el destino
 $backupid = $bc->get_backupid();
 $bc->execute_plan();
 $bc->destroy();
@@ -86,13 +87,16 @@ $copiaid = restore_dbops::create_new_course($fullname, $shortname, $original->ca
 
 $rc = new restore_controller($backupid, $copiaid, backup::INTERACTIVE_NO,
     backup::MODE_SAMESITE, $USER->id, backup::TARGET_NEW_COURSE);
+$rc->get_plan()->get_setting('users')->set_value(1);   // exige moodle/restore:userinfo sobre la copia
+$rc->get_plan()->get_setting('enrolments')->set_value(backup::ENROL_WITHUSERS);
+$rc->get_plan()->get_setting('role_assignments')->set_value(1);
 $rc->execute_precheck();
 $rc->execute_plan();
 $rc->destroy();
 ```
 
 **Paso 3 — importar reemplazando** (misma forma que `admin/cli/import.php:92-103`, cambiando el
-destino a `DELETING`):
+destino a `DELETING` y conservando personas y grupos):
 
 ```php
 $bc = new backup_controller(backup::TYPE_1COURSE, $stagingid, backup::FORMAT_MOODLE,
@@ -103,13 +107,18 @@ $bc->destroy();
 
 $rc = new restore_controller($backupid, $copiaid, backup::INTERACTIVE_NO,
     backup::MODE_SAMESITE, $USER->id, backup::TARGET_EXISTING_DELETING);
+$rc->get_plan()->get_setting('keep_roles_and_enrolments')->set_value(1);
+$rc->get_plan()->get_setting('keep_groups_and_groupings')->set_value(1);
 $rc->execute_precheck();
 $rc->execute_plan();   // llama a remove_course_contents() y luego puebla
 $rc->destroy();
 ```
 
 Con `TARGET_EXISTING_DELETING`, el motor ejecuta `restore_dbops::delete_course_content()` antes de
-poblar (`restore_controller.class.php:393-400`); no hace falta vaciar la copia a mano. Todo dentro de
+poblar (`restore_controller.class.php:393-400`); no hace falta vaciar la copia a mano. Con
+`keep_roles_and_enrolments` y `keep_groups_and_groupings` (`restore_controller.class.php:396-397`),
+`remove_course_contents()` deja en la copia las instancias de matriculación, las matrículas, los roles
+asignados, los grupos y los agrupamientos (`lib/moodlelib.php:4932` y `4945`). Todo dentro de
 un `try/catch` propio que, ante cualquier excepción, haga `delete_course($copiaid, false)`.
 
 ---
@@ -121,12 +130,16 @@ reduce mucho. `remove_course_contents()` (`lib/moodlelib.php:4765-5040`) borra d
 
 - todas las secciones, **incluida la 0** (`course_sections` completo);
 - todas las actividades, bloques y filtros;
-- las instancias de matriculación (`enrol_course_delete`) y los roles asignados;
-- grupos y agrupamientos, calificaciones y escalas, etiquetas, eventos, notas y comentarios.
+- las instancias de matriculación (`enrol_course_delete`) y los roles asignados, **salvo** con
+  `keep_roles_and_enrolments` (`lib/moodlelib.php:4932`), que es lo que fija el servicio;
+- grupos y agrupamientos (**salvo** con `keep_groups_and_groupings`, `lib/moodlelib.php:4945`, que el
+  servicio también fija), calificaciones y escalas, etiquetas, eventos, notas y comentarios.
 
 Y como en este sitio `restore_replace_overwrite_conf = 0`, la importación **no** sobrescribe la fila
 del curso. Resultado: de la copia sobreviven **la fila del curso** (nombre, formato, visibilidad,
-fechas, resumen, categoría…) **y sus opciones de formato**. Todo lo demás viene del staging.
+fechas, resumen, categoría…), **sus opciones de formato** y, con las dos opciones `keep_*` que fija el
+servicio, **las personas, los roles, los grupos y los agrupamientos**. Las calificaciones, los intentos
+y las entregas se van con las actividades reemplazadas; todo lo demás viene del staging.
 
 Es decir: dos ciclos de backup/restore y un borrado total para **clonar la configuración** de un
 curso. El mismo resultado se obtiene con una ruta más corta:
@@ -140,9 +153,12 @@ Sin staging, sin segunda importación, sin `remove_course_contents()`, sin direc
 sin el problema del tope de 180 s. **El original tampoco se toca** en esta ruta, así que la garantía
 de seguridad que motivó el ticket se cumple igual.
 
-Lo que la ruta larga aporta y la corta no: **nada que sobreviva al reemplazo**. Si en el futuro se
-quisiera conservar contenido del original (fusionar en vez de reemplazar), la ruta larga sería la
-correcta; con «reemplazar todo», no.
+Lo que la ruta larga aportaba y la corta no, cuando la copia iba sin usuarios: **nada que sobreviviera
+al reemplazo**. Con la decisión posterior de copiar siempre los usuarios (§1), la ruta larga sí aporta
+algo que la corta tendría que reconstruir a mano: las matriculaciones, los roles y los grupos del
+original en la copia y, en modo *añadir*, también las calificaciones y el resto de datos de usuario de
+las actividades originales. Si se quisiera conservar contenido del original (fusionar en vez de
+reemplazar), la ruta larga sería la correcta; con «reemplazar todo» y sin usuarios, no lo era.
 
 **Decisión:** el ticket de implementación fija la ruta larga (copia + tarea adhoc). La ruta corta
 queda registrada aquí como alternativa de menor coste por si el alcance cambia.
@@ -177,7 +193,9 @@ Los dos pasos —renombrar y crear la copia— van en **una transacción**: no h
 ## 7. Permisos — resuelto
 
 El rol **«Profesor Creador de curso IA»** (`editingteachercoursegenai`) cubre las ocho capacidades
-que exige la operación. Verificado sobre el rol real:
+que exigía la operación con la copia sin usuarios (verificado sobre el rol real). Con la decisión de
+copiar siempre los usuarios (§1) hacen falta **dos más**, que Moodle concede por defecto solo al
+arquetipo Gestor (`lib/db/access.php:233-242` y `359-368`) y que **hay que añadir al rol**:
 
 | Capacidad | Para qué |
 |---|---|
@@ -189,9 +207,26 @@ que exige la operación. Verificado sobre el rol real:
 | `moodle/course:changeshortname` | fijar el nombre corto de la copia |
 | `moodle/course:changefullname` | fijar el nombre largo de la copia |
 | `moodle/course:update` | ajustes del curso |
+| `moodle/backup:userinfo` | **nueva**: incluir los datos de usuario en la copia de seguridad del destino; se comprueba sobre el contexto del curso de destino |
+| `moodle/restore:userinfo` | **nueva**: restaurar esos datos en la copia; el motor la comprueba sobre el contexto de la copia (`backup/util/checks/restore_check.class.php:121`), que hereda de la categoría del destino, así que basta asignar el rol en Sistema o en esa categoría |
 
-Si la función se ofreciera a otro rol, comprobar las ocho. La ruta corta de la §5 necesita solo
-`moodle/course:create` y las del flujo actual.
+Si la función se ofreciera a otro rol, comprobar las diez. La ruta corta de la §5 necesita solo
+`moodle/course:create` y las del flujo actual. Sin las dos nuevas, el web service rechaza la importación
+antes de generar el staging (`required_capability_exception` en `require_import_target`) y la tarea vuelve
+a exigirlas antes de escribir nada. `error_import_users_required` queda para el caso en que, aun con las
+capacidades, el ajuste `users` del backup o del restore acabe apagado (por ejemplo, bloqueado por la
+configuración del sitio): la importación entra en rollback y la sesión queda en error con el staging accesible.
+
+**Asignación de roles.** Para que la copia reproduzca exactamente las personas del original, el rol que
+ejecuta la importación debe tener **permitida la asignación de los roles del curso** (pestaña «Permitir
+asignaciones de roles» en la definición del rol). El motor de restore remapea cada rol del backup al
+mejor rol **asignable por el usuario que restaura** (`restore_dbops::get_best_assignable_role`,
+`backup/util/dbops/restore_dbops.class.php:362-398`: shortname, luego arquetipo, luego
+`editingteacher` → `teacher`, y si nada coincide el rol se omite). El arquetipo de profesor con permiso
+de edición solo puede asignar `teacher` y `student` por defecto (`lib/accesslib.php:2206`), así que un
+rol derivado de él, sin ese permiso adicional, verá a los demás profesores con permiso de edición
+convertidos en profesores sin permiso de edición en la copia. Un administrador del sitio no se ve
+afectado (`lib/accesslib.php:3281`). Detalle en `FLUJO_IMPORT_COURSE.md`, §4.6.2.
 
 ---
 
@@ -213,7 +248,8 @@ original no se ha tocado. Hay que registrar `copiaid` en la sesión del plugin d
 se crea, para poder borrarla aunque falle el propio proceso.
 
 **Permisos sobre el destino.** El listado de cursos destino se filtra **curso a curso** por
-`moodle/backup:backupcourse` (hay que poder copiarlo), no por categoría.
+`moodle/backup:backupcourse` y `moodle/restore:restorecourse` (hay que poder copiarlo y restaurarlo;
+`search_target_courses.php:106`), no por categoría.
 
 **Tiempo de ejecución.** Dos backups, dos restauraciones y la generación superan el tope de 180 s del
 cliente (`course-create.js:153`). La ruta larga **exige** una `adhoc_task` con sondeo de estado; la
