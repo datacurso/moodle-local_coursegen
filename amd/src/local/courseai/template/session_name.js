@@ -26,6 +26,10 @@
 
 import {nameTemplateSession} from 'local_coursegen/local/courseai/template/repository';
 import Notification from 'core/notification';
+import {getString} from 'core/str';
+
+/** How many entries the sidebar lists. */
+const SIDEBAR_LIMIT = 5;
 
 /**
  * Put the name on the entries of a session, in the sidebar and in the full list.
@@ -65,4 +69,51 @@ export const applySessionName = (sessionId, data) => {
     paintName(sessionId, fullname, shortname);
     // The list is only a convenience: failing to save the name must not stop the generation.
     nameTemplateSession(sessionId, fullname, shortname).catch(Notification.exception);
+};
+
+/**
+ * Put a generation that has just started at the top of the sidebar, as an untitled course, and
+ * give the page's address its session, so the page is the conversation of that session.
+ *
+ * @param {number} sessionId
+ */
+export const announceSession = async(sessionId) => {
+    const list = document.getElementById('courseaiCoursesList');
+    if (list && !list.querySelector(`[data-sessionid="${sessionId}"]`)) {
+        const [untitled, generating] = await Promise.all([
+            getString('courseai_untitled', 'local_coursegen'),
+            getString('status_generating', 'local_coursegen'),
+        ]);
+        const empty = list.querySelector('.courseai-sidebar-courses-empty');
+        if (empty) {
+            empty.remove();
+        }
+        const first = list.querySelector('.courseai-sidebar-course-item');
+        const item = first ? first.cloneNode(true) : document.createElement('div');
+        if (!first) {
+            item.className = 'courseai-sidebar-course-item';
+            item.innerHTML = '<div class="courseai-sidebar-course-info">'
+                + '<span class="courseai-sidebar-course-title"></span>'
+                + '<span class="courseai-sidebar-course-shortname" hidden></span>'
+                + '<span class="courseai-sidebar-course-status"></span></div>';
+        }
+        item.dataset.sessionid = String(sessionId);
+        item.querySelector('.courseai-sidebar-course-title').textContent = untitled;
+        const shortname = item.querySelector('.courseai-sidebar-course-shortname');
+        shortname.textContent = '';
+        shortname.hidden = true;
+        item.querySelector('.courseai-sidebar-course-status').textContent = generating;
+        item.addEventListener('click', () => {
+            window.location.href = `aicoursecreation.php?sessionid=${sessionId}`;
+        });
+        list.prepend(item);
+        const items = list.querySelectorAll('.courseai-sidebar-course-item');
+        for (let i = SIDEBAR_LIMIT; i < items.length; i++) {
+            items[i].remove();
+        }
+    }
+    const url = new URL(window.location.href);
+    url.searchParams.set('mode', 'template');
+    url.searchParams.set('sessionid', String(sessionId));
+    window.history.replaceState(null, '', url.toString());
 };

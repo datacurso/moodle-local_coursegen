@@ -21,6 +21,7 @@
  * @license    http://www.gnu.org/copyleft/gpl.html GNU GPL v3 or later
  */
 
+import {announceSession} from 'local_coursegen/local/courseai/template/session_name';
 import Notification from 'core/notification';
 import {startTemplateGeneration} from './repository';
 import {GenerationStopped, runGenerationStream} from './generation_stream';
@@ -60,6 +61,7 @@ export const runGeneration = async(tplState, tplSelect, genBtn, state, host) => 
             parseInt(tplState.syllabusdraftitemid || 0, 10) || 0
         );
         usePreviewSession(started.sessionid);
+        announceSession(started.sessionid);
         await runGenerationStream(
             started.streamurl,
             () => reviewAndCreate(host, state, tplState, started.sessionid),
