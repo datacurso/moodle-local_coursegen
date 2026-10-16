@@ -781,6 +781,7 @@ $string['settings_error'] = 'Se produjo un error al guardar la configuración.';
 $string['settings_saved'] = 'Configuración guardada.';
 $string['status_creating'] = 'Creando';
 $string['status_failed'] = 'Fallido';
+$string['status_generating'] = 'Generando';
 $string['status_pending'] = 'Planificando';
 $string['subsections_decision_available'] = 'Tu petición solicita subsecciones, pero la opción de subsecciones está desactivada para este curso. ¿Cómo quieres continuar?';
 $string['subsections_decision_unavailable'] = 'Tu petición solicita subsecciones, pero las subsecciones no están disponibles en este sitio. ¿Cómo quieres continuar?';

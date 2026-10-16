@@ -55,6 +55,7 @@ import {refreshPreviewLinks} from 'local_coursegen/local/courseai/template/previ
 import {retryTemplateGeneration, sendTemplateReviewFeedback} from 'local_coursegen/local/courseai/template/repository';
 import {askToRetry} from 'local_coursegen/local/courseai/template/generation_retry';
 import {resetStatus} from 'local_coursegen/local/courseai/template/generation_status';
+import {applySessionName} from 'local_coursegen/local/courseai/template/session_name';
 import {hideWorkingIndicator, showWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
 import {ALL_STATUS_CLASSES, STATUS_CLASS, applyEvent} from 'local_coursegen/local/courseai/template/generation_events';
 import {watchOnce} from 'local_coursegen/local/courseai/template/generation_watch';
@@ -229,7 +230,12 @@ export const runGenerationStream = async(streamUrl, buildCourse, sessionId, cont
             pass = await watchOnce(
                 streamUrl,
                 progress,
-                (eventData, eventProgress) => applyEvent(eventData, eventProgress, paintStageOfRun),
+                (eventData, eventProgress) => {
+                    if (eventData.type === 'course_configuration') {
+                        applySessionName(sessionId, eventData);
+                    }
+                    return applyEvent(eventData, eventProgress, paintStageOfRun);
+                },
                 () => undefined
             );
         } catch (error) {

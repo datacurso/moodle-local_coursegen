@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101217
+
+### Changed
+- **The list of recent courses shows the name the AI gives the course as soon as it returns it**  
+  A generation made from a template appeared in the list as "Untitled course" with the label "Planning" until it was finished. The name is the first thing the AI returns, so now the full name and the short name replace the placeholder at that moment, in the list on the page and in the one that is loaded later, and the label says "Generating" instead of "Planning".
+
 ## [2.0.10] - 2026101216
 
 ### Added

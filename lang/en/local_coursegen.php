@@ -817,6 +817,7 @@ $string['settings_error'] = 'An error occurred while saving settings.';
 $string['settings_saved'] = 'Settings saved.';
 $string['status_creating'] = 'Creating';
 $string['status_failed'] = 'Failed';
+$string['status_generating'] = 'Generating';
 
 // Review modal strings.
 $string['status_pending'] = 'Planning';
