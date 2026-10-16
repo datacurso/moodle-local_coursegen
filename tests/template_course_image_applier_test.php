@@ -46,40 +46,17 @@ final class template_course_image_applier_test extends \advanced_testcase {
     }
 
     /**
-     * A whole picture is kept even when the byte count the result states is not the one that arrived.
+     * What arrives is kept as it arrived: the size the result states is not checked.
      */
-    public function test_a_whole_image_is_accepted_when_its_size_differs(): void {
+    public function test_the_downloaded_file_is_kept_whatever_its_size(): void {
         $this->resetAfterTest();
-        $png = base64_decode('iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAYAAAAfFcSJAAAADUlEQVR42mP8z8BQDwAEhQGAhKmMIQAAAABJRU5ErkJggg==');
-        $entry = ['thread_id' => 'thread', 'file_id' => 'file.png', 'filename' => 'cover.png', 'size' => strlen($png) + 7];
-        $cache = new generated_file_cache(static function ($thread, $id, $name, $record) use ($png) {
-            return get_file_storage()->create_file_from_string($record, $png);
+        $entry = ['thread_id' => 'thread', 'file_id' => 'file.png', 'filename' => 'cover.png', 'size' => 1000];
+        $cache = new generated_file_cache(static function ($thread, $id, $name, $record) {
+            return get_file_storage()->create_file_from_string($record, 'content');
         });
 
         $stored = $cache->get($entry);
 
-        $this->assertSame(strlen($png), (int) $stored->get_filesize());
-        $this->assertDebuggingCalled();
-    }
-
-    /**
-     * Something that is not a whole image is not kept: it is downloaded again and then refused.
-     */
-    public function test_a_file_that_is_not_a_whole_image_is_refused(): void {
-        $this->resetAfterTest();
-        $entry = ['thread_id' => 'thread', 'file_id' => 'file.png', 'filename' => 'cover.png', 'size' => 1000];
-        $calls = 0;
-        $cache = new generated_file_cache(static function ($thread, $id, $name, $record) use (&$calls) {
-            $calls++;
-            return get_file_storage()->create_file_from_string($record, 'not an image');
-        });
-
-        try {
-            $cache->get($entry);
-            $this->fail('A file that is not an image must be refused.');
-        } catch (\moodle_exception $exception) {
-            $this->assertSame('template_reference_download_failed', $exception->errorcode);
-        }
-        $this->assertSame(3, $calls);
+        $this->assertSame(7, (int) $stored->get_filesize());
     }
 }

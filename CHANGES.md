@@ -6,7 +6,7 @@ All notable changes to this project will be documented in this file. Each change
 
 ### Fixed
 - **A picture of the course that cannot be read back no longer stops the course, and an error while the course is created can be tried again**  
-  When a picture the AI made could not be downloaded as the course was being created, the whole creation failed with a technical error and no way to go on. The picture is now skipped, as it only decorates the course, and a file whose size is not the one the result states is accepted when it is a whole image, and otherwise downloaded again up to three times before it is skipped, and any other error of that step shows the same card as the rest of the generation, which keeps what was made and offers to try again.
+  When a picture the AI made could not be downloaded as the course was being created, the whole creation failed with a technical error and no way to go on. The picture is now skipped, as it only decorates the course, and the size the result states is no longer checked against the file that arrives, as free creation never did, and any other error of that step shows the same card as the rest of the generation, which keeps what was made and offers to try again.
 
 ## [2.0.10] - 2026101220
 
