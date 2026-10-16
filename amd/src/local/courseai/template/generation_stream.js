@@ -52,11 +52,16 @@ import {
     turn,
 } from 'local_coursegen/local/courseai/template/thread';
 import {refreshPreviewLinks} from 'local_coursegen/local/courseai/template/preview';
-import {sendTemplateReviewFeedback} from 'local_coursegen/local/courseai/template/repository';
+import {retryTemplateGeneration, sendTemplateReviewFeedback} from 'local_coursegen/local/courseai/template/repository';
+import {askToRetry} from 'local_coursegen/local/courseai/template/generation_retry';
+import {resetStatus} from 'local_coursegen/local/courseai/template/generation_status';
 import {hideWorkingIndicator, showWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
 import {ALL_STATUS_CLASSES, STATUS_CLASS, applyEvent} from 'local_coursegen/local/courseai/template/generation_events';
 import {watchOnce} from 'local_coursegen/local/courseai/template/generation_watch';
 import {hideHeader, markHeaderDone, showGeneratingHeader} from 'local_coursegen/local/courseai/template/generation_header';
+
+/** The person closed the generation after an error: nothing else is to be reported about it. */
+export class GenerationStopped extends Error {}
 
 /** Phase keys the service reports, plus the two this module owns. */
 // Body classes the styles of the left column read: waiting for the professor, and the run is over.
@@ -219,13 +224,36 @@ export const runGenerationStream = async(streamUrl, buildCourse, sessionId, cont
         await paintStage(key);
     };
     for (;;) {
-        // eslint-disable-next-line no-await-in-loop
-        const {outcome, data} = await watchOnce(
-            streamUrl,
-            progress,
-            (eventData, eventProgress) => applyEvent(eventData, eventProgress, paintStageOfRun),
-            closeView
-        );
+        let pass = null;
+        try {
+            pass = await watchOnce(
+                streamUrl,
+                progress,
+                (eventData, eventProgress) => applyEvent(eventData, eventProgress, paintStageOfRun),
+                () => undefined
+            );
+        } catch (error) {
+            // Whatever went wrong, the person can try again: what the run already made is kept.
+            hideWorkingIndicator();
+            if (!await askToRetry(error.code)) {
+                closeView(error.message);
+                throw new GenerationStopped(error.message);
+            }
+            await paintStage('connecting');
+            resetStatus();
+            try {
+                    await retryTemplateGeneration(sessionId);
+            } catch (retryError) {
+                // The retry itself failed: the same offer is made again.
+                    const again = await askToRetry('connection');
+                if (!again) {
+                    closeView(retryError.message);
+                    throw new GenerationStopped(retryError.message);
+                }
+            }
+            continue;
+        }
+        const {outcome, data} = pass;
 
         if (outcome === 'completed') {
             // The result payload stays server-side: the browser only reports

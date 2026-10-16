@@ -27,6 +27,7 @@ use local_coursegen\external\get_course_settings;
 use local_coursegen\external\get_template_course_settings;
 use local_coursegen\external\get_template_structure;
 use local_coursegen\external\manage_image_generation;
+use local_coursegen\external\retry_template_generation;
 use local_coursegen\external\start_course_planning;
 use local_coursegen\external\start_template_generation;
 use local_coursegen\external\template_review_feedback;
@@ -123,6 +124,7 @@ final class course_creation_capabilities_test extends \advanced_testcase {
             'structure' => [get_template_structure::class, [1], $template, []],
             'templatestart' => [start_template_generation::class, [1], $template, []],
             'templatefeedback' => [template_review_feedback::class, [1, 'accept'], $template, []],
+            'templateretry' => [retry_template_generation::class, [1], $template, []],
             'templatesettings' => [get_template_course_settings::class, [1], $template, []],
             'templatefinish' => [finish_template_generation::class, [1], $template, []],
             'filepicker' => [courseai_filepicker_init::class, [], $syllabus, $createcourse],

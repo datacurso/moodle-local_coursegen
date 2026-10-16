@@ -136,6 +136,19 @@ class template_ai_api_service {
     }
 
     /**
+     * Let a generation that failed go on, keeping what it already made.
+     *
+     * The service clears the failure so the run goes on from the generation of the activities, which makes only
+     * what is missing. Opening the stream again is what runs it.
+     *
+     * @param string $threadid
+     * @return array Decoded response.
+     */
+    public function retry(string $threadid): array {
+        return (array) $this->client->request('POST', '/course-template/retry/' . $threadid, []);
+    }
+
+    /**
      * The SSE URL whose consumption drives one session's generation.
      *
      * Handed to the browser, which opens it directly: the progress events the

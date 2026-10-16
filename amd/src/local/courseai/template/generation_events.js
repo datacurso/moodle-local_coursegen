@@ -33,6 +33,7 @@ import {
     showRepeatProgress,
 } from 'local_coursegen/local/courseai/template/generation_checklist';
 import {createRepeatTracker} from 'local_coursegen/local/courseai/template/repeat_progress';
+import {resetStatus, showNotice, showPicture} from 'local_coursegen/local/courseai/template/generation_status';
 
 const repeats = createRepeatTracker();
 
@@ -107,11 +108,21 @@ const reportRepeats = (uid) => {
 /** One handler per stream event type, keyed the way the server names them. */
 const EVENT_HANDLERS = {
     template_stage: (data, progress, paintStage) => {
+        resetStatus();
         paintStage(data.stage);
+        return '';
+    },
+    template_notice: (data) => {
+        showNotice(data);
+        return '';
+    },
+    template_image: (data) => {
+        showPicture(data);
         return '';
     },
     review_needed: () => 'review',
     activity_progress_init: (data, progress, paintStage) => {
+        resetStatus();
         repeats.reset();
         resetProgress(progress, data);
         openChecklist(progress);

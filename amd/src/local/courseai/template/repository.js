@@ -96,3 +96,14 @@ export const finishTemplateGeneration = (sessionId, overrides) => fetchMany([{
         category: overrides.category || 0,
     },
 }])[0];
+
+/**
+ * Let a generation that failed go on, keeping what it already made: the stream is opened again afterwards.
+ *
+ * @param {number} sessionId
+ * @returns {Promise<Object>} {reset}
+ */
+export const retryTemplateGeneration = (sessionId) => fetchMany([{
+    methodname: 'local_coursegen_retry_template_generation',
+    args: {sessionid: sessionId},
+}])[0];
