@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101219
+
+### Fixed
+- **The progress of the pictures and the notices about the wait are shown where they can be seen**  
+  They were written under the title of the right panel, which is out of sight as soon as the list of activities is scrolled, so while the pictures were made nothing seemed to happen. They now also go to the status bar of the conversation, which is always in view: the counter of pictures, the one being made and the reference it is made from, and the notices about a wait or a retry.
+
 ## [2.0.10] - 2026101218
 
 ### Changed

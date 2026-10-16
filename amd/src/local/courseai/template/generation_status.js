@@ -99,13 +99,13 @@ export const resetStatus = () => {
  * Say what the service reports about the wait.
  *
  * @param {Object} data {code, seconds?, attempt?, of?}
- * @returns {Promise<void>}
+ * @returns {Promise<string>} The sentence shown, empty when there was nothing to show.
  */
 export const showNotice = async(data) => {
     const elements = ensureElements();
     const key = NOTICE_STRINGS[data.code];
     if (!elements || !key) {
-        return;
+        return '';
     }
     clearTimeout(noticeTimer);
     const text = await getString(key, 'local_coursegen', {
@@ -121,6 +121,7 @@ export const showNotice = async(data) => {
             elements.notice.hidden = true;
         }, NOTICE_SECONDS * 1000);
     }
+    return text;
 };
 
 /**
@@ -145,22 +146,25 @@ const pictureLine = (data) => {
  * Show one picture event: the counter, and the line of the picture, newest first.
  *
  * @param {Object} data {state, activity, reference, done, total}
- * @returns {Promise<void>}
+ * @returns {Promise<string>} The counter and the line of the picture as one sentence, empty when nothing was shown.
  */
 export const showPicture = async(data) => {
     const elements = ensureElements();
     if (!elements) {
-        return;
+        return '';
     }
-    elements.counter.textContent = await getString('courseai_template_image_counter', 'local_coursegen', {
+    const counter = await getString('courseai_template_image_counter', 'local_coursegen', {
         done: data.done,
         total: data.total,
     });
+    elements.counter.textContent = counter;
     elements.counter.hidden = false;
+    const line = await pictureLine(data);
     const item = document.createElement('li');
-    item.textContent = await pictureLine(data);
+    item.textContent = line;
     elements.pictures.prepend(item);
     while (elements.pictures.children.length > VISIBLE_LINES) {
         elements.pictures.lastElementChild.remove();
     }
+    return `${counter} · ${line}`;
 };

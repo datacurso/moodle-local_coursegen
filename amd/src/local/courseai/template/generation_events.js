@@ -32,6 +32,7 @@ import {
     openChecklist,
     showRepeatProgress,
 } from 'local_coursegen/local/courseai/template/generation_checklist';
+import {showWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
 import {createRepeatTracker} from 'local_coursegen/local/courseai/template/repeat_progress';
 import {resetStatus, showNotice, showPicture} from 'local_coursegen/local/courseai/template/generation_status';
 
@@ -112,12 +113,14 @@ const EVENT_HANDLERS = {
         paintStage(data.stage);
         return '';
     },
+    // The line under the header's title is often scrolled out of sight on the right panel: what the person
+    // must not miss goes to the status bar of the thread too, which is always in view.
     template_notice: (data) => {
-        showNotice(data);
+        showNotice(data).then((text) => text && showWorkingIndicator({}, text)).catch(() => undefined);
         return '';
     },
     template_image: (data) => {
-        showPicture(data);
+        showPicture(data).then((text) => text && showWorkingIndicator({}, text)).catch(() => undefined);
         return '';
     },
     review_needed: () => 'review',
