@@ -71,7 +71,7 @@ class generated_file_cache {
      *
      * @param array $entry An entry of the result's generated_files.
      * @return \stored_file
-     * @throws \moodle_exception The download failed, or the file is not the size the result says.
+     * @throws \moodle_exception The download failed.
      */
     public function get(array $entry): \stored_file {
         $record = self::file_record($entry);
@@ -94,10 +94,6 @@ class generated_file_cache {
             $record
         );
         if (!$downloaded) {
-            throw new \moodle_exception('template_reference_download_failed', 'local_coursegen', '', $record['filename']);
-        }
-        if ((int) $downloaded->get_filesize() !== (int) ($entry['size'] ?? -1)) {
-            $downloaded->delete();
             throw new \moodle_exception('template_reference_download_failed', 'local_coursegen', '', $record['filename']);
         }
         return $downloaded;

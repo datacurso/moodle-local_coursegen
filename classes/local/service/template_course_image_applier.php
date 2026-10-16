@@ -49,9 +49,15 @@ final class template_course_image_applier {
             if ($slot === null) {
                 continue;
             }
-            $stored = $cache->get($entry);
-            self::put($courseid, $slot, $entry, $stored);
-            $cache->forget($entry);
+            // A picture is decoration: one that cannot be read back leaves the course without it, it never
+            // stops the course from being made.
+            try {
+                $stored = $cache->get($entry);
+                self::put($courseid, $slot, $entry, $stored);
+                $cache->forget($entry);
+            } catch (\moodle_exception $exception) {
+                debugging('A picture of the course could not be applied: ' . $exception->getMessage() . ' ' . $exception->debuginfo, DEBUG_DEVELOPER);
+            }
         }
         rebuild_course_cache($courseid, true);
     }

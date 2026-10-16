@@ -310,8 +310,8 @@ export const createCourseaiActions = (deps) => {
         showCourseReviewPanel: (loadSettings = getCourseSettings) => showCourseReviewPanel(
             state, elements, texts, loadSettings, FormAutocomplete
         ),
-        createCourseFromSession: (overrides = null, create = createCourse) => createCourseFromSession(
-            state, elements, texts, stepsUi, Notification, create, showCompletionView, overrides
+        createCourseFromSession: (overrides = null, create = createCourse, onError = null) => createCourseFromSession(
+            state, elements, texts, stepsUi, Notification, create, showCompletionView, overrides, onError
         ),
         handleGenerate: () => handleGenerate(genCtx()),
         sendFeedbackAction: (action) => sendFeedbackAction(action, fbCtx()),
