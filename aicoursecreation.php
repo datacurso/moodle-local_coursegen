@@ -136,12 +136,14 @@ foreach ($supportedlangs as $code) {
 
 // Helper to build session data array.
 $buildsessiondata = function ($session, $maxtitle = 50) {
+    $coursedata = json_decode($session->get('coursedata') ?? '{}', true) ?: [];
+    // A run made from a template is writing the course the whole time it is pending: it is not planning it.
+    $pending = isset($coursedata['templateid']) ? 'status_generating' : 'status_pending';
     $statuslabels = [
-        course_session::STATUS_PENDING => get_string('status_pending', 'local_coursegen'),
+        course_session::STATUS_PENDING => get_string($pending, 'local_coursegen'),
         course_session::STATUS_CREATING => get_string('status_creating', 'local_coursegen'),
         course_session::STATUS_FAILED => get_string('status_failed', 'local_coursegen'),
     ];
-    $coursedata = json_decode($session->get('coursedata') ?? '{}', true);
     $rawtitle = $coursedata['fullname'] ?? $coursedata['local_coursegen_custom_prompt'] ?? '';
     $title = \core_text::str_max_bytes($rawtitle, $maxtitle);
     if (empty($title)) {
@@ -150,6 +152,7 @@ $buildsessiondata = function ($session, $maxtitle = 50) {
     return [
         'id' => $session->get('id'),
         'title' => $title,
+        'shortname' => $coursedata['shortname'] ?? '',
         'statuslabel' => $statuslabels[$session->get('status')] ?? '',
         'status' => $session->get('status'),
         'timecreated' => userdate($session->get('timecreated'), get_string('strftimedatetimeshort', 'langconfig')),

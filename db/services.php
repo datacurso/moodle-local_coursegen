@@ -248,4 +248,13 @@ $functions = [
         'capabilities' => 'local/coursegen:createtemplatecoursewithai',
         'loginrequired' => true,
     ],
+    'local_coursegen_name_template_session' => [
+        'classname' => 'local_coursegen\\external\\name_template_session',
+        'methodname' => 'execute',
+        'description' => 'Keep the name the AI proposed on a template generation session',
+        'type' => 'write',
+        'ajax' => true,
+        'capabilities' => 'local/coursegen:createtemplatecoursewithai',
+        'loginrequired' => true,
+    ],
 ];

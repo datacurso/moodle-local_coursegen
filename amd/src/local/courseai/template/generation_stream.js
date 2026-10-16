@@ -53,6 +53,7 @@ import {
 } from 'local_coursegen/local/courseai/template/thread';
 import {refreshPreviewLinks} from 'local_coursegen/local/courseai/template/preview';
 import {sendTemplateReviewFeedback} from 'local_coursegen/local/courseai/template/repository';
+import {applySessionName} from 'local_coursegen/local/courseai/template/session_name';
 import {hideWorkingIndicator, showWorkingIndicator} from 'local_coursegen/local/courseai/ui/feedback-progress';
 import {ALL_STATUS_CLASSES, STATUS_CLASS, applyEvent} from 'local_coursegen/local/courseai/template/generation_events';
 import {watchOnce} from 'local_coursegen/local/courseai/template/generation_watch';
@@ -223,7 +224,12 @@ export const runGenerationStream = async(streamUrl, buildCourse, sessionId, cont
         const {outcome, data} = await watchOnce(
             streamUrl,
             progress,
-            (eventData, eventProgress) => applyEvent(eventData, eventProgress, paintStageOfRun),
+            (eventData, eventProgress) => {
+                if (eventData.type === 'course_configuration') {
+                    applySessionName(sessionId, eventData);
+                }
+                return applyEvent(eventData, eventProgress, paintStageOfRun);
+            },
             closeView
         );
 

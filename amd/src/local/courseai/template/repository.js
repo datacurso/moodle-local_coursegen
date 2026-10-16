@@ -96,3 +96,16 @@ export const finishTemplateGeneration = (sessionId, overrides) => fetchMany([{
         category: overrides.category || 0,
     },
 }])[0];
+
+/**
+ * Keep the name the AI proposed on the session, so the list of recent courses shows it.
+ *
+ * @param {number} sessionId
+ * @param {string} fullname
+ * @param {string} shortname
+ * @returns {Promise<Object>} {saved}
+ */
+export const nameTemplateSession = (sessionId, fullname, shortname) => fetchMany([{
+    methodname: 'local_coursegen_name_template_session',
+    args: {sessionid: sessionId, fullname: fullname, shortname: shortname},
+}])[0];
