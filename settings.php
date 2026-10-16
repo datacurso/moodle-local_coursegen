@@ -62,6 +62,21 @@ if ($hassiteconfig) {
         0
     ));
 
+    // Only meaningful while the import is enabled: "replace" deletes the copy
+    // content before importing the generated course, "add" keeps the existing
+    // sections and activities and merges the generated ones on top.
+    $settings->add(new admin_setting_configselect(
+        'local_coursegen/importcontentmode',
+        get_string('setting_importcontentmode', 'local_coursegen'),
+        get_string('setting_importcontentmode_desc', 'local_coursegen'),
+        'replace',
+        [
+            'replace' => get_string('importcontentmode_replace', 'local_coursegen'),
+            'add' => get_string('importcontentmode_add', 'local_coursegen'),
+        ]
+    ));
+    $settings->hide_if('local_coursegen/importcontentmode', 'local_coursegen/enableimportexisting', 'notchecked');
+
     $ADMIN->add($pluginname, $settings);
 
     // Development settings page: service URL overrides for dev/staging

@@ -220,6 +220,8 @@ class create_course extends external_api {
         require_capability('moodle/backup:backupcourse', $targetcontext);
         require_capability('moodle/restore:restorecourse', $targetcontext);
         require_capability('moodle/course:create', context_coursecat::instance($target->category));
+        // The import hides the original course, so the acting user must be allowed to change its visibility.
+        require_capability('moodle/course:visibility', $targetcontext);
 
         return $target;
     }

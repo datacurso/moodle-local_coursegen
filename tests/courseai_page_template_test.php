@@ -61,7 +61,7 @@ final class courseai_page_template_test extends \advanced_testcase {
     }
 
     /**
-     * The review panel carries the target-mode radios and the import fields only when the setting is on.
+     * The review panel carries the target-mode select and the import fields only when the setting is on.
      *
      * @return void
      */
@@ -71,28 +71,77 @@ final class courseai_page_template_test extends \advanced_testcase {
 
         $html = $this->render(true);
         $this->assertStringContainsString('data-import-existing-enabled="1"', $html);
-        $this->assertStringContainsString('name="coursegen-targetmode"', $html);
+        $this->assertStringContainsString('id="targetMode"', $html);
         $this->assertStringContainsString('id="importTargetFields"', $html);
         $this->assertStringContainsString('id="importCategory"', $html);
         $this->assertStringContainsString('id="importCourse"', $html);
         $this->assertStringContainsString('id="importProgressView"', $html);
-        // The "new" mode is the default choice.
-        $this->assertMatchesRegularExpression(
-            '/<input[^>]*name="coursegen-targetmode"[^>]*value="new"[^>]*checked/',
-            $html
-        );
         // The existing new-course fields stay in place.
         $this->assertStringContainsString('id="reviewCategory"', $html);
         $this->assertStringContainsString('id="reviewShortname"', $html);
 
         $html = $this->render(false);
         $this->assertStringContainsString('data-import-existing-enabled="0"', $html);
-        $this->assertStringNotContainsString('coursegen-targetmode', $html);
+        $this->assertStringNotContainsString('id="targetMode"', $html);
         $this->assertStringNotContainsString('id="importTargetFields"', $html);
         $this->assertStringNotContainsString('id="importCourse"', $html);
         // The existing new-course fields are untouched by the flag.
         $this->assertStringContainsString('id="reviewCategory"', $html);
         $this->assertStringContainsString('id="reviewShortname"', $html);
+    }
+
+    /**
+     * The course full name field is wrapped in its own group (#reviewFullnameGroup) so the
+     * review-panel JavaScript can hide it in import mode, like the short name and category
+     * groups. The group renders in both flag states and keeps the #reviewFullname input.
+     *
+     * @return void
+     */
+    public function test_fullname_field_is_wrapped_in_a_group(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        foreach ([true, false] as $enabled) {
+            $html = $this->render($enabled);
+            $this->assertMatchesRegularExpression(
+                '/<div[^>]*id="reviewFullnameGroup"[^>]*>(?:(?!<\/div>).)*<input[^>]*id="reviewFullname"/s',
+                $html,
+                'Flag ' . var_export($enabled, true)
+            );
+            $this->assertMatchesRegularExpression('/<div[^>]*id="reviewShortnameGroup"/', $html);
+            $this->assertMatchesRegularExpression('/<div[^>]*id="reviewCategoryGroup"/', $html);
+        }
+    }
+
+    /**
+     * The target-mode select offers "new" (selected by default) and "import", and is the
+     * first field of the panel, above the course full name.
+     *
+     * @return void
+     */
+    public function test_target_mode_select_offers_both_modes_above_fullname(): void {
+        $this->resetAfterTest();
+        $this->setAdminUser();
+
+        $html = $this->render(true);
+
+        $this->assertMatchesRegularExpression('/<select[^>]*id="targetMode"/', $html);
+        $this->assertMatchesRegularExpression('/<option[^>]*value="new"[^>]*selected/', $html);
+        $this->assertMatchesRegularExpression('/<option[^>]*value="import"(?![^>]*selected)[^>]*>/', $html);
+        // No trace of the former radio group.
+        $this->assertStringNotContainsString('coursegen-targetmode', $html);
+        $this->assertStringNotContainsString('id="targetModeNew"', $html);
+        $this->assertStringNotContainsString('id="targetModeImport"', $html);
+
+        // The select comes before the course full name field, both inside the review panel.
+        $panelpos = strpos($html, 'id="courseReviewPanel"');
+        $selectpos = strpos($html, 'id="targetMode"');
+        $fullnamepos = strpos($html, 'id="reviewFullname"');
+        $this->assertNotFalse($panelpos);
+        $this->assertNotFalse($selectpos);
+        $this->assertNotFalse($fullnamepos);
+        $this->assertGreaterThan($panelpos, $selectpos);
+        $this->assertLessThan($fullnamepos, $selectpos);
     }
 
     /**

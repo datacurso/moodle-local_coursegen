@@ -28,7 +28,7 @@ Feature: Import an AI-generated course into an existing course
     When I visit "/local/coursegen/aicoursecreation.php"
     Then "#courseReviewPanel" "css_element" should exist
     And "#courseReviewPanel[data-import-existing-enabled='0']" "css_element" should exist
-    And "input[name='coursegen-targetmode']" "css_element" should not exist
+    And "#targetMode" "css_element" should not exist
     And "#importTargetFields" "css_element" should not exist
     And "#reviewCategory" "css_element" should exist
     And "#reviewShortname" "css_element" should exist
@@ -39,10 +39,11 @@ Feature: Import an AI-generated course into an existing course
     And I log in as "admin"
     When I visit "/local/coursegen/aicoursecreation.php"
     Then "#courseReviewPanel[data-import-existing-enabled='1']" "css_element" should exist
-    And "input[name='coursegen-targetmode'][value='new']" "css_element" should exist
-    And "input[name='coursegen-targetmode'][value='import']" "css_element" should exist
-    And "//input[@id='targetModeNew'][@checked]" "xpath_element" should exist
-    And "//input[@id='targetModeImport'][not(@checked)]" "xpath_element" should exist
+    And "select#targetMode" "css_element" should exist
+    And "//select[@id='targetMode']/option[@value='new'][@selected]" "xpath_element" should exist
+    And "//select[@id='targetMode']/option[@value='import'][not(@selected)]" "xpath_element" should exist
+    # The destination select is the first field of the panel, above the course name.
+    And "//select[@id='targetMode']/following::input[@id='reviewFullname']" "xpath_element" should exist
     And "#importTargetFields" "css_element" should not be visible
     And "#importCategory" "css_element" should exist
     And "#importCourse" "css_element" should exist
@@ -59,18 +60,22 @@ Feature: Import an AI-generated course into an existing course
     And "Generate course" "button" should exist
     And I press "Generate course"
     And "#courseReviewPanel" "css_element" should be visible
+    And "#reviewFullnameGroup" "css_element" should be visible
     And "#reviewShortname" "css_element" should be visible
     And "#reviewCategoryGroup" "css_element" should be visible
     And "#importTargetFields" "css_element" should not be visible
-    When I click on "Import into an existing course" "radio"
-    Then "#reviewShortname" "css_element" should not be visible
+    When I set the field "Destination" to "Import into an existing course"
+    # The copy keeps the target's names and category, so none of the new-course fields are asked.
+    Then "#reviewFullnameGroup" "css_element" should not be visible
+    And "#reviewShortname" "css_element" should not be visible
     And "#reviewCategoryGroup" "css_element" should not be visible
     And "#importTargetFields" "css_element" should be visible
     And "#importCategoryGroup .form-autocomplete-downarrow" "css_element" should be visible
     And "#importCourseGroup input[data-fieldtype='autocomplete']" "css_element" should be visible
     And the "Create course" "button" should be disabled
-    When I click on "Create as a new course" "radio"
-    Then "#reviewShortname" "css_element" should be visible
+    When I set the field "Destination" to "Create as a new course"
+    Then "#reviewFullnameGroup" "css_element" should be visible
+    And "#reviewShortname" "css_element" should be visible
     And "#reviewCategoryGroup" "css_element" should be visible
     And "#importTargetFields" "css_element" should not be visible
     And the "Create course" "button" should be enabled
@@ -87,7 +92,7 @@ Feature: Import an AI-generated course into an existing course
     And "Generate course" "button" should exist
     And I press "Generate course"
     And "#courseReviewPanel" "css_element" should be visible
-    And I click on "Import into an existing course" "radio"
+    And I set the field "Destination" to "Import into an existing course"
     When I open the autocomplete suggestions list in the "#importCategoryGroup" "css_element"
     And I click on "Category A" "list_item" in the "#importCategoryGroup" "css_element"
     And I click on "#importCourseGroup input[data-fieldtype='autocomplete']" "css_element"

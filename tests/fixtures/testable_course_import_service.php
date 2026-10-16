@@ -30,7 +30,7 @@ defined('MOODLE_INTERNAL') || die();
  */
 class testable_course_import_service extends course_import_service {
     /**
-     * Throw instead of restoring when the target is the replacing import.
+     * Throw instead of restoring when the target is the staging import onto the copy.
      *
      * @param string $backupid Backup identifier.
      * @param int $courseid Destination course id.
@@ -40,7 +40,7 @@ class testable_course_import_service extends course_import_service {
      * @return void
      */
     protected static function restore_course(string $backupid, int $courseid, int $userid, int $target, array $settings): void {
-        if ($target === \backup::TARGET_EXISTING_DELETING) {
+        if ($target !== \backup::TARGET_NEW_COURSE) {
             throw new \RuntimeException('Injected restore failure');
         }
         parent::restore_course($backupid, $courseid, $userid, $target, $settings);

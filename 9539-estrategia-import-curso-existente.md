@@ -11,11 +11,14 @@
 |---|---|
 | Estrategia | Copiar primero; importar sobre la copia (ticket #9539) |
 | Rol de la copia | **Pasa a ser el curso** de cara al docente: conserva el nombre corto y el largo del original |
-| Contenido de la copia | **Se reemplaza por completo** con lo generado por la IA |
-| Matriculaciones y datos de usuario | **No se copian** |
+| Contenido de la copia | **Configurable por el administrador** (`importcontentmode`): *reemplazar todo* (por defecto, `TARGET_EXISTING_DELETING`) o *añadir después de las secciones originales* (`TARGET_EXISTING_ADDING` con las secciones del staging **renumeradas** a partir de la última del destino, para que el motor no fusione nada: las secciones originales quedan intactas y las generadas se añaden al final con sus propios nombres. **El plan de la IA numera desde cero**, así que la sección 0 del staging es una sección de contenido con nombre: se añade como sección propia, conservando nombre, resumen y actividades, y las demás van detrás) |
+| Matriculaciones y datos de usuario | **Se copian siempre** (decisión posterior): la copia trae instancias de matriculación, matrículas, roles, grupos con sus miembros, calificaciones, finalización y datos de usuario de las actividades, como una restauración completa. El modo de importación gobierna solo el contenido; en *reemplazar* se conservan personas, roles y grupos (`keep_roles_and_enrolments`, `keep_groups_and_groupings`) y se pierden los datos ligados a las actividades reemplazadas. Exige `moodle/backup:userinfo` y `moodle/restore:userinfo`, que Moodle reserva al Gestor: hay que añadirlas al rol |
 | Curso de staging | **Se borra** al terminar |
 | Nombre de la copia | **El del original** (corto y largo) |
 | Renombrado del original | **Sí**: sufijo único con marca de tiempo, patrón de `delete_user()` (`lib/moodlelib.php:3712-3730`) |
+| Visibilidad del original | **Se oculta** al renombrarlo (`visible = 0`, patrón de `course_change_visibility()`); el rollback restaura la visibilidad previa junto con los nombres |
+| Selector de destino | Un `<select>` «Crear como curso nuevo / Importar en un curso existente», **primer campo del panel**, antes del nombre del curso |
+| Campos en modo importar | Se ocultan **nombre completo, nombre corto y categoría del curso nuevo**: la copia toma los nombres del original. Solo quedan categoría y curso de destino |
 | Permisos | Cubiertos por el rol «Profesor Creador de curso IA» (§7) |
 | Ejecución | Copia + importación en una **tarea adhoc**; la generación del staging sigue síncrona |
 | Activación | **Ajuste de administrador**, desactivado por defecto; apagado, el flujo no cambia |
@@ -33,13 +36,13 @@ calificaciones.
 ```
 1. Generar el curso con IA              → curso staging  (síncrono, flujo actual)
    ── a partir de aquí, tarea adhoc ──
-2. Renombrar el original                → «<shortname>.<marca>» / «<fullname> (<marca>)»
+2. Renombrar y OCULTAR el original      → «<shortname>.<marca>» / «<fullname> (<marca>)», visible = 0
 3. Copiar el original, sin usuarios     → copia con el nombre corto y largo originales
-4. Importar staging sobre la copia      → reemplazando todo su contenido
+4. Importar staging sobre la copia      → reemplazando, o añadiendo al final (staging renumerado), según `importcontentmode`
 5. Borrar el staging
 ```
 
-Si falla 3 o 4: se borra la copia (si llegó a crearse), se **restauran los nombres** del original y la
+Si falla 3 o 4: se borra la copia (si llegó a crearse), se **restauran los nombres y la visibilidad** del original y la
 sesión queda en error con un mensaje claro. El staging **no se borra** en ese caso: es el curso
 generado y pagado, y la sesión lo referencia para que el usuario pueda abrirlo — no es un huérfano.
 

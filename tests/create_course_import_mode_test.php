@@ -108,6 +108,30 @@ final class create_course_import_mode_test extends \advanced_testcase {
     }
 
     /**
+     * Give the user, at the target's category, every capability the import pre-check requires except one.
+     *
+     * @param int $userid User id.
+     * @param \stdClass $target Target course record.
+     * @param string $missing The capability to leave out.
+     * @return void
+     */
+    private function allow_import_target_except(int $userid, \stdClass $target, string $missing): void {
+        $categorycontext = \context_coursecat::instance($target->category);
+        $roleid = $this->getDataGenerator()->create_role(['shortname' => 'importer_partial']);
+        $capabilities = [
+            'moodle/backup:backupcourse',
+            'moodle/restore:restorecourse',
+            'moodle/course:visibility',
+            'moodle/backup:userinfo',
+            'moodle/restore:userinfo',
+        ];
+        foreach (array_diff($capabilities, [$missing]) as $capability) {
+            assign_capability($capability, CAP_ALLOW, $roleid, $categorycontext->id, true);
+        }
+        role_assign($roleid, $userid, $categorycontext->id);
+    }
+
+    /**
      * Decode the import bookkeeping stored in the session JSON.
      *
      * @param int $sessionid Session id.
@@ -249,6 +273,84 @@ final class create_course_import_mode_test extends \advanced_testcase {
             $this->fail('Import mode must require the import capabilities on the target.');
         } catch (\required_capability_exception $e) {
             $this->assertInstanceOf(\required_capability_exception::class, $e);
+        }
+
+        $this->assertSame($coursesbefore, $DB->count_records('course'));
+        $this->assertCount(0, \core\task\manager::get_adhoc_tasks(import_generated_course_task::class));
+        $this->assertSame([], $this->import_data((int) $session->get('id')));
+    }
+
+    /**
+     * A user holding backup, restore and course:create but not moodle/course:visibility must be
+     * rejected before any staging course is created: the import hides the original course, so
+     * queuing a task that is bound to fail at run time would waste a generated course.
+     */
+    public function test_import_mode_denies_user_without_visibility_capability(): void {
+        global $DB;
+
+        $user = $this->getDataGenerator()->create_user();
+        $this->allow_ws_gate_at_system($user->id);
+        $target = $this->getDataGenerator()->create_course();
+        $targetcontext = \context_course::instance($target->id);
+        $roleid = $this->getDataGenerator()->create_role(['shortname' => 'importer_no_visibility']);
+        assign_capability('moodle/backup:backupcourse', CAP_ALLOW, $roleid, $targetcontext->id, true);
+        assign_capability('moodle/restore:restorecourse', CAP_ALLOW, $roleid, $targetcontext->id, true);
+        role_assign($roleid, $user->id, $targetcontext->id);
+        $this->setUser($user);
+        $session = $this->create_session((int) $user->id);
+        $service = $this->mock_result(['fullname' => 'AI course', 'shortname' => 'aicourse']);
+        $service->expects($this->never())->method('get_course_result');
+        $coursesbefore = $DB->count_records('course');
+
+        try {
+            testable_create_course::execute((int) $session->get('id'), '', '', 0, 'import', (int) $target->id);
+            $this->fail('Import mode must require moodle/course:visibility on the target.');
+        } catch (\required_capability_exception $e) {
+            $this->assertSame(get_capability_string('moodle/course:visibility'), $e->a);
+        }
+
+        $this->assertSame($coursesbefore, $DB->count_records('course'));
+        $this->assertCount(0, \core\task\manager::get_adhoc_tasks(import_generated_course_task::class));
+        $this->assertSame([], $this->import_data((int) $session->get('id')));
+    }
+
+    /**
+     * The capabilities that let the import copy user data, each denied on its own.
+     *
+     * @return array[]
+     */
+    public static function userinfo_capability_provider(): array {
+        return [
+            'backup userinfo' => ['moodle/backup:userinfo'],
+            'restore userinfo' => ['moodle/restore:userinfo'],
+        ];
+    }
+
+    /**
+     * The copy always carries the user data of the target, so a user who may not back up or restore
+     * user data is rejected before any staging course is created, never when the task runs.
+     *
+     * @dataProvider userinfo_capability_provider
+     * @param string $capability The one required capability the user lacks.
+     */
+    public function test_import_mode_denies_user_without_userinfo_capability(string $capability): void {
+        global $DB;
+
+        $user = $this->getDataGenerator()->create_user();
+        $this->allow_ws_gate_at_system($user->id);
+        $target = $this->getDataGenerator()->create_course();
+        $this->allow_import_target_except($user->id, $target, $capability);
+        $this->setUser($user);
+        $session = $this->create_session((int) $user->id);
+        $service = $this->mock_result(['fullname' => 'AI course', 'shortname' => 'aicourse']);
+        $service->expects($this->never())->method('get_course_result');
+        $coursesbefore = $DB->count_records('course');
+
+        try {
+            testable_create_course::execute((int) $session->get('id'), '', '', 0, 'import', (int) $target->id);
+            $this->fail('Import mode must require ' . $capability . ' for the target.');
+        } catch (\required_capability_exception $e) {
+            $this->assertSame(get_capability_string($capability), $e->a);
         }
 
         $this->assertSame($coursesbefore, $DB->count_records('course'));

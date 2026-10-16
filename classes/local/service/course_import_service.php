@@ -26,10 +26,11 @@ use local_coursegen\local\models\course_session;
  *
  * Strategy (ticket #9539): the original course is renamed with a unique
  * time stamp, a copy of it is created under the original names without any
- * user data, the staging content replaces the copy content, and the staging
- * course is deleted. On any failure the copy is removed, the original names
- * are restored and the staging course is kept so the generated content is
- * never lost.
+ * user data, the staging content is imported into the copy (replacing or
+ * adding to it, per the importcontentmode setting), and the staging course is
+ * deleted. The original stays renamed and hidden as a backup. On any failure
+ * the copy is removed, the original names and visibility are restored and the
+ * staging course is kept so the generated content is never lost.
  *
  * Import bookkeeping is stored as the "import" object inside the session
  * coursedata JSON bag; no schema change is required.
@@ -50,6 +51,12 @@ class course_import_service {
 
     /** @var string Import state: import failed and was rolled back. */
     public const STATE_FAILED = 'failed';
+
+    /** @var string Import content mode: delete the copy content before importing the staging course. */
+    public const CONTENT_MODE_REPLACE = 'replace';
+
+    /** @var string Import content mode: keep the copy content and add the staging course on top. */
+    public const CONTENT_MODE_ADD = 'add';
 
     /** @var int Maximum length of course.shortname. */
     private const SHORTNAME_MAXLENGTH = 100;
@@ -86,6 +93,8 @@ class course_import_service {
             'copycourseid' => 0,
             'originalshortname' => $target->shortname,
             'originalfullname' => $target->fullname,
+            'originalvisible' => (int)$target->visible,
+            'originalvisibleold' => (int)$target->visibleold,
             'renamedshortname' => '',
             'state' => self::STATE_RUNNING,
             'errorclass' => '',
@@ -110,7 +119,7 @@ class course_import_service {
             ]);
 
             self::restore_copy_with_original_names($backupid, $target, $copyid, $userid);
-            self::replace_copy_content($staging, $copyid, $userid, $tempdirs);
+            self::import_staging_into_copy($staging, $copyid, $userid, $tempdirs);
         } catch (\Throwable $e) {
             $copydeleted = self::rollback($target, $copyid, $renamed, $tempdirs);
             self::update_session($session, course_session::STATUS_FAILED, (int)$staging->id, [
@@ -205,16 +214,19 @@ class course_import_service {
         require_capability('moodle/restore:restorecourse', $targetcontext, $userid);
         require_capability('moodle/course:create', \context_coursecat::instance($target->category), $userid);
         require_capability('moodle/backup:backuptargetimport', \context_course::instance($staging->id), $userid);
+        // The original is hidden once the copy takes its place.
+        require_capability('moodle/course:visibility', $targetcontext, $userid);
     }
 
     /**
-     * Rename the original course and create the copy under the original names, in one transaction.
+     * Rename and hide the original course and create the copy under the original names, in one transaction.
      *
      * There is no unique index on course.shortname, so both steps share a
      * transaction to close the window in which another request could take
-     * the freed shortname.
+     * the freed shortname. The original is hidden in the same step so that
+     * rollback() covers it: it stays hidden and renamed when the import succeeds.
      *
-     * @param \stdClass $target Target course record (original names).
+     * @param \stdClass $target Target course record (original names and visibility).
      * @return array {0: array names given to the original, 1: int copy course id}
      */
     private static function rename_original_and_create_copy(\stdClass $target): array {
@@ -223,6 +235,7 @@ class course_import_service {
         $transaction = $DB->start_delegated_transaction();
         $names = self::compute_renamed_names($target->shortname, $target->fullname, time());
         self::set_course_names((int)$target->id, $names['shortname'], $names['fullname']);
+        self::set_course_visibility((int)$target->id, 0, 0);
         $copyid = (int)\restore_dbops::create_new_course($target->fullname, $target->shortname, $target->category);
         $transaction->allow_commit();
 
@@ -251,6 +264,47 @@ class course_import_service {
     }
 
     /**
+     * Set the visibility flags of a course the way course_change_visibility() does.
+     *
+     * Mirrors the visibility path of update_course(): both flags are written,
+     * the course caches are rebuilt and purged, and a course_updated event is
+     * triggered. The flags are written directly so the rollback can restore
+     * the exact previous values; course_change_visibility() always sets
+     * visibleold equal to visible, which would lose a course hidden by its
+     * category. No capability check happens here: callers hold
+     * moodle/course:visibility (see require_import_capabilities()).
+     *
+     * @param int $courseid Course id.
+     * @param int $visible New course.visible value (0 or 1).
+     * @param int $visibleold New course.visibleold value (0 or 1).
+     * @return void
+     */
+    private static function set_course_visibility(int $courseid, int $visible, int $visibleold): void {
+        global $DB;
+
+        $DB->update_record('course', (object) [
+            'id' => $courseid,
+            'visible' => $visible,
+            'visibleold' => $visibleold,
+            'timemodified' => time(),
+        ]);
+        rebuild_course_cache($courseid, true);
+        \cache_helper::purge_by_event('changesincourse');
+        \cache_helper::purge_by_event('changesincoursecat');
+
+        $course = $DB->get_record('course', ['id' => $courseid], 'id, shortname, fullname', MUST_EXIST);
+        \core\event\course_updated::create([
+            'objectid' => $courseid,
+            'context' => \context_course::instance($courseid),
+            'other' => [
+                'shortname' => $course->shortname,
+                'fullname' => $course->fullname,
+                'updatedfields' => ['visible' => $visible, 'visibleold' => $visibleold],
+            ],
+        ])->trigger();
+    }
+
+    /**
      * Restore the target backup into the copy, keeping the original names.
      *
      * The backup predates the rename, so the engine defaults already hold the
@@ -271,7 +325,12 @@ class course_import_service {
     }
 
     /**
-     * Import the staging course onto the copy, deleting the copy content first.
+     * Import the staging course onto the copy, replacing or adding to its content.
+     *
+     * The admin setting local_coursegen/importcontentmode decides the restore
+     * target: "add" keeps the copy sections and activities untouched and
+     * appends the staging sections after them (see backup_staging_appended());
+     * any other value deletes the copy content first.
      *
      * @param \stdClass $staging Staging course record.
      * @param int $copyid Copy course id.
@@ -279,9 +338,233 @@ class course_import_service {
      * @param string[] $tempdirs Collects backup temp directories to remove.
      * @return void
      */
-    private static function replace_copy_content(\stdClass $staging, int $copyid, int $userid, array &$tempdirs): void {
+    private static function import_staging_into_copy(\stdClass $staging, int $copyid, int $userid, array &$tempdirs): void {
+        $target = self::get_import_target();
+        if ($target === \backup::TARGET_EXISTING_ADDING) {
+            $backupid = self::backup_staging_appended((int)$staging->id, $copyid, $userid, $tempdirs);
+            static::restore_course($backupid, $copyid, $userid, $target, []);
+            self::extend_numsections($copyid);
+            return;
+        }
         $backupid = static::backup_course((int)$staging->id, \backup::MODE_IMPORT, $userid, $tempdirs);
-        static::restore_course($backupid, $copyid, $userid, \backup::TARGET_EXISTING_DELETING, []);
+        static::restore_course($backupid, $copyid, $userid, $target, []);
+    }
+
+    /**
+     * Back up the staging course with its sections numbered after the copy's last section.
+     *
+     * The restore engine matches sections by number: an existing section keeps
+     * its name and summary and receives the incoming activities. To append
+     * instead of merging, the staging sections are shifted past the copy's
+     * highest number T while the backup is taken. The AI plan numbers its
+     * sections from zero, so the staging's section 0 is usually a real section
+     * (named, with a summary or with modules): it is then materialised as a new
+     * section T+1 and the rest are shifted by T+1 so they follow it. Section 0
+     * itself is left blank so merging it into the copy's section 0 changes
+     * nothing there. The shift is undone right after the backup, so a later
+     * failure never leaves the staging course with gaps in its numbering.
+     *
+     * @param int $stagingid Staging course id.
+     * @param int $copyid Copy course id (already holding the target sections).
+     * @param int $userid Acting user.
+     * @param string[] $tempdirs Collects backup temp directories to remove.
+     * @return string Backup id.
+     */
+    private static function backup_staging_appended(int $stagingid, int $copyid, int $userid, array &$tempdirs): string {
+        global $DB;
+
+        $snapshot = self::snapshot_section_layout($stagingid);
+        try {
+            $offset = (int)$DB->get_field_sql('SELECT MAX(section) FROM {course_sections} WHERE course = ?', [$copyid]);
+            $zero = $DB->get_record(
+                'course_sections',
+                ['course' => $stagingid, 'section' => 0],
+                'id, name, summary, summaryformat, sequence',
+                MUST_EXIST
+            );
+            $zeromodules = self::section_zero_modules($stagingid, $zero);
+            $materialise = $zeromodules || (string)$zero->name !== '' || (string)$zero->summary !== '';
+            self::shift_section_numbers($stagingid, $materialise ? $offset + 1 : $offset);
+            if ($materialise) {
+                self::materialise_section_zero($stagingid, $zero, $zeromodules, $offset + 1);
+            }
+            rebuild_course_cache($stagingid, true);
+            return static::backup_course($stagingid, \backup::MODE_IMPORT, $userid, $tempdirs);
+        } finally {
+            self::restore_section_layout($stagingid, $snapshot);
+            rebuild_course_cache($stagingid, true);
+        }
+    }
+
+    /**
+     * Shift every section but section 0 by the given offset.
+     *
+     * Updated in descending order because of the unique (course, section) index.
+     * Delegated sections (mod_subsection) are shifted with the rest: only their
+     * number orders them, nothing else stores it.
+     *
+     * @param int $courseid Course id.
+     * @param int $offset Amount to add to each section number.
+     * @return void
+     */
+    private static function shift_section_numbers(int $courseid, int $offset): void {
+        global $DB;
+
+        if ($offset <= 0) {
+            return;
+        }
+        $sections = $DB->get_records_select(
+            'course_sections',
+            'course = ? AND section > 0',
+            [$courseid],
+            'section DESC',
+            'id, section'
+        );
+        foreach ($sections as $section) {
+            $DB->set_field('course_sections', 'section', $section->section + $offset, ['id' => $section->id]);
+        }
+    }
+
+    /**
+     * Ids of the modules placed in section 0, in sequence order (modules missing from the sequence go last).
+     *
+     * @param int $courseid Course id.
+     * @param \stdClass $zero Section 0 record (id, sequence).
+     * @return int[]
+     */
+    private static function section_zero_modules(int $courseid, \stdClass $zero): array {
+        global $DB;
+
+        $cmids = array_map(
+            'intval',
+            $DB->get_fieldset_select('course_modules', 'id', 'course = ? AND section = ?', [$courseid, $zero->id])
+        );
+        $sequence = array_map('intval', array_filter(explode(',', (string)$zero->sequence)));
+        return array_merge(array_values(array_intersect($sequence, $cmids)), array_values(array_diff($cmids, $sequence)));
+    }
+
+    /**
+     * Turn section 0 into a regular section with the given number and blank section 0.
+     *
+     * A new section row is created carrying the name, summary and modules of
+     * section 0; the modules keep their order. Section 0 is left with an empty
+     * sequence, name and summary so merging it into the copy's section 0
+     * changes nothing there (the restore only fills an empty name or summary).
+     * The row is transient: restore_section_layout() removes it after the backup.
+     *
+     * @param int $courseid Course id.
+     * @param \stdClass $zero Section 0 record (id, name, summary, summaryformat).
+     * @param int[] $cmids Modules of section 0 in sequence order.
+     * @param int $number Section number the new section takes; must be free.
+     * @return void
+     */
+    private static function materialise_section_zero(int $courseid, \stdClass $zero, array $cmids, int $number): void {
+        global $DB;
+
+        $section = (object) [
+            'course' => $courseid,
+            'section' => $number,
+            'name' => $zero->name,
+            'summary' => (string)$zero->summary,
+            'summaryformat' => (int)$zero->summaryformat,
+            'sequence' => implode(',', $cmids),
+            'visible' => 1,
+            'timemodified' => time(),
+        ];
+        $section->id = $DB->insert_record('course_sections', $section);
+        if ($cmids) {
+            [$insql, $params] = $DB->get_in_or_equal($cmids);
+            $DB->set_field_select('course_modules', 'section', $section->id, "id $insql", $params);
+        }
+        $DB->update_record('course_sections', (object) ['id' => $zero->id, 'sequence' => '', 'name' => null, 'summary' => '']);
+    }
+
+    /**
+     * Capture the section numbering and module placement of a course.
+     *
+     * @param int $courseid Course id.
+     * @return array {sections: \stdClass[] keyed by id, modules: int[] section id keyed by cm id}
+     */
+    private static function snapshot_section_layout(int $courseid): array {
+        global $DB;
+
+        return [
+            'sections' => $DB->get_records(
+                'course_sections',
+                ['course' => $courseid],
+                'section ASC',
+                'id, section, name, summary, sequence'
+            ),
+            'modules' => $DB->get_records_menu('course_modules', ['course' => $courseid], '', 'id, section'),
+        ];
+    }
+
+    /**
+     * Put back the section layout captured by snapshot_section_layout().
+     *
+     * Sections that did not exist in the snapshot are removed. Numbers are
+     * restored in ascending snapshot order: a shifted section always moves to
+     * a number lower than its current one that no other row can hold yet, so
+     * the unique (course, section) index is never hit.
+     *
+     * @param int $courseid Course id.
+     * @param array $snapshot Layout captured before the renumbering.
+     * @return void
+     */
+    private static function restore_section_layout(int $courseid, array $snapshot): void {
+        global $DB;
+
+        $current = $DB->get_fieldset_select('course_sections', 'id', 'course = ?', [$courseid]);
+        foreach (array_diff($current, array_keys($snapshot['sections'])) as $id) {
+            $DB->delete_records('course_sections', ['id' => $id]);
+        }
+        foreach ($snapshot['modules'] as $cmid => $sectionid) {
+            $DB->set_field('course_modules', 'section', $sectionid, ['id' => $cmid]);
+        }
+        foreach ($snapshot['sections'] as $section) {
+            $DB->update_record('course_sections', $section);
+        }
+    }
+
+    /**
+     * Raise the "numsections" format option of a course to its last regular section, when the format has one.
+     *
+     * The course.xml step is skipped when restoring onto an existing course, so
+     * nothing else updates the option after sections are appended. Core formats
+     * no longer use it; third-party formats may.
+     *
+     * @param int $courseid Course id.
+     * @return void
+     */
+    private static function extend_numsections(int $courseid): void {
+        global $DB;
+
+        $format = course_get_format($courseid);
+        $options = $format->get_format_options();
+        if (!isset($options['numsections'])) {
+            return;
+        }
+        $last = (int)$DB->get_field_sql(
+            'SELECT MAX(section) FROM {course_sections} WHERE course = ? AND component IS NULL',
+            [$courseid]
+        );
+        if ($last > (int)$options['numsections']) {
+            $format->update_course_format_options(['numsections' => $last]);
+            rebuild_course_cache($courseid, true);
+        }
+    }
+
+    /**
+     * Resolve the restore target from the import content mode setting.
+     *
+     * @return int backup::TARGET_EXISTING_ADDING for "add", backup::TARGET_EXISTING_DELETING otherwise.
+     */
+    private static function get_import_target(): int {
+        $mode = (string)get_config('local_coursegen', 'importcontentmode');
+        if ($mode === self::CONTENT_MODE_ADD) {
+            return \backup::TARGET_EXISTING_ADDING;
+        }
+        return \backup::TARGET_EXISTING_DELETING;
     }
 
     /**
@@ -370,11 +653,11 @@ class course_import_service {
     }
 
     /**
-     * Undo the import: restore the original names, delete the copy, remove temp directories.
+     * Undo the import: restore the original names and visibility, delete the copy, remove temp directories.
      *
      * The staging course is deliberately kept.
      *
-     * @param \stdClass $target Target course record (original names).
+     * @param \stdClass $target Target course record (original names and visibility).
      * @param int $copyid Copy course id, 0 if it was never created.
      * @param bool $renamed Whether the original was renamed.
      * @param string[] $tempdirs Backup temp directories to remove.
@@ -394,6 +677,7 @@ class course_import_service {
         }
         if ($renamed) {
             self::set_course_names((int)$target->id, $target->shortname, $target->fullname);
+            self::set_course_visibility((int)$target->id, (int)$target->visible, (int)$target->visibleold);
         }
         self::remove_temp_dirs($tempdirs);
 

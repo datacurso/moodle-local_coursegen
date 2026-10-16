@@ -92,13 +92,14 @@ const setupImportControls = (panel, confirmBtn, texts, FormAutocomplete) => {
     if (panel.dataset.importExistingEnabled !== '1') {
         return null;
     }
-    const radios = Array.from(panel.querySelectorAll('input[name="coursegen-targetmode"]'));
+    const modeSelect = document.getElementById('targetMode');
     const targetFields = document.getElementById('importTargetFields');
     const categorySelect = document.getElementById('importCategory');
     const courseGroup = document.getElementById('importCourseGroup');
+    const fullnameGroup = document.getElementById('reviewFullnameGroup');
     const shortnameGroup = document.getElementById('reviewShortnameGroup');
     const newCategoryGroup = document.getElementById('reviewCategoryGroup');
-    if (!radios.length || !targetFields || !categorySelect || !courseGroup) {
+    if (!modeSelect || !targetFields || !categorySelect || !courseGroup) {
         return null;
     }
 
@@ -109,7 +110,7 @@ const setupImportControls = (panel, confirmBtn, texts, FormAutocomplete) => {
     let courseSelect = null;
     let categoryEnhanced = false;
 
-    const getMode = () => (radios.find((radio) => radio.checked)?.value === 'import' ? 'import' : 'new');
+    const getMode = () => (modeSelect.value === 'import' ? 'import' : 'new');
     const getTargetCourseId = () => {
         const id = parseInt(courseSelect?.value || '', 10);
         return id > 0 ? id : 0;
@@ -137,12 +138,13 @@ const setupImportControls = (panel, confirmBtn, texts, FormAutocomplete) => {
         const importing = getMode() === 'import';
         targetFields.style.display = importing ? '' : 'none';
         // The copy keeps the target's names and category: those fields are for new courses.
+        if (fullnameGroup) { fullnameGroup.style.display = importing ? 'none' : ''; }
         if (shortnameGroup) { shortnameGroup.style.display = importing ? 'none' : ''; }
         if (newCategoryGroup) { newCategoryGroup.style.display = importing ? 'none' : ''; }
         syncConfirm();
     };
 
-    radios.forEach((radio) => radio.addEventListener('change', applyMode));
+    modeSelect.addEventListener('change', applyMode);
     categorySelect.addEventListener('change', () => {
         buildCourseField();
         syncConfirm();
@@ -169,7 +171,7 @@ const setupImportControls = (panel, confirmBtn, texts, FormAutocomplete) => {
                 );
             }
             buildCourseField();
-            radios.forEach((radio) => { radio.checked = radio.value === 'new'; });
+            modeSelect.value = 'new';
             applyMode();
         },
         getMode,
@@ -261,16 +263,16 @@ export const showCourseReviewPanel = async(state, elements, texts, getCourseSett
             cleanup();
             hidePanel();
             const overrides = {};
-            const fullname = fullnameInput.value.trim();
-            if (fullname) { overrides.fullname = fullname; }
             if (targetMode === 'import') {
-                // The copy keeps the target's short name and category.
+                // The copy keeps the target's names and category: no fullname/shortname/category.
                 overrides.targetmode = 'import';
                 overrides.targetcourseid = targetCourseId;
                 resolve(overrides);
                 return;
             }
             if (targetMode === 'new') { overrides.targetmode = 'new'; }
+            const fullname = fullnameInput.value.trim();
+            if (fullname) { overrides.fullname = fullname; }
             const shortname = shortnameInput.value.trim();
             if (shortname) { overrides.shortname = shortname; }
             const category = parseInt(categorySelect.value, 10);
