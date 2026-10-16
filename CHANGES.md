@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101216
+
+### Added
+- **The generation says what it is doing and any error can be tried again**  
+  While a course is generated the phase line now tells when the AI provider asked to wait, when a request is being tried again or is slow, and, for the pictures, which image is being made, from which template image, and how many are ready. When the generation stops on an error the technical message with its stack trace is gone: a card says that what was already made is kept and offers to try again, which makes only what is missing, or to close.
+
 ## [2.0.10] - 2026101214
 
 ### Fixed

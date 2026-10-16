@@ -23,7 +23,7 @@
 
 import Notification from 'core/notification';
 import {startTemplateGeneration} from './repository';
-import {runGenerationStream} from './generation_stream';
+import {GenerationStopped, runGenerationStream} from './generation_stream';
 import {usePreviewSession} from './preview';
 import {reviewAndCreate} from './finish';
 
@@ -71,6 +71,9 @@ export const runGeneration = async(tplState, tplSelect, genBtn, state, host) => 
         );
     } catch (e) {
         genBtn.disabled = false;
-        Notification.exception(e);
+        // After an error the person was already offered to try again, and closed it: nothing more to say.
+        if (!(e instanceof GenerationStopped)) {
+            Notification.exception(e);
+        }
     }
 };

@@ -50,11 +50,14 @@ const finishPass = (state, action) => {
  * @param {Function} onFail Called with the message once the pass fails.
  * @param {Function} reject The pass promise's reject.
  * @param {string} message
+ * @param {string} [code] The code the service gave to the failure.
  * @returns {void}
  */
-const failPass = (state, onFail, reject, message) => finishPass(state, () => {
+const failPass = (state, onFail, reject, message, code = 'connection') => finishPass(state, () => {
     onFail(message);
-    reject(new Error(message));
+    const error = new Error(message);
+    error.code = code;
+    reject(error);
 });
 
 /**
@@ -85,7 +88,7 @@ const handleStreamMessage = (state, progress, applyEvent, onFail, resolve, rejec
         // same point and re-emits the same pause, forever.
         finishPass(state, () => resolve({outcome, data}));
     } else if (outcome === 'failed') {
-        failPass(state, onFail, reject, data.message || 'The generation could not be completed.');
+        failPass(state, onFail, reject, data.message || 'The generation could not be completed.', data.code || 'failed');
     }
 };
 
