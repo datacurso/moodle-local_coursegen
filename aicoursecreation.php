@@ -64,6 +64,7 @@ use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\course_session_service;
 
 $resumesessionid = optional_param('sessionid', 0, PARAM_INT);
+$templatesession = null;
 $showsessionsview = optional_param('view', '', PARAM_ALPHA) === 'courses';
 // A fresh visit opens on the choice of starting point: the parameter being
 // absent is what means "nothing chosen yet", so a card writes its own value
@@ -82,6 +83,21 @@ if ($resumesessionid > 0) {
     if (is_array($openeddata) && isset($openeddata['templateid'])) {
         $resumesessionid = 0;
         $modeparam = 'template';
+        $templatesession = ['id' => (int) $opened->id, 'created' => false];
+        $openedrecord = new course_session((int) $opened->id);
+        $createdcourseid = (int) ($openedrecord->get('courseid') ?? 0);
+        if ((int) $openedrecord->get('status') === course_session::STATUS_CREATED && $createdcourseid > 0
+                && $DB->record_exists('course', ['id' => $createdcourseid])) {
+            // What the finished course holds, counted in the course itself.
+            $modinfo = get_fast_modinfo($createdcourseid, -1);
+            $templatesession = [
+                'id' => (int) $opened->id,
+                'created' => true,
+                'courseurl' => (new moodle_url('/course/view.php', ['id' => $createdcourseid]))->out(false),
+                'sections' => max(0, count($modinfo->get_section_info_all()) - 1),
+                'activities' => count($modinfo->get_cms()),
+            ];
+        }
     }
 }
 $templatemodeactive = $modeparam === 'template';
@@ -252,6 +268,7 @@ $PAGE->requires->js_call_amd('local_coursegen/courseai', 'init', [
         'sessions' => $allsessionsdata,
         'resumesessionid' => $resumesessionid,
         'isresuming' => $resumesessionid > 0,
+        'templatesession' => $templatesession,
     ],
 ]);
 

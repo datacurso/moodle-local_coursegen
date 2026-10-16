@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101220
+
+### Fixed
+- **A course made from a template opens as a finished course from the list of recent courses**  
+  Opening a session whose course was already created showed the empty template form with a completion card that said "0 activities were created in 0 sections", because the page treated it as the resume of a free-mode plan. It now shows the completion view with the number of sections and activities the course really holds and the button that opens it, and nothing of the form that makes a new course.
+
 ## [2.0.10] - 2026101219
 
 ### Fixed

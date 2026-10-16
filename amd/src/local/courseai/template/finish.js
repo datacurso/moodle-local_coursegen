@@ -92,3 +92,20 @@ export const reviewAndCreate = async(host, state, tplState, sessionId) => {
         (payload) => finishTemplateGeneration(payload.recordid, payload)
     );
 };
+
+/**
+ * Open a course that was already made from a template: the completion view, with what the course holds
+ * and the way to open it, and nothing of the form that makes a new one.
+ *
+ * @param {Object} host Holds the page's actions, bound once the page is set up.
+ * @param {Object} state Page state.
+ * @param {Object} session {id, courseurl, sections, activities}
+ */
+export const showFinishedCourse = (host, state, session) => {
+    state.sessionid = session.id;
+    state.completionStats = {units: session.sections, activities: session.activities, images: 0};
+    state.withImages = false;
+    state.createAnotherUrl = CREATE_ANOTHER_URL;
+    showFinishView();
+    host.actions.showCompletionView({success: true, courseurl: session.courseurl});
+};
