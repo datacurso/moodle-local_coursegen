@@ -28,6 +28,7 @@
  */
 
 import {finishTemplateGeneration, getTemplateCourseSettings} from './repository';
+import {askToRetry} from './generation_retry';
 
 /** Where "create another course" leads when the course came from a template. */
 const CREATE_ANOTHER_URL = 'aicoursecreation.php?mode=template';
@@ -89,7 +90,10 @@ export const reviewAndCreate = async(host, state, tplState, sessionId) => {
     }
     return actions.createCourseFromSession(
         overrides,
-        (payload) => finishTemplateGeneration(payload.recordid, payload)
+        (payload) => finishTemplateGeneration(payload.recordid, payload),
+        // Whatever stops the creation, the person is offered to try again instead of a technical error: the
+        // run is already generated and the server builds the course only once.
+        (error) => askToRetry(error?.errorcode || error?.code || '')
     );
 };
 
