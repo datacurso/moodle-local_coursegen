@@ -103,6 +103,15 @@ class generated_file_cache {
             if ($downloaded && (int) $downloaded->get_filesize() === $expected) {
                 return $downloaded;
             }
+            // The byte count is not the proof of a whole file: a picture that ends the way its format ends is whole.
+            if ($downloaded && self::is_whole_image($downloaded)) {
+                debugging(
+                    'A generated picture arrived with ' . $downloaded->get_filesize() . ' bytes instead of ' . $expected
+                        . ' and was accepted because it is a whole image.',
+                    DEBUG_DEVELOPER
+                );
+                return $downloaded;
+            }
             if ($downloaded) {
                 $actual = (int) $downloaded->get_filesize();
                 $downloaded->delete();
@@ -115,6 +124,28 @@ class generated_file_cache {
             $record['filename'],
             'expected ' . $expected . ' bytes, got ' . ($actual === null ? 'no file' : $actual . ' bytes')
         );
+    }
+
+    /**
+     * Whether a stored file is a complete image: it decodes and ends the way its format ends.
+     *
+     * @param \stored_file $file
+     * @return bool
+     */
+    private static function is_whole_image(\stored_file $file): bool {
+        $content = $file->get_content();
+        if ($content === '' || @getimagesizefromstring($content) === false) {
+            return false;
+        }
+        $tail = rtrim(substr($content, -64), "\0");
+        switch ($file->get_mimetype()) {
+            case 'image/jpeg':
+                return str_ends_with($tail, "\xFF\xD9");
+            case 'image/png':
+                return str_contains(substr($content, -16), 'IEND');
+            default:
+                return false;
+        }
     }
 
     /**
