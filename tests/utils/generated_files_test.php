@@ -96,29 +96,16 @@ final class generated_files_test extends \advanced_testcase {
     }
 
     /**
-     * A download that is not the size the result states is refused and not kept.
+     * A download is kept as it arrived: the size the result states is not checked.
      */
-    public function test_a_file_of_another_size_is_refused_and_removed(): void {
+    public function test_a_file_of_another_size_is_kept(): void {
         $this->resetAfterTest();
         $calls = [];
         $cache = new generated_file_cache($this->downloader('SHORT', $calls));
 
-        try {
-            $cache->get($this->entry('A LONGER CONTENT'));
-            $this->fail('A moodle_exception was expected.');
-        } catch (\moodle_exception $exception) {
-            $this->assertSame('template_reference_download_failed', $exception->errorcode);
-        }
+        $stored = $cache->get($this->entry('A LONGER CONTENT'));
 
-        $record = generated_file_cache::file_record($this->entry('A LONGER CONTENT'));
-        $this->assertFalse(get_file_storage()->file_exists(
-            $record['contextid'],
-            $record['component'],
-            $record['filearea'],
-            $record['itemid'],
-            $record['filepath'],
-            $record['filename']
-        ));
+        $this->assertSame('SHORT', $stored->get_content());
     }
 
     /**
