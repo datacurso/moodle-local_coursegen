@@ -96,6 +96,8 @@ class template_export_service {
             'course_configuration' => $courseconfiguration,
             'sections_info' => $sectionsinfo,
             'activities' => $activities,
+            // The pictures of the course itself the author asked to be made again, with their instruction.
+            'image_slots' => template_course_image_slots::payload(template_course_image_slots::for_course($course)),
             'general_instruction' => $generalinstruction,
             'lang' => $lang,
             'with_images' => false,

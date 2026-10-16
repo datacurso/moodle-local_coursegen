@@ -64,12 +64,42 @@ use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\course_session_service;
 
 $resumesessionid = optional_param('sessionid', 0, PARAM_INT);
+$templatesession = null;
 $showsessionsview = optional_param('view', '', PARAM_ALPHA) === 'courses';
 // A fresh visit opens on the choice of starting point: the parameter being
 // absent is what means "nothing chosen yet", so a card writes its own value
 // (free or template) and the old ?mode=template link keeps landing straight
 // on the template column.
 $modeparam = optional_param('mode', null, PARAM_ALPHA);
+// A generation made from a template has its own page: its session id in the address is not the resume of a free-mode
+// plan, so it opens the template mode and the free-mode resume is left alone.
+if ($resumesessionid > 0) {
+    $opened = $DB->get_record(
+        'local_coursegen_course_sessions',
+        ['id' => $resumesessionid, 'userid' => $USER->id],
+        'id, coursedata'
+    );
+    $openeddata = $opened ? json_decode((string) $opened->coursedata, true) : null;
+    if (is_array($openeddata) && isset($openeddata['templateid'])) {
+        $resumesessionid = 0;
+        $modeparam = 'template';
+        $templatesession = ['id' => (int) $opened->id, 'created' => false];
+        $openedrecord = new course_session((int) $opened->id);
+        $createdcourseid = (int) ($openedrecord->get('courseid') ?? 0);
+        if ((int) $openedrecord->get('status') === course_session::STATUS_CREATED && $createdcourseid > 0
+                && $DB->record_exists('course', ['id' => $createdcourseid])) {
+            // What the finished course holds, counted in the course itself.
+            $modinfo = get_fast_modinfo($createdcourseid, -1);
+            $templatesession = [
+                'id' => (int) $opened->id,
+                'created' => true,
+                'courseurl' => (new moodle_url('/course/view.php', ['id' => $createdcourseid]))->out(false),
+                'sections' => max(0, count($modinfo->get_section_info_all()) - 1),
+                'activities' => count($modinfo->get_cms()),
+            ];
+        }
+    }
+}
 $templatemodeactive = $modeparam === 'template';
 
 // Each way of creating a course is its own capability. A user who has only one of
@@ -136,12 +166,14 @@ foreach ($supportedlangs as $code) {
 
 // Helper to build session data array.
 $buildsessiondata = function ($session, $maxtitle = 50) {
+    $coursedata = json_decode($session->get('coursedata') ?? '{}', true) ?: [];
+    // A run made from a template is writing the course the whole time it is pending: it is not planning it.
+    $pending = isset($coursedata['templateid']) ? 'status_generating' : 'status_pending';
     $statuslabels = [
-        course_session::STATUS_PENDING => get_string('status_pending', 'local_coursegen'),
+        course_session::STATUS_PENDING => get_string($pending, 'local_coursegen'),
         course_session::STATUS_CREATING => get_string('status_creating', 'local_coursegen'),
         course_session::STATUS_FAILED => get_string('status_failed', 'local_coursegen'),
     ];
-    $coursedata = json_decode($session->get('coursedata') ?? '{}', true);
     $rawtitle = $coursedata['fullname'] ?? $coursedata['local_coursegen_custom_prompt'] ?? '';
     $title = \core_text::str_max_bytes($rawtitle, $maxtitle);
     if (empty($title)) {
@@ -150,6 +182,7 @@ $buildsessiondata = function ($session, $maxtitle = 50) {
     return [
         'id' => $session->get('id'),
         'title' => $title,
+        'shortname' => $coursedata['shortname'] ?? '',
         'statuslabel' => $statuslabels[$session->get('status')] ?? '',
         'status' => $session->get('status'),
         'timecreated' => userdate($session->get('timecreated'), get_string('strftimedatetimeshort', 'langconfig')),
@@ -235,6 +268,7 @@ $PAGE->requires->js_call_amd('local_coursegen/courseai', 'init', [
         'sessions' => $allsessionsdata,
         'resumesessionid' => $resumesessionid,
         'isresuming' => $resumesessionid > 0,
+        'templatesession' => $templatesession,
     ],
 ]);
 

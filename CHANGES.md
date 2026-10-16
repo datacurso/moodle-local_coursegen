@@ -2,6 +2,42 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101220
+
+### Fixed
+- **A course made from a template opens as a finished course from the list of recent courses**  
+  Opening a session whose course was already created showed the empty template form with a completion card that said "0 activities were created in 0 sections", because the page treated it as the resume of a free-mode plan. It now shows the completion view with the number of sections and activities the course really holds and the button that opens it, and nothing of the form that makes a new course.
+
+## [2.0.10] - 2026101219
+
+### Fixed
+- **The progress of the pictures and the notices about the wait are shown where they can be seen**  
+  They were written under the title of the right panel, which is out of sight as soon as the list of activities is scrolled, so while the pictures were made nothing seemed to happen. They now also go to the status bar of the conversation, which is always in view: the counter of pictures, the one being made and the reference it is made from, and the notices about a wait or a retry.
+
+## [2.0.10] - 2026101218
+
+### Changed
+- **A generation made from a template shows in the sidebar and in the address as soon as it starts**  
+  The session of the generation is now added at the top of the list of recent courses the moment the course starts to be made, and its identifier goes into the address of the page, the way a conversation does in a chat. The name replaces "Untitled course" when the AI returns it. Opening the address of a template session lands on the template page instead of the resume of a free-mode plan.
+
+## [2.0.10] - 2026101217
+
+### Changed
+- **The list of recent courses shows the name the AI gives the course as soon as it returns it**  
+  A generation made from a template appeared in the list as "Untitled course" with the label "Planning" until it was finished. The name is the first thing the AI returns, so now the full name and the short name replace the placeholder at that moment, in the list on the page and in the one that is loaded later, and the label says "Generating" instead of "Planning".
+
+## [2.0.10] - 2026101216
+
+### Added
+- **The generation says what it is doing and any error can be tried again**  
+  While a course is generated the phase line now tells when the AI provider asked to wait, when a request is being tried again or is slow, and, for the pictures, which image is being made, from which template image, and how many are ready. When the generation stops on an error the technical message with its stack trace is gone: a card says that what was already made is kept and offers to try again, which makes only what is missing, or to close.
+
+## [2.0.10] - 2026101215
+
+### Added
+- **The pictures of the course itself can be made again from the ones of the template**  
+  The cover of the course, the picture each section is shown with in the grid format and the pictures in the summary of a section can now be replaced by new ones the AI makes looking at the template's picture and following an instruction. The author writes `[[coursegen:reference: instruction]]` in the rich text next to the picture: in the summary of the course for its cover, in the summary of a section (with no picture of the text after it) for the picture of that section, and right above a picture of a section summary for that picture. The instructions are taken out of the texts the new course receives, a place where the template has no picture gets one made from nothing, and a marker that points at more than one picture, or two markers for the same place, are refused before the generation starts.
+
 ## [2.0.10] - 2026101214
 
 ### Fixed

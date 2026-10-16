@@ -345,6 +345,7 @@
   text-overflow: ellipsis;
 }
 
+.courseai-sidebar-course-shortname,
 .courseai-sidebar-course-status {
   font-size: 11px;
   color: var(--muted-fg);

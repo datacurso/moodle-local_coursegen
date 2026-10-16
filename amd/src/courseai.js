@@ -58,6 +58,7 @@ import {makeEmitLog, makeRenderPlanMarkdown} from 'local_coursegen/courseai/boot
 import {makeHydratePlan} from 'local_coursegen/courseai/bootstrap/hydrate-plan';
 import {createExecutionControls} from 'local_coursegen/local/courseai/actions/execution-control';
 import {wireTemplateMode} from 'local_coursegen/local/courseai/template_mode';
+import {showFinishedCourse} from 'local_coursegen/local/courseai/template/finish';
 
 /**
  * Reset the workspace chrome back to the context-gathering view.
@@ -318,6 +319,10 @@ export const init = async(params) => {
         });
 
         await attemptResume(resumeSessionId, resumeFromSnapshot, elements, setResumeBootLoading);
+
+        if (params?.templatesession?.created) {
+            showFinishedCourse(templateHost, state, params.templatesession);
+        }
 
         contextUi.renderGuidelineList();
         stepsUi.updateFlowNav();
