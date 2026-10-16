@@ -116,6 +116,9 @@ $logourl = new moodle_url('/local/coursegen/pix/logo.png');
 // Subsections toggle only renders when the feature is enabled and mod_subsection is available.
 $subsectionsenabled = \local_coursegen\local\service\course_planning_service::subsections_available();
 
+// Import-into-existing-course controls render only when the site opted in (ticket #9539).
+$importexistingenabled = !empty(get_config('local_coursegen', 'enableimportexisting'));
+
 // Prepare template context.
 $templatecontext = [
     'guidelines' => json_encode($systeminstructions),
@@ -127,6 +130,7 @@ $templatecontext = [
     'allsessions' => $allsessionsdata,
     'isresuming' => $resumesessionid > 0,
     'subsectionsenabled' => $subsectionsenabled,
+    'importexistingenabled' => $importexistingenabled,
     // Initial (empty) guideline listboxes; JavaScript re-renders them from the same templates.
     'guidelinelist' => [
         'listlabel' => get_string('courseai_guidelines_list_label', 'local_coursegen'),

@@ -1,3 +1,21 @@
+## 2.0.8
+
+**Released on:** Unreleased
+
+**Compatibility note:** This version is compatible **from Moodle 4.5 to Moodle 5.2**.
+
+## Added
+
+- **Import the generated course into an existing course**  
+  When the new administrator setting *Allow importing into an existing course* (`local_coursegen/enableimportexisting`, off by default) is enabled, the confirmation panel offers, as its first field, a selector with *Create as a new course* or *Import into an existing course*; in import mode the course name, short name and new-course category fields are hidden because the copy keeps the target course's names. Importing shows a category autocomplete and a course autocomplete filtered by the chosen category through the new `local_coursegen_search_target_courses` external function, which only lists courses the user can back up and restore. The generated course is materialised as a staging course and an adhoc task then copies the target course with its settings, enrolments, roles, groups, grades and user data (native backup/restore with user data, immediate mode; the acting user needs `moodle/backup:userinfo` and `moodle/restore:userinfo`), renames the original with a unique timestamp suffix following the `delete_user()` pattern so the copy keeps the original short and full names, hides the original course, imports the staging content onto the copy — replacing its content (people, roles and groups are kept) or appending the generated sections after the existing ones, including the plan's first section even though the generator stores it as section 0 (the original sections are never merged or renamed), as chosen in the new *Import content mode* administrator setting (`importcontentmode`, default replace) — and deletes the staging course bypassing the recycle bin. On any failure the copy is deleted, the original names and visibility are restored, the generated course is kept reachable from the session and the task is never retried by cron. The confirmation view polls the session state until the import finishes. With the setting disabled the flow is unchanged.
+
+## Fixed
+
+- **Optional web service parameters declared with a default**  
+  `local_coursegen_create_course` declared `fullname`, `shortname` and `category` as `VALUE_OPTIONAL` with a default value, which Moodle flags with a developer debugging notice on every call and, in isolated PHPUnit runs, raised before the database reset so rows leaked between tests. They are now `VALUE_DEFAULT`; the cleaned parameters and the response are identical.
+- **Site course comparison in the import target check**  
+  `SITEID` is a string in Moodle, so a strict integer comparison could never exclude the site course as an import target; the guard now casts it.
+
 ## 2.0.7
 
 **Released on:** Unreleased
