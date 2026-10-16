@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101218
+
+### Changed
+- **A generation made from a template shows in the sidebar and in the address as soon as it starts**  
+  The session of the generation is now added at the top of the list of recent courses the moment the course starts to be made, and its identifier goes into the address of the page, the way a conversation does in a chat. The name replaces "Untitled course" when the AI returns it. Opening the address of a template session lands on the template page instead of the resume of a free-mode plan.
+
 ## [2.0.10] - 2026101217
 
 ### Changed

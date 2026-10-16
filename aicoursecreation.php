@@ -70,6 +70,20 @@ $showsessionsview = optional_param('view', '', PARAM_ALPHA) === 'courses';
 // (free or template) and the old ?mode=template link keeps landing straight
 // on the template column.
 $modeparam = optional_param('mode', null, PARAM_ALPHA);
+// A generation made from a template has its own page: its session id in the address is not the resume of a free-mode
+// plan, so it opens the template mode and the free-mode resume is left alone.
+if ($resumesessionid > 0) {
+    $opened = $DB->get_record(
+        'local_coursegen_course_sessions',
+        ['id' => $resumesessionid, 'userid' => $USER->id],
+        'id, coursedata'
+    );
+    $openeddata = $opened ? json_decode((string) $opened->coursedata, true) : null;
+    if (is_array($openeddata) && isset($openeddata['templateid'])) {
+        $resumesessionid = 0;
+        $modeparam = 'template';
+    }
+}
 $templatemodeactive = $modeparam === 'template';
 
 // Each way of creating a course is its own capability. A user who has only one of
