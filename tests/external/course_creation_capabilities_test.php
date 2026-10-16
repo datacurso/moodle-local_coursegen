@@ -27,9 +27,9 @@ use local_coursegen\external\get_course_settings;
 use local_coursegen\external\get_template_course_settings;
 use local_coursegen\external\get_template_structure;
 use local_coursegen\external\manage_image_generation;
+use local_coursegen\external\retry_template_generation;
 use local_coursegen\external\start_course_planning;
 use local_coursegen\external\start_template_generation;
-use local_coursegen\external\retry_template_generation;
 use local_coursegen\external\template_review_feedback;
 
 defined('MOODLE_INTERNAL') || die();
