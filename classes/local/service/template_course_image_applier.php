@@ -56,7 +56,7 @@ final class template_course_image_applier {
                 self::put($courseid, $slot, $entry, $stored);
                 $cache->forget($entry);
             } catch (\moodle_exception $exception) {
-                debugging('A picture of the course could not be applied: ' . $exception->getMessage(), DEBUG_DEVELOPER);
+                debugging('A picture of the course could not be applied: ' . $exception->getMessage() . ' ' . $exception->debuginfo, DEBUG_DEVELOPER);
             }
         }
         rebuild_course_cache($courseid, true);

@@ -33,6 +33,9 @@ class generated_file_cache {
     /** @var string The file area the files are stored in, under the system context. */
     public const FILEAREA = 'generatedfiles';
 
+    /** @var int How many times a file is downloaded before giving up. */
+    private const ATTEMPTS = 3;
+
     /** @var callable Downloads one file: (threadid, fileid, filename, filerecord) => stored_file|null. */
     private $downloader;
 
@@ -87,20 +90,31 @@ class generated_file_cache {
         if ($stored) {
             return $stored;
         }
-        $downloaded = ($this->downloader)(
-            self::text($entry, 'thread_id'),
-            self::text($entry, 'file_id'),
+        // A download that arrives short is tried again: the size the result states is what a whole file has.
+        $expected = (int) ($entry['size'] ?? -1);
+        $actual = null;
+        for ($attempt = 1; $attempt <= self::ATTEMPTS; $attempt++) {
+            $downloaded = ($this->downloader)(
+                self::text($entry, 'thread_id'),
+                self::text($entry, 'file_id'),
+                $record['filename'],
+                $record
+            );
+            if ($downloaded && (int) $downloaded->get_filesize() === $expected) {
+                return $downloaded;
+            }
+            if ($downloaded) {
+                $actual = (int) $downloaded->get_filesize();
+                $downloaded->delete();
+            }
+        }
+        throw new \moodle_exception(
+            'template_reference_download_failed',
+            'local_coursegen',
+            '',
             $record['filename'],
-            $record
+            'expected ' . $expected . ' bytes, got ' . ($actual === null ? 'no file' : $actual . ' bytes')
         );
-        if (!$downloaded) {
-            throw new \moodle_exception('template_reference_download_failed', 'local_coursegen', '', $record['filename']);
-        }
-        if ((int) $downloaded->get_filesize() !== (int) ($entry['size'] ?? -1)) {
-            $downloaded->delete();
-            throw new \moodle_exception('template_reference_download_failed', 'local_coursegen', '', $record['filename']);
-        }
-        return $downloaded;
     }
 
     /**
