@@ -77,6 +77,21 @@ if ($hassiteconfig) {
     ));
     $settings->hide_if('local_coursegen/importcontentmode', 'local_coursegen/enableimportexisting', 'notchecked');
 
+    // Only meaningful while the import is enabled: "adhoc" queues a cron task
+    // and the page polls until it ends, "sync" runs the copy and the import
+    // inside the create_course request.
+    $settings->add(new admin_setting_configselect(
+        'local_coursegen/importexecution',
+        get_string('setting_importexecution', 'local_coursegen'),
+        get_string('setting_importexecution_desc', 'local_coursegen'),
+        'adhoc',
+        [
+            'adhoc' => get_string('importexecution_adhoc', 'local_coursegen'),
+            'sync' => get_string('importexecution_sync', 'local_coursegen'),
+        ]
+    ));
+    $settings->hide_if('local_coursegen/importexecution', 'local_coursegen/enableimportexisting', 'notchecked');
+
     $ADMIN->add($pluginname, $settings);
 
     // Development settings page: service URL overrides for dev/staging

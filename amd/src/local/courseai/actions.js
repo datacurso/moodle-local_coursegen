@@ -203,9 +203,12 @@ export const createCourseaiActions = (deps) => {
     };
 
     // ---- Import into an existing course (ticket #9539) -------------------------------
-    // The backend answers create_course with importqueued=true and the STAGING course;
-    // an adhoc task copies the target and imports the staging into the copy. The page
-    // polls the session state until importstate is done|failed (capped).
+    // The backend answers create_course with importqueued=true and the STAGING course.
+    // In the background execution an adhoc task copies the target and imports the
+    // staging into the copy, and the page polls the session state until importstate
+    // is done|failed (capped). In the foreground execution the answer already carries
+    // the terminal importstate (and copycourseid), so the terminal view is rendered
+    // straight away and nothing is polled.
     const IMPORT_POLL_INTERVAL_MS = 5000;
     const IMPORT_POLL_MAX_MS = 10 * 60 * 1000;
     let importPollTimer = null;
@@ -254,11 +257,16 @@ export const createCourseaiActions = (deps) => {
         const importState = String(info?.importstate || '');
         if (importState === 'done') {
             // The copy is the course the user asked for; the staging course is gone.
+            // get_course_session_state sends copycourseurl; create_course (foreground
+            // execution) only sends copycourseid, so the URL is built from it.
+            const copyCourseId = Number(info?.copycourseid || 0);
+            const copyCourseUrl = String(info?.copycourseurl || '')
+                || (copyCourseId > 0 ? M.cfg.wwwroot + '/course/view.php?id=' + copyCourseId : '');
             showCompletionView({
                 success: true,
                 importcompleted: true,
-                courseid: Number(info?.copycourseid || 0),
-                courseurl: String(info?.copycourseurl || '') || generatedCourseUrl,
+                courseid: copyCourseId,
+                courseurl: copyCourseUrl || generatedCourseUrl,
             });
             return true;
         }

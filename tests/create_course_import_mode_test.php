@@ -20,13 +20,15 @@ use local_coursegen\external\create_course;
 use local_coursegen\local\models\course_session;
 use local_coursegen\local\service\ai_course_api_service;
 use local_coursegen\local\service\course_session_service;
+use local_coursegen\local\service\testable_course_import_service;
 use local_coursegen\task\import_generated_course_task;
 
 /**
  * Contract tests for the import target mode of the create_course web service (ticket #9539).
  *
  * In import mode the AI-generated course is a staging course placed in the
- * target's category, and an adhoc import task is queued. The AI service is
+ * target's category, and the import is either queued as an adhoc task or run
+ * inside the request, per the importexecution setting. The AI service is
  * mocked through the testable subclass, so no network request is performed.
  * The fixture loads lib/externallib.php, so each test runs in an isolated process.
  *
@@ -46,6 +48,7 @@ final class create_course_import_mode_test extends \advanced_testcase {
         parent::setUp();
         $this->resetAfterTest();
         require_once(__DIR__ . '/fixtures/testable_create_course.php');
+        require_once(__DIR__ . '/fixtures/testable_course_import_service.php');
 
         // Any accidental real API call must fail fast instead of reaching the network.
         set_config('datacurso_service_url', 'https://invalid.invalid', 'local_coursegen');
@@ -57,6 +60,7 @@ final class create_course_import_mode_test extends \advanced_testcase {
      */
     protected function tearDown(): void {
         testable_create_course::$mockservice = null;
+        testable_create_course::$importserviceclass = null;
         parent::tearDown();
     }
 
@@ -179,6 +183,8 @@ final class create_course_import_mode_test extends \advanced_testcase {
         $this->assertTrue($result['success'], $result['message']);
         $this->assertFalse($result['importqueued']);
         $this->assertSame(0, $result['targetcourseid']);
+        $this->assertSame('', $result['importstate']);
+        $this->assertSame(0, $result['copycourseid']);
         $this->assertSame('AI course', $result['fullname']);
         $this->assertSame('aicourse', $result['shortname']);
         $this->assertEquals($category->id, $DB->get_field('course', 'category', ['id' => $result['courseid']]));
@@ -359,12 +365,33 @@ final class create_course_import_mode_test extends \advanced_testcase {
     }
 
     /**
+     * Values of local_coursegen/importexecution that queue the adhoc task.
+     *
+     * @return array[]
+     */
+    public static function adhoc_execution_provider(): array {
+        return [
+            'setting unset' => [null],
+            'explicit adhoc' => ['adhoc'],
+            'unknown value falls back to adhoc' => ['later'],
+        ];
+    }
+
+    /**
      * Happy path: the staging course lands in the target's category whatever the AI or the user
      * asked for, one import task is queued for the acting user and the session is marked queued.
+     *
+     * @dataProvider adhoc_execution_provider
+     * @param string|null $execution Value of local_coursegen/importexecution, null to leave it unset.
      */
-    public function test_import_mode_creates_staging_in_target_category_and_queues_task(): void {
+    public function test_import_mode_creates_staging_in_target_category_and_queues_task(?string $execution): void {
         global $DB;
 
+        if ($execution === null) {
+            unset_config('importexecution', 'local_coursegen');
+        } else {
+            set_config('importexecution', $execution, 'local_coursegen');
+        }
         $this->setAdminUser();
         $adminid = (int) get_admin()->id;
         $generator = $this->getDataGenerator();
@@ -391,6 +418,8 @@ final class create_course_import_mode_test extends \advanced_testcase {
         $this->assertTrue($result['success'], $result['message']);
         $this->assertTrue($result['importqueued']);
         $this->assertSame((int) $target->id, $result['targetcourseid']);
+        $this->assertSame('queued', $result['importstate']);
+        $this->assertSame(0, $result['copycourseid']);
         $stagingid = $result['courseid'];
         $this->assertGreaterThan(0, $stagingid);
         $this->assertNotSame((int) $target->id, $stagingid);
@@ -413,6 +442,94 @@ final class create_course_import_mode_test extends \advanced_testcase {
         $this->assertSame('queued', $import['state']);
         $this->assertSame((int) $target->id, (int) $import['targetcourseid']);
         $this->assertSame($stagingid, (int) $import['stagingcourseid']);
+    }
+
+    /**
+     * Foreground execution: the import runs inside the request, nothing is queued, and the
+     * response already carries the terminal state and the copy that replaced the target.
+     */
+    public function test_sync_execution_imports_in_request_and_returns_done(): void {
+        global $DB;
+
+        set_config('importexecution', 'sync', 'local_coursegen');
+        $this->setAdminUser();
+        $target = $this->getDataGenerator()->create_course(['shortname' => 'TARGET', 'fullname' => 'Target course']);
+        $session = $this->create_session((int) get_admin()->id);
+        $this->mock_result(['fullname' => 'AI course', 'shortname' => 'aicourse']);
+
+        $result = testable_create_course::execute((int) $session->get('id'), '', '', 0, 'import', (int) $target->id);
+        $result = \external_api::clean_returnvalue(create_course::execute_returns(), $result);
+
+        $this->assertTrue($result['success'], $result['message']);
+        $this->assertCount(0, \core\task\manager::get_adhoc_tasks(import_generated_course_task::class));
+        $this->assertTrue($result['importqueued']);
+        $this->assertSame((int) $target->id, $result['targetcourseid']);
+        $this->assertSame('done', $result['importstate']);
+        $this->assertGreaterThan(0, $result['copycourseid']);
+        $stagingid = $result['courseid'];
+        $this->assertGreaterThan(0, $stagingid);
+
+        // The copy took the target's names, the staging course is gone and the original is a hidden backup.
+        $copy = $DB->get_record('course', ['id' => $result['copycourseid']], '*', MUST_EXIST);
+        $this->assertSame('TARGET', $copy->shortname);
+        $this->assertSame('Target course', $copy->fullname);
+        $this->assertFalse($DB->record_exists('course', ['id' => $stagingid]));
+        $original = $DB->get_record('course', ['id' => $target->id], '*', MUST_EXIST);
+        $this->assertMatchesRegularExpression('/^TARGET\.\d{10}$/', $original->shortname);
+        $this->assertMatchesRegularExpression('/^Target course \(\d{10}\)$/', $original->fullname);
+        $this->assertSame(0, (int) $original->visible);
+
+        $session = new course_session($session->get('id'));
+        $this->assertSame(course_session::STATUS_CREATED, (int) $session->get('status'));
+        $this->assertSame($result['copycourseid'], (int) $session->get('courseid'));
+        $import = $this->import_data((int) $session->get('id'));
+        $this->assertSame('done', $import['state']);
+        $this->assertSame($result['copycourseid'], (int) $import['copycourseid']);
+        $this->assertSame((int) $target->id, (int) $import['targetcourseid']);
+        $this->assertSame($stagingid, (int) $import['stagingcourseid']);
+    }
+
+    /**
+     * Foreground execution, failed import: the service rolls back, the response reports the
+     * failure with no copy, the staging course is kept and nothing is queued.
+     */
+    public function test_sync_execution_returns_failed_and_keeps_staging_when_import_fails(): void {
+        global $DB;
+
+        set_config('importexecution', 'sync', 'local_coursegen');
+        testable_create_course::$importserviceclass = testable_course_import_service::class;
+        $this->setAdminUser();
+        $target = $this->getDataGenerator()->create_course(['shortname' => 'TARGET', 'fullname' => 'Target course']);
+        $session = $this->create_session((int) get_admin()->id);
+        $this->mock_result(['fullname' => 'AI course', 'shortname' => 'aicourse']);
+        $coursesbefore = $DB->count_records('course');
+
+        $result = testable_create_course::execute((int) $session->get('id'), '', '', 0, 'import', (int) $target->id);
+        $result = \external_api::clean_returnvalue(create_course::execute_returns(), $result);
+
+        $this->assertTrue($result['success'], $result['message']);
+        $this->assertCount(0, \core\task\manager::get_adhoc_tasks(import_generated_course_task::class));
+        $this->assertTrue($result['importqueued']);
+        $this->assertSame((int) $target->id, $result['targetcourseid']);
+        $this->assertSame('failed', $result['importstate']);
+        $this->assertSame(0, $result['copycourseid']);
+        $stagingid = $result['courseid'];
+        $this->assertGreaterThan(0, $stagingid);
+
+        // Only the staging course remains on top of what existed: the copy was rolled back.
+        $this->assertSame($coursesbefore + 1, $DB->count_records('course'));
+        $this->assertTrue($DB->record_exists('course', ['id' => $stagingid]));
+        $original = $DB->get_record('course', ['id' => $target->id], '*', MUST_EXIST);
+        $this->assertSame('TARGET', $original->shortname);
+        $this->assertSame('Target course', $original->fullname);
+        $this->assertSame(1, (int) $original->visible);
+
+        $session = new course_session($session->get('id'));
+        $this->assertSame(course_session::STATUS_FAILED, (int) $session->get('status'));
+        $this->assertSame($stagingid, (int) $session->get('courseid'));
+        $import = $this->import_data((int) $session->get('id'));
+        $this->assertSame('failed', $import['state']);
+        $this->assertSame(\RuntimeException::class, $import['errorclass']);
     }
 
     /**

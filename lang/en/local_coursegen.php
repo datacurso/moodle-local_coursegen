@@ -626,6 +626,8 @@ $string['import_queued'] = 'The import into the existing course has been queued.
 $string['import_running'] = 'The import into the existing course is in progress.';
 $string['importcontentmode_add'] = 'Keep the existing content and append the generated sections after it';
 $string['importcontentmode_replace'] = 'Replace all existing content';
+$string['importexecution_adhoc'] = 'In the background (cron task)';
+$string['importexecution_sync'] = 'In the foreground (same request)';
 
 // Activity-graph status.
 $string['intent_requires_parent'] = 'action \'{$a->action}\' requires a valid parent_section_id';
@@ -816,6 +818,8 @@ $string['setting_enableimportexisting'] = 'Allow importing into an existing cour
 $string['setting_enableimportexisting_desc'] = 'Lets AI course creators import a generated course into an existing course instead of creating a new one. The target course is copied under its original names, the generated content is imported into the copy according to the "Import content mode" setting, and the original course is renamed and hidden as a backup.';
 $string['setting_importcontentmode'] = 'Import content mode';
 $string['setting_importcontentmode_desc'] = 'How the generated content is imported into the copy of the target course. "Replace all existing content" removes every section and activity of the target first, so only the generated content remains. "Keep the existing content and append the generated sections after it" leaves the original sections and activities untouched and adds the generated sections after the last existing one, each with its own name and activities.';
+$string['setting_importexecution'] = 'Import execution';
+$string['setting_importexecution_desc'] = 'How the import into the existing course runs once the course has been generated. "In the background (cron task)" queues an adhoc task that cron runs; the page polls the session state until it finishes, and large courses are safe from request time limits. "In the foreground (same request)" runs the copy and the import inside the request, so no cron is needed, but the request must finish within the web server and browser time limits.';
 $string['settings_error'] = 'An error occurred while saving settings.';
 $string['settings_saved'] = 'Settings saved.';
 $string['status_creating'] = 'Creating';

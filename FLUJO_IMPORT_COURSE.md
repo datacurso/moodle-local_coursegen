@@ -4,7 +4,7 @@ Recorrido paso a paso del flujo de importación: qué archivos intervienen en ca
 
 ## Qué hace y por qué existe el staging
 
-Con el ajuste de administrador activado, el panel de confirmación permite elegir entre crear un curso nuevo o importar el contenido generado a un curso existente. En modo importación el plugin **no** genera el contenido directamente sobre el curso destino: materializa el resultado de la IA en un curso de **staging** (en la categoría del destino) y encola una tarea adhoc que copia el destino **con todos sus datos de usuario** (matriculaciones, roles, grupos, calificaciones, finalización y datos de usuario de las actividades), vuelca el staging sobre la copia (reemplazando o añadiendo contenido según el ajuste `importcontentmode`) y borra el staging. El original queda renombrado y oculto como copia de seguridad. La razón es que `create_course_service::process_course_sections()` llama a `delete_course_sections()` de forma incondicional: generar directamente sobre un curso existente lo vaciaría antes de escribir el contenido nuevo.
+Con el ajuste de administrador activado, el panel de confirmación permite elegir entre crear un curso nuevo o importar el contenido generado a un curso existente. En modo importación el plugin **no** genera el contenido directamente sobre el curso destino: materializa el resultado de la IA en un curso de **staging** (en la categoría del destino) y lanza la importación (en una tarea adhoc por defecto o, con el ajuste `importexecution` en `sync`, dentro de la misma petición; ver paso 4.1.1), que copia el destino **con todos sus datos de usuario** (matriculaciones, roles, grupos, calificaciones, finalización y datos de usuario de las actividades), vuelca el staging sobre la copia (reemplazando o añadiendo contenido según el ajuste `importcontentmode`) y borra el staging. El original queda renombrado y oculto como copia de seguridad. La razón es que `create_course_service::process_course_sections()` llama a `delete_course_sections()` de forma incondicional: generar directamente sobre un curso existente lo vaciaría antes de escribir el contenido nuevo.
 
 `classes/local/service/create_course_service.php:374-382`
 
@@ -410,7 +410,7 @@ El web service está declarado en `db/services.php` como función de lectura con
 
 ## 3. Confirmar: el web service `create_course` en modo importación
 
-Al pulsar confirmar, `onConfirm` lee el modo y el curso destino del controlador; en modo `import` devuelve **solo** `targetmode = 'import'` y `targetcourseid` y sale antes de leer los inputs (`fullname`, `shortname` y `category` se leen únicamente en modo `new`). `createCourseFromSession` copia esos dos campos al payload y el repositorio los reenvía a `local_coursegen_create_course`. En el servidor, `execute` valida `targetmode`, exige `moodle/course:create` y `local/coursegen:createcoursewithai` en contexto de sistema, carga la sesión del usuario y, **antes de pedir el resultado a la API y de materializar nada**, llama a `require_import_target`: ajuste activado, `targetcourseid > 0`, el curso existe y no es el sitio (`(int)SITEID`), y capacidades de backup/restore y `moodle/course:visibility` sobre el destino (la importación oculta el original), `moodle/course:create` sobre su categoría y, en último lugar, `moodle/backup:userinfo` sobre el destino y `moodle/restore:userinfo` sobre su categoría: la copia lleva los datos de usuario del original y, como aún no existe, hereda los permisos de la categoría del destino. Luego fuerza la categoría del staging a la del destino, llama a `create_course_service::create_course` y, si tuvo éxito, encola `import_generated_course_task` y responde `importqueued = true` con el `courseid` del **staging**.
+Al pulsar confirmar, `onConfirm` lee el modo y el curso destino del controlador; en modo `import` devuelve **solo** `targetmode = 'import'` y `targetcourseid` y sale antes de leer los inputs (`fullname`, `shortname` y `category` se leen únicamente en modo `new`). `createCourseFromSession` copia esos dos campos al payload y el repositorio los reenvía a `local_coursegen_create_course`. En el servidor, `execute` valida `targetmode`, exige `moodle/course:create` y `local/coursegen:createcoursewithai` en contexto de sistema, carga la sesión del usuario y, **antes de pedir el resultado a la API y de materializar nada**, llama a `require_import_target`: ajuste activado, `targetcourseid > 0`, el curso existe y no es el sitio (`(int)SITEID`), y capacidades de backup/restore y `moodle/course:visibility` sobre el destino (la importación oculta el original), `moodle/course:create` sobre su categoría y, en último lugar, `moodle/backup:userinfo` sobre el destino y `moodle/restore:userinfo` sobre su categoría: la copia lleva los datos de usuario del original y, como aún no existe, hereda los permisos de la categoría del destino. Luego fuerza la categoría del staging a la del destino, llama a `create_course_service::create_course` y, si tuvo éxito, lee el ajuste `importexecution`: en `adhoc` (por defecto) encola `import_generated_course_task` y responde `importstate = 'queued'`; en `sync` llama a `course_import_service::mark_queued` e `import_into_existing` dentro de la propia petición y responde el estado terminal (`importstate = 'done'` con `copycourseid`, o `'failed'`). En los dos casos responde `importqueued = true` con el `courseid` del **staging** (ver paso 4.1.1).
 
 `amd/src/local/courseai/actions/course-create.js:253-281`
 
@@ -490,7 +490,7 @@ export async function createCourse({recordid, fullname, shortname, category, tar
 }
 ```
 
-`classes/external/create_course.php:50-80`
+`classes/external/create_course.php:51-87`
 
 ```php
     /** @var string Target mode: create a new course (today's behaviour). */
@@ -498,6 +498,12 @@ export async function createCourse({recordid, fullname, shortname, category, tar
 
     /** @var string Target mode: generate a staging course and import it into an existing course. */
     const TARGETMODE_IMPORT = 'import';
+
+    /** @var string Import execution: queue an adhoc task that cron runs (default). */
+    const IMPORTEXECUTION_ADHOC = 'adhoc';
+
+    /** @var string Import execution: run the import inside the request. */
+    const IMPORTEXECUTION_SYNC = 'sync';
 
     /**
      * Returns description of method parameters.
@@ -526,7 +532,7 @@ export async function createCourse({recordid, fullname, shortname, category, tar
     }
 ```
 
-`classes/external/create_course.php:115-136`
+`classes/external/create_course.php:122-143`
 
 ```php
         if (!in_array($params['targetmode'], [self::TARGETMODE_NEW, self::TARGETMODE_IMPORT], true)) {
@@ -553,7 +559,7 @@ export async function createCourse({recordid, fullname, shortname, category, tar
         }
 ```
 
-`classes/external/create_course.php:205-231`
+`classes/external/create_course.php:226-252`
 
 ```php
     private static function require_import_target(int $targetcourseid): \stdClass {
@@ -585,7 +591,7 @@ export async function createCourse({recordid, fullname, shortname, category, tar
     }
 ```
 
-`classes/external/create_course.php:157-175`
+`classes/external/create_course.php:164-196`
 
 ```php
         if ($target !== null) {
@@ -597,19 +603,33 @@ export async function createCourse({recordid, fullname, shortname, category, tar
         $outcome = create_course_service::create_course($session, $resultdata, $overrides);
         $outcome['importqueued'] = false;
         $outcome['targetcourseid'] = 0;
+        $outcome['importstate'] = '';
+        $outcome['copycourseid'] = 0;
         if ($target !== null && !empty($outcome['success']) && !empty($outcome['courseid'])) {
-            import_generated_course_task::queue(
-                (int)$session->get('id'),
-                (int)$outcome['courseid'],
-                (int)$target->id,
-                (int)$USER->id
-            );
+            $sessionid = (int)$session->get('id');
+            $stagingid = (int)$outcome['courseid'];
+            $execution = (string)get_config('local_coursegen', 'importexecution');
+            if ($execution === self::IMPORTEXECUTION_SYNC) {
+                // Foreground: the copy and the import run inside this request. The
+                // service never throws on an import failure; it rolls back, marks
+                // the session failed and reports it in its result.
+                $importservice = static::get_import_service();
+                $importservice::mark_queued($sessionid, $stagingid, (int)$target->id);
+                $import = $importservice::import_into_existing($sessionid, $stagingid, (int)$target->id, (int)$USER->id);
+                $outcome['importstate'] = !empty($import['success'])
+                    ? course_import_service::STATE_DONE
+                    : course_import_service::STATE_FAILED;
+                $outcome['copycourseid'] = !empty($import['success']) ? (int)$import['copycourseid'] : 0;
+            } else {
+                import_generated_course_task::queue($sessionid, $stagingid, (int)$target->id, (int)$USER->id);
+                $outcome['importstate'] = course_import_service::STATE_QUEUED;
+            }
             $outcome['importqueued'] = true;
             $outcome['targetcourseid'] = (int)$target->id;
         }
 ```
 
-`classes/external/create_course.php:250-275`
+`classes/external/create_course.php:283-320`
 
 ```php
     public static function execute_returns() {
@@ -635,14 +655,26 @@ export async function createCourse({recordid, fullname, shortname, category, tar
                 false
             ),
             'targetcourseid' => new external_value(PARAM_INT, 'Existing course the import targets', VALUE_DEFAULT, 0),
+            'importstate' => new external_value(
+                PARAM_ALPHA,
+                'Import state: empty when no import, "queued" for a background import, "done" or "failed" when run in the request',
+                VALUE_DEFAULT,
+                ''
+            ),
+            'copycourseid' => new external_value(
+                PARAM_INT,
+                'Course that replaced the target, only when the import ran in the request and succeeded',
+                VALUE_DEFAULT,
+                0
+            ),
         ]);
     }
 }
 ```
 
-De vuelta en el navegador, `createCourseFromSession` bifurca según `importqueued`: si está activo muestra la tarjeta de progreso de importación (paso 5) con el `recordid` de la sesión; si no, la vista de finalización de siempre.
+De vuelta en el navegador, `createCourseFromSession` bifurca según `importqueued`: si está activo muestra la tarjeta de progreso de importación (paso 5) con el `recordid` de la sesión; si no, la vista de finalización de siempre. La tarjeta decide por sí sola si sondea: con un `importstate` terminal (ejecución `sync`) pinta el resultado directamente.
 
-`amd/src/local/courseai/actions/course-create.js:363-373`
+`amd/src/local/courseai/actions/course-create.js:363-375`
 
 ```javascript
         if (!result || !result.success) {
@@ -650,7 +682,9 @@ De vuelta en el navegador, `createCourseFromSession` bifurca según `importqueue
         }
 
         if (result.importqueued) {
-            // courseid is the staging course; the import into the target runs in an adhoc task.
+            // courseid is the staging course. The import into the target either runs in an
+            // adhoc task (importstate=queued, the view polls) or already ran in this request
+            // (importstate=done|failed, the view renders the terminal state without polling).
             showImportProgressView({...result, recordid: state.sessionid});
         } else {
             showCompletionView(result);
@@ -664,7 +698,7 @@ De vuelta en el navegador, `createCourseFromSession` bifurca según `importqueue
 
 ### 4.1 Encolado y ejecución de la tarea
 
-`queue` primero marca la sesión como `queued` (vía `course_import_service::mark_queued`) y después encola la tarea adhoc con `sessionid`, `stagingcourseid` y `targetcourseid` como custom data, ejecutándola como el usuario que pidió la importación. `execute` delega todo en `course_import_service::import_into_existing`. `retry_until_success` devuelve `false`: la tarea **nunca se reintenta** por cron, porque un reintento ciego podría ejecutarse con el curso original ya renombrado; reintentar es una acción explícita del usuario.
+Con `importexecution = adhoc` (por defecto), `execute` encola la tarea; con `sync` llama al servicio directamente (paso 4.1.1). `queue` primero marca la sesión como `queued` (vía `course_import_service::mark_queued`) y después encola la tarea adhoc con `sessionid`, `stagingcourseid` y `targetcourseid` como custom data, ejecutándola como el usuario que pidió la importación. `execute` delega todo en `course_import_service::import_into_existing`. `retry_until_success` devuelve `false`: la tarea **nunca se reintenta** por cron, porque un reintento ciego podría ejecutarse con el curso original ya renombrado; reintentar es una acción explícita del usuario.
 
 `classes/task/import_generated_course_task.php:43-54`
 
@@ -724,6 +758,119 @@ De vuelta en el navegador, `createCourseFromSession` bifurca según `importqueue
     public function retry_until_success(): bool {
         return false;
     }
+```
+
+### 4.1.1 Modo de ejecución (`importexecution`): tarea adhoc o misma petición
+
+Un tercer ajuste, el select `local_coursegen/importexecution`, decide **dónde** corre la importación. `adhoc` (por defecto) encola `import_generated_course_task` como se describe arriba y el navegador sondea el estado (paso 5). `sync` ejecuta la copia y la importación dentro de la propia petición de `create_course`. Como `importcontentmode`, se oculta con `hide_if` cuando `enableimportexisting` está desmarcado, y no llega ni a la plantilla ni al JS: lo lee únicamente `execute`.
+
+`settings.php:80-93`
+
+```php
+    // Only meaningful while the import is enabled: "adhoc" queues a cron task
+    // and the page polls until it ends, "sync" runs the copy and the import
+    // inside the create_course request.
+    $settings->add(new admin_setting_configselect(
+        'local_coursegen/importexecution',
+        get_string('setting_importexecution', 'local_coursegen'),
+        get_string('setting_importexecution_desc', 'local_coursegen'),
+        'adhoc',
+        [
+            'adhoc' => get_string('importexecution_adhoc', 'local_coursegen'),
+            'sync' => get_string('importexecution_sync', 'local_coursegen'),
+        ]
+    ));
+    $settings->hide_if('local_coursegen/importexecution', 'local_coursegen/enableimportexisting', 'notchecked');
+```
+
+En `execute`, tras crear el staging, se lee el ajuste. En `sync` el web service obtiene la clase del servicio por `get_import_service()` (factoría protegida para que PHPUnit inyecte una subclase por late static binding), llama a `mark_queued` y después a `import_into_existing`, sin `try/catch`: el servicio nunca lanza por un fallo de importación, hace rollback, marca la sesión como `failed` y lo devuelve en su resultado (`success`, `copycourseid`, `errorclass`). La respuesta lleva `importstate = done|failed` y, solo con éxito, `copycourseid`. En `adhoc` se encola la tarea y `importstate = queued`.
+
+`classes/external/create_course.php:178-193`
+
+```php
+            $execution = (string)get_config('local_coursegen', 'importexecution');
+            if ($execution === self::IMPORTEXECUTION_SYNC) {
+                // Foreground: the copy and the import run inside this request. The
+                // service never throws on an import failure; it rolls back, marks
+                // the session failed and reports it in its result.
+                $importservice = static::get_import_service();
+                $importservice::mark_queued($sessionid, $stagingid, (int)$target->id);
+                $import = $importservice::import_into_existing($sessionid, $stagingid, (int)$target->id, (int)$USER->id);
+                $outcome['importstate'] = !empty($import['success'])
+                    ? course_import_service::STATE_DONE
+                    : course_import_service::STATE_FAILED;
+                $outcome['copycourseid'] = !empty($import['success']) ? (int)$import['copycourseid'] : 0;
+            } else {
+                import_generated_course_task::queue($sessionid, $stagingid, (int)$target->id, (int)$USER->id);
+                $outcome['importstate'] = course_import_service::STATE_QUEUED;
+            }
+```
+
+`classes/external/create_course.php:266-276`
+
+```php
+    /**
+     * Name of the import service class used by the foreground execution.
+     *
+     * Protected factory so PHPUnit tests can inject a testable subclass of
+     * course_import_service through late static binding; the service API is static.
+     *
+     * @return string Class name of a course_import_service.
+     */
+    protected static function get_import_service(): string {
+        return course_import_service::class;
+    }
+```
+
+`execute_returns` gana dos campos: `importstate` (`''` sin importación, `queued` en segundo plano, `done`/`failed` cuando corrió en la petición) y `copycourseid` (solo cuando corrió en la petición y tuvo éxito).
+
+`classes/external/create_course.php:306-317`
+
+```php
+            'importstate' => new external_value(
+                PARAM_ALPHA,
+                'Import state: empty when no import, "queued" for a background import, "done" or "failed" when run in the request',
+                VALUE_DEFAULT,
+                ''
+            ),
+            'copycourseid' => new external_value(
+                PARAM_INT,
+                'Course that replaced the target, only when the import ran in the request and succeeded',
+                VALUE_DEFAULT,
+                0
+            ),
+```
+
+**Límites de tiempo en `sync`.** Toda la importación (backup del destino con usuarios, renombrado y ocultación del original, creación de la copia y restore sobre ella, backup e importación del staging, borrado del staging y, si algo falla, el rollback) corre dentro de la petición de `create_course`, bajo el servidor web y el navegador: cron no interviene. La petición debe caber en el tope del cliente, `CREATE_COURSE_TIMEOUT_MS` (180 s) de `course-create.js`, y en el `Timeout` de Apache (o el equivalente del servidor que sirva PHP). Si se supera el tope del cliente, el navegador rechaza con `courseai_error_connection` (`course-create.js:356`) aunque el servidor pueda seguir ejecutando la importación; el estado real queda en la sesión y se recupera al reanudar (paso 5.3). En `adhoc` esos límites afectan solo a la generación del staging.
+
+`amd/src/local/courseai/actions/course-create.js:320-320`
+
+```javascript
+    const CREATE_COURSE_TIMEOUT_MS = 180000;
+```
+
+En el navegador no cambia la bifurcación de `createCourseFromSession`: `showImportProgressView` aplica primero el resultado recibido y, si `importstate` ya es terminal, no arranca el sondeo.
+
+`amd/src/local/courseai/actions.js:338-344`
+
+```javascript
+        if (applyImportState(result)) {
+            return;
+        }
+        const recordid = Number(result?.recordid || state.sessionid || 0);
+        if (recordid > 0) {
+            startImportPolling(recordid);
+        }
+```
+
+Como `create_course` no devuelve `copycourseurl` (solo `get_course_session_state` lo hace), `applyImportState` construye la URL de la copia a partir de `copycourseid`.
+
+`amd/src/local/courseai/actions.js:262-264`
+
+```javascript
+            const copyCourseId = Number(info?.copycourseid || 0);
+            const copyCourseUrl = String(info?.copycourseurl || '')
+                || (copyCourseId > 0 ? M.cfg.wwwroot + '/course/view.php?id=' + copyCourseId : '');
 ```
 
 ### 4.2 Secuencia completa de `import_into_existing`
@@ -1385,7 +1532,7 @@ El modelo `course_session` añade el estado `5`. El web service `get_course_sess
 
 ### 5.2 La tarjeta `#importProgressView` y el sondeo
 
-La tarjeta se renderiza siempre (no depende del ajuste) para poder reanudar una sesión iniciada cuando el ajuste estaba activo. `showImportProgressView` la muestra con el spinner, guarda la URL del staging como fallback para el botón "abrir curso generado" y, si el resultado recibido ya no es terminal, arranca el sondeo: cada **5 s** (`IMPORT_POLL_INTERVAL_MS`) llama a `getSessionState`, con un tope de **10 min** (`IMPORT_POLL_MAX_MS`), ignorando errores transitorios. `applyImportState` resuelve `done` (vista de finalización con `copycourseid`/`copycourseurl` e `importcompleted`) y `failed` (`renderImportFailed`, sin confeti, con el staging accesible).
+La tarjeta se renderiza siempre (no depende del ajuste) para poder reanudar una sesión iniciada cuando el ajuste estaba activo. `showImportProgressView` la muestra con el spinner, guarda la URL del staging como fallback para el botón "abrir curso generado" y, solo si el resultado recibido no es terminal, arranca el sondeo (con `importexecution = sync` la respuesta de `create_course` ya trae `done` o `failed` y no se sondea): cada **5 s** (`IMPORT_POLL_INTERVAL_MS`) llama a `getSessionState`, con un tope de **10 min** (`IMPORT_POLL_MAX_MS`), ignorando errores transitorios. `applyImportState` resuelve `done` (vista de finalización con `copycourseid`/`copycourseurl` e `importcompleted`) y `failed` (`renderImportFailed`, sin confeti, con el staging accesible).
 
 `templates/courseai_page.mustache:621-635`
 
@@ -1407,13 +1554,16 @@ La tarjeta se renderiza siempre (no depende del ajuste) para poder reanudar una 
       </div>
 ```
 
-`amd/src/local/courseai/actions.js:205-227`
+`amd/src/local/courseai/actions.js:205-230`
 
 ```javascript
     // ---- Import into an existing course (ticket #9539) -------------------------------
-    // The backend answers create_course with importqueued=true and the STAGING course;
-    // an adhoc task copies the target and imports the staging into the copy. The page
-    // polls the session state until importstate is done|failed (capped).
+    // The backend answers create_course with importqueued=true and the STAGING course.
+    // In the background execution an adhoc task copies the target and imports the
+    // staging into the copy, and the page polls the session state until importstate
+    // is done|failed (capped). In the foreground execution the answer already carries
+    // the terminal importstate (and copycourseid), so the terminal view is rendered
+    // straight away and nothing is polled.
     const IMPORT_POLL_INTERVAL_MS = 5000;
     const IMPORT_POLL_MAX_MS = 10 * 60 * 1000;
     let importPollTimer = null;
@@ -1435,7 +1585,7 @@ La tarjeta se renderiza siempre (no depende del ajuste) para poder reanudar una 
     };
 ```
 
-`amd/src/local/courseai/actions.js:316-337`
+`amd/src/local/courseai/actions.js:324-345`
 
 ```javascript
     const showImportProgressView = (result) => {
@@ -1462,7 +1612,7 @@ La tarjeta se renderiza siempre (no depende del ajuste) para poder reanudar una 
     };
 ```
 
-`amd/src/local/courseai/actions.js:283-306`
+`amd/src/local/courseai/actions.js:291-314`
 
 ```javascript
     const startImportPolling = (recordid) => {
@@ -1491,18 +1641,23 @@ La tarjeta se renderiza siempre (no depende del ajuste) para poder reanudar una 
     };
 ```
 
-`amd/src/local/courseai/actions.js:253-275`
+`amd/src/local/courseai/actions.js:256-283`
 
 ```javascript
     const applyImportState = (info) => {
         const importState = String(info?.importstate || '');
         if (importState === 'done') {
             // The copy is the course the user asked for; the staging course is gone.
+            // get_course_session_state sends copycourseurl; create_course (foreground
+            // execution) only sends copycourseid, so the URL is built from it.
+            const copyCourseId = Number(info?.copycourseid || 0);
+            const copyCourseUrl = String(info?.copycourseurl || '')
+                || (copyCourseId > 0 ? M.cfg.wwwroot + '/course/view.php?id=' + copyCourseId : '');
             showCompletionView({
                 success: true,
                 importcompleted: true,
-                courseid: Number(info?.copycourseid || 0),
-                courseurl: String(info?.copycourseurl || '') || generatedCourseUrl,
+                courseid: copyCourseId,
+                courseurl: copyCourseUrl || generatedCourseUrl,
             });
             return true;
         }
@@ -1519,7 +1674,7 @@ La tarjeta se renderiza siempre (no depende del ajuste) para poder reanudar una 
     };
 ```
 
-`amd/src/local/courseai/actions.js:237-245`
+`amd/src/local/courseai/actions.js:240-248`
 
 ```javascript
     const renderImportFailed = (message) => {
@@ -1608,10 +1763,12 @@ Al recargar o reabrir la página, el bootstrap lee `sessionstatus` e `importstat
 | 2. Búsqueda de cursos | `classes/external/search_target_courses.php` | `execute`, `matches`, `execute_returns` |
 | 3. Confirmar (UI) | `amd/src/local/courseai/actions/course-create.js` | `onConfirm`, `createCourseFromSession` |
 | 3. Repositorio | `amd/src/repository/course.js` | `createCourse` |
-| 3. WS de creación | `classes/external/create_course.php` | `execute_parameters`, `execute`, `require_import_target`, `execute_returns` |
+| 3. WS de creación | `classes/external/create_course.php` | `execute_parameters`, `execute`, `require_import_target`, `get_import_service`, `execute_returns` |
 | 3. Staging | `classes/local/service/create_course_service.php` | `create_course` (categoría forzada a la del destino) |
 | 4. Encolado | `classes/task/import_generated_course_task.php` | `queue` → `course_import_service::mark_queued` |
 | 4. Ejecución / sin reintentos | `classes/task/import_generated_course_task.php` | `execute`, `retry_until_success` |
+| 4.1.1 Modo de ejecución | `settings.php` | `admin_setting_configselect('local_coursegen/importexecution')` + `hide_if` |
+| 4.1.1 Ejecución en la petición (`sync`) | `classes/external/create_course.php` | `execute` (rama `IMPORTEXECUTION_SYNC`) → `get_import_service` → `course_import_service::mark_queued`, `import_into_existing` |
 | 4. Importación | `classes/local/service/course_import_service.php` | `import_into_existing`, `require_import_capabilities`, `backup_course`, `rename_original_and_create_copy`, `compute_renamed_names`, `set_course_visibility`, `restore_copy_with_original_names`, `import_staging_into_copy`, `get_import_target`, `restore_course`, `set_owned_setting_value`, `rollback`, `delete_course_bypassing_bin`, `update_session` |
 | 4.7 Modo `add` (anexar) | `classes/local/service/course_import_service.php` | `backup_staging_appended`, `snapshot_section_layout`, `shift_section_numbers`, `section_zero_modules`, `materialise_section_zero`, `restore_section_layout`, `extend_numsections` |
 | 5. Estado | `classes/local/models/course_session.php` | `STATUS_IMPORTING = 5` |
@@ -1621,4 +1778,4 @@ Al recargar o reabrir la página, el bootstrap lee `sessionstatus` e `importstat
 
 ## Dónde vive el estado
 
-No hay cambio de esquema. Todo el estado de la importación se guarda en la fila existente de `local_coursegen_course_sessions`: el campo `status` toma el nuevo valor `STATUS_IMPORTING = 5` mientras corre la tarea (y vuelve a `STATUS_CREATED` o `STATUS_FAILED` al terminar), `courseid` apunta al staging durante el proceso y a la copia al finalizar (o al staging si falló), y el campo `coursedata` lleva un objeto JSON `import` con `targetcourseid`, `stagingcourseid`, `copycourseid`, `originalshortname`, `originalfullname`, `originalvisible`, `originalvisibleold`, `renamedshortname`, `state` (`queued|running|done|failed`), `errorclass`, `timestarted` y `timefinished`. `get_course_session_state` traduce ese objeto a `importstate`, `importmessage`, `copycourseid` y `copycourseurl` para el navegador.
+No hay cambio de esquema. Todo el estado de la importación se guarda en la fila existente de `local_coursegen_course_sessions`: el campo `status` toma el nuevo valor `STATUS_IMPORTING = 5` mientras corre la importación (en la tarea adhoc o en la propia petición de `create_course`) (y vuelve a `STATUS_CREATED` o `STATUS_FAILED` al terminar), `courseid` apunta al staging durante el proceso y a la copia al finalizar (o al staging si falló), y el campo `coursedata` lleva un objeto JSON `import` con `targetcourseid`, `stagingcourseid`, `copycourseid`, `originalshortname`, `originalfullname`, `originalvisible`, `originalvisibleold`, `renamedshortname`, `state` (`queued|running|done|failed`), `errorclass`, `timestarted` y `timefinished`. `get_course_session_state` traduce ese objeto a `importstate`, `importmessage`, `copycourseid` y `copycourseurl` para el navegador.

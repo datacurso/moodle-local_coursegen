@@ -34,6 +34,9 @@ class testable_create_course extends \local_coursegen\external\create_course {
     /** @var ai_course_api_service|null Mock service injected by tests. */
     public static $mockservice = null;
 
+    /** @var string|null Import service class injected by tests, null for the real one. */
+    public static $importserviceclass = null;
+
     /**
      * Return the injected mock service instead of building a real one.
      *
@@ -41,5 +44,14 @@ class testable_create_course extends \local_coursegen\external\create_course {
      */
     protected static function get_api_service(): ai_course_api_service {
         return static::$mockservice;
+    }
+
+    /**
+     * Return the injected import service class, or the real one.
+     *
+     * @return string Class name of a course_import_service.
+     */
+    protected static function get_import_service(): string {
+        return static::$importserviceclass ?? parent::get_import_service();
     }
 }

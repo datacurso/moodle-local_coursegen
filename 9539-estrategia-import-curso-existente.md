@@ -20,7 +20,7 @@
 | Selector de destino | Un `<select>` «Crear como curso nuevo / Importar en un curso existente», **primer campo del panel**, antes del nombre del curso |
 | Campos en modo importar | Se ocultan **nombre completo, nombre corto y categoría del curso nuevo**: la copia toma los nombres del original. Solo quedan categoría y curso de destino |
 | Permisos | Cubiertos por el rol «Profesor Creador de curso IA» (§7) |
-| Ejecución | Copia + importación en una **tarea adhoc**; la generación del staging sigue síncrona |
+| Ejecución | Ajuste `importexecution`: `adhoc` (por defecto) ejecuta copia + importación en una **tarea adhoc** con sondeo de estado; `sync` lo ejecuta todo en la misma petición de `create_course`, sin cron, sujeto a los límites de tiempo del cliente y del servidor web (§8). La generación del staging es síncrona en ambos |
 | Activación | **Ajuste de administrador**, desactivado por defecto; apagado, el flujo no cambia |
 | Ruta | **Larga** (copia + staging + importación con reemplazo). La ruta corta de la §5 queda descartada por el ticket de implementación |
 
@@ -35,7 +35,7 @@ calificaciones; la copia recibe su propia copia de todo ello (fila «Matriculaci
 
 ```
 1. Generar el curso con IA              → curso staging  (síncrono, flujo actual)
-   ── a partir de aquí, tarea adhoc ──
+   ── a partir de aquí, tarea adhoc (`importexecution = adhoc`, por defecto) o misma petición (`sync`) ──
 2. Renombrar y OCULTAR el original      → «<shortname>.<marca>» / «<fullname> (<marca>)», visible = 0
 3. Copiar el original, con usuarios     → copia con los nombres originales y todos los datos de usuario
 4. Importar staging sobre la copia      → reemplazando, o añadiendo al final (staging renumerado), según `importcontentmode`;
@@ -160,7 +160,7 @@ original en la copia y, en modo *añadir*, también las calificaciones y el rest
 las actividades originales. Si se quisiera conservar contenido del original (fusionar en vez de
 reemplazar), la ruta larga sería la correcta; con «reemplazar todo» y sin usuarios, no lo era.
 
-**Decisión:** el ticket de implementación fija la ruta larga (copia + tarea adhoc). La ruta corta
+**Decisión:** el ticket de implementación fija la ruta larga (copia + importación; en tarea adhoc por defecto o en la misma petición con `importexecution = sync`). La ruta corta
 queda registrada aquí como alternativa de menor coste por si el alcance cambia.
 
 ---
@@ -212,8 +212,8 @@ arquetipo Gestor (`lib/db/access.php:233-242` y `359-368`) y que **hay que añad
 
 Si la función se ofreciera a otro rol, comprobar las diez. La ruta corta de la §5 necesita solo
 `moodle/course:create` y las del flujo actual. Sin las dos nuevas, el web service rechaza la importación
-antes de generar el staging (`required_capability_exception` en `require_import_target`) y la tarea vuelve
-a exigirlas antes de escribir nada. `error_import_users_required` queda para el caso en que, aun con las
+antes de generar el staging (`required_capability_exception` en `require_import_target`) e `import_into_existing` vuelve
+a exigirlas antes de escribir nada, corra en la tarea adhoc o en la propia petición. `error_import_users_required` queda para el caso en que, aun con las
 capacidades, el ajuste `users` del backup o del restore acabe apagado (por ejemplo, bloqueado por la
 configuración del sitio): la importación entra en rollback y la sesión queda en error con el staging accesible.
 
@@ -239,7 +239,8 @@ No hay colisión de números de sección ni actividades duplicadas.
 renombrado **no**: un reintento tras un fallo que ya renombró el original debe partir del estado
 restaurado por el rollback, nunca renombrar dos veces. La tarea adhoc debe sobrescribir
 `retry_until_success()` devolviendo `false` para que cron **no** la reintente a ciegas; el reintento
-es una acción explícita del usuario.
+es una acción explícita del usuario. Con `importexecution = sync` no hay tarea ni cron: el fallo vuelve en
+la propia respuesta de `create_course` y el reintento sigue siendo manual.
 
 **Errores durante la importación.** El motor de backup/restore no tiene transacciones ni rollback
 —cero ocurrencias de `start_delegated_transaction` en `backup/`—. Un fallo a mitad deja la copia
@@ -252,8 +253,11 @@ se crea, para poder borrarla aunque falle el propio proceso.
 `search_target_courses.php:106`), no por categoría.
 
 **Tiempo de ejecución.** Dos backups, dos restauraciones y la generación superan el tope de 180 s del
-cliente (`course-create.js:153`). La ruta larga **exige** una `adhoc_task` con sondeo de estado; la
-ruta corta de la §5 cabe en el flujo actual.
+cliente (`CREATE_COURSE_TIMEOUT_MS`, `course-create.js:320`). Por eso la ejecución por defecto de la ruta
+larga es una `adhoc_task` con sondeo de estado (`importexecution = adhoc`). La opción `sync` ejecuta copia
+e importación dentro de la petición de `create_course`, sin cron: solo es viable donde ese tope y el
+`Timeout` de Apache cubran toda la importación, y la elige el administrador. La ruta corta de la §5 cabe
+en el flujo actual.
 
 **Infraestructura.** Con varios nodos, `$CFG->backuptempdir` debe estar en almacenamiento compartido.
 
@@ -269,6 +273,7 @@ directorios temporales con `fulldelete()` respetando `$CFG->keeptempdirectorieso
    ajuste está activo.
 3. Autocompletado de categoría y, después, de curso filtrado por la categoría — servicio externo
    propio con validación de permisos.
-4. Copia con la API nativa, renombrado del original, importación sobre la copia **en tarea adhoc**.
+4. Copia con la API nativa, renombrado del original, importación sobre la copia **en tarea adhoc** por
+   defecto; ajuste `importexecution` con la opción `sync` para ejecutarla en la misma petición.
 5. Rollback y mensaje claro; sin cursos huérfanos.
 6. Pruebas PHPUnit y Behat.

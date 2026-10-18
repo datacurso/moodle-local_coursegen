@@ -365,7 +365,9 @@ export const createCourseFromSession = async(
         }
 
         if (result.importqueued) {
-            // courseid is the staging course; the import into the target runs in an adhoc task.
+            // courseid is the staging course. The import into the target either runs in an
+            // adhoc task (importstate=queued, the view polls) or already ran in this request
+            // (importstate=done|failed, the view renders the terminal state without polling).
             showImportProgressView({...result, recordid: state.sessionid});
         } else {
             showCompletionView(result);

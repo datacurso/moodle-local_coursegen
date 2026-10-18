@@ -30,6 +30,7 @@ use external_value;
 use external_single_structure;
 use local_coursegen\event\generation_result_applied;
 use local_coursegen\local\service\ai_course_api_service;
+use local_coursegen\local\service\course_import_service;
 use local_coursegen\local\service\course_session_service;
 use local_coursegen\local\service\create_course_service;
 use local_coursegen\task\import_generated_course_task;
@@ -52,6 +53,12 @@ class create_course extends external_api {
 
     /** @var string Target mode: generate a staging course and import it into an existing course. */
     const TARGETMODE_IMPORT = 'import';
+
+    /** @var string Import execution: queue an adhoc task that cron runs (default). */
+    const IMPORTEXECUTION_ADHOC = 'adhoc';
+
+    /** @var string Import execution: run the import inside the request. */
+    const IMPORTEXECUTION_SYNC = 'sync';
 
     /**
      * Returns description of method parameters.
@@ -163,13 +170,27 @@ class create_course extends external_api {
         $outcome = create_course_service::create_course($session, $resultdata, $overrides);
         $outcome['importqueued'] = false;
         $outcome['targetcourseid'] = 0;
+        $outcome['importstate'] = '';
+        $outcome['copycourseid'] = 0;
         if ($target !== null && !empty($outcome['success']) && !empty($outcome['courseid'])) {
-            import_generated_course_task::queue(
-                (int)$session->get('id'),
-                (int)$outcome['courseid'],
-                (int)$target->id,
-                (int)$USER->id
-            );
+            $sessionid = (int)$session->get('id');
+            $stagingid = (int)$outcome['courseid'];
+            $execution = (string)get_config('local_coursegen', 'importexecution');
+            if ($execution === self::IMPORTEXECUTION_SYNC) {
+                // Foreground: the copy and the import run inside this request. The
+                // service never throws on an import failure; it rolls back, marks
+                // the session failed and reports it in its result.
+                $importservice = static::get_import_service();
+                $importservice::mark_queued($sessionid, $stagingid, (int)$target->id);
+                $import = $importservice::import_into_existing($sessionid, $stagingid, (int)$target->id, (int)$USER->id);
+                $outcome['importstate'] = !empty($import['success'])
+                    ? course_import_service::STATE_DONE
+                    : course_import_service::STATE_FAILED;
+                $outcome['copycourseid'] = !empty($import['success']) ? (int)$import['copycourseid'] : 0;
+            } else {
+                import_generated_course_task::queue($sessionid, $stagingid, (int)$target->id, (int)$USER->id);
+                $outcome['importstate'] = course_import_service::STATE_QUEUED;
+            }
             $outcome['importqueued'] = true;
             $outcome['targetcourseid'] = (int)$target->id;
         }
@@ -243,6 +264,18 @@ class create_course extends external_api {
     }
 
     /**
+     * Name of the import service class used by the foreground execution.
+     *
+     * Protected factory so PHPUnit tests can inject a testable subclass of
+     * course_import_service through late static binding; the service API is static.
+     *
+     * @return string Class name of a course_import_service.
+     */
+    protected static function get_import_service(): string {
+        return course_import_service::class;
+    }
+
+    /**
      * Returns description of method return value.
      *
      * @return external_single_structure
@@ -270,6 +303,18 @@ class create_course extends external_api {
                 false
             ),
             'targetcourseid' => new external_value(PARAM_INT, 'Existing course the import targets', VALUE_DEFAULT, 0),
+            'importstate' => new external_value(
+                PARAM_ALPHA,
+                'Import state: empty when no import, "queued" for a background import, "done" or "failed" when run in the request',
+                VALUE_DEFAULT,
+                ''
+            ),
+            'copycourseid' => new external_value(
+                PARAM_INT,
+                'Course that replaced the target, only when the import ran in the request and succeeded',
+                VALUE_DEFAULT,
+                0
+            ),
         ]);
     }
 }
