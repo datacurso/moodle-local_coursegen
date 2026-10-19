@@ -427,5 +427,45 @@ function xmldb_local_coursegen_upgrade($oldversion) {
         upgrade_plugin_savepoint(true, 2026100221, 'local', 'coursegen');
     }
 
+    if ($oldversion < 2026101222) {
+        // The list of sessions must not read the whole payload of every session (megabytes each): what it shows
+        // is kept in small columns of its own.
+        $table = new xmldb_table('local_coursegen_course_sessions');
+        $fields = [
+            new xmldb_field('templateid', XMLDB_TYPE_INTEGER, '10', null, null, null, null, 'coursedata'),
+            new xmldb_field('title', XMLDB_TYPE_CHAR, '255', null, null, null, null, 'templateid'),
+            new xmldb_field('shortname', XMLDB_TYPE_CHAR, '100', null, null, null, null, 'title'),
+        ];
+        foreach ($fields as $field) {
+            if (!$dbman->field_exists($table, $field)) {
+                $dbman->add_field($table, $field);
+            }
+        }
+        // The sessions that already exist are read one at a time.
+        $ids = $DB->get_fieldset_select('local_coursegen_course_sessions', 'id', 'templateid IS NULL AND title IS NULL');
+        foreach ($ids as $id) {
+            $row = $DB->get_record('local_coursegen_course_sessions', ['id' => $id], 'id, coursedata');
+            $data = json_decode((string) $row->coursedata, true);
+            if (!is_array($data)) {
+                continue;
+            }
+            $update = ['id' => $id];
+            if (isset($data['templateid'])) {
+                $update['templateid'] = (int) $data['templateid'];
+            }
+            if (!empty($data['fullname'])) {
+                $update['title'] = \core_text::substr((string) $data['fullname'], 0, 255);
+            }
+            if (!empty($data['shortname'])) {
+                $update['shortname'] = \core_text::substr((string) $data['shortname'], 0, 100);
+            }
+            if (count($update) > 1) {
+                $DB->update_record('local_coursegen_course_sessions', (object) $update);
+            }
+            unset($row, $data);
+        }
+        upgrade_plugin_savepoint(true, 2026101222, 'local', 'coursegen');
+    }
+
     return true;
 }

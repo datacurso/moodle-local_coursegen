@@ -50,6 +50,9 @@
                 <FIELD NAME="session_id" TYPE="char" LENGTH="255" NOTNULL="true" SEQUENCE="false" COMMENT="Session ID from AI service" />
                 <FIELD NAME="status" TYPE="int" LENGTH="1" NOTNULL="true" DEFAULT="1" SEQUENCE="false" COMMENT="Status: 1 planning, 2 creating, 3 created, 4 failed" />
                 <FIELD NAME="coursedata" TYPE="text" NOTNULL="false" SEQUENCE="false" COMMENT="Course data obtained from course form in JSON format" />
+                <FIELD NAME="templateid" TYPE="int" LENGTH="10" NOTNULL="false" SEQUENCE="false" COMMENT="Template the session was made from; null for a free-mode session" />
+                <FIELD NAME="title" TYPE="char" LENGTH="255" NOTNULL="false" SEQUENCE="false" COMMENT="Full name the AI gave the course, for the list of sessions" />
+                <FIELD NAME="shortname" TYPE="char" LENGTH="100" NOTNULL="false" SEQUENCE="false" COMMENT="Short name the AI gave the course, for the list of sessions" />
                 <FIELD NAME="timecreated" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
                 <FIELD NAME="timemodified" TYPE="int" LENGTH="10" NOTNULL="true" SEQUENCE="false" />
             </FIELDS>
