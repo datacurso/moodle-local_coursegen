@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101224
+
+### Fixed
+- **A finished course opens as its card alone**  
+  Opening a course already made from a template showed its card on the right and, on the left, the empty form that makes a new course. The form and the divider are now hidden, so the card is the whole view.
+
 ## [2.0.10] - 2026101223
 
 ### Fixed
