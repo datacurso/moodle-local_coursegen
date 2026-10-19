@@ -89,7 +89,23 @@ class quiz_settings extends base_settings {
 
             $qtypeobj = \question_bank::get_qtype($aiquestiondata['qtype']);
 
-            $question = $qtypeobj->save_question($questionrecord, (object)$aiquestiondata);
+            // A penalty Moodle cannot store (a number out of range, or text) is the default one.
+            if (isset($aiquestiondata['penalty'])) {
+                $penalty = is_numeric($aiquestiondata['penalty']) ? (float) $aiquestiondata['penalty'] : -1.0;
+                $aiquestiondata['penalty'] = ($penalty >= 0.0 && $penalty <= 1.0) ? round($penalty, 7) : 0.3333333;
+            }
+
+            try {
+                $question = $qtypeobj->save_question($questionrecord, (object)$aiquestiondata);
+            } catch (\Throwable $exception) {
+                // One question that cannot be stored must not stop the quiz at that point: the rest are added.
+                debugging(
+                    'coursegen: could not create ' . $aiquestiondata['qtype'] . ' question "'
+                        . ($aiquestiondata['name'] ?? '') . '": ' . $exception->getMessage(),
+                    DEBUG_DEVELOPER
+                );
+                return;
+            }
         }
 
         // Purge this question from the cache.
