@@ -107,6 +107,7 @@ class start_template_generation extends external_api {
             'userid' => (int) $USER->id,
             'session_id' => $threadid,
             'status' => course_session::STATUS_PENDING,
+            'templateid' => (int) $params['templateid'],
             'coursedata' => json_encode($coursedata),
         ]);
         $session->create();

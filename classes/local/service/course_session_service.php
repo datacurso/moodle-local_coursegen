@@ -148,21 +148,22 @@ class course_session_service {
             $params = [$userid, course_session::STATUS_CREATED];
         }
 
-        $records = $DB->get_records_select(
-            'local_coursegen_course_sessions',
-            $where,
+        // A session made from a template keeps megabytes in coursedata: the list never reads them. What it shows is in
+        // the small columns; a free-mode session has little data and keeps it.
+        $records = $DB->get_records_sql(
+            'SELECT id, courseid, userid, session_id, status, templateid, title, shortname, timecreated, timemodified,
+                    CASE WHEN templateid IS NULL THEN coursedata ELSE NULL END AS coursedata
+               FROM {local_coursegen_course_sessions}
+              WHERE ' . $where . '
+           ORDER BY timecreated DESC',
             $params,
-            'timecreated DESC'
+            0,
+            $limit > 0 ? $limit : 0
         );
 
         $sessions = [];
-        $count = 0;
         foreach ($records as $record) {
-            if ($limit > 0 && $count >= $limit) {
-                break;
-            }
             $sessions[] = new course_session(0, $record);
-            $count++;
         }
         return $sessions;
     }

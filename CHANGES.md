@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101222
+
+### Fixed
+- **The page to create a course no longer runs out of memory when a user has many generations**  
+  Every course made from a template keeps its whole payload, megabytes of text, in its session, and the page read all of the sessions of the user to draw the list of recent courses, twice. After about fifty of them the page failed with an error 500. The list now reads only what it shows: the name, the short name and the template of each session are kept in small columns of their own, filled in for the sessions that already exist, and the list asks only for the sessions it draws.
+
 ## [2.0.10] - 2026101221
 
 ### Fixed
