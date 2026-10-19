@@ -2,6 +2,12 @@
 
 All notable changes to this project will be documented in this file. Each change is logged under its own build number, newest first; the release stays as it is.
 
+## [2.0.10] - 2026101223
+
+### Fixed
+- **A question that cannot be stored no longer stops its quiz at that point**  
+  When the AI gave a question a penalty Moodle could not store, creating that question failed and every question after it was left out, while the course was still reported as created. The penalty is now always a valid number and a question that still fails is skipped, so the rest of the quiz is added.
+
 ## [2.0.10] - 2026101222
 
 ### Fixed
